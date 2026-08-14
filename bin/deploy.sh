@@ -180,11 +180,25 @@ if [[ "${COCKPIT_RESET:-0}" == "1" ]]; then
     else
       warn "échec schema.sql :"; sed -n '1,3p' /tmp/ck_schema_err
     fi
-    log "Chargement de sql/seed.sql via mysql…"
-    if mycli "$COCKPIT_DB_NAME" < "$TARGET_DIR/sql/seed.sql" 2>/tmp/ck_seed_err; then
-      log "seed.sql chargé"
+    # seed.sql contient 26 INSERT dans des tables PARTAGÉES du panel
+    # (of_tag/kpi/position) puis le jeu de démonstration des tables ceo_*.
+    # Par défaut on NE touche PAS aux tables du panel (déjà peuplées en prod, et
+    # leur schéma strict — position.description NOT NULL — refuse ces INSERT).
+    if [[ "${COCKPIT_SEED_PANEL:-0}" == "1" ]]; then
+      log "Chargement du seed COMPLET (y compris tables partagées du panel, sql_mode relâché)…"
+      if mycli --init-command="SET SESSION sql_mode=''" "$COCKPIT_DB_NAME" < "$TARGET_DIR/sql/seed.sql" 2>/tmp/ck_seed_err; then
+        log "seed.sql chargé (complet)"
+      else
+        warn "échec seed.sql — première erreur :"; sed -n '1,3p' /tmp/ck_seed_err
+      fi
     else
-      warn "échec seed.sql — première erreur :"; sed -n '1,3p' /tmp/ck_seed_err
+      log "Chargement du seed cockpit uniquement (tables ceo_*, panel non modifié)…"
+      if grep -vE '^INSERT INTO (of_tag|kpi|position)[ (]' "$TARGET_DIR/sql/seed.sql" \
+           | mycli "$COCKPIT_DB_NAME" 2>/tmp/ck_seed_err; then
+        log "seed.sql chargé (ceo_* uniquement)"
+      else
+        warn "échec seed.sql — première erreur :"; sed -n '1,3p' /tmp/ck_seed_err
+      fi
     fi
     unset MYSQL_PWD
   fi
