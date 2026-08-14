@@ -45,6 +45,9 @@ fi
 # --- 1. Prérequis (sans perturber le panel déjà en place) ----------------
 log "Vérification des prérequis…"
 export DEBIAN_FRONTEND=noninteractive
+# apt-get qui ATTEND le verrou (unattended-upgrades / apt daily le tiennent
+# souvent quelques minutes sur un serveur Ubuntu) au lieu d'échouer aussitôt.
+aptget() { apt-get -o DPkg::Lock::Timeout=600 "$@"; }
 need=()
 command -v apache2ctl >/dev/null 2>&1 || command -v apachectl >/dev/null 2>&1 || need+=(apache2)
 command -v php       >/dev/null 2>&1 || need+=(php-cli)
@@ -52,9 +55,11 @@ php -m 2>/dev/null | grep -qi '^pdo_mysql$' || need+=(php-mysql)
 command -v rsync     >/dev/null 2>&1 || need+=(rsync)
 command -v curl      >/dev/null 2>&1 || need+=(curl)
 if [[ ${#need[@]} -gt 0 ]]; then
-  log "Paquets manquants : ${need[*]}"
-  apt-get update -qq
-  apt-get install -y -qq "${need[@]}" >/dev/null
+  log "Paquets manquants : ${need[*]} (attente du verrou apt si nécessaire, max 10 min)…"
+  if ! aptget update -qq; then
+    warn "apt-get update a échoué (verrou ?) — tentative d'installation sur le cache existant."
+  fi
+  aptget install -y -qq "${need[@]}" >/dev/null
 else
   log "Tous les prérequis sont déjà présents (aucune installation)."
 fi
