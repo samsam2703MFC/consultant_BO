@@ -153,19 +153,38 @@ if [[ "${COCKPIT_RESET:-0}" == "1" ]]; then
     warn "identifiants MySQL absents — reset ignoré."
   else
     export MYSQL_PWD="$COCKPIT_DB_PASSWORD"
-    ceo_tables="$("$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" -N -B "$COCKPIT_DB_NAME" \
+    mycli() { "$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$@"; }
+
+    # a) DROP des tables ceo_* existantes (schéma potentiellement obsolète).
+    ceo_tables="$(mycli -N -B "$COCKPIT_DB_NAME" \
       -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name LIKE 'ceo\\_%';" 2>/dev/null || true)"
     ceo_n="$(printf '%s\n' "$ceo_tables" | grep -c . || true)"
-    if [[ -z "$ceo_tables" ]]; then
-      log "Aucune table ceo_* présente (rien à supprimer)."
-    else
+    if [[ -n "$ceo_tables" ]]; then
       log "Suppression de $ceo_n table(s) ceo_* : $(printf '%s ' $ceo_tables)"
       {
         echo "SET FOREIGN_KEY_CHECKS=0;"
         while IFS= read -r t; do [[ -n "$t" ]] && echo "DROP TABLE IF EXISTS \`$t\`;"; done <<< "$ceo_tables"
         echo "SET FOREIGN_KEY_CHECKS=1;"
-      } | "$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" \
-        && log "reset OK ($ceo_n table(s) supprimée(s))" || warn "reset : erreur lors du DROP"
+      } | mycli "$COCKPIT_DB_NAME" && log "DROP OK ($ceo_n)" || warn "DROP : erreur"
+    else
+      log "Aucune table ceo_* à supprimer."
+    fi
+
+    # b) (Re)chargement DÉTERMINISTE via le client mysql (parseur correct,
+    #    mono-thread) — évite les courses de l'auto-installation applicative
+    #    quand plusieurs requêtes arrivent en même temps. Équivaut à
+    #    l'alternative manuelle de docs/DEPLOIEMENT.md (mysql < schema puis seed).
+    log "Chargement de sql/schema.sql via mysql…"
+    if mycli "$COCKPIT_DB_NAME" < "$TARGET_DIR/sql/schema.sql" 2>/tmp/ck_schema_err; then
+      log "schema.sql chargé"
+    else
+      warn "échec schema.sql :"; sed -n '1,3p' /tmp/ck_schema_err
+    fi
+    log "Chargement de sql/seed.sql via mysql…"
+    if mycli "$COCKPIT_DB_NAME" < "$TARGET_DIR/sql/seed.sql" 2>/tmp/ck_seed_err; then
+      log "seed.sql chargé"
+    else
+      warn "échec seed.sql — première erreur :"; sed -n '1,3p' /tmp/ck_seed_err
     fi
     unset MYSQL_PWD
   fi
