@@ -140,6 +140,16 @@ a2enconf consulant_bo >/dev/null
 apache2ctl configtest
 systemctl reload apache2
 
+# --- 5b. Remise à zéro optionnelle des tables ceo_* (schéma obsolète) -----
+# atelierby_db est partagée avec le panel : d'anciennes tables ceo_* (schéma
+# périmé, ex. description NOT NULL) empêchent l'auto-installation (le seed
+# échoue en 1364). COCKPIT_RESET=1 les supprime pour repartir du schéma courant.
+if [[ "${COCKPIT_RESET:-0}" == "1" ]]; then
+  log "COCKPIT_RESET=1 — diagnostic puis suppression des tables ceo_* obsolètes…"
+  php "$TARGET_DIR/bin/db_admin.php" diag  || warn "diag indisponible"
+  php "$TARGET_DIR/bin/db_admin.php" reset || warn "reset échoué"
+fi
+
 # --- 6. Premier appel API (auto-installation) + recette locale -----------
 log "Recette (loopback) — premier appel déclenche tables + seed…"
 rc=0
