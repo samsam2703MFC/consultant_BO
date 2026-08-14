@@ -1,0 +1,97 @@
+name: Deploy — Cockpit CEO
+
+# Déploie le cockpit sur le serveur via SSH depuis un runner GitHub
+# (les runners ont un accès sortant ouvert, contrairement à l'environnement
+# de développement). Reproduit docs/DEPLOIEMENT.md via bin/deploy.sh.
+#
+# Secret REQUIS :  DEPLOY_SSH_PASSWORD  (mot de passe SSH root du serveur)
+# Secrets OPTIONNELS (sinon lus depuis le config du panel sur le serveur) :
+#   COCKPIT_DB_USER, COCKPIT_DB_PASSWORD
+#
+# Déclenchement : pousser un changement sur le fichier `deploy.trigger`
+# (ou "Run workflow" si le workflow est présent sur la branche par défaut).
+
+on:
+  push:
+    branches: [claude/deploiement-application-serveur-lmz1bm]
+    paths: ['deploy.trigger']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cockpit
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  SRC_DIR: "/opt/consulant_bo_src"
+  PWA_BASE: "http://185.180.206.46/pwa_consultant"
+  APP_BASE: "http://185.180.206.46/consulant_bo"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installer sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Vérifier le secret SSH
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          if [ -z "${SSHPASS}" ]; then
+            echo "::error title=Secret manquant::Ajoutez le secret DEPLOY_SSH_PASSWORD (Settings → Secrets and variables → Actions), puis relancez ce workflow (Re-run jobs)."
+            exit 1
+          fi
+
+      - name: Transférer le code vers le serveur
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          tar -czf - --exclude='.git' --exclude='node_modules' --exclude='.deployenv' . \
+            | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+                "rm -rf ${SRC_DIR} && mkdir -p ${SRC_DIR} && tar -xzf - -C ${SRC_DIR}"
+
+      - name: Passer les identifiants MySQL (optionnels)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          DBU: ${{ secrets.COCKPIT_DB_USER }}
+          DBP: ${{ secrets.COCKPIT_DB_PASSWORD }}
+        run: |
+          printf 'COCKPIT_DB_USER=%s\nCOCKPIT_DB_PASSWORD=%s\n' "${DBU:-}" "${DBP:-}" \
+            | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+                "cat > ${SRC_DIR}/.deployenv && chmod 600 ${SRC_DIR}/.deployenv"
+
+      - name: Déployer (install + config + auto-install + recette locale)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "cd ${SRC_DIR} && chmod +x bin/deploy.sh && COCKPIT_PWA_BASE='${PWA_BASE}' bash bin/deploy.sh"
+
+      - name: Nettoyer le fichier d'identifiants
+        if: always()
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "rm -f ${SRC_DIR}/.deployenv" || true
+
+      - name: Recette publique (3 endpoints depuis le runner)
+        run: |
+          fail=0
+          for ep in meta stores pwa/reports; do
+            echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
+            if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
+              echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1
+            fi
+            echo
+          done
+          [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
+          exit $fail
