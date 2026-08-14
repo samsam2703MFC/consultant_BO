@@ -145,9 +145,30 @@ systemctl reload apache2
 # périmé, ex. description NOT NULL) empêchent l'auto-installation (le seed
 # échoue en 1364). COCKPIT_RESET=1 les supprime pour repartir du schéma courant.
 if [[ "${COCKPIT_RESET:-0}" == "1" ]]; then
-  log "COCKPIT_RESET=1 — diagnostic puis suppression des tables ceo_* obsolètes…"
-  php "$TARGET_DIR/bin/db_admin.php" diag  || warn "diag indisponible"
-  php "$TARGET_DIR/bin/db_admin.php" reset || warn "reset échoué"
+  log "COCKPIT_RESET=1 — suppression des tables ceo_* obsolètes (client MySQL)…"
+  MYSQL_BIN="$(command -v mysql || command -v mariadb || true)"
+  if [[ -z "$MYSQL_BIN" ]]; then
+    warn "client mysql introuvable — reset ignoré."
+  elif [[ -z "$COCKPIT_DB_USER" || -z "$COCKPIT_DB_PASSWORD" ]]; then
+    warn "identifiants MySQL absents — reset ignoré."
+  else
+    export MYSQL_PWD="$COCKPIT_DB_PASSWORD"
+    ceo_tables="$("$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" -N -B "$COCKPIT_DB_NAME" \
+      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name LIKE 'ceo\\_%';" 2>/dev/null || true)"
+    ceo_n="$(printf '%s\n' "$ceo_tables" | grep -c . || true)"
+    if [[ -z "$ceo_tables" ]]; then
+      log "Aucune table ceo_* présente (rien à supprimer)."
+    else
+      log "Suppression de $ceo_n table(s) ceo_* : $(printf '%s ' $ceo_tables)"
+      {
+        echo "SET FOREIGN_KEY_CHECKS=0;"
+        while IFS= read -r t; do [[ -n "$t" ]] && echo "DROP TABLE IF EXISTS \`$t\`;"; done <<< "$ceo_tables"
+        echo "SET FOREIGN_KEY_CHECKS=1;"
+      } | "$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" \
+        && log "reset OK ($ceo_n table(s) supprimée(s))" || warn "reset : erreur lors du DROP"
+    fi
+    unset MYSQL_PWD
+  fi
 fi
 
 # --- 6. Premier appel API (auto-installation) + recette locale -----------

@@ -1,1 +1,1 @@
-v4 — reset des tables ceo_* obsolètes + re-déploiement (2026-08-14T17:18:07Z)
+v5 — reset via client mysql + re-déploiement (2026-08-14T17:21:33Z)
