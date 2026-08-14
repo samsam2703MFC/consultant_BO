@@ -115,7 +115,8 @@ function ep_stores(): array
  */
 function ep_pwa_reports(): array
 {
-    $base = rtrim((string) setting('pwaBase', ''), '/');
+    $cfgBase = Db::config()['pwaBase'] ?? null;                       // config/env prime
+    $base = rtrim((string) ($cfgBase ?: setting('pwaBase', '')), '/');
     $magasins = array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'pwaId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null],
         Db::rows("SELECT id, name, pwa_shop_id FROM ceo_shop WHERE status = 'Ouvert' ORDER BY id"));
     $shopByPwa = [];

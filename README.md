@@ -53,12 +53,14 @@ indiquée en console (`[cockpit] API indisponible … jeu de démonstration char
 
 ## Déploiement (Apache)
 
-Pointez le `DocumentRoot` sur `public/` — le `.htaccess` fourni route
-`/api/cockpit/*` vers l'API et le reste vers la SPA. `config/config.php` et
-`src/` restent hors du webroot.
+Guide complet — variables, secrets, DDL, droits MySQL, auth HTTP, recette :
+**`docs/DEPLOIEMENT.md`**.
 
-Pour changer la base d'URL de l'API côté client, définissez
-`window.COCKPIT_API_BASE` avant le chargement de `assets/js/app.js`.
+En bref : servez `public/` (racine de vhost **ou sous-répertoire** — tous les
+chemins sont relatifs), le `.htaccess` route `/api/cockpit/*` vers l'API et le
+reste vers la SPA. `config/config.php` (copie de l'exemple, hors Git) porte
+les identifiants MySQL et la base d'URL du panel. Pour changer la base d'URL
+de l'API côté client : `window.COCKPIT_API_BASE`.
 
 ## Structure
 

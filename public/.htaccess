@@ -1,4 +1,5 @@
-# Cockpit CEO — Apache
+# Cockpit CEO — Apache (fonctionne à la racine d'un vhost comme en sous-répertoire)
+DirectoryIndex index.html
 RewriteEngine On
 
 # API REST → contrôleur frontal

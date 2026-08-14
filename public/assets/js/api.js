@@ -9,7 +9,12 @@
  * que la maquette reste consultable — la source est indiquée dans p.source.
  */
 
-export const API_BASE = (typeof window !== 'undefined' && window.COCKPIT_API_BASE) || '/api/cockpit';
+/* Base d'URL de l'API : surcharge via window.COCKPIT_API_BASE, sinon déduite
+ * de l'URL de la page — « api/cockpit » à côté d'index.html, ce qui fonctionne
+ * à la racine (/api/cockpit) comme sous un sous-répertoire
+ * (/consulant_bo/api/cockpit). */
+export const API_BASE = (typeof window !== 'undefined' && window.COCKPIT_API_BASE)
+  || (typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') + 'api/cockpit' : '/api/cockpit');
 
 export const ENDPOINTS = {
   meta:           '/meta',

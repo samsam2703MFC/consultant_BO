@@ -6,13 +6,24 @@ final class Db
 {
     private static ?PDO $pdo = null;
 
+    private static ?array $cfg = null;
+
+    /** Configuration applicative (config/config.php, sinon l'exemple). */
+    public static function config(): array
+    {
+        if (self::$cfg === null) {
+            $file = __DIR__ . '/../config/config.php';
+            self::$cfg = is_file($file) ? require $file : require __DIR__ . '/../config/config.example.php';
+        }
+        return self::$cfg;
+    }
+
     public static function pdo(): PDO
     {
         if (self::$pdo !== null) {
             return self::$pdo;
         }
-        $file = __DIR__ . '/../config/config.php';
-        $cfg = is_file($file) ? require $file : require __DIR__ . '/../config/config.example.php';
+        $cfg = self::config();
         $db = $cfg['db'];
         $dsn = "mysql:host={$db['host']};port={$db['port']};dbname={$db['name']};charset={$db['charset']}";
         self::$pdo = new PDO($dsn, $db['user'], $db['password'], [
