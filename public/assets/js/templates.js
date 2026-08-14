@@ -6,6 +6,7 @@
 
 export function render(c, x){
   const { esc } = x;
+  if (c.gate) return tplGate(c.gate, x);
   return `
 <div style="display:flex;height:100vh;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
 
@@ -27,10 +28,11 @@ export function render(c, x){
     </nav>
     <div style="padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
       <div style="width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500">${esc(c.userInit)}</div>
-      <div>
+      <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:500">${esc(c.userNom)}</div>
         <div style="font-size:10px;color:var(--color-text-muted)">${esc(c.userRole)}</div>
       </div>
+      ${c.canLogout ? `<button ${x.A(c.logout)} title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>` : ''}
     </div>
   </aside>
 
@@ -72,6 +74,25 @@ export function render(c, x){
   ${c.nt ? tplWizardTache(c, x) : ''}
 
   ${c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:100;background:#222222;color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 10px 30px rgba(34,34,34,0.3);animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : ''}
+</div>`;
+}
+
+/* --- Écran de connexion / premier lancement ---------------------------------- */
+function tplGate(g, x){
+  const { esc } = x;
+  return `
+<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
+  <form ${x.SB(g.submit)} style="width:380px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:14px;box-shadow:0 18px 50px rgba(34,34,34,0.10);padding:34px 36px 30px;animation:toastIn 220ms ease">
+    <div style="font-family:var(--font-display);font-size:26px;color:var(--color-primary);line-height:1.1">L'Atelier by</div>
+    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:4px">Cockpit CEO — Réseau</div>
+    <div style="font-family:var(--font-display);font-size:19px;margin-top:22px">${esc(g.titre)}</div>
+    <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-top:5px;text-wrap:pretty">${esc(g.sub)}</div>
+    <label style="display:block;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:18px 0 6px">Mot de passe</label>
+    <input id="gate-pass" type="password" autocomplete="${g.mode === 'setup' ? 'new-password' : 'current-password'}" autofocus
+      style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:11px 13px;font-family:var(--font-ui);font-size:14px;background:var(--color-background-secondary);color:var(--color-text)">
+    ${g.err ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(g.err)}</div>` : ''}
+    <button type="submit" class="hv-fade" style="width:100%;margin-top:16px;border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:13.5px;font-weight:500;padding:12px 0;border-radius:999px">${esc(g.bouton)}</button>
+  </form>
 </div>`;
 }
 

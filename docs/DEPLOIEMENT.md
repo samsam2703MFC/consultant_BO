@@ -10,33 +10,32 @@ chemins (assets, API) sont relatifs à l'URL de la page.
 
 ## 1. Variables & secrets nécessaires
 
-### À créer / générer (secrets — jamais dans Git)
-
-| Variable | Exemple / format | Rôle | Qui la fournit |
-|---|---|---|---|
-| `COCKPIT_DB_HOST` | `127.0.0.1` | hôte MySQL | DBA (même valeur que `config/db.local.php` du panel) |
-| `COCKPIT_DB_PORT` | `3306` | port MySQL | DBA |
-| `COCKPIT_DB_NAME` | `atelierby_db` | base commune panel + cockpit | DBA |
-| `COCKPIT_DB_USER` | `cockpit_app` | compte applicatif dédié (moindre privilège) | DBA — créé par `sql/grants.sql` |
-| `COCKPIT_DB_PASSWORD` | 32+ caractères aléatoires | mot de passe du compte | **à générer** : `openssl rand -base64 24` |
-| Auth HTTP (htpasswd) | utilisateur + mot de passe | protéger l'accès public (voir §5 — le cockpit n'a pas d'authentification propre) | **à générer** : `htpasswd -c` |
-| Accès DBA (ponctuel) | root/admin MySQL | exécuter `schema.sql` + `grants.sql` une fois | DBA — non stocké |
-
-### Non secrètes (configuration)
+**Un seul jeu de secrets : les identifiants MySQL déjà utilisés par le panel**
+(mêmes valeurs que son `config/db.local.php`). Ni accès DBA, ni htpasswd :
+l'application crée ses tables elle-même au premier appel (comme le panel avec
+`mac_report_share`) et embarque sa propre authentification, dont le mot de
+passe est **défini dans l'écran de premier lancement** — rien à distribuer.
 
 | Variable | Valeur pour ce serveur | Rôle |
 |---|---|---|
-| `COCKPIT_PWA_BASE` | `http://185.180.206.46/pwa_consultant` | base d'URL du panel (rapports générés + liens `/r/{token}`) ; prime sur le paramètre `pwaBase` en base |
-| `window.COCKPIT_API_BASE` (client, optionnel) | — | surcharge de la base API ; inutile ici, elle est déduite de l'URL |
+| `COCKPIT_DB_HOST` | `127.0.0.1` | identiques au `config/db.local.php` du panel |
+| `COCKPIT_DB_PORT` | `3306` | — |
+| `COCKPIT_DB_NAME` | `atelierby_db` | base commune panel + cockpit |
+| `COCKPIT_DB_USER` | celui du panel | doit avoir le privilège `CREATE` (c'est le cas : le panel crée déjà ses tables) |
+| `COCKPIT_DB_PASSWORD` | celui du panel | secret — jamais dans Git |
+| `COCKPIT_PWA_BASE` | `http://185.180.206.46/pwa_consultant` | non secret — base d'URL du panel (rapports) ; prime sur le paramètre `pwaBase` en base |
 
-Il n'y a **aucun autre secret aujourd'hui** : pas de JWT, pas de clé d'API,
-pas de SMTP (l'envoi d'email des rapports est simulé ; le jour où il sera
-branché, il faudra une clé Resend/SendGrid ou des identifiants SMTP).
+Aucun autre secret : pas de JWT, pas de clé d'API, pas de SMTP (l'envoi
+d'email des rapports est simulé ; le jour où il sera branché, il faudra une
+clé Resend/SendGrid ou des identifiants SMTP).
 
-Les variables peuvent être posées soit en **environnement** (vhost Apache :
-`SetEnv COCKPIT_DB_PASSWORD …`, ou pool PHP-FPM : `env[COCKPIT_DB_PASSWORD]=…`),
-soit — plus simple et aligné sur le panel — dans **`config/config.php`** créé
-sur le serveur, hors Git (copie de `config/config.example.php`).
+Les variables se posent soit en environnement (vhost Apache : `SetEnv …`,
+pool PHP-FPM : `env[…]=…`), soit — plus simple, aligné sur le panel — dans
+**`config/config.php`** créé sur le serveur, hors Git (copie de
+`config/config.example.php`, `chmod 640`).
+
+Option durcissement (plus tard, avec un DBA) : un compte MySQL dédié à
+moindre privilège — modèle fourni dans `sql/grants.sql`, facultatif.
 
 ---
 
@@ -65,23 +64,22 @@ Prérequis : Apache `mod_rewrite`, PHP ≥ 8.1 avec `pdo_mysql`.
 
 ---
 
-## 3. Base de données — création des tables
+## 3. Base de données — création AUTOMATIQUE des tables
 
-```bash
-# 1. Tables (idempotent : CREATE TABLE IF NOT EXISTS ; ne touche pas
-#    of_tag / kpi / position / mac_report_share s'ils existent déjà)
-mysql -u root -p atelierby_db < sql/schema.sql
+**Rien à exécuter à la main.** Au premier appel de l'API, l'application :
 
-# 2. Compte applicatif à moindre privilège (éditez le mot de passe avant)
-mysql -u root -p < sql/grants.sql
+1. crée ses tables si elles manquent (`sql/schema.sql`, `CREATE TABLE IF NOT
+   EXISTS` — ne touche pas aux tables existantes du panel) ;
+2. charge le jeu de démonstration (`sql/seed.sql`, réseau belge) **si la base
+   est vide** — recommandé tant que les vraies données ne sont pas branchées ;
+3. génère le secret de session (`ceo_app_setting.authSecret`).
 
-# 3. Données de démonstration (recommandé pour la v1 en ligne : le réseau
-#    belge de démo, tant que les vraies données ne sont pas branchées)
-COCKPIT_DB_NAME=atelierby_db COCKPIT_DB_USER=cockpit_app \
-COCKPIT_DB_PASSWORD='…' php bin/seed.php
-```
+Seule exigence : le compte MySQL configuré doit avoir le privilège `CREATE`
+sur la base — c'est déjà le cas du compte du panel, qui crée lui-même
+`mac_report_share`. (Alternative manuelle, si souhaitée un jour :
+`mysql … < sql/schema.sql` puis `php bin/seed.php`.)
 
-Après le seed, deux réglages **de production** à corriger en base :
+Après le premier lancement, deux réglages **de production** à corriger en base :
 
 ```sql
 -- base d'URL réelle du panel (si non fournie par COCKPIT_PWA_BASE)
@@ -110,25 +108,24 @@ chmod 640 config/config.php && chown www-data:www-data config/config.php
 
 ---
 
-## 5. Protéger l'accès (obligatoire avant la mise en ligne)
+## 5. Authentification intégrée — premier lancement
 
-Le cockpit n'a **pas d'authentification propre** : en ligne, il expose les
-chiffres du réseau et accepte les écritures. À minima, une auth HTTP Basic :
+Le cockpit embarque sa propre authentification :
 
-```bash
-htpasswd -c /etc/apache2/cockpit.htpasswd ceo        # mot de passe à générer
-```
+- **Première visite** : l'écran « Premier lancement » demande de **définir le
+  mot de passe** (8 caractères minimum). Faites-le **immédiatement après la
+  mise en ligne** — tant qu'aucun mot de passe n'est défini, le premier
+  visiteur venu peut le poser.
+- Ensuite : mot de passe demandé à chaque connexion ; session de 30 jours
+  (cookie HttpOnly signé, secret généré à l'installation, stocké en base).
+  Toutes les routes de l'API sont fermées sans session valide.
+- « Quitter » (bas de la barre latérale) ferme la session ; changement de mot
+  de passe : `POST /api/cockpit/auth/password` `{ancien, password}`.
+- Mot de passe perdu : `DELETE FROM ceo_app_setting WHERE `` `key` `` =
+  'authPasswordHash';` → l'écran de premier lancement revient.
 
-```apache
-# dans le vhost ou en tête du .htaccess du cockpit
-AuthType Basic
-AuthName "Cockpit CEO"
-AuthUserFile /etc/apache2/cockpit.htpasswd
-Require valid-user
-```
-
-(À terme : reprendre l'auth JWT du panel — même philosophie que
-`pwa_consultant` — plutôt que Basic.)
+HTTPS fortement recommandé dès qu'un nom de domaine existe (le cookie passe
+en `Secure` automatiquement derrière HTTPS).
 
 ---
 
@@ -136,18 +133,20 @@ Require valid-user
 
 ```bash
 BASE=http://185.180.206.46/consulant_bo
-curl -su ceo:… $BASE/api/cockpit/meta | head -c 200      # JSON meta (pas d'erreur "base de données")
-curl -su ceo:… $BASE/api/cockpit/stores | head -c 200    # les magasins
-curl -su ceo:… $BASE/api/cockpit/pwa/reports | head -c 300  # base panel + partages mac_report_share
+# 1er appel : déclenche l'auto-installation (tables + seed) puis répond
+curl -s $BASE/api/cockpit/auth/status          # → {"setup":false,"authed":false} au tout premier appel
+curl -s $BASE/api/cockpit/meta                 # → 401 {"error":"auth",...} : l'API est bien fermée
 ```
 
 Puis dans le navigateur : `$BASE/` →
-- l'écran **Tâches consultants** se charge avec les données (la console NE doit
-  PAS afficher « jeu de démonstration chargé » — sinon l'API ne répond pas et
-  vous voyez le repli démo embarqué, pas la base) ;
+- écran **« Premier lancement »** → définir le mot de passe → le cockpit
+  s'ouvre sur les données (la console NE doit PAS afficher « jeu de
+  démonstration chargé » — sinon l'API ne répond pas et vous voyez le repli
+  démo embarqué, pas la base) ;
 - **Reporting** → « Panel consultant » : « Générer le rapport → » ouvre le
   panel, la carte de droite liste les partages de `mac_report_share` ;
-- cocher une tâche puis **Journal** : la ligne est tracée (écriture OK).
+- cocher une tâche puis **Journal** : la ligne est tracée (écriture OK) ;
+- navigation privée sans cookie : l'app doit re-demander le mot de passe.
 
 ---
 

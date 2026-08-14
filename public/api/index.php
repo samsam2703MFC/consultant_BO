@@ -9,6 +9,8 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/Db.php';
 require __DIR__ . '/../../src/endpoints.php';
 require __DIR__ . '/../../src/writes.php';
+require __DIR__ . '/../../src/installer.php';
+require __DIR__ . '/../../src/auth.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -19,7 +21,17 @@ $path = preg_replace('#^.*?/api/cockpit#', '', $uri) ?: '/';
 $path = rtrim($path, '/') ?: '/';
 
 try {
-    $out = route($method, $path);
+    ensureInstalled();                      // tables + seed + secret au premier appel
+
+    $out = authRoute($method, $path);       // /auth/* : toujours accessibles
+    if ($out === null) {
+        if (!authOk()) {                    // tout le reste exige la session
+            http_response_code(401);
+            $out = ['error' => 'auth', 'setup' => authIsSetup()];
+        } else {
+            $out = route($method, $path);
+        }
+    }
     echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (PDOException $e) {
     http_response_code(503);

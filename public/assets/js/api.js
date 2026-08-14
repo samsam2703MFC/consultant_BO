@@ -38,9 +38,40 @@ export const ENDPOINTS = {
 };
 
 async function get(path, signal){
-  const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal });
+  const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal, credentials: 'same-origin' });
   if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
   return r.json();
+}
+
+/* --- Authentification intégrée ------------------------------------------- */
+
+/** État d'auth : { setup, authed } — ou null si l'API est injoignable
+ *  (mode démo : pas d'authentification). */
+export async function authStatus(){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 4000);
+  try {
+    const r = await fetch(API_BASE + '/auth/status', { headers: { Accept: 'application/json' }, signal: ctl.signal, credentials: 'same-origin' });
+    clearTimeout(t);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { clearTimeout(t); return null; }
+}
+
+/** POST /auth/setup ou /auth/login — renvoie { ok } ou { error }. */
+export async function authSubmit(mode, password){
+  try {
+    const r = await fetch(API_BASE + '/auth/' + (mode === 'setup' ? 'setup' : 'login'), {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    return await r.json();
+  } catch (e) { return { error: 'API injoignable — réessayez.' }; }
+}
+
+export function authLogout(){
+  return fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => null);
 }
 
 export async function load(opts){
@@ -65,7 +96,7 @@ export async function load(opts){
 export function write(source, method, path, payload){
   if (source !== 'api') return Promise.resolve(null);
   return fetch(API_BASE + path, {
-    method,
+    method, credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: payload === undefined ? undefined : JSON.stringify(payload)
   }).catch(e => console.warn('[cockpit] écriture ' + path + ' échouée :', e.message));

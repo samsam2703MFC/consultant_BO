@@ -1,8 +1,12 @@
 -- ============================================================================
--- Cockpit CEO — compte MySQL applicatif (moindre privilège).
--- À exécuter UNE FOIS par le DBA (compte root/admin), après schema.sql.
+-- Cockpit CEO — compte MySQL applicatif à moindre privilège. FACULTATIF :
+-- par défaut le cockpit réutilise le compte du panel et crée ses tables
+-- lui-même (auto-installation). Ce fichier n'est utile que si un DBA veut,
+-- plus tard, isoler le cockpit sur un compte dédié.
 --
 -- Remplacez CHANGEZ_MOI par le mot de passe généré (voir docs/DEPLOIEMENT.md).
+-- NB : pour conserver l'auto-installation avec ce compte dédié, ajoutez :
+--   GRANT CREATE ON atelierby_db.* TO 'cockpit_app'@'localhost';
 -- ============================================================================
 
 CREATE USER IF NOT EXISTS 'cockpit_app'@'localhost' IDENTIFIED BY 'CHANGEZ_MOI';

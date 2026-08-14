@@ -4,7 +4,7 @@
  * + délégation d'événements), données : api.js (REST, repli démo data.js).
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
-import { load, write } from './api.js';
+import { load, write, authStatus, authSubmit, authLogout } from './api.js';
 import { render as tplRender } from './templates.js';
 
 function escHtml(v){
@@ -21,7 +21,7 @@ class App {
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
-      pwaType: 'gestion:month', pwaScope: 'all',
+      pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       pdCat: 'Toutes les catégories', pdSort: 'score' };
     this._h = [];
     this._tt = null;
@@ -30,9 +30,21 @@ class App {
   }
 
   async start(){
+    // Authentification intégrée : si l'API répond et que la session n'est pas
+    // ouverte, afficher l'écran de connexion (ou de premier lancement).
+    // API injoignable → mode démo, sans authentification.
+    const st = await authStatus();
+    if (st && !st.authed){
+      this.setState({ gate: { mode: st.setup ? 'login' : 'setup', err: '', busy: false } });
+      return;
+    }
+    await this.loadData();
+  }
+
+  async loadData(){
     const p = await load();
     this.M = p.M; this.D = p.D; this.meta = p.meta; this.source = p.source;
-    this.setState({ ready: true });
+    this.setState({ ready: true, gate: null });
   }
 
   /* --- cycle de rendu ------------------------------------------------------- */
@@ -52,6 +64,7 @@ class App {
       DS: fn => fn ? `data-ds="${this.reg(fn)}"` : '',
       DP: fn => fn ? `data-dp="${this.reg(fn)}"` : '',
       EN: fn => fn ? `data-en="${this.reg(fn)}"` : '',
+      SB: fn => fn ? `data-sb="${this.reg(fn)}"` : '',
       esc: escHtml
     };
     const common = this.renderVals();
@@ -83,6 +96,7 @@ class App {
       const el = e.target.closest && e.target.closest('[data-i]');
       if (el){ const fn = this._h[+el.getAttribute('data-i')]; if (fn) fn(e); }
     });
+    this.root.addEventListener('submit', e => { e.preventDefault(); run('data-sb', e); });
     this.root.addEventListener('dragstart', e => run('data-ds', e));
     this.root.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('[data-dp]')) e.preventDefault(); });
     this.root.addEventListener('drop', e => run('data-dp', e));
@@ -163,6 +177,26 @@ class App {
   /* --- valeurs de rendu (port de renderVals) --------------------------------- */
   renderVals(){
     const S = this.state;
+    if (S.gate){
+      const g = S.gate;
+      return { gate: {
+        mode: g.mode, err: g.err, busy: g.busy,
+        titre: g.mode === 'setup' ? 'Premier lancement' : 'Cockpit CEO',
+        sub: g.mode === 'setup'
+          ? 'Définissez le mot de passe qui protégera le cockpit — 8 caractères minimum. Il sera demandé à chaque connexion.'
+          : 'Entrez le mot de passe du cockpit pour continuer.',
+        bouton: g.busy ? '…' : (g.mode === 'setup' ? 'Définir et entrer' : 'Se connecter'),
+        submit: async () => {
+          if (g.busy) return;
+          const el = document.getElementById('gate-pass');
+          const pw = el ? el.value : '';
+          this.setState({ gate: Object.assign({}, g, { busy: true, err: '' }) });
+          const r = await authSubmit(g.mode, pw);
+          if (r && r.ok){ await this.loadData(); }
+          else this.setState({ gate: Object.assign({}, g, { busy: false, err: (r && r.error) || 'Échec — réessayez.' }) });
+        }
+      } };
+    }
     const goTo = id => () => this.setState({ screen: id, hmHover: null });
     const common = {
       ready: S.ready, toast: S.toast,
@@ -183,6 +217,9 @@ class App {
     common.brandNom = (mt.reseau || {}).nom || ''; common.brandSub = (mt.reseau || {}).sousTitre || '';
     const usr = mt.utilisateur || {};
     common.userInit = usr.initiales || ''; common.userNom = usr.nom || ''; common.userRole = usr.role || '';
+    common.canLogout = this.source === 'api';
+    common.logout = async () => { await authLogout();
+      this.setState({ ready: false, gate: { mode: 'login', err: '', busy: false } }); };
 
     if (!S.ready){ common.nav = []; return common; }
     const D = this.D, M = this.M;
