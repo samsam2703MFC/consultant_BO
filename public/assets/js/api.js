@@ -1,0 +1,147 @@
+/* Cockpit CEO — L'Atelier by · couche d'accès unique aux données.
+ *
+ * Règle : aucune valeur métier n'est écrite dans le HTML. Chaque écran lit un
+ * endpoint REST, la réponse est normalisée ici, et le composant ne connaît que
+ * la forme normalisée. Contrat JSON + mapping base de données : contrat-api.md
+ *
+ * Base d'URL : window.COCKPIT_API_BASE (sinon /api/cockpit).
+ * Si l'API est injoignable, le jeu de démonstration (data.js) est chargé pour
+ * que la maquette reste consultable — la source est indiquée dans p.source.
+ */
+
+export const API_BASE = (typeof window !== 'undefined' && window.COCKPIT_API_BASE) || '/api/cockpit';
+
+export const ENDPOINTS = {
+  meta:           '/meta',
+  leviers:        '/referentiels/leviers',
+  kpis:           '/referentiels/kpis',
+  emailTemplates: '/referentiels/email-templates',
+  projTemplates:  '/referentiels/project-templates',
+  stores:         '/stores?statut=tous',
+  perf:           '/stores/perf?granularite=mois&annees=2025,2026',
+  budgets:        '/stores/budgets?exercice=2026',
+  targets:        '/targets',
+  consultants:    '/consultants',
+  suppliers:      '/fournisseurs',
+  projects:       '/projects',
+  crm:            '/projects/crm',
+  people:         '/people',
+  reporting:      '/reporting',
+  journal:        '/journal',
+  products:       '/products/scoring?periode=2026-07'
+};
+
+async function get(path, signal){
+  const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal });
+  if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
+  return r.json();
+}
+
+export async function load(opts){
+  const timeoutMs = (opts && opts.timeoutMs) || 4000;
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const keys = Object.keys(ENDPOINTS);
+    const res = await Promise.all(keys.map(k => get(ENDPOINTS[k], ctl.signal)));
+    clearTimeout(t);
+    const p = {}; keys.forEach((k, i) => { p[k] = res[i]; });
+    return shape(p, 'api');
+  } catch (e) {
+    clearTimeout(t);
+    console.info('[cockpit] API indisponible (' + e.message + ') — jeu de démonstration chargé.');
+    const mod = await import('./data.js');
+    return shape(demoPayload(mod), 'demo');
+  }
+}
+
+/** Écriture non bloquante : ignorée en mode démo, best-effort en mode API. */
+export function write(source, method, path, payload){
+  if (source !== 'api') return Promise.resolve(null);
+  return fetch(API_BASE + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: payload === undefined ? undefined : JSON.stringify(payload)
+  }).catch(e => console.warn('[cockpit] écriture ' + path + ' échouée :', e.message));
+}
+
+/* Normalisation : une seule forme consommée par le composant. */
+function shape(p, source){
+  const meta = p.meta;
+  return {
+    source, meta,
+    M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers, KPI_LIST: p.kpis.map(k => k.nom || k),
+      FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes },
+    D: Object.assign({}, p.raw || {}, {
+      stores: joinPerf(p.stores, p.perf),
+      budgets: p.budgets,
+      targets: p.targets,
+      consultants: p.consultants,
+      suppliers: p.suppliers,
+      projects: p.projects,
+      projTemplates: p.projTemplates,
+      emailTemplates: p.emailTemplates,
+      crm: p.crm,
+      people: p.people,
+      reports: (p.reporting || {}).reports,
+      alertRules: (p.reporting || {}).alertRules,
+      logs: p.journal,
+      products: p.products
+    })
+  };
+}
+
+/* /stores/perf renvoie des lignes plates (storeId, annee, mois, …) —
+   le composant lit store.perf[annee][mois]. */
+function joinPerf(stores, perf){
+  if (!perf || !perf.length) return stores;
+  const by = {};
+  for (const r of perf){
+    const s = (by[r.storeId] = by[r.storeId] || {});
+    const y = (s[r.annee] = s[r.annee] || new Array(12).fill(null));
+    y[r.mois - 1] = { ca: r.ca, caT: r.caBudget, marge: r.margeNette, mp: r.margePct, tickets: r.tickets,
+      panier: r.panierMoyen, food: r.foodCostPct, labour: r.labourCostPct, overhead: r.overheadPct, val: r.valorisation };
+  }
+  return stores.map(s => Object.assign({}, s, { perf: by[s.id] || {} }));
+}
+
+/* --- Jeu de démonstration : même forme que les endpoints ------------------ */
+function demoPayload(m){
+  const D = m.buildData();
+  const seuils = { food: 32, labour: 33, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 };
+  const meta = {
+    reseau: { nom: "L'Atelier by", sousTitre: 'Cockpit CEO — Réseau' },
+    utilisateur: { initiales: 'GB', nom: 'G. Baert', role: 'CEO · admin' },
+    aujourdhui: m.TODAY,
+    dateLabel: 'Vendredi 31 juillet 2026',
+    periodeLabel: 'Données : juillet 2026',
+    exercice: 2026,
+    moisLabels: m.MOIS,
+    seuils: seuils,
+    contribOuverture: 210000,
+    notes: { objectifsOuverture: "Dont contribution attendue de l'ouverture de Knokke (oct.–déc.) : env. 210 k€." }
+  };
+  const budgets = D.stores.filter(s => s.status === 'Ouvert').map(s => {
+    const budAn = (s.perf && s.perf[2026] || []).reduce((t, r) => t + (r.caT || 0), 0);
+    const seed = s.id.split('').reduce((t, ch) => t + ch.charCodeAt(0), 0);
+    const coef = 0.92 + ((seed % 21) / 100);   // 0,92 → 1,12 du budget validé
+    return {
+    storeId: s.id, exercice: 2026, moisEncodes: 7, moisTotal: 12, dernierEncodage: '2026-08-04',
+    panierEngagement: +(s.panier * 1.08).toFixed(2),
+    caTheoriqueAn: Math.round(budAn * coef / 1000) * 1000,
+    etudeMarche: { date: '2025-09-15', source: 'Étude de marché — zone de chalandise 10 min', potentielMenages: 4200 + (seed % 17) * 130 },
+    charges: [
+      { poste: 'Matières premières', levier: 'food-cost', pctBudget: seuils.food, champReel: 'food' },
+      { poste: 'Rémunérations & charges sociales', levier: 'labour-cost', pctBudget: seuils.labour, champReel: 'labour' },
+      { poste: 'Services & biens divers', levier: 'overhead-cost', pctBudget: seuils.overhead, champReel: 'overhead' },
+      { poste: 'Royalties', levier: '', pctBudget: seuils.royalties, champReel: null },
+      { poste: 'Charges financières', levier: '', pctBudget: seuils.financieres, champReel: null }
+    ]
+  }; });
+  return {
+    raw: D, meta, leviers: m.LEVIERS, kpis: m.KPI_LIST, familles: m.FAMILLES, reportTypes: m.REPORT_TYPES, emailTemplates: D.emailTemplates, projTemplates: D.projTemplates,
+    stores: D.stores, perf: null, budgets, targets: D.targets, consultants: D.consultants, suppliers: D.suppliers,
+    projects: D.projects, crm: D.crm, people: D.people,
+    reporting: { reports: D.reports, alertRules: D.alertRules }, journal: D.logs, products: D.products
+  };
+}

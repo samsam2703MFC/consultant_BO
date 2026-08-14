@@ -1,0 +1,19 @@
+/* Cockpit CEO — styles applicatifs (repris du helmet du prototype). */
+a { color: #8D1D2C; text-decoration: none; }
+a:hover { color: #6d1622; text-decoration: underline; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(34,34,34,.18); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panelIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+html, body { margin: 0; padding: 0; }
+body { overflow: hidden; }
+button { font-family: inherit; }
+
+/* Équivalents des style-hover du prototype (le runtime DC générait des pseudo-classes). */
+.hv-line:hover  { border-color: var(--color-primary) !important; color: var(--color-primary) !important; }
+.hv-fade:hover  { opacity: 0.88; }
+.hv-bg:hover    { background: var(--color-background-secondary) !important; }
+.hv-apr:hover   { background: var(--pkg-abricot) !important; color: #fff !important; }
+.hv-apr-line:hover { border-color: var(--pkg-abricot) !important; color: var(--pkg-abricot) !important; }

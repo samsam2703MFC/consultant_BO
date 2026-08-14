@@ -1,0 +1,279 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Cockpit CEO — endpoints de lecture (GET), un par écran + référentiels.
+ * Formes JSON : voir contrat-api.md. Aucune donnée métier dans le HTML :
+ * tout ce que le front affiche sort d'ici.
+ */
+
+/** Correspondance slug levier ↔ of_tag.id (le nom/type/desc sont applicatifs, la couleur vient d'of_tag). */
+const LEVIER_DEFS = [
+    ['slug' => 'trafic',        'nom' => 'Trafic',            'type' => 'Vente', 'tag' => 4, 'desc' => 'Faire venir plus de monde : visibilité locale, vitrine, animations, signalétique.'],
+    ['slug' => 'recurrence',    'nom' => 'Récurrence',        'type' => 'Vente', 'tag' => 3, 'desc' => 'Faire revenir les clients : fidélisation PWA, qualité constante, loyalty, suivi B2B.'],
+    ['slug' => 'xp',            'nom' => 'Expérience Client', 'type' => 'Vente', 'tag' => 2, 'desc' => 'Qualité du moment en boutique : accueil < 3 s, conseil, ambiance, rapidité.'],
+    ['slug' => 'food-cost',     'nom' => 'Food Cost',         'type' => 'Coût',  'tag' => 5, 'desc' => 'Coût matière : recettes, contrôle réception ProdAtelier, FIFO, casse & invendus.'],
+    ['slug' => 'labour-cost',   'nom' => 'Labour Cost',       'type' => 'Coût',  'tag' => 6, 'desc' => 'Coût main d\'œuvre : plannings au flux, productivité, ratio CA/ETP, polyvalence.'],
+    ['slug' => 'overhead-cost', 'nom' => 'Overhead Cost',     'type' => 'Coût',  'tag' => 7, 'desc' => 'Charges fixes : loyer, énergies, abonnements, assurances, maintenance.'],
+];
+
+function levierSlugByTag(): array
+{
+    $out = [];
+    foreach (LEVIER_DEFS as $l) { $out[$l['tag']] = $l['slug']; }
+    return $out;
+}
+
+function setting(string $key, mixed $default = null): mixed
+{
+    $r = Db::row('SELECT value FROM ceo_app_setting WHERE `key` = ?', [$key]);
+    return $r === null ? $default : json_decode($r['value'], true);
+}
+
+function ep_meta(): array
+{
+    $seuils = [];
+    foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi WHERE code IS NOT NULL") as $k) {
+        $seuils[$k['code']] = $k['seuil_haut'] !== null ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
+    }
+    return [
+        'reseau'           => setting('reseau', ['nom' => '', 'sousTitre' => '']),
+        'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => '']),
+        'aujourdhui'       => setting('aujourdhui'),
+        'dateLabel'        => setting('dateLabel', ''),
+        'periodeLabel'     => setting('periodeLabel', ''),
+        'exercice'         => (int) setting('exercice', (int) date('Y')),
+        'moisLabels'       => setting('moisLabels', []),
+        'seuils'           => [
+            'food'        => $seuils['food'] ?? 32,
+            'labour'      => $seuils['labour'] ?? 33,
+            'overhead'    => $seuils['overhead'] ?? 13.5,
+            'royalties'   => $seuils['royalties'] ?? 3,
+            'financieres' => $seuils['financieres'] ?? 2.2,
+            'caEtp'       => $seuils['ca_etp'] ?? 13000,
+        ],
+        'contribOuverture' => setting('contribOuverture', 0),
+        'notes'            => setting('notes', new stdClass()),
+        'familles'         => setting('familles', []),
+        'reportTypes'      => setting('reportTypes', []),
+    ];
+}
+
+function ep_leviers(): array
+{
+    $colors = [];
+    foreach (Db::rows('SELECT id, color FROM of_tag') as $t) { $colors[(int) $t['id']] = $t['color']; }
+    return array_map(fn ($l) => [
+        'slug' => $l['slug'], 'nom' => $l['nom'], 'type' => $l['type'],
+        'color' => $colors[$l['tag']] ?? '#666666', 'desc' => $l['desc'],
+    ], LEVIER_DEFS);
+}
+
+function ep_kpis(): array
+{
+    return array_map(fn ($r) => ['nom' => $r['name']], Db::rows('SELECT name FROM kpi WHERE code IS NULL ORDER BY id'));
+}
+
+function ep_email_templates(): array
+{
+    return array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'sujet' => $r['subject'], 'corps' => $r['body']],
+        Db::rows('SELECT * FROM ceo_email_template ORDER BY id'));
+}
+
+function ep_project_templates(): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_project_template') as $r) {
+        $out[$r['axe']] = ['jalons' => json_decode($r['jalons_json'], true), 'couts' => json_decode($r['couts_json'], true)];
+    }
+    return $out;
+}
+
+function ep_stores(): array
+{
+    return array_map(fn ($r) => [
+        'id' => $r['id'], 'code' => $r['code'], 'nom' => $r['name'], 'fr' => $r['franchisee'],
+        'zone' => $r['zone'], 'status' => $r['status'],
+        'opened' => $r['opened_on'] ? substr($r['opened_on'], 0, 7) : null,
+        'valT' => $r['valuation_target'] !== null ? (float) $r['valuation_target'] : null,
+        'panier' => $r['basket_ref'] !== null ? (float) $r['basket_ref'] : null,
+    ], Db::rows('SELECT * FROM ceo_shop ORDER BY id'));
+}
+
+function ep_perf(): array
+{
+    $annees = array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026'));
+    $in = implode(',', array_fill(0, count($annees), '?'));
+    return array_map(fn ($r) => [
+        'storeId' => $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
+        'ca' => $r['revenue'] !== null ? (float) $r['revenue'] : null,
+        'caBudget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
+        'caTheorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null,
+        'margeNette' => $r['net_margin'] !== null ? (float) $r['net_margin'] : null,
+        'margePct' => ($r['net_margin'] !== null && $r['revenue'] > 0) ? round($r['net_margin'] / $r['revenue'], 4) : null,
+        'tickets' => $r['tickets'] !== null ? (int) $r['tickets'] : null,
+        'panierMoyen' => $r['basket_avg'] !== null ? (float) $r['basket_avg'] : null,
+        'foodCostPct' => $r['food_pct'] !== null ? (float) $r['food_pct'] : null,
+        'labourCostPct' => $r['labour_pct'] !== null ? (float) $r['labour_pct'] : null,
+        'overheadPct' => $r['overhead_pct'] !== null ? (float) $r['overhead_pct'] : null,
+        'valorisation' => $r['valuation'] !== null ? (float) $r['valuation'] : null,
+    ], Db::rows("SELECT * FROM ceo_shop_month_perf WHERE year IN ($in) ORDER BY shop_id, year, month", $annees));
+}
+
+function ep_budgets(): array
+{
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    $slugByTag = levierSlugByTag();
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_shop_budget WHERE fiscal_year = ?', [$exercice]) as $b) {
+        $sid = $b['shop_id'];
+        $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM ceo_shop_month_perf WHERE shop_id = ? AND year = ? AND revenue IS NOT NULL', [$sid, $exercice]);
+        $charges = array_map(fn ($l) => [
+            'poste' => $l['label'],
+            'levier' => $l['levid'] !== null ? ($slugByTag[(int) $l['levid']] ?? '') : '',
+            'pctBudget' => (float) $l['pct_budget'],
+            'pctTheorique' => $l['pct_theorique'] !== null ? (float) $l['pct_theorique'] : null,
+            'champReel' => $l['real_field'],
+        ], Db::rows('SELECT * FROM ceo_shop_budget_line WHERE shop_id = ? AND fiscal_year = ? ORDER BY sort_order', [$sid, $exercice]));
+        $out[] = [
+            'storeId' => $sid, 'exercice' => $exercice,
+            'moisEncodes' => (int) $enc['n'], 'moisTotal' => (int) $b['months_total'],
+            'dernierEncodage' => $enc['last'] ? substr($enc['last'], 0, 10) : null,
+            'panierEngagement' => $b['basket_target'] !== null ? (float) $b['basket_target'] : null,
+            'caTheoriqueAn' => $b['ca_theorique_an'] !== null ? (float) $b['ca_theorique_an'] : null,
+            'etudeMarche' => [
+                'date' => $b['etude_date'], 'source' => $b['etude_source'],
+                'potentielMenages' => $b['etude_potentiel_menages'] !== null ? (int) $b['etude_potentiel_menages'] : null,
+                'potentielMaturite' => $b['etude_potentiel_maturite'] !== null ? (float) $b['etude_potentiel_maturite'] : null,
+                'anneeExploitation' => $b['annee_exploitation'] !== null ? (int) $b['annee_exploitation'] : null,
+                'monteeEnRegime' => $b['montee_regime'] !== null ? json_decode($b['montee_regime'], true) : null,
+                'saisonnalite' => $b['saisonnalite'] !== null ? json_decode($b['saisonnalite'], true) : null,
+                'annexe' => $b['etude_annexe'] !== null ? json_decode($b['etude_annexe'], true) : null,
+            ],
+            'charges' => $charges,
+        ];
+    }
+    return $out;
+}
+
+function ep_targets(): array
+{
+    $ca = []; $expansion = [];
+    foreach (Db::rows('SELECT * FROM ceo_network_target') as $t) {
+        $h = $t['horizon'];
+        $ca[$h] = ['an' => (int) $t['target_year'], 'cible' => (float) $t['revenue_target']];
+        if ($t['note'] !== null) { $ca[$h]['note'] = $t['note']; }
+        $expansion[$h] = ['an' => (int) $t['target_year'], 'cible' => (int) $t['openings_target'], 'reel' => (int) $t['openings_real']];
+    }
+    return ['ca' => $ca, 'expansion' => $expansion, 'caMoyenOuverture' => (float) setting('caMoyenOuverture', 0)];
+}
+
+function ep_consultants(): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_consultant ORDER BY id') as $c) {
+        $visites = array_map(fn ($v) => ['date' => $v['visited_on'], 'store' => $v['store_label'], 'objet' => $v['subject']],
+            Db::rows('SELECT * FROM ceo_consultant_visit WHERE consultant_id = ? ORDER BY visited_on DESC', [$c['id']]));
+        $out[] = ['id' => $c['id'], 'nom' => $c['name'], 'role' => $c['role'], 'email' => $c['email'],
+            'tjm' => $c['daily_rate'] !== null ? (float) $c['daily_rate'] : null,
+            'charge' => $c['workload'] !== null ? (int) $c['workload'] : null, 'visites' => $visites];
+    }
+    return $out;
+}
+
+function ep_suppliers(): array
+{
+    return array_map(fn ($s) => ['id' => $s['id'], 'nom' => $s['name'], 'perim' => $s['perimeter'], 'email' => $s['email']],
+        Db::rows('SELECT * FROM ceo_supplier ORDER BY id'));
+}
+
+function ep_projects(): array
+{
+    $slugByTag = levierSlugByTag();
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_project ORDER BY id') as $p) {
+        $id = $p['id'];
+        $leviers = array_map(fn ($r) => $slugByTag[(int) $r['levid']] ?? '', Db::rows('SELECT levid FROM ceo_project_levid WHERE project_id = ?', [$id]));
+        $jalons = array_map(fn ($j) => ['nom' => $j['name'], 'cible' => $j['target_on'], 'reel' => $j['done_on']],
+            Db::rows('SELECT * FROM ceo_project_milestone WHERE project_id = ? ORDER BY sort_order, id', [$id]));
+        $couts = array_map(fn ($c) => ['poste' => $c['label'], 'prevu' => (float) $c['planned'], 'reel' => (float) $c['actual']],
+            Db::rows('SELECT * FROM ceo_project_cost WHERE project_id = ? ORDER BY id', [$id]));
+        $taches = array_map(fn ($t) => [
+            'id' => $t['id'], 'nom' => $t['name'],
+            'owner' => ['t' => $t['owner_kind'], 'id' => $t['owner_id']],
+            'magasin' => $t['shop_id'], 'due' => $t['due_on'], 'done' => $t['done_on'],
+            'relance' => $t['reminded_on'], 'desc' => $t['description'],
+            'budget' => $t['budget'] !== null ? (float) $t['budget'] : null,
+        ], Db::rows('SELECT * FROM ceo_project_task WHERE project_id = ? ORDER BY id', [$id]));
+        $out[] = [
+            'id' => $id, 'nom' => $p['name'], 'famille' => $p['famille'], 'statut' => $p['status'], 'prio' => $p['priority'],
+            'debut' => $p['starts_on'], 'fin' => $p['ends_on'],
+            'axes' => $p['axes_json'] ? json_decode($p['axes_json'], true) : [$p['axe']],
+            'leviers' => $leviers,
+            'budget' => $p['budget'] !== null ? (float) $p['budget'] : null,
+            'valeurEst' => $p['value_est'] !== null ? (float) $p['value_est'] : null,
+            'valeurReal' => $p['value_real'] !== null ? (float) $p['value_real'] : null,
+            'valeurTxt' => $p['value_txt'],
+            'kpis' => $p['kpis_json'] ? json_decode($p['kpis_json'], true) : [],
+            'jalons' => $jalons, 'taches' => $taches, 'couts' => $couts,
+        ];
+    }
+    return $out;
+}
+
+function ep_crm(): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_project_crm') as $r) {
+        $out[$r['project_id']] = ['gain' => $r['gain'], 'apport' => $r['apport'], 'objectif' => $r['objectif'],
+            'attendu' => $r['attendu'] !== null ? (float) $r['attendu'] : null,
+            'realise' => $r['realise'] !== null ? (float) $r['realise'] : null];
+    }
+    return $out;
+}
+
+function ep_people(): array
+{
+    return array_map(fn ($p) => ['id' => $p['id'], 'nom' => $p['name'], 'role' => $p['role'], 'email' => $p['email']],
+        Db::rows('SELECT * FROM ceo_person ORDER BY id'));
+}
+
+function ep_reporting(): array
+{
+    $reports = array_map(fn ($r) => [
+        'id' => $r['id'], 'nom' => $r['name'], 'type' => $r['type'], 'desc' => $r['description'],
+        'freq' => $r['frequency'], 'postes' => json_decode($r['postes_json'], true),
+        'destId' => $r['dest_id'], 'ccId' => $r['cc_id'] ?? '',
+        'dernier' => $r['last_run'], 'actif' => (bool) $r['active'],
+    ], Db::rows('SELECT * FROM ceo_report_schedule ORDER BY id'));
+    $alertRules = array_map(fn ($a) => ['id' => $a['id'], 'nom' => $a['name'], 'canal' => $a['channel'], 'actif' => (bool) $a['active']],
+        Db::rows('SELECT * FROM ceo_alert_rule ORDER BY id'));
+    return ['reports' => $reports, 'alertRules' => $alertRules];
+}
+
+function ep_journal(): array
+{
+    return array_map(fn ($l) => [
+        'ts' => substr($l['happened_at'], 0, 16), 'qui' => $l['actor'], 'type' => $l['kind'],
+        'projet' => $l['project'] ?? '—', 'msg' => $l['message'],
+    ], Db::rows('SELECT * FROM ceo_journal_entry ORDER BY happened_at DESC, id DESC LIMIT 500'));
+}
+
+function ep_products(): array
+{
+    $periode = $_GET['periode'] ?? '2026-07';
+    [$annee, $mois] = array_map('intval', explode('-', $periode));
+    $rows = Db::rows(
+        'SELECT p.id, p.nom, p.categorie, s.volume, s.nb_magasins, s.prix_moyen, s.cout_unitaire,
+                n1.volume AS volume_n1
+           FROM ceo_product p
+           JOIN ceo_product_month_sales s  ON s.product_id = p.id AND s.annee = ? AND s.mois = ?
+      LEFT JOIN ceo_product_month_sales n1 ON n1.product_id = p.id AND n1.annee = ? AND n1.mois = ?
+          WHERE p.actif = 1 ORDER BY p.id', [$annee, $mois, $annee - 1, $mois]);
+    return array_map(fn ($r) => [
+        'id' => $r['id'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
+        'volume' => (int) $r['volume'], 'prix' => (float) $r['prix_moyen'], 'coutUnit' => (float) $r['cout_unitaire'],
+        'tendVol' => $r['volume_n1'] ? round($r['volume'] / $r['volume_n1'], 4) : 1,
+        'magasins' => (int) $r['nb_magasins'],
+    ], $rows);
+}

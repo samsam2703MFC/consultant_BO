@@ -1,0 +1,10 @@
+# Cockpit CEO — Apache
+RewriteEngine On
+
+# API REST → contrôleur frontal
+RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
+
+# SPA : tout chemin qui n'est pas un fichier réel → index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
