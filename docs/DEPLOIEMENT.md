@@ -11,10 +11,11 @@ chemins (assets, API) sont relatifs à l'URL de la page.
 ## 1. Variables & secrets nécessaires
 
 **Un seul jeu de secrets : les identifiants MySQL déjà utilisés par le panel**
-(mêmes valeurs que son `config/db.local.php`). Ni accès DBA, ni htpasswd :
-l'application crée ses tables elle-même au premier appel (comme le panel avec
-`mac_report_share`) et embarque sa propre authentification, dont le mot de
-passe est **défini dans l'écran de premier lancement** — rien à distribuer.
+(mêmes valeurs que son `config/db.local.php`). Ni accès DBA, ni htpasswd, ni
+mot de passe applicatif : l'application crée ses tables elle-même au premier
+appel (comme le panel avec `mac_report_share`) et l'accès est **ouvert** —
+les utilisateurs arrivent **redirigés depuis l'ERP**, qui porte
+l'authentification. Rien à distribuer.
 
 | Variable | Valeur pour ce serveur | Rôle |
 |---|---|---|
@@ -108,24 +109,27 @@ chmod 640 config/config.php && chown www-data:www-data config/config.php
 
 ---
 
-## 5. Authentification intégrée — premier lancement
+## 5. Accès — redirection depuis l'ERP (auth désactivée par défaut)
 
-Le cockpit embarque sa propre authentification :
+L'accès au cockpit est **ouvert** : les utilisateurs y arrivent redirigés
+depuis l'ERP, qui porte l'authentification. Il suffit à l'ERP de pointer un
+lien/bouton vers `http://185.180.206.46/consulant_bo/`.
 
-- **Première visite** : l'écran « Premier lancement » demande de **définir le
-  mot de passe** (8 caractères minimum). Faites-le **immédiatement après la
-  mise en ligne** — tant qu'aucun mot de passe n'est défini, le premier
-  visiteur venu peut le poser.
-- Ensuite : mot de passe demandé à chaque connexion ; session de 30 jours
-  (cookie HttpOnly signé, secret généré à l'installation, stocké en base).
-  Toutes les routes de l'API sont fermées sans session valide.
-- « Quitter » (bas de la barre latérale) ferme la session ; changement de mot
-  de passe : `POST /api/cockpit/auth/password` `{ancien, password}`.
-- Mot de passe perdu : `DELETE FROM ceo_app_setting WHERE `` `key` `` =
-  'authPasswordHash';` → l'écran de premier lancement revient.
+À savoir : la redirection ne bloque pas un accès direct par l'URL. Si cela
+devient un sujet, l'écran de connexion intégré est déjà là — un booléen à
+activer :
 
-HTTPS fortement recommandé dès qu'un nom de domaine existe (le cookie passe
-en `Secure` automatiquement derrière HTTPS).
+```php
+// config/config.php
+'auth' => true,   // ou variable d'env COCKPIT_AUTH=1
+```
+
+→ au prochain chargement, écran « Premier lancement » (mot de passe à
+définir, 8 caractères min.), session 30 jours (cookie HttpOnly signé), API
+fermée sans session, bouton « Quitter ». Mot de passe perdu :
+`DELETE FROM ceo_app_setting WHERE `` `key` `` = 'authPasswordHash';`
+
+HTTPS recommandé dès qu'un nom de domaine existe.
 
 ---
 
@@ -134,19 +138,20 @@ en `Secure` automatiquement derrière HTTPS).
 ```bash
 BASE=http://185.180.206.46/consulant_bo
 # 1er appel : déclenche l'auto-installation (tables + seed) puis répond
-curl -s $BASE/api/cockpit/auth/status          # → {"setup":false,"authed":false} au tout premier appel
-curl -s $BASE/api/cockpit/meta                 # → 401 {"error":"auth",...} : l'API est bien fermée
+curl -s $BASE/api/cockpit/meta | head -c 200          # → JSON meta (pas d'erreur "base de données")
+curl -s $BASE/api/cockpit/stores | head -c 200        # → les magasins
+curl -s $BASE/api/cockpit/pwa/reports | head -c 300   # → base panel + partages mac_report_share
 ```
 
 Puis dans le navigateur : `$BASE/` →
-- écran **« Premier lancement »** → définir le mot de passe → le cockpit
-  s'ouvre sur les données (la console NE doit PAS afficher « jeu de
-  démonstration chargé » — sinon l'API ne répond pas et vous voyez le repli
-  démo embarqué, pas la base) ;
+- le cockpit s'ouvre **directement** sur les données (la console NE doit PAS
+  afficher « jeu de démonstration chargé » — sinon l'API ne répond pas et
+  vous voyez le repli démo embarqué, pas la base) ;
 - **Reporting** → « Panel consultant » : « Générer le rapport → » ouvre le
   panel, la carte de droite liste les partages de `mac_report_share` ;
 - cocher une tâche puis **Journal** : la ligne est tracée (écriture OK) ;
-- navigation privée sans cookie : l'app doit re-demander le mot de passe.
+- depuis l'ERP : le lien de redirection arrive sur la même URL, rien d'autre
+  à configurer.
 
 ---
 

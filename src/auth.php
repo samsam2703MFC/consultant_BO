@@ -16,6 +16,13 @@ declare(strict_types=1);
 const AUTH_COOKIE = 'cockpit_s';
 const AUTH_TTL    = 2592000; // 30 jours
 
+/**
+ * Auth désactivée par défaut : l'accès au cockpit se fait par redirection
+ * depuis l'ERP, qui porte l'authentification. Passez 'auth' => true dans
+ * config/config.php pour activer l'écran de connexion intégré.
+ */
+function authEnabled(): bool { return (bool) (Db::config()['auth'] ?? false); }
+
 function authSecret(): string { return (string) setting('authSecret', ''); }
 
 function authHash(): ?string { $h = setting('authPasswordHash'); return is_string($h) ? $h : null; }
@@ -50,6 +57,7 @@ function authClear(): void
 function authRoute(string $method, string $path): ?array
 {
     if ($method === 'GET' && $path === '/auth/status') {
+        if (!authEnabled()) { return ['setup' => true, 'authed' => true, 'disabled' => true]; }
         return ['setup' => authIsSetup(), 'authed' => authOk()];
     }
     if ($method === 'POST' && $path === '/auth/setup') {

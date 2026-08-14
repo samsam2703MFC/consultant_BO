@@ -25,7 +25,7 @@ try {
 
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
     if ($out === null) {
-        if (!authOk()) {                    // tout le reste exige la session
+        if (authEnabled() && !authOk()) {   // session exigée seulement si l'auth intégrée est activée
             http_response_code(401);
             $out = ['error' => 'auth', 'setup' => authIsSetup()];
         } else {
