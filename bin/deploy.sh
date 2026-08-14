@@ -186,5 +186,14 @@ if [[ $rc -eq 0 ]]; then
   log "Recette OK. Cockpit disponible sur ${PUBLIC_BASE}/"
 else
   warn "Recette en échec — vérifiez config/config.php (identifiants MySQL) et les logs Apache."
+  # --- Diagnostic DB (lecture seule) sur échec ---------------------------
+  DIAG_BIN="$(command -v mysql || command -v mariadb || true)"
+  if [[ -n "$DIAG_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
+    log "Diagnostic MySQL (version / sql_mode / SHOW CREATE ceo_project_task)…"
+    MYSQL_PWD="$COCKPIT_DB_PASSWORD" "$DIAG_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" \
+      -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" \
+      -e "SELECT VERSION() AS version\G SELECT @@sql_mode AS sql_mode\G SHOW CREATE TABLE ceo_project_task\G" 2>&1 \
+      | sed -n '1,60p' || warn "diag SQL indisponible"
+  fi
 fi
 exit $rc
