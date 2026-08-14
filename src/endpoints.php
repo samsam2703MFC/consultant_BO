@@ -97,7 +97,51 @@ function ep_stores(): array
         'opened' => $r['opened_on'] ? substr($r['opened_on'], 0, 7) : null,
         'valT' => $r['valuation_target'] !== null ? (float) $r['valuation_target'] : null,
         'panier' => $r['basket_ref'] !== null ? (float) $r['basket_ref'] : null,
+        'pwaId' => isset($r['pwa_shop_id']) && $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null,
     ], Db::rows('SELECT * FROM ceo_shop ORDER BY id'));
+}
+
+/**
+ * GET /pwa/reports — rapports du panel consultant (pwa_consultant).
+ *
+ * Deux volets :
+ *  - `base` + `magasins[].pwaId` : de quoi construire côté client les liens de
+ *    GÉNÉRATION (`/reports/view?type=week|month&scope=all|{id}`,
+ *    `/reports/checklist/week|month?scope={id}`) — le rapport est rendu par le
+ *    panel à l'ouverture, c'est sa génération ;
+ *  - `partages` : les liens de partage FIGÉS récupérés de `mac_report_share`
+ *    (un rapport mensuel, une boutique, un mois — page publique `/r/{token}`),
+ *    avec état, ouvertures et expiration.
+ */
+function ep_pwa_reports(): array
+{
+    $base = rtrim((string) setting('pwaBase', ''), '/');
+    $magasins = array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'pwaId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null],
+        Db::rows("SELECT id, name, pwa_shop_id FROM ceo_shop WHERE status = 'Ouvert' ORDER BY id"));
+    $shopByPwa = [];
+    foreach ($magasins as $m) { if ($m['pwaId'] !== null) { $shopByPwa[$m['pwaId']] = $m['nom']; } }
+
+    $partages = [];
+    try {
+        $rows = Db::rows('SELECT token, id_shop, ym, label, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at
+                            FROM mac_report_share ORDER BY created_at DESC LIMIT 100');
+    } catch (PDOException $e) {
+        $rows = []; // table absente (panel sur une autre base) : volet vide, pas d'erreur
+    }
+    $now = date('Y-m-d H:i:s');
+    foreach ($rows as $r) {
+        $etat = $r['revoked_at'] !== null ? 'Révoqué' : ($r['expires_at'] < $now ? 'Expiré' : 'Actif');
+        $partages[] = [
+            'label' => $r['label'], 'ym' => $r['ym'],
+            'magasin' => $shopByPwa[(int) $r['id_shop']] ?? ('Boutique #' . $r['id_shop']),
+            'consultant' => $r['consultant_name'],
+            'url' => $base !== '' ? $base . '/r/' . $r['token'] : '/r/' . $r['token'],
+            'cree' => substr($r['created_at'], 0, 10), 'expire' => substr($r['expires_at'], 0, 10),
+            'etat' => $etat, 'opens' => (int) $r['opens'],
+            'derniereOuverture' => $r['last_opened_at'] ? substr($r['last_opened_at'], 0, 10) : null,
+        ];
+    }
+    return ['base' => $base, 'magasins' => $magasins, 'partages' => $partages];
 }
 
 function ep_perf(): array

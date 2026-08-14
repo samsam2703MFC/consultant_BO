@@ -315,10 +315,12 @@ function buildStatements(): array
     }
 
     // --- magasins + perf mensuelle + budgets
-    foreach ($stores as $s) {
-        $sql[] = 'INSERT INTO ceo_shop (id, code, name, franchisee, zone, status, opened_on, valuation_target, basket_ref) VALUES (' .
+    // pwa_shop_id : id de la boutique dans le panel consultant (atelierby_db).
+    // En production, remplacez ces valeurs de démo par les vrais ids du panel.
+    foreach ($stores as $i => $s) {
+        $sql[] = 'INSERT INTO ceo_shop (id, code, name, franchisee, zone, status, opened_on, valuation_target, basket_ref, pwa_shop_id) VALUES (' .
             q($s['id']) . ', ' . q($s['code']) . ', ' . q($s['nom']) . ', ' . q($s['fr']) . ', ' . q($s['zone']) . ', ' . q($s['status']) . ', ' .
-            q($s['opened'] . '-01') . ', ' . n($s['valT']) . ', ' . n($s['panier']) . ');';
+            q($s['opened'] . '-01') . ', ' . n($s['valT']) . ', ' . n($s['panier']) . ', ' . ($i + 1) . ');';
     }
 
     foreach ($stores as $s) {
@@ -429,6 +431,18 @@ function buildStatements(): array
         $sql[] = "INSERT INTO ceo_product_month_sales VALUES (" . q($id) . ", 2025, 7, $volN1, $mags, $prix, $cout);";
     }
 
+    // --- liens de partage du panel consultant (démo — table mac_report_share)
+    $shares = [
+        ['tok_demo_cha_2026-06_aK3xW9pQvR7mZsL0dF2gH4jN8bYcE6tU1', 1, '2026-06', 'Rapport mensuel — Bruxelles Châtelain — juin 2026', 1, 'Marc Janssens', '2026-07-03 09:12:00', '2026-07-17 09:12:00', null, 7, '2026-07-15 08:40:00'],
+        ['tok_demo_lie_2026-06_bT5yV2nM8cX4kP0qW7rZ1sD9fG3hJ6lA2', 7, '2026-06', 'Rapport mensuel — Liège Le Carré — juin 2026', 1, 'Marc Janssens', '2026-07-04 14:30:00', '2026-07-18 14:30:00', null, 12, '2026-07-16 19:05:00'],
+        ['tok_demo_gnd_2026-07_cU8wQ4rN1mY6zT3vK9xB5dH0jF7gL2pS3', 8, '2026-07', 'Rapport mensuel — Gand Korenmarkt — juillet 2026', 4, 'Sofia Ricci', '2026-08-02 10:05:00', '2026-08-16 10:05:00', null, 3, '2026-08-05 11:22:00'],
+        ['tok_demo_nam_2026-05_dV1zX7sP4nW2qM9rT5yK8cB3fJ6hG0lD4', 6, '2026-05', 'Rapport mensuel — Namur Marché — mai 2026', 2, 'Élise Dupont', '2026-06-05 16:45:00', '2026-06-19 16:45:00', '2026-06-12 09:00:00', 1, '2026-06-06 12:10:00'],
+    ];
+    foreach ($shares as [$tok, $shop, $ym, $label, $cid, $cname, $created, $expires, $revoked, $opens, $lastOpen]) {
+        $sql[] = 'INSERT INTO mac_report_share (token, id_shop, ym, label, html, id_consultant, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at) VALUES (' .
+            q($tok) . ", $shop, " . q($ym) . ', ' . q($label) . ', NULL, ' . $cid . ', ' . q($cname) . ', ' . q($created) . ', ' . q($expires) . ', ' . q($revoked) . ", $opens, " . q($lastOpen) . ');';
+    }
+
     // --- paramètres applicatifs (/meta hors référentiels)
     $settings = [
         'reseau'           => ['nom' => "L'Atelier by", 'sousTitre' => 'Cockpit CEO — Réseau'],
@@ -443,6 +457,7 @@ function buildStatements(): array
         'familles'         => ['Produits', 'Services', 'Organisation & coûts', 'Développement réseau'],
         'reportTypes'      => ['Financier', 'Commercial', 'Contrôle qualité', 'Pilotage projets', 'Développement réseau'],
         'caMoyenOuverture' => 820000,
+        'pwaBase'          => 'https://panel.atelierby.be',   // base d'URL du panel consultant (pwa_consultant)
     ];
     foreach ($settings as $k => $v) {
         $sql[] = 'INSERT INTO ceo_app_setting VALUES (' . q($k) . ', ' . j($v) . ');';

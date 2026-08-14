@@ -21,6 +21,7 @@ class App {
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
+      pwaType: 'gestion:month', pwaScope: 'all',
       pdCat: 'Toutes les catégories', pdSort: 'score' };
     this._h = [];
     this._tt = null;
@@ -1008,6 +1009,51 @@ class App {
         sections: secs };
     } else common.repPrev = null;
     common.eqRep = null; common.eqClose = () => {};
+
+    // --- rapports du panel consultant (pwa_consultant) : générer + récupérer
+    const pwa = D.pwaReports || { base: '', magasins: [], partages: [] };
+    common.pwaHasBase = !!pwa.base;
+    common.pwaBase = pwa.base || 'Base d’URL du panel non configurée (paramètre pwaBase)';
+    const [pwaKind, pwaPer] = (S.pwaType || 'gestion:month').split(':');
+    common.pwaTypes = [
+      { val: 'gestion:week', nom: 'Gestion — hebdomadaire' }, { val: 'gestion:month', nom: 'Gestion — mensuel' },
+      { val: 'checklist:week', nom: 'Checklist tâches — semaine' }, { val: 'checklist:month', nom: 'Checklist tâches — mois' }];
+    common.pwaType = S.pwaType;
+    common.setPwaType = e => { const v = e.target.value;
+      // la checklist n'existe que par boutique : quitter « Réseau » si besoin
+      this.setState(s2 => ({ pwaType: v, pwaScope: v.startsWith('checklist') && s2.pwaScope === 'all' ? ((pwa.magasins[0] || {}).id || 'all') : s2.pwaScope })); };
+    const magOk = pwa.magasins.filter(m => m.pwaId != null);
+    common.pwaScopes = (pwaKind === 'gestion' ? [{ val: 'all', nom: 'Réseau — toutes les boutiques' }] : [])
+      .concat(magOk.map(m => ({ val: m.id, nom: m.nom })));
+    common.pwaScope = S.pwaScope;
+    common.setPwaScope = e => this.setState({ pwaScope: e.target.value });
+    const pwaMag = magOk.find(m => m.id === S.pwaScope);
+    const pwaScopeArg = S.pwaScope === 'all' ? 'all' : (pwaMag ? String(pwaMag.pwaId) : 'all');
+    const pwaPath = pwaKind === 'gestion'
+      ? '/reports/view?type=' + pwaPer + '&scope=' + pwaScopeArg
+      : '/reports/checklist/' + pwaPer + '?scope=' + pwaScopeArg;
+    const pwaUrl = (pwa.base || '') + pwaPath;
+    common.pwaUrl = pwaUrl;
+    const pwaTypeNom = (common.pwaTypes.find(t => t.val === S.pwaType) || {}).nom || '';
+    const pwaScopeNom = S.pwaScope === 'all' ? 'Réseau' : (pwaMag ? pwaMag.nom : '');
+    common.pwaNote = 'Le rapport est construit par le panel à l’ouverture (imprimable / « Enregistrer en PDF »). '
+      + 'Les liens figés ci-contre sont ceux partagés par les consultants — récupérés de mac_report_share, avec ouvertures et expiration.';
+    common.pwaGen = () => { if (!pwa.base){ this.notify('Configurez la base d’URL du panel (paramètre pwaBase).'); return; }
+      window.open(pwaUrl, '_blank', 'noopener');
+      this.log('Rapport', '—', 'Rapport du panel consultant généré — ' + pwaTypeNom + ' · ' + pwaScopeNom);
+      this.notify('Rapport du panel ouvert — ' + pwaTypeNom); };
+    common.pwaCopy = () => { try { navigator.clipboard.writeText(pwaUrl); } catch (e) {} this.notify('URL du rapport du panel copiée'); };
+    const etatCl = { 'Actif': ['rgba(45,122,62,0.10)', '#2d7a3e'], 'Expiré': ['rgba(193,122,42,0.16)', '#8a5a13'], 'Révoqué': ['rgba(141,29,44,0.10)', '#8D1D2C'] };
+    common.pwaShares = (pwa.partages || []).map(p => { const cl = etatCl[p.etat] || etatCl['Expiré'];
+      return { label: p.label, magasin: p.magasin, ym: p.ym, consultant: p.consultant || '—', url: p.url,
+        meta: (p.consultant ? p.consultant + ' · ' : '') + 'créé le ' + this.fD(p.cree) + ' · expire le ' + this.fD(p.expire)
+          + ' · ' + p.opens + ' ouverture' + (p.opens > 1 ? 's' : '') + (p.derniereOuverture ? ' (dern. ' + this.fD(p.derniereOuverture) + ')' : ''),
+        etat: p.etat, etatSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;white-space:nowrap;background:' + cl[0] + ';color:' + cl[1],
+        actif: p.etat === 'Actif',
+        open: () => { window.open(p.url, '_blank', 'noopener');
+          this.log('Rapport', '—', 'Rapport partagé du panel ouvert — ' + p.label); },
+        copy: () => { try { navigator.clipboard.writeText(p.url); } catch (e) {} this.notify('Lien de partage copié — ' + p.magasin); } }; });
+    common.pwaSharesVide = common.pwaShares.length === 0;
   }
 
   /* --- journal ------------------------------------------------------------------------ */

@@ -934,6 +934,51 @@ function tplReporting(c, x){
     <div style="grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
         <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <div style="font-size:13px;font-weight:500">Panel consultant — générer un rapport</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Rapports de gestion (hebdo / mensuel) et checklist tâches, rendus par le panel consultant.</div>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <select ${x.C(c.setPwaType)} style="${selCss};font-family:var(--font-ui)">${opts(c.pwaTypes, c.pwaType, o => o.val, o => o.nom)}</select>
+            <select ${x.C(c.setPwaScope)} style="${selCss};font-family:var(--font-ui)">${opts(c.pwaScopes, c.pwaScope, o => o.val, o => esc(o.nom))}</select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <code style="flex:1;min-width:240px;font-size:10.5px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:6px;padding:5px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.pwaUrl)}</code>
+            <button ${x.A(c.pwaCopy)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Copier</button>
+            <button ${x.A(c.pwaGen)} style="border:none;border-radius:7px;padding:6px 12px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;white-space:nowrap">Générer le rapport →</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5;text-wrap:pretty">${esc(c.pwaNote)}</div>
+          ${c.pwaHasBase ? '' : `<div style="padding:9px 12px;border-radius:8px;background:rgba(193,122,42,0.14);color:#8a5a13;font-size:11.5px;font-weight:500">${esc(c.pwaBase)}</div>`}
+        </div>
+      </div>
+
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+        <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <div style="font-size:13px;font-weight:500">Panel consultant — liens de partage récupérés</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Rapports mensuels figés partagés par les consultants — un rapport, une boutique, un mois, sans authentification.</div>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          ${c.pwaSharesVide ? `<div style="padding:16px 18px;font-size:12px;color:var(--color-text-muted)">Aucun lien de partage récupéré du panel.</div>` : ''}
+          ${c.pwaShares.map(p => `
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <div style="flex:1;min-width:220px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:12.5px;font-weight:500">${esc(p.magasin)}</span>
+                  <span style="font-size:11px;color:var(--color-text-muted)">${p.ym}</span>
+                  <span style="${p.etatSt}">${p.etat}</span>
+                </div>
+                <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(p.meta)}</div>
+              </div>
+              <button ${x.A(p.copy)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Copier</button>
+              <button ${x.A(p.open)} ${p.actif ? '' : 'disabled'} style="border:none;border-radius:7px;padding:5px 10px;background:${p.actif ? 'var(--color-primary)' : 'var(--color-background-secondary)'};color:${p.actif ? '#fff' : 'var(--color-text-muted)'};font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:${p.actif ? 'pointer' : 'default'}">Ouvrir</button>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+        <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
           <div style="font-size:13px;font-weight:500">Rapport consultant — par district</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Chaque consultant reçoit les magasins de son district et les leviers à travailler en visite.</div>
         </div>

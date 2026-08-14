@@ -52,6 +52,7 @@ function route(string $method, string $path): mixed
             $path === '/reporting'                     => ep_reporting(),
             $path === '/journal'                       => ep_journal(),
             $path === '/products/scoring'              => ep_products(),
+            $path === '/pwa/reports'                   => ep_pwa_reports(),
             default                                    => notFound(),
         };
     }

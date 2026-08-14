@@ -96,7 +96,8 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 `/referentiels/kpis`, `/referentiels/email-templates`,
 `/referentiels/project-templates`, `/stores`, `/stores/perf`,
 `/stores/budgets`, `/targets`, `/consultants`, `/fournisseurs`, `/projects`,
-`/projects/crm`, `/people`, `/reporting`, `/journal`, `/products/scoring`.
+`/projects/crm`, `/people`, `/reporting`, `/journal`, `/products/scoring`,
+`/pwa/reports`.
 
 Écritures : `POST /projects`, `PATCH /projects/{id}`,
 `POST /projects/{id}/tasks`, `PATCH /projects/{id}/tasks/{taskId}`,
@@ -107,6 +108,24 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 
 Chaque écriture produit une ligne dans `ceo_journal_entry` (écran Journal).
 Détail complet, exemples JSON et DDL : `docs/contrat-api.md`.
+
+## Intégration panel consultant (pwa_consultant)
+
+L'écran **Reporting** intègre les rapports du panel consultant :
+
+- **Générer** : liens profonds vers les rapports rendus par le panel —
+  gestion hebdo/mensuel (`/reports/view?type=week|month&scope=all|{id}`) et
+  checklist tâches par boutique (`/reports/checklist/week|month?scope={id}`).
+  Chaque génération est tracée au journal.
+- **Récupérer** : les liens de partage figés (`mac_report_share`, pages
+  publiques `/r/{token}`) sont lus et listés avec état (Actif / Expiré /
+  Révoqué), ouvertures et expiration. Table absente = volet vide, sans erreur.
+
+Configuration : `pwaBase` dans `ceo_app_setting` (base d'URL du panel) et
+`ceo_shop.pwa_shop_id` (id de la boutique dans la base du panel — les valeurs
+du seed sont des ids de démo à remplacer). Si le panel vit sur une autre base
+MySQL que le cockpit, pointez la connexion du cockpit sur la base commune ou
+répliquez `mac_report_share`.
 
 ## Notes
 

@@ -28,7 +28,8 @@ export const ENDPOINTS = {
   people:         '/people',
   reporting:      '/reporting',
   journal:        '/journal',
-  products:       '/products/scoring?periode=2026-07'
+  products:       '/products/scoring?periode=2026-07',
+  pwaReports:     '/pwa/reports'
 };
 
 async function get(path, signal){
@@ -86,7 +87,8 @@ function shape(p, source){
       reports: (p.reporting || {}).reports,
       alertRules: (p.reporting || {}).alertRules,
       logs: p.journal,
-      products: p.products
+      products: p.products,
+      pwaReports: p.pwaReports
     })
   };
 }
@@ -138,10 +140,28 @@ function demoPayload(m){
       { poste: 'Charges financières', levier: '', pctBudget: seuils.financieres, champReel: null }
     ]
   }; });
+  // Rapports du panel consultant (pwa_consultant) — même forme que /pwa/reports.
+  const pwaBase = 'https://panel.atelierby.be';
+  const ouverts = D.stores.filter(s => s.status === 'Ouvert');
+  const pwaReports = {
+    base: pwaBase,
+    magasins: ouverts.map((s, i) => ({ id: s.id, nom: s.nom, pwaId: i + 1 })),
+    partages: [
+      { label: 'Rapport mensuel — Bruxelles Châtelain — juin 2026', ym: '2026-06', magasin: 'Bruxelles — Châtelain', consultant: 'Marc Janssens',
+        url: pwaBase + '/r/tok_demo_cha_2026-06_aK3xW9pQvR7mZsL0dF2gH4jN8bYcE6tU1', cree: '2026-07-03', expire: '2026-07-17', etat: 'Expiré', opens: 7, derniereOuverture: '2026-07-15' },
+      { label: 'Rapport mensuel — Liège Le Carré — juin 2026', ym: '2026-06', magasin: 'Liège — Le Carré', consultant: 'Marc Janssens',
+        url: pwaBase + '/r/tok_demo_lie_2026-06_bT5yV2nM8cX4kP0qW7rZ1sD9fG3hJ6lA2', cree: '2026-07-04', expire: '2026-07-18', etat: 'Expiré', opens: 12, derniereOuverture: '2026-07-16' },
+      { label: 'Rapport mensuel — Gand Korenmarkt — juillet 2026', ym: '2026-07', magasin: 'Gand — Korenmarkt', consultant: 'Sofia Ricci',
+        url: pwaBase + '/r/tok_demo_gnd_2026-07_cU8wQ4rN1mY6zT3vK9xB5dH0jF7gL2pS3', cree: '2026-08-02', expire: '2026-08-16', etat: 'Actif', opens: 3, derniereOuverture: '2026-08-05' },
+      { label: 'Rapport mensuel — Namur Marché — mai 2026', ym: '2026-05', magasin: 'Namur — Marché', consultant: 'Élise Dupont',
+        url: pwaBase + '/r/tok_demo_nam_2026-05_dV1zX7sP4nW2qM9rT5yK8cB3fJ6hG0lD4', cree: '2026-06-05', expire: '2026-06-19', etat: 'Révoqué', opens: 1, derniereOuverture: '2026-06-06' }
+    ]
+  };
   return {
     raw: D, meta, leviers: m.LEVIERS, kpis: m.KPI_LIST, familles: m.FAMILLES, reportTypes: m.REPORT_TYPES, emailTemplates: D.emailTemplates, projTemplates: D.projTemplates,
     stores: D.stores, perf: null, budgets, targets: D.targets, consultants: D.consultants, suppliers: D.suppliers,
     projects: D.projects, crm: D.crm, people: D.people,
-    reporting: { reports: D.reports, alertRules: D.alertRules }, journal: D.logs, products: D.products
+    reporting: { reports: D.reports, alertRules: D.alertRules }, journal: D.logs, products: D.products,
+    pwaReports
   };
 }

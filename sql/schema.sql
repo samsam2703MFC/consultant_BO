@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS ceo_shop (
   status           ENUM('Ouvert','En ouverture','Fermé') NOT NULL DEFAULT 'Ouvert',
   opened_on        DATE NULL,
   valuation_target DECIMAL(12,2) NULL,
-  basket_ref       DECIMAL(6,2) NULL
+  basket_ref       DECIMAL(6,2) NULL,
+  pwa_shop_id      BIGINT UNSIGNED NULL   -- id de la boutique dans le panel consultant (atelierby_db)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Réel mensuel encodé par le franchisé (une ligne par magasin et par mois)
@@ -304,6 +305,32 @@ CREATE TABLE IF NOT EXISTS ceo_product (
   categorie VARCHAR(60)  NOT NULL,
   actif     TINYINT(1)   NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Panel consultant (pwa_consultant) — table LUE par le cockpit.
+-- Elle appartient au panel (atelierby_db) qui la crée lui-même au premier
+-- partage ; ce CREATE IF NOT EXISTS ne sert qu'à un déploiement autonome.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mac_report_share (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  token           VARCHAR(64)     NOT NULL,
+  id_shop         BIGINT UNSIGNED NOT NULL,
+  ym              CHAR(7)         NOT NULL,
+  label           VARCHAR(190)    NOT NULL,
+  html            MEDIUMBLOB      NULL,
+  id_consultant   BIGINT UNSIGNED NOT NULL,
+  consultant_name VARCHAR(190)    NULL,
+  created_at      DATETIME        NOT NULL,
+  expires_at      DATETIME        NOT NULL,
+  revoked_at      DATETIME        NULL,
+  opens           INT UNSIGNED    NOT NULL DEFAULT 0,
+  last_opened_at  DATETIME        NULL,
+  last_ip         VARCHAR(45)     NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_token (token),
+  KEY idx_consultant (id_consultant, created_at),
+  KEY idx_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS ceo_product_month_sales (
   product_id    VARCHAR(24) NOT NULL,
