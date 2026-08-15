@@ -10,6 +10,31 @@ export const LEVIERS=[
  {slug:'labour-cost',nom:'Labour Cost',type:'Coût',color:'#8b5cf6',desc:'Coût main d\u2019œuvre : plannings au flux, productivité, ratio CA/ETP, polyvalence.'},
  {slug:'overhead-cost',nom:'Overhead Cost',type:'Coût',color:'#8b5cf6',desc:'Charges fixes : loyer, énergies, abonnements, assurances, maintenance.'}];
 export const REPORT_TYPES=['Financier','Commercial','Contrôle qualité','Pilotage projets','Développement réseau'];
+// Validation des tâches consultants : les cinq niveaux, le seuil, et le
+// référentiel famille → type de problème.
+//
+// En mode API, cette définition vient de `meta.signalement` (réglage
+// `ceo_app_setting`) ; ici elle sert le mode démonstration. C'est la SEULE
+// copie côté client : ni templates.js ni app.js ne redéclarent un libellé ou
+// une couleur, sinon les deux se mettent à diverger sans que rien ne le dise.
+//
+// Les mêmes cinq niveaux servent au panel consultant pour les tâches boutique.
+// Un « majeur » doit vouloir dire la même chose des deux côtés, sinon les
+// chiffres ne s'additionnent pas.
+export const SIGNALEMENT={
+ seuil:4,
+ niveaux:[
+  {n:5,nom:'Exemplaire',couleur:'#C9A227',aide:"au-dessus de l'attendu"},
+  {n:4,nom:'Conforme',couleur:'#2D7A3E',aide:'livrable accepté'},
+  {n:3,nom:'Non conforme — mineur',couleur:'#D97706',aide:'détail à reprendre'},
+  {n:2,nom:'Non conforme — majeur',couleur:'#C0182B',aide:'écart net, à reprendre'},
+  {n:1,nom:'Non conforme — critique',couleur:'#8D1D2C',aide:'à reprendre immédiatement'}],
+ familles:[
+  {nom:'Livrable',types:['Incomplet','Non conforme au brief','Sans relecture','Format inexploitable']},
+  {nom:'Délai',types:['Rendu hors délai','Sans prévenir','Report répété']},
+  {nom:'Qualité de service',types:['Injoignable','Compte rendu absent','Consigne non suivie']},
+  {nom:'Budget',types:['Dépassement','Non justifié']},
+  {nom:'Autre',types:['À préciser']}]};
 export const FAMILLES=['Produits','Services','Organisation & coûts','Développement réseau'];
 export const KPI_LIST=['CA réseau','Trafic','Panier moyen','Récurrence client','Food cost %','Labour cost %','Overhead cost %','Marge nette franchisé %','Points de vente','Expérience client (mystère)'];
 export function buildData(){

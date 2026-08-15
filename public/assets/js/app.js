@@ -20,6 +20,10 @@ class App {
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
+      // Brouillon de validation par tâche : { note, famille, type, commentaire }.
+      // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
+      // ne doit pas clôturer une tâche.
+      tkVal: {},
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       pdCat: 'Toutes les catégories', pdSort: 'score' };
@@ -210,7 +214,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Liste des tâches par intervenant : cochez ce qui est fait, cliquez une ligne pour le détail.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -921,36 +925,114 @@ class App {
       .concat(D.stores.map(s => ({ val: s.id, nom: s.nom })));
     const mine = flat.filter(x => (S.tkWho === 'all' || (x.t.owner.t + ':' + x.t.owner.id) === S.tkWho)
       && (S.tkStore === 'tous' || (S.tkStore === 'reseau' ? !x.t.magasin : x.t.magasin === S.tkStore)));
-    const nFait = mine.filter(x => x.t.done).length;
+    const SG = M.SIGNAL || { seuil: 4, niveaux: [], familles: [] };
+    const seuil = SG.seuil || 4;
+    const niv = n => (SG.niveaux || []).find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666', aide: '' };
+    // Une tâche livrée mais pas encore notée attend une décision : c'est le
+    // seul état que la case à cocher ne savait pas exprimer.
+    const aValider = x => !!x.t.done && (x.t.note === null || x.t.note === undefined);
+    const validee = x => x.t.note !== null && x.t.note !== undefined;
+    const nValid = mine.filter(validee).length;
+    const nAttente = mine.filter(aValider).length;
     const nRetard = mine.filter(x => !x.t.done && x.t.due < M.TODAY).length;
-    common.tkResume = mine.length + ' tâches · ' + nFait + ' faites · ' + nRetard + ' en retard';
+    const notes = mine.filter(validee).map(x => x.t.note);
+    const moy = notes.length ? (notes.reduce((a, b) => a + b, 0) / notes.length) : null;
+    const nSignal = mine.filter(x => x.t.signalement && x.t.signalement.ouvert).length;
+    common.tkResume = mine.length + ' tâches · ' + nAttente + ' à valider · ' + nValid + ' validées'
+      + (moy !== null ? ' · note moyenne ' + moy.toFixed(1).replace('.', ',') : '')
+      + (nSignal ? ' · ' + nSignal + ' signalement' + (nSignal > 1 ? 's' : '') + ' ouvert' + (nSignal > 1 ? 's' : '') : '')
+      + (nRetard ? ' · ' + nRetard + ' en retard' : '');
     common.tkVide = mine.length === 0;
-    const ordre = mine.slice().sort((a, b) => (!!a.t.done) - (!!b.t.done) || (a.t.due < b.t.due ? -1 : 1));
+    const ordre = mine.slice().sort((a, b) => (validee(a) ? 1 : 0) - (validee(b) ? 1 : 0) || (a.t.due < b.t.due ? -1 : 1));
     const mk = (x, i) => { const done = !!x.t.done, late = !done && x.t.due < M.TODAY, ouvert = !!S.openInfo['tk:' + x.t.id];
       const crm = D.crm[x.p.id];
       const mag = x.t.magasin ? (D.stores.find(s => s.id === x.t.magasin) || {}).nom : null;
+      const note = validee(x) ? x.t.note : null, sig = x.t.signalement;
+      const l = note !== null ? niv(note) : null;
+      // Le brouillon de la ligne : la note ne part qu'au clic sur « Valider ».
+      const d = S.tkVal['tk:' + x.t.id] || { note: note, famille: '', type: '', commentaire: '' };
+      const dn = d.note, dl = dn ? niv(dn) : null, sous = !!dn && dn < seuil;
+      const fams = SG.familles || [];
+      const famCour = d.famille || (fams[0] || {}).nom || '';
+      const typs = ((fams.find(f => f.nom === famCour) || {}).types) || [];
+      const maj = f => this.setState(s2 => ({ tkVal: Object.assign({}, s2.tkVal, { ['tk:' + x.t.id]: Object.assign({}, d, f) }) }));
+      // Le passif de l'intervenant : valider sans lui, c'est valider de mémoire.
+      const sien = mine.filter(y => y.o.nom === x.o.nom);
+      const sesNotes = sien.filter(validee).map(y => y.t.note);
+      const sesSig = sien.filter(y => y.t.signalement && y.t.signalement.ouvert).length;
       return { nom: x.t.nom, qui: x.o.nom, projet: x.p.nom, ouvert, hasMag: !!mag, magasin: mag || '',
-        due: done ? 'Livrée le ' + this.fD(x.t.done) : (late ? 'En retard depuis le ' : 'Pour le ') + this.fD(x.t.due),
+        due: note !== null ? 'Validée le ' + this.fD(x.t.done) : done ? 'Rendue le ' + this.fD(x.t.done)
+          : (late ? 'En retard depuis le ' : 'Pour le ') + this.fD(x.t.due),
         rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
-        nomSt: 'font-size:13px;font-weight:500;line-height:1.4;' + (done ? 'color:var(--color-text-muted);text-decoration:line-through' : ''),
-        dueSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;margin-top:1px;color:' + (late ? '#8D1D2C' : done ? '#2d7a3e' : 'var(--color-text-muted)'),
-        boxSt: 'flex:0 0 auto;width:17px;height:17px;margin-top:1px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:1px solid ' + (done ? '#2d7a3e' : 'var(--color-border-secondary)') + ';background:' + (done ? '#2d7a3e' : 'transparent') + ';color:#fff',
-        boxTxt: done ? '✓' : '',
+        nomSt: 'font-size:13px;font-weight:500;line-height:1.4;' + (note !== null ? 'color:var(--color-text-muted)' : ''),
+        dueSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;margin-top:1px;color:' + (late ? '#8D1D2C' : note !== null ? l.couleur : 'var(--color-text-muted)'),
+        // La case garde son sens d'origine — « livrée » — et la note s'y ajoute.
+        boxSt: 'flex:0 0 auto;width:17px;height:17px;margin-top:1px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:1px ' + (done && note === null ? 'dashed #8D1D2C' : 'solid ' + (done ? '#2d7a3e' : 'var(--color-border-secondary)')) + ';background:' + (note !== null ? '#2d7a3e' : 'transparent') + ';color:' + (note !== null ? '#fff' : '#8D1D2C'),
+        boxTxt: note !== null ? '✓' : done ? '?' : '',
+        // La pastille de niveau, sur la ligne repliée.
+        hasLvl: note !== null,
+        lvlTxt: note !== null ? l.nom : '',
+        lvlSt: note !== null ? 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur : '',
+        lvlNum: note !== null ? String(note) : '',
+        lvlNumSt: note !== null ? 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;background:' + l.couleur : '',
+        hasSig: !!(sig && sig.ouvert),
+        sigTxt: sig && sig.ouvert ? 'Signalement · ' + sig.famille + ' · ' + sig.type : '',
+        sigSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
         chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        rows: [{ k: 'Intervenant', v: x.o.nom + ' — ' + x.o.type }, { k: 'Contact', v: x.o.email },
-          { k: 'Échéance', v: this.fD(x.t.due) + (done ? ' · livrée le ' + this.fD(x.t.done) : late ? ' · dépassée' : '') },
-          { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' },
-          { k: 'Objectif', v: crm ? crm.objectif : x.p.valeurTxt }],
+        rows: [{ k: 'Attendu', v: x.t.desc || crm && crm.objectif || x.p.valeurTxt || '—' },
+          { k: 'Intervenant', v: x.o.nom + ' — ' + x.o.type }, { k: 'Contact', v: x.o.email },
+          { k: 'Échéance', v: this.fD(x.t.due) + (done ? ' · rendue le ' + this.fD(x.t.done) : late ? ' · dépassée' : '') },
+          { k: 'Budget', v: x.t.budget !== null && x.t.budget !== undefined ? this.fE(x.t.budget) : '—' },
+          { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
+          { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }],
+        histo: [{ k: 'Ce mois', v: sesNotes.length ? sesNotes.length + ' tâche' + (sesNotes.length > 1 ? 's' : '') + ' validée' + (sesNotes.length > 1 ? 's' : '') + ' · note moyenne ' + (sesNotes.reduce((a, b) => a + b, 0) / sesNotes.length).toFixed(1).replace('.', ',') : 'Aucune tâche validée' },
+          { k: 'Signalements', v: sesSig ? sesSig + ' ouvert' + (sesSig > 1 ? 's' : '') : 'Aucun ouvert' }],
+        // --- le panneau de validation
+        vOuvert: done,
+        vNote: dn || 0,
+        starSt: n => 'border:0;background:none;padding:0 1px;font-size:25px;line-height:1;cursor:pointer;color:' + (dn && n <= dn ? dl.couleur : '#d9d2c8'),
+        setNote: n => maj({ note: n === dn ? null : n }),
+        hasLvb: !!dn,
+        lvbTxt: dl ? dl.nom : '', lvbNum: dn ? String(dn) : '', lvbAide: dl ? dl.aide : '',
+        lvbSt: dl ? 'margin-top:7px;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:' + dl.couleur + '1f;color:' + dl.couleur : '',
+        lvbNumSt: dl ? 'width:19px;height:19px;border-radius:50%;color:#fff;font-style:normal;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + dl.couleur : '',
+        sousSeuil: sous,
+        sousTxt: sous ? dl.nom.replace('Non conforme — ', '') + ' — ' + dn + '/5' : '',
+        fams: fams.map(f => f.nom), famCour,
+        // Changer de famille remet le type à zéro : « Cuisson » sous « Budget »
+        // n'existe pas, et un couple impossible passerait sans bruit.
+        setFam: e => maj({ famille: e.target.value, type: '' }),
+        typs, typCour: d.type || typs[0] || '',
+        setTyp: e => maj({ type: e.target.value }),
+        commentaire: d.commentaire || '',
+        setCom: e => maj({ commentaire: e.target.value }),
+        boutonTxt: sous ? 'Valider et signaler' : 'Valider la tâche',
+        peutValider: !!dn && (!sous || (famCour && (d.type || typs[0]))),
+        valider: e => { e.stopPropagation();
+          if (!dn) { this.notify('Choisissez une note avant de valider'); return; }
+          const fa = sous ? famCour : null, ty = sous ? (d.type || typs[0]) : null;
+          if (sous && (!fa || !ty)) { this.notify('Famille et type de problème obligatoires'); return; }
+          x.t.note = dn; x.t.done = x.t.done || M.TODAY;
+          if (sous) { x.t.signalement = { note: dn, famille: fa, type: ty, comment: d.commentaire || null, statut: 'nouveau', ouvert: true, creeLe: M.TODAY, creePar: 'CEO' }; }
+          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id,
+            { note: dn, famille: fa, type: ty, commentaire: d.commentaire || null, done: x.t.done, par: 'CEO' });
+          this.log('Validation', x.p.nom, 'Tâche « ' + x.t.nom + ' » validée ' + dn + '/5 — ' + dl.nom + ' (' + x.o.nom + ')');
+          if (sous) { this.log('Signalement', x.p.nom, 'Signalement ouvert sur « ' + x.t.nom + ' » — ' + fa + ' · ' + ty); }
+          this.setState(s2 => ({ tkVal: Object.assign({}, s2.tkVal, { ['tk:' + x.t.id]: undefined }),
+            openInfo: Object.assign({}, s2.openInfo, { ['tk:' + x.t.id]: false }) }));
+          this.notify('« ' + x.t.nom + ' » ' + dn + '/5 — ' + dl.nom); this.forceUpdate(); },
         toggleOpen: () => this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { ['tk:' + x.t.id]: !s2.openInfo['tk:' + x.t.id] }) })),
         check: e => { e.stopPropagation();
+          // La case ne dit plus que « rendue » : dénoter se fait par les étoiles.
           const nv = done ? null : M.TODAY;
-          x.t.done = nv;
-          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id, { done: nv });
-          this.log('Tâche', x.p.nom, 'Tâche « ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'marquée faite le ' + this.fD(M.TODAY)) + ' (' + x.o.nom + ')');
-          this.notify('« ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'faite')); this.forceUpdate(); } }; };
+          x.t.done = nv; if (nv === null) { x.t.note = null; }
+          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id, nv === null ? { done: null, note: null } : { done: nv });
+          this.log('Tâche', x.p.nom, 'Tâche « ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'rendue le ' + this.fD(M.TODAY)) + ' (' + x.o.nom + ')');
+          this.notify('« ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'rendue')); this.forceUpdate(); } }; };
     const grp = [['En retard', '#8D1D2C', x => !x.t.done && x.t.due < M.TODAY],
+      ['À valider', '#8D1D2C', aValider],
       ['À faire', '#8a5a13', x => !x.t.done && x.t.due >= M.TODAY],
-      ['Faites', '#2d7a3e', x => !!x.t.done]];
+      ['Validées', '#2d7a3e', validee]];
     common.tkGroups = grp.map(([nom, couleur, f]) => { const items = ordre.filter(f);
       return { nom, couleur, n: items.length, items: items.map((x, i) => mk(x, i)),
         dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);

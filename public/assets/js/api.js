@@ -108,7 +108,10 @@ function shape(p, source){
   return {
     source, meta,
     M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers, KPI_LIST: p.kpis.map(k => k.nom || k),
-      FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes },
+      FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes,
+      // Niveaux, seuil et référentiel du signalement — réglage serveur,
+      // jamais une constante d'écran.
+      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
     D: Object.assign({}, p.raw || {}, {
       stores: joinPerf(p.stores, p.perf),
       budgets: p.budgets,
@@ -157,6 +160,7 @@ function demoPayload(m){
     moisLabels: m.MOIS,
     seuils: seuils,
     contribOuverture: 210000,
+    signalement: m.SIGNALEMENT,
     notes: { objectifsOuverture: "Dont contribution attendue de l'ouverture de Knokke (oct.–déc.) : env. 210 k€." }
   };
   const budgets = D.stores.filter(s => s.status === 'Ouvert').map(s => {
