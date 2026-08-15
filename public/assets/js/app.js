@@ -133,6 +133,21 @@ class App {
       return r;
     });
   }
+  /** Le premier intervenant réel — jamais un identifiant du jeu de démonstration. */
+  premierIntervenant(){
+    const c = (this.D.consultants || [])[0];
+    if (c) { return 'c:' + c.id; }
+    const f = (this.D.suppliers || [])[0];
+    return f ? 's:' + f.id : '';
+  }
+
+  /** Une échéance relative à la date du jour, jamais une date écrite en dur. */
+  dansNJours(n){
+    const d = new Date(this.M && this.M.TODAY ? this.M.TODAY : Date.now());
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
   notify(msg){ clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: null }), 3600); }
   log(type, projet, msg){
     const ts = (this.M ? this.M.TODAY : '2026-07-31') + ' ' + new Date().toTimeString().slice(0, 5);
@@ -280,7 +295,16 @@ class App {
     }
 
     // --- assistant tâche
-    common.ntOpen = () => this.setState({ nt: { step: 1, reached: 1, projet: D.projects[0].id, nom: '', magasin: '', who: 'c:mj', due: '2026-10-31', col: 'À faire' } });
+    // Aucune valeur inventée : le projet, l'intervenant et l'échéance viennent
+    // des données réelles. « c:mj » et « 2026-10-31 » étaient des restes du jeu
+    // de démonstration — sur une base réelle ils désignaient un consultant
+    // inexistant et une date arbitraire, et D.projects[0] plantait tout net
+    // quand aucun projet n'existait encore.
+    common.ntOpen = () => {
+      if (!D.projects.length) { this.notify('Créez d’abord un projet — une tâche s’y rattache.'); return; }
+      this.setState({ nt: { step: 1, reached: 1, projet: D.projects[0].id, nom: '', magasin: '',
+        who: this.premierIntervenant(), due: this.dansNJours(60), col: 'À faire' } });
+    };
     common.ntClose = () => this.setState({ nt: null });
     if (S.nt){
       const f = S.nt, st = f.step, set = (k, v) => this.setState(s2 => ({ nt: Object.assign({}, s2.nt, { [k]: v }) }));
@@ -322,8 +346,12 @@ class App {
         this.log('Tâche', proj.nom, jr);
         this.notify('Tâche créée et assignée à ' + (own ? own.nom : '')); };
     }
-    common.npOpen = () => this.setState({ np: { step: 1, reached: 1, nom: '', lev: 'trafic', axe: 'Ventes', prio: 'Moyenne', debut: M.TODAY, fin: '2026-12-31', valeur: '', valeurTxt: '', kpi: '',
-      jalons: [{ nom: '', cible: '2026-12-31' }], taches: [{ nom: '', who: 'c:mj', due: '2026-10-31' }], couts: [{ poste: 'Jours-homme consultants', prevu: '6000' }] } });
+    common.npOpen = () => this.setState({ np: { step: 1, reached: 1, nom: '',
+      lev: (M.LEVIERS[0] || {}).slug || '', axe: 'Ventes', prio: 'Moyenne',
+      debut: M.TODAY, fin: this.dansNJours(180), valeur: '', valeurTxt: '', kpi: '',
+      jalons: [{ nom: '', cible: this.dansNJours(180) }],
+      taches: [{ nom: '', who: this.premierIntervenant(), due: this.dansNJours(60) }],
+      couts: [{ poste: 'Jours-homme consultants', prevu: '' }] } });
     common.npClose = () => this.setState({ np: null });
     const npSet = k => e => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [k]: e.target.value }) }));
     common.npNom = npSet('nom'); common.npLev = npSet('lev'); common.npAxe = npSet('axe'); common.npDebut = npSet('debut'); common.npFin = npSet('fin');
@@ -339,7 +367,7 @@ class App {
       common.npJalons = f.jalons.map((j, i) => ({ nom: j.nom, cible: j.cible, setNom: npRow('jalons', i, 'nom'), setCible: npRow('jalons', i, 'cible'), del: npDel('jalons', i) }));
       common.npTaches = f.taches.map((t, i) => ({ nom: t.nom, who: t.who, due: t.due, setNom: npRow('taches', i, 'nom'), setWho: npRow('taches', i, 'who'), setDue: npRow('taches', i, 'due'), del: npDel('taches', i) }));
       common.npCouts = f.couts.map((c, i) => ({ poste: c.poste, prevu: c.prevu, setPoste: npRow('couts', i, 'poste'), setPrevu: npRow('couts', i, 'prevu'), del: npDel('couts', i) }));
-      common.npJalAdd = npAdd('jalons', { nom: '', cible: f.fin }); common.npTacheAdd = npAdd('taches', { nom: '', who: 'c:mj', due: f.fin }); common.npCoutAdd = npAdd('couts', { poste: '', prevu: '0' });
+      common.npJalAdd = npAdd('jalons', { nom: '', cible: f.fin }); common.npTacheAdd = npAdd('taches', { nom: '', who: this.premierIntervenant(), due: f.fin }); common.npCoutAdd = npAdd('couts', { poste: '', prevu: '0' });
       common.npLoadJalons = () => { const tpl = D.projTemplates[f.axe]; if (!tpl) return;
         this.setState(s2 => ({ np: Object.assign({}, s2.np, { jalons: tpl.jalons.map(j => ({ nom: j.nom, cible: addD(f.fin, j.j) })) }) }));
         this.notify('Template rétroplanning « ' + f.axe + ' » chargé (' + tpl.jalons.length + ' jalons)'); };
@@ -1271,7 +1299,11 @@ class App {
           this.notify('Rapport district envoyé à ' + c.nom); } }; });
     const etats = [['Plan reçu — 4 actions', '#2d7a3e'], ['En attente depuis 6 j', '#8a5a13'], ['Jamais ouvert', '#8D1D2C']];
     common.dlRows = this.open().map((s, i) => { const e = etats[i % 3];
-      const url = 'latelierby.be/plan/' + s.nom.split(' — ')[0].toLowerCase().replace(/[^a-z]/g, '') + '-2026s2';
+      // Lien de plan d'action : base d'URL du panel (réglage pwaBase), et
+      // période dérivée de la date du jour — plus de « 2026s2 » figé.
+      const basePlan = ((this.D.pwaReports || {}).base || '').replace(/\/$/, '');
+      const t = new Date(M.TODAY), sem = t.getMonth() < 6 ? 's1' : 's2';
+      const url = (basePlan || 'plan') + '/plan/' + s.nom.split(' — ')[0].toLowerCase().replace(/[^a-z]/g, '') + '-' + t.getFullYear() + sem;
       return { store: s.nom, etat: e[0], etatCol: e[1], url,
         copy: () => { navigator.clipboard && navigator.clipboard.writeText('https://' + url); this.notify('Lien copié — ' + s.nom); },
         relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
@@ -1285,7 +1317,10 @@ class App {
       'marge', 'produits', 'projets', 'reporting', 'journal', 'parametres', 'suivi'];
     const labelDe = sid => (navDef.flatMap(g => g[1]).find(it => it[0] === sid) || [sid, sid])[1];
     const posteDefs = POSTES.map((sid, i) => ({ id: 'p' + (i + 1), tag: 'P' + (i + 1), sid, label: labelDe(sid) }));
-    const repUrl = (r, sel, email) => 'https://cockpit.latelierby.be/rapports/rapport.html?id=' + r.id + '&postes=' + sel.join(',') + '&periode={AAAA-MM}&dest=' + (email || '') + '&format=pdf';
+    // La base d'URL est celle d'où l'application est servie : un domaine écrit
+    // en dur donne un lien mort dès que le cockpit change d'adresse.
+    const baseCockpit = (typeof location !== 'undefined' ? location.origin + location.pathname.replace(/\/[^/]*$/, '') : '');
+    const repUrl = (r, sel, email) => baseCockpit + '/rapports/rapport.html?id=' + r.id + '&postes=' + sel.join(',') + '&periode={AAAA-MM}&dest=' + (email || '') + '&format=pdf';
     const isOn = r => S.alertOn['rep:' + r.id] != null ? S.alertOn['rep:' + r.id] : r.actif;
     const fFreq = S.repFFreq || 'Toutes les fréquences', fEtat = S.repFEtat || 'tous', fType = S.repFType || 'Tous les types';
     common.repFFreq = fFreq; common.setRepFFreq = e => this.setState({ repFFreq: e.target.value });

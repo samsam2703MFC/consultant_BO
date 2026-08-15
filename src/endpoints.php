@@ -696,8 +696,43 @@ function ep_crm(): array
     return $out;
 }
 
+/**
+ * Les personnes destinataires des rapports.
+ *
+ * Source de vérité : les comptes du panel (`user_membership` ⨝ `user_profile`),
+ * comme pour les consultants. `ceo_person` n'est qu'un repli d'installation
+ * autonome — sur une base réelle il est vide, et l'écran Reporting n'offrait
+ * alors AUCUN destinataire sélectionnable, sans le moindre message.
+ *
+ * On ne garde que les comptes actifs porteurs d'une adresse : un destinataire
+ * sans e-mail n'est pas un destinataire.
+ */
 function ep_people(): array
 {
+    try {
+        $rows = Db::rows(
+            "SELECT m.id, m.app, m.scope_type,
+                    COALESCE(NULLIF(TRIM(p.display_name), ''),
+                             NULLIF(TRIM(CONCAT(COALESCE(p.first_name,''),' ',COALESCE(p.last_name,''))), ''),
+                             CONCAT('Compte #', m.id)) AS nom,
+                    NULLIF(TRIM(p.email), '') AS email
+               FROM user_membership m
+               LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
+              WHERE m.is_active = 1 AND NULLIF(TRIM(p.email), '') IS NOT NULL
+              GROUP BY m.id, m.app, m.scope_type, nom, email
+              ORDER BY nom");
+        if ($rows !== []) {
+            return array_map(static fn ($r) => [
+                'id'    => 'u' . $r['id'],
+                'nom'   => $r['nom'],
+                'role'  => $r['app'] === 'CONSULTANT'
+                    ? ($r['scope_type'] === 'SHOP' ? 'Consultant boutique' : 'Consultant réseau')
+                    : ucfirst(strtolower((string) $r['app'])),
+                'email' => $r['email'],
+            ], $rows);
+        }
+    } catch (PDOException $e) { /* tables du panel absentes : repli local */ }
+
     return array_map(fn ($p) => ['id' => $p['id'], 'nom' => $p['name'], 'role' => $p['role'], 'email' => $p['email']],
         Db::rows('SELECT * FROM ceo_person ORDER BY id'));
 }
