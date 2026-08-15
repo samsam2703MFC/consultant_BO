@@ -1201,8 +1201,8 @@ class App {
     const S = this.state, D = this.D, M = this.M;
     const s = this.seuils();
     common.paramLeviers = M.LEVIERS;
-    const ax = S.tplAxe || common.npAxes[0]; const tpl = D.projTemplates[ax];
-    common.tplAxe = ax; common.setTplAxe = e => this.setState({ tplAxe: e.target.value });
+    const ax = S.tplAxe || common.npAxes[0]; const tpl = (ax && D.projTemplates[ax]) || { jalons: [], couts: [] };
+    common.tplAxe = ax || ''; common.setTplAxe = e => this.setState({ tplAxe: e.target.value });
     const persistTpl = () => this.api('PUT', '/parametres/template-' + encodeURIComponent(ax), { jalons: tpl.jalons, couts: tpl.couts });
     const mut = fn => { fn(); persistTpl(); this.forceUpdate(); };
     common.tplJalons = tpl.jalons.map((j, i) => ({ nom: j.nom, j: j.j,
