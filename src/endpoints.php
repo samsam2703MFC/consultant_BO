@@ -99,14 +99,35 @@ function ep_project_templates(): array
 
 function ep_stores(): array
 {
-    return array_map(fn ($r) => [
-        'id' => $r['id'], 'code' => $r['code'], 'nom' => $r['name'], 'fr' => $r['franchisee'],
-        'zone' => $r['zone'], 'status' => $r['status'],
-        'opened' => $r['opened_on'] ? substr($r['opened_on'], 0, 7) : null,
-        'valT' => $r['valuation_target'] !== null ? (float) $r['valuation_target'] : null,
-        'panier' => $r['basket_ref'] !== null ? (float) $r['basket_ref'] : null,
-        'pwaId' => isset($r['pwa_shop_id']) && $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null,
-    ], Db::rows('SELECT * FROM ceo_shop ORDER BY id'));
+    // Vraies boutiques du panel (table partagée `shops` d'atelierby_db) — même
+    // source que le panel consultant. Repli sur `ceo_shop` si la table partagée
+    // est absente (installation autonome / démo).
+    try {
+        $rows = Db::rows('SELECT id, slug, name, legal_name, city, zone, region, active, kind,
+                                 is_franchise, operator, contrat, since_year, sort_order
+                          FROM shops ORDER BY sort_order, id');
+        return array_map(fn ($r) => [
+            'id'     => (string) $r['id'],
+            'code'   => $r['slug'] !== null ? strtoupper((string) $r['slug']) : (string) $r['id'],
+            'nom'    => $r['name'],
+            'fr'     => $r['operator'] ?: ($r['legal_name'] ?: ''),
+            'zone'   => $r['zone'] ?: ($r['region'] ?: $r['city']),
+            'status' => ((int) $r['active'] === 1) ? 'Ouvert' : 'Fermé',
+            'opened' => $r['since_year'] ? sprintf('%04d-01', (int) $r['since_year']) : null,
+            'valT'   => null,          // valorisation calculée côté valuation, non stockée
+            'panier' => null,          // panier moyen : dérivé de /stores/perf
+            'pwaId'  => (int) $r['id'], // la boutique du panel EST le pwa_shop_id
+        ], $rows);
+    } catch (PDOException $e) {
+        return array_map(fn ($r) => [
+            'id' => $r['id'], 'code' => $r['code'], 'nom' => $r['name'], 'fr' => $r['franchisee'],
+            'zone' => $r['zone'], 'status' => $r['status'],
+            'opened' => $r['opened_on'] ? substr($r['opened_on'], 0, 7) : null,
+            'valT' => $r['valuation_target'] !== null ? (float) $r['valuation_target'] : null,
+            'panier' => $r['basket_ref'] !== null ? (float) $r['basket_ref'] : null,
+            'pwaId' => isset($r['pwa_shop_id']) && $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null,
+        ], Db::rows('SELECT * FROM ceo_shop ORDER BY id'));
+    }
 }
 
 /**
@@ -125,8 +146,15 @@ function ep_pwa_reports(): array
 {
     $cfgBase = Db::config()['pwaBase'] ?? null;                       // config/env prime
     $base = rtrim((string) ($cfgBase ?: setting('pwaBase', '')), '/');
-    $magasins = array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'pwaId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null],
-        Db::rows("SELECT id, name, pwa_shop_id FROM ceo_shop WHERE status = 'Ouvert' ORDER BY id"));
+    // Boutiques : vraies boutiques du panel (`shops`) si disponibles, sinon
+    // ceo_shop. pwaId = id de la boutique du panel (= id_shop de mac_report_share).
+    try {
+        $magasins = array_map(fn ($r) => ['id' => (string) $r['id'], 'nom' => $r['name'], 'pwaId' => (int) $r['id']],
+            Db::rows("SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id"));
+    } catch (PDOException $e) {
+        $magasins = array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'pwaId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null],
+            Db::rows("SELECT id, name, pwa_shop_id FROM ceo_shop WHERE status = 'Ouvert' ORDER BY id"));
+    }
     $shopByPwa = [];
     foreach ($magasins as $m) { if ($m['pwaId'] !== null) { $shopByPwa[$m['pwaId']] = $m['nom']; } }
 
@@ -157,20 +185,49 @@ function ep_perf(): array
 {
     $annees = array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026'));
     $in = implode(',', array_fill(0, count($annees), '?'));
-    return array_map(fn ($r) => [
-        'storeId' => $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
-        'ca' => $r['revenue'] !== null ? (float) $r['revenue'] : null,
-        'caBudget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
-        'caTheorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null,
-        'margeNette' => $r['net_margin'] !== null ? (float) $r['net_margin'] : null,
-        'margePct' => ($r['net_margin'] !== null && $r['revenue'] > 0) ? round($r['net_margin'] / $r['revenue'], 4) : null,
-        'tickets' => $r['tickets'] !== null ? (int) $r['tickets'] : null,
-        'panierMoyen' => $r['basket_avg'] !== null ? (float) $r['basket_avg'] : null,
-        'foodCostPct' => $r['food_pct'] !== null ? (float) $r['food_pct'] : null,
-        'labourCostPct' => $r['labour_pct'] !== null ? (float) $r['labour_pct'] : null,
-        'overheadPct' => $r['overhead_pct'] !== null ? (float) $r['overhead_pct'] : null,
-        'valorisation' => $r['valuation'] !== null ? (float) $r['valuation'] : null,
-    ], Db::rows("SELECT * FROM ceo_shop_month_perf WHERE year IN ($in) ORDER BY shop_id, year, month", $annees));
+    // Vrai P&L mensuel du panel (table partagée `mac_shop_monthly_pnl`, la même
+    // que le ValuationService du panel). Le snapshot porte ca / marge nette /
+    // labour / overhead ; il ne porte NI « material » (food, cf. ticket T5a du
+    // panel) NI tickets/panier — laissés à null. Repli sur ceo_shop_month_perf.
+    try {
+        $rows = Db::rows("SELECT id_shop, year, month, ca, net_margin_pct, net_result, labour, overhead
+                          FROM mac_shop_monthly_pnl WHERE year IN ($in) ORDER BY id_shop, year, month", $annees);
+        return array_map(function ($r) {
+            $ca  = $r['ca'] !== null ? (float) $r['ca'] : null;
+            $pos = $ca !== null && $ca > 0;
+            return [
+                'storeId'       => (string) $r['id_shop'],
+                'annee'         => (int) $r['year'],
+                'mois'          => (int) $r['month'],
+                'ca'            => $ca,
+                'caBudget'      => null,
+                'caTheorique'   => null,
+                'margeNette'    => $r['net_result'] !== null ? (float) $r['net_result'] : null,
+                'margePct'      => $r['net_margin_pct'] !== null ? round((float) $r['net_margin_pct'] / 100, 4) : null,
+                'tickets'       => null,
+                'panierMoyen'   => null,
+                'foodCostPct'   => null,
+                'labourCostPct' => ($pos && $r['labour'] !== null) ? round((float) $r['labour'] / $ca * 100, 1) : null,
+                'overheadPct'   => ($pos && $r['overhead'] !== null) ? round((float) $r['overhead'] / $ca * 100, 1) : null,
+                'valorisation'  => null,
+            ];
+        }, $rows);
+    } catch (PDOException $e) {
+        return array_map(fn ($r) => [
+            'storeId' => $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
+            'ca' => $r['revenue'] !== null ? (float) $r['revenue'] : null,
+            'caBudget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
+            'caTheorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null,
+            'margeNette' => $r['net_margin'] !== null ? (float) $r['net_margin'] : null,
+            'margePct' => ($r['net_margin'] !== null && $r['revenue'] > 0) ? round($r['net_margin'] / $r['revenue'], 4) : null,
+            'tickets' => $r['tickets'] !== null ? (int) $r['tickets'] : null,
+            'panierMoyen' => $r['basket_avg'] !== null ? (float) $r['basket_avg'] : null,
+            'foodCostPct' => $r['food_pct'] !== null ? (float) $r['food_pct'] : null,
+            'labourCostPct' => $r['labour_pct'] !== null ? (float) $r['labour_pct'] : null,
+            'overheadPct' => $r['overhead_pct'] !== null ? (float) $r['overhead_pct'] : null,
+            'valorisation' => $r['valuation'] !== null ? (float) $r['valuation'] : null,
+        ], Db::rows("SELECT * FROM ceo_shop_month_perf WHERE year IN ($in) ORDER BY shop_id, year, month", $annees));
+    }
 }
 
 function ep_budgets(): array
