@@ -119,7 +119,20 @@ class App {
   }
 
   /* --- utilitaires (identiques au prototype) --------------------------------- */
-  api(method, path, payload){ return write(this.source, method, path, payload); }
+  /**
+   * Écriture vers l'API, avec l'échec RENDU VISIBLE.
+   *
+   * Toutes les écritures de l'application passent ici. Tant que le refus du
+   * serveur était ignoré, un budget encodé pouvait être rejeté en 404 sans que
+   * l'écran le dise : l'utilisateur voyait sa saisie, le serveur n'avait rien
+   * gardé, et personne ne pouvait le savoir avant de recharger.
+   */
+  api(method, path, payload){
+    return write(this.source, method, path, payload).then(r => {
+      if (r && r.ok === false) { this.notify('Échec de l’enregistrement — ' + (r.error || 'refusé par le serveur')); }
+      return r;
+    });
+  }
   notify(msg){ clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: null }), 3600); }
   log(type, projet, msg){
     const ts = (this.M ? this.M.TODAY : '2026-07-31') + ' ' + new Date().toTimeString().slice(0, 5);
