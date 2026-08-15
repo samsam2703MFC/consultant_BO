@@ -1,1 +1,2 @@
-nouvel ecran Controle des taches : checklists consultants du panel (mac_task_review + todo_task) avec validation Owner ecrite dans le panel. Deploiement standard, aucune operation destructive sur la base.
+magasins reconnus depuis la table partagee, et les refus d'ecriture enfin
+visibles. Deploiement standard, aucune operation sur la base.
