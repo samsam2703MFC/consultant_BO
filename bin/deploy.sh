@@ -235,7 +235,7 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
     q() { "$DBI_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" "$@"; }
     echo "===== TABLES (hors ceo_) : nom + lignes ====="
     q -N -e "SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name NOT LIKE 'ceo\\_%' ORDER BY table_name;" 2>&1
-    for t in shops mac_shop_monthly_pnl mac_kpi_threshold mac_consultant_param of_tag kpi position mac_report_share transaction transaction_product user_membership user_profile; do
+    for t in shops mac_shop_monthly_pnl mac_kpi_threshold mac_consultant_param of_tag kpi position mac_report_share transaction transaction_product user_membership user_profile sig_products sig_product_categories sig_product_prices; do
       echo "===== $t ====="
       if q -N -e "SELECT 1 FROM \`$t\` LIMIT 1;" >/dev/null 2>&1; then
         echo "-- COUNT --"; q -N -e "SELECT COUNT(*) FROM \`$t\`;" 2>&1
@@ -250,6 +250,22 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
     done
     echo "-- mac_shop_monthly_pnl (5 lignes) --"; q -e "SELECT * FROM mac_shop_monthly_pnl ORDER BY year DESC, month DESC LIMIT 5;" 2>&1
     echo "-- shops (5 lignes) --"; q -e "SELECT * FROM shops LIMIT 5;" 2>&1
+    echo "-- sig_products (3 lignes) --"; q -e "SELECT * FROM sig_products LIMIT 3;" 2>&1
+    echo "-- sig_product_categories (10) --"; q -e "SELECT * FROM sig_product_categories LIMIT 10;" 2>&1
+    echo "-- consultants : user_membership(app=CONSULTANT) ⨝ user_profile --"
+    q -e "SELECT m.id, m.app, m.scope_type, m.scope_id, m.is_active, p.display_name, p.email
+          FROM user_membership m LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
+          WHERE m.app = 'CONSULTANT' LIMIT 20;" 2>&1
+    echo "-- transaction : bornes de dates + agrégat mensuel (1 magasin) --"
+    q -N -e "SELECT MIN(insert_timestamp), MAX(insert_timestamp) FROM transaction;" 2>&1
+    q -e "SELECT id_shop, YEAR(insert_timestamp) y, MONTH(insert_timestamp) m,
+                 COUNT(DISTINCT ticket_key) tickets, ROUND(SUM(total_gross_amount_after_discount),2) ca
+          FROM transaction WHERE insert_timestamp >= '2026-06-01'
+          GROUP BY id_shop, y, m ORDER BY id_shop, y, m LIMIT 12;" 2>&1
+    echo "-- transaction_product : top produits (volume) --"
+    q -e "SELECT id_product, MAX(product_name) nom, ROUND(SUM(quantity)) vol,
+                 ROUND(AVG(unit_gross_price),2) prix
+          FROM transaction_product GROUP BY id_product ORDER BY vol DESC LIMIT 8;" 2>&1
     unset MYSQL_PWD
   else
     warn "inspection impossible (client mysql ou identifiants absents)."
