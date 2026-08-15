@@ -93,6 +93,63 @@ function wr_project_delete(string $id): array
     return ['ok' => true];
 }
 
+/**
+ * POST /pwa/tasks/validate — l'Owner (CEO) valide ou retire un avis consultant.
+ *
+ * Écrit la validation dans la table partagée du panel `mac_task_review` (mêmes
+ * colonnes que setOwnerValidation côté panel). Ne CRÉE jamais de ligne : on ne
+ * valide que ce qui a été évalué — 0 ligne touchée ⇒ aucun avis à valider.
+ * L'identité de l'Owner est l'utilisateur du cockpit (réglage `utilisateur`).
+ */
+function wr_pwa_task_validate(): array
+{
+    $b = body();
+    $shopId = (int) ($b['shopId'] ?? $b['shop_id'] ?? 0);
+    $taskId = (int) ($b['taskId'] ?? $b['task_id'] ?? 0);
+    $date   = (string) ($b['date'] ?? $b['review_date'] ?? '');
+    $on     = !empty($b['validated']);
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shopId, taskId et date (YYYY-MM-DD) sont requis'];
+    }
+
+    // Colonnes de validation Owner : ajoutées seulement si une version
+    // antérieure du panel a créé la table sans elles (tolérant, idempotent).
+    try {
+        $have = [];
+        foreach (Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mac_task_review'") as $r2) {
+            $have[strtolower((string) $r2['COLUMN_NAME'])] = true;
+        }
+        foreach (['owner_validated_at' => 'DATETIME NULL', 'id_owner' => 'BIGINT UNSIGNED NULL', 'owner_name' => 'VARCHAR(190) NULL'] as $col => $type) {
+            if (!isset($have[$col])) {
+                try { Db::exec("ALTER TABLE mac_task_review ADD COLUMN `$col` $type"); } catch (Throwable $e) { /* course : déjà ajoutée */ }
+            }
+        }
+    } catch (Throwable $e) { /* information_schema indisponible : l'UPDATE tranchera */ }
+
+    $u = setting('utilisateur', []);
+    $ownerName = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+
+    try {
+        $n = Db::exec(
+            'UPDATE mac_task_review SET owner_validated_at = ?, id_owner = ?, owner_name = ?, updated_at = ?'
+            . ' WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+            [$on ? date('Y-m-d H:i:s') : null, $on ? 0 : null, $on ? $ownerName : null, date('Y-m-d H:i:s'), $shopId, $taskId, $date]
+        );
+    } catch (PDOException $e) {
+        http_response_code(503);
+        return ['error' => 'table des avis (mac_task_review) indisponible'];
+    }
+    if ($n === 0) {
+        http_response_code(422);
+        return ['error' => 'aucun avis consultant à valider pour cette tâche à cette date'];
+    }
+    journalAdd('CEO', 'Validation', null, ($on ? 'Avis validé' : 'Validation retirée')
+        . ' — boutique #' . $shopId . ', tâche #' . $taskId . ' (' . $date . ')');
+    return ['ok' => true, 'validated' => $on, 'by' => $on ? $ownerName : null, 'at' => $on ? date('Y-m-d H:i:s') : null];
+}
+
 /** PATCH /projects/{id} — statut et/ou famille. */
 function wr_project_patch(string $id): array
 {

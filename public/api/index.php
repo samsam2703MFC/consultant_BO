@@ -66,12 +66,14 @@ function route(string $method, string $path): mixed
             $path === '/journal'                       => ep_journal(),
             $path === '/products/scoring'              => ep_products(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),
+            $path === '/pwa/tasks'                     => ep_pwa_tasks(),
             default                                    => notFound(),
         };
     }
 
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
+    if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_patch($m[1]); }

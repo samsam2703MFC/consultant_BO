@@ -58,6 +58,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
+      ${c.isControle ? tplControle(c, x) : ''}
       ${c.isTaches ? tplTaches(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
@@ -755,6 +756,100 @@ function tplProduits(c, x){
       </div>
       <div style="padding:12px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.pdNote)}</div>
     </div>
+  </div>`;
+}
+
+/* --- Contrôle des tâches (checklists consultants du panel) -------------------- */
+function tplControle(c, x){
+  const { esc } = x;
+  const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const dateSel = c.ctrlDates && c.ctrlDates.length
+    ? `<select ${x.C(c.setCtrlDate)} style="${selCss};font-family:var(--font-ui)">${c.ctrlDates.map(d => `<option value="${d.val}"${d.sel ? ' selected' : ''}>${esc(d.label)}</option>`).join('')}</select>`
+    : `<span style="font-size:12.5px;font-weight:500">${esc(c.ctrlDateLabel)}</span>`;
+  return `
+  <div data-screen="controle" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+      ${c.ctrlKpis.map(k => `
+        <div style="${card};padding:16px 18px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k.k)}</div>
+          <div style="font-size:26px;font-weight:500;margin-top:6px;line-height:1.1">${esc(k.v)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(k.s)}</div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Journée</span>
+      ${dateSel}
+      <select ${x.C(c.setCtrlShop)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlShopOptions, c.ctrlShop)}</select>
+      <select ${x.C(c.setCtrlOnly)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlOnlyOptions, c.ctrlOnly, o => o.val, o => o.nom)}</select>
+    </div>
+    ${c.ctrlIndispo ? `
+      <div style="${card};padding:28px 22px;text-align:center">
+        <div style="font-size:14px;font-weight:500">Aucun avis consultant à contrôler pour l’instant</div>
+        <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:8px;line-height:1.6;max-width:620px;margin-left:auto;margin-right:auto">Les tâches et checklists sont évaluées par les consultants dans le panel ; leurs avis apparaissent ici dès qu’ils sont enregistrés (table partagée <code>mac_task_review</code>). Le détail vivant des checklists du jour reste dans le panel.</div>
+      </div>` : (c.ctrlEmpty ? `
+      <div style="${card};padding:24px;text-align:center;font-size:13px;color:var(--color-text-muted)">Aucune tâche ne correspond à ce filtre pour cette journée.</div>` : `
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${c.ctrlShops.map(s => `
+          <div style="${card};overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="font-size:13.5px;font-weight:600">${esc(s.shop)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">${s.nValid} / ${s.nTaches} validée(s)</div>
+            </div>
+            <div style="overflow-x:auto">
+            <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="${TH}">Tâche</th>
+                <th style="text-align:center;${TH2};width:78px">Note</th>
+                <th style="text-align:left;${TH2};width:120px">Conformité</th>
+                <th style="text-align:left;${TH2};width:150px">Consultant</th>
+                <th style="text-align:left;${TH2}">Commentaire</th>
+                <th style="text-align:right;${TH};width:190px">Validation direction</th>
+              </tr></thead>
+              <tbody>
+                ${s.taches.map(t => `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px;font-weight:500">${esc(t.tache)}</td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;${t.noteSt}">${esc(t.note)}</td>
+                    <td style="padding:10px 12px;${t.accSt}">${esc(t.acc)}</td>
+                    <td style="padding:10px 12px;color:var(--color-text)">${esc(t.consultant)}</td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">${t.hasComment ? esc(t.comment) : '<span style="opacity:0.6">—</span>'}</td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="font-size:11px;color:${t.valide ? '#2d7a3e' : 'var(--color-text-muted)'}">${esc(t.valideMeta)}</span>
+                        <button ${x.A(t.toggle)} style="${t.btnSt}">${esc(t.btnLabel)}</button>
+                      </div>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+            </div>
+          </div>`).join('')}
+      </div>`)}
+    ${c.ctrlConsultants && c.ctrlConsultants.length ? `
+      <div style="${card};overflow:hidden">
+        <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Activité d’évaluation par consultant — journée du ${esc(c.ctrlDateLabel)}</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;min-width:560px;border-collapse:collapse;font-size:12.5px">
+          <thead><tr>
+            <th style="${TH}">Consultant</th>
+            <th style="text-align:right;${TH2}">Avis</th>
+            <th style="text-align:right;${TH2}">Note moyenne</th>
+            <th style="text-align:right;${TH2}">Refus</th>
+            <th style="text-align:right;${TH};width:110px">Validés</th>
+          </tr></thead>
+          <tbody>
+            ${c.ctrlConsultants.map(cc => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                <td style="padding:10px 14px;font-weight:500">${esc(cc.nom)}</td>
+                <td style="padding:10px 12px;text-align:right">${esc(cc.avis)}</td>
+                <td style="padding:10px 12px;text-align:right">${esc(cc.noteMoy)}</td>
+                <td style="padding:10px 12px;text-align:right">${esc(cc.refuses)}</td>
+                <td style="padding:10px 14px;text-align:right">${esc(cc.valides)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>` : ''}
   </div>`;
 }
 

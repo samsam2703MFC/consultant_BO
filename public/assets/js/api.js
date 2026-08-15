@@ -34,7 +34,8 @@ export const ENDPOINTS = {
   reporting:      '/reporting',
   journal:        '/journal',
   products:       '/products/scoring?periode=2026-07',
-  pwaReports:     '/pwa/reports'
+  pwaReports:     '/pwa/reports',
+  pwaTasks:       '/pwa/tasks'
 };
 
 async function get(path, signal){
@@ -142,7 +143,8 @@ function shape(p, source){
       alertRules: (p.reporting || {}).alertRules,
       logs: p.journal,
       products: p.products,
-      pwaReports: p.pwaReports
+      pwaReports: p.pwaReports,
+      pwaTasks: p.pwaTasks
     })
   };
 }
@@ -192,6 +194,7 @@ function emptyPayload(){
     emailTemplates: [], projTemplates: [], stores: [], perf: null, budgets: [],
     targets: [], consultants: [], suppliers: [], projects: [], crm: [], people: [],
     reporting: { reports: [], alertRules: [] }, journal: [], products: [],
-    pwaReports: { base: '', magasins: [], partages: [] }
+    pwaReports: { base: '', magasins: [], partages: [] },
+    pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true }
   };
 }

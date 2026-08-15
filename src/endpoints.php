@@ -185,6 +185,138 @@ function ep_pwa_reports(): array
     return ['base' => $base, 'magasins' => $magasins, 'partages' => $partages];
 }
 
+/**
+ * Noms des tâches prédéfinies du panel (table partagée `todo_task`).
+ *
+ * Le schéma de `todo_task` varie ; on détecte la colonne du libellé comme le
+ * fait le panel (TodoTaskRepository) plutôt que de supposer `name`. Table ou
+ * colonne absente → map vide (les tâches s'afficheront par leur identifiant).
+ *
+ * @return array<int, string> id_task => libellé
+ */
+function todoTaskNames(): array
+{
+    try {
+        $cols = array_map(fn ($r) => (string) $r['COLUMN_NAME'],
+            Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'todo_task'"));
+        if ($cols === []) { return []; }
+        $lower = array_map('strtolower', $cols);
+        $nameCol = null;
+        foreach (['name', 'title', 'label', 'task_name', 'task'] as $cand) {
+            $i = array_search($cand, $lower, true);
+            if ($i !== false) { $nameCol = $cols[$i]; break; }
+        }
+        if ($nameCol === null) {
+            foreach ($cols as $c) { if (stripos($c, 'name') !== false) { $nameCol = $c; break; } }
+        }
+        if ($nameCol === null) { return []; }
+        $idCol = in_array('id', $lower, true) ? 'id' : $cols[0];
+        $out = [];
+        foreach (Db::rows("SELECT `$idCol` AS id, `$nameCol` AS name FROM todo_task LIMIT 1000") as $r) {
+            $out[(int) $r['id']] = trim((string) $r['name']);
+        }
+        return $out;
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * GET /pwa/tasks?date=YYYY-MM-DD — contrôle des tâches consultants du panel.
+ *
+ * Arbre Boutique › Tâche › avis consultant, lu dans la table partagée
+ * `mac_task_review` (même source que l'écran « réseau » du panel). Chaque avis
+ * porte la note, l'acceptation, le commentaire, qui a évalué, ET la validation
+ * de l'Owner (owner_validated_at/owner_name) — le CEO valide ou retire depuis
+ * ici. Les libellés de tâche viennent de `todo_task`, les magasins de `shops`.
+ *
+ * Sans date : la dernière journée réellement évaluée (l'écran n'est pas vide).
+ * Le contenu VIVANT des checklists (tâches planifiées du jour, photos) vient de
+ * l'API amont du panel, hors de portée ici : on montre ce qui est persité.
+ */
+function ep_pwa_tasks(): array
+{
+    $date = $_GET['date'] ?? null;
+    if ($date === null || !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date)) { $date = null; }
+
+    $empty = ['date' => $date ?? date('Y-m-d'), 'dates' => [], 'shops' => [],
+        'consultants' => [], 'totals' => ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0, 'noteMoy' => null],
+        'indispo' => true];
+
+    try {
+        // Journées réellement évaluées (sélecteur de date) + date active par défaut.
+        $dates = array_map(fn ($r) => (string) $r['d'],
+            Db::rows("SELECT DISTINCT review_date d FROM mac_task_review ORDER BY review_date DESC LIMIT 90"));
+        if ($date === null) { $date = $dates[0] ?? date('Y-m-d'); }
+
+        $taskNames = todoTaskNames();
+        $shopNames = [];
+        try {
+            foreach (Db::rows("SELECT id, name FROM shops") as $s) { $shopNames[(int) $s['id']] = $s['name']; }
+        } catch (PDOException $e) { /* shops absente : nom = #id */ }
+
+        $rows = Db::rows("SELECT * FROM mac_task_review WHERE review_date = ? ORDER BY id_shop, id_task", [$date]);
+
+        $byShop = [];
+        $cons = [];
+        $tot = ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0];
+        $noteSum = 0; $noteN = 0;
+        foreach ($rows as $r) {
+            $sid = (int) $r['id_shop'];
+            $tid = (int) $r['id_task'];
+            $note = isset($r['rating']) && $r['rating'] !== null ? (int) $r['rating'] : null;
+            $acc  = isset($r['is_accepted']) && $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null;
+            $valide = !empty($r['owner_validated_at']);
+            if (!isset($byShop[$sid])) {
+                $byShop[$sid] = ['shopId' => (string) $sid, 'shop' => $shopNames[$sid] ?? ('Boutique #' . $sid), 'taches' => []];
+            }
+            $byShop[$sid]['taches'][] = [
+                'taskId'      => (string) $tid,
+                'tache'       => $taskNames[$tid] ?? ('Tâche #' . $tid),
+                'note'        => $note,
+                'accepte'     => $acc,
+                'comment'     => $r['comment'] !== null && $r['comment'] !== '' ? (string) $r['comment'] : null,
+                'consultant'  => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+                'consultantId' => (int) ($r['id_consultant'] ?? 0),
+                'date'        => (string) $r['review_date'],
+                'valide'      => $valide,
+                'valideePar'  => $valide ? ($r['owner_name'] ?? null) : null,
+                'valideeLe'   => $valide ? substr((string) $r['owner_validated_at'], 0, 16) : null,
+                'majLe'       => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+            ];
+            $tot['taches']++;
+            if ($valide) { $tot['valides']++; } else { $tot['aValider']++; }
+            if ($acc === false) { $tot['refuses']++; }
+            if ($note !== null) { $noteSum += $note; $noteN++; }
+
+            // Agrégat par consultant (pilotage des consultants).
+            $cid = (int) ($r['id_consultant'] ?? 0);
+            if (!isset($cons[$cid])) {
+                $cons[$cid] = ['id' => $cid, 'nom' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : ('#' . $cid),
+                    'avis' => 0, 'refuses' => 0, 'valides' => 0, 'noteSum' => 0, 'noteN' => 0];
+            }
+            $cons[$cid]['avis']++;
+            if ($acc === false) { $cons[$cid]['refuses']++; }
+            if ($valide) { $cons[$cid]['valides']++; }
+            if ($note !== null) { $cons[$cid]['noteSum'] += $note; $cons[$cid]['noteN']++; }
+        }
+
+        $consultants = array_map(fn ($c) => [
+            'id' => $c['id'], 'nom' => $c['nom'], 'avis' => $c['avis'], 'refuses' => $c['refuses'], 'valides' => $c['valides'],
+            'noteMoy' => $c['noteN'] > 0 ? round($c['noteSum'] / $c['noteN'], 1) : null,
+        ], array_values($cons));
+        usort($consultants, fn ($a, $b) => $b['avis'] <=> $a['avis']);
+
+        $tot['noteMoy'] = $noteN > 0 ? round($noteSum / $noteN, 1) : null;
+        return ['date' => $date, 'dates' => $dates, 'shops' => array_values($byShop),
+            'consultants' => $consultants, 'totals' => $tot, 'indispo' => false];
+    } catch (PDOException $e) {
+        // mac_task_review absente (panel sur une autre base / jamais alimentée).
+        return $empty;
+    }
+}
+
 function ep_perf(): array
 {
     $annees = array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026'));

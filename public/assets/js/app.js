@@ -217,7 +217,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists évaluées par les consultants (panel) : note, conformité et commentaire, par boutique. Validez ou retirez la validation de chaque avis.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -359,13 +359,13 @@ class App {
 
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
-      ['Projets & contrôle', [['projets', 'Projets', nLate], ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0]]],
+      ['Projets & contrôle', [['projets', 'Projets', nLate], ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0], ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0], ['parametres', 'Paramètres', 0]]]];
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => ({ id: it[0], label: it[1], badge: it[2] || false, go: goTo(it[0]),
       st: 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;' + (S.screen === it[0] ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text)') })) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', suivi: 'isSuivi' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -483,6 +483,8 @@ class App {
     if (common.isMarge) this.valsMarge(common);
     // --- projets
     if (common.isProjets) this.valsProjets(common, projEff);
+    // --- contrôle des tâches (checklists consultants du panel)
+    if (common.isControle) this.valsControle(common);
     // --- tâches consultants
     if (common.isTaches) this.valsTaches(common, flat);
     // --- reporting
@@ -887,6 +889,83 @@ class App {
         statut: nAl === 0 ? 'OK' : nAl + (nAl > 1 ? ' leviers à traiter' : ' levier à traiter') + (st.risk ? ' · sous-perf. 3 mois consécutifs' : '') }; });
     rows.sort((a, b) => b._mp - a._mp);
     common.mgRows = rows;
+  }
+
+  /* --- contrôle des tâches (checklists consultants du panel) --------------------- */
+  ctrlSetDate(d){
+    if (!d) return;
+    if (this.source !== 'api'){ this.setState({ ctrlShop: 'tous' }); return; }
+    readOne('/pwa/tasks?date=' + encodeURIComponent(d)).then(pt => {
+      if (pt) this.D.pwaTasks = pt;
+      this.setState({ ctrlShop: 'tous' });
+    });
+  }
+  ctrlToggle(shopId, taskId, date, on){
+    const pt = this.D.pwaTasks || {};
+    const owner = ((this.meta || {}).utilisateur || {}).nom || 'CEO';
+    (pt.shops || []).forEach(sh => { if (sh.shopId === shopId) sh.taches.forEach(t => {
+      if (t.taskId === taskId && t.date === date){ t.valide = on; t.valideePar = on ? owner : null; t.valideeLe = on ? 'à l’instant' : null; }
+    }); });
+    if (pt.totals){ const n = (pt.shops || []).reduce((a, sh) => a + sh.taches.filter(t => t.valide).length, 0);
+      pt.totals.valides = n; pt.totals.aValider = (pt.totals.taches || 0) - n; }
+    this.api('POST', '/pwa/tasks/validate', { shopId, taskId, date, validated: on });
+    this.log('Validation', null, (on ? 'Avis validé' : 'Validation retirée') + ' — boutique ' + shopId + ', tâche ' + taskId + ' (' + date + ')');
+    this.setState({});
+    this.notify(on ? 'Avis validé' : 'Validation retirée');
+  }
+  valsControle(common){
+    const S = this.state, D = this.D;
+    const pt = D.pwaTasks || { shops: [], dates: [], consultants: [], totals: {}, indispo: true };
+    const T = pt.totals || {};
+    common.ctrlIndispo = !!pt.indispo && (pt.shops || []).length === 0;
+    common.ctrlDate = pt.date || '';
+    common.ctrlDateLabel = pt.date ? this.fD(pt.date) + '/' + String(pt.date).slice(0, 4) : '—';
+    common.ctrlDates = (pt.dates || []).map(d => ({ val: d, label: this.fD(d) + '/' + String(d).slice(0, 4), sel: d === pt.date }));
+    common.setCtrlDate = e => this.ctrlSetDate(e.target.value);
+    const nMoy = T.noteMoy != null ? String(T.noteMoy).replace('.', ',') + ' / 5' : '—';
+    common.ctrlKpis = [
+      { k: 'Tâches évaluées', v: String(T.taches || 0), s: (pt.shops || []).length + ' boutique(s) — journée du ' + common.ctrlDateLabel },
+      { k: 'À valider', v: String(T.aValider || 0), s: 'Avis consultants en attente de votre validation' },
+      { k: 'Validées', v: String(T.valides || 0), s: 'Avis validés par la direction' },
+      { k: 'Refus consultants', v: String(T.refuses || 0), s: 'Tâches jugées non conformes sur le terrain' },
+      { k: 'Note moyenne', v: nMoy, s: 'Moyenne des notes consultants du jour' },
+    ];
+    // Filtre boutique
+    const shopOpts = ['Toutes les boutiques'].concat((pt.shops || []).map(s => s.shop));
+    common.ctrlShopOptions = shopOpts;
+    common.ctrlShop = S.ctrlShop || 'Toutes les boutiques';
+    common.setCtrlShop = e => this.setState({ ctrlShop: e.target.value });
+    // Filtre statut
+    common.ctrlOnly = S.ctrlOnly || 'tous';
+    common.ctrlOnlyOptions = [{ val: 'tous', nom: 'Tous les avis' }, { val: 'avalider', nom: 'À valider seulement' }, { val: 'refuses', nom: 'Refus consultants' }];
+    common.setCtrlOnly = e => this.setState({ ctrlOnly: e.target.value });
+
+    const noteSt = n => n == null ? 'color:var(--color-text-muted)' : n >= 4 ? 'color:#2d7a3e;font-weight:600' : n >= 3 ? 'color:#8a5a13;font-weight:600' : 'color:#8D1D2C;font-weight:600';
+    const shops = (pt.shops || []).filter(s => common.ctrlShop === 'Toutes les boutiques' || s.shop === common.ctrlShop)
+      .map(s => {
+        const taches = (s.taches || []).filter(t => common.ctrlOnly === 'tous' || (common.ctrlOnly === 'avalider' ? !t.valide : t.accepte === false))
+          .map(t => ({
+            taskId: t.taskId, tache: t.tache,
+            note: t.note == null ? '—' : t.note + ' / 5', noteSt: noteSt(t.note),
+            acc: t.accepte == null ? '—' : (t.accepte ? 'Conforme' : 'Non conforme'),
+            accSt: t.accepte == null ? 'color:var(--color-text-muted)' : (t.accepte ? 'color:#2d7a3e' : 'color:#8D1D2C;font-weight:500'),
+            comment: t.comment || '', hasComment: !!t.comment,
+            consultant: t.consultant || '—',
+            valide: t.valide, valideMeta: t.valide ? ('Validé' + (t.valideePar ? ' par ' + t.valideePar : '') + (t.valideeLe ? ' · ' + t.valideeLe : '')) : 'Non validé',
+            btnLabel: t.valide ? 'Retirer' : 'Valider',
+            btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
+            toggle: () => this.ctrlToggle(s.shopId, t.taskId, t.date, !t.valide),
+          }));
+        return { shop: s.shop, shopId: s.shopId, nTaches: (s.taches || []).length,
+          nValid: (s.taches || []).filter(x => x.valide).length, taches, vide: taches.length === 0 };
+      }).filter(s => !(common.ctrlOnly !== 'tous' && s.vide));
+    common.ctrlShops = shops;
+    common.ctrlEmpty = shops.length === 0;
+
+    common.ctrlConsultants = (pt.consultants || []).map(c => ({
+      nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
+      noteMoy: c.noteMoy != null ? String(c.noteMoy).replace('.', ',') + ' / 5' : '—',
+    }));
   }
 
   /* --- projets (kanban) ---------------------------------------------------------- */
