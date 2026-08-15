@@ -145,6 +145,11 @@ function ensureValidation(): void
     if ($manque('ceo_project_task', 'validated_by')) {
         Db::exec('ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL');
     }
+    // La date de validation, distincte de la livraison : sans elle, le suivi
+    // situerait une validation d'aujourd'hui au mois où la tâche a été rendue.
+    if ($manque('ceo_project_task', 'validated_at')) {
+        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN validated_at DATETIME NULL');
+    }
 
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_issue ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'

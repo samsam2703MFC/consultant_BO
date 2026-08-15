@@ -180,6 +180,50 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
+### Suivi des tâches — traitement et reporting semaine / mois
+
+`GET /taches/suivi?periode=semaine|mois` (défaut `mois` ; 7 ou 30 jours glissants) :
+
+```json
+{ "periode": "semaine", "depuis": "2026-08-08",
+  "validees": 12, "moyenne": 4.08,
+  "repartition": { "5": 3, "4": 6, "3": 2, "2": 1, "1": 0 },
+  "ouverts": 2, "traites": 4,
+  "signalements": [ { "id": 7, "tacheId": "t12", "tache": "…", "projet": "…",
+                      "owner": {"t":"c","id":"c1"}, "note": 2,
+                      "famille": "Délai", "type": "Rendu hors délai",
+                      "statut": "vu", "ouvert": true,
+                      "creeLe": "…", "vuLe": "…", "closLe": null } ],
+  "parIntervenant": [ { "owner": {"t":"c","id":"c1"}, "validees": 5, "moyenne": 4.2, "ouverts": 1 } ] }
+```
+
+Deux règles de lecture qui ne se devinent pas :
+
+1. **La période porte sur la date de VALIDATION** (`ceo_project_task.validated_at`),
+   pas sur `done_on` qui est la livraison. Une tâche rendue en mars et jugée en
+   août appartient au suivi d'août — la borner sur la livraison la ferait
+   disparaître de tout suivi utile.
+2. **Les signalements ouverts remontent tous**, quelle que soit leur date. Un
+   signalement de trois semaines qui traîne doit apparaître dans le suivi de la
+   semaine : c'est même le premier à devoir sauter aux yeux, et une borne de
+   date l'aurait masqué.
+
+`PATCH /task-issues/{id}` avec `{ statut, commentaire, par }` — cycle
+`nouveau` → `vu` → `traite`, et retour possible à `nouveau`.
+
+| Statut | Effet |
+|---|---|
+| `vu` | pose `seen_at` — **ne clôt pas**. Voir n'est pas régler. |
+| `traite` | pose `closed_at` et `closed_by`, et **exige un commentaire** (`422` sinon) : clore sans dire ce qui a été fait, c'est perdre l'information que le suivi cherchait à produire. |
+| `nouveau` | rouvre, et laisse une trace au journal. |
+
+Un statut hors de ces trois valeurs est refusé en `422`. Chaque transition
+écrit une ligne dans `ceo_journal_entry`.
+
+```sql
+ALTER TABLE ceo_project_task ADD COLUMN validated_at DATETIME NULL;
+```
+
 **Aucune migration à lancer à la main.** `ensureValidation()` (`src/installer.php`) pose les deux
 colonnes, la table `ceo_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
 comme sur une base déjà en service — `schema.sql` et `seed.sql`, eux, ne repassent jamais sur une

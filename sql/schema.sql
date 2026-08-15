@@ -184,6 +184,10 @@ CREATE TABLE IF NOT EXISTS ceo_project_task (
   budget      DECIMAL(10,2) NULL,
   note        TINYINT NULL,              -- 1..5, NULL = rendue mais pas encore validée
   validated_by VARCHAR(80) NULL,
+  -- Distincte de done_on : une tâche rendue en mars peut être validée en août.
+  -- C'est cette date, pas la livraison, qui situe une validation dans la semaine
+  -- ou le mois du suivi.
+  validated_at DATETIME NULL,
   CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

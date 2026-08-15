@@ -47,6 +47,7 @@ function route(string $method, string $path): mixed
     if ($method === 'GET') {
         return match (true) {
             $path === '/meta'                          => ep_meta(),
+            $path === '/taches/suivi'                  => ep_taches_suivi($_GET['periode'] ?? 'mois'),
             $path === '/referentiels/leviers'          => ep_leviers(),
             $path === '/referentiels/kpis'             => ep_kpis(),
             $path === '/referentiels/email-templates'  => ep_email_templates(),
@@ -78,6 +79,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)/tasks/([\w-]+)$#', $path, $m)) { return wr_task_patch($m[1], $m[2]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)/milestones/(\d+)$#', $path, $m)) { return wr_milestone_patch($m[1], (int) $m[2]); }
     if ($method === 'POST' && preg_match('#^/tasks/([\w-]+)/reminder$#', $path, $m)) { return wr_task_reminder($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/task-issues/(\d+)$#', $path, $m)) { return wr_task_issue_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/budget$#', $path, $m)) { return wr_budget_put($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/reporting/reports/([\w-]+)$#', $path, $m)) { return wr_report_patch($m[1]); }
     if ($method === 'POST' && preg_match('#^/reporting/reports/([\w-]+)/send$#', $path, $m)) { return wr_report_send($m[1]); }
