@@ -381,8 +381,8 @@ class App {
         return { nom: r.nom, code: r.code, fr: r.fr, marge: this.fE(r._marge), margeN1: this.fE(r._margeN1), margeVar: tv.txt, margeVarSt: tv.st,
           val: this.fK(r._val), valT: this.fK(r.s.valT), valPct: this.fP(r._valPct, 0), valPctSt: this.pill(r._valPct + 0.08),
           ca: this.fK(r._ca), caT: this.fK(r.s.perf[2026][6].caT), caPct: this.fP(r._caPct, 0), caPctSt: this.pill(r._caPct),
-          tickets: r._tickets.toLocaleString('fr-BE'), tickEvo: te.txt + ' vs N-1', tickEvoSt: te.st + ';font-size:10.5px',
-          panier: r._panier.toFixed(2).replace('.', ',') + ' €', panEvo: pe.txt + ' vs N-1', panEvoSt: pe.st + ';font-size:10.5px' }; });
+          tickets: r._tickets != null ? r._tickets.toLocaleString('fr-BE') : '—', tickEvo: te.txt + ' vs N-1', tickEvoSt: te.st + ';font-size:10.5px',
+          panier: r._panier != null ? r._panier.toFixed(2).replace('.', ',') + ' €' : '—', panEvo: pe.txt + ' vs N-1', panEvoSt: pe.st + ';font-size:10.5px' }; });
     }
 
     // --- heatmap
