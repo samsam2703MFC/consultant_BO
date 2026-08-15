@@ -190,7 +190,8 @@ function wr_task_patch(string $projectId, string $taskId): array
         }
         if (array_key_exists('note', $b)) {
             $par = (string) ($b['par'] ?? 'CEO');
-            Db::exec('UPDATE ceo_project_task SET note = ?, validated_by = ? WHERE id = ?', [$note, $note === null ? null : $par, $taskId]);
+            Db::exec('UPDATE ceo_project_task SET note = ?, validated_by = ?, validated_at = ? WHERE id = ?',
+                [$note, $note === null ? null : $par, $note === null ? null : date('Y-m-d H:i:s'), $taskId]);
             if ($note !== null) {
                 // La note vaut clôture : valider sans cocher laisserait la tâche
                 // dans « À valider » alors qu'elle vient d'être jugée.
@@ -212,6 +213,66 @@ function wr_task_patch(string $projectId, string $taskId): array
                     'Signalement ouvert sur « ' . $t['name'] . ' » — ' . $b['famille'] . ' · ' . $b['type']);
             }
         }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+    return ['ok' => true];
+}
+
+/**
+ * PATCH /task-issues/{id} — le cycle de vie d'un signalement.
+ *
+ * Trois états : `nouveau` → `vu` → `traite`. Voir n'est pas régler : le passage
+ * en « vu » dit seulement que quelqu'un a lu, il ne clôt rien. Seul « traite »
+ * ferme, avec sa date et son auteur.
+ *
+ * Rouvrir est possible et laisse une trace : un signalement clos trop vite se
+ * corrige, mais pas en silence.
+ */
+function wr_task_issue_patch(string $issueId): array
+{
+    $b = body();
+    $i = Db::row('SELECT i.*, t.name AS tache, p.name AS projet FROM ceo_task_issue i'
+        . ' JOIN ceo_project_task t ON t.id = i.task_id'
+        . ' JOIN ceo_project p ON p.id = t.project_id WHERE i.id = ?', [$issueId]);
+    if ($i === null) { http_response_code(404); return ['error' => 'signalement inconnu']; }
+
+    $statut = (string) ($b['statut'] ?? '');
+    if (!in_array($statut, ['nouveau', 'vu', 'traite'], true)) {
+        http_response_code(422);
+        return ['error' => 'statut attendu : nouveau, vu ou traite'];
+    }
+    $par = (string) ($b['par'] ?? 'CEO');
+    $note = trim((string) ($b['commentaire'] ?? ''));
+
+    // Clore sans dire ce qui a été fait, c'est perdre la seule information que
+    // le suivi cherchait à produire.
+    if ($statut === 'traite' && $note === '') {
+        http_response_code(422);
+        return ['error' => 'un commentaire est obligatoire pour traiter un signalement'];
+    }
+
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        $maintenant = date('Y-m-d H:i:s');
+        if ($statut === 'vu') {
+            Db::exec('UPDATE ceo_task_issue SET status = ?, seen_at = COALESCE(seen_at, ?),'
+                . ' closed_at = NULL, closed_by = NULL WHERE id = ?', ['vu', $maintenant, $issueId]);
+        } elseif ($statut === 'traite') {
+            Db::exec('UPDATE ceo_task_issue SET status = ?, seen_at = COALESCE(seen_at, ?),'
+                . ' closed_at = ?, closed_by = ?, comment = CONCAT(COALESCE(comment, \'\'), ?) WHERE id = ?',
+                ['traite', $maintenant, $maintenant, $par, "\n— traité : " . $note, $issueId]);
+        } else {
+            Db::exec('UPDATE ceo_task_issue SET status = ?, closed_at = NULL, closed_by = NULL WHERE id = ?',
+                ['nouveau', $issueId]);
+        }
+        $verbe = ['nouveau' => 'rouvert', 'vu' => 'marqué vu', 'traite' => 'traité'][$statut];
+        journalAdd('CEO', 'Signalement', $i['projet'],
+            'Signalement sur « ' . $i['tache'] . ' » ' . $verbe . ' (' . $par . ')'
+            . ($note !== '' ? ' — ' . $note : ''));
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();

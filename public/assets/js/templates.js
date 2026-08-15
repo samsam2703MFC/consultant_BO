@@ -60,6 +60,7 @@ export function render(c, x){
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isTaches ? tplTaches(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
+      ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
       ${c.isParams ? tplParams(c, x) : ''}
       ` : `<div style="padding:60px 0;color:var(--color-text-muted);font-size:13px">Chargement des données du réseau…</div>`}
@@ -1085,6 +1086,101 @@ function tplReporting(c, x){
 }
 
 /* --- Journal ------------------------------------------------------------------ */
+/* --- Suivi des tâches --------------------------------------------------------- */
+/**
+ * Ce qui a été validé sur la période, et les signalements à traiter.
+ *
+ * Trois blocs, dans l'ordre où l'on décide : les chiffres, qui dit s'il y a un
+ * problème ; la répartition et les intervenants, qui disent où ; les
+ * signalements, qui se traitent sur place.
+ */
+function tplSuivi(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const titre = 'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)';
+  return `
+  <div data-screen="suivi" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      ${c.suOnglets.map(o => `<button ${x.A(o.go)} style="${o.st}">${o.nom}</button>`).join('')}
+      <span style="flex:1"></span>
+    </div>
+
+    ${c.suChargement ? `<div style="${carte};padding:18px;font-size:12px;color:var(--color-text-muted)">Lecture du suivi…</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+        ${c.suTuiles.map(t => `
+          <div style="${carte};padding:13px 15px">
+            <div style="${titre};margin-bottom:5px">${esc(t.k)}</div>
+            <div style="${t.vSt}">${esc(t.v)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(t.s)}</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">
+        <div style="${carte};padding:14px 16px">
+          <div style="${titre};margin-bottom:11px">Répartition des notes</div>
+          ${c.suBarres.map(b => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="${b.libSt};width:170px;flex:0 0 auto">${esc(b.nom)}</span>
+              <span style="flex:1;min-width:0;background:var(--color-background-secondary);border-radius:999px;height:7px">
+                <span style="display:block;${b.barSt}"></span></span>
+              <span style="font-size:11.5px;color:var(--color-text-muted);width:44px;text-align:right;flex:0 0 auto">${b.n} · ${b.pct}%</span>
+            </div>`).join('')}
+        </div>
+
+        <div style="${carte};padding:14px 16px">
+          <div style="${titre};margin-bottom:11px">Par intervenant</div>
+          ${c.suGens.length === 0 ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucune validation sur la période.</div>` : `
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;column-gap:14px;row-gap:8px;align-items:center">
+            <span style="font-size:10px;color:var(--color-text-muted)"></span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Validées</span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Moyenne</span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Ouverts</span>
+            ${c.suGens.map(g => `
+              <span style="font-size:12.5px;min-width:0">${esc(g.nom)}</span>
+              <span style="font-size:12px;text-align:right">${g.validees}</span>
+              <span style="${g.moySt};text-align:right">${g.moyenne}</span>
+              <span style="${g.ouvSt};text-align:right">${g.ouverts}</span>`).join('')}
+          </div>`}
+        </div>
+      </div>
+
+      <div style="${carte};overflow:hidden">
+        <div style="display:flex;align-items:center;gap:9px;padding:11px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <span style="${titre}">Signalements</span>
+          <span style="font-size:11px;color:var(--color-text-muted)">les ouverts d'abord, quelle que soit leur date</span>
+        </div>
+        ${c.suSignalements.length === 0 ? `<div style="padding:18px;font-size:12px;color:var(--color-text-muted)">Aucun signalement — rien à traiter.</div>` : ''}
+        ${c.suSignalements.map(g => `
+          <div style="${g.rowSt}">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500;line-height:1.3">${esc(g.tache)}</div>
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px">
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.qui)} · ${esc(g.projet)}</span>
+                <span style="${g.lvlSt}"><i style="${g.lvlNumSt};font-style:normal">${g.lvlNum}</i>${esc(g.lvlTxt)}</span>
+                <span style="font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary)">${esc(g.quoi)}</span>
+                <span style="${g.etatSt}">${esc(g.etat)}</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.age)}</span>
+              </div>
+              ${g.aCommentaire ? `<div style="font-size:11.5px;line-height:1.45;color:var(--color-text-muted);margin-top:6px;white-space:pre-line">${esc(g.commentaire)}</div>` : ''}
+            </div>
+            <div style="flex:0 0 300px;display:flex;flex-direction:column;gap:6px">
+              ${g.ouvert ? `
+                <textarea ${x.C(g.majNote)} rows="2" placeholder="Ce qui a été fait — obligatoire pour clore"
+                  style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 8px;font-size:11.5px;font-family:var(--font-ui);color:var(--color-text);resize:vertical;box-sizing:border-box">${esc(g.note)}</textarea>
+                <div style="display:flex;gap:6px">
+                  <button ${x.A(g.vu)} style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Marquer vu</button>
+                  <button ${x.A(g.traiter)} class="hv-fade" style="flex:1;border:none;border-radius:999px;padding:6px 12px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Traiter</button>
+                </div>`
+              : `<button ${x.A(g.rouvrir)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>`}
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div style="font-size:12px;color:var(--color-text-muted)">Voir n'est pas régler : « Marquer vu » dit qu'on a lu, « Traiter » ferme et demande ce qui a été fait. Tout passe au journal.</div>
+    `}
+  </div>`;
+}
+
 function tplJournal(c, x){
   const { esc } = x;
   return `

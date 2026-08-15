@@ -43,6 +43,18 @@ async function get(path, signal){
   return r.json();
 }
 
+/**
+ * Lecture ponctuelle d'un endpoint, hors du chargement initial.
+ *
+ * Le suivi des tâches se recharge quand on change de période ou qu'on traite
+ * un signalement : le refaire passer par `load()` rechargerait tout le cockpit
+ * pour un seul écran. Rend `null` si l'API est injoignable — l'écran affiche
+ * alors son message, il ne casse pas.
+ */
+export async function readOne(path){
+  try { return await get(path); } catch (e) { console.warn('[cockpit] lecture ' + path + ' : ' + e.message); return null; }
+}
+
 /* --- Authentification intégrée ------------------------------------------- */
 
 /** État d'auth : { setup, authed } — ou null si l'API est injoignable

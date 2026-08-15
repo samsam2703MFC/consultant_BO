@@ -4,7 +4,7 @@
  * + délégation d'événements), données : api.js (REST, repli vide hors-ligne).
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
-import { load, write, authStatus, authSubmit, authLogout } from './api.js';
+import { load, write, readOne, authStatus, authSubmit, authLogout } from './api.js';
 import { render as tplRender } from './templates.js';
 
 function escHtml(v){
@@ -24,6 +24,9 @@ class App {
       // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
       // ne doit pas clôturer une tâche.
       tkVal: {},
+      // Suivi : la période affichée, les données du serveur, et le
+      // brouillon de traitement par signalement.
+      suiviPeriode: 'semaine', suiviData: null, suiviNote: {},
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       pdCat: 'Toutes les catégories', pdSort: 'score' };
@@ -214,7 +217,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -356,13 +359,13 @@ class App {
 
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
-      ['Projets & contrôle', [['projets', 'Projets', nLate]]],
+      ['Projets & contrôle', [['projets', 'Projets', nLate], ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0]]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0], ['parametres', 'Paramètres', 0]]]];
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => ({ id: it[0], label: it[1], badge: it[2] || false, go: goTo(it[0]),
       st: 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;' + (S.screen === it[0] ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text)') })) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', suivi: 'isSuivi' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -484,6 +487,8 @@ class App {
     if (common.isTaches) this.valsTaches(common, flat);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
+    // --- suivi des tâches
+    if (common.isSuivi) this.valsSuivi(common);
     // --- journal
     if (common.isJournal) this.valsJournal(common);
     // --- paramètres
@@ -1061,6 +1066,107 @@ class App {
         dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
   }
 
+  /* --- suivi des tâches ------------------------------------------------------------- */
+  /**
+   * Ce qui a été validé sur la période, et les signalements à traiter.
+   *
+   * Les chiffres viennent du serveur (`/taches/suivi`) plutôt que d'un calcul
+   * sur les projets déjà chargés : le même calcul doit servir au rapport
+   * hebdomadaire et au rapport mensuel, et deux implémentations d'une même
+   * moyenne finissent par ne plus donner le même nombre.
+   */
+  valsSuivi(common){
+    const S = this.state, D = this.D, M = this.M;
+    const SG = M.SIGNAL || { seuil: 4, niveaux: [] };
+    const niv = n => (SG.niveaux || []).find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666' };
+    const nomDe = o => { if (!o) return '—';
+      const l = (o.t === 'c' ? D.consultants : D.suppliers) || [];
+      return (l.find(x => x.id === o.id) || {}).nom || o.id; };
+
+    common.suPeriode = S.suiviPeriode;
+    common.suOnglets = [['semaine', 'Semaine'], ['mois', 'Mois']].map(([v, nom]) => ({
+      nom, actif: S.suiviPeriode === v,
+      go: () => { this.setState({ suiviPeriode: v, suiviData: null }); this.chargerSuivi(v); },
+      st: 'border:0.5px solid ' + (S.suiviPeriode === v ? 'var(--color-primary)' : 'var(--color-border-secondary)')
+        + ';background:' + (S.suiviPeriode === v ? 'var(--color-primary)' : 'transparent')
+        + ';color:' + (S.suiviPeriode === v ? '#fff' : 'var(--color-text)')
+        + ';border-radius:999px;padding:5px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer' }));
+
+    const d = S.suiviData;
+    if (d === null) { this.chargerSuivi(S.suiviPeriode); common.suChargement = true; return; }
+    common.suChargement = false;
+    common.suVide = d.validees === 0 && d.signalements.length === 0;
+
+    const lib = S.suiviPeriode === 'semaine' ? '7 derniers jours' : '30 derniers jours';
+    common.suTuiles = [
+      { k: 'Validées', v: String(d.validees), s: lib, c: 'var(--color-text)' },
+      { k: 'Note moyenne', v: d.moyenne === null ? '—' : String(d.moyenne).replace('.', ','), s: 'sur 5', c: d.moyenne === null ? 'var(--color-text-muted)' : niv(Math.round(d.moyenne)).couleur },
+      { k: 'À traiter', v: String(d.ouverts), s: 'signalements ouverts', c: d.ouverts ? '#8D1D2C' : '#2d7a3e' },
+      { k: 'Traités', v: String(d.traites), s: lib, c: '#2d7a3e' }
+    ].map(t => ({ ...t, vSt: 'font-size:26px;font-weight:500;line-height:1.1;color:' + t.c }));
+
+    // La répartition : une moyenne de 4,0 peut cacher deux 5 et deux 3.
+    const tot = Object.values(d.repartition).reduce((a, b) => a + b, 0) || 1;
+    common.suBarres = [5, 4, 3, 2, 1].map(n => { const l = niv(n), v = d.repartition[n] || 0;
+      return { nom: l.nom, n: String(v), pct: Math.round(v / tot * 100),
+        barSt: 'height:7px;border-radius:999px;background:' + l.couleur + ';width:' + Math.round(v / tot * 100) + '%',
+        libSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }; });
+
+    common.suGens = d.parIntervenant.map(x => ({
+      nom: nomDe(x.owner), validees: String(x.validees),
+      moyenne: x.moyenne === null ? '—' : String(x.moyenne).replace('.', ','),
+      moySt: 'font-size:12px;font-weight:500;color:' + (x.moyenne === null ? 'var(--color-text-muted)' : niv(Math.round(x.moyenne)).couleur),
+      ouverts: x.ouverts ? String(x.ouverts) : '—',
+      ouvSt: 'font-size:12px;font-weight:500;color:' + (x.ouverts ? '#8D1D2C' : 'var(--color-text-muted)')
+    })).sort((a, b) => Number(b.ouverts === '—' ? 0 : b.ouverts) - Number(a.ouverts === '—' ? 0 : a.ouverts));
+
+    const jours = iso => { if (!iso) return ''; const j = Math.floor((new Date(M.TODAY) - new Date(iso.slice(0, 10))) / 86400000);
+      return j <= 0 ? "aujourd'hui" : j === 1 ? 'hier' : 'depuis ' + j + ' jours'; };
+
+    common.suSignalements = d.signalements.map(g => { const l = niv(g.note);
+      const brouillon = S.suiviNote['sg:' + g.id] || '';
+      const majNote = e => this.setState(s2 => ({ suiviNote: Object.assign({}, s2.suiviNote, { ['sg:' + g.id]: e.target.value }) }));
+      const acte = (statut, exigeNote) => () => {
+        if (exigeNote && brouillon.trim() === '') { this.notify('Dites ce qui a été fait avant de clore'); return; }
+        this.api('PATCH', '/task-issues/' + g.id, { statut, commentaire: brouillon, par: 'CEO' });
+        this.log('Signalement', g.projet, 'Signalement sur « ' + g.tache + ' » '
+          + ({ nouveau: 'rouvert', vu: 'marqué vu', traite: 'traité' })[statut]
+          + (brouillon ? ' — ' + brouillon : ''));
+        this.notify('Signalement ' + ({ nouveau: 'rouvert', vu: 'marqué vu', traite: 'traité' })[statut]);
+        this.setState(s2 => ({ suiviNote: Object.assign({}, s2.suiviNote, { ['sg:' + g.id]: '' }), suiviData: null }));
+        this.chargerSuivi(S.suiviPeriode);
+      };
+      const etat = g.ouvert ? (g.statut === 'vu' ? 'Vu' : 'Nouveau') : 'Traité';
+      const etatC = g.ouvert ? (g.statut === 'vu' ? '#8a5a13' : '#8D1D2C') : '#2d7a3e';
+      return {
+        tache: g.tache, projet: g.projet, qui: nomDe(g.owner),
+        quoi: g.famille + ' · ' + g.type,
+        commentaire: (g.comment || '').trim(),
+        aCommentaire: (g.comment || '').trim() !== '',
+        age: jours(g.creeLe), ouvert: g.ouvert,
+        lvlTxt: l.nom, lvlNum: String(g.note),
+        lvlSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur,
+        lvlNumSt: 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;background:' + l.couleur,
+        etat, etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;background:' + etatC + '1f;color:' + etatC,
+        rowSt: 'display:flex;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary)'
+          + (g.ouvert ? ';border-left:3px solid ' + l.couleur : ''),
+        note: brouillon, majNote,
+        vu: acte('vu', false), traiter: acte('traite', true), rouvrir: acte('nouveau', false)
+      }; });
+  }
+
+  /** Recharge le suivi sans rejouer tout le chargement du cockpit. */
+  chargerSuivi(periode){
+    if (this._suiviEnCours === periode) { return; }
+    this._suiviEnCours = periode;
+    readOne('/taches/suivi?periode=' + encodeURIComponent(periode)).then(d => {
+      this._suiviEnCours = null;
+      // Une réponse en retard ne doit pas écraser une autre période.
+      if (this.state.suiviPeriode !== periode) { return; }
+      this.setState({ suiviData: d || { periode, validees: 0, moyenne: null, repartition: {}, ouverts: 0, traites: 0, signalements: [], parIntervenant: [], taches: [] } });
+    });
+  }
+
   /* --- reporting -------------------------------------------------------------------- */
   valsReporting(common, navDef, titles){
     const S = this.state, D = this.D, M = this.M;
@@ -1079,7 +1185,14 @@ class App {
         relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
     const pById = id => D.people.find(p => p.id === id);
     common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role }));
-    const posteDefs = navDef.flatMap(g => g[1]).map((it, i) => ({ id: 'p' + (i + 1), tag: 'P' + (i + 1), sid: it[0], label: it[1] }));
+    // Ordre FIGÉ, indépendant du menu : `postes_json` stocke « p1 », « p3 »…
+    // Tant que la numérotation venait de l'index dans navDef, ajouter un écran
+    // au milieu redirigeait silencieusement tous les rapports enregistrés vers
+    // d'autres écrans. Un nouvel écran s'ajoute EN FIN de liste, jamais ailleurs.
+    const POSTES = ['taches', 'magasins', 'heatmap', 'objectifs', 'budget', 'encodage',
+      'marge', 'produits', 'projets', 'reporting', 'journal', 'parametres', 'suivi'];
+    const labelDe = sid => (navDef.flatMap(g => g[1]).find(it => it[0] === sid) || [sid, sid])[1];
+    const posteDefs = POSTES.map((sid, i) => ({ id: 'p' + (i + 1), tag: 'P' + (i + 1), sid, label: labelDe(sid) }));
     const repUrl = (r, sel, email) => 'https://cockpit.latelierby.be/rapports/rapport.html?id=' + r.id + '&postes=' + sel.join(',') + '&periode={AAAA-MM}&dest=' + (email || '') + '&format=pdf';
     const isOn = r => S.alertOn['rep:' + r.id] != null ? S.alertOn['rep:' + r.id] : r.actif;
     const fFreq = S.repFFreq || 'Toutes les fréquences', fEtat = S.repFEtat || 'tous', fType = S.repFType || 'Tous les types';

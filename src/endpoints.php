@@ -370,6 +370,7 @@ function ep_projects(): array
             'owner' => ['t' => $t['owner_kind'], 'id' => $t['owner_id']],
             'magasin' => $t['shop_id'], 'due' => $t['due_on'], 'done' => $t['done_on'],
             'relance' => $t['reminded_on'], 'desc' => $t['description'],
+            'valideeLe' => $t['validated_at'] ?? null,
             'budget' => $t['budget'] !== null ? (float) $t['budget'] : null,
             // `note` nulle sur une tâche rendue = elle attend une validation :
             // c'est ce qui alimente le groupe « À valider » de l'écran.
@@ -417,6 +418,107 @@ function tacheSignalement(string $taskId): ?array
         'ouvert'  => $r['closed_at'] === null,
         'creeLe'  => $r['created_at'],
         'creePar' => $r['created_by'],
+    ];
+}
+
+/**
+ * Suivi des tâches — les chiffres d'une période, et les signalements à traiter.
+ *
+ * Calculé en SQL plutôt qu'au client : l'écran doit pouvoir répondre « combien
+ * de tâches validées cette semaine » sans charger tous les projets, et le même
+ * calcul sert au rapport hebdomadaire et au rapport mensuel.
+ *
+ * `periode` vaut `semaine` ou `mois`. La borne est la date du jour côté base —
+ * pas celle du navigateur, qui peut être n'importe où.
+ */
+function ep_taches_suivi(string $periode = 'mois'): array
+{
+    $jours = $periode === 'semaine' ? 7 : 30;
+    $depuis = date('Y-m-d', strtotime('-' . $jours . ' days'));
+
+    // Les tâches validées sur la période, bornées sur la date de VALIDATION.
+    // Borner sur `done_on` — la livraison — situerait une validation d'
+    // aujourd'hui dans le mois où la tâche a été rendue : une tâche livrée en
+    // mars et jugée en août n'apparaîtrait dans aucun suivi utile.
+    // COALESCE pour les validations d'avant l'existence de la colonne.
+    $val = Db::rows(
+        'SELECT t.id, t.name, t.note, t.done_on, t.validated_at, t.owner_kind, t.owner_id, t.shop_id,'
+        . ' p.name AS projet FROM ceo_project_task t'
+        . ' JOIN ceo_project p ON p.id = t.project_id'
+        . ' WHERE t.note IS NOT NULL AND COALESCE(t.validated_at, t.done_on) >= ?'
+        . ' ORDER BY COALESCE(t.validated_at, t.done_on) DESC', [$depuis]);
+
+    $notes = array_map(static fn ($r) => (int) $r['note'], $val);
+    $repartition = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+    foreach ($notes as $n) { $repartition[$n] = ($repartition[$n] ?? 0) + 1; }
+
+    // Les signalements : ceux de la période, plus TOUS ceux qui restent
+    // ouverts. Un signalement de trois semaines qui traîne doit apparaître
+    // dans le suivi de la semaine — c'est même le premier à devoir sauter aux
+    // yeux, alors qu'une borne de date l'aurait masqué.
+    $sig = Db::rows(
+        'SELECT i.*, t.name AS tache, t.owner_kind, t.owner_id, p.name AS projet'
+        . ' FROM ceo_task_issue i'
+        . ' JOIN ceo_project_task t ON t.id = i.task_id'
+        . ' JOIN ceo_project p ON p.id = t.project_id'
+        . ' WHERE i.closed_at IS NULL OR i.created_at >= ?'
+        . ' ORDER BY (i.closed_at IS NULL) DESC, i.note ASC, i.created_at ASC', [$depuis]);
+
+    $signalements = array_map(static fn ($r) => [
+        'id'       => (int) $r['id'],
+        'tacheId'  => $r['task_id'],
+        'tache'    => $r['tache'],
+        'projet'   => $r['projet'],
+        'owner'    => ['t' => $r['owner_kind'], 'id' => $r['owner_id']],
+        'note'     => (int) $r['note'],
+        'famille'  => $r['famille'],
+        'type'     => $r['type'],
+        'comment'  => $r['comment'],
+        'statut'   => $r['status'],
+        'ouvert'   => $r['closed_at'] === null,
+        'creeLe'   => $r['created_at'],
+        'creePar'  => $r['created_by'],
+        'vuLe'     => $r['seen_at'],
+        'closLe'   => $r['closed_at'],
+        'closPar'  => $r['closed_by'],
+    ], $sig);
+
+    // Par intervenant : ce qui permet de dire à qui parler, pas seulement
+    // combien de lignes il reste.
+    $par = [];
+    foreach ($val as $r) {
+        $k = $r['owner_kind'] . ':' . $r['owner_id'];
+        $par[$k] ??= ['owner' => ['t' => $r['owner_kind'], 'id' => $r['owner_id']], 'validees' => 0, 'somme' => 0, 'sousSeuil' => 0, 'ouverts' => 0];
+        $par[$k]['validees']++;
+        $par[$k]['somme'] += (int) $r['note'];
+    }
+    foreach ($signalements as $g) {
+        $k = $g['owner']['t'] . ':' . $g['owner']['id'];
+        $par[$k] ??= ['owner' => $g['owner'], 'validees' => 0, 'somme' => 0, 'sousSeuil' => 0, 'ouverts' => 0];
+        if ($g['ouvert']) { $par[$k]['ouverts']++; }
+    }
+    $parIntervenant = array_values(array_map(static function (array $x): array {
+        $x['moyenne'] = $x['validees'] > 0 ? round($x['somme'] / $x['validees'], 2) : null;
+        unset($x['somme'], $x['sousSeuil']);
+        return $x;
+    }, $par));
+
+    $ouverts = count(array_filter($signalements, static fn ($g) => $g['ouvert']));
+    return [
+        'periode'    => $periode,
+        'depuis'     => $depuis,
+        'validees'   => count($val),
+        'moyenne'    => $notes !== [] ? round(array_sum($notes) / count($notes), 2) : null,
+        'repartition' => $repartition,
+        'ouverts'    => $ouverts,
+        'traites'    => count($signalements) - $ouverts,
+        'signalements' => $signalements,
+        'parIntervenant' => $parIntervenant,
+        'taches'     => array_map(static fn ($r) => [
+            'id' => $r['id'], 'nom' => $r['name'], 'note' => (int) $r['note'],
+            'le' => $r['validated_at'] ?? $r['done_on'], 'projet' => $r['projet'],
+            'owner' => ['t' => $r['owner_kind'], 'id' => $r['owner_id']],
+        ], $val),
     ];
 }
 
