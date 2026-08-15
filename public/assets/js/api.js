@@ -107,7 +107,11 @@ function shape(p, source){
   return {
     source, meta,
     M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers, KPI_LIST: p.kpis.map(k => k.nom || k),
-      FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes },
+      FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes,
+      // Niveaux, seuil et référentiel du signalement — réglage serveur,
+      // jamais une constante d'écran. `ensureValidation()` garantit qu'il
+      // existe : le repli ne sert qu'à un serveur injoignable.
+      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
     D: Object.assign({}, p.raw || {}, {
       stores: joinPerf(p.stores, p.perf),
       budgets: p.budgets,

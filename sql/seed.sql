@@ -674,3 +674,35 @@ INSERT INTO ceo_app_setting VALUES ('familles', '["Produits","Services","Organis
 INSERT INTO ceo_app_setting VALUES ('reportTypes', '["Financier","Commercial","Contrôle qualité","Pilotage projets","Développement réseau"]');
 INSERT INTO ceo_app_setting VALUES ('caMoyenOuverture', '820000');
 INSERT INTO ceo_app_setting VALUES ('pwaBase', '"https:\\/\\/panel.atelierby.be"');
+
+-- ----------------------------------------------------------------------------
+-- Validation des tâches consultants : les cinq niveaux, le seuil, et le
+-- référentiel famille → type de problème.
+--
+-- UNE SEULE SOURCE. Les libellés et les couleurs ne sont recopiés nulle part
+-- dans le JavaScript : le jour où « mineur » devient « à surveiller », il ne
+-- change qu'ici. Modifiable depuis l'écran Paramètres (PUT /parametres/signalement).
+--
+-- Les mêmes cinq niveaux servent au panel consultant (pwa_consultant) pour les
+-- tâches boutique : un « majeur » doit vouloir dire la même chose des deux
+-- côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type,
+-- lui, est propre à chaque application — on ne reproche pas la même chose à un
+-- livrable de consultant qu'à une vitrine de magasin.
+-- ----------------------------------------------------------------------------
+INSERT INTO ceo_app_setting VALUES ('signalement', '{
+  "seuil": 4,
+  "niveaux": [
+    {"n":5,"nom":"Exemplaire","couleur":"#C9A227","aide":"au-dessus de l\'attendu"},
+    {"n":4,"nom":"Conforme","couleur":"#2D7A3E","aide":"livrable accepté"},
+    {"n":3,"nom":"Non conforme — mineur","couleur":"#D97706","aide":"détail à reprendre"},
+    {"n":2,"nom":"Non conforme — majeur","couleur":"#C0182B","aide":"écart net, à reprendre"},
+    {"n":1,"nom":"Non conforme — critique","couleur":"#8D1D2C","aide":"à reprendre immédiatement"}
+  ],
+  "familles": [
+    {"nom":"Livrable","types":["Incomplet","Non conforme au brief","Sans relecture","Format inexploitable"]},
+    {"nom":"Délai","types":["Rendu hors délai","Sans prévenir","Report répété"]},
+    {"nom":"Qualité de service","types":["Injoignable","Compte rendu absent","Consigne non suivie"]},
+    {"nom":"Budget","types":["Dépassement","Non justifié"]},
+    {"nom":"Autre","types":["À préciser"]}
+  ]
+}');

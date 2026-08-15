@@ -91,18 +91,99 @@ function wr_task_create(string $projectId): array
     return ['ok' => true, 'id' => $id];
 }
 
-/** PATCH /projects/{id}/tasks/{taskId} — done / magasinId. */
+/**
+ * Le seuil de conformité — le réglage, jamais une constante.
+ *
+ * Une note en dessous ouvre un signalement. Le jour où 3 doit passer pour
+ * acceptable, c'est une ligne de `ceo_app_setting`, pas un déploiement.
+ */
+function seuilSignalement(): int
+{
+    $c = setting('signalement', []);
+    $s = is_array($c) && isset($c['seuil']) ? (int) $c['seuil'] : 4;
+    return $s >= 1 && $s <= 5 ? $s : 4;
+}
+
+/** Le libellé d'un niveau, pour le journal — lu au même endroit que l'écran. */
+function libelleNiveau(int $n): string
+{
+    $c = setting('signalement', []);
+    foreach ((is_array($c) && isset($c['niveaux']) ? $c['niveaux'] : []) as $l) {
+        if ((int) ($l['n'] ?? 0) === $n) { return (string) ($l['nom'] ?? $n . '/5'); }
+    }
+    return $n . '/5';
+}
+
+/**
+ * PATCH /projects/{id}/tasks/{taskId} — done / magasinId / note + signalement.
+ *
+ * La note et le signalement partent dans la MÊME requête que la clôture. Une
+ * tâche close dont le signalement s'est perdu en route est pire que les deux
+ * ensemble : la trace du problème disparaît, la clôture reste.
+ */
 function wr_task_patch(string $projectId, string $taskId): array
 {
     $b = body();
-    $t = Db::row('SELECT t.name, p.name AS pname FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
+    $t = Db::row('SELECT t.name, t.done_on, p.name AS pname FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
     if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
-    if (array_key_exists('done', $b)) {
-        Db::exec('UPDATE ceo_project_task SET done_on = ? WHERE id = ?', [$b['done'], $taskId]);
-        journalAdd('CEO', 'Tâche', $t['pname'], 'Tâche « ' . $t['name'] . ' » ' . ($b['done'] ? 'marquée faite le ' . $b['done'] : 'rouverte'));
+
+    // Une note hors 1..5 n'est pas une note : mieux vaut la refuser que
+    // l'écrire et voir un « 0 » remonter dans les moyennes du mois.
+    $note = null;
+    if (array_key_exists('note', $b) && $b['note'] !== null) {
+        $note = (int) $b['note'];
+        if ($note < 1 || $note > 5) { http_response_code(422); return ['error' => 'note hors échelle (1..5)']; }
     }
-    if (array_key_exists('magasinId', $b)) {
-        Db::exec('UPDATE ceo_project_task SET shop_id = ? WHERE id = ?', [$b['magasinId'], $taskId]);
+    $seuil = seuilSignalement();
+    // Sous le seuil, la famille et le type sont obligatoires. Sans eux, six
+    // mois plus tard la moitié du suivi est en « Autre » et rien ne s'analyse.
+    if ($note !== null && $note < $seuil) {
+        $fam = trim((string) ($b['famille'] ?? ''));
+        $typ = trim((string) ($b['type'] ?? ''));
+        if ($fam === '' || $typ === '') {
+            http_response_code(422);
+            return ['error' => 'famille et type de problème obligatoires en dessous de ' . $seuil];
+        }
+    }
+
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        if (array_key_exists('done', $b)) {
+            Db::exec('UPDATE ceo_project_task SET done_on = ? WHERE id = ?', [$b['done'], $taskId]);
+            journalAdd('CEO', 'Tâche', $t['pname'], 'Tâche « ' . $t['name'] . ' » ' . ($b['done'] ? 'marquée faite le ' . $b['done'] : 'rouverte'));
+        }
+        if (array_key_exists('magasinId', $b)) {
+            Db::exec('UPDATE ceo_project_task SET shop_id = ? WHERE id = ?', [$b['magasinId'], $taskId]);
+        }
+        if (array_key_exists('note', $b)) {
+            $par = (string) ($b['par'] ?? 'CEO');
+            Db::exec('UPDATE ceo_project_task SET note = ?, validated_by = ? WHERE id = ?', [$note, $note === null ? null : $par, $taskId]);
+            if ($note !== null) {
+                // La note vaut clôture : valider sans cocher laisserait la tâche
+                // dans « À valider » alors qu'elle vient d'être jugée.
+                if (!array_key_exists('done', $b) && $t['done_on'] === null) {
+                    Db::exec('UPDATE ceo_project_task SET done_on = ? WHERE id = ?', [date('Y-m-d'), $taskId]);
+                }
+                journalAdd('CEO', 'Validation', $t['pname'],
+                    'Tâche « ' . $t['name'] . ' » validée ' . $note . '/5 — ' . libelleNiveau($note) . ' (' . $par . ')');
+            }
+            if ($note !== null && $note < $seuil) {
+                $copie = $b['copie'] ?? [];
+                Db::exec('INSERT INTO ceo_task_issue (task_id, note, famille, type, comment, recipients, status, created_at, created_by) VALUES (?,?,?,?,?,?,?,?,?)', [
+                    $taskId, $note, (string) $b['famille'], (string) $b['type'],
+                    $b['commentaire'] ?? null,
+                    is_array($copie) ? implode(',', $copie) : (string) $copie,
+                    'nouveau', date('Y-m-d H:i:s'), $par,
+                ]);
+                journalAdd('CEO', 'Signalement', $t['pname'],
+                    'Signalement ouvert sur « ' . $t['name'] . ' » — ' . $b['famille'] . ' · ' . $b['type']);
+            }
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
     }
     return ['ok' => true];
 }

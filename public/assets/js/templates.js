@@ -821,6 +821,13 @@ function tplProjets(c, x){
 }
 
 /* --- Tâches consultants ------------------------------------------------------ */
+/* Styles du dépli de validation, nommés une fois plutôt que recopiés six. */
+const dkv = 'display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;row-gap:7px';
+const dk = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);white-space:nowrap;padding-top:2px';
+const dv = 'font-size:12px;line-height:1.45;text-wrap:pretty';
+const dcap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+const dsel = 'width:100%;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)';
+
 function tplTaches(c, x){
   const { esc } = x;
   return `
@@ -848,22 +855,58 @@ function tplTaches(c, x){
                   <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px">
                     <span style="font-size:11px;color:var(--color-text-muted)">${esc(t.qui)} · ${esc(t.projet)}</span>
                     ${t.hasMag ? `<span style="font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text);white-space:nowrap">${esc(t.magasin)}</span>` : ''}
+                    ${t.hasLvl ? `<span style="${t.lvlSt}"><i style="${t.lvlNumSt};font-style:normal">${t.lvlNum}</i>${esc(t.lvlTxt)}</span>` : ''}
+                    ${t.hasSig ? `<span style="${t.sigSt}">${esc(t.sigTxt)}</span>` : ''}
                   </div>
                 </div>
                 <span style="${t.dueSt}">${t.due}</span>
                 <span style="${t.chevSt}">▾</span>
               </div>
               ${t.ouvert ? `
-                <div style="margin:0 16px 14px 44px;padding:11px 14px;border-radius:9px;background:var(--color-background-secondary);display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;row-gap:6px">
-                  ${t.rows.map(r => `
-                    <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);white-space:nowrap;padding-top:2px">${r.k}</span>
-                    <span style="font-size:12px;line-height:1.45;text-wrap:pretty">${esc(r.v)}</span>`).join('')}
+                <div style="margin:0 16px 14px 44px;display:grid;grid-template-columns:${t.vOuvert ? 'minmax(0,1fr) 372px' : 'minmax(0,1fr)'};gap:14px;align-items:start">
+                  <div style="padding:11px 14px;border-radius:9px;background:var(--color-background-secondary)">
+                    <div style="${dkv}">
+                      ${t.rows.map(r => `
+                        <span style="${dk}">${r.k}</span>
+                        <span style="${dv}">${esc(r.v)}</span>`).join('')}
+                    </div>
+                    <div style="${dcap};margin:13px 0 6px">Cet intervenant</div>
+                    <div style="${dkv}">
+                      ${t.histo.map(r => `
+                        <span style="${dk}">${r.k}</span>
+                        <span style="${dv}">${esc(r.v)}</span>`).join('')}
+                    </div>
+                  </div>
+                  ${t.vOuvert ? `
+                  <div style="padding:12px 14px;border-radius:9px;background:var(--color-surface);border:0.5px solid var(--color-border-secondary)">
+                    <div style="${dcap};margin-bottom:6px">Votre validation</div>
+                    <div style="display:flex;align-items:center;gap:1px">
+                      ${[1, 2, 3, 4, 5].map(n => `<button ${x.A(() => t.setNote(n))} aria-label="${n}/5" style="${t.starSt(n)}">★</button>`).join('')}
+                    </div>
+                    ${t.hasLvb ? `
+                      <div style="${t.lvbSt}"><i style="${t.lvbNumSt}">${t.lvbNum}</i>${esc(t.lvbTxt)}
+                        <span style="margin-left:auto;font-size:10.5px;font-weight:500;opacity:0.75">${esc(t.lvbAide)}</span></div>` : ''}
+                    ${t.sousSeuil ? `
+                      <div style="margin-top:10px;border:1px solid rgba(141,29,44,0.26);border-radius:9px;background:rgba(141,29,44,0.035);padding:10px">
+                        <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-primary);margin-bottom:8px">
+                          <span style="width:14px;height:14px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">!</span>
+                          Signaler à l'intervenant
+                          <span style="margin-left:auto;text-transform:none;letter-spacing:0;font-size:10px;background:rgba(192,24,43,0.12);color:#C0182B;border-radius:999px;padding:1px 8px">${esc(t.sousTxt)}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                          <select ${x.C(t.setFam)} style="${dsel}">${opts(t.fams, t.famCour)}</select>
+                          <select ${x.C(t.setTyp)} style="${dsel}">${opts(t.typs, t.typCour)}</select>
+                        </div>
+                      </div>` : ''}
+                    <textarea ${x.C(t.setCom)} rows="2" placeholder="Commentaire (facultatif)" style="width:100%;margin-top:9px;border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:7px 9px;font-size:12px;font-family:var(--font-ui);color:var(--color-text);resize:vertical;box-sizing:border-box">${esc(t.commentaire)}</textarea>
+                    <button ${x.A(t.valider)} class="hv-fade" style="width:100%;margin-top:9px;border:none;border-radius:999px;padding:9px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${t.peutValider ? '' : 'opacity:0.5;cursor:default'}">${t.boutonTxt}</button>
+                  </div>` : ''}
                 </div>` : ''}
             </div>`).join('')}
         </div>`).join('')}
       ${c.tkVide ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12px;color:var(--color-text-muted)">Aucune tâche pour cet intervenant.</div>` : ''}
     </div>
-    <div style="font-size:12px;color:var(--color-text-muted)">Cochez une tâche pour la clôturer à la date du jour, cliquez la ligne pour voir le détail — tout est tracé dans le journal.</div>
+    <div style="font-size:12px;color:var(--color-text-muted)">Cochez une tâche quand elle est rendue, ouvrez la ligne pour la noter de 1 à 5. Une note sous 4 ouvre un signalement — tout est tracé dans le journal.</div>
   </div>`;
 }
 
