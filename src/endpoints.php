@@ -190,28 +190,57 @@ function ep_perf(): array
     // labour / overhead ; il ne porte NI « material » (food, cf. ticket T5a du
     // panel) NI tickets/panier — laissés à null. Repli sur ceo_shop_month_perf.
     try {
-        $rows = Db::rows("SELECT id_shop, year, month, ca, net_margin_pct, net_result, labour, overhead
-                          FROM mac_shop_monthly_pnl WHERE year IN ($in) ORDER BY id_shop, year, month", $annees);
-        return array_map(function ($r) {
+        $key = fn ($s, $y, $m) => $s . '-' . $y . '-' . $m;
+        $cells = [];
+        // 1) P&L mensuel (mac_shop_monthly_pnl) : CA, marge nette, labour, overhead.
+        foreach (Db::rows("SELECT id_shop, year, month, ca, net_margin_pct, net_result, labour, overhead
+                          FROM mac_shop_monthly_pnl WHERE year IN ($in)", $annees) as $r) {
             $ca  = $r['ca'] !== null ? (float) $r['ca'] : null;
             $pos = $ca !== null && $ca > 0;
-            return [
-                'storeId'       => (string) $r['id_shop'],
-                'annee'         => (int) $r['year'],
-                'mois'          => (int) $r['month'],
-                'ca'            => $ca,
-                'caBudget'      => null,
-                'caTheorique'   => null,
+            $cells[$key($r['id_shop'], $r['year'], $r['month'])] = [
+                'storeId'       => (string) $r['id_shop'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
+                'ca'            => $ca, 'caBudget' => null, 'caTheorique' => null,
                 'margeNette'    => $r['net_result'] !== null ? (float) $r['net_result'] : null,
                 'margePct'      => $r['net_margin_pct'] !== null ? round((float) $r['net_margin_pct'] / 100, 4) : null,
-                'tickets'       => null,
-                'panierMoyen'   => null,
-                'foodCostPct'   => null,
+                'tickets'       => null, 'panierMoyen' => null, 'foodCostPct' => null,
                 'labourCostPct' => ($pos && $r['labour'] !== null) ? round((float) $r['labour'] / $ca * 100, 1) : null,
                 'overheadPct'   => ($pos && $r['overhead'] !== null) ? round((float) $r['overhead'] / $ca * 100, 1) : null,
                 'valorisation'  => null,
             ];
-        }, $rows);
+        }
+        // 2) Ventes caisse (`transaction`) : tickets + panier moyen RÉELS, et CA de
+        //    repli pour les mois sans P&L. Borné à l'exercice courant (perf récente)
+        //    et plafonné côté MySQL ; en cas de lenteur/absence on garde le P&L seul.
+        try {
+            $yMax = max($annees);
+            $from = sprintf('%04d-01-01 00:00:00', $yMax);
+            $to   = sprintf('%04d-01-01 00:00:00', $yMax + 1);
+            foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
+                                      id_shop, MONTH(insert_timestamp) m,
+                                      COUNT(DISTINCT ticket_key) tickets,
+                                      SUM(total_gross_amount_after_discount) ca
+                               FROM transaction
+                               WHERE insert_timestamp >= ? AND insert_timestamp < ?
+                               GROUP BY id_shop, m", [$from, $to]) as $r) {
+                $tickets = (int) $r['tickets'];
+                $caPos   = $r['ca'] !== null ? (float) $r['ca'] : null;
+                $panier  = ($tickets > 0 && $caPos !== null) ? round($caPos / $tickets, 2) : null;
+                $k = $key($r['id_shop'], $yMax, (int) $r['m']);
+                if (isset($cells[$k])) {
+                    $cells[$k]['tickets'] = $tickets;
+                    $cells[$k]['panierMoyen'] = $panier;
+                    if ($cells[$k]['ca'] === null) { $cells[$k]['ca'] = $caPos; }
+                } else {
+                    $cells[$k] = [
+                        'storeId' => (string) $r['id_shop'], 'annee' => (int) $yMax, 'mois' => (int) $r['m'],
+                        'ca' => $caPos, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
+                        'tickets' => $tickets, 'panierMoyen' => $panier, 'foodCostPct' => null,
+                        'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null,
+                    ];
+                }
+            }
+        } catch (PDOException $eTx) { /* transaction lente/absente : P&L seul */ }
+        return array_values($cells);
     } catch (PDOException $e) {
         return array_map(fn ($r) => [
             'storeId' => $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
@@ -280,15 +309,39 @@ function ep_targets(): array
 
 function ep_consultants(): array
 {
-    $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_consultant ORDER BY id') as $c) {
-        $visites = array_map(fn ($v) => ['date' => $v['visited_on'], 'store' => $v['store_label'], 'objet' => $v['subject']],
-            Db::rows('SELECT * FROM ceo_consultant_visit WHERE consultant_id = ? ORDER BY visited_on DESC', [$c['id']]));
-        $out[] = ['id' => $c['id'], 'nom' => $c['name'], 'role' => $c['role'], 'email' => $c['email'],
-            'tjm' => $c['daily_rate'] !== null ? (float) $c['daily_rate'] : null,
-            'charge' => $c['workload'] !== null ? (int) $c['workload'] : null, 'visites' => $visites];
+    // Vrais consultants du panel : user_membership(app='CONSULTANT') ⨝ user_profile.
+    // Repli sur ceo_consultant pour une installation autonome.
+    try {
+        $rows = Db::rows(
+            "SELECT m.id, m.scope_type, m.scope_id,
+                    COALESCE(NULLIF(TRIM(p.display_name), ''),
+                             NULLIF(TRIM(CONCAT(COALESCE(p.first_name,''),' ',COALESCE(p.last_name,''))), ''),
+                             CONCAT('Consultant #', m.id)) AS nom,
+                    NULLIF(TRIM(p.email), '') AS email
+               FROM user_membership m
+               LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
+              WHERE m.app = 'CONSULTANT' AND m.is_active = 1
+              ORDER BY nom");
+        return array_map(fn ($c) => [
+            'id'     => 'u' . $c['id'],
+            'nom'    => $c['nom'],
+            'role'   => $c['scope_type'] === 'SHOP' ? 'Consultant boutique' : 'Consultant réseau',
+            'email'  => $c['email'],
+            'tjm'    => null,        // TJM/charge : données RH propres au cockpit, non présentes côté panel
+            'charge' => null,
+            'visites' => [],         // les visites (mac_consultant_visit) sont branchées séparément si présentes
+        ], $rows);
+    } catch (PDOException $e) {
+        $out = [];
+        foreach (Db::rows('SELECT * FROM ceo_consultant ORDER BY id') as $c) {
+            $visites = array_map(fn ($v) => ['date' => $v['visited_on'], 'store' => $v['store_label'], 'objet' => $v['subject']],
+                Db::rows('SELECT * FROM ceo_consultant_visit WHERE consultant_id = ? ORDER BY visited_on DESC', [$c['id']]));
+            $out[] = ['id' => $c['id'], 'nom' => $c['name'], 'role' => $c['role'], 'email' => $c['email'],
+                'tjm' => $c['daily_rate'] !== null ? (float) $c['daily_rate'] : null,
+                'charge' => $c['workload'] !== null ? (int) $c['workload'] : null, 'visites' => $visites];
+        }
+        return $out;
     }
-    return $out;
 }
 
 function ep_suppliers(): array

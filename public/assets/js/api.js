@@ -75,7 +75,10 @@ export function authLogout(){
 }
 
 export async function load(opts){
-  const timeoutMs = (opts && opts.timeoutMs) || 4000;
+  // 9 s : certaines lectures réelles (agrégats caisse sur `transaction`) sont
+  // plus lentes que le jeu de démo ; ne pas abandonner tout le chargement (et
+  // basculer en « hors-ligne ») à cause d'un seul endpoint un peu long.
+  const timeoutMs = (opts && opts.timeoutMs) || 9000;
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
