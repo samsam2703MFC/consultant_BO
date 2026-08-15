@@ -180,6 +180,11 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
+**Aucune migration à lancer à la main.** `ensureValidation()` (`src/installer.php`) pose les deux
+colonnes, la table `ceo_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
+comme sur une base déjà en service — `schema.sql` et `seed.sql`, eux, ne repassent jamais sur une
+installation existante. Pour information, l'équivalent manuel :
+
 ```sql
 ALTER TABLE ceo_project_task ADD COLUMN note TINYINT NULL;
 ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
