@@ -180,6 +180,35 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
+### Qui fait autorité sur quoi
+
+Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la
+plupart non — et pour celles-là, la table `ceo_*` n'est qu'un **repli
+d'installation autonome**, vide sur une base réelle.
+
+| Donnée | Source d'autorité | Repli local |
+|---|---|---|
+| Magasins | `shops` | `ceo_shop` (miroir, rempli à la volée pour les clés étrangères) |
+| Consultants | `user_membership` ⨝ `user_profile` (`app = 'CONSULTANT'`, actifs) | `ceo_consultant` |
+| Destinataires des rapports | `user_membership` ⨝ `user_profile` (actifs, avec e-mail) | `ceo_person` |
+| CA / marge mensuels | `mac_shop_monthly_pnl` | `ceo_shop_month_perf` |
+| Tickets, panier moyen | `transaction` | — |
+| Catalogue produits | `sig_products`, `transaction_product` | `ceo_product` |
+| Leviers, KPI, positions | `of_tag`, `kpi`, `position` | créées si absentes |
+| **Budget encodé** | **`ceo_shop_month_perf`** | — (donnée propre au cockpit) |
+| **Validation des tâches** | **`ceo_project_task`, `ceo_task_issue`** | — (donnée propre au cockpit) |
+| Projets, jalons, coûts | `ceo_project*` | — (données propres au cockpit) |
+| Fournisseurs | `ceo_supplier` | — (aucune table partagée équivalente) |
+
+**Le jeu de démonstration ne se charge jamais tout seul.** `sql/seed.sql` est
+gardé derrière `seed: true` (config) ou `COCKPIT_SEED=1` ; par défaut une base
+neuve reste vide, prête pour les vraies données.
+
+**Rien n'est écrit en dur côté écran.** Les échéances proposées par les
+assistants sont relatives à la date du jour, l'intervenant proposé est le
+premier intervenant réel, et les liens de rapport partent de l'adresse d'où
+l'application est servie.
+
 ### `GET /stores/perf` — d'où vient chaque colonne
 
 Trois sources, fusionnées par (magasin, année, mois) :
