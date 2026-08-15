@@ -16,6 +16,14 @@
 export const API_BASE = (typeof window !== 'undefined' && window.COCKPIT_API_BASE)
   || (typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') + 'api/cockpit' : '/api/cockpit');
 
+/* Périodes dérivées de l'année civile courante — jamais figées sur l'exercice
+ * de démonstration. L'exercice = année en cours, N-1 = l'année précédente ;
+ * le scoring produit part du mois courant (le backend replie sur le dernier
+ * mois de caisse réellement encodé si ce mois est encore vide). */
+const NOW = (typeof Date !== 'undefined') ? new Date() : { getFullYear: () => 2026, getMonth: () => 0 };
+const Y = NOW.getFullYear();
+const YM = Y + '-' + String(NOW.getMonth() + 1).padStart(2, '0');
+
 export const ENDPOINTS = {
   meta:           '/meta',
   leviers:        '/referentiels/leviers',
@@ -23,8 +31,8 @@ export const ENDPOINTS = {
   emailTemplates: '/referentiels/email-templates',
   projTemplates:  '/referentiels/project-templates',
   stores:         '/stores?statut=tous',
-  perf:           '/stores/perf?granularite=mois&annees=2025,2026',
-  budgets:        '/stores/budgets?exercice=2026',
+  perf:           '/stores/perf?granularite=mois&annees=' + (Y - 1) + ',' + Y,
+  budgets:        '/stores/budgets?exercice=' + Y,
   targets:        '/targets',
   consultants:    '/consultants',
   suppliers:      '/fournisseurs',
@@ -33,7 +41,7 @@ export const ENDPOINTS = {
   people:         '/people',
   reporting:      '/reporting',
   journal:        '/journal',
-  products:       '/products/scoring?periode=2026-07',
+  products:       '/products/scoring?periode=' + YM,
   pwaReports:     '/pwa/reports',
   pwaTasks:       '/pwa/tasks'
 };

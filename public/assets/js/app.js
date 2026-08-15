@@ -15,7 +15,7 @@ class App {
   constructor(root){
     this.root = root;
     this.state = { ready: false, screen: 'taches', bStore: 'cha', tkStore: 'tous', openProjId: null,
-      sortKey: 'caPct', sortDir: -1, zoneF: 'Toutes les zones', hmMetric: 'pct', hmYear: 2026, hmHover: null,
+      sortKey: 'caPct', sortDir: -1, zoneF: 'Toutes les zones', hmMetric: 'pct', hmYear: null, hmHover: null,
       horizon: 'h1', logType: 'Tous les types', logQui: 'Tous les auteurs', logQ: '', rel: null, toast: null,
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
@@ -159,6 +159,8 @@ class App {
   fM(n){ return (n == null || !isFinite(n)) ? '—' : (n / 1e6).toFixed(1).replace('.', ',') + ' M€'; }
   fP(x, d){ return (x == null || !isFinite(x)) ? '—' : (x * 100).toFixed(d == null ? 1 : d).replace('.', ',') + ' %'; }
   fD(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—'; }
+  fDA(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '—'; }   // année RÉELLE de la date, jamais figée
+  fDY(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(2, 4) : '—'; }
   pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
     if (pct == null || !isFinite(pct)) return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)';
     if (pct >= 1) return base + 'background:rgba(45,122,62,0.12);color:#2d7a3e';
@@ -173,7 +175,17 @@ class App {
   pStatut(p){ return this.state.statutOv[p.id] || p.statut; }
   pFamille(p){ return this.state.familleOv[p.id] || p.famille || 'Organisation & coûts'; }
   open(){ return this.D.stores.filter(s => s.status === 'Ouvert'); }
-  sum(y, m, f){ return this.open().reduce((a, s) => a + (s.perf[y][m][f] || 0), 0); }
+  sum(y, m, f){ return this.open().reduce((a, s) => a + ((s.perf[y] && s.perf[y][m] && s.perf[y][m][f]) || 0), 0); }
+  /* Dimension temporelle RÉELLE — plus de « 2026 / juillet » figés de la démo.
+     exo = exercice (meta), moisIdx = dernier mois (0-11) avec du CA encodé dans
+     l'exercice (réseau entier), nMois = nombre de mois écoulés (prorata). */
+  exo(){ return (this.meta && this.meta.exercice) || new Date().getFullYear(); }
+  moisIdx(){ const y = this.exo(), st = this.open();
+    for (let m = 11; m >= 0; m--){ for (const s of st){ const c = s.perf[y] && s.perf[y][m]; if (c && c.ca != null) return m; } }
+    const t = (this.M && this.M.TODAY) ? new Date(this.M.TODAY) : new Date();
+    return (t.getFullYear() === y && !isNaN(t)) ? t.getMonth() : 11; }
+  nMois(){ return this.moisIdx() + 1; }
+  moisLabel(){ return (this.M && this.M.MOIS && this.M.MOIS[this.moisIdx()]) || ''; }
   ownerOf(t){ const c = t.owner.t === 'c'; const p = (c ? this.D.consultants : this.D.suppliers).find(x => x.id === t.owner.id); return { nom: p.nom, email: p.email, type: c ? 'Consultant' : 'Fournisseur' }; }
   taskState(t){ if (t.done) return t.done <= t.due ? 'Livrée à temps' : 'Livrée en retard';
     return t.due < this.M.TODAY ? 'En retard' : 'En cours'; }
@@ -196,7 +208,7 @@ class App {
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
       l: this.state.sLabour != null ? +this.state.sLabour : d.labour, o: d.overhead }; }
   margeAlerts(){ const s = this.seuils(); const out = [];
-    for (const st of this.open()){ const r = st.perf[2026][6];
+    for (const st of this.open()){ const r = st.perf[this.exo()][this.moisIdx()];
       if (r.food > s.f) out.push({ store: st.nom, lev: 'food-cost', levNom: 'Food Cost', msg: 'food-cost ' + String(r.food).replace('.', ',') + ' % (seuil ' + s.f + ' %)', action: 'Revoir fiches techniques, contrôle réception ProdAtelier et gestion casse.' });
       if (r.labour > s.l) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'labour-cost ' + String(r.labour).replace('.', ',') + ' % (seuil ' + s.l + ' %)', action: 'Adapter les plannings au flux, suivre le ratio CA/ETP par tranche horaire.' });
       const etpN = Math.max(3, Math.round(r.ca / 14200)), ce = r.ca / etpN, sEtp = this.seuilCaEtp();
@@ -204,7 +216,7 @@ class App {
       if (r.overhead > s.o) out.push({ store: st.nom, lev: 'overhead-cost', levNom: 'Overhead Cost', msg: 'overhead ' + String(r.overhead).replace('.', ',') + ' % (seuil ' + String(s.o).replace('.', ',') + ' %)', action: 'Auditer loyer, énergies et abonnements ; renégocier les contrats.' }); }
     return out; }
   openRelTask(x){ const tpl = this.state.tpl; const late = x.st === 'En retard'; const base = this.D.emailTemplates[late ? 1 : 0]; const corps = (tpl[base.id] || base.corps);
-    const sub = s => s.replace('{tache}', x.t.nom).replace('{projet}', x.p.nom).replace('{echeance}', this.fD(x.t.due) + '/2026').replace('{destinataire}', x.o.nom).replace('{zone}', '');
+    const sub = s => s.replace('{tache}', x.t.nom).replace('{projet}', x.p.nom).replace('{echeance}', this.fDA(x.t.due)).replace('{destinataire}', x.o.nom).replace('{zone}', '');
     this.setState({ rel: { kind: 'task', id: x.t.id, projet: x.p.nom, to: x.o.nom, email: x.o.email, sujet: sub(base.sujet), corps: sub(corps) } }); }
   spark(series, w, h){ const vals = series.filter(v => v != null); if (!vals.length) return ''; const mn = Math.min(...vals), mx = Math.max(...vals); const sp = mx - mn || 1;
     return series.map((v, i) => v == null ? null : (4 + i * (w - 8) / (series.length - 1)).toFixed(1) + ',' + (h - 6 - (v - mn) / sp * (h - 12)).toFixed(1)).filter(Boolean).join(' '); }
@@ -245,7 +257,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists évaluées par les consultants (panel) : note, conformité et commentaire, par boutique. Validez ou retirez la validation de chaque avis.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists évaluées par les consultants (panel) : note, conformité et commentaire, par boutique. Validez ou retirez la validation de chaque avis.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -413,30 +425,34 @@ class App {
     if (common.isMagasins){
       common.zoneF = S.zoneF; common.setZoneF = e => this.setState({ zoneF: e.target.value });
       common.zoneOptions = ['Toutes les zones'].concat([...new Set(this.open().map(s => s.zone))]);
+      const E = this.exo(), MI = this.moisIdx();
+      common.storeHdrPeriode = this.moisLabel() + ' ' + E;
       const rows = this.open().filter(s => S.zoneF === 'Toutes les zones' || s.zone === S.zoneF).map(s => {
-        const r = s.perf[2026][6], n1 = s.perf[2025][6];
+        const r = s.perf[E][MI], n1 = s.perf[E - 1][MI];
         return { s, nom: s.nom, code: s.code, fr: s.fr, _marge: r.marge, _margeVar: r.marge / n1.marge - 1, _val: r.val, _valPct: r.val / s.valT, _ca: r.ca, _caPct: r.ca / r.caT, _tickets: r.tickets, _tick: r.tickets / n1.tickets - 1, _panier: r.panier, _pan: r.panier / n1.panier - 1, _margeN1: n1.marge }; });
       const sk = S.sortKey, dir = S.sortDir;
       rows.sort((a, b) => { const va = a['_' + sk] != null ? a['_' + sk] : a[sk], vb = b['_' + sk] != null ? b['_' + sk] : b[sk]; return (va < vb ? -1 : va > vb ? 1 : 0) * dir; });
-      const colDefs = [['nom', 'Magasin', 'left'], ['marge', 'Marge juil.', 'right'], ['margeN1', 'Marge N-1', 'right'], ['margeVar', 'Var.', 'right'], ['val', 'Valeur / cible', 'right'], ['valPct', '% réussite', 'center'], ['ca', 'CA / cible', 'right'], ['caPct', '% atteinte', 'center'], ['tickets', 'Tickets', 'right'], ['panier', 'Panier moyen', 'right']];
+      const colDefs = [['nom', 'Magasin', 'left'], ['marge', 'Marge ' + (this.moisLabel() || 'mois'), 'right'], ['margeN1', 'Marge N-1', 'right'], ['margeVar', 'Var.', 'right'], ['val', 'Valeur / cible', 'right'], ['valPct', '% réussite', 'center'], ['ca', 'CA / cible', 'right'], ['caPct', '% atteinte', 'center'], ['tickets', 'Tickets', 'right'], ['panier', 'Panier moyen', 'right']];
       common.storeCols = colDefs.map(c => ({ label: c[1], arrow: sk === c[0] ? (dir > 0 ? ' ↑' : ' ↓') : '', sort: () => this.setState({ sortKey: c[0], sortDir: sk === c[0] ? -dir : -1 }),
         st: 'text-align:' + c[2] + ';font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;white-space:nowrap;user-select:none' }));
       common.storeRows = rows.map(r => { const tv = this.trend(1 + r._margeVar, 1), te = this.trend(1 + r._tick, 1), pe = this.trend(1 + r._pan, 1);
         return { nom: r.nom, code: r.code, fr: r.fr, marge: this.fE(r._marge), margeN1: this.fE(r._margeN1), margeVar: tv.txt, margeVarSt: tv.st,
           val: this.fK(r._val), valT: this.fK(r.s.valT), valPct: this.fP(r._valPct, 0), valPctSt: this.pill(r._valPct + 0.08),
-          ca: this.fK(r._ca), caT: this.fK(r.s.perf[2026][6].caT), caPct: this.fP(r._caPct, 0), caPctSt: this.pill(r._caPct),
+          ca: this.fK(r._ca), caT: this.fK(r.s.perf[E][MI].caT), caPct: this.fP(r._caPct, 0), caPctSt: this.pill(r._caPct),
           tickets: r._tickets != null ? r._tickets.toLocaleString('fr-BE') : '—', tickEvo: te.txt + ' vs N-1', tickEvoSt: te.st + ';font-size:10.5px',
           panier: r._panier != null ? r._panier.toFixed(2).replace('.', ',') + ' €' : '—', panEvo: pe.txt + ' vs N-1', panEvoSt: pe.st + ';font-size:10.5px' }; });
     }
 
     // --- heatmap
     if (common.isHeatmap){
-      const year = S.hmYear, metric = year === 2025 ? 'ca' : S.hmMetric;
+      const E = this.exo();
+      const year = (S.hmYear === E - 1) ? E - 1 : E, metric = year === E - 1 ? 'ca' : S.hmMetric;
+      common.hmYearCur = String(E); common.hmYearPrev = String(E - 1);
       const tb = act => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:7px 14px;' + (act ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)');
-      common.hmBtnCaSt = tb(metric === 'ca'); common.hmBtnPctSt = tb(metric === 'pct'); common.hmBtn25St = tb(year === 2025); common.hmBtn26St = tb(year === 2026);
+      common.hmBtnCaSt = tb(metric === 'ca'); common.hmBtnPctSt = tb(metric === 'pct'); common.hmBtn25St = tb(year === E - 1); common.hmBtn26St = tb(year === E);
       common.hmMetricCa = () => this.setState({ hmMetric: 'ca' }); common.hmMetricPct = () => this.setState({ hmMetric: 'pct' });
-      common.hmY25 = () => this.setState({ hmYear: 2025 }); common.hmY26 = () => this.setState({ hmYear: 2026 });
-      common.hmNote = year === 2025 ? 'Année 2025 : CA constaté (pas d’objectif défini).' : (metric === 'pct' ? 'Cellules colorées selon le % d’atteinte de l’objectif mensuel du magasin.' : 'Cellules colorées du CA le plus faible au plus élevé.');
+      common.hmY25 = () => this.setState({ hmYear: E - 1 }); common.hmY26 = () => this.setState({ hmYear: E });
+      common.hmNote = year === E - 1 ? ('Année ' + (E - 1) + ' : CA constaté (pas d’objectif défini).') : (metric === 'pct' ? 'Cellules colorées selon le % d’atteinte de l’objectif mensuel du magasin.' : 'Cellules colorées du CA le plus faible au plus élevé.');
       common.hmMois = M.MOIS;
       let mn = Infinity, mx = -Infinity;
       if (metric === 'ca') for (const s of this.open()) for (const r of s.perf[year]) if (r.ca != null){ mn = Math.min(mn, r.ca); mx = Math.max(mx, r.ca); }
@@ -460,13 +476,19 @@ class App {
     // --- objectifs
     if (common.isObjectifs){
       const hz = S.horizon;
+      const E = this.exo(), MI = this.moisIdx(), NM = this.nMois();
       common.hz1 = () => this.setState({ horizon: 'h1' }); common.hz3 = () => this.setState({ horizon: 'h3' }); common.hz5 = () => this.setState({ horizon: 'h5' });
       common.hz1St = this.tabBtn(hz === 'h1'); common.hz3St = this.tabBtn(hz === 'h3'); common.hz5St = this.tabBtn(hz === 'h5');
       common.isH1 = hz === 'h1'; common.isH35 = hz !== 'h1'; common.hmMois = M.MOIS;
+      common.objExo = String(E); common.objMoisLabel = this.moisLabel();
+      const tgCa = (D.targets || {}).ca || {};
+      common.hzLabel1 = '1 an — ' + E;
+      common.hzLabel3 = '3 ans — ' + ((tgCa.h3 && tgCa.h3.an) || (E + 2));
+      common.hzLabel5 = '5 ans — ' + ((tgCa.h5 && tgCa.h5.an) || (E + 4));
       if (hz === 'h1'){
         let reelT = 0, prorataT = 0, cibleT = 0;
-        const rows = this.open().map(s => { const cible = s.perf[2026].reduce((a, r) => a + r.caT, 0);
-          let reel = 0, pro = 0; for (let m = 0; m <= 6; m++){ reel += s.perf[2026][m].ca; pro += s.perf[2026][m].caT; }
+        const rows = this.open().map(s => { const cible = s.perf[E].reduce((a, r) => a + r.caT, 0);
+          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += s.perf[E][m].caT; }
           reelT += reel; prorataT += pro; cibleT += cible; const att = reel / pro; const t = this.trend(att, 1);
           return { nom: s.nom, cible: this.fK(cible), reel: this.fK(reel), prorata: this.fK(pro), ecart: t.txt, ecartSt: t.st, att: this.fP(att, 0), attSt: this.pill(att), _att: att,
             goBudget: () => this.setState({ bStore: s.id, screen: 'budget' }) }; });
@@ -474,10 +496,10 @@ class App {
         common.objRows = rows;
         common.objCible = this.fM(((((D.targets || {}).ca) || {}).h1 || {}).cible || 0); common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
         const att = reelT / prorataT; common.objAtt = this.fP(att); common.objAttSt = 'font-weight:700;color:' + (att >= 1 ? '#2d7a3e' : att >= 0.92 ? '#8a5a13' : '#8D1D2C');
-        let resteCible = 0; for (let m = 7; m < 12; m++) resteCible += this.sum(2026, m, 'caT');
+        let resteCible = 0; for (let m = MI + 1; m < 12; m++) resteCible += this.sum(E, m, 'caT');
         common.objProj = this.fM(reelT + resteCible * att + (this.meta.contribOuverture || 0));
         const cumR = [], cumC = []; let ar = 0, ac = 0;
-        for (let m = 0; m < 12; m++){ ac += this.sum(2026, m, 'caT'); cumC.push(ac); if (m <= 6){ ar += this.sum(2026, m, 'ca'); cumR.push(ar); } }
+        for (let m = 0; m < 12; m++){ ac += this.sum(E, m, 'caT'); cumC.push(ac); if (m <= MI){ ar += this.sum(E, m, 'ca'); cumR.push(ar); } }
         // Échelle = max des deux cumuls (cible + réel), plancher 1 : sans objectif
         // encodé la cible cumulée vaut 0 → sans ce plancher, py divise par 0 et le
         // <polyline> reçoit des points NaN/Infinity. On trace quand même le réel.
@@ -486,7 +508,7 @@ class App {
         const pts = arr => arr.map((v, m) => px(m).toFixed(0) + ',' + py(v).toFixed(0)).filter(p => !/NaN|Infinity/.test(p)).join(' ');
         common.trajCible = ac > 0 ? pts(cumC) : '';
         common.trajReel = pts(cumR);
-        const budAn = this.open().reduce((a, s) => a + s.perf[2026].reduce((b, r) => b + (r.caT || 0), 0), 0);
+        const budAn = this.open().reduce((a, s) => a + s.perf[E].reduce((b, r) => b + (r.caT || 0), 0), 0);
         common.cumBudget = this.fM(budAn); common.cumReel = this.fM(reelT);
         const bMois = ((D.budgets || [])[0] || {}).moisEncodes;
         common.cumLabel = 'Budget validé ' + this.meta.exercice + ' — ' + this.open().length + ' magasins';
@@ -495,19 +517,19 @@ class App {
         const ec = reelT - prorataT;
         common.cumEcart = (ec >= 0 ? '+' : '−') + this.fK(Math.abs(ec)) + ' (' + (ec >= 0 ? '+' : '−') + this.fP(Math.abs(reelT / prorataT - 1)) + ')';
         common.cumEcartSt = 'font-weight:500;color:' + (ec >= 0 ? '#2d7a3e' : '#8D1D2C');
-        const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= 6; m++){ r += s.perf[2026][m].ca; p += s.perf[2026][m].caT; } return r < p; }).length;
+        const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= MI; m++){ r += s.perf[E][m].ca; p += s.perf[E][m].caT; } return r < p; }).length;
         common.cumSous = sous + ' / ' + this.open().length;
       } else {
         const cfg = (((D.targets || {}).ca) || {})[hz] || { an: this.meta.exercice, cible: 0 };
         const exp = (((D.targets || {}).expansion) || {})[hz] || { an: this.meta.exercice, cible: 1, reel: 0 };
-        let run = 0; for (let m = 0; m <= 6; m++) run += this.sum(2026, m, 'ca'); run = run / 7 * 12;
+        let run = 0; for (let m = 0; m <= MI; m++) run += this.sum(E, m, 'ca'); run = run / NM * 12;
         const nOuv = (exp.cible || 1) - 1; const contrib = nOuv * ((D.targets || {}).caMoyenOuverture || 0);
         const lfl = cfg.cible - run - contrib;
         common.hzAn = String(cfg.an); common.hzCible = this.fM(cfg.cible); common.hzRunrate = this.fM(run);
         common.hzGap = '+' + this.fM(cfg.cible - run); common.hzOuv = nOuv + ' points de vente'; common.hzContrib = 'env. ' + this.fM(contrib);
         common.hzLfl = '+' + this.fM(Math.max(0, lfl)) + ' à trouver';
         const mkBar = (v, cl) => 'height:100%;border-radius:5px;background:' + cl + ';width:' + Math.min(100, v / cfg.cible * 100).toFixed(1) + '%';
-        common.hzBars = [{ label: 'CA actuel (run-rate 9 magasins)', val: this.fM(run), st: mkBar(run, 'var(--color-primary)') },
+        common.hzBars = [{ label: 'CA actuel (run-rate ' + this.open().length + ' magasins)', val: this.fM(run), st: mkBar(run, 'var(--color-primary)') },
           { label: '+ Contribution des ' + nOuv + ' ouvertures prévues', val: this.fM(contrib), st: mkBar(contrib, 'var(--color-secondary)') },
           { label: '+ Croissance à périmètre constant requise', val: this.fM(Math.max(0, lfl)), st: mkBar(Math.max(0, lfl), '#c9a06a') }];
         common.hzNote = (cfg.note || '').replace('{ouvertures}', nOuv).replace('{caMoyen}', this.fK((D.targets || {}).caMoyenOuverture || 0));
@@ -542,14 +564,14 @@ class App {
     if (opP){
       const st = this.pStatut(opP); const c = this.cout(opP); const bt = this.budgetTot(opP); const dep = c - opP.budget;
       const v = opP.valeurReal || opP.valeurEst; const roi = v ? v - c : null; const av = this.avance(opP);
-      common.op = { nom: opP.nom, statut: st, prio: opP.prio, debut: this.fD(opP.debut) + '/26', fin: this.fD(opP.fin) + '/26',
+      common.op = { nom: opP.nom, statut: st, prio: opP.prio, debut: this.fDY(opP.debut), fin: this.fDY(opP.fin),
         av: Math.round(av * 100) + ' %', axes: opP.axes.join(' · '), valeur: v ? this.fK(v) : 'étude', valeurTxt: opP.valeurTxt,
         levs: opP.leviers.map(sl => M.LEVIERS.find(l => l.slug === sl)),
         setStatut: e => { const ns = e.target.value; this.setState(s2 => ({ statutOv: Object.assign({}, s2.statutOv, { [opP.id]: ns }) }));
           this.api('PATCH', '/projects/' + opP.id, { statut: ns });
           this.log('Statut', opP.nom, 'Statut passé de « ' + st + ' » à « ' + ns + ' » (fiche projet)'); this.notify('Statut de « ' + opP.nom + ' » : ' + ns); },
         jalons: opP.jalons.map(j => { const done = !!j.reel; const late = !done && j.cible < M.TODAY; const wasLate = done && j.reel > j.cible;
-          return { nom: j.nom, cible: this.fD(j.cible) + '/26',
+          return { nom: j.nom, cible: this.fDY(j.cible),
             dotSt: 'width:11px;height:11px;border-radius:50%;flex:0 0 auto;margin-top:3px;' + (done ? 'background:#2d7a3e' : late ? 'background:#8D1D2C' : 'background:var(--color-surface);border:2px solid var(--color-border-secondary)'),
             etat: done ? ('Atteint le ' + this.fD(j.reel) + (wasLate ? ' — en retard' : ' — à temps')) : late ? ('En retard de ' + Math.round((new Date(M.TODAY) - new Date(j.cible)) / 86400000) + ' j') : 'À venir',
             etatSt: 'font-size:11.5px;margin-top:2px;' + (done && !wasLate ? 'color:#2d7a3e' : late || wasLate ? 'color:#8D1D2C;font-weight:500' : 'color:var(--color-text-muted)') }; }),
@@ -583,6 +605,7 @@ class App {
     const bud = (D.budgets || []).find(b => b.storeId === st.id) || { charges: [] };
     const P = st.perf[this.meta.exercice];
     common.bExercice = this.meta.exercice;
+    common.bCumMois = this.moisLabel();
     common.bEncodes = (bud.moisEncodes || 0) + ' / ' + (bud.moisTotal || 12);
     common.bDernier = bud.dernierEncodage ? this.fD(bud.dernierEncodage) + '/' + bud.dernierEncodage.slice(0, 4) : '—';
     common.bStore = st.id;
@@ -590,7 +613,7 @@ class App {
     common.bStoreOpts = this.open().map(x => ({ id: x.id, nom: x.nom }));
     common.bMeta = st.code + ' · ' + st.zone + ' · franchisé ' + st.fr;
     const budgetAn = P.reduce((a, r) => a + (r.caT || 0), 0);
-    let reel = 0, pro = 0; for (let m = 0; m <= 6; m++){ reel += P[m].ca; pro += P[m].caT; }
+    let reel = 0, pro = 0; for (let m = 0; m <= this.moisIdx(); m++){ reel += P[m].ca; pro += P[m].caT; }
     common.bBudgetAn = this.fE(budgetAn);
     const sg = v => (v >= 0 ? '+' : '−') + this.fE(Math.abs(v));
     const sgp = v => (v >= 0 ? '+' : '−') + this.fP(Math.abs(v));
@@ -616,7 +639,7 @@ class App {
         ca: perStore.some(x2 => x2.P[i].ca != null) ? perStore.reduce((a, x2) => a + (x2.P[i].ca || 0), 0) : null }));
       theoC2 = perStore.every(x2 => x2.theoM) ? M.MOIS.map((_, i) => perStore.reduce((a, x2) => a + x2.theoM[i], 0)) : null;
       budgetAnC = Pc.reduce((a, r) => a + r.caT, 0);
-      reelC = 0; proC = 0; for (let m = 0; m <= 6; m++){ reelC += Pc[m].ca; proC += Pc[m].caT; }
+      reelC = 0; proC = 0; for (let m = 0; m <= this.moisIdx(); m++){ reelC += Pc[m].ca; proC += Pc[m].caT; }
     }
     const theoAnC = theoC2 ? theoC2.reduce((a, v) => a + v, 0) : null;
 
@@ -687,8 +710,8 @@ class App {
     let mgTotRes = 0, ecTotRes = 0, resReel = 0, resBud = 0, resTheo = 0;
     const sgK = v => (v >= 0 ? '+' : '−') + this.fK(Math.abs(v));
     common.bParMag = perStore.map(x2 => {
-      let r7 = 0, b7 = 0; for (let m = 0; m <= 6; m++){ r7 += x2.P[m].ca; b7 += x2.P[m].caT; }
-      const t7 = x2.theoM ? x2.theoM.slice(0, 7).reduce((a, v) => a + v, 0) : null;
+      let r7 = 0, b7 = 0; for (let m = 0; m <= this.moisIdx(); m++){ r7 += x2.P[m].ca; b7 += x2.P[m].caT; }
+      const t7 = x2.theoM ? x2.theoM.slice(0, this.nMois()).reduce((a, v) => a + v, 0) : null;
       const ecB = r7 - b7, ecT = t7 == null ? null : r7 - t7, mq = ecT != null && ecT < 0 ? -ecT : 0;
       mgTotRes += mq; ecTotRes += ecB; resReel += r7; resBud += b7; resTheo += (t7 || 0);
       return { nom: x2.s.nom, zone: x2.s.zone,
@@ -846,6 +869,7 @@ class App {
     const S = this.state, D = this.D;
     const W = this.poids(); const wt = (W.v + W.m + W.pos) || 1;
     common.pdPond = 'volume ' + Math.round(100 * W.v / wt) + ' · marge ' + Math.round(100 * W.m / wt) + ' · position ' + Math.round(100 * W.pos / wt);
+    common.pdPeriode = 'dernier mois de ventes encodé';
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
@@ -908,9 +932,12 @@ class App {
   valsMarge(common){
     const s = this.seuils();
     common.sFoodTxt = s.f + ' %'; common.sLabourTxt = s.l + ' %';
-    const mg26 = this.sum(2026, 6, 'marge') / this.sum(2026, 6, 'ca'), mg25 = this.sum(2025, 6, 'marge') / this.sum(2025, 6, 'ca');
+    const E = this.exo(), MI = this.moisIdx();
+    common.mgEvoLabel = 'Évolution mensuelle ' + E + ' (janv. → ' + this.moisLabel() + ')';
+    common.mgHdrPeriode = this.moisLabel() + ' ' + E;
+    const mg26 = this.sum(E, MI, 'marge') / this.sum(E, MI, 'ca'), mg25 = this.sum(E - 1, MI, 'marge') / this.sum(E - 1, MI, 'ca');
     common.mgReseau = this.fP(mg26); const tr = this.trend(mg26, mg25); common.mgTr = tr.txt + ' vs N-1'; common.mgTrSt = tr.st;
-    const series = []; for (let m = 0; m <= 6; m++) series.push(this.sum(2026, m, 'marge') / this.sum(2026, m, 'ca'));
+    const series = []; for (let m = 0; m <= MI; m++) series.push(this.sum(E, m, 'marge') / this.sum(E, m, 'ca'));
     common.mgTraj = this.spark(series, 320, 70);
     common.mgAlerts = this.margeAlerts();
     if (!common.mgAlerts.length) common.mgAlerts = [{ store: 'Aucune alerte', lev: 'food-cost', levNom: '—', msg: 'tous les ratios sont sous les seuils', action: '' }];
@@ -920,7 +947,7 @@ class App {
     common.mgSeuilEtp = this.fE(seuilEtp);
     const caEtpPill = v => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
       return v < seuilEtp ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v < seuilEtp * 1.08 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
-    const rows = this.open().map(st => { const r = st.perf[2026][6], n1 = st.perf[2025][6];
+    const rows = this.open().map(st => { const r = st.perf[E][MI], n1 = st.perf[E - 1][MI];
       const mp26 = r.marge / r.ca, mp25 = n1.marge / n1.ca; const tv = this.trend(mp26, mp25);
       const nAl = (r.food > s.f ? 1 : 0) + (r.labour > s.l ? 1 : 0) + (r.overhead > s.o ? 1 : 0);
       const etp = Math.max(3, Math.round(r.ca / 14200));
@@ -1297,14 +1324,17 @@ class App {
         leviers: levs.length ? levs : [{ id: 'xp', nom: 'Aucun levier ouvert' }],
         send: () => { this.log('Rapport', '—', 'Rapport district envoyé à ' + c.nom + ' (' + c.email + ') — ' + st.length + ' magasin(s), ' + levs.length + ' levier(s)');
           this.notify('Rapport district envoyé à ' + c.nom); } }; });
-    const etats = [['Plan reçu — 4 actions', '#2d7a3e'], ['En attente depuis 6 j', '#8a5a13'], ['Jamais ouvert', '#8D1D2C']];
-    common.dlRows = this.open().map((s, i) => { const e = etats[i % 3];
-      // Lien de plan d'action : base d'URL du panel (réglage pwaBase), et
-      // période dérivée de la date du jour — plus de « 2026s2 » figé.
-      const basePlan = ((this.D.pwaReports || {}).base || '').replace(/\/$/, '');
-      const t = new Date(M.TODAY), sem = t.getMonth() < 6 ? 's1' : 's2';
-      const url = (basePlan || 'plan') + '/plan/' + s.nom.split(' — ')[0].toLowerCase().replace(/[^a-z]/g, '') + '-' + t.getFullYear() + sem;
-      return { store: s.nom, etat: e[0], etatCol: e[1], url,
+    // Statut d'ouverture des plans par le franchisé : pas de source réelle en
+    // base (le panel ne l'expose pas) → état neutre, aucune donnée inventée.
+    // Lien de plan : base d'URL du panel (réglage pwaBase), période dérivée de
+    // la date du jour — plus de « 2026s2 » ni de statut fabriqué.
+    const basePlan = ((this.D.pwaReports || {}).base || '').replace(/\/$/, '');
+    const _t = new Date(M.TODAY), _ok = !isNaN(_t);
+    const sem = (_ok ? _t.getMonth() : this.moisIdx()) < 6 ? 's1' : 's2';
+    const yr = _ok ? _t.getFullYear() : this.exo();
+    common.dlRows = this.open().map((s) => {
+      const url = (basePlan || 'plan') + '/plan/' + s.nom.split(' — ')[0].toLowerCase().replace(/[^a-z]/g, '') + '-' + yr + sem;
+      return { store: s.nom, etat: 'Statut non suivi', etatCol: 'var(--color-text-muted)', url,
         copy: () => { navigator.clipboard && navigator.clipboard.writeText('https://' + url); this.notify('Lien copié — ' + s.nom); },
         relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
     const pById = id => D.people.find(p => p.id === id);
@@ -1341,7 +1371,7 @@ class App {
       const sel = S.repPostes[r.id] || r.postes;
       const url = repUrl(r, sel, pd && pd.email);
       const on = isOn(r);
-      return { nom: r.nom, desc: r.desc, dest, cc: cc || '', destEmail: pd ? pd.email : '', ccEmail: pc ? pc.email : '', dernier: this.fD(r.dernier) + '/2026', freq: S.repFreq[r.id] || r.freq,
+      return { nom: r.nom, desc: r.desc, dest, cc: cc || '', destEmail: pd ? pd.email : '', ccEmail: pc ? pc.email : '', dernier: this.fDA(r.dernier), freq: S.repFreq[r.id] || r.freq,
         type: r.type || '—', actif: on, actifTxt: on ? 'Actif' : 'Inactif',
         actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;' + (on ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         toggleActif: () => { this.setState(s2 => ({ alertOn: Object.assign({}, s2.alertOn, { ['rep:' + r.id]: !on }) }));
@@ -1383,6 +1413,7 @@ class App {
         .concat(['  <footer>Généré le {date_generation} — cockpit L’Atelier by</footer>', '</body>', '</html>']).join('\n');
       const cssCode = ['/* rapport.css — mise en forme PDF (A4, Chromium headless) */', '@page { size: A4 portrait; margin: 20mm 18mm; }', 'body { font-family: "Gotham", sans-serif; color: #222222; font-size: 11pt; line-height: 1.5; margin: 0; }', '', '.entete { display: flex; justify-content: space-between; align-items: baseline;', '  border-bottom: 1.5pt solid #222222; padding-bottom: 8pt; }', '.entete .marque { font-size: 14pt; font-weight: 500; }', '.entete .periode { font-size: 8pt; color: #666666; text-transform: uppercase; letter-spacing: 0.08em; }', '', 'h1 { font-size: 20pt; font-weight: 500; margin: 18pt 0 4pt; }', '.destinataires { font-size: 9pt; color: #666666; margin: 0 0 16pt; }', '', '.poste { margin-top: 14pt; break-inside: avoid; }', '.poste h2 { font-size: 12pt; font-weight: 600; border-bottom: 0.5pt solid #dddddd;', '  padding-bottom: 4pt; margin: 0 0 6pt; }', '.poste .tag { color: #8D1D2C; font-size: 8pt; font-weight: 600; margin-right: 6pt; }', '.poste .desc { font-size: 9pt; color: #555555; margin: 0 0 8pt; }', '.poste .donnees table { width: 100%; border-collapse: collapse; font-size: 9pt; }', '.poste .donnees th, .poste .donnees td { border-bottom: 0.5pt solid #eeeeee;', '  padding: 4pt 6pt; text-align: left; }', '', 'footer { position: running(footer); font-size: 7.5pt; color: #999999;', '  border-top: 0.5pt solid #dddddd; padding-top: 6pt; margin-top: 20pt; }'].join('\n');
       common.repPrev = { nom: rp.nom, freq: S.repFreq[rp.id] || rp.freq, url: repUrl(rp, sel, pd && pd.email),
+        periodeLabel: this.moisLabel() + ' ' + this.exo(), dateGenLabel: this.fDA(M.TODAY),
         to: pd ? pd.nom + ' <' + pd.email + '>' : '—', ccTxt: pc ? ' · Cc : ' + pc.nom + ' <' + pc.email + '>' : '',
         isPdf: tab === 'pdf', isCode: tab === 'code', tabPdfSt: tabSt(tab === 'pdf'), tabCodeSt: tabSt(tab === 'code'),
         htmlCode, cssCode,
@@ -1461,6 +1492,7 @@ class App {
   /* --- paramètres ---------------------------------------------------------------------- */
   valsParams(common){
     const S = this.state, D = this.D, M = this.M;
+    common.paramExo = String(this.meta.exercice);
     const s = this.seuils();
     common.paramLeviers = M.LEVIERS;
     const ax = S.tplAxe || common.npAxes[0]; const tpl = (ax && D.projTemplates[ax]) || { jalons: [], couts: [] };

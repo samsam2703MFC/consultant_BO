@@ -117,7 +117,7 @@ function tplMagasins(c, x){
   <div data-screen="magasins" style="display:flex;flex-direction:column;gap:16px">
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
-        <div style="font-size:13px;font-weight:500">Performance par magasin — juillet 2026</div>
+        <div style="font-size:13px;font-weight:500">Performance par magasin — ${c.storeHdrPeriode}</div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:var(--color-text-muted)">Zone</span>
           <select ${x.C(c.setZoneF)} style="${selCss}">${opts(c.zoneOptions, c.zoneF)}</select>
@@ -161,8 +161,8 @@ function tplHeatmap(c, x){
         <button ${x.A(c.hmMetricPct)} style="${c.hmBtnPctSt}">% d'atteinte de l'objectif</button>
       </div>
       <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
-        <button ${x.A(c.hmY25)} style="${c.hmBtn25St}">2025</button>
-        <button ${x.A(c.hmY26)} style="${c.hmBtn26St}">2026</button>
+        <button ${x.A(c.hmY25)} style="${c.hmBtn25St}">${c.hmYearPrev}</button>
+        <button ${x.A(c.hmY26)} style="${c.hmBtn26St}">${c.hmYearCur}</button>
       </div>
       <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.hmNote)}</span>
     </div>
@@ -187,20 +187,20 @@ function tplObjectifs(c, x){
   return `
   <div data-screen="objectifs" style="display:flex;flex-direction:column;gap:16px">
     <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;align-self:flex-start">
-      <button ${x.A(c.hz1)} style="${c.hz1St}">1 an — 2026</button>
-      <button ${x.A(c.hz3)} style="${c.hz3St}">3 ans — 2028</button>
-      <button ${x.A(c.hz5)} style="${c.hz5St}">5 ans — 2030</button>
+      <button ${x.A(c.hz1)} style="${c.hz1St}">${c.hzLabel1}</button>
+      <button ${x.A(c.hz3)} style="${c.hz3St}">${c.hzLabel3}</button>
+      <button ${x.A(c.hz5)} style="${c.hz5St}">${c.hzLabel5}</button>
     </div>
     ${c.isH1 ? `
       <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
         <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Cible réseau 2026</div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Cible réseau ${c.objExo}</div>
           <div style="font-size:32px;font-weight:500;margin-top:6px">${c.objCible}</div>
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:13px">
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Réel à fin juillet</span><span style="font-weight:500">${c.objReel}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Cible au prorata</span><span>${c.objProrata}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Taux d'atteinte</span><span style="${c.objAttSt}">${c.objAtt}</span></div>
-            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Projection fin 2026</span><span style="font-weight:500">${c.objProj}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Projection fin ${c.objExo}</span><span style="font-weight:500">${c.objProj}</span></div>
           </div>
           <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12px;color:var(--color-text-muted)">${esc(c.objNote)}</div>
           <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:12px">
@@ -215,7 +215,7 @@ function tplObjectifs(c, x){
         </div>
         <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="font-size:13px;font-weight:500">Trajectoire cumulée 2026 — réel vs cible</div>
+            <div style="font-size:13px;font-weight:500">Trajectoire cumulée ${c.objExo} — réel vs cible</div>
             <div style="display:flex;gap:14px;font-size:11px;color:var(--color-text-muted)">
               <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#8D1D2C;display:inline-block"></span>Réel</span>
               <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#c9a06a;display:inline-block"></span>Cible</span>
@@ -235,7 +235,7 @@ function tplObjectifs(c, x){
         <table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead><tr>
             <th style="${TH}">Magasin</th>
-            <th style="text-align:right;${TH2}">Cible 2026</th>
+            <th style="text-align:right;${TH2}">Cible ${c.objExo}</th>
             <th style="text-align:right;${TH2}">Réel à fin juil.</th>
             <th style="text-align:right;${TH2}">Cible prorata</th>
             <th style="text-align:center;${TH2}">Écart</th>
@@ -395,7 +395,7 @@ function tplBudget(c, x){
 
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px;min-width:0">
       <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Écarts et manque à gagner par magasin</div>
-      <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;margin-bottom:14px">Cumul janv. → juil. 2026 · cliquez une ligne pour charger le magasin ci-dessus</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;margin-bottom:14px">Cumul janv. → ${c.bCumMois} ${c.bExercice} · cliquez une ligne pour charger le magasin ci-dessus</div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px">
           <thead><tr>
@@ -451,7 +451,7 @@ function tplMarge(c, x){
         <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Marge nette réseau — juillet</div>
         <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px"><span style="font-size:32px;font-weight:500">${c.mgReseau}</span><span style="${c.mgTrSt}">${c.mgTr}</span></div>
         <svg width="100%" height="70" viewBox="0 0 320 70" preserveAspectRatio="none" style="margin-top:8px"><polyline points="${c.mgTraj}" fill="none" stroke="#8D1D2C" stroke-width="2"></polyline></svg>
-        <div style="font-size:11px;color:var(--color-text-muted)">Évolution mensuelle 2026 (janv. → juil.)</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">${c.mgEvoLabel}</div>
         <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px">
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Seuil Food Cost</span><span style="font-weight:500">≤ ${c.sFoodTxt}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Seuil Labour Cost</span><span style="font-weight:500">≤ ${c.sLabourTxt}</span></div>
@@ -473,7 +473,7 @@ function tplMarge(c, x){
       </div>
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Ratios de coûts par magasin — juillet 2026 · où se gagne / se perd la marge</div>
+      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Ratios de coûts par magasin — ${c.mgHdrPeriode} · où se gagne / se perd la marge</div>
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr>
           <th style="${TH}">Magasin</th>
@@ -697,7 +697,7 @@ function tplProduits(c, x){
       <span style="font-size:12px;color:var(--color-text-muted)">Pondération du score — ${c.pdPond}</span>
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge et position dans la catégorie · juillet 2026</div>
+      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge et position dans la catégorie · ${c.pdPeriode || ''}</div>
       <div style="overflow-x:auto">
       <table style="width:100%;min-width:1080px;border-collapse:collapse;font-size:12.5px">
         <thead><tr>
@@ -1388,7 +1388,7 @@ function tplParams(c, x){
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Général</div>
         <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Année de référence des objectifs</span><span style="font-weight:500">2026</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Année de référence des objectifs</span><span style="font-weight:500">${c.paramExo || ''}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Utilisateurs &amp; rôles</span><span style="font-weight:500">1 CEO/admin · 4 consultants · 3 lecture seule</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Magasins / zones d'implantation</span><span style="font-weight:500">10 magasins · 12 zones</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Service d'envoi email</span><span style="font-weight:500">Resend — connecté</span></div>
@@ -1559,7 +1559,7 @@ function tplRepPrev(c, x){
     <div style="background:#fff;border-radius:4px;box-shadow:0 4px 18px rgba(34,34,34,0.14);padding:36px 40px;min-height:780px;max-width:580px;margin:0 auto">
       <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1.5px solid #222;padding-bottom:12px">
         <div style="font-family:var(--font-display);font-size:19px">L'Atelier by</div>
-        <div style="font-size:10.5px;color:#666;text-transform:uppercase;letter-spacing:0.08em">Rapport automatique · Juillet 2026</div>
+        <div style="font-size:10.5px;color:#666;text-transform:uppercase;letter-spacing:0.08em">Rapport automatique · ${rp.periodeLabel}</div>
       </div>
       <div style="font-family:var(--font-display);font-size:24px;margin-top:20px">${esc(rp.nom)}</div>
       <div style="font-size:11.5px;color:#666;margin-top:4px">À : ${esc(rp.to)}${esc(rp.ccTxt)} · Fréquence : ${rp.freq}</div>
@@ -1580,7 +1580,7 @@ function tplRepPrev(c, x){
           </div>`).join('')}
       </div>
       <div style="border-top:0.5px solid #ddd;margin-top:28px;padding-top:8px;font-size:9.5px;color:#999;display:flex;justify-content:space-between">
-        <span>Généré automatiquement le 01/08/2026 — cockpit L'Atelier by</span><span>1 / 1</span>
+        <span>Généré automatiquement le ${rp.dateGenLabel} — cockpit L'Atelier by</span><span>1 / 1</span>
       </div>
     </div>` : ''}
   </div>`;
