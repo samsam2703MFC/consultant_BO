@@ -283,6 +283,58 @@ for ep in meta stores pwa/reports; do
   echo
 done
 
+# --- 6 bis. Câblage des bases : QUI est branché sur QUOI ------------------
+# Le cockpit vit dans la base du panel : il crée ses tables `ceo_*` et LIT des
+# tables qui ne lui appartiennent pas. Quand l'une d'elles manque, le code
+# l'attrape et continue en silence — c'est exactement ce qui a caché le budget
+# jamais relu. Ce rapport s'imprime à CHAQUE déploiement, pas seulement sur
+# échec : une dépendance absente doit se voir avant de produire des écrans
+# vides plutôt qu'une erreur.
+WIRE_BIN="$(command -v mysql || command -v mariadb || true)"
+if [[ -n "$WIRE_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
+  log "Câblage des bases — tables partagées et tables du cockpit :"
+  MYSQL_PWD="$COCKPIT_DB_PASSWORD" "$WIRE_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" \
+    -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" -N -B -e "
+    SELECT CONCAT(
+             RPAD(t.nom, 24, ' '), ' ',
+             RPAD(t.role, 10, ' '), ' ',
+             IF(i.TABLE_NAME IS NULL, 'ABSENTE', 'présente')
+           ) AS ligne
+      FROM (
+        SELECT 'mac_shop_monthly_pnl' nom, 'partagée' role UNION ALL
+        SELECT 'transaction',           'partagée' UNION ALL
+        SELECT 'transaction_product',   'partagée' UNION ALL
+        SELECT 'sig_products',          'partagée' UNION ALL
+        SELECT 'sig_product_categories','partagée' UNION ALL
+        SELECT 'user_membership',       'partagée' UNION ALL
+        SELECT 'user_profile',          'partagée' UNION ALL
+        SELECT 'of_tag',                'partagée' UNION ALL
+        SELECT 'kpi',                   'partagée' UNION ALL
+        SELECT 'position',              'partagée' UNION ALL
+        SELECT 'mac_report_share',      'partagée' UNION ALL
+        SELECT 'ceo_shop',              'cockpit'  UNION ALL
+        SELECT 'ceo_shop_month_perf',   'cockpit'  UNION ALL
+        SELECT 'ceo_project_task',      'cockpit'  UNION ALL
+        SELECT 'ceo_task_issue',        'cockpit'  UNION ALL
+        SELECT 'ceo_app_setting',       'cockpit'
+      ) t
+      LEFT JOIN information_schema.TABLES i
+        ON i.TABLE_SCHEMA = DATABASE() AND i.TABLE_NAME = t.nom
+     ORDER BY t.role DESC, t.nom;" 2>&1 | sed 's/^/    /' || warn "câblage : lecture impossible"
+
+  # Ce que le cockpit a réellement sous la main, en volumes. Une table présente
+  # mais vide ne produit pas d'erreur non plus — juste un écran à zéro.
+  log "Volumes :"
+  MYSQL_PWD="$COCKPIT_DB_PASSWORD" "$WIRE_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" \
+    -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" -N -B -e "
+    SELECT CONCAT('magasins            : ', COUNT(*)) FROM ceo_shop UNION ALL
+    SELECT CONCAT('tâches              : ', COUNT(*)) FROM ceo_project_task UNION ALL
+    SELECT CONCAT('  dont validées     : ', COUNT(*)) FROM ceo_project_task WHERE note IS NOT NULL UNION ALL
+    SELECT CONCAT('signalements ouverts: ', COUNT(*)) FROM ceo_task_issue WHERE closed_at IS NULL UNION ALL
+    SELECT CONCAT('mois budgétés       : ', COUNT(*)) FROM ceo_shop_month_perf WHERE revenue_budget IS NOT NULL;" 2>&1 \
+    | sed 's/^/    /' || warn "volumes : lecture impossible"
+fi
+
 if [[ $rc -eq 0 ]]; then
   log "Recette OK. Cockpit disponible sur ${PUBLIC_BASE}/"
 else

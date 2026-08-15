@@ -1,2 +1,2 @@
-budget encode enfin relu par /stores/perf — deploiement standard,
-aucune operation sur la base.
+budget relu + rapport de cablage des bases a chaque deploiement.
+Deploiement standard, aucune operation sur la base.
