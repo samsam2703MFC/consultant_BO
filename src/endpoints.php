@@ -56,6 +56,14 @@ function ep_meta(): array
         'notes'            => setting('notes', new stdClass()),
         'familles'         => setting('familles', []),
         'reportTypes'      => setting('reportTypes', []),
+        // Validation des tâches : une seule source pour les cinq niveaux, le
+        // seuil et le référentiel famille → type. Rien n'est recopié dans le
+        // JavaScript, sinon les deux se mettent à diverger en silence.
+        'signalement'      => setting('signalement', [
+            'seuil'    => 4,
+            'niveaux'  => [],
+            'familles' => [],
+        ]),
     ];
 }
 
@@ -249,6 +257,11 @@ function ep_projects(): array
             'magasin' => $t['shop_id'], 'due' => $t['due_on'], 'done' => $t['done_on'],
             'relance' => $t['reminded_on'], 'desc' => $t['description'],
             'budget' => $t['budget'] !== null ? (float) $t['budget'] : null,
+            // `note` nulle sur une tâche rendue = elle attend une validation :
+            // c'est ce qui alimente le groupe « À valider » de l'écran.
+            'note' => $t['note'] !== null ? (int) $t['note'] : null,
+            'valideePar' => $t['validated_by'],
+            'signalement' => tacheSignalement($t['id']),
         ], Db::rows('SELECT * FROM ceo_project_task WHERE project_id = ? ORDER BY id', [$id]));
         $out[] = [
             'id' => $id, 'nom' => $p['name'], 'famille' => $p['famille'], 'statut' => $p['status'], 'prio' => $p['priority'],
@@ -264,6 +277,33 @@ function ep_projects(): array
         ];
     }
     return $out;
+}
+
+/**
+ * Le dernier signalement d'une tâche, ouvert ou clos.
+ *
+ * Une tâche validée sous le seuil garde son signalement au suivi : l'écran
+ * affiche « 1 ouvert depuis 4 jours » sur l'intervenant, ce qui n'a de sens
+ * que si la ligne survit à la clôture de la tâche.
+ */
+function tacheSignalement(string $taskId): ?array
+{
+    $r = Db::row('SELECT * FROM ceo_task_issue WHERE task_id = ? ORDER BY id DESC LIMIT 1', [$taskId]);
+    if ($r === null) {
+        return null;
+    }
+    return [
+        'id'      => (int) $r['id'],
+        'note'    => (int) $r['note'],
+        'famille' => $r['famille'],
+        'type'    => $r['type'],
+        'comment' => $r['comment'],
+        'copie'   => $r['recipients'] !== null && $r['recipients'] !== '' ? explode(',', $r['recipients']) : [],
+        'statut'  => $r['status'],
+        'ouvert'  => $r['closed_at'] === null,
+        'creeLe'  => $r['created_at'],
+        'creePar' => $r['created_by'],
+    ];
 }
 
 function ep_crm(): array
