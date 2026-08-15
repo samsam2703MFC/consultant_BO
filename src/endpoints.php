@@ -244,6 +244,37 @@ function ep_perf(): array
                 }
             }
         } catch (PDOException $eTx) { /* transaction lente/absente : P&L seul */ }
+
+        // 3) Le BUDGET encodé (`ceo_shop_month_perf`) — table du cockpit, la
+        //    seule qui le porte. Ni `mac_shop_monthly_pnl` ni `transaction` ne
+        //    connaissent le budget : sans cette passe, l'encodage était écrit
+        //    en base et jamais relu, et tous les écrans qui comparent au
+        //    budget (suivi budget, heatmap, objectifs de CA) affichaient un
+        //    objectif vide sans la moindre erreur.
+        //
+        //    Un mois budgété SANS réel doit exister aussi : « budget 80 k,
+        //    rien encaissé » est une information, pas une ligne à masquer.
+        try {
+            foreach (Db::rows("SELECT shop_id, year, month, revenue_budget, ca_theorique
+                               FROM ceo_shop_month_perf
+                               WHERE year IN ($in) AND (revenue_budget IS NOT NULL OR ca_theorique IS NOT NULL)", $annees) as $r) {
+                $k = $key($r['shop_id'], $r['year'], $r['month']);
+                $bud = $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null;
+                $theo = $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null;
+                if (isset($cells[$k])) {
+                    $cells[$k]['caBudget'] = $bud;
+                    $cells[$k]['caTheorique'] = $theo;
+                } else {
+                    $cells[$k] = [
+                        'storeId' => (string) $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
+                        'ca' => null, 'caBudget' => $bud, 'caTheorique' => $theo,
+                        'margeNette' => null, 'margePct' => null, 'tickets' => null, 'panierMoyen' => null,
+                        'foodCostPct' => null, 'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null,
+                    ];
+                }
+            }
+        } catch (PDOException $eBud) { /* table du cockpit absente : réel seul */ }
+
         return array_values($cells);
     } catch (PDOException $e) {
         return array_map(fn ($r) => [

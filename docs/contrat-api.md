@@ -180,6 +180,27 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
+### `GET /stores/perf` — d'où vient chaque colonne
+
+Trois sources, fusionnées par (magasin, année, mois) :
+
+| Champ | Source | Remarque |
+|---|---|---|
+| `ca`, `margeNette`, `margePct`, `labourCostPct`, `overheadPct` | `mac_shop_monthly_pnl` | table partagée avec le panel |
+| `tickets`, `panierMoyen`, et `ca` de repli | `transaction` | ventes caisse de l'exercice courant |
+| **`caBudget`, `caTheorique`** | **`ceo_shop_month_perf`** | **le budget encodé — aucune autre table ne le porte** |
+
+La troisième passe n'est pas facultative : ni `mac_shop_monthly_pnl` ni
+`transaction` ne connaissent le budget. Sans elle, l'encodage était écrit en
+base et jamais relu, et tous les écrans qui comparent au budget — suivi budget,
+heatmap, objectifs de CA — affichaient un objectif vide **sans lever la moindre
+erreur**. Le défaut ne se voyait qu'en présence des tables partagées : sans
+elles, l'endpoint tombait dans son repli, qui lisait le budget correctement.
+C'est-à-dire qu'il marchait partout sauf en production.
+
+Un mois **budgété sans réel** est rendu, avec `ca: null` : « budget 80 k, rien
+encaissé » est une information, pas une ligne à masquer.
+
 ### Suivi des tâches — traitement et reporting semaine / mois
 
 `GET /taches/suivi?periode=semaine|mois` (défaut `mois` ; 7 ou 30 jours glissants) :
