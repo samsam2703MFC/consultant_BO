@@ -223,6 +223,39 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
   fi
 fi
 
+# --- 5c. Inspection lecture seule de atelierby_db (COCKPIT_DBINSPECT=1) ---
+# Sert à cartographier les tables partagées du panel que le cockpit lira
+# (shops, mac_*, of_tag, kpi…). Aucune écriture. Échantillons limités aux
+# tables de référence/figures (pas de PII : ni user_profile ni transaction).
+if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
+  log "COCKPIT_DBINSPECT=1 — inspection lecture seule de $COCKPIT_DB_NAME…"
+  DBI_BIN="$(command -v mysql || command -v mariadb || true)"
+  if [[ -n "$DBI_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
+    export MYSQL_PWD="$COCKPIT_DB_PASSWORD"
+    q() { "$DBI_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" "$@"; }
+    echo "===== TABLES (hors ceo_) : nom + lignes ====="
+    q -N -e "SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name NOT LIKE 'ceo\\_%' ORDER BY table_name;" 2>&1
+    for t in shops mac_shop_monthly_pnl mac_kpi_threshold mac_consultant_param of_tag kpi position mac_report_share transaction transaction_product user_membership user_profile; do
+      echo "===== $t ====="
+      if q -N -e "SELECT 1 FROM \`$t\` LIMIT 1;" >/dev/null 2>&1; then
+        echo "-- COUNT --"; q -N -e "SELECT COUNT(*) FROM \`$t\`;" 2>&1
+        echo "-- COLONNES --"; q -N -e "SHOW COLUMNS FROM \`$t\`;" 2>&1 | awk '{print "   "$1" "$2}'
+      else
+        echo "  (table absente)"
+      fi
+    done
+    echo "===== ÉCHANTILLONS (référence / figures, non-PII) ====="
+    for t in mac_consultant_param mac_kpi_threshold of_tag kpi; do
+      echo "-- $t (jusqu'à 25) --"; q -e "SELECT * FROM \`$t\` LIMIT 25;" 2>&1
+    done
+    echo "-- mac_shop_monthly_pnl (5 lignes) --"; q -e "SELECT * FROM mac_shop_monthly_pnl ORDER BY year DESC, month DESC LIMIT 5;" 2>&1
+    echo "-- shops (5 lignes) --"; q -e "SELECT * FROM shops LIMIT 5;" 2>&1
+    unset MYSQL_PWD
+  else
+    warn "inspection impossible (client mysql ou identifiants absents)."
+  fi
+fi
+
 # --- 6. Premier appel API (auto-installation) + recette locale -----------
 log "Recette (loopback) — premier appel déclenche tables + seed…"
 rc=0

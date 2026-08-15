@@ -75,12 +75,13 @@ jobs:
           # Opération base pilotée par des mots-clés dans deploy.trigger :
           #   « wipe »  → remise à zéro (base vide, aucune démo) — prioritaire ;
           #   « reset » → réinstallation avec jeu de démonstration.
-          RESET=0; WIPE=0
-          if grep -qiw 'reset' deploy.trigger 2>/dev/null; then RESET=1; fi
-          if grep -qiw 'wipe'  deploy.trigger 2>/dev/null; then WIPE=1; RESET=0; fi
-          echo "COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE}"
+          RESET=0; WIPE=0; DBINSPECT=0
+          if grep -qiw 'reset'     deploy.trigger 2>/dev/null; then RESET=1; fi
+          if grep -qiw 'wipe'      deploy.trigger 2>/dev/null; then WIPE=1; RESET=0; fi
+          if grep -qiw 'dbinspect' deploy.trigger 2>/dev/null; then DBINSPECT=1; fi
+          echo "COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT}"
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "cd ${SRC_DIR} && chmod +x bin/deploy.sh && COCKPIT_PWA_BASE='${PWA_BASE}' COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} bash bin/deploy.sh"
+            "cd ${SRC_DIR} && chmod +x bin/deploy.sh && COCKPIT_PWA_BASE='${PWA_BASE}' COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT} bash bin/deploy.sh"
 
       - name: Nettoyer le fichier d'identifiants
         if: always()
