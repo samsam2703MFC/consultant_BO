@@ -1,3 +1,2 @@
-suivi des taches et traitement des signalements — deploiement standard,
-aucune operation sur la base (la colonne validated_at est posee par
-ensureValidation() au premier appel HTTP)
+recette elargie — verifie aussi /taches/suivi et les contrats des ecrans.
+Deploiement standard, aucune operation sur la base.

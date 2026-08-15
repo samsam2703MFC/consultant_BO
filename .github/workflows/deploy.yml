@@ -91,15 +91,35 @@ jobs:
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "rm -f ${SRC_DIR}/.deployenv" || true
 
-      - name: Recette publique (3 endpoints depuis le runner)
+      - name: Recette publique (endpoints depuis le runner)
         run: |
+          # Un déploiement « réussi » ne prouve que le transfert de fichiers.
+          # Cette recette est le seul endroit qui dit si l'application RÉPOND,
+          # donc elle doit couvrir ce qui vient d'être livré — sinon elle
+          # certifie une mise en ligne qu'elle n'a pas vérifiée.
           fail=0
-          for ep in meta stores pwa/reports; do
+          for ep in meta stores pwa/reports 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
             echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
             if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
               echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1
             fi
             echo
           done
+
+          # Les contrats que les écrans supposent, vérifiés sur la vraie base :
+          # sans eux, l'écran s'affiche vide et personne ne sait pourquoi.
+          echo "== contrats attendus =="
+          meta=$(curl -fsS "${APP_BASE}/api/cockpit/meta" || echo '{}')
+          if ! echo "$meta" | grep -q '"niveaux":\[{'; then
+            echo "::error::/meta ne porte pas les niveaux de validation (réglage signalement absent)"; fail=1
+          else echo "OK  /meta porte les cinq niveaux de validation"; fi
+          su=$(curl -fsS "${APP_BASE}/api/cockpit/taches/suivi?periode=semaine" || echo '{}')
+          for k in validees moyenne repartition ouverts signalements parIntervenant; do
+            if ! echo "$su" | grep -q "\"$k\""; then
+              echo "::error::/taches/suivi ne porte pas « $k »"; fail=1
+            fi
+          done
+          [ "$fail" = "0" ] && echo "OK  /taches/suivi porte les six champs de l'écran de suivi"
+
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail
