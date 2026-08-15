@@ -1,2 +1,2 @@
-magasins reconnus depuis la table partagee, et les refus d'ecriture enfin
-visibles. Deploiement standard, aucune operation sur la base.
+destinataires branches sur les vrais comptes, plus aucune valeur de
+demonstration en dur. Deploiement standard, aucune operation sur la base.
