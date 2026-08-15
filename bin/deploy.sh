@@ -178,6 +178,15 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
       log "Aucune table ceo_* à supprimer."
     fi
 
+    # a bis) Nettoyage : partages de démonstration (tok_demo_*) éventuellement
+    #        injectés par erreur dans la table mac_report_share du panel par un
+    #        seed antérieur. On ne supprime QUE les tokens de démo.
+    del="$(mycli -N -B "$COCKPIT_DB_NAME" \
+      -e "DELETE FROM mac_report_share WHERE token LIKE 'tok\\_demo\\_%'; SELECT ROW_COUNT();" 2>/dev/null || true)"
+    if [[ -n "$del" && "$del" != "0" ]]; then
+      log "mac_report_share : $del partage(s) de démonstration supprimé(s)."
+    fi
+
     # b) (Re)chargement DÉTERMINISTE via le client mysql (parseur correct,
     #    mono-thread) — évite les courses de l'auto-installation applicative
     #    quand plusieurs requêtes arrivent en même temps. Équivaut à
@@ -203,7 +212,7 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
       fi
     else
       log "Chargement du seed cockpit uniquement (tables ceo_*, panel non modifié)…"
-      if grep -vE '^INSERT INTO (of_tag|kpi|position)[ (]' "$TARGET_DIR/sql/seed.sql" \
+      if grep -vE '^INSERT INTO (of_tag|kpi|position|mac_report_share)[ (]' "$TARGET_DIR/sql/seed.sql" \
            | mycli "$COCKPIT_DB_NAME" 2>/tmp/ck_seed_err; then
         log "seed.sql chargé (ceo_* uniquement)"
       else
