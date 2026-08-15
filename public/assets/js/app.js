@@ -125,16 +125,16 @@ class App {
   }
   fE(n){ return n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €'; }
   fK(n){ return n == null ? '—' : Math.round(n / 1000).toLocaleString('fr-BE') + ' k€'; }
-  fM(n){ return (n / 1e6).toFixed(1).replace('.', ',') + ' M€'; }
-  fP(x, d){ return x == null ? '—' : (x * 100).toFixed(d == null ? 1 : d).replace('.', ',') + ' %'; }
+  fM(n){ return (n == null || !isFinite(n)) ? '—' : (n / 1e6).toFixed(1).replace('.', ',') + ' M€'; }
+  fP(x, d){ return (x == null || !isFinite(x)) ? '—' : (x * 100).toFixed(d == null ? 1 : d).replace('.', ',') + ' %'; }
   fD(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—'; }
   pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
-    if (pct == null) return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)';
+    if (pct == null || !isFinite(pct)) return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)';
     if (pct >= 1) return base + 'background:rgba(45,122,62,0.12);color:#2d7a3e';
     if (pct >= 0.92) return base + 'background:rgba(193,122,42,0.16);color:#8a5a13';
     return base + 'background:rgba(141,29,44,0.10);color:#8D1D2C'; }
   trend(cur, prev, suffix){ if (cur == null || prev == null || !prev) return { txt: '', st: 'font-size:12px' };
-    const v = cur / prev - 1; const up = v >= 0;
+    const v = cur / prev - 1; if (!isFinite(v)) return { txt: '', st: 'font-size:12px' }; const up = v >= 0;
     return { txt: (up ? '▲ +' : '▼ ') + (v * 100).toFixed(1).replace('.', ',') + ' %' + (suffix || ''), st: 'font-size:12px;font-weight:500;color:' + (up ? '#2d7a3e' : '#8D1D2C') }; }
   mix(a, b, t){ const h = x => [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)]; const A = h(a), B = h(b); return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',') + ')'; }
   statutStyle(s){ const m = { 'À lancer': ['#EAE4DC', '#666666'], 'En cours': ['#F2C9A0', '#6b4420'], 'En retard': ['#8D1D2C', '#ffffff'], 'En pause': ['#F4EFE8', '#666666'], 'Terminé': ['#2d7a3e', '#ffffff'], 'Abandonné': ['#666666', '#ffffff'] }[s] || ['#F4EFE8', '#666666'];

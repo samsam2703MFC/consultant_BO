@@ -1,1 +1,1 @@
-garde-nulls parametres (templates projets vides) — deploiement standard
+formatters non-finis → tiret (propre) — deploiement standard
