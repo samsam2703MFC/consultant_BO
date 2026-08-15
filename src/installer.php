@@ -22,15 +22,28 @@ function ensureInstalled(): void
         runSqlFile(__DIR__ . '/../sql/schema.sql');
     }
 
-    $n = Db::row('SELECT COUNT(*) AS n FROM ceo_shop');
-    if ((int) $n['n'] === 0) {
-        runSqlFile(__DIR__ . '/../sql/seed.sql');
+    // Jeu de démonstration : chargé UNIQUEMENT s'il est explicitement activé
+    // (config 'seed' = true, ou variable d'env COCKPIT_SEED=1). Désactivé par
+    // défaut → une base neuve reste vide, prête pour les vraies données.
+    if (seedEnabled()) {
+        $n = Db::row('SELECT COUNT(*) AS n FROM ceo_shop');
+        if ((int) $n['n'] === 0) {
+            runSqlFile(__DIR__ . '/../sql/seed.sql');
+        }
     }
 
     if (setting('authSecret') === null) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
             ['authSecret', json_encode(bin2hex(random_bytes(32)))]);
     }
+}
+
+/** Le jeu de démonstration doit-il être chargé ? Désactivé par défaut. */
+function seedEnabled(): bool
+{
+    if ((string) (getenv('COCKPIT_SEED') ?: '') === '1') { return true; }
+    $cfg = Db::config();
+    return !empty($cfg['seed']);
 }
 
 function isMissingTable(PDOException $e): bool

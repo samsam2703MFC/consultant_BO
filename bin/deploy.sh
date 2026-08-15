@@ -117,6 +117,7 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       ],
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
       "auth"    => false,
+      "seed"    => false,   // base vide par défaut ; pas de données de démo
     ];
     echo "<?php\nreturn " . var_export($cfg, true) . ";\n";
   ' > "$CFG"
@@ -140,12 +141,19 @@ a2enconf consulant_bo >/dev/null
 apache2ctl configtest
 systemctl reload apache2
 
-# --- 5b. Remise à zéro optionnelle des tables ceo_* (schéma obsolète) -----
-# atelierby_db est partagée avec le panel : d'anciennes tables ceo_* (schéma
-# périmé, ex. description NOT NULL) empêchent l'auto-installation (le seed
-# échoue en 1364). COCKPIT_RESET=1 les supprime pour repartir du schéma courant.
-if [[ "${COCKPIT_RESET:-0}" == "1" ]]; then
-  log "COCKPIT_RESET=1 — suppression des tables ceo_* obsolètes (client MySQL)…"
+# --- 5b. Opérations base de données (client MySQL) -----------------------
+# Deux modes, mutuellement exclusifs, pilotés par le workflow :
+#   COCKPIT_WIPE=1  → drop des tables ceo_*, recréation du schéma VIDE, aucun
+#                     jeu de démonstration (base prête pour les vraies données).
+#   COCKPIT_RESET=1 → drop + schéma + jeu de démonstration (tables ceo_*).
+# Dans les deux cas, les tables du panel (of_tag/kpi/position/mac_report_share,
+# non préfixées ceo_) ne sont JAMAIS touchées.
+if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
+  if [[ "${COCKPIT_WIPE:-0}" == "1" ]]; then
+    log "COCKPIT_WIPE=1 — remise à zéro : drop des tables ceo_*, base laissée VIDE (aucune démo)."
+  else
+    log "COCKPIT_RESET=1 — réinstallation des tables ceo_* (schéma + jeu de démonstration)."
+  fi
   MYSQL_BIN="$(command -v mysql || command -v mariadb || true)"
   if [[ -z "$MYSQL_BIN" ]]; then
     warn "client mysql introuvable — reset ignoré."
@@ -180,11 +188,13 @@ if [[ "${COCKPIT_RESET:-0}" == "1" ]]; then
     else
       warn "échec schema.sql :"; sed -n '1,3p' /tmp/ck_schema_err
     fi
-    # seed.sql contient 26 INSERT dans des tables PARTAGÉES du panel
-    # (of_tag/kpi/position) puis le jeu de démonstration des tables ceo_*.
-    # Par défaut on NE touche PAS aux tables du panel (déjà peuplées en prod, et
-    # leur schéma strict — position.description NOT NULL — refuse ces INSERT).
-    if [[ "${COCKPIT_SEED_PANEL:-0}" == "1" ]]; then
+    # c) Jeu de démonstration — UNIQUEMENT en mode RESET. En mode WIPE, la base
+    #    reste vide (schéma seul), prête pour les vraies données.
+    if [[ "${COCKPIT_WIPE:-0}" == "1" ]]; then
+      log "WIPE : aucune donnée de démonstration chargée (base ceo_* vide)."
+    elif [[ "${COCKPIT_SEED_PANEL:-0}" == "1" ]]; then
+      # seed.sql contient 26 INSERT dans des tables PARTAGÉES du panel
+      # (of_tag/kpi/position) puis le jeu de démo des tables ceo_*.
       log "Chargement du seed COMPLET (y compris tables partagées du panel, sql_mode relâché)…"
       if mycli --init-command="SET SESSION sql_mode=''" "$COCKPIT_DB_NAME" < "$TARGET_DIR/sql/seed.sql" 2>/tmp/ck_seed_err; then
         log "seed.sql chargé (complet)"

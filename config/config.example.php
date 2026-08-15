@@ -25,4 +25,9 @@ return [
     // utilisateurs arrivent redirigés depuis l'ERP, qui porte l'auth.
     // true : mot de passe défini au premier lancement, session 30 jours.
     'auth' => (getenv('COCKPIT_AUTH') ?: '0') === '1',
+
+    // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
+    // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
+    // charge sql/seed.sql (réseau belge de démo) si la base est vide.
+    'seed' => (getenv('COCKPIT_SEED') ?: '0') === '1',
 ];

@@ -1,7 +1,7 @@
 /* Cockpit CEO — logique applicative.
  * Port fidèle de la classe Component du prototype Design Component :
  * même état, mêmes calculs, mêmes libellés. Rendu : templates.js (HTML string
- * + délégation d'événements), données : api.js (REST, repli démo data.js).
+ * + délégation d'événements), données : api.js (REST, repli vide hors-ligne).
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
 import { load, write, authStatus, authSubmit, authLogout } from './api.js';
