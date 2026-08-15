@@ -61,6 +61,38 @@ function wr_project_create(): array
     return ['ok' => true, 'id' => $id];
 }
 
+/**
+ * DELETE /projects/{id} — supprime le projet et tout son suivi.
+ *
+ * Purge en cascade dans l'ordre des dépendances (signalements → tâches, puis
+ * jalons / coûts / leviers / CRM, enfin le projet). Le journal est CONSERVÉ :
+ * c'est une trace d'audit, la suppression y ajoute une ligne au lieu d'en
+ * retirer. Tout est encapsulé dans une transaction.
+ */
+function wr_project_delete(string $id): array
+{
+    $p = Db::row('SELECT name FROM ceo_project WHERE id = ?', [$id]);
+    if ($p === null) { http_response_code(404); return ['error' => 'projet inconnu']; }
+
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        Db::exec('DELETE FROM ceo_task_issue WHERE task_id IN (SELECT id FROM ceo_project_task WHERE project_id = ?)', [$id]);
+        Db::exec('DELETE FROM ceo_project_task WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM ceo_project_milestone WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM ceo_project_cost WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM ceo_project_levid WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM ceo_project_crm WHERE project_id = ?', [$id]);
+        Db::exec('DELETE FROM ceo_project WHERE id = ?', [$id]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+    journalAdd('CEO', 'Suppression', $p['name'], 'Projet « ' . $p['name'] . ' » supprimé (fiche projet)');
+    return ['ok' => true];
+}
+
 /** PATCH /projects/{id} — statut et/ou famille. */
 function wr_project_patch(string $id): array
 {

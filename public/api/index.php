@@ -72,6 +72,7 @@ function route(string $method, string $path): mixed
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
+    if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_patch($m[1]); }
     if ($method === 'POST' && preg_match('#^/projects/([\w-]+)/tasks$#', $path, $m)) { return wr_task_create($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)/tasks/([\w-]+)$#', $path, $m)) { return wr_task_patch($m[1], $m[2]); }

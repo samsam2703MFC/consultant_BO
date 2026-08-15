@@ -434,9 +434,14 @@ class App {
         common.objProj = this.fM(reelT + resteCible * att + (this.meta.contribOuverture || 0));
         const cumR = [], cumC = []; let ar = 0, ac = 0;
         for (let m = 0; m < 12; m++){ ac += this.sum(2026, m, 'caT'); cumC.push(ac); if (m <= 6){ ar += this.sum(2026, m, 'ca'); cumR.push(ar); } }
-        const mxv = ac; const px = m => 20 + m * (620 / 11); const py = v => 195 - v / mxv * 175;
-        common.trajCible = cumC.map((v, m) => px(m).toFixed(0) + ',' + py(v).toFixed(0)).join(' ');
-        common.trajReel = cumR.map((v, m) => px(m).toFixed(0) + ',' + py(v).toFixed(0)).join(' ');
+        // Échelle = max des deux cumuls (cible + réel), plancher 1 : sans objectif
+        // encodé la cible cumulée vaut 0 → sans ce plancher, py divise par 0 et le
+        // <polyline> reçoit des points NaN/Infinity. On trace quand même le réel.
+        const mxv = Math.max(ac, cumR.length ? Math.max.apply(null, cumR) : 0, 1);
+        const px = m => 20 + m * (620 / 11); const py = v => 195 - (isFinite(v) ? v : 0) / mxv * 175;
+        const pts = arr => arr.map((v, m) => px(m).toFixed(0) + ',' + py(v).toFixed(0)).filter(p => !/NaN|Infinity/.test(p)).join(' ');
+        common.trajCible = ac > 0 ? pts(cumC) : '';
+        common.trajReel = pts(cumR);
         const budAn = this.open().reduce((a, s) => a + s.perf[2026].reduce((b, r) => b + (r.caT || 0), 0), 0);
         common.cumBudget = this.fM(budAn); common.cumReel = this.fM(reelT);
         const bMois = ((D.budgets || [])[0] || {}).moisEncodes;
@@ -510,6 +515,14 @@ class App {
         roi: roi == null ? '—' : '+' + this.fK(roi), roiCl: roi != null && roi > 0 ? '#2d7a3e' : 'var(--color-text)',
         roiPct: roi == null ? 'valeur non chiffrée' : '+' + this.fP(roi / c, 0), kpis: opP.kpis.join(' · ') };
       common.closeProj = () => this.setState({ openProjId: null });
+      common.deleteProj = () => {
+        if (typeof confirm === 'function' && !confirm('Supprimer définitivement le projet « ' + opP.nom + ' » et tout son suivi (jalons, tâches, coûts) ?')) return;
+        this.api('DELETE', '/projects/' + opP.id);
+        this.log('Suppression', opP.nom, 'Projet supprimé');
+        this.D.projects = (this.D.projects || []).filter(p => p.id !== opP.id);
+        this.setState({ openProjId: null });
+        this.notify('Projet « ' + opP.nom + ' » supprimé');
+      };
     } else { common.op = false; common.closeProj = () => this.setState({ openProjId: null }); }
 
     return common;

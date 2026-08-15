@@ -1302,6 +1302,9 @@ function tplFicheProjet(c, x){
           <div style="font-size:13px;font-weight:500;margin-top:6px;line-height:1.5">${esc(op.kpis)}</div>
         </div>
       </div>
+      <div style="margin-top:28px;padding-top:16px;border-top:0.5px solid var(--color-border-tertiary);display:flex;justify-content:flex-end">
+        <button ${x.A(c.deleteProj)} title="Supprimer définitivement ce projet et son suivi" style="border:0.5px solid rgba(141,29,44,0.4);border-radius:8px;padding:8px 14px;background:transparent;color:#8D1D2C;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Supprimer le projet</button>
+      </div>
     </div>
   </div>`;
 }
