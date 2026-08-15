@@ -428,7 +428,7 @@ class App {
             goBudget: () => this.setState({ bStore: s.id, screen: 'budget' }) }; });
         rows.sort((a, b) => b._att - a._att);
         common.objRows = rows;
-        common.objCible = this.fM(D.targets.ca.h1.cible); common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
+        common.objCible = this.fM(((((D.targets || {}).ca) || {}).h1 || {}).cible || 0); common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
         const att = reelT / prorataT; common.objAtt = this.fP(att); common.objAttSt = 'font-weight:700;color:' + (att >= 1 ? '#2d7a3e' : att >= 0.92 ? '#8a5a13' : '#8D1D2C');
         let resteCible = 0; for (let m = 7; m < 12; m++) resteCible += this.sum(2026, m, 'caT');
         common.objProj = this.fM(reelT + resteCible * att + (this.meta.contribOuverture || 0));
@@ -449,9 +449,10 @@ class App {
         const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= 6; m++){ r += s.perf[2026][m].ca; p += s.perf[2026][m].caT; } return r < p; }).length;
         common.cumSous = sous + ' / ' + this.open().length;
       } else {
-        const cfg = D.targets.ca[hz]; const exp = D.targets.expansion[hz];
+        const cfg = (((D.targets || {}).ca) || {})[hz] || { an: this.meta.exercice, cible: 0 };
+        const exp = (((D.targets || {}).expansion) || {})[hz] || { an: this.meta.exercice, cible: 1, reel: 0 };
         let run = 0; for (let m = 0; m <= 6; m++) run += this.sum(2026, m, 'ca'); run = run / 7 * 12;
-        const nOuv = exp.cible - 1; const contrib = nOuv * D.targets.caMoyenOuverture;
+        const nOuv = (exp.cible || 1) - 1; const contrib = nOuv * ((D.targets || {}).caMoyenOuverture || 0);
         const lfl = cfg.cible - run - contrib;
         common.hzAn = String(cfg.an); common.hzCible = this.fM(cfg.cible); common.hzRunrate = this.fM(run);
         common.hzGap = '+' + this.fM(cfg.cible - run); common.hzOuv = nOuv + ' points de vente'; common.hzContrib = 'env. ' + this.fM(contrib);
@@ -460,7 +461,7 @@ class App {
         common.hzBars = [{ label: 'CA actuel (run-rate 9 magasins)', val: this.fM(run), st: mkBar(run, 'var(--color-primary)') },
           { label: '+ Contribution des ' + nOuv + ' ouvertures prévues', val: this.fM(contrib), st: mkBar(contrib, 'var(--color-secondary)') },
           { label: '+ Croissance à périmètre constant requise', val: this.fM(Math.max(0, lfl)), st: mkBar(Math.max(0, lfl), '#c9a06a') }];
-        common.hzNote = (cfg.note || '').replace('{ouvertures}', nOuv).replace('{caMoyen}', this.fK(D.targets.caMoyenOuverture));
+        common.hzNote = (cfg.note || '').replace('{ouvertures}', nOuv).replace('{caMoyen}', this.fK((D.targets || {}).caMoyenOuverture || 0));
       }
     }
 
