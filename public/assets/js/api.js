@@ -113,7 +113,7 @@ function shape(p, source){
       // existe : le repli ne sert qu'à un serveur injoignable.
       SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
     D: Object.assign({}, p.raw || {}, {
-      stores: joinPerf(p.stores, p.perf),
+      stores: joinPerf(p.stores, p.perf, meta && meta.exercice),
       budgets: p.budgets,
       targets: p.targets,
       consultants: p.consultants,
@@ -132,18 +132,31 @@ function shape(p, source){
   };
 }
 
-/* /stores/perf renvoie des lignes plates (storeId, annee, mois, …) —
-   le composant lit store.perf[annee][mois]. */
-function joinPerf(stores, perf){
-  if (!perf || !perf.length) return stores;
+/* /stores/perf renvoie des lignes plates (storeId, annee, mois, …) — le
+   composant lit store.perf[annee][mois][champ]. Les vraies données du panel
+   sont CREUSES (tous les magasins/mois ne sont pas encodés) ; on densifie donc
+   en tableaux de 12 mois par année affichée, chaque cellule étant un objet aux
+   champs à null. Sans ça, `perf[annee]` ou `perf[annee][mois]` est indéfini et
+   les écrans Tableau/Heatmap/Marge plantent. */
+function joinPerf(stores, perf, exercice){
+  perf = perf || [];
+  const yEx = exercice || new Date().getFullYear();
+  const years = new Set(perf.map(r => r.annee));
+  years.add(yEx); years.add(yEx - 1);
+  const cell = () => ({ ca: null, caT: null, marge: null, mp: null, tickets: null,
+    panier: null, food: null, labour: null, overhead: null, val: null });
   const by = {};
   for (const r of perf){
     const s = (by[r.storeId] = by[r.storeId] || {});
-    const y = (s[r.annee] = s[r.annee] || new Array(12).fill(null));
+    const y = (s[r.annee] = s[r.annee] || Array.from({ length: 12 }, cell));
     y[r.mois - 1] = { ca: r.ca, caT: r.caBudget, marge: r.margeNette, mp: r.margePct, tickets: r.tickets,
       panier: r.panierMoyen, food: r.foodCostPct, labour: r.labourCostPct, overhead: r.overheadPct, val: r.valorisation };
   }
-  return stores.map(s => Object.assign({}, s, { perf: by[s.id] || {} }));
+  return stores.map(s => {
+    const per = by[s.id] || {};
+    for (const y of years) if (!per[y]) per[y] = Array.from({ length: 12 }, cell);
+    return Object.assign({}, s, { perf: per });
+  });
 }
 
 /* --- Repli hors-ligne : structure vide (aucune donnée fictive) ------------
