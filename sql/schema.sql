@@ -182,6 +182,8 @@ CREATE TABLE IF NOT EXISTS ceo_project_task (
   reminded_on DATE NULL,
   description TEXT NULL,
   budget      DECIMAL(10,2) NULL,
+  note        TINYINT NULL,              -- 1..5, NULL = rendue mais pas encore validée
+  validated_by VARCHAR(80) NULL,
   CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -342,4 +344,42 @@ CREATE TABLE IF NOT EXISTS ceo_product_month_sales (
   cout_unitaire DECIMAL(8,2) NOT NULL,        -- matière + emballage
   PRIMARY KEY (product_id, annee, mois),
   FOREIGN KEY (product_id) REFERENCES ceo_product(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Validation des tâches consultants
+--
+-- Une tâche n'est plus « cochée » : elle est NOTÉE de 1 à 5. La note porte à
+-- la fois la conformité et la gravité — 5 exemplaire, 4 conforme, 3/2/1 non
+-- conforme mineur/majeur/critique. Sous le seuil (réglage `signalement`,
+-- défaut 4), la validation ouvre un signalement.
+--
+-- `done_on` reste la date de clôture ; `note` nulle = tâche rendue mais pas
+-- encore validée, ce qui alimente le groupe « À valider » de l'écran.
+--
+-- Sur une base créée par une version antérieure :
+--   ALTER TABLE ceo_project_task ADD COLUMN note TINYINT NULL;
+--   ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
+-- ----------------------------------------------------------------------------
+-- Le signalement ouvert par une validation sous le seuil.
+--
+-- Pas de colonne `gravite` : elle serait la copie de `note`, et deux sources
+-- pour un même fait finissent par diverger.
+CREATE TABLE IF NOT EXISTS ceo_task_issue (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  task_id     VARCHAR(16)  NOT NULL,
+  note        TINYINT      NOT NULL,          -- 1..3, recopiée pour l'historique
+  famille     VARCHAR(60)  NOT NULL,          -- Livrable, Délai, Qualité de service…
+  type        VARCHAR(80)  NOT NULL,          -- filtré par la famille
+  comment     TEXT         NULL,
+  recipients  VARCHAR(400) NULL,              -- « c:c1,c:c3 » — en copie
+  status      ENUM('nouveau','vu','traite') NOT NULL DEFAULT 'nouveau',
+  created_at  DATETIME     NOT NULL,
+  created_by  VARCHAR(80)  NOT NULL,
+  seen_at     DATETIME     NULL,
+  closed_at   DATETIME     NULL,
+  closed_by   VARCHAR(80)  NULL,
+  KEY idx_task (task_id),
+  KEY idx_status (status, created_at),
+  CONSTRAINT fk_issue_task FOREIGN KEY (task_id) REFERENCES ceo_project_task(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

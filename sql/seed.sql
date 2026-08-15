@@ -674,3 +674,12 @@ INSERT INTO ceo_app_setting VALUES ('familles', '["Produits","Services","Organis
 INSERT INTO ceo_app_setting VALUES ('reportTypes', '["Financier","Commercial","Contrôle qualité","Pilotage projets","Développement réseau"]');
 INSERT INTO ceo_app_setting VALUES ('caMoyenOuverture', '820000');
 INSERT INTO ceo_app_setting VALUES ('pwaBase', '"https:\\/\\/panel.atelierby.be"');
+
+-- ----------------------------------------------------------------------------
+-- Le référentiel de validation (niveaux, seuil, familles) n'est PAS ici.
+--
+-- `seed.sql` ne se charge que sur une base vide ; le réglage, lui, doit
+-- exister sur toute installation, y compris celles déjà en service. Il est
+-- donc posé par `ensureValidation()` (src/installer.php), qui en est la seule
+-- source. Le mettre aux deux endroits, c'est garantir qu'ils divergeront.
+-- ----------------------------------------------------------------------------

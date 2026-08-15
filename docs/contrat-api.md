@@ -141,7 +141,55 @@ ce champ et l'affiche sur la ligne. `POST /projects/{id}/tasks` et `PATCH /proje
 acceptent `magasinId`.
 
 Routes d'écriture projets : `PATCH /projects/{id}` (`famille`, `statut`),
-`PATCH /projects/{id}/tasks/{taskId}` (`done`, `magasinId`), `PATCH /projects/{id}/milestones/{index}` (`reel`).
+`PATCH /projects/{id}/tasks/{taskId}` (`done`, `magasinId`, `note`), `PATCH /projects/{id}/milestones/{index}` (`reel`).
+
+### Validation d'une tâche consultant
+
+Une tâche n'est plus seulement cochée, elle est **notée**. La note porte à la fois la conformité
+et la gravité — il n'y a donc pas de champ « gravité » à côté :
+
+| Note | Niveau | Effet |
+|---|---|---|
+| 5 | Exemplaire | clôture |
+| 4 | Conforme | clôture |
+| 3 | Non conforme — mineur | clôture **+ signalement** |
+| 2 | Non conforme — majeur | clôture **+ signalement** |
+| 1 | Non conforme — critique | clôture **+ signalement** |
+
+Chaque tâche de `/projects` porte désormais `note` (1..5, `null` = rendue mais pas encore
+validée — c'est ce qui alimente le groupe « À valider »), `valideePar`, et `signalement` (le
+dernier signalement de la tâche, ou `null`).
+
+`PATCH /projects/{id}/tasks/{taskId}` accepte `{ note, famille, type, commentaire, copie, par }`.
+La note, la clôture et le signalement sont écrits dans **une seule transaction** : une tâche close
+dont le signalement s'est perdu en route est pire que les deux ensemble. Deux refus en `422` :
+une note hors `1..5`, et une note sous le seuil sans `famille` ni `type`.
+
+Les cinq niveaux, le seuil et le référentiel famille → type viennent de `GET /meta`, clé
+`signalement` (réglage `ceo_app_setting`, modifiable par `PUT /parametres/signalement`) :
+
+```json
+{ "seuil": 4,
+  "niveaux": [{ "n": 5, "nom": "Exemplaire", "couleur": "#C9A227", "aide": "au-dessus de l'attendu" }],
+  "familles": [{ "nom": "Livrable", "types": ["Incomplet", "Non conforme au brief"] }] }
+```
+
+**Une seule source.** Aucun libellé ni couleur n'est recopié dans le JavaScript : le jour où
+« mineur » devient « à surveiller », il ne change qu'ici. Les mêmes cinq niveaux servent au panel
+consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit vouloir dire la même
+chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
+est propre à chaque application.
+
+**Aucune migration à lancer à la main.** `ensureValidation()` (`src/installer.php`) pose les deux
+colonnes, la table `ceo_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
+comme sur une base déjà en service — `schema.sql` et `seed.sql`, eux, ne repassent jamais sur une
+installation existante. Pour information, l'équivalent manuel :
+
+```sql
+ALTER TABLE ceo_project_task ADD COLUMN note TINYINT NULL;
+ALTER TABLE ceo_project_task ADD COLUMN validated_by VARCHAR(80) NULL;
+-- + la table ceo_task_issue (voir sql/schema.sql)
+```
 
 ```sql
 ALTER TABLE ceo_shop_budget ADD COLUMN ca_theorique_an DECIMAL(12,2) NULL;
