@@ -38,6 +38,85 @@ function ensureInstalled(): void
     }
 
     ensureValidation();
+    ensureReference();
+}
+
+/**
+ * Données de RÉFÉRENCE de l'application (pas de démo métier), posées si elles
+ * manquent. Une base neuve reste vide de données métier (magasins/projets), mais
+ * l'app a besoin de cette structure pour FONCTIONNER : catégories du kanban
+ * projet, types de rapport, modèles de rétroplanning et d'email. Sans elles,
+ * l'assistant « Nouveau projet » et le reporting sont inutilisables. Même
+ * philosophie que ensureValidation()/signalementDefaut() : idempotent, on ne
+ * réécrit jamais une valeur déjà posée.
+ */
+function ensureReference(): void
+{
+    $poserSetting = static function (string $key, array $val): void {
+        if (setting($key) === null) {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
+                [$key, json_encode($val, JSON_UNESCAPED_UNICODE)]);
+        }
+    };
+    // Marque du réseau (réel : les boutiques sont « Atelier by … »).
+    $poserSetting('reseau', ['nom' => "L'Atelier by", 'sousTitre' => 'Cockpit CEO — Réseau']);
+    // Identité d'en-tête (pas une personne fictive : la marque, à personnaliser
+    // dans Paramètres). Sans elle, l'avatar de l'en-tête reste vide.
+    $poserSetting('utilisateur', ['initiales' => 'AB', 'nom' => "L'Atelier by", 'role' => 'CEO · admin']);
+    // Libellés de mois : indispensables — chaque écran indexé par mois
+    // (tableau, heatmap, marge, objectifs) lit M.MOIS[mois]. Sans eux, tout
+    // rendu mensuel casse. Structure, pas une donnée métier.
+    $poserSetting('moisLabels', ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']);
+    // Catégories du kanban projet + types de rapport (structure, pas des données).
+    $poserSetting('familles', ['Produits', 'Services', 'Organisation & coûts', 'Développement réseau']);
+    $poserSetting('reportTypes', ['Financier', 'Commercial', 'Contrôle qualité', 'Pilotage projets', 'Développement réseau']);
+
+    if ((int) Db::row('SELECT COUNT(*) AS n FROM ceo_email_template')['n'] === 0) {
+        foreach (emailTemplatesDefaut() as $t) {
+            Db::exec('INSERT INTO ceo_email_template (id, name, subject, body) VALUES (?,?,?,?)', $t);
+        }
+    }
+    if ((int) Db::row('SELECT COUNT(*) AS n FROM ceo_project_template')['n'] === 0) {
+        foreach (projectTemplatesDefaut() as $t) {
+            Db::exec('INSERT INTO ceo_project_template (axe, jalons_json, couts_json) VALUES (?,?,?)', $t);
+        }
+    }
+}
+
+/** Modèles d'email de relance livrés (réglables ensuite dans l'app). */
+function emailTemplatesDefaut(): array
+{
+    $sig = "\n\nBien à vous,\nDirection réseau — L'Atelier by";
+    return [
+        ['e1', 'Rappel J-3 avant échéance', "[L'Atelier by] Échéance dans 3 jours — {tache}",
+            "Bonjour {destinataire},\n\nPetit rappel : la tâche « {tache} » (projet {projet}) arrive à échéance le {echeance}.\nMerci de confirmer que la livraison est en bonne voie, ou de signaler tout blocage dès maintenant." . $sig],
+        ['e2', 'Relance J+1 en retard', "[L'Atelier by] Tâche en retard — {tache}",
+            "Bonjour {destinataire},\n\nLa tâche « {tache} » (projet {projet}) était attendue le {echeance} et n'est pas livrée.\nMerci de nous transmettre sous 48 h : la nouvelle date ferme, la cause du retard et le plan de rattrapage." . $sig],
+        ['e3', 'Candidat sans activité', "[L'Atelier by] Votre projet de franchise",
+            "Bonjour {destinataire},\n\nNous restons sans nouvelle depuis quelques semaines concernant votre projet d'ouverture ({zone}).\nSouhaitez-vous poursuivre ? Nous pouvons planifier un point téléphonique cette semaine." . $sig],
+    ];
+}
+
+/** Modèles de rétroplanning par axe (jalons + postes de coût). */
+function projectTemplatesDefaut(): array
+{
+    return [
+        ['Ventes',
+            '[{"nom":"Étude & cadrage","j":-90},{"nom":"Test magasins pilotes","j":-45},{"nom":"Déploiement réseau","j":0}]',
+            '[{"poste":"Jours-homme consultants","prevu":10000},{"poste":"Print & PLV","prevu":3000}]'],
+        ['Marge nette franchisé',
+            '[{"nom":"État des lieux","j":-90},{"nom":"Plan d\'action validé","j":-45},{"nom":"Mise en œuvre réseau","j":0}]',
+            '[{"poste":"Jours-homme consultants","prevu":8000},{"poste":"Licences & outils","prevu":2000}]'],
+        ['Développement réseau',
+            '[{"nom":"Signature bail","j":-120},{"nom":"Travaux & agencement","j":-40},{"nom":"Recrutement & formation","j":-10},{"nom":"Ouverture","j":0}]',
+            '[{"poste":"Agencement","prevu":30000},{"poste":"Jours-homme consultants","prevu":9000},{"poste":"Autres (juridique, permis)","prevu":4000}]'],
+        ['Produit — Interne (production)',
+            '[{"nom":"Recette & fiche technique","j":-100},{"nom":"Essais production","j":-60},{"nom":"Test magasins pilotes","j":-30},{"nom":"Lancement réseau","j":0}]',
+            '[{"poste":"Jours-homme consultants","prevu":6000},{"poste":"Essais production & matières","prevu":4000},{"poste":"Print & PLV","prevu":2500}]'],
+        ['Produit — Externe (achat)',
+            '[{"nom":"Sourcing fournisseurs","j":-100},{"nom":"Appel d\'offres & dégustation","j":-60},{"nom":"Contrat & référencement","j":-30},{"nom":"Lancement réseau","j":0}]',
+            '[{"poste":"Jours-homme consultants","prevu":5000},{"poste":"Échantillons & tests","prevu":1500},{"poste":"Print & PLV","prevu":2500}]'],
+    ];
 }
 
 /**

@@ -39,7 +39,11 @@ function ep_meta(): array
     return [
         'reseau'           => setting('reseau', ['nom' => '', 'sousTitre' => '']),
         'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => '']),
-        'aujourdhui'       => setting('aujourdhui'),
+        // « Aujourd'hui » pilote la logique de dates (défaut du planning d'un
+        // nouveau projet, jalons/tâches en retard). Sans réglage explicite, on
+        // prend la date réelle du serveur — jamais null (sinon les comparaisons
+        // de dates côté écran deviennent fausses) et jamais figée.
+        'aujourdhui'       => setting('aujourdhui', date('Y-m-d')),
         'dateLabel'        => setting('dateLabel', ''),
         'periodeLabel'     => setting('periodeLabel', ''),
         'exercice'         => (int) setting('exercice', (int) date('Y')),
@@ -457,18 +461,81 @@ function ep_journal(): array
 function ep_products(): array
 {
     $periode = $_GET['periode'] ?? '2026-07';
-    [$annee, $mois] = array_map('intval', explode('-', $periode));
-    $rows = Db::rows(
-        'SELECT p.id, p.nom, p.categorie, s.volume, s.nb_magasins, s.prix_moyen, s.cout_unitaire,
-                n1.volume AS volume_n1
-           FROM ceo_product p
-           JOIN ceo_product_month_sales s  ON s.product_id = p.id AND s.annee = ? AND s.mois = ?
-      LEFT JOIN ceo_product_month_sales n1 ON n1.product_id = p.id AND n1.annee = ? AND n1.mois = ?
-          WHERE p.actif = 1 ORDER BY p.id', [$annee, $mois, $annee - 1, $mois]);
-    return array_map(fn ($r) => [
-        'id' => $r['id'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
-        'volume' => (int) $r['volume'], 'prix' => (float) $r['prix_moyen'], 'coutUnit' => (float) $r['cout_unitaire'],
-        'tendVol' => $r['volume_n1'] ? round($r['volume'] / $r['volume_n1'], 4) : 1,
-        'magasins' => (int) $r['nb_magasins'],
-    ], $rows);
+    if (!preg_match('/^(\d{4})-(\d{2})$/', $periode, $m)) { $m = [null, '2026', '07']; }
+    $annee = (int) $m[1]; $mois = (int) $m[2];
+
+    // Vraies ventes par produit sur le mois (lignes de caisse `transaction_product`
+    // ⨝ `transaction` pour la période et le magasin). Mêmes bornes que la perf.
+    // coutUnit = null : le COÛT matière n'est PAS dans la base partagée (il vient
+    // de l'API amont, cf. panel) → marge non calculable ici. Requête bornée à un
+    // mois, plafonnée MySQL et encapsulée. Repli sur ceo_product si les tables POS
+    // sont absentes (installation autonome).
+    try {
+        $venteMois = static function (string $from, string $to): array {
+            return Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
+                                    tp.id_product,
+                                    MAX(tp.product_name) nom,
+                                    SUM(tp.quantity) volume,
+                                    SUM(tp.total_gross_value_after_discount) ca,
+                                    COUNT(DISTINCT t.id_shop) magasins
+                             FROM transaction t
+                             JOIN transaction_product tp ON tp.id_transaction = t.id
+                             WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                             GROUP BY tp.id_product
+                             ORDER BY volume DESC
+                             LIMIT 200", [$from, $to]);
+        };
+        $from = sprintf('%04d-%02d-01 00:00:00', $annee, $mois);
+        $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
+        $rows = $venteMois($from, $to);
+        // Période demandée sans vente (mois courant partiel, ou installation
+        // fraîche) : replier sur le dernier mois de caisse réellement encodé.
+        if (!$rows) {
+            $last = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */
+                                    DATE_FORMAT(MAX(insert_timestamp), '%Y-%m-01 00:00:00') d FROM transaction");
+            if ($last !== null && $last['d'] !== null) {
+                $from = $last['d'];
+                $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
+                $rows = $venteMois($from, $to);
+            }
+        }
+
+        // Petit référentiel catégorie (sig_products → sig_product_categories).
+        $cat = [];
+        try {
+            foreach (Db::rows("SELECT sp.id, sc.name FROM sig_products sp
+                               LEFT JOIN sig_product_categories sc ON sc.id = sp.category_id") as $c) {
+                $cat[(string) $c['id']] = $c['name'];
+            }
+        } catch (PDOException $eCat) { /* référentiel absent : catégorie vide */ }
+
+        return array_map(function ($r) use ($cat) {
+            $vol  = (float) $r['volume'];
+            $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
+            return [
+                'id'        => (string) $r['id_product'],
+                'nom'       => ($r['nom'] !== null && $r['nom'] !== '') ? $r['nom'] : ('#' . $r['id_product']),
+                'categorie' => $cat[(string) $r['id_product']] ?? 'Non catégorisé',
+                'volume'    => (int) round($vol),
+                'prix'      => $prix,
+                'coutUnit'  => null,
+                'tendVol'   => 1,
+                'magasins'  => (int) $r['magasins'],
+            ];
+        }, $rows);
+    } catch (PDOException $e) {
+        $rows = Db::rows(
+            'SELECT p.id, p.nom, p.categorie, s.volume, s.nb_magasins, s.prix_moyen, s.cout_unitaire,
+                    n1.volume AS volume_n1
+               FROM ceo_product p
+               JOIN ceo_product_month_sales s  ON s.product_id = p.id AND s.annee = ? AND s.mois = ?
+          LEFT JOIN ceo_product_month_sales n1 ON n1.product_id = p.id AND n1.annee = ? AND n1.mois = ?
+              WHERE p.actif = 1 ORDER BY p.id', [$annee, $mois, $annee - 1, $mois]);
+        return array_map(fn ($r) => [
+            'id' => $r['id'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
+            'volume' => (int) $r['volume'], 'prix' => (float) $r['prix_moyen'], 'coutUnit' => (float) $r['cout_unitaire'],
+            'tendVol' => $r['volume_n1'] ? round($r['volume'] / $r['volume_n1'], 4) : 1,
+            'magasins' => (int) $r['nb_magasins'],
+        ], $rows);
+    }
 }

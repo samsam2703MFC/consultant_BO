@@ -786,18 +786,26 @@ class App {
     const W = this.poids(); const wt = (W.v + W.m + W.pos) || 1;
     common.pdPond = 'volume ' + Math.round(100 * W.v / wt) + ' · marge ' + Math.round(100 * W.m / wt) + ' · position ' + Math.round(100 * W.pos / wt);
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
-    const base = (D.products || []).map(p => { const mu = p.prix - p.coutUnit;
-      return { nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp: mu / p.prix,
-        ca: p.volume * p.prix, mg: p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
-    const maxVol = Math.max.apply(null, base.map(p => p.vol));
-    const mps = base.map(p => p.mp), maxMp = Math.max.apply(null, mps), minMp = Math.min.apply(null, mps);
+    // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
+    // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
+    // restent à null et n'entrent pas dans le score (recalculé sur volume + position).
+    const base = (D.products || []).map(p => {
+      const mu = p.coutUnit == null ? null : p.prix - p.coutUnit;
+      const mp = (mu == null || !p.prix) ? null : mu / p.prix;
+      return { nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
+        ca: p.volume * p.prix, mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
+    const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
+    const mps = base.map(p => p.mp).filter(v => v != null);
+    const maxMp = mps.length ? Math.max.apply(null, mps) : null, minMp = mps.length ? Math.min.apply(null, mps) : null;
     const cats = {}; base.forEach(p => { (cats[p.cat] = cats[p.cat] || []).push(p); });
-    Object.keys(cats).forEach(c2 => { const g = cats[c2].slice().sort((a, b) => b.ca - a.ca); const tot = g.reduce((a, x2) => a + x2.ca, 0);
+    Object.keys(cats).forEach(c2 => { const g = cats[c2].slice().sort((a, b) => b.ca - a.ca); const tot = g.reduce((a, x2) => a + x2.ca, 0) || 1;
       g.forEach((p, i) => { p.rang = i + 1; p.nbCat = g.length; p.partCat = p.ca / tot; }); });
-    base.forEach(p => { p.sVol = 100 * Math.sqrt(p.vol / maxVol);
-      p.sMg = 100 * (p.mp - minMp) / ((maxMp - minMp) || 1);
+    base.forEach(p => { p.sVol = 100 * Math.sqrt((p.vol || 0) / maxVol);
+      p.sMg = (p.mp == null || minMp == null) ? null : 100 * (p.mp - minMp) / ((maxMp - minMp) || 1);
       p.sPos = 100 * (p.nbCat - p.rang + 1) / p.nbCat;
-      p.score = (W.v * p.sVol + W.m * p.sMg + W.pos * p.sPos) / wt; });
+      let num = W.v * p.sVol + W.pos * p.sPos, den = W.v + W.pos;
+      if (p.sMg != null) { num += W.m * p.sMg; den += W.m; }
+      p.score = den ? num / den : 0; });
     const verdict = s => s >= 68 ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)'] : s >= 46 ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)'] : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'];
     common.pdCat = S.pdCat; common.setPdCat = e => this.setState({ pdCat: e.target.value });
     common.pdCatOptions = ['Toutes les catégories'].concat(Object.keys(cats));
@@ -810,10 +818,10 @@ class App {
       : S.pdSort === 'rang' ? (a.rang - b.rang || b.score - a.score) : b.score - a.score);
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
     const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
-    const eur = v => v.toFixed(2).replace('.', ',') + ' €';
+    const eur = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €';
     common.pdRows = rows.map(p => { const vd = verdict(p.score); const t = this.trend(p.tend, 1);
       return { nom: p.nom, cat: p.cat, vol: Math.round(p.vol).toLocaleString('fr-BE'), tend: t.txt, tendSt: t.st + ';font-weight:400',
-        prix: eur(p.prix), mu: eur(p.mu), mp: this.fP(p.mp, 0) + ' de marge', mg: this.fK(p.mg),
+        prix: eur(p.prix), mu: eur(p.mu), mp: p.mp == null ? '—' : this.fP(p.mp, 0) + ' de marge', mg: this.fK(p.mg),
         pen: this.fP(p.pen, 0), mags: p.mags + ' / ' + nbOuv + ' magasins', partCaRes: this.fP(p.ca / caProd, 1), ca: this.fK(p.ca),
         barPen: bar(100 * p.pen, p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C'),
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),
@@ -822,12 +830,13 @@ class App {
         score: String(Math.round(p.score)), scoreSt: 'font-size:17px;font-weight:500;line-height:1;color:' + vd[1], scoreBar: bar(p.score, vd[1]),
         verdict: vd[0], verdictSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + vd[2] + ';color:' + vd[1] }; });
     const nMot = base.filter(p => p.score >= 68).length, nArb = base.filter(p => p.score < 46).length;
-    const caTot = caProd, mgTot = base.reduce((a, p) => a + p.mg, 0);
+    const mgVals = base.map(p => p.mg).filter(v => v != null);
+    const caTot = caProd, mgTot = mgVals.length ? mgVals.reduce((a, v) => a + v, 0) : null;
     const penMoy = base.reduce((a, p) => a + p.pen, 0) / (base.length || 1);
     const nPart = base.filter(p => p.pen < 0.5).length;
     common.pdKpis = [{ k: 'Références notées', v: String(base.length), s: Object.keys(cats).length + ' catégories — ' + nbOuv + ' magasins ouverts' },
       { k: 'CA produit réseau', v: this.fK(caTot), s: 'Ventes du mois, tous magasins ouverts' },
-      { k: 'Marge brute produits', v: this.fK(mgTot), s: this.fP(mgTot / caTot, 1) + ' de taux de marge sur le CA produit' },
+      { k: 'Marge brute produits', v: this.fK(mgTot), s: mgTot == null ? 'Coût produit non exposé par la base partagée — marge indisponible' : this.fP(mgTot / caTot, 1) + ' de taux de marge sur le CA produit' },
       { k: 'Pénétration moyenne', v: this.fP(penMoy, 0), s: nPart + ' références vendues dans moins de la moitié du réseau' },
       { k: 'Moteurs de gamme', v: String(nMot), s: 'Score ≥ 68 : disponibilité et mise en avant à sécuriser' },
       { k: 'À arbitrer', v: String(nArb), s: 'Score < 46 : retrait, repricing ou relance commerciale' }];

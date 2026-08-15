@@ -1,1 +1,1 @@
-donnees reelles : consultants (user_*) + tickets/panier (transaction) + timeout 9s
+produits reels (transaction_product) + config de reference (moisLabels, familles, templates projet) + garde-null scoring produits + date du jour dynamique
