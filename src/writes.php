@@ -360,13 +360,62 @@ function wr_task_reminder(string $taskId): array
     return ['ok' => true];
 }
 
+/**
+ * Le magasin existe-t-il, et son miroir local est-il prêt à recevoir ?
+ *
+ * L'autorité sur les magasins est la table PARTAGÉE `shops` du panel — c'est
+ * elle que `ep_stores()` sert à l'écran. Mais `ceo_shop_budget` et
+ * `ceo_shop_month_perf` portent une clé étrangère vers `ceo_shop`, qui n'est
+ * qu'un miroir local et reste vide sur une installation branchée sur la vraie
+ * base.
+ *
+ * Conséquence, avant ce correctif : l'écran proposait les vrais magasins, et
+ * l'encodage du budget répondait « magasin inconnu » en 404 pour chacun d'eux.
+ * Rien n'était enregistré, et le client n'affichait aucune erreur — le budget
+ * semblait saisi et disparaissait.
+ *
+ * On recopie donc le magasin dans le miroir au moment où l'on en a besoin.
+ * Rend le nom du magasin, ou null s'il n'existe nulle part.
+ */
+function magasinConnu(string $shopId): ?string
+{
+    $local = Db::row('SELECT name FROM ceo_shop WHERE id = ?', [$shopId]);
+    if ($local !== null) { return (string) $local['name']; }
+
+    try {
+        $ext = Db::row('SELECT id, slug, name, legal_name, operator, city, zone, region, active, since_year
+                        FROM shops WHERE id = ?', [$shopId]);
+    } catch (PDOException $e) {
+        return null;                       // table partagée absente : rien à mirroir
+    }
+    if ($ext === null) { return null; }
+
+    // `franchisee` et `zone` sont NOT NULL : on retombe sur une chaîne vide
+    // plutôt que de faire échouer l'insertion sur un champ décoratif.
+    Db::exec('INSERT INTO ceo_shop (id, code, name, franchisee, zone, status, opened_on, pwa_shop_id)
+              VALUES (?,?,?,?,?,?,?,?)
+              ON DUPLICATE KEY UPDATE name = VALUES(name), code = VALUES(code),
+                franchisee = VALUES(franchisee), zone = VALUES(zone), status = VALUES(status)', [
+        (string) $ext['id'],
+        $ext['slug'] !== null ? strtoupper((string) $ext['slug']) : (string) $ext['id'],
+        (string) $ext['name'],
+        (string) ($ext['operator'] ?: ($ext['legal_name'] ?: '')),
+        (string) ($ext['zone'] ?: ($ext['region'] ?: ($ext['city'] ?: ''))),
+        ((int) $ext['active'] === 1) ? 'Ouvert' : 'Fermé',
+        $ext['since_year'] ? sprintf('%04d-01-01', (int) $ext['since_year']) : null,
+        (int) $ext['id'],
+    ]);
+    return (string) $ext['name'];
+}
+
 /** PUT /stores/{id}/budget — écran « Encodage du budget ». */
 function wr_budget_put(string $shopId): array
 {
     $b = body();
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
-    $shop = Db::row('SELECT name FROM ceo_shop WHERE id = ?', [$shopId]);
-    if ($shop === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $nomShop = magasinConnu($shopId);
+    if ($nomShop === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $shop = ['name' => $nomShop];
     $em = $b['etudeMarche'] ?? [];
     $caTheo = $b['caTheoriqueMensuel'] ?? [];
     $caTheoAn = array_sum(array_map('floatval', $caTheo));

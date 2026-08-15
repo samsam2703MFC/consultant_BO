@@ -108,13 +108,30 @@ export async function load(opts){
 }
 
 /** Écriture non bloquante : ignorée en mode démo, best-effort en mode API. */
+/**
+ * Écriture vers l'API. Rend { ok, status, error } — jamais une exception.
+ *
+ * Le statut HTTP était ignoré : un 404 ou un 422 se résout normalement côté
+ * fetch, donc aucun `catch` ne se déclenchait et l'écran annonçait
+ * « enregistré » alors que le serveur avait refusé. C'est ainsi qu'un budget
+ * encodé pouvait disparaître sans un mot.
+ */
 export function write(source, method, path, payload){
-  if (source !== 'api') return Promise.resolve(null);
+  if (source !== 'api') return Promise.resolve({ ok: true, status: 0 });
   return fetch(API_BASE + path, {
     method, credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: payload === undefined ? undefined : JSON.stringify(payload)
-  }).catch(e => console.warn('[cockpit] écriture ' + path + ' échouée :', e.message));
+  }).then(async r => {
+    if (r.ok) { return { ok: true, status: r.status }; }
+    let msg = 'HTTP ' + r.status;
+    try { const j = await r.json(); if (j && j.error) { msg = j.error; } } catch (e) { /* corps non JSON */ }
+    console.warn('[cockpit] écriture ' + path + ' refusée : ' + msg);
+    return { ok: false, status: r.status, error: msg };
+  }).catch(e => {
+    console.warn('[cockpit] écriture ' + path + ' échouée : ' + e.message);
+    return { ok: false, status: 0, error: e.message };
+  });
 }
 
 /* Normalisation : une seule forme consommée par le composant. */
