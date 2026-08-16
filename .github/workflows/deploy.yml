@@ -98,7 +98,7 @@ jobs:
           # donc elle doit couvrir ce qui vient d'être livré — sinon elle
           # certifie une mise en ligne qu'elle n'a pas vérifiée.
           fail=0
-          for ep in meta stores pwa/reports 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
+          for ep in meta stores consultants people 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
             echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
             if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
               echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1
@@ -120,6 +120,19 @@ jobs:
             fi
           done
           [ "$fail" = "0" ] && echo "OK  /taches/suivi porte les six champs de l'écran de suivi"
+
+          # Les identifiants d'intervenant sont le point de jointure avec le
+          # panel : `owner_id` doit s'écrire « u<membership> » pour que le
+          # consultant connecté y retrouve ses tâches. Une divergence ici ne
+          # lève aucune erreur — elle vide simplement son écran.
+          echo "== identifiants d'intervenant =="
+          cons=$(curl -fsS "${APP_BASE}/api/cockpit/consultants" || echo '[]')
+          echo "$cons" | head -c 400; echo
+          if echo "$cons" | grep -q '"id":"u'; then
+            echo "OK  les consultants portent un identifiant « u<membership> »"
+          else
+            echo "::warning::les consultants ne portent PAS d'identifiant u<membership> — le panel ne retrouvera pas leurs tâches"
+          fi
 
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail
