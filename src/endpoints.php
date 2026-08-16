@@ -491,6 +491,33 @@ function ep_product_waste(): array
     return $out;
 }
 
+/**
+ * GET /pwa/probe?paths=a,b,c — quels chemins de l'API amont répondent.
+ *
+ * Sonde de branchement : avant de câbler l'ETP il faut savoir COMMENT lister
+ * les employés d'une boutique. On essaie les chemins plausibles et on rapporte
+ * ce qui répond, plutôt que d'en supposer un et d'écrire un calcul muet.
+ */
+function ep_pwa_probe(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $paths = array_filter(array_map('trim', explode(',', (string) ($_GET['paths'] ?? ''))));
+    if (!$paths) { http_response_code(400); return ['error' => 'paths requis']; }
+    $out = [];
+    foreach (array_slice($paths, 0, 12) as $p) {
+        PanelApi::$lastError = null;
+        $r = PanelApi::brut($p);
+        $apercu = null;
+        if (is_array($r)) {
+            $apercu = array_is_list($r)
+                ? ['type' => 'liste', 'n' => count($r), 'clesPremier' => ($r && is_array($r[0])) ? array_slice(array_keys($r[0]), 0, 20) : null, 'premier' => $r[0] ?? null]
+                : ['type' => 'objet', 'cles' => array_slice(array_keys($r), 0, 20)];
+        }
+        $out[] = ['chemin' => $p, 'erreur' => PanelApi::$lastError, 'apercu' => $apercu];
+    }
+    return ['resultats' => $out];
+}
+
 function ep_pwa_task_detail(): array
 {
     $shopId = (int) ($_GET['shop'] ?? 0);

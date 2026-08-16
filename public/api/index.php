@@ -72,6 +72,7 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks'                     => ep_pwa_tasks(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
+            $path === '/pwa/probe'                     => ep_pwa_probe(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             default                                    => notFound(),
         };

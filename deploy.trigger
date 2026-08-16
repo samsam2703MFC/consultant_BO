@@ -1,1 +1,1 @@
-sous-titre du scoring produits aligne sur les quatre criteres. Deploiement standard.
+sonde generique de chemins API pour trouver la liste des employes par boutique (ETP reel). Deploiement standard.
