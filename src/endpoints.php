@@ -63,7 +63,8 @@ function ep_meta(): array
         // constante d'écran : le score qui décide de retirer une référence
         // doit pouvoir se discuter et s'ajuster sans déploiement.
         'scoring'          => setting('scoring', ['poids' => ['volume' => 40, 'marge' => 40, 'position' => 20],
-                                                  'seuils' => ['moteur' => 68, 'conforter' => 46]]),
+                                                  'seuils' => ['moteur' => 68, 'conforter' => 46],
+                                                  'marge' => ['bas' => 20, 'basNote' => 20, 'haut' => 80, 'hautNote' => 100]]),
         'reportTypes'      => setting('reportTypes', []),
         // Validation des tâches : une seule source pour les cinq niveaux, le
         // seuil et le référentiel famille → type. Rien n'est recopié dans le

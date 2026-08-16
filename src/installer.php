@@ -231,6 +231,12 @@ function scoringDefaut(): array
     return [
         'poids'  => ['volume' => 40, 'marge' => 40, 'position' => 20],
         'seuils' => ['moteur' => 68, 'conforter' => 46],
+        // Échelle ABSOLUE du taux de marge brute → note sur 100, définie par
+        // deux bornes et linéaire entre elles (plafonnée aux extrémités).
+        // Auparavant la note était relative à la gamme : la meilleure marge
+        // valait 100, la moins bonne 0 — un produit changeait donc de note
+        // quand un AUTRE produit bougeait, sans rien avoir changé lui-même.
+        'marge'  => ['bas' => 20, 'basNote' => 20, 'haut' => 80, 'hautNote' => 100],
     ];
 }
 

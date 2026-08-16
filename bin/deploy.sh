@@ -233,6 +233,12 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
   if [[ -n "$DBI_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
     export MYSQL_PWD="$COCKPIT_DB_PASSWORD"
     q() { "$DBI_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$COCKPIT_DB_NAME" "$@"; }
+    echo "===== RECHERCHE : perte / casse / stock / attributs produit ====="
+    q -N -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME'
+             AND (table_name REGEXP 'wast|loss|perte|casse|discard|unsold|invendu|shrink|stock|inventor|product') ORDER BY table_name;" 2>&1
+    echo "-- colonnes evoquant une perte / un cout / une presence --"
+    q -N -e "SELECT CONCAT(table_name,'.',column_name) FROM information_schema.columns WHERE table_schema='$COCKPIT_DB_NAME'
+             AND (column_name REGEXP 'wast|loss|perte|casse|discard|unsold|shrink|cost|cout|labour|labor|counter|comptoir|display|image');" 2>&1 | head -60
     echo "===== TABLES (hors ceo_) : nom + lignes ====="
     q -N -e "SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name NOT LIKE 'ceo\\_%' ORDER BY table_name;" 2>&1
     for t in shops mac_shop_monthly_pnl mac_kpi_threshold mac_consultant_param of_tag kpi position mac_report_share transaction transaction_product user_membership user_profile sig_products sig_product_categories sig_product_prices; do
