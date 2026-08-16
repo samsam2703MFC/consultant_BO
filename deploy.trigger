@@ -1,1 +1,2 @@
-en-tete : logo L'Atelier (image) a la place du texte, dans la barre laterale, l'ecran de connexion et l'apercu de rapport. Aucune operation base.
+remise annoncee par le consultant (delivered_by / delivery_note).
+Deploiement standard, aucune operation sur la base.
