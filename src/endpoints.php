@@ -736,12 +736,13 @@ function ep_exploitation_magasin(): array
     $per = (string) ($_GET['periode'] ?? 'mois');
     if (!in_array($per, ['jour', 'semaine', 'mois'], true)) { $per = 'mois'; }
 
-    // Date de référence : le dernier jour de caisse encodé, comme l'écran
-    // Exploitation. Sans quoi les deux ne parleraient pas de la même journée.
-    try {
-        $d = Db::rows('SELECT MAX(DATE(insert_timestamp)) j FROM transaction');
-    } catch (PDOException $e) { $d = []; }
-    $date = ($d && !empty($d[0]['j'])) ? (string) $d[0]['j'] : date('Y-m-d');
+    // Date de référence : AUJOURD'HUI, pas le dernier jour de notre table de
+    // caisse. Ce panneau ne lit que l'API du panel, dont les données vont
+    // jusqu'à aujourd'hui ; l'ancrer sur notre copie — arrêtée au 14 juillet —
+    // revenait à demander une période que l'API n'a pas de raison de servir,
+    // puis à s'étonner qu'elle réponde pour la sienne. Les cartes du dessus
+    // gardent leur propre date, celle de la caisse, et l'écran l'affiche.
+    $date = date('Y-m-d');
 
     $out = ['shopId' => (string) $sid, 'periode' => $per, 'date' => $date,
         'magasin' => null, 'blocs' => []];
