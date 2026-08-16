@@ -1115,54 +1115,85 @@ function ep_produits_analyse(): array
         }
     }
 
-    foreach ($bornes as $idx => $b) {
-        // Ne jamais interroger au-delà d'aujourd'hui : l'API rendrait une
-        // période vide qu'on lirait comme une chute à zéro.
-        $au = min($b['au'], date('Y-m-d'));
-        $encours = $b['au'] > date('Y-m-d');
-        $val = null; $vide = 'aucune donnée';
-        if ($type === 'categorie') {
-            // `category-sales` expire dès qu'on dépasse le mois. Un point se
-            // reconstitue donc en additionnant ses mois, tous demandés d'un
-            // seul élan : le trimestre coûte trois appels mais une seule
-            // attente. Le CA d'une catégorie est additif — c'est ce qui rend
-            // ce découpage légitime, là où un ticket moyen ne le serait pas.
-            $req = [];
-            foreach (analyseMois($b['du'], $au) as $i => $mm) {
-                $req[$i] = '/consultant/shops/category-sales?'
-                    . http_build_query(['shop_id' => analyseShop(), 'date_from' => $mm[0], 'date_to' => $mm[1]]);
+    // Ne jamais interroger au-delà d'aujourd'hui : l'API rendrait une période
+    // vide qu'on lirait comme une chute à zéro.
+    foreach ($bornes as $i => $b) {
+        $bornes[$i]['au'] = min($b['au'], date('Y-m-d'));
+        $bornes[$i]['encours'] = $b['au'] > date('Y-m-d');
+    }
+
+    // TOUTES les requêtes de TOUS les points partent ensemble. Les découper par
+    // point ne servait à rien : en mensuel un point ne pèse qu'un appel, et six
+    // volées d'un appel restent six attentes bout à bout — cinquante secondes
+    // pour un écran qu'on ouvre en passant. Les points sont indépendants, rien
+    // n'oblige à les attendre l'un après l'autre.
+    $req = [];
+    if ($type === 'categorie') {
+        // `category-sales` expire dès qu'on dépasse le mois : un point se
+        // reconstitue en additionnant ses mois. Le CA d'une catégorie est
+        // additif — c'est ce qui rend ce découpage légitime, là où un ticket
+        // moyen ne le serait pas.
+        $out['source'] = '/consultant/shops/category-sales (par mois, réseau)';
+        foreach ($bornes as $i => $b) {
+            foreach (analyseMois($b['du'], $b['au']) as $j => $mm) {
+                $req["$i|$j"] = '/consultant/shops/category-sales?' . http_build_query(
+                    ['shop_id' => analyseShop(), 'date_from' => $mm[0], 'date_to' => $mm[1]]);
             }
-            $out['source'] = $out['source'] ?? '/consultant/shops/category-sales (par mois)';
-            $tot = null; $rendu = false;
-            foreach (PanelApi::getParallele($req) as $r) {
-                // Le vocabulaire de cette route est celui des GROUPES (douze),
-                // pas celui des 81 catégories du catalogue : « Boissons chaudes »
-                // n'y existe pas, seul « Boissons » y existe. Le sélecteur est
-                // alimenté par la route elle-même (voir les options) ; ici on
-                // sait donc dire que le nom demandé n'y figure pas, plutôt que
-                // de rendre un zéro qui se lirait comme une absence de vente.
-                foreach (analyseListe($r) as $sh) {
-                    foreach (($sh['categories'] ?? []) as $c) {
-                        $rendu = true;
-                        if (strcasecmp(trim((string) ($c['name'] ?? '')), $cle) !== 0) { continue; }
-                        $v = nombreOuNull($c, ['ca', 'value', 'amount']);
-                        if ($v !== null) { $tot = ($tot ?? 0) + $v; }
-                    }
+        }
+    } else {
+        // Cette route-ci encaisse les bornes larges : inutile de la découper.
+        $out['source'] = '/shops/{id}/products/waste (réseau)';
+        foreach ($bornes as $i => $b) {
+            foreach (analyseShops() as $j => $sid) {
+                $req["$i|$j"] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+                    ['from' => $b['du'], 'date_from' => $b['du'], 'to' => $b['au'], 'date_to' => $b['au']]);
+            }
+        }
+    }
+
+    $rep = PanelApi::getParallele($req);
+    $tot = []; $rendu = [];
+    foreach ($rep as $k => $r) {
+        $i = (int) strstr((string) $k, '|', true);
+        if ($type === 'categorie') {
+            // Le vocabulaire de cette route est celui des GROUPES (douze), pas
+            // celui des 81 catégories du catalogue : « Boissons chaudes » n'y
+            // existe pas, seul « Boissons » y existe. Le sélecteur est alimenté
+            // par la route elle-même (voir les options) ; ici on sait donc dire
+            // que le nom demandé n'y figure pas, plutôt que de rendre un zéro
+            // qui se lirait comme une absence de vente.
+            foreach (analyseListe($r) as $sh) {
+                foreach (($sh['categories'] ?? []) as $c) {
+                    $rendu[$i] = true;
+                    if (strcasecmp(trim((string) ($c['name'] ?? '')), $cle) !== 0) { continue; }
+                    $v = nombreOuNull($c, ['ca', 'value', 'amount']);
+                    if ($v !== null) { $tot[$i] = ($tot[$i] ?? 0) + $v; }
                 }
             }
-            if ($tot === null && $rendu) { $vide = 'catégorie absente de la réponse'; }
-            $val = $tot;
         } else {
-            $v = analyseVentes($b['du'], $au);
-            $out['source'] = $out['source'] ?? '/shops/{id}/products/waste (réseau)';
-            if (isset($v[$cle])) {
-                $val = $v[$cle]['vendu'];
-                $out['libelle'] = $v[$cle]['nom'];
-            } elseif ($v) { $vide = 'référence non vendue sur la période'; }
+            // `sold_qty` est une valeur RÉSEAU, rendue à l'identique par chaque
+            // boutique : on prend le maximum et non la somme, faute de quoi les
+            // ventes seraient multipliées par le nombre de magasins.
+            $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
+            foreach ($lignes as $p) {
+                if (trim((string) ($p['id_product'] ?? '')) === '') { continue; }
+                $rendu[$i] = true;
+                if (trim((string) $p['id_product']) !== $cle) { continue; }
+                $v = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
+                if ($v === null) { continue; }
+                if (!isset($tot[$i]) || $v > $tot[$i]) { $tot[$i] = $v; }
+                if (!empty($p['product_name'])) { $out['libelle'] = (string) $p['product_name']; }
+            }
         }
-        $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $au,
-            'valeur' => $val, 'enCours' => $encours,
-            'motif' => $val === null ? $vide : null];
+    }
+
+    foreach ($bornes as $i => $b) {
+        $val = $tot[$i] ?? null;
+        $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $b['au'],
+            'valeur' => $val, 'enCours' => $b['encours'],
+            'motif' => $val !== null ? null : (empty($rendu[$i]) ? 'aucune donnée'
+                : ($type === 'categorie' ? 'catégorie absente de la réponse'
+                                         : 'référence non vendue sur la période'))];
     }
 
     $connus = array_filter($out['points'], fn($p) => $p['valeur'] !== null);

@@ -129,10 +129,20 @@ final class PanelApi
      * Le jeton est obtenu AVANT la volée : sans cela douze requêtes se
      * heurteraient au même 401 et relanceraient douze connexions.
      */
-    public static function getParallele(array $paths): array
+    public static function getParallele(array $paths, int $front = 12): array
     {
+        if (!$paths) { return []; }
         $tok = self::token();
         if ($tok === null) { return array_fill_keys(array_keys($paths), null); }
+        // Au-delà d'une douzaine de connexions simultanées on n'accélère plus :
+        // on met seulement l'API amont en difficulté. Les paquets s'enchaînent.
+        if (count($paths) > $front) {
+            $out = [];
+            foreach (array_chunk($paths, $front, true) as $lot) {
+                $out += self::getParallele($lot, $front);
+            }
+            return $out;
+        }
         $base = self::config()['base'];
         $multi = curl_multi_init();
         $hs = [];
