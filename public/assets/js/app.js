@@ -235,8 +235,14 @@ class App {
     for (const st of this.open()){ const r = st.perf[this.exo()][this.moisIdx()];
       if (r.food > s.f) out.push({ store: st.nom, lev: 'food-cost', levNom: 'Food Cost', msg: 'food-cost ' + String(r.food).replace('.', ',') + ' % (seuil ' + s.f + ' %)', action: 'Revoir fiches techniques, contrôle réception ProdAtelier et gestion casse.' });
       if (r.labour > s.l) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'labour-cost ' + String(r.labour).replace('.', ',') + ' % (seuil ' + s.l + ' %)', action: 'Adapter les plannings au flux, suivre le ratio CA/ETP par tranche horaire.' });
-      const etpN = Math.max(3, Math.round(r.ca / 14200)), ce = r.ca / etpN, sEtp = this.seuilCaEtp();
-      if (ce < sEtp) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'CA/ETP ' + this.fE(ce) + ' sous le minimum de ' + this.fE(sEtp), action: 'Revoir le dimensionnement d’équipe et la productivité horaire.' });
+      // ETP RÉEL (planning du panel : heures du mois ÷ 168). Sans planning
+      // connu, aucune alerte : mieux vaut ne rien dire que déclencher une
+      // alerte de dimensionnement d'équipe sur un effectif déduit du CA.
+      const sEtp = this.seuilCaEtp();
+      if (r.etp != null && r.etp > 0 && r.ca != null) {
+        const ce = r.ca / r.etp;
+        if (ce < sEtp) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'CA/ETP ' + this.fE(ce) + ' sous le minimum de ' + this.fE(sEtp) + ' (' + r.etp.toFixed(1).replace('.', ',') + ' ETP planifiés)', action: 'Revoir le dimensionnement d’équipe et la productivité horaire.' });
+      }
       if (r.overhead > s.o) out.push({ store: st.nom, lev: 'overhead-cost', levNom: 'Overhead Cost', msg: 'overhead ' + String(r.overhead).replace('.', ',') + ' % (seuil ' + String(s.o).replace('.', ',') + ' %)', action: 'Auditer loyer, énergies et abonnements ; renégocier les contrats.' }); }
     return out; }
   openRelTask(x){ const tpl = this.state.tpl; const late = x.st === 'En retard'; const base = this.D.emailTemplates[late ? 1 : 0]; const corps = (tpl[base.id] || base.corps);
@@ -1112,10 +1118,16 @@ class App {
     const rows = this.open().map(st => { const r = st.perf[E][MI], n1 = st.perf[E - 1][MI];
       const mp26 = r.marge / r.ca, mp25 = n1.marge / n1.ca; const tv = this.trend(mp26, mp25);
       const nAl = (r.food > s.f ? 1 : 0) + (r.labour > s.l ? 1 : 0) + (r.overhead > s.o ? 1 : 0);
-      const etp = Math.max(3, Math.round(r.ca / 14200));
+      // ETP RÉEL : heures planifiées du mois ÷ 168 (réglage). Inconnu = « — »,
+      // jamais une estimation tirée du CA : le ratio CA/ETP sert à juger un
+      // dimensionnement d'équipe, un effectif deviné le rendrait circulaire.
+      const etp = (r.etp != null && r.etp > 0) ? r.etp : null;
+      const caEtp = (etp && r.ca != null) ? r.ca / etp : null;
       return { _mp: mp26, nom: st.nom, marge: this.fP(mp26), var: tv.txt, varSt: tv.st,
         food: String(r.food).replace('.', ',') + ' %', foodSt: rat(r.food, s.f), labour: String(r.labour).replace('.', ',') + ' %', labourSt: rat(r.labour, s.l), ov: String(r.overhead).replace('.', ',') + ' %', ovSt: rat(r.overhead, s.o),
-        caEtp: this.fE(r.ca / etp), etp: etp + ' ETP', caEtpSt: caEtpPill(r.ca / etp),
+        caEtp: caEtp == null ? '—' : this.fE(caEtp),
+        etp: etp == null ? 'ETP inconnu' : (etp.toFixed(1).replace('.', ',') + ' ETP' + (r.heures != null ? ' · ' + Math.round(r.heures) + ' h' : '')),
+        caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),
         statut: nAl === 0 ? 'OK' : nAl + (nAl > 1 ? ' leviers à traiter' : ' levier à traiter') + (st.risk ? ' · sous-perf. 3 mois consécutifs' : '') }; });
     rows.sort((a, b) => b._mp - a._mp);
     common.mgRows = rows;

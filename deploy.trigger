@@ -1,1 +1,1 @@
-sonde generique de chemins API pour trouver la liste des employes par boutique (ETP reel). Deploiement standard.
+ETP reel calcule depuis le planning du panel (heures du mois / 168) : le CA/ETP et l alerte de dimensionnement ne reposent plus sur un effectif deduit du CA. Sonde generique retiree. Deploiement standard.

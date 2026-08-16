@@ -58,6 +58,7 @@ function route(string $method, string $path): mixed
             $path === '/stores'                        => ep_stores(),
             $path === '/stores/perf'                   => ep_perf(),
             $path === '/stores/budgets'                => ep_budgets(),
+            $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
@@ -72,7 +73,6 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks'                     => ep_pwa_tasks(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
-            $path === '/pwa/probe'                     => ep_pwa_probe(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             default                                    => notFound(),
         };

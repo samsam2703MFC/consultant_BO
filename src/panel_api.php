@@ -282,6 +282,21 @@ final class PanelApi
         return null;
     }
 
+    /**
+     * Planning d'une boutique : un créneau par ligne (work_date, start_hour,
+     * end_hour). UN appel par boutique — l'endpoint par employé existe aussi
+     * mais demanderait une requête par personne.
+     *
+     * On n'en retient que des AGRÉGATS d'heures : le flux porte des données
+     * personnelles (nom, téléphone) qui n'ont rien à faire dans le cockpit.
+     */
+    public static function shopSchedule(int $shopId): array
+    {
+        if ($shopId <= 0) { return []; }
+        $r = self::get('/shops/' . $shopId . '/schedule');
+        return is_array($r) ? self::liste($r) : [];
+    }
+
     /** Réponse brute d'un chemin — sonde de diagnostic, pas un usage courant. */
     public static function brut(string $path): mixed
     {

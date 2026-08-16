@@ -717,6 +717,56 @@ function ep_perf(): array
     }
 }
 
+/**
+ * GET /stores/etp?annees=2025,2026 — ETP réel par boutique et par mois.
+ *
+ * L'écran Marge & coûts déduisait l'effectif du chiffre d'affaires
+ * (max(3, ca/14200)) : un ETP inventé, qui déclenchait pourtant une alerte de
+ * dimensionnement d'équipe. On le calcule ici depuis le planning réel :
+ * somme des heures planifiées du mois ÷ 168 = 1 ETP (règle du réseau).
+ *
+ * Un seul appel par boutique. Seules des heures agrégées sont conservées — le
+ * flux porte des données personnelles (nom, téléphone) qui n'ont pas à entrer
+ * dans le cockpit.
+ */
+function ep_stores_etp(): array
+{
+    $annees = array_map('intval', explode(',', $_GET['annees'] ?? date('Y')));
+    $out = [];
+    if (!PanelApi::configured()) { return $out; }
+    try {
+        $shops = Db::rows('SELECT id FROM shops WHERE active = 1');
+    } catch (PDOException $e) { return $out; }
+
+    $HEURES_ETP = (float) setting('heuresEtpMois', 168);
+    foreach ($shops as $sh) {
+        $sid = (int) $sh['id'];
+        $parMois = [];
+        foreach (PanelApi::shopSchedule($sid) as $c) {
+            $d = (string) ($c['work_date'] ?? '');
+            if (!preg_match('/^(\d{4})-(\d{2})/', $d, $m)) { continue; }
+            $an = (int) $m[1];
+            if (!in_array($an, $annees, true)) { continue; }
+            $deb = strtotime('1970-01-01 ' . (string) ($c['start_hour'] ?? ''));
+            $fin = strtotime('1970-01-01 ' . (string) ($c['end_hour'] ?? ''));
+            if ($deb === false || $fin === false) { continue; }
+            // Un créneau qui finit avant de commencer passe minuit : sans ça,
+            // une nuit compterait des heures négatives.
+            if ($fin <= $deb) { $fin += 86400; }
+            $h = ($fin - $deb) / 3600;
+            if ($h <= 0 || $h > 24) { continue; }
+            $k = $an . '-' . (int) $m[2];
+            $parMois[$k] = ($parMois[$k] ?? 0) + $h;
+        }
+        foreach ($parMois as $k => $h) {
+            [$an, $mo] = array_map('intval', explode('-', $k));
+            $out[] = ['storeId' => (string) $sid, 'annee' => $an, 'mois' => $mo,
+                'heures' => round($h, 1), 'etp' => $HEURES_ETP > 0 ? round($h / $HEURES_ETP, 2) : null];
+        }
+    }
+    return $out;
+}
+
 function ep_budgets(): array
 {
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
