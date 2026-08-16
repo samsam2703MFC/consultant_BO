@@ -38,6 +38,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Un script de déploiement mal quoté part sur le serveur sans que rien
+      # ne l'arrête : le transfert réussit, et c'est l'exécution distante qui
+      # casse. Une apostrophe française dans un bloc `php -r '…'` a suffi.
+      # On refuse donc de livrer du code qui ne s'analyse pas.
+      - name: Contrôler la syntaxe avant de livrer
+        run: |
+          fail=0
+          bash -n bin/deploy.sh || { echo "::error title=deploy.sh::syntaxe shell invalide"; fail=1; }
+          for f in $(find src public -name '*.php'); do
+            php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP invalide"; fail=1; }
+          done
+          for f in $(find public -name '*.js'); do
+            node --check "$f" >/dev/null 2>&1 || { echo "::error file=$f::syntaxe JS invalide"; fail=1; }
+          done
+          [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
+          exit $fail
+
       - name: Installer sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 

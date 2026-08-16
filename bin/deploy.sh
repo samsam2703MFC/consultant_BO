@@ -416,8 +416,8 @@ printf("  gammes      : %d (source %s) — %d traduite(s), %d sans référence%s
   count($p), $r["source"] ?? "?", $tr, $vides,
   !empty($r["aliasErreur"]) ? "\n    ALIAS KO : ".$r["aliasErreur"] : "",
   !empty($r["aliasInfo"])   ? "\n    alias    : ".$r["aliasInfo"] : "");
-// Ouvrir la gamme la mieux fournie : une gamme qui compte des références mais
-// n'en rend aucune signale un rattachement cassé, pas une offre vide.
+// Ouvrir la gamme la mieux fournie : une gamme qui compte des references sans
+// en rendre aucune signale un rattachement casse, pas une offre vide.
 $best = null;
 foreach ($p as $x) { if (!empty($x["references"]) && (!$best || $x["references"] > $best["references"])) { $best = $x; } }
 if ($best) { file_put_contents("/tmp/ceo_periode_id", (string) $best["id"]); }

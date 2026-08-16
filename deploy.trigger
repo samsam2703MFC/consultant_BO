@@ -1,1 +1,1 @@
-Alias de gammes : voir la forme reelle du payload.
+Correction de la syntaxe du script et garde-fou avant livraison.
