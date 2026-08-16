@@ -1089,6 +1089,10 @@ function ep_analyse_sonde(): array
         ];
     };
     $voir('monthly-sales', PanelApi::monthlySales($du, $au));
+    $voir('products', PanelApi::produits());
+    // Ventes par catégorie : l'appel réseau reste muet, l'appel par boutique
+    // répondait. On vérifie lequel des deux tient, sur des bornes courtes.
+    $voir('category-sales (boutique)', PanelApi::categorySales(2, 'mois', $au));
     $voir('sales-kpis/quarterly', PanelApi::salesKpisQuarterly($du, $au));
     $voir('category-sales', PanelApi::categorySalesEntre($du, $au));
     return $out;

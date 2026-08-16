@@ -510,11 +510,21 @@ final class PanelApi
      */
     public static function monthlySales(string $du, string $au): ?array
     {
-        $q = http_build_query(['date_from' => $du, 'date_to' => $au]);
+        // Les routes « monthly » du panel raisonnent en mois PLEINS : une borne
+        // haute au 16 du mois est refusée (« Invalid monthly sales range »).
+        // On aligne donc sur le premier et le dernier jour du mois.
+        $d1 = date('Y-m-01', strtotime($du));
+        $d2 = date('Y-m-t', strtotime($au));
         return self::premierObjet([
-            '/consultant/shops/monthly-sales?' . $q,
-            '/consultant/shops/monthly-sales',
+            '/consultant/shops/monthly-sales?' . http_build_query(['date_from' => $d1, 'date_to' => $d2]),
+            '/consultant/shops/monthly-sales?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
         ]);
+    }
+
+    /** Catalogue produit du panel — candidat pour l'analyse par référence. */
+    public static function produits(): ?array
+    {
+        return self::premierObjet(['/products', '/consultant/products']);
     }
 
     /** Indicateurs trimestriels du réseau. */

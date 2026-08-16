@@ -1,1 +1,1 @@
-Sonde : quelles series temporelles l API rend deja.
+Sonde : mois pleins, catalogue produit, categories par boutique.
