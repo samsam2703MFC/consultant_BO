@@ -325,6 +325,21 @@ if [[ "${COCKPIT_APIINSPECT:-0}" == "1" ]]; then
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST "$base/consultant/auth/login" -H 'Content-Type: application/json' -d '{}' 2>/dev/null || echo "000")
     echo "  POST $base/consultant/auth/login → HTTP $code"
   done
+  # Quels endpoints le panel appelle-t-il RÉELLEMENT ? Plutôt que de deviner
+  # les chemins un par un, on les lit dans son code. C'est la liste qui fait
+  # foi : elle dit ce qui existe, et sous quelle écriture exacte.
+  echo "===== ENDPOINTS APPELÉS PAR LE PANEL (extraits de son code) ====="
+  { grep -rhoE "'/(v1/)?[a-z0-9][a-z0-9._/{}$-]{2,80}'" "${PANEL_DIR:-/var/www}/src" "${PANEL_DIR:-/var/www}/app" \
+       "${PANEL_DIR:-/var/www}/public" "${PANEL_DIR:-/var/www}/lib" 2>/dev/null \
+     | tr -d "'" | grep -vE '\.(php|css|js|png|jpg|svg|ico|woff|map)$' \
+     | sort -u | head -120; } || true
+  echo "===== APPELS HTTP DU PANEL (méthode + chemin) ====="
+  { grep -rhoE "(get|post|put|patch|delete|request)\(\s*'[^']+'" \
+       "${PANEL_DIR:-/var/www}/src" "${PANEL_DIR:-/var/www}/app" "${PANEL_DIR:-/var/www}/lib" 2>/dev/null \
+     | sed "s/[[:space:]]\+/ /g" | sort -u | head -80; } || true
+  echo "===== FICHIERS DU PANEL QUI PARLENT À L'API ====="
+  { grep -rlE "api/v1|CONSULTANT_API_BASE|apiGet|apiPost" \
+       "${PANEL_DIR:-/var/www}/src" "${PANEL_DIR:-/var/www}/app" "${PANEL_DIR:-/var/www}/lib" 2>/dev/null | head -25; } || true
   echo "===== ROUTAGE /api : dossiers candidats ====="
   { find /var/www -maxdepth 4 -type d -name "api*" 2>/dev/null | head -10; } || true
   echo "===== SERVICES A L'ECOUTE (ports) ====="

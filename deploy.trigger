@@ -1,1 +1,2 @@
-P&L detaille par magasin : food cost, main d oeuvre, positionnement reseau.
+apiinspect
+Lire dans le code du panel la liste des endpoints qu il appelle.
