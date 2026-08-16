@@ -1,1 +1,1 @@
-Vue cumulee en courbes : reel plein, cible pointillee.
+Cumul : rendre au reel sa trajectoire complete.

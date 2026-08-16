@@ -1067,11 +1067,16 @@ class App {
       const cumR = [], cumB = [];
       let aR = 0, aB = 0;
       for (let i = 0; i < 12; i++){
-        const compte = !nb || buds[i] != null;
-        // Ne RIEN reporter sur un mois sans donnée. Prolonger le cumul jusqu'à
-        // décembre dessinait quatre barres pleine hauteur pour des mois qui
-        // n'ont pas eu lieu : l'exercice paraissait déjà terminé.
-        if (reels[i] != null && compte){ aR += reels[i]; cumR.push(aR); } else { cumR.push(null); }
+        // Le réel cumule TOUS les mois connus : c'est la trajectoire du
+        // magasin, et la restreindre aux seuls mois budgétés privait celui qui
+        // a le plus de données de sa courbe — l'inverse du but recherché.
+        // Ne rien reporter en revanche sur un mois sans donnée : prolonger le
+        // cumul jusqu'à décembre faisait paraître l'exercice déjà bouclé.
+        if (reels[i] != null){ aR += reels[i]; cumR.push(aR); } else { cumR.push(null); }
+        // La cible ne court que sur les mois réellement encodés. Elle s'arrête
+        // donc visiblement plus tôt que le réel quand le budget est partiel —
+        // c'est ce décrochage qui dit de ne pas comparer les deux extrémités,
+        // et la mention sous le graphique le nomme.
         if (buds[i] != null){ aB += buds[i]; cumB.push(aB); } else { cumB.push(null); }
       }
       const serie = (rs, bs) => {
@@ -1141,7 +1146,7 @@ class App {
         gGrille: g.grille, gBarres: g.barres, gReperes: g.reperes, gLabels: g.labels,
         gMax: g.max,
         gNote: !nb ? 'budget non encodé'
-             : cumule ? ('cumul sur les ' + nb + ' mois budgétés')
+             : cumule ? ('cible partielle : ' + nb + ' mois encodés sur 12')
              : ('budget encodé sur ' + nb + ' mois'),
         exercice: an };
     });
