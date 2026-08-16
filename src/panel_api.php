@@ -392,20 +392,34 @@ final class PanelApi
         return self::premierObjet(self::cheminsBoutique('pnl', $shopId, $du, $au));
     }
 
-    /** Main-d'œuvre journalière d'une boutique. */
+    /**
+     * Main-d'œuvre d'une boutique.
+     * `labour/daily` répond 404 sous les quatre écritures habituelles ; on
+     * essaie donc aussi la ressource sans le suffixe journalier.
+     */
     public static function labourDaily(int $shopId, string $du, string $au): ?array
     {
-        return self::premierObjet(self::cheminsBoutique('labour/daily', $shopId, $du, $au));
+        return self::premierObjet(array_merge(
+            self::cheminsBoutique('labour/daily', $shopId, $du, $au),
+            self::cheminsBoutique('labour', $shopId, $du, $au),
+            self::cheminsBoutique('statistics/labour', $shopId, $du, $au)
+        ));
     }
 
-    /** Synthèse réseau des boutiques (positionnement d'une boutique). */
+    /**
+     * Positionnement de la boutique dans le réseau.
+     * `/consultant/shops` est un endpoint dont le panel se sert réellement
+     * (relevé dans son code) : à défaut de la synthèse dédiée, c'est lui qui
+     * porte de quoi situer une boutique parmi les autres.
+     */
     public static function networkSummary(string $du, string $au): ?array
     {
         $q = http_build_query(['from' => $du, 'to' => $au]);
         return self::premierObjet([
             '/consultant/network/shops/summary?' . $q,
             '/consultant/network/shops/summary',
-            '/consultant/dashboard?date=' . $au,
+            '/consultant/shops?' . $q,
+            '/consultant/shops',
         ]);
     }
 

@@ -1,1 +1,1 @@
-Chemins /shops/{id}/ pour les endpoints du P&L.
+Variantes pour la main d oeuvre et le positionnement reseau.
