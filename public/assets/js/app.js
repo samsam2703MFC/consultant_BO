@@ -1033,7 +1033,7 @@ class App {
         this.notify('Échec de l’envoi de la note.'); });
   }
   valsControle(common){
-    const S = this.state, D = this.D;
+    const S = this.state, D = this.D, M = this.M;
     const pt = D.pwaTasks || { shops: [], dates: [], consultants: [], totals: {}, indispo: true };
     const T = pt.totals || {};
     common.ctrlIndispo = !!pt.indispo && (pt.shops || []).length === 0;
@@ -1062,7 +1062,7 @@ class App {
     const seuilC = pt.seuil || 4;
     const noteSt = n => n == null ? 'color:var(--color-text-muted)' : n >= seuilC ? 'color:#2d7a3e;font-weight:600' : n >= seuilC - 1 ? 'color:#8a5a13;font-weight:600' : 'color:#8D1D2C;font-weight:600';
     // Libellé du niveau (Exemplaire, Conforme, NC mineur…) à partir du barème.
-    const nomNiveau = n => { const lv = (M.SIGNAL.niveaux || []).find(l => l.n === n); return lv ? lv.nom : (n + '/5'); };
+    const nomNiveau = n => { const lv = ((M.SIGNAL || {}).niveaux || []).find(l => l.n === n); return lv ? lv.nom : (n + '/5'); };
     const mkRep = r => ({ nom: r.nom, aide: r.aide || '', nb: String(r.nb),
       pct: r.pct + ' %', txt: r.nb + ' · ' + r.pct + ' %',
       dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + r.couleur,
@@ -1134,19 +1134,19 @@ class App {
         // Barème des cinq niveaux — le MÊME référentiel que l'écran de
         // validation (réglage `signalement`), jamais une échelle d'étoiles
         // muette : « majeur » doit vouloir dire la même chose partout.
-        niveaux: (M.SIGNAL.niveaux || []).map(lv => { const on = dt.note === lv.n;
+        niveaux: ((M.SIGNAL || {}).niveaux || []).map(lv => { const on = dt.note === lv.n;
           return { n: lv.n, nom: lv.nom, aide: lv.aide || '',
-            conforme: lv.n >= (M.SIGNAL.seuil || 4),
+            conforme: lv.n >= ((M.SIGNAL || {}).seuil || 4),
             st: 'display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;'
               + 'font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;'
               + (on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '14;font-weight:600;color:var(--color-text)'
                     : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)'),
             dotSt: 'width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:' + lv.couleur,
             pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: lv.n }) })) }; }),
-        verdict: dt.note == null ? '' : (dt.note >= (M.SIGNAL.seuil || 4) ? 'Conforme' : 'Non conforme'),
+        verdict: dt.note == null ? '' : (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'Conforme' : 'Non conforme'),
         verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
-          + (dt.note >= (M.SIGNAL.seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
-        commentRequis: dt.note != null && dt.note < (M.SIGNAL.seuil || 4),
+          + (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
+        commentRequis: dt.note != null && dt.note < ((M.SIGNAL || {}).seuil || 4),
         produit: d.produit || '', photoRef: d.photoRef || null,
         photoRefTxt: d.produitId ? (d.photoRef ? '' : 'Fiche technique sans visuel pour ce produit.')
           : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',

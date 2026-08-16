@@ -1,1 +1,1 @@
-notation au bareme des cinq niveaux (Exemplaire / Conforme / NC mineur / majeur / critique) avec repartition chiffree, et photo de reference du produit en face de la photo boutique. Deploiement standard, aucune operation sur la base.
+correctif : M non defini dans l ecran Controle (repartition par niveau) et acces SIGNAL protege. Deploiement standard, aucune operation sur la base.
