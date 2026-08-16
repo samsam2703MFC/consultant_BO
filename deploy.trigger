@@ -1,1 +1,1 @@
-Gammes saisonnieres et leurs intitules traduits.
+Alias de gammes : voir la forme reelle du payload.

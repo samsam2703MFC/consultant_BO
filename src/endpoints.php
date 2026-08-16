@@ -1046,6 +1046,14 @@ function ep_prod_periodes(): array
     // parmi les écritures usuelles plutôt que d'en imposer une.
     $alias = PanelApi::periodNameAliases();
     if ($alias) {
+        // Les clés ne sont pas documentées : `?debug=1` rend la forme réelle
+        // d'une ligne. Sans cela, un alias non reconnu se solde par une gamme
+        // sans traduction et par AUCUNE erreur — donc par rien à corriger.
+        if (!empty($_GET['debug'])) {
+            $out['aliasBrut'] = array_slice($alias, 0, 3);
+            $out['aliasCles'] = array_slice(array_keys($alias[0]), 0, 25);
+            $out['aliasNb']   = count($alias);
+        }
         $par = [];
         foreach ($alias as $a) {
             $id = null;
@@ -1063,11 +1071,19 @@ function ep_prod_periodes(): array
             if ($id === null || $val === '') { continue; }
             $par[$id][$lang !== '' ? $lang : '?'] = $val;
         }
+        $poses = 0;
         foreach ($out['periodes'] as &$p) {
-            if ($p['id'] !== null && isset($par[$p['id']])) { $p['alias'] = $par[$p['id']]; }
+            if ($p['id'] !== null && isset($par[$p['id']])) { $p['alias'] = $par[$p['id']]; $poses++; }
         }
         unset($p);
         $out['aliasSource'] = PanelApi::$lastPath;
+        // Des alias reçus mais aucun posé : les clés ou les identifiants ne
+        // correspondent pas. Le dire, plutôt que de rendre un écran monolingue
+        // qui a toutes les apparences du succès.
+        if ($poses === 0) {
+            $out['aliasErreur'] = count($alias) . ' alias reçus, aucun rattaché à une gamme'
+                . ' — clés inattendues (voir ?debug=1)';
+        }
     } elseif (PanelApi::$lastError !== null) {
         $out['aliasErreur'] = PanelApi::$lastError;
     }
