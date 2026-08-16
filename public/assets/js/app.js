@@ -1013,7 +1013,14 @@ class App {
         : {}));
   }
   ctrlSendNote(){
-    const dt = this.state.ctrlDet; if (!dt || !dt.note) { this.notify('Choisissez une note de 1 à 5.'); return; }
+    const dt = this.state.ctrlDet;
+    if (!dt || !dt.note) { this.notify('Choisissez un niveau de conformité.'); return; }
+    // Sous le seuil, le commentaire est obligatoire : une non-conformité sans
+    // motif est ininterprétable un mois plus tard.
+    const seuil = (this.M.SIGNAL && this.M.SIGNAL.seuil) || 4;
+    if (dt.note < seuil && !String(dt.comment || '').trim()) {
+      this.notify('Commentaire obligatoire pour une non-conformité.'); return;
+    }
     const d = dt.d || {};
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
     write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
@@ -1052,15 +1059,25 @@ class App {
     common.ctrlOnlyOptions = [{ val: 'tous', nom: 'Tous les avis' }, { val: 'avalider', nom: 'À valider seulement' }, { val: 'refuses', nom: 'Refus consultants' }];
     common.setCtrlOnly = e => this.setState({ ctrlOnly: e.target.value });
 
-    const noteSt = n => n == null ? 'color:var(--color-text-muted)' : n >= 4 ? 'color:#2d7a3e;font-weight:600' : n >= 3 ? 'color:#8a5a13;font-weight:600' : 'color:#8D1D2C;font-weight:600';
+    const seuilC = pt.seuil || 4;
+    const noteSt = n => n == null ? 'color:var(--color-text-muted)' : n >= seuilC ? 'color:#2d7a3e;font-weight:600' : n >= seuilC - 1 ? 'color:#8a5a13;font-weight:600' : 'color:#8D1D2C;font-weight:600';
+    // Libellé du niveau (Exemplaire, Conforme, NC mineur…) à partir du barème.
+    const nomNiveau = n => { const lv = (M.SIGNAL.niveaux || []).find(l => l.n === n); return lv ? lv.nom : (n + '/5'); };
+    const mkRep = r => ({ nom: r.nom, aide: r.aide || '', nb: String(r.nb),
+      pct: r.pct + ' %', txt: r.nb + ' · ' + r.pct + ' %',
+      dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + r.couleur,
+      barSt: 'display:block;height:5px;border-radius:999px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
     const shops = (pt.shops || []).filter(s => common.ctrlShop === 'Toutes les boutiques' || s.shop === common.ctrlShop)
       .map(s => {
         const taches = (s.taches || []).filter(t => common.ctrlOnly === 'tous' || (common.ctrlOnly === 'avalider' ? !t.valide : t.accepte === false))
           .map(t => ({
             taskId: t.taskId, tache: t.tache,
             note: t.note == null ? '—' : t.note + ' / 5', noteSt: noteSt(t.note),
-            acc: t.accepte == null ? '—' : (t.accepte ? 'Conforme' : 'Non conforme'),
-            accSt: t.accepte == null ? 'color:var(--color-text-muted)' : (t.accepte ? 'color:#2d7a3e' : 'color:#8D1D2C;font-weight:500'),
+            // Le niveau NOMMÉ prime sur le verdict binaire : « Non conforme »
+            // sans gravité ne dit pas s'il faut repasser demain ou tout de suite.
+            acc: t.note != null ? nomNiveau(t.note) : (t.accepte == null ? '—' : (t.accepte ? 'Conforme' : 'Non conforme')),
+            accSt: (t.note != null ? (t.note >= seuilC ? 'color:#2d7a3e;font-weight:500' : 'color:#8D1D2C;font-weight:500')
+              : (t.accepte == null ? 'color:var(--color-text-muted)' : (t.accepte ? 'color:#2d7a3e' : 'color:#8D1D2C;font-weight:500'))),
             comment: t.comment || '', hasComment: !!t.comment,
             consultant: t.consultant || '—',
             valide: t.valide, valideMeta: t.valide ? ('Validé' + (t.valideePar ? ' par ' + t.valideePar : '') + (t.valideeLe ? ' · ' + t.valideeLe : '')) : 'Non validé',
@@ -1079,6 +1096,15 @@ class App {
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
       noteMoy: c.noteMoy != null ? String(c.noteMoy).replace('.', ',') + ' / 5' : '—',
     }));
+
+    // Répartition par niveau de conformité (Exemplaire … NC critique) — même
+    // barème que l'écran de validation, avec effectif et part.
+    const rep = pt.repartition || [];
+    common.ctrlRepConf = rep.filter(r => r.conforme).map(mkRep);
+    common.ctrlRepNc = rep.filter(r => !r.conforme).map(mkRep);
+    common.ctrlRepVide = rep.length === 0;
+    common.ctrlNotees = String(T.notees || 0);
+    common.ctrlNonNotees = String(T.nonNotees || 0);
 
     // Bandeau si le compte API n'est pas branché : les noms restent « Tâche #… »
     // et les photos sont indisponibles tant qu'il manque.
@@ -1105,10 +1131,25 @@ class App {
         avisComment: a.comment || '',
         note: dt.note, comment: dt.comment, envoi: !!dt.envoi,
         erreur: (d.api && d.api.erreur) || '',
-        etoiles: [1, 2, 3, 4, 5].map(n => ({ n: String(n), on: dt.note != null && n <= dt.note,
-          st: 'cursor:pointer;font-size:26px;line-height:1;background:none;border:none;padding:0 3px;color:'
-            + (dt.note != null && n <= dt.note ? '#C17A2A' : 'var(--color-border-secondary)'),
-          pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: n }) })) })),
+        // Barème des cinq niveaux — le MÊME référentiel que l'écran de
+        // validation (réglage `signalement`), jamais une échelle d'étoiles
+        // muette : « majeur » doit vouloir dire la même chose partout.
+        niveaux: (M.SIGNAL.niveaux || []).map(lv => { const on = dt.note === lv.n;
+          return { n: lv.n, nom: lv.nom, aide: lv.aide || '',
+            conforme: lv.n >= (M.SIGNAL.seuil || 4),
+            st: 'display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;'
+              + 'font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;'
+              + (on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '14;font-weight:600;color:var(--color-text)'
+                    : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)'),
+            dotSt: 'width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:' + lv.couleur,
+            pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: lv.n }) })) }; }),
+        verdict: dt.note == null ? '' : (dt.note >= (M.SIGNAL.seuil || 4) ? 'Conforme' : 'Non conforme'),
+        verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+          + (dt.note >= (M.SIGNAL.seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
+        commentRequis: dt.note != null && dt.note < (M.SIGNAL.seuil || 4),
+        produit: d.produit || '', photoRef: d.photoRef || null,
+        photoRefTxt: d.produitId ? (d.photoRef ? '' : 'Fiche technique sans visuel pour ce produit.')
+          : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
         setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
         send: () => this.ctrlSendNote(),
         close: () => this.setState({ ctrlDet: null }),

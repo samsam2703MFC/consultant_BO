@@ -325,7 +325,34 @@ function ep_pwa_tasks(): array
         usort($consultants, fn ($a, $b) => $b['avis'] <=> $a['avis']);
 
         $tot['noteMoy'] = $noteN > 0 ? round($noteSum / $noteN, 1) : null;
+
+        // Répartition par NIVEAU DE CONFORMITÉ — le barème des cinq niveaux
+        // (Exemplaire / Conforme / NC mineur / majeur / critique) est le
+        // réglage `signalement`, partagé avec l'écran de validation : un
+        // « majeur » doit vouloir dire la même chose partout.
+        $sig = setting('signalement', []);
+        $niveaux = (is_array($sig) && isset($sig['niveaux']) && is_array($sig['niveaux'])) ? $sig['niveaux'] : [];
+        $parNote = [];
+        foreach ($rows as $r) {
+            if ($r['rating'] !== null) { $n = (int) $r['rating']; $parNote[$n] = ($parNote[$n] ?? 0) + 1; }
+        }
+        $repartition = [];
+        foreach ($niveaux as $lv) {
+            $n = (int) ($lv['n'] ?? 0);
+            $c = $parNote[$n] ?? 0;
+            $repartition[] = [
+                'n' => $n, 'nom' => (string) ($lv['nom'] ?? ($n . '/5')),
+                'couleur' => (string) ($lv['couleur'] ?? '#666666'),
+                'aide' => (string) ($lv['aide'] ?? ''),
+                'conforme' => $n >= (int) ($sig['seuil'] ?? 4),
+                'nb' => $c, 'pct' => $noteN > 0 ? round(100 * $c / $noteN) : 0,
+            ];
+        }
+        $tot['notees'] = $noteN;
+        $tot['nonNotees'] = $tot['taches'] - $noteN;
+
         return ['date' => $date, 'dates' => $dates, 'shops' => array_values($byShop),
+            'repartition' => $repartition, 'seuil' => (int) ($sig['seuil'] ?? 4),
             'consultants' => $consultants, 'totals' => $tot, 'indispo' => false,
             // L'écran doit pouvoir DIRE pourquoi il manque des noms/photos.
             'api' => ['configure' => $apiOn, 'erreur' => $apiOn ? PanelApi::$lastError : null]];
@@ -374,6 +401,9 @@ function ep_pwa_task_detail(): array
         'tache' => null, 'checklist' => null, 'photo' => null, 'obligatoire' => null,
         'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
         'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
+        // Référence : la photo de la fiche technique du produit contrôlé, pour
+        // juger par COMPARAISON. Rapprochée par identifiant seul (jamais le nom).
+        'produitId' => null, 'produit' => null, 'photoRef' => null,
         'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
 
     if (!PanelApi::configured()) {
@@ -389,6 +419,9 @@ function ep_pwa_task_detail(): array
             $out['obligatoire']  = isset($t['is_mandatory']) ? (bool) $t['is_mandatory'] : null;
             $out['photoRequise'] = isset($t['requires_photo']) ? (bool) $t['requires_photo'] : null;
             $out['statut']       = $t['status'] ?? null;
+            foreach (['product_id', 'id_product', 'productId'] as $pk) {
+                if (!empty($t[$pk]) && is_numeric($t[$pk])) { $out['produitId'] = (int) $t[$pk]; break; }
+            }
             break;
         }
     }
@@ -410,10 +443,19 @@ function ep_pwa_task_detail(): array
             if ($out['tache'] === null) {
                 $out['tache'] = trim((string) ($p['task_name'] ?? $p['name'] ?? '')) ?: null;
             }
+            if ($out['produitId'] === null) {
+                foreach (['product_id', 'id_product', 'productId'] as $pk) {
+                    if (!empty($p[$pk]) && is_numeric($p[$pk])) { $out['produitId'] = (int) $p[$pk]; break; }
+                }
+            }
             break 2;
         }
     }
     if ($attId > 0) { $out['photo'] = PanelApi::attachmentUrl($attId); }
+    if ($out['produitId'] !== null) {
+        $ref = PanelApi::productPhoto($out['produitId']);
+        if ($ref !== null) { $out['produit'] = $ref['nom']; $out['photoRef'] = $ref['url']; }
+    }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;
 }

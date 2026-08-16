@@ -1,1 +1,1 @@
-brancher l'API du panel : noms de taches reels, photo de realisation et notation depuis le cockpit ; compte consultant configurable dans Parametres. Deploiement standard, aucune operation sur la base.
+notation au bareme des cinq niveaux (Exemplaire / Conforme / NC mineur / majeur / critique) avec repartition chiffree, et photo de reference du produit en face de la photo boutique. Deploiement standard, aucune operation sur la base.

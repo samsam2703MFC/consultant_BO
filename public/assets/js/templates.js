@@ -798,6 +798,39 @@ function tplControle(c, x){
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(k.s)}</div>
         </div>`).join('')}
     </div>
+    ${c.ctrlRepVide ? '' : `
+    <div style="${card};padding:16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500">Répartition des avis par niveau de conformité</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.ctrlNotees)} notée(s)${c.ctrlNonNotees !== '0' ? ' · ' + esc(c.ctrlNonNotees) + ' sans note' : ''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:14px">
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#2d7a3e;margin-bottom:8px">Conforme</div>
+          ${c.ctrlRepConf.map(r => `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="${r.dotSt}"></span>
+                <span style="font-size:12.5px;flex:1">${esc(r.nom)}</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">${esc(r.txt)}</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
+            </div>`).join('')}
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#8D1D2C;margin-bottom:8px">Non conforme</div>
+          ${c.ctrlRepNc.map(r => `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="${r.dotSt}"></span>
+                <span style="font-size:12.5px;flex:1">${esc(r.nom)}</span>
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap">${esc(r.txt)}</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`}
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Journée</span>
       ${dateSel}
@@ -1953,21 +1986,37 @@ function tplCtrlDetail(c, x){
         <button ${x.A(d.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
       </div>
 
-      <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 8px">Photo de réalisation</div>
-      ${d.photo
-        ? `<a href="${d.photo}" target="_blank" rel="noopener"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
-        : `<div style="background:var(--color-background-secondary);border-radius:10px;padding:26px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">${esc(d.photoTxt)}</div>`}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
+        <div>
+          <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Photo en boutique</div>
+          ${d.photo
+            ? `<a href="${d.photo}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
+            : `<div style="background:var(--color-background-secondary);border-radius:10px;padding:22px 12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
+        </div>
+        <div>
+          <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Référence attendue${d.produit ? ' — ' + esc(d.produit) : ''}</div>
+          ${d.photoRef
+            ? `<a href="${d.photoRef}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photoRef}" alt="Photo de référence du produit" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
+            : `<div style="background:var(--color-background-secondary);border-radius:10px;padding:22px 12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoRefTxt)}</div>`}
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Un contrôle qualité se juge par comparaison : la fiche technique du produit s\u2019affiche en face de la photo prise en boutique.</div>
 
       <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>
       <div style="font-size:13px;font-weight:500">${esc(d.avisTxt)}</div>
       ${d.avisComment ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(d.avisComment)}</div>` : ''}
 
-      <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Votre note</div>
-      <div style="display:flex;align-items:center;gap:2px">
-        ${d.etoiles.map(e => `<button ${x.A(e.pick)} title="${e.n}/5" style="${e.st}">${e.on ? '\u2605' : '\u2606'}</button>`).join('')}
-        <span style="font-size:12.5px;color:var(--color-text-muted);margin-left:10px">${d.note ? d.note + ' / 5' : 'non notée'}</span>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px">
+        <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'}">Votre évaluation</div>
+        ${d.verdict ? `<span style="${d.verdictSt}">${esc(d.verdict)}</span>` : ''}
       </div>
-      <textarea ${x.C(d.setComment)} rows="4" placeholder="Commentaire (obligatoire si non conforme)" style="width:100%;box-sizing:border-box;margin-top:12px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
+      ${d.niveaux.map(lv => `
+        <button ${x.A(lv.pick)} style="${lv.st}">
+          <span style="${lv.dotSt}"></span>
+          <span style="flex:1">${esc(lv.nom)}</span>
+          ${lv.aide ? `<span style="font-size:11px;color:var(--color-text-muted);font-weight:400">${esc(lv.aide)}</span>` : ''}
+        </button>`).join('')}
+      <textarea ${x.C(d.setComment)} rows="4" placeholder="${d.commentRequis ? 'Commentaire obligatoire pour une non-conformité' : 'Commentaire (facultatif)'}" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:13px;border:0.5px solid ${d.commentRequis && !d.comment ? '#8D1D2C' : 'var(--color-border-secondary)'};border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
       ${d.erreur ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(d.erreur)}</div>` : ''}
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
         <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>

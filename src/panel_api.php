@@ -236,6 +236,50 @@ final class PanelApi
         return self::post('/consultant/shops/' . $shopId . '/task-reviews', $data);
     }
 
+    /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
+    private static ?array $catalogue = null;
+
+    /**
+     * Photo de la fiche technique d'un produit — à mettre en face de la photo
+     * prise en boutique : un contrôle qualité se juge par comparaison.
+     *
+     * UNIQUEMENT PAR IDENTIFIANT, comme le panel : rapprocher sur l'intitulé
+     * ferait refuser un produit correct avec l'air d'une preuve.
+     *
+     * @return array{nom:string, url:?string}|null
+     */
+    public static function productPhoto(int $productId): ?array
+    {
+        if ($productId <= 0) { return null; }
+        if (self::$catalogue === null) {
+            $r = self::get('/products');
+            self::$catalogue = is_array($r) ? self::liste($r) : [];
+        }
+        foreach (self::$catalogue as $p) {
+            $pid = null;
+            foreach (['id', 'product_id', 'id_product'] as $k) {
+                if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+            }
+            if ($pid !== $productId) { continue; }
+            $nom = '';
+            foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
+                if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+            }
+            // L'image est soit une URL directe, soit une pièce jointe à signer.
+            $url = null;
+            foreach (['url', 'image_url', 'photo_url', 'picture', 'image', 'thumbnail'] as $k) {
+                if (!empty($p[$k]) && is_string($p[$k])) { $url = $p[$k]; break; }
+            }
+            if ($url === null) {
+                foreach (['attachment_id', 'att', 'id_attachment', 'photo_id'] as $k) {
+                    if (!empty($p[$k]) && is_numeric($p[$k])) { $url = self::attachmentUrl((int) $p[$k]); break; }
+                }
+            }
+            return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
+        }
+        return null;
+    }
+
     /** Déballe une enveloppe API ({data:…}, {items:…}, liste nue…). */
     private static function liste(array $d): array
     {

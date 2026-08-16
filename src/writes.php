@@ -220,7 +220,17 @@ function wr_pwa_task_review(): array
         return ['error' => 'compte consultant de l’API panel non configuré (Paramètres)'];
     }
 
-    $accepte = array_key_exists('accepte', $b) ? (bool) $b['accepte'] : ($note >= 4);
+    // Conformité déduite du barème partagé (seuil du réglage `signalement`),
+    // jamais d'un 4 en dur : si le seuil bouge, les deux écrans suivent.
+    $sigC = setting('signalement', []);
+    $seuilC = (is_array($sigC) && isset($sigC['seuil'])) ? (int) $sigC['seuil'] : 4;
+    $accepte = array_key_exists('accepte', $b) ? (bool) $b['accepte'] : ($note >= $seuilC);
+    // Sous le seuil, le commentaire est exigé — même règle que l'écran de
+    // validation : une non-conformité sans motif ne s'analyse pas.
+    if ($note < $seuilC && trim((string) ($b['comment'] ?? '')) === '') {
+        http_response_code(422);
+        return ['error' => 'commentaire obligatoire pour une non-conformité'];
+    }
     $comment = trim((string) ($b['comment'] ?? ''));
     $payload = [
         'shop_id'       => $shopId,
