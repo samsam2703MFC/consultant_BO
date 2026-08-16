@@ -304,6 +304,10 @@ class App {
         initiales: ud.initiales != null ? ud.initiales : (usr.initiales || ''),
         role: ud.role != null ? ud.role : (usr.role || ''),
         setNom: uSet('nom'), setInit: uSet('initiales'), setRole: uSet('role'),
+        // Le rôle vient du référentiel d'atelierby_db (position / comptes
+        // actifs) : un rôle saisi librement ne veut rien dire de commun avec
+        // le panel. Si le référentiel est vide, on laisse le champ libre.
+        roles: (D.roles || []), aRoles: (D.roles || []).length > 0,
         identMsg: ud.msg || '',
         identMsgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (ud.ok ? '#2d7a3e' : '#8D1D2C'),
         canLogout: this.source === 'api', logout: common.logout,
@@ -519,13 +523,20 @@ class App {
     // --- heatmap
     if (common.isHeatmap){
       const E = this.exo();
-      const year = (S.hmYear === E - 1) ? E - 1 : E, metric = year === E - 1 ? 'ca' : S.hmMetric;
+      const year = (S.hmYear === E - 1) ? E - 1 : E;
+      // Le mode « % d'atteinte » suppose des objectifs encodés. Tant qu'il n'y
+      // en a pas, il n'affiche que des cases vides — l'écran paraît mort alors
+      // que le CA réel est là. On bascule alors sur le CA, sauf choix explicite.
+      const aDesCibles = this.open().some(st => (st.perf[year] || []).some(c => c && c.caT));
+      const metric = (year === E - 1 || !aDesCibles) ? (S.hmMetric === 'pct' && aDesCibles ? 'pct' : 'ca') : S.hmMetric;
       common.hmYearCur = String(E); common.hmYearPrev = String(E - 1);
       const tb = act => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:7px 14px;' + (act ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)');
       common.hmBtnCaSt = tb(metric === 'ca'); common.hmBtnPctSt = tb(metric === 'pct'); common.hmBtn25St = tb(year === E - 1); common.hmBtn26St = tb(year === E);
       common.hmMetricCa = () => this.setState({ hmMetric: 'ca' }); common.hmMetricPct = () => this.setState({ hmMetric: 'pct' });
       common.hmY25 = () => this.setState({ hmYear: E - 1 }); common.hmY26 = () => this.setState({ hmYear: E });
-      common.hmNote = year === E - 1 ? ('Année ' + (E - 1) + ' : CA constaté (pas d’objectif défini).') : (metric === 'pct' ? 'Cellules colorées selon le % d’atteinte de l’objectif mensuel du magasin.' : 'Cellules colorées du CA le plus faible au plus élevé.');
+      common.hmNote = year === E - 1 ? ('Année ' + (E - 1) + ' : CA constaté (pas d’objectif défini).')
+        : (!aDesCibles ? 'Aucun objectif encodé pour ' + year + ' : les cellules montrent le CA constaté. Encodez un budget (Encodage du budget) pour activer le % d’atteinte.'
+        : (metric === 'pct' ? 'Cellules colorées selon le % d’atteinte de l’objectif mensuel du magasin.' : 'Cellules colorées du CA le plus faible au plus élevé.'));
       common.hmMois = M.MOIS;
       let mn = Infinity, mx = -Infinity;
       if (metric === 'ca') for (const s of this.open()) for (const r of s.perf[year]) if (r.ca != null){ mn = Math.min(mn, r.ca); mx = Math.max(mx, r.ca); }

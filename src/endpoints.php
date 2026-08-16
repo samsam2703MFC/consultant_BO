@@ -679,6 +679,68 @@ function ep_targets(): array
     return ['ca' => $ca, 'expansion' => $expansion, 'caMoyenOuverture' => (float) setting('caMoyenOuverture', 0)];
 }
 
+/**
+ * GET /referentiels/roles — rôles disponibles, lus dans `atelierby_db`.
+ *
+ * Le rôle affiché sur un compte ne doit pas être un texte libre : il vient du
+ * référentiel du panel (`position`), pour que « Consultant réseau » désigne la
+ * même chose des deux côtés. Le schéma de `position` variant, la colonne du
+ * libellé est détectée comme le fait le panel plutôt que supposée.
+ *
+ * Repli, dans l'ordre : `position` → rôles réellement portés par les comptes
+ * actifs (user_membership) → liste vide (l'écran laisse alors le champ libre).
+ */
+function ep_roles(): array
+{
+    // 1) Référentiel des positions du panel.
+    try {
+        $cols = array_map(fn ($r) => (string) $r['COLUMN_NAME'],
+            Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'position'"));
+        if ($cols !== []) {
+            $lower = array_map('strtolower', $cols);
+            $nameCol = null;
+            foreach (['name', 'label', 'title', 'nom', 'libelle'] as $cand) {
+                $i = array_search($cand, $lower, true);
+                if ($i !== false) { $nameCol = $cols[$i]; break; }
+            }
+            if ($nameCol === null) {
+                foreach ($cols as $c) { if (stripos($c, 'name') !== false) { $nameCol = $c; break; } }
+            }
+            if ($nameCol !== null) {
+                $where = '';
+                // Beaucoup de schémas portent un drapeau d'activité : on ne
+                // propose pas un rôle désactivé.
+                foreach (['active', 'is_active', 'enabled'] as $a) {
+                    $i = array_search($a, $lower, true);
+                    if ($i !== false) { $where = ' WHERE `' . $cols[$i] . '` = 1'; break; }
+                }
+                $out = [];
+                foreach (Db::rows("SELECT DISTINCT `$nameCol` AS nom FROM `position`$where ORDER BY `$nameCol` LIMIT 200") as $r) {
+                    $n = trim((string) $r['nom']);
+                    if ($n !== '') { $out[] = $n; }
+                }
+                if ($out !== []) { return ['source' => 'position', 'roles' => $out]; }
+            }
+        }
+    } catch (PDOException $e) { /* table absente : on tente le repli */ }
+
+    // 2) À défaut, les rôles réellement portés par les comptes actifs.
+    try {
+        $out = [];
+        foreach (Db::rows("SELECT DISTINCT app, scope_type FROM user_membership WHERE is_active = 1") as $r) {
+            $app = trim((string) ($r['app'] ?? ''));
+            if ($app === '') { continue; }
+            $lib = ucfirst(strtolower($app)) . ((string) ($r['scope_type'] ?? '') === 'SHOP' ? ' boutique' : ' réseau');
+            if (!in_array($lib, $out, true)) { $out[] = $lib; }
+        }
+        sort($out);
+        if ($out !== []) { return ['source' => 'user_membership', 'roles' => $out]; }
+    } catch (PDOException $e) { /* rien */ }
+
+    return ['source' => null, 'roles' => []];
+}
+
 function ep_consultants(): array
 {
     // Vrais consultants du panel : user_membership(app='CONSULTANT') ⨝ user_profile.

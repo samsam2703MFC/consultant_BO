@@ -2040,7 +2040,11 @@ function tplUserPanel(c, x){
       </div>
       <div style="margin-top:12px">
         <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">R\u00f4le</div>
-        <input type="text" value="${esc(u.role)}" ${x.C(u.setRole)} placeholder="CEO \u00b7 admin" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        ${u.aRoles
+          ? `<select ${x.C(u.setRole)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">${u.roles.map(r => `<option value="${esc(r)}"${r === u.role ? ' selected' : ''}>${esc(r)}</option>`).join('')}${u.roles.indexOf(u.role) < 0 && u.role ? `<option value="${esc(u.role)}" selected>${esc(u.role)}</option>` : ''}</select>
+             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">R\u00f4les lus dans la base partag\u00e9e (atelierby_db).</div>`
+          : `<input type="text" value="${esc(u.role)}" ${x.C(u.setRole)} placeholder="CEO \u00b7 admin" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">Aucun r\u00e9f\u00e9rentiel de r\u00f4les dans la base partag\u00e9e : saisie libre.</div>`}
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:12px">
         <button ${x.A(u.saveIdent)} style="border:none;border-radius:999px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer mon identit\u00e9</button>

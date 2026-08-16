@@ -28,6 +28,7 @@ export const ENDPOINTS = {
   meta:           '/meta',
   leviers:        '/referentiels/leviers',
   kpis:           '/referentiels/kpis',
+  roles:          '/referentiels/roles',
   emailTemplates: '/referentiels/email-templates',
   projTemplates:  '/referentiels/project-templates',
   stores:         '/stores?statut=tous',
@@ -171,7 +172,8 @@ function shape(p, source){
       products: p.products,
       pwaReports: p.pwaReports,
       pwaTasks: p.pwaTasks,
-      pwaCompte: p.pwaCompte
+      pwaCompte: p.pwaCompte,
+      roles: (p.roles || {}).roles || []
     })
   };
 }
@@ -223,6 +225,7 @@ function emptyPayload(){
     reporting: { reports: [], alertRules: [] }, journal: [], products: [],
     pwaReports: { base: '', magasins: [], partages: [] },
     pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
-    pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false }
+    pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false },
+    roles: { source: null, roles: [] }
   };
 }
