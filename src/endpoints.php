@@ -1122,21 +1122,32 @@ function ep_produits_analyse(): array
         $encours = $b['au'] > date('Y-m-d');
         $val = null; $vide = 'aucune donnée';
         if ($type === 'categorie') {
-            $r = PanelApi::categorySalesEntre($b['du'], $au);
-            $out['source'] = $out['source'] ?? PanelApi::$lastPath;
-            // Le vocabulaire de `category-sales` est celui des GROUPES (douze),
-            // pas celui des quatre-vingt-une catégories du catalogue : « Boissons
-            // chaudes » n'y existe pas, seul « Boissons » y existe. Le sélecteur
-            // est donc alimenté par cette route elle-même (voir les options),
-            // et l'on sait dire ici que le nom demandé n'y figure pas — plutôt
-            // que de rendre un zéro qui se lit comme une catégorie sans vente.
+            // `category-sales` expire dès qu'on dépasse le mois. Un point se
+            // reconstitue donc en additionnant ses mois, tous demandés d'un
+            // seul élan : le trimestre coûte trois appels mais une seule
+            // attente. Le CA d'une catégorie est additif — c'est ce qui rend
+            // ce découpage légitime, là où un ticket moyen ne le serait pas.
+            $req = [];
+            foreach (analyseMois($b['du'], $au) as $i => $mm) {
+                $req[$i] = '/consultant/shops/category-sales?'
+                    . http_build_query(['shop_id' => analyseShop(), 'date_from' => $mm[0], 'date_to' => $mm[1]]);
+            }
+            $out['source'] = $out['source'] ?? '/consultant/shops/category-sales (par mois)';
             $tot = null; $rendu = false;
-            foreach (analyseListe($r) as $sh) {
-                foreach (($sh['categories'] ?? []) as $c) {
-                    $rendu = true;
-                    if (strcasecmp(trim((string) ($c['name'] ?? '')), $cle) !== 0) { continue; }
-                    $v = nombreOuNull($c, ['ca', 'value', 'amount']);
-                    if ($v !== null) { $tot = ($tot ?? 0) + $v; }
+            foreach (PanelApi::getParallele($req) as $r) {
+                // Le vocabulaire de cette route est celui des GROUPES (douze),
+                // pas celui des 81 catégories du catalogue : « Boissons chaudes »
+                // n'y existe pas, seul « Boissons » y existe. Le sélecteur est
+                // alimenté par la route elle-même (voir les options) ; ici on
+                // sait donc dire que le nom demandé n'y figure pas, plutôt que
+                // de rendre un zéro qui se lirait comme une absence de vente.
+                foreach (analyseListe($r) as $sh) {
+                    foreach (($sh['categories'] ?? []) as $c) {
+                        $rendu = true;
+                        if (strcasecmp(trim((string) ($c['name'] ?? '')), $cle) !== 0) { continue; }
+                        $v = nombreOuNull($c, ['ca', 'value', 'amount']);
+                        if ($v !== null) { $tot = ($tot ?? 0) + $v; }
+                    }
                 }
             }
             if ($tot === null && $rendu) { $vide = 'catégorie absente de la réponse'; }
@@ -1163,6 +1174,18 @@ function ep_produits_analyse(): array
         $out['motif'] = 'aucune donnée sur cette sélection — '
             . (PanelApi::$lastError ?: ($raisons ? implode(' ; ', $raisons)
                 : 'l\'API n\'a rien rendu pour ces périodes'));
+    }
+    return $out;
+}
+
+/** Découpe [du, au] en bornes mensuelles — l'unité que l'API sait servir. */
+function analyseMois(string $du, string $au): array
+{
+    $out = []; $c = date('Y-m-01', strtotime($du));
+    while ($c <= $au) {
+        $fin = min(date('Y-m-t', strtotime($c)), $au);
+        $out[] = [max($c, $du), $fin];
+        $c = date('Y-m-01', strtotime($c . ' +1 month'));
     }
     return $out;
 }

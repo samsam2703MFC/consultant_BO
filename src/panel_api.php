@@ -115,6 +115,62 @@ final class PanelApi
         return [$code, json_decode((string) $raw, true)];
     }
 
+    /**
+     * Plusieurs GET menés de front. Renvoie les corps décodés dans l'ordre des
+     * chemins fournis (null pour ceux qui ont échoué).
+     *
+     * Certaines routes ne supportent pas qu'on élargisse leurs bornes :
+     * `category-sales` répond en moins d'une seconde sur un mois et expire sur
+     * un trimestre. Un trimestre se reconstitue donc en additionnant ses mois —
+     * mais en série, douze mois font douze allers-retours et l'écran devient
+     * inutilisable. Ces appels étant indépendants, ils partent ensemble : le
+     * temps total redevient celui du plus lent, pas leur somme.
+     *
+     * Le jeton est obtenu AVANT la volée : sans cela douze requêtes se
+     * heurteraient au même 401 et relanceraient douze connexions.
+     */
+    public static function getParallele(array $paths): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return array_fill_keys(array_keys($paths), null); }
+        $base = self::config()['base'];
+        $multi = curl_multi_init();
+        $hs = [];
+        foreach ($paths as $k => $p) {
+            $ch = curl_init($base . $p);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
+                CURLOPT_TIMEOUT        => 25,
+                CURLOPT_CONNECTTIMEOUT => 6,
+            ]);
+            curl_multi_add_handle($multi, $ch);
+            $hs[$k] = $ch;
+        }
+        $en = null;
+        do {
+            $st = curl_multi_exec($multi, $en);
+            if ($en) { curl_multi_select($multi, 1.0); }
+        } while ($en > 0 && $st === CURLM_OK);
+
+        $out = [];
+        foreach ($hs as $k => $ch) {
+            $raw  = curl_multi_getcontent($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_multi_remove_handle($multi, $ch);
+            curl_close($ch);
+            $res = is_string($raw) ? json_decode($raw, true) : null;
+            if ($code < 200 || $code >= 300) {
+                self::$lastError = 'GET ' . $paths[$k] . ' → HTTP ' . $code;
+                $out[$k] = null;
+                continue;
+            }
+            $out[$k] = $res['data'] ?? $res;
+        }
+        curl_multi_close($multi);
+        return $out;
+    }
+
     /** Jeton en cache, sinon connexion. `$force` ignore le cache (retry sur 401). */
     private static function token(bool $force = false): ?string
     {
