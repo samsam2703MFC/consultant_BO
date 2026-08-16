@@ -1,1 +1,1 @@
-Une seule echelle de marge pour tous les ecrans.
+Sonde : quelles series temporelles l API rend deja.

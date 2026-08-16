@@ -1057,6 +1057,44 @@ function ep_exploitation_reseau(): array
 }
 
 /**
+ * Sonde des séries temporelles disponibles.
+ *
+ * Avant de bâtir un écran d'analyse, savoir ce que l'API rend DÉJÀ sous forme
+ * de série : appeler douze fois un endpoint mensuel pour reconstituer un an
+ * coûterait une dizaine de secondes à chaque ouverture. Cette route ne sert
+ * qu'à établir la forme, elle disparaîtra une fois l'écran câblé.
+ */
+function ep_analyse_sonde(): array
+{
+    $au = date('Y-m-d');
+    $du = date('Y-01-01');
+    $out = ['du' => $du, 'au' => $au, 'sources' => []];
+    if (!PanelApi::configured()) { return $out + ['erreur' => 'compte consultant non configuré']; }
+
+    $voir = function (string $nom, $r) use (&$out): void {
+        if (!is_array($r)) {
+            $out['sources'][$nom] = ['etat' => 'muet', 'motif' => PanelApi::$lastError]; return;
+        }
+        $liste = array_is_list($r) ? $r : null;
+        if ($liste === null) {
+            foreach (['data', 'items', 'shops', 'results', 'months', 'series'] as $k) {
+                if (isset($r[$k]) && is_array($r[$k]) && array_is_list($r[$k])) { $liste = $r[$k]; break; }
+            }
+        }
+        $out['sources'][$nom] = [
+            'etat' => 'ok', 'chemin' => PanelApi::$lastPath,
+            'forme' => $liste !== null ? 'liste(' . count($liste) . ')' : 'objet',
+            'cles' => array_slice(array_keys($liste !== null ? ($liste[0] ?? []) : $r), 0, 16),
+            'premier' => $liste !== null ? ($liste[0] ?? null) : array_slice($r, 0, 3),
+        ];
+    };
+    $voir('monthly-sales', PanelApi::monthlySales($du, $au));
+    $voir('sales-kpis/quarterly', PanelApi::salesKpisQuarterly($du, $au));
+    $voir('category-sales', PanelApi::categorySalesEntre($du, $au));
+    return $out;
+}
+
+/**
  * Suivi de production du réseau.
  *
  * Source : `product_movement`, qui journalise les mouvements de la caisse

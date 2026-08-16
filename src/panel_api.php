@@ -517,6 +517,24 @@ final class PanelApi
         ]);
     }
 
+    /** Indicateurs trimestriels du réseau. */
+    public static function salesKpisQuarterly(string $du, string $au): ?array
+    {
+        $q = http_build_query(['date_from' => $du, 'date_to' => $au]);
+        return self::premierObjet([
+            '/consultant/shops/sales-kpis/quarterly?' . $q,
+            '/consultant/shops/sales-kpis/quarterly',
+        ]);
+    }
+
+    /** Ventes par catégorie sur des bornes explicites (réseau). */
+    public static function categorySalesEntre(string $du, string $au): ?array
+    {
+        return self::premierObjet([
+            '/consultant/shops/category-sales?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        ]);
+    }
+
     /** Synthèse P&L de toutes les boutiques. */
     public static function pnlSummary(string $periode, string $date): ?array
     {
