@@ -280,31 +280,41 @@ fi
 # l'extérieur). Lecture seule, secrets masqués.
 if [[ "${COCKPIT_APIINSPECT:-0}" == "1" ]]; then
   log "COCKPIT_APIINSPECT=1 — découverte de l'API amont du panel…"
+  # `set -e` est actif : un grep sans résultat renvoie 1 et tuerait le script.
+  # Toute commande de ce bloc est donc neutralisée par « || true ».
   PANEL_DIR=""
-  for d in /var/www/pwa_consultant /var/www/html/pwa_consultant /var/www/html /var/www; do
-    [[ -f "$d/config/app.php" ]] && { PANEL_DIR="$d"; break; }
-    [[ -f "$d/pwa_consultant/config/app.php" ]] && { PANEL_DIR="$d/pwa_consultant"; break; }
+  for d in /var/www/app/pwa_consultant /var/www/pwa_consultant /var/www/html/pwa_consultant /var/www/html /var/www; do
+    if [[ -f "$d/config/app.php" ]]; then PANEL_DIR="$d"; break; fi
+    if [[ -f "$d/pwa_consultant/config/app.php" ]]; then PANEL_DIR="$d/pwa_consultant"; break; fi
   done
   echo "===== EMPLACEMENT DU PANEL ====="
   if [[ -n "$PANEL_DIR" ]]; then echo "  $PANEL_DIR"; else
-    echo "  introuvable — recherche large :"; find /var/www -maxdepth 4 -name app.php -path '*config*' 2>/dev/null | head -5
+    echo "  introuvable — recherche large :"; find /var/www -maxdepth 5 -name app.php -path '*config*' 2>/dev/null | head -5 || true
   fi
   echo "===== CONSULTANT_API_BASE (env / .htaccess / vhost) ====="
-  grep -rhi "CONSULTANT_API_BASE" ${PANEL_DIR:-/var/www}/public/.htaccess ${PANEL_DIR:-/var/www}/.htaccess \
-       /etc/apache2/sites-enabled/ /etc/apache2/conf-enabled/ 2>/dev/null | sed 's/[[:space:]]\+/ /g' | head -10
+  { grep -rhi "CONSULTANT_API_BASE" \
+       "${PANEL_DIR:-/var/www}/public/.htaccess" "${PANEL_DIR:-/var/www}/.htaccess" \
+       "${PANEL_DIR:-/var/www}/.env" \
+       /etc/apache2/sites-enabled/ /etc/apache2/conf-enabled/ 2>/dev/null \
+     | sed 's/[[:space:]]\+/ /g' | head -10; } || true
   echo "  (vide ci-dessus = non défini → défaut : même origine + /api/v1)"
-  echo "===== VHOSTS / ServerName ====="
-  grep -rhi "ServerName\|ServerAlias\|DocumentRoot\|Alias /api" /etc/apache2/sites-enabled/ 2>/dev/null | sed 's/^[[:space:]]*//' | head -20
+  echo "===== .env du panel : CLÉS uniquement (valeurs masquées) ====="
+  { sed -n 's/^\([A-Z_]*\)=.*/  \1=<masqué>/p' "${PANEL_DIR:-/var/www}/.env" 2>/dev/null | head -30; } || true
+  echo "===== VHOSTS (ServerName / DocumentRoot / Alias / Proxy) ====="
+  { grep -rhi "ServerName\|ServerAlias\|DocumentRoot\|Alias \|ProxyPass" /etc/apache2/sites-enabled/ 2>/dev/null \
+     | sed 's/^[[:space:]]*//' | head -40; } || true
   echo "===== L'API RÉPOND-ELLE DEPUIS LE SERVEUR ? ====="
-  for base in "http://127.0.0.1/api/v1" "http://localhost/api/v1" "http://127.0.0.1:8080/api/v1"; do
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "$base/consultant/auth/login" -X POST -H 'Content-Type: application/json' -d '{}' 2>/dev/null || echo "000")
+  for base in "http://127.0.0.1/api/v1" "http://localhost/api/v1" "http://127.0.0.1:8080/api/v1" "http://127.0.0.1:3000/api/v1"; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST "$base/consultant/auth/login" -H 'Content-Type: application/json' -d '{}' 2>/dev/null || echo "000")
     echo "  POST $base/consultant/auth/login → HTTP $code"
   done
-  echo "===== ROUTAGE /api (Apache) ====="
-  ls -la /var/www/api /var/www/html/api 2>/dev/null | head -10
-  find /var/www -maxdepth 3 -type d -name "api*" 2>/dev/null | head -5
-  echo "===== JOURNAL APACHE (dernières erreurs 503/proxy) ====="
-  tail -n 30 /var/log/apache2/error.log 2>/dev/null | grep -i "503\|proxy\|api\|unavailable" | tail -10
+  echo "===== ROUTAGE /api : dossiers candidats ====="
+  { find /var/www -maxdepth 4 -type d -name "api*" 2>/dev/null | head -10; } || true
+  echo "===== SERVICES A L'ECOUTE (ports) ====="
+  { (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | head -20; } || true
+  echo "===== JOURNAL APACHE (dernières erreurs) ====="
+  { tail -n 60 /var/log/apache2/error.log 2>/dev/null | grep -i "503\|proxy\|api\|unavailable" | tail -12; } || true
+  echo "===== FIN APIINSPECT ====="
 fi
 
 # --- 6. Premier appel API (auto-installation) + recette locale -----------

@@ -1,1 +1,1 @@
-apiinspect : decouvrir la base d'URL reelle de l'API amont du panel et tester si elle repond depuis le serveur (pour brancher noms de taches + photos + notation comme dans le panel). Plus : rail avec sous-menu Checklists consultants. Lecture seule, aucune operation sur la base.
+apiinspect (corrige) : le panel est dans /var/www/app/pwa_consultant et les greps sans resultat tuaient le script. Relance de la decouverte de l'API amont. Lecture seule, aucune operation sur la base.
