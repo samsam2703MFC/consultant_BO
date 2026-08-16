@@ -600,6 +600,125 @@ function ep_prod_catalogue(): array
 }
 
 /**
+ * Exploitation — le P&L court des magasins : jour, semaine, mois.
+ *
+ * Trois précautions de fond.
+ *
+ * D'abord, « aujourd'hui » n'est pas la date du jour mais le DERNIER JOUR
+ * ENCODÉ en caisse. La caisse s'arrête au 14 juillet ; afficher un vrai
+ * « aujourd'hui » rendrait des zéros partout, qu'on lirait comme un effondrement
+ * du réseau au lieu d'un simple retard d'encodage.
+ *
+ * Ensuite, l'objectif du jour et de la semaine se déduit du budget MENSUEL au
+ * prorata des jours d'ouverture : c'est une convention, elle est donc annoncée
+ * (`objectifBase`) plutôt que présentée comme une cible saisie.
+ *
+ * Enfin, un magasin sans budget encodé n'a pas un objectif de zéro : il n'en a
+ * pas. La différence décide de la couleur d'une pastille.
+ */
+function ep_exploitation(): array
+{
+    $out = ['jour' => null, 'semaine' => null, 'mois' => null, 'magasins' => [],
+        'reseau' => [], 'objectifBase' => 'budget mensuel au prorata des jours',
+        'avertissement' => null];
+
+    try {
+        $d = Db::rows('SELECT MAX(DATE(insert_timestamp)) j FROM transaction');
+    } catch (PDOException $e) { return $out + ['erreur' => 'caisse indisponible']; }
+    $jour = ($d && !empty($d[0]['j'])) ? (string) $d[0]['j'] : null;
+    if ($jour === null) { return $out + ['erreur' => 'aucune vente enregistrée']; }
+
+    $ts   = strtotime($jour);
+    $lundi = date('Y-m-d', strtotime('monday this week', $ts));
+    $mois1 = date('Y-m-01', $ts);
+    $out['jour'] = $jour; $out['semaine'] = $lundi; $out['mois'] = substr($mois1, 0, 7);
+    if ($jour !== date('Y-m-d')) {
+        $out['avertissement'] = 'dernier jour encodé en caisse : ' . $jour
+            . ' (la caisse n\'a rien remonté depuis)';
+    }
+
+    // Un seul balayage : le mois courant par magasin ET par jour. Tout le reste
+    // — jour, semaine, mois — s'en déduit sans repasser sur la table.
+    $par = [];
+    try {
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */
+                                  id_shop, DATE(insert_timestamp) j,
+                                  COUNT(DISTINCT ticket_key) tickets,
+                                  SUM(total_gross_amount_after_discount) ca
+                             FROM transaction
+                            WHERE insert_timestamp >= ? AND insert_timestamp < ?
+                         GROUP BY id_shop, j", [$mois1 . ' 00:00:00',
+                            date('Y-m-d 00:00:00', strtotime($jour . ' +1 day'))]) as $r) {
+            $par[(int) $r['id_shop']][(string) $r['j']] = ['ca' => (float) $r['ca'], 'tk' => (int) $r['tickets']];
+        }
+    } catch (PDOException $e) { return $out + ['erreur' => 'agrégat de caisse indisponible']; }
+
+    $budget = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, revenue_budget FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+            [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
+            if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
+                $budget[(string) $b['shop_id']] = (float) $b['revenue_budget'];
+            }
+        }
+    } catch (PDOException $e) { /* budget non encodé */ }
+
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) {
+            $noms[(int) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* noms indisponibles */ }
+
+    $joursMois   = (int) date('t', $ts);
+    $joursEcoule = (int) date('j', $ts);
+    $joursSem    = (int) round((strtotime($jour) - strtotime($lundi)) / 86400) + 1;
+
+    $bloc = function (array $jours, ?float $obj): array {
+        $ca = 0.0; $tk = 0;
+        foreach ($jours as $x) { $ca += $x['ca']; $tk += $x['tk']; }
+        return ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $obj !== null ? round($obj, 2) : null,
+            'atteinte' => ($obj !== null && $obj > 0) ? round($ca / $obj, 4) : null];
+    };
+
+    $tot = ['jour' => [], 'semaine' => [], 'mois' => []];
+    foreach ($par as $sid => $jours) {
+        $b = $budget[(string) $sid] ?? null;
+        $dJour = isset($jours[$jour]) ? [$jours[$jour]] : [];
+        $dSem  = []; $dMois = [];
+        foreach ($jours as $j => $x) {
+            $dMois[] = $x;
+            if ($j >= $lundi) { $dSem[] = $x; }
+        }
+        $ligne = ['shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+            'budgetMois' => $b,
+            'jour'    => $bloc($dJour, $b !== null ? $b / $joursMois : null),
+            'semaine' => $bloc($dSem,  $b !== null ? $b * $joursSem / $joursMois : null),
+            'mois'    => $bloc($dMois, $b !== null ? $b * $joursEcoule / $joursMois : null),
+            'moisPlein' => $b];
+        $out['magasins'][] = $ligne;
+        foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
+    }
+    usort($out['magasins'], fn($a, $b2) => $b2['mois']['ca'] <=> $a['mois']['ca']);
+
+    foreach (['jour', 'semaine', 'mois'] as $p) {
+        $ca = 0.0; $tk = 0; $ob = 0.0; $aucun = true;
+        foreach ($tot[$p] as $x) {
+            $ca += $x['ca']; $tk += $x['tickets'];
+            if ($x['objectif'] !== null) { $ob += $x['objectif']; $aucun = false; }
+        }
+        $out['reseau'][$p] = ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $aucun ? null : round($ob, 2),
+            'atteinte' => (!$aucun && $ob > 0) ? round($ca / $ob, 4) : null];
+    }
+    $out['magasinsSansBudget'] = count($out['magasins']) - count($budget);
+    return $out;
+}
+
+/**
  * Suivi de production du réseau.
  *
  * Source : `product_movement`, qui journalise les mouvements de la caisse

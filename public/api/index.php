@@ -59,6 +59,7 @@ function route(string $method, string $path): mixed
             $path === '/stores/perf'                   => ep_perf(),
             $path === '/stores/budgets'                => ep_budgets(),
             $path === '/stores/etp'                    => ep_stores_etp(),
+            $path === '/exploitation'                  => ep_exploitation(),
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
