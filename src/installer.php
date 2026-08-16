@@ -68,6 +68,7 @@ function ensureReference(): void
     // rendu mensuel casse. Structure, pas une donnée métier.
     $poserSetting('moisLabels', ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']);
     // Catégories du kanban projet + types de rapport (structure, pas des données).
+    $poserSetting('scoring', scoringDefaut());
     $poserSetting('familles', ['Produits', 'Services', 'Organisation & coûts', 'Développement réseau']);
     $poserSetting('reportTypes', ['Financier', 'Commercial', 'Contrôle qualité', 'Pilotage projets', 'Développement réseau']);
 
@@ -213,6 +214,23 @@ function signalementDefaut(): array
             ['nom' => 'Budget',             'types' => ['Dépassement', 'Non justifié']],
             ['nom' => 'Autre',              'types' => ['À préciser']],
         ],
+    ];
+}
+
+/**
+ * Pondération et seuils du scoring produit.
+ *
+ * Le score arbitre la gamme : garder, conforter, retirer. Les poids (volume,
+ * marge, position) et les deux seuils de verdict étaient écrits dans le
+ * JavaScript — donc invisibles, non discutables et impossibles à ajuster sans
+ * déploiement. Ils vivent ici, modifiables dans Paramètres, comme les seuils
+ * de coûts et le barème de conformité.
+ */
+function scoringDefaut(): array
+{
+    return [
+        'poids'  => ['volume' => 40, 'marge' => 40, 'position' => 20],
+        'seuils' => ['moteur' => 68, 'conforter' => 46],
     ];
 }
 

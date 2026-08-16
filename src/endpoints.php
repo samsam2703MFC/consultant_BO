@@ -59,6 +59,11 @@ function ep_meta(): array
         'contribOuverture' => setting('contribOuverture', 0),
         'notes'            => setting('notes', new stdClass()),
         'familles'         => setting('familles', []),
+        // Pondération et seuils du scoring produit — réglage, jamais une
+        // constante d'écran : le score qui décide de retirer une référence
+        // doit pouvoir se discuter et s'ajuster sans déploiement.
+        'scoring'          => setting('scoring', ['poids' => ['volume' => 40, 'marge' => 40, 'position' => 20],
+                                                  'seuils' => ['moteur' => 68, 'conforter' => 46]]),
         'reportTypes'      => setting('reportTypes', []),
         // Validation des tâches : une seule source pour les cinq niveaux, le
         // seuil et le référentiel famille → type. Rien n'est recopié dans le

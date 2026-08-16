@@ -20,7 +20,7 @@ class App {
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
-      navOpen: {},   // sous-menus du rail ouverts/fermés (clé = libellé du parent)
+      navOpen: {}, scDraft: {},   // sous-menus du rail ; brouillon du scoring produits
       userPanel: false, userDraft: {},   // panneau « Mon compte » (identité + compte API)
       // Brouillon de validation par tâche : { note, famille, type, commentaire }.
       // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
@@ -205,7 +205,15 @@ class App {
     const d = p.taches.filter(t => t.done).length + p.jalons.filter(j => j.reel).length;
     return tot ? d / tot : 0; }
   tabBtn(act){ return 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;' + (act ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'); }
-  poids(){ return { v: 40, m: 40, pos: 20 }; }
+  /* Pondération et seuils du scoring produit : RÉGLAGE serveur (Paramètres),
+     jamais des constantes d'écran — c'est ce score qui décide de retirer une
+     référence de la gamme. Repli sur les valeurs livrées si absent. */
+  scoringCfg(){ const c = (this.meta && this.meta.scoring) || {};
+    const p = c.poids || {}, s = c.seuils || {};
+    const n = (v, d) => { const x = Number(v); return isFinite(x) && x >= 0 ? x : d; };
+    return { v: n(p.volume, 40), m: n(p.marge, 40), pos: n(p.position, 20),
+      moteur: n(s.moteur, 68), conforter: n(s.conforter, 46) }; }
+  poids(){ const c = this.scoringCfg(); return { v: c.v, m: c.m, pos: c.pos }; }
   seuilCaEtp(){ const d = (this.meta && this.meta.seuils) || {}; return d.caEtp != null ? +d.caEtp : 13000; }
   seuils(){ const d = (this.meta && this.meta.seuils) || {};
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
@@ -952,7 +960,8 @@ class App {
       let num = W.v * p.sVol + W.pos * p.sPos, den = W.v + W.pos;
       if (p.sMg != null) { num += W.m * p.sMg; den += W.m; }
       p.score = den ? num / den : 0; });
-    const verdict = s => s >= 68 ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)'] : s >= 46 ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)'] : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'];
+    const SC = this.scoringCfg();
+    const verdict = s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)'] : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)'] : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'];
     common.pdCat = S.pdCat; common.setPdCat = e => this.setState({ pdCat: e.target.value });
     common.pdCatOptions = ['Toutes les catégories'].concat(Object.keys(cats));
     const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['pen', 'Trier par pénétration réseau'], ['ca', 'Trier par CA réseau'], ['marge', 'Trier par taux de marge'], ['mg', 'Trier par marge brute'], ['rang', 'Trier par rang catégorie']];
@@ -975,7 +984,7 @@ class App {
         barVol: bar(p.sVol, '#8D1D2C'), barMg: bar(p.sMg, '#2d7a3e'), barPos: bar(p.sPos, '#C17A2A'),
         score: String(Math.round(p.score)), scoreSt: 'font-size:17px;font-weight:500;line-height:1;color:' + vd[1], scoreBar: bar(p.score, vd[1]),
         verdict: vd[0], verdictSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + vd[2] + ';color:' + vd[1] }; });
-    const nMot = base.filter(p => p.score >= 68).length, nArb = base.filter(p => p.score < 46).length;
+    const nMot = base.filter(p => p.score >= SC.moteur).length, nArb = base.filter(p => p.score < SC.conforter).length;
     const mgVals = base.map(p => p.mg).filter(v => v != null);
     const caTot = caProd, mgTot = mgVals.length ? mgVals.reduce((a, v) => a + v, 0) : null;
     const penMoy = base.reduce((a, p) => a + p.pen, 0) / (base.length || 1);
@@ -984,8 +993,8 @@ class App {
       { k: 'CA produit réseau', v: this.fK(caTot), s: 'Ventes du mois, tous magasins ouverts' },
       { k: 'Marge brute produits', v: this.fK(mgTot), s: mgTot == null ? 'Coût produit non exposé par la base partagée — marge indisponible' : this.fP(mgTot / caTot, 1) + ' de taux de marge sur le CA produit' },
       { k: 'Pénétration moyenne', v: this.fP(penMoy, 0), s: nPart + ' références vendues dans moins de la moitié du réseau' },
-      { k: 'Moteurs de gamme', v: String(nMot), s: 'Score ≥ 68 : disponibilité et mise en avant à sécuriser' },
-      { k: 'À arbitrer', v: String(nArb), s: 'Score < 46 : retrait, repricing ou relance commerciale' }];
+      { k: 'Moteurs de gamme', v: String(nMot), s: 'Score ≥ ' + SC.moteur + ' : disponibilité et mise en avant à sécuriser' },
+      { k: 'À arbitrer', v: String(nArb), s: 'Score < ' + SC.conforter + ' : retrait, repricing ou relance commerciale' }];
     common.pdNote = 'Score sur 100 = moyenne pondérée de trois notes : volume vendu (racine du volume réseau, ramené au best-seller), taux de marge unitaire (normalisé sur la gamme) et position dans la catégorie (rang par CA). Pondération actuelle : ' + common.pdPond + '. La pénétration réseau (nombre de magasins ouverts vendant la référence sur ' + nbOuv + ') et le CA réseau sont affichés à titre de contexte et n\'entrent pas dans le score.';
   }
 
@@ -1710,6 +1719,41 @@ class App {
   valsParams(common){
     const S = this.state, D = this.D, M = this.M;
     common.paramExo = String(this.meta.exercice);
+    // --- Scoring produits : pondération (volume / marge / position) et seuils
+    //     de verdict. Modifiable ici plutôt qu'enfoui dans le JavaScript.
+    const scd = S.scDraft || {};
+    const SCc = this.scoringCfg();
+    const scv = (k, def) => scd[k] != null ? scd[k] : String(def);
+    const scSet = k => e => { const v = e.target.value; this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { [k]: v }) })); };
+    const scNum = (v, d) => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? n : d; };
+    const pv = scNum(scv('volume', SCc.v), SCc.v), pm = scNum(scv('marge', SCc.m), SCc.m), pp = scNum(scv('position', SCc.pos), SCc.pos);
+    const somme = pv + pm + pp;
+    common.scVolume = scv('volume', SCc.v); common.scMarge = scv('marge', SCc.m); common.scPosition = scv('position', SCc.pos);
+    common.scMoteur = scv('moteur', SCc.moteur); common.scConforter = scv('conforter', SCc.conforter);
+    common.setScVolume = scSet('volume'); common.setScMarge = scSet('marge'); common.setScPosition = scSet('position');
+    common.setScMoteur = scSet('moteur'); common.setScConforter = scSet('conforter');
+    // Les poids sont relatifs : on montre la part effective de chacun, pour que
+    // « 40 » ne se lise pas comme « 40 % » quand la somme ne fait pas 100.
+    common.scPart = somme > 0
+      ? 'Part effective — volume ' + Math.round(100 * pv / somme) + ' % · marge ' + Math.round(100 * pm / somme) + ' % · position ' + Math.round(100 * pp / somme) + ' %'
+      : 'Au moins un poids doit être supérieur à zéro.';
+    const sMot = scNum(scv('moteur', SCc.moteur), SCc.moteur), sCon = scNum(scv('conforter', SCc.conforter), SCc.conforter);
+    common.scAlerte = somme <= 0 ? 'Somme des poids nulle : le score ne peut pas être calculé.'
+      : (sCon >= sMot ? 'Le seuil « à conforter » doit rester sous le seuil « moteur de gamme ».'
+      : (sMot > 100 || sCon < 0 ? 'Les seuils s’expriment sur une échelle de 0 à 100.' : ''));
+    common.scMsg = scd.msg || '';
+    common.scMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (scd.ok ? '#2d7a3e' : '#8D1D2C');
+    common.scSave = () => {
+      if (common.scAlerte) { this.notify(common.scAlerte); return; }
+      const val = { poids: { volume: pv, marge: pm, position: pp }, seuils: { moteur: sMot, conforter: sCon } };
+      this.api('PUT', '/parametres/scoring', { valeur: val }).then(r => {
+        if (r && r.ok === false) { this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { ok: false, msg: r.error || 'Échec' }) })); return; }
+        this.meta.scoring = val;
+        this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { ok: true, msg: 'Pondération enregistrée — le scoring est recalculé.' }) }));
+        this.log('Paramètre', null, 'Scoring produits : poids ' + pv + '/' + pm + '/' + pp + ', seuils ' + sMot + ' / ' + sCon);
+      });
+    };
+    common.scReset = () => this.setState({ scDraft: {} });
     // Comptes RÉELS (plus de « 4 consultants · 10 magasins · 12 zones » inventés).
     const nCons = (D.consultants || []).length, nFour = (D.suppliers || []).length, nPers = (D.people || []).length;
     common.paramIntervenants = [nCons + ' consultant' + (nCons > 1 ? 's' : ''),

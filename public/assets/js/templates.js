@@ -1454,6 +1454,43 @@ function tplParams(c, x){
         </div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Scoring produits — pondération et seuils</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">Le score sur 100 est la moyenne pond\u00e9r\u00e9e de trois notes : volume vendu, taux de marge et position dans la cat\u00e9gorie. Les poids sont relatifs (leur somme n\u2019a pas besoin de faire 100). Les seuils fixent le verdict : au-dessus du premier, « moteur de gamme » ; en dessous du second, « \u00e0 arbitrer ».</div>
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Pond\u00e9ration</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:4px">Volume vendu</div>
+            <input type="number" min="0" step="5" value="${esc(c.scVolume)}" ${x.C(c.setScVolume)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+          <div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:4px">Taux de marge</div>
+            <input type="number" min="0" step="5" value="${esc(c.scMarge)}" ${x.C(c.setScMarge)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+          <div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:4px">Position cat\u00e9gorie</div>
+            <input type="number" min="0" step="5" value="${esc(c.scPosition)}" ${x.C(c.setScPosition)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.scPart)}</div>
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px;margin-top:18px">Seuils de verdict (score sur 100)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:11.5px;color:#2d7a3e;margin-bottom:4px">\u2265 Moteur de gamme</div>
+            <input type="number" min="0" max="100" step="1" value="${esc(c.scMoteur)}" ${x.C(c.setScMoteur)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+          <div>
+            <div style="font-size:11.5px;color:#8D1D2C;margin-bottom:4px">&lt; \u00c0 arbitrer</div>
+            <input type="number" min="0" max="100" step="1" value="${esc(c.scConforter)}" ${x.C(c.setScConforter)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+        </div>
+        ${c.scAlerte ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(c.scAlerte)}</div>` : ''}
+        ${c.scMsg ? `<div style="${c.scMsgSt}">${esc(c.scMsg)}</div>` : ''}
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+          <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+          <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
+        </div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Réseau</div>
         <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Intervenants</span><span style="font-weight:500">${esc(c.paramIntervenants)}</span></div>
