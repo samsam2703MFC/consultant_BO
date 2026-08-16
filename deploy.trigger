@@ -1,1 +1,1 @@
-apiinspect (corrige) : le panel est dans /var/www/app/pwa_consultant et les greps sans resultat tuaient le script. Relance de la decouverte de l'API amont. Lecture seule, aucune operation sur la base.
+brancher l'API du panel : noms de taches reels, photo de realisation et notation depuis le cockpit ; compte consultant configurable dans Parametres. Deploiement standard, aucune operation sur la base.

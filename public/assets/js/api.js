@@ -43,7 +43,8 @@ export const ENDPOINTS = {
   journal:        '/journal',
   products:       '/products/scoring?periode=' + YM,
   pwaReports:     '/pwa/reports',
-  pwaTasks:       '/pwa/tasks'
+  pwaTasks:       '/pwa/tasks',
+  pwaCompte:      '/pwa/compte'
 };
 
 async function get(path, signal){
@@ -169,7 +170,8 @@ function shape(p, source){
       logs: p.journal,
       products: p.products,
       pwaReports: p.pwaReports,
-      pwaTasks: p.pwaTasks
+      pwaTasks: p.pwaTasks,
+      pwaCompte: p.pwaCompte
     })
   };
 }
@@ -220,6 +222,7 @@ function emptyPayload(){
     targets: [], consultants: [], suppliers: [], projects: [], crm: [], people: [],
     reporting: { reports: [], alertRules: [] }, journal: [], products: [],
     pwaReports: { base: '', magasins: [], partages: [] },
-    pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true }
+    pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
+    pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false }
   };
 }

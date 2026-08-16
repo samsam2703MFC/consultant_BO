@@ -150,6 +150,115 @@ function wr_pwa_task_validate(): array
     return ['ok' => true, 'validated' => $on, 'by' => $on ? $ownerName : null, 'at' => $on ? date('Y-m-d H:i:s') : null];
 }
 
+/**
+ * PUT /pwa/compte — identifiants du compte consultant utilisé par le cockpit
+ * pour lire les tâches/photos et déposer les notes sur l'API du panel.
+ *
+ * Le mot de passe doit rester réutilisable (l'API exige téléphone + mot de
+ * passe à chaque connexion) : il est donc stocké tel quel dans
+ * `ceo_app_setting`, et n'est JAMAIS renvoyé par une lecture — l'écran ne voit
+ * que « défini / non défini ». Laisser le champ vide conserve le mot de passe
+ * existant (on ne l'efface pas par inadvertance en modifiant le téléphone).
+ */
+function wr_pwa_compte(): array
+{
+    $b = body();
+    $cur = setting('panelApi', []);
+    if (!is_array($cur)) { $cur = []; }
+    $conf = [
+        'base'  => trim((string) ($b['base'] ?? $cur['base'] ?? '')),
+        'phone' => trim((string) ($b['phone'] ?? $cur['phone'] ?? '')),
+        'password' => (string) ($b['password'] ?? ''),
+    ];
+    if ($conf['password'] === '') { $conf['password'] = (string) ($cur['password'] ?? ''); }
+    if ($conf['base'] === '') { unset($conf['base']); }               // → défaut du client
+
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['panelApi', json_encode($conf, JSON_UNESCAPED_UNICODE)]);
+    PanelApi::oublierJeton();
+    journalAdd('CEO', 'Paramètre', null, 'Compte consultant de l’API panel mis à jour ('
+        . ($conf['phone'] !== '' ? $conf['phone'] : 'téléphone vide') . ')');
+
+    // Test immédiat : un réglage enregistré mais refusé doit se voir tout de suite.
+    [$ok, $msg] = PanelApi::tester();
+    return ['ok' => true, 'testOk' => $ok, 'message' => $msg, 'statut' => PanelApi::statut()];
+}
+
+/** POST /pwa/compte/test — vérifie la connexion sans rien modifier. */
+function wr_pwa_compte_test(): array
+{
+    [$ok, $msg] = PanelApi::tester();
+    return ['ok' => $ok, 'message' => $msg, 'statut' => PanelApi::statut()];
+}
+
+/**
+ * POST /pwa/tasks/review — noter une tâche (note 1-5, conformité, commentaire).
+ *
+ * L'API du panel est la SOURCE DE VÉRITÉ (c'est elle qui porte review_rating /
+ * review_is_accepted / review_comment) ; `mac_task_review` en est le journal
+ * local, avec l'auteur. On écrit donc d'abord l'API : si elle refuse, on
+ * n'écrit rien en base — sinon le cockpit afficherait une note que le panel
+ * ignore. Mêmes champs que le panel (ChecklistController::submitReview).
+ */
+function wr_pwa_task_review(): array
+{
+    $b = body();
+    $shopId = (int) ($b['shopId'] ?? 0);
+    $taskId = (int) ($b['taskId'] ?? 0);
+    $date   = (string) ($b['date'] ?? '');
+    $note   = isset($b['note']) && $b['note'] !== null ? (int) $b['note'] : null;
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shopId, taskId et date (YYYY-MM-DD) sont requis'];
+    }
+    if ($note === null || $note < 1 || $note > 5) {
+        http_response_code(422);
+        return ['error' => 'note hors échelle (1..5)'];
+    }
+    if (!PanelApi::configured()) {
+        http_response_code(503);
+        return ['error' => 'compte consultant de l’API panel non configuré (Paramètres)'];
+    }
+
+    $accepte = array_key_exists('accepte', $b) ? (bool) $b['accepte'] : ($note >= 4);
+    $comment = trim((string) ($b['comment'] ?? ''));
+    $payload = [
+        'shop_id'       => $shopId,
+        'task_id'       => $taskId,
+        'review_date'   => $date,
+        'rating'        => $note,
+        'is_accepted'   => $accepte ? 1 : 0,
+        'comment'       => $comment !== '' ? $comment : null,
+    ];
+    if (!empty($b['checklistId']))  { $payload['checklist_id'] = (int) $b['checklistId']; }
+    if (!empty($b['completionId'])) { $payload['completion_id'] = (int) $b['completionId']; }
+
+    [$ok, $res] = PanelApi::submitReview($shopId, $payload);
+    if (!$ok) {
+        http_response_code(502);
+        return ['error' => 'l’API du panel a refusé la note : ' . (PanelApi::$lastError ?? 'erreur inconnue')];
+    }
+
+    // Journal local (miroir), comme le panel : l'auteur est le compte du cockpit.
+    $u = setting('utilisateur', []);
+    $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+    try {
+        Db::exec(
+            'INSERT INTO mac_task_review (id_shop, id_checklist, id_task, review_date, completion_id,'
+            . ' id_consultant, consultant_name, rating, is_accepted, comment, created_at, updated_at)'
+            . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+            . ' ON DUPLICATE KEY UPDATE rating = VALUES(rating), is_accepted = VALUES(is_accepted),'
+            . ' comment = VALUES(comment), consultant_name = VALUES(consultant_name), updated_at = VALUES(updated_at)',
+            [$shopId, $payload['checklist_id'] ?? null, $taskId, $date, $payload['completion_id'] ?? null,
+             0, $auteur, $note, $accepte ? 1 : 0, $payload['comment'], date('Y-m-d H:i:s'), date('Y-m-d H:i:s')]
+        );
+    } catch (PDOException $e) { /* miroir best-effort : l'API a déjà la note */ }
+
+    journalAdd('CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
+        . $note . '/5 — ' . ($accepte ? 'conforme' : 'non conforme') . ($comment !== '' ? ' : ' . $comment : ''));
+    return ['ok' => true, 'note' => $note, 'accepte' => $accepte];
+}
+
 /** PATCH /projects/{id} — statut et/ou famille. */
 function wr_project_patch(string $id): array
 {

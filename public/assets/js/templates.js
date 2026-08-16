@@ -92,6 +92,7 @@ export function render(c, x){
   ${c.rel ? tplRelance(c, x) : ''}
   ${c.repPrev ? tplRepPrev(c, x) : ''}
   ${c.eqRep ? tplEqRep(c, x) : ''}
+  ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
 
@@ -803,6 +804,10 @@ function tplControle(c, x){
       <select ${x.C(c.setCtrlShop)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlShopOptions, c.ctrlShop)}</select>
       <select ${x.C(c.setCtrlOnly)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlOnlyOptions, c.ctrlOnly, o => o.val, o => o.nom)}</select>
     </div>
+    ${c.ctrlApiOff ? `
+      <div style="background:rgba(193,122,42,0.10);border:0.5px solid rgba(193,122,42,0.35);border-radius:10px;padding:12px 16px;font-size:12.5px;line-height:1.55">
+        <span style="font-weight:600">Compte consultant non configuré.</span> Les noms de tâches et les photos viennent de l’API du panel : renseignez le téléphone et le mot de passe du compte dans <span style="font-weight:500">Paramètres → Compte consultant (API panel)</span>. En attendant, les tâches s’affichent par leur identifiant et la notation est indisponible.${c.ctrlApiErr ? `<div style="margin-top:6px;color:#8a5a13">${esc(c.ctrlApiErr)}</div>` : ''}
+      </div>` : ''}
     ${c.ctrlIndispo ? `
       <div style="${card};padding:28px 22px;text-align:center">
         <div style="font-size:14px;font-weight:500">Aucun avis consultant à contrôler pour l’instant</div>
@@ -829,7 +834,7 @@ function tplControle(c, x){
               <tbody>
                 ${s.taches.map(t => `
                   <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                    <td style="padding:10px 14px;font-weight:500">${esc(t.tache)}</td>
+                    <td style="padding:10px 14px"><button ${x.A(t.open)} title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${esc(t.tache)}</button></td>
                     <td style="padding:10px 12px;text-align:center;white-space:nowrap;${t.noteSt}">${esc(t.note)}</td>
                     <td style="padding:10px 12px;${t.accSt}">${esc(t.acc)}</td>
                     <td style="padding:10px 12px;color:var(--color-text)">${esc(t.consultant)}</td>
@@ -1410,9 +1415,39 @@ function tplParams(c, x){
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Général</div>
         <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Année de référence des objectifs</span><span style="font-weight:500">${c.paramExo || ''}</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Utilisateurs &amp; rôles</span><span style="font-weight:500">1 CEO/admin · 4 consultants · 3 lecture seule</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Magasins / zones d'implantation</span><span style="font-weight:500">10 magasins · 12 zones</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Service d'envoi email</span><span style="font-weight:500">Resend — connecté</span></div>
+        </div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div style="font-size:13px;font-weight:600">Compte consultant (API panel)</div>
+          <span style="${c.paEtatSt}">${esc(c.paEtat)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;text-wrap:pretty">Les noms des tâches, les photos de réalisation et l’envoi des notes passent par l’API du panel consultant. Renseignez ici le compte que le cockpit utilise pour s’y connecter (même téléphone et mot de passe que dans le panel). Le mot de passe n’est jamais réaffiché ; le laisser vide conserve celui déjà enregistré.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+          <div>
+            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Téléphone du compte</div>
+            <input type="text" value="${esc(c.paPhone)}" ${x.C(c.setPaPhone)} placeholder="+32…" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Mot de passe</div>
+            <input type="password" value="${esc(c.paPass)}" ${x.C(c.setPaPass)} placeholder="${esc(c.paPassPlaceholder)}" autocomplete="new-password" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Base d’URL de l’API (laisser vide pour la valeur par défaut)</div>
+          <input type="text" value="${esc(c.paBase)}" ${x.C(c.setPaBase)} placeholder="https://…/api/v1" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        ${c.paMsg ? `<div style="${c.paMsgSt}">${esc(c.paMsg)}</div>` : ''}
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+          <button ${x.A(c.paTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+          <button ${x.A(c.paSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
+        </div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px">Réseau</div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Intervenants</span><span style="font-weight:500">${esc(c.paramIntervenants)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Magasins / zones d'implantation</span><span style="font-weight:500">${esc(c.paramMagasins)}</span></div>
         </div>
       </div>
     </div>
@@ -1897,6 +1932,48 @@ function tplWizardTache(c, x){
         ${c.ntCanNext ? `<button ${x.A(c.ntNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:999px">Suivant</button>` : ''}
         ${c.ntS3 ? `<button ${x.A(c.ntCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:999px">Créer la tâche</button>` : ''}
       </div>
+    </div>
+  </div>`;
+}
+
+/* --- Détail d'une tâche checklist : photo de réalisation + notation --------- */
+function tplCtrlDetail(c, x){
+  const { esc } = x;
+  const d = c.ctrlDet;
+  return `
+  <div ${x.A(d.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:60;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:560px;background:var(--color-surface);z-index:61;box-shadow:-12px 0 40px rgba(34,34,34,0.18);overflow-y:auto;animation:panelIn 200ms ease">
+    <div style="padding:24px 28px 60px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Tâche checklist${d.checklist ? ' — ' + esc(d.checklist) : ''}</div>
+          <h2 style="font-family:var(--font-display);font-size:22px;font-weight:400;margin:4px 0 0;line-height:1.2">${esc(d.nom)}</h2>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(d.date)}${d.statut ? ' · ' + esc(d.statut) : ''}${d.obligatoire ? ' · ' + esc(d.obligatoire) : ''}</div>
+        </div>
+        <button ${x.A(d.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
+      </div>
+
+      <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 8px">Photo de réalisation</div>
+      ${d.photo
+        ? `<a href="${d.photo}" target="_blank" rel="noopener"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
+        : `<div style="background:var(--color-background-secondary);border-radius:10px;padding:26px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">${esc(d.photoTxt)}</div>`}
+
+      <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>
+      <div style="font-size:13px;font-weight:500">${esc(d.avisTxt)}</div>
+      ${d.avisComment ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(d.avisComment)}</div>` : ''}
+
+      <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Votre note</div>
+      <div style="display:flex;align-items:center;gap:2px">
+        ${d.etoiles.map(e => `<button ${x.A(e.pick)} title="${e.n}/5" style="${e.st}">${e.on ? '\u2605' : '\u2606'}</button>`).join('')}
+        <span style="font-size:12.5px;color:var(--color-text-muted);margin-left:10px">${d.note ? d.note + ' / 5' : 'non notée'}</span>
+      </div>
+      <textarea ${x.C(d.setComment)} rows="4" placeholder="Commentaire (obligatoire si non conforme)" style="width:100%;box-sizing:border-box;margin-top:12px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
+      ${d.erreur ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(d.erreur)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+        <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
+        ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
     </div>
   </div>`;
 }

@@ -258,6 +258,22 @@ function ep_pwa_tasks(): array
 
         $rows = Db::rows("SELECT * FROM mac_task_review WHERE review_date = ? ORDER BY id_shop, id_task", [$date]);
 
+        // Noms RÉELS des tâches : l'API amont du panel est la seule à les porter
+        // (la base ne garde que l'identifiant). On interroge une fois par
+        // boutique concernée, et on complète le référentiel local `todo_task`.
+        // Sans identifiants API configurés, on garde les noms disponibles.
+        $apiNames = [];
+        $apiOn = PanelApi::configured();
+        if ($apiOn) {
+            foreach (array_unique(array_map(fn ($r) => (int) $r['id_shop'], $rows)) as $sid) {
+                foreach (PanelApi::shopTasks($sid, $date) as $t) {
+                    $tid = (int) ($t['task_id'] ?? $t['id'] ?? 0);
+                    $nom = trim((string) ($t['task_name'] ?? $t['name'] ?? ''));
+                    if ($tid > 0 && $nom !== '') { $apiNames[$sid . '|' . $tid] = $nom; }
+                }
+            }
+        }
+
         $byShop = [];
         $cons = [];
         $tot = ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0];
@@ -273,7 +289,7 @@ function ep_pwa_tasks(): array
             }
             $byShop[$sid]['taches'][] = [
                 'taskId'      => (string) $tid,
-                'tache'       => $taskNames[$tid] ?? ('Tâche #' . $tid),
+                'tache'       => $apiNames[$sid . '|' . $tid] ?? $taskNames[$tid] ?? ('Tâche #' . $tid),
                 'note'        => $note,
                 'accepte'     => $acc,
                 'comment'     => $r['comment'] !== null && $r['comment'] !== '' ? (string) $r['comment'] : null,
@@ -310,11 +326,96 @@ function ep_pwa_tasks(): array
 
         $tot['noteMoy'] = $noteN > 0 ? round($noteSum / $noteN, 1) : null;
         return ['date' => $date, 'dates' => $dates, 'shops' => array_values($byShop),
-            'consultants' => $consultants, 'totals' => $tot, 'indispo' => false];
+            'consultants' => $consultants, 'totals' => $tot, 'indispo' => false,
+            // L'écran doit pouvoir DIRE pourquoi il manque des noms/photos.
+            'api' => ['configure' => $apiOn, 'erreur' => $apiOn ? PanelApi::$lastError : null]];
     } catch (PDOException $e) {
         // mac_task_review absente (panel sur une autre base / jamais alimentée).
         return $empty;
     }
+}
+
+/**
+ * GET /pwa/tasks/detail?shop=&task=&date= — le détail d'une tâche : photo de
+ * réalisation + avis en cours.
+ *
+ * La photo n'est pas en base : l'API donne un `attachment_id` sur le flux
+ * d'avancement de la checklist, puis une URL signée pour l'image. On parcourt
+ * les checklists du jour pour retrouver la ligne de CETTE tâche.
+ */
+function ep_pwa_task_detail(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    $taskId = (int) ($_GET['task'] ?? 0);
+    $date   = (string) ($_GET['date'] ?? '');
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shop, task et date (YYYY-MM-DD) sont requis'];
+    }
+
+    // Ce que la base partagée sait déjà de l'avis (toujours disponible).
+    $avis = null;
+    try {
+        $r = Db::row('SELECT * FROM mac_task_review WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+            [$shopId, $taskId, $date]);
+        if ($r !== null) {
+            $avis = [
+                'note' => $r['rating'] !== null ? (int) $r['rating'] : null,
+                'accepte' => $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null,
+                'comment' => $r['comment'], 'consultant' => $r['consultant_name'],
+                'checklistId' => $r['id_checklist'] !== null ? (int) $r['id_checklist'] : null,
+                'completionId' => $r['completion_id'] !== null ? (int) $r['completion_id'] : null,
+                'valide' => !empty($r['owner_validated_at']), 'valideePar' => $r['owner_name'],
+            ];
+        }
+    } catch (PDOException $e) { /* table absente : avis inconnu */ }
+
+    $out = ['shopId' => (string) $shopId, 'taskId' => (string) $taskId, 'date' => $date,
+        'tache' => null, 'checklist' => null, 'photo' => null, 'obligatoire' => null,
+        'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
+        'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
+        'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
+
+    if (!PanelApi::configured()) {
+        $out['api']['erreur'] = 'identifiants API du panel non configurés (Paramètres)';
+        return $out;
+    }
+
+    // 1) Nom / obligation / photo requise : la liste des tâches du jour.
+    foreach (PanelApi::shopTasks($shopId, $date) as $t) {
+        if ((int) ($t['task_id'] ?? $t['id'] ?? 0) === $taskId) {
+            $out['tache']        = trim((string) ($t['task_name'] ?? $t['name'] ?? '')) ?: null;
+            $out['checklist']    = $t['checklist_name'] ?? null;
+            $out['obligatoire']  = isset($t['is_mandatory']) ? (bool) $t['is_mandatory'] : null;
+            $out['photoRequise'] = isset($t['requires_photo']) ? (bool) $t['requires_photo'] : null;
+            $out['statut']       = $t['status'] ?? null;
+            break;
+        }
+    }
+
+    // 2) Pièce jointe + completion : c'est l'AVANCEMENT qui les porte.
+    $attId = 0;
+    $checklists = $out['checklistId'] !== null
+        ? [['id' => $out['checklistId']]]
+        : PanelApi::shopChecklists($shopId, $date);
+    foreach ($checklists as $cl) {
+        $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+        if ($cid <= 0) { continue; }
+        foreach (PanelApi::checklistProgress($shopId, $cid, $date) as $p) {
+            if ((int) ($p['task_id'] ?? $p['id'] ?? 0) !== $taskId) { continue; }
+            $attId = (int) ($p['attachment_id'] ?? 0);
+            $out['checklistId']  = $cid;
+            $out['completionId'] = $p['completion_id'] !== null ? (int) $p['completion_id'] : $out['completionId'];
+            $out['statut']       = $p['status'] ?? $out['statut'];
+            if ($out['tache'] === null) {
+                $out['tache'] = trim((string) ($p['task_name'] ?? $p['name'] ?? '')) ?: null;
+            }
+            break 2;
+        }
+    }
+    if ($attId > 0) { $out['photo'] = PanelApi::attachmentUrl($attId); }
+    $out['api']['erreur'] = PanelApi::$lastError;
+    return $out;
 }
 
 function ep_perf(): array

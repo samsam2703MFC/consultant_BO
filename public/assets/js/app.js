@@ -4,7 +4,7 @@
  * + délégation d'événements), données : api.js (REST, repli vide hors-ligne).
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
-import { load, write, readOne, authStatus, authSubmit, authLogout } from './api.js';
+import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout } from './api.js';
 import { render as tplRender } from './templates.js';
 
 function escHtml(v){
@@ -128,6 +128,7 @@ class App {
    * l'écran le dise : l'utilisateur voyait sa saisie, le serveur n'avait rien
    * gardé, et personne ne pouvait le savoir avant de recharger.
    */
+  apiBase(){ return API_BASE; }
   api(method, path, payload){
     return write(this.source, method, path, payload).then(r => {
       if (r && r.ok === false) { this.notify('Échec de l’enregistrement — ' + (r.error || 'refusé par le serveur')); }
@@ -1001,6 +1002,29 @@ class App {
     this.setState({});
     this.notify(on ? 'Avis validé' : 'Validation retirée');
   }
+  /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
+     vient de l'API du panel (la base ne porte ni le nom ni la photo). */
+  ctrlOpenTask(shopId, taskId, date, tacheNom){
+    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false } });
+    readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
+      .then(d => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === taskId)
+        ? { ctrlDet: Object.assign({}, s.ctrlDet, { chargement: false, d: d || null,
+            note: (d && d.avis && d.avis.note) || null, comment: (d && d.avis && d.avis.comment) || '' }) }
+        : {}));
+  }
+  ctrlSendNote(){
+    const dt = this.state.ctrlDet; if (!dt || !dt.note) { this.notify('Choisissez une note de 1 à 5.'); return; }
+    const d = dt.d || {};
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
+    write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
+      note: dt.note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
+      .then(() => readOne('/pwa/tasks?date=' + encodeURIComponent(dt.date)))
+      .then(pt => { if (pt) this.D.pwaTasks = pt;
+        this.setState({ ctrlDet: null });
+        this.notify('Note ' + dt.note + '/5 envoyée au panel'); })
+      .catch(() => { this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: false }) }));
+        this.notify('Échec de l’envoi de la note.'); });
+  }
   valsControle(common){
     const S = this.state, D = this.D;
     const pt = D.pwaTasks || { shops: [], dates: [], consultants: [], totals: {}, indispo: true };
@@ -1043,6 +1067,7 @@ class App {
             btnLabel: t.valide ? 'Retirer' : 'Valider',
             btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
             toggle: () => this.ctrlToggle(s.shopId, t.taskId, t.date, !t.valide),
+            open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
           }));
         return { shop: s.shop, shopId: s.shopId, nTaches: (s.taches || []).length,
           nValid: (s.taches || []).filter(x => x.valide).length, taches, vide: taches.length === 0 };
@@ -1054,6 +1079,42 @@ class App {
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
       noteMoy: c.noteMoy != null ? String(c.noteMoy).replace('.', ',') + ' / 5' : '—',
     }));
+
+    // Bandeau si le compte API n'est pas branché : les noms restent « Tâche #… »
+    // et les photos sont indisponibles tant qu'il manque.
+    const api = pt.api || {};
+    common.ctrlApiOff = !api.configure;
+    common.ctrlApiErr = api.erreur || '';
+
+    // --- volet détail d'une tâche (photo + notation)
+    const dt = S.ctrlDet;
+    if (dt) {
+      const d = dt.d || {};
+      const a = d.avis || {};
+      common.ctrlDet = {
+        nom: d.tache || dt.nom || ('Tâche #' + dt.taskId),
+        checklist: d.checklist || '', date: this.fDA(dt.date),
+        chargement: !!dt.chargement,
+        photo: d.photo || null,
+        photoTxt: d.photo ? '' : (dt.chargement ? 'Chargement de la photo…'
+          : (d.api && d.api.configure === false ? 'Compte API non configuré — photo indisponible.'
+            : (d.photoRequise === false ? 'Cette tâche n’exige pas de photo.' : 'Aucune photo de réalisation pour cette tâche.'))),
+        statut: d.statut || '—', obligatoire: d.obligatoire ? 'Obligatoire' : '',
+        avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
+          + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
+        avisComment: a.comment || '',
+        note: dt.note, comment: dt.comment, envoi: !!dt.envoi,
+        erreur: (d.api && d.api.erreur) || '',
+        etoiles: [1, 2, 3, 4, 5].map(n => ({ n: String(n), on: dt.note != null && n <= dt.note,
+          st: 'cursor:pointer;font-size:26px;line-height:1;background:none;border:none;padding:0 3px;color:'
+            + (dt.note != null && n <= dt.note ? '#C17A2A' : 'var(--color-border-secondary)'),
+          pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: n }) })) })),
+        setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
+        send: () => this.ctrlSendNote(),
+        close: () => this.setState({ ctrlDet: null }),
+        peutNoter: !dt.chargement && (d.api ? d.api.configure !== false : true),
+      };
+    } else { common.ctrlDet = false; }
   }
 
   /* --- projets (kanban) ---------------------------------------------------------- */
@@ -1515,6 +1576,51 @@ class App {
   valsParams(common){
     const S = this.state, D = this.D, M = this.M;
     common.paramExo = String(this.meta.exercice);
+    // Comptes RÉELS (plus de « 4 consultants · 10 magasins · 12 zones » inventés).
+    const nCons = (D.consultants || []).length, nFour = (D.suppliers || []).length, nPers = (D.people || []).length;
+    common.paramIntervenants = [nCons + ' consultant' + (nCons > 1 ? 's' : ''),
+      nFour + ' fournisseur' + (nFour > 1 ? 's' : ''), nPers + ' interne' + (nPers > 1 ? 's' : '')].join(' · ');
+    const zones = [...new Set((D.stores || []).map(s2 => s2.zone).filter(Boolean))].length;
+    const nMag = (D.stores || []).length;
+    common.paramMagasins = nMag + ' magasin' + (nMag > 1 ? 's' : '') + ' · ' + zones + ' zone' + (zones > 1 ? 's' : '');
+    // --- Compte consultant utilisé pour l'API du panel (noms de tâches, photos,
+    //     notation). Le mot de passe n'est jamais relu : on n'affiche que son
+    //     existence, et le laisser vide conserve celui déjà enregistré.
+    const pa = S.paCompte || {};
+    const paSt = D.pwaCompte || { base: '', phone: '', motDePasseDefini: false, configure: false };
+    common.paBase = pa.base != null ? pa.base : (paSt.base || '');
+    common.paPhone = pa.phone != null ? pa.phone : (paSt.phone || '');
+    common.paPass = pa.password || '';
+    common.paPassPlaceholder = paSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte';
+    common.paEtat = paSt.configure ? 'Compte configuré' : 'Compte non configuré';
+    common.paEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+      + (paSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
+    common.paMsg = pa.msg || '';
+    common.paMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (pa.ok ? '#2d7a3e' : '#8D1D2C');
+    common.paBusy = !!pa.busy;
+    const paSet = k => e => { const v = e.target.value; this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { [k]: v }) })); };
+    common.setPaBase = paSet('base'); common.setPaPhone = paSet('phone'); common.setPaPass = paSet('password');
+    const paRefresh = () => readOne('/pwa/compte').then(st => { if (st) this.D.pwaCompte = st; this.setState({}); });
+    common.paSave = () => {
+      const p = this.state.paCompte || {};
+      this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: true, msg: '' }) }));
+      fetch(this.apiBase() + '/pwa/compte', { method: 'PUT', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ base: p.base || '', phone: p.phone || '', password: p.password || '' }) })
+        .then(r => r.json())
+        .then(r => { this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, password: '',
+            ok: !!r.testOk, msg: r.message || (r.testOk ? 'Connexion réussie.' : 'Enregistré.') }) }));
+          this.log('Paramètre', null, 'Compte consultant de l’API panel mis à jour');
+          return paRefresh(); })
+        .catch(() => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) })));
+    };
+    common.paTest = () => {
+      this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: true, msg: '' }) }));
+      fetch(this.apiBase() + '/pwa/compte/test', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(r => r.json())
+        .then(r => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: !!r.ok, msg: r.message || '' }) })))
+        .catch(() => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: false, msg: 'Test impossible.' }) })));
+    };
     const s = this.seuils();
     common.paramLeviers = M.LEVIERS;
     const ax = S.tplAxe || common.npAxes[0]; const tpl = (ax && D.projTemplates[ax]) || { jalons: [], couts: [] };
