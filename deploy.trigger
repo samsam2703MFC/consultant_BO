@@ -1,2 +1,1 @@
-apiinspect
-Detail magasin : API seule, « en attente d API » sinon.
+Chemins /shops/{id}/ pour les endpoints du P&L.

@@ -346,53 +346,66 @@ final class PanelApi
      */
     private static function premierObjet(array $paths): ?array
     {
-        $err = null;
+        $essais = [];
         foreach ($paths as $p) {
             $r = self::get($p);
             if (is_array($r) && $r !== []) { self::$lastPath = $p; return $r; }
-            $err = $err ?? self::$lastError;
+            // On garde la trace de CHAQUE variante tentée : quand rien ne
+            // répond, la seule information utile est la liste de ce qui a été
+            // essayé et ce que chacun a renvoyé.
+            $essais[] = preg_replace('/\?.*$/', '', $p) . ' → '
+                . (preg_match('/HTTP (\d+)/', (string) self::$lastError, $m) ? $m[1] : 'vide');
         }
         self::$lastPath = null;
-        self::$lastError = $err ?? self::$lastError;
+        self::$lastError = 'aucune variante ne répond — ' . implode(' · ', $essais);
         return null;
+    }
+
+    /**
+     * Variantes de chemin pour une ressource de boutique.
+     *
+     * Les endpoints du panel qui fonctionnent déjà suivent tous le motif
+     * `/shops/{id}/…` (planning, pertes) : c'est donc la première écriture
+     * essayée, avant la forme à paramètre. Mesuré en ligne : à la racine,
+     * /statistics/sales/kpis, /pnl et /labour/daily répondent tous 404.
+     */
+    private static function cheminsBoutique(string $res, int $shopId, string $du, string $au): array
+    {
+        $q = http_build_query(['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au]);
+        return [
+            '/shops/' . $shopId . '/' . $res . '?' . $q,
+            '/consultant/shops/' . $shopId . '/' . $res . '?' . $q,
+            '/' . $res . '?' . $q . '&shop_id=' . $shopId,
+            '/' . $res . '?' . $q . '&id_shop=' . $shopId,
+        ];
     }
 
     /** Indicateurs de vente d'une boutique (CA, tickets, panier, produits/client). */
     public static function salesKpis(int $shopId, string $du, string $au): ?array
     {
-        $q = ['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au];
-        return self::premierObjet([
-            '/statistics/sales/kpis?' . http_build_query($q + ['shop_id' => $shopId]),
-            '/statistics/sales/kpis?' . http_build_query($q + ['id_shop' => $shopId]),
-        ]);
+        return self::premierObjet(self::cheminsBoutique('statistics/sales/kpis', $shopId, $du, $au));
     }
 
     /** Compte de résultat d'une boutique sur une période. */
     public static function pnl(int $shopId, string $du, string $au): ?array
     {
-        $q = ['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au];
-        return self::premierObjet([
-            '/pnl?' . http_build_query($q + ['shop_id' => $shopId]),
-            '/pnl?' . http_build_query($q + ['id_shop' => $shopId]),
-        ]);
+        return self::premierObjet(self::cheminsBoutique('pnl', $shopId, $du, $au));
     }
 
     /** Main-d'œuvre journalière d'une boutique. */
     public static function labourDaily(int $shopId, string $du, string $au): ?array
     {
-        $q = ['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au];
-        return self::premierObjet([
-            '/labour/daily?' . http_build_query($q + ['shop_id' => $shopId]),
-            '/labour/daily?' . http_build_query($q + ['id_shop' => $shopId]),
-        ]);
+        return self::premierObjet(self::cheminsBoutique('labour/daily', $shopId, $du, $au));
     }
 
     /** Synthèse réseau des boutiques (positionnement d'une boutique). */
     public static function networkSummary(string $du, string $au): ?array
     {
+        $q = http_build_query(['from' => $du, 'to' => $au]);
         return self::premierObjet([
-            '/consultant/network/shops/summary?' . http_build_query(['from' => $du, 'to' => $au]),
+            '/consultant/network/shops/summary?' . $q,
             '/consultant/network/shops/summary',
+            '/consultant/dashboard?date=' . $au,
         ]);
     }
 
