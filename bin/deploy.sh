@@ -412,10 +412,27 @@ $r = json_decode(file_get_contents("php://stdin"), true);
 $p = $r["periodes"] ?? [];
 $tr = 0; $vides = 0;
 foreach ($p as $x) { if (!empty($x["alias"])) { $tr++; } if (empty($x["references"])) { $vides++; } }
-printf("  gammes      : %d (source %s) — %d traduite(s), %d sans référence%s\n",
+printf("  gammes      : %d (source %s) — %d traduite(s), %d sans référence%s%s\n",
   count($p), $r["source"] ?? "?", $tr, $vides,
-  !empty($r["aliasErreur"]) ? " — alias : ".$r["aliasErreur"] : "");
+  !empty($r["aliasErreur"]) ? "\n    ALIAS KO : ".$r["aliasErreur"] : "",
+  !empty($r["aliasInfo"])   ? "\n    alias    : ".$r["aliasInfo"] : "");
+// Ouvrir la gamme la mieux fournie : une gamme qui compte des références mais
+// n'en rend aucune signale un rattachement cassé, pas une offre vide.
+$best = null;
+foreach ($p as $x) { if (!empty($x["references"]) && (!$best || $x["references"] > $best["references"])) { $best = $x; } }
+if ($best) { file_put_contents("/tmp/ceo_periode_id", (string) $best["id"]); }
 '
+PID="$(cat /tmp/ceo_periode_id 2>/dev/null || true)"; rm -f /tmp/ceo_periode_id
+if [ -n "$PID" ]; then
+  curl -fsS "${LOCAL_BASE}/api/cockpit/production/periode/produits?id=${PID}" 2>/dev/null | php -r '
+  $r = json_decode(file_get_contents("php://stdin"), true);
+  $p = $r["produits"] ?? [];
+  printf("  gamme %s (%s) : %d référence(s), source %s%s\n", $r["periodeId"] ?? "?",
+    $r["gamme"] ?? "?", count($p), $r["source"] ?? "aucune",
+    !empty($r["erreur"]) ? " — ".$r["erreur"] : "");
+  if (!$p) { echo "    ATTENTION : gamme annoncée non vide mais sans référence rendue\n"; }
+  '
+fi
 
 # --- 6 bis. Câblage des bases : QUI est branché sur QUOI ------------------
 # Le cockpit vit dans la base du panel : il crée ses tables `ceo_*` et LIT des

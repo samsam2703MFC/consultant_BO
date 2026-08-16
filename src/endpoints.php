@@ -1054,38 +1054,147 @@ function ep_prod_periodes(): array
             $out['aliasCles'] = array_slice(array_keys($alias[0]), 0, 25);
             $out['aliasNb']   = count($alias);
         }
-        $par = [];
+        // Forme réelle constatée en ligne : fk_id / base_value / alias_value /
+        // effective_value / lang_code. `alias_value` porte la traduction quand
+        // elle est saisie ; `effective_value` porte ce qu'il faut afficher et
+        // retombe sur l'intitulé de base sinon.
+        $par = [];      // traductions réellement saisies
+        $eff = [];      // intitulé à afficher
+        $rattaches = 0;
         foreach ($alias as $a) {
             $id = null;
-            foreach (['id_period', 'period_id', 'id_product_availability_period', 'id'] as $k) {
+            foreach (['fk_id', 'id_period', 'period_id', 'id_product_availability_period', 'id'] as $k) {
                 if (isset($a[$k]) && is_numeric($a[$k])) { $id = (int) $a[$k]; break; }
             }
+            if ($id === null) { continue; }
+            $rattaches++;
             $lang = '';
-            foreach (['lang', 'language', 'locale', 'lang_code', 'language_code', 'code'] as $k) {
+            foreach (['lang_code', 'lang', 'language', 'locale', 'language_code', 'code'] as $k) {
                 if (!empty($a[$k]) && is_string($a[$k])) { $lang = strtolower(trim($a[$k])); break; }
             }
+            foreach (['effective_value', 'base_value'] as $k) {
+                if (!empty($a[$k]) && is_string($a[$k])) { $eff[$id] = trim($a[$k]); break; }
+            }
             $val = '';
-            foreach (['name', 'value', 'text', 'alias', 'translation', 'label'] as $k) {
+            foreach (['alias_value', 'translation', 'alias', 'value', 'text'] as $k) {
                 if (!empty($a[$k]) && is_string($a[$k])) { $val = trim($a[$k]); break; }
             }
-            if ($id === null || $val === '') { continue; }
-            $par[$id][$lang !== '' ? $lang : '?'] = $val;
+            if ($val === '') { continue; }            // ligne présente, traduction non saisie
+            $par[$id][$lang !== '' ? $lang : 'defaut'] = $val;
         }
-        $poses = 0;
+        $traduites = 0;
         foreach ($out['periodes'] as &$p) {
-            if ($p['id'] !== null && isset($par[$p['id']])) { $p['alias'] = $par[$p['id']]; $poses++; }
+            if ($p['id'] === null) { continue; }
+            if (isset($par[$p['id']])) { $p['alias'] = $par[$p['id']]; $traduites++; }
+            if (isset($eff[$p['id']])) { $p['nomAffiche'] = $eff[$p['id']]; }
         }
         unset($p);
         $out['aliasSource'] = PanelApi::$lastPath;
-        // Des alias reçus mais aucun posé : les clés ou les identifiants ne
-        // correspondent pas. Le dire, plutôt que de rendre un écran monolingue
-        // qui a toutes les apparences du succès.
-        if ($poses === 0) {
+        $out['aliasRecus'] = count($alias);
+        $out['aliasTraduits'] = $traduites;
+        // Deux situations très différentes, qu'il ne faut pas confondre : des
+        // alias qui ne se rattachent à rien (rapprochement cassé, à corriger
+        // ici) et des alias bien rattachés mais vides (traductions jamais
+        // saisies, à compléter dans le panel).
+        if ($rattaches === 0) {
             $out['aliasErreur'] = count($alias) . ' alias reçus, aucun rattaché à une gamme'
                 . ' — clés inattendues (voir ?debug=1)';
+        } elseif ($traduites === 0) {
+            $out['aliasInfo'] = count($alias) . ' alias rattachés mais aucune traduction saisie'
+                . ' — les gammes s\'affichent dans leur seule langue de base';
         }
     } elseif (PanelApi::$lastError !== null) {
         $out['aliasErreur'] = PanelApi::$lastError;
+    }
+    return $out;
+}
+
+/**
+ * Fabrique la fonction qui met en forme UNE référence, quelle que soit la
+ * branche par laquelle on y arrive — catégorie, gamme, assortiment.
+ *
+ * Les prix, coûts et paramètres de production sont chargés une seule fois et
+ * partagés par toutes les lignes. Deux écrans qui répondraient différemment
+ * sur la même référence seraient pires que pas d'écran du tout : c'est
+ * pourquoi le contrôle de vraisemblance vit ici, et nulle part ailleurs.
+ *
+ * @return callable(int,string):array
+ */
+function produitLigne(): callable
+{
+    $couts = catalogueCouts();
+    $prixR = cataloguePrix();
+    $enrich = [];
+    try {
+        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
+            $enrich[(int) $r['pwa_id']] = $r;
+        }
+    } catch (PDOException $e) { /* référentiel de production absent */ }
+
+    return function (int $pid, string $nom) use ($couts, $prixR, $enrich): array {
+        $e = $enrich[$pid] ?? null;
+        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : ($prixR[$pid] ?? null);
+        $mat  = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : ($couts[$pid]['mat'] ?? null);
+        $ok   = coutVraisemblable($mat, $prix);
+        return ['id' => (string) $pid, 'nom' => $nom, 'prix' => $prix, 'mat' => $mat,
+            'matFiable' => $ok,
+            'margePct' => ($ok && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'must' => $e !== null ? (bool) $e['must'] : false];
+    };
+}
+
+/**
+ * Références d'une gamme saisonnière.
+ * Même mise en forme que l'ouverture d'une catégorie : c'est la même
+ * référence, vue par une autre branche de l'arbre.
+ */
+function ep_prod_periode_produits(): array
+{
+    $pid = (int) ($_GET['id'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'gamme requise']; }
+
+    $out = ['periodeId' => $pid, 'gamme' => null, 'source' => null, 'chemin' => null,
+        'produits' => [], 'erreur' => null];
+    try {
+        $g = Db::rows('SELECT name FROM product_availability_period WHERE id = ?', [$pid]);
+        if ($g) { $out['gamme'] = (string) $g[0]['name']; }
+    } catch (PDOException $e) { /* intitulé indisponible */ }
+
+    $ligne = produitLigne();
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::periodProducts($pid);
+        if ($rows) {
+            $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
+            foreach ($rows as $p) {
+                $id = 0;
+                foreach (['id', 'id_product', 'product_id', 'fk_id'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k])) { $id = (int) $p[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'product_name', 'base_value', 'effective_value', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+                }
+                if ($id <= 0 || $nom === '') { continue; }
+                $out['produits'][] = $ligne($id, $nom);
+            }
+            if ($out['produits']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    try {
+        foreach (Db::rows('SELECT p.id, p.name
+                             FROM product_availability_period_connection k
+                             JOIN product p ON p.id = k.id_product
+                            WHERE k.id_period = ? AND p.is_active = 1
+                         ORDER BY p.name', [$pid]) as $p) {
+            $out['produits'][] = $ligne((int) $p['id'], (string) $p['name']);
+        }
+        if ($out['produits']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
     }
     return $out;
 }
@@ -1107,27 +1216,7 @@ function ep_prod_categorie_produits(): array
         'groupe' => $cats[$cid]['groupe'] ?? null,
         'source' => null, 'chemin' => null, 'produits' => [], 'erreur' => null];
 
-    $couts = catalogueCouts();
-    $prixR = cataloguePrix();
-    $enrich = [];
-    try {
-        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
-            $enrich[(int) $r['pwa_id']] = $r;
-        }
-    } catch (PDOException $e) { /* référentiel de production absent */ }
-
-    // Assemble une ligne à partir d'un id et d'un nom, d'où qu'ils viennent :
-    // la provenance change, la forme rendue à l'écran ne doit pas.
-    $ligne = function (int $pid, string $nom) use ($couts, $prixR, $enrich): array {
-        $e = $enrich[$pid] ?? null;
-        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : ($prixR[$pid] ?? null);
-        $mat  = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : ($couts[$pid]['mat'] ?? null);
-        $ok   = coutVraisemblable($mat, $prix);
-        return ['id' => (string) $pid, 'nom' => $nom, 'prix' => $prix, 'mat' => $mat,
-            'matFiable' => $ok,
-            'margePct' => ($ok && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
-            'must' => $e !== null ? (bool) $e['must'] : false];
-    };
+    $ligne = produitLigne();
 
     if (PanelApi::configured()) {
         $rows = PanelApi::categoryProducts($cid);

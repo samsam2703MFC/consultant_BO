@@ -361,6 +361,16 @@ final class PanelApi
         ]);
     }
 
+    /** Références rattachées à une gamme saisonnière. */
+    public static function periodProducts(int $periodId): array
+    {
+        if ($periodId <= 0) { return []; }
+        return self::premierNonVide([
+            '/product-availability-periods/' . $periodId . '/products',
+            '/product/availability-periods/' . $periodId . '/products',
+        ]);
+    }
+
     /** Références rattachées à une catégorie. */
     public static function categoryProducts(int $categoryId): array
     {
