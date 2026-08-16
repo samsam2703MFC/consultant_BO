@@ -1,1 +1,1 @@
-P&L par magasin : periode+date, cascade et ventilation depuis l API.
+Signaler quand l API rend une autre periode que celle demandee.

@@ -794,7 +794,19 @@ function ep_exploitation_magasin(): array
             return ['valeur' => $val, 'pct' => $pct,
                 'delta' => is_array($v) ? nombreOuNull($v, ['delta', 'variation']) : null];
         };
+        // L'API ancre ses périodes sur AUJOURD'HUI et ignore la date demandée :
+        // mesuré en ligne, `date=2026-07-14` rend le mois d'août. Les chiffres
+        // sont justes, mais pour une autre période que celle du reste de
+        // l'écran. On compare donc ce qui est demandé à ce qui est rendu, et on
+        // le dit — un écart tu est bien pire qu'un écart affiché.
+        $ecart = null;
+        $du = (string) ($p['date_from'] ?? ''); $au2 = (string) ($p['date_to'] ?? '');
+        if ($du !== '' && $au2 !== '' && ($date < $du || $date > $au2)) {
+            $ecart = 'l\'API a rendu ' . $du . ' → ' . $au2 . ', alors que l\'écran porte sur '
+                . $date . ' — ces chiffres ne couvrent pas la même période que les cartes';
+        }
         $out['blocs']['pnl'] = ['titre' => 'Compte de résultat', 'etat' => 'ok', 'source' => $src,
+            'avertissement' => $ecart,
             'donnees' => [
                 'periode' => $p['period'] ?? null, 'du' => $p['date_from'] ?? null, 'au' => $p['date_to'] ?? null,
                 'ca' => $ca, 'caDelta' => nombreOuNull($p['turnover'] ?? [], ['delta', 'variation']),

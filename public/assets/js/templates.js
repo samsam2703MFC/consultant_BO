@@ -273,6 +273,7 @@ function tplExploitDetail(c, x){
           ${b.attente
             ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5;word-break:break-word">${esc(b.motif)}</div>`
             : `<div style="font-size:10.5px;color:var(--color-text-muted);margin-bottom:8px;word-break:break-all">${esc(b.source)}</div>
+               ${b.avert ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-bottom:8px;line-height:1.45">${esc(b.avert)}</div>` : ''}
                ${b.tuiles ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                  ${b.tuiles.map(t => `<div style="background:var(--color-background-secondary);border-radius:8px;padding:9px 11px">
                    <div style="font-family:var(--font-display);font-size:18px;line-height:1.1">${esc(t.v)}</div>

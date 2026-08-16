@@ -1052,8 +1052,8 @@ class App {
       blocs: det.d && det.d.blocs ? Object.keys(det.d.blocs).map(k => {
         const b = det.d.blocs[k], D2 = b.donnees;
         const o = { cle: k, titre: b.titre, attente: b.etat !== 'ok',
-          motif: b.motif || '', source: b.source || '', lignes: [], tuiles: null,
-          cascade: null, cats: null, rang: null };
+          motif: b.motif || '', source: b.source || '', avert: b.avertissement || '',
+          lignes: [], tuiles: null, cascade: null, cats: null, rang: null };
         if (b.etat !== 'ok') return o;
         if (k === 'kpis'){
           o.tuiles = [
