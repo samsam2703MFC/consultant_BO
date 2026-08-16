@@ -662,7 +662,7 @@ class App {
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
     if (common.isProd) this.valsProduction(common);
-    if (common.isAnalyse) this.valsAnalyse(common);
+    if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -1208,17 +1208,21 @@ class App {
    */
   valsAnalyse(common){
     const S = this.state, D = this.D;
-    const cat = D.prodCatalogue || [];
     const type = S.anType || 'categorie';
     const gran = S.anGran || 'mois';
     common.anType = type; common.anGran = gran;
 
-    common.anCategories = [...new Set(cat.map(p => p.categorie).filter(Boolean))].sort();
-    // Les références les plus vendues d'abord : sur 711, l'ordre alphabétique
-    // oblige à connaître le nom exact avant de pouvoir chercher.
-    common.anProduits = cat.filter(p => p.pwaId)
-      .sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
-      .map(p => ({ id: String(p.pwaId), nom: p.nom + ' · ' + (p.categorie || '—') }));
+    // Le sélecteur est rempli par la SOURCE des chiffres, pas par le catalogue.
+    // Les ventes sont ventilées par groupe (12), le catalogue par catégorie
+    // (81) : proposer « Boissons chaudes » quand l'API ne connaît que
+    // « Boissons » rendait une série vide sans le moindre message d'erreur.
+    const O = D.anOptions;
+    common.anOptChargement = !O && !!this._anOptEnCours;
+    common.anOptErreur = O && O.erreur ? O.erreur : '';
+    common.anOptPeriode = O && O.periode ? O.periode : '';
+    common.anCategories = (O && O.categories || []).map(c => ({ id: c.cle, nom: c.nom }));
+    common.anProduits = (O && O.produits || []).map(p => ({ id: p.cle,
+      nom: p.nom + (p.poids ? ' · ' + Math.round(p.poids).toLocaleString('fr-BE') + ' u' : '') }));
 
     const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
       + 'padding:6px 14px;border-radius:8px;'
@@ -1241,6 +1245,9 @@ class App {
     common.anMotif = d && d.motif ? d.motif : '';
     common.anSource = d && d.source ? d.source : '';
     common.anPlafond = d && d.plafond ? d.plafond : 0;
+    common.anMesure = d && d.mesure ? d.mesure : '';
+    common.anLibelle = d && d.libelle ? d.libelle : '';
+    const euro = !d || d.unite !== 'u';
     common.anGraphe = null;
     if (d && d.points && d.points.length) {
       const pts = d.points;
@@ -1258,7 +1265,7 @@ class App {
             // il est hachuré, comme les mois partiels du graphique budget.
             fill: p.enCours ? 'url(#anhach)' : 'var(--color-primary)' });
           valeurs.push({ x: (cx + sw / 2).toFixed(1), y: (y(p.valeur) - 5).toFixed(1),
-            t: this.fK(p.valeur) });
+            t: euro ? this.fK(p.valeur) : Math.round(p.valeur).toLocaleString('fr-BE') });
         }
         labels.push({ x: (cx + sw / 2).toFixed(1), y: H - 9, t: p.libelle,
           c: p.enCours ? 'var(--color-primary)' : 'var(--color-text-muted)' });
@@ -1272,14 +1279,31 @@ class App {
           ? { txt: (der >= prem ? '+' : '') + (100 * (der - prem) / prem).toFixed(1).replace('.', ',') + ' %',
               col: der >= prem ? '#2d7a3e' : 'var(--color-primary)' }
           : null,
-        secondaire: pts.some(p => p.secondaire != null),
+        unite: euro ? '€' : 'unités',
         lignes: pts.map(p => ({ libelle: p.libelle,
-          valeur: p.valeur == null ? '—' : Math.round(p.valeur).toLocaleString('fr-BE'),
-          secondaire: p.secondaire == null ? '—' : Math.round(p.secondaire).toLocaleString('fr-BE'),
-          taux: (p.valeur && p.secondaire != null) ? this.fP(p.secondaire / (p.valeur + p.secondaire), 1) : '—',
+          valeur: p.valeur == null ? '—'
+            : Math.round(p.valeur).toLocaleString('fr-BE') + (euro ? ' €' : ' u'),
+          // Un point sans valeur n'est pas un zéro : il dit pourquoi il est
+          // vide, sans quoi « pas de réponse » se lit comme « pas de vente ».
+          motif: p.valeur == null ? (p.motif || 'aucune donnée')
+            : (p.enCours ? 'période en cours' : ''),
           enCours: p.enCours })) };
     }
     return common;
+  }
+  /**
+   * Vocabulaire analysable, chargé à l'ouverture de l'écran et une seule fois.
+   * Il coûte deux appels amont : hors du chargement général, qui en fait déjà
+   * une vingtaine et que personne n'attend pour consulter le tableau de bord.
+   */
+  anOptions(){
+    if (this.D.anOptions || this._anOptEnCours) { return; }
+    this._anOptEnCours = true;
+    readOne('/produits/analyse/options').then(o => {
+      this._anOptEnCours = false;
+      this.D.anOptions = o || { categories: [], produits: [], erreur: 'API injoignable' };
+      this.setState({});
+    });
   }
   /** Charge une série. Un appel par point : jamais automatique. */
   anCharge(cle, type, gran){

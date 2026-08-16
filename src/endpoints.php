@@ -1070,6 +1070,13 @@ function ep_exploitation_reseau(): array
  *  · référence → /shops/{id}/products/waste, dont `sold_qty` est une valeur
  *    RÉSEAU. Employée par boutique elle serait fausse ; au niveau réseau,
  *    c'est exactement ce qu'on cherche.
+ *
+ * Les deux séries mesurent donc le RÉSEAU. Le rebut a été écarté : `waste_qty`
+ * est propre au magasin alors que `sold_qty` est réseau — les afficher côte à
+ * côte donnait un taux de perte divisé par le nombre de magasins, faux et
+ * d'autant plus crédible qu'il paraissait bas. Un rebut réseau exigerait un
+ * appel par magasin ET par point (24 allers-retours pour six mois) : hors
+ * budget pour un écran interactif.
  */
 function ep_produits_analyse(): array
 {
@@ -1078,7 +1085,9 @@ function ep_produits_analyse(): array
     $gran = (string) ($_GET['granularite'] ?? 'mois');
     if (!in_array($gran, ['mois', 'trimestre', 'annee'], true)) { $gran = 'mois'; }
     $out = ['type' => $type, 'cle' => $cle, 'granularite' => $gran,
-        'points' => [], 'source' => null, 'motif' => null, 'plafond' => null];
+        'points' => [], 'source' => null, 'motif' => null, 'plafond' => null,
+        'libelle' => $cle, 'mesure' => $type === 'categorie' ? "chiffre d'affaires réseau" : 'volume vendu réseau',
+        'unite' => $type === 'categorie' ? '€' : 'u'];
     if ($cle === '') { http_response_code(400); return $out + ['error' => 'sélection requise']; }
     if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
 
@@ -1111,37 +1120,117 @@ function ep_produits_analyse(): array
         // période vide qu'on lirait comme une chute à zéro.
         $au = min($b['au'], date('Y-m-d'));
         $encours = $b['au'] > date('Y-m-d');
-        $val = null; $sec = null;
+        $val = null; $vide = 'aucune donnée';
         if ($type === 'categorie') {
             $r = PanelApi::categorySalesEntre($b['du'], $au);
             $out['source'] = $out['source'] ?? PanelApi::$lastPath;
-            $tot = null;
+            // Le vocabulaire de `category-sales` est celui des GROUPES (douze),
+            // pas celui des quatre-vingt-une catégories du catalogue : « Boissons
+            // chaudes » n'y existe pas, seul « Boissons » y existe. Le sélecteur
+            // est donc alimenté par cette route elle-même (voir les options),
+            // et l'on sait dire ici que le nom demandé n'y figure pas — plutôt
+            // que de rendre un zéro qui se lit comme une catégorie sans vente.
+            $tot = null; $rendu = false;
             foreach (analyseListe($r) as $sh) {
                 foreach (($sh['categories'] ?? []) as $c) {
-                    if (strcasecmp((string) ($c['name'] ?? ''), $cle) !== 0) { continue; }
+                    $rendu = true;
+                    if (strcasecmp(trim((string) ($c['name'] ?? '')), $cle) !== 0) { continue; }
                     $v = nombreOuNull($c, ['ca', 'value', 'amount']);
                     if ($v !== null) { $tot = ($tot ?? 0) + $v; }
                 }
             }
+            if ($tot === null && $rendu) { $vide = 'catégorie absente de la réponse'; }
             $val = $tot;
         } else {
-            $r = PanelApi::shopWaste(2, $b['du'], $au);
+            $r = PanelApi::shopWaste(analyseShop(), $b['du'], $au);
             $out['source'] = $out['source'] ?? '/shops/{id}/products/waste';
             foreach ($r as $p) {
-                if ((int) ($p['id_product'] ?? 0) !== (int) $cle) { continue; }
+                if ((string) ($p['id_product'] ?? '') !== $cle) { continue; }
                 $val = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
-                $sec = nombreOuNull($p, ['waste_qty', 'waste']);
+                if (!empty($p['product_name'])) { $out['libelle'] = (string) $p['product_name']; }
                 break;
             }
+            if ($val === null && $r) { $vide = 'référence non vendue sur la période'; }
         }
         $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $au,
-            'valeur' => $val, 'secondaire' => $sec, 'enCours' => $encours];
+            'valeur' => $val, 'enCours' => $encours,
+            'motif' => $val === null ? $vide : null];
     }
 
     $connus = array_filter($out['points'], fn($p) => $p['valeur'] !== null);
     if (!$connus) {
+        $raisons = array_unique(array_filter(array_column($out['points'], 'motif')));
         $out['motif'] = 'aucune donnée sur cette sélection — '
-            . (PanelApi::$lastError ?: 'l\'API n\'a rien rendu pour ces périodes');
+            . (PanelApi::$lastError ?: ($raisons ? implode(' ; ', $raisons)
+                : 'l\'API n\'a rien rendu pour ces périodes'));
+    }
+    return $out;
+}
+
+/** Boutique servant de laissez-passer aux routes réseau (cf. analyseOptions). */
+function analyseShop(): int
+{
+    static $id = null;
+    if ($id !== null) { return $id; }
+    foreach (analyseListe(PanelApi::consultantShops()) as $s) {
+        $v = (int) ($s['id'] ?? $s['id_shop'] ?? $s['shop_id'] ?? 0);
+        if ($v > 0) { return $id = $v; }
+    }
+    return $id = 2;
+}
+
+/**
+ * Vocabulaire analysable — alimenté par les routes qui portent les DONNÉES.
+ *
+ * C'est le cœur du correctif : le sélecteur était rempli avec les catégories du
+ * catalogue (81), alors que les ventes sont ventilées par groupe (12). Aucun
+ * nom ne se rencontrait, et l'écran rendait une série vide sans la moindre
+ * erreur — un silence qui se lit comme « pas de vente ». Une liste d'options
+ * dérivée de la source interdit structurellement ce décalage : on ne peut
+ * demander que ce que l'API sait rendre.
+ */
+function ep_produits_analyse_options(): array
+{
+    $out = ['categories' => [], 'produits' => [], 'periode' => null,
+        'source' => null, 'erreur' => null];
+    if (!PanelApi::configured()) { $out['erreur'] = 'compte consultant non configuré'; return $out; }
+
+    // Fenêtre de référence : le dernier mois de caisse réellement encodé, jamais
+    // le mois courant — un mois entamé rendrait une liste tronquée aux seules
+    // références déjà vendues, et masquerait le reste de l'assortiment.
+    $ref = setting('periodeProduits');
+    $per = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m', strtotime('-1 month'));
+    $du = $per . '-01';
+    $au = min(date('Y-m-t', strtotime($du)), date('Y-m-d'));
+    $out['periode'] = $per;
+
+    $cats = [];
+    foreach (analyseListe(PanelApi::categorySalesEntre($du, $au)) as $sh) {
+        foreach (($sh['categories'] ?? []) as $c) {
+            $nom = trim((string) ($c['name'] ?? ''));
+            if ($nom === '') { continue; }
+            $cats[$nom] = ($cats[$nom] ?? 0) + (float) (nombreOuNull($c, ['ca', 'value', 'amount']) ?? 0);
+        }
+    }
+    $out['source'] = PanelApi::$lastPath;
+    arsort($cats);
+    foreach ($cats as $nom => $ca) { $out['categories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($ca, 2)]; }
+
+    // Les références viennent de la route qui les mesurera : mêmes identifiants,
+    // donc aucune sélection ne peut retomber dans le vide. Triées par volume :
+    // sur des centaines de lignes, l'ordre alphabétique suppose de connaître le
+    // nom exact avant même de pouvoir chercher.
+    $prods = [];
+    foreach (PanelApi::shopWaste(analyseShop(), $du, $au) as $p) {
+        $pid = trim((string) ($p['id_product'] ?? ''));
+        if ($pid === '' || $pid === '0') { continue; }
+        $prods[] = ['cle' => $pid, 'nom' => (string) ($p['product_name'] ?? $p['name'] ?? $pid),
+            'poids' => (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0)];
+    }
+    usort($prods, fn($a, $b) => $b['poids'] <=> $a['poids']);
+    $out['produits'] = $prods;
+    if (!$out['categories'] && !$out['produits']) {
+        $out['erreur'] = PanelApi::$lastError ?: 'l\'API n\'a rendu ni catégorie ni référence sur ' . $per;
     }
     return $out;
 }

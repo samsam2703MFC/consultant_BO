@@ -472,6 +472,39 @@ if [ -n "$CID" ]; then
   if (!$p) { echo "    ATTENTION : catégorie sans référence\n"; }
   '
 fi
+# Analyse dans le temps. Le sélecteur et les chiffres viennent de deux routes
+# differentes : si leurs vocabulaires divergent, aucun nom ne se rencontre et
+# l ecran rend une serie vide SANS lever la moindre erreur. On ne verifie donc
+# pas que la route repond, mais qu une option reellement proposee produit au
+# moins un point chiffre. C est le seul controle qui attrape ce decalage.
+echo "== analyse dans le temps =="
+rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod
+curl -fsS "${LOCAL_BASE}/api/cockpit/produits/analyse/options" 2>/dev/null | php -r '
+$r = json_decode(file_get_contents("php://stdin"), true);
+$c = $r["categories"] ?? []; $p = $r["produits"] ?? [];
+printf("  options     : %d categorie(s), %d reference(s), releve %s%s\n",
+  count($c), count($p), $r["periode"] ?? "?", !empty($r["erreur"]) ? " — ".$r["erreur"] : "");
+if (!$c) { echo "    ATTENTION : aucune categorie analysable\n"; }
+if ($c) { file_put_contents("/tmp/ceo_an_cat", (string) $c[0]["cle"]); printf("    ex. categorie : %s\n", $c[0]["nom"]); }
+if ($p) { file_put_contents("/tmp/ceo_an_prod", (string) $p[0]["cle"]); printf("    ex. reference : %s\n", $p[0]["nom"]); }
+'
+for kind in categorie produit; do
+  f="/tmp/ceo_an_cat"; [ "$kind" = "produit" ] && f="/tmp/ceo_an_prod"
+  KEY="$(cat "$f" 2>/dev/null || true)"
+  [ -z "$KEY" ] && continue
+  curl -fsS -G "${LOCAL_BASE}/api/cockpit/produits/analyse" \
+       --data-urlencode "type=${kind}" --data-urlencode "cle=${KEY}" \
+       --data-urlencode "granularite=mois" 2>/dev/null | php -r '
+  $r = json_decode(file_get_contents("php://stdin"), true);
+  $pts = $r["points"] ?? [];
+  $ok = 0; foreach ($pts as $x) { if ($x["valeur"] !== null) { $ok++; } }
+  printf("  serie %-9s : %s -> %d point(s), %d chiffre(s)%s\n", $r["type"] ?? "?",
+    mb_substr((string) ($r["libelle"] ?? $r["cle"] ?? "?"), 0, 26), count($pts), $ok,
+    !empty($r["motif"]) ? " — ".$r["motif"] : "");
+  if (!$ok) { echo "    ATTENTION : option proposee mais serie vide — vocabulaires desynchronises\n"; }
+  '
+done
+rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod
 # Gammes saisonnières : les traductions ne vivent que dans l'API, la table
 # d'alias de la base étant vide. Si elles manquent, l'écran restera monolingue.
 curl -fsS "${LOCAL_BASE}/api/cockpit/production/periodes" 2>/dev/null | php -r '
