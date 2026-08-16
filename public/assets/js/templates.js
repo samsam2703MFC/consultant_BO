@@ -4,6 +4,30 @@
  * x = { A: onClick, C: onChange, I: onInput, DS: dragstart, DP: drop, EN: mouseenter, esc }.
  */
 
+/* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
+   enfants indentés). Le badge s'affiche à droite. */
+function navBtn(n, x){
+  const { esc } = x;
+  const badge = b => b ? `<span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">${b}</span>` : '';
+  if (n.type === 'sub') {
+    return `
+      <button ${x.A(n.toggle)} style="${n.st}">
+        <span style="display:flex;align-items:center;gap:7px"><span style="font-size:9px;color:var(--color-text-muted);width:8px;display:inline-block">${n.chevron}</span>${esc(n.label)}</span>
+        ${badge(n.badge)}
+      </button>
+      ${n.open ? (n.children || []).map(c => `
+        <button ${x.A(c.go)} style="${c.st}">
+          <span>${esc(c.label)}</span>
+          ${badge(c.badge)}
+        </button>`).join('') : ''}`;
+  }
+  return `
+    <button ${x.A(n.go)} style="${n.st}">
+      <span>${esc(n.label)}</span>
+      ${badge(n.badge)}
+    </button>`;
+}
+
 export function render(c, x){
   const { esc } = x;
   if (c.gate) return tplGate(c.gate, x);
@@ -19,11 +43,7 @@ export function render(c, x){
       ${(c.nav || []).map(g => `
         <div style="display:flex;flex-direction:column;gap:2px">
           <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted);padding:0 10px 6px">${esc(g.titre)}</div>
-          ${g.items.map(n => `
-            <button ${x.A(n.go)} style="${n.st}">
-              <span>${esc(n.label)}</span>
-              ${n.badge ? `<span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">${n.badge}</span>` : ''}
-            </button>`).join('')}
+          ${g.items.map(n => navBtn(n, x)).join('')}
         </div>`).join('')}
     </nav>
     <div style="padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">

@@ -20,6 +20,7 @@ class App {
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
+      navOpen: {},   // sous-menus du rail ouverts/fermés (clé = libellé du parent)
       // Brouillon de validation par tâche : { note, famille, type, commentaire }.
       // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
       // ne doit pas clôturer une tâche.
@@ -416,10 +417,25 @@ class App {
 
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
-      ['Projets & contrôle', [['projets', 'Projets', nLate], ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0], ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]]],
+      ['Projets & contrôle', [['projets', 'Projets', nLate],
+        // Sous-menu : les deux écrans « tâches consultants » (panel) regroupés.
+        { sub: 'Checklists consultants', children: [
+          ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
+          ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] }]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0], ['parametres', 'Paramètres', 0]]]];
-    common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => ({ id: it[0], label: it[1], badge: it[2] || false, go: goTo(it[0]),
-      st: 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;' + (S.screen === it[0] ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text)') })) }));
+    const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
+    const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
+    common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
+      if (Array.isArray(it)) return { type: 'leaf', label: it[1], badge: it[2] || false, go: goTo(it[0]), st: navSt(S.screen === it[0], false) };
+      const childActive = it.children.some(c => S.screen === c[0]);
+      const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
+      return { type: 'sub', label: it.sub, open, chevron: open ? '▾' : '▸',
+        badge: open ? false : (sumBadge(it.children) || false),
+        toggle: () => { const cur = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
+          this.setState(s2 => ({ navOpen: Object.assign({}, s2.navOpen, { [it.sub]: !cur }) })); },
+        st: navSt(childActive && !open, false),
+        children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
+    }) }));
 
     ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];

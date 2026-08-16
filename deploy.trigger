@@ -1,2 +1,1 @@
-destinataires : ne plus masquer les comptes sans adresse, les signaler.
-Deploiement standard, aucune operation sur la base.
+rail : Suivi des taches et Controle des taches regroupes dans un sous-menu repliable (Checklists consultants). Deploiement standard, aucune operation sur la base.
