@@ -540,9 +540,11 @@ final class PanelApi
     /** Ventes par catégorie sur des bornes explicites (réseau). */
     public static function categorySalesEntre(string $du, string $au): ?array
     {
-        return self::premierObjet([
-            '/consultant/shops/category-sales?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
-        ]);
+        // Sans `shop_id`, cette route ne répond pas (mesuré : code 0). Avec, elle
+        // rend TOUTES les boutiques — le paramètre sert d'autorisation, pas de
+        // filtre, et la réponse reste bien celle du réseau.
+        $q = http_build_query(['shop_id' => 2, 'date_from' => $du, 'date_to' => $au]);
+        return self::premierObjet(['/consultant/shops/category-sales?' . $q]);
     }
 
     /** Synthèse P&L de toutes les boutiques. */

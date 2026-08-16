@@ -1057,45 +1057,111 @@ function ep_exploitation_reseau(): array
 }
 
 /**
- * Sonde des séries temporelles disponibles.
+ * Analyse d'une catégorie ou d'une référence dans le temps.
  *
- * Avant de bâtir un écran d'analyse, savoir ce que l'API rend DÉJÀ sous forme
- * de série : appeler douze fois un endpoint mensuel pour reconstituer un an
- * coûterait une dizaine de secondes à chaque ouverture. Cette route ne sert
- * qu'à établir la forme, elle disparaîtra une fois l'écran câblé.
+ * Une série se construit en interrogeant l'API sur des bornes successives :
+ * aucune route ne rend d'historique par catégorie ou par référence. Le nombre
+ * de points est donc PLAFONNÉ — chaque point est un aller-retour, et un
+ * graphique de vingt-quatre mois ferait attendre une demi-minute pour une
+ * précision que personne ne lit.
+ *
+ * Deux sources, selon ce qu'on regarde :
+ *  · catégorie → /consultant/shops/category-sales, ventilé par boutique ;
+ *  · référence → /shops/{id}/products/waste, dont `sold_qty` est une valeur
+ *    RÉSEAU. Employée par boutique elle serait fausse ; au niveau réseau,
+ *    c'est exactement ce qu'on cherche.
  */
-function ep_analyse_sonde(): array
+function ep_produits_analyse(): array
 {
-    $au = date('Y-m-d');
-    $du = date('Y-01-01');
-    $out = ['du' => $du, 'au' => $au, 'sources' => []];
-    if (!PanelApi::configured()) { return $out + ['erreur' => 'compte consultant non configuré']; }
+    $type = ($_GET['type'] ?? 'categorie') === 'produit' ? 'produit' : 'categorie';
+    $cle  = trim((string) ($_GET['cle'] ?? ''));
+    $gran = (string) ($_GET['granularite'] ?? 'mois');
+    if (!in_array($gran, ['mois', 'trimestre', 'annee'], true)) { $gran = 'mois'; }
+    $out = ['type' => $type, 'cle' => $cle, 'granularite' => $gran,
+        'points' => [], 'source' => null, 'motif' => null, 'plafond' => null];
+    if ($cle === '') { http_response_code(400); return $out + ['error' => 'sélection requise']; }
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
 
-    $voir = function (string $nom, $r) use (&$out): void {
-        if (!is_array($r)) {
-            $out['sources'][$nom] = ['etat' => 'muet', 'motif' => PanelApi::$lastError]; return;
+    // Bornes des points, du plus ancien au plus récent. Le dernier point est
+    // marqué « en cours » : un mois entamé comparé à des mois clos ressemble
+    // toujours à un effondrement, et ce n'en est pas un.
+    $n = $gran === 'mois' ? 6 : ($gran === 'trimestre' ? 4 : 3);
+    $out['plafond'] = $n;
+    $auj = time();
+    $bornes = [];
+    for ($i = $n - 1; $i >= 0; $i--) {
+        if ($gran === 'mois') {
+            $t = strtotime("-$i month", $auj);
+            $bornes[] = ['lib' => strftime_fr($t, 'M Y'), 'du' => date('Y-m-01', $t), 'au' => date('Y-m-t', $t)];
+        } elseif ($gran === 'trimestre') {
+            $t = strtotime('-' . ($i * 3) . ' month', $auj);
+            $q = (int) ceil((int) date('n', $t) / 3);
+            $m1 = ($q - 1) * 3 + 1;
+            $d1 = sprintf('%04d-%02d-01', (int) date('Y', $t), $m1);
+            $bornes[] = ['lib' => 'T' . $q . ' ' . date('Y', $t), 'du' => $d1,
+                'au' => date('Y-m-t', strtotime($d1 . ' +2 month'))];
+        } else {
+            $y = (int) date('Y', $auj) - $i;
+            $bornes[] = ['lib' => (string) $y, 'du' => $y . '-01-01', 'au' => $y . '-12-31'];
         }
-        $liste = array_is_list($r) ? $r : null;
-        if ($liste === null) {
-            foreach (['data', 'items', 'shops', 'results', 'months', 'series'] as $k) {
-                if (isset($r[$k]) && is_array($r[$k]) && array_is_list($r[$k])) { $liste = $r[$k]; break; }
+    }
+
+    foreach ($bornes as $idx => $b) {
+        // Ne jamais interroger au-delà d'aujourd'hui : l'API rendrait une
+        // période vide qu'on lirait comme une chute à zéro.
+        $au = min($b['au'], date('Y-m-d'));
+        $encours = $b['au'] > date('Y-m-d');
+        $val = null; $sec = null;
+        if ($type === 'categorie') {
+            $r = PanelApi::categorySalesEntre($b['du'], $au);
+            $out['source'] = $out['source'] ?? PanelApi::$lastPath;
+            $tot = null;
+            foreach (analyseListe($r) as $sh) {
+                foreach (($sh['categories'] ?? []) as $c) {
+                    if (strcasecmp((string) ($c['name'] ?? ''), $cle) !== 0) { continue; }
+                    $v = nombreOuNull($c, ['ca', 'value', 'amount']);
+                    if ($v !== null) { $tot = ($tot ?? 0) + $v; }
+                }
+            }
+            $val = $tot;
+        } else {
+            $r = PanelApi::shopWaste(2, $b['du'], $au);
+            $out['source'] = $out['source'] ?? '/shops/{id}/products/waste';
+            foreach ($r as $p) {
+                if ((int) ($p['id_product'] ?? 0) !== (int) $cle) { continue; }
+                $val = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
+                $sec = nombreOuNull($p, ['waste_qty', 'waste']);
+                break;
             }
         }
-        $out['sources'][$nom] = [
-            'etat' => 'ok', 'chemin' => PanelApi::$lastPath,
-            'forme' => $liste !== null ? 'liste(' . count($liste) . ')' : 'objet',
-            'cles' => array_slice(array_keys($liste !== null ? ($liste[0] ?? []) : $r), 0, 16),
-            'premier' => $liste !== null ? ($liste[0] ?? null) : array_slice($r, 0, 3),
-        ];
-    };
-    $voir('monthly-sales', PanelApi::monthlySales($du, $au));
-    $voir('products', PanelApi::produits());
-    // Ventes par catégorie : l'appel réseau reste muet, l'appel par boutique
-    // répondait. On vérifie lequel des deux tient, sur des bornes courtes.
-    $voir('category-sales (boutique)', PanelApi::categorySales(2, 'mois', $au));
-    $voir('sales-kpis/quarterly', PanelApi::salesKpisQuarterly($du, $au));
-    $voir('category-sales', PanelApi::categorySalesEntre($du, $au));
+        $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $au,
+            'valeur' => $val, 'secondaire' => $sec, 'enCours' => $encours];
+    }
+
+    $connus = array_filter($out['points'], fn($p) => $p['valeur'] !== null);
+    if (!$connus) {
+        $out['motif'] = 'aucune donnée sur cette sélection — '
+            . (PanelApi::$lastError ?: 'l\'API n\'a rien rendu pour ces périodes');
+    }
     return $out;
+}
+
+/** Liste d'une réponse d'API, quelle que soit son enveloppe. */
+function analyseListe($r): array
+{
+    if (!is_array($r)) { return []; }
+    if (array_is_list($r)) { return $r; }
+    foreach (['data', 'items', 'shops', 'results'] as $k) {
+        if (isset($r[$k]) && is_array($r[$k]) && array_is_list($r[$k])) { return $r[$k]; }
+    }
+    return [];
+}
+
+/** Libellé de mois en français — `strftime` est déprécié et dépend du locale. */
+function strftime_fr(int $ts, string $fmt): string
+{
+    $M = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return $M[(int) date('n', $ts) - 1] . ' ' . date('Y', $ts);
 }
 
 /**

@@ -1,1 +1,1 @@
-Sonde : mois pleins, catalogue produit, categories par boutique.
+Analyse produit et categorie dans le temps.
