@@ -820,12 +820,20 @@ function ep_exploitation_magasin(): array
         $out['blocs']['categories'] = !is_array($cats) || !$cats
             ? $attente('Ventilation du chiffre d\'affaires', 'le compte de résultat ne porte pas de ventilation')
             : ['titre' => 'Ventilation du chiffre d\'affaires', 'etat' => 'ok', 'source' => $src,
+               'avertissement' => null,
                'donnees' => array_map(function ($c) use ($ca) {
                    $v = nombreOuNull($c, ['value', 'amount', 'ca']);
+                   $fc = nombreOuNull($c, ['food_cost_pct', 'fc_pct', 'fc', 'food_cost', 'foodcost']);
+                   $mg = nombreOuNull($c, ['margin_pct', 'margin', 'marge_pct', 'gross_margin_pct']);
+                   // La marge se déduit du food cost quand elle n'est pas
+                   // donnée — mais JAMAIS l'inverse d'un champ absent : sans
+                   // l'un ni l'autre, la catégorie reste sans couleur plutôt
+                   // que teintée d'une marge supposée.
+                   if ($mg === null && $fc !== null) { $mg = round(100 - $fc, 1); }
                    return ['categorie' => (string) ($c['name'] ?? $c['label'] ?? '—'), 'ca' => $v,
                        'partCa' => ($v !== null && $ca !== null && $ca > 0) ? round($v / $ca, 4) : null,
                        'delta' => nombreOuNull($c, ['delta', 'variation']),
-                       'fcPct' => nombreOuNull($c, ['food_cost_pct', 'fc_pct', 'food_cost'])];
+                       'fcPct' => $fc, 'margePct' => $mg];
                }, $cats)];
     }
 

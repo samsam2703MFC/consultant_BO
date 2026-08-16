@@ -1,1 +1,1 @@
-Signaler quand l API rend une autre periode que celle demandee.
+Treemap : couleur par niveau de marge.

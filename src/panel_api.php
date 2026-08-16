@@ -395,11 +395,17 @@ final class PanelApi
      */
     public static function pnl(int $shopId, string $periode, string $date): ?array
     {
-        $q = self::q($periode, $date);
+        // `treemap` n'est pas une invention : le panel lit ce paramètre dans
+        // son propre code. C'est lui qui doit ramener le food cost par
+        // catégorie — la couleur de la treemap en dépend, et sans lui les
+        // catégories ne peuvent être classées que par poids, pas par marge.
+        $qt = self::q($periode, $date, ['treemap' => 1]);
+        $q  = self::q($periode, $date);
         return self::premierObjet([
+            '/consultant/shops/' . $shopId . '/pnl?' . $qt,
             '/consultant/shops/' . $shopId . '/pnl?' . $q,
-            '/shops/' . $shopId . '/pnl?' . $q,
-            '/pnl?' . self::q($periode, $date, ['shop_id' => $shopId]),
+            '/shops/' . $shopId . '/pnl?' . $qt,
+            '/pnl?' . self::q($periode, $date, ['shop_id' => $shopId, 'treemap' => 1]),
         ]);
     }
 

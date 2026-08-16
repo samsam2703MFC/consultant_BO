@@ -288,13 +288,19 @@ function tplExploitDetail(c, x){
                ${b.cats ? `<div style="display:flex;flex-direction:column;gap:6px">
                  ${b.cats.map(c => `<div>
                    <div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px">
-                     <span>${esc(c.nom)}</span>
+                     <span>${esc(c.nom)}${c.marge ? `<span style="color:var(--color-text-muted)"> · ${esc(c.marge)}</span>` : ''}</span>
                      <span style="white-space:nowrap"><span style="font-variant-numeric:tabular-nums">${esc(c.ca)}</span>
                        <span style="color:var(--color-text-muted)"> · ${esc(c.part)}</span>
                        ${c.delta ? `<span style="color:${c.deltaC}"> ${esc(c.delta)}</span>` : ''}</span>
                    </div>
-                   <div style="height:5px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${c.w};background:var(--color-primary)"></i></div>
-                 </div>`).join('')}</div>` : ''}
+                   <div style="height:5px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${c.w};background:${c.col}"></i></div>
+                 </div>`).join('')}
+                 <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px;font-size:10px;color:var(--color-text-muted)">
+                   ${b.echelle.map(e => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${e.c};vertical-align:-1px"></i> ${esc(e.l)}</span>`).join('')}
+                 </div>
+                 <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">Largeur : poids dans le CA · Couleur : niveau de marge</div>
+                 ${b.sansMarge ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:6px;line-height:1.45">l’API ne renvoie pas de food cost par catégorie : les barres restent grises, faute de marge connue</div>` : ''}
+                 </div>` : ''}
                ${b.rang ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">panier moyen réseau ${esc(b.rang.moyenne)}</div>
                  <table style="width:100%;border-collapse:collapse;font-size:12px">
                  ${b.rang.lignes.map(r => `<tr style="${r.moi ? 'font-weight:500;color:var(--color-primary)' : ''}">
