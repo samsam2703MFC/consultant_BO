@@ -262,6 +262,10 @@ class App {
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
     common.brandNom = (mt.reseau || {}).nom || ''; common.brandSub = (mt.reseau || {}).sousTitre || '';
+    // Logo de marque (image) plutôt que le nom en texte. Chemin résolu comme
+    // l'API : relatif à la page, donc valable à la racine comme sous un
+    // sous-répertoire (/consulant_bo/assets/img/logo.png).
+    common.brandLogo = ((typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') : '')) + 'assets/img/logo.png';
     const usr = mt.utilisateur || {};
     common.userInit = usr.initiales || ''; common.userNom = usr.nom || ''; common.userRole = usr.role || '';
     common.canLogout = this.source === 'api';

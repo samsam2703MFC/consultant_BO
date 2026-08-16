@@ -12,8 +12,8 @@ export function render(c, x){
 
   <aside style="width:236px;flex:0 0 236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto">
     <div style="padding:22px 20px 14px">
-      <div style="font-family:var(--font-display);font-size:22px;color:var(--color-primary);line-height:1.1">${esc(c.brandNom)}</div>
-      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:4px">${esc(c.brandSub)}</div>
+      <img src="${c.brandLogo}" alt="${esc(c.brandNom) || 'L’Atelier'}" style="width:176px;max-width:100%;height:auto;display:block">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">${esc(c.brandSub)}</div>
     </div>
     <nav style="flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px">
       ${(c.nav || []).map(g => `
@@ -82,11 +82,12 @@ export function render(c, x){
 /* --- Écran de connexion / premier lancement ---------------------------------- */
 function tplGate(g, x){
   const { esc } = x;
+  const logo = (typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') : '') + 'assets/img/logo.png';
   return `
 <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
   <form ${x.SB(g.submit)} style="width:380px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:14px;box-shadow:0 18px 50px rgba(34,34,34,0.10);padding:34px 36px 30px;animation:toastIn 220ms ease">
-    <div style="font-family:var(--font-display);font-size:26px;color:var(--color-primary);line-height:1.1">L'Atelier by</div>
-    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:4px">Cockpit CEO — Réseau</div>
+    <img src="${logo}" alt="L’Atelier" style="width:190px;max-width:100%;height:auto;display:block">
+    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">Cockpit CEO — Réseau</div>
     <div style="font-family:var(--font-display);font-size:19px;margin-top:22px">${esc(g.titre)}</div>
     <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-top:5px;text-wrap:pretty">${esc(g.sub)}</div>
     <label style="display:block;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:18px 0 6px">Mot de passe</label>
@@ -1558,7 +1559,8 @@ function tplRepPrev(c, x){
     ${rp.isPdf ? `
     <div style="background:#fff;border-radius:4px;box-shadow:0 4px 18px rgba(34,34,34,0.14);padding:36px 40px;min-height:780px;max-width:580px;margin:0 auto">
       <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1.5px solid #222;padding-bottom:12px">
-        <div style="font-family:var(--font-display);font-size:19px">L'Atelier by</div>
+        <img src="${c.brandLogo}" alt="L’Atelier" style="width:120px;height:auto;display:block">
+
         <div style="font-size:10.5px;color:#666;text-transform:uppercase;letter-spacing:0.08em">Rapport automatique · ${rp.periodeLabel}</div>
       </div>
       <div style="font-family:var(--font-display);font-size:24px;margin-top:20px">${esc(rp.nom)}</div>
