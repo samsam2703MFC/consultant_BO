@@ -833,17 +833,49 @@ function ep_exploitation_magasin(): array
     $srcCat = PanelApi::$lastPath;
     $repliCat = PanelApi::$lastFallbacks;
     $errCat = $cs === null ? PanelApi::$lastError : null;
+    // Extraction VALIDÉE. Accepter la première liste venue m'a fait afficher
+    // les cinq boutiques du réseau comme si c'étaient des catégories : cinq
+    // lignes vides, à la place d'un repli qui en donnait onze de vraies. Une
+    // liste n'est retenue que si ses éléments ressemblent à des catégories —
+    // un intitulé ET un montant.
+    $estCategorie = static function ($x): bool {
+        if (!is_array($x)) { return false; }
+        $nom = false;
+        foreach (['name', 'label', 'category', 'category_name'] as $c) {
+            if (!empty($x[$c]) && is_string($x[$c])) { $nom = true; break; }
+        }
+        if (!$nom) { return false; }
+        foreach (['value', 'amount', 'ca', 'turnover', 'total'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) { return true; }
+        }
+        return false;
+    };
+    $trouver = static function ($n, int $prof = 0) use (&$trouver, $estCategorie) {
+        if ($prof > 3 || !is_array($n)) { return null; }
+        if (array_is_list($n) && $n && $estCategorie($n[0])) { return $n; }
+        foreach ($n as $v) {
+            if (is_array($v)) { $r = $trouver($v, $prof + 1); if ($r !== null) { return $r; } }
+        }
+        return null;
+    };
     $cats = null;
     if (is_array($cs)) {
-        foreach ([$cs, $cs['categories'] ?? null, $cs['data'] ?? null, $cs['items'] ?? null,
-                  $cs['shops'] ?? null, $cs['results'] ?? null, $cs['rows'] ?? null,
-                  $cs['sales'] ?? null, $cs['category_sales'] ?? null] as $cand) {
-            if (is_array($cand) && $cand && array_is_list($cand)) { $cats = $cand; break; }
+        // Réponse par boutique : descendre d'abord dans la nôtre, sinon on
+        // lirait les catégories d'un autre magasin sans s'en apercevoir.
+        $mien = null;
+        if (array_is_list($cs)) {
+            foreach ($cs as $e) {
+                if (!is_array($e)) { continue; }
+                foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                    if (isset($e[$c]) && (int) $e[$c] === $sid) { $mien = $e; break 2; }
+                }
+            }
         }
-        // L'endpoint a RÉPONDU mais sa forme n'est pas dépliée : dire quelles
-        // clés il porte, seule façon de savoir où chercher la liste. « Sans
-        // réponse » était faux — il répondait, je ne le comprenais pas.
-        if ($cats === null) { $errCat = 'forme inattendue, clés : ' . implode(', ', array_slice(array_keys($cs), 0, 12)); }
+        $cats = $trouver($mien ?? $cs);
+        if ($cats === null) {
+            $errCat = 'forme non reconnue, clés : '
+                . implode(', ', array_slice(array_keys(array_is_list($cs) ? ($cs[0] ?? []) : $cs), 0, 12));
+        }
     }
     if ($cats === null && isset($p['turnover']['categories']) && is_array($p['turnover']['categories'])) {
         $cats = $p['turnover']['categories'];

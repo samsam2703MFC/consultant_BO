@@ -450,6 +450,16 @@ final class PanelApi
             // raisonne en MOIS ENTIERS. Lui passer le 1er → 14 juillet, un mois
             // tronqué, la faisait échouer — et le repli silencieux sur la route
             // générique rendait alors la journée courante.
+            // « maximum 24 months » : la borne se compte en MOIS. Des dates
+            // complètes, même alignées sur le mois, restent refusées — on
+            // essaie donc l'identifiant de mois, puis l'année et le mois.
+            $chemins[] = $base . '/monthly?' . http_build_query([
+                'date_from' => date('Y-m', strtotime($date)),
+                'date_to'   => date('Y-m', strtotime($date)),
+            ]);
+            $chemins[] = $base . '/monthly?' . http_build_query([
+                'year' => (int) date('Y', strtotime($date)), 'month' => (int) date('n', strtotime($date)),
+            ]);
             $chemins[] = $base . '/monthly?' . http_build_query([
                 'date_from' => date('Y-m-01', strtotime($date)),
                 'date_to'   => date('Y-m-t', strtotime($date)),

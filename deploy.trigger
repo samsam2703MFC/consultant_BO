@@ -1,1 +1,1 @@
-Tracer les bornes envoyees et la forme de category-sales.
+Valider ce qu on deplie ; mois au format YYYY-MM.
