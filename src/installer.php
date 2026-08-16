@@ -150,6 +150,14 @@ function ensureValidation(): void
     if ($manque('ceo_project_task', 'validated_at')) {
         Db::exec('ALTER TABLE ceo_project_task ADD COLUMN validated_at DATETIME NULL');
     }
+    // La remise déclarée par le consultant depuis le panel : sans ces colonnes,
+    // « rendue » ne dit pas QUI l'a dit, et c'était toujours la direction.
+    if ($manque('ceo_project_task', 'delivered_by')) {
+        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN delivered_by VARCHAR(80) NULL');
+    }
+    if ($manque('ceo_project_task', 'delivery_note')) {
+        Db::exec('ALTER TABLE ceo_project_task ADD COLUMN delivery_note TEXT NULL');
+    }
 
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_issue ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'

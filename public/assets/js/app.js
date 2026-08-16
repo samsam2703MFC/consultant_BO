@@ -1140,7 +1140,7 @@ class App {
       const sesNotes = sien.filter(validee).map(y => y.t.note);
       const sesSig = sien.filter(y => y.t.signalement && y.t.signalement.ouvert).length;
       return { nom: x.t.nom, qui: x.o.nom, projet: x.p.nom, ouvert, hasMag: !!mag, magasin: mag || '',
-        due: note !== null ? 'Validée le ' + this.fD(x.t.done) : done ? 'Rendue le ' + this.fD(x.t.done)
+        due: note !== null ? 'Validée le ' + this.fD(x.t.done) : done ? (x.t.renduePar ? 'Annoncée le ' : 'Cochée le ') + this.fD(x.t.done)
           : (late ? 'En retard depuis le ' : 'Pour le ') + this.fD(x.t.due),
         rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
         nomSt: 'font-size:13px;font-weight:500;line-height:1.4;' + (note !== null ? 'color:var(--color-text-muted)' : ''),
@@ -1162,6 +1162,8 @@ class App {
           { k: 'Intervenant', v: x.o.nom + ' — ' + x.o.type }, { k: 'Contact', v: x.o.email },
           { k: 'Échéance', v: this.fD(x.t.due) + (done ? ' · rendue le ' + this.fD(x.t.done) : late ? ' · dépassée' : '') },
           { k: 'Budget', v: x.t.budget !== null && x.t.budget !== undefined ? this.fE(x.t.budget) : '—' },
+          { k: 'Remise', v: done ? (x.t.renduePar ? 'Annoncée par ' + x.t.renduePar + ' le ' + this.fD(x.t.done) : 'Cochée par la direction le ' + this.fD(x.t.done)) : 'Pas encore annoncée' },
+          { k: 'Mot du consultant', v: x.t.noteRemise || '—' },
           { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
           { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }],
         histo: [{ k: 'Ce mois', v: sesNotes.length ? sesNotes.length + ' tâche' + (sesNotes.length > 1 ? 's' : '') + ' validée' + (sesNotes.length > 1 ? 's' : '') + ' · note moyenne ' + (sesNotes.reduce((a, b) => a + b, 0) / sesNotes.length).toFixed(1).replace('.', ',') : 'Aucune tâche validée' },
