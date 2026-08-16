@@ -1052,7 +1052,10 @@ class App {
       for (let i = 0; i < 12; i++){
         const c = ligne[i] || {};
         reels.push(c.ca != null && c.ca > 0 ? c.ca : null);
-        buds.push(c.caBudget != null && c.caBudget > 0 ? c.caBudget : null);
+        // Le budget mensuel est normalisé sous `caT` par joinPerf, pas sous
+        // `caBudget` : lire la mauvaise clé ne lève aucune erreur, elle rend
+        // simplement « budget non encodé » sur un magasin qui en a un.
+        buds.push(c.caT != null && c.caT > 0 ? c.caT : null);
       }
       const nb = buds.filter(b => b != null).length;
       // Vue cumulée. Cumuler huit mois de réel face à deux mois de budget

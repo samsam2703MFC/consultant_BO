@@ -216,7 +216,7 @@ function tplExploitation(c, x){
         <button ${x.A(c.exVueCumul)} style="${c.exStCumul}">Cumulé</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px">
       ${c.exMagasins.map(carte).join('')}
     </div>
     <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
