@@ -1,1 +1,1 @@
-Ouverture d'une categorie : les references qu'elle contient.
+Gammes saisonnieres et leurs intitules traduits.

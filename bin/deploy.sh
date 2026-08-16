@@ -405,6 +405,17 @@ if [ -n "$CID" ]; then
   if (!$p) { echo "    ATTENTION : catégorie sans référence\n"; }
   '
 fi
+# Gammes saisonnières : les traductions ne vivent que dans l'API, la table
+# d'alias de la base étant vide. Si elles manquent, l'écran restera monolingue.
+curl -fsS "${LOCAL_BASE}/api/cockpit/production/periodes" 2>/dev/null | php -r '
+$r = json_decode(file_get_contents("php://stdin"), true);
+$p = $r["periodes"] ?? [];
+$tr = 0; $vides = 0;
+foreach ($p as $x) { if (!empty($x["alias"])) { $tr++; } if (empty($x["references"])) { $vides++; } }
+printf("  gammes      : %d (source %s) — %d traduite(s), %d sans référence%s\n",
+  count($p), $r["source"] ?? "?", $tr, $vides,
+  !empty($r["aliasErreur"]) ? " — alias : ".$r["aliasErreur"] : "");
+'
 
 # --- 6 bis. Câblage des bases : QUI est branché sur QUOI ------------------
 # Le cockpit vit dans la base du panel : il crée ses tables `ceo_*` et LIT des

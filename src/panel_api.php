@@ -339,6 +339,28 @@ final class PanelApi
         return self::premierNonVide(['/product/category-groups', '/product-category-groups']);
     }
 
+    /** Gammes saisonnières du réseau. */
+    public static function availabilityPeriods(): array
+    {
+        return self::premierNonVide([
+            '/product-availability-periods',
+            '/product/availability-periods',
+        ]);
+    }
+
+    /**
+     * Intitulés traduits des gammes saisonnières.
+     * Le réseau est bilingue : la table d'alias de la base est vide, l'API
+     * est donc la seule source connue pour le néerlandais.
+     */
+    public static function periodNameAliases(): array
+    {
+        return self::premierNonVide([
+            '/product-availability-periods/name-aliases',
+            '/product/availability-periods/name-aliases',
+        ]);
+    }
+
     /** Références rattachées à une catégorie. */
     public static function categoryProducts(int $categoryId): array
     {

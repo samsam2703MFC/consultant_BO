@@ -979,6 +979,102 @@ function ep_prod_categories(): array
 }
 
 /**
+ * Gammes saisonnières du réseau, avec leurs intitulés traduits.
+ *
+ * Les gammes datent l'offre (printanière, estivale, Saint-Nicolas…) et 441
+ * références en portent au moins une. La base tient les dates et le
+ * rattachement ; les traductions n'existent que dans l'API — la table d'alias
+ * de la base est vide, et le réseau est bilingue.
+ */
+function ep_prod_periodes(): array
+{
+    $out = ['source' => null, 'chemin' => null, 'periodes' => [], 'erreur' => null];
+
+    // Combien de références par gamme : une gamme sans référence encombre un
+    // filtre sans rien filtrer.
+    $n = [];
+    try {
+        foreach (Db::rows('SELECT id_period, COUNT(DISTINCT id_product) n
+                             FROM product_availability_period_connection GROUP BY id_period') as $r) {
+            $n[(int) $r['id_period']] = (int) $r['n'];
+        }
+    } catch (PDOException $e) { /* rattachement indisponible */ }
+
+    try {
+        foreach (Db::rows('SELECT id, name, description, start_date, end_date,
+                                  is_recurring, is_active
+                             FROM product_availability_period ORDER BY from_md, id') as $p) {
+            $id = (int) $p['id'];
+            $out['periodes'][] = [
+                'id' => $id, 'nom' => (string) $p['name'],
+                'description' => $p['description'] !== null ? (string) $p['description'] : null,
+                'debut' => $p['start_date'], 'fin' => $p['end_date'],
+                'recurrente' => (int) $p['is_recurring'] === 1,
+                'active' => (int) $p['is_active'] === 1,
+                'references' => $n[$id] ?? 0,
+                'alias' => [],
+            ];
+        }
+        if ($out['periodes']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $e->getMessage();
+    }
+
+    if (!PanelApi::configured()) { return $out; }
+
+    // Les gammes elles-mêmes, si la base n'a rien pu rendre.
+    if (!$out['periodes']) {
+        foreach (PanelApi::availabilityPeriods() as $p) {
+            $id = null;
+            foreach (['id', 'id_period', 'period_id'] as $k) {
+                if (isset($p[$k]) && is_numeric($p[$k])) { $id = (int) $p[$k]; break; }
+            }
+            $nom = '';
+            foreach (['name', 'period_name', 'label', 'title', 'nom'] as $k) {
+                if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+            }
+            if ($nom === '') { continue; }
+            $out['periodes'][] = ['id' => $id, 'nom' => $nom, 'description' => null,
+                'debut' => $p['start_date'] ?? null, 'fin' => $p['end_date'] ?? null,
+                'recurrente' => !empty($p['is_recurring']), 'active' => !isset($p['is_active']) || !empty($p['is_active']),
+                'references' => $id !== null ? ($n[$id] ?? 0) : 0, 'alias' => []];
+        }
+        if ($out['periodes']) { $out['source'] = 'api'; $out['chemin'] = PanelApi::$lastPath; }
+    }
+
+    // Traductions. Clés incertaines : on reconnaît la langue et l'intitulé
+    // parmi les écritures usuelles plutôt que d'en imposer une.
+    $alias = PanelApi::periodNameAliases();
+    if ($alias) {
+        $par = [];
+        foreach ($alias as $a) {
+            $id = null;
+            foreach (['id_period', 'period_id', 'id_product_availability_period', 'id'] as $k) {
+                if (isset($a[$k]) && is_numeric($a[$k])) { $id = (int) $a[$k]; break; }
+            }
+            $lang = '';
+            foreach (['lang', 'language', 'locale', 'lang_code', 'language_code', 'code'] as $k) {
+                if (!empty($a[$k]) && is_string($a[$k])) { $lang = strtolower(trim($a[$k])); break; }
+            }
+            $val = '';
+            foreach (['name', 'value', 'text', 'alias', 'translation', 'label'] as $k) {
+                if (!empty($a[$k]) && is_string($a[$k])) { $val = trim($a[$k]); break; }
+            }
+            if ($id === null || $val === '') { continue; }
+            $par[$id][$lang !== '' ? $lang : '?'] = $val;
+        }
+        foreach ($out['periodes'] as &$p) {
+            if ($p['id'] !== null && isset($par[$p['id']])) { $p['alias'] = $par[$p['id']]; }
+        }
+        unset($p);
+        $out['aliasSource'] = PanelApi::$lastPath;
+    } elseif (PanelApi::$lastError !== null) {
+        $out['aliasErreur'] = PanelApi::$lastError;
+    }
+    return $out;
+}
+
+/**
  * Références d'une catégorie, pour ouvrir une branche de l'arbre produit.
  *
  * L'API donne la liste faisant foi ; le coût matière, la marge et les
