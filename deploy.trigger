@@ -1,2 +1,1 @@
-dbinspect
-Catalogue produit : structure des recettes, des coûts et des mouvements.
+Catalogue réel : produits, catégories, coût matière depuis atelierby_db.

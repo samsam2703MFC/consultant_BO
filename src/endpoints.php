@@ -442,8 +442,16 @@ function ep_product_waste(): array
 {
     $pid = (int) ($_GET['produit'] ?? 0);
     if ($pid <= 0) { http_response_code(400); return ['error' => 'produit requis']; }
+    // Défaut : le mois de caisse réellement encodé, PAS le mois courant. La
+    // caisse s'arrête à la mi-juillet ; interroger août rend des rebuts réels
+    // face à zéro vente, donc 100 % de perte partout — un chiffre faux qui a
+    // l'air d'une catastrophe. L'écran de scoring travaille déjà sur ce mois.
     $periode = (string) ($_GET['periode'] ?? '');
-    if (!preg_match('/^(\d{4})-(\d{2})$/', $periode, $m)) { $periode = date('Y-m'); preg_match('/^(\d{4})-(\d{2})$/', $periode, $m); }
+    if (!preg_match('/^\d{4}-\d{2}$/', $periode)) {
+        $ref = setting('periodeProduits');
+        $periode = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m');
+    }
+    preg_match('/^(\d{4})-(\d{2})$/', $periode, $m);
     $from = sprintf('%04d-%02d-01', (int) $m[1], (int) $m[2]);
     $to   = date('Y-m-d', strtotime($from . ' +1 month -1 day'));
 
@@ -541,11 +549,32 @@ function ep_pwa_probe(): array
  * source. `pwaId` rapproche la référence du catalogue de caisse, ce qui permet
  * de croiser avec les ventes et les pertes réelles.
  */
+/**
+ * Catalogue produit du réseau.
+ *
+ * Le catalogue N'EST PAS tenu par le cockpit : il vit dans `product`
+ * (atelierby_db), avec ses catégories et ses gammes saisonnières. Le cockpit
+ * n'ajoute que ce qui n'existe nulle part ailleurs — les paramètres de
+ * production (temps, batchs, four) et le coût matière saisi à la main. On
+ * enrichit donc, on ne duplique pas : dupliquer ferait diverger les deux
+ * listes sans que personne ne s'en aperçoive.
+ */
 function ep_prod_catalogue(): array
 {
-    $rows = Db::rows('SELECT * FROM ceo_prod_product WHERE actif = 1 ORDER BY categorie, nom');
+    $enrich = [];   // id_product du panel → ligne cockpit
+    $parRef = [];
+    foreach (Db::rows('SELECT * FROM ceo_prod_product') as $r) {
+        $parRef[(string) $r['ref']] = $r;
+        if ($r['pwa_id'] !== null) { $enrich[(int) $r['pwa_id']] = $r; }
+    }
     $plano = [];
-    foreach (Db::rows('SELECT * FROM ceo_prod_planogram') as $p) { $plano[$p['ref']] = $p; }
+    foreach (Db::rows('SELECT * FROM ceo_prod_planogram') as $p) { $plano[(string) $p['ref']] = $p; }
+
+    $reel = ep_prod_catalogue_reel($enrich, $parRef, $plano);
+    if ($reel !== null) { return $reel; }
+
+    // Repli : installation autonome, sans la base de caisse.
+    $rows = Db::rows('SELECT * FROM ceo_prod_product WHERE actif = 1 ORDER BY categorie, nom');
     return array_map(function ($r) use ($plano) {
         $pl = $plano[$r['ref']] ?? null;
         $mat = $r['mat'] !== null ? (float) $r['mat'] : null;
@@ -568,6 +597,179 @@ function ep_prod_catalogue(): array
             'slot' => $pl && $pl['slot'] !== null ? (int) $pl['slot'] : null,
         ];
     }, $rows);
+}
+
+/**
+ * Catégories produit indexées par id, avec leur groupe.
+ * La liaison porte `id_category` / `id_group`, et une catégorie peut relever
+ * de PLUSIEURS groupes (les boissons sont aussi du traiteur) : sans
+ * regroupement, la jointure dupliquerait la catégorie autant de fois.
+ * Rend null si la base partagée n'est pas là.
+ */
+function catalogueCategories(): ?array
+{
+    $sql = "SELECT c.id, c.name,
+                   GROUP_CONCAT(DISTINCT g.name ORDER BY g.id SEPARATOR ' · ') AS groupe
+              FROM product_category c
+         LEFT JOIN product_category_group_connection k ON k.id_category = c.id
+         LEFT JOIN product_category_group g ON g.id = k.id_group
+          GROUP BY c.id, c.name";
+    try {
+        $rows = Db::rows($sql);
+    } catch (PDOException $e) {
+        // Le regroupement est un confort ; la catégorie, elle, est nécessaire.
+        try { $rows = Db::rows('SELECT id, name, NULL AS groupe FROM product_category'); }
+        catch (PDOException $e2) { return null; }
+    }
+    $cat = [];
+    foreach ($rows as $c) {
+        $cat[(int) $c['id']] = ['nom' => (string) $c['name'],
+            'groupe' => !empty($c['groupe']) ? (string) $c['groupe'] : null];
+    }
+    return $cat ?: null;
+}
+
+/**
+ * Coût matière par référence, depuis les recettes du réseau.
+ *
+ * `product` ne porte aucun coût : il vit dans `recipe_cost`, rattaché à la
+ * recette et non au produit. Deux natures de lignes s'y côtoient — le coût
+ * de référence du réseau (id_shop = 0, price_type « suggested ») et le coût
+ * recalculé par magasin. On préfère la référence réseau ; à défaut, la
+ * moyenne des magasins. Les zéros sont écartés : ils signifient « pas encore
+ * calculé », pas « gratuit », et les prendre pour argent comptant afficherait
+ * une marge de 100 %.
+ */
+function catalogueCouts(): array
+{
+    $out = [];
+    try {
+        $rows = Db::rows("SELECT p.id AS pid,
+                                 AVG(CASE WHEN rc.id_shop = 0 AND rc.calculated_cost_net > 0
+                                          THEN rc.calculated_cost_net END) AS reseau,
+                                 AVG(CASE WHEN rc.id_shop > 0 AND rc.calculated_cost_net > 0
+                                          THEN rc.calculated_cost_net END) AS magasins
+                            FROM product p
+                            JOIN recipe_cost rc ON rc.id_recipe = p.id_recipe
+                           WHERE p.id_recipe IS NOT NULL AND p.is_active = 1
+                        GROUP BY p.id");
+    } catch (PDOException $e) { return []; }
+    foreach ($rows as $r) {
+        $res = $r['reseau'] !== null ? (float) $r['reseau'] : null;
+        $mag = $r['magasins'] !== null ? (float) $r['magasins'] : null;
+        $v = $res ?? $mag;
+        if ($v === null || $v <= 0) { continue; }
+        $out[(int) $r['pid']] = ['mat' => round($v, 3),
+            'source' => $res !== null ? 'recette réseau' : 'moyenne magasins'];
+    }
+    return $out;
+}
+
+/** Prix de vente réellement pratiqué, moyenne réseau (`shop_product`). */
+function cataloguePrix(): array
+{
+    $out = [];
+    try {
+        $rows = Db::rows('SELECT id_product, AVG(portion_price) prix
+                            FROM shop_product WHERE portion_price > 0 GROUP BY id_product');
+    } catch (PDOException $e) { return []; }
+    foreach ($rows as $r) { $out[(int) $r['id_product']] = round((float) $r['prix'], 2); }
+    return $out;
+}
+
+/**
+ * Lecture du catalogue réel dans la base partagée.
+ * Rend null — et non un tableau vide — si les tables ne sont pas là : un vide
+ * se confondrait avec « catalogue sans produit » et masquerait la panne.
+ */
+function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?array
+{
+    // Catégorie + groupe. La liaison passe par une table dédiée ; si elle
+    // manque, on garde la catégorie et on perd seulement le regroupement.
+    $cat = catalogueCategories();
+    if ($cat === null) { return null; }
+
+    // Gammes saisonnières : plusieurs périodes possibles par référence.
+    $per = [];
+    try {
+        foreach (Db::rows('SELECT k.id_product, p.name
+                             FROM product_availability_period_connection k
+                             JOIN product_availability_period p ON p.id = k.id_period
+                            WHERE p.is_active = 1') as $r) {
+            $per[(int) $r['id_product']][] = (string) $r['name'];
+        }
+    } catch (PDOException $e) { /* sans gamme : le produit reste permanent */ }
+
+    try {
+        $prods = Db::rows('SELECT id, name, id_category, id_recipe, is_active,
+                                  suggested_sale_price, expected_margin, shelf_life_minutes,
+                                  is_prepared_before_sales, single_weight, nutriscore, allergene
+                             FROM product WHERE is_active = 1 ORDER BY id_category, name');
+    } catch (PDOException $e) { return null; }
+    if (!$prods) { return null; }
+
+    $couts = catalogueCouts();
+    $prixR = cataloguePrix();
+    $out = [];
+    foreach ($prods as $p) {
+        $pid = (int) $p['id'];
+        $c   = $cat[(int) $p['id_category']] ?? null;
+        $e   = $enrich[$pid] ?? ($parRef[(string) $pid] ?? null);
+        $ref = $e !== null ? (string) $e['ref'] : (string) $pid;
+        $pl  = $plano[$ref] ?? null;
+
+        // Prix : la saisie réseau prime, puis le prix réellement pratiqué en
+        // boutique (`shop_product`), puis seulement le prix conseillé de la
+        // fiche — qui vaut 1,00 partout, donc ne veut rien dire.
+        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : null;
+        $prixSrc = $prix !== null ? 'réseau' : null;
+        if ($prix === null && isset($prixR[$pid])) { $prix = $prixR[$pid]; $prixSrc = 'boutiques'; }
+        if ($prix === null && (float) $p['suggested_sale_price'] > 0) {
+            $prix = (float) $p['suggested_sale_price']; $prixSrc = 'fiche';
+        }
+        // Coût matière : la saisie cockpit prime, sinon la recette du réseau.
+        $mat = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : null;
+        $matSrc = $mat !== null ? 'saisi' : null;
+        if ($mat === null && isset($couts[$pid])) {
+            $mat = $couts[$pid]['mat']; $matSrc = $couts[$pid]['source'];
+        }
+
+        $dlv = $e !== null && (int) $e['dlv'] > 0 ? (int) $e['dlv'] : null;
+        if ($dlv === null && (int) $p['shelf_life_minutes'] > 0) {
+            $dlv = (int) round(((int) $p['shelf_life_minutes']) / 60);
+        }
+
+        $out[] = [
+            'ref' => $ref, 'pwaId' => $pid, 'nom' => (string) $p['name'],
+            'categorie' => $c['nom'] ?? '', 'groupe' => $c['groupe'] ?? null,
+            'categorieId' => (int) $p['id_category'],
+            'prep'    => $e ? (int) $e['prep'] : 0,
+            'cuisson' => $e ? (int) $e['cuisson'] : 0,
+            'fin'     => $e ? (int) $e['fin'] : 0,
+            'bmin'    => $e ? (int) $e['bmin'] : 0,
+            'bmult'   => $e ? (int) $e['bmult'] : 1,
+            'four'    => $e ? (int) $e['four'] : 0,
+            'dlv' => $dlv ?? 0, 'mat' => $mat, 'prix' => $prix,
+            'matSource' => $matSrc, 'prixSource' => $prixSrc,
+            'marge'    => ($mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
+            'margePct' => ($mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'margeAttendue' => $p['expected_margin'] !== null && (float) $p['expected_margin'] > 0
+                ? round((float) $p['expected_margin'], 2) : null,
+            'must'   => $e ? (bool) $e['must'] : false,
+            'qmin'   => $e ? (int) $e['qmin'] : 0,
+            'profil' => $e ? (string) $e['profil'] : '',
+            'periods' => $per[$pid] ?? [],
+            'recetteId' => $p['id_recipe'] !== null ? (int) $p['id_recipe'] : null,
+            'prepare'   => (int) $p['is_prepared_before_sales'] === 1,
+            'poids'     => (int) $p['single_weight'] ?: null,
+            'parametre' => $e !== null,   // la fiche de production est-elle remplie ?
+            'zone'   => $pl ? $pl['zone'] : null,
+            'meuble' => $pl ? $pl['meuble'] : null,
+            'niveau' => $pl ? $pl['niveau'] : null,
+            'slot'   => $pl && $pl['slot'] !== null ? (int) $pl['slot'] : null,
+        ];
+    }
+    return $out;
 }
 
 /**
@@ -1391,26 +1593,37 @@ function ep_products(): array
             }
         }
 
-        // COÛT MATIÈRE — référentiel de production du réseau (ceo_prod_product).
-        // L'API de caisse ne l'expose pas ; le franchiseur, lui, le tient. Le
-        // rapprochement se fait par `pwa_id` UNIQUEMENT (l'identifiant de
-        // caisse), jamais par l'intitulé : deux références peuvent porter des
-        // noms voisins et une marge fausse ne se voit pas.
+        // COÛT MATIÈRE — sans lui, « marge nette » (30 % du score) reste nulle
+        // pour tout le monde et le classement se joue sur le seul volume.
+        // Deux sources, dans cet ordre : les recettes du réseau
+        // (product_recipe ⨝ recipe_cost, ~422 références sur 711), puis la
+        // saisie du cockpit qui prime — elle corrige au cas par cas.
+        // Le rapprochement se fait par identifiant de caisse UNIQUEMENT,
+        // jamais par l'intitulé : deux références peuvent porter des noms
+        // voisins et une marge fausse ne se voit pas.
         $cout = [];
+        foreach (catalogueCouts() as $pid => $c) { $cout[$pid] = $c['mat']; }
         try {
             foreach (Db::rows('SELECT pwa_id, mat FROM ceo_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
                 $cout[(int) $c['pwa_id']] = (float) $c['mat'];
             }
-        } catch (PDOException $eC) { /* référentiel absent : marge indisponible */ }
+        } catch (PDOException $eC) { /* référentiel absent : recettes seules */ }
 
-        // Petit référentiel catégorie (sig_products → sig_product_categories).
+        // Catégorie : le vrai catalogue (product ⨝ product_category), indexé
+        // par identifiant de caisse. La table miroir sig_products porte des
+        // identifiants d'un autre format (« pwp1000001 ») : la recherche par
+        // id numérique n'y trouvait jamais rien, et la catégorie retombait
+        // silencieusement sur « Non catégorisé » dès que l'API était muette.
         $cat = [];
-        try {
-            foreach (Db::rows("SELECT sp.id, sc.name FROM sig_products sp
-                               LEFT JOIN sig_product_categories sc ON sc.id = sp.category_id") as $c) {
-                $cat[(string) $c['id']] = $c['name'];
-            }
-        } catch (PDOException $eCat) { /* référentiel absent : catégorie vide */ }
+        $refCat = catalogueCategories();
+        if ($refCat !== null) {
+            try {
+                foreach (Db::rows('SELECT id, id_category FROM product WHERE is_active = 1') as $c) {
+                    $k = (int) $c['id_category'];
+                    if (isset($refCat[$k])) { $cat[(int) $c['id']] = $refCat[$k]['nom']; }
+                }
+            } catch (PDOException $eCat) { /* catalogue absent : catégorie vide */ }
+        }
 
         return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout) {
             $vol  = (float) $r['volume'];
@@ -1428,7 +1641,7 @@ function ep_products(): array
                 'id'        => (string) $pid,
                 'nom'       => ($r['nom'] !== null && $r['nom'] !== '') ? $r['nom'] : ('#' . $pid),
                 // Catégorie : celle de l'API (fiable) avant le référentiel local.
-                'categorie' => $catApi[$pid] ?? $cat[(string) $pid] ?? 'Non catégorisé',
+                'categorie' => $catApi[$pid] ?? $cat[$pid] ?? 'Non catégorisé',
                 'volume'    => (int) round($vol),
                 'prix'      => $prix,
                 'coutUnit'  => $cout[$pid] ?? null,

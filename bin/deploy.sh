@@ -345,6 +345,35 @@ for ep in meta stores pwa/reports; do
   echo
 done
 
+# Le catalogue et le coût matière viennent d'être branchés sur les vraies
+# tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre
+# faux qui a l'air juste. On mesure donc la couverture et la vraisemblance.
+echo "== catalogue produit =="
+CAT_JSON="$(curl -fsS "${LOCAL_BASE}/api/cockpit/production/catalogue" 2>/dev/null || echo '[]')"
+php -r '
+$j = json_decode(file_get_contents("php://stdin"), true);
+if (!is_array($j) || !$j) { echo "  AUCUN produit rendu par /production/catalogue\n"; exit; }
+$n = count($j);
+$mat = $prix = $grp = $per = $ko = 0;
+foreach ($j as $p) {
+  if (isset($p["mat"]) && $p["mat"] !== null) { $mat++; }
+  if (isset($p["prix"]) && $p["prix"] !== null) { $prix++; }
+  if (!empty($p["groupe"])) { $grp++; }
+  if (!empty($p["periods"])) { $per++; }
+  // Un coût matière au-dessus du prix de vente signale un rapprochement
+  // douteux (ou une recette à revoir) : mieux vaut le dire que le tolérer.
+  if (isset($p["mat"], $p["prix"]) && $p["mat"] !== null && $p["prix"] !== null && $p["mat"] >= $p["prix"]) { $ko++; }
+}
+printf("  produits            : %d\n", $n);
+printf("  avec coût matière   : %d (%.0f %%)\n", $mat, 100 * $mat / $n);
+printf("  avec prix de vente  : %d (%.0f %%)\n", $prix, 100 * $prix / $n);
+printf("  avec groupe         : %d (%.0f %%)\n", $grp, 100 * $grp / $n);
+printf("  avec gamme saison   : %d\n", $per);
+printf("  coût >= prix        : %d%s\n", $ko, $ko > 0 ? "  <-- à vérifier" : "");
+' <<< "$CAT_JSON"
+echo "== catégories =="
+curl -fsS "${LOCAL_BASE}/api/cockpit/production/categories" 2>/dev/null | head -c 300; echo
+
 # --- 6 bis. Câblage des bases : QUI est branché sur QUOI ------------------
 # Le cockpit vit dans la base du panel : il crée ses tables `ceo_*` et LIT des
 # tables qui ne lui appartiennent pas. Quand l'une d'elles manque, le code
