@@ -586,7 +586,14 @@ function ep_budgets(): array
     $out = [];
     foreach (Db::rows('SELECT * FROM ceo_shop_budget WHERE fiscal_year = ?', [$exercice]) as $b) {
         $sid = $b['shop_id'];
-        $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM ceo_shop_month_perf WHERE shop_id = ? AND year = ? AND revenue IS NOT NULL', [$sid, $exercice]);
+        // Mois encodés = mois dont le BUDGET est saisi. On comptait les mois
+        // ayant un `revenue` dans ceo_shop_month_perf — or le réel vient
+        // désormais du panel (mac_shop_monthly_pnl / transaction) et cette
+        // colonne reste vide : le compteur affichait « 0 / 12 » même après une
+        // saisie complète, laissant croire que l'encodage n'avait rien gardé.
+        $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM ceo_shop_month_perf
+                        WHERE shop_id = ? AND year = ? AND revenue_budget IS NOT NULL AND revenue_budget > 0',
+            [$sid, $exercice]);
         $charges = array_map(fn ($l) => [
             'poste' => $l['label'],
             'levier' => $l['levid'] !== null ? ($slugByTag[(int) $l['levid']] ?? '') : '',
