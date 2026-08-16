@@ -376,18 +376,25 @@ final class PanelApi
     }
 
     /**
-     * Convention de période du panel : `period` + `date`, et non des bornes.
+     * Convention de période du panel : `date_from` / `date_to`.
      *
-     * Mesuré en ligne : avec `from`/`to`/`date_from`/`date_to`, /pnl répond
-     * pour la journée d'aujourd'hui en ignorant les bornes — une réponse
-     * valide pour une période qui n'est pas celle demandée, donc un chiffre
-     * juste au mauvais endroit. Le code du panel lit `period` et `date` :
-     * c'est cette écriture qu'il faut employer.
+     * L'API l'a dit elle-même — « Invalid date_from/date_to range » — après
+     * que j'aie essayé `period`+`date` sur la foi de son code. Deux bornes,
+     * rien d'autre : ajouter `from`/`to` en doublon brouillait la lecture et
+     * faisait retomber /pnl sur la période courante.
      */
+    private static function bornes(string $periode, string $date): array
+    {
+        $ts = strtotime($date);
+        $du = $periode === 'jour' ? $date
+            : ($periode === 'semaine' ? date('Y-m-d', strtotime('monday this week', $ts))
+                                      : date('Y-m-01', $ts));
+        return ['date_from' => $du, 'date_to' => $date];
+    }
+
     private static function q(string $periode, string $date, array $extra = []): string
     {
-        $p = ['jour' => 'day', 'semaine' => 'week', 'mois' => 'month'][$periode] ?? 'month';
-        return http_build_query($extra + ['period' => $p, 'date' => $date]);
+        return http_build_query($extra + self::bornes($periode, $date));
     }
 
     /** Indicateurs de vente d'une boutique (CA, tickets, panier, produits/client). */
@@ -448,6 +455,26 @@ final class PanelApi
             '/consultant/shops/category-sales?' . $q,
             '/consultant/shops/' . $shopId . '/category-sales?' . self::q($periode, $date),
         ]);
+    }
+
+    /**
+     * Ventes mensuelles du réseau — la série qui alimente le graphique
+     * budget/réel de l'écran Exploitation, à la source du panel plutôt que
+     * recalculée de notre côté.
+     */
+    public static function monthlySales(string $du, string $au): ?array
+    {
+        $q = http_build_query(['date_from' => $du, 'date_to' => $au]);
+        return self::premierObjet([
+            '/consultant/shops/monthly-sales?' . $q,
+            '/consultant/shops/monthly-sales',
+        ]);
+    }
+
+    /** Synthèse P&L de toutes les boutiques. */
+    public static function pnlSummary(string $periode, string $date): ?array
+    {
+        return self::premierObjet(['/consultant/shops/pnl-summary?' . self::q($periode, $date)]);
     }
 
     /** Heatmap de marge d'une boutique. */

@@ -1,1 +1,1 @@
-Remonter le message de validation des 422.
+Convention date_from / date_to, dictee par l API elle-meme.
