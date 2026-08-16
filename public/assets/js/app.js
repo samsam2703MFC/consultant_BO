@@ -303,7 +303,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+    const titles = { exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -494,6 +494,7 @@ class App {
     const nLate = projEff.filter(p => p.statut === 'En retard').length;
 
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
+      ['Exploitation', [['exploitation', 'P&L magasins', 0]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
       ['Projets & contrôle', [['projets', 'Projets', nLate],
         // Sous-menu : les deux écrans « tâches consultants » (panel) regroupés.
@@ -516,8 +517,8 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -642,6 +643,8 @@ class App {
       }
     }
 
+    // --- exploitation (P&L court des magasins)
+    if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
     if (common.isBudget) this.valsBudget(common);
     // --- encodage du budget
@@ -991,6 +994,130 @@ class App {
       .then(d => this.setState(s => (s.pdWaste && s.pdWaste.id === id)
         ? { pdWaste: Object.assign({}, s.pdWaste, { chargement: false, d: d || null }) } : {}));
   }
+  /**
+   * Écran Exploitation — le P&L court des magasins.
+   *
+   * Le serveur a déjà tranché les questions délicates (quel jour montrer,
+   * quel objectif au prorata) : on n'en refait aucune ici. L'écran se borne à
+   * mettre en forme, et à distinguer trois états que la donnée impose —
+   * mois clos, mois partiellement encodé, mois sans budget.
+   */
+  valsExploitation(common){
+    const D = this.D, E = D.exploitation || {};
+    const MOIS1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    common.exJour = E.jour || '—';
+    common.exAvertissement = E.avertissement || '';
+    common.exBase = E.objectifBase || '';
+    common.exVide = !(E.magasins || []).length;
+    const cumule = this.state.exCumul === true;
+    common.exCumul = cumule;
+    common.exVueMois = () => this.setState({ exCumul: false });
+    common.exVueCumul = () => this.setState({ exCumul: true });
+    const ongl = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;'
+      + 'padding:5px 12px;border-radius:8px;'
+      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
+            : 'background:transparent;color:var(--color-text-muted)');
+    common.exStMois = ongl(!cumule);
+    common.exStCumul = ongl(cumule);
+    common.exLegendeReel = cumule ? 'réel cumulé' : 'réel mensuel';
+    const an = E.mois ? +E.mois.slice(0, 4) : this.exo();
+    const mc = E.mois ? +E.mois.slice(5, 7) : 12;
+
+    // Atteinte : sans objectif on ne rend PAS une pastille rouge — on dit que
+    // le budget manque. Un magasin non budgété n'est pas un magasin en échec.
+    const att = a => a == null
+      ? { txt: 'sans budget', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
+      : { txt: this.fP(a, 0),
+          st: a >= 1 ? 'background:#E6F2E9;color:#2d7a3e'
+             : a >= 0.9 ? 'background:#FBEFE0;color:#C17A2A'
+             : 'background:#F7E4E6;color:var(--color-primary)' };
+    const jauge = a => {
+      if (a == null) return { w: '0%', c: 'transparent' };
+      return { w: Math.min(100, 100 * a).toFixed(0) + '%',
+        c: a >= 1 ? '#2d7a3e' : a >= 0.9 ? '#C17A2A' : 'var(--color-primary)' };
+    };
+
+    const r = E.reseau || {};
+    const rm = r.mois || {};
+    common.exRes = { ca: this.fE(rm.ca), clients: rm.tickets == null ? '—' : rm.tickets.toLocaleString('fr-BE'),
+      panier: rm.panier == null ? '—' : this.fEd(rm.panier), objectif: this.fE(rm.objectif),
+      att: att(rm.atteinte), jauge: jauge(rm.atteinte) };
+
+    common.exMagasins = (E.magasins || []).map(m => {
+      // Série mensuelle : le réel vient de la perf déjà chargée (une seule
+      // source pour tout le cockpit), pas d'un second appel.
+      const st = (D.stores || []).find(s => String(s.id) === String(m.shopId));
+      const ligne = (st && st.perf && st.perf[an]) ? st.perf[an] : [];
+      const reels = [], buds = [];
+      for (let i = 0; i < 12; i++){
+        const c = ligne[i] || {};
+        reels.push(c.ca != null && c.ca > 0 ? c.ca : null);
+        buds.push(c.caBudget != null && c.caBudget > 0 ? c.caBudget : null);
+      }
+      const nb = buds.filter(b => b != null).length;
+      // Vue cumulée. Cumuler huit mois de réel face à deux mois de budget
+      // comparerait deux choses différentes : le cumul du budget ne court donc
+      // que sur les mois budgétés, et le réel cumulé se restreint aux MÊMES
+      // mois dès qu'un budget existe. Sans budget, le cumul du réel garde tout
+      // son sens et reste affiché seul.
+      const cumR = [], cumB = [];
+      let aR = 0, aB = 0;
+      for (let i = 0; i < 12; i++){
+        const compte = !nb || buds[i] != null;
+        if (reels[i] != null && compte){ aR += reels[i]; cumR.push(aR); } else { cumR.push(aR || null); }
+        if (buds[i] != null){ aB += buds[i]; cumB.push(aB); } else { cumB.push(null); }
+      }
+      const serie = (rs, bs) => {
+        const vals = rs.concat(bs).filter(v => v != null);
+        const hi = vals.length ? Math.max.apply(null, vals) * 1.15 : 0;
+        const W = 300, H = 70, PB = 12, sw = W / 12;
+        const y = v => (H - PB) * (1 - v / hi);
+        const barres = [], reperes = [], labels = [];
+        for (let i = 0; i < 12; i++){
+          const cx = i * sw;
+          // Tout mois à partir du dernier mois de caisse est incomplet — pas
+          // seulement celui-ci. Une barre pleine sur un mois tronqué se lit
+          // comme un effondrement, et c'est le contraire de ce qu'elle dit.
+          const partiel = (i + 1) >= mc;
+          if (rs[i] != null && rs[i] > 0 && hi > 0){
+            barres.push({ x: (cx + sw * 0.22).toFixed(2), y: y(rs[i]).toFixed(2),
+              w: (sw * 0.56).toFixed(2), h: Math.max((H - PB) - y(rs[i]), 1).toFixed(2),
+              fill: partiel ? 'url(#exhach)' : 'var(--color-primary)' });
+          }
+          if (bs[i] != null && hi > 0){
+            reperes.push({ x1: (cx + sw * 0.10).toFixed(2), x2: (cx + sw * 0.90).toFixed(2),
+              y: y(bs[i]).toFixed(2) });
+          }
+          labels.push({ x: (cx + sw / 2).toFixed(2), y: H - 3,
+            t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });
+        }
+        return { vide: !vals.length, W: W, H: H,
+          grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
+          barres: barres, reperes: reperes, labels: labels,
+          max: hi > 0 ? this.fK(hi / 1.15) : '—' };
+      };
+      const gM = serie(reels, buds), gC = serie(cumR, cumB);
+      const g = cumule ? gC : gM;
+      const vals = reels.concat(buds).filter(v => v != null);
+      return { shopId: m.shopId, magasin: m.magasin,
+        objMois: this.fE(m.moisPlein),
+        jourCa: this.fE(m.jour.ca), jourClients: (m.jour.tickets || 0).toLocaleString('fr-BE'),
+        jourPanier: m.jour.panier == null ? '—' : this.fEd(m.jour.panier),
+        semCa: this.fE(m.semaine.ca), semJauge: jauge(m.semaine.atteinte),
+        moisCa: this.fE(m.mois.ca), moisJauge: jauge(m.mois.atteinte),
+        att: att(m.mois.atteinte),
+        gVide: g.vide, gW: g.W, gH: g.H,
+        gGrille: g.grille, gBarres: g.barres, gReperes: g.reperes, gLabels: g.labels,
+        gMax: g.max,
+        gNote: !nb ? 'budget non encodé'
+             : cumule ? ('cumul sur les ' + nb + ' mois budgétés')
+             : ('budget encodé sur ' + nb + ' mois'),
+        exercice: an };
+    });
+    return common;
+  }
+  /** Montant à deux décimales — un panier moyen arrondi à l'euro ne dit rien. */
+  fEd(n){ return n == null ? '—' : n.toFixed(2).replace('.', ',') + ' €'; }
   valsProduits(common){
     const S = this.state, D = this.D;
     const W = this.poids();

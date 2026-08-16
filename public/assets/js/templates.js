@@ -72,6 +72,7 @@ export function render(c, x){
       </header>
 
       ${c.ready ? `
+      ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
       ${c.isObjectifs ? tplObjectifs(c, x) : ''}
@@ -138,6 +139,94 @@ function opts(list, val, getV, getN){
 }
 
 /* --- Tableau des magasins --------------------------------------------------- */
+/* Exploitation — une carte par magasin, avec le budget en regard du réel.
+   Le graphique bascule entre mensuel et cumulé pour TOUTES les cartes à la
+   fois : deux cartes réglées différemment se compareraient à leur insu. */
+function tplExploitation(c, x){
+  const { esc } = x;
+  const carte = m => `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-weight:500;font-size:13.5px">${esc(m.magasin)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">objectif du mois ${esc(m.objMois)}</div>
+        </div>
+        <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;white-space:nowrap;${m.att.st}">${esc(m.att.txt)}</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">CA du jour</div>
+          <div style="font-family:var(--font-display);font-size:27px;line-height:1">${esc(m.jourCa)}</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);padding-bottom:3px">
+          ${esc(m.jourClients)} clients<br>panier ${esc(m.jourPanier)}
+        </div>
+      </div>
+      <div style="display:flex;gap:14px">
+        <div style="flex:1">
+          <div style="font-size:10.5px;color:var(--color-text-muted)">Semaine</div>
+          <div style="font-weight:500">${esc(m.semCa)}</div>
+          <div style="height:6px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${m.semJauge.w};background:${m.semJauge.c}"></i></div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10.5px;color:var(--color-text-muted)">Mois</div>
+          <div style="font-weight:500">${esc(m.moisCa)}</div>
+          <div style="height:6px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${m.moisJauge.w};background:${m.moisJauge.c}"></i></div>
+        </div>
+      </div>
+      <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:9px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:3px">
+          Budget vs réel — exercice ${esc(String(m.exercice))}${c.exCumul ? ' · cumulé' : ''}
+        </div>
+        ${m.gVide ? `<div style="padding:22px 0;text-align:center;font-size:11.5px;color:var(--color-text-muted)">aucun historique mensuel</div>` : `
+        <svg viewBox="0 0 ${m.gW} ${m.gH}" style="width:100%;height:auto;display:block">
+          ${m.gGrille.map(g => `<line x1="0" x2="${g.w}" y1="${g.y}" y2="${g.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.6"/>`).join('')}
+          ${m.gBarres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="1.4" fill="${b.fill}"/>`).join('')}
+          ${m.gReperes.map(r => `<line x1="${r.x1}" x2="${r.x2}" y1="${r.y}" y2="${r.y}" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
+          ${m.gLabels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="7" fill="${l.c}">${esc(l.t)}</text>`).join('')}
+        </svg>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:11.5px;color:var(--color-text-muted)">
+          <span>max ${esc(m.gMax)}</span><span>${esc(m.gNote)}</span>
+        </div>`}
+      </div>
+    </div>`;
+  return `
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <pattern id="exhach" width="4" height="4" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <rect width="4" height="4" fill="#D9B3B8"/>
+        <line x1="0" y1="0" x2="0" y2="4" stroke="var(--color-primary)" stroke-width="1.6"/>
+      </pattern>
+    </defs></svg>
+    ${c.exAvertissement ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 11px;border-radius:8px;margin-bottom:14px;display:inline-block">${esc(c.exAvertissement)}</div>` : ''}
+    ${c.exVide ? `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Aucune vente enregistrée en caisse — l'écran se remplira dès la première remontée.</div>` : `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px;margin-bottom:14px;display:flex;gap:32px;align-items:center;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Réseau — mois</div>
+        <div style="font-family:var(--font-display);font-size:27px;line-height:1">${esc(c.exRes.ca)}</div>
+      </div>
+      <div><div style="font-size:11.5px;color:var(--color-text-muted)">clients</div><div style="font-size:17px;font-weight:500">${esc(c.exRes.clients)}</div></div>
+      <div><div style="font-size:11.5px;color:var(--color-text-muted)">panier moyen</div><div style="font-size:17px;font-weight:500">${esc(c.exRes.panier)}</div></div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:11.5px;color:var(--color-text-muted)">objectif ${esc(c.exRes.objectif)}</div>
+        <div style="height:6px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${c.exRes.jauge.w};background:${c.exRes.jauge.c}"></i></div>
+      </div>
+      <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;white-space:nowrap;${c.exRes.att.st}">${esc(c.exRes.att.txt)}</span>
+      <div style="display:flex;gap:4px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        <button ${x.A(c.exVueMois)} style="${c.exStMois}">Par mois</button>
+        <button ${x.A(c.exVueCumul)} style="${c.exStCumul}">Cumulé</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">
+      ${c.exMagasins.map(carte).join('')}
+    </div>
+    <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
+      <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
+      <span><i style="display:inline-block;width:14px;height:2px;background:#222;vertical-align:3px"></i> budget encodé</span>
+      <span><i style="display:inline-block;width:9px;height:9px;background:#D9B3B8;border-radius:2px;vertical-align:-1px"></i> mois partiellement encodé</span>
+      ${c.exBase ? `<span>objectif jour et semaine : ${esc(c.exBase)}</span>` : ''}
+    </div>`}`;
+}
+
 function tplMagasins(c, x){
   const { esc } = x;
   return `

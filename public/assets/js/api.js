@@ -46,7 +46,8 @@ export const ENDPOINTS = {
   products:       '/products/scoring?periode=' + YM,
   pwaReports:     '/pwa/reports',
   pwaTasks:       '/pwa/tasks',
-  pwaCompte:      '/pwa/compte'
+  pwaCompte:      '/pwa/compte',
+  exploitation:   '/exploitation'
 };
 
 async function get(path, signal){
@@ -174,6 +175,7 @@ function shape(p, source){
       pwaReports: p.pwaReports,
       pwaTasks: p.pwaTasks,
       pwaCompte: p.pwaCompte,
+      exploitation: p.exploitation,
       roles: (p.roles || {}).roles || []
     })
   };
@@ -234,6 +236,7 @@ function emptyPayload(){
     pwaReports: { base: '', magasins: [], partages: [] },
     pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
     pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false },
+    exploitation: { jour: null, semaine: null, mois: null, magasins: [], reseau: {}, avertissement: null },
     roles: { source: null, roles: [] }
   };
 }

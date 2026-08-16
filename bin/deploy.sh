@@ -348,6 +348,21 @@ done
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
 # tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre
 # faux qui a l'air juste. On mesure donc la couverture et la vraisemblance.
+# L'écran Exploitation ne sert à rien s'il ne rend aucun magasin, et il ment
+# s'il prend le mois courant pour un mois clos. On vérifie les deux.
+curl -fsS "${LOCAL_BASE}/api/cockpit/exploitation" 2>/dev/null | php -r '
+$r = json_decode(file_get_contents("php://stdin"), true);
+$m = $r["magasins"] ?? [];
+printf("  exploitation: %d magasin(s), jour %s, mois %s%s\n", count($m),
+  $r["jour"] ?? "?", $r["mois"] ?? "?", !empty($r["erreur"]) ? " — ".$r["erreur"] : "");
+if (!$m) { echo "    ATTENTION : aucun magasin rendu\n"; exit; }
+$sb = $r["magasinsSansBudget"] ?? 0;
+if ($sb) { printf("    %d magasin(s) sans budget encodé : la colonne objectif restera vide\n", $sb); }
+foreach ($m as $s) {
+  printf("    %-34s jour %8.2f  semaine %9.2f  mois %10.2f\n",
+    mb_substr($s["magasin"], 0, 34), $s["jour"]["ca"], $s["semaine"]["ca"], $s["mois"]["ca"]);
+}
+'
 echo "== catalogue produit =="
 CAT_JSON="$(curl -fsS "${LOCAL_BASE}/api/cockpit/production/catalogue" 2>/dev/null || echo '[]')"
 php -r '
