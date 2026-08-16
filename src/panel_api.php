@@ -308,7 +308,7 @@ final class PanelApi
     private static function liste(array $d): array
     {
         if (array_is_list($d)) { return array_values(array_filter($d, 'is_array')); }
-        foreach (['data', 'items', 'tasks', 'results', 'rows', 'content', 'checklists'] as $k) {
+        foreach (['data', 'items', 'tasks', 'results', 'rows', 'content', 'checklists', 'products', 'grouped_products'] as $k) {
             if (isset($d[$k]) && is_array($d[$k])) {
                 $sous = self::liste($d[$k]);
                 if ($sous !== []) { return $sous; }

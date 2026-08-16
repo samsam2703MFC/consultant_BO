@@ -405,14 +405,23 @@ function ep_pwa_waste_debug(): array
     $path = '/shops/' . $shopId . '/products/waste' . ($q ? '?' . http_build_query($q) : '');
     $brut = PanelApi::brut($path);
     $liste = PanelApi::shopWaste($shopId, $from, $to);
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return ['type' => gettype($v), 'valeur' => $v]; }
+        if (array_is_list($v)) {
+            return ['type' => 'liste', 'n' => count($v),
+                'clesPremier' => ($v && is_array($v[0])) ? array_slice(array_keys($v[0]), 0, 25) : null,
+                'premier' => $v[0] ?? null];
+        }
+        return ['type' => 'objet', 'cles' => array_slice(array_keys($v), 0, 25), 'extrait' => array_slice($v, 0, 6, true)];
+    };
     return [
         'chemin'    => $path,
         'erreur'    => PanelApi::$lastError,
-        'typeBrut'  => gettype($brut),
         'clesBrut'  => is_array($brut) ? array_slice(array_keys($brut), 0, 15) : null,
-        'nbLignes'  => count($liste),
-        'clesLigne' => $liste ? array_slice(array_keys($liste[0]), 0, 25) : null,
-        'echantillon' => array_slice($liste, 0, 3),
+        'products'         => is_array($brut) && isset($brut['products']) ? $apercu($brut['products']) : null,
+        'grouped_products' => is_array($brut) && isset($brut['grouped_products']) ? $apercu($brut['grouped_products']) : null,
+        'period_summary'   => is_array($brut) && isset($brut['period_summary']) ? $apercu($brut['period_summary']) : null,
+        'nbLignesApresDepaquetage' => count($liste),
     ];
 }
 

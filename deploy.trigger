@@ -1,1 +1,1 @@
-sonde lecture seule sur l endpoint pertes du panel pour en constater la forme avant de brancher le calcul. Deploiement standard.
+sonde pertes : detailler products / grouped_products / period_summary. Deploiement standard.
