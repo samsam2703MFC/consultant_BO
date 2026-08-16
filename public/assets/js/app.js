@@ -976,6 +976,7 @@ class App {
       const mp = (mu == null || !p.prix) ? null : mu / p.prix;
       return { nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
         perte: p.tauxPerte != null ? p.tauxPerte : null,
+        jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
         ca: p.volume * p.prix, mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
@@ -1016,6 +1017,10 @@ class App {
     common.pdRows = rows.map(p => { const vd = verdict(p.score); const t = this.trend(p.tend, 1);
       return { nom: p.nom, cat: p.cat, vol: Math.round(p.vol).toLocaleString('fr-BE'), tend: t.txt, tendSt: t.st + ';font-weight:400',
         prix: eur(p.prix), mu: eur(p.mu), mp: p.mp == null ? '—' : this.fP(p.mp, 0) + ' de marge', mg: this.fK(p.mg),
+        perteTxt: p.perte == null ? '—' : this.fP(p.perte, 1),
+        perteSt: p.perte == null ? 'color:var(--color-text-muted)'
+          : (p.perte >= 0.10 ? 'color:#8D1D2C;font-weight:600' : p.perte >= 0.05 ? 'color:#8a5a13;font-weight:500' : 'color:#2d7a3e'),
+        perteDetail: p.jete != null ? (Math.round(p.jete).toLocaleString('fr-BE') + ' jeté(s)' + (p.motifPerte ? ' · ' + p.motifPerte : '')) : '',
         pen: this.fP(p.pen, 0), mags: p.mags + ' / ' + nbOuv + ' magasins', partCaRes: this.fP(p.ca / caProd, 1), ca: this.fK(p.ca),
         barPen: bar(100 * p.pen, p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C'),
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),

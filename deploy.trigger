@@ -1,1 +1,1 @@
-role lu du referentiel atelierby_db (position / comptes actifs) ; heatmap : repli sur le CA quand aucun objectif n est encode. Deploiement standard.
+taux de perte reel branche sur /shops/{id}/products/waste : le critere entre dans le score, categories reelles et motif de rebut affiches. Deploiement standard.

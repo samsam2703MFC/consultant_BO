@@ -1075,6 +1075,32 @@ function ep_products(): array
             }
         }
 
+        // PERTES par référence — API du panel (/shops/{id}/products/waste), la
+        // seule source : la base partagée ne connaît que les ventes. On agrège
+        // les quantités jetées et vendues sur TOUTES les boutiques pour la même
+        // période que le volume, puis on en tire un taux réseau. Le volet
+        // rapporte aussi la catégorie réelle et le motif principal de rebut.
+        $perteVol = []; $perteSold = []; $catApi = []; $motif = [];
+        if ($apiOn) {
+            $dFrom = substr($from, 0, 10);
+            $dTo   = date('Y-m-d', strtotime($to . ' -1 day'));
+            try {
+                $shopIds = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+            } catch (PDOException $eS) { $shopIds = []; }
+            foreach ($shopIds as $sid) {
+                foreach (PanelApi::shopWaste($sid, $dFrom, $dTo) as $w) {
+                    $pid = (int) ($w['id_product'] ?? 0);
+                    if ($pid <= 0) { continue; }
+                    $perteVol[$pid]  = ($perteVol[$pid] ?? 0) + (float) ($w['waste_qty'] ?? 0);
+                    $perteSold[$pid] = ($perteSold[$pid] ?? 0) + (float) ($w['sold_qty'] ?? 0);
+                    $cn = trim((string) ($w['category_name'] ?? ''));
+                    if ($cn !== '' && !isset($catApi[$pid])) { $catApi[$pid] = $cn; }
+                    $tr = trim((string) ($w['top_reason'] ?? ''));
+                    if ($tr !== '' && !isset($motif[$pid])) { $motif[$pid] = $tr; }
+                }
+            }
+        }
+
         // Petit référentiel catégorie (sig_products → sig_product_categories).
         $cat = [];
         try {
@@ -1084,18 +1110,31 @@ function ep_products(): array
             }
         } catch (PDOException $eCat) { /* référentiel absent : catégorie vide */ }
 
-        return array_map(function ($r) use ($cat) {
+        return array_map(function ($r) use ($cat, $catApi, $perteVol, $perteSold, $motif) {
             $vol  = (float) $r['volume'];
             $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
+            $pid  = (int) $r['id_product'];
+            // Taux de perte = jeté / (vendu + jeté) sur la période, en part
+            // (0..1). Dénominateur = ce qui a été PRODUIT et proposé, sinon un
+            // produit très jeté mais peu vendu afficherait un taux > 100 %.
+            $tp = null;
+            if (isset($perteVol[$pid])) {
+                $den = $perteSold[$pid] + $perteVol[$pid];
+                if ($den > 0) { $tp = round($perteVol[$pid] / $den, 4); }
+            }
             return [
-                'id'        => (string) $r['id_product'],
-                'nom'       => ($r['nom'] !== null && $r['nom'] !== '') ? $r['nom'] : ('#' . $r['id_product']),
-                'categorie' => $cat[(string) $r['id_product']] ?? 'Non catégorisé',
+                'id'        => (string) $pid,
+                'nom'       => ($r['nom'] !== null && $r['nom'] !== '') ? $r['nom'] : ('#' . $pid),
+                // Catégorie : celle de l'API (fiable) avant le référentiel local.
+                'categorie' => $catApi[$pid] ?? $cat[(string) $pid] ?? 'Non catégorisé',
                 'volume'    => (int) round($vol),
                 'prix'      => $prix,
                 'coutUnit'  => null,
                 'tendVol'   => 1,
                 'magasins'  => (int) $r['magasins'],
+                'tauxPerte' => $tp,
+                'jete'      => isset($perteVol[$pid]) ? (int) round($perteVol[$pid]) : null,
+                'motifPerte' => $motif[$pid] ?? null,
             ];
         }, $rows);
     } catch (PDOException $e) {

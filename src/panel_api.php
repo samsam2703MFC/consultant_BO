@@ -251,6 +251,9 @@ final class PanelApi
         if ($to !== null)   { $q['to'] = $to;     $q['date_to'] = $to; }
         $path = '/shops/' . $shopId . '/products/waste' . ($q ? '?' . http_build_query($q) : '');
         $r = self::get($path);
+        // Le volet `products` porte le détail par référence ; sans période,
+        // l'API répond une enveloppe vide — d'où l'obligation de dater.
+        if (is_array($r) && isset($r['products']) && is_array($r['products'])) { return $r['products']; }
         return is_array($r) ? self::liste($r) : [];
     }
 

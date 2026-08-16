@@ -730,6 +730,7 @@ function tplProduits(c, x){
           <th style="${TH}">Référence</th>
           <th style="text-align:right;${TH2}">Volume / mois</th>
           <th style="text-align:left;${TH2};width:118px">Pénétration réseau</th>
+          <th style="text-align:right;${TH2}">Taux de perte</th>
           <th style="text-align:right;${TH2}">Marge unit.</th>
           <th style="text-align:right;${TH2}">CA réseau · marge brute</th>
           <th style="text-align:center;${TH2}">Rang catégorie</th>
@@ -751,6 +752,10 @@ function tplProduits(c, x){
               <td style="padding:10px 12px">
                 <div style="display:flex;align-items:baseline;gap:6px"><span style="font-weight:500">${r.pen}</span><span style="font-size:11.5px;color:var(--color-text-muted)">${r.mags}</span></div>
                 <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:4px"><span style="${r.barPen}"></span></span>
+              </td>
+              <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+                <div style="${r.perteSt}">${r.perteTxt}</div>
+                ${r.perteDetail ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(r.perteDetail)}</div>` : ''}
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
                 <div style="font-weight:500">${r.mu}</div>
