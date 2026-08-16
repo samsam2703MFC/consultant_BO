@@ -1,1 +1,1 @@
-Cumul : ne rien reporter sur les mois a venir.
+Vue cumulee en courbes : reel plein, cible pointillee.

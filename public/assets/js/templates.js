@@ -181,8 +181,14 @@ function tplExploitation(c, x){
         ${m.gVide ? `<div style="padding:22px 0;text-align:center;font-size:11.5px;color:var(--color-text-muted)">aucun historique mensuel</div>` : `
         <svg viewBox="0 0 ${m.gW} ${m.gH}" style="width:100%;height:auto;display:block">
           ${m.gGrille.map(g => `<line x1="0" x2="${g.w}" y1="${g.y}" y2="${g.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.6"/>`).join('')}
-          ${m.gBarres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="1.4" fill="${b.fill}"/>`).join('')}
-          ${m.gReperes.map(r => `<line x1="${r.x1}" x2="${r.x2}" y1="${r.y}" y2="${r.y}" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
+          ${m.gCourbe ? `
+            <line x1="0" x2="${m.gW}" y1="${m.gBase}" y2="${m.gBase}" stroke="rgba(34,34,34,0.15)" stroke-width="0.6"/>
+            ${m.gCible ? `<polyline points="${m.gCible}" fill="none" stroke="#c9a06a" stroke-width="1.6" stroke-dasharray="3 2.4" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+            ${m.gReel ? `<polyline points="${m.gReel}" fill="none" stroke="#8D1D2C" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+          ` : `
+            ${m.gBarres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="1.4" fill="${b.fill}"/>`).join('')}
+            ${m.gReperes.map(r => `<line x1="${r.x1}" x2="${r.x2}" y1="${r.y}" y2="${r.y}" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
+          `}
           ${m.gLabels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="7" fill="${l.c}">${esc(l.t)}</text>`).join('')}
         </svg>
         <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:11.5px;color:var(--color-text-muted)">
@@ -221,8 +227,10 @@ function tplExploitation(c, x){
     </div>
     <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
       <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
-      <span><i style="display:inline-block;width:14px;height:2px;background:#222;vertical-align:3px"></i> budget encodé</span>
-      <span><i style="display:inline-block;width:9px;height:9px;background:#D9B3B8;border-radius:2px;vertical-align:-1px"></i> mois partiellement encodé</span>
+      <span>${c.exCumul
+        ? `<i style="display:inline-block;width:14px;height:0;border-top:2px dashed #c9a06a;vertical-align:4px"></i>`
+        : `<i style="display:inline-block;width:14px;height:2px;background:#222;vertical-align:3px"></i>`} ${esc(c.exLegendeCible)}</span>
+      ${c.exCumul ? '' : `<span><i style="display:inline-block;width:9px;height:9px;background:#D9B3B8;border-radius:2px;vertical-align:-1px"></i> mois partiellement encodé</span>`}
       ${c.exBase ? `<span>objectif jour et semaine : ${esc(c.exBase)}</span>` : ''}
     </div>`}`;
 }

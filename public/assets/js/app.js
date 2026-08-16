@@ -1020,6 +1020,7 @@ class App {
     common.exStMois = ongl(!cumule);
     common.exStCumul = ongl(cumule);
     common.exLegendeReel = cumule ? 'réel cumulé' : 'réel mensuel';
+    common.exLegendeCible = cumule ? 'cible cumulée' : 'budget encodé';
     const an = E.mois ? +E.mois.slice(0, 4) : this.exo();
     const mc = E.mois ? +E.mois.slice(5, 7) : 12;
 
@@ -1102,8 +1103,31 @@ class App {
           barres: barres, reperes: reperes, labels: labels,
           max: hi > 0 ? this.fK(hi / 1.15) : '—' };
       };
-      const gM = serie(reels, buds), gC = serie(cumR, cumB);
-      const g = cumule ? gC : gM;
+      // Le cumulé se lit en trajectoire, pas en volumes : deux courbes, réel
+      // plein et cible pointillée, comme l'écran Objectifs de CA. Empiler des
+      // barres cumulées répondait « combien » quand la question est « où en
+      // est-on ». Même langage visuel d'un écran à l'autre, sinon deux
+      // graphiques qui disent la même chose paraissent dire autre chose.
+      const courbes = (rs, bs) => {
+        const vals = rs.concat(bs).filter(v => v != null);
+        const hi = vals.length ? Math.max.apply(null, vals) * 1.15 : 0;
+        const W = 300, H = 70, PB = 12, sw = W / 12;
+        const y = v => (H - PB) * (1 - v / hi);
+        const pts = arr => arr.map((v, i) => v == null ? null
+          : ((i + 0.5) * sw).toFixed(2) + ',' + y(v).toFixed(2))
+          .filter(Boolean).join(' ');
+        const labels = [];
+        for (let i = 0; i < 12; i++){
+          labels.push({ x: ((i + 0.5) * sw).toFixed(2), y: H - 3,
+            t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });
+        }
+        return { vide: !vals.length, W: W, H: H, courbe: true,
+          grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
+          reel: pts(rs), cible: pts(bs), barres: [], reperes: [], labels: labels,
+          base: (H - PB).toFixed(2),
+          max: hi > 0 ? this.fK(hi / 1.15) : '—' };
+      };
+      const g = cumule ? courbes(cumR, cumB) : serie(reels, buds);
       const vals = reels.concat(buds).filter(v => v != null);
       return { shopId: m.shopId, magasin: m.magasin,
         objMois: this.fE(m.moisPlein),
@@ -1112,7 +1136,8 @@ class App {
         semCa: this.fE(m.semaine.ca), semJauge: jauge(m.semaine.atteinte),
         moisCa: this.fE(m.mois.ca), moisJauge: jauge(m.mois.atteinte),
         att: att(m.mois.atteinte),
-        gVide: g.vide, gW: g.W, gH: g.H,
+        gVide: g.vide, gW: g.W, gH: g.H, gCourbe: !!g.courbe,
+        gReel: g.reel || '', gCible: g.cible || '', gBase: g.base || 0,
         gGrille: g.grille, gBarres: g.barres, gReperes: g.reperes, gLabels: g.labels,
         gMax: g.max,
         gNote: !nb ? 'budget non encodé'
