@@ -304,7 +304,8 @@ function ep_pwa_tasks(): array
                 'valide'      => $valide,
                 // Qui a validé = qui a noté (le consultant), sauf si la
                 // direction a explicitement contresigné : elle prime alors.
-                'valideePar'  => $ctrlDir ? ($r['owner_name'] ?? null) : ($valide ? ($r['consultant_name'] ?? null) : null),
+                'valideePar'  => $valide ? ($r['consultant_name'] ?? null) : null,
+                'revuePar'    => $ctrlDir ? ($r['owner_name'] ?? null) : null,
                 'valideeLe'   => $ctrlDir ? substr((string) $r['owner_validated_at'], 0, 16)
                                           : ($valide && $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null),
                 'ctrlDir'     => $ctrlDir,

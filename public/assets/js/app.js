@@ -1086,7 +1086,9 @@ class App {
             // changer un verdict, on renote.
             valide: t.valide,
             valideMeta: t.valide
-              ? ('Validé' + (t.valideePar ? ' par ' + t.valideePar : '') + (t.valideeLe ? ' · ' + t.valideeLe : ''))
+              ? ('Validé' + (t.valideePar ? ' par ' + t.valideePar : '')
+                 + (t.revuePar ? ' · revu par ' + t.revuePar : '')
+                 + (t.valideeLe ? ' · ' + t.valideeLe : ''))
               : 'Pas encore noté',
             btnLabel: t.valide ? 'Renoter' : 'Noter',
             btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),

@@ -1,1 +1,1 @@
-une tache notee est validee : le statut decoule de la note, l action devient Noter / Renoter. Deploiement standard, aucune operation sur la base.
+noter depuis le cockpit ne remplace plus l evaluateur terrain : la direction est consignee dans owner_*, et l ecran affiche evalue par / revu par. Deploiement standard.

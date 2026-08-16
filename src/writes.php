@@ -249,19 +249,35 @@ function wr_pwa_task_review(): array
         return ['error' => 'l’API du panel a refusé la note : ' . (PanelApi::$lastError ?? 'erreur inconnue')];
     }
 
-    // Journal local (miroir), comme le panel : l'auteur est le compte du cockpit.
+    // Journal local (miroir). L'auteur du cockpit est la DIRECTION : on le
+    // consigne dans les colonnes owner_*, et on NE TOUCHE PAS à
+    // `consultant_name` quand un avis existe déjà — sinon renoter depuis le
+    // cockpit efface qui a évalué sur le terrain, et la trace du contrôle
+    // remplace celle du contrôlé.
     $u = setting('utilisateur', []);
     $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+    $now = date('Y-m-d H:i:s');
     try {
-        Db::exec(
-            'INSERT INTO mac_task_review (id_shop, id_checklist, id_task, review_date, completion_id,'
-            . ' id_consultant, consultant_name, rating, is_accepted, comment, created_at, updated_at)'
-            . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
-            . ' ON DUPLICATE KEY UPDATE rating = VALUES(rating), is_accepted = VALUES(is_accepted),'
-            . ' comment = VALUES(comment), consultant_name = VALUES(consultant_name), updated_at = VALUES(updated_at)',
-            [$shopId, $payload['checklist_id'] ?? null, $taskId, $date, $payload['completion_id'] ?? null,
-             0, $auteur, $note, $accepte ? 1 : 0, $payload['comment'], date('Y-m-d H:i:s'), date('Y-m-d H:i:s')]
-        );
+        $exist = Db::row('SELECT consultant_name FROM mac_task_review WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+            [$shopId, $taskId, $date]);
+        if ($exist !== null) {
+            Db::exec(
+                'UPDATE mac_task_review SET rating = ?, is_accepted = ?, comment = ?,'
+                . ' owner_validated_at = ?, owner_name = ?, updated_at = ?'
+                . ' WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+                [$note, $accepte ? 1 : 0, $payload['comment'], $now, $auteur, $now, $shopId, $taskId, $date]
+            );
+        } else {
+            // Aucun avis terrain : la direction est le premier évaluateur.
+            Db::exec(
+                'INSERT INTO mac_task_review (id_shop, id_checklist, id_task, review_date, completion_id,'
+                . ' id_consultant, consultant_name, rating, is_accepted, comment,'
+                . ' owner_validated_at, owner_name, created_at, updated_at)'
+                . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                [$shopId, $payload['checklist_id'] ?? null, $taskId, $date, $payload['completion_id'] ?? null,
+                 0, $auteur, $note, $accepte ? 1 : 0, $payload['comment'], $now, $auteur, $now, $now]
+            );
+        }
     } catch (PDOException $e) { /* miroir best-effort : l'API a déjà la note */ }
 
     journalAdd('CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
