@@ -1067,7 +1067,10 @@ class App {
       let aR = 0, aB = 0;
       for (let i = 0; i < 12; i++){
         const compte = !nb || buds[i] != null;
-        if (reels[i] != null && compte){ aR += reels[i]; cumR.push(aR); } else { cumR.push(aR || null); }
+        // Ne RIEN reporter sur un mois sans donnée. Prolonger le cumul jusqu'à
+        // décembre dessinait quatre barres pleine hauteur pour des mois qui
+        // n'ont pas eu lieu : l'exercice paraissait déjà terminé.
+        if (reels[i] != null && compte){ aR += reels[i]; cumR.push(aR); } else { cumR.push(null); }
         if (buds[i] != null){ aB += buds[i]; cumB.push(aB); } else { cumB.push(null); }
       }
       const serie = (rs, bs) => {

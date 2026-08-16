@@ -1,1 +1,1 @@
-Exploitation : lire le budget sous la bonne cle.
+Cumul : ne rien reporter sur les mois a venir.
