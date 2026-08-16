@@ -303,7 +303,8 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
+    const titles = { analyse: ['Analyse dans le temps', 'Choisissez une catégorie ou une référence, puis un horizon. La série est reconstituée point par point depuis l\u2019API — le nombre de points est plafonné pour que l\u2019écran reste utilisable.'],
+      catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
@@ -499,7 +500,10 @@ class App {
 
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Exploitation', [['exploitation', 'P&L magasins', 0]]],
-      ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
+      ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length],
+        { sub: 'Scoring produits', children: [
+          ['produits', 'Scoring des références', 0],
+          ['analyse', 'Analyse dans le temps', 0]] }]],
       ['Référentiel produit', [
         { sub: 'Catalogue & comptoir', children: [
           ['catalogue', 'Catalogue produit', 0],
@@ -527,9 +531,10 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd' }[S.screen];
+      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd',
+      analyse: 'isAnalyse' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -657,6 +662,7 @@ class App {
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
     if (common.isProd) this.valsProduction(common);
+    if (common.isAnalyse) this.valsAnalyse(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -1193,6 +1199,93 @@ class App {
       lignes: (m.lignes || 0).toLocaleString('fr-BE')
     }));
     return common;
+  }
+  /**
+   * Analyse dans le temps — une catégorie ou une référence, sur un horizon.
+   *
+   * La série coûte un appel par point : elle n'est donc lancée que sur une
+   * sélection explicite, jamais à l'ouverture de l'écran.
+   */
+  valsAnalyse(common){
+    const S = this.state, D = this.D;
+    const cat = D.prodCatalogue || [];
+    const type = S.anType || 'categorie';
+    const gran = S.anGran || 'mois';
+    common.anType = type; common.anGran = gran;
+
+    common.anCategories = [...new Set(cat.map(p => p.categorie).filter(Boolean))].sort();
+    // Les références les plus vendues d'abord : sur 711, l'ordre alphabétique
+    // oblige à connaître le nom exact avant de pouvoir chercher.
+    common.anProduits = cat.filter(p => p.pwaId)
+      .sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
+      .map(p => ({ id: String(p.pwaId), nom: p.nom + ' · ' + (p.categorie || '—') }));
+
+    const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
+      + 'padding:6px 14px;border-radius:8px;'
+      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
+            : 'background:transparent;color:var(--color-text-muted)');
+    common.anTypeBtns = [['categorie', 'Par catégorie'], ['produit', 'Par référence']]
+      .map(b => ({ label: b[1], st: onglet(type === b[0]),
+        go: () => this.setState({ anType: b[0], anCle: '', anData: null }) }));
+    common.anGranBtns = [['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']]
+      .map(b => ({ label: b[1], st: onglet(gran === b[0]),
+        go: () => { this.setState({ anGran: b[0] }); if (S.anCle) this.anCharge(S.anCle, type, b[0]); } }));
+
+    common.anCle = S.anCle || '';
+    common.anChoisir = e => { const v = e.target.value;
+      this.setState({ anCle: v }); if (v) this.anCharge(v, type, gran); };
+
+    const d = S.anData;
+    common.anChargement = !!S.anBusy;
+    common.anVide = !S.anCle;
+    common.anMotif = d && d.motif ? d.motif : '';
+    common.anSource = d && d.source ? d.source : '';
+    common.anPlafond = d && d.plafond ? d.plafond : 0;
+    common.anGraphe = null;
+    if (d && d.points && d.points.length) {
+      const pts = d.points;
+      const vals = pts.map(p => p.valeur).filter(v => v != null);
+      const hi = vals.length ? Math.max.apply(null, vals) * 1.18 : 0;
+      const W = 640, H = 190, PB = 26, PL = 4, sw = (W - PL) / pts.length;
+      const y = v => (H - PB) * (1 - v / hi);
+      const barres = [], labels = [], valeurs = [];
+      pts.forEach((p, i) => {
+        const cx = PL + i * sw;
+        if (p.valeur != null && hi > 0) {
+          barres.push({ x: (cx + sw * 0.2).toFixed(1), y: y(p.valeur).toFixed(1),
+            w: (sw * 0.6).toFixed(1), h: Math.max((H - PB) - y(p.valeur), 1).toFixed(1),
+            // Un point encore en cours n'est pas comparable aux précédents :
+            // il est hachuré, comme les mois partiels du graphique budget.
+            fill: p.enCours ? 'url(#anhach)' : 'var(--color-primary)' });
+          valeurs.push({ x: (cx + sw / 2).toFixed(1), y: (y(p.valeur) - 5).toFixed(1),
+            t: this.fK(p.valeur) });
+        }
+        labels.push({ x: (cx + sw / 2).toFixed(1), y: H - 9, t: p.libelle,
+          c: p.enCours ? 'var(--color-primary)' : 'var(--color-text-muted)' });
+      });
+      const prem = vals.length ? vals[0] : null, der = vals.length ? vals[vals.length - 1] : null;
+      common.anGraphe = { W, H, barres, labels, valeurs,
+        grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(1), w: W })) : [],
+        // L'évolution ne se calcule QUE sur des points clos : comparer un mois
+        // entamé au précédent annoncerait une chute qui n'existe pas.
+        evolution: (pts.length > 1 && !pts[pts.length - 1].enCours && prem != null && prem !== 0 && der != null)
+          ? { txt: (der >= prem ? '+' : '') + (100 * (der - prem) / prem).toFixed(1).replace('.', ',') + ' %',
+              col: der >= prem ? '#2d7a3e' : 'var(--color-primary)' }
+          : null,
+        secondaire: pts.some(p => p.secondaire != null),
+        lignes: pts.map(p => ({ libelle: p.libelle,
+          valeur: p.valeur == null ? '—' : Math.round(p.valeur).toLocaleString('fr-BE'),
+          secondaire: p.secondaire == null ? '—' : Math.round(p.secondaire).toLocaleString('fr-BE'),
+          taux: (p.valeur && p.secondaire != null) ? this.fP(p.secondaire / (p.valeur + p.secondaire), 1) : '—',
+          enCours: p.enCours })) };
+    }
+    return common;
+  }
+  /** Charge une série. Un appel par point : jamais automatique. */
+  anCharge(cle, type, gran){
+    this.setState({ anBusy: true });
+    readOne('/produits/analyse?type=' + type + '&cle=' + encodeURIComponent(cle) + '&granularite=' + gran)
+      .then(d => this.setState({ anBusy: false, anData: d || { motif: 'API injoignable' } }));
   }
   valsExploitation(common){
     const D = this.D, E = D.exploitation || {};

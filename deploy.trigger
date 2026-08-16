@@ -1,1 +1,1 @@
-Analyse produit et categorie dans le temps.
+Ecran Analyse dans le temps, sous le scoring produits.

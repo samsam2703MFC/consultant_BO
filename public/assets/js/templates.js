@@ -74,6 +74,7 @@ export function render(c, x){
       ${c.ready ? `
       ${c.isCat || c.isAsso || c.isPlano ? tplReferentiel(c, x) : ''}
       ${c.isProd ? tplProduction(c, x) : ''}
+      ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -529,6 +530,78 @@ function tplProduction(c, x){
       </div>`).join('')}
     </div>
   </div>`;
+}
+
+/* Analyse dans le temps. La série coûte un appel par point : rien ne part
+   avant une sélection explicite, et le nombre de points est annoncé. */
+function tplAnalyse(c, x){
+  const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:240px;flex:1';
+  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const g = c.anGraphe;
+  return `
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <pattern id="anhach" width="5" height="5" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="5" height="5" fill="#D9B3B8"/><line x1="0" y1="0" x2="0" y2="5" stroke="var(--color-primary)" stroke-width="2"/>
+    </pattern>
+  </defs></svg>
+
+  <div style="${CARD};margin-bottom:14px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        ${c.anTypeBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        ${c.anGranBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <select ${x.C(c.anChoisir)} style="${SEL}">
+        <option value="">${c.anType === 'produit' ? 'Choisir une référence…' : 'Choisir une catégorie…'}</option>
+        ${c.anType === 'produit'
+          ? c.anProduits.map(p => `<option value="${esc(p.id)}"${p.id === c.anCle ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')
+          : c.anCategories.map(n => `<option value="${esc(n)}"${n === c.anCle ? ' selected' : ''}>${esc(n)}</option>`).join('')}
+      </select>
+      ${c.anPlafond ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${c.anPlafond} points — un appel API par point</span>` : ''}
+    </div>
+  </div>
+
+  ${c.anVide ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Choisissez ${c.anType === 'produit' ? 'une référence' : 'une catégorie'} pour construire la série.</div>`
+   : c.anChargement ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Construction de la série — ${c.anPlafond} appels à l’API…</div>`
+   : !g ? `<div style="padding:34px 0;color:var(--color-text-muted);font-size:13px">${esc(c.anMotif || 'aucune donnée')}</div>`
+   : `
+  <div style="${CARD}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+      <div>
+        <div style="font-size:13px;font-weight:500">${esc(c.anCle)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.anSource)}</div>
+      </div>
+      ${g.evolution ? `<div style="text-align:right">
+        <div style="font-family:var(--font-display);font-size:21px;line-height:1;color:${g.evolution.col}">${esc(g.evolution.txt)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">du premier au dernier point clos</div></div>` : ''}
+    </div>
+    <svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
+      ${g.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
+      ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"/>`).join('')}
+      ${g.valeurs.map(v => `<text x="${v.x}" y="${v.y}" text-anchor="middle" font-size="10" fill="var(--color-text-muted)">${esc(v.t)}</text>`).join('')}
+      ${g.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="10.5" fill="${l.c}">${esc(l.t)}</text>`).join('')}
+    </svg>
+    ${c.anMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:8px">${esc(c.anMotif)}</div>` : ''}
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px">
+      <thead><tr>
+        <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Période</th>
+        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">${c.anType === 'produit' ? 'Vendu' : 'CA'}</th>
+        ${g.secondaire ? `<th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">Jeté</th>
+        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Taux</th>` : ''}
+      </tr></thead>
+      <tbody>${g.lignes.map(l => `<tr>
+        <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">${esc(l.libelle)}${l.enCours ? ' <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>' : ''}</td>
+        <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
+        ${g.secondaire ? `<td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.secondaire)}</td>
+        <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.taux)}</td>` : ''}
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`}`;
 }
 
 function tplMagasins(c, x){
