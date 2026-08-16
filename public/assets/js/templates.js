@@ -72,6 +72,8 @@ export function render(c, x){
       </header>
 
       ${c.ready ? `
+      ${c.isCat || c.isAsso || c.isPlano ? tplReferentiel(c, x) : ''}
+      ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -343,6 +345,184 @@ function tplExploitDetail(c, x){
                  </tr>`).join('')}</table>` : ''}`}
         </div>`).join('')}
     </div>`)}
+  </div>`;
+}
+
+/* Catalogue / assortiment / planogramme — une seule liste, trois lectures.
+   Les colonnes changent avec l'écran ; les filtres, eux, sont partagés :
+   travailler sur un sous-ensemble puis changer d'onglet est le geste normal. */
+function tplReferentiel(c, x){
+  const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:0';
+  const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px';
+  const TD = 'padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const num = 'text-align:right;font-variant-numeric:tabular-nums';
+  return `
+  ${c.refVide ? `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Catalogue indisponible — l’API et la base partagée n’ont rien rendu.</div>` : `
+  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <input value="${esc(c.refQ)}" ${x.I(c.refSetQ)} placeholder="Rechercher une référence…" style="${SEL};flex:1;min-width:190px">
+    <select ${x.C(c.refSetG)} style="${SEL}">${c.refGroupes.map(g => `<option${g === c.refG ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
+    <select ${x.C(c.refSetC)} style="${SEL}">${c.refCategories.map(g => `<option${g === c.refC ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
+    <select ${x.C(c.refSetP)} style="${SEL}">${c.refGammes.map(g => `<option${g === c.refP ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
+    ${c.isCat ? '' : `<button ${x.A(c.refBascule)} style="border:0.5px solid var(--color-border-secondary);background:${c.refToutes ? 'var(--color-primary)' : 'transparent'};color:${c.refToutes ? '#fff' : 'var(--color-text-muted)'};cursor:pointer;font-family:var(--font-ui);font-size:12px;padding:7px 12px;border-radius:8px;white-space:nowrap">Afficher tout le catalogue</button>`}
+    <span style="font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${c.refFiltres} / ${c.refTotal}</span>
+  </div>
+
+  ${c.isAsso ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refMust} référence(s) déclarée(s) obligatoire(s) sur ${c.refTotal}. ${c.refMust === 0 ? 'Aucune pour l’instant : affichez le catalogue et cochez celles que toute boutique doit tenir.' : ''}</div>` : ''}
+  ${c.isPlano ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refPlaces} référence(s) placée(s) au comptoir sur ${c.refTotal}. ${c.refPlaces === 0 ? 'Aucun emplacement enregistré : affichez le catalogue et posez les premières références.' : ''}</div>` : ''}
+
+  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:640px">
+      <thead><tr>
+        <th style="${TH}">Référence</th>
+        <th style="${TH}">Catégorie</th>
+        ${c.isCat ? `<th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge</th><th style="${TH};${num}">DLV</th>` : ''}
+        ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}">Qté min.</th>` : ''}
+        ${c.isPlano ? `<th style="${TH}">Zone</th><th style="${TH}">Meuble</th><th style="${TH}">Niveau</th><th style="${TH};${num}">Emplac.</th>` : ''}
+        <th style="${TH};text-align:right">Fiche</th>
+      </tr></thead>
+      <tbody>
+        ${c.refLignes.map(l => `<tr>
+          <td style="${TD}">
+            <button ${x.A(l.ouvrir)} style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(l.nom)}</button>
+            <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.ref)}${l.gamme !== '—' ? ' · ' + esc(l.gamme) : ''}</div>
+          </td>
+          <td style="${TD};color:var(--color-text-muted)">${esc(l.categorie)}<div style="font-size:10.5px">${esc(l.groupe)}</div></td>
+          ${c.isCat ? `<td style="${TD};${num}">${esc(l.prix)}</td>
+            <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.cout)}</td>
+            <td style="${TD};${num};color:${l.margeC}">${esc(l.marge)}</td>
+            <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.dlv)}</td>` : ''}
+          ${c.isAsso ? `<td style="${TD};text-align:center">${l.must ? '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e">obligatoire</span>' : '<span style="color:var(--color-text-muted);font-size:11.5px">—</span>'}</td>
+            <td style="${TD};${num}">${l.must ? l.qmin : '—'}</td>` : ''}
+          ${c.isPlano ? `<td style="${TD}">${esc(l.zone) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
+            <td style="${TD};color:var(--color-text-muted)">${esc(l.meuble) || '—'}</td>
+            <td style="${TD};color:var(--color-text-muted)">${esc(l.niveau) || '—'}</td>
+            <td style="${TD};${num}">${esc(l.slot) || '—'}</td>` : ''}
+          <td style="${TD};text-align:right">${l.parametre ? '<span style="font-size:11px;color:#2d7a3e">remplie</span>' : '<span style="font-size:11px;color:var(--color-text-muted)">vide</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  ${c.refTronque ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">${c.refTronque} référence(s) au-delà des 400 affichées — affinez les filtres.</div>` : ''}
+  ${c.refEdit ? tplRefEdit(c, x) : ''}`}`;
+}
+
+/* Édition d'une référence. Deux formulaires selon l'écran d'où l'on vient :
+   poser une référence au comptoir et chiffrer sa production sont deux gestes
+   distincts, les mélanger allongerait la saisie sans servir personne. */
+function tplRefEdit(c, x){
+  const { esc } = x;
+  const e = c.refEdit;
+  const L = 'font-size:11px;color:var(--color-text-muted);display:block;margin-bottom:3px';
+  const IN = 'font-family:var(--font-ui);font-size:13px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);width:100%';
+  const champ = (k, lbl, ph) => `<div><label style="${L}">${esc(lbl)}</label>
+    <input value="${esc(String(e.champs[k] == null ? '' : e.champs[k]))}" ${x.I(e.set(k))} placeholder="${esc(ph || '')}" style="${IN}"></div>`;
+  return `
+  <div style="position:fixed;inset:0;background:rgba(20,16,14,.42);display:flex;align-items:center;justify-content:center;padding:24px;z-index:60">
+    <div style="background:var(--color-surface);border-radius:14px;padding:22px;width:100%;max-width:${e.mode === 'plano' ? '460px' : '620px'};max-height:88vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px">
+        <div>
+          <div style="font-family:var(--font-display);font-size:19px;line-height:1.2">${esc(e.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(e.ref)} · ${e.mode === 'plano' ? 'emplacement au comptoir' : 'fiche de production'}</div>
+        </div>
+        <button ${x.A(e.close)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:18px;line-height:1;padding:2px 6px">×</button>
+      </div>
+      ${e.mode === 'plano' ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${champ('zone', 'Zone', 'Vitrine chaude')}
+          ${champ('meuble', 'Meuble', 'M1')}
+          ${champ('niveau', 'Niveau', 'Haut')}
+          ${champ('slot', 'Emplacement', '3')}
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Vider la zone retire la référence du planogramme.</div>
+      ` : `
+        <div style="display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--color-background-secondary);border-radius:9px;margin-bottom:14px">
+          <input type="checkbox" ${e.champs.must ? 'checked' : ''} ${x.C(e.set('must'))} style="width:16px;height:16px;accent-color:var(--color-primary)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Référence obligatoire</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">toute boutique doit la proposer en permanence</div>
+          </div>
+          <div style="width:110px">${champ('qmin', 'Quantité min.', '0')}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+          ${champ('prix', 'Prix de vente (€)', '')}
+          ${champ('mat', 'Coût matière (€)', '')}
+          ${champ('dlv', 'DLV (heures)', '')}
+          ${champ('prep', 'Préparation (min)', '')}
+          ${champ('cuisson', 'Cuisson (min)', '')}
+          ${champ('fin', 'Finition (min)', '')}
+          ${champ('bmin', 'Batch minimum', '')}
+          ${champ('bmult', 'Multiple de batch', '')}
+          ${champ('four', 'Four', '')}
+        </div>
+        <div style="margin-top:12px">${champ('profil', 'Profil de vente', 'matin, week-end…')}</div>
+      `}
+      ${e.err ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary);background:#F7E4E6;border-radius:8px;padding:8px 11px">${esc(e.err)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+        <button ${x.A(e.close)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 16px;border-radius:9px">Annuler</button>
+        <button ${x.A(e.save)} style="border:none;background:var(--color-primary);color:#fff;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;padding:8px 18px;border-radius:9px;opacity:${e.busy ? '.6' : '1'}">${e.busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Suivi de production. Le taux de perte se calcule sur les VENTES : deux
+   boutiques sur quatre ne déclarent pas leurs fournées, et diviser par ce
+   champ leur attribuait 100 % de perte pour une case non remplie. */
+function tplProduction(c, x){
+  const { esc } = x;
+  if (c.prChargement) return `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Lecture des mouvements de caisse…</div>`;
+  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px';
+  const TD = 'padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const num = 'text-align:right;font-variant-numeric:tabular-nums';
+  return `
+  ${c.prAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 11px;border-radius:8px;margin-bottom:14px;display:inline-block">${esc(c.prAvert)}</div>` : ''}
+  <div style="${CARD};margin-bottom:14px;display:flex;gap:34px;align-items:center;flex-wrap:wrap">
+    <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Réseau</div>
+      <div style="font-size:12.5px;color:var(--color-text-muted)">${esc(c.prPeriode)}</div></div>
+    ${c.prReseau.map(k => `<div><div style="font-family:var(--font-display);font-size:23px;line-height:1">${esc(k.v)}</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(k.l)}</div></div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px">
+    <div style="${CARD}">
+      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Par boutique</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="${TH}">Boutique</th><th style="${TH};${num}">Vendu</th><th style="${TH};${num}">Jeté</th><th style="${TH};${num}">Taux</th></tr></thead>
+        <tbody>${c.prMagasins.map(m => `<tr>
+          <td style="${TD}">${esc(m.magasin)}${m.note ? `<div style="font-size:10.5px;color:var(--color-on-abricot)">${esc(m.note)}</div>` : ''}</td>
+          <td style="${TD};${num};color:var(--color-text-muted)">${esc(m.vendu)}</td>
+          <td style="${TD};${num}">${esc(m.jete)}</td>
+          <td style="${TD};${num};color:${m.col};font-weight:500">${esc(m.taux)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div style="${CARD}">
+      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Motifs de rebut</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="${TH}">Motif</th><th style="${TH};${num}">Quantité</th><th style="${TH};${num}">Lignes</th></tr></thead>
+        <tbody>${c.prMotifs.map(m => `<tr>
+          <td style="${TD}">${esc(m.motif)}</td>
+          <td style="${TD};${num}">${esc(m.quantite)}</td>
+          <td style="${TD};${num};color:var(--color-text-muted)">${esc(m.lignes)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>
+  <div style="${CARD};margin-top:14px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:3px">Références les plus jetées</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">quantité jetée sur la période, et taux rapporté aux ventes</div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      ${c.prProduits.map(p => `<div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px">
+          <span>${esc(p.nom)}</span>
+          <span style="white-space:nowrap"><b style="font-variant-numeric:tabular-nums">${esc(p.jete)}</b>
+            <span style="color:var(--color-text-muted)"> jetés · ${esc(p.vendu)} vendus · </span>
+            <span style="color:${p.col};font-weight:500">${esc(p.taux)}</span></span>
+        </div>
+        <div style="height:5px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${p.w};background:var(--color-primary)"></i></div>
+      </div>`).join('')}
+    </div>
   </div>`;
 }
 

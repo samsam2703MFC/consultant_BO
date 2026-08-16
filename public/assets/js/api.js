@@ -47,7 +47,11 @@ export const ENDPOINTS = {
   pwaReports:     '/pwa/reports',
   pwaTasks:       '/pwa/tasks',
   pwaCompte:      '/pwa/compte',
-  exploitation:   '/exploitation'
+  exploitation:   '/exploitation',
+  prodCatalogue:  '/production/catalogue',
+  prodGroupes:    '/production/groupes',
+  prodCategories: '/production/categories',
+  prodPeriodes:   '/production/periodes'
 };
 
 async function get(path, signal){
@@ -176,6 +180,10 @@ function shape(p, source){
       pwaTasks: p.pwaTasks,
       pwaCompte: p.pwaCompte,
       exploitation: p.exploitation,
+      prodCatalogue: p.prodCatalogue,
+      prodGroupes: (p.prodGroupes || {}).groupes || [],
+      prodCategories: (p.prodCategories || {}).categories || [],
+      prodPeriodes: (p.prodPeriodes || {}).periodes || [],
       roles: (p.roles || {}).roles || []
     })
   };
@@ -237,6 +245,8 @@ function emptyPayload(){
     pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
     pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false },
     exploitation: { jour: null, semaine: null, mois: null, magasins: [], reseau: {}, avertissement: null },
+    prodCatalogue: [], prodGroupes: { groupes: [] }, prodCategories: { categories: [] },
+    prodPeriodes: { periodes: [] },
     roles: { source: null, roles: [] }
   };
 }

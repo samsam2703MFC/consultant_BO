@@ -303,7 +303,11 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+    const titles = { catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
+      assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
+      production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
+      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -496,6 +500,12 @@ class App {
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Exploitation', [['exploitation', 'P&L magasins', 0]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
+      ['Référentiel produit', [
+        { sub: 'Catalogue & comptoir', children: [
+          ['catalogue', 'Catalogue produit', 0],
+          ['assortiment', 'Assortiment obligatoire', 0],
+          ['planogramme', 'Planogramme comptoir', 0]] },
+        ['production', 'Suivi de production', 0]]],
       ['Projets & contrôle', [['projets', 'Projets', nLate],
         // Sous-menu : les deux écrans « tâches consultants » (panel) regroupés.
         { sub: 'Checklists consultants', children: [
@@ -517,8 +527,9 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -643,6 +654,9 @@ class App {
       }
     }
 
+    // --- référentiel produit (partie franchiseur)
+    if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
+    if (common.isProd) this.valsProduction(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -1023,6 +1037,161 @@ class App {
     readOne('/exploitation/magasin?id=' + encodeURIComponent(id) + '&periode=' + per)
       .then(d => this.setState(s => (s.exDetail && s.exDetail.id === id)
         ? { exDetail: Object.assign({}, s.exDetail, { chargement: false, d: d || null }) } : {}));
+  }
+  /**
+   * Catalogue, assortiment et planogramme : trois lectures d'une même liste.
+   *
+   * Les filtres et la recherche sont partagés — passer d'un écran à l'autre en
+   * gardant sa sélection est le comportement attendu quand on travaille sur un
+   * sous-ensemble de références.
+   */
+  valsReferentiel(common){
+    const S = this.state, D = this.D;
+    const cat = D.prodCatalogue || [];
+    common.refVide = !cat.length;
+
+    const fG = S.refG || 'Tous les groupes';
+    const fC = S.refC || 'Toutes les catégories';
+    const fP = S.refP || 'Toutes les gammes';
+    const q = (S.refQ || '').trim().toLowerCase();
+    common.refG = fG; common.refC = fC; common.refP = fP; common.refQ = S.refQ || '';
+    common.refSetG = e => this.setState({ refG: e.target.value, refC: 'Toutes les catégories' });
+    common.refSetC = e => this.setState({ refC: e.target.value });
+    common.refSetP = e => this.setState({ refP: e.target.value });
+    common.refSetQ = e => this.setState({ refQ: e.target.value });
+
+    common.refGroupes = ['Tous les groupes'].concat(
+      [...new Set(cat.map(p => p.groupe).filter(Boolean))].sort());
+    // Les catégories proposées suivent le groupe choisi : offrir les 56 quand
+    // un groupe en contient 6 oblige à chercher ce qui ne s'appliquera pas.
+    const pourCat = fG === 'Tous les groupes' ? cat : cat.filter(p => p.groupe === fG);
+    common.refCategories = ['Toutes les catégories'].concat(
+      [...new Set(pourCat.map(p => p.categorie).filter(Boolean))].sort());
+    common.refGammes = ['Toutes les gammes'].concat(
+      [...new Set(cat.flatMap(p => p.periods || []))].sort());
+
+    let lignes = cat.filter(p =>
+      (fG === 'Tous les groupes' || p.groupe === fG) &&
+      (fC === 'Toutes les catégories' || p.categorie === fC) &&
+      (fP === 'Toutes les gammes' || (p.periods || []).indexOf(fP) >= 0) &&
+      (!q || (p.nom || '').toLowerCase().indexOf(q) >= 0 || String(p.ref).indexOf(q) >= 0));
+
+    if (common.isAsso) { lignes = lignes.filter(p => p.must || S.refToutes); }
+    if (common.isPlano) { lignes = lignes.filter(p => p.zone || S.refToutes); }
+    common.refToutes = !!S.refToutes;
+    common.refBascule = () => this.setState({ refToutes: !S.refToutes });
+    common.refTotal = cat.length;
+    common.refFiltres = lignes.length;
+
+    // Compteurs de couverture : sur ces deux écrans, ce qui manque est
+    // l'information principale — pas ce qui est déjà renseigné.
+    common.refMust = cat.filter(p => p.must).length;
+    common.refPlaces = cat.filter(p => p.zone).length;
+
+    const ed = S.refEdit;
+    common.refEdit = ed ? {
+      ref: ed.ref, nom: ed.nom, mode: ed.mode, busy: !!ed.busy, err: ed.err || '',
+      champs: ed.champs,
+      set: k => e => this.setState(s2 => ({ refEdit: Object.assign({}, s2.refEdit,
+        { champs: Object.assign({}, s2.refEdit.champs, { [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }) }) })),
+      close: () => this.setState({ refEdit: null }),
+      save: () => this.refSave()
+    } : null;
+
+    common.refLignes = lignes.slice(0, 400).map(p => ({
+      ref: String(p.ref), nom: p.nom, categorie: p.categorie || '—',
+      groupe: p.groupe || '—',
+      gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '—',
+      prix: this.fEd(p.prix), cout: this.fEd(p.mat),
+      // Une marge non publiée n'est pas une marge nulle : le coût est visible,
+      // la marge se tait, et la mention dit laquelle des deux on regarde.
+      marge: p.margePct == null ? (p.mat != null ? 'non fiable' : '—') : this.fP(p.margePct, 0),
+      margeC: p.margePct == null ? 'var(--color-text-muted)'
+        : (p.margePct >= 0.6 ? '#2d7a3e' : p.margePct >= 0.4 ? '#C17A2A' : 'var(--color-primary)'),
+      must: !!p.must, qmin: p.qmin || 0,
+      zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
+      slot: p.slot == null ? '' : String(p.slot),
+      place: !!p.zone,
+      dlv: p.dlv ? p.dlv + ' h' : '—',
+      parametre: !!p.parametre,
+      ouvrir: () => this.refOpen(p, common.isPlano ? 'plano' : (common.isAsso ? 'asso' : 'fiche'))
+    }));
+    common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
+    return common;
+  }
+  /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
+  refOpen(p, mode){
+    this.setState({ refEdit: { ref: String(p.ref), nom: p.nom, mode, busy: false, err: '',
+      champs: { must: !!p.must, qmin: p.qmin || 0, prep: p.prep || 0, cuisson: p.cuisson || 0,
+        fin: p.fin || 0, bmin: p.bmin || 0, bmult: p.bmult || 1, four: p.four || 0,
+        dlv: p.dlv || 0, mat: p.mat == null ? '' : p.mat, prix: p.prix == null ? '' : p.prix,
+        profil: p.profil || '',
+        zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
+        slot: p.slot == null ? '' : p.slot } } });
+  }
+  /** Enregistre la référence en cours d'édition, puis recharge le catalogue. */
+  refSave(){
+    const e = this.state.refEdit; if (!e || e.busy) return;
+    this.setState(s => ({ refEdit: Object.assign({}, s.refEdit, { busy: true, err: '' }) }));
+    const url = e.mode === 'plano' ? '/production/planogramme/' : '/production/produit/';
+    this.api('PUT', url + encodeURIComponent(e.ref), e.champs)
+      .then(r => {
+        // Ne PAS annoncer un enregistrement que le serveur n'a pas confirmé :
+        // le budget avait ce défaut, et le message rassurait à tort.
+        if (!r || r.error) {
+          this.setState(s => ({ refEdit: Object.assign({}, s.refEdit,
+            { busy: false, err: (r && r.error) || 'Échec de l\u2019enregistrement.' }) }));
+          return;
+        }
+        return readOne('/production/catalogue').then(c => {
+          if (c) { this.D.prodCatalogue = c; }
+          this.setState({ refEdit: null });
+          this.notify('« ' + e.nom + ' » enregistré');
+        });
+      });
+  }
+  /** Suivi de production — produit, jeté, motifs, par boutique et référence. */
+  valsProduction(common){
+    const S = this.state;
+    const d = S.prodSuivi;
+    if (!d && !this._prodEnCours){
+      this._prodEnCours = true;
+      readOne('/production/suivi').then(r => { this._prodEnCours = false;
+        this.setState({ prodSuivi: r || { vide: true } }); });
+    }
+    common.prChargement = !d;
+    if (!d) return common;
+    common.prPeriode = (d.du || '') + ' → ' + (d.au || '');
+    common.prAvert = d.avertissement || '';
+    const r = d.reseau || {};
+    common.prReseau = [
+      { l: 'vendu', v: (r.vendu || 0).toLocaleString('fr-BE') },
+      { l: 'jeté', v: (r.jete || 0).toLocaleString('fr-BE') },
+      { l: 'taux de perte', v: r.taux == null ? '—' : this.fP(r.taux, 1) },
+      { l: 'fournées déclarées', v: (r.produit || 0).toLocaleString('fr-BE') }
+    ];
+    const tx = t => t == null ? 'var(--color-text-muted)'
+      : (t >= 0.08 ? 'var(--color-primary)' : t >= 0.05 ? '#C17A2A' : '#2d7a3e');
+    common.prMagasins = (d.magasins || []).map(m => ({
+      magasin: m.magasin, vendu: (m.vendu || 0).toLocaleString('fr-BE'),
+      jete: (m.jete || 0).toLocaleString('fr-BE'),
+      taux: m.taux == null ? '—' : this.fP(m.taux, 1), col: tx(m.taux),
+      // « Journal non tenu » n'est pas « zéro fournée » : la distinction décide
+      // de ce qu'on va dire au franchisé.
+      note: m.journalTenu ? '' : 'journal des fournées non tenu'
+    }));
+    const mx = Math.max.apply(null, (d.produits || []).map(p => p.jete || 0).concat([1]));
+    common.prProduits = (d.produits || []).slice(0, 20).map(p => ({
+      nom: p.nom, jete: (p.jete || 0).toLocaleString('fr-BE'),
+      vendu: (p.vendu || 0).toLocaleString('fr-BE'),
+      taux: p.taux == null ? '—' : this.fP(p.taux, 1), col: tx(p.taux),
+      w: Math.max(2, 100 * (p.jete || 0) / mx).toFixed(0) + '%'
+    }));
+    common.prMotifs = (d.motifs || []).map(m => ({
+      motif: m.motif || '—', quantite: (m.quantite || 0).toLocaleString('fr-BE'),
+      lignes: (m.lignes || 0).toLocaleString('fr-BE')
+    }));
+    return common;
   }
   valsExploitation(common){
     const D = this.D, E = D.exploitation || {};

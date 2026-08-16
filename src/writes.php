@@ -655,3 +655,75 @@ function wr_param_put(string $key): array
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$key, json_encode($b['valeur'] ?? null, JSON_UNESCAPED_UNICODE)]);
     return ['ok' => true];
 }
+
+/**
+ * Fiche de production d'une référence — assortiment et paramètres four.
+ *
+ * Le catalogue vient d'`atelierby_db` ; ces attributs-là n'existent nulle part
+ * ailleurs et appartiennent au réseau. La ligne cockpit est donc créée à la
+ * volée, la première fois qu'on touche une référence : rien n'est pré-rempli,
+ * et une référence jamais éditée n'occupe aucune place.
+ */
+function wr_prod_produit(string $ref): array
+{
+    $b = body();
+    $ref = trim($ref);
+    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
+
+    // Intitulé et catégorie recopiés depuis le catalogue : la table cockpit ne
+    // sert à rien si l'on ne peut pas relire ses lignes sans la base partagée.
+    $nom = ''; $cat = '';
+    try {
+        $p = Db::rows('SELECT p.name, c.name AS cat FROM product p
+                    LEFT JOIN product_category c ON c.id = p.id_category
+                       WHERE p.id = ?', [(int) $ref]);
+        if ($p) { $nom = (string) $p[0]['name']; $cat = (string) ($p[0]['cat'] ?? ''); }
+    } catch (PDOException $e) { /* catalogue indisponible : on garde ce qui est fourni */ }
+    if ($nom === '') { $nom = (string) ($b['nom'] ?? $ref); }
+
+    $num = static fn ($v, $def = 0) => is_numeric($v) ? (float) $v : $def;
+    Db::exec(
+        'INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, mat, prix,
+             prep, cuisson, fin, bmin, bmult, four, dlv, profil, actif)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+         ON DUPLICATE KEY UPDATE
+             must = VALUES(must), qmin = VALUES(qmin), mat = VALUES(mat), prix = VALUES(prix),
+             prep = VALUES(prep), cuisson = VALUES(cuisson), fin = VALUES(fin),
+             bmin = VALUES(bmin), bmult = VALUES(bmult), four = VALUES(four),
+             dlv = VALUES(dlv), profil = VALUES(profil)',
+        [$ref, $nom, $cat, ctype_digit($ref) ? (int) $ref : null,
+         !empty($b['must']) ? 1 : 0, (int) $num($b['qmin'] ?? 0),
+         isset($b['mat']) && $b['mat'] !== '' ? $num($b['mat']) : null,
+         isset($b['prix']) && $b['prix'] !== '' ? $num($b['prix']) : null,
+         (int) $num($b['prep'] ?? 0), (int) $num($b['cuisson'] ?? 0), (int) $num($b['fin'] ?? 0),
+         (int) $num($b['bmin'] ?? 0), (int) $num($b['bmult'] ?? 1), (int) $num($b['four'] ?? 0),
+         (int) $num($b['dlv'] ?? 0), (string) ($b['profil'] ?? '')]
+    );
+    journalAdd('CEO', 'Référentiel produit', $nom,
+        (string) ($b['journal'] ?? 'Fiche de production mise à jour'));
+    return ['ok' => true, 'ref' => $ref];
+}
+
+/**
+ * Emplacement d'une référence au comptoir.
+ * Une zone vide efface l'emplacement plutôt que d'enregistrer un blanc : une
+ * référence « posée nulle part » et une référence « jamais placée » doivent se
+ * distinguer à l'écran.
+ */
+function wr_prod_planogramme(string $ref): array
+{
+    $b = body();
+    $ref = trim($ref);
+    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
+    $zone = trim((string) ($b['zone'] ?? ''));
+    if ($zone === '') {
+        Db::exec('DELETE FROM ceo_prod_planogram WHERE ref = ?', [$ref]);
+        return ['ok' => true, 'ref' => $ref, 'retire' => true];
+    }
+    $slot = isset($b['slot']) && is_numeric($b['slot']) ? (int) $b['slot'] : null;
+    Db::exec('INSERT INTO ceo_prod_planogram (ref, zone, meuble, niveau, slot) VALUES (?,?,?,?,?)
+              ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble),
+                                      niveau = VALUES(niveau), slot = VALUES(slot)',
+        [$ref, $zone, trim((string) ($b['meuble'] ?? '')), trim((string) ($b['niveau'] ?? '')), $slot]);
+    return ['ok' => true, 'ref' => $ref];
+}
