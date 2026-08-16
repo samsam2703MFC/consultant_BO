@@ -1052,7 +1052,7 @@ function tplReporting(c, x){
                 <select ${x.C(r.setDest)} style="flex:1;min-width:0;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 7px;background:var(--color-surface);color:var(--color-text)">
                   ${opts(c.repPeople, r.dest, o => o.val, o => esc(o.nom))}
                 </select>
-                <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${r.destEmail}</span>
+                <span style="${r.destSt}">${r.destEmail}</span>
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:240px">
                 <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);width:20px">Cc</span>
@@ -1060,7 +1060,7 @@ function tplReporting(c, x){
                   <option value=""${r.cc === '' ? ' selected' : ''}>— Aucune copie —</option>
                   ${opts(c.repPeople, r.cc, o => o.val, o => esc(o.nom))}
                 </select>
-                <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${r.ccEmail}</span>
+                <span style="${r.ccSt}">${r.ccEmail}</span>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
