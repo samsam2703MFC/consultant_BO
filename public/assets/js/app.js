@@ -1002,6 +1002,20 @@ class App {
    * mettre en forme, et à distinguer trois états que la donnée impose —
    * mois clos, mois partiellement encodé, mois sans budget.
    */
+  /**
+   * Tableau N vs N-1 de toutes les boutiques.
+   * Chargé à l'ouverture de l'écran puis à chaque changement de période ; une
+   * seule requête réseau, jamais une par magasin.
+   */
+  exChargeReseau(per){
+    if (this._exReseauEnCours === per) return;
+    this._exReseauEnCours = per;
+    this.setState({ exReseau: { per, chargement: true, d: null } });
+    readOne('/exploitation/reseau?periode=' + per)
+      .then(d => { this._exReseauEnCours = null;
+        this.setState(s => (s.exReseau && s.exReseau.per === per)
+          ? { exReseau: { per, chargement: false, d: d || null } } : {}); });
+  }
   /** Ouvre le détail d'un magasin : lecture ponctuelle, hors chargement initial. */
   exOpen(id, nom){
     const per = this.state.exPeriode || 'mois';
@@ -1029,6 +1043,32 @@ class App {
     common.exStCumul = ongl(cumule);
     common.exLegendeReel = cumule ? 'réel cumulé' : 'réel mensuel';
     common.exLegendeCible = cumule ? 'cible cumulée' : 'budget encodé';
+    // --- N vs N-1, toutes boutiques
+    const rp = (this.state.exNvPer || 'mois');
+    const rz = this.state.exReseau;
+    if (!rz || rz.per !== rp) { setTimeout(() => this.exChargeReseau(rp), 0); }
+    const ongN = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
+      + 'padding:4px 11px;border-radius:7px;'
+      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
+            : 'background:transparent;color:var(--color-text-muted)');
+    common.exNvBtns = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']]
+      .map(b => ({ label: b[1], st: ongN(rp === b[0]),
+        go: () => { this.setState({ exNvPer: b[0] }); this.exChargeReseau(b[0]); } }));
+    common.exNv = {
+      chargement: !rz || rz.chargement,
+      motif: rz && rz.d ? (rz.d.motif || '') : '',
+      periode: rz && rz.d ? (rz.d.du || '') + ' → ' + (rz.d.au || '') : '',
+      source: rz && rz.d ? (rz.d.source || '') : '',
+      lignes: (rz && rz.d && rz.d.magasins ? rz.d.magasins : []).map(m => ({
+        magasin: m.magasin,
+        n: m.n == null ? '—' : (Math.abs(m.n) >= 100000 ? this.fK(m.n) : this.fE(m.n)),
+        n1: m.n1 == null ? '—' : (Math.abs(m.n1) >= 100000 ? this.fK(m.n1) : this.fE(m.n1)),
+        // Pas d'écart sans N-1 : une boutique ouverte cette année n'a pas
+        // « 0 % de croissance », elle n'a pas d'an dernier.
+        ecart: m.ecart == null ? '—' : (m.ecart > 0 ? '+' : '') + m.ecart.toFixed(1).replace('.', ',') + ' %',
+        col: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
+        pt: m.ecart == null ? 'transparent' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)') }))
+    };
     // Détail d'un magasin. Chaque bloc porte son état : « ok » quand l'API a
     // répondu, « attente » sinon. Aucun chiffre n'est fabriqué pour combler —
     // un écran qui annonce ce qui lui manque vaut mieux qu'un écran rempli

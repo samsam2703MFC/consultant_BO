@@ -1,1 +1,1 @@
-N vs N-1 : reposer la meme question sur l exercice precedent.
+Tableau N vs N-1 pour toutes les boutiques.

@@ -225,6 +225,34 @@ function tplExploitation(c, x){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px">
       ${c.exMagasins.map(carte).join('')}
     </div>
+    <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:500">N vs N-1 — toutes les boutiques</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.exNv.periode)}${c.exNv.source ? ' · ' + esc(c.exNv.source.split('?')[0]) : ''}</div>
+        </div>
+        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
+          ${c.exNvBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+        </div>
+      </div>
+      ${c.exNv.chargement ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel…</div>`
+        : (!c.exNv.lignes.length ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">${esc(c.exNv.motif || 'aucune donnée')}</div>` : `
+      ${c.exNv.motif ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-bottom:8px">${esc(c.exNv.motif)}</div>` : ''}
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Magasin</th>
+          <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">N</th>
+          <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">N-1</th>
+          <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Écart</th>
+        </tr></thead>
+        <tbody>${c.exNv.lignes.map(l => `<tr>
+          <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);font-weight:500">${esc(l.magasin)}</td>
+          <td style="padding:7px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.n)}</td>
+          <td style="padding:7px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
+          <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;color:${l.col};font-weight:500">${esc(l.ecart)}<i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${l.pt};margin-left:6px;vertical-align:1px"></i></td>
+        </tr>`).join('')}</tbody>
+      </table>`)}
+    </div>
     ${c.exDetail ? tplExploitDetail(c, x) : ''}
     <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
       <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
