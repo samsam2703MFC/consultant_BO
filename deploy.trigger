@@ -1,1 +1,1 @@
-compte consultant deplace dans le panneau utilisateur (chip du rail) avec edition de l identite ; encodage budget : champs vides au lieu de zeros et message d enregistrement honnete. Deploiement standard.
+correctif : variable sec non definie dans le panneau utilisateur. Deploiement standard.

@@ -2008,6 +2008,7 @@ function tplCtrlDetail(c, x){
 function tplUserPanel(c, x){
   const { esc } = x;
   const u = c.userPanel;
+  const sec = 'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)';
   return `
   <div ${x.A(u.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:70;animation:fadeIn 160ms ease"></div>
   <div style="position:fixed;top:0;right:0;bottom:0;width:520px;background:var(--color-surface);z-index:71;box-shadow:-12px 0 40px rgba(34,34,34,0.18);overflow-y:auto;animation:panelIn 200ms ease">
