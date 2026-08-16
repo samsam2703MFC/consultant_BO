@@ -423,6 +423,25 @@ final class PanelApi
      * Sert le positionnement réseau : un appel au lieu d'un par boutique, et
      * surtout des chiffres calculés de la même façon pour tout le monde.
      */
+    /**
+     * Indicateurs de toutes les boutiques sur des bornes explicites.
+     * Sert la comparaison N-1 : on repose la MÊME question sur l'exercice
+     * précédent, plutôt que de déduire l'écart d'une source qui ne compterait
+     * pas de la même façon.
+     */
+    public static function shopsSalesKpisEntre(string $du, string $au): ?array
+    {
+        return self::premierObjet([
+            '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        ]);
+    }
+
+    /** Liste des boutiques avec leurs intitulés — /consultant/shops. */
+    public static function consultantShops(): ?array
+    {
+        return self::premierObjet(['/consultant/shops']);
+    }
+
     public static function shopsSalesKpis(string $periode, string $date): ?array
     {
         $q = self::q($periode, $date);

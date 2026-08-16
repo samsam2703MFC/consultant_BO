@@ -1,1 +1,1 @@
-Reseau N vs N-1 : indicateurs de toutes les boutiques.
+N vs N-1 : reposer la meme question sur l exercice precedent.

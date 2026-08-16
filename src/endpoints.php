@@ -981,19 +981,52 @@ function ep_exploitation_reseau(): array
         $out['motif'] = 'compte consultant non configuré (Mon compte)';
         return $out;
     }
-    $r = PanelApi::shopsSalesKpis($per === 'annee' ? 'annee' : $per, $date);
+    // Bornes de la période, puis LES MÊMES un an plus tôt. La comparaison N-1
+    // n'est pas rendue par cet endpoint : plutôt que de la déduire d'une autre
+    // source — qui ne compterait pas pareil — on lui repose la même question
+    // sur l'exercice précédent. Deux appels, une seule définition du chiffre.
+    $ts = strtotime($date);
+    $du = $per === 'jour' ? $date
+        : ($per === 'semaine' ? date('Y-m-d', strtotime('monday this week', $ts))
+        : ($per === 'annee' ? date('Y-01-01', $ts) : date('Y-m-01', $ts)));
+    $r = PanelApi::shopsSalesKpisEntre($du, $date);
     if (!is_array($r)) { $out['motif'] = PanelApi::$lastError ?: 'endpoint non disponible'; return $out; }
+    $src = PanelApi::$lastPath;
 
-    $liste = null;
-    foreach ([$r, $r['shops'] ?? null, $r['data'] ?? null, $r['items'] ?? null, $r['results'] ?? null] as $c) {
-        if (is_array($c) && $c && array_is_list($c)) { $liste = $c; break; }
-    }
+    $extraire = static function ($rep): ?array {
+        foreach ([$rep, $rep['shops'] ?? null, $rep['data'] ?? null,
+                  $rep['items'] ?? null, $rep['results'] ?? null] as $c) {
+            if (is_array($c) && $c && array_is_list($c)) { return $c; }
+        }
+        return null;
+    };
+    $liste = $extraire($r);
     if ($liste === null) {
         $out['motif'] = 'forme non reconnue, clés : ' . implode(', ', array_slice(array_keys($r), 0, 12));
         return $out;
     }
+    $n1par = [];
+    $rn1 = PanelApi::shopsSalesKpisEntre(date('Y-m-d', strtotime($du . ' -1 year')),
+                                         date('Y-m-d', strtotime($date . ' -1 year')));
+    foreach ($extraire(is_array($rn1) ? $rn1 : []) ?? [] as $x) {
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) {
+                $n1par[(int) $x[$c]] = nombreOuNull($x, ['ca', 'turnover', 'revenue']); break;
+            }
+        }
+    }
+    // Les noms ne sont pas dans les indicateurs : « Magasin 2 » n'aide personne.
+    $noms = [];
+    foreach (PanelApi::consultantShops() ?? [] as $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        foreach (['representative_name', 'name', 'label'] as $c) {
+            if (!empty($sh[$c]) && is_string($sh[$c])) { $noms[$id] = trim($sh[$c]); break; }
+        }
+    }
     $out['etat'] = 'ok';
-    $out['source'] = PanelApi::$lastPath;
+    $out['source'] = $src;
+    $out['du'] = $du; $out['au'] = $date;
     if (!empty($_GET['debug'])) { $out['brut'] = array_slice($liste, 0, 2); }
 
     foreach ($liste as $x) {
@@ -1002,23 +1035,17 @@ function ep_exploitation_reseau(): array
         foreach (['shop_id', 'id_shop', 'id'] as $c) {
             if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
         }
-        $nom = '';
-        foreach (['representative_name', 'shop_name', 'name', 'label'] as $c) {
-            if (!empty($x[$c]) && is_string($x[$c])) { $nom = trim($x[$c]); break; }
-        }
         $n  = nombreOuNull($x, ['ca', 'turnover', 'revenue', 'value', 'total']);
-        // L'écart peut être donné tel quel, ou déductible d'une valeur N-1.
-        // Rien n'est calculé sans l'une des deux : un « 0 % » inventé se lirait
-        // comme une stabilité alors qu'il signifie une absence.
-        $ec = nombreOuNull($x, ['delta', 'variation', 'evolution', 'growth', 'pct_change', 'delta_pct']);
-        $n1 = nombreOuNull($x, ['ca_n1', 'turnover_n1', 'previous', 'previous_value', 'last_year', 'ca_last_year']);
-        if ($ec === null && $n1 !== null && $n1 != 0.0 && $n !== null) { $ec = round(100 * ($n - $n1) / $n1, 1); }
+        $n1 = $n1par[$id] ?? nombreOuNull($x, ['ca_n1', 'previous', 'last_year']);
+        // Aucun écart sans un N-1 non nul : un « 0 % » calculé faute de mieux se
+        // lirait comme une stabilité alors qu'il signifie une absence.
+        $ec = ($n !== null && $n1 !== null && $n1 != 0.0) ? round(100 * ($n - $n1) / $n1, 1) : null;
         $out['magasins'][] = ['shopId' => (string) $id,
-            'magasin' => $nom !== '' ? $nom : ('Magasin ' . $id),
+            'magasin' => $noms[$id] ?? ('Magasin ' . $id),
             'n' => $n, 'n1' => $n1, 'ecart' => $ec,
             'tickets' => nombreOuNull($x, ['tickets', 'ticket_count']),
             'panier' => nombreOuNull($x, ['avg_basket', 'average_basket']),
-            'produitsParClient' => nombreOuNull($x, ['products_per_ticket', 'products_per_client'])];
+            'produits' => nombreOuNull($x, ['products', 'product_count'])];
     }
     usort($out['magasins'], fn($a, $b) => ($b['n'] ?? 0) <=> ($a['n'] ?? 0));
     // Dire si la comparaison N-1 manque, plutôt que d'afficher une colonne vide
