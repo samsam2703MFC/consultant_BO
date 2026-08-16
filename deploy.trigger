@@ -1,1 +1,1 @@
-Vraisemblance du coût matière : borne haute et borne basse.
+Groupes de catégories : referentiel complet de l'arbre produit.

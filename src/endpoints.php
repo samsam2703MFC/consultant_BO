@@ -933,37 +933,72 @@ function ep_prod_categories(): array
         $out['erreur'] = PanelApi::$lastError;
     }
 
-    // Repli base partagée. `product_category` ne porte pas le groupe : le
-    // rattachement passe par product_category_group_connection (une ligne par
-    // catégorie). Sans cette jointure les 84 catégories arrivent à plat.
-    try {
-        foreach (Db::rows('SELECT c.id, c.name, c.is_active, g.name AS groupe
-                             FROM product_category c
-                        LEFT JOIN product_category_group_connection k ON k.id_product_category = c.id
-                        LEFT JOIN product_category_group g ON g.id = k.id_product_category_group
-                            ORDER BY g.name IS NULL, g.name, c.id') as $c) {
-            $out['categories'][] = [
-                'id'     => (int) $c['id'],
-                'nom'    => (string) $c['name'],
-                'groupe' => $c['groupe'] !== null ? (string) $c['groupe'] : null,
-                'actif'  => !isset($c['is_active']) || (int) $c['is_active'] === 1,
-            ];
+    // Repli base partagée. `catalogueCategories()` porte la jointure correcte
+    // (product_category_group_connection : id_category / id_group) et regroupe
+    // les catégories rattachées à plusieurs groupes, qui sinon apparaîtraient
+    // en double.
+    if (!$out['categories']) {
+        $cat = catalogueCategories();
+        if ($cat !== null) {
+            foreach ($cat as $id => $c) {
+                $out['categories'][] = ['id' => $id, 'nom' => $c['nom'], 'groupe' => $c['groupe']];
+            }
+            usort($out['categories'], function ($a, $b) {
+                return [$a['groupe'] === null, (string) $a['groupe'], $a['id']]
+                   <=> [$b['groupe'] === null, (string) $b['groupe'], $b['id']];
+            });
+            $out['source'] = 'atelierby_db';
         }
-        if ($out['categories']) { $out['source'] = 'atelierby_db'; }
-    } catch (PDOException $e) {
-        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
+    }
+    return $out;
+}
+
+/**
+ * Groupes de catégories du réseau (/product-category-groups).
+ * C'est le premier niveau de l'arbre produit : Boulangerie, Viennoiserie,
+ * Pâtisserie… Les catégories s'y rattachent par une table de liaison, et une
+ * catégorie peut relever de plusieurs groupes.
+ */
+function ep_prod_groupes(): array
+{
+    $debug = !empty($_GET['debug']);
+    $out = ['source' => null, 'groupes' => [], 'erreur' => null];
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::productCategoryGroups();
+        if ($rows) {
+            $out['source'] = 'api';
+            if ($debug) { $out['clesBrut'] = array_slice(array_keys($rows[0]), 0, 25); $out['premier'] = $rows[0]; }
+            foreach ($rows as $g) {
+                $id = null;
+                foreach (['id', 'id_group', 'group_id', 'id_product_category_group'] as $k) {
+                    if (isset($g[$k]) && is_numeric($g[$k])) { $id = (int) $g[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'group_name', 'category_group_name', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($g[$k]) && is_string($g[$k])) { $nom = trim($g[$k]); break; }
+                }
+                if ($nom === '') { continue; }
+                $out['groupes'][] = ['id' => $id, 'nom' => $nom];
+            }
+            if ($out['groupes']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
     }
 
-    // Dernier recours : les catégories seules. Mieux vaut un écran sans
-    // regroupement qu'un écran vide parce qu'une colonne de jointure a changé.
-    if (!$out['categories']) {
-        try {
-            foreach (Db::rows('SELECT id, name, is_active FROM product_category ORDER BY id') as $c) {
-                $out['categories'][] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'],
-                    'groupe' => null, 'actif' => (int) $c['is_active'] === 1];
-            }
-            if ($out['categories']) { $out['source'] = 'atelierby_db (sans regroupement)'; }
-        } catch (PDOException $e) { /* la base partagée n'est pas accessible */ }
+    // Repli base partagée, avec le nombre de catégories rattachées : un groupe
+    // vide n'est pas une erreur, mais il ne mérite pas d'entrée dans un filtre.
+    try {
+        foreach (Db::rows('SELECT g.id, g.name, COUNT(k.id_category) n
+                             FROM product_category_group g
+                        LEFT JOIN product_category_group_connection k ON k.id_group = g.id
+                         GROUP BY g.id, g.name ORDER BY g.name') as $g) {
+            $out['groupes'][] = ['id' => (int) $g['id'], 'nom' => (string) $g['name'],
+                'categories' => (int) $g['n']];
+        }
+        if ($out['groupes']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
     }
     return $out;
 }

@@ -310,6 +310,13 @@ final class PanelApi
         return is_array($r) ? self::liste($r) : [];
     }
 
+    /** Groupes de catégories du réseau (/product-category-groups). */
+    public static function productCategoryGroups(): array
+    {
+        $r = self::get('/product-category-groups');
+        return is_array($r) ? self::liste($r) : [];
+    }
+
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
     private static ?array $catalogue = null;
 
