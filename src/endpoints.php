@@ -534,6 +534,8 @@ function ep_projects(): array
             'magasin' => $t['shop_id'], 'due' => $t['due_on'], 'done' => $t['done_on'],
             'relance' => $t['reminded_on'], 'desc' => $t['description'],
             'valideeLe' => $t['validated_at'] ?? null,
+            'renduePar' => $t['delivered_by'] ?? null,
+            'noteRemise' => $t['delivery_note'] ?? null,
             'budget' => $t['budget'] !== null ? (float) $t['budget'] : null,
             // `note` nulle sur une tâche rendue = elle attend une validation :
             // c'est ce qui alimente le groupe « À valider » de l'écran.

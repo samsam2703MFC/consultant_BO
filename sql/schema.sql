@@ -188,6 +188,11 @@ CREATE TABLE IF NOT EXISTS ceo_project_task (
   -- C'est cette date, pas la livraison, qui situe une validation dans la semaine
   -- ou le mois du suivi.
   validated_at DATETIME NULL,
+  -- Qui a déclaré la remise. Jusqu'ici seul le CEO cochait, au nom du
+  -- consultant : on ne savait pas si le livrable était réellement annoncé par
+  -- celui qui l'a produit. NULL = coché par la direction.
+  delivered_by VARCHAR(80) NULL,
+  delivery_note TEXT NULL,
   CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
