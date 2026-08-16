@@ -783,6 +783,7 @@ function ep_exploitation_magasin(): array
         $out['blocs']['categories'] = $attente('Ventilation du chiffre d\'affaires');
     } else {
         $srcPnl = $src = PanelApi::$lastPath;
+        $replisPnl = PanelApi::$lastFallbacks;
         $caPnl = $ca = nombreOuNull($p['turnover'] ?? [], ['value', 'amount']) ?? nombreOuNull($p, ['turnover']);
         $poste = function (array $p, string $cle) use ($ca): array {
             $v = $p[$cle] ?? null;
@@ -805,6 +806,13 @@ function ep_exploitation_magasin(): array
             $ecart = 'l\'API a rendu ' . $du . ' → ' . $au2 . ', alors que l\'écran porte sur '
                 . $date . ' — ces chiffres ne couvrent pas la même période que les cartes';
         }
+        // Une route dédiée qui échoue et un repli qui réussit : l'écran doit
+        // dire lequel il lit, sinon on attribue à la bonne source des chiffres
+        // qui viennent d'une autre.
+        if ($replisPnl) {
+            $ecart = trim(($ecart ? $ecart . ' — ' : '')
+                . 'route dédiée indisponible : ' . implode(' · ', $replisPnl));
+        }
         $out['blocs']['pnl'] = ['titre' => 'Compte de résultat', 'etat' => 'ok', 'source' => $src,
             'avertissement' => $ecart,
             'donnees' => [
@@ -823,6 +831,7 @@ function ep_exploitation_magasin(): array
     // /pnl, qui donne les montants mais pas la marge — donc pas la couleur.
     $cs = PanelApi::categorySales($sid, $per, $date);
     $srcCat = PanelApi::$lastPath;
+    $repliCat = PanelApi::$lastFallbacks;
     $cats = null;
     if (is_array($cs)) {
         foreach ([$cs, $cs['categories'] ?? null, $cs['data'] ?? null, $cs['items'] ?? null] as $cand) {
@@ -831,6 +840,7 @@ function ep_exploitation_magasin(): array
     }
     if ($cats === null && isset($p['turnover']['categories']) && is_array($p['turnover']['categories'])) {
         $cats = $p['turnover']['categories'];
+        $repliCat = array_merge($repliCat ?: [], ['/consultant/shops/category-sales → sans réponse']);
         $srcCat = $srcPnl;
     }
     if (!is_array($cats) || !$cats) {
@@ -840,8 +850,9 @@ function ep_exploitation_magasin(): array
         if ($caRef === null || $caRef <= 0) {
             $caRef = array_sum(array_map(fn($c) => nombreOuNull($c, ['value', 'amount', 'ca', 'turnover']) ?? 0, $cats));
         }
+        $avCat = $repliCat ? ('route dédiée indisponible : ' . implode(' · ', $repliCat)) : null;
         $out['blocs']['categories'] = ['titre' => 'Ventilation du chiffre d\'affaires', 'etat' => 'ok',
-            'source' => $srcCat, 'avertissement' => null,
+            'source' => $srcCat, 'avertissement' => $avCat,
             'donnees' => array_map(function ($c) use ($caRef) {
                 $v = nombreOuNull($c, ['value', 'amount', 'ca', 'turnover']);
                 $fc = nombreOuNull($c, ['food_cost_pct', 'fc_pct', 'fc', 'food_cost', 'foodcost']);

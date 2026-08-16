@@ -357,12 +357,23 @@ final class PanelApi
      * `premierNonVide()` ne convient pas ici : ces endpoints rendent des
      * objets (un P&L, un jeu d'indicateurs), pas des collections.
      */
+    /** Variantes tombées avant celle qui a répondu — diagnostic d'un repli. */
+    public static array $lastFallbacks = [];
+
     private static function premierObjet(array $paths): ?array
     {
         $essais = [];
+        self::$lastFallbacks = [];
         foreach ($paths as $p) {
             $r = self::get($p);
-            if (is_array($r) && $r !== []) { self::$lastPath = $p; return $r; }
+            if (is_array($r) && $r !== []) {
+                self::$lastPath = $p;
+                // Un repli réussi masque l'échec de la route dédiée : sans
+                // cette trace, on croit lire la bonne source alors qu'on lit la
+                // suivante. C'est exactement ce qui a caché le mauvais mois.
+                self::$lastFallbacks = $essais;
+                return $r;
+            }
             // On garde la trace de CHAQUE variante tentée : quand rien ne
             // répond, la seule information utile est la liste de ce qui a été
             // essayé et ce que chacun a renvoyé.
