@@ -241,7 +241,7 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
              AND (column_name REGEXP 'wast|loss|perte|casse|discard|unsold|shrink|cost|cout|labour|labor|counter|comptoir|display|image');" 2>&1 | head -60
     echo "===== TABLES (hors ceo_) : nom + lignes ====="
     q -N -e "SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name NOT LIKE 'ceo\\_%' ORDER BY table_name;" 2>&1
-    for t in shops mac_shop_monthly_pnl mac_kpi_threshold mac_consultant_param of_tag kpi position mac_report_share transaction transaction_product user_membership user_profile sig_products sig_product_categories sig_product_prices; do
+    for t in product product_category product_category_group product_availability_period product_availability_period_connection shops mac_shop_monthly_pnl of_tag kpi position transaction_product sig_products; do
       echo "===== $t ====="
       if q -N -e "SELECT 1 FROM \`$t\` LIMIT 1;" >/dev/null 2>&1; then
         echo "-- COUNT --"; q -N -e "SELECT COUNT(*) FROM \`$t\`;" 2>&1
@@ -250,6 +250,11 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
         echo "  (table absente)"
       fi
     done
+    echo "===== CATALOGUE PRODUIT : échantillons ====="
+    for t in product_category_group product_category product_availability_period product_availability_period_connection; do
+      echo "-- $t (10 lignes) --"; q -e "SELECT * FROM \`$t\` LIMIT 10;" 2>&1
+    done
+    echo "-- product (5 lignes) --"; q -e "SELECT * FROM product LIMIT 5;" 2>&1
     echo "===== ÉCHANTILLONS (référence / figures, non-PII) ====="
     for t in mac_consultant_param mac_kpi_threshold of_tag kpi; do
       echo "-- $t (jusqu'à 25) --"; q -e "SELECT * FROM \`$t\` LIMIT 25;" 2>&1
