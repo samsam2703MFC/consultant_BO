@@ -283,7 +283,12 @@ function ep_pwa_tasks(): array
             $tid = (int) $r['id_task'];
             $note = isset($r['rating']) && $r['rating'] !== null ? (int) $r['rating'] : null;
             $acc  = isset($r['is_accepted']) && $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null;
-            $valide = !empty($r['owner_validated_at']);
+            // Une tâche NOTÉE est validée : la note EST la validation. Le
+            // contrôle de la direction consiste à noter (ou à renoter), pas à
+            // cocher une case en plus — sans quoi l'écran annonce « 0 validée »
+            // devant dix tâches déjà évaluées.
+            $valide = $note !== null;
+            $ctrlDir = !empty($r['owner_validated_at']);
             if (!isset($byShop[$sid])) {
                 $byShop[$sid] = ['shopId' => (string) $sid, 'shop' => $shopNames[$sid] ?? ('Boutique #' . $sid), 'taches' => []];
             }
@@ -297,8 +302,12 @@ function ep_pwa_tasks(): array
                 'consultantId' => (int) ($r['id_consultant'] ?? 0),
                 'date'        => (string) $r['review_date'],
                 'valide'      => $valide,
-                'valideePar'  => $valide ? ($r['owner_name'] ?? null) : null,
-                'valideeLe'   => $valide ? substr((string) $r['owner_validated_at'], 0, 16) : null,
+                // Qui a validé = qui a noté (le consultant), sauf si la
+                // direction a explicitement contresigné : elle prime alors.
+                'valideePar'  => $ctrlDir ? ($r['owner_name'] ?? null) : ($valide ? ($r['consultant_name'] ?? null) : null),
+                'valideeLe'   => $ctrlDir ? substr((string) $r['owner_validated_at'], 0, 16)
+                                          : ($valide && $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null),
+                'ctrlDir'     => $ctrlDir,
                 'majLe'       => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
             ];
             $tot['taches']++;

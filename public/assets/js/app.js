@@ -259,7 +259,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists évaluées par les consultants (panel) : note, conformité et commentaire, par boutique. Validez ou retirez la validation de chaque avis.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -1044,9 +1044,9 @@ class App {
     const nMoy = T.noteMoy != null ? String(T.noteMoy).replace('.', ',') + ' / 5' : '—';
     common.ctrlKpis = [
       { k: 'Tâches évaluées', v: String(T.taches || 0), s: (pt.shops || []).length + ' boutique(s) — journée du ' + common.ctrlDateLabel },
-      { k: 'À valider', v: String(T.aValider || 0), s: 'Avis consultants en attente de votre validation' },
-      { k: 'Validées', v: String(T.valides || 0), s: 'Avis validés par la direction' },
-      { k: 'Refus consultants', v: String(T.refuses || 0), s: 'Tâches jugées non conformes sur le terrain' },
+      { k: 'À noter', v: String(T.aValider || 0), s: 'Tâches rendues sans évaluation — la note vaut validation' },
+      { k: 'Validées', v: String(T.valides || 0), s: 'Tâches évaluées : une note posée vaut validation' },
+      { k: 'Non conformes', v: String(T.refuses || 0), s: 'Évaluées sous le seuil de conformité' },
       { k: 'Note moyenne', v: nMoy, s: 'Moyenne des notes consultants du jour' },
     ];
     // Filtre boutique
@@ -1056,7 +1056,7 @@ class App {
     common.setCtrlShop = e => this.setState({ ctrlShop: e.target.value });
     // Filtre statut
     common.ctrlOnly = S.ctrlOnly || 'tous';
-    common.ctrlOnlyOptions = [{ val: 'tous', nom: 'Tous les avis' }, { val: 'avalider', nom: 'À valider seulement' }, { val: 'refuses', nom: 'Refus consultants' }];
+    common.ctrlOnlyOptions = [{ val: 'tous', nom: 'Toutes les tâches' }, { val: 'avalider', nom: 'À noter seulement' }, { val: 'refuses', nom: 'Non conformes seulement' }];
     common.setCtrlOnly = e => this.setState({ ctrlOnly: e.target.value });
 
     const seuilC = pt.seuil || 4;
@@ -1069,7 +1069,8 @@ class App {
       barSt: 'display:block;height:5px;border-radius:999px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
     const shops = (pt.shops || []).filter(s => common.ctrlShop === 'Toutes les boutiques' || s.shop === common.ctrlShop)
       .map(s => {
-        const taches = (s.taches || []).filter(t => common.ctrlOnly === 'tous' || (common.ctrlOnly === 'avalider' ? !t.valide : t.accepte === false))
+        const taches = (s.taches || []).filter(t => common.ctrlOnly === 'tous'
+          ? true : (common.ctrlOnly === 'avalider' ? !t.valide : (t.note != null && t.note < seuilC)))
           .map(t => ({
             taskId: t.taskId, tache: t.tache,
             note: t.note == null ? '—' : t.note + ' / 5', noteSt: noteSt(t.note),
@@ -1080,10 +1081,16 @@ class App {
               : (t.accepte == null ? 'color:var(--color-text-muted)' : (t.accepte ? 'color:#2d7a3e' : 'color:#8D1D2C;font-weight:500'))),
             comment: t.comment || '', hasComment: !!t.comment,
             consultant: t.consultant || '—',
-            valide: t.valide, valideMeta: t.valide ? ('Validé' + (t.valideePar ? ' par ' + t.valideePar : '') + (t.valideeLe ? ' · ' + t.valideeLe : '')) : 'Non validé',
-            btnLabel: t.valide ? 'Retirer' : 'Valider',
+            // La note EST la validation : une tâche notée est validée, une tâche
+            // sans note reste à noter. Pas de case à cocher en plus — pour
+            // changer un verdict, on renote.
+            valide: t.valide,
+            valideMeta: t.valide
+              ? ('Validé' + (t.valideePar ? ' par ' + t.valideePar : '') + (t.valideeLe ? ' · ' + t.valideeLe : ''))
+              : 'Pas encore noté',
+            btnLabel: t.valide ? 'Renoter' : 'Noter',
             btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
-            toggle: () => this.ctrlToggle(s.shopId, t.taskId, t.date, !t.valide),
+            toggle: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
             open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
           }));
         return { shop: s.shop, shopId: s.shopId, nTaches: (s.taches || []).length,

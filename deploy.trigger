@@ -1,1 +1,1 @@
-correctif : M non defini dans l ecran Controle (repartition par niveau) et acces SIGNAL protege. Deploiement standard, aucune operation sur la base.
+une tache notee est validee : le statut decoule de la note, l action devient Noter / Renoter. Deploiement standard, aucune operation sur la base.

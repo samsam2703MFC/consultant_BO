@@ -852,7 +852,7 @@ function tplControle(c, x){
           <div style="${card};overflow:hidden">
             <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="font-size:13.5px;font-weight:600">${esc(s.shop)}</div>
-              <div style="font-size:11.5px;color:var(--color-text-muted)">${s.nValid} / ${s.nTaches} validée(s)</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">${s.nValid} / ${s.nTaches} notée(s) — donc validée(s)</div>
             </div>
             <div style="overflow-x:auto">
             <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
@@ -862,7 +862,7 @@ function tplControle(c, x){
                 <th style="text-align:left;${TH2};width:120px">Conformité</th>
                 <th style="text-align:left;${TH2};width:150px">Consultant</th>
                 <th style="text-align:left;${TH2}">Commentaire</th>
-                <th style="text-align:right;${TH};width:190px">Validation direction</th>
+                <th style="text-align:right;${TH};width:200px">Validation (note posée)</th>
               </tr></thead>
               <tbody>
                 ${s.taches.map(t => `
