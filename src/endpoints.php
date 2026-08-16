@@ -570,6 +570,82 @@ function ep_prod_catalogue(): array
     }, $rows);
 }
 
+/**
+ * GET /production/categories — catégories produit du réseau.
+ *
+ * Source : API du panel (/product-categories). Repli sur les tables partagées
+ * (product_category ⨝ product_category_group) si l'API n'est pas configurée —
+ * les deux existent, autant ne pas dépendre d'une seule.
+ *
+ * `debug=1` rend les clés brutes : la forme n'est pas documentée ici, et un
+ * mapping deviné produirait un référentiel faux sans erreur visible.
+ */
+function ep_prod_categories(): array
+{
+    $debug = !empty($_GET['debug']);
+    $out = ['source' => null, 'categories' => [], 'erreur' => null];
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::productCategories();
+        if ($rows) {
+            $out['source'] = 'api';
+            if ($debug) { $out['clesBrut'] = array_slice(array_keys($rows[0]), 0, 25); $out['premier'] = $rows[0]; }
+            foreach ($rows as $c) {
+                $id = null;
+                foreach (['id', 'id_category', 'category_id'] as $k) {
+                    if (isset($c[$k]) && is_numeric($c[$k])) { $id = (int) $c[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'category_name', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($c[$k]) && is_string($c[$k])) { $nom = trim($c[$k]); break; }
+                }
+                if ($nom === '') { continue; }
+                $grp = '';
+                foreach (['group_name', 'category_group_name', 'group', 'parent_name'] as $k) {
+                    if (!empty($c[$k]) && is_string($c[$k])) { $grp = trim($c[$k]); break; }
+                }
+                $out['categories'][] = ['id' => $id, 'nom' => $nom, 'groupe' => $grp !== '' ? $grp : null];
+            }
+            if ($out['categories']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    // Repli base partagée. `product_category` ne porte pas le groupe : le
+    // rattachement passe par product_category_group_connection (une ligne par
+    // catégorie). Sans cette jointure les 84 catégories arrivent à plat.
+    try {
+        foreach (Db::rows('SELECT c.id, c.name, c.is_active, g.name AS groupe
+                             FROM product_category c
+                        LEFT JOIN product_category_group_connection k ON k.id_product_category = c.id
+                        LEFT JOIN product_category_group g ON g.id = k.id_product_category_group
+                            ORDER BY g.name IS NULL, g.name, c.id') as $c) {
+            $out['categories'][] = [
+                'id'     => (int) $c['id'],
+                'nom'    => (string) $c['name'],
+                'groupe' => $c['groupe'] !== null ? (string) $c['groupe'] : null,
+                'actif'  => !isset($c['is_active']) || (int) $c['is_active'] === 1,
+            ];
+        }
+        if ($out['categories']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
+    }
+
+    // Dernier recours : les catégories seules. Mieux vaut un écran sans
+    // regroupement qu'un écran vide parce qu'une colonne de jointure a changé.
+    if (!$out['categories']) {
+        try {
+            foreach (Db::rows('SELECT id, name, is_active FROM product_category ORDER BY id') as $c) {
+                $out['categories'][] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'],
+                    'groupe' => null, 'actif' => (int) $c['is_active'] === 1];
+            }
+            if ($out['categories']) { $out['source'] = 'atelierby_db (sans regroupement)'; }
+        } catch (PDOException $e) { /* la base partagée n'est pas accessible */ }
+    }
+    return $out;
+}
+
 /** GET /production/params — réglages du moteur de production. */
 function ep_prod_params(): array
 {

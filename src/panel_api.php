@@ -303,6 +303,13 @@ final class PanelApi
         return self::get($path);
     }
 
+    /** Catégories produit du réseau (/product-categories). */
+    public static function productCategories(): array
+    {
+        $r = self::get('/product-categories');
+        return is_array($r) ? self::liste($r) : [];
+    }
+
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
     private static ?array $catalogue = null;
 

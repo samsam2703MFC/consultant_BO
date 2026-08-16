@@ -241,7 +241,7 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
              AND (column_name REGEXP 'wast|loss|perte|casse|discard|unsold|shrink|cost|cout|labour|labor|counter|comptoir|display|image');" 2>&1 | head -60
     echo "===== TABLES (hors ceo_) : nom + lignes ====="
     q -N -e "SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name NOT LIKE 'ceo\\_%' ORDER BY table_name;" 2>&1
-    for t in product product_category product_category_group product_availability_period product_availability_period_connection shops mac_shop_monthly_pnl of_tag kpi position transaction_product sig_products; do
+    for t in product_category_group_connection product_recipe recipe_cost product_recipe_material_connection product_movement material_movement_reason shop_product product_portion product_positioning product_storage; do
       echo "===== $t ====="
       if q -N -e "SELECT 1 FROM \`$t\` LIMIT 1;" >/dev/null 2>&1; then
         echo "-- COUNT --"; q -N -e "SELECT COUNT(*) FROM \`$t\`;" 2>&1
@@ -251,10 +251,16 @@ if [[ "${COCKPIT_DBINSPECT:-0}" == "1" ]]; then
       fi
     done
     echo "===== CATALOGUE PRODUIT : échantillons ====="
-    for t in product_category_group product_category product_availability_period product_availability_period_connection; do
-      echo "-- $t (10 lignes) --"; q -e "SELECT * FROM \`$t\` LIMIT 10;" 2>&1
+    for t in product_category_group_connection product_recipe recipe_cost product_recipe_material_connection material_movement_reason; do
+      echo "-- $t (8 lignes) --"; q -e "SELECT * FROM \`$t\` LIMIT 8;" 2>&1
     done
-    echo "-- product (5 lignes) --"; q -e "SELECT * FROM product LIMIT 5;" 2>&1
+    echo "-- product_movement (8 lignes récentes) --"; q -e "SELECT * FROM product_movement ORDER BY id DESC LIMIT 8;" 2>&1
+    echo "-- shop_product (8 lignes) --"; q -e "SELECT * FROM shop_product LIMIT 8;" 2>&1
+    # Le coût matière décide de la « marge nette » du scoring : sans lui le
+    # critère vaut zéro pour tout le monde. Combien de produits en portent un ?
+    echo "-- couverture du coût matière (product ⨝ product_recipe ⨝ recipe_cost) --"
+    q -e "SELECT COUNT(*) produits, COUNT(p.id_recipe) avec_recette FROM product p WHERE p.is_active = 1;" 2>&1
+    echo "-- recipe_cost : bornes --"; q -e "SELECT COUNT(*) n FROM recipe_cost;" 2>&1
     echo "===== ÉCHANTILLONS (référence / figures, non-PII) ====="
     for t in mac_consultant_param mac_kpi_threshold of_tag kpi; do
       echo "-- $t (jusqu'à 25) --"; q -e "SELECT * FROM \`$t\` LIMIT 25;" 2>&1
