@@ -1,1 +1,1 @@
-Cumul : rendre au reel sa trajectoire complete.
+P&L detaille par magasin : food cost, main d oeuvre, positionnement reseau.
