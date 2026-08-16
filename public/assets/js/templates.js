@@ -403,6 +403,11 @@ function tplReferentiel(c, x){
       </tbody>
     </table>
   </div>
+  ${c.isCat ? `<div style="margin-top:11px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:10.5px;color:var(--color-text-muted)">
+    <span style="font-weight:500">Marge</span>
+    ${c.refEchelle.map(e => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${e.c};vertical-align:-1px"></i> ${esc(e.l)}</span>`).join('')}
+    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#C9C2B8;vertical-align:-1px"></i> inconnue (${c.refSansMarge})</span>
+  </div>` : ''}
   ${c.refTronque ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">${c.refTronque} référence(s) au-delà des 400 affichées — affinez les filtres.</div>` : ''}
   ${c.refEdit ? tplRefEdit(c, x) : ''}`}`;
 }

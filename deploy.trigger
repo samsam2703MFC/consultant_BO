@@ -1,1 +1,1 @@
-Referentiel produit : catalogue, assortiment, planogramme, suivi de production.
+Une seule echelle de marge pour tous les ecrans.

@@ -1106,8 +1106,7 @@ class App {
       // Une marge non publiée n'est pas une marge nulle : le coût est visible,
       // la marge se tait, et la mention dit laquelle des deux on regarde.
       marge: p.margePct == null ? (p.mat != null ? 'non fiable' : '—') : this.fP(p.margePct, 0),
-      margeC: p.margePct == null ? 'var(--color-text-muted)'
-        : (p.margePct >= 0.6 ? '#2d7a3e' : p.margePct >= 0.4 ? '#C17A2A' : 'var(--color-primary)'),
+      margeC: this.echelleMarge(p.margePct == null ? null : 100 * p.margePct),
       must: !!p.must, qmin: p.qmin || 0,
       zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
       slot: p.slot == null ? '' : String(p.slot),
@@ -1117,6 +1116,8 @@ class App {
       ouvrir: () => this.refOpen(p, common.isPlano ? 'plano' : (common.isAsso ? 'asso' : 'fiche'))
     }));
     common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
+    common.refEchelle = this.paliersMarge();
+    common.refSansMarge = cat.filter(p => p.margePct == null).length;
     return common;
   }
   /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
@@ -1288,9 +1289,7 @@ class App {
           // informations, deux canaux. Sans marge connue, la barre reste
           // neutre — une catégorie grise dit « on ne sait pas », une catégorie
           // verte par défaut dirait « tout va bien ».
-          const tm = m => m == null ? '#C9C2B8'
-            : m < 0 ? '#8B0000' : m < 40 ? '#dc3545' : m < 50 ? '#e67e22'
-            : m < 60 ? '#8FA31E' : m < 70 ? '#27ae60' : '#C9A227';
+          const tm = m => this.echelleMarge(m);
           o.cats = D2.slice(0, 12).map(c => ({ nom: c.categorie, ca: this.fE(c.ca),
             part: c.partCa == null ? '—' : this.fP(c.partCa, 0),
             w: Math.max(2, 100 * (c.ca || 0) / mx).toFixed(0) + '%',
@@ -1299,9 +1298,7 @@ class App {
             delta: c.delta == null ? '' : (c.delta > 0 ? '+' : '') + c.delta.toFixed(1).replace('.', ',') + ' %',
             deltaC: c.delta == null ? 'var(--color-text-muted)' : (c.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)') }));
           o.sansMarge = D2.every(c => c.margePct == null);
-          o.echelle = [['Perte', '#8B0000'], ['0–40', '#dc3545'], ['40–50', '#e67e22'],
-                       ['50–60', '#8FA31E'], ['60–70', '#27ae60'], ['> 70 %', '#C9A227']]
-                      .map(e => ({ l: e[0], c: e[1] }));
+          o.echelle = this.paliersMarge();
         } else if (k === 'reseau'){
           const av = D2.filter(r => r.panier != null).map(r => r.panier);
           const moy = av.length ? av.reduce((a, b2) => a + b2, 0) / av.length : null;
@@ -1469,6 +1466,26 @@ class App {
       out.push({ k: pre + k, v: typeof v === 'number' ? v.toLocaleString('fr-BE') : String(v) });
     });
     return out;
+  }
+  /**
+   * Échelle de marge du réseau : Perte / 0–40 / 40–50 / 50–60 / 60–70 / > 70 %.
+   *
+   * Une seule définition pour tous les écrans. Deux barèmes différents sur la
+   * même notion — l'un à trois niveaux, l'autre à six — feraient qu'une même
+   * référence change de couleur selon l'écran où on la regarde.
+   * Marge inconnue : gris. Le vert par défaut dirait « tout va bien » là où il
+   * faut lire « on ne sait pas ».
+   */
+  echelleMarge(m){
+    if (m == null) return 'var(--color-text-muted)';
+    return m < 0 ? '#8B0000' : m < 40 ? '#dc3545' : m < 50 ? '#e67e22'
+         : m < 60 ? '#8FA31E' : m < 70 ? '#27ae60' : '#C9A227';
+  }
+  /** Les six paliers, pour la légende. */
+  paliersMarge(){
+    return [['Perte', '#8B0000'], ['0–40', '#dc3545'], ['40–50', '#e67e22'],
+            ['50–60', '#8FA31E'], ['60–70', '#27ae60'], ['> 70 %', '#C9A227']]
+           .map(e => ({ l: e[0], c: e[1] }));
   }
   /** Montant à deux décimales — un panier moyen arrondi à l'euro ne dit rien. */
   fEd(n){ return n == null ? '—' : n.toFixed(2).replace('.', ',') + ' €'; }
