@@ -1,1 +1,1 @@
-Tracer les replis : dire quelle route a echoue.
+pnl/monthly : mois entiers ; recuperer l erreur de category-sales.

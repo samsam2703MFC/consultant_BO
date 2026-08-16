@@ -443,15 +443,21 @@ final class PanelApi
      */
     public static function pnl(int $shopId, string $periode, string $date): ?array
     {
-        $q = self::q($periode, $date);
         $base = '/consultant/shops/' . $shopId . '/pnl';
-        $routes = ['jour' => '/daily', 'mois' => '/monthly'];
         $chemins = [];
-        if (isset($routes[$periode])) {
-            $chemins[] = $base . $routes[$periode] . '?' . $q;
-            $chemins[] = $base . $routes[$periode] . '?' . http_build_query(['date' => $date]);
+        if ($periode === 'mois') {
+            // « Invalid monthly P&L range (maximum 24 months) » : cette route
+            // raisonne en MOIS ENTIERS. Lui passer le 1er → 14 juillet, un mois
+            // tronqué, la faisait échouer — et le repli silencieux sur la route
+            // générique rendait alors la journée courante.
+            $chemins[] = $base . '/monthly?' . http_build_query([
+                'date_from' => date('Y-m-01', strtotime($date)),
+                'date_to'   => date('Y-m-t', strtotime($date)),
+            ]);
+        } elseif ($periode === 'jour') {
+            $chemins[] = $base . '/daily?' . http_build_query(['date_from' => $date, 'date_to' => $date]);
         }
-        $chemins[] = $base . '?' . $q;
+        $chemins[] = $base . '?' . self::q($periode, $date);
         return self::premierObjet($chemins);
     }
 

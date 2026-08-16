@@ -832,6 +832,7 @@ function ep_exploitation_magasin(): array
     $cs = PanelApi::categorySales($sid, $per, $date);
     $srcCat = PanelApi::$lastPath;
     $repliCat = PanelApi::$lastFallbacks;
+    $errCat = $cs === null ? PanelApi::$lastError : null;
     $cats = null;
     if (is_array($cs)) {
         foreach ([$cs, $cs['categories'] ?? null, $cs['data'] ?? null, $cs['items'] ?? null] as $cand) {
@@ -840,7 +841,10 @@ function ep_exploitation_magasin(): array
     }
     if ($cats === null && isset($p['turnover']['categories']) && is_array($p['turnover']['categories'])) {
         $cats = $p['turnover']['categories'];
-        $repliCat = array_merge($repliCat ?: [], ['/consultant/shops/category-sales → sans réponse']);
+        // Quand TOUTES les variantes échouent, la trace de repli est vide et
+        // seule `lastError` porte la raison : sans elle on écrivait « sans
+        // réponse », ce qui ne dit pas pourquoi.
+        $repliCat = array_merge($repliCat ?: [], [$errCat ?: 'category-sales sans réponse']);
         $srcCat = $srcPnl;
     }
     if (!is_array($cats) || !$cats) {
