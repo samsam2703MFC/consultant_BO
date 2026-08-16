@@ -188,6 +188,22 @@ class App {
     const t = (this.M && this.M.TODAY) ? new Date(this.M.TODAY) : new Date();
     return (t.getFullYear() === y && !isNaN(t)) ? t.getMonth() : 11; }
   nMois(){ return this.moisIdx() + 1; }
+  /* Dernier mois COMPLET : les ratios (food/labour/overhead, CA/ETP) et les
+     alertes qui en découlent n'ont de sens que sur un mois entier. Sur le mois
+     en cours, ventes et plannings ne couvrent qu'une partie des jours et le
+     ratio se lit comme une contre-performance. On recule donc d'un mois quand
+     le dernier mois encodé est le mois calendaire courant. */
+  moisIdxComplet(){
+    const mi = this.moisIdx(), y = this.exo();
+    const t = (this.M && this.M.TODAY) ? new Date(this.M.TODAY) : new Date();
+    const partiel = !isNaN(t) && t.getFullYear() === y && t.getMonth() === mi;
+    if (!partiel) { return mi; }
+    for (let m = mi - 1; m >= 0; m--) {
+      if (this.open().some(s => { const c = s.perf[y] && s.perf[y][m]; return c && c.ca != null; })) { return m; }
+    }
+    return mi;
+  }
+  moisPartiel(){ return this.moisIdxComplet() !== this.moisIdx(); }
   moisLabel(){ return (this.M && this.M.MOIS && this.M.MOIS[this.moisIdx()]) || ''; }
   ownerOf(t){ const c = t.owner.t === 'c'; const p = (c ? this.D.consultants : this.D.suppliers).find(x => x.id === t.owner.id); return { nom: p.nom, email: p.email, type: c ? 'Consultant' : 'Fournisseur' }; }
   taskState(t){ if (t.done) return t.done <= t.due ? 'Livrée à temps' : 'Livrée en retard';
@@ -232,7 +248,7 @@ class App {
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
       l: this.state.sLabour != null ? +this.state.sLabour : d.labour, o: d.overhead }; }
   margeAlerts(){ const s = this.seuils(); const out = [];
-    for (const st of this.open()){ const r = st.perf[this.exo()][this.moisIdx()];
+    for (const st of this.open()){ const r = st.perf[this.exo()][this.moisIdxComplet()];
       if (r.food > s.f) out.push({ store: st.nom, lev: 'food-cost', levNom: 'Food Cost', msg: 'food-cost ' + String(r.food).replace('.', ',') + ' % (seuil ' + s.f + ' %)', action: 'Revoir fiches techniques, contrôle réception ProdAtelier et gestion casse.' });
       if (r.labour > s.l) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'labour-cost ' + String(r.labour).replace('.', ',') + ' % (seuil ' + s.l + ' %)', action: 'Adapter les plannings au flux, suivre le ratio CA/ETP par tranche horaire.' });
       // ETP RÉEL (planning du panel : heures du mois ÷ 168). Sans planning
@@ -1100,16 +1116,22 @@ class App {
   valsMarge(common){
     const s = this.seuils();
     common.sFoodTxt = s.f + ' %'; common.sLabourTxt = s.l + ' %';
-    const E = this.exo(), MI = this.moisIdx();
-    common.mgEvoLabel = 'Évolution mensuelle ' + E + ' (janv. → ' + this.moisLabel() + ')';
-    common.mgHdrPeriode = this.moisLabel() + ' ' + E;
+    const E = this.exo(), MI = this.moisIdxComplet();
+    const moisNom = (this.M.MOIS && this.M.MOIS[MI]) || '';
+    common.mgEvoLabel = 'Évolution mensuelle ' + E + ' (janv. → ' + moisNom + ')';
+    common.mgHdrPeriode = moisNom + ' ' + E + (this.moisPartiel() ? ' — dernier mois complet' : '');
     const mg26 = this.sum(E, MI, 'marge') / this.sum(E, MI, 'ca'), mg25 = this.sum(E - 1, MI, 'marge') / this.sum(E - 1, MI, 'ca');
     common.mgReseau = this.fP(mg26); const tr = this.trend(mg26, mg25); common.mgTr = tr.txt + ' vs N-1'; common.mgTrSt = tr.st;
     const series = []; for (let m = 0; m <= MI; m++) series.push(this.sum(E, m, 'marge') / this.sum(E, m, 'ca'));
     common.mgTraj = this.spark(series, 320, 70);
     common.mgAlerts = this.margeAlerts();
     if (!common.mgAlerts.length) common.mgAlerts = [{ store: 'Aucune alerte', lev: 'food-cost', levNom: '—', msg: 'tous les ratios sont sous les seuils', action: '' }];
+    // Un ratio absent du P&L (le panel n'expose pas le food cost) s'affichait
+    // « null % » : le mot « null » n'est pas une valeur, et une pastille verte
+    // sur une donnée manquante se lit comme une performance.
+    const pct = v => (v == null || !isFinite(v)) ? '—' : String(v).replace('.', ',') + ' %';
     const rat = (v, seuil) => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+      if (v == null || !isFinite(v)) { return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
       return v > seuil ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v > seuil - 1.5 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
     const seuilEtp = this.seuilCaEtp();
     common.mgSeuilEtp = this.fE(seuilEtp);
@@ -1124,7 +1146,7 @@ class App {
       const etp = (r.etp != null && r.etp > 0) ? r.etp : null;
       const caEtp = (etp && r.ca != null) ? r.ca / etp : null;
       return { _mp: mp26, nom: st.nom, marge: this.fP(mp26), var: tv.txt, varSt: tv.st,
-        food: String(r.food).replace('.', ',') + ' %', foodSt: rat(r.food, s.f), labour: String(r.labour).replace('.', ',') + ' %', labourSt: rat(r.labour, s.l), ov: String(r.overhead).replace('.', ',') + ' %', ovSt: rat(r.overhead, s.o),
+        food: pct(r.food), foodSt: rat(r.food, s.f), labour: pct(r.labour), labourSt: rat(r.labour, s.l), ov: pct(r.overhead), ovSt: rat(r.overhead, s.o),
         caEtp: caEtp == null ? '—' : this.fE(caEtp),
         etp: etp == null ? 'ETP inconnu' : (etp.toFixed(1).replace('.', ',') + ' ETP' + (r.heures != null ? ' · ' + Math.round(r.heures) + ' h' : '')),
         caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),

@@ -1,1 +1,1 @@
-ETP reel calcule depuis le planning du panel (heures du mois / 168) : le CA/ETP et l alerte de dimensionnement ne reposent plus sur un effectif deduit du CA. Sonde generique retiree. Deploiement standard.
+marge & couts : ratios et alertes sur le dernier mois COMPLET (le mois en cours est partiel) et fin du null pourcent sur les ratios absents. Deploiement standard.
