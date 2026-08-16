@@ -1,2 +1,2 @@
 apiinspect
-Lire dans le code du panel la liste des endpoints qu il appelle.
+Sonder la forme des endpoints P&L du panel.

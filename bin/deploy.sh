@@ -340,6 +340,40 @@ if [[ "${COCKPIT_APIINSPECT:-0}" == "1" ]]; then
   echo "===== FICHIERS DU PANEL QUI PARLENT À L'API ====="
   { grep -rlE "api/v1|CONSULTANT_API_BASE|apiGet|apiPost" \
        "${PANEL_DIR:-/var/www}/src" "${PANEL_DIR:-/var/www}/app" "${PANEL_DIR:-/var/www}/lib" 2>/dev/null | head -25; } || true
+  # Forme réelle des endpoints qui portent le P&L. On les interroge avec le
+  # compte consultant configuré, DEPUIS le serveur (l'API n'est pas joignable
+  # de l'extérieur). Seules les CLÉS et un échantillon tronqué sont affichés :
+  # ces réponses peuvent contenir des données de boutique, pas de la doc.
+  echo "===== FORME DES ENDPOINTS DU P&L ====="
+  php -r '
+    require "'"$TARGET_DIR"'/src/Db.php"; require "'"$TARGET_DIR"'/src/installer.php";
+    require "'"$TARGET_DIR"'/src/panel_api.php";
+    if (!PanelApi::configured()) { echo "  compte consultant non configuré — sonde impossible\n"; exit; }
+    $shop = 2; $jour = date("Y-m-d", strtotime("2026-07-14"));
+    $cibles = [
+      "/statistics/sales/kpis?shop_id=$shop&date=$jour",
+      "/statistics/sales/kpis?id_shop=$shop&date=$jour",
+      "/pnl?shop_id=$shop&date=$jour",
+      "/labour/daily?shop_id=$shop&date=$jour",
+      "/consultant/dashboard?date=$jour",
+      "/consultant/shops",
+      "/consultant/network/shops/summary",
+      "/trends/data?shop_id=$shop",
+      "/targets",
+    ];
+    foreach ($cibles as $p) {
+      $r = PanelApi::brut($p);
+      if ($r === null) { printf("  %-52s → %s\n", $p, PanelApi::$lastError ?: "vide"); continue; }
+      if (!is_array($r)) { printf("  %-52s → scalaire\n", $p); continue; }
+      $liste = array_is_list($r);
+      $ech = $liste ? ($r[0] ?? []) : $r;
+      $cles = is_array($ech) ? array_slice(array_keys($ech), 0, 18) : [];
+      printf("  %-52s → %s, %d clé(s)\n", $p, $liste ? "liste(".count($r).")" : "objet", count($cles));
+      if ($cles) { echo "      ", implode(", ", $cles), "\n"; }
+      $j = json_encode($ech, JSON_UNESCAPED_UNICODE);
+      if ($j !== false) { echo "      ", substr($j, 0, 240), "\n"; }
+    }
+  ' 2>&1 | head -70 || true
   echo "===== ROUTAGE /api : dossiers candidats ====="
   { find /var/www -maxdepth 4 -type d -name "api*" 2>/dev/null | head -10; } || true
   echo "===== SERVICES A L'ECOUTE (ports) ====="
