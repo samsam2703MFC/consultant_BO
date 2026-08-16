@@ -1,1 +1,1 @@
-Exploitation : P&L court des magasins (jour, semaine, mois).
+Sous-titre : Pilotage Reseau.

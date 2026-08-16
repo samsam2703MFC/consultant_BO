@@ -60,7 +60,16 @@ function ensureReference(): void
         }
     };
     // Marque du réseau (réel : les boutiques sont « Atelier by … »).
-    $poserSetting('reseau', ['nom' => "L'Atelier by", 'sousTitre' => 'Cockpit CEO — Réseau']);
+    $poserSetting('reseau', ['nom' => "L'Atelier by", 'sousTitre' => 'Pilotage Réseau']);
+    // Renommage du sous-titre sur une installation déjà en service. On ne
+    // remplace QUE l'ancien libellé livré : un sous-titre personnalisé depuis
+    // l'écran Paramètres n'a pas à être écrasé par une mise à jour.
+    $r = setting('reseau');
+    if (is_array($r) && ($r['sousTitre'] ?? '') === 'Cockpit CEO — Réseau') {
+        $r['sousTitre'] = 'Pilotage Réseau';
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['reseau', json_encode($r, JSON_UNESCAPED_UNICODE)]);
+    }
     // Identité d'en-tête (pas une personne fictive : la marque, à personnaliser
     // dans Paramètres). Sans elle, l'avatar de l'en-tête reste vide.
     $poserSetting('utilisateur', ['initiales' => 'AB', 'nom' => "L'Atelier by", 'role' => 'CEO · admin']);
