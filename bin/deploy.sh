@@ -390,6 +390,21 @@ for r in groupes categories; do
          $k === "categories" && $sans ? " — dont $sans SANS GROUPE" : "");
   '
 done
+# Ouvrir une branche réelle : un référentiel qui se compte bien mais dont
+# aucune catégorie ne rend de produit reste un arbre mort.
+CID="$(curl -fsS "${LOCAL_BASE}/api/cockpit/production/categories" 2>/dev/null \
+  | php -r '$r=json_decode(file_get_contents("php://stdin"),true);
+            foreach (($r["categories"] ?? []) as $c) { if (!empty($c["id"])) { echo $c["id"]; break; } }')"
+if [ -n "$CID" ]; then
+  curl -fsS "${LOCAL_BASE}/api/cockpit/production/categorie/produits?id=${CID}" 2>/dev/null | php -r '
+  $r = json_decode(file_get_contents("php://stdin"), true);
+  $p = $r["produits"] ?? [];
+  printf("  branche %s (%s) : %d référence(s), source %s%s\n",
+    $r["categorieId"] ?? "?", $r["categorie"] ?? "?", count($p), $r["source"] ?? "aucune",
+    !empty($r["erreur"]) ? " — ".$r["erreur"] : "");
+  if (!$p) { echo "    ATTENTION : catégorie sans référence\n"; }
+  '
+fi
 
 # --- 6 bis. Câblage des bases : QUI est branché sur QUOI ------------------
 # Le cockpit vit dans la base du panel : il crée ses tables `ceo_*` et LIT des

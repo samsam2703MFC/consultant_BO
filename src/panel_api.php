@@ -339,6 +339,16 @@ final class PanelApi
         return self::premierNonVide(['/product/category-groups', '/product-category-groups']);
     }
 
+    /** Références rattachées à une catégorie. */
+    public static function categoryProducts(int $categoryId): array
+    {
+        if ($categoryId <= 0) { return []; }
+        return self::premierNonVide([
+            '/product-categories/' . $categoryId . '/products',
+            '/product/categories/' . $categoryId . '/products',
+        ]);
+    }
+
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
     private static ?array $catalogue = null;
 

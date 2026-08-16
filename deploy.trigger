@@ -1,1 +1,1 @@
-Chemins API variables et rattachement des categories a leur groupe.
+Ouverture d'une categorie : les references qu'elle contient.

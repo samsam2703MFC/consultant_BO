@@ -979,6 +979,79 @@ function ep_prod_categories(): array
 }
 
 /**
+ * Références d'une catégorie, pour ouvrir une branche de l'arbre produit.
+ *
+ * L'API donne la liste faisant foi ; le coût matière, la marge et les
+ * paramètres de production viennent de chez nous. Repli sur la base partagée,
+ * qui porte le même rattachement (`product.id_category`).
+ */
+function ep_prod_categorie_produits(): array
+{
+    $cid = (int) ($_GET['id'] ?? 0);
+    if ($cid <= 0) { http_response_code(400); return ['error' => 'catégorie requise']; }
+
+    $cats = catalogueCategories();
+    $out = ['categorieId' => $cid, 'categorie' => $cats[$cid]['nom'] ?? null,
+        'groupe' => $cats[$cid]['groupe'] ?? null,
+        'source' => null, 'chemin' => null, 'produits' => [], 'erreur' => null];
+
+    $couts = catalogueCouts();
+    $prixR = cataloguePrix();
+    $enrich = [];
+    try {
+        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
+            $enrich[(int) $r['pwa_id']] = $r;
+        }
+    } catch (PDOException $e) { /* référentiel de production absent */ }
+
+    // Assemble une ligne à partir d'un id et d'un nom, d'où qu'ils viennent :
+    // la provenance change, la forme rendue à l'écran ne doit pas.
+    $ligne = function (int $pid, string $nom) use ($couts, $prixR, $enrich): array {
+        $e = $enrich[$pid] ?? null;
+        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : ($prixR[$pid] ?? null);
+        $mat  = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : ($couts[$pid]['mat'] ?? null);
+        $ok   = coutVraisemblable($mat, $prix);
+        return ['id' => (string) $pid, 'nom' => $nom, 'prix' => $prix, 'mat' => $mat,
+            'matFiable' => $ok,
+            'margePct' => ($ok && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'must' => $e !== null ? (bool) $e['must'] : false];
+    };
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::categoryProducts($cid);
+        if ($rows) {
+            $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
+            foreach ($rows as $p) {
+                $pid = 0;
+                foreach (['id', 'id_product', 'product_id'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'product_name', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+                }
+                if ($pid <= 0 || $nom === '') { continue; }
+                $out['produits'][] = $ligne($pid, $nom);
+            }
+            if ($out['produits']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    try {
+        foreach (Db::rows('SELECT id, name FROM product WHERE id_category = ? AND is_active = 1 ORDER BY name',
+            [$cid]) as $p) {
+            $out['produits'][] = $ligne((int) $p['id'], (string) $p['name']);
+        }
+        if ($out['produits']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
+    }
+    return $out;
+}
+
+/**
  * Groupes de catégories du réseau (/product-category-groups).
  * C'est le premier niveau de l'arbre produit : Boulangerie, Viennoiserie,
  * Pâtisserie… Les catégories s'y rattachent par une table de liaison, et une
