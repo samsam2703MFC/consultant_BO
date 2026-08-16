@@ -1,1 +1,1 @@
-rail : Suivi des taches et Controle des taches regroupes dans un sous-menu repliable (Checklists consultants). Deploiement standard, aucune operation sur la base.
+apiinspect : decouvrir la base d'URL reelle de l'API amont du panel et tester si elle repond depuis le serveur (pour brancher noms de taches + photos + notation comme dans le panel). Plus : rail avec sous-menu Checklists consultants. Lecture seule, aucune operation sur la base.
