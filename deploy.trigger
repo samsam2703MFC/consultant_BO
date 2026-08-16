@@ -1,1 +1,1 @@
-correctif : le bloc pertes de ep_products testait une variable definie dans une autre fonction, donc jamais execute. Deploiement standard.
+sous-titre du scoring produits aligne sur les quatre criteres. Deploiement standard.
