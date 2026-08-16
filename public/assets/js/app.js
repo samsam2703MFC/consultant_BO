@@ -303,7 +303,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { analyse: ['Analyse dans le temps', 'Choisissez une catégorie ou une référence, puis un horizon. La série est reconstituée point par point depuis l\u2019API — le nombre de points est plafonné pour que l\u2019écran reste utilisable.'],
+    const titles = { analyse: ['Analyse dans le temps', 'Choisissez une catégorie ou une référence, puis un horizon. Les libellés proposés sont ceux de l\u2019API : les ventes sont ventilées par groupe, pas par catégorie de catalogue. Chaque point est reconstitué mois par mois, sur l\u2019ensemble du réseau.'],
       catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],

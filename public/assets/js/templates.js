@@ -562,7 +562,7 @@ function tplAnalyse(c, x){
         ${(c.anType === 'produit' ? c.anProduits : c.anCategories)
           .map(p => `<option value="${esc(p.id)}"${p.id === c.anCle ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}
       </select>
-      ${c.anPlafond ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${c.anPlafond} points — un appel API par point</span>` : ''}
+      ${c.anPlafond ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${c.anPlafond} points — reconstitués mois par mois depuis l’API</span>` : ''}
     </div>
     ${c.anOptErreur
       ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px">${esc(c.anOptErreur)}</div>`
@@ -574,7 +574,7 @@ function tplAnalyse(c, x){
   </div>
 
   ${c.anVide ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Choisissez ${c.anType === 'produit' ? 'une référence' : 'une catégorie'} pour construire la série.</div>`
-   : c.anChargement ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Construction de la série — ${c.anPlafond} appels à l’API…</div>`
+   : c.anChargement ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Construction de la série — interrogation de l’API mois par mois…</div>`
    : !g ? `<div style="padding:34px 0;color:var(--color-text-muted);font-size:13px">${esc(c.anMotif || 'aucune donnée')}</div>`
    : `
   <div style="${CARD}">

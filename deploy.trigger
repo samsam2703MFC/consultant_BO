@@ -1,6 +1,4 @@
-References : le selecteur voit tout le reseau, plus une seule boutique.
+Libelles de l ecran Analyse : dire ce que l on mesure vraiment.
 
-/shops/{id}/products/waste ne liste que les references suivies par la boutique
-interrogee : s en tenir a une seule amputait le selecteur (45 references) et
-trouait les series des qu un magasin ne portait pas l article. Les boutiques
-sont desormais interrogees ensemble, en une seule volee.
+Un point coute desormais plusieurs appels mensuels, pas un seul, et la serie
+porte sur tout le reseau. Le texte le disait autrement.
