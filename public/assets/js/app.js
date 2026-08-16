@@ -21,6 +21,7 @@ class App {
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
       navOpen: {},   // sous-menus du rail ouverts/fermés (clé = libellé du parent)
+      userPanel: false, userDraft: {},   // panneau « Mon compte » (identité + compte API)
       // Brouillon de validation par tâche : { note, famille, type, commentaire }.
       // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
       // ne doit pas clôturer une tâche.
@@ -271,6 +272,35 @@ class App {
     const usr = mt.utilisateur || {};
     common.userInit = usr.initiales || ''; common.userNom = usr.nom || ''; common.userRole = usr.role || '';
     common.canLogout = this.source === 'api';
+    // Panneau utilisateur : identité affichée + compte consultant de l'API.
+    common.userOpen = () => this.setState({ userPanel: true });
+    this.valsCompteApi(common);
+    if (S.userPanel) {
+      const ud = S.userDraft || {};
+      const uSet = k => e => { const v = e.target.value; this.setState(s2 => ({ userDraft: Object.assign({}, s2.userDraft, { [k]: v }) })); };
+      common.userPanel = {
+        nom: ud.nom != null ? ud.nom : (usr.nom || ''),
+        initiales: ud.initiales != null ? ud.initiales : (usr.initiales || ''),
+        role: ud.role != null ? ud.role : (usr.role || ''),
+        setNom: uSet('nom'), setInit: uSet('initiales'), setRole: uSet('role'),
+        identMsg: ud.msg || '',
+        identMsgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (ud.ok ? '#2d7a3e' : '#8D1D2C'),
+        canLogout: this.source === 'api', logout: common.logout,
+        close: () => this.setState({ userPanel: false, userDraft: {} }),
+        saveIdent: () => {
+          const p = this.state.userDraft || {};
+          const val = { nom: p.nom != null ? p.nom : (usr.nom || ''),
+            initiales: p.initiales != null ? p.initiales : (usr.initiales || ''),
+            role: p.role != null ? p.role : (usr.role || '') };
+          this.api('PUT', '/parametres/utilisateur', { valeur: val }).then(r => {
+            if (r && r.ok === false) { this.setState(s2 => ({ userDraft: Object.assign({}, s2.userDraft, { ok: false, msg: r.error || 'Échec' }) })); return; }
+            this.meta.utilisateur = val;
+            this.setState(s2 => ({ userDraft: Object.assign({}, s2.userDraft, { ok: true, msg: 'Identité enregistrée.' }) }));
+            this.log('Paramètre', null, 'Identité de l’utilisateur mise à jour : ' + val.nom);
+          });
+        },
+      };
+    } else { common.userPanel = false; }
     common.logout = async () => { await authLogout();
       this.setState({ ready: false, gate: { mode: 'login', err: '', busy: false } }); };
 
@@ -782,7 +812,10 @@ class App {
     const budAnRef = P.reduce((a, r) => a + (r.caT || 0), 0) || 1;
     const theoAnRef = bud.caTheoriqueAn || 0;
     const mois = M.MOIS.map((nom, i) => ({ nom,
-      valeur: val('ca' + i, Math.round(P[i].caT)), set: set('ca' + i),
+      // Sans budget encodé, `caT` est nul : pré-remplir « 0 » donne douze
+      // champs à zéro qu'un simple clic sur Enregistrer fige en base — le
+      // budget paraît enregistré et vaut zéro partout. Champ VIDE à la place.
+      valeur: val('ca' + i, P[i].caT != null ? Math.round(P[i].caT) : ''), set: set('ca' + i),
       theo: val('th' + i, theoAnRef ? Math.round(theoAnRef * (P[i].caT || 0) / budAnRef) : ''), setTheo: set('th' + i) }));
     common.encMois = mois;
     const caTot = mois.reduce((a, m) => a + num(m.valeur), 0);
@@ -865,6 +898,7 @@ class App {
     common.encReset = () => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: {} }) }));
     common.encSave = () => {
       const jr = 'Budget ' + this.meta.exercice + ' encodé — CA validé ' + this.fE(caTot) + ', CA théorique ' + this.fE(theoTot) + ', charges validées ' + common.encPctTot + ' (théoriques ' + common.encPctTotT + '), marge ' + common.encMargePct;
+      if (!caTot) { this.notify('Renseignez au moins un mois de CA avant d’enregistrer.'); return; }
       this.api('PUT', '/stores/' + st.id + '/budget?exercice=' + this.meta.exercice, {
         caMensuel: mois.map(m => num(m.valeur)),
         caTheoriqueMensuel: mois.map(m => num(m.theo)),
@@ -878,9 +912,15 @@ class App {
         },
         charges: common.encCharges.map((c2, i) => ({ poste: c2.nom, levier: c2.lev, pctBudget: num(c2.valeur), pctTheorique: num(c2.valeurT), champReel: (bud.charges[i] || {}).champReel || null })),
         journal: jr
+      }).then(r => {
+        // Ne jamais annoncer « enregistré » sans la réponse du serveur : un
+        // 404/422 se résout normalement côté fetch, et l'écran mentait.
+        if (r && r.ok === false) { this.notify('Échec de l’enregistrement : ' + (r.error || 'refusé par le serveur')); return; }
+        this.log('Budget', st.nom, jr);
+        this.notify('Budget enregistré — ' + st.nom + ' · ' + this.fE(caTot));
+        return readOne('/stores/perf?granularite=mois&annees=' + (this.exo() - 1) + ',' + this.exo())
+          .then(p => { if (p) { this.D.perfRaw = p; } this.setState({}); });
       });
-      this.log('Budget', st.nom, jr);
-      this.notify('Budget enregistré — ' + st.nom);
     };
     common.encNote = 'À l’enregistrement, la série validée devient le budget de référence du magasin et la série théorique alimente le CA d’étude de marché : elles servent de référence au suivi mensuel et au calcul des écarts. Le CA théorique et l’étude de marché restent indépendants du budget négocié avec ' + st.fr + '.';
   }
@@ -1622,17 +1662,9 @@ class App {
       this.notify('Journal exporté — ' + rows.length + ' événements (CSV)'); };
   }
 
-  /* --- paramètres ---------------------------------------------------------------------- */
-  valsParams(common){
-    const S = this.state, D = this.D, M = this.M;
-    common.paramExo = String(this.meta.exercice);
-    // Comptes RÉELS (plus de « 4 consultants · 10 magasins · 12 zones » inventés).
-    const nCons = (D.consultants || []).length, nFour = (D.suppliers || []).length, nPers = (D.people || []).length;
-    common.paramIntervenants = [nCons + ' consultant' + (nCons > 1 ? 's' : ''),
-      nFour + ' fournisseur' + (nFour > 1 ? 's' : ''), nPers + ' interne' + (nPers > 1 ? 's' : '')].join(' · ');
-    const zones = [...new Set((D.stores || []).map(s2 => s2.zone).filter(Boolean))].length;
-    const nMag = (D.stores || []).length;
-    common.paramMagasins = nMag + ' magasin' + (nMag > 1 ? 's' : '') + ' · ' + zones + ' zone' + (zones > 1 ? 's' : '');
+  /* --- compte consultant de l'API panel (panneau utilisateur) ------------------ */
+  valsCompteApi(common){
+    const S = this.state, D = this.D;
     // --- Compte consultant utilisé pour l'API du panel (noms de tâches, photos,
     //     notation). Le mot de passe n'est jamais relu : on n'affiche que son
     //     existence, et le laisser vide conserve celui déjà enregistré.
@@ -1643,6 +1675,7 @@ class App {
     common.paPass = pa.password || '';
     common.paPassPlaceholder = paSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte';
     common.paEtat = paSt.configure ? 'Compte configuré' : 'Compte non configuré';
+    common.paEtatCourt = paSt.configure ? '' : 'compte API à configurer';
     common.paEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
       + (paSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
     common.paMsg = pa.msg || '';
@@ -1671,6 +1704,19 @@ class App {
         .then(r => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: !!r.ok, msg: r.message || '' }) })))
         .catch(() => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: false, msg: 'Test impossible.' }) })));
     };
+  }
+
+  /* --- paramètres ---------------------------------------------------------------------- */
+  valsParams(common){
+    const S = this.state, D = this.D, M = this.M;
+    common.paramExo = String(this.meta.exercice);
+    // Comptes RÉELS (plus de « 4 consultants · 10 magasins · 12 zones » inventés).
+    const nCons = (D.consultants || []).length, nFour = (D.suppliers || []).length, nPers = (D.people || []).length;
+    common.paramIntervenants = [nCons + ' consultant' + (nCons > 1 ? 's' : ''),
+      nFour + ' fournisseur' + (nFour > 1 ? 's' : ''), nPers + ' interne' + (nPers > 1 ? 's' : '')].join(' · ');
+    const zones = [...new Set((D.stores || []).map(s2 => s2.zone).filter(Boolean))].length;
+    const nMag = (D.stores || []).length;
+    common.paramMagasins = nMag + ' magasin' + (nMag > 1 ? 's' : '') + ' · ' + zones + ' zone' + (zones > 1 ? 's' : '');
     const s = this.seuils();
     common.paramLeviers = M.LEVIERS;
     const ax = S.tplAxe || common.npAxes[0]; const tpl = (ax && D.projTemplates[ax]) || { jalons: [], couts: [] };

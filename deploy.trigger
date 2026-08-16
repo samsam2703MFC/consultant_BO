@@ -1,1 +1,1 @@
-noter depuis le cockpit ne remplace plus l evaluateur terrain : la direction est consignee dans owner_*, et l ecran affiche evalue par / revu par. Deploiement standard.
+compte consultant deplace dans le panneau utilisateur (chip du rail) avec edition de l identite ; encodage budget : champs vides au lieu de zeros et message d enregistrement honnete. Deploiement standard.

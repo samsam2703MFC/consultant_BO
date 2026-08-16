@@ -47,11 +47,13 @@ export function render(c, x){
         </div>`).join('')}
     </nav>
     <div style="padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
-      <div style="width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500">${esc(c.userInit)}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500">${esc(c.userNom)}</div>
-        <div style="font-size:10px;color:var(--color-text-muted)">${esc(c.userRole)}</div>
-      </div>
+      <button ${x.A(c.userOpen)} title="Mon compte et le compte consultant" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:none;background:transparent;padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui)">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:0 0 auto">${esc(c.userInit)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--color-text)">${esc(c.userNom)}</div>
+          <div style="font-size:10px;color:var(--color-text-muted)">${esc(c.userRole)}${c.paEtatCourt ? ' · ' + esc(c.paEtatCourt) : ''}</div>
+        </div>
+      </button>
       ${c.canLogout ? `<button ${x.A(c.logout)} title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>` : ''}
     </div>
   </aside>
@@ -92,6 +94,7 @@ export function render(c, x){
   ${c.rel ? tplRelance(c, x) : ''}
   ${c.repPrev ? tplRepPrev(c, x) : ''}
   ${c.eqRep ? tplEqRep(c, x) : ''}
+  ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
@@ -1450,32 +1453,6 @@ function tplParams(c, x){
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Année de référence des objectifs</span><span style="font-weight:500">${c.paramExo || ''}</span></div>
         </div>
       </div>
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <div style="font-size:13px;font-weight:600">Compte consultant (API panel)</div>
-          <span style="${c.paEtatSt}">${esc(c.paEtat)}</span>
-        </div>
-        <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;text-wrap:pretty">Les noms des tâches, les photos de réalisation et l’envoi des notes passent par l’API du panel consultant. Renseignez ici le compte que le cockpit utilise pour s’y connecter (même téléphone et mot de passe que dans le panel). Le mot de passe n’est jamais réaffiché ; le laisser vide conserve celui déjà enregistré.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
-          <div>
-            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Téléphone du compte</div>
-            <input type="text" value="${esc(c.paPhone)}" ${x.C(c.setPaPhone)} placeholder="+32…" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-          <div>
-            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Mot de passe</div>
-            <input type="password" value="${esc(c.paPass)}" ${x.C(c.setPaPass)} placeholder="${esc(c.paPassPlaceholder)}" autocomplete="new-password" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-        </div>
-        <div style="margin-top:12px">
-          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Base d’URL de l’API (laisser vide pour la valeur par défaut)</div>
-          <input type="text" value="${esc(c.paBase)}" ${x.C(c.setPaBase)} placeholder="https://…/api/v1" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-        </div>
-        ${c.paMsg ? `<div style="${c.paMsgSt}">${esc(c.paMsg)}</div>` : ''}
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
-          <button ${x.A(c.paTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
-          <button ${x.A(c.paSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
-        </div>
-      </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Réseau</div>
         <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
@@ -2023,6 +2000,80 @@ function tplCtrlDetail(c, x){
         ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
+    </div>
+  </div>`;
+}
+
+/* --- Panneau utilisateur : mon identité + le compte consultant (API panel) --- */
+function tplUserPanel(c, x){
+  const { esc } = x;
+  const u = c.userPanel;
+  return `
+  <div ${x.A(u.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:70;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:520px;background:var(--color-surface);z-index:71;box-shadow:-12px 0 40px rgba(34,34,34,0.18);overflow-y:auto;animation:panelIn 200ms ease">
+    <div style="padding:24px 28px 60px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500">${esc(u.initiales || '—')}</div>
+          <div>
+            <div style="${sec}">Mon compte</div>
+            <h2 style="font-family:var(--font-display);font-size:21px;font-weight:400;margin:2px 0 0;line-height:1.2">${esc(u.nom || 'Sans nom')}</h2>
+          </div>
+        </div>
+        <button ${x.A(u.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">\u2715</button>
+      </div>
+
+      <div style="${sec};margin:24px 0 8px">Identité affichée</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px;line-height:1.5">C\u2019est ce nom qui appara\u00eet comme relecteur sur les t\u00e2ches que vous notez.</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Nom</div>
+          <input type="text" value="${esc(u.nom)}" ${x.C(u.setNom)} placeholder="Pr\u00e9nom Nom" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Initiales</div>
+          <input type="text" value="${esc(u.initiales)}" ${x.C(u.setInit)} maxlength="3" placeholder="AB" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">R\u00f4le</div>
+        <input type="text" value="${esc(u.role)}" ${x.C(u.setRole)} placeholder="CEO \u00b7 admin" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button ${x.A(u.saveIdent)} style="border:none;border-radius:999px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer mon identit\u00e9</button>
+      </div>
+      ${u.identMsg ? `<div style="${u.identMsgSt}">${esc(u.identMsg)}</div>` : ''}
+
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin:26px 0 0"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px">
+        <div style="${sec}">Compte consultant (API panel)</div>
+        <span style="${c.paEtatSt}">${esc(c.paEtat)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.55;text-wrap:pretty">Les noms des t\u00e2ches, les photos de r\u00e9alisation et l\u2019envoi des notes passent par l\u2019API du panel consultant. Renseignez le compte que le cockpit utilise pour s\u2019y connecter \u2014 m\u00eame t\u00e9l\u00e9phone et mot de passe que dans le panel. Le mot de passe n\u2019est jamais r\u00e9affich\u00e9 ; le laisser vide conserve celui d\u00e9j\u00e0 enregistr\u00e9.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">T\u00e9l\u00e9phone du compte</div>
+          <input type="text" value="${esc(c.paPhone)}" ${x.C(c.setPaPhone)} placeholder="+32\u2026" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Mot de passe</div>
+          <input type="password" value="${esc(c.paPass)}" ${x.C(c.setPaPass)} placeholder="${esc(c.paPassPlaceholder)}" autocomplete="new-password" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Base d\u2019URL de l\u2019API (vide = valeur par d\u00e9faut)</div>
+        <input type="text" value="${esc(c.paBase)}" ${x.C(c.setPaBase)} placeholder="https://\u2026/api/v1" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+      </div>
+      ${c.paMsg ? `<div style="${c.paMsgSt}">${esc(c.paMsg)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+        <button ${x.A(c.paTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+        <button ${x.A(c.paSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
+      </div>
+
+      ${u.canLogout ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:26px;padding-top:16px;display:flex;justify-content:flex-end">
+        <button ${x.A(u.logout)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Se d\u00e9connecter</button>
+      </div>` : ''}
     </div>
   </div>`;
 }
