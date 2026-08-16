@@ -1,2 +1,2 @@
 apiinspect
-Sonder la forme des endpoints P&L du panel.
+Sonde P&L : charger endpoints.php pour setting().

@@ -346,7 +346,10 @@ if [[ "${COCKPIT_APIINSPECT:-0}" == "1" ]]; then
   # ces réponses peuvent contenir des données de boutique, pas de la doc.
   echo "===== FORME DES ENDPOINTS DU P&L ====="
   php -r '
-    require "'"$TARGET_DIR"'/src/Db.php"; require "'"$TARGET_DIR"'/src/installer.php";
+    // `setting()` vit dans endpoints.php : sans lui, PanelApi::config() lève
+    // « fonction indefinie » et la sonde meurt avant le premier appel.
+    require "'"$TARGET_DIR"'/src/Db.php"; require "'"$TARGET_DIR"'/src/endpoints.php";
+    require "'"$TARGET_DIR"'/src/installer.php"; require "'"$TARGET_DIR"'/src/writes.php";
     require "'"$TARGET_DIR"'/src/panel_api.php";
     if (!PanelApi::configured()) { echo "  compte consultant non configuré — sonde impossible\n"; exit; }
     $shop = 2; $jour = date("Y-m-d", strtotime("2026-07-14"));
