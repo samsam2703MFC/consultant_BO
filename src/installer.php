@@ -39,6 +39,7 @@ function ensureInstalled(): void
 
     ensureValidation();
     ensureReference();
+    ensureProduction();
 }
 
 /**
@@ -81,6 +82,46 @@ function ensureReference(): void
         foreach (projectTemplatesDefaut() as $t) {
             Db::exec('INSERT INTO ceo_project_template (axe, jalons_json, couts_json) VALUES (?,?,?)', $t);
         }
+    }
+}
+
+/**
+ * Référentiel de production (partie franchiseur du dashboard Recuissons).
+ *
+ * Créé à chaud comme ensureValidation() : sur une installation déjà en service,
+ * `schema.sql` ne repasse pas. Aucune donnée métier n'est posée — le catalogue
+ * se remplit depuis l'écran ou par import ; seuls les réglages du moteur ont
+ * des valeurs par défaut, sans lesquelles l'écran serait inutilisable.
+ */
+function ensureProduction(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_product ('
+        . 'ref VARCHAR(24) PRIMARY KEY, nom VARCHAR(160) NOT NULL,'
+        . 'categorie VARCHAR(60) NOT NULL DEFAULT \'\', prep INT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'cuisson INT UNSIGNED NOT NULL DEFAULT 0, fin INT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'bmin SMALLINT UNSIGNED NOT NULL DEFAULT 0, bmult SMALLINT UNSIGNED NOT NULL DEFAULT 1,'
+        . 'four SMALLINT UNSIGNED NOT NULL DEFAULT 0, dlv SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'mat DECIMAL(8,3) NULL, prix DECIMAL(8,2) NULL, must TINYINT(1) NOT NULL DEFAULT 0,'
+        . 'qmin SMALLINT UNSIGNED NOT NULL DEFAULT 0, periods VARCHAR(120) NOT NULL DEFAULT \'\','
+        . 'profil VARCHAR(120) NOT NULL DEFAULT \'\', pwa_id BIGINT UNSIGNED NULL,'
+        . 'actif TINYINT(1) NOT NULL DEFAULT 1, KEY idx_pwa (pwa_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_planogram ('
+        . 'ref VARCHAR(24) PRIMARY KEY, zone VARCHAR(160) NOT NULL DEFAULT \'\','
+        . 'meuble VARCHAR(40) NOT NULL DEFAULT \'\', niveau VARCHAR(40) NOT NULL DEFAULT \'\','
+        . 'slot SMALLINT UNSIGNED NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+    // Réglages du moteur : structure indispensable au calcul, pas des données.
+    if (setting('production') === null) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
+            ['production', json_encode([
+                'fenetreSemaines' => 6,      // fenêtre statistique glissante
+                'observationsMin' => 3,      // en deçà : série non fiable
+                'tauxHoraire'     => 24.0,   // charges comprises
+                'arrondi'         => 'batch',
+                'fours'           => 2,
+                'ouverture'       => '07:00',
+            ], JSON_UNESCAPED_UNICODE)]);
     }
 }
 

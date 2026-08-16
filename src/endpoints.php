@@ -518,6 +518,50 @@ function ep_pwa_probe(): array
     return ['resultats' => $out];
 }
 
+/**
+ * GET /production/catalogue — référentiel produit RÉSEAU (partie franchiseur).
+ *
+ * Temps de production, batchs, capacité four, durée de vie, coût matière : rien
+ * de tout cela n'existe côté panel ni en base partagée. Le cockpit en est la
+ * source. `pwaId` rapproche la référence du catalogue de caisse, ce qui permet
+ * de croiser avec les ventes et les pertes réelles.
+ */
+function ep_prod_catalogue(): array
+{
+    $rows = Db::rows('SELECT * FROM ceo_prod_product WHERE actif = 1 ORDER BY categorie, nom');
+    $plano = [];
+    foreach (Db::rows('SELECT * FROM ceo_prod_planogram') as $p) { $plano[$p['ref']] = $p; }
+    return array_map(function ($r) use ($plano) {
+        $pl = $plano[$r['ref']] ?? null;
+        $mat = $r['mat'] !== null ? (float) $r['mat'] : null;
+        $prix = $r['prix'] !== null ? (float) $r['prix'] : null;
+        return [
+            'ref' => $r['ref'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
+            'prep' => (int) $r['prep'], 'cuisson' => (int) $r['cuisson'], 'fin' => (int) $r['fin'],
+            'bmin' => (int) $r['bmin'], 'bmult' => (int) $r['bmult'], 'four' => (int) $r['four'],
+            'dlv' => (int) $r['dlv'], 'mat' => $mat, 'prix' => $prix,
+            // Marge unitaire : disponible ici parce que le coût matière est
+            // tenu par le réseau — l'API de caisse ne l'expose pas.
+            'marge' => ($mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
+            'margePct' => ($mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'must' => (bool) $r['must'], 'qmin' => (int) $r['qmin'],
+            'periods' => $r['periods'], 'profil' => $r['profil'],
+            'pwaId' => $r['pwa_id'] !== null ? (int) $r['pwa_id'] : null,
+            'zone' => $pl ? $pl['zone'] : null,
+            'meuble' => $pl ? $pl['meuble'] : null,
+            'niveau' => $pl ? $pl['niveau'] : null,
+            'slot' => $pl && $pl['slot'] !== null ? (int) $pl['slot'] : null,
+        ];
+    }, $rows);
+}
+
+/** GET /production/params — réglages du moteur de production. */
+function ep_prod_params(): array
+{
+    $p = setting('production', []);
+    return is_array($p) ? $p : [];
+}
+
 function ep_pwa_task_detail(): array
 {
     $shopId = (int) ($_GET['shop'] ?? 0);
@@ -1251,6 +1295,18 @@ function ep_products(): array
             }
         }
 
+        // COÛT MATIÈRE — référentiel de production du réseau (ceo_prod_product).
+        // L'API de caisse ne l'expose pas ; le franchiseur, lui, le tient. Le
+        // rapprochement se fait par `pwa_id` UNIQUEMENT (l'identifiant de
+        // caisse), jamais par l'intitulé : deux références peuvent porter des
+        // noms voisins et une marge fausse ne se voit pas.
+        $cout = [];
+        try {
+            foreach (Db::rows('SELECT pwa_id, mat FROM ceo_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
+                $cout[(int) $c['pwa_id']] = (float) $c['mat'];
+            }
+        } catch (PDOException $eC) { /* référentiel absent : marge indisponible */ }
+
         // Petit référentiel catégorie (sig_products → sig_product_categories).
         $cat = [];
         try {
@@ -1260,7 +1316,7 @@ function ep_products(): array
             }
         } catch (PDOException $eCat) { /* référentiel absent : catégorie vide */ }
 
-        return array_map(function ($r) use ($cat, $catApi, $perteVol, $perteSold, $motif) {
+        return array_map(function ($r) use ($cat, $catApi, $perteVol, $perteSold, $motif, $cout) {
             $vol  = (float) $r['volume'];
             $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
             $pid  = (int) $r['id_product'];
@@ -1279,7 +1335,7 @@ function ep_products(): array
                 'categorie' => $catApi[$pid] ?? $cat[(string) $pid] ?? 'Non catégorisé',
                 'volume'    => (int) round($vol),
                 'prix'      => $prix,
-                'coutUnit'  => null,
+                'coutUnit'  => $cout[$pid] ?? null,
                 'tendVol'   => 1,
                 'magasins'  => (int) $r['magasins'],
                 'tauxPerte' => $tp,

@@ -392,3 +392,42 @@ CREATE TABLE IF NOT EXISTS ceo_task_issue (
   KEY idx_status (status, created_at),
   CONSTRAINT fk_issue_task FOREIGN KEY (task_id) REFERENCES ceo_project_task(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Production & recuissons — référentiel RÉSEAU (partie franchiseur).
+--
+-- Porté par le cockpit : ni la base partagée ni l'API du panel ne connaissent
+-- les temps de production, les batchs, la capacité four ou la durée de vie.
+-- Le coût matière (`mat`) vit ici aussi — c'est la seule source dont dispose
+-- le réseau, et il alimente le critère « marge nette » du scoring produit.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_prod_product (
+  ref        VARCHAR(24) PRIMARY KEY,
+  nom        VARCHAR(160) NOT NULL,
+  categorie  VARCHAR(60)  NOT NULL DEFAULT '',
+  prep       INT UNSIGNED NOT NULL DEFAULT 0,   -- secondes / pièce
+  cuisson    INT UNSIGNED NOT NULL DEFAULT 0,   -- secondes / fournée
+  fin        INT UNSIGNED NOT NULL DEFAULT 0,   -- secondes / pièce (finitions)
+  bmin       SMALLINT UNSIGNED NOT NULL DEFAULT 0,  -- batch minimum
+  bmult      SMALLINT UNSIGNED NOT NULL DEFAULT 1,  -- multiple de batch
+  four       SMALLINT UNSIGNED NOT NULL DEFAULT 0,  -- capacité four (pièces)
+  dlv        SMALLINT UNSIGNED NOT NULL DEFAULT 0,  -- durée de vie (heures)
+  mat        DECIMAL(8,3) NULL,                 -- coût matière / pièce
+  prix       DECIMAL(8,2) NULL,                 -- prix de vente conseillé
+  must       TINYINT(1)  NOT NULL DEFAULT 0,    -- obligatoire réseau
+  qmin       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  periods    VARCHAR(120) NOT NULL DEFAULT '',
+  profil     VARCHAR(120) NOT NULL DEFAULT '',  -- profil de cuisson
+  pwa_id     BIGINT UNSIGNED NULL,              -- rapprochement id_product du panel
+  actif      TINYINT(1)  NOT NULL DEFAULT 1,
+  KEY idx_pwa (pwa_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Emplacement au comptoir (planogramme) — un produit, une zone.
+CREATE TABLE IF NOT EXISTS ceo_prod_planogram (
+  ref      VARCHAR(24) PRIMARY KEY,
+  zone     VARCHAR(160) NOT NULL DEFAULT '',
+  meuble   VARCHAR(40)  NOT NULL DEFAULT '',
+  niveau   VARCHAR(40)  NOT NULL DEFAULT '',
+  slot     SMALLINT UNSIGNED NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
