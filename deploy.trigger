@@ -1,1 +1,1 @@
-scoring produits : taux de perte par ligne et modale du detail magasin par magasin. Deploiement standard.
+correctif : le bloc pertes de ep_products testait une variable definie dans une autre fonction, donc jamais execute. Deploiement standard.

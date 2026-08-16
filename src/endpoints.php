@@ -1154,7 +1154,7 @@ function ep_products(): array
         // période que le volume, puis on en tire un taux réseau. Le volet
         // rapporte aussi la catégorie réelle et le motif principal de rebut.
         $perteVol = []; $perteSold = []; $catApi = []; $motif = [];
-        if ($apiOn) {
+        if (PanelApi::configured()) {
             $dFrom = substr($from, 0, 10);
             $dTo   = date('Y-m-d', strtotime($to . ' -1 day'));
             try {
