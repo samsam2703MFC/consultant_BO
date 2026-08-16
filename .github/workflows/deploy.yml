@@ -134,5 +134,19 @@ jobs:
             echo "::warning::les consultants ne portent PAS d'identifiant u<membership> — le panel ne retrouvera pas leurs tâches"
           fi
 
+          # Personne ne doit disparaître entre les deux listes : un filtre trop
+          # zélé sur /people cachait trois consultants sur cinq, sans rien dire.
+          nc=$(echo "$cons" | grep -o '"id":"u' | wc -l)
+          np=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"id":"u' | wc -l)
+          echo "consultants : $nc · destinataires : $np"
+          if [ "$np" -lt "$nc" ]; then
+            echo "::warning::$((nc - np)) intervenant(s) absent(s) de la liste des destinataires"
+          else
+            echo "OK  aucun intervenant ne disparaît de la liste des destinataires"
+          fi
+          sans=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"joignable":false' | wc -l)
+          [ "$sans" -gt 0 ] && echo "::notice::$sans compte(s) sans adresse e-mail — un rapport ne peut pas leur être envoyé"
+          true
+
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail

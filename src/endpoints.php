@@ -706,8 +706,11 @@ function ep_crm(): array
  * autonome — sur une base réelle il est vide, et l'écran Reporting n'offrait
  * alors AUCUN destinataire sélectionnable, sans le moindre message.
  *
- * On ne garde que les comptes actifs porteurs d'une adresse : un destinataire
- * sans e-mail n'est pas un destinataire.
+ * On rend TOUS les comptes actifs, adresse ou non. Filtrer sur l'e-mail
+ * paraissait raisonnable — « un destinataire sans adresse n'en est pas un » —
+ * mais sur la vraie base cela faisait disparaître trois consultants sur cinq
+ * de la liste, sans rien dire. On ne peut pas corriger une fiche qu'on ne voit
+ * plus : l'écran les montre, et signale l'adresse manquante.
  */
 function ep_people(): array
 {
@@ -720,7 +723,7 @@ function ep_people(): array
                     NULLIF(TRIM(p.email), '') AS email
                FROM user_membership m
                LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
-              WHERE m.is_active = 1 AND NULLIF(TRIM(p.email), '') IS NOT NULL
+              WHERE m.is_active = 1 AND p.auth_user_id IS NOT NULL
               GROUP BY m.id, m.app, m.scope_type, nom, email
               ORDER BY nom");
         if ($rows !== []) {
@@ -731,6 +734,9 @@ function ep_people(): array
                     ? ($r['scope_type'] === 'SHOP' ? 'Consultant boutique' : 'Consultant réseau')
                     : ucfirst(strtolower((string) $r['app'])),
                 'email' => $r['email'],
+                // Un rapport ne part pas sans adresse : l'écran doit pouvoir le
+                // dire, plutôt que de proposer un destinataire injoignable.
+                'joignable' => $r['email'] !== null && $r['email'] !== '',
             ], $rows);
         }
     } catch (PDOException $e) { /* tables du panel absentes : repli local */ }

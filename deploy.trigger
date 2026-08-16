@@ -1,2 +1,2 @@
-imprimer les identifiants d'intervenant reels. Deploiement standard, aucune
-operation sur la base.
+destinataires : ne plus masquer les comptes sans adresse, les signaler.
+Deploiement standard, aucune operation sur la base.

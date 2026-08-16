@@ -1344,7 +1344,7 @@ class App {
         copy: () => { navigator.clipboard && navigator.clipboard.writeText('https://' + url); this.notify('Lien copié — ' + s.nom); },
         relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
     const pById = id => D.people.find(p => p.id === id);
-    common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role }));
+    common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role + (p.email ? '' : ' (adresse manquante)') }));
     // Ordre FIGÉ, indépendant du menu : `postes_json` stocke « p1 », « p3 »…
     // Tant que la numérotation venait de l'index dans navDef, ajouter un écran
     // au milieu redirigeait silencieusement tous les rapports enregistrés vers
@@ -1377,7 +1377,7 @@ class App {
       const sel = S.repPostes[r.id] || r.postes;
       const url = repUrl(r, sel, pd && pd.email);
       const on = isOn(r);
-      return { nom: r.nom, desc: r.desc, dest, cc: cc || '', destEmail: pd ? pd.email : '', ccEmail: pc ? pc.email : '', dernier: this.fDA(r.dernier), freq: S.repFreq[r.id] || r.freq,
+      return { nom: r.nom, desc: r.desc, dest, cc: cc || '', destEmail: pd ? (pd.email || 'adresse manquante') : '', ccEmail: pc ? (pc.email || 'adresse manquante') : '', destSt: 'font-size:10.5px;white-space:nowrap;color:' + (pd && !pd.email ? '#8D1D2C' : 'var(--color-text-muted)'), ccSt: 'font-size:10.5px;white-space:nowrap;color:' + (pc && !pc.email ? '#8D1D2C' : 'var(--color-text-muted)'), dernier: this.fDA(r.dernier), freq: S.repFreq[r.id] || r.freq,
         type: r.type || '—', actif: on, actifTxt: on ? 'Actif' : 'Inactif',
         actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;' + (on ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         toggleActif: () => { this.setState(s2 => ({ alertOn: Object.assign({}, s2.alertOn, { ['rep:' + r.id]: !on }) }));
