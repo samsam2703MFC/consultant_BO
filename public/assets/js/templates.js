@@ -86,6 +86,7 @@ export function render(c, x){
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
       ${c.isParams ? tplParams(c, x) : ''}
+      ${c.isScoring ? tplScoring(c, x) : ''}
       ` : `<div style="padding:60px 0;color:var(--color-text-muted);font-size:13px">Chargement des données du réseau…</div>`}
     </div>
   </main>
@@ -732,7 +733,7 @@ function tplProduits(c, x){
           <th style="text-align:right;${TH2}">Marge unit.</th>
           <th style="text-align:right;${TH2}">CA réseau · marge brute</th>
           <th style="text-align:center;${TH2}">Rang catégorie</th>
-          <th style="text-align:left;${TH2};width:130px">Profil V · M · P</th>
+          <th style="text-align:left;${TH2};width:140px">Profil V · M · P · C</th>
           <th style="text-align:right;${TH2}">Score</th>
           <th style="${TH}">Arbitrage</th>
         </tr></thead>
@@ -765,9 +766,10 @@ function tplProduits(c, x){
               </td>
               <td style="padding:10px 12px">
                 <div style="display:flex;flex-direction:column;gap:4px">
-                  <div style="display:flex;align-items:center;gap:6px"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">V</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barVol}"></span></span></div>
-                  <div style="display:flex;align-items:center;gap:6px"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">M</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barMg}"></span></span></div>
-                  <div style="display:flex;align-items:center;gap:6px"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">P</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barPos}"></span></span></div>
+                  <div title="Volume vendu" style="display:flex;align-items:center;gap:6px"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">V</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barVol}"></span></span></div>
+                  <div title="${r.mgDispo ? 'Marge nette' : 'Marge nette — sans donnée, exclue du score'}" style="display:flex;align-items:center;gap:6px;opacity:${r.mgDispo ? '1' : '0.35'}"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">M</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barMg}"></span></span></div>
+                  <div title="${r.perteDispo ? 'Taux de perte' : 'Taux de perte — sans donnée, exclu du score'}" style="display:flex;align-items:center;gap:6px;opacity:${r.perteDispo ? '1' : '0.35'}"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">P</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barPerte}"></span></span></div>
+                  <div title="${r.comptoirDispo ? 'Présence au comptoir' : 'Présence au comptoir — sans donnée, exclue du score'}" style="display:flex;align-items:center;gap:6px;opacity:${r.comptoirDispo ? '1' : '0.35'}"><span style="font-size:9.5px;font-weight:500;color:var(--color-text-muted);width:8px">C</span><span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary)"><span style="${r.barComptoir}"></span></span></div>
                 </div>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
@@ -1454,43 +1456,6 @@ function tplParams(c, x){
         </div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Scoring produits — pondération et seuils</div>
-        <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">Le score sur 100 est la moyenne pond\u00e9r\u00e9e de trois notes : volume vendu, taux de marge et position dans la cat\u00e9gorie. Les poids sont relatifs (leur somme n\u2019a pas besoin de faire 100). Les seuils fixent le verdict : au-dessus du premier, « moteur de gamme » ; en dessous du second, « \u00e0 arbitrer ».</div>
-        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Pond\u00e9ration</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-          <div>
-            <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:4px">Volume vendu</div>
-            <input type="number" min="0" step="5" value="${esc(c.scVolume)}" ${x.C(c.setScVolume)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-          <div>
-            <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:4px">Taux de marge</div>
-            <input type="number" min="0" step="5" value="${esc(c.scMarge)}" ${x.C(c.setScMarge)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-          <div>
-            <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:4px">Position cat\u00e9gorie</div>
-            <input type="number" min="0" step="5" value="${esc(c.scPosition)}" ${x.C(c.setScPosition)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-        </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.scPart)}</div>
-        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px;margin-top:18px">Seuils de verdict (score sur 100)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
-            <div style="font-size:11.5px;color:#2d7a3e;margin-bottom:4px">\u2265 Moteur de gamme</div>
-            <input type="number" min="0" max="100" step="1" value="${esc(c.scMoteur)}" ${x.C(c.setScMoteur)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-          <div>
-            <div style="font-size:11.5px;color:#8D1D2C;margin-bottom:4px">&lt; \u00c0 arbitrer</div>
-            <input type="number" min="0" max="100" step="1" value="${esc(c.scConforter)}" ${x.C(c.setScConforter)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
-          </div>
-        </div>
-        ${c.scAlerte ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(c.scAlerte)}</div>` : ''}
-        ${c.scMsg ? `<div style="${c.scMsgSt}">${esc(c.scMsg)}</div>` : ''}
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
-          <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
-          <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
-        </div>
-      </div>
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Réseau</div>
         <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Intervenants</span><span style="font-weight:500">${esc(c.paramIntervenants)}</span></div>
@@ -2112,6 +2077,56 @@ function tplUserPanel(c, x){
       ${u.canLogout ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:26px;padding-top:16px;display:flex;justify-content:flex-end">
         <button ${x.A(u.logout)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Se d\u00e9connecter</button>
       </div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* --- Réglages du scoring produits (sous-menu Paramètres) --------------------- */
+function tplScoring(c, x){
+  const { esc } = x;
+  return `
+  <div data-screen="scoring" style="display:flex;flex-direction:column;gap:16px;max-width:900px">
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Pondération des critères</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">Le score sur 100 est la moyenne pondérée de quatre notes. Les poids sont relatifs : leur somme n\u2019a pas besoin de faire 100, la part effective est recalculée. Un critère sans donnée est EXCLU du calcul et le score est repondéré sur les autres — il n\u2019est jamais pénalisé par une donnée manquante.</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${c.scCriteres.map(cr => `
+          <div style="display:grid;grid-template-columns:1fr 110px 70px;gap:12px;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:500">${esc(cr.nom)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(cr.aide)}</div>
+            </div>
+            <input type="number" min="0" step="5" value="${esc(cr.val)}" ${x.C(cr.set)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+            <div style="font-size:13px;font-weight:600;text-align:right">${esc(cr.part)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Échelle de la marge nette</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">Le taux de marge est converti en note sur une échelle ABSOLUE, définie par deux bornes : linéaire entre elles, plafonnée au-delà. Une note absolue ne bouge pas quand un AUTRE produit change — contrairement à une note relative à la gamme.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Marge basse (%)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMBas)}" ${x.C(c.setScMBas)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">vaut (points)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMBasNote)}" ${x.C(c.setScMBasNote)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Marge haute (%)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMHaut)}" ${x.C(c.setScMHaut)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">vaut (points)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMHautNote)}" ${x.C(c.setScMHautNote)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.scMargeApercu)}</div>
+    </div>
+
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:14px">Seuils de verdict (score sur 100)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px;color:#2d7a3e">\u2265 Moteur de gamme</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMoteur)}" ${x.C(c.setScMoteur)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px;color:#8D1D2C">&lt; \u00c0 arbitrer</div><input type="number" min="0" max="100" step="1" value="${esc(c.scConforter)}" ${x.C(c.setScConforter)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+      </div>
+    </div>
+
+    ${c.scAlerte ? `<div style="padding:11px 14px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12.5px;font-weight:500">${esc(c.scAlerte)}</div>` : ''}
+    ${c.scMsg ? `<div style="${c.scMsgSt}">${esc(c.scMsg)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
     </div>
   </div>`;
 }

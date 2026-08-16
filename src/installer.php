@@ -229,7 +229,13 @@ function signalementDefaut(): array
 function scoringDefaut(): array
 {
     return [
-        'poids'  => ['volume' => 40, 'marge' => 40, 'position' => 20],
+        // Quatre critères, pondérés (somme libre — la part effective est
+        // recalculée) :
+        //   volume    — médiane des 6 dernières semaines, par période
+        //   marge     — marge NETTE : prix de vente moins matière et main d'œuvre
+        //   perte     — pénalise les produits jetés en fin de journée
+        //   comptoir  — rôle d'image du produit, présence au comptoir
+        'poids'  => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10],
         'seuils' => ['moteur' => 68, 'conforter' => 46],
         // Échelle ABSOLUE du taux de marge brute → note sur 100, définie par
         // deux bornes et linéaire entre elles (plafonnée aux extrémités).

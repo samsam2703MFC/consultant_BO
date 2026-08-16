@@ -62,7 +62,7 @@ function ep_meta(): array
         // Pondération et seuils du scoring produit — réglage, jamais une
         // constante d'écran : le score qui décide de retirer une référence
         // doit pouvoir se discuter et s'ajuster sans déploiement.
-        'scoring'          => setting('scoring', ['poids' => ['volume' => 40, 'marge' => 40, 'position' => 20],
+        'scoring'          => setting('scoring', ['poids' => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10],
                                                   'seuils' => ['moteur' => 68, 'conforter' => 46],
                                                   'marge' => ['bas' => 20, 'basNote' => 20, 'haut' => 80, 'hautNote' => 100]]),
         'reportTypes'      => setting('reportTypes', []),

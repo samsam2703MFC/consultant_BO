@@ -209,11 +209,24 @@ class App {
      jamais des constantes d'écran — c'est ce score qui décide de retirer une
      référence de la gamme. Repli sur les valeurs livrées si absent. */
   scoringCfg(){ const c = (this.meta && this.meta.scoring) || {};
-    const p = c.poids || {}, s = c.seuils || {};
+    const p = c.poids || {}, s = c.seuils || {}, mg = c.marge || {};
     const n = (v, d) => { const x = Number(v); return isFinite(x) && x >= 0 ? x : d; };
-    return { v: n(p.volume, 40), m: n(p.marge, 40), pos: n(p.position, 20),
-      moteur: n(s.moteur, 68), conforter: n(s.conforter, 46) }; }
-  poids(){ const c = this.scoringCfg(); return { v: c.v, m: c.m, pos: c.pos }; }
+    return { v: n(p.volume, 40), m: n(p.marge, 30), perte: n(p.perte, 20), comptoir: n(p.comptoir, 10),
+      moteur: n(s.moteur, 68), conforter: n(s.conforter, 46),
+      mBas: n(mg.bas, 20), mBasNote: n(mg.basNote, 20), mHaut: n(mg.haut, 80), mHautNote: n(mg.hautNote, 100) }; }
+  poids(){ const c = this.scoringCfg(); return { v: c.v, m: c.m, perte: c.perte, comptoir: c.comptoir }; }
+  /* Taux de marge (0..1) → note sur 100, échelle ABSOLUE à deux bornes :
+     sous la borne basse on plafonne à sa note, au-dessus de la haute idem,
+     linéaire entre les deux. Une note absolue ne bouge pas quand un AUTRE
+     produit change — contrairement à la normalisation relative d'avant. */
+  noteMarge(tauxPct){
+    const c = this.scoringCfg();
+    if (tauxPct == null || !isFinite(tauxPct)) return null;
+    const b = c.mBas, h = c.mHaut, nb = c.mBasNote, nh = c.mHautNote;
+    if (h <= b) return null;
+    if (tauxPct <= b) return nb;
+    if (tauxPct >= h) return nh;
+    return nb + (nh - nb) * (tauxPct - b) / (h - b); }
   seuilCaEtp(){ const d = (this.meta && this.meta.seuils) || {}; return d.caEtp != null ? +d.caEtp : 13000; }
   seuils(){ const d = (this.meta && this.meta.seuils) || {};
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
@@ -268,7 +281,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -461,7 +474,8 @@ class App {
         { sub: 'Checklists consultants', children: [
           ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
           ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] }]],
-      ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0], ['parametres', 'Paramètres', 0]]]];
+      ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0],
+        { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
@@ -476,8 +490,8 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -617,6 +631,7 @@ class App {
     if (common.isJournal) this.valsJournal(common);
     // --- paramètres
     if (common.isParams) this.valsParams(common);
+    if (common.isScoring) this.valsParams(common);   // même bloc de réglages, écran dédié
 
     // --- fiche projet
     const opP = S.openProjId && D.projects.find(p => p.id === S.openProjId);
@@ -936,8 +951,10 @@ class App {
   /* --- scoring produits -------------------------------------------------------- */
   valsProduits(common){
     const S = this.state, D = this.D;
-    const W = this.poids(); const wt = (W.v + W.m + W.pos) || 1;
-    common.pdPond = 'volume ' + Math.round(100 * W.v / wt) + ' · marge ' + Math.round(100 * W.m / wt) + ' · position ' + Math.round(100 * W.pos / wt);
+    const W = this.poids();
+    const wtTot = (W.v + W.m + W.perte + W.comptoir) || 1;
+    const pc4 = w => Math.round(100 * w / wtTot);
+    common.pdPond = 'volume ' + pc4(W.v) + ' · marge nette ' + pc4(W.m) + ' · perte ' + pc4(W.perte) + ' · comptoir ' + pc4(W.comptoir);
     common.pdPeriode = 'dernier mois de ventes encodé';
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
@@ -947,6 +964,8 @@ class App {
       const mu = p.coutUnit == null ? null : p.prix - p.coutUnit;
       const mp = (mu == null || !p.prix) ? null : mu / p.prix;
       return { nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
+        perte: p.tauxPerte != null ? p.tauxPerte : null,
+        comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
         ca: p.volume * p.prix, mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
     const mps = base.map(p => p.mp).filter(v => v != null);
@@ -954,11 +973,20 @@ class App {
     const cats = {}; base.forEach(p => { (cats[p.cat] = cats[p.cat] || []).push(p); });
     Object.keys(cats).forEach(c2 => { const g = cats[c2].slice().sort((a, b) => b.ca - a.ca); const tot = g.reduce((a, x2) => a + x2.ca, 0) || 1;
       g.forEach((p, i) => { p.rang = i + 1; p.nbCat = g.length; p.partCat = p.ca / tot; }); });
-    base.forEach(p => { p.sVol = 100 * Math.sqrt((p.vol || 0) / maxVol);
-      p.sMg = (p.mp == null || minMp == null) ? null : 100 * (p.mp - minMp) / ((maxMp - minMp) || 1);
-      p.sPos = 100 * (p.nbCat - p.rang + 1) / p.nbCat;
-      let num = W.v * p.sVol + W.pos * p.sPos, den = W.v + W.pos;
-      if (p.sMg != null) { num += W.m * p.sMg; den += W.m; }
+    base.forEach(p => {
+      p.sVol = 100 * Math.sqrt((p.vol || 0) / maxVol);
+      // Marge NETTE sur une échelle absolue (réglage), et non plus relative
+      // à la gamme. `mp` reste nul tant que le coût n'est pas disponible.
+      p.sMg = this.noteMarge(p.mp == null ? null : p.mp * 100);
+      // Perte et présence au comptoir : sans source de données, la note reste
+      // nulle et le critère SORT du calcul — on ne remplace pas une donnée
+      // manquante par un zéro, qui pénaliserait à tort chaque produit.
+      p.sPerte = p.perte == null ? null : Math.max(0, Math.min(100, 100 - p.perte * 100));
+      p.sComptoir = p.comptoir == null ? null : Math.max(0, Math.min(100, p.comptoir));
+      let num = W.v * p.sVol, den = W.v;
+      if (p.sMg != null)       { num += W.m * p.sMg; den += W.m; }
+      if (p.sPerte != null)    { num += W.perte * p.sPerte; den += W.perte; }
+      if (p.sComptoir != null) { num += W.comptoir * p.sComptoir; den += W.comptoir; }
       p.score = den ? num / den : 0; });
     const SC = this.scoringCfg();
     const verdict = s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)'] : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)'] : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'];
@@ -981,7 +1009,9 @@ class App {
         barPen: bar(100 * p.pen, p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C'),
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),
         rangSt: this.pill(p.rang <= Math.ceil(p.nbCat / 3) ? 1 : p.rang <= Math.ceil(2 * p.nbCat / 3) ? 0.95 : 0.8),
-        barVol: bar(p.sVol, '#8D1D2C'), barMg: bar(p.sMg, '#2d7a3e'), barPos: bar(p.sPos, '#C17A2A'),
+        barVol: bar(p.sVol, '#8D1D2C'), barMg: bar(p.sMg == null ? 0 : p.sMg, '#2d7a3e'),
+        barPerte: bar(p.sPerte == null ? 0 : p.sPerte, '#C17A2A'), barComptoir: bar(p.sComptoir == null ? 0 : p.sComptoir, '#6b7fa8'),
+        mgDispo: p.sMg != null, perteDispo: p.sPerte != null, comptoirDispo: p.sComptoir != null,
         score: String(Math.round(p.score)), scoreSt: 'font-size:17px;font-weight:500;line-height:1;color:' + vd[1], scoreBar: bar(p.score, vd[1]),
         verdict: vd[0], verdictSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + vd[2] + ';color:' + vd[1] }; });
     const nMot = base.filter(p => p.score >= SC.moteur).length, nArb = base.filter(p => p.score < SC.conforter).length;
@@ -995,7 +1025,12 @@ class App {
       { k: 'Pénétration moyenne', v: this.fP(penMoy, 0), s: nPart + ' références vendues dans moins de la moitié du réseau' },
       { k: 'Moteurs de gamme', v: String(nMot), s: 'Score ≥ ' + SC.moteur + ' : disponibilité et mise en avant à sécuriser' },
       { k: 'À arbitrer', v: String(nArb), s: 'Score < ' + SC.conforter + ' : retrait, repricing ou relance commerciale' }];
-    common.pdNote = 'Score sur 100 = moyenne pondérée de trois notes : volume vendu (racine du volume réseau, ramené au best-seller), taux de marge unitaire (normalisé sur la gamme) et position dans la catégorie (rang par CA). Pondération actuelle : ' + common.pdPond + '. La pénétration réseau (nombre de magasins ouverts vendant la référence sur ' + nbOuv + ') et le CA réseau sont affichés à titre de contexte et n\'entrent pas dans le score.';
+    const manque = [];
+    if (!base.some(p => p.sMg != null)) manque.push('marge nette (coût matière et main d’œuvre non exposés par la base partagée)');
+    if (!base.some(p => p.sPerte != null)) manque.push('taux de perte (aucune source de casse/invendus)');
+    if (!base.some(p => p.sComptoir != null)) manque.push('présence au comptoir (attribut produit non renseigné)');
+    common.pdNote = 'Score sur 100 = moyenne pondérée de quatre notes : volume vendu, marge nette, taux de perte et présence au comptoir. Pondération réglée dans Paramètres — ' + common.pdPond + '.'
+      + (manque.length ? ' Critère(s) sans donnée aujourd’hui, donc EXCLUS du calcul (le score est repondéré sur les critères disponibles, il n’est pas pénalisé) : ' + manque.join(' ; ') + '.' : '');
   }
 
   /* --- marge & coûts ------------------------------------------------------------ */
@@ -1719,38 +1754,55 @@ class App {
   valsParams(common){
     const S = this.state, D = this.D, M = this.M;
     common.paramExo = String(this.meta.exercice);
-    // --- Scoring produits : pondération (volume / marge / position) et seuils
-    //     de verdict. Modifiable ici plutôt qu'enfoui dans le JavaScript.
+    // --- Scoring produits : pondération des 4 critères, seuils de verdict et
+    //     échelle absolue de la marge nette. Écran dédié (sous-menu Paramètres).
     const scd = S.scDraft || {};
     const SCc = this.scoringCfg();
     const scv = (k, def) => scd[k] != null ? scd[k] : String(def);
     const scSet = k => e => { const v = e.target.value; this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { [k]: v }) })); };
     const scNum = (v, d) => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? n : d; };
-    const pv = scNum(scv('volume', SCc.v), SCc.v), pm = scNum(scv('marge', SCc.m), SCc.m), pp = scNum(scv('position', SCc.pos), SCc.pos);
-    const somme = pv + pm + pp;
-    common.scVolume = scv('volume', SCc.v); common.scMarge = scv('marge', SCc.m); common.scPosition = scv('position', SCc.pos);
+    const pv = scNum(scv('volume', SCc.v), SCc.v), pm = scNum(scv('marge', SCc.m), SCc.m);
+    const pp = scNum(scv('perte', SCc.perte), SCc.perte), pc = scNum(scv('comptoir', SCc.comptoir), SCc.comptoir);
+    const somme = pv + pm + pp + pc;
+    common.scVolume = scv('volume', SCc.v); common.scMarge = scv('marge', SCc.m);
+    common.scPerte = scv('perte', SCc.perte); common.scComptoir = scv('comptoir', SCc.comptoir);
     common.scMoteur = scv('moteur', SCc.moteur); common.scConforter = scv('conforter', SCc.conforter);
-    common.setScVolume = scSet('volume'); common.setScMarge = scSet('marge'); common.setScPosition = scSet('position');
+    common.scMBas = scv('mBas', SCc.mBas); common.scMBasNote = scv('mBasNote', SCc.mBasNote);
+    common.scMHaut = scv('mHaut', SCc.mHaut); common.scMHautNote = scv('mHautNote', SCc.mHautNote);
+    common.setScVolume = scSet('volume'); common.setScMarge = scSet('marge');
+    common.setScPerte = scSet('perte'); common.setScComptoir = scSet('comptoir');
     common.setScMoteur = scSet('moteur'); common.setScConforter = scSet('conforter');
-    // Les poids sont relatifs : on montre la part effective de chacun, pour que
-    // « 40 » ne se lise pas comme « 40 % » quand la somme ne fait pas 100.
-    common.scPart = somme > 0
-      ? 'Part effective — volume ' + Math.round(100 * pv / somme) + ' % · marge ' + Math.round(100 * pm / somme) + ' % · position ' + Math.round(100 * pp / somme) + ' %'
-      : 'Au moins un poids doit être supérieur à zéro.';
+    common.setScMBas = scSet('mBas'); common.setScMBasNote = scSet('mBasNote');
+    common.setScMHaut = scSet('mHaut'); common.setScMHautNote = scSet('mHautNote');
+    // Les poids sont relatifs : montrer la part effective, pour que « 40 » ne se
+    // lise pas « 40 % » quand la somme ne fait pas 100.
+    const part = w => somme > 0 ? Math.round(100 * w / somme) + ' %' : '—';
+    common.scCriteres = [
+      { k: 'volume', nom: 'Volume de ventes', aide: 'Médiane des 6 dernières semaines, par période.', val: common.scVolume, set: common.setScVolume, part: part(pv) },
+      { k: 'marge', nom: 'Marge nette', aide: 'Prix de vente moins matière et coût main d’œuvre.', val: common.scMarge, set: common.setScMarge, part: part(pm) },
+      { k: 'perte', nom: 'Taux de perte', aide: 'Pénalise les produits jetés en fin de journée.', val: common.scPerte, set: common.setScPerte, part: part(pp) },
+      { k: 'comptoir', nom: 'Présence au comptoir', aide: 'Poids donné au rôle d’image du produit.', val: common.scComptoir, set: common.setScComptoir, part: part(pc) },
+    ];
     const sMot = scNum(scv('moteur', SCc.moteur), SCc.moteur), sCon = scNum(scv('conforter', SCc.conforter), SCc.conforter);
+    const mb = scNum(scv('mBas', SCc.mBas), SCc.mBas), mh = scNum(scv('mHaut', SCc.mHaut), SCc.mHaut);
+    const mbn = scNum(scv('mBasNote', SCc.mBasNote), SCc.mBasNote), mhn = scNum(scv('mHautNote', SCc.mHautNote), SCc.mHautNote);
     common.scAlerte = somme <= 0 ? 'Somme des poids nulle : le score ne peut pas être calculé.'
       : (sCon >= sMot ? 'Le seuil « à conforter » doit rester sous le seuil « moteur de gamme ».'
-      : (sMot > 100 || sCon < 0 ? 'Les seuils s’expriment sur une échelle de 0 à 100.' : ''));
+      : (sMot > 100 || sCon < 0 ? 'Les seuils s’expriment sur une échelle de 0 à 100.'
+      : (mh <= mb ? 'La borne haute de marge doit être supérieure à la borne basse.' : '')));
+    common.scMargeApercu = 'Marge ' + mb + ' % → ' + mbn + ' pts · ' + mh + ' % → ' + mhn + ' pts (linéaire entre les deux, plafonné au-delà).';
     common.scMsg = scd.msg || '';
     common.scMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (scd.ok ? '#2d7a3e' : '#8D1D2C');
     common.scSave = () => {
       if (common.scAlerte) { this.notify(common.scAlerte); return; }
-      const val = { poids: { volume: pv, marge: pm, position: pp }, seuils: { moteur: sMot, conforter: sCon } };
+      const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc },
+        seuils: { moteur: sMot, conforter: sCon },
+        marge: { bas: mb, basNote: mbn, haut: mh, hautNote: mhn } };
       this.api('PUT', '/parametres/scoring', { valeur: val }).then(r => {
         if (r && r.ok === false) { this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { ok: false, msg: r.error || 'Échec' }) })); return; }
         this.meta.scoring = val;
         this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { ok: true, msg: 'Pondération enregistrée — le scoring est recalculé.' }) }));
-        this.log('Paramètre', null, 'Scoring produits : poids ' + pv + '/' + pm + '/' + pp + ', seuils ' + sMot + ' / ' + sCon);
+        this.log('Paramètre', null, 'Scoring produits : poids ' + pv + '/' + pm + '/' + pp + '/' + pc + ', seuils ' + sMot + ' / ' + sCon);
       });
     };
     common.scReset = () => this.setState({ scDraft: {} });
