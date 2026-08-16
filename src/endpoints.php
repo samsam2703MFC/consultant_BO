@@ -460,12 +460,27 @@ function ep_product_waste(): array
         $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
     } catch (PDOException $e) { $shops = []; }
 
+    // Ventes PAR MAGASIN : notre propre agrégat de caisse. L'API rend un
+    // `sold_qty` identique pour tous les magasins (valeur réseau) — s'en servir
+    // comme dénominateur par magasin donnerait des taux faux, d'autant plus
+    // trompeurs qu'ils paraissent plausibles.
+    $venteParShop = [];
+    try {
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */ t.id_shop, SUM(tp.quantity) q
+                           FROM transaction t JOIN transaction_product tp ON tp.id_transaction = t.id
+                           WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ? AND tp.id_product = ?
+                           GROUP BY t.id_shop",
+            [$from . ' 00:00:00', date('Y-m-d 00:00:00', strtotime($to . ' +1 day')), $pid]) as $v) {
+            $venteParShop[(int) $v['id_shop']] = (float) $v['q'];
+        }
+    } catch (PDOException $eV) { /* caisse indisponible : ventes inconnues */ }
+
     $totJ = 0.0; $totV = 0.0;
     foreach ($shops as $sh) {
         $sid = (int) $sh['id'];
         $w = PanelApi::shopProductWaste($sid, $pid, $from, $to);
         $j = $w !== null ? (float) ($w['waste_qty'] ?? 0) : 0.0;
-        $v = $w !== null ? (float) ($w['sold_qty'] ?? 0) : 0.0;
+        $v = $venteParShop[$sid] ?? 0.0;
         if ($out['nom'] === null && $w !== null && !empty($w['product_name'])) { $out['nom'] = (string) $w['product_name']; }
         $den = $j + $v;
         $totJ += $j; $totV += $v;
@@ -1274,7 +1289,7 @@ function ep_products(): array
         // les quantités jetées et vendues sur TOUTES les boutiques pour la même
         // période que le volume, puis on en tire un taux réseau. Le volet
         // rapporte aussi la catégorie réelle et le motif principal de rebut.
-        $perteVol = []; $perteSold = []; $catApi = []; $motif = [];
+        $perteVol = []; $catApi = []; $motif = [];
         if (PanelApi::configured()) {
             $dFrom = substr($from, 0, 10);
             $dTo   = date('Y-m-d', strtotime($to . ' -1 day'));
@@ -1285,8 +1300,13 @@ function ep_products(): array
                 foreach (PanelApi::shopWaste($sid, $dFrom, $dTo) as $w) {
                     $pid = (int) ($w['id_product'] ?? 0);
                     if ($pid <= 0) { continue; }
-                    $perteVol[$pid]  = ($perteVol[$pid] ?? 0) + (float) ($w['waste_qty'] ?? 0);
-                    $perteSold[$pid] = ($perteSold[$pid] ?? 0) + (float) ($w['sold_qty'] ?? 0);
+                    // `waste_qty` est bien propre au magasin (il diffère d'un
+                    // magasin à l'autre) et s'additionne. `sold_qty`, lui, est
+                    // rendu IDENTIQUE pour tous les magasins : c'est une valeur
+                    // réseau. L'additionner multipliait les ventes par le nombre
+                    // de magasins et écrasait le taux. On l'ignore : le volume
+                    // vendu vient de notre propre agrégat de caisse.
+                    $perteVol[$pid] = ($perteVol[$pid] ?? 0) + (float) ($w['waste_qty'] ?? 0);
                     $cn = trim((string) ($w['category_name'] ?? ''));
                     if ($cn !== '' && !isset($catApi[$pid])) { $catApi[$pid] = $cn; }
                     $tr = trim((string) ($w['top_reason'] ?? ''));
@@ -1316,7 +1336,7 @@ function ep_products(): array
             }
         } catch (PDOException $eCat) { /* référentiel absent : catégorie vide */ }
 
-        return array_map(function ($r) use ($cat, $catApi, $perteVol, $perteSold, $motif, $cout) {
+        return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout) {
             $vol  = (float) $r['volume'];
             $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
             $pid  = (int) $r['id_product'];
@@ -1325,7 +1345,7 @@ function ep_products(): array
             // produit très jeté mais peu vendu afficherait un taux > 100 %.
             $tp = null;
             if (isset($perteVol[$pid])) {
-                $den = $perteSold[$pid] + $perteVol[$pid];
+                $den = $vol + $perteVol[$pid];      // vendu (notre agrégat) + jeté
                 if ($den > 0) { $tp = round($perteVol[$pid] / $den, 4); }
             }
             return [
