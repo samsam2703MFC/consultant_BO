@@ -362,65 +362,51 @@ final class PanelApi
     }
 
     /**
-     * Variantes de chemin pour une ressource de boutique.
+     * Convention de période du panel : `period` + `date`, et non des bornes.
      *
-     * Les endpoints du panel qui fonctionnent déjà suivent tous le motif
-     * `/shops/{id}/…` (planning, pertes) : c'est donc la première écriture
-     * essayée, avant la forme à paramètre. Mesuré en ligne : à la racine,
-     * /statistics/sales/kpis, /pnl et /labour/daily répondent tous 404.
+     * Mesuré en ligne : avec `from`/`to`/`date_from`/`date_to`, /pnl répond
+     * pour la journée d'aujourd'hui en ignorant les bornes — une réponse
+     * valide pour une période qui n'est pas celle demandée, donc un chiffre
+     * juste au mauvais endroit. Le code du panel lit `period` et `date` :
+     * c'est cette écriture qu'il faut employer.
      */
-    private static function cheminsBoutique(string $res, int $shopId, string $du, string $au): array
+    private static function q(string $periode, string $date, array $extra = []): string
     {
-        $q = http_build_query(['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au]);
-        return [
-            '/shops/' . $shopId . '/' . $res . '?' . $q,
-            '/consultant/shops/' . $shopId . '/' . $res . '?' . $q,
-            '/' . $res . '?' . $q . '&shop_id=' . $shopId,
-            '/' . $res . '?' . $q . '&id_shop=' . $shopId,
-        ];
+        $p = ['jour' => 'day', 'semaine' => 'week', 'mois' => 'month'][$periode] ?? 'month';
+        return http_build_query($extra + ['period' => $p, 'date' => $date]);
     }
 
     /** Indicateurs de vente d'une boutique (CA, tickets, panier, produits/client). */
-    public static function salesKpis(int $shopId, string $du, string $au): ?array
+    public static function salesKpis(int $shopId, string $periode, string $date): ?array
     {
-        return self::premierObjet(self::cheminsBoutique('statistics/sales/kpis', $shopId, $du, $au));
-    }
-
-    /** Compte de résultat d'une boutique sur une période. */
-    public static function pnl(int $shopId, string $du, string $au): ?array
-    {
-        return self::premierObjet(self::cheminsBoutique('pnl', $shopId, $du, $au));
-    }
-
-    /**
-     * Main-d'œuvre d'une boutique.
-     * `labour/daily` répond 404 sous les quatre écritures habituelles ; on
-     * essaie donc aussi la ressource sans le suffixe journalier.
-     */
-    public static function labourDaily(int $shopId, string $du, string $au): ?array
-    {
-        return self::premierObjet(array_merge(
-            self::cheminsBoutique('labour/daily', $shopId, $du, $au),
-            self::cheminsBoutique('labour', $shopId, $du, $au),
-            self::cheminsBoutique('statistics/labour', $shopId, $du, $au)
-        ));
-    }
-
-    /**
-     * Positionnement de la boutique dans le réseau.
-     * `/consultant/shops` est un endpoint dont le panel se sert réellement
-     * (relevé dans son code) : à défaut de la synthèse dédiée, c'est lui qui
-     * porte de quoi situer une boutique parmi les autres.
-     */
-    public static function networkSummary(string $du, string $au): ?array
-    {
-        $q = http_build_query(['from' => $du, 'to' => $au]);
+        $q = self::q($periode, $date);
         return self::premierObjet([
-            '/consultant/network/shops/summary?' . $q,
-            '/consultant/network/shops/summary',
-            '/consultant/shops?' . $q,
-            '/consultant/shops',
+            '/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
+            '/consultant/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
+            '/statistics/sales/kpis?' . self::q($periode, $date, ['shop_id' => $shopId]),
         ]);
+    }
+
+    /**
+     * Compte de résultat d'une boutique.
+     * Porte aussi la ventilation du chiffre d'affaires par catégorie ET la
+     * main-d'œuvre : l'endpoint /labour/daily, introuvable sous toutes ses
+     * écritures, était de toute façon superflu.
+     */
+    public static function pnl(int $shopId, string $periode, string $date): ?array
+    {
+        $q = self::q($periode, $date);
+        return self::premierObjet([
+            '/consultant/shops/' . $shopId . '/pnl?' . $q,
+            '/shops/' . $shopId . '/pnl?' . $q,
+            '/pnl?' . self::q($periode, $date, ['shop_id' => $shopId]),
+        ]);
+    }
+
+    /** Boutiques du réseau (sert au positionnement d'une boutique). */
+    public static function consultantShops(): ?array
+    {
+        return self::premierObjet(['/consultant/shops']);
     }
 
     /** Gammes saisonnières du réseau. */

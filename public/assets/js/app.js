@@ -1050,10 +1050,45 @@ class App {
       close: () => this.setState({ exDetail: null }),
       du: det.d ? det.d.du : null, au: det.d ? det.d.au : null,
       blocs: det.d && det.d.blocs ? Object.keys(det.d.blocs).map(k => {
-        const b = det.d.blocs[k];
-        return { cle: k, titre: b.titre, attente: b.etat !== 'ok',
-          motif: b.motif || '', source: b.source || '',
-          lignes: b.etat === 'ok' ? this.exAplat(b.donnees) : [] };
+        const b = det.d.blocs[k], D2 = b.donnees;
+        const o = { cle: k, titre: b.titre, attente: b.etat !== 'ok',
+          motif: b.motif || '', source: b.source || '', lignes: [], tuiles: null,
+          cascade: null, cats: null, rang: null };
+        if (b.etat !== 'ok') return o;
+        if (k === 'kpis'){
+          o.tuiles = [
+            { l: 'CA de la période', v: this.fE(D2.ca) },
+            { l: 'tickets', v: D2.tickets == null ? '—' : D2.tickets.toLocaleString('fr-BE') },
+            { l: 'panier moyen', v: this.fEd(D2.panier) },
+            { l: 'produits / client', v: D2.produitsParClient == null ? '—' : String(D2.produitsParClient) }];
+        } else if (k === 'pnl'){
+          const p = x => x && x.pct != null ? x.pct.toFixed(1).replace('.', ',') + ' %' : '—';
+          const v = x => x && x.valeur != null ? this.fE(x.valeur) : '—';
+          o.cascade = [
+            { l: 'Chiffre d\u2019affaires', v: this.fE(D2.ca), p: '', fort: true },
+            { l: 'Food cost', v: v(D2.food), p: p(D2.food) },
+            { l: 'Main-d\u2019œuvre', v: v(D2.labour), p: p(D2.labour) },
+            { l: 'Frais généraux', v: v(D2.overhead), p: p(D2.overhead) },
+            { l: 'Résultat', v: v(D2.result), p: p(D2.result), fort: true }];
+          // La période RENDUE par l'API, pas celle demandée : si elle diffère,
+          // l'écran doit le montrer plutôt que de laisser croire au contraire.
+          o.lignes = (D2.du && D2.au) ? [{ k: 'période rendue', v: D2.du + ' → ' + D2.au }] : [];
+        } else if (k === 'categories'){
+          const mx = Math.max.apply(null, D2.map(c => c.ca || 0).concat([1]));
+          o.cats = D2.slice(0, 12).map(c => ({ nom: c.categorie, ca: this.fE(c.ca),
+            part: c.partCa == null ? '—' : this.fP(c.partCa, 0),
+            w: Math.max(2, 100 * (c.ca || 0) / mx).toFixed(0) + '%',
+            delta: c.delta == null ? '' : (c.delta > 0 ? '+' : '') + c.delta.toFixed(1).replace('.', ',') + ' %',
+            deltaC: c.delta == null ? 'var(--color-text-muted)' : (c.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)') }));
+        } else if (k === 'reseau'){
+          const av = D2.filter(r => r.panier != null).map(r => r.panier);
+          const moy = av.length ? av.reduce((a, b2) => a + b2, 0) / av.length : null;
+          o.rang = { moyenne: this.fEd(moy),
+            lignes: D2.slice().sort((a, b2) => (b2.panier || 0) - (a.panier || 0)).map(r => ({
+              magasin: r.magasin, moi: r.moi, panier: this.fEd(r.panier),
+              ppc: r.produitsParClient == null ? '—' : String(r.produitsParClient) })) };
+        }
+        return o;
       }) : []
     } : null;
     const an = E.mois ? +E.mois.slice(0, 4) : this.exo();

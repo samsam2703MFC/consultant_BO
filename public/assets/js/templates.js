@@ -271,14 +271,41 @@ function tplExploitDetail(c, x){
               : `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e;white-space:nowrap">API</span>`}
           </div>
           ${b.attente
-            ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(b.motif)}</div>`
-            : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:6px">${esc(b.source)}</div>
-               <table style="width:100%;border-collapse:collapse;font-size:12px">
+            ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5;word-break:break-word">${esc(b.motif)}</div>`
+            : `<div style="font-size:10.5px;color:var(--color-text-muted);margin-bottom:8px;word-break:break-all">${esc(b.source)}</div>
+               ${b.tuiles ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                 ${b.tuiles.map(t => `<div style="background:var(--color-background-secondary);border-radius:8px;padding:9px 11px">
+                   <div style="font-family:var(--font-display);font-size:18px;line-height:1.1">${esc(t.v)}</div>
+                   <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(t.l)}</div>
+                 </div>`).join('')}</div>` : ''}
+               ${b.cascade ? `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                 ${b.cascade.map(l => `<tr style="${l.fort ? 'font-weight:500' : ''}">
+                   <td style="padding:5px 0;border-top:0.5px solid var(--color-border-tertiary)">${esc(l.l)}</td>
+                   <td style="padding:5px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.v)}</td>
+                   <td style="padding:5px 0 5px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(l.p)}</td>
+                 </tr>`).join('')}</table>` : ''}
+               ${b.cats ? `<div style="display:flex;flex-direction:column;gap:6px">
+                 ${b.cats.map(c => `<div>
+                   <div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px">
+                     <span>${esc(c.nom)}</span>
+                     <span style="white-space:nowrap"><span style="font-variant-numeric:tabular-nums">${esc(c.ca)}</span>
+                       <span style="color:var(--color-text-muted)"> · ${esc(c.part)}</span>
+                       ${c.delta ? `<span style="color:${c.deltaC}"> ${esc(c.delta)}</span>` : ''}</span>
+                   </div>
+                   <div style="height:5px;border-radius:3px;background:#EDEAE5;overflow:hidden"><i style="display:block;height:100%;border-radius:3px;width:${c.w};background:var(--color-primary)"></i></div>
+                 </div>`).join('')}</div>` : ''}
+               ${b.rang ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">panier moyen réseau ${esc(b.rang.moyenne)}</div>
+                 <table style="width:100%;border-collapse:collapse;font-size:12px">
+                 ${b.rang.lignes.map(r => `<tr style="${r.moi ? 'font-weight:500;color:var(--color-primary)' : ''}">
+                   <td style="padding:3px 0">${esc(r.magasin)}</td>
+                   <td style="padding:3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(r.panier)}</td>
+                   <td style="padding:3px 0 3px 10px;text-align:right;color:var(--color-text-muted)">${esc(r.ppc)}</td>
+                 </tr>`).join('')}</table>` : ''}
+               ${b.lignes.length ? `<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px">
                  ${b.lignes.map(l => `<tr>
                    <td style="padding:3px 0;color:var(--color-text-muted)">${esc(l.k)}</td>
-                   <td style="padding:3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(l.v)}</td>
-                 </tr>`).join('')}
-               </table>`}
+                   <td style="padding:3px 0;text-align:right">${esc(l.v)}</td>
+                 </tr>`).join('')}</table>` : ''}`}
         </div>`).join('')}
     </div>`)}
   </div>`;

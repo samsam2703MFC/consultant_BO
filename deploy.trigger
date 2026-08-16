@@ -1,1 +1,1 @@
-Variantes pour la main d oeuvre et le positionnement reseau.
+P&L par magasin : periode+date, cascade et ventilation depuis l API.

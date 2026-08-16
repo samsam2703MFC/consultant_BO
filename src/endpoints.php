@@ -736,49 +736,122 @@ function ep_exploitation_magasin(): array
     $per = (string) ($_GET['periode'] ?? 'mois');
     if (!in_array($per, ['jour', 'semaine', 'mois'], true)) { $per = 'mois'; }
 
-    // Bornes de période. Le « jour » est le dernier jour de caisse encodé, pas
-    // la date du jour — même règle que l'écran Exploitation, sans quoi les deux
-    // ne parleraient pas de la même journée.
+    // Date de référence : le dernier jour de caisse encodé, comme l'écran
+    // Exploitation. Sans quoi les deux ne parleraient pas de la même journée.
     try {
         $d = Db::rows('SELECT MAX(DATE(insert_timestamp)) j FROM transaction');
     } catch (PDOException $e) { $d = []; }
-    $jour = ($d && !empty($d[0]['j'])) ? (string) $d[0]['j'] : date('Y-m-d');
-    $ts = strtotime($jour);
-    $from = $per === 'jour' ? $jour
-        : ($per === 'semaine' ? date('Y-m-d', strtotime('monday this week', $ts)) : date('Y-m-01', $ts));
+    $date = ($d && !empty($d[0]['j'])) ? (string) $d[0]['j'] : date('Y-m-d');
 
-    $out = ['shopId' => (string) $sid, 'periode' => $per, 'du' => $from, 'au' => $jour,
+    $out = ['shopId' => (string) $sid, 'periode' => $per, 'date' => $date,
         'magasin' => null, 'blocs' => []];
     try {
-        $s = Db::rows('SELECT name FROM shops WHERE id = ?', [$sid]);
-        if ($s) { $out['magasin'] = (string) $s[0]['name']; }
+        $sh = Db::rows('SELECT name FROM shops WHERE id = ?', [$sid]);
+        if ($sh) { $out['magasin'] = (string) $sh[0]['name']; }
     } catch (PDOException $e) { /* nom indisponible */ }
 
-    // Chaque bloc dit d'où il vient. Tant qu'un endpoint du panel n'a pas
-    // répondu, le bloc est marqué « en attente d'API » et ne porte AUCUN
-    // chiffre : mieux vaut un écran qui annonce ce qui lui manque qu'un écran
-    // rempli d'une source qu'on n'a pas voulue.
-    $bloc = function (string $cle, string $titre, ?array $rep) use (&$out): void {
-        $out['blocs'][$cle] = $rep !== null
-            ? ['titre' => $titre, 'etat' => 'ok', 'source' => PanelApi::$lastPath, 'donnees' => $rep]
-            : ['titre' => $titre, 'etat' => 'attente', 'source' => null, 'donnees' => null,
-               'motif' => PanelApi::$lastError ?: 'endpoint non disponible'];
+    $attente = function (string $titre, ?string $motif = null): array {
+        return ['titre' => $titre, 'etat' => 'attente', 'source' => null, 'donnees' => null,
+            'motif' => $motif ?: (PanelApi::$lastError ?: 'endpoint non disponible')];
     };
-
     if (!PanelApi::configured()) {
         foreach ([['kpis', 'Indicateurs de vente'], ['pnl', 'Compte de résultat'],
-                  ['labour', 'Main-d\'œuvre'], ['reseau', 'Positionnement réseau']] as $b) {
-            $out['blocs'][$b[0]] = ['titre' => $b[1], 'etat' => 'attente', 'source' => null,
-                'donnees' => null, 'motif' => 'compte consultant non configuré (Mon compte)'];
+                  ['categories', 'Ventilation du chiffre d\'affaires'],
+                  ['reseau', 'Positionnement réseau']] as $b) {
+            $out['blocs'][$b[0]] = $attente($b[1], 'compte consultant non configuré (Mon compte)');
         }
         return $out;
     }
 
-    $bloc('kpis',   'Indicateurs de vente',   PanelApi::salesKpis($sid, $from, $jour));
-    $bloc('pnl',    'Compte de résultat',     PanelApi::pnl($sid, $from, $jour));
-    $bloc('labour', 'Main-d\'œuvre',          PanelApi::labourDaily($sid, $from, $jour));
-    $bloc('reseau', 'Positionnement réseau',  PanelApi::networkSummary($from, $jour));
+    // --- Indicateurs de tête
+    $k = PanelApi::salesKpis($sid, $per, $date);
+    $out['blocs']['kpis'] = $k === null ? $attente('Indicateurs de vente')
+        : ['titre' => 'Indicateurs de vente', 'etat' => 'ok', 'source' => PanelApi::$lastPath,
+           'donnees' => [
+               'ca' => nombreOuNull($k, ['ca', 'turnover', 'revenue']),
+               'tickets' => nombreOuNull($k, ['tickets', 'ticket_count']),
+               'produits' => nombreOuNull($k, ['products', 'product_count']),
+               'panier' => nombreOuNull($k, ['avg_basket', 'average_basket', 'basket_avg']),
+               'produitsParClient' => nombreOuNull($k, ['products_per_ticket', 'products_per_client']),
+           ]];
+
+    // --- Compte de résultat : porte aussi la ventilation par catégorie et la
+    // main-d'œuvre. Un seul appel suffit donc là où j'en prévoyais trois.
+    $p = PanelApi::pnl($sid, $per, $date);
+    if ($p === null) {
+        $out['blocs']['pnl'] = $attente('Compte de résultat');
+        $out['blocs']['categories'] = $attente('Ventilation du chiffre d\'affaires');
+    } else {
+        $src = PanelApi::$lastPath;
+        $ca = nombreOuNull($p['turnover'] ?? [], ['value', 'amount']) ?? nombreOuNull($p, ['turnover']);
+        $poste = function (array $p, string $cle) use ($ca): array {
+            $v = $p[$cle] ?? null;
+            $val = is_array($v) ? nombreOuNull($v, ['value', 'amount']) : (is_numeric($v) ? (float) $v : null);
+            $pct = is_array($v) ? nombreOuNull($v, ['pct', 'percent', 'percentage', 'ratio']) : null;
+            // Le pourcentage n'est calculé QUE si le CA est connu et non nul :
+            // une part de zéro ne veut rien dire, et un zéro affiché non plus.
+            if ($pct === null && $val !== null && $ca !== null && $ca > 0) { $pct = round(100 * $val / $ca, 1); }
+            return ['valeur' => $val, 'pct' => $pct,
+                'delta' => is_array($v) ? nombreOuNull($v, ['delta', 'variation']) : null];
+        };
+        $out['blocs']['pnl'] = ['titre' => 'Compte de résultat', 'etat' => 'ok', 'source' => $src,
+            'donnees' => [
+                'periode' => $p['period'] ?? null, 'du' => $p['date_from'] ?? null, 'au' => $p['date_to'] ?? null,
+                'ca' => $ca, 'caDelta' => nombreOuNull($p['turnover'] ?? [], ['delta', 'variation']),
+                'labour' => $poste($p, 'labour'),
+                'overhead' => $poste($p, 'overhead'),
+                'result' => $poste($p, 'result'),
+                'food' => $poste($p, 'food_cost'),
+            ]];
+
+        $cats = $p['turnover']['categories'] ?? null;
+        $out['blocs']['categories'] = !is_array($cats) || !$cats
+            ? $attente('Ventilation du chiffre d\'affaires', 'le compte de résultat ne porte pas de ventilation')
+            : ['titre' => 'Ventilation du chiffre d\'affaires', 'etat' => 'ok', 'source' => $src,
+               'donnees' => array_map(function ($c) use ($ca) {
+                   $v = nombreOuNull($c, ['value', 'amount', 'ca']);
+                   return ['categorie' => (string) ($c['name'] ?? $c['label'] ?? '—'), 'ca' => $v,
+                       'partCa' => ($v !== null && $ca !== null && $ca > 0) ? round($v / $ca, 4) : null,
+                       'delta' => nombreOuNull($c, ['delta', 'variation']),
+                       'fcPct' => nombreOuNull($c, ['food_cost_pct', 'fc_pct', 'food_cost'])];
+               }, $cats)];
+    }
+
+    // --- Positionnement : les indicateurs des AUTRES boutiques, lus par la
+    // même API. Comparer une boutique à elle-même n'apprend rien ; la comparer
+    // à des chiffres calculés autrement apprend pire que rien.
+    $shops = PanelApi::consultantShops();
+    if (!is_array($shops) || !$shops) {
+        $out['blocs']['reseau'] = $attente('Positionnement réseau');
+    } else {
+        $lignes = [];
+        foreach ($shops as $s2) {
+            $id = (int) ($s2['id'] ?? 0);
+            if ($id <= 0) { continue; }
+            $kk = $id === $sid ? $k : PanelApi::salesKpis($id, $per, $date);
+            if ($kk === null) { continue; }
+            $lignes[] = ['shopId' => (string) $id,
+                'magasin' => (string) ($s2['representative_name'] ?? $s2['name'] ?? ('Magasin ' . $id)),
+                'moi' => $id === $sid,
+                'panier' => nombreOuNull($kk, ['avg_basket', 'average_basket']),
+                'produitsParClient' => nombreOuNull($kk, ['products_per_ticket', 'products_per_client']),
+                'ca' => nombreOuNull($kk, ['ca', 'turnover'])];
+        }
+        $out['blocs']['reseau'] = !$lignes ? $attente('Positionnement réseau')
+            : ['titre' => 'Positionnement réseau', 'etat' => 'ok',
+               'source' => '/consultant/shops + /shops/{id}/statistics/sales/kpis',
+               'donnees' => $lignes];
+    }
     return $out;
+}
+
+/** Première clé numérique présente parmi plusieurs écritures possibles. */
+function nombreOuNull(array $d, array $cles): ?float
+{
+    foreach ($cles as $c) {
+        if (isset($d[$c]) && is_numeric($d[$c])) { return (float) $d[$c]; }
+    }
+    return null;
 }
 
 /**
