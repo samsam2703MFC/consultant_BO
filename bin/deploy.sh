@@ -362,7 +362,7 @@ foreach ($j as $p) {
   if (!empty($p["periods"])) { $per++; }
   // Un coût matière au-dessus du prix de vente signale un rapprochement
   // douteux (ou une recette à revoir) : mieux vaut le dire que le tolérer.
-  if (isset($p["mat"], $p["prix"]) && $p["mat"] !== null && $p["prix"] !== null && $p["mat"] >= $p["prix"]) { $ko++; }
+  if (isset($p["matFiable"]) && $p["matFiable"] === false) { $ko++; }
 }
 printf("  produits            : %d\n", $n);
 printf("  avec coût matière   : %d (%.0f %%)\n", $mat, 100 * $mat / $n);

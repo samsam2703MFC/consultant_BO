@@ -730,9 +730,13 @@ function catalogueCouts(): array
 {
     $out = [];
     try {
-        // `calculated_cost_net` chiffre la RECETTE ENTIÈRE, pas la pièce : sans
-        // division par le rendement, un cannelloni vendu 7,50 € s'affichait à
-        // 734 € de matière. Le rendement est donc obligatoire dans le calcul.
+        // Le rendement divise le coût quand la recette en déclare un. Mesuré
+        // sur la base : il vaut 1,00 partout aujourd'hui, la division ne change
+        // donc aucun chiffre — elle protège d'une recette future au rendement
+        // multiple. Les coûts aberrants constatés (un cannelloni à 734 € de
+        // matière pour 7,50 € de vente) ne viennent PAS de là : ce sont des
+        // recettes mal chiffrées en amont. Seul le contrôle de vraisemblance
+        // ci-dessous les empêche de nourrir le score.
         $rows = Db::rows("SELECT p.id AS pid, r.yield_quantity AS rendement,
                                  AVG(CASE WHEN rc.id_shop = 0 AND rc.calculated_cost_net > 0
                                           THEN rc.calculated_cost_net END) AS reseau,
@@ -755,6 +759,23 @@ function catalogueCouts(): array
             'source' => $res !== null ? 'recette réseau' : 'moyenne magasins'];
     }
     return $out;
+}
+
+/**
+ * Un coût matière est-il exploitable pour calculer une marge ?
+ *
+ * Le seuil bas est un réglage (`production.coutRatioMin`, 5 % par défaut) et
+ * non une constante cachée : c'est un jugement métier, il doit pouvoir se
+ * discuter. Un coût nul ou négatif n'est jamais crédible.
+ */
+function coutVraisemblable(?float $mat, ?float $prix): bool
+{
+    if ($mat === null || $prix === null || $prix <= 0) { return true; }  // rien à juger
+    if ($mat <= 0 || $mat >= $prix) { return false; }
+    $p = setting('production', []);
+    $min = (is_array($p) && isset($p['coutRatioMin'])) ? (float) $p['coutRatioMin'] : 0.05;
+    if ($min <= 0) { return true; }
+    return ($mat / $prix) >= $min;
 }
 
 /** Prix de vente réellement pratiqué, moyenne réseau (`shop_product`). */
@@ -825,10 +846,13 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         if ($mat === null && isset($couts[$pid])) {
             $mat = $couts[$pid]['mat']; $matSrc = $couts[$pid]['source'];
         }
-        // Coût au-dessus du prix : la recette est incomplète ou mal chiffrée.
-        // On montre le coût — c'est ce qui permet de le corriger — mais on
-        // refuse d'en tirer une marge, qui serait fausse et démoralisante.
-        $matFiable = $mat === null || $prix === null || $mat < $prix;
+        // Vraisemblance du coût. Au-dessus du prix, la recette est mal
+        // chiffrée ; très en dessous, elle est incomplète — un granola à
+        // 0,01 € de matière pour 8,95 € donne 99,9 % de marge et hisserait la
+        // référence en tête du critère. Les deux erreurs se valent, on écarte
+        // les deux. On MONTRE le coût malgré tout : c'est ce qui permet de le
+        // corriger à la source.
+        $matFiable = coutVraisemblable($mat, $prix);
 
         $dlv = $e !== null && (int) $e['dlv'] > 0 ? (int) $e['dlv'] : null;
         if ($dlv === null && (int) $p['shelf_life_minutes'] > 0) {
@@ -1740,11 +1764,10 @@ function ep_products(): array
                 'categorie' => $catApi[$pid] ?? $cat[$pid] ?? 'Non catégorisé',
                 'volume'    => (int) round($vol),
                 'prix'      => $prix,
-                // Un coût matière supérieur au prix de vente n'est pas une
-                // marge négative, c'est une recette mal chiffrée. Le laisser
-                // passer noircirait « marge nette » (30 % du score) sur des
-                // références qui se portent bien : on préfère ne rien dire.
-                'coutUnit'  => (isset($cout[$pid]) && ($prix === null || $cout[$pid] < $prix))
+                // « Marge nette » pèse 30 % du score. Un coût mal chiffré —
+                // au-dessus du prix comme quasi nul — y ferait plus de dégâts
+                // que son absence, qui est déjà gérée (critère neutralisé).
+                'coutUnit'  => (isset($cout[$pid]) && coutVraisemblable($cout[$pid], $prix))
                     ? $cout[$pid] : null,
                 'tendVol'   => 1,
                 'magasins'  => (int) $r['magasins'],

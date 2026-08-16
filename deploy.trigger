@@ -1,1 +1,1 @@
-Coût matière par pièce : division par le rendement de la recette.
+Vraisemblance du coût matière : borne haute et borne basse.

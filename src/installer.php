@@ -121,6 +121,10 @@ function ensureProduction(): void
                 'arrondi'         => 'batch',
                 'fours'           => 2,
                 'ouverture'       => '07:00',
+                // En deçà de cette part du prix, un coût matière est jugé
+                // incomplet : la marge n'est ni affichée ni comptée dans le
+                // score. C'est un jugement métier, donc un réglage.
+                'coutRatioMin'    => 0.05,
             ], JSON_UNESCAPED_UNICODE)]);
     }
 }
