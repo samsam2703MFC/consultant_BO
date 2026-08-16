@@ -782,8 +782,8 @@ function ep_exploitation_magasin(): array
         $out['blocs']['pnl'] = $attente('Compte de résultat');
         $out['blocs']['categories'] = $attente('Ventilation du chiffre d\'affaires');
     } else {
-        $src = PanelApi::$lastPath;
-        $ca = nombreOuNull($p['turnover'] ?? [], ['value', 'amount']) ?? nombreOuNull($p, ['turnover']);
+        $srcPnl = $src = PanelApi::$lastPath;
+        $caPnl = $ca = nombreOuNull($p['turnover'] ?? [], ['value', 'amount']) ?? nombreOuNull($p, ['turnover']);
         $poste = function (array $p, string $cle) use ($ca): array {
             $v = $p[$cle] ?? null;
             $val = is_array($v) ? nombreOuNull($v, ['value', 'amount']) : (is_numeric($v) ? (float) $v : null);
@@ -816,51 +816,81 @@ function ep_exploitation_magasin(): array
                 'food' => $poste($p, 'food_cost'),
             ]];
 
-        $cats = $p['turnover']['categories'] ?? null;
-        $out['blocs']['categories'] = !is_array($cats) || !$cats
-            ? $attente('Ventilation du chiffre d\'affaires', 'le compte de résultat ne porte pas de ventilation')
-            : ['titre' => 'Ventilation du chiffre d\'affaires', 'etat' => 'ok', 'source' => $src,
-               'avertissement' => null,
-               'donnees' => array_map(function ($c) use ($ca) {
-                   $v = nombreOuNull($c, ['value', 'amount', 'ca']);
-                   $fc = nombreOuNull($c, ['food_cost_pct', 'fc_pct', 'fc', 'food_cost', 'foodcost']);
-                   $mg = nombreOuNull($c, ['margin_pct', 'margin', 'marge_pct', 'gross_margin_pct']);
-                   // La marge se déduit du food cost quand elle n'est pas
-                   // donnée — mais JAMAIS l'inverse d'un champ absent : sans
-                   // l'un ni l'autre, la catégorie reste sans couleur plutôt
-                   // que teintée d'une marge supposée.
-                   if ($mg === null && $fc !== null) { $mg = round(100 - $fc, 1); }
-                   return ['categorie' => (string) ($c['name'] ?? $c['label'] ?? '—'), 'ca' => $v,
-                       'partCa' => ($v !== null && $ca !== null && $ca > 0) ? round($v / $ca, 4) : null,
-                       'delta' => nombreOuNull($c, ['delta', 'variation']),
-                       'fcPct' => $fc, 'margePct' => $mg];
-               }, $cats)];
     }
 
-    // --- Positionnement : les indicateurs des AUTRES boutiques, lus par la
-    // même API. Comparer une boutique à elle-même n'apprend rien ; la comparer
-    // à des chiffres calculés autrement apprend pire que rien.
-    $shops = PanelApi::consultantShops();
-    if (!is_array($shops) || !$shops) {
+    // --- Ventilation par catégorie. Endpoint dédié : c'est lui qui porte le
+    // food cost, absent du compte de résultat. Repli sur la ventilation du
+    // /pnl, qui donne les montants mais pas la marge — donc pas la couleur.
+    $cs = PanelApi::categorySales($sid, $per, $date);
+    $srcCat = PanelApi::$lastPath;
+    $cats = null;
+    if (is_array($cs)) {
+        foreach ([$cs, $cs['categories'] ?? null, $cs['data'] ?? null, $cs['items'] ?? null] as $cand) {
+            if (is_array($cand) && $cand && array_is_list($cand)) { $cats = $cand; break; }
+        }
+    }
+    if ($cats === null && isset($p['turnover']['categories']) && is_array($p['turnover']['categories'])) {
+        $cats = $p['turnover']['categories'];
+        $srcCat = $srcPnl;
+    }
+    if (!is_array($cats) || !$cats) {
+        $out['blocs']['categories'] = $attente('Ventilation du chiffre d\'affaires');
+    } else {
+        $caRef = $caPnl;
+        if ($caRef === null || $caRef <= 0) {
+            $caRef = array_sum(array_map(fn($c) => nombreOuNull($c, ['value', 'amount', 'ca', 'turnover']) ?? 0, $cats));
+        }
+        $out['blocs']['categories'] = ['titre' => 'Ventilation du chiffre d\'affaires', 'etat' => 'ok',
+            'source' => $srcCat, 'avertissement' => null,
+            'donnees' => array_map(function ($c) use ($caRef) {
+                $v = nombreOuNull($c, ['value', 'amount', 'ca', 'turnover']);
+                $fc = nombreOuNull($c, ['food_cost_pct', 'fc_pct', 'fc', 'food_cost', 'foodcost']);
+                $mg = nombreOuNull($c, ['margin_pct', 'margin', 'marge_pct', 'gross_margin_pct']);
+                // La marge se déduit du food cost quand elle n'est pas donnée —
+                // jamais l'inverse d'un champ absent : sans l'un ni l'autre, la
+                // catégorie reste sans couleur plutôt que teintée d'une supposition.
+                if ($mg === null && $fc !== null) { $mg = round(100 - $fc, 1); }
+                return ['categorie' => (string) ($c['name'] ?? $c['label'] ?? $c['category'] ?? '—'),
+                    'ca' => $v,
+                    'partCa' => ($v !== null && $caRef > 0) ? round($v / $caRef, 4) : null,
+                    'delta' => nombreOuNull($c, ['delta', 'variation']),
+                    'fcPct' => $fc, 'margePct' => $mg];
+            }, $cats)];
+    }
+
+    // --- Positionnement : les indicateurs de TOUTES les boutiques en un appel.
+    // Un appel par boutique donnait le même résultat, mais multipliait les
+    // aller-retours et le risque qu'une réponse manque sans qu'on le voie.
+    $ks = PanelApi::shopsSalesKpis($per, $date);
+    $liste = null;
+    if (is_array($ks)) {
+        foreach ([$ks, $ks['shops'] ?? null, $ks['data'] ?? null, $ks['items'] ?? null] as $cand) {
+            if (is_array($cand) && $cand && array_is_list($cand)) { $liste = $cand; break; }
+        }
+    }
+    if ($liste === null) {
         $out['blocs']['reseau'] = $attente('Positionnement réseau');
     } else {
         $lignes = [];
-        foreach ($shops as $s2) {
-            $id = (int) ($s2['id'] ?? 0);
-            if ($id <= 0) { continue; }
-            $kk = $id === $sid ? $k : PanelApi::salesKpis($id, $per, $date);
-            if ($kk === null) { continue; }
-            $lignes[] = ['shopId' => (string) $id,
-                'magasin' => (string) ($s2['representative_name'] ?? $s2['name'] ?? ('Magasin ' . $id)),
+        foreach ($liste as $r) {
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                if (isset($r[$c]) && is_numeric($r[$c])) { $id = (int) $r[$c]; break; }
+            }
+            $nom = '';
+            foreach (['representative_name', 'shop_name', 'name', 'label'] as $c) {
+                if (!empty($r[$c]) && is_string($r[$c])) { $nom = trim($r[$c]); break; }
+            }
+            if ($id <= 0 && $nom === '') { continue; }
+            $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom !== '' ? $nom : ('Magasin ' . $id),
                 'moi' => $id === $sid,
-                'panier' => nombreOuNull($kk, ['avg_basket', 'average_basket']),
-                'produitsParClient' => nombreOuNull($kk, ['products_per_ticket', 'products_per_client']),
-                'ca' => nombreOuNull($kk, ['ca', 'turnover'])];
+                'panier' => nombreOuNull($r, ['avg_basket', 'average_basket', 'basket_avg']),
+                'produitsParClient' => nombreOuNull($r, ['products_per_ticket', 'products_per_client']),
+                'ca' => nombreOuNull($r, ['ca', 'turnover', 'revenue'])];
         }
         $out['blocs']['reseau'] = !$lignes ? $attente('Positionnement réseau')
             : ['titre' => 'Positionnement réseau', 'etat' => 'ok',
-               'source' => '/consultant/shops + /shops/{id}/statistics/sales/kpis',
-               'donnees' => $lignes];
+               'source' => PanelApi::$lastPath, 'avertissement' => null, 'donnees' => $lignes];
     }
     return $out;
 }

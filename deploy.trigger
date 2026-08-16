@@ -1,1 +1,1 @@
-Treemap : couleur par niveau de marge.
+Endpoints dedies : pnl/daily, pnl/monthly, category-sales, sales-kpis.

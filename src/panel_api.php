@@ -381,38 +381,67 @@ final class PanelApi
     {
         $q = self::q($periode, $date);
         return self::premierObjet([
-            '/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
             '/consultant/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
-            '/statistics/sales/kpis?' . self::q($periode, $date, ['shop_id' => $shopId]),
+            '/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
+        ]);
+    }
+
+    /**
+     * Indicateurs de TOUTES les boutiques en un appel.
+     * Sert le positionnement réseau : un appel au lieu d'un par boutique, et
+     * surtout des chiffres calculés de la même façon pour tout le monde.
+     */
+    public static function shopsSalesKpis(string $periode, string $date): ?array
+    {
+        $q = self::q($periode, $date);
+        return self::premierObjet([
+            '/consultant/shops/sales-kpis?' . $q,
+            '/consultant/shops/sales-kpis',
         ]);
     }
 
     /**
      * Compte de résultat d'une boutique.
-     * Porte aussi la ventilation du chiffre d'affaires par catégorie ET la
-     * main-d'œuvre : l'endpoint /labour/daily, introuvable sous toutes ses
-     * écritures, était de toute façon superflu.
+     *
+     * Le panel expose une route PAR granularité — /pnl/daily, /pnl/monthly —
+     * en plus de la route générique. C'est la route dédiée qui est essayée
+     * d'abord : la générique ignorait la date transmise et rendait toujours la
+     * période courante, ce qui donnait des chiffres justes sur la mauvaise
+     * période.
      */
     public static function pnl(int $shopId, string $periode, string $date): ?array
     {
-        // `treemap` n'est pas une invention : le panel lit ce paramètre dans
-        // son propre code. C'est lui qui doit ramener le food cost par
-        // catégorie — la couleur de la treemap en dépend, et sans lui les
-        // catégories ne peuvent être classées que par poids, pas par marge.
-        $qt = self::q($periode, $date, ['treemap' => 1]);
-        $q  = self::q($periode, $date);
+        $q = self::q($periode, $date);
+        $base = '/consultant/shops/' . $shopId . '/pnl';
+        $routes = ['jour' => '/daily', 'mois' => '/monthly'];
+        $chemins = [];
+        if (isset($routes[$periode])) {
+            $chemins[] = $base . $routes[$periode] . '?' . $q;
+            $chemins[] = $base . $routes[$periode] . '?' . http_build_query(['date' => $date]);
+        }
+        $chemins[] = $base . '?' . $q;
+        return self::premierObjet($chemins);
+    }
+
+    /**
+     * Ventes par catégorie — la ventilation colorée par niveau de marge.
+     * C'est cet endpoint qui doit porter le food cost, absent du /pnl.
+     */
+    public static function categorySales(int $shopId, string $periode, string $date): ?array
+    {
+        $q = self::q($periode, $date, ['shop_id' => $shopId]);
         return self::premierObjet([
-            '/consultant/shops/' . $shopId . '/pnl?' . $qt,
-            '/consultant/shops/' . $shopId . '/pnl?' . $q,
-            '/shops/' . $shopId . '/pnl?' . $qt,
-            '/pnl?' . self::q($periode, $date, ['shop_id' => $shopId, 'treemap' => 1]),
+            '/consultant/shops/category-sales?' . $q,
+            '/consultant/shops/' . $shopId . '/category-sales?' . self::q($periode, $date),
         ]);
     }
 
-    /** Boutiques du réseau (sert au positionnement d'une boutique). */
-    public static function consultantShops(): ?array
+    /** Heatmap de marge d'une boutique. */
+    public static function marginHeatmap(int $shopId, string $periode, string $date): ?array
     {
-        return self::premierObjet(['/consultant/shops']);
+        return self::premierObjet([
+            '/consultant/shops/' . $shopId . '/margin-heatmap?' . self::q($periode, $date),
+        ]);
     }
 
     /** Gammes saisonnières du réseau. */
