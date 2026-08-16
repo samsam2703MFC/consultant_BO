@@ -1,1 +1,1 @@
-Groupes de catégories : referentiel complet de l'arbre produit.
+Chemins API variables et rattachement des categories a leur groupe.

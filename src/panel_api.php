@@ -304,17 +304,39 @@ final class PanelApi
     }
 
     /** Catégories produit du réseau (/product-categories). */
-    public static function productCategories(): array
+    /** Chemin qui a effectivement répondu au dernier appel multi-variantes. */
+    public static ?string $lastPath = null;
+
+    /**
+     * Premier chemin qui rend une liste non vide, parmi plusieurs écritures
+     * possibles. Le panel n'expose pas partout la même convention
+     * (/product-categories vs /product/categories) et deviner en dur ferait
+     * dépendre un écran d'un tiret.
+     */
+    private static function premierNonVide(array $paths): array
     {
-        $r = self::get('/product-categories');
-        return is_array($r) ? self::liste($r) : [];
+        $err = null;
+        foreach ($paths as $p) {
+            $r = self::get($p);
+            $l = is_array($r) ? self::liste($r) : [];
+            if ($l !== []) { self::$lastPath = $p; return $l; }
+            $err = $err ?? self::$lastError;
+        }
+        self::$lastPath = null;
+        self::$lastError = $err ?? self::$lastError;
+        return [];
     }
 
-    /** Groupes de catégories du réseau (/product-category-groups). */
+    /** Catégories produit du réseau. */
+    public static function productCategories(): array
+    {
+        return self::premierNonVide(['/product/categories', '/product-categories']);
+    }
+
+    /** Groupes de catégories du réseau. */
     public static function productCategoryGroups(): array
     {
-        $r = self::get('/product-category-groups');
-        return is_array($r) ? self::liste($r) : [];
+        return self::premierNonVide(['/product/category-groups', '/product-category-groups']);
     }
 
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */

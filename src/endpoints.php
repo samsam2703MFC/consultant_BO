@@ -911,6 +911,7 @@ function ep_prod_categories(): array
         $rows = PanelApi::productCategories();
         if ($rows) {
             $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
             if ($debug) { $out['clesBrut'] = array_slice(array_keys($rows[0]), 0, 25); $out['premier'] = $rows[0]; }
             foreach ($rows as $c) {
                 $id = null;
@@ -928,7 +929,31 @@ function ep_prod_categories(): array
                 }
                 $out['categories'][] = ['id' => $id, 'nom' => $nom, 'groupe' => $grp !== '' ? $grp : null];
             }
-            if ($out['categories']) { return $out; }
+            if ($out['categories']) {
+                // L'API rend les catégories SANS leur groupe : mesuré en ligne,
+                // 81 sur 81 arrivaient orphelines. Le rattachement n'existe que
+                // dans la base (product_category_group_connection). On garde
+                // donc les intitulés de l'API, qui font foi, et on va chercher
+                // le groupe là où il se trouve — plutôt que de livrer un arbre
+                // sans branches.
+                $sans = 0;
+                foreach ($out['categories'] as $c) { if ($c['groupe'] === null) { $sans++; } }
+                if ($sans > 0) {
+                    $ref = catalogueCategories();
+                    if ($ref !== null) {
+                        $repris = 0;
+                        foreach ($out['categories'] as &$c) {
+                            if ($c['groupe'] === null && $c['id'] !== null && !empty($ref[$c['id']]['groupe'])) {
+                                $c['groupe'] = $ref[$c['id']]['groupe'];
+                                $repris++;
+                            }
+                        }
+                        unset($c);
+                        if ($repris > 0) { $out['source'] = 'api + groupes atelierby_db'; }
+                    }
+                }
+                return $out;
+            }
         }
         $out['erreur'] = PanelApi::$lastError;
     }
@@ -968,6 +993,7 @@ function ep_prod_groupes(): array
         $rows = PanelApi::productCategoryGroups();
         if ($rows) {
             $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
             if ($debug) { $out['clesBrut'] = array_slice(array_keys($rows[0]), 0, 25); $out['premier'] = $rows[0]; }
             foreach ($rows as $g) {
                 $id = null;

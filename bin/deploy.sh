@@ -385,8 +385,9 @@ for r in groupes categories; do
   $n = count($r[$k]);
   $sans = 0;
   foreach ($r[$k] as $e) { if ($k === "categories" && empty($e["groupe"])) { $sans++; } }
-  printf("  %-11s : %d (source %s)%s\n", $k, $n, $r["source"] ?? "?",
-         $k === "categories" && $sans ? " — dont $sans sans groupe" : "");
+  printf("  %-11s : %d (source %s%s)%s\n", $k, $n, $r["source"] ?? "?",
+         !empty($r["chemin"]) ? ", chemin ".$r["chemin"] : "",
+         $k === "categories" && $sans ? " — dont $sans SANS GROUPE" : "");
   '
 done
 
