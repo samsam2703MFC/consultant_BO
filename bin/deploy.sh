@@ -369,7 +369,10 @@ printf("  avec coût matière   : %d (%.0f %%)\n", $mat, 100 * $mat / $n);
 printf("  avec prix de vente  : %d (%.0f %%)\n", $prix, 100 * $prix / $n);
 printf("  avec groupe         : %d (%.0f %%)\n", $grp, 100 * $grp / $n);
 printf("  avec gamme saison   : %d\n", $per);
-printf("  coût >= prix        : %d%s\n", $ko, $ko > 0 ? "  <-- à vérifier" : "");
+printf("  coût >= prix        : %d%s\n", $ko, $ko > 0 ? "  <-- recettes à rechiffrer (marge non publiée)" : "");
+$mg = 0;
+foreach ($j as $p) { if (isset($p["margePct"]) && $p["margePct"] !== null) { $mg++; } }
+printf("  marge exploitable   : %d (%.0f %%)\n", $mg, 100 * $mg / $n);
 ' <<< "$CAT_JSON"
 echo "== catégories =="
 curl -fsS "${LOCAL_BASE}/api/cockpit/production/categories" 2>/dev/null | head -c 300; echo

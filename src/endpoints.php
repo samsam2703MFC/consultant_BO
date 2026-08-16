@@ -600,6 +600,92 @@ function ep_prod_catalogue(): array
 }
 
 /**
+ * Suivi de production du réseau.
+ *
+ * Source : `product_movement`, qui journalise les mouvements de la caisse
+ * avec leur nature (PRODUCTION, WASTE, SALE, RETURN, ADJUSTMENT). C'est la
+ * seule trace de ce qui a été RÉELLEMENT produit — les fournées « demandées »
+ * n'existent nulle part dans la base, et cet écran ne prétend donc pas les
+ * connaître : il rend le produit et le jeté, pas un écart contre une consigne
+ * qui n'est pas enregistrée.
+ */
+function ep_prod_suivi(): array
+{
+    $periode = (string) ($_GET['periode'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}$/', $periode)) {
+        // Le dernier mois réellement journalisé, pas le mois courant : la
+        // caisse peut s'être arrêtée avant, et un écran vide passerait pour
+        // « aucune production ».
+        $periode = null;
+        try {
+            $d = Db::rows("SELECT DATE_FORMAT(MAX(created_at), '%Y-%m') p FROM product_movement");
+            if ($d && !empty($d[0]['p'])) { $periode = (string) $d[0]['p']; }
+        } catch (PDOException $e) { /* table absente */ }
+        if ($periode === null) { $periode = date('Y-m'); }
+    }
+    $from = $periode . '-01 00:00:00';
+    $to   = date('Y-m-d 00:00:00', strtotime($from . ' +1 month'));
+
+    $out = ['periode' => $periode, 'du' => substr($from, 0, 10), 'au' => date('Y-m-d', strtotime($to . ' -1 day')),
+        'reseau' => ['produit' => 0, 'jete' => 0, 'taux' => null],
+        'magasins' => [], 'produits' => [], 'motifs' => [], 'source' => 'product_movement'];
+
+    $agg = static function (string $group) use ($from, $to): array {
+        return Db::rows("SELECT $group AS k,
+                                SUM(CASE WHEN movement_type = 'PRODUCTION' THEN quantity ELSE 0 END) prod,
+                                SUM(CASE WHEN movement_type = 'WASTE'      THEN quantity ELSE 0 END) jete
+                           FROM product_movement
+                          WHERE created_at >= ? AND created_at < ?
+                            AND movement_type IN ('PRODUCTION','WASTE')
+                       GROUP BY k", [$from, $to]);
+    };
+
+    try {
+        $noms = [];
+        foreach (Db::rows('SELECT id, name FROM shops') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
+        foreach ($agg('id_shop') as $r) {
+            $p = (float) $r['prod']; $j = (float) $r['jete']; $den = $p + $j;
+            $out['magasins'][] = ['shopId' => (string) (int) $r['k'],
+                'magasin' => $noms[(int) $r['k']] ?? ('Magasin ' . (int) $r['k']),
+                'produit' => (int) round($p), 'jete' => (int) round($j),
+                'taux' => $den > 0 ? round($j / $den, 4) : null];
+            $out['reseau']['produit'] += (int) round($p);
+            $out['reseau']['jete']    += (int) round($j);
+        }
+        usort($out['magasins'], fn($a, $b) => ($b['taux'] ?? -1) <=> ($a['taux'] ?? -1));
+
+        $pn = [];
+        try {
+            foreach (Db::rows('SELECT id, name FROM product') as $p) { $pn[(int) $p['id']] = (string) $p['name']; }
+        } catch (PDOException $e) { /* noms indisponibles */ }
+        foreach ($agg('id_product') as $r) {
+            $p = (float) $r['prod']; $j = (float) $r['jete']; $den = $p + $j;
+            if ($den <= 0) { continue; }
+            $out['produits'][] = ['produitId' => (string) (int) $r['k'],
+                'nom' => $pn[(int) $r['k']] ?? ('#' . (int) $r['k']),
+                'produit' => (int) round($p), 'jete' => (int) round($j),
+                'taux' => round($j / $den, 4)];
+        }
+        usort($out['produits'], fn($a, $b) => $b['jete'] <=> $a['jete']);
+        $out['produits'] = array_slice($out['produits'], 0, 40);
+
+        foreach (Db::rows("SELECT reason, COUNT(*) n, SUM(quantity) q FROM product_movement
+                            WHERE created_at >= ? AND created_at < ? AND movement_type = 'WASTE'
+                         GROUP BY reason ORDER BY q DESC LIMIT 12", [$from, $to]) as $m) {
+            $out['motifs'][] = ['motif' => (string) ($m['reason'] ?? ''), 'lignes' => (int) $m['n'],
+                'quantite' => (int) round((float) $m['q'])];
+        }
+    } catch (PDOException $e) {
+        $out['erreur'] = 'journal des mouvements indisponible';
+        return $out;
+    }
+
+    $den = $out['reseau']['produit'] + $out['reseau']['jete'];
+    $out['reseau']['taux'] = $den > 0 ? round($out['reseau']['jete'] / $den, 4) : null;
+    return $out;
+}
+
+/**
  * Catégories produit indexées par id, avec leur groupe.
  * La liaison porte `id_category` / `id_group`, et une catégorie peut relever
  * de PLUSIEURS groupes (les boissons sont aussi du traiteur) : sans
@@ -644,22 +730,28 @@ function catalogueCouts(): array
 {
     $out = [];
     try {
-        $rows = Db::rows("SELECT p.id AS pid,
+        // `calculated_cost_net` chiffre la RECETTE ENTIÈRE, pas la pièce : sans
+        // division par le rendement, un cannelloni vendu 7,50 € s'affichait à
+        // 734 € de matière. Le rendement est donc obligatoire dans le calcul.
+        $rows = Db::rows("SELECT p.id AS pid, r.yield_quantity AS rendement,
                                  AVG(CASE WHEN rc.id_shop = 0 AND rc.calculated_cost_net > 0
                                           THEN rc.calculated_cost_net END) AS reseau,
                                  AVG(CASE WHEN rc.id_shop > 0 AND rc.calculated_cost_net > 0
                                           THEN rc.calculated_cost_net END) AS magasins
                             FROM product p
                             JOIN recipe_cost rc ON rc.id_recipe = p.id_recipe
+                       LEFT JOIN product_recipe r ON r.id = p.id_recipe
                            WHERE p.id_recipe IS NOT NULL AND p.is_active = 1
-                        GROUP BY p.id");
+                        GROUP BY p.id, r.yield_quantity");
     } catch (PDOException $e) { return []; }
     foreach ($rows as $r) {
         $res = $r['reseau'] !== null ? (float) $r['reseau'] : null;
         $mag = $r['magasins'] !== null ? (float) $r['magasins'] : null;
         $v = $res ?? $mag;
         if ($v === null || $v <= 0) { continue; }
-        $out[(int) $r['pid']] = ['mat' => round($v, 3),
+        $rend = $r['rendement'] !== null ? (float) $r['rendement'] : 1.0;
+        if ($rend > 0) { $v /= $rend; }
+        $out[(int) $r['pid']] = ['mat' => round($v, 3), 'rendement' => $rend,
             'source' => $res !== null ? 'recette réseau' : 'moyenne magasins'];
     }
     return $out;
@@ -733,6 +825,10 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
         if ($mat === null && isset($couts[$pid])) {
             $mat = $couts[$pid]['mat']; $matSrc = $couts[$pid]['source'];
         }
+        // Coût au-dessus du prix : la recette est incomplète ou mal chiffrée.
+        // On montre le coût — c'est ce qui permet de le corriger — mais on
+        // refuse d'en tirer une marge, qui serait fausse et démoralisante.
+        $matFiable = $mat === null || $prix === null || $mat < $prix;
 
         $dlv = $e !== null && (int) $e['dlv'] > 0 ? (int) $e['dlv'] : null;
         if ($dlv === null && (int) $p['shelf_life_minutes'] > 0) {
@@ -750,9 +846,9 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
             'bmult'   => $e ? (int) $e['bmult'] : 1,
             'four'    => $e ? (int) $e['four'] : 0,
             'dlv' => $dlv ?? 0, 'mat' => $mat, 'prix' => $prix,
-            'matSource' => $matSrc, 'prixSource' => $prixSrc,
-            'marge'    => ($mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
-            'margePct' => ($mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'matSource' => $matSrc, 'prixSource' => $prixSrc, 'matFiable' => $matFiable,
+            'marge'    => ($matFiable && $mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
+            'margePct' => ($matFiable && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
             'margeAttendue' => $p['expected_margin'] !== null && (float) $p['expected_margin'] > 0
                 ? round((float) $p['expected_margin'], 2) : null,
             'must'   => $e ? (bool) $e['must'] : false,
@@ -1644,7 +1740,12 @@ function ep_products(): array
                 'categorie' => $catApi[$pid] ?? $cat[$pid] ?? 'Non catégorisé',
                 'volume'    => (int) round($vol),
                 'prix'      => $prix,
-                'coutUnit'  => $cout[$pid] ?? null,
+                // Un coût matière supérieur au prix de vente n'est pas une
+                // marge négative, c'est une recette mal chiffrée. Le laisser
+                // passer noircirait « marge nette » (30 % du score) sur des
+                // références qui se portent bien : on préfère ne rien dire.
+                'coutUnit'  => (isset($cout[$pid]) && ($prix === null || $cout[$pid] < $prix))
+                    ? $cout[$pid] : null,
                 'tendVol'   => 1,
                 'magasins'  => (int) $r['magasins'],
                 'tauxPerte' => $tp,

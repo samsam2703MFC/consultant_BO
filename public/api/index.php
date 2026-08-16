@@ -70,6 +70,7 @@ function route(string $method, string $path): mixed
             $path === '/production/catalogue'          => ep_prod_catalogue(),
             $path === '/production/params'             => ep_prod_params(),
             $path === '/production/categories'         => ep_prod_categories(),
+            $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/products/scoring'              => ep_products(),
             $path === '/products/waste'                => ep_product_waste(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),

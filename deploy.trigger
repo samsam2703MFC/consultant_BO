@@ -1,1 +1,1 @@
-Catalogue réel : produits, catégories, coût matière depuis atelierby_db.
+Coût matière par pièce : division par le rendement de la recette.
