@@ -1,1 +1,1 @@
-Endpoints dedies : pnl/daily, pnl/monthly, category-sales, sales-kpis.
+Remonter le message de validation des 422.

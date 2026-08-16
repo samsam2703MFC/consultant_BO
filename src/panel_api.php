@@ -163,8 +163,21 @@ final class PanelApi
             [$code, $res] = self::http('GET', $url, null, $tok);
         }
         if ($code < 200 || $code >= 300) {
+            // Un 422 n'est pas un mur : c'est l'API qui dit ce qu'elle attend.
+            // Son message vaut mieux que dix essais de noms de paramètres, à
+            // condition de le remonter — d'où la lecture des clés usuelles.
+            $det = '';
+            foreach (['description', 'message', 'detail', 'error'] as $k) {
+                if (!empty($res[$k]) && is_string($res[$k])) { $det = $res[$k]; break; }
+            }
+            if ($det === '' && !empty($res['errors'])) {
+                $det = json_encode($res['errors'], JSON_UNESCAPED_UNICODE);
+            }
+            if ($det === '' && is_array($res)) {
+                $det = json_encode(array_slice($res, 0, 4), JSON_UNESCAPED_UNICODE);
+            }
             self::$lastError = 'GET ' . $path . ' → HTTP ' . $code
-                . (isset($res['description']) ? ' : ' . $res['description'] : '');
+                . ($det !== '' ? ' : ' . substr($det, 0, 300) : '');
             return null;
         }
         return $res['data'] ?? $res;
@@ -353,8 +366,9 @@ final class PanelApi
             // On garde la trace de CHAQUE variante tentée : quand rien ne
             // répond, la seule information utile est la liste de ce qui a été
             // essayé et ce que chacun a renvoyé.
+            $e = (string) self::$lastError;
             $essais[] = preg_replace('/\?.*$/', '', $p) . ' → '
-                . (preg_match('/HTTP (\d+)/', (string) self::$lastError, $m) ? $m[1] : 'vide');
+                . (preg_match('/HTTP (\d+)(.*)$/s', $e, $m) ? $m[1] . substr($m[2], 0, 140) : 'vide');
         }
         self::$lastPath = null;
         self::$lastError = 'aucune variante ne répond — ' . implode(' · ', $essais);
