@@ -1122,39 +1122,48 @@ function ep_produits_analyse(): array
         $bornes[$i]['encours'] = $b['au'] > date('Y-m-d');
     }
 
-    // TOUTES les requêtes de TOUS les points partent ensemble. Les découper par
-    // point ne servait à rien : en mensuel un point ne pèse qu'un appel, et six
-    // volées d'un appel restent six attentes bout à bout — cinquante secondes
-    // pour un écran qu'on ouvre en passant. Les points sont indépendants, rien
-    // n'oblige à les attendre l'un après l'autre.
-    $req = [];
+    // Un mois clos ne bouge plus : son agrégat est mémorisé. Sans cela, six
+    // mois de catégorie coûtaient cinquante secondes à CHAQUE ouverture, et
+    // paralléliser davantage ne faisait que noyer l'API amont — mesuré : douze
+    // requêtes simultanées, neuf sans réponse. Ne reste en direct que la
+    // période encore en cours, la seule qui puisse changer.
+    $agg = []; $req = []; $cles = [];
     if ($type === 'categorie') {
         // `category-sales` expire dès qu'on dépasse le mois : un point se
-        // reconstitue en additionnant ses mois. Le CA d'une catégorie est
-        // additif — c'est ce qui rend ce découpage légitime, là où un ticket
-        // moyen ne le serait pas.
+        // reconstitue en additionnant ses mois. Le CA est additif — c'est ce
+        // qui rend ce découpage légitime, là où un ticket moyen ne le serait pas.
         $out['source'] = '/consultant/shops/category-sales (par mois, réseau)';
         foreach ($bornes as $i => $b) {
-            foreach (analyseMois($b['du'], $b['au']) as $j => $mm) {
-                $req["$i|$j"] = '/consultant/shops/category-sales?' . http_build_query(
+            foreach (analyseMois($b['du'], $b['au']) as $mm) {
+                $k = $mm[0] . '.' . $mm[1];
+                $cles[$i][] = $k;
+                if (isset($agg[$k]) || isset($req[$k])) { continue; }
+                $c = analyseCache('an.cat.' . $k);
+                if ($c !== null) { $agg[$k] = $c; continue; }
+                $req[$k] = '/consultant/shops/category-sales?' . http_build_query(
                     ['shop_id' => analyseShop(), 'date_from' => $mm[0], 'date_to' => $mm[1]]);
             }
         }
     } else {
-        // Cette route-ci encaisse les bornes larges : inutile de la découper.
+        // Cette route-ci encaisse les bornes larges : inutile de la découper,
+        // et l'interroger sur la borne exacte évite d'avoir à supposer que les
+        // quantités s'additionnent d'un mois à l'autre.
         $out['source'] = '/shops/{id}/products/waste (réseau)';
         foreach ($bornes as $i => $b) {
+            $k = $b['du'] . '.' . $b['au'];
+            $cles[$i][] = $k;
+            if (isset($agg[$k])) { continue; }
+            $c = analyseCache('an.prod.' . $k);
+            if ($c !== null) { $agg[$k] = $c; continue; }
             foreach (analyseShops() as $j => $sid) {
-                $req["$i|$j"] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+                $req[$k . '#' . $j] = '/shops/' . $sid . '/products/waste?' . http_build_query(
                     ['from' => $b['du'], 'date_from' => $b['du'], 'to' => $b['au'], 'date_to' => $b['au']]);
             }
         }
     }
 
-    $rep = PanelApi::getParallele($req);
-    $tot = []; $rendu = [];
-    foreach ($rep as $k => $r) {
-        $i = (int) strstr((string) $k, '|', true);
+    foreach (PanelApi::getParallele($req) as $rk => $r) {
+        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
         if ($type === 'categorie') {
             // Le vocabulaire de cette route est celui des GROUPES (douze), pas
             // celui des 81 catégories du catalogue : « Boissons chaudes » n'y
@@ -1164,10 +1173,10 @@ function ep_produits_analyse(): array
             // qui se lirait comme une absence de vente.
             foreach (analyseListe($r) as $sh) {
                 foreach (($sh['categories'] ?? []) as $c) {
-                    $rendu[$i] = true;
-                    if (strcasecmp(trim((string) ($c['name'] ?? '')), $cle) !== 0) { continue; }
+                    $nom = trim((string) ($c['name'] ?? ''));
+                    if ($nom === '') { continue; }
                     $v = nombreOuNull($c, ['ca', 'value', 'amount']);
-                    if ($v !== null) { $tot[$i] = ($tot[$i] ?? 0) + $v; }
+                    $agg[$k][$nom] = ($agg[$k][$nom] ?? 0) + (float) ($v ?? 0);
                 }
             }
         } else {
@@ -1176,25 +1185,45 @@ function ep_produits_analyse(): array
             // ventes seraient multipliées par le nombre de magasins.
             $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
             foreach ($lignes as $p) {
-                if (trim((string) ($p['id_product'] ?? '')) === '') { continue; }
-                $rendu[$i] = true;
-                if (trim((string) $p['id_product']) !== $cle) { continue; }
-                $v = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
-                if ($v === null) { continue; }
-                if (!isset($tot[$i]) || $v > $tot[$i]) { $tot[$i] = $v; }
-                if (!empty($p['product_name'])) { $out['libelle'] = (string) $p['product_name']; }
+                $pid = trim((string) ($p['id_product'] ?? ''));
+                if ($pid === '') { continue; }
+                $v = (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0);
+                $nom = (string) ($p['product_name'] ?? $p['name'] ?? $pid);
+                if (!isset($agg[$k][$pid]) || $v > $agg[$k][$pid]['v']) { $agg[$k][$pid] = ['n' => $nom, 'v' => $v]; }
             }
         }
     }
 
+    // Mémoriser les périodes closes qui viennent d'être lues. La période en
+    // cours ne l'est jamais : elle changera encore aujourd'hui.
+    $pref = $type === 'categorie' ? 'an.cat.' : 'an.prod.';
+    foreach ($req as $rk => $_) {
+        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
+        if (!isset($agg[$k]) || substr($k, -10) >= date('Y-m-d')) { continue; }
+        analyseCacheMaj($pref . $k, $agg[$k]);
+    }
+
     foreach ($bornes as $i => $b) {
-        $val = $tot[$i] ?? null;
+        $val = null; $rendu = false;
+        foreach (($cles[$i] ?? []) as $k) {
+            if (!isset($agg[$k])) { continue; }
+            $rendu = true;
+            if ($type === 'categorie') {
+                foreach ($agg[$k] as $nom => $ca) {
+                    if (strcasecmp((string) $nom, $cle) === 0) { $val = ($val ?? 0) + (float) $ca; }
+                }
+            } elseif (isset($agg[$k][$cle])) {
+                $val = ($val ?? 0) + (float) $agg[$k][$cle]['v'];
+                $out['libelle'] = (string) $agg[$k][$cle]['n'];
+            }
+        }
         $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $b['au'],
             'valeur' => $val, 'enCours' => $b['encours'],
-            'motif' => $val !== null ? null : (empty($rendu[$i]) ? 'aucune donnée'
+            'motif' => $val !== null ? null : (!$rendu ? 'aucune donnée'
                 : ($type === 'categorie' ? 'catégorie absente de la réponse'
                                          : 'référence non vendue sur la période'))];
     }
+
 
     $connus = array_filter($out['points'], fn($p) => $p['valeur'] !== null);
     if (!$connus) {
@@ -1204,6 +1233,28 @@ function ep_produits_analyse(): array
                 : 'l\'API n\'a rien rendu pour ces périodes'));
     }
     return $out;
+}
+
+/**
+ * Agrégat d'une période close, relu depuis la base.
+ *
+ * Les périodes closes sont immuables : les relire à chaque ouverture d'écran
+ * coûtait cinquante secondes pour six mois, et tenter d'aller plus vite en
+ * multipliant les connexions simultanées faisait échouer les appels plutôt
+ * qu'accélérer. Seule la période en cours reste interrogée en direct.
+ */
+function analyseCache(string $cle): ?array
+{
+    try { $v = setting($cle); } catch (PDOException $e) { return null; }
+    return is_array($v) ? $v : null;
+}
+
+function analyseCacheMaj(string $cle, array $v): void
+{
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            [$cle, json_encode($v, JSON_UNESCAPED_UNICODE)]);
+    } catch (PDOException $e) { /* le cache est un confort, pas une dépendance */ }
 }
 
 /** Découpe [du, au] en bornes mensuelles — l'unité que l'API sait servir. */

@@ -1,5 +1,7 @@
-Analyse : une seule volee pour toute la serie, plus une par point.
+Analyse : memoriser les periodes closes.
 
-Paralleliser DANS un point ne servait a rien : en mensuel un point ne pese
-qu un appel, et six volees d un appel restent six attentes bout a bout —
-cinquante secondes mesurees. Les points sont independants.
+Une periode close ne bouge plus. Les relire a chaque ouverture coutait
+cinquante secondes pour six mois, et aller plus vite en multipliant les
+connexions simultanees faisait ECHOUER les appels au lieu d accelerer :
+douze requetes de front, neuf sans reponse. Seule la periode en cours reste
+interrogee en direct.
