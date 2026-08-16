@@ -386,6 +386,36 @@ function ep_pwa_tasks(): array
  * d'avancement de la checklist, puis une URL signée pour l'image. On parcourt
  * les checklists du jour pour retrouver la ligne de CETTE tâche.
  */
+/**
+ * GET /pwa/waste/debug?shop=&from=&to= — forme brute de la réponse « pertes ».
+ *
+ * Sonde de diagnostic : la structure exacte de /shops/{id}/products/waste n'est
+ * pas documentée ici. Plutôt que de deviner les noms de champs et d'écrire un
+ * calcul qui échouerait en silence, on regarde. Lecture seule, quelques lignes.
+ */
+function ep_pwa_waste_debug(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    if ($shopId <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $from = $_GET['from'] ?? null; $to = $_GET['to'] ?? null;
+    $q = [];
+    if ($from) { $q['from'] = $from; $q['date_from'] = $from; }
+    if ($to)   { $q['to'] = $to;     $q['date_to'] = $to; }
+    $path = '/shops/' . $shopId . '/products/waste' . ($q ? '?' . http_build_query($q) : '');
+    $brut = PanelApi::brut($path);
+    $liste = PanelApi::shopWaste($shopId, $from, $to);
+    return [
+        'chemin'    => $path,
+        'erreur'    => PanelApi::$lastError,
+        'typeBrut'  => gettype($brut),
+        'clesBrut'  => is_array($brut) ? array_slice(array_keys($brut), 0, 15) : null,
+        'nbLignes'  => count($liste),
+        'clesLigne' => $liste ? array_slice(array_keys($liste[0]), 0, 25) : null,
+        'echantillon' => array_slice($liste, 0, 3),
+    ];
+}
+
 function ep_pwa_task_detail(): array
 {
     $shopId = (int) ($_GET['shop'] ?? 0);

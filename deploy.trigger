@@ -1,1 +1,1 @@
-scoring produits : modele a 4 criteres (volume, marge nette, taux de perte, presence comptoir), echelle absolue de marge, ecran de reglages dedie en sous-menu de Parametres. Deploiement standard.
+sonde lecture seule sur l endpoint pertes du panel pour en constater la forme avant de brancher le calcul. Deploiement standard.

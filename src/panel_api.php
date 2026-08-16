@@ -236,6 +236,30 @@ final class PanelApi
         return self::post('/consultant/shops/' . $shopId . '/task-reviews', $data);
     }
 
+    /**
+     * Pertes (casse / invendus jetés) d'une boutique, par produit.
+     *   GET /shops/{shop}/products/waste          — toutes les références
+     *   GET /shops/{shop}/products/{prod}/waste   — une seule
+     * Les bornes de période sont passées telles quelles si fournies ; l'API
+     * décide de son propre défaut si elle n'en veut pas.
+     */
+    public static function shopWaste(int $shopId, ?string $from = null, ?string $to = null): array
+    {
+        if ($shopId <= 0) { return []; }
+        $q = [];
+        if ($from !== null) { $q['from'] = $from; $q['date_from'] = $from; }
+        if ($to !== null)   { $q['to'] = $to;     $q['date_to'] = $to; }
+        $path = '/shops/' . $shopId . '/products/waste' . ($q ? '?' . http_build_query($q) : '');
+        $r = self::get($path);
+        return is_array($r) ? self::liste($r) : [];
+    }
+
+    /** Réponse brute d'un chemin — sonde de diagnostic, pas un usage courant. */
+    public static function brut(string $path): mixed
+    {
+        return self::get($path);
+    }
+
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
     private static ?array $catalogue = null;
 
