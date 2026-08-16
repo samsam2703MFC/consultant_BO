@@ -1,1 +1,1 @@
-Ancrer le panneau sur aujourd hui, comme l API.
+Reseau N vs N-1 : indicateurs de toutes les boutiques.

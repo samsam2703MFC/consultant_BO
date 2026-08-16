@@ -959,6 +959,77 @@ function nombreOuNull(array $d, array $cles): ?float
 }
 
 /**
+ * Indicateurs de toutes les boutiques, N contre N-1.
+ *
+ * Un seul appel réseau (/consultant/shops/sales-kpis) plutôt qu'un par
+ * boutique : mêmes chiffres, calculés de la même façon pour tout le monde, et
+ * une seule occasion de manquer une réponse au lieu de cinq.
+ *
+ * `?debug=1` rend la forme brute d'une ligne — la comparaison N-1 n'est pas
+ * documentée, et supposer un nom de champ est le moyen le plus sûr d'afficher
+ * un écart qui n'existe pas.
+ */
+function ep_exploitation_reseau(): array
+{
+    $per = (string) ($_GET['periode'] ?? 'mois');
+    if (!in_array($per, ['jour', 'semaine', 'mois', 'annee'], true)) { $per = 'mois'; }
+    $date = date('Y-m-d');
+    $out = ['periode' => $per, 'date' => $date, 'etat' => 'attente', 'source' => null,
+        'magasins' => [], 'motif' => null];
+
+    if (!PanelApi::configured()) {
+        $out['motif'] = 'compte consultant non configuré (Mon compte)';
+        return $out;
+    }
+    $r = PanelApi::shopsSalesKpis($per === 'annee' ? 'annee' : $per, $date);
+    if (!is_array($r)) { $out['motif'] = PanelApi::$lastError ?: 'endpoint non disponible'; return $out; }
+
+    $liste = null;
+    foreach ([$r, $r['shops'] ?? null, $r['data'] ?? null, $r['items'] ?? null, $r['results'] ?? null] as $c) {
+        if (is_array($c) && $c && array_is_list($c)) { $liste = $c; break; }
+    }
+    if ($liste === null) {
+        $out['motif'] = 'forme non reconnue, clés : ' . implode(', ', array_slice(array_keys($r), 0, 12));
+        return $out;
+    }
+    $out['etat'] = 'ok';
+    $out['source'] = PanelApi::$lastPath;
+    if (!empty($_GET['debug'])) { $out['brut'] = array_slice($liste, 0, 2); }
+
+    foreach ($liste as $x) {
+        if (!is_array($x)) { continue; }
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+        }
+        $nom = '';
+        foreach (['representative_name', 'shop_name', 'name', 'label'] as $c) {
+            if (!empty($x[$c]) && is_string($x[$c])) { $nom = trim($x[$c]); break; }
+        }
+        $n  = nombreOuNull($x, ['ca', 'turnover', 'revenue', 'value', 'total']);
+        // L'écart peut être donné tel quel, ou déductible d'une valeur N-1.
+        // Rien n'est calculé sans l'une des deux : un « 0 % » inventé se lirait
+        // comme une stabilité alors qu'il signifie une absence.
+        $ec = nombreOuNull($x, ['delta', 'variation', 'evolution', 'growth', 'pct_change', 'delta_pct']);
+        $n1 = nombreOuNull($x, ['ca_n1', 'turnover_n1', 'previous', 'previous_value', 'last_year', 'ca_last_year']);
+        if ($ec === null && $n1 !== null && $n1 != 0.0 && $n !== null) { $ec = round(100 * ($n - $n1) / $n1, 1); }
+        $out['magasins'][] = ['shopId' => (string) $id,
+            'magasin' => $nom !== '' ? $nom : ('Magasin ' . $id),
+            'n' => $n, 'n1' => $n1, 'ecart' => $ec,
+            'tickets' => nombreOuNull($x, ['tickets', 'ticket_count']),
+            'panier' => nombreOuNull($x, ['avg_basket', 'average_basket']),
+            'produitsParClient' => nombreOuNull($x, ['products_per_ticket', 'products_per_client'])];
+    }
+    usort($out['magasins'], fn($a, $b) => ($b['n'] ?? 0) <=> ($a['n'] ?? 0));
+    // Dire si la comparaison N-1 manque, plutôt que d'afficher une colonne vide
+    // que chacun interprétera à sa façon.
+    if ($out['magasins'] && !array_filter($out['magasins'], fn($m) => $m['ecart'] !== null)) {
+        $out['motif'] = 'l\'API ne renvoie pas de comparaison N-1 sur cet appel';
+    }
+    return $out;
+}
+
+/**
  * Suivi de production du réseau.
  *
  * Source : `product_movement`, qui journalise les mouvements de la caisse
