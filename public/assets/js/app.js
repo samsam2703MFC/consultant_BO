@@ -20,7 +20,7 @@ class App {
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
       np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
-      navOpen: {}, scDraft: {},   // sous-menus du rail ; brouillon du scoring produits
+      navOpen: {}, scDraft: {}, pdWaste: null,   // sous-menus ; brouillon scoring ; modale perte par magasin
       userPanel: false, userDraft: {},   // panneau « Mon compte » (identité + compte API)
       // Brouillon de validation par tâche : { note, famille, type, commentaire }.
       // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
@@ -960,6 +960,15 @@ class App {
   }
 
   /* --- scoring produits -------------------------------------------------------- */
+  /* Perte d'une référence, magasin par magasin. Un taux réseau moyen peut
+     cacher UN magasin qui jette : la modale montre la dispersion. */
+  pdOpenWaste(id, nom){
+    const per = (this.meta && this.meta.periodeProduits) || '';
+    this.setState({ pdWaste: { id, nom, chargement: true, d: null } });
+    readOne('/products/waste?produit=' + encodeURIComponent(id) + (per ? '&periode=' + encodeURIComponent(per) : ''))
+      .then(d => this.setState(s => (s.pdWaste && s.pdWaste.id === id)
+        ? { pdWaste: Object.assign({}, s.pdWaste, { chargement: false, d: d || null }) } : {}));
+  }
   valsProduits(common){
     const S = this.state, D = this.D;
     const W = this.poids();
@@ -972,9 +981,10 @@ class App {
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
     // restent à null et n'entrent pas dans le score (recalculé sur volume + position).
     const base = (D.products || []).map(p => {
+      const _id = p.id;
       const mu = p.coutUnit == null ? null : p.prix - p.coutUnit;
       const mp = (mu == null || !p.prix) ? null : mu / p.prix;
-      return { nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
+      return { id: _id, nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
         perte: p.tauxPerte != null ? p.tauxPerte : null,
         jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
@@ -1021,6 +1031,7 @@ class App {
         perteSt: p.perte == null ? 'color:var(--color-text-muted)'
           : (p.perte >= 0.10 ? 'color:#8D1D2C;font-weight:600' : p.perte >= 0.05 ? 'color:#8a5a13;font-weight:500' : 'color:#2d7a3e'),
         perteDetail: p.jete != null ? (Math.round(p.jete).toLocaleString('fr-BE') + ' jeté(s)' + (p.motifPerte ? ' · ' + p.motifPerte : '')) : '',
+        openWaste: () => this.pdOpenWaste(p.id, p.nom),
         pen: this.fP(p.pen, 0), mags: p.mags + ' / ' + nbOuv + ' magasins', partCaRes: this.fP(p.ca / caProd, 1), ca: this.fK(p.ca),
         barPen: bar(100 * p.pen, p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C'),
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),
@@ -1045,6 +1056,36 @@ class App {
     if (!base.some(p => p.sMg != null)) manque.push('marge nette (coût matière et main d’œuvre non exposés par la base partagée)');
     if (!base.some(p => p.sPerte != null)) manque.push('taux de perte (aucune source de casse/invendus)');
     if (!base.some(p => p.sComptoir != null)) manque.push('présence au comptoir (attribut produit non renseigné)');
+    // --- modale « perte par magasin »
+    const pw = S.pdWaste;
+    if (pw) {
+      const d = pw.d || {};
+      const mags = (d.magasins || []);
+      const avecTaux = mags.filter(m => m.taux != null);
+      common.pdWaste = {
+        nom: d.nom || pw.nom || ('#' + pw.id),
+        chargement: !!pw.chargement,
+        periode: d.du && d.au ? (this.fDA(d.du) + ' → ' + this.fDA(d.au)) : '',
+        reseauTaux: (d.reseau && d.reseau.taux != null) ? this.fP(d.reseau.taux, 1) : '—',
+        reseauDetail: d.reseau ? ((d.reseau.jete || 0).toLocaleString('fr-BE') + ' jeté(s) · ' + (d.reseau.vendu || 0).toLocaleString('fr-BE') + ' vendu(s)') : '',
+        erreur: (d.api && d.api.erreur) || '',
+        vide: !pw.chargement && avecTaux.length === 0,
+        rows: mags.map(m => ({
+          magasin: m.magasin,
+          taux: m.taux == null ? '—' : this.fP(m.taux, 1),
+          tauxSt: m.taux == null ? 'color:var(--color-text-muted)'
+            : (m.taux >= 0.10 ? 'color:#8D1D2C;font-weight:600' : m.taux >= 0.05 ? 'color:#8a5a13;font-weight:600' : 'color:#2d7a3e;font-weight:500'),
+          detail: m.taux == null ? 'Référence non proposée ici' : ((m.jete || 0).toLocaleString('fr-BE') + ' jeté(s) / ' + (m.vendu || 0).toLocaleString('fr-BE') + ' vendu(s)'),
+          motif: m.motif || '', caPerdu: m.caPerdu != null ? this.fE(m.caPerdu) : '',
+          barSt: 'display:block;height:5px;border-radius:999px;background:' + (m.taux == null ? 'var(--color-border-secondary)' : m.taux >= 0.10 ? '#8D1D2C' : m.taux >= 0.05 ? '#C17A2A' : '#2d7a3e')
+            + ';width:' + Math.max(m.taux ? 3 : 0, Math.min(100, (m.taux || 0) * 100 * 5)) + '%',
+        })),
+        note: avecTaux.length > 1
+          ? 'Écart réseau : ' + this.fP(Math.max.apply(null, avecTaux.map(m => m.taux)), 1) + ' au plus haut contre ' + this.fP(Math.min.apply(null, avecTaux.map(m => m.taux)), 1) + ' au plus bas. Un taux réseau moyen peut masquer un seul point de vente.'
+          : '',
+        close: () => this.setState({ pdWaste: null }),
+      };
+    } else { common.pdWaste = false; }
     common.pdNote = 'Score sur 100 = moyenne pondérée de quatre notes : volume vendu, marge nette, taux de perte et présence au comptoir. Pondération réglée dans Paramètres — ' + common.pdPond + '.'
       + (manque.length ? ' Critère(s) sans donnée aujourd’hui, donc EXCLUS du calcul (le score est repondéré sur les critères disponibles, il n’est pas pénalisé) : ' + manque.join(' ; ') + '.' : '');
   }

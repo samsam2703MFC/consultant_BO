@@ -257,6 +257,31 @@ final class PanelApi
         return is_array($r) ? self::liste($r) : [];
     }
 
+    /**
+     * Perte d'UNE référence dans UNE boutique — sert au détail réseau.
+     * Endpoint dédié (/shops/{s}/products/{p}/waste) ; s'il ne répond pas la
+     * forme attendue, on retombe sur la liste complète filtrée, plutôt que de
+     * rendre un vide qui passerait pour « aucune perte ».
+     */
+    public static function shopProductWaste(int $shopId, int $productId, ?string $from = null, ?string $to = null): ?array
+    {
+        if ($shopId <= 0 || $productId <= 0) { return null; }
+        $q = [];
+        if ($from !== null) { $q['from'] = $from; $q['date_from'] = $from; }
+        if ($to !== null)   { $q['to'] = $to;     $q['date_to'] = $to; }
+        $qs = $q ? '?' . http_build_query($q) : '';
+        $r = self::get('/shops/' . $shopId . '/products/' . $productId . '/waste' . $qs);
+        if (is_array($r)) {
+            if (isset($r['products']) && is_array($r['products']) && $r['products']) { return $r['products'][0]; }
+            if (isset($r['waste_qty']) || isset($r['sold_qty'])) { return $r; }
+            if (isset($r['product']) && is_array($r['product'])) { return $r['product']; }
+        }
+        foreach (self::shopWaste($shopId, $from, $to) as $w) {
+            if ((int) ($w['id_product'] ?? 0) === $productId) { return $w; }
+        }
+        return null;
+    }
+
     /** Réponse brute d'un chemin — sonde de diagnostic, pas un usage courant. */
     public static function brut(string $path): mixed
     {

@@ -1,1 +1,1 @@
-taux de perte reel branche sur /shops/{id}/products/waste : le critere entre dans le score, categories reelles et motif de rebut affiches. Deploiement standard.
+scoring produits : taux de perte par ligne et modale du detail magasin par magasin. Deploiement standard.

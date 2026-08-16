@@ -56,6 +56,11 @@ function ep_meta(): array
             'financieres' => $seuils['financieres'] ?? 2.2,
             'caEtp'       => $seuils['ca_etp'] ?? 13000,
         ],
+        // Période réellement servie par le scoring produit (le backend replie
+        // sur le dernier mois de caisse encodé) — la modale « perte par
+        // magasin » doit interroger la MÊME fenêtre, sinon les deux chiffres
+        // se contredisent sans que rien ne le signale.
+        'periodeProduits'  => setting('periodeProduits', date('Y-m')),
         'contribOuverture' => setting('contribOuverture', 0),
         'notes'            => setting('notes', new stdClass()),
         'familles'         => setting('familles', []),
@@ -423,6 +428,67 @@ function ep_pwa_waste_debug(): array
         'period_summary'   => is_array($brut) && isset($brut['period_summary']) ? $apercu($brut['period_summary']) : null,
         'nbLignesApresDepaquetage' => count($liste),
     ];
+}
+
+/**
+ * GET /products/waste?produit=&periode=YYYY-MM — perte d'une référence,
+ * magasin par magasin, pour la modale du scoring.
+ *
+ * Le taux réseau d'une référence peut cacher un seul magasin qui jette : la
+ * décision (retirer ? reformer une équipe ?) n'est pas la même. On rend donc
+ * le détail par boutique, trié du plus mauvais au meilleur.
+ */
+function ep_product_waste(): array
+{
+    $pid = (int) ($_GET['produit'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'produit requis']; }
+    $periode = (string) ($_GET['periode'] ?? '');
+    if (!preg_match('/^(\d{4})-(\d{2})$/', $periode, $m)) { $periode = date('Y-m'); preg_match('/^(\d{4})-(\d{2})$/', $periode, $m); }
+    $from = sprintf('%04d-%02d-01', (int) $m[1], (int) $m[2]);
+    $to   = date('Y-m-d', strtotime($from . ' +1 month -1 day'));
+
+    $out = ['produitId' => (string) $pid, 'nom' => null, 'periode' => $periode,
+        'du' => $from, 'au' => $to, 'magasins' => [],
+        'reseau' => ['jete' => 0, 'vendu' => 0, 'taux' => null],
+        'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
+    if (!PanelApi::configured()) {
+        $out['api']['erreur'] = 'compte consultant non configuré (Mon compte)';
+        return $out;
+    }
+
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
+    } catch (PDOException $e) { $shops = []; }
+
+    $totJ = 0.0; $totV = 0.0;
+    foreach ($shops as $sh) {
+        $sid = (int) $sh['id'];
+        $w = PanelApi::shopProductWaste($sid, $pid, $from, $to);
+        $j = $w !== null ? (float) ($w['waste_qty'] ?? 0) : 0.0;
+        $v = $w !== null ? (float) ($w['sold_qty'] ?? 0) : 0.0;
+        if ($out['nom'] === null && $w !== null && !empty($w['product_name'])) { $out['nom'] = (string) $w['product_name']; }
+        $den = $j + $v;
+        $totJ += $j; $totV += $v;
+        $out['magasins'][] = [
+            'shopId' => (string) $sid, 'magasin' => (string) $sh['name'],
+            'jete' => (int) round($j), 'vendu' => (int) round($v),
+            // Pas de vente ni de rebut : la référence n'était pas proposée ici.
+            // C'est différent d'un taux nul, et l'écran doit pouvoir le dire.
+            'taux' => $den > 0 ? round($j / $den, 4) : null,
+            'motif' => $w !== null && !empty($w['top_reason']) ? (string) $w['top_reason'] : null,
+            'caPerdu' => $w !== null && isset($w['ca_waste_net']) ? round((float) $w['ca_waste_net'], 2) : null,
+        ];
+    }
+    usort($out['magasins'], function ($a, $b) {
+        if ($a['taux'] === null) { return 1; }
+        if ($b['taux'] === null) { return -1; }
+        return $b['taux'] <=> $a['taux'];
+    });
+    $den = $totJ + $totV;
+    $out['reseau'] = ['jete' => (int) round($totJ), 'vendu' => (int) round($totV),
+        'taux' => $den > 0 ? round($totJ / $den, 4) : null];
+    $out['api']['erreur'] = PanelApi::$lastError;
+    return $out;
 }
 
 function ep_pwa_task_detail(): array
@@ -1074,6 +1140,13 @@ function ep_products(): array
                 $rows = $venteMois($from, $to);
             }
         }
+
+        // Mémoriser la période réellement servie : la modale de détail doit
+        // interroger la même fenêtre que le tableau.
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['periodeProduits', json_encode(substr($from, 0, 7))]);
+        } catch (PDOException $eP) { /* sans importance */ }
 
         // PERTES par référence — API du panel (/shops/{id}/products/waste), la
         // seule source : la base partagée ne connaît que les ventes. On agrège

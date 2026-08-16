@@ -95,6 +95,7 @@ export function render(c, x){
   ${c.rel ? tplRelance(c, x) : ''}
   ${c.repPrev ? tplRepPrev(c, x) : ''}
   ${c.eqRep ? tplEqRep(c, x) : ''}
+  ${c.pdWaste ? tplPerteMagasins(c, x) : ''}
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
@@ -723,7 +724,7 @@ function tplProduits(c, x){
       <span style="font-size:12px;color:var(--color-text-muted)">Pondération du score — ${c.pdPond}</span>
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge et position dans la catégorie · ${c.pdPeriode || ''}</div>
+      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge nette, taux de perte et présence au comptoir · ${c.pdPeriode || ''}</div>
       <div style="overflow-x:auto">
       <table style="width:100%;min-width:1080px;border-collapse:collapse;font-size:12.5px">
         <thead><tr>
@@ -754,8 +755,10 @@ function tplProduits(c, x){
                 <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:4px"><span style="${r.barPen}"></span></span>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
-                <div style="${r.perteSt}">${r.perteTxt}</div>
-                ${r.perteDetail ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(r.perteDetail)}</div>` : ''}
+                <button ${x.A(r.openWaste)} title="Voir la perte magasin par magasin" style="border:none;background:none;padding:0;cursor:pointer;text-align:right;font-family:var(--font-ui)">
+                  <div style="${r.perteSt};text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${r.perteTxt}</div>
+                  ${r.perteDetail ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(r.perteDetail)}</div>` : ''}
+                </button>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
                 <div style="font-weight:500">${r.mu}</div>
@@ -2136,6 +2139,51 @@ function tplScoring(c, x){
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
       <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
+    </div>
+  </div>`;
+}
+
+/* --- Perte d'une référence, magasin par magasin ------------------------------ */
+function tplPerteMagasins(c, x){
+  const { esc } = x;
+  const w = c.pdWaste;
+  return `
+  <div ${x.A(w.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:660px;max-height:86vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:24px 26px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+      <div>
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Taux de perte par magasin</div>
+        <div style="font-family:var(--font-display);font-size:20px;margin-top:3px">${esc(w.nom)}</div>
+        ${w.periode ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(w.periode)}</div>` : ''}
+      </div>
+      <button ${x.A(w.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">\u2715</button>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:16px;padding:12px 14px;background:var(--color-background-secondary);border-radius:10px">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">R\u00e9seau</div>
+      <div style="font-size:20px;font-weight:600">${esc(w.reseauTaux)}</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(w.reseauDetail)}</div>
+    </div>
+    ${w.chargement ? `<div style="padding:24px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Lecture des pertes magasin par magasin\u2026</div>` : ''}
+    ${w.erreur ? `<div style="margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(w.erreur)}</div>` : ''}
+    ${(!w.chargement && w.vide) ? `<div style="padding:20px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Aucune perte enregistr\u00e9e sur cette r\u00e9f\u00e9rence pour la p\u00e9riode.</div>` : ''}
+    ${(!w.chargement && !w.vide) ? `
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+      ${w.rows.map(r => `
+        <div style="padding:10px 2px;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <span style="font-size:13px;font-weight:500">${esc(r.magasin)}</span>
+            <span style="${r.tauxSt};font-size:14px">${esc(r.taux)}</span>
+          </div>
+          <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:6px"><span style="${r.barSt}"></span></span>
+          <div style="display:flex;justify-content:space-between;gap:10px;margin-top:4px;font-size:11.5px;color:var(--color-text-muted)">
+            <span>${esc(r.detail)}${r.motif ? ' \u00b7 ' + esc(r.motif) : ''}</span>
+            ${r.caPerdu ? `<span>${esc(r.caPerdu)} perdu</span>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>
+    ${w.note ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5;text-wrap:pretty">${esc(w.note)}</div>` : ''}` : ''}
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button ${x.A(w.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
     </div>
   </div>`;
 }
