@@ -736,258 +736,48 @@ function ep_exploitation_magasin(): array
     $per = (string) ($_GET['periode'] ?? 'mois');
     if (!in_array($per, ['jour', 'semaine', 'mois'], true)) { $per = 'mois'; }
 
+    // Bornes de période. Le « jour » est le dernier jour de caisse encodé, pas
+    // la date du jour — même règle que l'écran Exploitation, sans quoi les deux
+    // ne parleraient pas de la même journée.
     try {
         $d = Db::rows('SELECT MAX(DATE(insert_timestamp)) j FROM transaction');
-    } catch (PDOException $e) { return ['error' => 'caisse indisponible']; }
-    if (!$d || empty($d[0]['j'])) { return ['error' => 'aucune vente enregistrée']; }
-    $jour = (string) $d[0]['j'];
+    } catch (PDOException $e) { $d = []; }
+    $jour = ($d && !empty($d[0]['j'])) ? (string) $d[0]['j'] : date('Y-m-d');
     $ts = strtotime($jour);
     $from = $per === 'jour' ? $jour
         : ($per === 'semaine' ? date('Y-m-d', strtotime('monday this week', $ts)) : date('Y-m-01', $ts));
-    $to = date('Y-m-d 00:00:00', strtotime($jour . ' +1 day'));
-    $nbJours = max(1, (int) round((strtotime($jour) - strtotime($from)) / 86400) + 1);
 
     $out = ['shopId' => (string) $sid, 'periode' => $per, 'du' => $from, 'au' => $jour,
-        'jours' => $nbJours, 'magasin' => null,
-        'kpis' => [], 'categories' => [], 'pnl' => [], 'positionnement' => [],
-        'ohProrata' => false, 'notes' => []];
+        'magasin' => null, 'blocs' => []];
     try {
         $s = Db::rows('SELECT name FROM shops WHERE id = ?', [$sid]);
         if ($s) { $out['magasin'] = (string) $s[0]['name']; }
     } catch (PDOException $e) { /* nom indisponible */ }
 
-    // Ventes de la période, par référence — une seule lecture sert le CA, les
-    // volumes, le food cost et la ventilation par catégorie.
-    $lignes = [];
-    try {
-        $lignes = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */ tp.id_product,
-                                   SUM(tp.quantity) q,
-                                   SUM(tp.total_gross_value_after_discount) ca,
-                                   COUNT(DISTINCT t.ticket_key) tk
-                              FROM transaction t
-                              JOIN transaction_product tp ON tp.id_transaction = t.id
-                             WHERE t.id_shop = ? AND t.insert_timestamp >= ? AND t.insert_timestamp < ?
-                          GROUP BY tp.id_product", [$sid, $from . ' 00:00:00', $to]);
-    } catch (PDOException $e) { return $out + ['erreur' => 'agrégat de caisse indisponible']; }
-
-    $tickets = 0;
-    try {
-        $t = Db::rows("SELECT COUNT(DISTINCT ticket_key) tk, SUM(total_gross_amount_after_discount) ca
-                         FROM transaction WHERE id_shop = ? AND insert_timestamp >= ? AND insert_timestamp < ?",
-            [$sid, $from . ' 00:00:00', $to]);
-        $tickets = $t ? (int) $t[0]['tk'] : 0;
-        $caTotal = $t ? (float) $t[0]['ca'] : 0.0;
-    } catch (PDOException $e) { $caTotal = 0.0; }
-
-    $couts = catalogueCouts();
-    $cats  = catalogueCategories() ?: [];
-    $prodCat = [];
-    try {
-        foreach (Db::rows('SELECT id, id_category FROM product') as $p) {
-            $prodCat[(int) $p['id']] = (int) $p['id_category'];
-        }
-    } catch (PDOException $e) { /* catégories indisponibles */ }
-
-    $qTot = 0.0; $food = 0.0; $foodConnu = 0.0; $caConnu = 0.0;
-    $parCat = [];
-    foreach ($lignes as $l) {
-        $pid = (int) $l['id_product']; $q = (float) $l['q']; $ca = (float) $l['ca'];
-        $qTot += $q;
-        $nom = $cats[$prodCat[$pid] ?? 0]['nom'] ?? 'Non catégorisé';
-        if (!isset($parCat[$nom])) { $parCat[$nom] = ['ca' => 0.0, 'mat' => 0.0, 'caConnu' => 0.0, 'q' => 0.0]; }
-        $parCat[$nom]['ca'] += $ca; $parCat[$nom]['q'] += $q;
-        // Prix unitaire moyen constaté : sert au contrôle de vraisemblance du
-        // coût, exactement comme dans le scoring.
-        $pu = $q > 0 ? $ca / $q : null;
-        $mat = $couts[$pid]['mat'] ?? null;
-        if ($mat !== null && coutVraisemblable($mat, $pu)) {
-            $food += $mat * $q; $foodConnu += $mat * $q; $caConnu += $ca;
-            $parCat[$nom]['mat'] += $mat * $q; $parCat[$nom]['caConnu'] += $ca;
-        }
-    }
-
-    $out['kpis'] = [
-        'ca' => round($caTotal, 2),
-        'tickets' => $tickets,
-        'ticketsJour' => $nbJours > 0 ? (int) round($tickets / $nbJours) : null,
-        'panier' => $tickets > 0 ? round($caTotal / $tickets, 2) : null,
-        'produitsClient' => $tickets > 0 ? round($qTot / $tickets, 1) : null,
-    ];
-
-    foreach ($parCat as $nom => $c) {
-        $out['categories'][] = ['categorie' => $nom, 'ca' => round($c['ca'], 2),
-            'partCa' => $caTotal > 0 ? round($c['ca'] / $caTotal, 4) : null,
-            'quantite' => (int) round($c['q']),
-            // Food cost d'une catégorie : rapporté au CA des SEULES références
-            // dont le coût est connu. Le rapporter au CA total sous-estimerait
-            // le ratio d'autant de références non chiffrées.
-            'fcPct' => $c['caConnu'] > 0 ? round($c['mat'] / $c['caConnu'], 4) : null,
-            'margePct' => $c['caConnu'] > 0 ? round(1 - $c['mat'] / $c['caConnu'], 4) : null,
-            'couverture' => $c['ca'] > 0 ? round($c['caConnu'] / $c['ca'], 4) : null];
-    }
-    usort($out['categories'], fn($a, $b) => $b['ca'] <=> $a['ca']);
-
-    // Main-d'œuvre : heures réellement plannifiées sur la période.
-    $labour = null; $heures = null;
-    $prod = setting('production', []);
-    $taux = (is_array($prod) && isset($prod['tauxHoraire'])) ? (float) $prod['tauxHoraire'] : 24.0;
-    if (PanelApi::configured()) {
-        $h = exploitationHeures($sid, $from, $jour);
-        if ($h !== null) { $heures = round($h, 1); $labour = round($h * $taux, 2); }
-    }
-
-    // Frais généraux : mensuels par nature. Au prorata pour un jour ou une
-    // semaine, et signalé comme tel.
-    $overhead = null;
-    try {
-        $o = Db::rows('SELECT overhead FROM mac_shop_monthly_pnl WHERE id_shop = ? AND year = ? AND month = ?',
-            [$sid, (int) date('Y', $ts), (int) date('n', $ts)]);
-        if ($o && $o[0]['overhead'] !== null) {
-            $oh = (float) $o[0]['overhead'];
-            $joursMois = (int) date('t', $ts);
-            $overhead = $per === 'mois' ? round($oh, 2) : round($oh * $nbJours / $joursMois, 2);
-            $out['ohProrata'] = $per !== 'mois';
-        }
-    } catch (PDOException $e) { /* P&L mensuel indisponible */ }
-
-    $pc = fn($v) => ($caTotal > 0 && $v !== null) ? round($v / $caTotal, 4) : null;
-    $margeBrute = $caTotal - $food;
-    $resultat = ($labour !== null && $overhead !== null) ? $margeBrute - $labour - $overhead : null;
-    $out['pnl'] = [
-        'ca' => round($caTotal, 2),
-        'foodCost' => round($food, 2), 'foodPct' => $pc($food),
-        'margeBrute' => round($margeBrute, 2), 'margeBrutePct' => $pc($margeBrute),
-        'labour' => $labour, 'labourPct' => $pc($labour), 'heures' => $heures, 'tauxHoraire' => $taux,
-        'overhead' => $overhead, 'overheadPct' => $pc($overhead),
-        'resultat' => $resultat, 'resultatPct' => $pc($resultat),
-    ];
-    // Le food cost ne couvre pas tout le catalogue : le dire, sinon un ratio
-    // flatteur passerait pour une performance.
-    $couv = $caTotal > 0 ? $caConnu / $caTotal : 0;
-    $out['pnl']['couvertureFood'] = round($couv, 4);
-    if ($couv < 0.95) {
-        $out['notes'][] = 'food cost calculé sur ' . round(100 * $couv) . ' % du chiffre d\'affaires'
-            . ' — les références sans recette chiffrée en sont absentes';
-    }
-    if ($labour === null) { $out['notes'][] = 'main-d\'œuvre indisponible : planning du panel non lu'; }
-    if ($overhead === null) { $out['notes'][] = 'frais généraux non remontés pour ce mois'; }
-
-    $out['positionnement'] = exploitationPositionnement($sid, $from, $to, $jour, $per);
-    return $out;
-}
-
-/**
- * Heures plannifiées d'une boutique entre deux dates (planning du panel).
- *
- * L'endpoint du planning ne prend pas de bornes : il rend TOUT l'historique.
- * Le filtrage se fait donc ici, sur `work_date`. Sans lui, la main-d'œuvre
- * d'une seule journée se verrait attribuer des mois de planning — un coût
- * absurde, mais qui ne lève aucune erreur.
- */
-function exploitationHeures(int $sid, string $du, string $au): ?float
-{
-    $r = PanelApi::shopSchedule($sid);
-    if (!$r) { return null; }
-    $tot = 0.0; $vu = false;
-    foreach ($r as $l) {
-        $d = (string) ($l['work_date'] ?? '');
-        if ($d === '') { continue; }
-        $d = substr($d, 0, 10);
-        if ($d < $du || $d > $au) { continue; }
-        foreach (['hours', 'total_hours', 'duration_hours'] as $k) {
-            if (isset($l[$k]) && is_numeric($l[$k])) { $tot += (float) $l[$k]; $vu = true; continue 2; }
-        }
-        $a0 = $l['start_hour'] ?? $l['start_time'] ?? null;
-        $b0 = $l['end_hour'] ?? $l['end_time'] ?? null;
-        if ($a0 !== null && $b0 !== null) {
-            $a = strtotime('1970-01-01 ' . $a0); $b = strtotime('1970-01-01 ' . $b0);
-            if ($a !== false && $b !== false) {
-                if ($b <= $a) { $b += 86400; }      // service à cheval sur minuit
-                $tot += ($b - $a) / 3600; $vu = true;
-            }
-        }
-    }
-    return $vu ? $tot : null;
-}
-
-/**
- * Où se situe ce magasin dans le réseau, sur les indicateurs de la fiche.
- * Rend la valeur, la moyenne réseau, les bornes et les autres boutiques —
- * de quoi placer un curseur sans que l'écran ait à recalculer quoi que ce soit.
- */
-function exploitationPositionnement(int $sid, string $from, string $to, string $jour, string $per): array
-{
-    $calc = function (string $du, string $auExcl) {
-        try {
-            return Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */ t.id_shop,
-                                    COUNT(DISTINCT t.ticket_key) tk,
-                                    SUM(t.total_gross_amount_after_discount) ca
-                               FROM transaction t
-                              WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
-                           GROUP BY t.id_shop", [$du . ' 00:00:00', $auExcl]);
-        } catch (PDOException $e) { return []; }
+    // Chaque bloc dit d'où il vient. Tant qu'un endpoint du panel n'a pas
+    // répondu, le bloc est marqué « en attente d'API » et ne porte AUCUN
+    // chiffre : mieux vaut un écran qui annonce ce qui lui manque qu'un écran
+    // rempli d'une source qu'on n'a pas voulue.
+    $bloc = function (string $cle, string $titre, ?array $rep) use (&$out): void {
+        $out['blocs'][$cle] = $rep !== null
+            ? ['titre' => $titre, 'etat' => 'ok', 'source' => PanelApi::$lastPath, 'donnees' => $rep]
+            : ['titre' => $titre, 'etat' => 'attente', 'source' => null, 'donnees' => null,
+               'motif' => PanelApi::$lastError ?: 'endpoint non disponible'];
     };
-    $qte = function (string $du, string $auExcl) {
-        try {
-            return Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */ t.id_shop, SUM(tp.quantity) q
-                               FROM transaction t
-                               JOIN transaction_product tp ON tp.id_transaction = t.id
-                              WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
-                           GROUP BY t.id_shop", [$du . ' 00:00:00', $auExcl]);
-        } catch (PDOException $e) { return []; }
-    };
-    $noms = [];
-    try {
-        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
-    } catch (PDOException $e) { /* noms indisponibles */ }
 
-    $par = [];
-    foreach ($calc($from, $to) as $r) {
-        $k = (int) $r['id_shop'];
-        $par[$k] = ['tk' => (int) $r['tk'], 'ca' => (float) $r['ca'], 'q' => 0.0];
-    }
-    foreach ($qte($from, $to) as $r) {
-        $k = (int) $r['id_shop']; if (isset($par[$k])) { $par[$k]['q'] = (float) $r['q']; }
-    }
-
-    // Même période, un an plus tôt : la comparaison n'a de sens qu'à calendrier
-    // égal. Absente de la base, elle reste nulle plutôt qu'approchée.
-    $anD = [];
-    $duN1 = date('Y-m-d', strtotime($from . ' -1 year'));
-    $auN1 = date('Y-m-d 00:00:00', strtotime($to . ' -1 year'));
-    foreach ($calc($duN1, $auN1) as $r) {
-        $k = (int) $r['id_shop'];
-        $anD[$k] = ['tk' => (int) $r['tk'], 'ca' => (float) $r['ca'], 'q' => 0.0];
-    }
-    foreach ($qte($duN1, $auN1) as $r) {
-        $k = (int) $r['id_shop']; if (isset($anD[$k])) { $anD[$k]['q'] = (float) $r['q']; }
-    }
-
-    $metriques = [
-        'panier' => fn($x) => $x['tk'] > 0 ? $x['ca'] / $x['tk'] : null,
-        'produitsClient' => fn($x) => $x['tk'] > 0 ? $x['q'] / $x['tk'] : null,
-    ];
-    $out = [];
-    foreach ($metriques as $cle => $f) {
-        $vals = []; $autres = [];
-        foreach ($par as $k => $x) {
-            $v = $f($x); if ($v === null) { continue; }
-            $vals[] = $v;
-            $autres[] = ['shopId' => (string) $k, 'magasin' => $noms[$k] ?? ('Magasin ' . $k),
-                'valeur' => round($v, 2), 'moi' => $k === $sid];
+    if (!PanelApi::configured()) {
+        foreach ([['kpis', 'Indicateurs de vente'], ['pnl', 'Compte de résultat'],
+                  ['labour', 'Main-d\'œuvre'], ['reseau', 'Positionnement réseau']] as $b) {
+            $out['blocs'][$b[0]] = ['titre' => $b[1], 'etat' => 'attente', 'source' => null,
+                'donnees' => null, 'motif' => 'compte consultant non configuré (Mon compte)'];
         }
-        if (!$vals) { $out[$cle] = null; continue; }
-        $moi = isset($par[$sid]) ? $f($par[$sid]) : null;
-        $n1  = isset($anD[$sid]) ? $f($anD[$sid]) : null;
-        usort($autres, fn($a, $b) => $a['valeur'] <=> $b['valeur']);
-        $out[$cle] = [
-            'valeur' => $moi !== null ? round($moi, 2) : null,
-            'reseau' => round(array_sum($vals) / count($vals), 2),
-            'min' => round(min($vals), 2), 'max' => round(max($vals), 2),
-            'anDernier' => $n1 !== null ? round($n1, 2) : null,
-            'boutiques' => $autres,
-        ];
+        return $out;
     }
+
+    $bloc('kpis',   'Indicateurs de vente',   PanelApi::salesKpis($sid, $from, $jour));
+    $bloc('pnl',    'Compte de résultat',     PanelApi::pnl($sid, $from, $jour));
+    $bloc('labour', 'Main-d\'œuvre',          PanelApi::labourDaily($sid, $from, $jour));
+    $bloc('reseau', 'Positionnement réseau',  PanelApi::networkSummary($from, $jour));
     return $out;
 }
 

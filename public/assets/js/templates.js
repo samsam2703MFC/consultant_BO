@@ -148,7 +148,7 @@ function tplExploitation(c, x){
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:9px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div>
-          <div style="font-weight:500;font-size:13.5px">${esc(m.magasin)}</div>
+          <button ${x.A(m.ouvrir)} title="Ouvrir le P&amp;L détaillé" style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-weight:500;font-size:13.5px;color:var(--color-text);text-align:left" class="hv-line">${esc(m.magasin)}</button>
           <div style="font-size:11.5px;color:var(--color-text-muted)">objectif du mois ${esc(m.objMois)}</div>
         </div>
         <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;white-space:nowrap;${m.att.st}">${esc(m.att.txt)}</span>
@@ -225,6 +225,7 @@ function tplExploitation(c, x){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px">
       ${c.exMagasins.map(carte).join('')}
     </div>
+    ${c.exDetail ? tplExploitDetail(c, x) : ''}
     <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
       <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
       <span>${c.exCumul
@@ -233,6 +234,54 @@ function tplExploitation(c, x){
       ${c.exCumul ? '' : `<span><i style="display:inline-block;width:9px;height:9px;background:#D9B3B8;border-radius:2px;vertical-align:-1px"></i> mois partiellement encodé</span>`}
       ${c.exBase ? `<span>objectif jour et semaine : ${esc(c.exBase)}</span>` : ''}
     </div>`}`;
+}
+
+
+/* P&L détaillé d'un magasin. Chaque bloc affiche soit ses données, soit la
+   raison pour laquelle il n'en a pas : tant qu'un endpoint du panel n'a pas
+   répondu, on écrit « en attente d'API » plutôt que de combler avec une autre
+   source. Un écran qui annonce ce qui lui manque est réparable ; un écran
+   rempli en douce ne l'est pas. */
+function tplExploitDetail(c, x){
+  const { esc } = x;
+  const d = c.exDetail;
+  return `
+  <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <div>
+        <div style="font-family:var(--font-display);font-size:19px;line-height:1.2">${esc(d.nom)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">P&amp;L détaillé${d.du ? ' · ' + esc(d.du) + ' → ' + esc(d.au) : ''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
+          ${c.exPerBtns.map(p => `<button ${x.A(p.go)} style="${p.st}">${esc(p.label)}</button>`).join('')}
+        </div>
+        <button ${x.A(d.close)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+      </div>
+    </div>
+    ${d.chargement ? `<div style="padding:26px 0;color:var(--color-text-muted);font-size:12.5px">Lecture des API du panel…</div>`
+      : (!d.blocs.length ? `<div style="padding:26px 0;color:var(--color-text-muted);font-size:12.5px">Aucune réponse du panel.</div>` : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+      ${d.blocs.map(b => `
+        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:13px;background:${b.attente ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+            <div style="font-size:12.5px;font-weight:500">${esc(b.titre)}</div>
+            ${b.attente
+              ? `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;background:#FBEFE0;color:var(--color-on-abricot);white-space:nowrap">en attente d’API</span>`
+              : `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e;white-space:nowrap">API</span>`}
+          </div>
+          ${b.attente
+            ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(b.motif)}</div>`
+            : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:6px">${esc(b.source)}</div>
+               <table style="width:100%;border-collapse:collapse;font-size:12px">
+                 ${b.lignes.map(l => `<tr>
+                   <td style="padding:3px 0;color:var(--color-text-muted)">${esc(l.k)}</td>
+                   <td style="padding:3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(l.v)}</td>
+                 </tr>`).join('')}
+               </table>`}
+        </div>`).join('')}
+    </div>`)}
+  </div>`;
 }
 
 function tplMagasins(c, x){

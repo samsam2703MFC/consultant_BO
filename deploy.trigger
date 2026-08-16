@@ -1,2 +1,2 @@
 apiinspect
-Sonde P&L : charger endpoints.php pour setting().
+Detail magasin : API seule, « en attente d API » sinon.

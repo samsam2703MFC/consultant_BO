@@ -339,6 +339,63 @@ final class PanelApi
         return self::premierNonVide(['/product/category-groups', '/product-category-groups']);
     }
 
+    /**
+     * Premier chemin qui rend une réponse exploitable — objet OU liste.
+     * `premierNonVide()` ne convient pas ici : ces endpoints rendent des
+     * objets (un P&L, un jeu d'indicateurs), pas des collections.
+     */
+    private static function premierObjet(array $paths): ?array
+    {
+        $err = null;
+        foreach ($paths as $p) {
+            $r = self::get($p);
+            if (is_array($r) && $r !== []) { self::$lastPath = $p; return $r; }
+            $err = $err ?? self::$lastError;
+        }
+        self::$lastPath = null;
+        self::$lastError = $err ?? self::$lastError;
+        return null;
+    }
+
+    /** Indicateurs de vente d'une boutique (CA, tickets, panier, produits/client). */
+    public static function salesKpis(int $shopId, string $du, string $au): ?array
+    {
+        $q = ['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au];
+        return self::premierObjet([
+            '/statistics/sales/kpis?' . http_build_query($q + ['shop_id' => $shopId]),
+            '/statistics/sales/kpis?' . http_build_query($q + ['id_shop' => $shopId]),
+        ]);
+    }
+
+    /** Compte de résultat d'une boutique sur une période. */
+    public static function pnl(int $shopId, string $du, string $au): ?array
+    {
+        $q = ['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au];
+        return self::premierObjet([
+            '/pnl?' . http_build_query($q + ['shop_id' => $shopId]),
+            '/pnl?' . http_build_query($q + ['id_shop' => $shopId]),
+        ]);
+    }
+
+    /** Main-d'œuvre journalière d'une boutique. */
+    public static function labourDaily(int $shopId, string $du, string $au): ?array
+    {
+        $q = ['from' => $du, 'to' => $au, 'date_from' => $du, 'date_to' => $au];
+        return self::premierObjet([
+            '/labour/daily?' . http_build_query($q + ['shop_id' => $shopId]),
+            '/labour/daily?' . http_build_query($q + ['id_shop' => $shopId]),
+        ]);
+    }
+
+    /** Synthèse réseau des boutiques (positionnement d'une boutique). */
+    public static function networkSummary(string $du, string $au): ?array
+    {
+        return self::premierObjet([
+            '/consultant/network/shops/summary?' . http_build_query(['from' => $du, 'to' => $au]),
+            '/consultant/network/shops/summary',
+        ]);
+    }
+
     /** Gammes saisonnières du réseau. */
     public static function availabilityPeriods(): array
     {

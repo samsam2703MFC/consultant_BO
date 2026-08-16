@@ -1002,6 +1002,14 @@ class App {
    * mettre en forme, et à distinguer trois états que la donnée impose —
    * mois clos, mois partiellement encodé, mois sans budget.
    */
+  /** Ouvre le détail d'un magasin : lecture ponctuelle, hors chargement initial. */
+  exOpen(id, nom){
+    const per = this.state.exPeriode || 'mois';
+    this.setState({ exDetail: { id, nom, per, chargement: true, d: null } });
+    readOne('/exploitation/magasin?id=' + encodeURIComponent(id) + '&periode=' + per)
+      .then(d => this.setState(s => (s.exDetail && s.exDetail.id === id)
+        ? { exDetail: Object.assign({}, s.exDetail, { chargement: false, d: d || null }) } : {}));
+  }
   valsExploitation(common){
     const D = this.D, E = D.exploitation || {};
     const MOIS1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
@@ -1021,6 +1029,33 @@ class App {
     common.exStCumul = ongl(cumule);
     common.exLegendeReel = cumule ? 'réel cumulé' : 'réel mensuel';
     common.exLegendeCible = cumule ? 'cible cumulée' : 'budget encodé';
+    // Détail d'un magasin. Chaque bloc porte son état : « ok » quand l'API a
+    // répondu, « attente » sinon. Aucun chiffre n'est fabriqué pour combler —
+    // un écran qui annonce ce qui lui manque vaut mieux qu'un écran rempli
+    // d'une source qu'on n'a pas voulue.
+    const S2 = this.state, det = S2.exDetail;
+    common.exPer = S2.exPeriode || 'mois';
+    common.exSetPer = p => () => {
+      this.setState({ exPeriode: p });
+      if (S2.exDetail) { this.exOpen(S2.exDetail.id, S2.exDetail.nom); }
+    };
+    const ongP = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
+      + 'padding:4px 11px;border-radius:7px;'
+      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
+            : 'background:transparent;color:var(--color-text-muted)');
+    common.exPerBtns = [['jour', 'Aujourd\u2019hui'], ['semaine', 'Semaine'], ['mois', 'Mois']]
+      .map(p => ({ cle: p[0], label: p[1], st: ongP(common.exPer === p[0]), go: common.exSetPer(p[0]) }));
+    common.exDetail = det ? {
+      nom: det.nom, chargement: det.chargement,
+      close: () => this.setState({ exDetail: null }),
+      du: det.d ? det.d.du : null, au: det.d ? det.d.au : null,
+      blocs: det.d && det.d.blocs ? Object.keys(det.d.blocs).map(k => {
+        const b = det.d.blocs[k];
+        return { cle: k, titre: b.titre, attente: b.etat !== 'ok',
+          motif: b.motif || '', source: b.source || '',
+          lignes: b.etat === 'ok' ? this.exAplat(b.donnees) : [] };
+      }) : []
+    } : null;
     const an = E.mois ? +E.mois.slice(0, 4) : this.exo();
     const mc = E.mois ? +E.mois.slice(5, 7) : 12;
 
@@ -1135,6 +1170,7 @@ class App {
       const g = cumule ? courbes(cumR, cumB) : serie(reels, buds);
       const vals = reels.concat(buds).filter(v => v != null);
       return { shopId: m.shopId, magasin: m.magasin,
+        ouvrir: () => this.exOpen(m.shopId, m.magasin),
         objMois: this.fE(m.moisPlein),
         jourCa: this.fE(m.jour.ca), jourClients: (m.jour.tickets || 0).toLocaleString('fr-BE'),
         jourPanier: m.jour.panier == null ? '—' : this.fEd(m.jour.panier),
@@ -1151,6 +1187,31 @@ class App {
         exercice: an };
     });
     return common;
+  }
+  /**
+   * Aplatit une réponse d'API en lignes « libellé / valeur ».
+   *
+   * La forme exacte des réponses du panel n'est pas encore établie : plutôt
+   * que de supposer des noms de clés — la manière la plus sûre d'afficher un
+   * chiffre faux — on rend ce qui arrive, tel qu'il arrive. Le câblage fin
+   * viendra quand la sonde aura donné les clés réelles.
+   */
+  exAplat(d, prefixe){
+    if (d == null) return [];
+    const out = [];
+    const pre = prefixe ? prefixe + ' · ' : '';
+    if (Array.isArray(d)){
+      d.slice(0, 12).forEach((v, i) => out.push.apply(out, this.exAplat(v, pre + '#' + (i + 1))));
+      return out;
+    }
+    if (typeof d !== 'object'){ return [{ k: prefixe || 'valeur', v: String(d) }]; }
+    Object.keys(d).slice(0, 24).forEach(k => {
+      const v = d[k];
+      if (v == null){ out.push({ k: pre + k, v: '—' }); return; }
+      if (typeof v === 'object'){ out.push.apply(out, this.exAplat(v, pre + k)); return; }
+      out.push({ k: pre + k, v: typeof v === 'number' ? v.toLocaleString('fr-BE') : String(v) });
+    });
+    return out;
   }
   /** Montant à deux décimales — un panier moyen arrondi à l'euro ne dit rien. */
   fEd(n){ return n == null ? '—' : n.toFixed(2).replace('.', ',') + ' €'; }
