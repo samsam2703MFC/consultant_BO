@@ -1,1 +1,1 @@
-Correction de la syntaxe du script et garde-fou avant livraison.
+Suivi de production : taux de perte calcule sur les ventes, pas sur les fournees.

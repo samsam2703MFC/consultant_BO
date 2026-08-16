@@ -627,8 +627,12 @@ function ep_prod_suivi(): array
     $to   = date('Y-m-d 00:00:00', strtotime($from . ' +1 month'));
 
     $out = ['periode' => $periode, 'du' => substr($from, 0, 10), 'au' => date('Y-m-d', strtotime($to . ' -1 day')),
-        'reseau' => ['produit' => 0, 'jete' => 0, 'taux' => null],
-        'magasins' => [], 'produits' => [], 'motifs' => [], 'source' => 'product_movement'];
+        'reseau' => ['produit' => 0, 'jete' => 0, 'vendu' => 0, 'taux' => null],
+        'magasins' => [], 'produits' => [], 'motifs' => [], 'source' => 'product_movement',
+        // Le journal des fournées n'est pas tenu partout : le dire, parce que
+        // « zéro fournée » et « fournées non saisies » se ressemblent à
+        // l'écran et ne veulent pas du tout dire la même chose.
+        'avertissement' => null];
 
     $agg = static function (string $group) use ($from, $to): array {
         return Db::rows("SELECT $group AS k,
@@ -640,31 +644,73 @@ function ep_prod_suivi(): array
                        GROUP BY k", [$from, $to]);
     };
 
+    // Ventes de la période, par magasin et par référence. C'est le SEUL
+    // dénominateur honnête d'un taux de perte ici : mesuré sur la base, deux
+    // boutiques sur quatre n'enregistrent aucune fournée (Halle : 0 mouvement
+    // PRODUCTION pour 21 730 € de ventes en juillet), si bien qu'un taux
+    // jeté/(produit+jeté) leur attribuerait 100 % de perte pour la seule
+    // raison qu'elles ne remplissent pas ce champ. C'est aussi la définition
+    // employée par le scoring des références : deux écrans ne doivent pas
+    // calculer la même chose de deux façons.
+    $vendShop = []; $vendProd = [];
+    try {
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_shop, SUM(tp.quantity) q
+                             FROM transaction t JOIN transaction_product tp ON tp.id_transaction = t.id
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                         GROUP BY t.id_shop", [$from, $to]) as $v) {
+            $vendShop[(int) $v['id_shop']] = (float) $v['q'];
+        }
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ tp.id_product, SUM(tp.quantity) q
+                             FROM transaction t JOIN transaction_product tp ON tp.id_transaction = t.id
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                         GROUP BY tp.id_product", [$from, $to]) as $v) {
+            $vendProd[(int) $v['id_product']] = (float) $v['q'];
+        }
+    } catch (PDOException $e) { /* caisse indisponible : taux non calculable */ }
+
     try {
         $noms = [];
         foreach (Db::rows('SELECT id, name FROM shops') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
+        $sansJournal = [];
         foreach ($agg('id_shop') as $r) {
-            $p = (float) $r['prod']; $j = (float) $r['jete']; $den = $p + $j;
-            $out['magasins'][] = ['shopId' => (string) (int) $r['k'],
-                'magasin' => $noms[(int) $r['k']] ?? ('Magasin ' . (int) $r['k']),
-                'produit' => (int) round($p), 'jete' => (int) round($j),
-                'taux' => $den > 0 ? round($j / $den, 4) : null];
+            $sid = (int) $r['k'];
+            $p = (float) $r['prod']; $j = (float) $r['jete'];
+            $v = $vendShop[$sid] ?? 0.0;
+            $den = $v + $j;
+            $nom = $noms[$sid] ?? ('Magasin ' . $sid);
+            // Une boutique qui vend sans jamais déclarer de fournée ne produit
+            // pas « zéro » : elle ne tient pas le journal.
+            $tient = $p > 0 || $v <= 0;
+            if (!$tient) { $sansJournal[] = $nom; }
+            $out['magasins'][] = ['shopId' => (string) $sid, 'magasin' => $nom,
+                'produit' => (int) round($p), 'jete' => (int) round($j), 'vendu' => (int) round($v),
+                'taux' => $den > 0 ? round($j / $den, 4) : null,
+                'journalTenu' => $tient];
             $out['reseau']['produit'] += (int) round($p);
             $out['reseau']['jete']    += (int) round($j);
+            $out['reseau']['vendu']   += (int) round($v);
         }
         usort($out['magasins'], fn($a, $b) => ($b['taux'] ?? -1) <=> ($a['taux'] ?? -1));
+        if ($sansJournal) {
+            $out['avertissement'] = count($sansJournal) . ' boutique(s) ne déclarent aucune fournée ('
+                . implode(', ', $sansJournal) . ') — les volumes produits y sont incomplets,'
+                . ' le taux de perte reste calculé sur les ventes';
+        }
 
         $pn = [];
         try {
             foreach (Db::rows('SELECT id, name FROM product') as $p) { $pn[(int) $p['id']] = (string) $p['name']; }
         } catch (PDOException $e) { /* noms indisponibles */ }
         foreach ($agg('id_product') as $r) {
-            $p = (float) $r['prod']; $j = (float) $r['jete']; $den = $p + $j;
-            if ($den <= 0) { continue; }
-            $out['produits'][] = ['produitId' => (string) (int) $r['k'],
-                'nom' => $pn[(int) $r['k']] ?? ('#' . (int) $r['k']),
-                'produit' => (int) round($p), 'jete' => (int) round($j),
-                'taux' => round($j / $den, 4)];
+            $pid = (int) $r['k'];
+            $p = (float) $r['prod']; $j = (float) $r['jete'];
+            $v = $vendProd[$pid] ?? 0.0;
+            $den = $v + $j;
+            if ($j <= 0 && $p <= 0) { continue; }
+            $out['produits'][] = ['produitId' => (string) $pid,
+                'nom' => $pn[$pid] ?? ('#' . $pid),
+                'produit' => (int) round($p), 'jete' => (int) round($j), 'vendu' => (int) round($v),
+                'taux' => $den > 0 ? round($j / $den, 4) : null];
         }
         usort($out['produits'], fn($a, $b) => $b['jete'] <=> $a['jete']);
         $out['produits'] = array_slice($out['produits'], 0, 40);
@@ -680,7 +726,7 @@ function ep_prod_suivi(): array
         return $out;
     }
 
-    $den = $out['reseau']['produit'] + $out['reseau']['jete'];
+    $den = $out['reseau']['vendu'] + $out['reseau']['jete'];
     $out['reseau']['taux'] = $den > 0 ? round($out['reseau']['jete'] / $den, 4) : null;
     return $out;
 }
