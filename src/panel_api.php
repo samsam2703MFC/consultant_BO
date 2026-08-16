@@ -378,7 +378,7 @@ final class PanelApi
             // répond, la seule information utile est la liste de ce qui a été
             // essayé et ce que chacun a renvoyé.
             $e = (string) self::$lastError;
-            $essais[] = preg_replace('/\?.*$/', '', $p) . ' → '
+            $essais[] = (strlen($p) > 120 ? substr($p, 0, 120) . '…' : $p) . ' → '
                 . (preg_match('/HTTP (\d+)(.*)$/s', $e, $m) ? $m[1] . substr($m[2], 0, 140) : 'vide');
         }
         self::$lastPath = null;

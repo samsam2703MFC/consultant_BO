@@ -835,9 +835,15 @@ function ep_exploitation_magasin(): array
     $errCat = $cs === null ? PanelApi::$lastError : null;
     $cats = null;
     if (is_array($cs)) {
-        foreach ([$cs, $cs['categories'] ?? null, $cs['data'] ?? null, $cs['items'] ?? null] as $cand) {
+        foreach ([$cs, $cs['categories'] ?? null, $cs['data'] ?? null, $cs['items'] ?? null,
+                  $cs['shops'] ?? null, $cs['results'] ?? null, $cs['rows'] ?? null,
+                  $cs['sales'] ?? null, $cs['category_sales'] ?? null] as $cand) {
             if (is_array($cand) && $cand && array_is_list($cand)) { $cats = $cand; break; }
         }
+        // L'endpoint a RÉPONDU mais sa forme n'est pas dépliée : dire quelles
+        // clés il porte, seule façon de savoir où chercher la liste. « Sans
+        // réponse » était faux — il répondait, je ne le comprenais pas.
+        if ($cats === null) { $errCat = 'forme inattendue, clés : ' . implode(', ', array_slice(array_keys($cs), 0, 12)); }
     }
     if ($cats === null && isset($p['turnover']['categories']) && is_array($p['turnover']['categories'])) {
         $cats = $p['turnover']['categories'];

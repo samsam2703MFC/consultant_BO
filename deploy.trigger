@@ -1,1 +1,1 @@
-pnl/monthly : mois entiers ; recuperer l erreur de category-sales.
+Tracer les bornes envoyees et la forme de category-sales.
