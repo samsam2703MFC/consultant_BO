@@ -1153,15 +1153,12 @@ function ep_produits_analyse(): array
             if ($tot === null && $rendu) { $vide = 'catégorie absente de la réponse'; }
             $val = $tot;
         } else {
-            $r = PanelApi::shopWaste(analyseShop(), $b['du'], $au);
-            $out['source'] = $out['source'] ?? '/shops/{id}/products/waste';
-            foreach ($r as $p) {
-                if ((string) ($p['id_product'] ?? '') !== $cle) { continue; }
-                $val = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
-                if (!empty($p['product_name'])) { $out['libelle'] = (string) $p['product_name']; }
-                break;
-            }
-            if ($val === null && $r) { $vide = 'référence non vendue sur la période'; }
+            $v = analyseVentes($b['du'], $au);
+            $out['source'] = $out['source'] ?? '/shops/{id}/products/waste (réseau)';
+            if (isset($v[$cle])) {
+                $val = $v[$cle]['vendu'];
+                $out['libelle'] = $v[$cle]['nom'];
+            } elseif ($v) { $vide = 'référence non vendue sur la période'; }
         }
         $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $au,
             'valeur' => $val, 'enCours' => $encours,
@@ -1190,16 +1187,54 @@ function analyseMois(string $du, string $au): array
     return $out;
 }
 
-/** Boutique servant de laissez-passer aux routes réseau (cf. analyseOptions). */
-function analyseShop(): int
+/** Boutiques du réseau, via l'API. La première sert de laissez-passer aux
+ *  routes réseau, qui exigent un `shop_id` sans pour autant filtrer dessus. */
+function analyseShops(): array
 {
-    static $id = null;
-    if ($id !== null) { return $id; }
+    static $ids = null;
+    if ($ids !== null) { return $ids; }
+    $ids = [];
     foreach (analyseListe(PanelApi::consultantShops()) as $s) {
         $v = (int) ($s['id'] ?? $s['id_shop'] ?? $s['shop_id'] ?? 0);
-        if ($v > 0) { return $id = $v; }
+        if ($v > 0) { $ids[] = $v; }
     }
-    return $id = 2;
+    return $ids = $ids ?: [2];
+}
+
+function analyseShop(): int { return analyseShops()[0]; }
+
+/**
+ * Ventes d'une période par référence, vues sur TOUT le réseau.
+ *
+ * `/shops/{id}/products/waste` ne liste que les références suivies par la
+ * boutique interrogée : s'en tenir à une seule amputait le sélecteur (45
+ * références sur des centaines) et trouait les séries dès qu'un magasin ne
+ * portait pas l'article. Les boutiques sont donc interrogées ensemble.
+ *
+ * `sold_qty` y est une valeur RÉSEAU, rendue à l'identique par chaque
+ * boutique — d'où le maximum et non la somme : additionner multiplierait les
+ * ventes par le nombre de magasins, et le chiffre resterait crédible.
+ */
+function analyseVentes(string $du, string $au): array
+{
+    $req = [];
+    foreach (analyseShops() as $i => $sid) {
+        $req[$i] = '/shops/' . $sid . '/products/waste?'
+            . http_build_query(['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
+    }
+    $par = [];
+    foreach (PanelApi::getParallele($req) as $r) {
+        $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
+        foreach ($lignes as $p) {
+            $pid = trim((string) ($p['id_product'] ?? ''));
+            if ($pid === '' || $pid === '0') { continue; }
+            $v = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
+            if ($v === null) { continue; }
+            $nom = (string) ($p['product_name'] ?? $p['name'] ?? $pid);
+            if (!isset($par[$pid]) || $v > $par[$pid]['vendu']) { $par[$pid] = ['nom' => $nom, 'vendu' => $v]; }
+        }
+    }
+    return $par;
 }
 
 /**
@@ -1239,16 +1274,13 @@ function ep_produits_analyse_options(): array
     arsort($cats);
     foreach ($cats as $nom => $ca) { $out['categories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($ca, 2)]; }
 
-    // Les références viennent de la route qui les mesurera : mêmes identifiants,
-    // donc aucune sélection ne peut retomber dans le vide. Triées par volume :
-    // sur des centaines de lignes, l'ordre alphabétique suppose de connaître le
-    // nom exact avant même de pouvoir chercher.
+    // Les références viennent de la route qui les mesurera : mêmes identifiants
+    // et même agrégation réseau, donc aucune sélection ne peut retomber dans le
+    // vide. Triées par volume : sur des centaines de lignes, l'ordre
+    // alphabétique suppose de connaître le nom exact avant de pouvoir chercher.
     $prods = [];
-    foreach (PanelApi::shopWaste(analyseShop(), $du, $au) as $p) {
-        $pid = trim((string) ($p['id_product'] ?? ''));
-        if ($pid === '' || $pid === '0') { continue; }
-        $prods[] = ['cle' => $pid, 'nom' => (string) ($p['product_name'] ?? $p['name'] ?? $pid),
-            'poids' => (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0)];
+    foreach (analyseVentes($du, $au) as $pid => $p) {
+        $prods[] = ['cle' => (string) $pid, 'nom' => $p['nom'], 'poids' => (float) $p['vendu']];
     }
     usort($prods, fn($a, $b) => $b['poids'] <=> $a['poids']);
     $out['produits'] = $prods;

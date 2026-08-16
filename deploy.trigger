@@ -1,6 +1,6 @@
-Trimestre et annee par categorie : additionner des mois, mais en parallele.
+References : le selecteur voit tout le reseau, plus une seule boutique.
 
-category-sales repond en moins d une seconde sur un mois et EXPIRE sur un
-trimestre. Un point large se reconstitue donc en additionnant ses mois — en
-serie, douze mois font douze allers-retours et l ecran devient inutilisable.
-Ces appels etant independants, ils partent ensemble.
+/shops/{id}/products/waste ne liste que les references suivies par la boutique
+interrogee : s en tenir a une seule amputait le selecteur (45 references) et
+trouait les series des qu un magasin ne portait pas l article. Les boutiques
+sont desormais interrogees ensemble, en une seule volee.
