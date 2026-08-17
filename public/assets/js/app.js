@@ -4339,12 +4339,18 @@ class App {
           bPrev: maxi > 0 ? 100 * x.prev / maxi : 0,
           bReel: maxi > 0 ? 100 * x.reel / maxi : 0,
         })),
-        totFonds: this.fE(totF), totPrev: this.fE(totP), totReel: this.fE(totR),
-        // Ce que le calendrier NE PORTE PAS, dit chiffre en main.
+        totFonds: totF ? this.fE(totF) : '—',
+        totPrev: totP ? this.fE(totP) : '—',
+        totReel: totR ? this.fE(totR) : '—',
+        // Ce que le calendrier NE PORTE PAS, dit chiffre en main. Un poste de
+        // coût à zéro n'est pas un poste absent : la phrase distingue les deux,
+        // sinon on chercherait une saisie qui existe déjà.
         horsCal: (T.engage > 0 || T.conso > 0)
           ? 'Hors calendrier : ' + this.fE(T.engage) + ' engagés et ' + this.fE(T.conso)
             + ' consommés sur les postes de coût, qui ne portent pas de date.'
-          : 'Aucun poste de coût saisi sur les projets.',
+          : (lignes.some(l => ((l.p.couts || []).length))
+            ? 'Les postes de coût des projets sont tous à zéro : rien à placer sur le calendrier.'
+            : 'Aucun poste de coût saisi sur les projets.'),
         sansDate: sansDate > 0 ? this.fE(sansDate) + ' de budget de tâches sans échéance ni date de réalisation.' : '',
         vidTaches: datees === 0,
         note: 'Aucun champ ne rattache un mouvement du fonds à un projet : les deux séries se lisent '
