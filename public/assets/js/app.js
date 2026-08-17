@@ -74,6 +74,7 @@ class App {
       DP: fn => fn ? `data-dp="${this.reg(fn)}"` : '',
       EN: fn => fn ? `data-en="${this.reg(fn)}"` : '',
       SB: fn => fn ? `data-sb="${this.reg(fn)}"` : '',
+      PD: fn => fn ? `data-pd="${this.reg(fn)}"` : '',
       esc: escHtml
     };
     const common = this.renderVals();
@@ -117,6 +118,10 @@ class App {
       if (el){ const fn = this._h[+el.getAttribute('data-i')]; if (fn) fn(e); }
     });
     this.root.addEventListener('submit', e => { e.preventDefault(); run('data-sb', e); });
+    // Tracé d'un repère sur une photo : le geste se suit à la souris ET au
+    // doigt, d'où pointerdown plutôt que mousedown — les consultants annotent
+    // sur tablette en boutique.
+    this.root.addEventListener('pointerdown', e => run('data-pd', e));
     this.root.addEventListener('dragstart', e => run('data-ds', e));
     this.root.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('[data-dp]')) e.preventDefault(); });
     this.root.addEventListener('drop', e => run('data-dp', e));
@@ -2410,12 +2415,168 @@ class App {
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
   ctrlOpenTask(shopId, taskId, date, tacheNom){
-    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false } });
+    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
       .then(d => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === taskId)
         ? { ctrlDet: Object.assign({}, s.ctrlDet, { chargement: false, d: d || null,
-            note: (d && d.avis && d.avis.note) || null, comment: (d && d.avis && d.avis.comment) || '' }) }
+            note: (d && d.avis && d.avis.note) || null, comment: (d && d.avis && d.avis.comment) || '',
+            // Repères déjà posés : ils reviennent avec le détail, on ne les
+            // relit pas dans un second appel.
+            rep: ((d && d.reperes) || {}).liste || [] }) }
         : {}));
+  }
+
+  /* --- repères sur la photo : cadre numéroté + gravité ------------------------ */
+
+  /** Le barème de gravité, tel que le porte le réglage partagé. */
+  zNiveaux(){
+    const l = ((this.M || {}).SIGNAL || {}).niveaux || [];
+    return l.length ? l : [{ n: 3, nom: 'Non conforme — mineur', couleur: '#D97706' }];
+  }
+  zNiveau(n){
+    const l = this.zNiveaux();
+    return l.find(v => v.n === n) || l.find(v => v.n === 3) || l[0];
+  }
+  /**
+   * Épaisseur et style du cadre selon la gravité.
+   *
+   * La couleur seule ne suffit pas : « majeur » (#C0182B) et « critique »
+   * (#8D1D2C) sont deux rouges voisins, indiscernables sur une photo sombre et
+   * pour une part des daltoniens. La FORME porte donc la même information —
+   * plus épais quand c'est plus grave, doublé quand c'est critique.
+   */
+  zTrait(n){
+    if (n <= 1) { return { w: 4, dbl: true, dash: '' }; }
+    if (n === 2) { return { w: 4, dbl: false, dash: '' }; }
+    if (n === 3) { return { w: 3, dbl: false, dash: '' }; }
+    return { w: 2, dbl: false, dash: '5 4' };     // conforme / exemplaire : constat
+  }
+  zOpen(){
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet,
+      { zoom: true, zSel: null, zCompare: false, zBusy: false, zSaved: false }) }));
+  }
+  zClose(){
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { zoom: false, zSel: null }) }));
+  }
+  zPatch(patch){
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, patch) }));
+  }
+  /**
+   * Pose un repère : on glisse sur la zone, le cadre suit le doigt.
+   *
+   * L'aperçu est dessiné DIRECTEMENT dans le DOM pendant le geste. Passer par
+   * l'état à chaque pointermove relancerait le rendu complet de l'écran
+   * plusieurs fois par seconde ; le cadre est donc un élément vivant, et l'état
+   * n'est touché qu'au relâchement — un seul rendu par repère.
+   */
+  zDown(ev){
+    const surf = ev.target.closest ? ev.target.closest('[data-zsurf]') : null;
+    if (!surf) { return; }
+    // Un clic SUR un repère existant le sélectionne — il n'en pose pas un
+    // second par-dessus. Sans ce garde-fou, corriger une remarque commencerait
+    // par empiler un cadre sur celui qu'on visait.
+    if (ev.target.closest('[data-zbox]')) { return; }
+    ev.preventDefault();
+    const r = surf.getBoundingClientRect();
+    if (r.width < 20 || r.height < 20) { return; }
+    const px = c => Math.max(0, Math.min(1, (c - r.left) / r.width));
+    const py = c => Math.max(0, Math.min(1, (c - r.top) / r.height));
+    const x0 = px(ev.clientX), y0 = py(ev.clientY);
+    const niv = this.state.ctrlDet.zNiv || 3;
+    const lv = this.zNiveau(niv), tr = this.zTrait(niv);
+
+    const vue = document.createElement('div');
+    vue.style.cssText = 'position:absolute;pointer-events:none;border-radius:5px;box-sizing:border-box;'
+      + 'border:' + tr.w + 'px solid ' + lv.couleur + ';outline:2px solid rgba(255,255,255,0.85);outline-offset:0';
+    surf.appendChild(vue);
+
+    let x1 = x0, y1 = y0;
+    const bouge = e => {
+      x1 = px(e.clientX); y1 = py(e.clientY);
+      vue.style.left = (Math.min(x0, x1) * 100) + '%';
+      vue.style.top = (Math.min(y0, y1) * 100) + '%';
+      vue.style.width = (Math.abs(x1 - x0) * 100) + '%';
+      vue.style.height = (Math.abs(y1 - y0) * 100) + '%';
+    };
+    bouge(ev);
+    const fini = () => {
+      window.removeEventListener('pointermove', bouge);
+      window.removeEventListener('pointerup', fini);
+      window.removeEventListener('pointercancel', fini);
+      if (vue.parentNode) { vue.parentNode.removeChild(vue); }
+      // Un clic sec pose un cadre par défaut : viser au pixel n'est pas
+      // toujours possible au doigt, et un cadre de zéro n'indiquerait rien.
+      let x = Math.min(x0, x1), y = Math.min(y0, y1);
+      let l = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
+      if (l < 0.03 || h < 0.03) {
+        l = Math.max(l, 0.12); h = Math.max(h, 0.12);
+        x = Math.max(0, Math.min(1 - l, x0 - l / 2));
+        y = Math.max(0, Math.min(1 - h, y0 - h / 2));
+      }
+      l = Math.min(l, 1 - x); h = Math.min(h, 1 - y);
+      this.setState(s => {
+        const rep = ((s.ctrlDet || {}).rep || []).slice();
+        rep.push({ n: rep.length + 1, x: +x.toFixed(4), y: +y.toFixed(4),
+          l: +l.toFixed(4), h: +h.toFixed(4), niveau: niv, txt: '' });
+        return { ctrlDet: Object.assign({}, s.ctrlDet, { rep, zSel: rep.length - 1, zSaved: false }) };
+      });
+      // Le commentaire du repère s'ouvre focalisé : poser un cadre sans dire
+      // pourquoi ne sert à rien, autant enchaîner sans chercher le champ.
+      setTimeout(() => { const t = document.getElementById('zrep-txt'); if (t) { t.focus(); } }, 0);
+    };
+    window.addEventListener('pointermove', bouge);
+    window.addEventListener('pointerup', fini);
+    window.addEventListener('pointercancel', fini);
+  }
+  zRepSet(i, champ, val){
+    this.setState(s => {
+      const rep = ((s.ctrlDet || {}).rep || []).slice();
+      if (!rep[i]) { return {}; }
+      rep[i] = Object.assign({}, rep[i], { [champ]: val });
+      return { ctrlDet: Object.assign({}, s.ctrlDet, { rep, zSaved: false }) };
+    });
+  }
+  /** Supprime un repère — et RENUMÉROTE : un 1, 3, 4 ne se lit pas. */
+  zRepDel(i){
+    this.setState(s => {
+      const rep = ((s.ctrlDet || {}).rep || []).filter((_, k) => k !== i)
+        .map((r, k) => Object.assign({}, r, { n: k + 1 }));
+      const sel = (s.ctrlDet || {}).zSel;
+      return { ctrlDet: Object.assign({}, s.ctrlDet,
+        { rep, zSaved: false, zSel: sel == null ? null : (sel === i ? null : (sel > i ? sel - 1 : sel)) }) };
+    });
+  }
+  /**
+   * Compose le commentaire au franchisé depuis les repères.
+   *
+   * Chaque ligne porte son numéro et sa gravité : le magasin lit « 2. majeur »
+   * en face du cadre 2 sur la photo. Le texte reste modifiable ensuite — c'est
+   * une composition, pas un verrou. Un commentaire déjà écrit n'est jamais
+   * écrasé sans être proposé : on l'ajoute en dessous.
+   */
+  zCompose(){
+    const dt = this.state.ctrlDet || {};
+    const rep = (dt.rep || []).filter(r => String(r.txt || '').trim());
+    if (!rep.length) { this.notify('Aucun repère commenté à reprendre.'); return; }
+    const court = nom => String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, '').toLowerCase();
+    const lignes = rep.map(r => r.n + '. [' + court((this.zNiveau(r.niveau) || {}).nom) + '] ' + String(r.txt).trim());
+    const dej = String(dt.comment || '').trim();
+    const txt = lignes.join('\n');
+    this.zPatch({ comment: dej && dej !== txt ? dej + '\n' + txt : txt });
+    this.notify(rep.length + ' repère(s) reportés dans le commentaire');
+  }
+  /** Enregistre les repères. Une liste vide efface — c'est « tout effacer ». */
+  zSave(){
+    const dt = this.state.ctrlDet;
+    if (!dt || dt.zBusy) { return; }
+    this.zPatch({ zBusy: true });
+    this.api('PUT', '/pwa/tasks/annotation', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
+      reperes: (dt.rep || []).map(r => ({ x: r.x, y: r.y, l: r.l, h: r.h, niveau: r.niveau, txt: r.txt })) })
+      .then(r => {
+        if (!r || r.ok === false) { this.zPatch({ zBusy: false }); return; }
+        this.zPatch({ zBusy: false, zSaved: true });
+        this.notify((dt.rep || []).length ? (dt.rep || []).length + ' repère(s) enregistrés' : 'Repères effacés');
+      });
   }
   ctrlSendNote(){
     const dt = this.state.ctrlDet;
@@ -2598,8 +2759,95 @@ class App {
           return { ctrlDet: Object.assign({}, s2.ctrlDet, {
             note: p.niveau != null ? p.niveau : (s2.ctrlDet || {}).note,
             comment: dej ? dej : (p.commentaire || '') }) }; }),
+        // Repères : l'agrandissement de la photo EST l'écran d'annotation.
+        zoomGo: d.photo ? () => this.zOpen() : null,
+        nRep: (dt.rep || []).length,
       };
-    } else { common.ctrlDet = false; }
+      common.ctrlZoom = dt.zoom && d.photo ? this.valsCtrlZoom(dt, d) : false;
+    } else { common.ctrlDet = false; common.ctrlZoom = false; }
+  }
+
+  /** L'agrandissement annotable : cadres numérotés + liste des remarques. */
+  valsCtrlZoom(dt, d){
+    const rep = dt.rep || [];
+    const sel = dt.zSel;
+    const nivCourant = dt.zNiv || 3;
+    const court = nom => String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, '');
+    return {
+      nom: d.tache || dt.nom || ('Tâche #' + dt.taskId),
+      sous: [d.checklist || '', this.fDA(dt.date), (d.avis && d.avis.consultant) ? 'rendue par ' + d.avis.consultant : '']
+        .filter(Boolean).join(' · '),
+      photo: d.photo,
+      close: () => this.zClose(),
+      down: e => this.zDown(e),
+      n: rep.length,
+      busy: !!dt.zBusy, saved: !!dt.zSaved,
+      // Gravité du PROCHAIN repère : on choisit avant de poser, comme on
+      // choisit un feutre avant de tracer.
+      niveaux: this.zNiveaux().map(lv => ({
+        n: lv.n, nom: court(lv.nom), couleur: lv.couleur, on: lv.n === nivCourant,
+        pick: () => this.zPatch({ zNiv: lv.n })
+      })),
+      // Les cadres, dessinés en pourcentage de la photo : le rendu suit la
+      // taille d'affichage sans que les coordonnées ne bougent.
+      cadres: rep.map((r, i) => { const lv = this.zNiveau(r.niveau) || {}, tr = this.zTrait(r.niveau);
+        const actif = sel === i;
+        return { n: r.n, couleur: lv.couleur || '#D97706',
+          boxSt: 'position:absolute;box-sizing:border-box;border-radius:5px;cursor:pointer;'
+            + 'left:' + (r.x * 100) + '%;top:' + (r.y * 100) + '%;'
+            + 'width:' + (r.l * 100) + '%;height:' + (r.h * 100) + '%;'
+            + 'border:' + tr.w + 'px ' + (tr.dash ? 'dashed' : 'solid') + ' ' + (lv.couleur || '#D97706') + ';'
+            + 'outline:2px solid rgba(255,255,255,' + (actif ? '1' : '0.8') + ');outline-offset:0;'
+            + (tr.dbl ? 'box-shadow:inset 0 0 0 3px rgba(255,255,255,0.9), inset 0 0 0 6px ' + (lv.couleur || '#D97706') + ';' : '')
+            + (actif ? 'z-index:3' : ''),
+          badgeSt: 'position:absolute;left:-3px;top:-15px;min-width:22px;height:22px;padding:0 5px;border-radius:6px;'
+            + 'display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:13px;'
+            + 'font-weight:600;color:#fff;background:' + (lv.couleur || '#D97706')
+            + ';border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.35)',
+          xSt: 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:24px;line-height:1;'
+            + 'font-weight:600;color:' + (lv.couleur || '#D97706')
+            + ';text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff;pointer-events:none',
+          pick: () => this.zPatch({ zSel: i })
+        }; }),
+      lignes: rep.map((r, i) => { const lv = this.zNiveau(r.niveau) || {};
+        return { n: r.n, txt: r.txt || '', actif: sel === i,
+          niveauNom: court(lv.nom), couleur: lv.couleur || '#D97706',
+          vide: !String(r.txt || '').trim(),
+          pastilleSt: 'flex:0 0 auto;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;'
+            + 'justify-content:center;font-size:12px;font-weight:600;color:#fff;background:' + (lv.couleur || '#D97706'),
+          rowSt: 'display:flex;gap:9px;padding:10px 13px;border-bottom:0.5px solid var(--color-border-tertiary);'
+            + 'align-items:flex-start;cursor:pointer;'
+            + (sel === i ? 'background:rgba(141,29,44,0.045);box-shadow:inset 3px 0 0 var(--color-primary)' : ''),
+          pick: () => this.zPatch({ zSel: i }),
+          setTxt: e => this.zRepSet(i, 'txt', e.target.value),
+          niveaux: this.zNiveaux().map(lv2 => ({ n: lv2.n, nom: court(lv2.nom), couleur: lv2.couleur,
+            on: lv2.n === r.niveau, pick: () => this.zRepSet(i, 'niveau', lv2.n) })),
+          del: () => this.zRepDel(i) }; }),
+      // Récapitulatif par gravité : « 1 majeur, 2 mineurs » se lit d'un coup
+      // d'œil et prépare la note.
+      bilan: this.zNiveaux().map(lv => ({ nom: court(lv.nom), couleur: lv.couleur,
+        n: rep.filter(r => r.niveau === lv.n).length }))
+        .filter(b => b.n > 0),
+      undo: rep.length ? () => this.zRepDel(rep.length - 1) : null,
+      clear: rep.length ? () => this.zPatch({ rep: [], zSel: null, zSaved: false }) : null,
+      save: () => this.zSave(),
+      compose: rep.some(r => String(r.txt || '').trim()) ? () => this.zCompose() : null,
+      // Option « comparer » : la photo de référence en face. Elle n'existe pas
+      // encore côté panel — l'écran le dit au lieu de laisser un cadre noir.
+      compare: !!dt.zCompare,
+      compareGo: () => this.zPatch({ zCompare: !dt.zCompare }),
+      photoRef: d.photoRef || null,
+      produit: d.produit || '',
+      refManque: !d.photoRef,
+      refTxt: d.produitId
+        ? 'La fiche technique de ce produit ne porte pas de visuel dans le panel.'
+        : 'Cette tâche ne porte pas sur un produit précis, et aucune route du panel n’expose de photo de référence par emplacement de comptoir.',
+      refBesoin: 'Donnée à obtenir : une image de référence par produit ou par emplacement de comptoir '
+        + '(champ photoRef du détail de tâche — rend null aujourd’hui).',
+      envoiBesoin: 'Les repères restent dans le cockpit : /consultant/shops/{id}/task-reviews n’accepte que '
+        + 'note, conformité et commentaire, sans pièce jointe. Reportez-les dans le commentaire pour que '
+        + 'le franchisé les reçoive.'
+    };
   }
 
   /** CA du mois en cours par magasin — via l'API, une seule fois. */

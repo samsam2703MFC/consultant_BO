@@ -285,6 +285,44 @@ function wr_pwa_task_review(): array
     return ['ok' => true, 'note' => $note, 'accepte' => $accepte];
 }
 
+/**
+ * PUT /pwa/tasks/annotation — les repères posés sur une photo de contrôle.
+ *
+ * L'écriture est un REMPLACEMENT complet de la liste : le navigateur tient
+ * l'ordre et la numérotation à l'écran, un patch repère par repère ferait
+ * diverger les deux à la première suppression.
+ *
+ * Une liste vide EFFACE les repères — c'est le « tout effacer » de l'écran, et
+ * garder une ligne à zéro laisserait un « annoté » trompeur sur la tâche.
+ */
+function wr_pwa_annotation(): array
+{
+    $b = body();
+    $shopId = (int) ($b['shopId'] ?? 0);
+    $taskId = (int) ($b['taskId'] ?? 0);
+    $date   = (string) ($b['date'] ?? '');
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shopId, taskId et date (YYYY-MM-DD) sont requis'];
+    }
+    $liste = annotationNormalise(is_array($b['reperes'] ?? null) ? $b['reperes'] : []);
+
+    $u = setting('utilisateur', []);
+    $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+    $now = date('Y-m-d H:i:s');
+
+    if (!$liste) {
+        Db::exec('DELETE FROM ceo_task_annotation WHERE id_shop = ? AND id_task = ? AND annot_date = ?',
+            [$shopId, $taskId, $date]);
+        return ['ok' => true, 'n' => 0];
+    }
+    Db::exec('INSERT INTO ceo_task_annotation (id_shop, id_task, annot_date, reperes, auteur, maj_le)'
+        . ' VALUES (?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE reperes = VALUES(reperes), auteur = VALUES(auteur), maj_le = VALUES(maj_le)',
+        [$shopId, $taskId, $date, json_encode($liste, JSON_UNESCAPED_UNICODE), $auteur, $now]);
+    return ['ok' => true, 'n' => count($liste), 'maj' => $now, 'auteur' => $auteur];
+}
+
 /** PATCH /projects/{id} — statut et/ou famille. */
 function wr_project_patch(string $id): array
 {

@@ -2450,6 +2450,9 @@ function ep_pwa_task_detail(): array
         // Référence : la photo de la fiche technique du produit contrôlé, pour
         // juger par COMPARAISON. Rapprochée par identifiant seul (jamais le nom).
         'produitId' => null, 'produit' => null, 'photoRef' => null,
+        // Repères posés sur la photo. Lus AVANT l'API : ils sont locaux, ils
+        // doivent revenir même si le panel ne répond pas.
+        'reperes' => annotationLire($shopId, $taskId, $date),
         'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
 
     if (!PanelApi::configured()) {
@@ -2504,6 +2507,89 @@ function ep_pwa_task_detail(): array
     }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;
+}
+
+/**
+ * Repères d'une photo de contrôle : lecture.
+ *
+ * Rend toujours une forme exploitable — liste vide et `maj` nul quand rien n'a
+ * été posé — pour que l'écran n'ait pas à distinguer « pas de repère » de
+ * « table absente ».
+ */
+function annotationLire(int $shopId, int $taskId, string $date): array
+{
+    $out = ['liste' => [], 'maj' => null, 'auteur' => null];
+    try {
+        $r = Db::row('SELECT reperes, auteur, maj_le FROM ceo_task_annotation'
+            . ' WHERE id_shop = ? AND id_task = ? AND annot_date = ?', [$shopId, $taskId, $date]);
+    } catch (PDOException $e) { return $out; }
+    if ($r === null) { return $out; }
+    $j = json_decode((string) $r['reperes'], true);
+    $out['liste']  = annotationNormalise(is_array($j) ? $j : []);
+    $out['maj']    = $r['maj_le'];
+    $out['auteur'] = $r['auteur'] !== '' ? $r['auteur'] : null;
+    return $out;
+}
+
+/**
+ * Normalise et BORNE une liste de repères, à l'écriture comme à la lecture.
+ *
+ * Un repère vient du navigateur : ses coordonnées, sa taille et son texte sont
+ * ramenés dans des limites tenables avant d'être gardés ou rendus. Sans cela un
+ * cadre à x = 40 sortirait de la photo sans qu'aucun écran puisse le rattraper,
+ * et un texte sans limite ferait de cette table un dépotoir.
+ *
+ * La numérotation est RECALCULÉE ici, dans l'ordre de la liste : elle ne peut
+ * donc pas se trouer ni doubler, quoi que le navigateur envoie.
+ */
+function annotationNormalise(array $liste): array
+{
+    $borne = static fn ($v) => max(0.0, min(1.0, round((float) $v, 4)));
+    // La gravité d'un repère est celle du barème DÉJÀ partagé par l'écran de
+    // validation (réglage `signalement`) : « non conforme mineur / majeur /
+    // critique » y sont nommés, avec leur couleur. Un second barème pour les
+    // repères se serait mis à diverger du premier au premier changement.
+    $echelle = [];
+    $sig = setting('signalement', []);
+    foreach ((is_array($sig) && is_array($sig['niveaux'] ?? null)) ? $sig['niveaux'] : [] as $nv) {
+        if (isset($nv['n'])) { $echelle[(int) $nv['n']] = true; }
+    }
+    $defaut = isset($echelle[3]) ? 3 : (int) (array_key_first($echelle) ?? 3);
+
+    $out = [];
+    foreach ($liste as $r) {
+        if (!is_array($r)) { continue; }
+        $x = $borne($r['x'] ?? 0);
+        $y = $borne($r['y'] ?? 0);
+        // Un cadre d'au moins 1,5 % de la photo : en dessous, le ✕ le recouvre
+        // et le repère n'indique plus rien.
+        $l = max(0.015, min(1 - $x, $borne($r['l'] ?? 0.1)));
+        $h = max(0.015, min(1 - $y, $borne($r['h'] ?? 0.1)));
+        $txt = trim((string) ($r['txt'] ?? ''));
+        if (function_exists('mb_substr')) { $txt = mb_substr($txt, 0, 400); }
+        $niv = (int) ($r['niveau'] ?? $defaut);
+        if (!isset($echelle[$niv])) { $niv = $defaut; }
+        $out[] = ['n' => count($out) + 1, 'x' => $x, 'y' => $y, 'l' => $l, 'h' => $h,
+            'niveau' => $niv, 'txt' => $txt];
+        if (count($out) >= 40) { break; }   // au-delà, la photo n'est plus lisible
+    }
+    return $out;
+}
+
+/**
+ * Ce qu'il faudrait pour que la photo annotée PARTE au franchisé.
+ *
+ * L'annotation est complète côté cockpit ; ce qui manque est le canal retour.
+ * L'écran le dit lui-même plutôt que de laisser croire que le magasin a reçu
+ * quelque chose.
+ */
+function annotationLacune(): array
+{
+    return lacune('Envoi des repères au franchisé',
+        'joindre la photo annotée à l’avis de tâche, côté panel',
+        'API panel — /consultant/shops/{id}/task-reviews n’accepte que note, conformité et commentaire ; '
+        . 'aucune route de dépôt de pièce jointe n’est exposée. À obtenir : POST d’une pièce jointe '
+        . '(image ou calque) rattachable à un task-review, ou un champ de commentaire portant les repères');
 }
 
 function ep_perf(): array
@@ -3755,6 +3841,9 @@ function ep_lacunes(): array
                 'L\'écran part de mac_task_review (notes DÉJÀ posées) ; il doit partir de /consultant/shops/{id}/tasks');
         }
     } catch (PDOException $e) { /* table absente */ }
+
+    // Les repères se posent et se gardent ; c'est le canal RETOUR qui manque.
+    $out['controle'][] = annotationLacune();
 
     // --- centrale d'achat : six écrans sans source, détaillés colonne par
     //     colonne sur leurs propres écrans. Résumés ici pour la vue d'ensemble.

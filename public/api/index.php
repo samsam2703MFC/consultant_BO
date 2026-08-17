@@ -112,6 +112,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
+    if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
     if ($method === 'PUT'  && $path === '/pwa/compte') { return wr_pwa_compte(); }
     if ($method === 'POST' && $path === '/pwa/compte/test') { return wr_pwa_compte_test(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }

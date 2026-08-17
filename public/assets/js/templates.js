@@ -120,6 +120,7 @@ export function render(c, x){
   ${c.pdWaste ? tplPerteMagasins(c, x) : ''}
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
+  ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
 
@@ -2615,7 +2616,9 @@ function tplCtrlDetail(c, x){
         <div>
           <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Photo en boutique</div>
           ${d.photo
-            ? `<a href="${d.photo}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
+            ? `<button ${x.A(d.zoomGo)} title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block">
+                <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:3px 9px;border-radius:999px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
+               <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;padding:22px 12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
         </div>
         <div>
@@ -2670,6 +2673,112 @@ function tplCtrlDetail(c, x){
         ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
+    </div>
+  </div>`;
+}
+
+/* --- Photo agrandie et ANNOTABLE : cadres numérotés + liste des remarques ----
+   On glisse sur la zone, le cadre se pose avec son numéro et sa gravité, et la
+   remarque s'écrit à droite. La couleur vient du barème de conformité déjà
+   partagé (mineur / majeur / critique) : elle dit la gravité, elle ne décore
+   pas. L'épaisseur du trait la redit — deux rouges voisins ne se distinguent
+   pas sur une photo sombre. */
+function tplCtrlZoom(c, x){
+  const { esc } = x;
+  const z = c.ctrlZoom;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const tool = (on, dispo) => 'display:inline-flex;align-items:center;gap:6px;border-radius:9px;height:33px;padding:0 12px;'
+    + 'font-family:var(--font-ui);font-size:12px;font-weight:500;white-space:nowrap;'
+    + (dispo === false ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;')
+    + (on ? 'border:none;background:var(--color-primary);color:#fff'
+          : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)');
+  return `
+  <div ${x.A(z.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.66);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.34);overflow:hidden;display:flex;flex-direction:column;max-width:100%;max-height:100%">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <div>
+          <div style="${lbl}">Repères sur la photo</div>
+          <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(z.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(z.sous)}</div>
+        </div>
+        <button ${x.A(z.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
+      </div>
+
+      <div style="display:flex;min-height:0">
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <div style="background:#141110;padding:14px;display:flex;align-items:center;justify-content:center;gap:12px;min-height:0">
+            <!-- data-zsurf : la surface de tracé. Les cadres sont positionnés en
+                 POURCENTAGE d'elle, jamais en pixels — la photo peut être
+                 affichée à n'importe quelle taille. -->
+            <div ${x.PD(z.down)} data-zsurf style="position:relative;display:inline-block;line-height:0;touch-action:none;cursor:crosshair;flex:0 1 auto">
+              <img src="${z.photo}" alt="Photo de réalisation" style="display:block;max-width:100%;max-height:70vh;border-radius:2px">
+              ${z.cadres.map(k => `<div ${x.A(k.pick)} data-zbox style="${k.boxSt}">
+                <span style="${k.badgeSt}">${k.n}</span>
+                <span style="${k.xSt}">✕</span>
+              </div>`).join('')}
+            </div>
+            ${z.compare ? `<div style="flex:0 1 auto;align-self:stretch;display:flex;flex-direction:column;gap:6px;min-width:240px;max-width:46%">
+              <div style="${lbl};color:#c9bfb8">Référence attendue${z.produit ? ' — ' + esc(z.produit) : ''}</div>
+              ${z.refManque
+                ? `<div style="flex:1;background:#211c1a;border-radius:8px;padding:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px">
+                    <span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>
+                    <div style="font-size:12px;color:#c9bfb8;line-height:1.55;max-width:290px">${esc(z.refTxt)}</div>
+                    <div style="font-size:11px;color:#8f857e;line-height:1.5;max-width:290px">${esc(z.refBesoin)}</div>
+                  </div>`
+                : `<img src="${z.photoRef}" alt="Photo de référence" style="display:block;max-width:100%;max-height:70vh;border-radius:2px">`}
+            </div>` : ''}
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
+            <span style="${lbl}">Gravité du prochain repère</span>
+            ${z.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:29px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
+              <span style="width:10px;height:10px;border-radius:3px;background:${lv.couleur};flex:0 0 auto"></span>${esc(lv.nom)}</button>`).join('')}
+            <div style="width:1px;height:22px;background:var(--color-border-tertiary);margin:0 3px"></div>
+            <button ${x.A(z.compareGo)} style="${tool(z.compare, true)}">◫ Comparer</button>
+            <button ${x.A(z.undo)} style="${tool(false, !!z.undo)}">↶ Retirer le dernier</button>
+            <button ${x.A(z.clear)} style="${tool(false, !!z.clear)}">Tout effacer</button>
+            <div style="flex:1"></div>
+            <span style="font-size:11px;color:var(--color-text-muted)">Glissez sur la zone — le numéro s’ajoute tout seul</span>
+          </div>
+        </div>
+
+        <div style="width:310px;flex:0 0 310px;border-left:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto" data-scroll="zrep">
+          <div style="padding:11px 13px 8px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <span style="${lbl}">Repères</span>
+            <span style="font-size:11px;color:var(--color-text-muted)">${z.n}</span>
+          </div>
+          ${z.bilan.length ? `<div style="padding:9px 13px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:6px;flex-wrap:wrap">
+            ${z.bilan.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:999px;background:${b.couleur}1f;color:var(--color-text)">
+              <span style="width:8px;height:8px;border-radius:2px;background:${b.couleur}"></span>${b.n} ${esc(b.nom.toLowerCase())}</span>`).join('')}
+          </div>` : ''}
+          ${z.n === 0
+            ? `<div style="padding:22px 15px;font-size:12px;color:var(--color-text-muted);line-height:1.6">Aucun repère. Glissez un cadre sur la zone à reprendre : il prend le numéro suivant et sa remarque s’écrit ici.</div>`
+            : z.lignes.map(l => `<div ${x.A(l.pick)} style="${l.rowSt}">
+                <span style="${l.pastilleSt}">${l.n}</span>
+                <div style="flex:1;min-width:0">
+                  ${l.actif
+                    ? `<textarea id="zrep-txt" ${x.I(l.setTxt)} rows="3" placeholder="Ce qui est à reprendre, en une phrase" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 9px;font-family:var(--font-ui);font-size:11.5px;line-height:1.45;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(l.txt)}</textarea>
+                      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
+                        ${l.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 8px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
+                          <span style="width:8px;height:8px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</button>`).join('')}
+                      </div>`
+                    : `<div style="font-size:11.5px;line-height:1.45;${l.vide ? 'color:var(--color-text-muted);font-style:italic' : ''}">${l.vide ? 'Sans remarque — cliquez pour l’écrire' : esc(l.txt)}</div>
+                       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(l.niveauNom)}</div>`}
+                </div>
+                <button ${x.A(l.del)} title="Supprimer ce repère" style="border:none;background:transparent;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;flex:0 0 auto">✕</button>
+              </div>`).join('')}
+
+          <div style="padding:12px 13px;border-top:0.5px solid var(--color-border-tertiary);margin-top:auto">
+            <button ${x.A(z.compose)} style="${tool(false, !!z.compose)};width:100%;justify-content:center">Reporter dans le commentaire</button>
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(z.envoiBesoin)}</div>
+            <div style="display:flex;gap:8px;margin-top:11px">
+              <button ${x.A(z.save)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:34px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${z.busy ? 'wait' : 'pointer'};opacity:${z.busy ? '0.6' : '1'};flex:1">${z.busy ? 'Enregistrement…' : (z.saved ? 'Enregistré ✓' : 'Enregistrer les repères')}</button>
+              <button ${x.A(z.close)} style="${tool(false, true)}">Fermer</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>`;
 }

@@ -41,6 +41,30 @@ function ensureInstalled(): void
     ensureReference();
     ensureProduction();
     ensureCentrale();
+    ensureAnnotation();
+}
+
+/**
+ * Repères posés sur une photo de contrôle.
+ *
+ * Les repères sont stockés en VECTORIEL (coordonnées relatives 0..1 + texte),
+ * jamais en image aplatie. Trois raisons : la photo de la boutique n'est jamais
+ * modifiée, le repère reste modifiable et supprimable, et le rendu suit la
+ * taille d'affichage sans se pixeliser. L'aplatir en PNG imposerait en plus de
+ * relire la photo depuis son URL signée dans un canvas — ce que le navigateur
+ * refuse sans en-têtes CORS sur le stockage du panel.
+ */
+function ensureAnnotation(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_annotation ('
+        . 'id_shop INT UNSIGNED NOT NULL,'
+        . 'id_task INT UNSIGNED NOT NULL,'
+        . 'annot_date DATE NOT NULL,'
+        . 'reperes MEDIUMTEXT NULL,'
+        . 'auteur VARCHAR(190) NOT NULL DEFAULT \'\','
+        . 'maj_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
+        . 'PRIMARY KEY (id_shop, id_task, annot_date)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
 /**
