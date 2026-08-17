@@ -969,12 +969,22 @@ function wr_plano_placer(string $ref): array
 
     // Le minimum d'assortiment est le même chiffre que celui du comptoir : le
     // saisir ici évite d'ouvrir un second écran pour la même idée.
+    //
+    // Mais un minimum de ZÉRO ne rend rien obligatoire. La première version
+    // posait `must = 1` dès qu'un `qmin` était transmis — et l'écran en transmet
+    // toujours un : placer une référence la déclarait obligatoire au réseau sans
+    // que personne ne l'ait demandé. C'est le minimum qui engage, pas la place.
     if (isset($b['qmin'])) {
         $q = max(0, min(9999, (int) $b['qmin']));
         try {
-            Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, qmin, must) VALUES (?,?,?,?,1)'
-                . ' ON DUPLICATE KEY UPDATE qmin = VALUES(qmin), must = 1',
-                [$ref, mb_substr(trim((string) ($b['nom'] ?? $ref)), 0, 190), '', $q]);
+            if ($q > 0) {
+                Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, qmin, must) VALUES (?,?,?,?,1)'
+                    . ' ON DUPLICATE KEY UPDATE qmin = VALUES(qmin), must = 1',
+                    [$ref, mb_substr(trim((string) ($b['nom'] ?? $ref)), 0, 190), '', $q]);
+            } else {
+                // Zéro : on ne touche NI au drapeau, ni à une fiche inexistante.
+                Db::exec('UPDATE ceo_prod_product SET qmin = 0 WHERE ref = ?', [$ref]);
+            }
         } catch (PDOException $e) { /* fiche produit indisponible : le placement tient quand même */ }
     }
     journalAdd('CEO', 'Planogramme', $ref,
