@@ -1560,9 +1560,17 @@ function tplProjets(c, x){
   const { esc } = x;
   return `
   <div data-screen="projets" style="display:flex;flex-direction:column;gap:14px">
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <!-- Trois lectures d'un même portefeuille : où en est chaque projet, ce
+           qu'il coûte et rapporte, et ce qu'il demande à une boutique. La
+           troisième question ne se lit pas dans un kanban. -->
+      ${(c.pjVueBtns || []).map(v => `<button ${x.A(v.go)} style="border-radius:9px;height:32px;padding:0 14px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer;${v.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(v.nom)}</button>`).join('')}
+      <div style="flex:1"></div>
       <button ${x.A(c.npOpen)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouveau projet</button>
     </div>
+    ${c.pjBudgets ? tplProjetsBudgets(c, x) : ''}
+    ${c.pjFranchise ? tplProjetsFranchise(c, x) : ''}
+    ${c.pjVue !== 'kanban' ? '' : `
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start">
       ${c.kanban.map(col => `
         <div ${x.DP(col.drop)} style="background:rgba(255,255,255,0.55);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px;min-height:220px">
@@ -1614,7 +1622,127 @@ function tplProjets(c, x){
           </div>
         </div>`).join('')}
     </div>
-    <div style="font-size:12px;color:var(--color-text-muted)">Colonnes = famille de projet. Cliquez une carte pour dérouler ses étapes, cochez-les au fil de l'eau, (i) pour le détail. Glissez-déposez une carte pour changer de famille — tout est tracé dans le journal.</div>
+    <div style="font-size:12px;color:var(--color-text-muted)">Colonnes = famille de projet. Cliquez une carte pour dérouler ses étapes, cochez-les au fil de l'eau, (i) pour le détail. Glissez-déposez une carte pour changer de famille — tout est tracé dans le journal.</div>`}
+  </div>`;
+}
+
+/* --- Projets · budgets engagés et retour ------------------------------------- */
+function tplProjetsBudgets(c, x){
+  const { esc } = x;
+  const b = c.pjBudgets;
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 10px 7px';
+  const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const num = 'text-align:right;font-variant-numeric:tabular-nums';
+  return `
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+    ${b.tuiles.map(t => `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px">
+      <div style="${k}">${esc(t.k)}</div>
+      <div style="font-size:25px;font-weight:500;line-height:1.05;margin-top:3px">${esc(t.v)}</div>
+      ${t.barre != null ? `<div style="height:8px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden;margin-top:7px"><i style="display:block;height:100%;border-radius:999px;width:${t.barre.toFixed(1)}%;background:${t.col}"></i></div>` : ''}
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
+    </div>`).join('')}
+  </div>
+  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+    <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Par projet — ce qui est engagé, ce qui revient</div>
+    ${b.vide ? `<div style="padding:24px 18px;font-size:12.5px;color:var(--color-text-muted)">Aucun projet.</div>` : `
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="${th};padding-left:18px">Projet</th>
+        <th style="${th}">Famille</th>
+        <th style="${th};${num}">Voté</th>
+        <th style="${th};${num}">Engagé</th>
+        <th style="${th};${num}">Consommé</th>
+        <th style="${th};${num}">Valeur est.</th>
+        <th style="${th};${num}">Valeur réal.</th>
+        <th style="${th};${num}">ROI</th>
+        <th style="${th};${num};padding-right:18px">Retour</th>
+      </tr></thead>
+      <tbody>${b.lignes.map(l => `<tr ${x.A(l.ouvrir)} title="Voir la fiche franchisé" style="cursor:pointer">
+        <td style="${td};padding-left:18px">
+          <span style="font-weight:500">${esc(l.nom)}</span>
+          ${l.leviers.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${l.leviers.map(lv => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>` : ''}
+        </td>
+        <td style="${td};color:var(--color-text-muted)">${esc(l.famille)}<div style="font-size:10.5px">${esc(l.statut)}</div></td>
+        <td style="${td};${num}">${esc(l.vote)}</td>
+        <td style="${td};${num}">${esc(l.engage)}</td>
+        <td style="${td};${num}">${esc(l.conso)}</td>
+        <td style="${td};${num};color:var(--color-text-muted)">${esc(l.est)}</td>
+        <td style="${td};${num}">${esc(l.real)}</td>
+        <td style="${td};${num};color:${l.roiCol};font-weight:500">${esc(l.roi)}${l.roiEstime ? `<div style="font-size:10px;font-weight:400;color:var(--color-text-muted)">estimé</div>` : ''}</td>
+        <td style="${td};${num};padding-right:18px">${esc(l.retour)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`}
+  </div>
+  <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">« Engagé » = le prévu des postes de coût, « consommé » = leur réel. Le ROI se lit sur la valeur RÉALISÉE ; tant qu’elle manque, la colonne rend l’estimation et le dit. Le retour n’est calculé qu’avec au moins un mois écoulé — extrapoler un mois sur douze annoncerait un retour que personne n’a observé.${b.note ? ' ' + esc(b.note) : ''}</div>`;
+}
+
+/* --- Projets · la fiche que lit un franchisé --------------------------------- */
+function tplProjetsFranchise(c, x){
+  const { esc } = x;
+  const f = c.pjFranchise;
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px';
+  if (f.vide) {
+    return `<div style="${carte};font-size:12.5px;color:var(--color-text-muted)">Aucun projet à présenter.</div>`;
+  }
+  return `
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    ${f.choix.map(o => `<button ${x.A(o.go)} style="border-radius:999px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.nom)}</button>`).join('')}
+  </div>
+
+  <div style="${carte}">
+    <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:22px">
+      <div>
+        <div style="${k}">Ce que ce projet développe</div>
+        ${f.leviers.length
+          ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">${f.leviers.map(lv => `<span title="${esc(lv.desc)}" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 11px;border-radius:999px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:9px;height:9px;border-radius:3px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>
+             ${f.leviers[0].desc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">${esc(f.leviers[0].desc)}</div>` : ''}`
+          : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Aucun levier choisi sur ce projet.</div>`}
+      </div>
+      <div>
+        <div style="${k}">Ce qui est recherché</div>
+        ${f.kpisVide
+          ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">Aucun indicateur choisi. Sans lui, on saura que le projet est fini, pas s’il a marché.</div>`
+          : `<div style="display:flex;flex-direction:column;gap:5px;margin-top:8px">${f.kpis.map(kp => `<div style="font-size:12.5px">${esc(kp)}</div>`).join('')}</div>
+             <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Aucune cible chiffrée n’est enregistrée — l’inventer donnerait un objectif que personne n’a fixé.</div>`}
+      </div>
+      <div>
+        <div style="${k}">Pourquoi ce projet</div>
+        <div style="font-size:12.5px;line-height:1.55;margin-top:8px">${f.pourquoi ? esc(f.pourquoi) : '<span style="color:var(--color-text-muted)">Rien n’est écrit sur ce que le projet doit apporter.</span>'}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">${esc(f.famille)} · ${esc(f.statut)} · ${esc(f.periode)}</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+    ${f.tuiles.map(t => `<div style="${carte}">
+      <div style="${k}">${esc(t.k)}</div>
+      <div style="font-size:24px;font-weight:500;line-height:1.05;margin-top:3px${t.vert ? ';color:#2d7a3e' : ''}">${esc(t.v)}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
+    </div>`).join('')}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:12px;align-items:start">
+    <div style="${carte}">
+      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Ce qui attend la boutique</div>
+      ${f.etapesVide
+        ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucun jalon ni tâche sur ce projet.</div>`
+        : f.etapes.map(e => `<div style="display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)">
+            <span style="flex:0 0 auto;width:9px;height:9px;border-radius:999px;margin-top:5px;background:${e.fait ? '#2d7a3e' : 'var(--color-border-secondary)'}"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;${e.fait ? 'color:var(--color-text-muted)' : 'font-weight:500'}">${esc(e.nom)}${e.fait ? ' — fait' : ''}</div>
+              <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(e.date)}${e.tache ? ' · tâche' : ' · jalon'}</div>
+            </div>
+          </div>`).join('')}
+    </div>
+    <div style="${carte}">
+      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Ce que cette fiche ne peut pas encore dire</div>
+      ${f.manque.map(m => `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:9px">
+        <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque</span>
+        <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b><div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
+      </div>`).join('')}
+    </div>
   </div>`;
 }
 

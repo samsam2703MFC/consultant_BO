@@ -4044,8 +4044,158 @@ class App {
             ia: r || { motif: 'assistance injoignable' } }) } : {}));
   }
   /* --- projets (kanban) ---------------------------------------------------------- */
+  /**
+   * Trois lectures d'un même portefeuille de projets.
+   *
+   * Le kanban dit OÙ en est chaque projet. La vue budgets dit ce qu'il coûte et
+   * ce qu'il rapporte — la question de la direction. La fiche franchisé dit ce
+   * que le projet demande et apporte À UNE BOUTIQUE, ce qui n'est pas la même
+   * question et ne se lit pas dans un kanban.
+   *
+   * Les trois lisent la MÊME donnée : rien n'est recalculé d'un onglet à
+   * l'autre, sinon deux chiffres finiraient par se contredire à l'écran.
+   */
+  valsProjetsVues(common, projEff){
+    const S = this.state, D = this.D, M = this.M;
+    const vue = ['budgets', 'franchise'].indexOf(S.pjVue) >= 0 ? S.pjVue : 'kanban';
+    common.pjVue = vue;
+    common.pjVueBtns = [['kanban', 'Kanban'], ['budgets', 'Budgets & ROI'], ['franchise', 'Vue franchisé']]
+      .map(([v, nom]) => ({ nom, on: vue === v, go: () => this.setState({ pjVue: v }) }));
+    if (vue === 'kanban') { common.pjBudgets = false; common.pjFranchise = false; return; }
+
+    const nbMag = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
+    const som = (arr, k) => (arr || []).reduce((a, c) => a + (+c[k] || 0), 0);
+    const mois = (a, b) => {
+      if (!a || !b) { return 0; }
+      const d1 = new Date(a), d2 = new Date(b);
+      return Math.max(0, (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth()));
+    };
+    const aujourdhui = (M && M.TODAY) || new Date().toISOString().slice(0, 10);
+
+    // Un projet, ses chiffres. Le prévu des postes de coût EST l'engagement ;
+    // le réel est ce qui est sorti. On ne déduit pas l'engagé des tâches
+    // livrées : une tâche livrée sans budget saisi vaudrait alors zéro.
+    const lignes = projEff.map(p => {
+      const vote = +p.budget || 0;
+      const engage = som(p.couts, 'prevu');
+      const conso = som(p.couts, 'reel');
+      const est = p.valeurEst == null ? null : +p.valeurEst;
+      const real = p.valeurReal == null ? null : +p.valeurReal;
+      const roi = (real != null && conso > 0) ? real / conso : null;
+      const roiEst = (est != null && (engage > 0 || vote > 0)) ? est / (engage || vote) : null;
+      const ecoules = mois(p.debut, aujourdhui);
+      // Le retour ne se calcule QUE sur du réalisé, et seulement si assez de
+      // temps a passé : extrapoler un mois de valeur sur douze annoncerait un
+      // retour qui n'a pas été observé.
+      const retour = (real != null && real > 0 && conso > 0 && ecoules >= 1)
+        ? Math.round(conso / (real / ecoules)) : null;
+      return { id: p.id, nom: p.nom, famille: this.pFamille(p), statut: this.pStatut(p),
+        leviers: p.leviers || [], kpis: p.kpis || [], valeurTxt: p.valeurTxt || '',
+        debut: p.debut, fin: p.fin, jalons: p.jalons || [], taches: p.taches || [],
+        vote, engage, conso, est, real, roi, roiEst, retour, ecoules, p };
+    });
+
+    if (vue === 'budgets') {
+      const T = { vote: 0, engage: 0, conso: 0, real: 0 };
+      lignes.forEach(l => { T.vote += l.vote; T.engage += l.engage; T.conso += l.conso; T.real += (l.real || 0); });
+      const pct = (a, b) => b > 0 ? Math.max(0, Math.min(100, 100 * a / b)) : 0;
+      common.pjBudgets = {
+        tuiles: [
+          { k: 'Budget voté', v: this.fE(T.vote), aide: lignes.length + ' projet(s)' },
+          { k: 'Engagé', v: this.fE(T.engage), aide: T.vote > 0 ? Math.round(pct(T.engage, T.vote)) + ' % du voté' : 'aucun budget voté',
+            barre: pct(T.engage, T.vote), col: 'var(--color-primary)' },
+          { k: 'Consommé', v: this.fE(T.conso), aide: T.vote > 0 ? 'reste ' + this.fE(Math.max(0, T.vote - T.conso)) : '—',
+            barre: pct(T.conso, T.vote), col: '#c9a06a' },
+          { k: 'Valeur réalisée', v: T.real > 0 ? this.fE(T.real) : '—',
+            aide: (T.real > 0 && T.conso > 0) ? '× ' + (T.real / T.conso).toFixed(1).replace('.', ',') + ' le consommé'
+              : 'aucune valeur réalisée saisie' },
+        ],
+        lignes: lignes.map(l => ({
+          nom: l.nom, famille: l.famille, statut: l.statut,
+          leviers: this.pjLeviers(l.leviers),
+          vote: this.fE(l.vote), engage: this.fE(l.engage), conso: this.fE(l.conso),
+          est: l.est == null ? '—' : this.fE(l.est),
+          real: l.real == null ? '—' : this.fE(l.real),
+          roi: l.roi != null ? '×' + l.roi.toFixed(1).replace('.', ',')
+            : (l.roiEst != null ? '×' + l.roiEst.toFixed(1).replace('.', ',') : '—'),
+          roiEstime: l.roi == null && l.roiEst != null,
+          roiCol: l.roi == null ? 'var(--color-text-muted)'
+            : (l.roi >= 1 ? '#2d7a3e' : 'var(--color-primary)'),
+          retour: l.retour != null ? l.retour + ' mois' : '—',
+          ouvrir: () => this.setState({ pjVue: 'franchise', pjSel: l.id }),
+        })),
+        vide: !lignes.length,
+        // Sans coûts saisis, la colonne ne peut rien dire : mieux vaut
+        // l'annoncer que laisser lire des zéros comme une gratuité.
+        note: lignes.every(l => l.engage === 0 && l.conso === 0)
+          ? 'Aucun coût saisi sur les projets — « engagé » et « consommé » restent à zéro tant que les postes de coût ne sont pas remplis dans la fiche projet.'
+          : '',
+      };
+      common.pjFranchise = false;
+      return;
+    }
+
+    // --- vue franchisé : un projet à la fois, celui qu'on regarde.
+    const sel = lignes.find(l => l.id === S.pjSel) || lignes[0] || null;
+    common.pjBudgets = false;
+    if (!sel) { common.pjFranchise = { vide: true }; return; }
+    const jal = (sel.jalons || []).map((j, i) => ({ nom: j.nom, date: this.fD(j.cible),
+      fait: !!j.reel, courant: !j.reel, i }));
+    const faits = jal.filter(j => j.fait).length;
+    const etapes = jal.concat((sel.taches || []).map(t => ({ nom: t.nom, date: this.fD(t.due),
+      fait: !!t.done, tache: true })))
+      .sort((a, b) => (a.date || '').split('/').reverse().join('') < (b.date || '').split('/').reverse().join('') ? -1 : 1);
+
+    common.pjFranchise = {
+      vide: false,
+      choix: lignes.map(l => ({ id: l.id, nom: l.nom, on: l.id === sel.id,
+        go: () => this.setState({ pjSel: l.id }) })),
+      nom: sel.nom, famille: sel.famille, statut: sel.statut,
+      periode: (sel.debut ? this.fD(sel.debut) : '—') + ' → ' + (sel.fin ? this.fD(sel.fin) : '—'),
+      leviers: this.pjLeviers(sel.leviers),
+      // « Ce qui est recherché » : les KPI visés, tels qu'ils ont été choisis.
+      // Aucune cible chiffrée n'existe en base — l'inventer donnerait un
+      // objectif que personne n'a fixé.
+      kpis: sel.kpis,
+      kpisVide: !(sel.kpis || []).length,
+      pourquoi: sel.valeurTxt || '',
+      tuiles: [
+        { k: 'Ce que ça coûte à une boutique', v: sel.vote > 0 ? this.fE(sel.vote / nbMag) : '—',
+          aide: sel.vote > 0 ? this.fE(sel.vote) + ' réseau ÷ ' + nbMag + ' boutiques' : 'budget non voté' },
+        { k: 'Ce que ça rapporte', v: sel.est != null ? this.fE(sel.est / nbMag) : '—',
+          aide: sel.est != null ? 'estimation réseau répartie' : 'valeur estimée non saisie',
+          vert: sel.est != null },
+        { k: 'Retour', v: sel.retour != null ? sel.retour + ' mois' : '—',
+          aide: sel.retour != null ? 'sur la valeur réellement constatée' : 'pas encore de valeur réalisée' },
+        { k: 'Où en est le projet', v: jal.length ? faits + ' / ' + jal.length : '—',
+          aide: jal.length ? 'jalons livrés' : 'aucun jalon posé' },
+      ],
+      etapes: etapes.slice(0, 8).map(e => ({ nom: e.nom, date: e.date, fait: e.fait, tache: !!e.tache,
+        col: e.fait ? '#2d7a3e' : 'var(--color-primary)' })),
+      etapesVide: !etapes.length,
+      // Ce que la fiche ne peut pas encore porter, et pourquoi.
+      manque: [
+        { champ: 'Ce que ça rapporte À MA boutique',
+          source: 'API panel — le volume vendu par référence ET par magasin n’est pas exposé '
+            + '(sold_qty est une valeur réseau, identique dans les quatre boutiques). '
+            + 'La valeur est donc répartie à parts égales, pas mesurée.' },
+        { champ: 'Les références portées par le projet',
+          source: 'Aucun lien projet → référence n’existe dans le cockpit : il reste à créer '
+            + 'pour afficher ici le minimum à tenir et l’emplacement au comptoir.' },
+      ],
+    };
+  }
+  /** Les leviers d'un projet, avec la couleur du référentiel. */
+  pjLeviers(slugs){
+    const ref = (this.M && this.M.LEVIERS) || [];
+    return (slugs || []).map(s => {
+      const l = ref.find(r => r.slug === s) || {};
+      return { slug: s, nom: l.nom || s, couleur: l.color || '#666666', desc: l.desc || '' };
+    });
+  }
   valsProjets(common, projEff){
     const S = this.state, D = this.D, M = this.M;
+    this.valsProjetsVues(common, projEff);
     const mkCard = p => { const av = this.avance(p); const lateT = p.taches.filter(t => this.taskState(t) === 'En retard').length;
       const ouvert = !!S.openCards[p.id], st = this.pStatut(p);
       const quote = p.taches.length ? this.budgetTot(p) / p.taches.length : 0;
