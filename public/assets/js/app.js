@@ -1408,9 +1408,10 @@ class App {
             phase: ph,
             // Nommer la période du plus grand écart : « s'écarte » invite à
             // chercher, « s'écarte en Mai » dit où regarder.
-            phaseTxt: ph == null ? '' : 'moy. ± ' + ph.moy.toFixed(1).replace('.', ',')
-              + ' · max ' + (ph.max >= 0 ? '+' : '') + ph.max.toFixed(0) + ' pts'
-              + (ph.quand ? ' en ' + ph.quand : ''),
+            // Pas de « ± » : la police de l'application le rend par un « 3 ».
+            // Un signe illisible dans un verdict vaut mieux supprimé que subi.
+            phaseTxt: ph == null ? '' : 'max ' + (ph.max >= 0 ? '+' : '') + ph.max.toFixed(0) + ' pts'
+              + (ph.quand ? ' en ' + ph.quand : '') + ' · moyen ' + ph.moy.toFixed(1).replace('.', ','),
             // Trois paliers calés sur le PIRE écart, celui sur lequel on agit.
             verdict: ph == null ? 'indéterminé' : Math.abs(ph.max) <= 8 ? 'suit le réseau'
               : (Math.abs(ph.max) <= 20 ? 'écart ponctuel' : 'trajectoire propre'),
