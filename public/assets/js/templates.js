@@ -1061,16 +1061,27 @@ function tplMarge(c, x){
   const { esc } = x;
   return `
   <div data-screen="marge" style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Marge nette réseau — juillet</div>
-        <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px"><span style="font-size:32px;font-weight:500">${c.mgReseau}</span><span style="${c.mgTrSt}">${c.mgTr}</span></div>
-        <svg width="100%" height="70" viewBox="0 0 320 70" preserveAspectRatio="none" style="margin-top:8px"><polyline points="${c.mgTraj}" fill="none" stroke="#8D1D2C" stroke-width="2"></polyline></svg>
-        <div style="font-size:11px;color:var(--color-text-muted)">${c.mgEvoLabel}</div>
-        <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Seuil Food Cost</span><span style="font-weight:500">≤ ${c.sFoodTxt}</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Seuil Labour Cost</span><span style="font-weight:500">≤ ${c.sLabourTxt}</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Seuil Overhead Cost</span><span style="font-weight:500">≤ 13,5 %</span></div>
+    <!-- Une tuile par ligne : la marge réseau et les alertes se lisent l'une
+         après l'autre. Côte à côte, la première était comprimée à 380 px — son
+         graphique de trajectoire y perdait sa pente — et la seconde étalait des
+         phrases courtes sur toute la largeur restante. -->
+    <div style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px;display:grid;grid-template-columns:290px 1fr;gap:24px;align-items:start">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Marge nette réseau — juillet</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px;flex-wrap:wrap"><span style="font-size:32px;font-weight:500">${c.mgReseau}</span><span style="${c.mgTrSt}">${c.mgTr}</span></div>
+          <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px">
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Food Cost</span><span style="font-weight:500">≤ ${c.sFoodTxt}</span></div>
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Labour Cost</span><span style="font-weight:500">≤ ${c.sLabourTxt}</span></div>
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Overhead Cost</span><span style="font-weight:500">≤ 13,5 %</span></div>
+          </div>
+        </div>
+        <!-- La trajectoire prend la largeur libérée. `non-scaling-stroke` est
+             indispensable ici : la boîte s'étire sans garder ses proportions,
+             et sans lui le trait s'amincirait à mesure qu'elle s'élargit. -->
+        <div>
+          <svg width="100%" height="132" viewBox="0 0 320 70" preserveAspectRatio="none" style="display:block"><polyline points="${c.mgTraj}" fill="none" stroke="#8D1D2C" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">${c.mgEvoLabel}</div>
         </div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
