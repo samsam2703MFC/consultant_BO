@@ -1,6 +1,7 @@
-Split par magasin aux trois niveaux — sur la grandeur qui existe vraiment.
+Cache navigateur : forcer la revalidation du shell et des modules JS/CSS.
 
-Mesure de la sonde : pour une meme reference sur un meme mois, sold_qty vaut
-5165.000000000 dans les QUATRE boutiques, quand waste_qty y vaut 47, 34, 5 et
-30. La vente est une valeur reseau, le rebut non. Sous le niveau groupe, la
-vue par magasin trace donc le REBUT, et le dit.
+Apache ne servait aucun Cache-Control, seulement un ETag : le navigateur
+applique alors son cache heuristique et continue d afficher l ancienne version
+apres une livraison. L ecran parait inchange alors que le serveur est a jour.
+mod_headers est active et la recette verifie desormais l en-tete reellement
+servi, pas seulement present au fichier.

@@ -2,6 +2,18 @@
 DirectoryIndex index.html
 RewriteEngine On
 
+# Le shell et les modules JS/CSS sont REVALIDÉS à chaque visite. Sans en-tête
+# explicite, Apache ne renvoie qu'un ETag et le navigateur applique alors son
+# cache heuristique : après une livraison il continue de servir l'ancien
+# fichier, et l'écran paraît inchangé alors que le serveur est à jour.
+# « no-cache » n'interdit pas de stocker, il impose de revalider : avec l'ETag
+# la requête coûte un 304 vide, pas un téléchargement.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 # API REST → contrôleur frontal
 RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
 

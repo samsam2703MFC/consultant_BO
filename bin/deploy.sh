@@ -65,6 +65,9 @@ else
 fi
 # mod_rewrite requis par le .htaccess (idempotent ; ne touche pas au SAPI PHP).
 a2enmod rewrite >/dev/null 2>&1 || true
+# mod_headers porte l'en-tete de revalidation des fichiers JS/CSS : sans lui le
+# navigateur garde l'ancienne version apres une livraison.
+a2enmod headers >/dev/null 2>&1 || true
 
 # --- 2. Fichiers ---------------------------------------------------------
 log "Copie du dépôt vers $TARGET_DIR (hors webroot ; public/ sera aliasé)…"
@@ -477,6 +480,14 @@ fi
 # l ecran rend une serie vide SANS lever la moindre erreur. On ne verifie donc
 # pas que la route repond, mais qu une option reellement proposee produit au
 # moins un point chiffre. C est le seul controle qui attrape ce decalage.
+# Une livraison invisible cote navigateur vaut une livraison ratee : on verifie
+# que l en-tete de revalidation est bien servi, pas seulement present au fichier.
+echo "== cache navigateur =="
+for f in "" "assets/js/app.js" "assets/js/templates.js" "assets/css/app.css"; do
+  cc="$(curl -sI --max-time 15 "${LOCAL_BASE}/${f}" 2>/dev/null | tr -d '\r' | sed -n 's/^[Cc]ache-[Cc]ontrol: //p')"
+  printf "  %-24s %s\n" "/${f:-index.html}" "${cc:-ABSENT — le navigateur gardera l ancienne version}"
+done
+
 echo "== analyse dans le temps =="
 rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod /tmp/ceo_an_sous
 curl -fsS --max-time 300 "${LOCAL_BASE}/api/cockpit/produits/analyse/options" 2>/dev/null | php -r '
