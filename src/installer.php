@@ -40,6 +40,7 @@ function ensureInstalled(): void
     ensureValidation();
     ensureReference();
     ensureProduction();
+    ensureCentrale();
 }
 
 /**
@@ -326,5 +327,44 @@ function runSqlFile(string $path): void
         // ignorer le vide et les blocs entièrement en commentaire
         if ($stmt === '' || preg_match('/^(--[^\n]*\n?)+$/', $stmt)) { continue; }
         Db::pdo()->exec($stmt);
+    }
+}
+
+/**
+ * Centrale d'achat — tables dont le BO est PROPRIÉTAIRE.
+ *
+ * Le module lit surtout des sources amont (produits, ventes, magasins). Ne sont
+ * créées ici que les tables dont le handoff dit qu'elles appartiennent au BO :
+ * la demande de prix, qui naît de l'écran, et les réglages du moteur de marge.
+ * Rien d'autre n'est inventé : une table vide ne remplace pas une API absente,
+ * elle la déguise — les écrans concernés annoncent leur source manquante.
+ */
+function ensureCentrale(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ca_demande ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'fournisseur VARCHAR(120) NOT NULL DEFAULT \'\','
+        . 'base VARCHAR(16) NOT NULL DEFAULT \'periode\','
+        . 'du DATE NULL, au DATE NULL,'
+        . 'campagne VARCHAR(60) NOT NULL DEFAULT \'\','
+        . 'lignes MEDIUMTEXT NULL,'
+        . 'total_qte INT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'total_cible DECIMAL(12,2) NOT NULL DEFAULT 0,'
+        . 'statut VARCHAR(24) NOT NULL DEFAULT \'envoyée\','
+        . 'cree_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
+        . 'KEY idx_stat (statut)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+    // Réglages du moteur : structure indispensable au calcul, pas des données.
+    // Les taux viennent du handoff ; ils sont modifiables dans Réglages.
+    if (setting('centrale') === null) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
+            ['centrale', json_encode([
+                'commissionMarquePct'   => 4.0,   // commission marque sur le CA
+                'margeCentraleCiblePct' => 12.0,
+                'tvaDefautPct'          => 6.0,   // Belgique : 6 % alimentaire
+                'objectifBaissePrixPct' => 3.0,   // défaut d'une demande de prix
+                'objectifHausseVolPct'  => 10.0,
+            ], JSON_UNESCAPED_UNICODE)]);
     }
 }

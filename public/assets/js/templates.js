@@ -76,6 +76,7 @@ export function render(c, x){
       ${c.isCat || c.isAsso || c.isPlano ? tplReferentiel(c, x) : ''}
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
+      ${c.isCentrale ? tplCentrale(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -2741,4 +2742,109 @@ function tplPerteMagasins(c, x){
       <button ${x.A(w.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
     </div>
   </div>`;
+}
+
+
+/**
+ * Centrale d'achat — gabarit commun aux dix écrans.
+ *
+ * Le point notable : quand la source manque, on ne montre PAS un écran vide
+ * avec un message. On rend la table telle qu'elle sera, colonne par colonne,
+ * et chaque ligne dit le champ attendu et l'API qui doit le fournir. Le
+ * tableau devient la spécification du branchement : on y lit ce qui manque,
+ * mais aussi ce que le cockpit possède déjà et qu'il est inutile de redemander.
+ */
+function tplCentrale(c, x){
+  const { esc } = x;
+  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap';
+  const TD = 'padding:8px 12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const MANQUE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap';
+
+  const periodes = c.caPerBtns ? `<div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px;width:fit-content;margin-bottom:14px">
+      ${c.caPerBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+    </div>` : '';
+
+  if (c.caChargement) {
+    return `${periodes}<div style="${CARD};color:var(--color-text-muted);font-size:13px;padding:40px 16px">Chargement…</div>`;
+  }
+
+  // --- source absente : la table attendue, champ par champ
+  if (c.caAttendu) {
+    const n = c.caAttendu.filter(a => !a.dispo).length;
+    return `${periodes}
+    <div style="${CARD}">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+        <span style="${MANQUE}">manque API</span>
+        <span style="font-size:13px;font-weight:500">${esc(c.caTitreSrc)}</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.caSource)} · ${n} colonne${n > 1 ? 's' : ''} à obtenir sur ${c.caAttendu.length}</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:660px">
+        <thead><tr>
+          <th style="${TH}">Colonne de l’écran</th>
+          <th style="${TH}">Donnée attendue</th>
+          <th style="${TH}">À obtenir de</th>
+        </tr></thead>
+        <tbody>${c.caAttendu.map(a => `<tr>
+          <td style="${TD};font-weight:500;white-space:nowrap">${esc(a.col)}</td>
+          <td style="${TD};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text-muted)">${esc(a.champ)}</td>
+          <td style="${TD}">${a.dispo
+            ? `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:rgba(45,122,62,0.1);color:#2d7a3e;white-space:nowrap">${esc(a.src)}</span>`
+            : `<span style="${MANQUE}">${esc(a.src)}</span>`}
+            ${a.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">${esc(a.note)}</div>` : ''}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  if (c.caEtat === 'erreur' || (c.caMotif && !c.caCols && !c.caKpis)) {
+    return `${periodes}<div style="${CARD}"><span style="${MANQUE}">manque API</span>
+      <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.caMotif || 'source indisponible')}</div></div>`;
+  }
+
+  const kpis = c.caKpis ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px">
+    ${c.caKpis.map(k => `<div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">${esc(k.libelle)}</div>
+      ${k.vide ? `<span style="${MANQUE}">manque API</span>`
+        : `<div style="font-family:var(--font-display);font-size:24px;line-height:1">${esc(k.valeur)}</div>`}
+    </div>`).join('')}
+  </div>` : '';
+
+  const manquants = (c.caManquants && c.caManquants.length) ? `<div style="${CARD};margin-bottom:14px">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Reste à brancher</div>
+    ${c.caManquants.map(m => `<div style="display:flex;gap:8px;align-items:baseline;font-size:12px;color:var(--color-text-muted);padding:3px 0">
+      <span style="${MANQUE}">manque API</span><span>${esc(m)}</span></div>`).join('')}
+  </div>` : '';
+
+  const params = c.caParams ? `<div style="${CARD};margin-bottom:14px">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:10px">Moteur de marge</div>
+    <div style="display:flex;gap:26px;flex-wrap:wrap">
+      ${[['Commission marque', c.caParams.commissionMarquePct, '%'], ['Marge centrale cible', c.caParams.margeCentraleCiblePct, '%'],
+         ['TVA par défaut', c.caParams.tvaDefautPct, '%'], ['Objectif baisse prix', c.caParams.objectifBaissePrixPct, '%'],
+         ['Objectif hausse volume', c.caParams.objectifHausseVolPct, '%']].map(p => `<div>
+        <div style="font-size:11px;color:var(--color-text-muted)">${esc(p[0])}</div>
+        <div style="font-size:15px;font-variant-numeric:tabular-nums">${esc(String(p[1] == null ? '—' : String(p[1]).replace('.', ',')))} ${esc(p[2])}</div></div>`).join('')}
+    </div></div>` : '';
+
+  const recherche = (c.caEcran === 'caCatalogue') ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+    <input id="ca-search" type="search" value="${esc(c.caQ || '')}" ${x.I(c.caSetQ)} placeholder="Rechercher une référence, une catégorie…"
+      style="font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:260px;flex:0 1 320px">
+    <span style="font-size:11.5px;color:var(--color-text-muted)">${c.caRows ? c.caRows.length : 0} sur ${c.caTotal || 0} référence${(c.caTotal || 0) > 1 ? 's' : ''}${(c.caRows && c.caRows.length >= 300) ? ' · 300 affichées' : ''}</span>
+  </div>` : '';
+
+  const table = c.caCols ? `<div style="${CARD}">
+    ${c.caAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-bottom:12px">${esc(c.caAvert)}</div>` : ''}
+    ${c.caVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:16px 0">${esc(c.caVide)}</div>` : `
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:720px">
+      <thead><tr>${c.caCols.map((h, i) => `<th style="${TH}${i ? ';text-align:right' : ''}">${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${c.caRows.map(r => `<tr>${r.cells.map(q => `<td style="${TD}${q.num ? ';text-align:right;font-variant-numeric:tabular-nums' : ''}${q.mut ? ';color:var(--color-text-muted)' : ''}${q.col ? ';color:' + q.col : ''}">${
+        q.vide ? `<span style="${MANQUE}">${esc(q.t)}</span>` : esc(q.t)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`}
+    ${c.caNote ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">${esc(c.caNote)}</div>` : ''}
+    ${c.caSource ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">source : ${esc(c.caSource)}</div>` : ''}
+  </div>` : '';
+
+  return periodes + kpis + manquants + params + recherche + table;
 }

@@ -3153,3 +3153,265 @@ function ep_produits_analyse_sonde(): array
     }
     return $out;
 }
+
+/* ==========================================================================
+   CENTRALE D'ACHAT
+   --------------------------------------------------------------------------
+   Le module couvre dix écrans. Quatre reposent sur des données que le cockpit
+   possède réellement — le catalogue et son coût matière, les ventes du panel,
+   les magasins, les fournisseurs. Les six autres attendent des sources qui
+   n'existent nulle part : commandes fournisseurs, commandes franchisés,
+   factures, stock, campagnes marketing, assortiments.
+
+   Ces six-là ne sont PAS remplis de données fabriquées. Un écran qui invente
+   ses chiffres ne se distingue pas d'un écran qui marche, et se découvre le
+   jour où quelqu'un s'en sert pour décider. Chacun annonce donc la source
+   qu'il attend, nommée, pour que le branchement soit une tâche et non une
+   enquête.
+   ========================================================================== */
+
+/** Réglages du moteur (commission, TVA, objectifs de négociation). */
+function caParams(): array
+{
+    $p = setting('centrale');
+    return is_array($p) ? $p : ['commissionMarquePct' => 4.0, 'margeCentraleCiblePct' => 12.0,
+        'tvaDefautPct' => 6.0, 'objectifBaissePrixPct' => 3.0, 'objectifHausseVolPct' => 10.0];
+}
+
+/**
+ * Marge d'une référence, à l'identique du handoff :
+ *   commission = prix_vente × commission_marque_pct/100
+ *   marge_nette = (prix_vente − prix_achat) − commission
+ *   taux = marge_nette / prix_vente
+ */
+function caMarge(?float $vente, ?float $achat, float $commPct): array
+{
+    if ($vente === null || $achat === null || $vente <= 0) {
+        return ['ca' => $vente, 'commission' => null, 'brute' => null, 'nette' => null, 'taux' => null];
+    }
+    $comm = round($vente * $commPct / 100, 2);
+    $brute = round($vente - $achat, 2);
+    $nette = round($brute - $comm, 2);
+    return ['ca' => round($vente, 2), 'commission' => $comm, 'brute' => $brute,
+        'nette' => $nette, 'taux' => round($nette / $vente, 4)];
+}
+
+/** Bloc « source absente », de forme constante pour que l'écran sache l'afficher. */
+function caAttente(string $quoi, string $source): array
+{
+    return ['etat' => 'attente', 'lignes' => [],
+        'motif' => 'en attente d\'API — ' . $quoi . ' : ' . $source];
+}
+
+/**
+ * Catalogue + moteur de marge. Le seul écran du module entièrement réel :
+ * le coût matière vient des recettes, le prix de vente de la caisse.
+ */
+function ep_ca_catalogue(): array
+{
+    $p = caParams();
+    $out = ['etat' => 'ok', 'params' => $p, 'lignes' => [], 'source' => '/production/catalogue'];
+    $comm = (float) ($p['commissionMarquePct'] ?? 4.0);
+    $fourn = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM ceo_supplier ORDER BY id') as $f) { $fourn[] = $f['name']; }
+    } catch (PDOException $e) { /* référentiel fournisseurs absent */ }
+
+    foreach (ep_prod_catalogue() as $l) {
+        $m = caMarge($l['prix'], $l['mat'], $comm);
+        $out['lignes'][] = [
+            'ref' => $l['ref'], 'nom' => $l['nom'], 'categorie' => $l['categorie'],
+            'groupe' => $l['groupe'] ?? '', 'fournisseur' => null,
+            'prixAchat' => $l['mat'], 'prixVente' => $l['prix'],
+            'commission' => $m['commission'], 'margeBrute' => $m['brute'],
+            'margeNette' => $m['nette'], 'tauxMarge' => $m['taux'],
+            'tvaPct' => (float) ($p['tvaDefautPct'] ?? 6.0),
+            'fiable' => $l['matFiable'] ?? true];
+    }
+    $out['fournisseurs'] = $fourn;
+    // Le fournisseur n'est rattaché à aucune référence : la table le porte pour
+    // le réseau, pas pour l'article. Le dire vaut mieux qu'une colonne vide.
+    $out['avertissement'] = $fourn
+        ? 'Le rattachement référence → fournisseur n\'existe pas encore : la colonne reste vide tant qu\'une API ne le porte pas.'
+        : 'Aucun fournisseur au référentiel.';
+    return $out;
+}
+
+/** Cockpit du module : les indicateurs réseau que le panel sait rendre. */
+function ep_ca_cockpit(): array
+{
+    $per = (string) ($_GET['periode'] ?? '30j');
+    $jours = ['7j' => 7, '30j' => 30, 'trimestre' => 90, 'annee' => 365][$per] ?? 30;
+    $au = date('Y-m-d');
+    $du = date('Y-m-d', strtotime("-$jours day"));
+    $out = ['periode' => $per, 'du' => $du, 'au' => $au, 'etat' => 'attente',
+        'kpis' => [], 'motif' => null, 'source' => null];
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
+
+    $r = PanelApi::shopsSalesKpisEntre($du, $au);
+    $out['source'] = PanelApi::$lastPath;
+    $liste = analyseListe($r);
+    if (!$liste) { $out['motif'] = PanelApi::$lastError ?: 'l\'API n\'a rien rendu sur la période'; return $out; }
+
+    $ca = 0.0; $tickets = 0.0; $n = 0;
+    foreach ($liste as $sh) {
+        $v = nombreOuNull($sh, ['ca', 'turnover', 'revenue']);
+        if ($v !== null) { $ca += $v; $n++; }
+        $t = nombreOuNull($sh, ['tickets', 'transactions', 'nb_tickets']);
+        if ($t !== null) { $tickets += $t; }
+    }
+    $out['etat'] = 'ok';
+    $out['kpis'] = [
+        ['cle' => 'ca', 'libelle' => 'Chiffre d\'affaires réseau', 'valeur' => round($ca, 2), 'unite' => '€'],
+        ['cle' => 'magasins', 'libelle' => 'Magasins mesurés', 'valeur' => $n, 'unite' => ''],
+        ['cle' => 'tickets', 'libelle' => 'Tickets', 'valeur' => $tickets ?: null, 'unite' => ''],
+        ['cle' => 'panier', 'libelle' => 'Ticket moyen', 'valeur' => $tickets > 0 ? round($ca / $tickets, 2) : null, 'unite' => '€'],
+    ];
+    // Les achats sont l'objet même de la centrale : tant qu'aucune API ne les
+    // porte, l'annoncer plutôt que de laisser croire à un cockpit complet.
+    $out['manquants'] = ['Volume d\'achat et marge centrale — aucune API de commandes fournisseurs',
+        'Litiges et réception — aucune API de facturation fournisseurs'];
+    return $out;
+}
+
+/** Ventes par magasin sur la période, base de la négociation. */
+function ep_ca_ventes(): array
+{
+    $per = (string) ($_GET['periode'] ?? '30j');
+    $jours = ['7j' => 7, '30j' => 30, 'trimestre' => 90, 'annee' => 365][$per] ?? 30;
+    $au = date('Y-m-d');
+    $du = date('Y-m-d', strtotime("-$jours day"));
+    $out = ['periode' => $per, 'du' => $du, 'au' => $au, 'etat' => 'attente',
+        'lignes' => [], 'motif' => null, 'source' => null];
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
+
+    $noms = analyseNoms();
+    $r = PanelApi::shopsSalesKpisEntre($du, $au);
+    $out['source'] = PanelApi::$lastPath;
+    foreach (analyseListe($r) as $sh) {
+        $id = analyseShopId($sh);
+        if ($id === '0') { continue; }
+        $out['lignes'][] = ['id' => $id, 'magasin' => $noms[$id] ?? ('Magasin ' . $id),
+            'ca' => nombreOuNull($sh, ['ca', 'turnover', 'revenue']),
+            'tickets' => nombreOuNull($sh, ['tickets', 'transactions', 'nb_tickets'])];
+    }
+    if ($out['lignes']) { $out['etat'] = 'ok'; }
+    else { $out['motif'] = PanelApi::$lastError ?: 'l\'API n\'a rien rendu sur la période'; }
+    return $out;
+}
+
+/** Fournisseurs et réglages du moteur (RFA en lecture seule, cf. handoff). */
+function ep_ca_reglages(): array
+{
+    $out = ['params' => caParams(), 'fournisseurs' => [], 'etat' => 'ok'];
+    try {
+        foreach (Db::rows('SELECT id, name, perimeter, email FROM ceo_supplier ORDER BY id') as $f) {
+            $out['fournisseurs'][] = ['id' => (string) $f['id'], 'nom' => $f['name'],
+                'perimetre' => $f['perimeter'], 'email' => $f['email'],
+                // Le taux de RFA n'est porté par aucune source : la colonne
+                // existe au handoff, la donnée non. Un zéro se lirait comme
+                // « pas de remise » là où l'on ne sait simplement pas.
+                'rfaPct' => null];
+        }
+    } catch (PDOException $e) { $out['etat'] = 'attente'; $out['motif'] = 'référentiel fournisseurs indisponible'; }
+    $out['manquants'] = ['RFA fournisseurs — aucune API ne porte le taux',
+        'Redevance centrale — idem'];
+    return $out;
+}
+
+/** Demandes de prix enregistrées (table possédée par le BO). */
+function ep_ca_demandes(): array
+{
+    try {
+        $r = Db::rows('SELECT id, fournisseur, base, du, au, campagne, total_qte, total_cible, statut, cree_le
+                       FROM ceo_ca_demande ORDER BY id DESC LIMIT 200');
+    } catch (PDOException $e) { return ['etat' => 'attente', 'lignes' => [], 'motif' => 'table indisponible']; }
+    return ['etat' => 'ok', 'lignes' => array_map(fn ($d) => [
+        'id' => (string) $d['id'], 'fournisseur' => $d['fournisseur'], 'base' => $d['base'],
+        'du' => $d['du'], 'au' => $d['au'], 'campagne' => $d['campagne'],
+        'qte' => (int) $d['total_qte'], 'cible' => (float) $d['total_cible'],
+        'statut' => $d['statut'], 'creeLe' => $d['cree_le']], $r)];
+}
+
+/**
+ * Écrans sans source : la TABLE est rendue quand même, avec ses vraies
+ * colonnes, et chacune dit le champ qu'elle attend et d'où il doit venir.
+ *
+ * Un bandeau « en attente d'API » en tête d'écran n'apprend rien à qui devra
+ * brancher : il faut ouvrir le handoff pour savoir quoi chercher. En portant
+ * le manque DANS le tableau, colonne par colonne, l'écran devient lui-même la
+ * spécification du branchement — et l'on voit du même coup si une colonne est
+ * déjà servie par une source existante.
+ */
+function ep_ca_manquant(string $ecran): array
+{
+    $def = [
+        'campagnes' => [
+            'titre'  => 'Campagnes commerciales',
+            'source' => 'API cockpit marketing — lecture seule, ne jamais écrire depuis la centrale',
+            'colonnes' => [
+                ['col' => 'Campagne',            'champ' => 'campagnes.nom + statut',            'src' => 'API marketing'],
+                ['col' => 'Période',             'champ' => 'campagnes.periode_debut / _fin',    'src' => 'API marketing'],
+                ['col' => 'Assortiment',         'champ' => 'campagnes.assortiment_id → assortiments.produits[]', 'src' => 'référentiel assortiments'],
+                ['col' => 'Objectif volume',     'champ' => 'campagnes.objectifs_volume{magasin}', 'src' => 'API marketing'],
+                ['col' => 'Prix cible',          'champ' => 'campagnes.prix_cible_baisse_pct',   'src' => 'API marketing'],
+                ['col' => 'Remise négociée',     'champ' => 'campagnes.remise_negociee_pct',     'src' => 'API marketing'],
+                ['col' => 'Reçu / commandé',     'champ' => 'lignes_commande_fournisseur.quantite_recue / _commandee', 'src' => 'API achats'],
+                ['col' => 'Hors prix négocié',   'champ' => '|prix_unitaire − produit.prix_achat| > 0,001', 'src' => 'API achats'],
+                ['col' => 'Litige',              'champ' => 'factures_fournisseur.statut = litige', 'src' => 'API achats'],
+            ]],
+        'achats' => [
+            'titre'  => 'Suivi fournisseurs',
+            'source' => 'API achats — commandes fournisseurs, réception, litiges',
+            'colonnes' => [
+                ['col' => 'Commande',      'champ' => 'commandes_fournisseur.id + date',       'src' => 'API achats'],
+                ['col' => 'Fournisseur',   'champ' => 'commandes_fournisseur.fournisseur_id',  'src' => 'API achats',
+                 'note' => 'le référentiel fournisseurs existe déjà côté cockpit'],
+                ['col' => 'Statut',        'champ' => 'envoyée | partiellement reçue | reçue', 'src' => 'API achats'],
+                ['col' => 'Commandé',      'champ' => 'Σ lignes.quantite_commandee',           'src' => 'API achats'],
+                ['col' => 'Reçu',          'champ' => 'Σ lignes.quantite_recue',               'src' => 'API achats'],
+                ['col' => 'Écart',         'champ' => 'reçu − commandé (rouge si négatif)',    'src' => 'calcul local'],
+                ['col' => 'Montant',       'champ' => 'commandes_fournisseur.total',           'src' => 'API achats'],
+                ['col' => 'Facture',       'champ' => 'factures_fournisseur.statut',           'src' => 'API achats'],
+            ]],
+        'commandes' => [
+            'titre'  => 'Commandes franchisés',
+            'source' => 'API commandes franchisés — lecture + transition de statut',
+            'colonnes' => [
+                ['col' => 'Commande',   'champ' => 'commandes.id + date',                    'src' => 'API commandes'],
+                ['col' => 'Magasin',    'champ' => 'commandes.magasin_id',                   'src' => 'API commandes',
+                 'note' => 'les magasins sont déjà connus du cockpit'],
+                ['col' => 'Statut',     'champ' => 'nouvelle | préparée | expédiée | livrée', 'src' => 'API commandes'],
+                ['col' => 'Lignes',     'champ' => 'lignes_commande.produit_id, quantite, prix_unitaire', 'src' => 'API commandes'],
+                ['col' => 'Total',      'champ' => 'commandes.total',                        'src' => 'API commandes'],
+                ['col' => 'Marge nette', 'champ' => '(CA − achat) − commission marque',       'src' => 'calcul local',
+                 'note' => 'le coût d\'achat est déjà disponible (coût matière des recettes)'],
+            ]],
+        'stock' => [
+            'titre'  => 'Stock',
+            'source' => 'API stock — aucune source connue à ce jour, ni base ni panel',
+            'colonnes' => [
+                ['col' => 'Référence',    'champ' => 'produits.id + nom',        'src' => 'déjà disponible (catalogue)'],
+                ['col' => 'Stock actuel', 'champ' => 'produits.stock_actuel',    'src' => 'API stock'],
+                ['col' => 'Stock mini',   'champ' => 'produits.stock_min',       'src' => 'API stock'],
+                ['col' => 'Rotation',     'champ' => 'produits.rotation_attendue', 'src' => 'API stock'],
+                ['col' => 'Délai réappro', 'champ' => 'produits.delai_reappro_jours', 'src' => 'API stock'],
+                ['col' => 'Alerte',       'champ' => 'stock_actuel < stock_min → rupture', 'src' => 'calcul local'],
+            ]],
+        'facturation' => [
+            'titre'  => 'Facturation magasins',
+            'source' => 'API facturation — factures magasins, TVA par ligne, relances',
+            'colonnes' => [
+                ['col' => 'Facture',  'champ' => 'facture.id + date',                  'src' => 'API facturation'],
+                ['col' => 'Magasin',  'champ' => 'facture.magasin_id',                 'src' => 'API facturation'],
+                ['col' => 'Montant HT', 'champ' => 'Σ quantite × prix_unitaire',       'src' => 'API facturation'],
+                ['col' => 'TVA',      'champ' => 'PAR LIGNE : quantite × prix × produit.tva_pct/100', 'src' => 'API produits (tva_pct)',
+                 'note' => 'jamais de taux global ; repli sur le taux par défaut des réglages'],
+                ['col' => 'Statut',   'champ' => 'à payer | payée | litige',           'src' => 'API facturation'],
+                ['col' => 'Relance',  'champ' => 'date de dernière relance',           'src' => 'API facturation'],
+            ]],
+    ][$ecran] ?? ['titre' => $ecran, 'source' => 'source non déterminée', 'colonnes' => []];
+
+    return ['ecran' => $ecran, 'etat' => 'attente', 'titre' => $def['titre'],
+        'source' => $def['source'], 'colonnes' => $def['colonnes'], 'lignes' => []];
+}

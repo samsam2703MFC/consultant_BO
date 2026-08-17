@@ -1,4 +1,6 @@
-Le signe « plus ou moins » sortait en « 3 » dans la police de l app.
+Centrale d achat : dix ecrans dans le rail.
 
-Vu a l ecran : « moy. 3 4,8 » au lieu de « moy. +/- 4,8 ». Le verdict est
-reformule sans ce caractere : le pire ecart d abord, la moyenne ensuite.
+Quatre ecrans portent du reel (catalogue et marge, cockpit, ventes, reglages).
+Les six autres n ont aucune source : ils rendent la table ATTENDUE, colonne par
+colonne, chacune disant le champ a obtenir et l API qui doit le fournir. Le
+tableau devient la specification du branchement.

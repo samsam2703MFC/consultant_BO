@@ -158,6 +158,13 @@ class App {
     this.setState(s => ({ logsExtra: [{ ts, qui: 'CEO', type, projet: projet || '—', msg }, ...s.logsExtra] }));
   }
   fE(n){ return n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €'; }
+  // Prix unitaire : deux décimales. fE() arrondit à l'euro, ce qui ramène un
+  // prix d'achat de 2,10 € à « 2 € » et rend toute marge illisible.
+  fU(n){ return (n == null || !isFinite(n)) ? '—' : n.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+  // Montant lisible quel que soit l'ordre de grandeur : le réseau se compte en
+  // centaines de milliers, un magasin en dizaines de milliers.
+  fMt(n){ return (n == null || !isFinite(n)) ? '—'
+    : (Math.abs(n) >= 1e6 ? this.fM(n) : (Math.abs(n) >= 1000 ? this.fK(n) : this.fU(n))); }
   fK(n){ return n == null ? '—' : Math.round(n / 1000).toLocaleString('fr-BE') + ' k€'; }
   fM(n){ return (n == null || !isFinite(n)) ? '—' : (n / 1e6).toFixed(1).replace('.', ',') + ' M€'; }
   fP(x, d){ return (x == null || !isFinite(x)) ? '—' : (x * 100).toFixed(d == null ? 1 : d).replace('.', ',') + ' %'; }
@@ -303,7 +310,18 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
+    const titles = {
+      caCockpit: ['Centrale d’achat — Cockpit', 'Indicateurs du réseau sur une période glissante. Le volet achat reste à brancher : aucune API ne porte encore les commandes fournisseurs.'],
+      caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
+      caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
+      caAchats: ['Suivi fournisseurs', 'Commandes fournisseurs, réception et litiges.'],
+      caCommandes: ['Commandes franchisés', 'Commandes des magasins, de la préparation à la livraison.'],
+      caCatalogue: ['Catalogue & marge', 'Les références du réseau et leur marge nette, commission de marque déduite. Coût matière issu des recettes, prix de vente issu de la caisse.'],
+      caVentes: ['Analyse des ventes', 'Ventes par magasin sur la période, base de référence des négociations.'],
+      caStock: ['Stock', 'Stock, seuils et ruptures.'],
+      caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
+      caReglages: ['Réglages de la centrale', 'Paramètres du moteur de marge et référentiel fournisseurs.'],
+      analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
@@ -513,6 +531,17 @@ class App {
           ['assortiment', 'Assortiment obligatoire', 0],
           ['planogramme', 'Planogramme comptoir', 0]] },
         ['production', 'Suivi de production', 0]]],
+      ['Centrale d’achat', [
+        ['caCockpit', 'Cockpit', 0],
+        ['caCampagnes', 'Campagnes commerciales', 0],
+        ['caDemande', 'Demande de prix', 0],
+        ['caAchats', 'Suivi fournisseurs', 0],
+        ['caCommandes', 'Commandes franchisés', 0],
+        ['caCatalogue', 'Catalogue & marge', 0],
+        ['caVentes', 'Analyse des ventes', 0],
+        ['caStock', 'Stock', 0],
+        ['caFacturation', 'Facturation magasins', 0],
+        ['caReglages', 'Réglages', 0]]],
       ['Projets & contrôle', [['projets', 'Projets', nLate],
         // Sous-menu : les deux écrans « tâches consultants » (panel) regroupés.
         { sub: 'Checklists consultants', children: [
@@ -534,11 +563,14 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd',
       analyse: 'isAnalyse' }[S.screen];
-    common[key] = true;
+    // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
+    // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
+    if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
+    else if (key) { common[key] = true; }
 
     // --- magasins
     if (common.isMagasins){
@@ -666,6 +698,7 @@ class App {
     if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
+    if (common.isCentrale) this.valsCentrale(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -1492,6 +1525,119 @@ class App {
           motif: p.valeur == null ? (p.motif || 'aucune donnée')
             : (p.enCours ? 'période en cours' : ''),
           enCours: p.enCours })) };
+    }
+    return common;
+  }
+  /**
+   * Centrale d'achat — dix écrans, un seul gabarit.
+   *
+   * Chaque écran charge sa route et rend le MÊME objet : des colonnes, des
+   * lignes, un état. Quand la source manque, l'état vaut « attente » et les
+   * colonnes portent, à la place des données, le champ attendu et son API.
+   * Le tableau devient alors la spécification du branchement — on voit d'un
+   * coup d'œil ce qui reste à obtenir, sans rouvrir le document de cadrage.
+   */
+  caRoute(){
+    return { caCockpit: '/centrale/cockpit', caCampagnes: '/centrale/campagnes',
+      caDemande: '/centrale/demandes', caAchats: '/centrale/achats',
+      caCommandes: '/centrale/commandes', caCatalogue: '/centrale/catalogue',
+      caVentes: '/centrale/ventes', caStock: '/centrale/stock',
+      caFacturation: '/centrale/facturation', caReglages: '/centrale/reglages' }[this.state.screen];
+  }
+  caCharge(){
+    const S = this.state, ecr = S.screen, r = this.caRoute();
+    if (!r) { return; }
+    const per = S.caPeriode || '30j';
+    const cle = ecr + '|' + per;
+    this._caEnCours = this._caEnCours || {};
+    if ((S.caData || {})[cle] || this._caEnCours[cle]) { return; }
+    this._caEnCours[cle] = true;
+    const q = (ecr === 'caCockpit' || ecr === 'caVentes') ? '?periode=' + encodeURIComponent(per) : '';
+    readOne(r + q).then(d => { this._caEnCours[cle] = false;
+      this.setState(s2 => ({ caData: Object.assign({}, s2.caData, { [cle]: d || { etat: 'erreur', motif: 'API injoignable' } }) })); });
+  }
+  valsCentrale(common){
+    const S = this.state, ecr = S.screen;
+    const per = S.caPeriode || '30j';
+    this.caCharge();
+    const d = (S.caData || {})[ecr + '|' + per];
+    common.caEcran = ecr;
+    common.caChargement = !d;
+    common.caEtat = d ? (d.etat || 'ok') : '';
+    common.caMotif = d && d.motif ? d.motif : '';
+    common.caSource = d && d.source ? d.source : '';
+    common.caTitreSrc = d && d.titre ? d.titre : '';
+    common.caManquants = (d && d.manquants) || [];
+    common.caPeriode = per;
+    const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
+      + 'padding:6px 14px;border-radius:8px;'
+      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
+            : 'background:transparent;color:var(--color-text-muted)');
+    common.caPerBtns = (ecr === 'caCockpit' || ecr === 'caVentes')
+      ? [['7j', '7 jours'], ['30j', '30 jours'], ['trimestre', 'Trimestre'], ['annee', 'Année']]
+          .map(o => ({ label: o[1], st: onglet(per === o[0]), go: () => this.setState({ caPeriode: o[0] }) }))
+      : null;
+
+    // --- écrans sans source : la table est rendue, colonne par colonne
+    common.caAttendu = (d && d.etat === 'attente' && d.colonnes) ? d.colonnes.map(c => ({
+      col: c.col, champ: c.champ, src: c.src, note: c.note || '',
+      // Une colonne déjà servie ailleurs n'est pas un manque : la distinguer
+      // évite de redemander ce que le cockpit possède déjà.
+      dispo: /déjà disponible|déjà connus|déjà|calcul local/i.test(c.src || '') })) : null;
+
+    common.caKpis = null; common.caCols = null; common.caRows = null; common.caParams = null;
+    if (!d || d.etat === 'attente') { return common; }
+
+    if (ecr === 'caCockpit') {
+      common.caKpis = (d.kpis || []).map(k => ({ libelle: k.libelle,
+        valeur: k.valeur == null ? 'manque API' : (k.unite === '€' ? this.fMt(k.valeur) : Math.round(k.valeur).toLocaleString('fr-BE')),
+        vide: k.valeur == null }));
+    } else if (ecr === 'caCatalogue') {
+      const q = (S.caQ || '').trim().toLowerCase();
+      common.caQ = S.caQ || '';
+      common.caSetQ = e => this.setState({ caQ: e.target.value });
+      common.caParams = d.params || null;
+      common.caAvert = d.avertissement || '';
+      const l = (d.lignes || []).filter(x => !q || (x.nom || '').toLowerCase().includes(q) || (x.categorie || '').toLowerCase().includes(q));
+      common.caTotal = (d.lignes || []).length;
+      common.caCols = ['Référence', 'Catégorie', 'Fournisseur', 'Prix achat', 'Prix vente', 'Commission', 'Marge nette', 'Taux'];
+      common.caRows = l.slice(0, 300).map(x => ({
+        cells: [
+          { t: x.nom },
+          { t: x.categorie || '—', mut: true },
+          // Le rattachement fournisseur n'existe pas : le dire dans la cellule.
+          { t: 'manque API', vide: true },
+          { t: x.prixAchat == null ? 'manque API' : this.fU(x.prixAchat), vide: x.prixAchat == null, num: true },
+          { t: x.prixVente == null ? 'manque API' : this.fU(x.prixVente), vide: x.prixVente == null, num: true },
+          { t: x.commission == null ? '—' : this.fU(x.commission), num: true, mut: true },
+          { t: x.margeNette == null ? '—' : this.fU(x.margeNette), num: true },
+          { t: x.tauxMarge == null ? '—' : this.fP(x.tauxMarge, 1), num: true,
+            col: x.tauxMarge == null ? '' : (x.tauxMarge >= 0.5 ? '#2d7a3e' : (x.tauxMarge >= 0.3 ? '#B87512' : 'var(--color-primary)')) }
+        ] }));
+    } else if (ecr === 'caVentes') {
+      common.caCols = ['Magasin', 'Chiffre d’affaires', 'Tickets', 'Ticket moyen', 'Objectif'];
+      common.caRows = (d.lignes || []).map(x => ({ cells: [
+        { t: x.magasin },
+        { t: x.ca == null ? 'manque API' : this.fMt(x.ca), vide: x.ca == null, num: true },
+        { t: x.tickets == null ? 'manque API' : Math.round(x.tickets).toLocaleString('fr-BE'), vide: x.tickets == null, num: true },
+        { t: (x.ca && x.tickets) ? this.fU(x.ca / x.tickets) : '—', num: true, mut: true },
+        { t: 'manque API', vide: true } ] }));
+      common.caNote = 'Objectif par magasin : aucune API ne le porte pour la centrale (les budgets du cockpit sont mensuels, pas par période glissante).';
+    } else if (ecr === 'caReglages') {
+      common.caParams = d.params || null;
+      common.caCols = ['Fournisseur', 'Périmètre', 'Courriel', 'RFA %', 'Redevance centrale %'];
+      common.caRows = (d.fournisseurs || []).map(f => ({ cells: [
+        { t: f.nom }, { t: f.perimetre || '—', mut: true }, { t: f.email || '—', mut: true },
+        { t: 'manque API', vide: true }, { t: 'manque API', vide: true } ] }));
+    } else if (ecr === 'caDemande') {
+      common.caCols = ['Demande', 'Fournisseur', 'Base', 'Période', 'Quantité', 'Prix cible', 'Statut'];
+      common.caRows = (d.lignes || []).map(x => ({ cells: [
+        { t: '#' + x.id }, { t: x.fournisseur || '—' }, { t: x.base, mut: true },
+        { t: (x.du || '—') + ' → ' + (x.au || '—'), mut: true },
+        { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
+        { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
+      common.caVide = !(d.lignes || []).length
+        ? 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin — le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre.' : '';
     }
     return common;
   }
