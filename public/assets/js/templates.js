@@ -554,12 +554,15 @@ function tplAnalyse(c, x){
       <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
         ${c.anGranBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
       </div>
+      ${c.anVueDispo ? `<div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        ${c.anVueBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+      </div>` : ''}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <select ${x.C(c.anChoisir)} style="${SEL}"${c.anOptChargement ? ' disabled' : ''}>
         <option value="">${c.anOptChargement ? 'Lecture des libellés de l’API…'
           : c.anType === 'produit' ? 'Choisir une référence…' : 'Choisir une catégorie…'}</option>
-        ${(c.anType === 'produit' ? c.anProduits : c.anCategories)
+        ${c.anListe
           .map(p => `<option value="${esc(p.id)}"${p.id === c.anCle ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}
       </select>
       ${c.anPlafond ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${c.anPlafond} points — reconstitués mois par mois depuis l’API</span>` : ''}
@@ -569,7 +572,9 @@ function tplAnalyse(c, x){
       : `<div style="font-size:11.5px;color:var(--color-text-muted)">${
           c.anType === 'produit'
             ? `${c.anProduits.length} référence${c.anProduits.length > 1 ? 's' : ''}, les plus vendues d’abord`
-            : `${c.anCategories.length} catégorie${c.anCategories.length > 1 ? 's' : ''} — la ventilation des ventes de l’API`
+            : c.anType === 'souscategorie'
+            ? `${c.anSousCategories.length} catégorie${c.anSousCategories.length > 1 ? 's' : ''} — en volume, le CA n’étant ventilé que par groupe`
+            : `${c.anCategories.length} groupe${c.anCategories.length > 1 ? 's' : ''} — la ventilation du chiffre d’affaires de l’API`
         }${c.anOptPeriode ? ` · relevé sur ${esc(c.anOptPeriode)}` : ''}</div>`}
   </div>
 
@@ -587,22 +592,46 @@ function tplAnalyse(c, x){
         <div style="font-family:var(--font-display);font-size:21px;line-height:1;color:${g.evolution.col}">${esc(g.evolution.txt)}</div>
         <div style="font-size:11px;color:var(--color-text-muted)">du premier au dernier point clos</div></div>` : ''}
     </div>
-    <svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
+    ${c.anLignes ? (c.anLignes.vide
+      ? `<div style="padding:30px 0;color:var(--color-text-muted);font-size:12.5px">${esc(c.anLignes.vide)}</div>`
+      : `<svg viewBox="0 0 ${c.anLignes.W} ${c.anLignes.H}" style="width:100%;height:auto;display:block;overflow:visible">
+      ${c.anLignes.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
+      ${c.anLignes.series.map(s => `<path d="${s.d}" fill="none" stroke="${s.col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${s.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4" fill="${s.col}" stroke="var(--color-surface)" stroke-width="2"><title>${esc(q.t)}</title></circle>`).join('')}
+        ${s.fin ? `<text x="${s.fin.x}" y="${s.fin.y - 8}" text-anchor="end" font-size="9.5" fill="var(--color-text-muted)">${esc(s.fin.t)}</text>` : ''}`).join('')}
+      ${c.anLignes.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="10.5" fill="${l.c}">${esc(l.t)}</text>`).join('')}
+    </svg>
+    <div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px">
+      ${c.anLignes.series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:10px;height:10px;border-radius:3px;background:${s.col};flex:none"></span>${esc(s.nom)}</span>`).join('')}
+    </div>`)
+    : `<svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
       ${g.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
-      ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"/>`).join('')}
+      ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"><title>${esc(b.t || '')}</title></rect>`).join('')}
       ${g.valeurs.map(v => `<text x="${v.x}" y="${v.y}" text-anchor="middle" font-size="10" fill="var(--color-text-muted)">${esc(v.t)}</text>`).join('')}
       ${g.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="10.5" fill="${l.c}">${esc(l.t)}</text>`).join('')}
     </svg>
+    ${g.n1 ? `<div style="display:flex;gap:14px;margin-top:8px">
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:10px;height:10px;border-radius:3px;background:var(--color-primary);flex:none"></span>Exercice en cours</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:10px;height:10px;border-radius:3px;background:var(--color-secondary);flex:none"></span>N-1, même étendue</span>
+    </div>` : ''}`}
+    ${c.anParMagasin === 'attente' && c.anParMagasinMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:10px">${esc(c.anParMagasinMotif)}</div>` : ''}
     ${c.anMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:8px">${esc(c.anMotif)}</div>` : ''}
     <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px">
       <thead><tr>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Période</th>
-        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">${c.anType === 'produit' ? 'Vendu' : 'CA'}</th>
+        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">${c.anType === 'categorie' ? 'CA' : 'Vendu'}</th>
+        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">N-1</th>
+        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">Écart</th>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Lecture</th>
       </tr></thead>
       <tbody>${g.lignes.map(l => `<tr>
         <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">${esc(l.libelle)}${l.enCours ? ' <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>' : ''}</td>
         <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
+        <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
+        <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:${l.deltaCol}">${esc(l.delta)}</td>
         <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-text-muted)">${esc(l.motif)}</td>
       </tr>`).join('')}</tbody>
     </table>

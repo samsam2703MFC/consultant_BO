@@ -1,7 +1,6 @@
-Analyse : memoriser les periodes closes.
+Analyse : sous-categories, comparatif N-1, et vue par magasin.
 
-Une periode close ne bouge plus. Les relire a chaque ouverture coutait
-cinquante secondes pour six mois, et aller plus vite en multipliant les
-connexions simultanees faisait ECHOUER les appels au lieu d accelerer :
-douze requetes de front, neuf sans reponse. Seule la periode en cours reste
-interrogee en direct.
+Trois niveaux (groupe / categorie / reference) et deux lectures (reseau ou
+magasin par magasin). Le detail par magasin n existe qu au niveau des groupes :
+sous ce niveau l API ne rend qu un volume RESEAU, identique d un magasin a
+l autre. L ecran le dit au lieu de tracer cinq courbes superposees.

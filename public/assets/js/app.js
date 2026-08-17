@@ -303,7 +303,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { analyse: ['Analyse dans le temps', 'Choisissez une catégorie ou une référence, puis un horizon. Les libellés proposés sont ceux de l\u2019API : les ventes sont ventilées par groupe, pas par catégorie de catalogue. Chaque point est reconstitué mois par mois, sur l\u2019ensemble du réseau.'],
+    const titles = { analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
@@ -1220,17 +1220,27 @@ class App {
     common.anOptChargement = !O && !!this._anOptEnCours;
     common.anOptErreur = O && O.erreur ? O.erreur : '';
     common.anOptPeriode = O && O.periode ? O.periode : '';
-    common.anCategories = (O && O.categories || []).map(c => ({ id: c.cle, nom: c.nom }));
-    common.anProduits = (O && O.produits || []).map(p => ({ id: p.cle,
-      nom: p.nom + (p.poids ? ' · ' + Math.round(p.poids).toLocaleString('fr-BE') + ' u' : '') }));
+    const pds = (l, u) => (l || []).map(c => ({ id: c.cle,
+      nom: c.nom + (c.poids ? ' · ' + Math.round(c.poids).toLocaleString('fr-BE') + u : '') }));
+    common.anCategories = pds(O && O.categories, ' €');
+    common.anSousCategories = pds(O && O.souscategories, ' u');
+    common.anProduits = pds(O && O.produits, ' u');
+    common.anListe = { categorie: common.anCategories, souscategorie: common.anSousCategories,
+      produit: common.anProduits }[type] || [];
 
     const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
       + 'padding:6px 14px;border-radius:8px;'
       + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
             : 'background:transparent;color:var(--color-text-muted)');
-    common.anTypeBtns = [['categorie', 'Par catégorie'], ['produit', 'Par référence']]
+    common.anTypeBtns = [['categorie', 'Groupe'], ['souscategorie', 'Catégorie'], ['produit', 'Référence']]
       .map(b => ({ label: b[1], st: onglet(type === b[0]),
         go: () => this.setState({ anType: b[0], anCle: '', anData: null }) }));
+    // Réseau ou magasin par magasin. La bascule n'a de sens qu'au niveau des
+    // groupes : ailleurs l'API ne rend qu'un volume réseau (cf. parMagasin).
+    const vue = S.anVue === 'magasin' ? 'magasin' : 'reseau';
+    common.anVue = vue;
+    common.anVueBtns = [['reseau', 'Réseau'], ['magasin', 'Par magasin']]
+      .map(b => ({ label: b[1], st: onglet(vue === b[0]), go: () => this.setState({ anVue: b[0] }) }));
     common.anGranBtns = [['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']]
       .map(b => ({ label: b[1], st: onglet(gran === b[0]),
         go: () => { this.setState({ anGran: b[0] }); if (S.anCle) this.anCharge(S.anCle, type, b[0]); } }));
@@ -1247,32 +1257,82 @@ class App {
     common.anPlafond = d && d.plafond ? d.plafond : 0;
     common.anMesure = d && d.mesure ? d.mesure : '';
     common.anLibelle = d && d.libelle ? d.libelle : '';
+    common.anParMagasin = d ? (d.parMagasin || 'attente') : 'attente';
+    common.anParMagasinMotif = d && d.parMagasinMotif ? d.parMagasinMotif : '';
+    // La bascule ne s'affiche que là où elle mène quelque part.
+    common.anVueDispo = common.anParMagasin === 'ok';
     const euro = !d || d.unite !== 'u';
-    common.anGraphe = null;
+    const fmt = v => Math.round(v).toLocaleString('fr-BE') + (euro ? ' €' : ' u');
+    common.anGraphe = null; common.anLignes = null;
     if (d && d.points && d.points.length) {
       const pts = d.points;
-      const vals = pts.map(p => p.valeur).filter(v => v != null);
-      const hi = vals.length ? Math.max.apply(null, vals) * 1.18 : 0;
-      const W = 640, H = 190, PB = 26, PL = 4, sw = (W - PL) / pts.length;
+      const W = 640, H = 200, PB = 26, PL = 4, sw = (W - PL) / pts.length;
+      const parShop = common.anVueDispo && common.anVue === 'magasin';
+      const mags = (d.magasins || []);
+
+      // Une échelle unique. Deux axes y feraient tenir n'importe quoi côte à
+      // côte : N et N-1 se comparent sur la même graduation, ou pas du tout.
+      const tous = [];
+      pts.forEach(p => {
+        if (parShop) { mags.forEach(m => { const v = (p.parMagasin || {})[m.id]; if (v != null) tous.push(v); }); }
+        else { if (p.valeur != null) tous.push(p.valeur); if (p.n1 != null) tous.push(p.n1); }
+      });
+      const hi = tous.length ? Math.max.apply(null, tous) * 1.18 : 0;
       const y = v => (H - PB) * (1 - v / hi);
-      const barres = [], labels = [], valeurs = [];
+      const labels = pts.map((p, i) => ({ x: (PL + i * sw + sw / 2).toFixed(1), y: H - 9, t: p.libelle,
+        c: p.enCours ? 'var(--color-primary)' : 'var(--color-text-muted)' }));
+      const grille = hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(1), w: W })) : [];
+
+      if (parShop) {
+        // Palette Okabe-Ito, éprouvée pour les déficiences de vision des
+        // couleurs et vérifiée sur fond blanc (écarts CVD toutes paires ≥ 7,6).
+        // La couleur suit le magasin, jamais son rang : filtrer la liste ne
+        // doit pas repeindre ceux qui restent.
+        const PAL = ['#D55E00', '#0072B2', '#009E73', '#CC79A7', '#E69F00'];
+        const series = mags.map((m, k) => {
+          const pt = [];
+          pts.forEach((p, i) => { const v = (p.parMagasin || {})[m.id];
+            if (v != null && hi > 0) pt.push({ i, v, x: +(PL + i * sw + sw / 2).toFixed(1), y: +y(v).toFixed(1) }); });
+          const der = pt.length ? pt[pt.length - 1] : null;
+          return { id: m.id, nom: m.nom, col: PAL[k % PAL.length],
+            // Une ligne coupée en deux par un trou vaut mieux qu'une ligne
+            // droite qui inventerait le point manquant.
+            d: pt.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
+            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : ' + fmt(q.v) })),
+            total: pt.reduce((a, q) => a + q.v, 0),
+            // Étiquette en bout de course : l'identité ne repose jamais sur la
+            // seule couleur, exigence d'autant plus nette avec cinq séries.
+            fin: der ? { x: Math.min(der.x + 6, W - 2), y: der.y, t: m.nom } : null };
+        }).filter(s => s.pts.length);
+        common.anLignes = { W, H, grille, labels, series,
+          vide: !series.length ? 'aucun magasin n’a de chiffre sur cette sélection' : '' };
+      }
+
+      const barres = [], valeurs = [];
       pts.forEach((p, i) => {
         const cx = PL + i * sw;
+        // N-1 en retrait derrière N : deux barres appariées sur la même
+        // graduation, la plus pâle portant l'exercice précédent.
+        if (p.n1 != null && hi > 0) {
+          barres.push({ x: (cx + sw * 0.16).toFixed(1), y: y(p.n1).toFixed(1),
+            w: (sw * 0.3).toFixed(1), h: Math.max((H - PB) - y(p.n1), 1).toFixed(1),
+            fill: 'var(--color-secondary)', t: 'N-1 · ' + fmt(p.n1) });
+        }
         if (p.valeur != null && hi > 0) {
-          barres.push({ x: (cx + sw * 0.2).toFixed(1), y: y(p.valeur).toFixed(1),
-            w: (sw * 0.6).toFixed(1), h: Math.max((H - PB) - y(p.valeur), 1).toFixed(1),
+          barres.push({ x: (cx + sw * 0.5).toFixed(1), y: y(p.valeur).toFixed(1),
+            w: (sw * 0.3).toFixed(1), h: Math.max((H - PB) - y(p.valeur), 1).toFixed(1),
             // Un point encore en cours n'est pas comparable aux précédents :
             // il est hachuré, comme les mois partiels du graphique budget.
-            fill: p.enCours ? 'url(#anhach)' : 'var(--color-primary)' });
-          valeurs.push({ x: (cx + sw / 2).toFixed(1), y: (y(p.valeur) - 5).toFixed(1),
+            fill: p.enCours ? 'url(#anhach)' : 'var(--color-primary)',
+            t: p.libelle + ' · ' + fmt(p.valeur) });
+          valeurs.push({ x: (cx + sw * 0.65).toFixed(1), y: (y(p.valeur) - 5).toFixed(1),
             t: euro ? this.fK(p.valeur) : Math.round(p.valeur).toLocaleString('fr-BE') });
         }
-        labels.push({ x: (cx + sw / 2).toFixed(1), y: H - 9, t: p.libelle,
-          c: p.enCours ? 'var(--color-primary)' : 'var(--color-text-muted)' });
       });
+      const vals = pts.map(p => p.valeur).filter(v => v != null);
       const prem = vals.length ? vals[0] : null, der = vals.length ? vals[vals.length - 1] : null;
-      common.anGraphe = { W, H, barres, labels, valeurs,
-        grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(1), w: W })) : [],
+      const dN1 = pts.some(p => p.n1 != null);
+      common.anGraphe = { W, H, barres, labels, valeurs, grille, n1: dN1,
         // L'évolution ne se calcule QUE sur des points clos : comparer un mois
         // entamé au précédent annoncerait une chute qui n'existe pas.
         evolution: (pts.length > 1 && !pts[pts.length - 1].enCours && prem != null && prem !== 0 && der != null)
@@ -1281,8 +1341,11 @@ class App {
           : null,
         unite: euro ? '€' : 'unités',
         lignes: pts.map(p => ({ libelle: p.libelle,
-          valeur: p.valeur == null ? '—'
-            : Math.round(p.valeur).toLocaleString('fr-BE') + (euro ? ' €' : ' u'),
+          valeur: p.valeur == null ? '—' : fmt(p.valeur),
+          n1: p.n1 == null ? '—' : fmt(p.n1),
+          delta: p.delta == null ? '—' : (p.delta >= 0 ? '+' : '') + this.fP(p.delta, 1),
+          deltaCol: p.delta == null ? 'var(--color-text-muted)'
+            : (p.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
           // Un point sans valeur n'est pas un zéro : il dit pourquoi il est
           // vide, sans quoi « pas de réponse » se lit comme « pas de vente ».
           motif: p.valeur == null ? (p.motif || 'aucune donnée')

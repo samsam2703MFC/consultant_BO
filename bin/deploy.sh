@@ -478,22 +478,26 @@ fi
 # pas que la route repond, mais qu une option reellement proposee produit au
 # moins un point chiffre. C est le seul controle qui attrape ce decalage.
 echo "== analyse dans le temps =="
-rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod
-curl -fsS "${LOCAL_BASE}/api/cockpit/produits/analyse/options" 2>/dev/null | php -r '
+rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod /tmp/ceo_an_sous
+curl -fsS --max-time 300 "${LOCAL_BASE}/api/cockpit/produits/analyse/options" 2>/dev/null | php -r '
 $r = json_decode(file_get_contents("php://stdin"), true);
-$c = $r["categories"] ?? []; $p = $r["produits"] ?? [];
-printf("  options     : %d categorie(s), %d reference(s), releve %s%s\n",
-  count($c), count($p), $r["periode"] ?? "?", !empty($r["erreur"]) ? " — ".$r["erreur"] : "");
-if (!$c) { echo "    ATTENTION : aucune categorie analysable\n"; }
-if ($c) { file_put_contents("/tmp/ceo_an_cat", (string) $c[0]["cle"]); printf("    ex. categorie : %s\n", $c[0]["nom"]); }
+$c = $r["categories"] ?? []; $p = $r["produits"] ?? []; $s = $r["souscategories"] ?? [];
+printf("  options     : %d groupe(s), %d categorie(s), %d reference(s), releve %s%s\n",
+  count($c), count($s), count($p), $r["periode"] ?? "?", !empty($r["erreur"]) ? " — ".$r["erreur"] : "");
+if (!$c) { echo "    ATTENTION : aucun groupe analysable\n"; }
+if (!$s) { echo "    ATTENTION : aucune sous-categorie analysable\n"; }
+if ($c) { file_put_contents("/tmp/ceo_an_cat", (string) $c[0]["cle"]); printf("    ex. groupe    : %s\n", $c[0]["nom"]); }
+if ($s) { file_put_contents("/tmp/ceo_an_sous", (string) $s[0]["cle"]); printf("    ex. categorie : %s\n", $s[0]["nom"]); }
 if ($p) { file_put_contents("/tmp/ceo_an_prod", (string) $p[0]["cle"]); printf("    ex. reference : %s\n", $p[0]["nom"]); }
 '
 # Les periodes closes sont mises en cache a la premiere lecture. On les lit ici
 # pour que le premier visiteur trouve un ecran deja chaud, et parce qu un cache
 # vide est justement le cas le plus lent : c est celui-la qu il faut mesurer.
-for kind in categorie produit; do
+for kind in categorie souscategorie produit; do
  for gran in mois trimestre annee; do
-  f="/tmp/ceo_an_cat"; [ "$kind" = "produit" ] && f="/tmp/ceo_an_prod"
+  f="/tmp/ceo_an_cat"
+  [ "$kind" = "produit" ] && f="/tmp/ceo_an_prod"
+  [ "$kind" = "souscategorie" ] && f="/tmp/ceo_an_sous"
   KEY="$(cat "$f" 2>/dev/null || true)"
   [ -z "$KEY" ] && continue
   T0=$(date +%s)
@@ -507,6 +511,14 @@ for kind in categorie produit; do
     mb_substr((string) ($r["libelle"] ?? $r["cle"] ?? "?"), 0, 26), count($pts), $ok,
     !empty($r["motif"]) ? " — ".$r["motif"] : "");
   if (!$ok) { echo "    ATTENTION : option proposee mais serie vide — vocabulaires desynchronises\n"; }
+  // Le N-1 et le detail par magasin se cablent en silence : sans controle, une
+  // colonne vide passerait pour une absence de donnees plutot que pour un
+  // branchement casse. On compte donc ce qui est reellement chiffre.
+  $n1 = 0; foreach ($pts as $x) { if (($x["n1"] ?? null) !== null) { $n1++; } }
+  $mg = 0; foreach ($pts as $x) { $mg = max($mg, count((array) ($x["parMagasin"] ?? []))); }
+  printf("    N-1 %d/%d point(s) · par magasin : %s\n", $n1, count($pts),
+    ($r["parMagasin"] ?? "?") === "ok" ? $mg." magasin(s), ".count($r["magasins"] ?? [])." nomme(s)" : "en attente d API");
+  if (($r["parMagasin"] ?? "") === "ok" && !$mg) { echo "    ATTENTION : detail par magasin annonce mais aucun chiffre\n"; }
   '
   echo "    ${gran} : $(( $(date +%s) - T0 )) s (cache froid)"
  done

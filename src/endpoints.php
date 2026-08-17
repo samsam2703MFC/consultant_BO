@@ -1080,7 +1080,12 @@ function ep_exploitation_reseau(): array
  */
 function ep_produits_analyse(): array
 {
-    $type = ($_GET['type'] ?? 'categorie') === 'produit' ? 'produit' : 'categorie';
+    // Trois niveaux, et deux sources bien distinctes. Les GROUPES (douze) sont
+    // les seuls que la caisse ventile en chiffre d'affaires ; les CATÉGORIES
+    // (quatre-vingt-une) et les références ne se lisent qu'en volume, sur la
+    // route des rebuts qui porte `category_name` pour chaque produit.
+    $type = (string) ($_GET['type'] ?? 'categorie');
+    if (!in_array($type, ['categorie', 'souscategorie', 'produit'], true)) { $type = 'categorie'; }
     $cle  = trim((string) ($_GET['cle'] ?? ''));
     $gran = (string) ($_GET['granularite'] ?? 'mois');
     if (!in_array($gran, ['mois', 'trimestre', 'annee'], true)) { $gran = 'mois'; }
@@ -1116,113 +1121,63 @@ function ep_produits_analyse(): array
     }
 
     // Ne jamais interroger au-delà d'aujourd'hui : l'API rendrait une période
-    // vide qu'on lirait comme une chute à zéro.
+    // vide qu'on lirait comme une chute à zéro. Les bornes N-1 reprennent la
+    // MÊME étendue décalée d'un an : comparer un mois entamé à un mois entier
+    // de l'an dernier annoncerait un effondrement qui n'existe pas.
     foreach ($bornes as $i => $b) {
         $bornes[$i]['au'] = min($b['au'], date('Y-m-d'));
         $bornes[$i]['encours'] = $b['au'] > date('Y-m-d');
+        $bornes[$i]['n1du'] = date('Y-m-d', strtotime($b['du'] . ' -1 year'));
+        $bornes[$i]['n1au'] = date('Y-m-d', strtotime($bornes[$i]['au'] . ' -1 year'));
     }
 
-    // Un mois clos ne bouge plus : son agrégat est mémorisé. Sans cela, six
-    // mois de catégorie coûtaient cinquante secondes à CHAQUE ouverture, et
-    // paralléliser davantage ne faisait que noyer l'API amont — mesuré : douze
-    // requêtes simultanées, neuf sans réponse. Ne reste en direct que la
-    // période encore en cours, la seule qui puisse changer.
-    $agg = []; $req = []; $cles = [];
+    // Les plages élémentaires des deux exercices sont réunies avant tout appel :
+    // elles partent ensemble, et celles déjà mémorisées ne repartent pas.
+    $cN = $cN1 = $toutes = [];
+    foreach ($bornes as $i => $b) {
+        $cN[$i]  = analysePlages($type, $b['du'], $b['au']);
+        $cN1[$i] = analysePlages($type, $b['n1du'], $b['n1au']);
+        $toutes = array_merge($toutes, $cN[$i], $cN1[$i]);
+    }
+    $agg = analyseAgregats($type, $toutes);
+
+    // Le détail par magasin n'existe que pour les catégories : la route des
+    // références rend un `sold_qty` RÉSEAU, identique d'un magasin à l'autre
+    // (seul le rebut y est propre au magasin). Plutôt que de présenter cinq
+    // courbes superposées qui vaudraient toutes la même chose, l'écran le dit.
+    $out['parMagasin'] = $type === 'categorie' ? 'ok' : 'attente';
+    $out['parMagasinMotif'] = $type === 'categorie' ? null
+        : 'en attente d\'API — /shops/{id}/products/waste rend un volume RÉSEAU, identique d\'un '
+        . 'magasin à l\'autre ; seul le rebut y est propre au magasin. Le détail par magasin '
+        . 'n\'existe donc qu\'au niveau des groupes.';
+    $out['magasins'] = [];
     if ($type === 'categorie') {
-        // `category-sales` expire dès qu'on dépasse le mois : un point se
-        // reconstitue en additionnant ses mois. Le CA est additif — c'est ce
-        // qui rend ce découpage légitime, là où un ticket moyen ne le serait pas.
-        $out['source'] = '/consultant/shops/category-sales (par mois, réseau)';
-        foreach ($bornes as $i => $b) {
-            foreach (analyseMois($b['du'], $b['au']) as $mm) {
-                $k = $mm[0] . '.' . $mm[1];
-                $cles[$i][] = $k;
-                if (isset($agg[$k]) || isset($req[$k])) { continue; }
-                $c = analyseCache('an.cat.' . $k);
-                if ($c !== null) { $agg[$k] = $c; continue; }
-                $req[$k] = '/consultant/shops/category-sales?' . http_build_query(
-                    ['shop_id' => analyseShop(), 'date_from' => $mm[0], 'date_to' => $mm[1]]);
-            }
+        $vus = [];
+        foreach ($agg as $a) { foreach ((array) $a as $sid => $_) { $vus[(string) $sid] = true; } }
+        $noms = analyseNoms();
+        foreach (array_keys($vus) as $sid) {
+            $out['magasins'][] = ['id' => (string) $sid, 'nom' => $noms[(string) $sid] ?? ('Magasin ' . $sid)];
         }
-    } else {
-        // Cette route-ci encaisse les bornes larges : inutile de la découper,
-        // et l'interroger sur la borne exacte évite d'avoir à supposer que les
-        // quantités s'additionnent d'un mois à l'autre.
-        $out['source'] = '/shops/{id}/products/waste (réseau)';
-        foreach ($bornes as $i => $b) {
-            $k = $b['du'] . '.' . $b['au'];
-            $cles[$i][] = $k;
-            if (isset($agg[$k])) { continue; }
-            $c = analyseCache('an.prod.' . $k);
-            if ($c !== null) { $agg[$k] = $c; continue; }
-            foreach (analyseShops() as $j => $sid) {
-                $req[$k . '#' . $j] = '/shops/' . $sid . '/products/waste?' . http_build_query(
-                    ['from' => $b['du'], 'date_from' => $b['du'], 'to' => $b['au'], 'date_to' => $b['au']]);
-            }
-        }
-    }
-
-    foreach (PanelApi::getParallele($req) as $rk => $r) {
-        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
-        if ($type === 'categorie') {
-            // Le vocabulaire de cette route est celui des GROUPES (douze), pas
-            // celui des 81 catégories du catalogue : « Boissons chaudes » n'y
-            // existe pas, seul « Boissons » y existe. Le sélecteur est alimenté
-            // par la route elle-même (voir les options) ; ici on sait donc dire
-            // que le nom demandé n'y figure pas, plutôt que de rendre un zéro
-            // qui se lirait comme une absence de vente.
-            foreach (analyseListe($r) as $sh) {
-                foreach (($sh['categories'] ?? []) as $c) {
-                    $nom = trim((string) ($c['name'] ?? ''));
-                    if ($nom === '') { continue; }
-                    $v = nombreOuNull($c, ['ca', 'value', 'amount']);
-                    $agg[$k][$nom] = ($agg[$k][$nom] ?? 0) + (float) ($v ?? 0);
-                }
-            }
-        } else {
-            // `sold_qty` est une valeur RÉSEAU, rendue à l'identique par chaque
-            // boutique : on prend le maximum et non la somme, faute de quoi les
-            // ventes seraient multipliées par le nombre de magasins.
-            $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
-            foreach ($lignes as $p) {
-                $pid = trim((string) ($p['id_product'] ?? ''));
-                if ($pid === '') { continue; }
-                $v = (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0);
-                $nom = (string) ($p['product_name'] ?? $p['name'] ?? $pid);
-                if (!isset($agg[$k][$pid]) || $v > $agg[$k][$pid]['v']) { $agg[$k][$pid] = ['n' => $nom, 'v' => $v]; }
-            }
-        }
-    }
-
-    // Mémoriser les périodes closes qui viennent d'être lues. La période en
-    // cours ne l'est jamais : elle changera encore aujourd'hui.
-    $pref = $type === 'categorie' ? 'an.cat.' : 'an.prod.';
-    foreach ($req as $rk => $_) {
-        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
-        if (!isset($agg[$k]) || substr($k, -10) >= date('Y-m-d')) { continue; }
-        analyseCacheMaj($pref . $k, $agg[$k]);
+        usort($out['magasins'], fn($a, $b) => strcmp($a['nom'], $b['nom']));
     }
 
     foreach ($bornes as $i => $b) {
-        $val = null; $rendu = false;
-        foreach (($cles[$i] ?? []) as $k) {
-            if (!isset($agg[$k])) { continue; }
-            $rendu = true;
-            if ($type === 'categorie') {
-                foreach ($agg[$k] as $nom => $ca) {
-                    if (strcasecmp((string) $nom, $cle) === 0) { $val = ($val ?? 0) + (float) $ca; }
-                }
-            } elseif (isset($agg[$k][$cle])) {
-                $val = ($val ?? 0) + (float) $agg[$k][$cle]['v'];
-                $out['libelle'] = (string) $agg[$k][$cle]['n'];
-            }
-        }
+        [$val, $par, $rendu, $lib] = analyseLire($type, $agg, $cN[$i], $cle);
+        [$n1, $parN1] = analyseLire($type, $agg, $cN1[$i], $cle);
+        if ($lib !== null) { $out['libelle'] = $lib; }
         $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $b['au'],
             'valeur' => $val, 'enCours' => $b['encours'],
+            'n1' => $n1, 'n1du' => $b['n1du'], 'n1au' => $b['n1au'],
+            // L'écart ne se calcule que sur deux chiffres connus : « +100 % »
+            // face à un N-1 absent dirait une croissance là où il n'y a qu'un
+            // trou dans l'historique.
+            'delta' => ($val !== null && $n1 !== null && $n1 != 0) ? round(($val - $n1) / $n1, 4) : null,
+            'parMagasin' => $par, 'parMagasinN1' => $parN1,
             'motif' => $val !== null ? null : (!$rendu ? 'aucune donnée'
                 : ($type === 'categorie' ? 'catégorie absente de la réponse'
                                          : 'référence non vendue sur la période'))];
     }
+
 
 
     $connus = array_filter($out['points'], fn($p) => $p['valeur'] !== null);
@@ -1233,6 +1188,149 @@ function ep_produits_analyse(): array
                 : 'l\'API n\'a rien rendu pour ces périodes'));
     }
     return $out;
+}
+
+/**
+ * Plages élémentaires couvrant [du, au] pour le type demandé.
+ *
+ * `category-sales` expire dès qu'on dépasse le mois : ses points se
+ * reconstituent en additionnant leurs mois, ce que la nature additive du CA
+ * autorise. La route des références encaisse les bornes larges — la découper
+ * obligerait à SUPPOSER que les quantités s'additionnent d'un mois à l'autre,
+ * autant le lui demander directement.
+ */
+function analysePlages(string $type, string $du, string $au): array
+{
+    if ($du > $au) { return []; }
+    if ($type !== 'categorie') { return [$du . '.' . $au]; }
+    $out = [];
+    foreach (analyseMois($du, $au) as $mm) { $out[] = $mm[0] . '.' . $mm[1]; }
+    return $out;
+}
+
+/** Identifiant de boutique d'une ligne, quelle que soit son orthographe. */
+function analyseShopId(array $ligne): string
+{
+    foreach (['shop_id', 'id_shop', 'id'] as $c) {
+        if (isset($ligne[$c]) && is_numeric($ligne[$c])) { return (string) (int) $ligne[$c]; }
+    }
+    return '0';
+}
+
+/** Noms des boutiques — « Magasin 3 » n'aide personne à lire une courbe. */
+function analyseNoms(): array
+{
+    static $n = null;
+    if ($n !== null) { return $n; }
+    $n = [];
+    foreach (analyseListe(PanelApi::consultantShops()) as $sh) {
+        $id = analyseShopId($sh);
+        if ($id === '0') { continue; }
+        foreach (['representative_name', 'name', 'label'] as $c) {
+            if (!empty($sh[$c]) && is_string($sh[$c])) { $n[$id] = trim($sh[$c]); break; }
+        }
+    }
+    return $n;
+}
+
+/**
+ * Agrégats des plages demandées : mémoire d'abord, API pour le reste.
+ *
+ * Les catégories sont conservées VENTILÉES PAR BOUTIQUE. Agréger dès la lecture
+ * aurait interdit la vue par magasin sans tout relire, et l'agrégat réseau se
+ * retrouve de toute façon en sommant — l'inverse n'est pas vrai.
+ */
+function analyseAgregats(string $type, array $cles): array
+{
+    $pref = $type === 'categorie' ? 'an.cat2.' : 'an.prod2.';
+    $agg = []; $req = [];
+    foreach (array_unique($cles) as $k) {
+        $c = analyseCache($pref . $k);
+        if ($c !== null) { $agg[$k] = $c; continue; }
+        [$du, $au] = explode('.', $k, 2);
+        if ($type === 'categorie') {
+            $req[$k] = '/consultant/shops/category-sales?' . http_build_query(
+                ['shop_id' => analyseShop(), 'date_from' => $du, 'date_to' => $au]);
+        } else {
+            foreach (analyseShops() as $j => $sid) {
+                $req[$k . '#' . $j] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+                    ['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
+            }
+        }
+    }
+    foreach (PanelApi::getParallele($req) as $rk => $r) {
+        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
+        if ($type === 'categorie') {
+            // Le vocabulaire de cette route est celui des GROUPES (douze), pas
+            // celui des 81 catégories du catalogue : « Boissons chaudes » n'y
+            // existe pas, seul « Boissons ». Le sélecteur étant alimenté par la
+            // route elle-même, aucune sélection ne peut retomber dans le vide.
+            foreach (analyseListe($r) as $sh) {
+                $sid = analyseShopId($sh);
+                foreach (($sh['categories'] ?? []) as $c) {
+                    $nom = trim((string) ($c['name'] ?? ''));
+                    if ($nom === '') { continue; }
+                    $v = nombreOuNull($c, ['ca', 'value', 'amount']);
+                    $agg[$k][$sid][$nom] = ($agg[$k][$sid][$nom] ?? 0) + (float) ($v ?? 0);
+                }
+            }
+        } else {
+            // `sold_qty` est une valeur RÉSEAU rendue à l'identique par chaque
+            // boutique : maximum et non somme, faute de quoi les ventes
+            // seraient multipliées par le nombre de magasins.
+            $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
+            foreach ($lignes as $p) {
+                $pid = trim((string) ($p['id_product'] ?? ''));
+                if ($pid === '') { continue; }
+                $v = (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0);
+                if (!isset($agg[$k][$pid]) || $v > $agg[$k][$pid]['v']) {
+                    // `c` porte la catégorie de la référence : les totaux par
+                    // catégorie s'en déduisent en sommant les volumes RÉSEAU
+                    // déjà dédoublonnés. `grouped_products` ne rend, lui, que
+                    // les catégories ayant connu du rebut — neuf sur quatre-
+                    // vingt-une : le lire aurait amputé le sélecteur.
+                    $agg[$k][$pid] = ['n' => (string) ($p['product_name'] ?? $p['name'] ?? $pid), 'v' => $v,
+                        'c' => trim((string) ($p['category_name'] ?? ''))];
+                }
+            }
+        }
+    }
+    // Mémoriser les plages CLOSES qui viennent d'être lues. La période en cours
+    // ne l'est jamais : elle changera encore aujourd'hui.
+    foreach ($req as $rk => $_) {
+        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
+        if (!isset($agg[$k]) || substr($k, -10) >= date('Y-m-d')) { continue; }
+        analyseCacheMaj($pref . $k, $agg[$k]);
+    }
+    return $agg;
+}
+
+/** Valeur d'un point : [total, par magasin, l'API a répondu, libellé]. */
+function analyseLire(string $type, array $agg, array $cles, string $sel): array
+{
+    $val = null; $par = []; $rendu = false; $lib = null;
+    foreach ($cles as $k) {
+        if (!isset($agg[$k])) { continue; }
+        $rendu = true;
+        if ($type === 'categorie') {
+            foreach ((array) $agg[$k] as $sid => $cats) {
+                foreach ((array) $cats as $nom => $ca) {
+                    if (strcasecmp((string) $nom, $sel) !== 0) { continue; }
+                    $val = ($val ?? 0) + (float) $ca;
+                    $par[(string) $sid] = round(($par[(string) $sid] ?? 0) + (float) $ca, 2);
+                }
+            }
+        } elseif ($type === 'souscategorie') {
+            foreach ((array) $agg[$k] as $p) {
+                if (strcasecmp((string) ($p['c'] ?? ''), $sel) !== 0) { continue; }
+                $val = ($val ?? 0) + (float) $p['v'];
+            }
+        } elseif (isset($agg[$k][$sel])) {
+            $val = ($val ?? 0) + (float) $agg[$k][$sel]['v'];
+            $lib = (string) $agg[$k][$sel]['n'];
+        }
+    }
+    return [$val === null ? null : round($val, 2), $par, $rendu, $lib];
 }
 
 /**
@@ -1285,39 +1383,6 @@ function analyseShops(): array
 
 function analyseShop(): int { return analyseShops()[0]; }
 
-/**
- * Ventes d'une période par référence, vues sur TOUT le réseau.
- *
- * `/shops/{id}/products/waste` ne liste que les références suivies par la
- * boutique interrogée : s'en tenir à une seule amputait le sélecteur (45
- * références sur des centaines) et trouait les séries dès qu'un magasin ne
- * portait pas l'article. Les boutiques sont donc interrogées ensemble.
- *
- * `sold_qty` y est une valeur RÉSEAU, rendue à l'identique par chaque
- * boutique — d'où le maximum et non la somme : additionner multiplierait les
- * ventes par le nombre de magasins, et le chiffre resterait crédible.
- */
-function analyseVentes(string $du, string $au): array
-{
-    $req = [];
-    foreach (analyseShops() as $i => $sid) {
-        $req[$i] = '/shops/' . $sid . '/products/waste?'
-            . http_build_query(['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
-    }
-    $par = [];
-    foreach (PanelApi::getParallele($req) as $r) {
-        $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
-        foreach ($lignes as $p) {
-            $pid = trim((string) ($p['id_product'] ?? ''));
-            if ($pid === '' || $pid === '0') { continue; }
-            $v = nombreOuNull($p, ['sold_qty', 'sold', 'quantity']);
-            if ($v === null) { continue; }
-            $nom = (string) ($p['product_name'] ?? $p['name'] ?? $pid);
-            if (!isset($par[$pid]) || $v > $par[$pid]['vendu']) { $par[$pid] = ['nom' => $nom, 'vendu' => $v]; }
-        }
-    }
-    return $par;
-}
 
 /**
  * Vocabulaire analysable — alimenté par les routes qui portent les DONNÉES.
@@ -1331,7 +1396,7 @@ function analyseVentes(string $du, string $au): array
  */
 function ep_produits_analyse_options(): array
 {
-    $out = ['categories' => [], 'produits' => [], 'periode' => null,
+    $out = ['categories' => [], 'souscategories' => [], 'produits' => [], 'periode' => null,
         'source' => null, 'erreur' => null];
     if (!PanelApi::configured()) { $out['erreur'] = 'compte consultant non configuré'; return $out; }
 
@@ -1356,16 +1421,22 @@ function ep_produits_analyse_options(): array
     arsort($cats);
     foreach ($cats as $nom => $ca) { $out['categories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($ca, 2)]; }
 
-    // Les références viennent de la route qui les mesurera : mêmes identifiants
-    // et même agrégation réseau, donc aucune sélection ne peut retomber dans le
-    // vide. Triées par volume : sur des centaines de lignes, l'ordre
-    // alphabétique suppose de connaître le nom exact avant de pouvoir chercher.
-    $prods = [];
-    foreach (analyseVentes($du, $au) as $pid => $p) {
-        $prods[] = ['cle' => (string) $pid, 'nom' => $p['nom'], 'poids' => (float) $p['vendu']];
+    // Références ET sous-catégories viennent de la route qui les mesurera :
+    // mêmes identifiants, même agrégation réseau, donc aucune sélection ne peut
+    // retomber dans le vide. Triées par volume : sur des centaines de lignes,
+    // l'ordre alphabétique suppose de connaître le nom exact avant de chercher.
+    $prods = []; $sous = [];
+    foreach (analyseAgregats('produit', analysePlages('produit', $du, $au)) as $a) {
+        foreach ((array) $a as $pid => $p) {
+            $prods[] = ['cle' => (string) $pid, 'nom' => (string) $p['n'], 'poids' => (float) $p['v']];
+            $c = trim((string) ($p['c'] ?? ''));
+            if ($c !== '') { $sous[$c] = ($sous[$c] ?? 0) + (float) $p['v']; }
+        }
     }
     usort($prods, fn($a, $b) => $b['poids'] <=> $a['poids']);
     $out['produits'] = $prods;
+    arsort($sous);
+    foreach ($sous as $nom => $v) { $out['souscategories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($v, 2)]; }
     if (!$out['categories'] && !$out['produits']) {
         $out['erreur'] = PanelApi::$lastError ?: 'l\'API n\'a rendu ni catégorie ni référence sur ' . $per;
     }
