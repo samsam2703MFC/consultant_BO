@@ -1625,6 +1625,9 @@ class App {
       common.caNote = 'Objectif par magasin : aucune API ne le porte pour la centrale (les budgets du cockpit sont mensuels, pas par période glissante).';
     } else if (ecr === 'caReglages') {
       common.caParams = d.params || null;
+      // Un référentiel vide n'est pas une API manquante : il est vide, et
+      // confondre les deux enverrait chercher une source qui existe déjà.
+      common.caRien = 'Aucun fournisseur au référentiel du cockpit — la table existe, elle n’est pas remplie.';
       common.caCols = ['Fournisseur', 'Périmètre', 'Courriel', 'RFA %', 'Redevance centrale %'];
       common.caRows = (d.fournisseurs || []).map(f => ({ cells: [
         { t: f.nom }, { t: f.perimetre || '—', mut: true }, { t: f.email || '—', mut: true },
@@ -1636,8 +1639,7 @@ class App {
         { t: (x.du || '—') + ' → ' + (x.au || '—'), mut: true },
         { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
         { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
-      common.caVide = !(d.lignes || []).length
-        ? 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin — le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre.' : '';
+      common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
     }
     return common;
   }

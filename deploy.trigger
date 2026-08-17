@@ -1,6 +1,6 @@
-Centrale d achat : dix ecrans dans le rail.
+Centrale d achat : dire « manque API », pas le laisser deviner.
 
-Quatre ecrans portent du reel (catalogue et marge, cockpit, ventes, reglages).
-Les six autres n ont aucune source : ils rendent la table ATTENDUE, colonne par
-colonne, chacune disant le champ a obtenir et l API qui doit le fournir. Le
-tableau devient la specification du branchement.
+La pastille affichait le nom de l API attendue, ce qui IMPLIQUE le manque sans
+le dire. Elle porte desormais « manque API » suivi de la source. Un tableau
+sans ligne rend ses colonnes et explique pourquoi il est vide, au lieu de
+paraitre casse.

@@ -2790,8 +2790,10 @@ function tplCentrale(c, x){
           <td style="${TD};font-weight:500;white-space:nowrap">${esc(a.col)}</td>
           <td style="${TD};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text-muted)">${esc(a.champ)}</td>
           <td style="${TD}">${a.dispo
-            ? `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:rgba(45,122,62,0.1);color:#2d7a3e;white-space:nowrap">${esc(a.src)}</span>`
-            : `<span style="${MANQUE}">${esc(a.src)}</span>`}
+            ? `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:rgba(45,122,62,0.1);color:#2d7a3e;white-space:nowrap">déjà disponible</span>
+               <span style="font-size:11px;color:var(--color-text-muted);margin-left:6px">${esc(a.src)}</span>`
+            : `<span style="${MANQUE}">manque API</span>
+               <span style="font-size:11.5px;color:var(--color-text);margin-left:6px">${esc(a.src)}</span>`}
             ${a.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">${esc(a.note)}</div>` : ''}</td>
         </tr>`).join('')}</tbody>
       </table></div>
@@ -2835,7 +2837,11 @@ function tplCentrale(c, x){
 
   const table = c.caCols ? `<div style="${CARD}">
     ${c.caAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-bottom:12px">${esc(c.caAvert)}</div>` : ''}
-    ${c.caVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:16px 0">${esc(c.caVide)}</div>` : `
+    ${c.caVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:16px 0">${esc(c.caVide)}</div>` : !c.caRows.length ? `
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
+      <thead><tr>${c.caCols.map((h, i) => `<th style="${TH}${i ? ';text-align:right' : ''}">${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody><tr><td colspan="${c.caCols.length}" style="${TD};color:var(--color-text-muted);font-size:12.5px;padding-top:14px">${esc(c.caRien || 'aucune ligne')}</td></tr></tbody>
+    </table></div>` : `
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;min-width:720px">
       <thead><tr>${c.caCols.map((h, i) => `<th style="${TH}${i ? ';text-align:right' : ''}">${esc(h)}</th>`).join('')}</tr></thead>
