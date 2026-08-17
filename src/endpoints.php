@@ -2510,6 +2510,205 @@ function ep_pwa_task_detail(): array
 }
 
 /**
+ * GET /planogramme — la structure du comptoir, avec son occupation.
+ *
+ * Un seul appel rend l'arbre complet : zones → meubles → niveaux →
+ * emplacements, chaque emplacement portant son occupant ou `null`. C'est ce qui
+ * permet à l'écran de proposer les places libres sans rien calculer, et de
+ * dessiner le comptoir tel qu'il est.
+ *
+ * La structure vit dans le cockpit : l'API du panel n'expose rien de tout cela
+ * (mesuré). Ce qui en dépend vraiment — la photo de présentation et la
+ * diffusion de la consigne en boutique — est annoncé comme manquant, jamais
+ * remplacé par une invention.
+ */
+function ep_planogramme(): array
+{
+    $out = ['zones' => [], 'slots' => [], 'placements' => [], 'notes' => [],
+        'totaux' => ['slots' => 0, 'libres' => 0, 'places' => 0, 'refs' => 0],
+        'manque' => planoManque()];
+
+    // Placements, indexés par emplacement — et par référence pour l'écran.
+    $parSlot = []; $placements = [];
+    foreach (Db::rows('SELECT * FROM ceo_prod_planogram') as $p) {
+        $sid = $p['slot_id'] !== null ? (int) $p['slot_id'] : null;
+        $l = ['ref' => (string) $p['ref'], 'slotId' => $sid,
+            'fronts' => (int) ($p['fronts'] ?? 1), 'ordre' => (int) ($p['ordre'] ?? 1),
+            'zone' => $p['zone'], 'meuble' => $p['meuble'], 'niveau' => $p['niveau'],
+            'position' => $p['slot'] !== null ? (int) $p['slot'] : null];
+        $placements[] = $l;
+        if ($sid !== null) { $parSlot[$sid][] = $l; }
+    }
+    $out['placements'] = $placements;
+
+    // Noms des références, pour afficher l'occupant sans second appel.
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT ref, nom FROM ceo_prod_product') as $r) {
+            $noms[(string) $r['ref']] = (string) $r['nom'];
+        }
+    } catch (PDOException $e) { /* sans nom : la référence seule */ }
+    if (count($noms) < count($placements)) {
+        // Le nom vient du catalogue réel quand la fiche cockpit n'existe pas.
+        foreach (ep_prod_catalogue() as $c) { $noms[(string) $c['ref']] = (string) $c['nom']; }
+    }
+
+    $zones = Db::rows('SELECT * FROM ceo_plano_zone ORDER BY rang, id');
+    $meubles = Db::rows('SELECT * FROM ceo_plano_meuble ORDER BY rang, id');
+    $niveaux = Db::rows('SELECT * FROM ceo_plano_niveau ORDER BY rang, id');
+    $slots = Db::rows('SELECT * FROM ceo_plano_slot ORDER BY niveau_id, position');
+
+    $parNiveau = [];
+    foreach ($slots as $s) { $parNiveau[(int) $s['niveau_id']][] = $s; }
+    $parMeuble = [];
+    foreach ($niveaux as $n) { $parMeuble[(int) $n['meuble_id']][] = $n; }
+    $parZone = [];
+    foreach ($meubles as $m) { $parZone[(int) $m['zone_id']][] = $m; }
+
+    foreach ($zones as $z) {
+        $zid = (int) $z['id'];
+        $zl = ['id' => $zid, 'nom' => (string) $z['nom'], 'rang' => (int) $z['rang'], 'meubles' => []];
+        foreach ($parZone[$zid] ?? [] as $m) {
+            $mid = (int) $m['id'];
+            $ml = ['id' => $mid, 'nom' => (string) $m['nom'], 'rang' => (int) $m['rang'], 'niveaux' => []];
+            foreach ($parMeuble[$mid] ?? [] as $n) {
+                $nid = (int) $n['id'];
+                $nl = ['id' => $nid, 'nom' => (string) $n['nom'], 'rang' => (int) $n['rang'], 'slots' => []];
+                foreach ($parNiveau[$nid] ?? [] as $s) {
+                    $sid = (int) $s['id'];
+                    $occ = $parSlot[$sid] ?? [];
+                    $ligne = [
+                        'id' => $sid, 'position' => (int) $s['position'],
+                        'largeurMm' => $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
+                        'capacite' => $s['capacite'] !== null ? (int) $s['capacite'] : null,
+                        'zoneId' => $zid, 'zone' => (string) $z['nom'],
+                        'meubleId' => $mid, 'meuble' => (string) $m['nom'],
+                        'niveauId' => $nid, 'niveau' => (string) $n['nom'],
+                        'occupants' => array_map(fn ($o) => [
+                            'ref' => $o['ref'], 'nom' => $noms[$o['ref']] ?? $o['ref'],
+                            'fronts' => $o['fronts'], 'ordre' => $o['ordre']], $occ),
+                    ];
+                    $nl['slots'][] = $ligne;
+                    $out['slots'][] = $ligne;
+                    $out['totaux']['slots']++;
+                    if (!$occ) { $out['totaux']['libres']++; }
+                }
+                $ml['niveaux'][] = $nl;
+            }
+            $zl['meubles'][] = $ml;
+        }
+        $out['zones'][] = $zl;
+    }
+
+    $out['totaux']['places'] = count(array_filter($placements, fn ($p) => $p['slotId'] !== null));
+    $out['totaux']['refs'] = count($placements);
+
+    foreach (Db::rows('SELECT * FROM ceo_plano_note') as $n) {
+        $out['notes'][(string) $n['cible'] . ':' . (string) $n['cible_id']] = [
+            'cible' => $n['cible'], 'cibleId' => (string) $n['cible_id'],
+            'texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
+            'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],
+            'auteur' => $n['auteur'], 'majLe' => $n['maj_le']];
+    }
+    return $out;
+}
+
+/**
+ * Ce qui manque au planogramme, et qui ne peut PAS venir du cockpit.
+ *
+ * La structure, les placements et les consignes se saisissent ici. Restent deux
+ * dépendances réelles au panel : le visuel du produit, et le fait que la
+ * consigne parvienne à la boutique. Les nommer évite de laisser croire qu'un
+ * planogramme rempli est un planogramme diffusé.
+ */
+function planoManque(): array
+{
+    return [
+        lacune('Photo de présentation',
+            'le visuel du produit tel qu\'il doit être présenté',
+            'API panel — GET /products rend 579 produits et AUCUNE clé d\'image (mesuré). '
+            . 'À obtenir : POST /consultant/products/{id}/photos avec kind: presentation'),
+        lacune('Diffusion de la consigne en boutique',
+            'afficher les notes épinglées sur la tâche de comptoir, côté application terrain',
+            'API panel — aucune route ne porte de consigne de présentation vers la boutique. '
+            . 'Sans elle, la consigne reste lisible du seul côté cockpit'),
+    ];
+}
+
+/**
+ * GET /production/produit/fiche — la fiche de vente d'UNE référence.
+ *
+ * Lue produit par produit, et en `SELECT *` : les colonnes utiles de la caisse
+ * (nutriscore, allergènes, conservation, réchauffe, positionnement…) existent
+ * mais leur présence varie d'une installation à l'autre. Les nommer une par une
+ * dans le SELECT ferait échouer toute la fiche sur une colonne absente ; on
+ * prend la ligne entière et on ne rend que ce qu'on y trouve.
+ */
+function ep_prod_produit_fiche(): array
+{
+    $ref = trim((string) ($_GET['ref'] ?? ''));
+    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
+
+    $cat = null;
+    foreach (ep_prod_catalogue() as $c) {
+        if ((string) $c['ref'] === $ref) { $cat = $c; break; }
+    }
+    if ($cat === null) { http_response_code(404); return ['error' => 'référence inconnue']; }
+
+    $out = ['ref' => $ref, 'catalogue' => $cat, 'technique' => [], 'source' => null,
+        'note' => null, 'manque' => planoManque()];
+
+    // Fiche technique : la ligne produit de la caisse, telle quelle.
+    $pid = $cat['pwaId'] ?? null;
+    if ($pid !== null) {
+        try {
+            $r = Db::row('SELECT * FROM product WHERE id = ?', [(int) $pid]);
+            if ($r !== null) {
+                $out['source'] = 'caisse';
+                // Libellé lisible → valeur, en ne gardant que le renseigné : un
+                // champ vide affiché ferait passer une absence pour un zéro.
+                $champs = [
+                    'nutriscore' => 'Nutriscore',
+                    'allergene' => 'Allergènes',
+                    'is_vegetarian' => 'Végétarien',
+                    'storage_name' => 'Conservation',
+                    'storage_description' => 'Consigne de conservation',
+                    'storage_temperature' => 'Température de conservation',
+                    'shelf_life_category' => 'Catégorie de DLV',
+                    'reheating_time_minutes' => 'Réchauffe (minutes)',
+                    'reheating_temperature_celsius' => 'Réchauffe (°C)',
+                    'preparation_lead_time_hours' => 'Délai de préparation (h)',
+                    'positioning_name' => 'Positionnement',
+                    'positioning_description' => 'Description du positionnement',
+                    'sector_name' => 'Secteur',
+                    'quantity_per_label' => 'Quantité par étiquette',
+                    'label_size' => 'Format d\'étiquette',
+                    'is_divisible' => 'Divisible',
+                    'is_piece_based' => 'Vendu à la pièce',
+                ];
+                foreach ($champs as $col => $lib) {
+                    if (!array_key_exists($col, $r)) { continue; }
+                    $v = $r[$col];
+                    if ($v === null || $v === '' ) { continue; }
+                    if (in_array($col, ['is_vegetarian', 'is_divisible', 'is_piece_based'], true)) {
+                        $v = ((int) $v === 1) ? 'oui' : 'non';
+                    }
+                    $out['technique'][] = ['champ' => $lib, 'valeur' => (string) $v];
+                }
+            }
+        } catch (PDOException $e) { /* table de caisse absente : fiche réduite */ }
+    }
+
+    $n = Db::row('SELECT * FROM ceo_plano_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]);
+    if ($n !== null) {
+        $out['note'] = ['texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
+            'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],
+            'auteur' => $n['auteur'], 'majLe' => $n['maj_le']];
+    }
+    return $out;
+}
+
+/**
  * Repères d'une photo de contrôle : lecture.
  *
  * Rend toujours une forme exploitable — liste vide et `maj` nul quand rien n'a

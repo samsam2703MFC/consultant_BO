@@ -81,6 +81,8 @@ function route(string $method, string $path): mixed
             $path === '/production/periodes'           => ep_prod_periodes(),
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
             $path === '/production/suivi'              => ep_prod_suivi(),
+            $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
+            $path === '/planogramme'                   => ep_planogramme(),
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
             $path === '/produits/analyse/sonde'        => ep_produits_analyse_sonde(),
@@ -129,6 +131,14 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/produit/([\w-]+)$#', $path, $m)) { return wr_prod_produit($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/planogramme/([\w-]+)$#', $path, $m)) { return wr_prod_planogramme($m[1]); }
+    // --- planogramme : structure du comptoir, placements, consignes
+    if ($method === 'POST' && preg_match('#^/planogramme/(zone|meuble|niveau)$#', $path, $m)) { return wr_plano_creer($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/planogramme/(zone|meuble|niveau)/(\d+)$#', $path, $m)) { return wr_plano_patch($m[1], (int) $m[2]); }
+    if ($method === 'DELETE' && preg_match('#^/planogramme/(zone|meuble|niveau)/(\d+)$#', $path, $m)) { return wr_plano_supprimer($m[1], (int) $m[2]); }
+    if ($method === 'POST' && $path === '/planogramme/emplacement') { return wr_plano_slots(); }
+    if ($method === 'DELETE' && preg_match('#^/planogramme/emplacement/(\d+)$#', $path, $m)) { return wr_plano_slot_supprimer((int) $m[1]); }
+    if ($method === 'PUT' && preg_match('#^/planogramme/placement/([\w-]+)$#', $path, $m)) { return wr_plano_placer($m[1]); }
+    if ($method === 'PUT' && $path === '/planogramme/note') { return wr_plano_note(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
 

@@ -766,6 +766,275 @@ function wr_prod_planogramme(string $ref): array
     return ['ok' => true, 'ref' => $ref];
 }
 
+/* --- Planogramme : structure du comptoir, placements, consignes ------------- */
+
+/** Les trois niveaux de structure partagent leur forme : un nom, un rang, un parent. */
+const PLANO_NIVEAUX = [
+    'zone'   => ['table' => 'ceo_plano_zone',   'parent' => null,        'enfant' => 'ceo_plano_meuble', 'fkEnfant' => 'zone_id'],
+    'meuble' => ['table' => 'ceo_plano_meuble', 'parent' => 'zone_id',   'enfant' => 'ceo_plano_niveau', 'fkEnfant' => 'meuble_id'],
+    'niveau' => ['table' => 'ceo_plano_niveau', 'parent' => 'meuble_id', 'enfant' => 'ceo_plano_slot',   'fkEnfant' => 'niveau_id'],
+];
+
+/**
+ * POST /planogramme/{zone|meuble|niveau} — créer un élément de structure.
+ *
+ * Le comptoir se déclare une fois. Tant qu'il n'est pas déclaré, aucun
+ * emplacement n'existe et rien ne peut être placé : c'est pour cela que cette
+ * écriture précède tout le reste.
+ */
+function wr_plano_creer(string $type): array
+{
+    $def = PLANO_NIVEAUX[$type] ?? null;
+    if ($def === null) { http_response_code(404); return ['error' => 'niveau inconnu']; }
+    $b = body();
+    $nom = trim((string) ($b['nom'] ?? ''));
+    if ($nom === '') { http_response_code(422); return ['error' => 'un nom est requis']; }
+    $nom = mb_substr($nom, 0, 80);
+    $rang = isset($b['rang']) ? max(0, (int) $b['rang']) : 0;
+
+    if ($def['parent'] !== null) {
+        $pid = (int) ($b['parentId'] ?? 0);
+        if ($pid <= 0) { http_response_code(422); return ['error' => 'le parent est requis']; }
+        Db::exec('INSERT INTO ' . $def['table'] . ' (' . $def['parent'] . ', nom, rang) VALUES (?,?,?)',
+            [$pid, $nom, $rang]);
+    } else {
+        Db::exec('INSERT INTO ' . $def['table'] . ' (nom, rang) VALUES (?,?)', [$nom, $rang]);
+    }
+    $id = (int) Db::pdo()->lastInsertId();
+
+    // Un niveau créé avec un nombre d'emplacements : les poser tout de suite
+    // évite de saisir douze fois la même chose. `slots` absent = niveau vide.
+    $poses = 0;
+    if ($type === 'niveau' && isset($b['slots'])) {
+        $n = max(0, min(40, (int) $b['slots']));
+        for ($i = 1; $i <= $n; $i++) {
+            Db::exec('INSERT INTO ceo_plano_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
+                . ' ON DUPLICATE KEY UPDATE position = position',
+                [$id, $i, isset($b['largeurMm']) ? (int) $b['largeurMm'] : null,
+                 isset($b['capacite']) ? (int) $b['capacite'] : null]);
+            $poses++;
+        }
+    }
+    return ['ok' => true, 'id' => $id, 'nom' => $nom, 'slots' => $poses];
+}
+
+/** PATCH /planogramme/{type}/{id} — renommer ou réordonner. */
+function wr_plano_patch(string $type, int $id): array
+{
+    $def = PLANO_NIVEAUX[$type] ?? null;
+    if ($def === null) { http_response_code(404); return ['error' => 'niveau inconnu']; }
+    $b = body();
+    if (isset($b['nom'])) {
+        $nom = trim((string) $b['nom']);
+        if ($nom === '') { http_response_code(422); return ['error' => 'un nom est requis']; }
+        Db::exec('UPDATE ' . $def['table'] . ' SET nom = ? WHERE id = ?', [mb_substr($nom, 0, 80), $id]);
+    }
+    if (isset($b['rang'])) {
+        Db::exec('UPDATE ' . $def['table'] . ' SET rang = ? WHERE id = ?', [max(0, (int) $b['rang']), $id]);
+    }
+    return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * DELETE /planogramme/{type}/{id} — supprimer, avec ce qu'il porte.
+ *
+ * Une suppression en cascade est REFUSÉE tant qu'un produit est placé dessous :
+ * supprimer une vitrine ne doit pas retirer silencieusement dix références de
+ * l'assortiment du comptoir. On dit combien, et l'écran demande confirmation.
+ */
+function wr_plano_supprimer(string $type, int $id): array
+{
+    $def = PLANO_NIVEAUX[$type] ?? null;
+    if ($def === null) { http_response_code(404); return ['error' => 'niveau inconnu']; }
+
+    $slots = planoSlotsSous($type, $id);
+    if ($slots) {
+        $in = implode(',', array_fill(0, count($slots), '?'));
+        $r = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_planogram WHERE slot_id IN (' . $in . ')', $slots);
+        $n = (int) ($r['n'] ?? 0);
+        if ($n > 0 && empty(body()['force'])) {
+            http_response_code(409);
+            return ['error' => $n . ' référence(s) y sont placées — la suppression les retirerait du comptoir',
+                'placees' => $n];
+        }
+        Db::exec('DELETE FROM ceo_prod_planogram WHERE slot_id IN (' . $in . ')', $slots);
+        Db::exec('DELETE FROM ceo_plano_slot WHERE id IN (' . $in . ')', $slots);
+    }
+    // Puis la descendance de structure, du bas vers le haut.
+    if ($type === 'zone') {
+        $ms = array_map(fn ($x) => (int) $x['id'], Db::rows('SELECT id FROM ceo_plano_meuble WHERE zone_id = ?', [$id]));
+        foreach ($ms as $m) {
+            Db::exec('DELETE FROM ceo_plano_niveau WHERE meuble_id = ?', [$m]);
+        }
+        Db::exec('DELETE FROM ceo_plano_meuble WHERE zone_id = ?', [$id]);
+    } elseif ($type === 'meuble') {
+        Db::exec('DELETE FROM ceo_plano_niveau WHERE meuble_id = ?', [$id]);
+    }
+    Db::exec('DELETE FROM ' . $def['table'] . ' WHERE id = ?', [$id]);
+    return ['ok' => true, 'id' => $id];
+}
+
+/** Les identifiants d'emplacement situés sous un élément de structure. */
+function planoSlotsSous(string $type, int $id): array
+{
+    if ($type === 'niveau') {
+        $q = 'SELECT id FROM ceo_plano_slot WHERE niveau_id = ?';
+    } elseif ($type === 'meuble') {
+        $q = 'SELECT s.id FROM ceo_plano_slot s JOIN ceo_plano_niveau n ON n.id = s.niveau_id WHERE n.meuble_id = ?';
+    } else {
+        $q = 'SELECT s.id FROM ceo_plano_slot s JOIN ceo_plano_niveau n ON n.id = s.niveau_id'
+           . ' JOIN ceo_plano_meuble m ON m.id = n.meuble_id WHERE m.zone_id = ?';
+    }
+    return array_map(fn ($x) => (int) $x['id'], Db::rows($q, [$id]));
+}
+
+/** POST /planogramme/emplacement — ajouter des emplacements à un niveau. */
+function wr_plano_slots(): array
+{
+    $b = body();
+    $nid = (int) ($b['niveauId'] ?? 0);
+    if ($nid <= 0) { http_response_code(422); return ['error' => 'le niveau est requis']; }
+    $n = max(1, min(40, (int) ($b['nombre'] ?? 1)));
+    $r = Db::row('SELECT COALESCE(MAX(position), 0) AS p FROM ceo_plano_slot WHERE niveau_id = ?', [$nid]);
+    $depart = (int) ($r['p'] ?? 0);
+    for ($i = 1; $i <= $n; $i++) {
+        Db::exec('INSERT INTO ceo_plano_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
+            . ' ON DUPLICATE KEY UPDATE position = position',
+            [$nid, $depart + $i, isset($b['largeurMm']) ? (int) $b['largeurMm'] : null,
+             isset($b['capacite']) ? (int) $b['capacite'] : null]);
+    }
+    return ['ok' => true, 'niveauId' => $nid, 'ajoutes' => $n];
+}
+
+/** DELETE /planogramme/emplacement/{id} — retirer un emplacement. */
+function wr_plano_slot_supprimer(int $id): array
+{
+    $r = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_planogram WHERE slot_id = ?', [$id]);
+    if ((int) ($r['n'] ?? 0) > 0 && empty(body()['force'])) {
+        http_response_code(409);
+        return ['error' => 'une référence y est placée — elle serait retirée du comptoir'];
+    }
+    Db::exec('DELETE FROM ceo_prod_planogram WHERE slot_id = ?', [$id]);
+    Db::exec('DELETE FROM ceo_plano_slot WHERE id = ?', [$id]);
+    return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * PUT /planogramme/placement/{ref} — placer une référence sur un emplacement.
+ *
+ * L'écriture recopie zone / meuble / niveau / position en clair dans la table :
+ * le référentiel produit les lit déjà sous cette forme, et un écran qui affiche
+ * « Vitrine 1 · haut · 4 » ne doit pas avoir à recharger tout l'arbre pour le
+ * dire. Le `slot_id` reste la vérité ; le texte n'est qu'une commodité, rafraîchi
+ * à chaque écriture.
+ *
+ * Un emplacement plein est REFUSÉ avec son occupant : l'écran propose alors
+ * l'échange, au lieu d'empiler deux produits au même endroit sans le dire.
+ */
+function wr_plano_placer(string $ref): array
+{
+    $ref = trim($ref);
+    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
+    $b = body();
+
+    if (empty($b['slotId'])) {
+        Db::exec('DELETE FROM ceo_prod_planogram WHERE ref = ?', [$ref]);
+        journalAdd('CEO', 'Planogramme', $ref, 'Référence retirée du comptoir');
+        return ['ok' => true, 'ref' => $ref, 'retire' => true];
+    }
+    $sid = (int) $b['slotId'];
+    $s = Db::row('SELECT s.id, s.position, s.capacite, n.nom AS niveau, m.nom AS meuble, z.nom AS zone
+                    FROM ceo_plano_slot s
+                    JOIN ceo_plano_niveau n ON n.id = s.niveau_id
+                    JOIN ceo_plano_meuble m ON m.id = n.meuble_id
+                    JOIN ceo_plano_zone   z ON z.id = m.zone_id
+                   WHERE s.id = ?', [$sid]);
+    if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
+
+    $occ = Db::rows('SELECT ref FROM ceo_prod_planogram WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    if ($occ && empty($b['partager'])) {
+        http_response_code(409);
+        return ['error' => 'emplacement déjà occupé',
+            'occupants' => array_map(fn ($o) => (string) $o['ref'], $occ)];
+    }
+
+    $fronts = max(1, min(40, (int) ($b['fronts'] ?? 1)));
+    $ordre  = max(1, min(40, (int) ($b['ordre'] ?? 1)));
+    Db::exec('INSERT INTO ceo_prod_planogram (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre)'
+        . ' VALUES (?,?,?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble), niveau = VALUES(niveau),'
+        . ' slot = VALUES(slot), slot_id = VALUES(slot_id), fronts = VALUES(fronts), ordre = VALUES(ordre)',
+        [$ref, (string) $s['zone'], (string) $s['meuble'], (string) $s['niveau'],
+         (int) $s['position'], $sid, $fronts, $ordre]);
+
+    // Le minimum d'assortiment est le même chiffre que celui du comptoir : le
+    // saisir ici évite d'ouvrir un second écran pour la même idée.
+    if (isset($b['qmin'])) {
+        $q = max(0, min(9999, (int) $b['qmin']));
+        try {
+            Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, qmin, must) VALUES (?,?,?,?,1)'
+                . ' ON DUPLICATE KEY UPDATE qmin = VALUES(qmin), must = 1',
+                [$ref, mb_substr(trim((string) ($b['nom'] ?? $ref)), 0, 190), '', $q]);
+        } catch (PDOException $e) { /* fiche produit indisponible : le placement tient quand même */ }
+    }
+    journalAdd('CEO', 'Planogramme', $ref,
+        'Placée en « ' . $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau']
+        . ' · position ' . $s['position'] . ' » (' . $fronts . ' front(s))');
+    return ['ok' => true, 'ref' => $ref, 'slotId' => $sid,
+        'ou' => $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau'] . ' · ' . $s['position']];
+}
+
+/**
+ * PUT /planogramme/note — la consigne de présentation.
+ *
+ * Trois cibles possibles : une référence, un meuble, une zone. Une consigne de
+ * meuble vaut pour tout ce qu'il contient — c'est ce qui permet d'écrire une
+ * fois « étiquettes face client » pour une vitrine entière.
+ *
+ * Un texte vide EFFACE la consigne : garder une ligne vide laisserait un
+ * « consigne présente » trompeur à l'écran.
+ */
+function wr_plano_note(): array
+{
+    $b = body();
+    $cible = (string) ($b['cible'] ?? '');
+    if (!in_array($cible, ['ref', 'zone', 'meuble'], true)) {
+        http_response_code(422); return ['error' => 'cible inconnue (ref, zone ou meuble)'];
+    }
+    $id = trim((string) ($b['cibleId'] ?? ''));
+    if ($id === '') { http_response_code(422); return ['error' => 'la cible est requise']; }
+    $texte = trim((string) ($b['texte'] ?? ''));
+
+    if ($texte === '') {
+        Db::exec('DELETE FROM ceo_plano_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        return ['ok' => true, 'efface' => true];
+    }
+    $texte = mb_substr($texte, 0, 2000);
+    // La gravité suit le barème partagé — jamais une échelle inventée ici.
+    $sig = setting('signalement', []);
+    $ech = [];
+    foreach ((is_array($sig) && is_array($sig['niveaux'] ?? null)) ? $sig['niveaux'] : [] as $nv) {
+        if (isset($nv['n'])) { $ech[(int) $nv['n']] = true; }
+    }
+    $g = (int) ($b['gravite'] ?? 3);
+    if (!isset($ech[$g])) { $g = isset($ech[3]) ? 3 : (int) (array_key_first($ech) ?? 3); }
+    $jour = static function ($v) {
+        $v = trim((string) $v);
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
+    };
+    $u = setting('utilisateur', []);
+    $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+
+    Db::exec('INSERT INTO ceo_plano_note (cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE texte = VALUES(texte), epinglee = VALUES(epinglee),'
+        . ' gravite = VALUES(gravite), du = VALUES(du), au = VALUES(au),'
+        . ' auteur = VALUES(auteur), maj_le = VALUES(maj_le)',
+        [$cible, $id, $texte, !empty($b['epinglee']) ? 1 : 0, $g,
+         $jour($b['du'] ?? ''), $jour($b['au'] ?? ''), $auteur, date('Y-m-d H:i:s')]);
+    return ['ok' => true, 'cible' => $cible, 'cibleId' => $id, 'gravite' => $g];
+}
+
 /**
  * Enregistre la clé Anthropic. Elle ne repart JAMAIS vers l'écran : le
  * formulaire l'envoie, le serveur la garde, et l'état ne rend qu'une empreinte.

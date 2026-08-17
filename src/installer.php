@@ -42,6 +42,81 @@ function ensureInstalled(): void
     ensureProduction();
     ensureCentrale();
     ensureAnnotation();
+    ensurePlanogramme();
+}
+
+/**
+ * Structure du comptoir, placements et notes de présentation.
+ *
+ * Tout vit dans le cockpit : mesuré le 17/08/2026, l'API du panel n'expose ni
+ * zone, ni meuble, ni emplacement, et le référentiel en portait zéro sur 710
+ * références. Attendre une API pour déclarer un comptoir aurait laissé l'écran
+ * vide indéfiniment ; seuls la photo de présentation et la diffusion en boutique
+ * en dépendent vraiment, et ces deux-là sont annoncés comme manquants.
+ *
+ * Quatre niveaux, chacun avec son identité : renommer « Vitrine 1 » ne doit pas
+ * déplacer les produits qu'elle porte, ce qu'un rattachement par libellé aurait
+ * fait. L'ancienne table `ceo_prod_planogram` gardait justement zone, meuble et
+ * niveau en TEXTE ; elle reste, complétée d'un `slot_id`, pour ne pas casser ce
+ * qui la lit.
+ */
+function ensurePlanogramme(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_zone ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'nom VARCHAR(80) NOT NULL,'
+        . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_meuble ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'zone_id INT UNSIGNED NOT NULL,'
+        . 'nom VARCHAR(80) NOT NULL,'
+        . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'KEY idx_zone (zone_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_niveau ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'meuble_id INT UNSIGNED NOT NULL,'
+        . 'nom VARCHAR(80) NOT NULL,'
+        . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'KEY idx_meuble (meuble_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_slot ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'niveau_id INT UNSIGNED NOT NULL,'
+        . 'position SMALLINT UNSIGNED NOT NULL,'
+        . 'largeur_mm SMALLINT UNSIGNED NULL,'
+        . 'capacite SMALLINT UNSIGNED NULL,'
+        . 'UNIQUE KEY uniq_pos (niveau_id, position)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+    // Le placement rejoint la table existante : `slot_id` la rattache à la
+    // structure, `fronts` et `ordre` disent comment le produit occupe la place.
+    foreach ([
+        'slot_id' => 'INT UNSIGNED NULL',
+        'fronts'  => 'SMALLINT UNSIGNED NOT NULL DEFAULT 1',
+        'ordre'   => 'SMALLINT UNSIGNED NOT NULL DEFAULT 1',
+    ] as $col => $type) {
+        try {
+            Db::exec('ALTER TABLE ceo_prod_planogram ADD COLUMN ' . $col . ' ' . $type);
+        } catch (PDOException $e) { /* colonne déjà présente */ }
+    }
+
+    // Notes de présentation. `cible` distingue ce à quoi la note s'applique —
+    // une consigne de meuble vaut pour tout ce qu'il contient, une consigne de
+    // référence ne vaut que pour elle. Deux tables auraient dupliqué la même
+    // forme et le même écran.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_note ('
+        . 'cible VARCHAR(12) NOT NULL,'          // ref | zone | meuble
+        . 'cible_id VARCHAR(24) NOT NULL,'
+        . 'texte TEXT NULL,'
+        . 'epinglee TINYINT(1) NOT NULL DEFAULT 0,'
+        . 'gravite TINYINT NOT NULL DEFAULT 3,'
+        . 'du DATE NULL, au DATE NULL,'
+        . 'auteur VARCHAR(190) NOT NULL DEFAULT \'\','
+        . 'maj_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
+        . 'PRIMARY KEY (cible, cible_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
 /**
