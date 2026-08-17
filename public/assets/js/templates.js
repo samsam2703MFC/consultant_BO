@@ -603,34 +603,40 @@ function tplAnalyse(c, x){
     </div>
     ${c.anLignes ? (c.anLignes.vide
       ? `<div style="padding:30px 0;color:var(--color-text-muted);font-size:12.5px">${esc(c.anLignes.vide)}</div>`
-      : `<div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px;margin-bottom:10px;width:fit-content">
-        ${c.anBaseBtns.map(o => `<button ${x.A(o.go)} style="${o.st}">${esc(o.label)}</button>`).join('')}
+      : `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+          ${c.anBaseBtns.map(o => `<button ${x.A(o.go)} style="${o.st}">${esc(o.label)}</button>`).join('')}
+        </div>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${c.anBase100
+          ? 'Chaque courbe repart de 100 : seules les formes se comparent. Qui suit le réseau colle à la ligne pointillée, quelle que soit sa taille.'
+          : 'Valeurs absolues — la taille des boutiques domine la lecture.'}${
+          c.anLignes.exclu ? ' · période en cours exclue, un mois entamé n’est pas comparable' : ''}</span>
       </div>
-      ${c.anBase100 ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:6px">Chaque courbe repart de 100 à sa première période : seules les formes se comparent. Une boutique qui suit le réseau colle à la ligne pointillée, quelle que soit sa taille.</div>` : ''}
       <svg viewBox="0 0 ${c.anLignes.W} ${c.anLignes.H}" style="width:100%;height:auto;display:block">
-      ${c.anLignes.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
-      ${c.anLignes.reseau ? `<path d="${c.anLignes.reseau.d}" fill="none" stroke="var(--color-text)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round" opacity="0.55"/>
-        ${c.anLignes.reseau.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="3.5" fill="var(--color-surface)" stroke="var(--color-text)" stroke-width="1.6" opacity="0.75"><title>${esc(q.t)}</title></circle>`).join('')}
-        <line x1="${c.anLignes.reseau.fin.xd + 4}" y1="${c.anLignes.reseau.fin.y}" x2="${c.anLignes.PD + 6}" y2="${c.anLignes.reseau.fin.ly}" stroke="var(--color-text)" stroke-width="0.8" opacity="0.35"/>
-        <text x="${c.anLignes.PD + 16}" y="${c.anLignes.reseau.fin.ly + 3}" font-size="9.5" fill="var(--color-text-muted)" font-style="italic">réseau</text>` : ''}
-      ${c.anLignes.series.map(s => `<path d="${s.d}" fill="none" stroke="${s.col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        ${s.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4" fill="${s.col}" stroke="var(--color-surface)" stroke-width="2"><title>${esc(q.t)}</title></circle>`).join('')}
-        ${s.fin ? `<line x1="${s.fin.xd + 4}" y1="${s.fin.y}" x2="${c.anLignes.PD + 6}" y2="${s.fin.ly}" stroke="${s.col}" stroke-width="0.8" opacity="0.45"/>
-          <circle cx="${c.anLignes.PD + 10}" cy="${s.fin.ly}" r="3" fill="${s.col}"/>
-          <text x="${c.anLignes.PD + 16}" y="${s.fin.ly + 3}" font-size="9.5" fill="var(--color-text-muted)">${esc(s.court)}</text>` : ''}`).join('')}
-      ${c.anLignes.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="10.5" fill="${l.c}">${esc(l.t)}</text>`).join('')}
+      ${c.anLignes.ticks.map(t => `<line x1="0" x2="${c.anLignes.PD}" y1="${t.y}" y2="${t.y}" stroke="${t.ref ? 'rgba(34,34,34,0.3)' : 'rgba(34,34,34,0.08)'}" stroke-width="${t.ref ? 1 : 0.8}"/>
+        <text x="${c.anLignes.PD + 4}" y="${t.y + 4}" font-size="10.5" fill="var(--color-text-muted)" ${t.ref ? 'font-weight="500"' : ''}>${esc(t.t)}</text>`).join('')}
+      ${c.anLignes.reseau ? `<path d="${c.anLignes.reseau.d}" fill="none" stroke="var(--color-text)" stroke-width="2.5" stroke-dasharray="7 5" stroke-linejoin="round" opacity="0.6"/>
+        ${c.anLignes.reseau.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4" fill="var(--color-surface)" stroke="var(--color-text)" stroke-width="1.8" opacity="0.75"><title>${esc(q.t)}</title></circle>`).join('')}
+        <line x1="${c.anLignes.reseau.fin.xd + 5}" y1="${c.anLignes.reseau.fin.y}" x2="${c.anLignes.PD + 34}" y2="${c.anLignes.reseau.fin.ly}" stroke="var(--color-text)" stroke-width="0.9" opacity="0.35"/>
+        <text x="${c.anLignes.PD + 40}" y="${c.anLignes.reseau.fin.ly + 4}" font-size="11.5" fill="var(--color-text-muted)" font-style="italic">réseau</text>` : ''}
+      ${c.anLignes.series.map(s => `<path d="${s.d}" fill="none" stroke="${s.col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${s.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4.5" fill="${s.col}" stroke="var(--color-surface)" stroke-width="2"><title>${esc(q.t)}</title></circle>`).join('')}
+        ${s.fin ? `<line x1="${s.fin.xd + 5}" y1="${s.fin.y}" x2="${c.anLignes.PD + 34}" y2="${s.fin.ly}" stroke="${s.col}" stroke-width="0.9" opacity="0.45"/>
+          <circle cx="${c.anLignes.PD + 38}" cy="${s.fin.ly}" r="3.5" fill="${s.col}"/>
+          <text x="${c.anLignes.PD + 45}" y="${s.fin.ly + 4}" font-size="11.5" fill="var(--color-text)">${esc(s.court)}</text>` : ''}`).join('')}
+      ${c.anLignes.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="11.5" fill="var(--color-text-muted)">${esc(l.t)}</text>`).join('')}
     </svg>
-    <div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px">
+    <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px">
       ${c.anLignes.series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
         <span style="width:10px;height:10px;border-radius:3px;background:${s.col};flex:none"></span>${esc(s.nom)}</span>`).join('')}
       <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
-        <span style="width:14px;height:0;border-top:2px dashed var(--color-text);opacity:0.55;flex:none"></span>Moyenne réseau</span>
+        <span style="width:16px;height:0;border-top:2px dashed var(--color-text);opacity:0.6;flex:none"></span>Moyenne réseau</span>
     </div>
-    <div style="overflow-x:auto;margin-top:14px">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">
+    <div style="overflow-x:auto;margin-top:16px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
       <thead><tr>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Magasin</th>
-        ${c.anLignes.entetes.map(h => `<th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;padding:0 8px 6px;color:${h.enCours ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(h.t)}</th>`).join('')}
+        ${c.anLignes.entetes.map(h => `<th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;padding:0 8px 6px;color:var(--color-text-muted)">${esc(h.t)}</th>`).join('')}
         <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 14px 6px">Évolution</th>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Suit le réseau ?</th>
       </tr></thead>
@@ -648,10 +654,11 @@ function tplAnalyse(c, x){
             <span style="display:inline-block;width:14px;border-top:2px dashed var(--color-text);opacity:0.55;margin-right:5px;vertical-align:middle"></span>Moyenne réseau</td>
           ${c.anLignes.reseau.cells.map(q => `<td style="padding:6px 8px;border-top:0.5px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted);white-space:nowrap">${esc(q.v)}</td>`).join('')}
           <td style="padding:6px 14px;border-top:0.5px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted);font-style:italic">${esc(c.anLignes.reseau.evo)}</td>
-          <td style="padding:6px 0;border-top:0.5px solid var(--color-border-secondary);font-size:11px;color:var(--color-text-muted);font-style:italic">référence${c.anLignes.nClos ? ' · ' + c.anLignes.nClos + ' période' + (c.anLignes.nClos > 1 ? 's' : '') + ' close' + (c.anLignes.nClos > 1 ? 's' : '') : ''}</td>
+          <td style="padding:6px 0;border-top:0.5px solid var(--color-border-secondary);font-size:11px;color:var(--color-text-muted);font-style:italic">référence · ${c.anLignes.nClos} période${c.anLignes.nClos > 1 ? 's' : ''} close${c.anLignes.nClos > 1 ? 's' : ''}</td>
         </tr>` : ''}
       </tbody>
-    </table></div>`)
+    </table></div>
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">« En phase » = moins de 5 points d’écart entre l’évolution du magasin et celle du réseau ; en deçà, on lirait du bruit comme un signal.</div>`)
     : `<svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
       ${g.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
       ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"><title>${esc(b.t || '')}</title></rect>`).join('')}
@@ -666,7 +673,8 @@ function tplAnalyse(c, x){
     </div>` : ''}`}
     ${c.anParMagasinMotif && c.anVue === 'magasin' ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:10px">${esc(c.anParMagasinMotif)}</div>` : ''}
     ${c.anMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:8px">${esc(c.anMotif)}</div>` : ''}
-    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px">
+    <div style="font-size:11.5px;font-weight:500;color:var(--color-text);margin-top:22px;padding-top:14px;border-top:0.5px solid var(--color-border-tertiary)">Total réseau, comparé à l’an dernier</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px">
       <thead><tr>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Période</th>
         <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">${c.anType === 'categorie' ? 'CA' : 'Vendu'}</th>

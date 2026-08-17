@@ -1301,30 +1301,39 @@ class App {
       const grille = hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(1), w: W })) : [];
 
       if (parShop) {
-        // Marge de droite RÉSERVÉE aux étiquettes. Sans elle, les quatre noms
-        // se chevauchaient là où les courbes convergent — illisibles au moment
-        // précis où l'on compare.
-        const PR = 96, PD = W - PR;
-        const xi = i => +(PL + i * (PD - PL) / pts.length + (PD - PL) / pts.length / 2).toFixed(1);
-        labels.forEach((l, i) => { l.x = xi(i).toFixed(1); });
+        // Cadre PROPRE à cette vue, bien plus large que celui des barres. Le
+        // même viewBox de 640 étiré sur 1500 pixels grossissait tout texte de
+        // 2,3 fois : les libellés de mois criaient pendant que les courbes
+        // chuchotaient. À cette échelle-ci, un corps 11 reste un corps 11.
+        const LW = 1180, LH = 380, LB = 42, LL = 8, PR = 150, PD = LW - PR;
+
+        // La période EN COURS est écartée de cette vue. Un mois entamé fait
+        // plonger les cinq courbes d'un coup : cette chute occupait la moitié
+        // du cadre et écrasait les mois clos — le signal — dans une bande
+        // étroite. Le verdict ne compte déjà que les périodes closes ; le
+        // graphique montre donc exactement ce que le verdict mesure.
+        const iC = pts.map((p, i) => p.enCours ? -1 : i).filter(i => i >= 0);
+        const ptsC = iC.map(i => pts[i]);
+        const nC = ptsC.length;
+        const xi = i => +(LL + i * (PD - LL) / nC + (PD - LL) / nC / 2).toFixed(1);
         const PAL = ['#D55E00', '#0072B2', '#009E73', '#CC79A7', '#E69F00'];
 
         // Tendance réseau : la MOYENNE par magasin, pas le total. Le total vaut
         // quatre fois une boutique et écraserait les courbes sur le bas du cadre.
-        const moy = pts.map(p => {
+        const moy = ptsC.map(p => {
           const v = mags.map(m => (p.parMagasin || {})[m.id]).filter(x => x != null);
           return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
         });
-        const brut = mags.map(m => pts.map(p => { const v = (p.parMagasin || {})[m.id]; return v == null ? null : v; }));
+        const brut = mags.map(m => ptsC.map(p => { const v = (p.parMagasin || {})[m.id]; return v == null ? null : v; }));
 
         // SUIVRE LE RÉSEAU N'EST PAS ÊTRE AU NIVEAU DU RÉSEAU. Une boutique
         // trois fois plus grosse que la moyenne peut en épouser parfaitement la
-        // tendance ; l'écart de niveau ne dit rien de la phase. La base 100
-        // ramène chacun à son propre point de départ : ne restent que les
-        // formes, et c'est là seulement qu'un décrochage se voit.
-        const base100 = S.anBase === '100';
+        // tendance. La base 100 ramène chacun à son propre point de départ :
+        // ne restent que les formes, et c'est là seulement qu'un décrochage
+        // se voit.
+        const base100 = S.anBase !== 'valeurs';
         common.anBase = base100 ? '100' : 'valeurs';
-        common.anBaseBtns = [['valeurs', 'Valeurs'], ['100', 'Tendance base 100']]
+        common.anBaseBtns = [['100', 'Tendance base 100'], ['valeurs', 'Valeurs']]
           .map(o => ({ label: o[1], st: onglet((base100 ? '100' : 'valeurs') === o[0]),
             go: () => this.setState({ anBase: o[0] }) }));
         const indexer = a => { const b = a.find(v => v != null && v !== 0);
@@ -1335,51 +1344,61 @@ class App {
         const tous = [];
         aff.forEach(a => a.forEach(v => { if (v != null) tous.push(v); }));
         affMoy.forEach(v => { if (v != null) tous.push(v); });
-        const lo = base100 && tous.length ? Math.min.apply(null, tous) * 0.94 : 0;
-        const hh = tous.length ? Math.max.apply(null, tous) * 1.06 : 0;
-        const yy = v => (H - PB) * (1 - (v - lo) / (hh - lo || 1));
-        const grille2 = hh > lo ? [0.5, 1].map(f => ({ y: yy(lo + (hh - lo) * f).toFixed(1), w: PD })) : [];
-        const fmtA = v => base100 ? Math.round(v).toLocaleString('fr-BE') : fmtM(v);
+        let lo = tous.length ? Math.min.apply(null, tous) : 0;
+        let hh = tous.length ? Math.max.apply(null, tous) : 1;
+        if (base100) { lo = Math.min(lo, 100); hh = Math.max(hh, 100); }
+        const mrg = (hh - lo) * 0.12 || 1;
+        lo = base100 ? lo - mrg : 0; hh = hh + mrg;
+        const yy = v => +((LH - LB) * (1 - (v - lo) / (hh - lo || 1))).toFixed(1);
 
-        // Le verdict ne se calcule QUE sur des périodes closes : une période
-        // entamée ferait passer tout le monde pour décrochant.
-        const iClos = pts.map((p, i) => p.enCours ? -1 : i).filter(i => i >= 0);
-        const evo = a => { const c = iClos.map(i => a[i]).filter(v => v != null);
+        // Graduations CHIFFRÉES. Sans elles on lit des pentes sans savoir de
+        // quelle amplitude — et en base 100, la ligne 100 est la référence même.
+        const ticks = [];
+        if (base100) {
+          const pas = (hh - lo) > 60 ? 20 : (hh - lo) > 30 ? 10 : 5;
+          for (let v = Math.ceil(lo / pas) * pas; v <= hh; v += pas) {
+            ticks.push({ y: yy(v), t: String(v), ref: v === 100 });
+          }
+          if (!ticks.some(t => t.ref)) { ticks.push({ y: yy(100), t: '100', ref: true }); }
+        } else {
+          [0.5, 1].forEach(f => ticks.push({ y: yy(lo + (hh - lo) * f), t: this.fK(lo + (hh - lo) * f), ref: false }));
+        }
+
+        const evo = a => { const c = a.filter(v => v != null);
           return c.length > 1 && c[0] ? (c[c.length - 1] - c[0]) / c[0] : null; };
         const evoRes = evo(moy);
 
         const series = mags.map((m, k) => {
           const pt = [];
-          aff[k].forEach((v, i) => { if (v != null && hh > lo) pt.push({ i, v, x: xi(i), y: +yy(v).toFixed(1) }); });
+          aff[k].forEach((v, i) => { if (v != null) pt.push({ i, v, x: xi(i), y: yy(v) }); });
           const der = pt.length ? pt[pt.length - 1] : null;
           const e = evo(brut[k]);
-          // L'écart de TENDANCE, en points de pourcentage : c'est la réponse à
-          // « ce magasin suit-il le réseau ? ». Sous cinq points on considère
-          // qu'il est en phase — en deçà, on lirait du bruit comme un signal.
+          // L'écart de TENDANCE, en points de pourcentage : la réponse à « ce
+          // magasin suit-il le réseau ? ». Sous cinq points on lirait du bruit.
           const ph = (e != null && evoRes != null) ? (e - evoRes) * 100 : null;
           return { id: m.id, nom: m.nom,
             court: (m.nom.split(/\s+[-–]\s+/).pop() || m.nom).trim(),
             col: PAL[k % PAL.length],
             d: pt.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
-            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : '
-              + (base100 ? Math.round(q.v) + ' (base 100)' : fmtM(brut[k][q.i])) })),
+            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + ptsC[q.i].libelle + ' : '
+              + fmtM(brut[k][q.i]) + (base100 ? ' — base ' + Math.round(q.v) : '') })),
             evo: e == null ? '—' : (e >= 0 ? '+' : '') + this.fP(e, 1),
-            phase: ph, 
+            phase: ph,
             phaseTxt: ph == null ? '—' : (ph >= 0 ? '+' : '') + ph.toFixed(1).replace('.', ',') + ' pts',
             verdict: ph == null ? 'indéterminé' : Math.abs(ph) <= 5 ? 'en phase'
               : (ph > 0 ? 'au-dessus de la tendance' : 'décroche'),
             vCol: ph == null ? 'var(--color-text-muted)' : Math.abs(ph) <= 5 ? '#2d7a3e'
               : (ph > 0 ? '#1f6f7a' : 'var(--color-primary)'),
             fin: der ? { y: der.y, xd: der.x } : null,
-            cells: pts.map((p, i) => ({ v: brut[k][i] == null ? '—' : fmtM(brut[k][i]) })) };
+            cells: ptsC.map((p, i) => ({ v: brut[k][i] == null ? '—' : fmtM(brut[k][i]) })) };
         }).filter(s => s.pts.length);
 
         const mp = [];
-        affMoy.forEach((v, i) => { if (v != null && hh > lo) mp.push({ i, v, x: xi(i), y: +yy(v).toFixed(1) }); });
+        affMoy.forEach((v, i) => { if (v != null) mp.push({ i, v, x: xi(i), y: yy(v) }); });
         const reseau = mp.length ? {
           d: mp.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
-          pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + pts[q.i].libelle + ' : '
-            + (base100 ? Math.round(q.v) + ' (base 100)' : fmtM(moy[q.i])) })),
+          pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + ptsC[q.i].libelle + ' : '
+            + fmtM(moy[q.i]) + (base100 ? ' — base ' + Math.round(q.v) : '') })),
           fin: { xd: mp[mp.length - 1].x, y: mp[mp.length - 1].y },
           evo: evoRes == null ? '—' : (evoRes >= 0 ? '+' : '') + this.fP(evoRes, 1),
           cells: moy.map(v => ({ v: v == null ? '—' : fmtM(v) }))
@@ -1391,13 +1410,14 @@ class App {
         if (reseau) { bouts.push(reseau.fin); }
         bouts.sort((a, b) => a.y - b.y);
         let prec = -99;
-        bouts.forEach(f => { f.ly = Math.max(f.y, prec + 12); prec = f.ly; });
+        bouts.forEach(f => { f.ly = Math.max(f.y, prec + 17); prec = f.ly; });
 
         common.fPct = v => this.fP(v, 1);
         common.anBase100 = base100;
-        common.anLignes = { W, H, PD, grille: grille2, labels, series, reseau,
-          entetes: pts.map(p => ({ t: p.libelle, enCours: p.enCours })),
-          nClos: iClos.length,
+        common.anLignes = { W: LW, H: LH, PD, ticks,
+          labels: ptsC.map((p, i) => ({ x: xi(i).toFixed(1), y: LH - 16, t: p.libelle })),
+          series, reseau, entetes: ptsC.map(p => ({ t: p.libelle })), nClos: nC,
+          exclu: pts.length - nC,
           vide: !series.length ? 'aucun magasin n’a de chiffre sur cette sélection' : '' };
       }
 
