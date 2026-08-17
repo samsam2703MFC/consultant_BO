@@ -1667,7 +1667,10 @@ function tplTaches(c, x){
 function tplReporting(c, x){
   const { esc } = x;
   return `
-  <div data-screen="reporting" style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+  <!-- Un panneau par ligne : à deux colonnes, le rapport et sa colonne de 340 px
+       se lisaient en zigzag, et la liste des rapports — le contenu principal —
+       se retrouvait comprimée par un panneau secondaire. -->
+  <div data-screen="reporting" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
         <div style="font-size:13px;font-weight:500">Rapports récurrents — génération et envoi automatiques (PDF)</div>
@@ -1748,7 +1751,7 @@ function tplReporting(c, x){
       </div>
     </div>
 
-    <div style="grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div style="grid-column:1 / -1;display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
         <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
           <div style="font-size:13px;font-weight:500">Panel consultant — générer un rapport</div>
@@ -1793,7 +1796,7 @@ function tplReporting(c, x){
       </div>
     </div>
 
-    <div style="grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div style="grid-column:1 / -1;display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
         <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
           <div style="font-size:13px;font-weight:500">Rapport consultant — par district</div>

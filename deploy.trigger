@@ -1,5 +1,4 @@
-La tuile « a controler » emmene avec son filtre.
+Reporting automatise : un panneau par ligne.
 
-Cliquer la tuile ouvrait la liste complete : il fallait refaire a la main le tri
-qu on venait de demander. Et « a noter seulement » retenait tout ce qui n etait
-pas note, y compris ce qui n est pas notable. Trois filtres distincts.
+A deux colonnes, la liste des rapports — le contenu principal — se retrouvait
+comprimee par un panneau secondaire de 340 px, et la lecture partait en zigzag.
