@@ -2094,8 +2094,21 @@ class App {
    * visible, on reclique — deux zones identiques ont été créées ainsi avant que
    * cet écran ne dise ce qu'il avait enregistré.
    */
+  /**
+   * Ce que le champ AFFICHE fait foi, pas ce que l'état croit savoir.
+   *
+   * L'état se met à jour sur un événement du navigateur, et cette plomberie a
+   * suffi à perdre une saisie : après avoir touché le nombre d'emplacements, le
+   * bouton « Ajouter » du niveau ne voyait plus le nom pourtant visible à
+   * l'écran, et ne faisait plus rien — sans message. On lit donc le champ.
+   */
+  plLire(id, defaut){
+    const el = document.getElementById(id);
+    return el ? String(el.value) : String(defaut == null ? '' : defaut);
+  }
   plAjouter(type, parentId, nom, champ){
-    const v = String(nom || '').trim();
+    const ids = { plNZone: 'pl-nzone', plNMeuble: 'pl-nmeuble' };
+    const v = String(this.plLire(ids[champ] || '', nom) || '').trim();
     if (!v) { this.notify('Donnez un nom avant d’ajouter.'); return; }
     write(this.source, 'POST', '/planogramme/' + type, { nom: v, parentId })
       .then(r => {
@@ -2116,9 +2129,10 @@ class App {
    */
   plAjouterNiveau(meubleId){
     const S = this.state;
-    const nom = String(S.plNNiveau || '').trim();
+    const nom = String(this.plLire('pl-nniveau', S.plNNiveau) || '').trim();
     if (!nom) { this.notify('Donnez un nom de niveau (haut, médian, bas…).'); return; }
-    const slots = Math.max(0, Math.min(40, parseInt(S.plNSlots == null ? '4' : S.plNSlots, 10) || 0));
+    const slots = Math.max(0, Math.min(40,
+      parseInt(this.plLire('pl-nslots', S.plNSlots == null ? '4' : S.plNSlots), 10) || 0));
     write(this.source, 'POST', '/planogramme/niveau', { nom, parentId: meubleId, slots })
       .then(r => {
         if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }

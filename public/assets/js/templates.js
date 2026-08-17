@@ -2767,7 +2767,7 @@ function tplPlanoComptoir(c, x){
           </div>`).join('')}
           <div style="display:flex;gap:6px;margin-top:7px">
             <input id="pl-nniveau" value="${esc(c.plNNiveau.val)}" ${x.I(c.plNNiveau.set)} placeholder="Niveau haut…" style="${inp};flex:1;min-width:0" ${c.plNiveauAdd ? '' : 'disabled'}>
-            <input type="number" min="0" max="40" value="${esc(c.plNSlots.val)}" ${x.C(c.plNSlots.set)} title="Nombre d’emplacements" style="${inp};width:56px;text-align:right">
+            <input id="pl-nslots" type="number" min="0" max="40" value="${esc(c.plNSlots.val)}" ${x.C(c.plNSlots.set)} title="Nombre d’emplacements" style="${inp};width:56px;text-align:right">
             <button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)}">Ajouter</button>
           </div>
         </div>
