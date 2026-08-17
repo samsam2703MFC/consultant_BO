@@ -1656,7 +1656,27 @@ function tplFonds(c, x){
       </div>`).join('')}
     </div>
 
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+    <div style="${carte};padding:14px 17px 16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:11px">
+        <span style="font-size:13px;font-weight:500">Par levier — où part l’argent du fonds</span>
+        <span style="font-size:10.5px;color:var(--color-text-muted)">${c.foLevActifs} / ${c.foLevNb} portent une dépense</span>
+      </div>
+      ${(c.foLeviers || []).length ? `<div style="display:grid;grid-template-columns:repeat(${c.foLevNb},minmax(0,1fr));gap:9px">
+        ${c.foLeviers.map(l => `<div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:11px 12px;border-top:2.5px solid ${l.couleur};${l.inactif ? 'opacity:.55' : ''}">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:2px;background:${l.couleur};flex:0 0 auto"></span>
+            <span style="font-size:11px;font-weight:500;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.nom)}">${esc(l.nom)}</span>
+          </div>
+          <div style="font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:6px;line-height:1.1">${esc(l.depense)}</div>
+          <div style="height:4px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden;margin-top:6px"><i style="display:block;height:100%;border-radius:999px;width:${l.barre.toFixed(1)}%;background:${l.couleur}"></i></div>
+          <div style="font-size:10px;color:var(--color-text-muted);margin-top:5px;line-height:1.35">${esc(l.part || 'aucune dépense')}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">ROI ${esc(l.roi)}</div>
+        </div>`).join('')}
+      </div>` : `<div style="font-size:12px;color:var(--color-text-muted)">Aucun levier renseigné.</div>`}
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un levier sans dépense n’a pas de retour à montrer — c’est une absence, pas un zéro.${c.foLevOrphelines ? ' ' + esc(c.foLevOrphelines) : ''}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:12px;align-items:start">
       <div style="${carte};overflow:hidden">
         <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
           <span style="font-size:13px;font-weight:500">Grand livre du fonds</span>
@@ -1678,17 +1698,6 @@ function tplFonds(c, x){
           </tr>`).join('')}</tbody>
         </table></div>
         ${c.foTronque ? `<div style="padding:9px 17px;font-size:11px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.foTronque} mouvement(s) plus anciens — le détail complet est dans le module marketing.</div>` : ''}`}
-      </div>
-
-      <div style="${carte};padding:15px 17px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:10px">Par levier</div>
-        ${(c.foLeviers || []).length ? c.foLeviers.map(l => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
-          <span style="width:10px;height:10px;border-radius:3px;background:${l.couleur};flex:0 0 auto"></span>
-          <span style="flex:1;font-size:12.5px;${l.inactif ? 'color:var(--color-text-muted)' : ''}">${esc(l.nom)}</span>
-          <span style="font-size:12.5px;font-variant-numeric:tabular-nums">${esc(l.depense)}</span>
-          <span style="font-size:11.5px;color:var(--color-text-muted);width:42px;text-align:right">${esc(l.roi)}</span>
-        </div>`).join('') : `<div style="font-size:12px;color:var(--color-text-muted)">Aucun levier renseigné.</div>`}
-        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.45">${c.foLevActifs} levier(s) portent une dépense. Un levier sans dépense n\u2019a pas de retour à montrer — c\u2019est une absence, pas un zéro.</div>
       </div>
     </div>
 
@@ -1716,6 +1725,102 @@ function tplFonds(c, x){
   </div>`;
 }
 
+/* --- Projets · le fonds de la marque face aux projets ------------------------ */
+/**
+ * Le rapprochement se fait sur le SOLDE, pas sur la ligne : rien ne rattache
+ * encore un mouvement du fonds à un projet, et la carte le dit — sinon on
+ * lirait une couverture projet par projet qui n'existe pas.
+ */
+function tplProjetsFonds(c, x){
+  const { esc } = x;
+  const f = c.pjFonds;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
+  if (f.chargement) {
+    return `<div style="${carte};padding:15px 18px;font-size:12.5px;color:var(--color-text-muted)">Lecture du fonds de la marque…</div>`;
+  }
+  return `
+  <div style="${carte};padding:15px 18px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+      <span style="font-size:13px;font-weight:500">Le fonds de la marque face aux projets</span>
+      <button ${x.A(f.ouvrir)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Fonds &amp; Royalties</button>
+    </div>
+    ${f.erreur ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.45">${esc(f.erreur)}</div>` : ''}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:13px">
+      <div><div style="${k}">Alimenté</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.alim)}</div></div>
+      <div><div style="${k}">Dépensé</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.dep)}</div></div>
+      <div><div style="${k}">Solde disponible</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums;color:${f.verdictCol}">${esc(f.solde)}</div></div>
+      <div><div style="${k}">Engagé par les projets</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.engage)}</div></div>
+    </div>
+    <div style="height:9px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden;margin-top:12px">
+      <i style="display:block;height:100%;border-radius:999px;width:${f.couvre.toFixed(1)}%;background:${f.verdictCol}"></i>
+    </div>
+    <div style="font-size:12px;color:${f.verdictCol};margin-top:7px;font-weight:500">${esc(f.verdict)}</div>
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">${esc(f.note)}</div>
+  </div>`;
+}
+
+/* --- Projets · les sorties d'argent, mois par mois --------------------------- */
+/**
+ * Le calendrier des sorties : ce qui quitte le fonds, et ce que les projets
+ * font sortir — prévisionnel en GRIS, réel en NOIR.
+ *
+ * Seul ce qui porte une date figure ici. Ce qui n'en porte pas est annoncé
+ * sous le tableau plutôt que réparti au jugé.
+ */
+function tplProjetsPeriodes(c, x){
+  const { esc } = x;
+  const p = c.pjPeriodes;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 10px 7px';
+  const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const num = 'text-align:right;font-variant-numeric:tabular-nums';
+  const GRIS = '#C2BDB7', NOIR = 'var(--color-text)', FONDS = 'var(--color-primary)';
+  const puce = (col, nom) => `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted)"><span style="width:11px;height:4px;border-radius:2px;background:${col}"></span>${nom}</span>`;
+  return `
+  <div style="${carte};overflow:hidden">
+    <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:500">Les sorties d’argent, mois par mois</span>
+      <span style="display:flex;gap:14px;flex-wrap:wrap">${puce(FONDS, 'Sortie du fonds')}${puce(GRIS, 'Budget prévisionnel')}${puce(NOIR, 'Budget réel')}</span>
+    </div>
+    ${p.vide ? `<div style="padding:22px 18px;font-size:12.5px;color:var(--color-text-muted)">Aucune sortie datée — ni du fonds, ni des projets.</div>` : `
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:640px">
+      <thead><tr>
+        <th style="${th};padding-left:18px">Mois</th>
+        <th style="${th};${num}">Sortie du fonds</th>
+        <th style="${th};${num}">Prévisionnel</th>
+        <th style="${th};${num}">Réel</th>
+        <th style="${th};${num}">Écart</th>
+        <th style="${th};width:34%;padding-right:18px">Comparaison</th>
+      </tr></thead>
+      <tbody>${p.lignes.map(l => `<tr>
+        <td style="${td};padding-left:18px;white-space:nowrap"><span style="font-weight:500">${esc(l.mois)}</span>${l.detail ? `<div style="font-size:10.5px;color:var(--color-text-muted);font-weight:400">${esc(l.detail)}</div>` : ''}</td>
+        <td style="${td};${num};color:${FONDS}">${esc(l.fonds)}</td>
+        <td style="${td};${num};color:var(--color-text-muted)">${esc(l.prev)}</td>
+        <td style="${td};${num};font-weight:500">${esc(l.reel)}</td>
+        <td style="${td};${num};color:${l.ecartCol}">${esc(l.ecart)}</td>
+        <td style="${td};padding-right:18px">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="height:5px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${l.bFonds.toFixed(1)}%;background:${FONDS}"></i></div>
+            <div style="height:5px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${l.bPrev.toFixed(1)}%;background:${GRIS}"></i></div>
+            <div style="height:5px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${l.bReel.toFixed(1)}%;background:${NOIR}"></i></div>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr>
+        <td style="${td};padding-left:18px;font-weight:500;border-top-width:1px">Total</td>
+        <td style="${td};${num};color:${FONDS};font-weight:500;border-top-width:1px">${esc(p.totFonds)}</td>
+        <td style="${td};${num};color:var(--color-text-muted);border-top-width:1px">${esc(p.totPrev)}</td>
+        <td style="${td};${num};font-weight:500;border-top-width:1px">${esc(p.totReel)}</td>
+        <td style="${td};border-top-width:1px"></td><td style="${td};border-top-width:1px"></td>
+      </tr></tfoot>
+    </table></div>`}
+    <div style="padding:11px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">
+      Le calendrier ne porte que ce qui a une date : le budget des tâches, placé à l’échéance pour le prévisionnel et à la date de réalisation pour le réel.${p.vidTaches ? ' Aucune tâche ne porte de budget — la ligne des projets reste donc vide.' : ''} ${esc(p.horsCal)}${p.sansDate ? ' ' + esc(p.sansDate) : ''} ${esc(p.note)}
+    </div>
+  </div>`;
+}
+
 /* --- Projets · budgets engagés et retour ------------------------------------- */
 function tplProjetsBudgets(c, x){
   const { esc } = x;
@@ -1733,6 +1838,10 @@ function tplProjetsBudgets(c, x){
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
     </div>`).join('')}
   </div>
+
+  ${c.pjFonds ? tplProjetsFonds(c, x) : ''}
+  ${c.pjPeriodes ? tplProjetsPeriodes(c, x) : ''}
+
   <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
     <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Par projet — ce qui est engagé, ce qui revient</div>
     ${b.vide ? `<div style="padding:24px 18px;font-size:12.5px;color:var(--color-text-muted)">Aucun projet.</div>` : `

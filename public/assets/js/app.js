@@ -631,23 +631,35 @@ class App {
     const projEff = D.projects.map(p => Object.assign({}, p, { statut: this.pStatut(p) }));
     const nLate = projEff.filter(p => p.statut === 'En retard').length;
 
-    const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
-      ['Exploitation', [['exploitation', 'P&L magasins', 0]]],
-      ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length],
-        { sub: 'Scoring produits', children: [
-          ['produits', 'Scoring des références', 0],
-          ['seuil', 'Références sous seuil', 0],
-          ['analyse', 'Analyse dans le temps', 0]] }]],
-      ['Référentiel produit', [
+    // Le rail suit le geste, pas l'organigramme : on pilote sa journée, puis on
+    // regarde la performance des magasins, puis les produits qui la font, puis
+    // les achats, puis ce que la marque investit, puis ce qu'on contrôle.
+    // « Exploitation » et « Réseau & marque » ne portaient qu'une entrée
+    // chacune : une section d'un seul item coûte un titre pour rien.
+    const navDef = [
+      ['Pilotage', [
+        ['taches', 'Tâches consultants', lateTasks.length],
+        ['exploitation', 'P&L magasins', 0]]],
+      ['Performance magasins', [
+        ['magasins', 'Tableau des magasins', 0],
+        ['heatmap', 'Heatmap mensuelle', 0],
+        ['objectifs', 'Objectifs de CA', 0],
+        ['marge', 'Marge & coûts', this.margeAlerts().length],
+        { sub: 'Budget magasin', children: [
+          ['budget', 'Suivi du budget', 0],
+          ['encodage', 'Encodage du budget', 0]] }]],
+      // Le produit d'abord tel qu'il est (catalogue, comptoir), ensuite ce
+      // qu'il vaut (scoring), enfin ce qu'on en produit.
+      ['Produits', [
         { sub: 'Catalogue & comptoir', children: [
           ['catalogue', 'Catalogue produit', 0],
           ['assortiment', 'Assortiment obligatoire', 0],
           ['planogramme', 'Planogramme comptoir', 0]] },
+        { sub: 'Scoring & analyse', children: [
+          ['produits', 'Scoring des références', 0],
+          ['seuil', 'Références sous seuil', 0],
+          ['analyse', 'Analyse dans le temps', 0]] },
         ['production', 'Suivi de production', 0]]],
-      // Sept entrées, pas dix. « Catalogue & marge », « Analyse des ventes » et
-      // « Cockpit » doublaient le Référentiel produit, le Tableau des magasins
-      // et P&L magasins — mêmes sources, en moins riche. La marge nette qu'ils
-      // apportaient a rejoint le catalogue existant.
       ['Centrale d’achat', [
         ['caCampagnes', 'Campagnes commerciales', 0],
         ['caDemande', 'Demande de prix', 0],
@@ -655,20 +667,20 @@ class App {
         ['caCommandes', 'Commandes franchisés', 0],
         ['caStock', 'Stock', 0],
         ['caFacturation', 'Facturation magasins', 0]]],
-      ['Projets & contrôle', [['projets', 'Projets', nLate],
-        // Sous-menu : les deux écrans « tâches consultants » (panel) regroupés.
+      // Ce que la marque investit et ce qu'elle en retire, au même endroit : le
+      // fonds finance les projets de développement, et l'un ne se lit pas sans
+      // l'autre.
+      ['Marque & développement', [
+        ['projets', 'Projets de développement', nLate],
+        ['fonds', 'Fonds & Royalties', 0],
+        ['reporting', 'Reporting', 0]]],
+      ['Contrôle', [
         { sub: 'Checklists consultants', children: [
           ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
-          ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] }]],
-      // Le fonds marketing et les redevances vivent dans le module marketing,
-      // déployé sur le même serveur. On les LIT ici : dupliquer un grand livre
-      // donnerait deux soldes pour le même fonds.
-      ['Réseau & marque', [['fonds', 'Fonds & Royalties', 0]]],
-      ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0],
+          ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] },
+        ['journal', 'Journal', 0]]],
+      ['Administration', [
         ['diagnostic', 'Diagnostic API', 0],
-        // Les réglages de la centrale rejoignent les Paramètres : un moteur de
-        // marge et un référentiel fournisseurs sont des réglages, pas un écran
-        // d'exploitation. Les chercher à deux endroits était le vrai défaut.
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
           ['caReglages', 'Centrale d’achat', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
@@ -1949,6 +1961,53 @@ class App {
   /* --- fonds marketing & redevances ------------------------------------------ */
 
   /**
+   * Le grand livre du fonds, remis à plat.
+   *
+   * Le module marketing rend DEUX tableaux par période : `entries` pour les
+   * entrées, `exits` pour les sorties. Ne lire que `entries` laissait les
+   * sorties invisibles et affichait un solde faux — 3 000 € « alimenté » là
+   * où le module annonce 2 335 € de solde. Les totaux de période viennent du
+   * module quand il les donne : c'est lui qui tient le fonds.
+   *
+   * Sert à l'écran Fonds ET au rapprochement des projets : un seul calcul,
+   * donc un seul solde.
+   */
+  fondsMouvements(F){
+    const per = ((F && F.ledger && F.ledger.periods) || []);
+    const lignes = [], parPeriode = [];
+    let entrees = 0, sorties = 0;
+    per.forEach(p => {
+      const cle = p.period_key || '';
+      let e = 0, s = 0;
+      [].concat(p.entries || [], p.exits || []).forEach(m => {
+        const mt = +m.amount || 0;
+        const sort = (m.direction || '') === 'OUT';
+        if (sort) { s += mt; } else { e += mt; }
+        lignes.push({
+          date: this.fD(m.movement_date), jour: m.movement_date || '', periode: cle,
+          libelle: m.label || '—',
+          sens: sort ? 'sortie' : 'entrée',
+          montant: (sort ? '− ' : '+ ') + this.fU(mt),
+          col: sort ? 'var(--color-primary)' : '#2d7a3e',
+          source: m.source || '', magasin: m.shop_name || '', campagne: m.campaign_name || '',
+          levier: m.lever_label || '', levierCol: m.lever_color_hex || '#666666',
+        });
+      });
+      if (p.entries_total != null) { e = +p.entries_total || 0; }
+      if (p.exits_total != null) { s = +p.exits_total || 0; }
+      entrees += e; sorties += s;
+      parPeriode.push({ cle, entrees: e, sorties: s,
+        cloture: p.closing_balance == null ? null : +p.closing_balance });
+    });
+    return { lignes, parPeriode, entrees, sorties };
+  }
+  /** « 2026-08-01 » → « Août 2026 ». */
+  fPeriode(cle){
+    if (!cle) { return '—'; }
+    const mo = ((this.M && this.M.MOIS) || [])[+cle.slice(5, 7) - 1];
+    return mo ? mo + ' ' + cle.slice(0, 4) : cle;
+  }
+  /**
    * Le fonds du réseau, lu chez celui qui le tient.
    *
    * Le module marketing est déployé sur le même serveur et porte déjà le grand
@@ -1973,46 +2032,51 @@ class App {
     // --- grand livre : entrées et sorties, période par période.
     const L = f.ledger || {};
     const periodes = Array.isArray(L.periods) ? L.periods : [];
-    let entrees = 0, sorties = 0;
-    const lignes = [];
-    periodes.forEach(p => {
-      (p.entries || []).forEach(e => {
-        const m = +e.amount || 0;
-        if ((e.direction || '') === 'IN') { entrees += m; } else { sorties += m; }
-        lignes.push({
-          date: this.fD(e.movement_date), periode: p.period_key,
-          libelle: e.label || '—',
-          sens: (e.direction || '') === 'IN' ? 'entrée' : 'sortie',
-          montant: ((e.direction || '') === 'IN' ? '+ ' : '− ') + this.fU(m),
-          col: (e.direction || '') === 'IN' ? '#2d7a3e' : 'var(--color-primary)',
-          source: e.source || '', magasin: e.shop_name || '', campagne: e.campaign_name || '',
-          levier: e.lever_label || '', levierCol: e.lever_color_hex || '#666666',
-        });
-      });
-    });
-    lignes.sort((a, b) => (a.date < b.date ? 1 : -1));
+    const mv = this.fondsMouvements(f);
+    const entrees = mv.entrees, sorties = mv.sorties;
+    const lignes = mv.lignes;
+    lignes.sort((a, b) => (a.jour < b.jour ? 1 : -1));
     common.foLignes = lignes.slice(0, 60);
     common.foTronque = lignes.length > 60 ? lignes.length - 60 : 0;
     common.foVide = !lignes.length;
+    // Le solde vient du module quand il le donne : c'est LUI qui arrête le
+    // fonds. Le recalculer d'un côté et l'afficher de l'autre finirait par
+    // donner deux chiffres pour la même caisse.
+    const solde = L.closing_balance != null ? +L.closing_balance : entrees - sorties;
     common.foTuiles = [
       { k: 'Alimenté', v: this.fE(entrees), aide: 'ce que le réseau verse au fonds' },
       { k: 'Dépensé', v: this.fE(sorties), aide: 'ce que le fonds a financé' },
-      { k: 'Solde', v: this.fE(entrees - sorties),
-        aide: entrees - sorties >= 0 ? 'disponible' : 'engagé au-delà de l’alimenté',
-        col: entrees - sorties >= 0 ? '#2d7a3e' : 'var(--color-primary)' },
+      { k: 'Solde', v: this.fE(solde),
+        aide: solde >= 0 ? 'disponible' : 'engagé au-delà de l’alimenté',
+        col: solde >= 0 ? '#2d7a3e' : 'var(--color-primary)' },
       { k: 'Mouvements', v: String(lignes.length), aide: periodes.length + ' période(s)' },
     ];
 
     // --- leviers : où l'argent est allé, et ce qu'il a rendu.
-    common.foLeviers = (f.leviers || []).map(l => ({
-      nom: l.lever_label || l.lever_code || '—', couleur: l.color_hex || '#666666',
-      depense: this.fU(+l.spent_amount || 0),
-      roi: l.roi_value == null ? '—' : '×' + (+l.roi_value).toFixed(1).replace('.', ','),
-      // Un levier sans dépense n'a pas de ROI à montrer : c'est une absence,
-      // pas un zéro.
-      inactif: (+l.spent_amount || 0) === 0,
-    }));
+    const depMax = (f.leviers || []).reduce((a, l) => Math.max(a, +l.spent_amount || 0), 0);
+    common.foLeviers = (f.leviers || []).map(l => {
+      const dep = +l.spent_amount || 0;
+      return {
+        nom: l.lever_label || l.lever_code || '—', couleur: l.color_hex || '#666666',
+        depense: this.fU(dep),
+        part: sorties > 0 ? Math.round(100 * dep / sorties) + ' % des sorties' : '',
+        barre: depMax > 0 ? Math.max(0, Math.min(100, 100 * dep / depMax)) : 0,
+        roi: l.roi_value == null ? '—' : '×' + (+l.roi_value).toFixed(1).replace('.', ','),
+        // Un levier sans dépense n'a pas de ROI à montrer : c'est une absence,
+        // pas un zéro.
+        inactif: dep === 0,
+      };
+    });
     common.foLevActifs = common.foLeviers.filter(l => !l.inactif).length;
+    // Une seule rangée : les sept leviers se comparent d'un coup d'œil, ce
+    // qu'une colonne empilée ne permet pas.
+    common.foLevNb = common.foLeviers.length;
+    // Les sorties non rattachées : un levier sans mouvement n'est pas la même
+    // chose qu'une dépense sans levier, et c'est la seconde qui pose problème.
+    const sansLev = lignes.filter(l => l.sens === 'sortie' && !l.levier).length;
+    common.foLevOrphelines = sansLev
+      ? sansLev + ' sortie(s) ne portent aucun levier : elles pèsent sur le solde sans dire ce qu’elles développent.'
+      : '';
 
     // --- redevances par magasin.
     const R = f.royalties || {};
@@ -4154,7 +4218,7 @@ class App {
     common.pjVue = vue;
     common.pjVueBtns = [['kanban', 'Kanban'], ['budgets', 'Budgets & ROI'], ['franchise', 'Vue franchisé']]
       .map(([v, nom]) => ({ nom, on: vue === v, go: () => this.setState({ pjVue: v }) }));
-    if (vue === 'kanban') { common.pjBudgets = false; common.pjFranchise = false; return; }
+    if (vue === 'kanban') { common.pjBudgets = false; common.pjFranchise = false; common.pjPeriodes = false; return; }
 
     const nbMag = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     const som = (arr, k) => (arr || []).reduce((a, c) => a + (+c[k] || 0), 0);
@@ -4191,6 +4255,102 @@ class App {
     if (vue === 'budgets') {
       const T = { vote: 0, engage: 0, conso: 0, real: 0 };
       lignes.forEach(l => { T.vote += l.vote; T.engage += l.engage; T.conso += l.conso; T.real += (l.real || 0); });
+
+      // Ce que la marque a dans la caisse face à ce que les projets réclament.
+      // Le fonds est tenu par le module marketing : on le lit, on n'en fait pas
+      // une seconde comptabilité.
+      if (!D.fonds && !this._foEnCours) {
+        this._foEnCours = true;
+        readOne('/fonds').then(f2 => { this._foEnCours = false;
+          this.D.fonds = f2 || { erreurs: ['module injoignable'] }; this.setState({}); });
+      }
+      const F = D.fonds;
+      const mv = this.fondsMouvements(F);
+      const alim = mv.entrees, dep = mv.sorties;
+      const solde = (F && F.ledger && F.ledger.closing_balance != null)
+        ? +F.ledger.closing_balance : alim - dep;
+      common.pjFonds = !F ? { chargement: true } : {
+        chargement: false,
+        erreur: (F.erreurs || []).length ? F.erreurs.join(' · ') : '',
+        alim: this.fE(alim), dep: this.fE(dep), solde: this.fE(solde),
+        engage: this.fE(T.engage),
+        couvre: solde > 0 ? Math.max(0, Math.min(100, 100 * T.engage / solde)) : 0,
+        // Le verdict tient en une phrase : le fonds suffit-il à ce qui est
+        // engagé ? C'est la seule question que pose ce rapprochement.
+        verdict: T.engage === 0 ? 'Aucun engagement de projet à financer pour l’instant.'
+          : (solde <= 0 ? 'Le fonds n’a plus de solde : les projets engagés ne sont pas couverts.'
+            : (T.engage <= solde ? 'Le solde du fonds couvre ce que les projets ont engagé.'
+              : 'Les projets engagent ' + this.fE(T.engage - solde) + ' de plus que le solde du fonds.')),
+        verdictCol: (T.engage === 0 || (solde > 0 && T.engage <= solde)) ? '#2d7a3e' : 'var(--color-primary)',
+        // Le rattachement projet → mouvement du fonds n'existe pas : le
+        // rapprochement est GLOBAL, et le dire évite de le prendre pour un
+        // suivi ligne à ligne.
+        note: 'Rapprochement global : aucun champ ne rattache encore un projet à un mouvement du fonds. '
+          + 'Les écritures se font dans le module marketing.',
+        ouvrir: () => this.setState({ screen: 'fonds' }),
+      };
+
+      // --- les sorties, mois par mois : la caisse face au budget.
+      //
+      // Trois séries sur le même calendrier : ce qui SORT réellement du fonds
+      // (le grand livre du module marketing), et ce que les projets font
+      // sortir — prévu puis réel.
+      //
+      // Seul ce qui porte une DATE peut se placer sur un mois : le budget des
+      // tâches, à l'échéance pour le prévisionnel, à la date de réalisation
+      // pour le réel. Les postes de coût du projet n'ont pas de date en base :
+      // ils comptent dans les totaux, jamais sur ce calendrier — les étaler
+      // sur la durée du projet inventerait un échéancier que personne n'a
+      // posé.
+      const parMois = new Map();
+      const clef = d => (d || '').slice(0, 7);
+      const seau = m => { if (!parMois.has(m)) { parMois.set(m, { m, fonds: 0, prev: 0, reel: 0, nbP: 0, nbR: 0 }); }
+        return parMois.get(m); };
+      mv.parPeriode.forEach(p => { if (p.cle) { seau(clef(p.cle)).fonds += p.sorties; } });
+      let datees = 0, sansDate = 0;
+      lignes.forEach(l => (l.taches || []).forEach(t => {
+        const b = +t.budget || 0;
+        if (!b) { return; }
+        if (!t.due && !t.done) { sansDate += b; return; }
+        datees += b;
+        if (t.due) { const s = seau(clef(t.due)); s.prev += b; s.nbP++; }
+        if (t.done) { const s = seau(clef(t.done)); s.reel += b; s.nbR++; }
+      }));
+      const moisTri = Array.from(parMois.values()).filter(x => x.m).sort((a, b) => a.m < b.m ? -1 : 1);
+      const maxi = moisTri.reduce((a, x) => Math.max(a, x.fonds, x.prev, x.reel), 0);
+      const totF = moisTri.reduce((a, x) => a + x.fonds, 0);
+      const totP = moisTri.reduce((a, x) => a + x.prev, 0);
+      const totR = moisTri.reduce((a, x) => a + x.reel, 0);
+      common.pjPeriodes = {
+        vide: !moisTri.length,
+        lignes: moisTri.map(x => ({
+          mois: this.fPeriode(x.m + '-01'),
+          fonds: x.fonds ? this.fE(x.fonds) : '—',
+          prev: x.prev ? this.fE(x.prev) : '—',
+          reel: x.reel ? this.fE(x.reel) : '—',
+          // L'écart ne se lit qu'une fois le mois joué : avant, un réel à zéro
+          // n'est pas un écart, c'est un mois qui n'a pas encore eu lieu.
+          ecart: (x.nbR ? this.fE(x.reel - x.prev) : '—'),
+          ecartCol: !x.nbR ? 'var(--color-text-muted)'
+            : (x.reel > x.prev ? 'var(--color-primary)' : '#2d7a3e'),
+          detail: [x.nbP ? x.nbP + ' tâche(s) à échéance' : '', x.nbR ? x.nbR + ' réalisée(s)' : '']
+            .filter(Boolean).join(' · '),
+          bFonds: maxi > 0 ? 100 * x.fonds / maxi : 0,
+          bPrev: maxi > 0 ? 100 * x.prev / maxi : 0,
+          bReel: maxi > 0 ? 100 * x.reel / maxi : 0,
+        })),
+        totFonds: this.fE(totF), totPrev: this.fE(totP), totReel: this.fE(totR),
+        // Ce que le calendrier NE PORTE PAS, dit chiffre en main.
+        horsCal: (T.engage > 0 || T.conso > 0)
+          ? 'Hors calendrier : ' + this.fE(T.engage) + ' engagés et ' + this.fE(T.conso)
+            + ' consommés sur les postes de coût, qui ne portent pas de date.'
+          : 'Aucun poste de coût saisi sur les projets.',
+        sansDate: sansDate > 0 ? this.fE(sansDate) + ' de budget de tâches sans échéance ni date de réalisation.' : '',
+        vidTaches: datees === 0,
+        note: 'Aucun champ ne rattache un mouvement du fonds à un projet : les deux séries se lisent '
+          + 'côte à côte, mois par mois — elles ne se soldent pas l’une l’autre.',
+      };
+
       const pct = (a, b) => b > 0 ? Math.max(0, Math.min(100, 100 * a / b)) : 0;
       common.pjBudgets = {
         tuiles: [
@@ -4230,7 +4390,7 @@ class App {
 
     // --- vue franchisé : un projet à la fois, celui qu'on regarde.
     const sel = lignes.find(l => l.id === S.pjSel) || lignes[0] || null;
-    common.pjBudgets = false;
+    common.pjBudgets = false; common.pjPeriodes = false;
     if (!sel) { common.pjFranchise = { vide: true }; return; }
     const jal = (sel.jalons || []).map((j, i) => ({ nom: j.nom, date: this.fD(j.cible),
       fait: !!j.reel, courant: !j.reel, i }));
