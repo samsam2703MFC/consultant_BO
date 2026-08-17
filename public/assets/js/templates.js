@@ -54,6 +54,7 @@ export function render(c, x){
           <div style="font-size:10px;color:var(--color-text-muted)">${esc(c.userRole)}${c.paEtatCourt ? ' · ' + esc(c.paEtatCourt) : ''}</div>
         </div>
       </button>
+      ${c.build ? `<span title="Version en ligne — si elle est plus ancienne que la livraison, le navigateur sert une version en cache (Ctrl+Maj+R)" style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">v${esc(c.build)}</span>` : ''}
       ${c.canLogout ? `<button ${x.A(c.logout)} title="Se déconnecter" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:4px 0" class="hv-line">Quitter</button>` : ''}
     </div>
   </aside>

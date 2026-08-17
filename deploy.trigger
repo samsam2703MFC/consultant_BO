@@ -1,7 +1,5 @@
-Cache navigateur : forcer la revalidation du shell et des modules JS/CSS.
+Horodatage de version visible dans le rail.
 
-Apache ne servait aucun Cache-Control, seulement un ETag : le navigateur
-applique alors son cache heuristique et continue d afficher l ancienne version
-apres une livraison. L ecran parait inchange alors que le serveur est a jour.
-mod_headers est active et la recette verifie desormais l en-tete reellement
-servi, pas seulement present au fichier.
+« Je ne le vois pas en ligne » ne doit plus se trancher en tatonnant : le rail
+affiche la date du JS reellement servi. Plus ancienne que la livraison = cache
+du navigateur, pas le serveur.

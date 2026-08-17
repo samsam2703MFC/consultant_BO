@@ -318,6 +318,9 @@ class App {
     // sous-répertoire (/consulant_bo/assets/img/logo.png).
     common.brandLogo = ((typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') : '')) + 'assets/img/logo.png';
     const usr = mt.utilisateur || {};
+    // Version affichée dans le rail : comparée à la date de livraison, elle
+    // dit d'un coup d'œil si le navigateur sert encore une version périmée.
+    common.build = (this.meta && this.meta.build) || '';
     common.userInit = usr.initiales || ''; common.userNom = usr.nom || ''; common.userRole = usr.role || '';
     common.canLogout = this.source === 'api';
     // Panneau utilisateur : identité affichée + compte consultant de l'API.

@@ -32,11 +32,19 @@ function setting(string $key, mixed $default = null): mixed
 
 function ep_meta(): array
 {
+    // Horodatage du JS RÉELLEMENT déployé. « Je ne le vois pas en ligne » est
+    // une question qu'on ne doit pas avoir à trancher en tâtonnant : si l'écran
+    // affiche une version plus ancienne que la livraison, c'est le cache du
+    // navigateur, pas le serveur. On lit le fichier servi, pas une constante
+    // qu'on aurait pu oublier de mettre à jour.
+    $js = __DIR__ . '/../public/assets/js/app.js';
+    $build = is_file($js) ? date('d/m H:i', (int) filemtime($js)) : null;
     $seuils = [];
     foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi WHERE code IS NOT NULL") as $k) {
         $seuils[$k['code']] = $k['seuil_haut'] !== null ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
     }
     return [
+        'build'            => $build,
         'reseau'           => setting('reseau', ['nom' => '', 'sousTitre' => '']),
         'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => '']),
         // « Aujourd'hui » pilote la logique de dates (défaut du planning d'un
