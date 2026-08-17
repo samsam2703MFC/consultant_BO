@@ -3540,8 +3540,60 @@ function ep_lacunes(): array
         }
     } catch (Throwable $e) { /* consultants indisponibles */ }
 
-    // --- centrale d'achat : six écrans sans source, déjà détaillés colonne
-    //     par colonne sur leurs propres écrans. On ne les répète pas ici.
+    // --- catalogue produit : coût matière et prix de vente incomplets
+    try {
+        $cat = ep_prod_catalogue();
+        $n = count($cat);
+        if ($n > 0) {
+            $sansMat = 0; $sansPrix = 0; $sansFour = $n;
+            foreach ($cat as $p) {
+                if (($p['mat'] ?? null) === null) { $sansMat++; }
+                if (($p['prix'] ?? null) === null) { $sansPrix++; }
+            }
+            if ($sansMat > 0) {
+                $out['catalogue'][] = lacune('Coût matière',
+                    $sansMat . ' référence(s) sur ' . $n . ' sans coût',
+                    'Recettes du panel — recipe_cost ne couvre pas toutes les références ; le reste se saisit par fiche', 'saisie');
+            }
+            if ($sansPrix > 0) {
+                $out['catalogue'][] = lacune('Prix de vente',
+                    $sansPrix . ' référence(s) sur ' . $n . ' sans prix',
+                    'Caisse du panel — shop_product.portion_price absent pour ces références', 'api');
+            }
+            // Le rattachement référence → fournisseur n'existe nulle part.
+            $out['catalogue'][] = lacune('Fournisseur',
+                'le fournisseur de chacune des ' . $n . ' références',
+                'API achats — aucune source ne rattache une référence à un fournisseur');
+        }
+    } catch (Throwable $e) { /* catalogue indisponible */ }
+
+    // --- scoring / analyse : la vente par magasin et par référence
+    $out['produits'][] = lacune('Vente par magasin',
+        'le volume vendu d\'une référence dans UN magasin',
+        'API panel — /shops/{id}/products/waste rend un sold_qty RÉSEAU, identique dans les quatre boutiques (mesuré : 5165 partout)');
+    $out['analyse'][] = end($out['produits']);
+
+    // --- contrôle des tâches : les tâches restant à contrôler
+    try {
+        $d = Db::row('SELECT MAX(review_date) AS d FROM mac_task_review');
+        $der = (string) ($d['d'] ?? '');
+        if ($der !== '' && $der < date('Y-m-d')) {
+            $out['controle'][] = lacune('Tâches à contrôler',
+                'les tâches rendues depuis le ' . $der . ' et non encore notées',
+                'L\'écran part de mac_task_review (notes DÉJÀ posées) ; il doit partir de /consultant/shops/{id}/tasks');
+        }
+    } catch (PDOException $e) { /* table absente */ }
+
+    // --- centrale d'achat : six écrans sans source, détaillés colonne par
+    //     colonne sur leurs propres écrans. Résumés ici pour la vue d'ensemble.
+    foreach (['campagnes' => 'Campagnes commerciales', 'achats' => 'Suivi fournisseurs',
+              'commandes' => 'Commandes franchisés', 'stock' => 'Stock',
+              'facturation' => 'Facturation magasins'] as $k => $lib) {
+        $m = ep_ca_manquant($k);
+        $n = 0;
+        foreach ($m['colonnes'] as $c) { if (!preg_match('/déjà|calcul local/i', (string) $c['src'])) { $n++; } }
+        $out['centrale'][] = lacune($lib, $n . ' colonne(s) sur ' . count($m['colonnes']), $m['source']);
+    }
     return $out;
 }
 

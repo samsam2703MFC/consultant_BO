@@ -4,7 +4,7 @@
  * + délégation d'événements), données : api.js (REST, repli vide hors-ligne).
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
-import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout } from './api.js';
+import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz } from './api.js';
 import { render as tplRender } from './templates.js';
 
 function escHtml(v){
@@ -311,6 +311,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
       caAchats: ['Suivi fournisseurs', 'Commandes fournisseurs, réception et litiges.'],
@@ -546,6 +547,7 @@ class App {
           ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
           ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] }]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0],
+        ['diagnostic', 'Diagnostic API', 0],
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
@@ -561,10 +563,10 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd',
-      analyse: 'isAnalyse' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -698,6 +700,7 @@ class App {
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isCentrale) this.valsCentrale(common);
     this.valsLacunes(common);
+    if (common.isDiag) this.valsDiag(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -1532,6 +1535,46 @@ class App {
             : (p.enCours ? 'période en cours' : ''),
           enCours: p.enCours })) };
     }
+    return common;
+  }
+  /**
+   * Diagnostic : la vue d'ensemble des manques, et les appels lents.
+   *
+   * Les deux tiennent ensemble : un écran incomplet et un écran lent se
+   * corrigent au même endroit — l'API amont. Réunir les deux listes donne, en
+   * une page, ce qu'il faut demander et ce qu'il faut faire accélérer.
+   */
+  valsDiag(common){
+    this.lacunes();
+    const L = this.D.lacunes || {};
+    const noms = { magasins: 'Tableau des magasins', marge: 'Marge & coûts',
+      exploitation: 'P&L magasins', parametres: 'Paramètres', catalogue: 'Catalogue produit',
+      produits: 'Scoring des références', analyse: 'Analyse dans le temps',
+      controle: 'Contrôle des tâches', centrale: 'Centrale d’achat' };
+    common.diagGroupes = Object.keys(L).map(k => ({
+      ecran: noms[k] || k,
+      lignes: (L[k] || []).map(o => ({ champ: o.champ, quoi: o.quoi, source: o.source,
+        etiquette: o.type === 'saisie' ? 'à renseigner' : 'manque API', api: o.type !== 'saisie' }))
+    })).filter(g => g.lignes.length);
+    common.diagNbApi = common.diagGroupes.reduce((a, g) => a + g.lignes.filter(l => l.api).length, 0);
+    common.diagNbSaisie = common.diagGroupes.reduce((a, g) => a + g.lignes.filter(l => !l.api).length, 0);
+    common.diagChargement = !this.D.lacunes;
+
+    // --- appels lents, mesurés sur la session en cours
+    const t = apiTraces();
+    common.diagSeuil = (t.seuil / 1000).toFixed(0);
+    common.diagTotal = t.total;
+    // Regroupées par chemin : c'est la ROUTE qu'on fait améliorer, pas l'appel.
+    const par = {};
+    t.lentes.forEach(x => { const k = x.path;
+      par[k] = par[k] || { path: k, n: 0, max: 0, som: 0, ko: 0 };
+      par[k].n++; par[k].som += x.ms; par[k].max = Math.max(par[k].max, x.ms);
+      if (!x.ok) { par[k].ko++; } });
+    common.diagLentes = Object.values(par).sort((a, b) => b.max - a.max).map(x => ({
+      path: x.path, n: x.n, moy: Math.round(x.som / x.n).toLocaleString('fr-BE'),
+      max: x.max.toLocaleString('fr-BE'), ko: x.ko,
+      col: x.max >= 10000 ? 'var(--color-primary)' : (x.max >= 5000 ? '#B87512' : 'var(--color-text)') }));
+    common.diagRaz = () => { apiTracesRaz(); this.setState({}); };
     return common;
   }
   /**

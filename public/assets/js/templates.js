@@ -87,6 +87,7 @@ export function render(c, x){
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isCentrale ? tplCentrale(c, x) : ''}
+      ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -2865,4 +2866,84 @@ function tplCentrale(c, x){
   </div>` : '';
 
   return periodes + kpis + manquants + params + recherche + table;
+}
+
+
+/**
+ * Diagnostic API — ce qui manque, et ce qui est lent.
+ *
+ * Les deux se corrigent au même endroit : l'API amont. Réunis sur une page,
+ * ils forment la demande à porter — quelles données réclamer, et quelles routes
+ * faire accélérer, avec les durées mesurées à l'appui. « C'est lent » ne fait
+ * bouger personne ; « /exploitation/magasin, 6,4 s au pire, 4 appels dont 2 en
+ * série » se traite.
+ */
+function tplDiagnostic(c, x){
+  const { esc } = x;
+  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const TH = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap';
+  const TD = 'padding:8px 12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const MANQUE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap';
+  const SAISIE = 'font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap';
+  const MONO = 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px';
+
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+    <div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">À réclamer à l’API</div>
+      <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:var(--color-on-abricot)">${c.diagNbApi || 0}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">donnée(s) qu’aucune source n’expose</div>
+    </div>
+    <div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">À renseigner</div>
+      <div style="font-family:var(--font-display);font-size:26px;line-height:1">${c.diagNbSaisie || 0}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">la source existe, elle est vide</div>
+    </div>
+    <div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Appels &gt; ${esc(c.diagSeuil)} s</div>
+      <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:${(c.diagLentes || []).length ? 'var(--color-primary)' : '#2d7a3e'}">${(c.diagLentes || []).length}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">route(s) lente(s) sur ${c.diagTotal || 0} appel(s)</div>
+    </div>
+  </div>
+
+  <div style="${CARD};margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:500">Routes dépassant ${esc(c.diagSeuil)} secondes</div>
+      ${(c.diagLentes || []).length ? `<button ${x.A(c.diagRaz)} style="border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;color:var(--color-text-muted)" class="hv-line">réinitialiser la mesure</button>` : ''}
+    </div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px">Mesuré depuis l’ouverture de l’application, sur les appels réellement effectués. Un appel en erreur est retenu quelle que soit sa durée.</div>
+    ${!(c.diagLentes || []).length
+      ? `<div style="font-size:12.5px;color:#2d7a3e">Aucun appel au-delà de ${esc(c.diagSeuil)} s sur les ${c.diagTotal || 0} mesurés. Ouvrez les écrans lourds (Analyse dans le temps, Catalogue, P&amp;L d’un magasin) puis revenez ici.</div>`
+      : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
+      <thead><tr>
+        <th style="${TH}">Route</th>
+        <th style="${TH};text-align:right">Appels</th>
+        <th style="${TH};text-align:right">Moyenne</th>
+        <th style="${TH};text-align:right">Pire</th>
+        <th style="${TH}">État</th>
+      </tr></thead>
+      <tbody>${c.diagLentes.map(l => `<tr>
+        <td style="${TD};${MONO}">${esc(l.path)}</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${l.n}</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.moy)} ms</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums;font-weight:500;color:${l.col}">${esc(l.max)} ms</td>
+        <td style="${TD}">${l.ko ? `<span style="${MANQUE}">${l.ko} en erreur</span>` : '<span style="font-size:11.5px;color:var(--color-text-muted)">répond</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>`}
+  </div>
+
+  <div style="${CARD}">
+    <div style="font-size:13px;font-weight:500;margin-bottom:4px">Ce que le cockpit ne peut pas afficher</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:14px">Détecté sur l’état réel des données, écran par écran. « manque API » : personne ne l’expose, il faut le réclamer. « à renseigner » : la source existe et attend d’être remplie.</div>
+    ${c.diagChargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Analyse en cours…</div>`
+      : !(c.diagGroupes || []).length ? `<div style="font-size:12.5px;color:#2d7a3e">Aucune lacune détectée.</div>`
+      : c.diagGroupes.map(g => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding-bottom:6px;border-bottom:0.5px solid var(--color-border-tertiary)">${esc(g.ecran)}</div>
+        ${g.lignes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:7px 0;flex-wrap:wrap;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <span style="${l.api ? MANQUE : SAISIE}">${esc(l.etiquette)}</span>
+          <span style="font-size:12.5px;font-weight:500;min-width:130px">${esc(l.champ)}</span>
+          <span style="font-size:12px;color:var(--color-text-muted);flex:1;min-width:220px">${esc(l.quoi)}<div style="margin-top:2px">${esc(l.source)}</div></span>
+        </div>`).join('')}
+      </div>`).join('')}
+  </div>`;
 }

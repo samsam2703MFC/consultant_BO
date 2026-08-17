@@ -54,10 +54,41 @@ export const ENDPOINTS = {
   prodPeriodes:   '/production/periodes'
 };
 
+/* --- Chronométrage des appels ---------------------------------------------
+ * Toute réponse est mesurée, et les lentes sont conservées. Ce n'est pas de la
+ * curiosité : au-delà de deux secondes l'écran attend visiblement, et la seule
+ * façon de faire améliorer une API amont est de pouvoir dire LAQUELLE, sur
+ * quel chemin, et combien de temps elle a pris. Sans trace, la conversation
+ * se réduit à « c'est lent ».
+ * Mémoire bornée : on ne garde que les cent derniers appels lents.
+ */
+const SEUIL_LENT_MS = 2000;
+const MAX_TRACES = 100;
+const traces = [];
+let nAppels = 0;
+export function apiTraces(){ return { lentes: traces.slice(), total: nAppels, seuil: SEUIL_LENT_MS }; }
+export function apiTracesRaz(){ traces.length = 0; nAppels = 0; }
+function noteAppel(path, ms, ok){
+  nAppels++;
+  if (ms < SEUIL_LENT_MS && ok) { return; }
+  // Un appel en ERREUR est retenu quelle que soit sa durée : un 500 rapide est
+  // un problème, pas une bonne nouvelle.
+  traces.push({ path: String(path).split('?')[0], full: String(path), ms: Math.round(ms), ok,
+    at: new Date().toISOString().slice(11, 19) });
+  if (traces.length > MAX_TRACES) { traces.shift(); }
+}
+
 async function get(path, signal){
-  const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal, credentials: 'same-origin' });
-  if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
-  return r.json();
+  const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  let ok = false;
+  try {
+    const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal, credentials: 'same-origin' });
+    ok = r.ok;
+    if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
+    return await r.json();
+  } finally {
+    noteAppel(path, (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0, ok);
+  }
 }
 
 /**
