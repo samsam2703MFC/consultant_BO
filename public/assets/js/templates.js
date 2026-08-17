@@ -1076,9 +1076,11 @@ function tplMarge(c, x){
             <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Overhead Cost</span><span style="font-weight:500">≤ 13,5 %</span></div>
           </div>
         </div>
-        <!-- La trajectoire prend la largeur libérée. `non-scaling-stroke` est
-             indispensable ici : la boîte s'étire sans garder ses proportions,
-             et sans lui le trait s'amincirait à mesure qu'elle s'élargit. -->
+        <!-- La trajectoire prend la largeur libérée. L'attribut
+             vector-effect est indispensable ici : la boîte s'étire sans garder
+             ses proportions, et sans lui le trait s'amincirait à mesure
+             qu'elle s'élargit. (Pas d'accent grave dans ce commentaire : il est
+             DANS un littéral de gabarit, un seul le refermerait.) -->
         <div>
           <svg width="100%" height="132" viewBox="0 0 320 70" preserveAspectRatio="none" style="display:block"><polyline points="${c.mgTraj}" fill="none" stroke="#8D1D2C" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
           <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">${c.mgEvoLabel}</div>
