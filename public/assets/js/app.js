@@ -2213,17 +2213,23 @@ class App {
   plMwCreer(){
     const w = this.state.plMw;
     if (!w || w.busy) { return; }
+    // Les champs sont relus DANS L'ÉCRAN au moment de créer. Mesuré : la
+    // capacité saisie n'arrivait pas au serveur — l'état ne l'avait pas gardée,
+    // alors qu'elle était bien affichée. Ce que l'utilisateur voit est ce qui
+    // part ; c'est la seule règle qui ne dépend d'aucune plomberie.
+    const lu = (id, val) => this.plLire(id, val);
     const nb = (v, min, max) => Math.max(min, Math.min(max, parseInt(v, 10) || 0));
-    const nNiveaux = nb(w.nNiveaux, 1, 40);
-    const nSlots = nb(w.nSlots, 0, 40);
-    const nom = String(w.nom || '').trim();
+    const ent = v => { const n = parseInt(v, 10); return (isFinite(n) && n > 0) ? n : null; };
+    const nNiveaux = nb(lu('plmw-nniv', w.nNiveaux), 1, 40);
+    const nSlots = nb(lu('plmw-nslot', w.nSlots), 0, 40);
+    const nom = String(lu('plmw-nom', w.nom) || '').trim();
     if (!nom) { this.plMwPatch({ etape: 1, err: 'Donnez un nom à ce meuble.' }); return; }
     this.plMwPatch({ busy: true, err: '' });
     write(this.source, 'POST', '/planogramme/meuble', {
       nom, parentId: w.zoneId, type: w.type, temperature: w.temperature, presentation: w.presentation,
-      longueurMm: parseInt(w.longueur, 10) || null, largeurMm: parseInt(w.largeur, 10) || null,
-      hauteurMm: parseInt(w.hauteur, 10) || null,
-      capacite: w.capacite === '' ? null : parseInt(w.capacite, 10),
+      longueurMm: ent(lu('plmw-lon', w.longueur)), largeurMm: ent(lu('plmw-lar', w.largeur)),
+      hauteurMm: ent(lu('plmw-hau', w.hauteur)),
+      capacite: ent(lu('plmw-cap', w.capacite)),
       niveaux: this.plMwNiveaux(nNiveaux).map(n => ({ nom: n, slots: nSlots })),
     }).then(res => {
       if (!res || res.ok === false) {
