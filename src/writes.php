@@ -904,11 +904,33 @@ function wr_plano_supprimer(string $type, int $id): array
     if ($def === null) { http_response_code(404); return ['error' => 'niveau inconnu']; }
 
     $slots = planoSlotsSous($type, $id);
+    $force = !empty(body()['force']);
+
+    // Ce qui est PORTÉ compte autant que ce qui est placé. La première version
+    // ne refusait que sur des références placées : une zone entière, ses meubles
+    // et ses niveaux disparaissaient sans confirmation dès qu'aucun produit n'y
+    // était encore posé. C'est ainsi qu'une structure déclarée a été perdue.
+    if (!$force) {
+        $porte = [];
+        if ($type === 'zone') {
+            $m = Db::row('SELECT COUNT(*) AS n FROM pla_meuble WHERE zone_id = ?', [$id]);
+            if ((int) ($m['n'] ?? 0) > 0) { $porte[] = (int) $m['n'] . ' meuble(s)'; }
+        } elseif ($type === 'meuble') {
+            $n2 = Db::row('SELECT COUNT(*) AS n FROM pla_niveau WHERE meuble_id = ?', [$id]);
+            if ((int) ($n2['n'] ?? 0) > 0) { $porte[] = (int) $n2['n'] . ' niveau(x)'; }
+        }
+        if ($slots) { $porte[] = count($slots) . ' emplacement(s)'; }
+        if ($porte) {
+            http_response_code(409);
+            return ['error' => 'cet élément porte ' . implode(' et ', $porte)
+                . ' — tout serait supprimé', 'porte' => $porte];
+        }
+    }
     if ($slots) {
         $in = implode(',', array_fill(0, count($slots), '?'));
         $r = Db::row('SELECT COUNT(*) AS n FROM pla_placement WHERE slot_id IN (' . $in . ')', $slots);
         $n = (int) ($r['n'] ?? 0);
-        if ($n > 0 && empty(body()['force'])) {
+        if ($n > 0 && !$force) {
             http_response_code(409);
             return ['error' => $n . ' référence(s) y sont placées — la suppression les retirerait du comptoir',
                 'placees' => $n];
