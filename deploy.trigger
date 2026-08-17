@@ -1,6 +1,7 @@
-Analyse : sous-categories, comparatif N-1, et vue par magasin.
+Options : le niveau groupe passe par l agregat memorise.
 
-Trois niveaux (groupe / categorie / reference) et deux lectures (reseau ou
-magasin par magasin). Le detail par magasin n existe qu au niveau des groupes :
-sous ce niveau l API ne rend qu un volume RESEAU, identique d un magasin a
-l autre. L ecran le dit au lieu de tracer cinq courbes superposees.
+Mesure : deux appels de suite, 12 groupes puis 0, sans erreur. La liste des
+groupes etait le seul niveau encore lu par un appel direct (12 s) ; sous charge
+il expirait une fois sur deux et le selecteur revenait vide — indiscernable
+d un reseau sans vente. Il passe desormais par le meme cache que les series,
+et un niveau vide se signale niveau par niveau.

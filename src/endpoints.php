@@ -1409,15 +1409,19 @@ function ep_produits_analyse_options(): array
     $au = min(date('Y-m-t', strtotime($du)), date('Y-m-d'));
     $out['periode'] = $per;
 
+    // Les groupes passent par le MÊME agrégat mémorisé que les séries. Les lire
+    // par un appel direct les rendait tributaires d'un aller-retour de douze
+    // secondes : sous charge il expirait une fois sur deux et le sélecteur
+    // revenait vide — sans erreur, donc indiscernable d'un réseau sans vente.
     $cats = [];
-    foreach (analyseListe(PanelApi::categorySalesEntre($du, $au)) as $sh) {
-        foreach (($sh['categories'] ?? []) as $c) {
-            $nom = trim((string) ($c['name'] ?? ''));
-            if ($nom === '') { continue; }
-            $cats[$nom] = ($cats[$nom] ?? 0) + (float) (nombreOuNull($c, ['ca', 'value', 'amount']) ?? 0);
+    foreach (analyseAgregats('categorie', analysePlages('categorie', $du, $au)) as $a) {
+        foreach ((array) $a as $parCat) {
+            foreach ((array) $parCat as $nom => $ca) {
+                $cats[(string) $nom] = ($cats[(string) $nom] ?? 0) + (float) $ca;
+            }
         }
     }
-    $out['source'] = PanelApi::$lastPath;
+    $out['source'] = '/consultant/shops/category-sales (par mois, réseau)';
     arsort($cats);
     foreach ($cats as $nom => $ca) { $out['categories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($ca, 2)]; }
 
@@ -1437,8 +1441,16 @@ function ep_produits_analyse_options(): array
     $out['produits'] = $prods;
     arsort($sous);
     foreach ($sous as $nom => $v) { $out['souscategories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($v, 2)]; }
-    if (!$out['categories'] && !$out['produits']) {
-        $out['erreur'] = PanelApi::$lastError ?: 'l\'API n\'a rendu ni catégorie ni référence sur ' . $per;
+    // Un niveau vide se signale NIVEAU PAR NIVEAU. Ne parler qu'au cas où tout
+    // manque laissait passer le cas réel : les groupes absents, le reste rempli,
+    // et un sélecteur muet qui ressemble à un réseau sans vente.
+    $vides = [];
+    foreach (['categories' => 'groupe', 'souscategories' => 'catégorie', 'produits' => 'référence'] as $k => $lib) {
+        if (!$out[$k]) { $vides[] = $lib; }
+    }
+    if ($vides) {
+        $out['erreur'] = 'aucun niveau « ' . implode(' », « ', $vides) . ' » rendu sur ' . $per
+            . ' — ' . (PanelApi::$lastError ?: 'l\'API n\'a pas répondu pour cette période');
     }
     return $out;
 }
