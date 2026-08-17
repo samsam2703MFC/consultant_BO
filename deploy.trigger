@@ -1,5 +1,7 @@
-Taches consultants : un tableau de bord avant la liste.
+Assistance IA a la notation, et extraction des references sous seuil.
 
-Six tuiles sobres : a controler (photographiees), rendues sans photo, mes taches
-en retard, a noter, projets en retard, alertes marge. Chacune cliquable vers
-l ecran concerne. La couleur ne s allume que si une action est attendue.
+Le formulaire de controle peut demander a Claude une PROPOSITION d evaluation
+sur la photo (niveau du bareme reseau, constats, commentaire) : elle pre-remplit,
+le consultant valide. La cle Anthropic reste sur le serveur.
+Nouvel ecran « References sous seuil » : un curseur, la liste de tout ce qui
+passe dessous, le critere le plus faible nomme, et un export CSV.

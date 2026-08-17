@@ -92,6 +92,7 @@ export function render(c, x){
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isCentrale ? tplCentrale(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
+      ${c.isSeuil ? tplSeuil(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -2577,6 +2578,28 @@ function tplCtrlDetail(c, x){
       <div style="font-size:13px;font-weight:500">${esc(d.avisTxt)}</div>
       ${d.avisComment ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(d.avisComment)}</div>` : ''}
 
+      <!-- Assistance IA : une PROPOSITION, jamais une note. Elle pré-remplit,
+           le consultant valide — c'est son geste qui engage le réseau. -->
+      ${d.photo ? `<div style="margin:20px 0 0;padding:12px 14px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="${'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};flex:1;min-width:150px">Assistance à la notation</div>
+          ${d.iaDispo
+            ? `<button ${x.A(d.iaGo)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${d.iaBusy ? 'wait' : 'pointer'};opacity:${d.iaBusy ? '0.6' : '1'};color:var(--color-text)">${d.iaBusy ? 'Analyse de la photo…' : (d.iaFait ? 'Réanalyser' : 'Proposer une évaluation')}</button>`
+            : `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>`}
+        </div>
+        ${!d.iaDispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.5">Aucune clé Anthropic enregistrée. Paramètres → Assistance IA. La clé reste sur le serveur ; le navigateur ne reçoit que la proposition.</div>` : ''}
+        ${d.iaMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaMotif)}</div>` : ''}
+        ${d.iaNom ? `<div style="margin-top:9px">
+          <div style="font-size:12.5px"><span style="font-weight:500">Proposition : ${esc(d.iaNom)}</span>${d.iaConfiance ? `<span style="color:var(--color-text-muted)"> · confiance ${esc(d.iaConfiance)}</span>` : ''}${d.iaModele ? `<span style="color:var(--color-text-muted)"> · ${esc(d.iaModele)}</span>` : ''}</div>
+          ${(d.iaConstats || []).length ? `<ul style="margin:6px 0 0;padding-left:17px;font-size:12px;color:var(--color-text-muted);line-height:1.55">${d.iaConstats.map(k => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
+          ${d.iaAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaAvert)}</div>` : ''}
+          <div style="display:flex;gap:9px;margin-top:10px;flex-wrap:wrap">
+            <button ${x.A(d.iaAppliquer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Reprendre cette proposition</button>
+            <span style="font-size:11px;color:var(--color-text-muted);align-self:center">rien n’est enregistré tant que vous n’envoyez pas la note</span>
+          </div>
+        </div>` : ''}
+      </div>` : ''}
+
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px">
         <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'}">Votre évaluation</div>
         ${d.verdict ? `<span style="${d.verdictSt}">${esc(d.verdict)}</span>` : ''}
@@ -2986,5 +3009,79 @@ function tplDiagnostic(c, x){
           <span style="font-size:12px;color:var(--color-text-muted);flex:1;min-width:220px">${esc(l.quoi)}<div style="margin-top:2px">${esc(l.source)}</div></span>
         </div>`).join('')}
       </div>`).join('')}
+  </div>`;
+}
+
+
+/**
+ * Références sous seuil — l'écran de scoring trie, celui-ci coupe.
+ *
+ * Le curseur fixe la ligne, le tableau rend tout ce qui passe dessous, et la
+ * dernière colonne nomme le critère le plus faible : c'est elle qui transforme
+ * « cette référence est mauvaise » en « ce coût est à renégocier ». Sans elle
+ * la liste ne dit pas sur quoi agir.
+ */
+function tplSeuil(c, x){
+  const { esc } = x;
+  const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const TH = 'text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap';
+  const TD = 'padding:8px 12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const NUM = ';text-align:right;font-variant-numeric:tabular-nums';
+  const MANQUE = 'font-size:10.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap';
+  const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+
+  return `
+  <div style="${CARD};margin-bottom:14px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Seuil de score</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" min="0" max="100" step="1" value="${c.sqSeuil}" ${x.I(c.sqSetSeuil)} style="flex:1;min-width:140px;accent-color:var(--color-primary)">
+          <span style="font-family:var(--font-display);font-size:26px;line-height:1;min-width:44px;text-align:right">${c.sqSeuil}</span>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px">${esc(c.sqRepere)}</div>
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Catégorie</label>
+        <select ${x.C(c.sqSetCat)} style="${SEL};min-width:190px">${(c.sqCatOptions || []).map(o => `<option value="${esc(o)}"${o === c.sqCat ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Tri</label>
+        <select ${x.C(c.sqSetTri)} style="${SEL};min-width:190px">${(c.sqTriOptions || []).map(o => `<option value="${esc(o.val)}"${o.val === c.sqTri ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      </div>
+      ${c.sqNb ? `<button ${x.A(c.sqExport)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">Exporter en CSV</button>` : ''}
+    </div>
+    <div style="font-size:12px;color:var(--color-text-muted)">
+      <strong style="font-weight:700;color:var(--color-text)">${c.sqNb}</strong> référence${c.sqNb > 1 ? 's' : ''} sous ${c.sqSeuil} sur ${c.sqTotal} — elles pèsent <strong style="font-weight:700;color:var(--color-text)">${esc(c.sqCaPart)}</strong> du CA réseau. Pondération : ${esc(c.sqPond)}.
+    </div>
+  </div>
+
+  <div style="${CARD}">
+    ${!c.sqNb ? `<div style="padding:22px 0;font-size:13px;color:#2d7a3e">Aucune référence sous ce seuil${c.sqCat !== 'Toutes les catégories' ? ' dans ' + esc(c.sqCat) : ''}. Relevez le curseur pour élargir.</div>` : `
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:880px">
+      <thead><tr>
+        <th style="${TH}">Référence</th>
+        <th style="${TH}">Catégorie</th>
+        <th style="${TH}${NUM}">Score</th>
+        <th style="${TH}">Verdict</th>
+        <th style="${TH}${NUM}">Volume</th>
+        <th style="${TH}${NUM}">CA réseau</th>
+        <th style="${TH}${NUM}">Marge</th>
+        <th style="${TH}${NUM}">Perte</th>
+        <th style="${TH}">Critère le plus faible</th>
+      </tr></thead>
+      <tbody>${c.sqLignes.map(r => `<tr>
+        <td style="${TD};font-weight:500">${esc(r.nom)}</td>
+        <td style="${TD};color:var(--color-text-muted)">${esc(r.cat)}</td>
+        <td style="${TD}${NUM};font-weight:700;color:${r.scoreCol}">${r.score}</td>
+        <td style="${TD}"><span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;background:${r.vFond};color:${r.vCol};white-space:nowrap">${esc(r.verdict)}</span></td>
+        <td style="${TD}${NUM}">${esc(r.vol)}</td>
+        <td style="${TD}${NUM}">${esc(r.ca)}</td>
+        <td style="${TD}${NUM}">${r.margeVide ? `<span style="${MANQUE}">manque API</span>` : esc(r.marge)}</td>
+        <td style="${TD}${NUM}">${r.perteVide ? `<span style="${MANQUE}">manque API</span>` : esc(r.perte)}</td>
+        <td style="${TD};color:var(--color-text-muted)">${esc(r.faible)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`}
   </div>`;
 }

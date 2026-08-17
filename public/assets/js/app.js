@@ -311,6 +311,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
@@ -522,6 +523,7 @@ class App {
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length],
         { sub: 'Scoring produits', children: [
           ['produits', 'Scoring des références', 0],
+          ['seuil', 'Références sous seuil', 0],
           ['analyse', 'Analyse dans le temps', 0]] }]],
       ['Référentiel produit', [
         { sub: 'Catalogue & comptoir', children: [
@@ -563,10 +565,10 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd',
-      analyse: 'isAnalyse', diagnostic: 'isDiag' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -701,6 +703,7 @@ class App {
     if (common.isCentrale) this.valsCentrale(common);
     this.valsLacunes(common);
     if (common.isDiag) this.valsDiag(common);
+    if (common.isSeuil) this.valsSeuil(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -714,7 +717,7 @@ class App {
     // --- projets
     if (common.isProjets) this.valsProjets(common, projEff);
     // --- contrôle des tâches (checklists consultants du panel)
-    if (common.isControle) this.valsControle(common);
+    if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     // --- tâches consultants
     if (common.isTaches) this.valsTaches(common, flat);
     // --- reporting
@@ -2072,6 +2075,93 @@ class App {
         : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
         : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'] };
   }
+  /**
+   * Extraction sous seuil — arbitrer une gamme entière, pas une référence.
+   *
+   * L'écran de scoring trie ; celui-ci COUPE. On fixe un seuil, on obtient la
+   * liste de tout ce qui passe dessous, avec de quoi comprendre pourquoi :
+   * le critère le plus faible de chaque référence est nommé. Sans lui, on sait
+   * qu'une référence est mauvaise sans savoir sur quoi agir — baisser un coût,
+   * corriger une perte ou la déréférencer ne sont pas la même décision.
+   */
+  valsSeuil(common){
+    const S = this.state;
+    const _c = this.pdCalcule();
+    const { base, SC, verdict } = _c;
+    // Défaut : le seuil « à conforter » du réglage de scoring. Reprendre le
+    // barème existant évite d'introduire un troisième seuil concurrent.
+    const seuil = S.sqSeuil != null ? +S.sqSeuil : Math.round(SC.conforter);
+    common.sqSeuil = seuil;
+    common.sqSetSeuil = e => { const v = Math.max(0, Math.min(100, +e.target.value || 0));
+      this.setState({ sqSeuil: v }); };
+    common.sqPond = _c.pond;
+    common.sqRepere = 'seuils du réglage : à conforter ' + Math.round(SC.conforter)
+      + ' · moteur de gamme ' + Math.round(SC.moteur);
+    common.sqTotal = base.length;
+
+    const cats = [...new Set(base.map(p => p.cat).filter(Boolean))].sort();
+    common.sqCat = S.sqCat || 'Toutes les catégories';
+    common.sqCatOptions = ['Toutes les catégories'].concat(cats);
+    common.sqSetCat = e => this.setState({ sqCat: e.target.value });
+
+    const tris = [['score', 'Score croissant'], ['scoreDesc', 'Score décroissant'],
+      ['ca', 'CA réseau décroissant'], ['vol', 'Volume décroissant'],
+      ['perte', 'Taux de perte décroissant'], ['cat', 'Catégorie']];
+    common.sqTri = S.sqTri || 'score';
+    common.sqTriOptions = tris.map(t => ({ val: t[0], nom: t[1] }));
+    common.sqSetTri = e => this.setState({ sqTri: e.target.value });
+
+    let l = base.filter(p => p.score < seuil
+      && (common.sqCat === 'Toutes les catégories' || p.cat === common.sqCat));
+    const tri = common.sqTri;
+    l.sort((a, b) => tri === 'scoreDesc' ? b.score - a.score
+      : tri === 'ca' ? b.ca - a.ca
+      : tri === 'vol' ? b.vol - a.vol
+      : tri === 'perte' ? ((b.perte == null ? -1 : b.perte) - (a.perte == null ? -1 : a.perte))
+      : tri === 'cat' ? (String(a.cat).localeCompare(String(b.cat)) || a.score - b.score)
+      : a.score - b.score);
+
+    // Le critère le PLUS FAIBLE, parmi ceux qui sont réellement mesurés. Un
+    // critère absent ne peut pas être le point faible : il n'entre pas au score.
+    const faible = p => {
+      const c = [['volume', p.sVol], ['marge nette', p.sMg], ['perte', p.sPerte], ['comptoir', p.sComptoir]]
+        .filter(x => x[1] != null);
+      if (!c.length) { return '—'; }
+      c.sort((a, b) => a[1] - b[1]);
+      return c[0][0] + ' (' + Math.round(c[0][1]) + '/100)';
+    };
+    const caTot = base.reduce((a, p) => a + p.ca, 0) || 1;
+    common.sqCaPart = this.fP(l.reduce((a, p) => a + p.ca, 0) / caTot, 1);
+    common.sqNb = l.length;
+    common.sqLignes = l.map(p => { const v = verdict(p.score);
+      return { nom: p.nom, cat: p.cat || '—',
+        score: Math.round(p.score),
+        scoreCol: p.score < SC.conforter ? 'var(--color-primary)' : '#B87512',
+        verdict: v[0], vFond: v[2], vCol: v[1],
+        vol: Math.round(p.vol).toLocaleString('fr-BE'),
+        ca: this.fK(p.ca),
+        marge: p.mp == null ? 'manque API' : this.fP(p.mp, 0),
+        margeVide: p.mp == null,
+        perte: p.perte == null ? 'manque API' : this.fP(p.perte, 1),
+        perteVide: p.perte == null,
+        mags: p.mags + ' / ' + Math.round(p.mags / (p.pen || 1)),
+        faible: faible(p) }; });
+    // Exporter est le geste attendu : on arbitre une gamme sur un tableur, pas
+    // dans un navigateur. Point-virgule et BOM pour qu'Excel FR ouvre droit.
+    common.sqExport = () => {
+      const t = [['Référence', 'Catégorie', 'Score', 'Verdict', 'Volume', 'CA réseau',
+        'Taux de marge', 'Taux de perte', 'Critère le plus faible']];
+      common.sqLignes.forEach(r => t.push([r.nom, r.cat, r.score, r.verdict, r.vol, r.ca,
+        r.margeVide ? '' : r.marge, r.perteVide ? '' : r.perte, r.faible]));
+      const csv = '﻿' + t.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = 'references-sous-' + seuil + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      this.log('Export', '', 'Références sous seuil ' + seuil + ' — ' + common.sqLignes.length + ' ligne(s)');
+    };
+    return common;
+  }
   valsProduits(common){
     const S = this.state, D = this.D;
     const _c = this.pdCalcule();
@@ -2382,10 +2472,50 @@ class App {
         send: () => this.ctrlSendNote(),
         close: () => this.setState({ ctrlDet: null }),
         peutNoter: !dt.chargement && (d.api ? d.api.configure !== false : true),
+        // --- assistance IA : proposition, jamais décision
+        iaDispo: (this.D.iaStatut || {}).configure === true,
+        iaBusy: !!dt.iaBusy,
+        iaFait: !!dt.ia,
+        iaMotif: (dt.ia && dt.ia.motif) || '',
+        iaNom: (dt.ia && dt.ia.nom) || '',
+        iaConfiance: (dt.ia && dt.ia.confiance) || '',
+        iaModele: (dt.ia && dt.ia.modele) || '',
+        iaConstats: (dt.ia && dt.ia.constats) || [],
+        iaAvert: (dt.ia && dt.ia.avertissement) || '',
+        iaGo: () => this.ctrlIaProposer(),
+        // Reprendre ne valide pas : cela remplit le formulaire, l'envoi reste
+        // un geste distinct. Le commentaire proposé complète le vôtre sans
+        // l'écraser — on ne perd pas ce qui a déjà été écrit.
+        iaAppliquer: () => this.setState(s2 => { const p = (s2.ctrlDet || {}).ia || {};
+          const dej = ((s2.ctrlDet || {}).comment || '').trim();
+          return { ctrlDet: Object.assign({}, s2.ctrlDet, {
+            note: p.niveau != null ? p.niveau : (s2.ctrlDet || {}).note,
+            comment: dej ? dej : (p.commentaire || '') }) }; }),
       };
     } else { common.ctrlDet = false; }
   }
 
+  /**
+   * État de l'assistance IA, lu une fois. La clé n'arrive jamais au navigateur :
+   * la route ne rend qu'une empreinte et le modèle retenu.
+   */
+  iaStatut(){
+    if (this.D.iaStatut || this._iaStEnCours) { return; }
+    this._iaStEnCours = true;
+    readOne('/ia/statut').then(st => { this._iaStEnCours = false;
+      this.D.iaStatut = st || { configure: false }; this.setState({}); });
+  }
+  /** Demande une proposition d'évaluation sur la photo ouverte. */
+  ctrlIaProposer(){
+    const dt = this.state.ctrlDet;
+    if (!dt || dt.iaBusy) { return; }
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: true, ia: null }) }));
+    readOne('/ia/note?shop=' + encodeURIComponent(dt.shopId) + '&task=' + encodeURIComponent(dt.taskId)
+      + '&date=' + encodeURIComponent(dt.date))
+      .then(r => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
+        ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
+            ia: r || { motif: 'assistance injoignable' } }) } : {}));
+  }
   /* --- projets (kanban) ---------------------------------------------------------- */
   valsProjets(common, projEff){
     const S = this.state, D = this.D, M = this.M;

@@ -727,3 +727,27 @@ function wr_prod_planogramme(string $ref): array
         [$ref, $zone, trim((string) ($b['meuble'] ?? '')), trim((string) ($b['niveau'] ?? '')), $slot]);
     return ['ok' => true, 'ref' => $ref];
 }
+
+/**
+ * Enregistre la clé Anthropic. Elle ne repart JAMAIS vers l'écran : le
+ * formulaire l'envoie, le serveur la garde, et l'état ne rend qu'une empreinte.
+ * Un champ pré-rempli avec la clé la ferait apparaître dans chaque réponse HTTP,
+ * dans le cache du navigateur et dans les captures d'écran.
+ */
+function wr_ia_compte(): array
+{
+    $b = body();
+    $cur = setting('anthropic');
+    if (!is_array($cur)) { $cur = []; }
+    $cle = trim((string) ($b['cle'] ?? ''));
+    // Champ laissé vide = on ne touche pas à la clé en place. Sans cette règle,
+    // changer le modèle effacerait la clé.
+    if ($cle !== '') { $cur['cle'] = $cle; }
+    if (array_key_exists('effacer', $b) && !empty($b['effacer'])) { unset($cur['cle']); }
+    $mod = trim((string) ($b['modele'] ?? ''));
+    if ($mod !== '') { $cur['modele'] = $mod; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['anthropic', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('Paramètres', 'Assistance IA — ' . ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour'));
+    return ['ok' => true] + Anthropic::statut();
+}

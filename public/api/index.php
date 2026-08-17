@@ -12,6 +12,7 @@ require __DIR__ . '/../../src/writes.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
+require __DIR__ . '/../../src/anthropic.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -100,6 +101,8 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
+            $path === '/ia/note'                       => ep_ia_note(),
+            $path === '/ia/statut'                     => ep_ia_statut(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             default                                    => notFound(),
         };
@@ -125,6 +128,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/produit/([\w-]+)$#', $path, $m)) { return wr_prod_produit($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/planogramme/([\w-]+)$#', $path, $m)) { return wr_prod_planogramme($m[1]); }
+    if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
 
     return notFound();

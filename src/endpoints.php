@@ -3826,3 +3826,66 @@ function ep_audit_fraicheur(): array
         : ($retard <= 1 ? 'la caisse en base est à jour' : 'la caisse en base a ' . $retard . ' jour(s) de retard sur aujourd\'hui');
     return $out;
 }
+
+/**
+ * Proposition de note par l'IA pour une tâche photographiée.
+ *
+ * L'écran de contrôle affiche la photo prise en boutique et, quand elle existe,
+ * la fiche technique attendue. Cette route soumet les deux au modèle et rend une
+ * PROPOSITION : niveau du barème réseau, constats, commentaire. Rien n'est
+ * écrit — le consultant valide ou corrige, et c'est son geste qui note.
+ */
+function ep_ia_note(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    $taskId = (int) ($_GET['task'] ?? 0);
+    $date   = (string) ($_GET['date'] ?? '');
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shop, task et date (YYYY-MM-DD) sont requis'];
+    }
+    $out = ['shopId' => (string) $shopId, 'taskId' => (string) $taskId, 'date' => $date,
+        'etat' => 'attente', 'niveau' => null, 'nom' => null, 'commentaire' => null,
+        'constats' => [], 'confiance' => null, 'modele' => null, 'motif' => null];
+
+    if (!Anthropic::configured()) {
+        $out['motif'] = 'manque API — aucune clé Anthropic enregistrée (Paramètres → Assistance IA)';
+        return $out;
+    }
+    // La photo vient du détail : même source que l'écran, donc même image que
+    // celle que le consultant a sous les yeux. Juger une autre photo que la
+    // sienne serait le pire des malentendus.
+    $d = ep_pwa_task_detail();
+    if (empty($d['photo'])) {
+        $out['motif'] = 'aucune photo sur cette tâche — il n\'y a rien à évaluer';
+        return $out;
+    }
+    $sig = setting('signalement', []);
+    $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : signalementDefaut()['niveaux'];
+
+    $ctx = trim(($d['checklist'] ? 'checklist « ' . $d['checklist'] . ' »' : '')
+        . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
+        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : ''));
+    $r = Anthropic::noterPhoto((string) ($d['tache'] ?? ('Tâche #' . $taskId)),
+        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx);
+
+    $out['modele'] = $r['modele'];
+    if ($r['erreur'] !== null && $r['niveau'] === null) { $out['motif'] = $r['erreur']; return $out; }
+    $out['etat'] = 'ok';
+    $out['niveau'] = $r['niveau'];
+    $out['nom'] = $r['nom'];
+    $out['commentaire'] = $r['commentaire'];
+    $out['constats'] = $r['constats'];
+    $out['confiance'] = $r['confiance'];
+    // Une confiance faible n'est pas une note : elle invite à regarder soi-même.
+    if ($r['confiance'] === 'faible') {
+        $out['avertissement'] = 'Le modèle annonce une confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même.';
+    }
+    return $out;
+}
+
+/** État de l'assistance IA pour l'écran Paramètres — jamais la clé. */
+function ep_ia_statut(): array
+{
+    return Anthropic::statut();
+}
