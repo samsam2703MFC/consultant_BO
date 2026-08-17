@@ -2746,6 +2746,7 @@ function tplPlanoComptoir(c, x){
         ${c.plZonesOpts.map(z => `<button ${x.A(z.go)} style="${btn(z.on)}">${esc(z.nom)}</button>`).join('')}` : ''}
       <div style="flex:1"></div>
       <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plTot.slots} emplacement(s) · ${c.plTot.libres} libre(s) · ${c.plTot.places} placée(s)</span>
+      <button ${x.A(c.plImprimer)} title="Imprimer tout le comptoir, zones comprises" style="${btn(false, !!c.plImprimer)}">⎙ Imprimer</button>
       <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
     </div>
 
@@ -2996,10 +2997,21 @@ function tplPlanoFiche(c, x){
 
         <div style="padding:14px 16px;border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto" data-scroll="plf1">
           <div style="${lbl}">Photo de présentation</div>
+          ${f.photo
+            ? `<div style="margin-top:8px;position:relative">
+                <img src="${esc(f.photo)}" alt="Photo de présentation" style="width:100%;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block">
+                <button ${x.A(f.photoRetirer)} title="Retirer la photo" style="position:absolute;top:7px;right:7px;border:none;background:rgba(20,16,14,0.72);color:#fff;border-radius:999px;width:24px;height:24px;font-size:12px;cursor:pointer">✕</button>
+              </div>
+              <label style="display:inline-block;margin-top:7px;font-size:11px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px">Remplacer<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(f.photoDepose)} style="display:none"></label>`
+            : `<label style="margin-top:8px;background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer">
+                <span style="font-size:12.5px;font-weight:500;color:var(--color-text)">Annexer une photo</span>
+                <span style="font-size:11px;color:var(--color-text-muted);line-height:1.45">JPEG, PNG ou WebP — réduite avant l’envoi</span>
+                <input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(f.photoDepose)} style="display:none">
+              </label>`}
           ${(f.manque || []).filter(m => /photo/i.test(m.champ)).map(m => `
-            <div style="margin-top:8px;background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;padding:20px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px">
-              <span style="font-size:10.5px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>
-              <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(m.source)}</div>
+            <div style="margin-top:8px;display:flex;gap:7px;align-items:flex-start">
+              <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
+              <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.45">Cette photo reste dans le cockpit. ${esc(m.source)}</div>
             </div>`).join('')}
 
           <div style="${lbl};margin-top:18px">Consigne de présentation</div>

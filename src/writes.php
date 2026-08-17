@@ -1118,6 +1118,84 @@ function wr_plano_note(): array
 }
 
 /**
+ * POST /planogramme/photo — annexer une photo à un meuble, une zone, une
+ * référence placée.
+ *
+ * La photo est rangée sur le DISQUE, sa seule référence en base : un fichier de
+ * deux mégaoctets stocké en colonne serait relu à chaque lecture du
+ * planogramme, pour n'être affiché que sur une fiche.
+ *
+ * Le contenu arrive en data-URL parce que tout le reste de l'application parle
+ * JSON ; on ne bascule pas une seule route en multipart pour le plaisir. Le
+ * type est déduit des OCTETS, jamais de l'extension annoncée : une extension
+ * n'est qu'une affirmation du client.
+ */
+function wr_plano_photo(): array
+{
+    $b = body();
+    $cible = (string) ($b['cible'] ?? '');
+    if (!in_array($cible, ['ref', 'zone', 'meuble'], true)) {
+        http_response_code(422); return ['error' => 'cible inconnue (ref, zone ou meuble)'];
+    }
+    $id = trim((string) ($b['cibleId'] ?? ''));
+    if ($id === '') { http_response_code(422); return ['error' => 'la cible est requise']; }
+
+    $dossier = __DIR__ . '/../public/uploads/plano';
+    $rel = 'uploads/plano/' . $cible . '-' . preg_replace('/[^\w-]/', '', $id);
+
+    // Corps vide = on retire la photo.
+    $data = (string) ($b['data'] ?? '');
+    if (trim($data) === '') {
+        $ancien = Db::row('SELECT photo FROM pla_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        if ($ancien !== null && !empty($ancien['photo'])) {
+            $f = __DIR__ . '/../public/' . $ancien['photo'];
+            if (is_file($f)) { @unlink($f); }
+        }
+        Db::exec('UPDATE pla_note SET photo = NULL WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        return ['ok' => true, 'photo' => null, 'retiree' => true];
+    }
+
+    if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $data, $m)) {
+        http_response_code(422); return ['error' => 'image illisible (data-URL attendue)'];
+    }
+    $bin = base64_decode($m[2], true);
+    if ($bin === false || strlen($bin) < 64) {
+        http_response_code(422); return ['error' => 'image illisible'];
+    }
+    if (strlen($bin) > 4 * 1024 * 1024) {
+        http_response_code(413); return ['error' => 'image trop lourde — 4 Mo au maximum'];
+    }
+    // Le type vient des octets : l'extension annoncée n'engage que le client.
+    $info = @getimagesizefromstring($bin);
+    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime'] ?? ''] ?? null;
+    if ($ext === null) {
+        http_response_code(415); return ['error' => 'format non accepté — JPEG, PNG ou WebP'];
+    }
+
+    if (!is_dir($dossier) && !@mkdir($dossier, 0775, true) && !is_dir($dossier)) {
+        http_response_code(500); return ['error' => 'dossier des photos impossible à créer sur le serveur'];
+    }
+    // Une seule photo par cible : les anciennes extensions sont retirées, sans
+    // quoi un JPEG remplacé par un PNG laisserait le premier orphelin.
+    foreach (['jpg', 'png', 'webp'] as $e) {
+        $f = __DIR__ . '/../public/' . $rel . '.' . $e;
+        if (is_file($f)) { @unlink($f); }
+    }
+    $chemin = $rel . '.' . $ext;
+    if (@file_put_contents(__DIR__ . '/../public/' . $chemin, $bin) === false) {
+        http_response_code(500); return ['error' => 'écriture de la photo impossible sur le serveur'];
+    }
+
+    $u = setting('utilisateur', []);
+    $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
+    Db::exec('INSERT INTO pla_note (cible, cible_id, photo, auteur, maj_le) VALUES (?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE photo = VALUES(photo), auteur = VALUES(auteur), maj_le = VALUES(maj_le)',
+        [$cible, $id, $chemin, $auteur, date('Y-m-d H:i:s')]);
+    return ['ok' => true, 'photo' => $chemin, 'octets' => strlen($bin),
+        'largeur' => $info[0] ?? null, 'hauteur' => $info[1] ?? null];
+}
+
+/**
  * Enregistre la clé Anthropic. Elle ne repart JAMAIS vers l'écran : le
  * formulaire l'envoie, le serveur la garde, et l'état ne rend qu'une empreinte.
  * Un champ pré-rempli avec la clé la ferait apparaître dans chaque réponse HTTP,

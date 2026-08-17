@@ -2626,6 +2626,7 @@ function ep_planogramme(): array
             'cible' => $n['cible'], 'cibleId' => (string) $n['cible_id'],
             'texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
             'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],
+            'photo' => $n['photo'] ?? null,
             'auteur' => $n['auteur'], 'majLe' => $n['maj_le']];
     }
     return $out;
@@ -2730,6 +2731,7 @@ function ep_prod_produit_fiche(): array
     if ($n !== null) {
         $out['note'] = ['texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
             'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],
+            'photo' => $n['photo'] ?? null,
             'auteur' => $n['auteur'], 'majLe' => $n['maj_le']];
     }
     return $out;

@@ -2009,6 +2009,13 @@ class App {
             }) };
         }) });
     }
+    // --- impression : TOUT le comptoir, pas seulement la zone regardée.
+    //
+    // Une feuille qu'on emporte en boutique doit porter l'ensemble : à quoi bon
+    // imprimer la vitrine qu'on a sous les yeux. La feuille est construite ici,
+    // en HTML simple, et le navigateur s'occupe de la pagination.
+    common.plImprimer = (pl.zones || []).length ? () => this.plImprimer() : null;
+
     common.plCible = cible;
     const sC = (pl.slots || []).find(s => s.id === cible) || null;
     common.plCibleTxt = sC ? (sC.meuble + ' · ' + sC.niveau + ' · position ' + sC.position) : '';
@@ -2137,6 +2144,82 @@ class App {
     common.plParRef = parRef;
     common.plFiche = S.plFiche ? this.valsPlFiche(S.plFiche, pl) : false;
   }
+  /**
+   * Imprime le planogramme entier.
+   *
+   * La feuille est écrite dans une fenêtre à part plutôt que dans l'écran :
+   * imprimer l'application obligerait à masquer le rail, les modales et chaque
+   * bouton en `@media print`, et le moindre écran ajouté ensuite ressortirait
+   * sur le papier. Une page à part ne dit que ce qu'elle doit dire.
+   *
+   * Les photos annexées y figurent : c'est ce qui rend la feuille utilisable
+   * au comptoir, où l'on compare ce qu'on voit à ce qui est attendu.
+   */
+  plImprimer(){
+    const pl = this.D.plano || {};
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
+      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const notes = pl.notes || {};
+    const jour = new Date().toLocaleDateString('fr-BE');
+    const bloc = [];
+    (pl.zones || []).forEach(z => {
+      const nz = notes['zone:' + z.id];
+      bloc.push('<section><h2>' + esc(z.nom) + '</h2>'
+        + (nz && nz.texte ? '<p class="note">' + esc(nz.texte) + '</p>' : ''));
+      (z.meubles || []).forEach(m => {
+        const nm = notes['meuble:' + m.id];
+        const meta = [m.type, m.temperature, m.presentation].filter(Boolean).join(' · ');
+        bloc.push('<h3>' + esc(m.nom) + (meta ? ' <span class="meta">' + esc(meta) + '</span>' : '') + '</h3>');
+        if (nm && nm.texte) { bloc.push('<p class="note">' + esc(nm.texte) + '</p>'); }
+        if (nm && nm.photo) { bloc.push('<img class="ph" src="' + esc(nm.photo) + '" alt="">'); }
+        (m.niveaux || []).forEach(n => {
+          const cases = (n.slots || []).map(s => {
+            const o = (s.occupants || [])[0];
+            const nr = o ? notes['ref:' + o.ref] : null;
+            const dim = [s.longueurMm, s.largeurMm].filter(Boolean).join('×');
+            return '<td>' + '<b>' + s.position + '</b> '
+              + (o ? esc(o.nom) + '<span class="f">' + o.fronts + ' front(s)</span>'
+                   : '<span class="libre">libre</span>')
+              + (dim ? '<span class="f">' + dim + ' mm</span>' : '')
+              + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : '')
+              + '</td>';
+          }).join('');
+          bloc.push('<table><tr><th>' + esc(n.nom) + '</th>' + (cases || '<td class="libre">aucun emplacement</td>') + '</tr></table>');
+        });
+      });
+      bloc.push('</section>');
+    });
+    const t = pl.totaux || {};
+    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+      + '<title>Planogramme comptoir — ' + esc(jour) + '</title><style>'
+      + 'body{font-family:Helvetica,Arial,sans-serif;color:#222;margin:18mm 14mm;font-size:11px;line-height:1.45}'
+      + 'h1{font-size:19px;margin:0 0 2px}h2{font-size:14px;margin:16px 0 4px;border-bottom:1.5px solid #222;padding-bottom:3px}'
+      + 'h3{font-size:12px;margin:10px 0 3px}.meta{font-weight:400;color:#666}'
+      + '.sous{color:#666;margin:0 0 10px}.note{margin:2px 0 6px;color:#444;font-style:italic}'
+      + 'table{width:100%;border-collapse:collapse;margin:0 0 5px;table-layout:fixed}'
+      + 'th{width:64px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#666;'
+      + 'border:0.5px solid #ccc;padding:5px 6px;vertical-align:top}'
+      + 'td{border:0.5px solid #ccc;padding:5px 6px;vertical-align:top;font-size:10px}'
+      + '.f{display:block;color:#666;font-size:8.5px}.n{font-style:italic}.libre{color:#999}'
+      + '.ph{max-width:74mm;max-height:52mm;border:0.5px solid #ccc;margin:2px 0 6px;display:block}'
+      + 'section{break-inside:auto}h3,table{break-inside:avoid}'
+      + '@page{size:A4;margin:14mm}</style></head><body>'
+      + '<h1>Planogramme comptoir</h1>'
+      + '<p class="sous">' + esc(jour) + ' · ' + (t.slots || 0) + ' emplacement(s), '
+      + (t.places || 0) + ' référence(s) placée(s), ' + (t.libres || 0) + ' libre(s)</p>'
+      + bloc.join('') + '</body></html>';
+
+    const w = window.open('', '_blank');
+    if (!w) { this.notify('Le navigateur a bloqué la fenêtre d’impression.'); return; }
+    w.document.write(html);
+    w.document.close();
+    // Attendre les images : imprimer avant leur chargement sortirait des cadres
+    // vides à la place des photos.
+    const lancer = () => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } };
+    if (w.document.images.length === 0) { setTimeout(lancer, 120); }
+    else { w.onload = lancer; setTimeout(lancer, 2500); }
+  }
+
   /* --- assistant de création d'un meuble ------------------------------------- */
 
   plMwOuvrir(zoneId){
@@ -2302,6 +2385,14 @@ class App {
       technique: (d.technique || []).map(t => ({ k: t.champ, v: t.valeur })),
       techniqueVide: !(d.technique || []).length,
       manque: (d.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source })),
+      // Photo annexée dans le cockpit. Elle ne remplace pas celle du panel — on
+      // dit l'un ET l'autre : ce visuel-ci ne partira pas en boutique tant que
+      // la route de dépôt n'existe pas côté panel.
+      // Le chemin est relatif au dossier de l'application : il se résout tout
+      // seul, quelle que soit la base d'URL du déploiement.
+      photo: (d.note || {}).photo || null,
+      photoDepose: ev => this.plPhoto('ref', f.ref, (ev.target.files || [])[0]),
+      photoRetirer: (d.note || {}).photo ? () => this.plPhotoRetirer('ref', f.ref) : null,
       // Consigne de présentation.
       noteTxt: n.texte != null ? n.texte : ((d.note || {}).texte || ''),
       notePin: n.epinglee != null ? !!n.epinglee : !!(d.note || {}).epinglee,
@@ -2370,6 +2461,52 @@ class App {
   /** Le référentiel lit le placement : il doit être relu après une écriture. */
   plRechargeCatalogue(){
     readOne('/production/catalogue').then(c => { if (c) { this.D.prodCatalogue = c; } this.setState({}); });
+  }
+  /**
+   * Annexe une photo. Le fichier est lu dans le navigateur et envoyé en
+   * data-URL : toute l'application parle JSON, et basculer une seule route en
+   * multipart pour cette occasion aurait coûté un chemin de plus à maintenir.
+   *
+   * L'image est réduite avant l'envoi — une photo de téléphone pèse 4 à 8 Mo et
+   * n'apporte rien au-delà de 1600 px sur un plan de comptoir. Réduire ici
+   * évite un refus du serveur que l'utilisateur ne saurait pas corriger.
+   */
+  plPhoto(cible, cibleId, file, apres){
+    if (!file) { return; }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      this.notify('Format non accepté — JPEG, PNG ou WebP.'); return;
+    }
+    const envoi = data => write(this.source, 'POST', '/planogramme/photo', { cible, cibleId, data })
+      .then(r => {
+        if (!r || r.ok === false) { this.notify('Photo non enregistrée : ' + ((r && r.error) || 'échec')); return; }
+        this.plCharge(true);
+        if (typeof apres === 'function') { apres(r.photo || null); }
+        this.notify(r.photo ? 'Photo annexée' : 'Photo retirée');
+      });
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1600;
+        const ech = Math.min(1, max / Math.max(img.width, img.height));
+        if (ech >= 1 && file.size < 1.5 * 1024 * 1024) { envoi(fr.result); return; }
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * ech); cv.height = Math.round(img.height * ech);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        envoi(cv.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => this.notify('Image illisible.');
+      img.src = fr.result;
+    };
+    fr.onerror = () => this.notify('Lecture du fichier impossible.');
+    fr.readAsDataURL(file);
+  }
+  plPhotoRetirer(cible, cibleId, apres){
+    write(this.source, 'POST', '/planogramme/photo', { cible, cibleId, data: '' })
+      .then(r => { if (!r || r.ok === false) { this.notify('Non retirée : ' + ((r && r.error) || 'échec')); return; }
+        this.plCharge(true);
+        if (typeof apres === 'function') { apres(null); }
+        this.notify('Photo retirée'); });
   }
   plNote(){
     const f = this.state.plFiche;

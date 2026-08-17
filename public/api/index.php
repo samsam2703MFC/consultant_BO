@@ -139,6 +139,7 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/planogramme/emplacement/(\d+)$#', $path, $m)) { return wr_plano_slot_supprimer((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/planogramme/placement/([\w-]+)$#', $path, $m)) { return wr_plano_placer($m[1]); }
     if ($method === 'PUT' && $path === '/planogramme/note') { return wr_plano_note(); }
+    if ($method === 'POST' && $path === '/planogramme/photo') { return wr_plano_photo(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
 

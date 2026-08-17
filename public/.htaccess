@@ -21,3 +21,15 @@ RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
+
+# Photos annexées au planogramme : servies telles quelles, mais JAMAIS exécutées.
+# Un fichier déposé qui se terminerait en .php doit rester un fichier.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^uploads/.*\.(php|phtml|phar|cgi|pl|py|sh)$ - [F,L]
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "^uploads/">
+    Header set X-Content-Type-Options "nosniff"
+  </FilesMatch>
+</IfModule>

@@ -137,6 +137,9 @@ function ensurePlanogramme(): void
             'longueur_mm' => 'SMALLINT UNSIGNED NULL',
             'hauteur_mm'  => 'SMALLINT UNSIGNED NULL',
         ],
+        // La photo est rangée sur le disque et sa SEULE référence vit ici : un
+        // fichier de 2 Mo en base serait relu à chaque lecture du planogramme.
+        'pla_note' => ['photo' => 'VARCHAR(255) NULL'],
     ] as $table => $cols) {
         foreach ($cols as $col => $type) {
             try { Db::exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $col . ' ' . $type); }

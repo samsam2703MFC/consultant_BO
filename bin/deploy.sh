@@ -106,7 +106,15 @@ mkdir -p "$TARGET_DIR"
 rsync -a --delete \
   --exclude '.git' --exclude 'config/config.php' \
   --exclude 'node_modules' --exclude '.deployenv' \
+  --exclude 'public/uploads' \
   "$REPO_SRC/" "$TARGET_DIR/"
+
+# Photos annexées au planogramme : elles vivent HORS du dépôt et doivent
+# survivre au déploiement. Sans cette exclusion, `rsync --delete` les effacerait
+# à chaque livraison — une photo de comptoir perdue sans que rien ne le dise.
+mkdir -p "$TARGET_DIR/public/uploads/plano"
+chown -R www-data:www-data "$TARGET_DIR/public/uploads"
+chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 
 # --- 3. Identifiants MySQL du panel -------------------------------------
 if [[ -z "$COCKPIT_DB_USER" || -z "$COCKPIT_DB_PASSWORD" ]]; then
