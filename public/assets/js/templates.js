@@ -379,7 +379,7 @@ function tplReferentiel(c, x){
       <thead><tr>
         <th style="${TH}">Référence</th>
         <th style="${TH}">Catégorie</th>
-        ${c.isCat ? `<th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge</th><th style="${TH};${num}">DLV</th>` : ''}
+        ${c.isCat ? `<th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
         ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}">Qté min.</th>` : ''}
         ${c.isPlano ? `<th style="${TH}">Zone</th><th style="${TH}">Meuble</th><th style="${TH}">Niveau</th><th style="${TH};${num}">Emplac.</th>` : ''}
         <th style="${TH};text-align:right">Fiche</th>
@@ -394,6 +394,8 @@ function tplReferentiel(c, x){
           ${c.isCat ? `<td style="${TD};${num}">${esc(l.prix)}</td>
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.cout)}</td>
             <td style="${TD};${num};color:${l.margeC}">${esc(l.marge)}</td>
+            <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.commission)}</td>
+            <td style="${TD};${num};color:${l.margeNetteC}">${esc(l.margeNette)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(l.margeNetteEur)}</div></td>
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.dlv)}</td>` : ''}
           ${c.isAsso ? `<td style="${TD};text-align:center">${l.must ? '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e">obligatoire</span>' : '<span style="color:var(--color-text-muted);font-size:11.5px">—</span>'}</td>
             <td style="${TD};${num}">${l.must ? l.qmin : '—'}</td>` : ''}

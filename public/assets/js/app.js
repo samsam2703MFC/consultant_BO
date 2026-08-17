@@ -311,18 +311,15 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
-      caCockpit: ['Centrale d’achat — Cockpit', 'Indicateurs du réseau sur une période glissante. Le volet achat reste à brancher : aucune API ne porte encore les commandes fournisseurs.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
       caAchats: ['Suivi fournisseurs', 'Commandes fournisseurs, réception et litiges.'],
       caCommandes: ['Commandes franchisés', 'Commandes des magasins, de la préparation à la livraison.'],
-      caCatalogue: ['Catalogue & marge', 'Les références du réseau et leur marge nette, commission de marque déduite. Coût matière issu des recettes, prix de vente issu de la caisse.'],
-      caVentes: ['Analyse des ventes', 'Ventes par magasin sur la période, base de référence des négociations.'],
       caStock: ['Stock', 'Stock, seuils et ruptures.'],
       caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
       caReglages: ['Réglages de la centrale', 'Paramètres du moteur de marge et référentiel fournisseurs.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
-      catalogue: ['Catalogue produit', 'Les 711 références du réseau, avec leur catégorie, leur gamme, leur prix et leur marge. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
+      catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
@@ -531,14 +528,15 @@ class App {
           ['assortiment', 'Assortiment obligatoire', 0],
           ['planogramme', 'Planogramme comptoir', 0]] },
         ['production', 'Suivi de production', 0]]],
+      // Sept entrées, pas dix. « Catalogue & marge », « Analyse des ventes » et
+      // « Cockpit » doublaient le Référentiel produit, le Tableau des magasins
+      // et P&L magasins — mêmes sources, en moins riche. La marge nette qu'ils
+      // apportaient a rejoint le catalogue existant.
       ['Centrale d’achat', [
-        ['caCockpit', 'Cockpit', 0],
         ['caCampagnes', 'Campagnes commerciales', 0],
         ['caDemande', 'Demande de prix', 0],
         ['caAchats', 'Suivi fournisseurs', 0],
         ['caCommandes', 'Commandes franchisés', 0],
-        ['caCatalogue', 'Catalogue & marge', 0],
-        ['caVentes', 'Analyse des ventes', 0],
         ['caStock', 'Stock', 0],
         ['caFacturation', 'Facturation magasins', 0],
         ['caReglages', 'Réglages', 0]]],
@@ -1149,6 +1147,13 @@ class App {
       // la marge se tait, et la mention dit laquelle des deux on regarde.
       marge: p.margePct == null ? (p.mat != null ? 'non fiable' : '—') : this.fP(p.margePct, 0),
       margeC: this.echelleMarge(p.margePct == null ? null : 100 * p.margePct),
+      // Marge NETTE, commission de marque déduite : c'est celle que pilote la
+      // centrale d'achat, qui n'a plus d'écran catalogue propre. Deux
+      // catalogues sur les mêmes 711 références finissaient par se contredire.
+      commission: this.fU(p.commission),
+      margeNette: p.margeNettePct == null ? '—' : this.fP(p.margeNettePct, 0),
+      margeNetteEur: this.fU(p.margeNette),
+      margeNetteC: this.echelleMarge(p.margeNettePct == null ? null : 100 * p.margeNettePct),
       must: !!p.must, qmin: p.qmin || 0,
       zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
       slot: p.slot == null ? '' : String(p.slot),
@@ -1538,11 +1543,10 @@ class App {
    * coup d'œil ce qui reste à obtenir, sans rouvrir le document de cadrage.
    */
   caRoute(){
-    return { caCockpit: '/centrale/cockpit', caCampagnes: '/centrale/campagnes',
-      caDemande: '/centrale/demandes', caAchats: '/centrale/achats',
-      caCommandes: '/centrale/commandes', caCatalogue: '/centrale/catalogue',
-      caVentes: '/centrale/ventes', caStock: '/centrale/stock',
-      caFacturation: '/centrale/facturation', caReglages: '/centrale/reglages' }[this.state.screen];
+    return { caCampagnes: '/centrale/campagnes', caDemande: '/centrale/demandes',
+      caAchats: '/centrale/achats', caCommandes: '/centrale/commandes',
+      caStock: '/centrale/stock', caFacturation: '/centrale/facturation',
+      caReglages: '/centrale/reglages' }[this.state.screen];
   }
   caCharge(){
     const S = this.state, ecr = S.screen, r = this.caRoute();
@@ -1552,7 +1556,7 @@ class App {
     this._caEnCours = this._caEnCours || {};
     if ((S.caData || {})[cle] || this._caEnCours[cle]) { return; }
     this._caEnCours[cle] = true;
-    const q = (ecr === 'caCockpit' || ecr === 'caVentes') ? '?periode=' + encodeURIComponent(per) : '';
+    const q = '';
     readOne(r + q).then(d => { this._caEnCours[cle] = false;
       this.setState(s2 => ({ caData: Object.assign({}, s2.caData, { [cle]: d || { etat: 'erreur', motif: 'API injoignable' } }) })); });
   }
@@ -1573,10 +1577,7 @@ class App {
       + 'padding:6px 14px;border-radius:8px;'
       + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
             : 'background:transparent;color:var(--color-text-muted)');
-    common.caPerBtns = (ecr === 'caCockpit' || ecr === 'caVentes')
-      ? [['7j', '7 jours'], ['30j', '30 jours'], ['trimestre', 'Trimestre'], ['annee', 'Année']]
-          .map(o => ({ label: o[1], st: onglet(per === o[0]), go: () => this.setState({ caPeriode: o[0] }) }))
-      : null;
+    common.caPerBtns = null;
 
     // --- écrans sans source : la table est rendue, colonne par colonne
     common.caAttendu = (d && d.etat === 'attente' && d.colonnes) ? d.colonnes.map(c => ({
@@ -1588,42 +1589,10 @@ class App {
     common.caKpis = null; common.caCols = null; common.caRows = null; common.caParams = null;
     if (!d || d.etat === 'attente') { return common; }
 
-    if (ecr === 'caCockpit') {
-      common.caKpis = (d.kpis || []).map(k => ({ libelle: k.libelle,
-        valeur: k.valeur == null ? 'manque API' : (k.unite === '€' ? this.fMt(k.valeur) : Math.round(k.valeur).toLocaleString('fr-BE')),
-        vide: k.valeur == null }));
-    } else if (ecr === 'caCatalogue') {
-      const q = (S.caQ || '').trim().toLowerCase();
-      common.caQ = S.caQ || '';
-      common.caSetQ = e => this.setState({ caQ: e.target.value });
-      common.caParams = d.params || null;
-      common.caAvert = d.avertissement || '';
-      const l = (d.lignes || []).filter(x => !q || (x.nom || '').toLowerCase().includes(q) || (x.categorie || '').toLowerCase().includes(q));
-      common.caTotal = (d.lignes || []).length;
-      common.caCols = ['Référence', 'Catégorie', 'Fournisseur', 'Prix achat', 'Prix vente', 'Commission', 'Marge nette', 'Taux'];
-      common.caRows = l.slice(0, 300).map(x => ({
-        cells: [
-          { t: x.nom },
-          { t: x.categorie || '—', mut: true },
-          // Le rattachement fournisseur n'existe pas : le dire dans la cellule.
-          { t: 'manque API', vide: true },
-          { t: x.prixAchat == null ? 'manque API' : this.fU(x.prixAchat), vide: x.prixAchat == null, num: true },
-          { t: x.prixVente == null ? 'manque API' : this.fU(x.prixVente), vide: x.prixVente == null, num: true },
-          { t: x.commission == null ? '—' : this.fU(x.commission), num: true, mut: true },
-          { t: x.margeNette == null ? '—' : this.fU(x.margeNette), num: true },
-          { t: x.tauxMarge == null ? '—' : this.fP(x.tauxMarge, 1), num: true,
-            col: x.tauxMarge == null ? '' : (x.tauxMarge >= 0.5 ? '#2d7a3e' : (x.tauxMarge >= 0.3 ? '#B87512' : 'var(--color-primary)')) }
-        ] }));
-    } else if (ecr === 'caVentes') {
-      common.caCols = ['Magasin', 'Chiffre d’affaires', 'Tickets', 'Ticket moyen', 'Objectif'];
-      common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: x.magasin },
-        { t: x.ca == null ? 'manque API' : this.fMt(x.ca), vide: x.ca == null, num: true },
-        { t: x.tickets == null ? 'manque API' : Math.round(x.tickets).toLocaleString('fr-BE'), vide: x.tickets == null, num: true },
-        { t: (x.ca && x.tickets) ? this.fU(x.ca / x.tickets) : '—', num: true, mut: true },
-        { t: 'manque API', vide: true } ] }));
-      common.caNote = 'Objectif par magasin : aucune API ne le porte pour la centrale (les budgets du cockpit sont mensuels, pas par période glissante).';
-    } else if (ecr === 'caReglages') {
+    // Les branches Cockpit, Catalogue et Analyse des ventes ont été retirées
+    // avec leurs entrées de rail : elles doublaient P&L magasins, le Référentiel
+    // produit et le Tableau des magasins, en rendant moins que ces derniers.
+    if (ecr === 'caReglages') {
       common.caParams = d.params || null;
       // Un référentiel vide n'est pas une API manquante : il est vide, et
       // confondre les deux enverrait chercher une source qui existe déjà.

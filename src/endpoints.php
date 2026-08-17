@@ -596,6 +596,9 @@ function ep_prod_catalogue(): array
             // tenu par le réseau — l'API de caisse ne l'expose pas.
             'marge' => ($mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
             'margePct' => ($mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'commission' => caCommission($prix),
+            'margeNette' => caMargeNette($prix, $mat),
+            'margeNettePct' => caMargeNettePct($prix, $mat),
             'must' => (bool) $r['must'], 'qmin' => (int) $r['qmin'],
             'periods' => $r['periods'], 'profil' => $r['profil'],
             'pwaId' => $r['pwa_id'] !== null ? (int) $r['pwa_id'] : null,
@@ -1827,6 +1830,13 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
             'matSource' => $matSrc, 'prixSource' => $prixSrc, 'matFiable' => $matFiable,
             'marge'    => ($matFiable && $mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
             'margePct' => ($matFiable && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            // Marge NETTE : la commission de marque retirée. Elle vient de la
+            // centrale d'achat, qui n'a plus son propre écran catalogue —
+            // deux catalogues sur les mêmes 711 références se contredisent tôt
+            // ou tard. Le référentiel porte donc les deux marges.
+            'commission'  => $matFiable ? caCommission($prix) : null,
+            'margeNette'  => $matFiable ? caMargeNette($prix, $mat) : null,
+            'margeNettePct' => $matFiable ? caMargeNettePct($prix, $mat) : null,
             'margeAttendue' => $p['expected_margin'] !== null && (float) $p['expected_margin'] > 0
                 ? round((float) $p['expected_margin'], 2) : null,
             'must'   => $e ? (bool) $e['must'] : false,
@@ -3173,8 +3183,12 @@ function ep_produits_analyse_sonde(): array
 /** Réglages du moteur (commission, TVA, objectifs de négociation). */
 function caParams(): array
 {
-    $p = setting('centrale');
-    return is_array($p) ? $p : ['commissionMarquePct' => 4.0, 'margeCentraleCiblePct' => 12.0,
+    // Mémorisé : le catalogue applique la commission à 711 lignes, et setting()
+    // fait un SELECT à chaque appel — sept cents requêtes pour un seul écran.
+    static $p = null;
+    if ($p !== null) { return $p; }
+    try { $v = setting('centrale'); } catch (PDOException $e) { $v = null; }
+    return $p = is_array($v) ? $v : ['commissionMarquePct' => 4.0, 'margeCentraleCiblePct' => 12.0,
         'tvaDefautPct' => 6.0, 'objectifBaissePrixPct' => 3.0, 'objectifHausseVolPct' => 10.0];
 }
 
@@ -3203,9 +3217,30 @@ function caAttente(string $quoi, string $source): array
         'motif' => 'en attente d\'API — ' . $quoi . ' : ' . $source];
 }
 
+/** Commission de marque sur le prix de vente (taux des réglages centrale). */
+function caCommission(?float $vente): ?float
+{
+    if ($vente === null || $vente <= 0) { return null; }
+    return round($vente * (float) (caParams()['commissionMarquePct'] ?? 4.0) / 100, 3);
+}
+
+/** Marge après commission de marque — la marge que la centrale pilote. */
+function caMargeNette(?float $vente, ?float $achat): ?float
+{
+    if ($vente === null || $achat === null || $vente <= 0) { return null; }
+    return round($vente - $achat - (float) caCommission($vente), 3);
+}
+
+function caMargeNettePct(?float $vente, ?float $achat): ?float
+{
+    $n = caMargeNette($vente, $achat);
+    return ($n === null || $vente === null || $vente <= 0) ? null : round($n / $vente, 4);
+}
+
 /**
- * Catalogue + moteur de marge. Le seul écran du module entièrement réel :
- * le coût matière vient des recettes, le prix de vente de la caisse.
+ * Conservé pour la route /centrale/catalogue, sans entrée au rail : le
+ * catalogue vit au Référentiel produit, qui porte désormais la marge nette.
+ * Deux écrans sur les mêmes 711 références finissaient par se contredire.
  */
 function ep_ca_catalogue(): array
 {

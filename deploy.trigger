@@ -1,6 +1,7 @@
-Centrale d achat : dire « manque API », pas le laisser deviner.
+Centrale d achat : supprimer le double emploi avec les menus existants.
 
-La pastille affichait le nom de l API attendue, ce qui IMPLIQUE le manque sans
-le dire. Elle porte desormais « manque API » suivi de la source. Un tableau
-sans ligne rend ses colonnes et explique pourquoi il est vide, au lieu de
-paraitre casse.
+Trois des dix ecrans doublaient l existant : « Catalogue & marge » appelait
+litteralement ep_prod_catalogue (memes 711 references), « Analyse des ventes »
+et « Cockpit » rendaient moins que Tableau des magasins et P&L magasins. Ils
+sont retires du rail ; la marge nette apres commission qu ils apportaient
+rejoint le Catalogue produit. Sept entrees restent, toutes specifiques.
