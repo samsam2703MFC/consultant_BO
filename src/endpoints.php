@@ -3391,6 +3391,33 @@ function ep_produits_analyse_sonde(): array
         }
         $out['routes'][$nom] = $e;
     }
+
+    // 3. Le catalogue du panel porte-t-il une IMAGE de présentation ?
+    //    La question décide de ce qu'un écran peut promettre : une fiche de
+    //    vente sans visuel n'est pas une fiche de vente. On compte, on ne
+    //    suppose pas — et on nomme les clés trouvées, pour que le rapprochement
+    //    ne soit pas deviné.
+    $prods = PanelApi::brut('/products');
+    $liste = is_array($prods) ? (array_is_list($prods) ? $prods : ($prods['products'] ?? $prods['data'] ?? [])) : [];
+    $clesImg = ['url', 'image_url', 'photo_url', 'picture', 'image', 'thumbnail', 'photo',
+        'attachment_id', 'id_attachment', 'image_id', 'media', 'images'];
+    $avec = []; $n = 0;
+    foreach ($liste as $p) {
+        if (!is_array($p)) { continue; }
+        $n++;
+        foreach ($clesImg as $k) {
+            if (!empty($p[$k])) { $avec[$k] = ($avec[$k] ?? 0) + 1; }
+        }
+    }
+    $out['catalogueImage'] = [
+        'chemin' => '/products', 'erreur' => PanelApi::$lastError,
+        'produits' => $n,
+        'clesPremier' => ($liste && is_array($liste[0] ?? null)) ? array_keys($liste[0]) : null,
+        'clesImageRemplies' => $avec,
+        'verdict' => $n === 0 ? 'catalogue injoignable'
+            : ($avec ? 'une image existe : ' . implode(', ', array_keys($avec))
+                     : 'AUCUNE image de présentation sur les ' . $n . ' produits'),
+    ];
     return $out;
 }
 
