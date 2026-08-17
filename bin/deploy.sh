@@ -69,6 +69,37 @@ a2enmod rewrite >/dev/null 2>&1 || true
 # navigateur garde l'ancienne version apres une livraison.
 a2enmod headers >/dev/null 2>&1 || true
 
+# --- 1 bis. Syntaxe : refuser de livrer du code qui ne se charge pas -----
+# Le navigateur charge assets/js/*.js comme des MODULES ES. `node --check` sur
+# un fichier .js le lit comme un script, mode dans lequel il a déjà laissé
+# passer une erreur qui rendait l'application muette en ligne (un accent grave
+# dans un commentaire, DANS un littéral de gabarit : il refermait le littéral).
+# On vérifie donc en mode module — la copie en .mjs est ce qui l'impose — et on
+# arrête le déploiement plutôt que de servir un écran de chargement infini.
+if command -v node >/dev/null 2>&1; then
+  log "Vérification de la syntaxe des modules JS…"
+  jstmp="$(mktemp -d)"
+  jsko=0
+  for f in "$REPO_SRC"/public/assets/js/*.js; do
+    cp "$f" "$jstmp/$(basename "${f%.js}").mjs"
+    if ! node --check "$jstmp/$(basename "${f%.js}").mjs"; then
+      warn "SYNTAXE : $(basename "$f") ne se charge pas comme module ES."
+      jsko=1
+    fi
+  done
+  rm -rf "$jstmp"
+  if [[ $jsko -ne 0 ]]; then
+    warn "Déploiement interrompu : corrigez la syntaxe avant de livrer."
+    exit 1
+  fi
+  log "Modules JS : syntaxe correcte."
+else
+  warn "node absent : syntaxe JS non vérifiée avant livraison."
+fi
+for f in "$REPO_SRC"/src/*.php "$REPO_SRC"/public/api/*.php; do
+  php -l "$f" >/dev/null || { warn "SYNTAXE PHP : $f"; exit 1; }
+done
+
 # --- 2. Fichiers ---------------------------------------------------------
 log "Copie du dépôt vers $TARGET_DIR (hors webroot ; public/ sera aliasé)…"
 mkdir -p "$TARGET_DIR"
