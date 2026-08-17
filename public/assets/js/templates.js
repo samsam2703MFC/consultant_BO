@@ -2775,6 +2775,7 @@ function tplPlanoComptoir(c, x){
           ${c.plMeublesListe.length ? c.plMeublesListe.map(m => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
             <input value="${esc(m.nom)}" ${x.C(m.renommer)} style="${inp};flex:1;min-width:0">
             <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap" title="${esc(m.detail || '')}">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
+            <label title="${m.photo ? 'Remplacer la photo' : 'Annexer une photo'}" style="flex:0 0 auto;width:26px;height:26px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${m.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:13px;line-height:1'}">${m.photo ? `<img src="${esc(l.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(l.photoSet)} style="display:none"></label>${m.photoDel ? `<button ${x.A(l.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
             <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('') : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">Aucun meuble dans cette zone.</div>`}
           <!-- Un meuble ne se saisit pas sur une ligne : il porte un type, une
@@ -2795,6 +2796,7 @@ function tplPlanoComptoir(c, x){
           ${c.plNiveauxListe.map(n => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
             <input value="${esc(n.nom)}" ${x.C(n.renommer)} style="${inp};flex:1;min-width:0">
             <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${n.nSlots} empl.</span>
+            <label title="${n.photo ? 'Remplacer la photo' : 'Annexer une photo'}" style="flex:0 0 auto;width:26px;height:26px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${n.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:13px;line-height:1'}">${n.photo ? `<img src="${esc(l.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(n.photoSet)} style="display:none"></label>${n.photoDel ? `<button ${x.A(n.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
             <button ${x.A(n.ajouter)} title="Ajouter un emplacement à ce niveau" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1">+</button>
             <button ${x.A(n.supprimer)} title="Supprimer ce niveau" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('')}
@@ -2897,7 +2899,19 @@ function tplPlanoMeubleWizard(c, x){
   const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
     + 'border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px;box-sizing:border-box';
   const puce = o => `<button ${x.A(o.pick)} style="border-radius:999px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.v)}</button>`;
-  const etapes = ['Le meuble', 'Conservation & présentation', 'Un emplacement', 'Récapitulatif'];
+  const etapes = ['Le meuble', 'Conservation & présentation', 'Un emplacement', 'Photos', 'Récapitulatif'];
+  // Vignette de photo : le même geste partout — déposer, remplacer, retirer.
+  const vignette = (data, poser, retirer, titre) => data
+    ? `<div style="position:relative;flex:0 0 auto">
+        <img src="${data}" alt="" style="width:104px;height:76px;object-fit:cover;border-radius:8px;border:0.5px solid var(--color-border-tertiary);display:block">
+        ${retirer ? `<button ${x.A(retirer)} title="Retirer" style="position:absolute;top:4px;right:4px;border:none;background:rgba(20,16,14,0.72);color:#fff;border-radius:999px;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">✕</button>` : ''}
+        <label style="display:block;text-align:center;font-size:10px;color:var(--color-text-muted);margin-top:3px;cursor:pointer;text-decoration:underline;text-underline-offset:2px">remplacer<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(poser)} style="display:none"></label>
+      </div>`
+    : `<label style="flex:0 0 auto;width:104px;height:76px;border:1px dashed var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:var(--color-surface)">
+        <span style="font-size:15px;line-height:1;color:var(--color-text-muted)">＋</span>
+        <span style="font-size:10px;color:var(--color-text-muted);text-align:center;padding:0 5px">${esc(titre || 'photo')}</span>
+        <input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(poser)} style="display:none">
+      </label>`;
   return `
   <div ${x.A(w.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:90;animation:fadeIn 160ms ease"></div>
   <div style="position:fixed;inset:0;z-index:91;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
@@ -2948,6 +2962,22 @@ function tplPlanoMeubleWizard(c, x){
         ` : ''}
 
         ${w.etape === 4 ? `
+          <div style="${lbl};margin-bottom:7px">Photo du meuble</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${vignette(w.photoMeuble, w.photoMeubleSet, w.photoMeubleDel, 'le meuble')}
+            <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5;max-width:330px;align-self:center">Le meuble tel qu’il doit se présenter. C’est à elle qu’on compare ce qu’on voit en boutique.</div>
+          </div>
+          <div style="${lbl};margin:18px 0 7px">Une photo par niveau</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            ${w.photosNiveau.map(n => `<div style="text-align:center">
+              ${vignette(n.data, n.set, n.del, esc(n.nom))}
+              <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(n.nom)}</div>
+            </div>`).join('')}
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">Tout est facultatif, et rien n’est figé : une photo s’ajoute, se remplace ou se retire ensuite depuis « Retoucher un meuble ».</div>
+        ` : ''}
+
+        ${w.etape === 5 ? `
           <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden">
             ${w.recap.map((r, i) => `<div style="display:flex;gap:14px;padding:9px 13px;${i ? 'border-top:0.5px solid var(--color-border-tertiary);' : ''}${i % 2 ? 'background:var(--color-background-secondary);' : ''}">
               <span style="${lbl};flex:0 0 118px">${esc(r.k)}</span>

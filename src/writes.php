@@ -838,12 +838,18 @@ function wr_plano_creer(string $type): array
         // déclarer en trois écrans successifs faisait abandonner à mi-chemin,
         // et un meuble sans emplacement ne sert à rien.
         $faits = 0;
+        $crees = [];
         foreach (is_array($b['niveaux'] ?? null) ? $b['niveaux'] : [] as $i => $n) {
             if (!is_array($n)) { continue; }
             $nn = mb_substr(trim((string) ($n['nom'] ?? '')), 0, 80);
             if ($nn === '') { $nn = 'Niveau ' . ($i + 1); }
             Db::exec('INSERT INTO pla_niveau (meuble_id, nom, rang) VALUES (?,?,?)', [$id, $nn, $i + 1]);
             $nid = (int) Db::pdo()->lastInsertId();
+            // Les identifiants créés sont RENDUS : sans eux, l'assistant ne peut
+            // pas rattacher la photo qu'il vient de collecter pour ce niveau —
+            // il faudrait recharger l'arbre et rapprocher par le nom, ce qui se
+            // trompe dès que deux niveaux s'appellent pareil.
+            $crees[] = ['id' => $nid, 'nom' => $nn, 'rang' => $i + 1];
             $ns = max(0, min(40, (int) ($n['slots'] ?? 0)));
             for ($k = 1; $k <= $ns; $k++) {
                 Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
@@ -855,7 +861,7 @@ function wr_plano_creer(string $type): array
                 $faits++;
             }
         }
-        if ($faits > 0) { return ['ok' => true, 'id' => $id, 'nom' => $nom, 'slots' => $faits]; }
+        if ($crees) { return ['ok' => true, 'id' => $id, 'nom' => $nom, 'slots' => $faits, 'niveaux' => $crees]; }
     }
 
     // Un niveau créé avec un nombre d'emplacements : les poser tout de suite
@@ -1102,8 +1108,8 @@ function wr_plano_note(): array
 {
     $b = body();
     $cible = (string) ($b['cible'] ?? '');
-    if (!in_array($cible, ['ref', 'zone', 'meuble'], true)) {
-        http_response_code(422); return ['error' => 'cible inconnue (ref, zone ou meuble)'];
+    if (!in_array($cible, ['ref', 'zone', 'meuble', 'niveau'], true)) {
+        http_response_code(422); return ['error' => 'cible inconnue (ref, zone, meuble ou niveau)'];
     }
     $id = trim((string) ($b['cibleId'] ?? ''));
     if ($id === '') { http_response_code(422); return ['error' => 'la cible est requise']; }
@@ -1156,8 +1162,8 @@ function wr_plano_photo(): array
 {
     $b = body();
     $cible = (string) ($b['cible'] ?? '');
-    if (!in_array($cible, ['ref', 'zone', 'meuble'], true)) {
-        http_response_code(422); return ['error' => 'cible inconnue (ref, zone ou meuble)'];
+    if (!in_array($cible, ['ref', 'zone', 'meuble', 'niveau'], true)) {
+        http_response_code(422); return ['error' => 'cible inconnue (ref, zone, meuble ou niveau)'];
     }
     $id = trim((string) ($b['cibleId'] ?? ''));
     if ($id === '') { http_response_code(422); return ['error' => 'la cible est requise']; }

@@ -2138,12 +2138,22 @@ class App {
       renommer: e => this.plRenommer('zone', z.id, e.target.value),
       supprimer: () => this.plSupprimer('zone', z.id, z.nom) }));
 
-    common.plMeublesListe = meubles.map(m => ({ id: m.id, nom: m.nom,
+    // Une photo peut être posée, remplacée ou retirée à tout moment, sur un
+    // meuble comme sur un niveau : l'assistant n'est pas le seul moment où
+    // l'on en dispose d'une.
+    const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
+    const photoCtrl = (cible, id) => ({
+      photo: photoDe(cible, id),
+      photoSet: e => this.plPhoto(cible, id, (e.target.files || [])[0]),
+      photoDel: photoDe(cible, id) ? () => this.plPhotoRetirer(cible, id) : null,
+    });
+
+    common.plMeublesListe = meubles.map(m => Object.assign({ id: m.id, nom: m.nom,
       nNiveaux: (m.niveaux || []).length,
       nSlots: (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0),
       detail: [m.type, m.temperature, m.presentation].filter(Boolean).join(' · '),
       renommer: e => this.plRenommer('meuble', m.id, e.target.value),
-      supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
+      supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }, photoCtrl('meuble', m.id)));
 
     const msel = S.plMeubleSel && meubles.some(m => m.id === S.plMeubleSel)
       ? S.plMeubleSel : (meubles[0] ? meubles[0].id : null);
@@ -2153,11 +2163,11 @@ class App {
     common.plNiveauAdd = msel ? () => this.plAjouterNiveau(msel) : null;
 
     const mSel = meubles.find(m => m.id === msel) || null;
-    common.plNiveauxListe = mSel ? (mSel.niveaux || []).map(n => ({ id: n.id, nom: n.nom,
+    common.plNiveauxListe = mSel ? (mSel.niveaux || []).map(n => Object.assign({ id: n.id, nom: n.nom,
       nSlots: (n.slots || []).length,
       renommer: e => this.plRenommer('niveau', n.id, e.target.value),
       ajouter: () => this.plAjouterSlots(n.id),
-      supprimer: () => this.plSupprimer('niveau', n.id, n.nom) })) : [];
+      supprimer: () => this.plSupprimer('niveau', n.id, n.nom) }, photoCtrl('niveau', n.id))) : [];
 
     // Où en est la déclaration : dire l'étape suivante plutôt qu'un « pas encore
     // déclaré » qui ne bouge pas quand on avance.
@@ -2292,6 +2302,40 @@ class App {
 
   /* --- assistant de création d'un meuble ------------------------------------- */
 
+  /**
+   * Lit un fichier image et rend une data-URL réduite, sans l'envoyer.
+   *
+   * L'assistant collecte des photos AVANT que le meuble et ses niveaux
+   * existent : il n'a pas encore d'identifiant à leur donner. On garde donc
+   * l'image en main et on l'envoie une fois la création faite.
+   */
+  plImageLire(file){
+    return new Promise((ok, non) => {
+      if (!file) { non(new Error('aucun fichier')); return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { non(new Error('format non accepté')); return; }
+      const fr = new FileReader();
+      fr.onerror = () => non(new Error('lecture impossible'));
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = () => non(new Error('image illisible'));
+        img.onload = () => {
+          const max = 1600;
+          const ech = Math.min(1, max / Math.max(img.width, img.height));
+          if (ech >= 1 && file.size < 1.5 * 1024 * 1024) { ok(fr.result); return; }
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(img.width * ech); cv.height = Math.round(img.height * ech);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          ok(cv.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+  /** Envoie une data-URL déjà préparée. */
+  plPhotoEnvoyer(cible, cibleId, data){
+    return write(this.source, 'POST', '/planogramme/photo', { cible, cibleId: String(cibleId), data });
+  }
   plMwOuvrir(zoneId){
     const r = ((this.D.plano || {}).referentiels) || {};
     const d = r.slotDefaut || {};
@@ -2300,7 +2344,11 @@ class App {
       presentation: (r.presentations || [])[0] || '',
       longueur: String(d.longueur || 300), largeur: String(d.largeur || 300),
       hauteur: String(d.hauteur || 250), capacite: '',
-      nNiveaux: '3', nSlots: '4' } });
+      nNiveaux: '3', nSlots: '4',
+      // Photos collectées avant la création : une pour le meuble, une par
+      // niveau, indexées par le rang du niveau. Elles partent une fois les
+      // identifiants connus.
+      photoMeuble: null, photosNiveau: {} } });
   }
   plMwPatch(patch){ this.setState(s => ({ plMw: Object.assign({}, s.plMw, patch) })); }
   /**
@@ -2345,20 +2393,47 @@ class App {
         { k: 'Un emplacement', v: dims[0] && dims[1]
           ? dims[0] + ' × ' + dims[1] + (dims[2] ? ' × ' + dims[2] : '') + ' mm'
           : 'dimensions non renseignées' },
+        { k: 'Photos', v: (() => { const n = (w.photoMeuble ? 1 : 0)
+            + Object.keys(w.photosNiveau || {}).filter(k2 => (w.photosNiveau || {})[k2]).length;
+          return n ? n + ' à joindre' : 'aucune'; })() },
       ],
       niveauxTxt: listeNiv.join(' · '),
       total: nSlots * nNiveaux,
+      // Photos : celle du meuble, puis une par niveau. Facultatives, ajoutables
+      // aussi APRÈS coup depuis « Retoucher un meuble » — l'assistant ne doit
+      // pas être le seul moment où l'on peut en poser une.
+      photoMeuble: w.photoMeuble || null,
+      photoMeubleSet: e => this.plMwPhoto('meuble', null, (e.target.files || [])[0]),
+      photoMeubleDel: w.photoMeuble ? () => this.plMwPatch({ photoMeuble: null }) : null,
+      photosNiveau: listeNiv.map((nom, i) => ({ nom, rang: i + 1,
+        data: (w.photosNiveau || {})[i + 1] || null,
+        set: e => this.plMwPhoto('niveau', i + 1, (e.target.files || [])[0]),
+        del: (w.photosNiveau || {})[i + 1]
+          ? () => this.plMwPatch({ photosNiveau: Object.assign({}, w.photosNiveau, { [i + 1]: null }) })
+          : null })),
+      nPhotos: (w.photoMeuble ? 1 : 0) + Object.keys(w.photosNiveau || {})
+        .filter(k => (w.photosNiveau || {})[k]).length,
       precedent: w.etape > 1 ? () => this.plMwPatch({ etape: w.etape - 1, err: '' }) : null,
-      suivant: w.etape < 4 ? () => {
+      suivant: w.etape < 5 ? () => {
         if (w.etape === 1 && !String(this.plLire('plmw-nom', w.nom) || '').trim()) {
           this.plMwPatch({ err: 'Donnez un nom à ce meuble — « Vitrine 1 », « Gondole A ».' });
           return;
         }
         this.plMwPatch({ nom: this.plLire('plmw-nom', w.nom), etape: w.etape + 1, err: '' });
       } : null,
-      creer: w.etape === 4 ? () => this.plMwCreer() : null,
+      creer: w.etape === 5 ? () => this.plMwCreer() : null,
       fermer: () => this.setState({ plMw: null }),
     };
+  }
+  /** Retient une photo de l'assistant, sans l'envoyer : rien n'existe encore. */
+  plMwPhoto(quoi, rang, file){
+    if (!file) { return; }
+    this.plImageLire(file).then(data => {
+      const w = this.state.plMw;
+      if (!w) { return; }
+      if (quoi === 'meuble') { this.plMwPatch({ photoMeuble: data }); }
+      else { this.plMwPatch({ photosNiveau: Object.assign({}, w.photosNiveau, { [rang]: data }) }); }
+    }).catch(e => this.notify('Photo non retenue : ' + e.message));
   }
   plMwCreer(){
     const w = this.state.plMw;
@@ -2386,9 +2461,23 @@ class App {
         this.plMwPatch({ busy: false, err: (res && res.error) || 'création refusée' });
         return;
       }
-      this.setState({ plMw: null });
-      this.plCharge(true);
-      this.notify('« ' + nom + ' » créé — ' + (res.slots || 0) + ' emplacement(s)');
+      // Les photos partent APRÈS, une fois les identifiants connus. Le meuble
+      // est déjà créé : un envoi de photo qui échoue ne doit pas défaire ce qui
+      // a réussi — on le dit, on ne revient pas en arrière.
+      const envois = [];
+      if (w.photoMeuble && res.id) { envois.push(this.plPhotoEnvoyer('meuble', res.id, w.photoMeuble)); }
+      (res.niveaux || []).forEach(n => {
+        const d2 = (w.photosNiveau || {})[n.rang];
+        if (d2) { envois.push(this.plPhotoEnvoyer('niveau', n.id, d2)); }
+      });
+      Promise.all(envois).then(rs => {
+        const rates = rs.filter(r => !r || r.ok === false).length;
+        this.setState({ plMw: null });
+        this.plCharge(true);
+        this.notify('« ' + nom + ' » créé — ' + (res.slots || 0) + ' emplacement(s)'
+          + (envois.length ? ' · ' + (envois.length - rates) + '/' + envois.length + ' photo(s)' : '')
+          + (rates ? ' — ' + rates + ' photo(s) non enregistrée(s)' : ''));
+      });
     });
   }
 
