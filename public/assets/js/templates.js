@@ -396,7 +396,7 @@ function tplReferentiel(c, x){
         <th style="${TH}">Référence</th>
         <th style="${TH}">Catégorie</th>
         ${c.isCat ? `<th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
-        ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}">Qté min.</th>` : ''}
+        ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}" title="Quantité minimale à tenir. Le bouton « batch » reprend la fournée minimale de la fiche produit.">Qté min. · batch</th>` : ''}
         ${c.isPlano ? `<th style="${TH}">Zone</th><th style="${TH}">Meuble</th><th style="${TH}">Niveau</th><th style="${TH};${num}">Emplac.</th>` : ''}
         <th style="${TH};text-align:right">Fiche</th>
       </tr></thead>
@@ -414,7 +414,16 @@ function tplReferentiel(c, x){
             <td style="${TD};${num};color:${l.margeNetteC}">${esc(l.margeNette)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(l.margeNetteEur)}</div></td>
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.dlv)}</td>` : ''}
           ${c.isAsso ? `<td style="${TD};text-align:center">${l.must ? '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e">obligatoire</span>' : '<span style="color:var(--color-text-muted);font-size:11.5px">—</span>'}</td>
-            <td style="${TD};${num}">${l.must ? l.qmin : '—'}</td>` : ''}
+            <td style="${TD};${num}">
+              <div style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end">
+                <input type="number" min="0" step="1" value="${l.qmin || ''}" ${x.C(l.qminSet)}
+                  title="Quantité minimale à tenir en boutique"
+                  style="width:62px;text-align:right;font-family:var(--font-ui);font-size:12.5px;padding:5px 7px;border-radius:7px;border:0.5px solid ${l.qminSousBatch ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">
+                ${l.qminBatch ? `<button ${x.A(l.qminBatch)} title="Reprendre le batch de la fiche produit : ${esc(l.batchTxt)}"
+                  style="border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-muted);border-radius:999px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap">batch ${esc(l.batchTxt)}</button>` : ''}
+              </div>
+              ${l.qminSousBatch ? `<div style="font-size:10px;color:var(--color-primary);margin-top:3px">sous le batch (${esc(l.batchTxt)})</div>` : ''}
+            </td>` : ''}
           ${c.isPlano ? `<td style="${TD}">${esc(l.zone) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
             <td style="${TD};color:var(--color-text-muted)">${esc(l.meuble) || '—'}</td>
             <td style="${TD};color:var(--color-text-muted)">${esc(l.niveau) || '—'}</td>

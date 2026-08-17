@@ -1,6 +1,6 @@
-Nouveau projet : couleurs des leviers, plus de saut, template de jalons par type.
+Assortiment obligatoire : saisir le minimum, et le reprendre du batch.
 
-Trois defauts distincts : le levier se choisissait dans un menu deroulant qui
-cachait sa couleur ; les modales rejouaient leur animation d entree a CHAQUE
-rendu et perdaient leur defilement, d ou le saut a chaque validation ; et le
-retroplanning du type de projet exigeait un clic sur « charger le template ».
+La quantite minimale etait en lecture seule : il fallait rouvrir la fiche
+produit pour un entier. Elle se saisit desormais en ligne, avec un bouton qui
+reprend la fournee minimale de la fiche — un minimum sous le batch est
+intenable en production, et l ecran le signale.

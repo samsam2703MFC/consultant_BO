@@ -1204,6 +1204,16 @@ class App {
       margeNetteEur: this.fU(p.margeNette),
       margeNetteC: this.echelleMarge(p.margeNettePct == null ? null : 100 * p.margeNettePct),
       must: !!p.must, qmin: p.qmin || 0,
+      // Assortiment : la quantité minimale se saisit EN LIGNE, et le batch de
+      // la fiche produit est proposé à côté. Un minimum qui n'est pas un
+      // multiple du batch est intenable en production : le four sort des
+      // fournées, pas des unités. Le proposer d'un clic évite de le retaper.
+      bmin: p.bmin || 0, bmult: p.bmult || 1,
+      batchTxt: p.bmin ? (p.bmin + (p.bmult > 1 ? ' × ' + p.bmult : '')) : '',
+      qminSet: e => this.refQminPut(p.ref, e.target.value),
+      qminBatch: p.bmin ? () => this.refQminPut(p.ref, p.bmin) : null,
+      // Un minimum inférieur au batch ne peut pas être produit tel quel.
+      qminSousBatch: !!(p.must && p.bmin && (p.qmin || 0) > 0 && (p.qmin || 0) < p.bmin),
       zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
       slot: p.slot == null ? '' : String(p.slot),
       place: !!p.zone,
@@ -1227,6 +1237,27 @@ class App {
         slot: p.slot == null ? '' : p.slot } } });
   }
   /** Enregistre la référence en cours d'édition, puis recharge le catalogue. */
+  /**
+   * Écrit la quantité minimale d'assortiment, sans passer par la fiche.
+   *
+   * Déclarer une référence obligatoire et lui donner son minimum sont le même
+   * geste : obliger à rouvrir la fiche pour un entier faisait abandonner la
+   * saisie. L'écriture emprunte la route de la fiche, en ne portant que les
+   * deux champs concernés — le reste de la fiche n'est pas touché.
+   */
+  refQminPut(ref, val){
+    const n = Math.max(0, Math.round(+val || 0));
+    const cat = (this.D.prodCatalogue || []).find(p => p.ref === ref);
+    if (!cat) { return; }
+    // Optimiste à l'affichage, confirmé au serveur : sans cela le champ se
+    // vide sous les doigts à chaque frappe, le temps de l'aller-retour.
+    cat.qmin = n;
+    if (n > 0) { cat.must = true; }
+    this.setState({});
+    this.api('PUT', '/production/produit/' + encodeURIComponent(ref),
+      Object.assign({}, cat, { qmin: n, must: n > 0 ? 1 : (cat.must ? 1 : 0) }))
+      .then(r => { if (!r || r.error) { this.notify('Minimum non enregistré : ' + ((r && r.error) || 'échec')); } });
+  }
   refSave(){
     const e = this.state.refEdit; if (!e || e.busy) return;
     this.setState(s => ({ refEdit: Object.assign({}, s.refEdit, { busy: true, err: '' }) }));
