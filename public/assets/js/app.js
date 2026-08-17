@@ -86,20 +86,41 @@ class App {
     try { this.rendreMaintenant(); } finally { this._rendu = false; }
     if (this._rendUnDeplus) { this._rendUnDeplus = false; this.render(); }
   }
+  /**
+   * Les gestionnaires ne remplacent les anciens QUE si le rendu aboutit.
+   *
+   * `this._h` était vidé en tout premier. Si la construction de l'écran
+   * échouait ensuite — une donnée d'API d'une forme inattendue suffit —, on se
+   * retrouvait avec un DOM intact mais un tableau de gestionnaires vide : plus
+   * un seul bouton ne répondait, sans message. C'est le « écran figé, puis
+   * blanc » d'après une validation de tâche.
+   *
+   * Le rendu écrit donc dans un tableau neuf et ne le publie qu'avec le HTML,
+   * d'un seul geste. Un échec laisse l'écran précédent ENTIER — affichage et
+   * gestes — et se raconte au lieu de se taire.
+   */
   rendreMaintenant(){
-    this._h = [];
+    const h = [];
+    const reg = fn => { h.push(fn); return h.length - 1; };
     const x = {
-      A: fn => fn ? `data-h="${this.reg(fn)}"` : '',
-      C: fn => fn ? `data-c="${this.reg(fn)}"` : '',
-      I: fn => fn ? `data-i="${this.reg(fn)}"` : '',
-      DS: fn => fn ? `data-ds="${this.reg(fn)}"` : '',
-      DP: fn => fn ? `data-dp="${this.reg(fn)}"` : '',
-      EN: fn => fn ? `data-en="${this.reg(fn)}"` : '',
-      SB: fn => fn ? `data-sb="${this.reg(fn)}"` : '',
-      PD: fn => fn ? `data-pd="${this.reg(fn)}"` : '',
+      A: fn => fn ? `data-h="${reg(fn)}"` : '',
+      C: fn => fn ? `data-c="${reg(fn)}"` : '',
+      I: fn => fn ? `data-i="${reg(fn)}"` : '',
+      DS: fn => fn ? `data-ds="${reg(fn)}"` : '',
+      DP: fn => fn ? `data-dp="${reg(fn)}"` : '',
+      EN: fn => fn ? `data-en="${reg(fn)}"` : '',
+      SB: fn => fn ? `data-sb="${reg(fn)}"` : '',
+      PD: fn => fn ? `data-pd="${reg(fn)}"` : '',
       esc: escHtml
     };
-    const common = this.renderVals();
+    let common; let html;
+    try {
+      common = this.renderVals();
+      html = tplRender(common, x);
+    } catch (e) {
+      this.panneRendu(e);
+      return;
+    }
     const active = document.activeElement;
     const focusId = active && active.id ? active.id : null;
     const selStart = focusId && active.selectionStart != null ? active.selectionStart : null;
@@ -112,7 +133,11 @@ class App {
     document.querySelectorAll('[data-scroll]').forEach(e => {
       if (e.scrollTop) { gardes[e.getAttribute('data-scroll')] = e.scrollTop; }
     });
-    this.root.innerHTML = tplRender(common, x);
+    // Publication d'un seul geste : le HTML et les gestes qui vont avec.
+    this._h = h;
+    this.root.innerHTML = html;
+    const banniere = document.getElementById('panne-rendu');
+    if (banniere) { banniere.remove(); }
     const main2 = document.getElementById('main-scroll');
     if (main2) main2.scrollTop = scrollTop;
     Object.keys(gardes).forEach(k => {
@@ -123,6 +148,27 @@ class App {
       const el = document.getElementById(focusId);
       if (el){ el.focus(); if (selStart != null && el.setSelectionRange) el.setSelectionRange(selStart, selStart); }
     }
+  }
+  /**
+   * Un rendu qui échoue le DIT, au lieu de laisser un écran muet.
+   *
+   * La bannière se pose PAR-DESSUS l'écran précédent sans le remplacer : ce qui
+   * est affiché reste lisible, et le message porte de quoi rapporter la panne
+   * plutôt que « ça a fait un écran blanc ».
+   */
+  panneRendu(e){
+    const msg = (e && e.message) ? String(e.message) : String(e);
+    console.error('[cockpit] rendu impossible :', e);
+    let el = document.getElementById('panne-rendu');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'panne-rendu';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:200;padding:12px 18px;'
+        + 'background:#8D1D2C;color:#fff;font-family:var(--font-ui),sans-serif;font-size:12.5px;line-height:1.5';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'L’écran n’a pas pu être rafraîchi — ' + msg
+      + ' · l’affichage précédent reste utilisable ; rechargez la page si le problème persiste.';
   }
 
   bindEvents(){
