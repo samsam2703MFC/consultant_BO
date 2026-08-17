@@ -2510,6 +2510,57 @@ function ep_pwa_task_detail(): array
 }
 
 /**
+ * GET /fonds — le fonds marketing et les redevances.
+ *
+ * La donnée n'est PAS recopiée : elle est lue en direct sur le module
+ * marketing, déployé sur le même serveur. Dupliquer un grand livre donnerait
+ * deux soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait.
+ *
+ * Le relais se fait côté serveur parce que le module vit sous un autre chemin :
+ * un appel depuis le navigateur y serait une requête d'origine différente, que
+ * rien n'autorise aujourd'hui.
+ */
+function ep_fonds(): array
+{
+    $base = (string) (setting('marketingApi') ?: '/marketing/api/v1/marketing');
+    $out = ['base' => $base, 'ledger' => null, 'leviers' => [], 'royalties' => null,
+        'erreurs' => [], 'source' => null];
+
+    $lire = static function (string $chemin) use ($base, &$out) {
+        // Relais local : on reconstruit l'URL absolue depuis l'hôte courant,
+        // sans quoi un chemin relatif ne veut rien dire pour curl.
+        $hote = ($_SERVER['HTTPS'] ?? '') === 'on' ? 'https://' : 'http://';
+        $hote .= $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
+        $url = preg_match('#^https?://#', $base) ? $base . $chemin : $hote . $base . $chemin;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 12,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ]);
+        $rep = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+        if ($rep === false || $code >= 400) {
+            $out['erreurs'][] = $chemin . ' : ' . ($err !== '' ? $err : 'HTTP ' . $code);
+            return null;
+        }
+        $j = json_decode((string) $rep, true);
+        if (!is_array($j)) { $out['erreurs'][] = $chemin . ' : réponse illisible'; return null; }
+        // Le module enveloppe ses lectures dans `data` ; certaines rendent la
+        // liste nue. On accepte les deux plutôt que d'imposer une forme.
+        return array_key_exists('data', $j) ? $j['data'] : $j;
+    };
+
+    $out['ledger'] = $lire('/funds/ledger');
+    $lev = $lire('/funds/levers');
+    $out['leviers'] = is_array($lev) ? $lev : [];
+    $out['royalties'] = $lire('/funds/royalties');
+    $out['source'] = $out['ledger'] !== null ? 'module marketing' : null;
+    return $out;
+}
+
+/**
  * GET /planogramme — la structure du comptoir, avec son occupation.
  *
  * Un seul appel rend l'arbre complet : zones → meubles → niveaux →

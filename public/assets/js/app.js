@@ -407,6 +407,7 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. La donnée vient du module marketing, lue en direct : elle n\u2019est pas recopiée ici.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
       exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
@@ -659,6 +660,10 @@ class App {
         { sub: 'Checklists consultants', children: [
           ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
           ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] }]],
+      // Le fonds marketing et les redevances vivent dans le module marketing,
+      // déployé sur le même serveur. On les LIT ici : dupliquer un grand livre
+      // donnerait deux soldes pour le même fonds.
+      ['Réseau & marque', [['fonds', 'Fonds & Royalties', 0]]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0],
         ['diagnostic', 'Diagnostic API', 0],
         // Les réglages de la centrale rejoignent les Paramètres : un moteur de
@@ -682,9 +687,9 @@ class App {
 
     this.valsRecherche(common, navDef, goTo, titles);
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd',
+      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -816,6 +821,7 @@ class App {
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
     if (common.isPlano) { this.plCharge(); this.valsPlano(common); }
+    if (common.isFonds) this.valsFonds(common);
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isCentrale) this.valsCentrale(common);
@@ -1940,6 +1946,93 @@ class App {
       caStock: '/centrale/stock', caFacturation: '/centrale/facturation',
       caReglages: '/centrale/reglages' }[this.state.screen];
   }
+  /* --- fonds marketing & redevances ------------------------------------------ */
+
+  /**
+   * Le fonds du réseau, lu chez celui qui le tient.
+   *
+   * Le module marketing est déployé sur le même serveur et porte déjà le grand
+   * livre, les leviers et les redevances. Le cockpit les LIT — recopier un
+   * grand livre donnerait deux soldes pour le même fonds, et c'est celui qui a
+   * tort qu'on regarderait.
+   */
+  valsFonds(common){
+    const S = this.state, D = this.D;
+    if (!D.fonds && !this._foEnCours) {
+      this._foEnCours = true;
+      readOne('/fonds').then(f => { this._foEnCours = false;
+        this.D.fonds = f || { erreurs: ['module injoignable'] }; this.setState({}); });
+    }
+    const f = D.fonds;
+    common.foChargement = !f;
+    if (!f) { return; }
+    common.foErreurs = f.erreurs || [];
+    common.foSource = f.source || '';
+    common.foBase = f.base || '';
+
+    // --- grand livre : entrées et sorties, période par période.
+    const L = f.ledger || {};
+    const periodes = Array.isArray(L.periods) ? L.periods : [];
+    let entrees = 0, sorties = 0;
+    const lignes = [];
+    periodes.forEach(p => {
+      (p.entries || []).forEach(e => {
+        const m = +e.amount || 0;
+        if ((e.direction || '') === 'IN') { entrees += m; } else { sorties += m; }
+        lignes.push({
+          date: this.fD(e.movement_date), periode: p.period_key,
+          libelle: e.label || '—',
+          sens: (e.direction || '') === 'IN' ? 'entrée' : 'sortie',
+          montant: ((e.direction || '') === 'IN' ? '+ ' : '− ') + this.fU(m),
+          col: (e.direction || '') === 'IN' ? '#2d7a3e' : 'var(--color-primary)',
+          source: e.source || '', magasin: e.shop_name || '', campagne: e.campaign_name || '',
+          levier: e.lever_label || '', levierCol: e.lever_color_hex || '#666666',
+        });
+      });
+    });
+    lignes.sort((a, b) => (a.date < b.date ? 1 : -1));
+    common.foLignes = lignes.slice(0, 60);
+    common.foTronque = lignes.length > 60 ? lignes.length - 60 : 0;
+    common.foVide = !lignes.length;
+    common.foTuiles = [
+      { k: 'Alimenté', v: this.fE(entrees), aide: 'ce que le réseau verse au fonds' },
+      { k: 'Dépensé', v: this.fE(sorties), aide: 'ce que le fonds a financé' },
+      { k: 'Solde', v: this.fE(entrees - sorties),
+        aide: entrees - sorties >= 0 ? 'disponible' : 'engagé au-delà de l’alimenté',
+        col: entrees - sorties >= 0 ? '#2d7a3e' : 'var(--color-primary)' },
+      { k: 'Mouvements', v: String(lignes.length), aide: periodes.length + ' période(s)' },
+    ];
+
+    // --- leviers : où l'argent est allé, et ce qu'il a rendu.
+    common.foLeviers = (f.leviers || []).map(l => ({
+      nom: l.lever_label || l.lever_code || '—', couleur: l.color_hex || '#666666',
+      depense: this.fU(+l.spent_amount || 0),
+      roi: l.roi_value == null ? '—' : '×' + (+l.roi_value).toFixed(1).replace('.', ','),
+      // Un levier sans dépense n'a pas de ROI à montrer : c'est une absence,
+      // pas un zéro.
+      inactif: (+l.spent_amount || 0) === 0,
+    }));
+    common.foLevActifs = common.foLeviers.filter(l => !l.inactif).length;
+
+    // --- redevances par magasin.
+    const R = f.royalties || {};
+    common.foMois = R.month || '';
+    common.foRoyalties = (R.shops || []).map(s => {
+      const ca = s.revenue_amount == null ? null : +s.revenue_amount;
+      const du = (s.movements || []).reduce((a, m) => a + (+m.amount || 0), 0);
+      return { nom: s.shop_name || ('Magasin ' + s.shop_id), ville: s.city || '',
+        ca: ca == null ? '—' : this.fE(ca),
+        taux: (s.rates || []).map(t => (t.label || t.code || '') + ' ' + (t.rate_pct != null ? t.rate_pct + ' %' : '—')).join(' · ') || '—',
+        du: du > 0 ? this.fU(du) : '—',
+        // Sans chiffre d'affaires, la redevance ne peut pas être calculée :
+        // le dire vaut mieux qu'un tiret qu'on lirait comme un zéro.
+        manque: ca == null ? 'chiffre d’affaires du mois non repris' : '' };
+    });
+    common.foRoyaltiesVide = !common.foRoyalties.length;
+    common.foErp = (R.erp && R.erp.available === false) ? (R.erp.reason || 'reprise ERP indisponible') : '';
+    common.foOuvrir = () => { try { window.open(common.foBase.replace(/\/api\/v1\/marketing$/, '') || '/marketing/', '_blank'); } catch (e) { /* bloqué */ } };
+  }
+
   /* --- recherche globale : retrouver n'importe quoi depuis le rail ----------- */
 
   /**

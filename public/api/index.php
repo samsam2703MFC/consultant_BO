@@ -83,6 +83,7 @@ function route(string $method, string $path): mixed
             $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             $path === '/planogramme'                   => ep_planogramme(),
+            $path === '/fonds'                         => ep_fonds(),
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
             $path === '/produits/analyse/sonde'        => ep_produits_analyse_sonde(),

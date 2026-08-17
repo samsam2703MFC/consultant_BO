@@ -116,6 +116,7 @@ export function render(c, x){
       ${c.isCentrale ? tplCentrale(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isSeuil ? tplSeuil(c, x) : ''}
+      ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -1623,6 +1624,95 @@ function tplProjets(c, x){
         </div>`).join('')}
     </div>
     <div style="font-size:12px;color:var(--color-text-muted)">Colonnes = famille de projet. Cliquez une carte pour dérouler ses étapes, cochez-les au fil de l'eau, (i) pour le détail. Glissez-déposez une carte pour changer de famille — tout est tracé dans le journal.</div>`}
+  </div>`;
+}
+
+
+/* --- Fonds & Royalties : lu chez le module marketing -------------------------
+   Le cockpit ne recopie pas le grand livre : il le lit là où il est tenu. Deux
+   soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait. */
+function tplFonds(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 10px 7px';
+  const td = 'padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  const num = 'text-align:right;font-variant-numeric:tabular-nums';
+  if (c.foChargement) {
+    return `<div data-screen="fonds" style="${carte};padding:22px;font-size:12.5px;color:var(--color-text-muted)">Lecture du fonds…</div>`;
+  }
+  return `
+  <div data-screen="fonds" style="display:flex;flex-direction:column;gap:14px">
+    ${(c.foErreurs || []).length ? `<div style="${carte};padding:13px 16px;background:#FBEFE0;border-color:#E8C9A0">
+      <div style="font-size:12.5px;font-weight:500;color:var(--color-on-abricot)">Le module marketing n\u2019a pas tout rendu</div>
+      ${c.foErreurs.map(e => `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:4px;line-height:1.45">${esc(e)}</div>`).join('')}
+    </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      ${(c.foTuiles || []).map(t => `<div style="${carte};padding:15px 17px">
+        <div style="${k}">${esc(t.k)}</div>
+        <div style="font-size:25px;font-weight:500;line-height:1.05;margin-top:3px${t.col ? ';color:' + t.col : ''}">${esc(t.v)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
+      </div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+      <div style="${carte};overflow:hidden">
+        <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="font-size:13px;font-weight:500">Grand livre du fonds</span>
+          <button ${x.A(c.foOuvrir)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Ouvrir le module marketing</button>
+        </div>
+        ${c.foVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun mouvement enregistré.</div>` : `
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
+          <thead><tr>
+            <th style="${th};padding-left:17px">Date</th>
+            <th style="${th}">Mouvement</th>
+            <th style="${th}">Rattachement</th>
+            <th style="${th};${num};padding-right:17px">Montant</th>
+          </tr></thead>
+          <tbody>${c.foLignes.map(l => `<tr>
+            <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
+            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.sens)}${l.source ? ' · ' + esc(l.source) : ''}</div></td>
+            <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc([l.magasin, l.campagne].filter(Boolean).join(' · ')) || '—'}${l.levier ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</div>` : ''}</td>
+            <td style="${td};${num};padding-right:17px;color:${l.col};font-weight:500">${esc(l.montant)}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+        ${c.foTronque ? `<div style="padding:9px 17px;font-size:11px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.foTronque} mouvement(s) plus anciens — le détail complet est dans le module marketing.</div>` : ''}`}
+      </div>
+
+      <div style="${carte};padding:15px 17px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px">Par levier</div>
+        ${(c.foLeviers || []).length ? c.foLeviers.map(l => `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+          <span style="width:10px;height:10px;border-radius:3px;background:${l.couleur};flex:0 0 auto"></span>
+          <span style="flex:1;font-size:12.5px;${l.inactif ? 'color:var(--color-text-muted)' : ''}">${esc(l.nom)}</span>
+          <span style="font-size:12.5px;font-variant-numeric:tabular-nums">${esc(l.depense)}</span>
+          <span style="font-size:11.5px;color:var(--color-text-muted);width:42px;text-align:right">${esc(l.roi)}</span>
+        </div>`).join('') : `<div style="font-size:12px;color:var(--color-text-muted)">Aucun levier renseigné.</div>`}
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.45">${c.foLevActifs} levier(s) portent une dépense. Un levier sans dépense n\u2019a pas de retour à montrer — c\u2019est une absence, pas un zéro.</div>
+      </div>
+    </div>
+
+    <div style="${carte};overflow:hidden">
+      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Redevances par magasin${c.foMois ? ' — ' + esc(c.foMois) : ''}</div>
+      ${c.foRoyaltiesVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun magasin.</div>` : `
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="${th};padding-left:17px">Magasin</th>
+          <th style="${th};${num}">CA du mois</th>
+          <th style="${th}">Taux</th>
+          <th style="${th};${num};padding-right:17px">Dû</th>
+        </tr></thead>
+        <tbody>${c.foRoyalties.map(r => `<tr>
+          <td style="${td};padding-left:17px"><span style="font-weight:500">${esc(r.nom)}</span>${r.ville ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ville)}</div>` : ''}</td>
+          <td style="${td};${num}">${esc(r.ca)}${r.manque ? `<div style="font-size:10px;color:var(--color-on-abricot);font-weight:400">${esc(r.manque)}</div>` : ''}</td>
+          <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc(r.taux)}</td>
+          <td style="${td};${num};padding-right:17px">${esc(r.du)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`}
+      ${c.foErp ? `<div style="padding:10px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Reprise ERP : ${esc(c.foErp)}</div>` : ''}
+    </div>
+
+    <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">Lu en direct sur ${esc(c.foSource || 'le module marketing')} (${esc(c.foBase)}). Le cockpit n\u2019en garde aucune copie : le fonds se tient à un seul endroit, et les écritures s\u2019y font.</div>
   </div>`;
 }
 
