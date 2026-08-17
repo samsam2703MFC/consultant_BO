@@ -121,6 +121,7 @@ export function render(c, x){
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
+  ${c.plFiche ? tplPlanoFiche(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
 
@@ -389,7 +390,8 @@ function tplReferentiel(c, x){
   </div>
 
   ${c.isAsso ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refMust} référence(s) déclarée(s) obligatoire(s) sur ${c.refTotal}. ${c.refMust === 0 ? 'Aucune pour l’instant : affichez le catalogue et cochez celles que toute boutique doit tenir.' : ''}</div>` : ''}
-  ${c.isPlano ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refPlaces} référence(s) placée(s) au comptoir sur ${c.refTotal}. ${c.refPlaces === 0 ? 'Aucun emplacement enregistré : affichez le catalogue et posez les premières références.' : ''}</div>` : ''}
+  ${c.isPlano ? tplPlanoComptoir(c, x) : ''}
+  ${c.isPlano ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refPlaces} référence(s) placée(s) au comptoir sur ${c.refTotal}. ${c.refPlaces === 0 ? 'Aucune encore : affichez le catalogue, ouvrez une référence et choisissez son emplacement.' : ''}</div>` : ''}
 
   <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;min-width:640px">
@@ -2686,6 +2688,193 @@ function tplCtrlDetail(c, x){
         ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
+    </div>
+  </div>`;
+}
+
+/* --- Le comptoir dessiné : meubles en colonnes, niveaux en lignes ------------
+   Un planogramme se regarde, il ne se lit pas en liste : un trou de facing se
+   voit sur un plan et se cherche dans un tableau. Les cases pointillées sont
+   libres, les pleines portent leur produit. La structure se déclare ici même —
+   l'API du panel n'expose ni zone, ni meuble, ni emplacement (mesuré), donc
+   attendre une API aurait laissé l'écran vide indéfiniment. */
+function tplPlanoComptoir(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const btn = (on, dispo) => 'border-radius:8px;height:30px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;'
+    + 'font-weight:500;white-space:nowrap;' + (dispo === false ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;')
+    + (on ? 'border:none;background:var(--color-primary);color:#fff'
+          : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)');
+  if (c.plChargement) {
+    return `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:22px;margin-bottom:14px;font-size:12.5px;color:var(--color-text-muted)">Lecture du comptoir…</div>`;
+  }
+  return `
+  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="${lbl}">Plan du comptoir</div>
+      ${c.plZonesOpts.map(z => `<button ${x.A(z.go)} style="${btn(z.on)}">${esc(z.nom)}</button>`).join('')}
+      <div style="flex:1"></div>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plTot.slots} emplacement(s) · ${c.plTot.libres} libre(s) · ${c.plTot.places} placée(s)</span>
+      <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
+    </div>
+
+    ${c.plOrg ? `<div style="margin-top:12px;padding:11px 13px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="${lbl}">Déclarer</span>
+        <button ${x.A(c.plZoneAdd)} style="${btn(false)}">+ Zone</button>
+        <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)}">+ Meuble</button>
+        <button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)}">+ Niveau &amp; emplacements</button>
+        <div style="flex:1"></div>
+        <button ${x.A(c.plZoneSuppr)} style="${btn(false, !!c.plZoneSuppr)};color:var(--color-primary)">Supprimer la zone</button>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">Une zone contient des meubles, un meuble des niveaux, un niveau des emplacements numérotés. Le nombre d’emplacements se donne à la création du niveau — les poser un par un ferait douze saisies pour une étagère.</div>
+    </div>` : ''}
+
+    ${c.plVide
+      ? `<div style="margin-top:14px;padding:26px 18px;border:1px dashed var(--color-border-secondary);border-radius:10px;text-align:center">
+          <div style="font-size:13px;font-weight:500">Le comptoir n’est pas encore déclaré.</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;max-width:560px;margin-left:auto;margin-right:auto">Commencez par une zone — « vitrine réfrigérée », « comptoir sec » — puis ses meubles et ses niveaux. Tant qu’aucun emplacement n’existe, il n’y a rien à choisir pour une référence.</div>
+        </div>`
+      : `<div style="margin-top:14px;overflow-x:auto">
+          <div style="display:grid;grid-template-columns:82px repeat(${Math.max(1, c.plMeubles.length)},minmax(190px,1fr));gap:10px;align-items:start;min-width:${82 + c.plMeubles.length * 200}px">
+            <div></div>
+            ${c.plMeubles.map(m => `<div style="text-align:center;padding-bottom:5px;border-bottom:2px solid var(--color-text)">
+              <button ${x.A(m.renommer)} title="Renommer" style="border:none;background:none;padding:0;cursor:pointer;${lbl};color:var(--color-text)">${esc(m.nom)}</button>
+              ${c.plOrg ? `<button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;padding:0 0 0 6px;cursor:pointer;font-size:10.5px;color:var(--color-text-muted)">✕</button>` : ''}
+            </div>`).join('')}
+            ${c.plLignes.map(l => `
+              <div style="padding-top:14px;text-align:right;font-size:10.5px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:500">${esc(l.nom)}</div>
+              ${l.cases.map(k => k.absent
+                ? `<div style="min-height:50px"></div>`
+                : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, k.slots.length)},1fr);gap:5px">
+                    ${k.slots.map(s => `<div ${x.A(s.clic)} title="${s.libre ? 'Emplacement libre — cliquez pour le viser' : 'Ouvrir la fiche de ' + esc(s.nom)}" style="${s.st}">
+                      <span style="overflow:hidden;text-overflow:ellipsis">${s.vise ? 'visé' : (s.libre ? 'libre' : esc(s.nom))}</span>
+                      <span style="opacity:0.8">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}</span>
+                    </div>`).join('')}
+                    ${c.plOrg ? `<button ${x.A(k.ajouter)} title="Ajouter des emplacements" style="border:1px dashed var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:7px;min-height:50px;cursor:pointer;font-family:var(--font-ui);font-size:14px">+</button>` : ''}
+                  </div>`).join('')}`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:10.5px;color:var(--color-text-muted)">
+          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;border:1.5px dashed var(--color-primary);border-radius:3px"></span>libre</span>
+          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:3px"></span>occupé — cliquez pour la fiche</span>
+          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-primary);border-radius:3px"></span>visé</span>
+          ${c.plCibleTxt ? `<span style="margin-left:auto;font-size:11.5px;color:var(--color-text)">Emplacement visé : <b style="font-weight:500">${esc(c.plCibleTxt)}</b> — ouvrez une référence pour l’y placer.</span>` : ''}
+        </div>`}
+
+    ${(c.plManque || []).length ? `<div style="margin-top:13px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="${lbl};margin-bottom:7px">Ce que le comptoir ne peut pas encore diffuser</div>
+      ${c.plManque.map(m => `<div style="display:flex;gap:9px;align-items:flex-start;margin-top:6px">
+        <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
+        <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b> — ${esc(m.quoi)}<div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
+      </div>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+/* --- Fiche de présentation et de vente d'une référence -----------------------
+   Où le produit se présente, comment, et avec quelles informations. Trois
+   colonnes : la consigne, l'emplacement, la fiche technique. */
+function tplPlanoFiche(c, x){
+  const { esc } = x;
+  const f = c.plFiche;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const k = 'font-size:10.5px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:500';
+  const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
+    + 'border-radius:8px;height:31px;padding:0 9px;font-family:var(--font-ui);font-size:12px';
+  return `
+  <div ${x.A(f.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;width:1180px;max-width:100%;max-height:100%">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <div>
+          <div style="${lbl}">Fiche de présentation &amp; de vente</div>
+          <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(f.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(f.ref)}${f.sous ? ' · ' + esc(f.sous) : ''} · ${f.placeTxt ? esc(f.placeTxt) : 'sans emplacement au comptoir'}</div>
+        </div>
+        <button ${x.A(f.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
+      </div>
+
+      ${f.chargement ? `<div style="padding:40px;font-size:12.5px;color:var(--color-text-muted)">Lecture de la fiche…</div>` : `
+      <div style="display:grid;grid-template-columns:320px 1fr 290px;min-height:0;overflow:hidden">
+
+        <div style="padding:14px 16px;border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto" data-scroll="plf1">
+          <div style="${lbl}">Photo de présentation</div>
+          ${(f.manque || []).filter(m => /photo/i.test(m.champ)).map(m => `
+            <div style="margin-top:8px;background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;padding:20px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px">
+              <span style="font-size:10.5px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">manque API</span>
+              <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(m.source)}</div>
+            </div>`).join('')}
+
+          <div style="${lbl};margin-top:18px">Consigne de présentation</div>
+          <textarea ${x.I(f.noteSet('texte'))} rows="5" placeholder="Comment ce produit doit être présenté au comptoir" style="width:100%;box-sizing:border-box;margin-top:7px;border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:8px 10px;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(f.noteTxt)}</textarea>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            ${f.noteNiveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
+              <span style="width:8px;height:8px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</button>`).join('')}
+          </div>
+          <label style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:11.5px;cursor:pointer">
+            <input type="checkbox" ${f.notePin ? 'checked' : ''} ${x.C(f.noteSet('epinglee'))} style="width:15px;height:15px;accent-color:var(--color-primary);margin:0">
+            épingler à l’ouverture de la boutique</label>
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+            <span style="${k}">du</span><input type="date" value="${esc(f.noteDu)}" ${x.C(f.noteSet('du'))} style="${inp};width:135px">
+            <span style="${k}">au</span><input type="date" value="${esc(f.noteAu)}" ${x.C(f.noteSet('au'))} style="${inp};width:135px">
+          </div>
+          <button ${x.A(f.enregistrerNote)} style="margin-top:11px;width:100%;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">Enregistrer la consigne</button>
+          ${f.noteMaj ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">${esc(f.noteMaj)}</div>` : ''}
+          ${(f.manque || []).filter(m => /diffusion/i.test(m.champ)).map(m => `
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5"><span style="font-weight:500;color:var(--color-on-abricot)">manque API</span> — ${esc(m.source)}</div>`).join('')}
+        </div>
+
+        <div style="padding:14px 16px;border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto" data-scroll="plf2">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div style="${lbl}">Emplacement au comptoir</div>
+            ${f.zonesOpts.length ? `<select ${x.C(f.zoneSet)} style="${inp}">${f.zonesOpts.map(z => `<option value="${z.id}"${z.on ? ' selected' : ''}>${esc(z.nom)}</option>`).join('')}</select>` : ''}
+          </div>
+          ${f.lignes.length ? `
+            <div style="margin-top:11px;overflow-x:auto">
+              <div style="display:grid;grid-template-columns:62px repeat(${Math.max(1, f.meubles.length)},minmax(160px,1fr));gap:8px;align-items:start">
+                <div></div>
+                ${f.meubles.map(m => `<div style="text-align:center;padding-bottom:4px;border-bottom:2px solid var(--color-text);${lbl};color:var(--color-text)">${esc(m)}</div>`).join('')}
+                ${f.lignes.map(l => `
+                  <div style="padding-top:12px;text-align:right;font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:500">${esc(l.nom)}</div>
+                  ${l.cases.map(cs => cs.absent ? `<div style="min-height:44px"></div>`
+                    : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, cs.slots.length)},1fr);gap:4px">
+                        ${cs.slots.map(s => `<div ${x.A(s.clic)} style="${s.st}"><span style="overflow:hidden;text-overflow:ellipsis">${esc(s.nom)}</span><span style="opacity:0.8">${s.position}</span></div>`).join('')}
+                      </div>`).join('')}`).join('')}
+              </div>
+            </div>`
+            : `<div style="margin-top:11px;padding:18px;border:1px dashed var(--color-border-secondary);border-radius:9px;font-size:12px;color:var(--color-text-muted);line-height:1.55">Aucun emplacement déclaré dans cette zone. Fermez la fiche et utilisez « Organiser le comptoir ».</div>`}
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:13px;flex-wrap:wrap">
+            <span style="${k}">Fronts</span><input type="number" min="1" value="${f.fronts}" ${x.C(f.set('fronts'))} style="${inp};width:60px;text-align:right">
+            <span style="${k}">Min. à tenir</span><input type="number" min="0" value="${f.qmin}" ${x.C(f.set('qmin'))} style="${inp};width:66px;text-align:right">
+            <span style="${k}">Ordre</span><input type="number" min="1" value="${f.ordre}" ${x.C(f.set('ordre'))} style="${inp};width:56px;text-align:right">
+          </div>
+          <div style="display:flex;gap:9px;align-items:center;margin-top:13px;flex-wrap:wrap">
+            <button ${x.A(f.placer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : (f.placer ? 'pointer' : 'not-allowed')};opacity:${f.placer && !f.busy ? '1' : '0.5'}">${f.cibleTxt ? 'Placer en ' + esc(f.cibleTxt) : 'Choisissez un emplacement'}</button>
+            ${f.retirer ? `<button ${x.A(f.retirer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:9px;height:33px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Retirer du comptoir</button>` : ''}
+          </div>
+          ${f.err ? `<div style="margin-top:10px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;line-height:1.45">${esc(f.err)}</div>` : ''}
+          ${!f.err && f.ok ? `<div style="margin-top:10px;font-size:11.5px;color:#2d7a3e">${esc(f.ok)}</div>` : ''}
+
+          <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:15px;padding-top:13px">
+            <div style="${lbl}">Informations de vente</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:9px">
+              ${f.vente.map(v => `<div><div style="${k}">${esc(v.k)}</div><div style="font-size:12.5px;font-weight:500">${esc(v.v)}${v.aide ? ` <span style="font-weight:400;color:var(--color-text-muted)">${esc(v.aide)}</span>` : ''}</div></div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:14px 16px;overflow-y:auto;background:var(--color-background-secondary)" data-scroll="plf3">
+          <div style="${lbl}">Fiche technique — de la caisse</div>
+          ${f.techniqueVide
+            ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">Aucun renseignement technique pour cette référence.</div>`
+            : `<div style="display:flex;flex-direction:column;gap:9px;margin-top:9px">
+                ${f.technique.map(t => `<div><div style="${k}">${esc(t.k)}</div><div style="font-size:12.5px">${esc(t.v)}</div></div>`).join('')}
+              </div>`}
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.45">Ces champs viennent du catalogue du réseau. Ils ne demandent aucune nouvelle API — seulement d’être renseignés à la source quand ils manquent.</div>
+        </div>
+      </div>`}
     </div>
   </div>`;
 }

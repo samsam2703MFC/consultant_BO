@@ -2686,10 +2686,19 @@ function ep_prod_produit_fiche(): array
                     'is_divisible' => 'Divisible',
                     'is_piece_based' => 'Vendu à la pièce',
                 ];
+                // Un zéro de réchauffe veut dire « pas de réchauffe », pas
+                // « réchauffer zéro minute », et un format « none » n'est pas un
+                // format. Les afficher remplirait la fiche de bruit et rendrait
+                // les vrais renseignements plus durs à trouver.
+                $zeroAbsent = ['reheating_time_minutes', 'reheating_temperature_celsius',
+                    'preparation_lead_time_hours', 'storage_temperature'];
+                $motsVides = ['none', 'n/a', 'na', 'null', '-', 'aucun', 'aucune'];
                 foreach ($champs as $col => $lib) {
                     if (!array_key_exists($col, $r)) { continue; }
                     $v = $r[$col];
-                    if ($v === null || $v === '' ) { continue; }
+                    if ($v === null || $v === '') { continue; }
+                    if (in_array($col, $zeroAbsent, true) && (float) $v === 0.0) { continue; }
+                    if (in_array(mb_strtolower(trim((string) $v)), $motsVides, true)) { continue; }
                     if (in_array($col, ['is_vegetarian', 'is_divisible', 'is_piece_based'], true)) {
                         $v = ((int) $v === 1) ? 'oui' : 'non';
                     }

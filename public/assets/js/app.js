@@ -745,6 +745,7 @@ class App {
 
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
+    if (common.isPlano) { this.plCharge(); this.valsPlano(common); }
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isCentrale) this.valsCentrale(common);
@@ -1228,7 +1229,12 @@ class App {
       place: !!p.zone,
       dlv: p.dlv ? p.dlv + ' h' : '—',
       parametre: !!p.parametre,
-      ouvrir: () => this.refOpen(p, common.isPlano ? 'plano' : (common.isAsso ? 'asso' : 'fiche'))
+      // Au planogramme, la ligne ouvre la FICHE de présentation : c'est là que
+      // se choisit l'emplacement, sur le plan, et non dans un formulaire où il
+      // fallait retaper « Vitrine 1 » sans savoir ce qui était libre.
+      ouvrir: common.isPlano
+        ? () => this.plFicheOuvrir(String(p.ref))
+        : () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche')
     }));
     common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
     common.refEchelle = this.paliersMarge();
@@ -1743,6 +1749,300 @@ class App {
       caStock: '/centrale/stock', caFacturation: '/centrale/facturation',
       caReglages: '/centrale/reglages' }[this.state.screen];
   }
+  /* --- planogramme : le comptoir, ses emplacements, ses consignes ------------ */
+
+  /** Charge l'arbre du comptoir. Un seul appel : structure ET occupation. */
+  plCharge(force){
+    if (this._plEnCours) { return; }
+    if (this.D.plano && !force) { return; }
+    this._plEnCours = true;
+    readOne('/planogramme').then(d => { this._plEnCours = false;
+      this.D.plano = d || { etat: 'erreur' }; this.setState({}); });
+  }
+  valsPlano(common){
+    const S = this.state, D = this.D;
+    const pl = D.plano;
+    common.plChargement = !pl;
+    if (!pl) { common.plZones = []; return; }
+    common.plManque = (pl.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source, type: m.type }));
+    const T = pl.totaux || {};
+    common.plTot = { slots: T.slots || 0, libres: T.libres || 0, places: T.places || 0 };
+    common.plVide = (T.slots || 0) === 0;
+
+    // Zone affichée : la première déclarée, sauf choix explicite.
+    const zones = pl.zones || [];
+    const zid = S.plZone && zones.some(z => z.id === S.plZone) ? S.plZone : (zones[0] ? zones[0].id : null);
+    common.plZoneId = zid;
+    common.plZonesOpts = zones.map(z => ({ id: z.id, nom: z.nom, on: z.id === zid,
+      go: () => this.setState({ plZone: z.id }) }));
+    const zone = zones.find(z => z.id === zid) || null;
+
+    // Le plan : une colonne par meuble, une ligne par niveau. Les niveaux d'un
+    // meuble à l'autre ne coïncident pas forcément — on prend donc le rang
+    // maximal et on laisse les cases manquantes vides, plutôt que de forcer
+    // une grille qui mentirait sur la forme du comptoir.
+    const meubles = zone ? (zone.meubles || []) : [];
+    const nMax = meubles.reduce((a, m) => Math.max(a, (m.niveaux || []).length), 0);
+    const cible = S.plCible || null;
+    common.plMeubles = meubles.map(m => ({ id: m.id, nom: m.nom,
+      renommer: () => this.plRenommer('meuble', m.id, m.nom),
+      supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
+    common.plLignes = [];
+    for (let i = 0; i < nMax; i++) {
+      const noms = meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean);
+      common.plLignes.push({
+        nom: noms.length ? noms[0] : '—',
+        cases: meubles.map(m => {
+          const niv = (m.niveaux || [])[i];
+          if (!niv) { return { absent: true, slots: [] }; }
+          return { absent: false, niveauId: niv.id,
+            ajouter: () => this.plAjouterSlots(niv.id, niv.nom),
+            slots: (niv.slots || []).map(s => {
+              const occ = (s.occupants || [])[0] || null;
+              const vise = cible === s.id;
+              return { id: s.id, position: s.position, libre: !occ, vise,
+                nom: occ ? occ.nom : '', ref: occ ? occ.ref : '',
+                detail: occ ? (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : ''))
+                  : ((s.largeurMm ? s.largeurMm + ' mm' : '') + (s.capacite ? ' · ' + s.capacite : '')),
+                st: 'border-radius:7px;padding:6px 7px;min-height:50px;display:flex;flex-direction:column;'
+                  + 'justify-content:space-between;gap:3px;font-size:10.5px;line-height:1.3;cursor:pointer;'
+                  + (vise ? 'border:1.5px solid var(--color-primary);background:var(--color-primary);color:#fff;font-weight:600'
+                    : occ ? 'border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text)'
+                          : 'border:1.5px dashed var(--color-primary);background:rgba(141,29,44,0.04);color:var(--color-primary);font-weight:500'),
+                clic: occ ? () => this.plFicheOuvrir(occ.ref) : () => this.setState({ plCible: vise ? null : s.id }) };
+            }) };
+        }) });
+    }
+    common.plCible = cible;
+    const sC = (pl.slots || []).find(s => s.id === cible) || null;
+    common.plCibleTxt = sC ? (sC.meuble + ' · ' + sC.niveau + ' · position ' + sC.position) : '';
+
+    // Déclaration de la structure : ouverte tant que rien n'existe, replaçable
+    // ensuite — on ne fait pas chercher un formulaire à qui démarre de zéro.
+    common.plOrg = S.plOrg == null ? common.plVide : !!S.plOrg;
+    common.plOrgGo = () => this.setState({ plOrg: !common.plOrg });
+    common.plZoneAdd = () => this.plCreer('zone', null);
+    common.plMeubleAdd = zid ? () => this.plCreer('meuble', zid) : null;
+    common.plNiveauAdd = (common.plMeubles[0] || null)
+      ? () => this.plCreerNiveau(common.plMeubles.map(m => ({ id: m.id, nom: m.nom }))) : null;
+    common.plZoneSuppr = zone ? () => this.plSupprimer('zone', zone.id, zone.nom) : null;
+
+    // Références placées / à placer, dans la zone regardée.
+    const parRef = {};
+    (pl.placements || []).forEach(p => { parRef[p.ref] = p; });
+    common.plParRef = parRef;
+    common.plFiche = S.plFiche ? this.valsPlFiche(S.plFiche, pl) : false;
+  }
+  /** La fiche de présentation et de vente d'une référence. */
+  valsPlFiche(f, pl){
+    const d = f.d || {};
+    const cat = d.catalogue || {};
+    const n = f.note || {};
+    const court = nom => String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, '');
+    const slots = (pl.slots || []);
+    const place = (pl.placements || []).find(p => p.ref === f.ref) || null;
+    const cible = f.cible != null ? f.cible : (place ? place.slotId : null);
+    const sC = slots.find(s => s.id === cible) || null;
+    // Zone du mini-plan : celle de l'emplacement visé, sinon la première.
+    const zones = pl.zones || [];
+    const zid = f.zone || (sC ? sC.zoneId : (zones[0] ? zones[0].id : null));
+    const zone = zones.find(z => z.id === zid) || null;
+    const meubles = zone ? (zone.meubles || []) : [];
+    const nMax = meubles.reduce((a, m) => Math.max(a, (m.niveaux || []).length), 0);
+    const lignes = [];
+    for (let i = 0; i < nMax; i++) {
+      lignes.push({ nom: (meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean)[0]) || '—',
+        cases: meubles.map(m => { const niv = (m.niveaux || [])[i];
+          if (!niv) { return { absent: true, slots: [] }; }
+          return { absent: false, slots: (niv.slots || []).map(s => {
+            const occ = (s.occupants || []).filter(o => o.ref !== f.ref)[0] || null;
+            const vise = cible === s.id;
+            return { id: s.id, position: s.position, libre: !occ, vise,
+              nom: vise ? 'ici' : (occ ? occ.nom : 'libre'),
+              st: 'border-radius:6px;padding:5px 6px;min-height:44px;display:flex;flex-direction:column;'
+                + 'justify-content:space-between;font-size:10px;line-height:1.25;cursor:pointer;'
+                + (vise ? 'border:1.5px solid var(--color-primary);background:var(--color-primary);color:#fff;font-weight:600'
+                  : occ ? 'border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-muted)'
+                        : 'border:1.5px dashed var(--color-primary);background:rgba(141,29,44,0.04);color:var(--color-primary);font-weight:500'),
+              clic: () => this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { cible: s.id }) })) };
+          }) }; }) });
+    }
+    return {
+      ref: f.ref, nom: cat.nom || f.ref, chargement: !!f.chargement, busy: !!f.busy,
+      err: f.err || '', ok: f.ok || '',
+      sous: [cat.categorie, cat.groupe, (cat.periods || [])[0]].filter(Boolean).join(' · '),
+      placeTxt: place && place.slotId
+        ? (place.zone + ' · ' + place.meuble + ' · ' + place.niveau + ' · position ' + place.position)
+        : '',
+      zonesOpts: zones.map(z => ({ id: z.id, nom: z.nom, on: z.id === zid })),
+      zoneSet: e => { const v = +e.target.value;
+        this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { zone: v }) })); },
+      meubles: meubles.map(m => m.nom), lignes,
+      cibleTxt: sC ? (sC.meuble + ' · ' + sC.niveau + ' · ' + sC.position) : '',
+      fronts: f.fronts != null ? f.fronts : (place ? place.fronts : 1),
+      ordre: f.ordre != null ? f.ordre : (place ? place.ordre : 1),
+      qmin: f.qmin != null ? f.qmin : (cat.qmin || 0),
+      set: k => e => { const v = e.target.value;
+        this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { [k]: v }) })); },
+      // Vente : les chiffres du référentiel, sans recalcul local.
+      vente: [
+        { k: 'Prix de vente', v: this.fEd(cat.prix) },
+        { k: 'Coût matière', v: this.fEd(cat.mat) },
+        { k: 'Marge brute', v: cat.margePct == null ? '—' : this.fP(cat.margePct, 0) },
+        { k: 'Marge nette', v: cat.margeNettePct == null ? '—' : this.fP(cat.margeNettePct, 0), aide: 'commission déduite' },
+        { k: 'Poids', v: cat.poids ? cat.poids.toLocaleString('fr-BE') + ' g' : '—' },
+        { k: 'DLV', v: cat.dlv ? cat.dlv + ' h' : '—' },
+      ],
+      technique: (d.technique || []).map(t => ({ k: t.champ, v: t.valeur })),
+      techniqueVide: !(d.technique || []).length,
+      manque: (d.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source })),
+      // Consigne de présentation.
+      noteTxt: n.texte != null ? n.texte : ((d.note || {}).texte || ''),
+      notePin: n.epinglee != null ? !!n.epinglee : !!(d.note || {}).epinglee,
+      noteGrav: n.gravite != null ? n.gravite : ((d.note || {}).gravite || 3),
+      noteDu: n.du != null ? n.du : ((d.note || {}).du || ''),
+      noteAu: n.au != null ? n.au : ((d.note || {}).au || ''),
+      noteMaj: (d.note || {}).majLe ? ('modifiée par ' + ((d.note || {}).auteur || '—') + ', ' + (d.note || {}).majLe) : '',
+      noteSet: k => e => { const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
+          { note: Object.assign({}, s2.plFiche.note, { [k]: v }) }) })); },
+      noteNiveaux: this.zNiveaux().map(lv => ({ n: lv.n, nom: court(lv.nom), couleur: lv.couleur,
+        on: lv.n === (n.gravite != null ? n.gravite : ((d.note || {}).gravite || 3)),
+        pick: () => this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
+          { note: Object.assign({}, s2.plFiche.note, { gravite: lv.n }) }) })) })),
+      placer: cible ? () => this.plPlacer() : null,
+      retirer: place && place.slotId ? () => this.plRetirer() : null,
+      enregistrerNote: () => this.plNote(),
+      close: () => this.setState({ plFiche: null }),
+    };
+  }
+  plFicheOuvrir(ref){
+    this.setState({ plFiche: { ref, chargement: true, d: null, note: {} } });
+    readOne('/production/produit/fiche?ref=' + encodeURIComponent(ref))
+      .then(d => this.setState(s => (s.plFiche && s.plFiche.ref === ref)
+        ? { plFiche: Object.assign({}, s.plFiche, { chargement: false, d: d || null }) } : {}));
+  }
+  plFPatch(patch){
+    this.setState(s => ({ plFiche: Object.assign({}, s.plFiche, patch) }));
+  }
+  /** Place la référence sur l'emplacement visé. Un refus est RENDU tel quel. */
+  plPlacer(){
+    const f = this.state.plFiche;
+    if (!f || f.busy) { return; }
+    const pl = this.D.plano || {};
+    const place = (pl.placements || []).find(p => p.ref === f.ref) || null;
+    const cible = f.cible != null ? f.cible : (place ? place.slotId : null);
+    if (!cible) { return; }
+    const cat = (f.d || {}).catalogue || {};
+    this.plFPatch({ busy: true, err: '', ok: '' });
+    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(f.ref), {
+      slotId: cible, nom: cat.nom || f.ref,
+      fronts: Math.max(1, Math.round(+f.fronts || (place ? place.fronts : 1))),
+      ordre: Math.max(1, Math.round(+f.ordre || (place ? place.ordre : 1))),
+      qmin: Math.max(0, Math.round(+(f.qmin != null ? f.qmin : (cat.qmin || 0)) || 0)),
+    }).then(r => {
+      if (!r || r.ok === false) {
+        this.plFPatch({ busy: false, err: (r && r.error) || 'placement refusé' });
+        return;
+      }
+      this.plFPatch({ busy: false, ok: 'Placée au comptoir.' });
+      this.plCharge(true);
+      this.D.prodCatalogue = null; this.plRechargeCatalogue();
+    });
+  }
+  plRetirer(){
+    const f = this.state.plFiche;
+    if (!f || f.busy) { return; }
+    this.plFPatch({ busy: true, err: '', ok: '' });
+    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(f.ref), { slotId: null })
+      .then(r => {
+        if (!r || r.ok === false) { this.plFPatch({ busy: false, err: (r && r.error) || 'échec' }); return; }
+        this.plFPatch({ busy: false, ok: 'Retirée du comptoir.', cible: null });
+        this.plCharge(true); this.D.prodCatalogue = null; this.plRechargeCatalogue();
+      });
+  }
+  /** Le référentiel lit le placement : il doit être relu après une écriture. */
+  plRechargeCatalogue(){
+    readOne('/production/catalogue').then(c => { if (c) { this.D.prodCatalogue = c; } this.setState({}); });
+  }
+  plNote(){
+    const f = this.state.plFiche;
+    if (!f || f.busy) { return; }
+    const v = this.valsPlFiche(f, this.D.plano || {});
+    this.plFPatch({ busy: true, err: '', ok: '' });
+    write(this.source, 'PUT', '/planogramme/note', { cible: 'ref', cibleId: f.ref,
+      texte: v.noteTxt, epinglee: v.notePin ? 1 : 0, gravite: v.noteGrav,
+      du: v.noteDu || '', au: v.noteAu || '' })
+      .then(r => {
+        if (!r || r.ok === false) { this.plFPatch({ busy: false, err: (r && r.error) || 'échec' }); return; }
+        this.plFPatch({ busy: false, ok: v.noteTxt.trim() ? 'Consigne enregistrée.' : 'Consigne effacée.' });
+        this.plCharge(true);
+      });
+  }
+  /* --- déclaration de la structure ------------------------------------------- */
+  plCreer(type, parentId){
+    const quoi = type === 'zone' ? 'zone (vitrine réfrigérée, comptoir sec…)' : 'meuble (vitrine 1, gondole A…)';
+    const nom = window.prompt('Nom de la ' + quoi);
+    if (nom === null || !nom.trim()) { return; }
+    write(this.source, 'POST', '/planogramme/' + type, { nom: nom.trim(), parentId })
+      .then(r => { if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
+        this.plCharge(true); });
+  }
+  /**
+   * Un niveau naît avec ses emplacements : les créer un par un ferait douze
+   * saisies pour une étagère. Le nombre est demandé au moment du nom.
+   */
+  plCreerNiveau(meubles){
+    let mid = meubles[0].id;
+    if (meubles.length > 1) {
+      const q = meubles.map((m, i) => (i + 1) + ' — ' + m.nom).join('\n');
+      const c = window.prompt('Sur quel meuble ?\n' + q, '1');
+      const i = Math.max(1, Math.min(meubles.length, parseInt(c, 10) || 1));
+      mid = meubles[i - 1].id;
+    }
+    const nom = window.prompt('Nom du niveau (haut, médian, bas…)');
+    if (nom === null || !nom.trim()) { return; }
+    const n = window.prompt('Combien d’emplacements sur ce niveau ?', '4');
+    const slots = Math.max(0, Math.min(40, parseInt(n, 10) || 0));
+    write(this.source, 'POST', '/planogramme/niveau', { nom: nom.trim(), parentId: mid, slots })
+      .then(r => { if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
+        this.plCharge(true); });
+  }
+  plAjouterSlots(niveauId, nom){
+    const n = window.prompt('Combien d’emplacements ajouter à « ' + nom + ' » ?', '1');
+    const nb = Math.max(1, Math.min(40, parseInt(n, 10) || 0));
+    if (!nb) { return; }
+    write(this.source, 'POST', '/planogramme/emplacement', { niveauId, nombre: nb })
+      .then(r => { if (!r || r.ok === false) { this.notify('Non ajouté : ' + ((r && r.error) || 'échec')); return; }
+        this.plCharge(true); });
+  }
+  plRenommer(type, id, nom){
+    const v = window.prompt('Nouveau nom', nom);
+    if (v === null || !v.trim() || v.trim() === nom) { return; }
+    write(this.source, 'PATCH', '/planogramme/' + type + '/' + id, { nom: v.trim() })
+      .then(() => this.plCharge(true));
+  }
+  /**
+   * Supprimer un élément de structure. Le serveur REFUSE d'abord s'il porte des
+   * références ; on demande alors confirmation en disant combien seraient
+   * retirées du comptoir, plutôt que de forcer d'emblée.
+   */
+  plSupprimer(type, id, nom){
+    write(this.source, 'DELETE', '/planogramme/' + type + '/' + id, {})
+      .then(r => {
+        if (r && r.ok !== false) { this.setState({ plCible: null }); this.plCharge(true); return; }
+        const msg = (r && r.error) || 'échec';
+        if (r && r.status === 409) {
+          if (!window.confirm('« ' + nom + ' » : ' + msg + '.\n\nSupprimer quand même ?')) { return; }
+          write(this.source, 'DELETE', '/planogramme/' + type + '/' + id, { force: 1 })
+            .then(r2 => { if (!r2 || r2.ok === false) { this.notify('Non supprimé : ' + ((r2 && r2.error) || 'échec')); return; }
+              this.setState({ plCible: null }); this.plCharge(true); });
+          return;
+        }
+        this.notify('Non supprimé : ' + msg);
+      });
+  }
+
   caCharge(){
     const S = this.state, ecr = S.screen, r = this.caRoute();
     if (!r) { return; }
