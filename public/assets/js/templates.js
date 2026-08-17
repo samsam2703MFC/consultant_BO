@@ -2920,15 +2920,15 @@ function tplPlanoMeubleWizard(c, x){
         ${w.etape === 3 ? `
           <div style="${lbl};margin-bottom:7px">Dimensions d’un emplacement, en millimètres</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Longueur</div><input id="plmw-lon" type="number" min="0" max="5000" value="${esc(w.longueur)}" ${x.C(w.set('longueur'))} style="${inp};width:96px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Largeur</div><input id="plmw-lar" type="number" min="0" max="5000" value="${esc(w.largeur)}" ${x.C(w.set('largeur'))} style="${inp};width:96px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Hauteur</div><input id="plmw-hau" type="number" min="0" max="5000" value="${esc(w.hauteur)}" ${x.C(w.set('hauteur'))} style="${inp};width:96px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Capacité (pièces)</div><input id="plmw-cap" type="number" min="0" max="999" value="${esc(w.capacite)}" ${x.C(w.set('capacite'))} placeholder="—" style="${inp};width:110px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Longueur</div><input id="plmw-lon" type="number" min="0" max="5000" value="${esc(w.longueur)}" ${x.I(w.set('longueur'))} style="${inp};width:96px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Largeur</div><input id="plmw-lar" type="number" min="0" max="5000" value="${esc(w.largeur)}" ${x.I(w.set('largeur'))} style="${inp};width:96px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Hauteur</div><input id="plmw-hau" type="number" min="0" max="5000" value="${esc(w.hauteur)}" ${x.I(w.set('hauteur'))} style="${inp};width:96px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Capacité (pièces)</div><input id="plmw-cap" type="number" min="0" max="999" value="${esc(w.capacite)}" ${x.I(w.set('capacite'))} placeholder="—" style="${inp};width:110px;text-align:right"></div>
           </div>
           <div style="${lbl};margin:20px 0 7px">Combien de niveaux, combien d’emplacements</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Niveaux</div><input id="plmw-nniv" type="number" min="1" max="40" value="${esc(w.nNiveaux)}" ${x.C(w.set('nNiveaux'))} style="${inp};width:88px;text-align:right"></div>
-            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Emplacements par niveau</div><input id="plmw-nslot" type="number" min="0" max="40" value="${esc(w.nSlots)}" ${x.C(w.set('nSlots'))} style="${inp};width:130px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Niveaux</div><input id="plmw-nniv" type="number" min="1" max="40" value="${esc(w.nNiveaux)}" ${x.I(w.set('nNiveaux'))} style="${inp};width:88px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Emplacements par niveau</div><input id="plmw-nslot" type="number" min="0" max="40" value="${esc(w.nSlots)}" ${x.I(w.set('nSlots'))} style="${inp};width:130px;text-align:right"></div>
             <div style="font-size:12px;color:var(--color-text-muted);padding-bottom:8px">→ ${w.total} emplacement(s) : ${esc(w.niveauxTxt)}</div>
           </div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">Une dimension laissée vide reste inconnue — elle ne sera pas affichée comme un zéro. Tout se corrige ensuite, emplacement par emplacement.</div>
