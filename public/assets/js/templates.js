@@ -603,7 +603,11 @@ function tplAnalyse(c, x){
     </div>
     ${c.anLignes ? (c.anLignes.vide
       ? `<div style="padding:30px 0;color:var(--color-text-muted);font-size:12.5px">${esc(c.anLignes.vide)}</div>`
-      : `<svg viewBox="0 0 ${c.anLignes.W} ${c.anLignes.H}" style="width:100%;height:auto;display:block">
+      : `<div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px;margin-bottom:10px;width:fit-content">
+        ${c.anBaseBtns.map(o => `<button ${x.A(o.go)} style="${o.st}">${esc(o.label)}</button>`).join('')}
+      </div>
+      ${c.anBase100 ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:6px">Chaque courbe repart de 100 à sa première période : seules les formes se comparent. Une boutique qui suit le réseau colle à la ligne pointillée, quelle que soit sa taille.</div>` : ''}
+      <svg viewBox="0 0 ${c.anLignes.W} ${c.anLignes.H}" style="width:100%;height:auto;display:block">
       ${c.anLignes.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
       ${c.anLignes.reseau ? `<path d="${c.anLignes.reseau.d}" fill="none" stroke="var(--color-text)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round" opacity="0.55"/>
         ${c.anLignes.reseau.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="3.5" fill="var(--color-surface)" stroke="var(--color-text)" stroke-width="1.6" opacity="0.75"><title>${esc(q.t)}</title></circle>`).join('')}
@@ -627,21 +631,24 @@ function tplAnalyse(c, x){
       <thead><tr>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Magasin</th>
         ${c.anLignes.entetes.map(h => `<th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;padding:0 8px 6px;color:${h.enCours ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(h.t)}</th>`).join('')}
-        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Écart moyen</th>
+        <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 14px 6px">Évolution</th>
+        <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Suit le réseau ?</th>
       </tr></thead>
       <tbody>
         ${c.anLignes.series.map(s => `<tr>
           <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);white-space:nowrap">
             <span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${s.col};margin-right:7px"></span>${esc(s.court)}</td>
-          ${s.cells.map(q => `<td style="padding:6px 8px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(q.v)}
-            ${q.e ? `<div style="font-size:10px;color:${q.col}">${esc(q.e)}</div>` : ''}</td>`).join('')}
-          <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-weight:500;color:${s.ecart == null ? 'var(--color-text-muted)' : (s.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)')}">${s.ecart == null ? '—' : (s.ecart >= 0 ? '+' : '') + c.fPct(s.ecart)}</td>
+          ${s.cells.map(q => `<td style="padding:6px 8px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(q.v)}</td>`).join('')}
+          <td style="padding:6px 14px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(s.evo)}</td>
+          <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);white-space:nowrap;color:${s.vCol};font-weight:500">${esc(s.verdict)}
+            <span style="font-weight:400;color:var(--color-text-muted)"> ${esc(s.phaseTxt)}</span></td>
         </tr>`).join('')}
         ${c.anLignes.reseau ? `<tr>
           <td style="padding:6px 0;border-top:0.5px solid var(--color-border-secondary);white-space:nowrap;font-style:italic;color:var(--color-text-muted)">
             <span style="display:inline-block;width:14px;border-top:2px dashed var(--color-text);opacity:0.55;margin-right:5px;vertical-align:middle"></span>Moyenne réseau</td>
           ${c.anLignes.reseau.cells.map(q => `<td style="padding:6px 8px;border-top:0.5px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted);white-space:nowrap">${esc(q.v)}</td>`).join('')}
-          <td style="border-top:0.5px solid var(--color-border-secondary)"></td>
+          <td style="padding:6px 14px;border-top:0.5px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted);font-style:italic">${esc(c.anLignes.reseau.evo)}</td>
+          <td style="padding:6px 0;border-top:0.5px solid var(--color-border-secondary);font-size:11px;color:var(--color-text-muted);font-style:italic">référence${c.anLignes.nClos ? ' · ' + c.anLignes.nClos + ' période' + (c.anLignes.nClos > 1 ? 's' : '') + ' close' + (c.anLignes.nClos > 1 ? 's' : '') : ''}</td>
         </tr>` : ''}
       </tbody>
     </table></div>`)

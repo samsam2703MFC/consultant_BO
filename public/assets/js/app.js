@@ -1307,61 +1307,86 @@ class App {
         const PR = 96, PD = W - PR;
         const xi = i => +(PL + i * (PD - PL) / pts.length + (PD - PL) / pts.length / 2).toFixed(1);
         labels.forEach((l, i) => { l.x = xi(i).toFixed(1); });
-        grille.forEach(g => { g.w = PD; });
-
-        // Palette Okabe-Ito, éprouvée pour les déficiences de vision des
-        // couleurs et vérifiée sur fond blanc (écarts CVD toutes paires ≥ 7,6).
-        // La couleur suit le magasin, jamais son rang : filtrer la liste ne
-        // doit pas repeindre ceux qui restent.
         const PAL = ['#D55E00', '#0072B2', '#009E73', '#CC79A7', '#E69F00'];
 
-        // Tendance réseau : la MOYENNE par magasin, pas le total. Le total
-        // vaut quatre fois une boutique et écraserait toutes les courbes sur
-        // le bas du cadre ; la moyenne se compare à vue, magasin par magasin.
+        // Tendance réseau : la MOYENNE par magasin, pas le total. Le total vaut
+        // quatre fois une boutique et écraserait les courbes sur le bas du cadre.
         const moy = pts.map(p => {
           const v = mags.map(m => (p.parMagasin || {})[m.id]).filter(x => x != null);
           return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
         });
+        const brut = mags.map(m => pts.map(p => { const v = (p.parMagasin || {})[m.id]; return v == null ? null : v; }));
+
+        // SUIVRE LE RÉSEAU N'EST PAS ÊTRE AU NIVEAU DU RÉSEAU. Une boutique
+        // trois fois plus grosse que la moyenne peut en épouser parfaitement la
+        // tendance ; l'écart de niveau ne dit rien de la phase. La base 100
+        // ramène chacun à son propre point de départ : ne restent que les
+        // formes, et c'est là seulement qu'un décrochage se voit.
+        const base100 = S.anBase === '100';
+        common.anBase = base100 ? '100' : 'valeurs';
+        common.anBaseBtns = [['valeurs', 'Valeurs'], ['100', 'Tendance base 100']]
+          .map(o => ({ label: o[1], st: onglet((base100 ? '100' : 'valeurs') === o[0]),
+            go: () => this.setState({ anBase: o[0] }) }));
+        const indexer = a => { const b = a.find(v => v != null && v !== 0);
+          return b == null ? a.map(() => null) : a.map(v => v == null ? null : v / b * 100); };
+        const aff = base100 ? brut.map(indexer) : brut;
+        const affMoy = base100 ? indexer(moy) : moy;
+
+        const tous = [];
+        aff.forEach(a => a.forEach(v => { if (v != null) tous.push(v); }));
+        affMoy.forEach(v => { if (v != null) tous.push(v); });
+        const lo = base100 && tous.length ? Math.min.apply(null, tous) * 0.94 : 0;
+        const hh = tous.length ? Math.max.apply(null, tous) * 1.06 : 0;
+        const yy = v => (H - PB) * (1 - (v - lo) / (hh - lo || 1));
+        const grille2 = hh > lo ? [0.5, 1].map(f => ({ y: yy(lo + (hh - lo) * f).toFixed(1), w: PD })) : [];
+        const fmtA = v => base100 ? Math.round(v).toLocaleString('fr-BE') : fmtM(v);
+
+        // Le verdict ne se calcule QUE sur des périodes closes : une période
+        // entamée ferait passer tout le monde pour décrochant.
+        const iClos = pts.map((p, i) => p.enCours ? -1 : i).filter(i => i >= 0);
+        const evo = a => { const c = iClos.map(i => a[i]).filter(v => v != null);
+          return c.length > 1 && c[0] ? (c[c.length - 1] - c[0]) / c[0] : null; };
+        const evoRes = evo(moy);
 
         const series = mags.map((m, k) => {
           const pt = [];
-          pts.forEach((p, i) => { const v = (p.parMagasin || {})[m.id];
-            if (v != null && hi > 0) pt.push({ i, v, x: xi(i), y: +y(v).toFixed(1) }); });
+          aff[k].forEach((v, i) => { if (v != null && hh > lo) pt.push({ i, v, x: xi(i), y: +yy(v).toFixed(1) }); });
           const der = pt.length ? pt[pt.length - 1] : null;
-          // Écart au réseau, moyenné sur les périodes connues : c'est lui qui
-          // dit si la boutique suit le réseau ou s'en détache.
-          const ec = pt.filter(q => moy[q.i]).map(q => (q.v - moy[q.i]) / moy[q.i]);
+          const e = evo(brut[k]);
+          // L'écart de TENDANCE, en points de pourcentage : c'est la réponse à
+          // « ce magasin suit-il le réseau ? ». Sous cinq points on considère
+          // qu'il est en phase — en deçà, on lirait du bruit comme un signal.
+          const ph = (e != null && evoRes != null) ? (e - evoRes) * 100 : null;
           return { id: m.id, nom: m.nom,
-            // Le nom de ville suffit à distinguer : « Atelier by » est commun à
-            // tous et ne fait qu'allonger une étiquette déjà à l'étroit.
             court: (m.nom.split(/\s+[-–]\s+/).pop() || m.nom).trim(),
             col: PAL[k % PAL.length],
-            // Une ligne coupée en deux par un trou vaut mieux qu'une ligne
-            // droite qui inventerait le point manquant.
             d: pt.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
-            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : ' + fmtM(q.v)
-              + (moy[q.i] ? ' (' + (q.v >= moy[q.i] ? '+' : '') + this.fP((q.v - moy[q.i]) / moy[q.i], 0) + ' / réseau)' : '') })),
-            ecart: ec.length ? ec.reduce((a, b) => a + b, 0) / ec.length : null,
+            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : '
+              + (base100 ? Math.round(q.v) + ' (base 100)' : fmtM(brut[k][q.i])) })),
+            evo: e == null ? '—' : (e >= 0 ? '+' : '') + this.fP(e, 1),
+            phase: ph, 
+            phaseTxt: ph == null ? '—' : (ph >= 0 ? '+' : '') + ph.toFixed(1).replace('.', ',') + ' pts',
+            verdict: ph == null ? 'indéterminé' : Math.abs(ph) <= 5 ? 'en phase'
+              : (ph > 0 ? 'au-dessus de la tendance' : 'décroche'),
+            vCol: ph == null ? 'var(--color-text-muted)' : Math.abs(ph) <= 5 ? '#2d7a3e'
+              : (ph > 0 ? '#1f6f7a' : 'var(--color-primary)'),
             fin: der ? { y: der.y, xd: der.x } : null,
-            cells: pts.map((p, i) => { const v = (p.parMagasin || {})[m.id];
-              return { v: v == null ? '—' : fmtM(v),
-                e: (v == null || !moy[i]) ? '' : (v >= moy[i] ? '+' : '') + this.fP((v - moy[i]) / moy[i], 0),
-                col: (v == null || !moy[i]) ? 'var(--color-text-muted)'
-                  : (v >= moy[i] ? '#2d7a3e' : 'var(--color-primary)') }; }) };
+            cells: pts.map((p, i) => ({ v: brut[k][i] == null ? '—' : fmtM(brut[k][i]) })) };
         }).filter(s => s.pts.length);
 
         const mp = [];
-        moy.forEach((v, i) => { if (v != null && hi > 0) mp.push({ i, v, x: xi(i), y: +y(v).toFixed(1) }); });
+        affMoy.forEach((v, i) => { if (v != null && hh > lo) mp.push({ i, v, x: xi(i), y: +yy(v).toFixed(1) }); });
         const reseau = mp.length ? {
           d: mp.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
-          pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + pts[q.i].libelle + ' : ' + fmtM(q.v) })),
+          pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + pts[q.i].libelle + ' : '
+            + (base100 ? Math.round(q.v) + ' (base 100)' : fmtM(moy[q.i])) })),
           fin: { xd: mp[mp.length - 1].x, y: mp[mp.length - 1].y },
+          evo: evoRes == null ? '—' : (evoRes >= 0 ? '+' : '') + this.fP(evoRes, 1),
           cells: moy.map(v => ({ v: v == null ? '—' : fmtM(v) }))
         } : null;
 
-        // Étiquettes écartées verticalement, de haut en bas. L'étiquette du
-        // réseau entre dans le MÊME calcul : traitée à part, elle retombait sur
-        // celle d'un magasin — mesuré, 8,6 px d'écart là où il en faut douze.
+        // L'étiquette du réseau entre dans le MÊME écartement : traitée à part,
+        // elle retombait sur celle d'un magasin (mesuré : 8,6 px pour 12 requis).
         const bouts = series.filter(s => s.fin).map(s => s.fin);
         if (reseau) { bouts.push(reseau.fin); }
         bouts.sort((a, b) => a.y - b.y);
@@ -1369,8 +1394,10 @@ class App {
         bouts.forEach(f => { f.ly = Math.max(f.y, prec + 12); prec = f.ly; });
 
         common.fPct = v => this.fP(v, 1);
-        common.anLignes = { W, H, PD, grille, labels, series, reseau,
+        common.anBase100 = base100;
+        common.anLignes = { W, H, PD, grille: grille2, labels, series, reseau,
           entetes: pts.map(p => ({ t: p.libelle, enCours: p.enCours })),
+          nClos: iClos.length,
           vide: !series.length ? 'aucun magasin n’a de chiffre sur cette sélection' : '' };
       }
 
