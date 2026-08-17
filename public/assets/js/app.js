@@ -2079,8 +2079,6 @@ class App {
     const champ = (k, val) => ({ val: S[k] == null ? val : S[k],
       set: e => this.setState({ [k]: e.target.value }) });
     common.plNZone = champ('plNZone', '');
-    common.plNNiveau = champ('plNNiveau', '');
-    common.plNSlots = champ('plNSlots', '4');
 
     common.plZoneAdd = () => this.plAjouter('zone', null, S.plNZone, 'plNZone');
     // Le meuble passe par un ASSISTANT : type, température, présentation et
@@ -2429,18 +2427,27 @@ class App {
    * Un niveau naît avec ses emplacements : les créer un par un ferait douze
    * saisies pour une étagère.
    */
+  /**
+   * Un niveau de plus sur un meuble EXISTANT.
+   *
+   * Ni nom ni nombre à saisir : le niveau suit ce que le meuble fait déjà —
+   * même nombre d'emplacements que son dernier niveau, nom numéroté à la
+   * suite. Redemander ces deux valeurs à chaque ajout dupliquait l'assistant,
+   * qui les a posées une fois pour toutes.
+   */
   plAjouterNiveau(meubleId){
-    const S = this.state;
-    const nom = String(this.plLire('pl-nniveau', S.plNNiveau) || '').trim();
-    if (!nom) { this.notify('Donnez un nom de niveau (haut, médian, bas…).'); return; }
-    const slots = Math.max(0, Math.min(40,
-      parseInt(this.plLire('pl-nslots', S.plNSlots == null ? '4' : S.plNSlots), 10) || 0));
+    const pl = this.D.plano || {};
+    let meuble = null;
+    (pl.zones || []).forEach(z => (z.meubles || []).forEach(m => { if (m.id === meubleId) { meuble = m; } }));
+    const niveaux = (meuble && meuble.niveaux) || [];
+    const dernier = niveaux[niveaux.length - 1];
+    const slots = dernier ? (dernier.slots || []).length : 4;
+    const nom = 'Niveau ' + (niveaux.length + 1);
     write(this.source, 'POST', '/planogramme/niveau', { nom, parentId: meubleId, slots })
       .then(r => {
         if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
-        this.setState({ plNNiveau: '' });
         this.plCharge(true);
-        this.notify('Niveau « ' + nom + ' » créé' + (slots ? ' avec ' + slots + ' emplacement(s)' : ''));
+        this.notify('« ' + nom + ' » ajouté' + (slots ? ' avec ' + slots + ' emplacement(s)' : ''));
       });
   }
   plAjouterSlots(niveauId){

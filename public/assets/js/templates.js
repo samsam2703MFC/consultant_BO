@@ -2782,20 +2782,21 @@ function tplPlanoComptoir(c, x){
           <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">${c.plMeubleAdd ? 'Type, température, présentation, dimensions et niveaux — créés d’un seul geste.' : 'Créez d’abord une zone.'}</div>
         </div>
 
+        <!-- La CRÉATION des niveaux appartient à l'assistant : elle y est
+             demandée avec le reste du meuble. Ce qui reste ici est ce que
+             l'assistant ne peut pas faire — retoucher un meuble déjà posé :
+             renommer un niveau, lui ajouter un emplacement, en retirer un. -->
         <div>
-          <div style="${lbl};margin-bottom:7px">Niveaux &amp; emplacements</div>
-          ${c.plMeubleOpts.length ? `<select ${x.C(c.plMeubleSetSel)} style="${inp};width:100%;margin-bottom:6px">${c.plMeubleOpts.map(m => `<option value="${m.id}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>` : ''}
+          <div style="${lbl};margin-bottom:7px">Retoucher un meuble</div>
+          ${c.plMeubleOpts.length ? `<select ${x.C(c.plMeubleSetSel)} style="${inp};width:100%;margin-bottom:6px">${c.plMeubleOpts.map(m => `<option value="${m.id}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>` : `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucun meuble à retoucher.</div>`}
           ${c.plNiveauxListe.map(n => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
             <input value="${esc(n.nom)}" ${x.C(n.renommer)} style="${inp};flex:1;min-width:0">
             <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${n.nSlots} empl.</span>
-            <button ${x.A(n.ajouter)} title="Ajouter un emplacement" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1">+</button>
+            <button ${x.A(n.ajouter)} title="Ajouter un emplacement à ce niveau" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1">+</button>
             <button ${x.A(n.supprimer)} title="Supprimer ce niveau" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('')}
-          <div style="display:flex;gap:6px;margin-top:7px">
-            <input id="pl-nniveau" value="${esc(c.plNNiveau.val)}" ${x.I(c.plNNiveau.set)} placeholder="Niveau haut…" style="${inp};flex:1;min-width:0" ${c.plNiveauAdd ? '' : 'disabled'}>
-            <input id="pl-nslots" type="number" min="0" max="40" value="${esc(c.plNSlots.val)}" ${x.C(c.plNSlots.set)} title="Nombre d’emplacements" style="${inp};width:56px;text-align:right">
-            <button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)}">Ajouter</button>
-          </div>
+          ${c.plMeubleOpts.length ? `<button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)};width:100%;justify-content:center;margin-top:7px">+ Un niveau de plus</button>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">Il reprend le nombre d’emplacements du dernier niveau de ce meuble.</div>` : ''}
         </div>
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:11px;line-height:1.5">Une zone contient des meubles, un meuble des niveaux, un niveau des emplacements numérotés. Renommer se fait dans le champ ; la suppression d’un élément qui porte des références est refusée puis reconfirmée.</div>
