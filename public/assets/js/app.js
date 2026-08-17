@@ -2365,7 +2365,14 @@ class App {
     common.setCtrlShop = e => this.setState({ ctrlShop: e.target.value });
     // Filtre statut
     common.ctrlOnly = S.ctrlOnly || 'tous';
-    common.ctrlOnlyOptions = [{ val: 'tous', nom: 'Toutes les tâches' }, { val: 'avalider', nom: 'À noter seulement' }, { val: 'refuses', nom: 'Non conformes seulement' }];
+    // « À noter seulement » retenait tout ce qui n'était pas noté, y compris ce
+    // qui n'est pas notable : une tâche sans photo n'a rien à juger, et une
+    // tâche non rendue n'est pas en retard de contrôle. Trois filtres distincts.
+    common.ctrlOnlyOptions = [{ val: 'tous', nom: 'Toutes les tâches' },
+      { val: 'acontroler', nom: 'À contrôler — photographiées, non notées' },
+      { val: 'sansphoto', nom: 'Rendues sans photo' },
+      { val: 'avalider', nom: 'Toutes les non notées' },
+      { val: 'refuses', nom: 'Non conformes seulement' }];
     common.setCtrlOnly = e => this.setState({ ctrlOnly: e.target.value });
 
     const seuilC = pt.seuil || 4;
@@ -2378,8 +2385,12 @@ class App {
       barSt: 'display:block;height:5px;border-radius:999px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
     const shops = (pt.shops || []).filter(s => common.ctrlShop === 'Toutes les boutiques' || s.shop === common.ctrlShop)
       .map(s => {
-        const taches = (s.taches || []).filter(t => common.ctrlOnly === 'tous'
-          ? true : (common.ctrlOnly === 'avalider' ? !t.valide : (t.note != null && t.note < seuilC)))
+        const taches = (s.taches || []).filter(t =>
+            common.ctrlOnly === 'tous' ? true
+          : common.ctrlOnly === 'acontroler' ? (t.statut === 'aControler' && !t.valide)
+          : common.ctrlOnly === 'sansphoto' ? (t.statut === 'sansPhoto')
+          : common.ctrlOnly === 'avalider' ? !t.valide
+          : (t.note != null && t.note < seuilC))
           .map(t => ({
             taskId: t.taskId, tache: t.tache,
             note: t.note == null ? '—' : t.note + ' / 5', noteSt: noteSt(t.note),
@@ -2584,7 +2595,12 @@ class App {
       valeur: n == null ? '—' : Math.round(n).toLocaleString('fr-BE'),
       vif: !!n && urgent,
       col: (!!n && urgent) ? 'var(--color-primary)' : (n ? 'var(--color-text)' : 'var(--color-text-muted)'),
-      go: ecran ? () => this.setState({ screen: ecran }) : null });
+      // La tuile emmène AVEC son filtre : arriver sur la liste complète après
+      // avoir cliqué « à contrôler » oblige à refaire à la main le tri qu'on
+      // vient de demander.
+      go: ecran ? () => this.setState(Object.assign({ screen: ecran },
+        cle === 'controler' ? { ctrlOnly: 'acontroler', ctrlShop: 'Toutes les boutiques' }
+        : cle === 'sansPhoto' ? { ctrlOnly: 'sansphoto', ctrlShop: 'Toutes les boutiques' } : {})) : null });
     common.tkTuiles = [
       tuile('controler', PT.aControler || 0, 'À contrôler',
         'tâches photographiées, en attente de note', 'controle', true),

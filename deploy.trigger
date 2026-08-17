@@ -1,7 +1,5 @@
-Assistance IA a la notation, et extraction des references sous seuil.
+La tuile « a controler » emmene avec son filtre.
 
-Le formulaire de controle peut demander a Claude une PROPOSITION d evaluation
-sur la photo (niveau du bareme reseau, constats, commentaire) : elle pre-remplit,
-le consultant valide. La cle Anthropic reste sur le serveur.
-Nouvel ecran « References sous seuil » : un curseur, la liste de tout ce qui
-passe dessous, le critere le plus faible nomme, et un export CSV.
+Cliquer la tuile ouvrait la liste complete : il fallait refaire a la main le tri
+qu on venait de demander. Et « a noter seulement » retenait tout ce qui n etait
+pas note, y compris ce qui n est pas notable. Trois filtres distincts.
