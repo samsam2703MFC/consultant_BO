@@ -2100,7 +2100,12 @@ class App {
     write(this.source, 'POST', '/planogramme/' + type, { nom: v, parentId })
       .then(r => {
         if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
-        this.setState({ [champ]: '' });
+        // Une zone créée devient la zone REGARDÉE. Sans cela, le meuble
+        // suivant s'ajoutait à la zone restée affichée — mesuré : deux
+        // « Gondole A » atterries dans « Tartes » au lieu du comptoir voulu.
+        const suite = { [champ]: '' };
+        if (type === 'zone' && r.id) { suite.plZone = r.id; suite.plMeubleSel = null; }
+        this.setState(suite);
         this.plCharge(true);
         this.notify(type === 'zone' ? 'Zone « ' + v + ' » créée' : 'Meuble « ' + v + ' » créé');
       });

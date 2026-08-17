@@ -804,8 +804,20 @@ function wr_plano_creer(string $type): array
     $nom = mb_substr($nom, 0, 80);
     $rang = isset($b['rang']) ? max(0, (int) $b['rang']) : 0;
 
+    // Deux éléments de même nom sous le même parent ne se distinguent pas à
+    // l'écran : on les créait sans broncher, et deux zones « Tartes »
+    // identiques sont nées d'un simple double-clic. On refuse, en le disant —
+    // plutôt que de laisser un doublon qu'il faudra retrouver.
+    $pid = $def['parent'] !== null ? (int) ($b['parentId'] ?? 0) : 0;
+    $ou = $def['parent'] !== null ? ' AND ' . $def['parent'] . ' = ?' : '';
+    $args = $def['parent'] !== null ? [$nom, $pid] : [$nom];
+    $dej = Db::row('SELECT id FROM ' . $def['table'] . ' WHERE nom = ?' . $ou, $args);
+    if ($dej !== null) {
+        http_response_code(409);
+        return ['error' => '« ' . $nom . ' » existe déjà à cet endroit', 'id' => (int) $dej['id']];
+    }
+
     if ($def['parent'] !== null) {
-        $pid = (int) ($b['parentId'] ?? 0);
         if ($pid <= 0) { http_response_code(422); return ['error' => 'le parent est requis']; }
         Db::exec('INSERT INTO ' . $def['table'] . ' (' . $def['parent'] . ', nom, rang) VALUES (?,?,?)',
             [$pid, $nom, $rang]);

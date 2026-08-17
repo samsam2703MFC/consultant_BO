@@ -170,11 +170,25 @@ export function write(source, method, path, payload){
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: payload === undefined ? undefined : JSON.stringify(payload)
   }).then(async r => {
-    if (r.ok) { return { ok: true, status: r.status }; }
+    if (r.ok) {
+      // Le CORPS de la réponse revient à l'appelant. Il était jeté, et une
+      // création ne pouvait donc pas rendre l'identifiant de ce qu'elle venait
+      // de créer : impossible d'enchaîner sans recharger et deviner. `ok` et
+      // `status` restent maîtres — un corps qui dirait le contraire du statut
+      // HTTP ne doit pas transformer un succès en échec.
+      let corps = {};
+      try { const j = await r.json(); if (j && typeof j === 'object' && !Array.isArray(j)) { corps = j; } }
+      catch (e) { /* corps vide ou non JSON : le statut suffit */ }
+      return Object.assign({}, corps, { ok: true, status: r.status });
+    }
     let msg = 'HTTP ' + r.status;
-    try { const j = await r.json(); if (j && j.error) { msg = j.error; } } catch (e) { /* corps non JSON */ }
+    let corps = {};
+    try {
+      const j = await r.json();
+      if (j && typeof j === 'object' && !Array.isArray(j)) { corps = j; if (j.error) { msg = j.error; } }
+    } catch (e) { /* corps non JSON */ }
     console.warn('[cockpit] écriture ' + path + ' refusée : ' + msg);
-    return { ok: false, status: r.status, error: msg };
+    return Object.assign({}, corps, { ok: false, status: r.status, error: msg });
   }).catch(e => {
     console.warn('[cockpit] écriture ' + path + ' échouée : ' + e.message);
     return { ok: false, status: 0, error: e.message };
