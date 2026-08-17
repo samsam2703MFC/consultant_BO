@@ -1,6 +1,5 @@
-Assortiment : nommer les deux saisies qui manquent.
+Assortiment : « obligatoire » devient une case a cocher.
 
-Le champ de minimum et le bouton « batch » sont en place, mais invisibles :
-aucune reference n est declaree obligatoire (l ecran n a rien a lister) et le
-batch vaut 0 sur les 711 references. Ce sont deux SAISIES, pas des API — l ecran
-le dit maintenant, sur place et au Diagnostic.
+Un badge en lecture seule renvoyait a la fiche pour un booleen, alors que
+cocher est le geste meme de cet ecran. Decocher remet le minimum a zero : un
+minimum sur une reference facultative ne veut rien dire.

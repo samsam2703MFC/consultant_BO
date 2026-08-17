@@ -1211,6 +1211,10 @@ class App {
       bmin: p.bmin || 0, bmult: p.bmult || 1,
       batchTxt: p.bmin ? (p.bmin + (p.bmult > 1 ? ' × ' + p.bmult : '')) : '',
       qminSet: e => this.refQminPut(p.ref, e.target.value),
+      // « Obligatoire » se coche dans la ligne. Un badge en lecture seule
+      // renvoyait à la fiche pour un booléen : c'est le geste même de cet
+      // écran, il devait s'y faire.
+      mustSet: () => this.refMustPut(p.ref, !p.must),
       qminBatch: p.bmin ? () => this.refQminPut(p.ref, p.bmin) : null,
       // Un minimum inférieur au batch ne peut pas être produit tel quel.
       qminSousBatch: !!(p.must && p.bmin && (p.qmin || 0) > 0 && (p.qmin || 0) < p.bmin),
@@ -1237,6 +1241,23 @@ class App {
         slot: p.slot == null ? '' : p.slot } } });
   }
   /** Enregistre la référence en cours d'édition, puis recharge le catalogue. */
+  /**
+   * Coche ou décoche « obligatoire » depuis la ligne.
+   *
+   * Décocher remet le minimum à zéro : un minimum sur une référence facultative
+   * ne veut rien dire, et le laisser en place ferait réapparaître un chiffre
+   * orphelin à la prochaine coche.
+   */
+  refMustPut(ref, val){
+    const cat = (this.D.prodCatalogue || []).find(p => p.ref === ref);
+    if (!cat) { return; }
+    cat.must = !!val;
+    if (!val) { cat.qmin = 0; }
+    this.setState({});
+    this.api('PUT', '/production/produit/' + encodeURIComponent(ref),
+      Object.assign({}, cat, { must: val ? 1 : 0, qmin: val ? (cat.qmin || 0) : 0 }))
+      .then(r => { if (!r || r.error) { this.notify('Non enregistré : ' + ((r && r.error) || 'échec')); } });
+  }
   /**
    * Écrit la quantité minimale d'assortiment, sans passer par la fiche.
    *

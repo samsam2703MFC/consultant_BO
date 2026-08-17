@@ -413,7 +413,11 @@ function tplReferentiel(c, x){
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.commission)}</td>
             <td style="${TD};${num};color:${l.margeNetteC}">${esc(l.margeNette)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(l.margeNetteEur)}</div></td>
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.dlv)}</td>` : ''}
-          ${c.isAsso ? `<td style="${TD};text-align:center">${l.must ? '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;background:#E6F2E9;color:#2d7a3e">obligatoire</span>' : '<span style="color:var(--color-text-muted);font-size:11.5px">—</span>'}</td>
+          ${c.isAsso ? `<td style="${TD};text-align:center">
+            <label title="${l.must ? 'Retirer de l’assortiment obligatoire' : 'Imposer cette référence à tout le réseau'}" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">
+              <input type="checkbox" ${l.must ? 'checked' : ''} ${x.C(l.mustSet)}
+                style="width:17px;height:17px;cursor:pointer;accent-color:var(--color-primary);margin:0">
+            </label></td>
             <td style="${TD};${num}">
               <div style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end">
                 <input type="number" min="0" step="1" value="${l.qmin || ''}" ${x.C(l.qminSet)}
