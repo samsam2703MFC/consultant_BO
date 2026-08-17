@@ -458,7 +458,7 @@ function tplRefEdit(c, x){
   const L = 'font-size:11px;color:var(--color-text-muted);display:block;margin-bottom:3px';
   const IN = 'font-family:var(--font-ui);font-size:13px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);width:100%';
   const champ = (k, lbl, ph) => `<div><label style="${L}">${esc(lbl)}</label>
-    <input value="${esc(String(e.champs[k] == null ? '' : e.champs[k]))}" ${x.I(e.set(k))} placeholder="${esc(ph || '')}" style="${IN}"></div>`;
+    <input id="ref-ch-${k}" value="${esc(String(e.champs[k] == null ? '' : e.champs[k]))}" ${x.I(e.set(k))} placeholder="${esc(ph || '')}" style="${IN}"></div>`;
   return `
   <div style="position:fixed;inset:0;background:rgba(20,16,14,.42);display:flex;align-items:center;justify-content:center;padding:24px;z-index:60">
     <div style="background:var(--color-surface);border-radius:14px;padding:22px;width:100%;max-width:${e.mode === 'plano' ? '460px' : '620px'};max-height:88vh;overflow-y:auto">
@@ -2738,7 +2738,7 @@ function tplPlanoComptoir(c, x){
             <button ${x.A(z.supprimer)} title="Supprimer cette zone" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('')}
           <div style="display:flex;gap:6px;margin-top:7px">
-            <input value="${esc(c.plNZone.val)}" ${x.I(c.plNZone.set)} placeholder="Vitrine réfrigérée…" style="${inp};flex:1;min-width:0">
+            <input id="pl-nzone" value="${esc(c.plNZone.val)}" ${x.I(c.plNZone.set)} placeholder="Vitrine réfrigérée…" style="${inp};flex:1;min-width:0">
             <button ${x.A(c.plZoneAdd)} style="${btn(false)}">Ajouter</button>
           </div>
         </div>
@@ -2751,7 +2751,7 @@ function tplPlanoComptoir(c, x){
             <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('') : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">Aucun meuble dans cette zone.</div>`}
           <div style="display:flex;gap:6px;margin-top:7px">
-            <input value="${esc(c.plNMeuble.val)}" ${x.I(c.plNMeuble.set)} placeholder="Vitrine 1…" style="${inp};flex:1;min-width:0" ${c.plMeubleAdd ? '' : 'disabled'}>
+            <input id="pl-nmeuble" value="${esc(c.plNMeuble.val)}" ${x.I(c.plNMeuble.set)} placeholder="Vitrine 1…" style="${inp};flex:1;min-width:0" ${c.plMeubleAdd ? '' : 'disabled'}>
             <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)}">Ajouter</button>
           </div>
         </div>
@@ -2766,7 +2766,7 @@ function tplPlanoComptoir(c, x){
             <button ${x.A(n.supprimer)} title="Supprimer ce niveau" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('')}
           <div style="display:flex;gap:6px;margin-top:7px">
-            <input value="${esc(c.plNNiveau.val)}" ${x.I(c.plNNiveau.set)} placeholder="Niveau haut…" style="${inp};flex:1;min-width:0" ${c.plNiveauAdd ? '' : 'disabled'}>
+            <input id="pl-nniveau" value="${esc(c.plNNiveau.val)}" ${x.I(c.plNNiveau.set)} placeholder="Niveau haut…" style="${inp};flex:1;min-width:0" ${c.plNiveauAdd ? '' : 'disabled'}>
             <input type="number" min="0" max="40" value="${esc(c.plNSlots.val)}" ${x.C(c.plNSlots.set)} title="Nombre d’emplacements" style="${inp};width:56px;text-align:right">
             <button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)}">Ajouter</button>
           </div>
@@ -2785,7 +2785,7 @@ function tplPlanoComptoir(c, x){
         </div>`
       : c.plVue === 'tableau' ? `
         <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:13px">
-          <input value="${esc(c.plQ)}" ${x.I(c.plSetQ)} placeholder="Chercher une référence, un meuble, un niveau…" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:31px;padding:0 10px;font-family:var(--font-ui);font-size:12px;flex:1;min-width:210px">
+          <input id="pl-q" value="${esc(c.plQ)}" ${x.I(c.plSetQ)} placeholder="Chercher une référence, un meuble, un niveau…" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:31px;padding:0 10px;font-family:var(--font-ui);font-size:12px;flex:1;min-width:210px">
           <button ${x.A(c.plLibresGo)} style="${btn(c.plLibresSeules)}">Emplacements libres</button>
           <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plRangsN} ligne(s)</span>
         </div>
@@ -2883,7 +2883,7 @@ function tplPlanoFiche(c, x){
             </div>`).join('')}
 
           <div style="${lbl};margin-top:18px">Consigne de présentation</div>
-          <textarea ${x.I(f.noteSet('texte'))} rows="5" placeholder="Comment ce produit doit être présenté au comptoir" style="width:100%;box-sizing:border-box;margin-top:7px;border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:8px 10px;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(f.noteTxt)}</textarea>
+          <textarea id="plf-note" ${x.I(f.noteSet('texte'))} rows="5" placeholder="Comment ce produit doit être présenté au comptoir" style="width:100%;box-sizing:border-box;margin-top:7px;border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:8px 10px;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(f.noteTxt)}</textarea>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
             ${f.noteNiveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
               <span style="width:8px;height:8px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</button>`).join('')}
@@ -3485,7 +3485,7 @@ function tplSeuil(c, x){
       <div style="flex:1;min-width:240px">
         <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:7px">Seuil de score</label>
         <div style="display:flex;align-items:center;gap:12px">
-          <input type="range" min="0" max="100" step="1" value="${c.sqSeuil}" ${x.I(c.sqSetSeuil)} style="flex:1;min-width:140px;accent-color:var(--color-primary)">
+          <input id="sq-seuil" type="range" min="0" max="100" step="1" value="${c.sqSeuil}" ${x.I(c.sqSetSeuil)} style="flex:1;min-width:140px;accent-color:var(--color-primary)">
           <span style="font-family:var(--font-display);font-size:26px;line-height:1;min-width:44px;text-align:right">${c.sqSeuil}</span>
         </div>
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px">${esc(c.sqRepere)}</div>
