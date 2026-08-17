@@ -1648,7 +1648,8 @@ class App {
     const noms = { magasins: 'Tableau des magasins', marge: 'Marge & coûts',
       exploitation: 'P&L magasins', parametres: 'Paramètres', catalogue: 'Catalogue produit',
       produits: 'Scoring des références', analyse: 'Analyse dans le temps',
-      controle: 'Contrôle des tâches', centrale: 'Centrale d’achat' };
+      controle: 'Contrôle des tâches', centrale: 'Centrale d’achat',
+      assortiment: 'Assortiment obligatoire' };
     common.diagGroupes = Object.keys(L).map(k => ({
       ecran: noms[k] || k,
       lignes: (L[k] || []).map(o => ({ champ: o.champ, quoi: o.quoi, source: o.source,
@@ -1691,7 +1692,8 @@ class App {
   valsLacunes(common){
     this.lacunes();
     const ecr = { magasins: 'magasins', marge: 'marge', exploitation: 'exploitation',
-      parametres: 'parametres' }[this.state.screen];
+      parametres: 'parametres', assortiment: 'assortiment', catalogue: 'catalogue',
+      produits: 'produits', analyse: 'analyse', controle: 'controle' }[this.state.screen];
     const l = ((this.D.lacunes || {})[ecr] || []);
     common.lacunes = l.map(o => ({ champ: o.champ, quoi: o.quoi, source: o.source,
       // « manque API » quand il faut réclamer, « à renseigner » quand il faut

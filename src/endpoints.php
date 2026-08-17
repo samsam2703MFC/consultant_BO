@@ -3671,12 +3671,33 @@ function ep_lacunes(): array
                     $sansPrix . ' référence(s) sur ' . $n . ' sans prix',
                     'Caisse du panel — shop_product.portion_price absent pour ces références', 'api');
             }
+            // Le batch : sans lui, l'assortiment ne peut pas proposer de minimum
+            // tenable, et le suivi de production n'a pas d'unité de fournée.
+            $sansBatch = 0;
+            foreach ($cat as $p) { if ((int) ($p['bmin'] ?? 0) <= 0) { $sansBatch++; } }
+            if ($sansBatch === $n) {
+                $out['assortiment'][] = lacune('Batch (fournée minimale)',
+                    'aucune des ' . $n . ' références ne porte de batch',
+                    'Fiche de production — le champ existe (ceo_prod_product.bmin), il attend la saisie. '
+                    . 'Sans lui, le minimum d\'assortiment ne peut pas être calé sur une fournée', 'saisie');
+                $out['catalogue'][] = end($out['assortiment']);
+            }
             // Le rattachement référence → fournisseur n'existe nulle part.
             $out['catalogue'][] = lacune('Fournisseur',
                 'le fournisseur de chacune des ' . $n . ' références',
                 'API achats — aucune source ne rattache une référence à un fournisseur');
         }
     } catch (Throwable $e) { /* catalogue indisponible */ }
+
+    // --- assortiment : rien n'est déclaré obligatoire
+    try {
+        $c2 = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_product WHERE must = 1');
+        if ((int) ($c2['n'] ?? 0) === 0) {
+            $out['assortiment'][] = lacune('Références obligatoires',
+                'aucune référence déclarée obligatoire pour le réseau',
+                'Écran « Catalogue produit » — cocher les références que toute boutique doit tenir', 'saisie');
+        }
+    } catch (PDOException $e) { /* table absente */ }
 
     // --- scoring / analyse : la vente par magasin et par référence
     $out['produits'][] = lacune('Vente par magasin',
