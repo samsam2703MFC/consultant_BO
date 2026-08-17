@@ -3544,3 +3544,39 @@ function ep_lacunes(): array
     //     par colonne sur leurs propres écrans. On ne les répète pas ici.
     return $out;
 }
+
+/**
+ * Sonde : que rend l'API des tâches du panel pour une journée donnée ?
+ *
+ * L'écran « Contrôle des tâches » partait de `mac_task_review`, la table des
+ * notes DÉJÀ posées : il ne pouvait donc afficher que du déjà-contrôlé, jamais
+ * le reste à contrôler. Avant de le rebrancher sur la route amont, il faut
+ * savoir ce qu'elle rend, et sous quels noms de champs — un mauvais mapping
+ * produirait une liste de tâches à contrôler qui aurait l'air juste.
+ */
+function ep_pwa_tasks_sonde(): array
+{
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    $out = ['date' => $date, 'shops' => [], 'erreur' => null];
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY id'); }
+    catch (PDOException $e) { $shops = []; }
+    foreach ($shops as $s) {
+        $sid = (int) $s['id'];
+        $l = PanelApi::shopTasks($sid, $date);
+        $e = ['id' => $sid, 'nom' => $s['name'], 'n' => count($l), 'erreur' => PanelApi::$lastError];
+        if ($l && is_array($l[0])) {
+            $e['clesPremier'] = array_keys($l[0]);
+            $e['premier'] = $l[0];
+            // Quelles valeurs distinctes portent les champs d'état ? C'est ce
+            // qui dira comment reconnaître « rendue, en attente de contrôle ».
+            foreach (['status', 'state', 'is_done', 'done', 'completed', 'is_completed'] as $k) {
+                $vals = [];
+                foreach ($l as $t) { if (array_key_exists($k, $t)) { $vals[json_encode($t[$k])] = true; } }
+                if ($vals) { $e['valeurs'][$k] = array_keys($vals); }
+            }
+        }
+        $out['shops'][] = $e;
+    }
+    return $out;
+}

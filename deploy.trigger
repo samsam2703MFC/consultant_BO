@@ -1,7 +1,6 @@
-Lacunes : chaque ecran dit ce qu il ne peut pas afficher, et pourquoi.
+Sonde des taches du panel : que rend la route amont pour aujourd hui ?
 
-Audit des 26 routes principales : cinq familles de champs toujours vides, dont
-deux que rien n expliquait (valorisation, TJM des consultants). Nouvelle route
-/lacunes qui DETECTE l etat reel — une liste ecrite en dur perimerait le jour
-ou le panel exposerait enfin le food cost. Et deux etiquettes distinctes :
-« manque API » quand il faut reclamer, « a renseigner » quand il faut remplir.
+« Controle des taches » part de mac_task_review, la table des notes DEJA
+posees : il ne peut afficher que du deja-controle. Mesure : pour le 17/08 il
+rend 0 boutique, et les dates proposees s arretent au 15/08. Avant de le
+rebrancher sur /consultant/shops/{id}/tasks, on sonde sa forme reelle.
