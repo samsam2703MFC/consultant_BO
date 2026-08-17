@@ -1270,8 +1270,10 @@ class App {
     common.anLibelle = d && d.libelle ? d.libelle : '';
     common.anParMagasin = d ? (d.parMagasin || 'attente') : 'attente';
     common.anParMagasinMotif = d && d.parMagasinMotif ? d.parMagasinMotif : '';
+    common.anParMagasinMesure = d && d.parMagasinMesure ? d.parMagasinMesure : '';
     // La bascule ne s'affiche que là où elle mène quelque part.
     common.anVueDispo = common.anParMagasin === 'ok';
+    const uMag = d && d.parMagasinUnite === 'u';
     const euro = !d || d.unite !== 'u';
     const fmt = v => Math.round(v).toLocaleString('fr-BE') + (euro ? ' €' : ' u');
     common.anGraphe = null; common.anLignes = null;
@@ -1283,6 +1285,7 @@ class App {
 
       // Une échelle unique. Deux axes y feraient tenir n'importe quoi côte à
       // côte : N et N-1 se comparent sur la même graduation, ou pas du tout.
+      const fmtM = v => Math.round(v).toLocaleString('fr-BE') + (uMag ? ' u' : ' €');
       const tous = [];
       pts.forEach(p => {
         if (parShop) { mags.forEach(m => { const v = (p.parMagasin || {})[m.id]; if (v != null) tous.push(v); }); }
@@ -1309,7 +1312,7 @@ class App {
             // Une ligne coupée en deux par un trou vaut mieux qu'une ligne
             // droite qui inventerait le point manquant.
             d: pt.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
-            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : ' + fmt(q.v) })),
+            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : ' + fmtM(q.v) })),
             total: pt.reduce((a, q) => a + q.v, 0),
             // Étiquette en bout de course : l'identité ne repose jamais sur la
             // seule couleur, exigence d'autant plus nette avec cinq séries.

@@ -1,6 +1,6 @@
-Recherche dans la liste + sonde : existe-t-il des ventes par magasin ?
+Split par magasin aux trois niveaux — sur la grandeur qui existe vraiment.
 
-La liste compte 155 references : un champ de recherche, insensible aux accents.
-Et une sonde en lecture seule pour trancher par la MESURE si sold_qty varie
-d un magasin a l autre, et si margin-heatmap ou pnl portent une ventilation
-par categorie exploitable.
+Mesure de la sonde : pour une meme reference sur un meme mois, sold_qty vaut
+5165.000000000 dans les QUATRE boutiques, quand waste_qty y vaut 47, 34, 5 et
+30. La vente est une valeur reseau, le rebut non. Sous le niveau groupe, la
+vue par magasin trace donc le REBUT, et le dit.

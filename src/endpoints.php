@@ -1145,21 +1145,31 @@ function ep_produits_analyse(): array
     // références rend un `sold_qty` RÉSEAU, identique d'un magasin à l'autre
     // (seul le rebut y est propre au magasin). Plutôt que de présenter cinq
     // courbes superposées qui vaudraient toutes la même chose, l'écran le dit.
-    $out['parMagasin'] = $type === 'categorie' ? 'ok' : 'attente';
+    // Le détail par magasin existe aux trois niveaux, mais il ne mesure pas la
+    // même chose : le chiffre d'affaires pour les groupes, le REBUT en dessous.
+    // Mesuré sur une même référence et un même mois, `sold_qty` vaut 5165 dans
+    // les quatre boutiques quand `waste_qty` y vaut 47, 34, 5 et 30 : la vente
+    // est une valeur réseau, le rebut non. Tracer quatre courbes de ventes
+    // identiques aurait donné un « chacun sa part » entièrement faux.
+    $out['parMagasin'] = 'ok';
+    $out['parMagasinMesure'] = $type === 'categorie' ? "chiffre d'affaires" : 'rebut';
+    $out['parMagasinUnite'] = $type === 'categorie' ? '€' : 'u';
     $out['parMagasinMotif'] = $type === 'categorie' ? null
-        : 'en attente d\'API — /shops/{id}/products/waste rend un volume RÉSEAU, identique d\'un '
-        . 'magasin à l\'autre ; seul le rebut y est propre au magasin. Le détail par magasin '
-        . 'n\'existe donc qu\'au niveau des groupes.';
+        : 'Par magasin, ce niveau montre le REBUT : c\'est la seule grandeur que l\'API rende '
+        . 'boutique par boutique ici — le volume vendu y est une valeur réseau, identique partout.';
     $out['magasins'] = [];
-    if ($type === 'categorie') {
-        $vus = [];
-        foreach ($agg as $a) { foreach ((array) $a as $sid => $_) { $vus[(string) $sid] = true; } }
-        $noms = analyseNoms();
-        foreach (array_keys($vus) as $sid) {
-            $out['magasins'][] = ['id' => (string) $sid, 'nom' => $noms[(string) $sid] ?? ('Magasin ' . $sid)];
+    $vus = [];
+    foreach ($agg as $a) {
+        foreach ((array) $a as $sid => $e) {
+            if ($type === 'categorie') { $vus[(string) $sid] = true; continue; }
+            foreach ((array) ($e['w'] ?? []) as $s2 => $_) { $vus[(string) $s2] = true; }
         }
-        usort($out['magasins'], fn($a, $b) => strcmp($a['nom'], $b['nom']));
     }
+    $noms = analyseNoms();
+    foreach (array_keys($vus) as $sid) {
+        $out['magasins'][] = ['id' => (string) $sid, 'nom' => $noms[(string) $sid] ?? ('Magasin ' . $sid)];
+    }
+    usort($out['magasins'], fn($a, $b) => strcmp($a['nom'], $b['nom']));
 
     foreach ($bornes as $i => $b) {
         [$val, $par, $rendu, $lib] = analyseLire($type, $agg, $cN[$i], $cle);
@@ -1243,7 +1253,7 @@ function analyseNoms(): array
  */
 function analyseAgregats(string $type, array $cles): array
 {
-    $pref = $type === 'categorie' ? 'an.cat2.' : 'an.prod2.';
+    $pref = $type === 'categorie' ? 'an.cat2.' : 'an.prod3.';
     $agg = []; $req = [];
     foreach (array_unique($cles) as $k) {
         $c = analyseCache($pref . $k);
@@ -1253,14 +1263,15 @@ function analyseAgregats(string $type, array $cles): array
             $req[$k] = '/consultant/shops/category-sales?' . http_build_query(
                 ['shop_id' => analyseShop(), 'date_from' => $du, 'date_to' => $au]);
         } else {
-            foreach (analyseShops() as $j => $sid) {
-                $req[$k . '#' . $j] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+            foreach (analyseShops() as $sid) {
+                $req[$k . '#' . $sid] = '/shops/' . $sid . '/products/waste?' . http_build_query(
                     ['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
             }
         }
     }
     foreach (PanelApi::getParallele($req) as $rk => $r) {
         $k = strstr((string) $rk, '#', true) ?: (string) $rk;
+        $sidReq = (string) (substr((string) $rk, strlen($k) + 1) ?: '0');
         if ($type === 'categorie') {
             // Le vocabulaire de cette route est celui des GROUPES (douze), pas
             // celui des 81 catégories du catalogue : « Boissons chaudes » n'y
@@ -1284,14 +1295,22 @@ function analyseAgregats(string $type, array $cles): array
                 $pid = trim((string) ($p['id_product'] ?? ''));
                 if ($pid === '') { continue; }
                 $v = (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0);
-                if (!isset($agg[$k][$pid]) || $v > $agg[$k][$pid]['v']) {
+                // Le REBUT, lui, est bien propre au magasin — mesuré : pour une
+                // même référence sur un même mois, 47 / 34 / 5 / 30 selon la
+                // boutique, quand `sold_qty` y vaut 5165 partout. C'est donc la
+                // seule grandeur qui permette, sous le niveau groupe, de voir
+                // si une boutique décroche du réseau.
+                $w = nombreOuNull($p, ['waste_qty', 'waste']);
+                if ($w !== null && $sidReq !== '0') { $agg[$k][$pid]['w'][$sidReq] = (float) $w; }
+                if (!isset($agg[$k][$pid]['v']) || $v > $agg[$k][$pid]['v']) {
                     // `c` porte la catégorie de la référence : les totaux par
                     // catégorie s'en déduisent en sommant les volumes RÉSEAU
                     // déjà dédoublonnés. `grouped_products` ne rend, lui, que
                     // les catégories ayant connu du rebut — neuf sur quatre-
                     // vingt-une : le lire aurait amputé le sélecteur.
-                    $agg[$k][$pid] = ['n' => (string) ($p['product_name'] ?? $p['name'] ?? $pid), 'v' => $v,
-                        'c' => trim((string) ($p['category_name'] ?? ''))];
+                    $agg[$k][$pid]['n'] = (string) ($p['product_name'] ?? $p['name'] ?? $pid);
+                    $agg[$k][$pid]['v'] = $v;
+                    $agg[$k][$pid]['c'] = trim((string) ($p['category_name'] ?? ''));
                 }
             }
         }
@@ -1324,11 +1343,17 @@ function analyseLire(string $type, array $agg, array $cles, string $sel): array
         } elseif ($type === 'souscategorie') {
             foreach ((array) $agg[$k] as $p) {
                 if (strcasecmp((string) ($p['c'] ?? ''), $sel) !== 0) { continue; }
-                $val = ($val ?? 0) + (float) $p['v'];
+                $val = ($val ?? 0) + (float) ($p['v'] ?? 0);
+                foreach ((array) ($p['w'] ?? []) as $sid => $w) {
+                    $par[(string) $sid] = round(($par[(string) $sid] ?? 0) + (float) $w, 2);
+                }
             }
         } elseif (isset($agg[$k][$sel])) {
-            $val = ($val ?? 0) + (float) $agg[$k][$sel]['v'];
-            $lib = (string) $agg[$k][$sel]['n'];
+            $val = ($val ?? 0) + (float) ($agg[$k][$sel]['v'] ?? 0);
+            $lib = (string) ($agg[$k][$sel]['n'] ?? $sel);
+            foreach ((array) ($agg[$k][$sel]['w'] ?? []) as $sid => $w) {
+                $par[(string) $sid] = round(($par[(string) $sid] ?? 0) + (float) $w, 2);
+            }
         }
     }
     return [$val === null ? null : round($val, 2), $par, $rendu, $lib];

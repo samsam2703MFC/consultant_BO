@@ -591,7 +591,10 @@ function tplAnalyse(c, x){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px">
       <div>
         <div style="font-size:13px;font-weight:500">${esc(c.anLibelle || c.anCle)}</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.anMesure)} · ${esc(c.anSource)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${
+          c.anVue === 'magasin' && c.anParMagasinMesure
+            ? esc(c.anParMagasinMesure) + ' par magasin'
+            : esc(c.anMesure)} · ${esc(c.anSource)}</div>
       </div>
       ${g.evolution ? `<div style="text-align:right">
         <div style="font-family:var(--font-display);font-size:21px;line-height:1;color:${g.evolution.col}">${esc(g.evolution.txt)}</div>
@@ -622,7 +625,7 @@ function tplAnalyse(c, x){
       <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
         <span style="width:10px;height:10px;border-radius:3px;background:var(--color-secondary);flex:none"></span>N-1, même étendue</span>
     </div>` : ''}`}
-    ${c.anParMagasin === 'attente' && c.anParMagasinMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:10px">${esc(c.anParMagasinMotif)}</div>` : ''}
+    ${c.anParMagasinMotif && c.anVue === 'magasin' ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:10px">${esc(c.anParMagasinMotif)}</div>` : ''}
     ${c.anMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-top:8px">${esc(c.anMotif)}</div>` : ''}
     <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px">
       <thead><tr>
