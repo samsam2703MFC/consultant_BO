@@ -2774,10 +2774,12 @@ function tplPlanoComptoir(c, x){
             <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap" title="${esc(m.detail || '')}">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
             <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('') : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">Aucun meuble dans cette zone.</div>`}
-          <div style="display:flex;gap:6px;margin-top:7px">
-            <input id="pl-nmeuble" value="${esc(c.plNMeuble.val)}" ${x.I(c.plNMeuble.set)} placeholder="Vitrine 1…" style="${inp};flex:1;min-width:0" ${c.plMeubleAdd ? '' : 'disabled'}>
-            <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)}">Ajouter</button>
-          </div>
+          <!-- Un meuble ne se saisit pas sur une ligne : il porte un type, une
+               température, un mode de présentation et les dimensions de ses
+               emplacements. Le champ de nom qui vivait ici ne servait plus à
+               rien et faisait chercher l'assistant. -->
+          <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)};width:100%;justify-content:center;margin-top:7px;height:34px">+ Nouveau meuble — assistant</button>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">${c.plMeubleAdd ? 'Type, température, présentation, dimensions et niveaux — créés d’un seul geste.' : 'Créez d’abord une zone.'}</div>
         </div>
 
         <div>
@@ -2806,6 +2808,13 @@ function tplPlanoComptoir(c, x){
                l'écriture perdue et on recommençait. -->
           <div style="font-size:13px;font-weight:500">${c.plEtape === 'zone' ? 'Le comptoir n’est pas encore déclaré.' : 'Déclaration en cours.'}</div>
           <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;max-width:560px;margin-left:auto;margin-right:auto">${esc(c.plEtapeTxt || '')} Tant qu’aucun emplacement n’existe, il n’y a rien à choisir pour une référence.</div>
+          <!-- L'action de l'étape est proposée LÀ où on lit qu'il faut la faire.
+               L'assistant vivait dans un panneau replié, sous un bouton nommé
+               « Ajouter » comme deux autres : on ne le trouvait pas. -->
+          ${c.plEtape === 'meuble' && c.plMeubleAdd
+            ? `<button ${x.A(c.plMeubleAdd)} style="margin-top:12px;border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:34px;padding:0 17px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">+ Nouveau meuble — assistant</button>` : ''}
+          ${c.plEtape === 'zone'
+            ? `<button ${x.A(c.plOrgGo)} style="margin-top:12px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:34px;padding:0 15px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">${c.plOrg ? 'Saisir la première zone ci-dessus' : 'Organiser le comptoir'}</button>` : ''}
         </div>`
       : c.plVue === 'tableau' ? `
         <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:13px">

@@ -2079,7 +2079,6 @@ class App {
     const champ = (k, val) => ({ val: S[k] == null ? val : S[k],
       set: e => this.setState({ [k]: e.target.value }) });
     common.plNZone = champ('plNZone', '');
-    common.plNMeuble = champ('plNMeuble', '');
     common.plNNiveau = champ('plNNiveau', '');
     common.plNSlots = champ('plNSlots', '4');
 
