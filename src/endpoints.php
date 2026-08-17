@@ -137,8 +137,12 @@ function ep_stores(): array
             'zone'   => $r['zone'] ?: ($r['region'] ?: $r['city']),
             'status' => ((int) $r['active'] === 1) ? 'Ouvert' : 'Fermé',
             'opened' => $r['since_year'] ? sprintf('%04d-01', (int) $r['since_year']) : null,
-            'valT'   => null,          // valorisation calculée côté valuation, non stockée
-            'panier' => null,          // panier moyen : dérivé de /stores/perf
+            // La valorisation n'est calculée ni ici ni en amont : elle est
+            // déclarée en lacune plutôt que rendue par un null muet.
+            'valT'   => null,
+            // Le panier moyen n'est PAS un manque : /stores/perf le rend. Le
+            // laisser nul ici est correct ; le déclarer manquant serait faux.
+            'panier' => null,
             'pwaId'  => (int) $r['id'], // la boutique du panel EST le pwa_shop_id
         ], $rows);
     } catch (PDOException $e) {
@@ -3449,4 +3453,94 @@ function ep_ca_manquant(string $ecran): array
 
     return ['ecran' => $ecran, 'etat' => 'attente', 'titre' => $def['titre'],
         'source' => $def['source'], 'colonnes' => $def['colonnes'], 'lignes' => []];
+}
+
+/**
+ * Lacune déclarée par un endpoint : un champ qu'il ne peut pas servir, et
+ * pourquoi.
+ *
+ * Deux causes que rien ne distinguait jusqu'ici, et que confondre coûte cher :
+ *  · `api`  — aucune source n'expose la donnée. Il faut la RÉCLAMER, et l'écran
+ *             dit à qui et sous quel nom.
+ *  · `saisie` — la source existe, elle est vide. Il n'y a rien à réclamer, il
+ *             faut REMPLIR. Envoyer quelqu'un chercher une API dans ce cas,
+ *             c'est le lancer sur une piste qui n'existe pas.
+ *
+ * L'écran affiche « manque API » dans le premier cas, « à renseigner » dans le
+ * second, avec les champs attendus nommés.
+ */
+function lacune(string $champ, string $quoi, string $source, string $type = 'api'): array
+{
+    return ['champ' => $champ, 'quoi' => $quoi, 'source' => $source, 'type' => $type];
+}
+
+
+/**
+ * Catalogue des lacunes, DÉTECTÉES à l'exécution et non listées à la main.
+ *
+ * Une liste écrite en dur périme : le jour où le panel expose enfin le food
+ * cost, l'écran continuerait de le réclamer. On mesure donc l'état réel — un
+ * champ n'est déclaré manquant que s'il l'est vraiment, sur toutes les lignes.
+ *
+ * La distinction entre « manque API » et « à renseigner » est portée ici, une
+ * fois, plutôt que devinée par chaque écran.
+ */
+function ep_lacunes(): array
+{
+    $out = [];
+
+    // --- performance magasin : ce que le P&L du panel ne porte pas
+    try {
+        $perf = ep_perf();
+        $n = count($perf);
+        if ($n > 0) {
+            $sansFc = 0; $sansVal = 0;
+            foreach ($perf as $r) {
+                if (($r['foodCostPct'] ?? null) === null) { $sansFc++; }
+                if (($r['valorisation'] ?? null) === null) { $sansVal++; }
+            }
+            if ($sansFc === $n) {
+                $out['magasins'][] = lacune('Food cost %',
+                    'le ratio matière par magasin et par mois',
+                    'API panel — mac_shop_monthly_pnl ne porte pas le poste « material » (ticket T5a du panel)');
+                $out['marge'][] = end($out['magasins']);
+            }
+            if ($sansVal === $n) {
+                $out['magasins'][] = lacune('Valorisation',
+                    'la valeur du fonds par magasin',
+                    'API panel — le ValuationService du panel la calcule sans la stocker dans le snapshot mensuel');
+            }
+        }
+    } catch (Throwable $e) { /* la perf est indisponible : rien à déclarer */ }
+
+    // --- exploitation : objectifs absents parce que le budget n'est pas saisi
+    try {
+        $b = Db::row('SELECT COUNT(*) AS n FROM ceo_shop_budget');
+        $s = Db::row('SELECT COUNT(*) AS n FROM shops WHERE active = 1');
+        $nb = (int) ($b['n'] ?? 0); $ns = (int) ($s['n'] ?? 0);
+        if ($ns > 0 && $nb < $ns) {
+            $out['exploitation'][] = lacune('Objectif / Atteinte',
+                'le budget mensuel de ' . ($ns - $nb) . ' magasin(s) sur ' . $ns,
+                'Écran « Encodage du budget » — la table existe, elle attend la saisie', 'saisie');
+        }
+    } catch (PDOException $e) { /* tables absentes */ }
+
+    // --- consultants : référentiel incomplet, pas une API manquante
+    try {
+        $c = ep_consultants();
+        $n = count($c);
+        if ($n > 0) {
+            $sans = 0;
+            foreach ($c as $r) { if (($r['tjm'] ?? null) === null && ($r['charge'] ?? null) === null) { $sans++; } }
+            if ($sans === $n) {
+                $out['parametres'][] = lacune('TJM / Charge',
+                    'le taux journalier et la charge des ' . $n . ' consultants',
+                    'Référentiel consultants — le panel ne porte pas ces champs, ils se saisissent côté cockpit', 'saisie');
+            }
+        }
+    } catch (Throwable $e) { /* consultants indisponibles */ }
+
+    // --- centrale d'achat : six écrans sans source, déjà détaillés colonne
+    //     par colonne sur leurs propres écrans. On ne les répète pas ici.
+    return $out;
 }

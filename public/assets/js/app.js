@@ -697,6 +697,7 @@ class App {
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isCentrale) this.valsCentrale(common);
+    this.valsLacunes(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
     // --- suivi budget magasin
@@ -1531,6 +1532,31 @@ class App {
             : (p.enCours ? 'période en cours' : ''),
           enCours: p.enCours })) };
     }
+    return common;
+  }
+  /**
+   * Lacunes de l'écran courant : ce qu'il ne peut PAS afficher, et pourquoi.
+   *
+   * Chargées une fois, détectées côté serveur sur l'état réel des données. Une
+   * colonne vide sans explication se lit comme un zéro ou comme une panne ;
+   * nommer la source attendue transforme le trou en tâche.
+   */
+  lacunes(){
+    if (this.D.lacunes || this._lacEnCours) { return; }
+    this._lacEnCours = true;
+    readOne('/lacunes').then(l => { this._lacEnCours = false;
+      this.D.lacunes = l || {}; this.setState({}); });
+  }
+  valsLacunes(common){
+    this.lacunes();
+    const ecr = { magasins: 'magasins', marge: 'marge', exploitation: 'exploitation',
+      parametres: 'parametres' }[this.state.screen];
+    const l = ((this.D.lacunes || {})[ecr] || []);
+    common.lacunes = l.map(o => ({ champ: o.champ, quoi: o.quoi, source: o.source,
+      // « manque API » quand il faut réclamer, « à renseigner » quand il faut
+      // remplir. Confondre les deux envoie chercher une API qui existe déjà.
+      etiquette: o.type === 'saisie' ? 'à renseigner' : 'manque API',
+      api: o.type !== 'saisie' }));
     return common;
   }
   /**

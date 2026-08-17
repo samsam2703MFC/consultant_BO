@@ -73,6 +73,16 @@ export function render(c, x){
       </header>
 
       ${c.ready ? `
+      ${(c.lacunes && c.lacunes.length) ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Ce que cet écran ne peut pas afficher</div>
+        ${c.lacunes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;${l.api
+            ? 'background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0'
+            : 'background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary)'}">${esc(l.etiquette)}</span>
+          <span style="font-size:12.5px;font-weight:500">${esc(l.champ)}</span>
+          <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
+        </div>`).join('')}
+      </div>` : ''}
       ${c.isCat || c.isAsso || c.isPlano ? tplReferentiel(c, x) : ''}
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}

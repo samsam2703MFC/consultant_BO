@@ -1,7 +1,7 @@
-Centrale d achat : supprimer le double emploi avec les menus existants.
+Lacunes : chaque ecran dit ce qu il ne peut pas afficher, et pourquoi.
 
-Trois des dix ecrans doublaient l existant : « Catalogue & marge » appelait
-litteralement ep_prod_catalogue (memes 711 references), « Analyse des ventes »
-et « Cockpit » rendaient moins que Tableau des magasins et P&L magasins. Ils
-sont retires du rail ; la marge nette apres commission qu ils apportaient
-rejoint le Catalogue produit. Sept entrees restent, toutes specifiques.
+Audit des 26 routes principales : cinq familles de champs toujours vides, dont
+deux que rien n expliquait (valorisation, TJM des consultants). Nouvelle route
+/lacunes qui DETECTE l etat reel — une liste ecrite en dur perimerait le jour
+ou le panel exposerait enfin le food cost. Et deux etiquettes distinctes :
+« manque API » quand il faut reclamer, « a renseigner » quand il faut remplir.
