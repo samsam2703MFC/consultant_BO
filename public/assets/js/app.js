@@ -64,7 +64,29 @@ class App {
   forceUpdate(){ this.render(); }
 
   reg(fn){ this._h.push(fn); return this._h.length - 1; }
+  /**
+   * Un rendu à la fois. Un second rendu déclenché PENDANT le premier est
+   * différé, pas imbriqué.
+   *
+   * Le DOM porte des index (`data-h="62"`) qui désignent des positions dans le
+   * tableau des gestionnaires. Les deux ne valent que s'ils sortent de la MÊME
+   * passe. Or la fin du rendu rend le focus au champ actif, et rendre le focus
+   * fait sortir le champ précédent — ce qui déclenche son `change`, donc un
+   * `setState`, donc un rendu imbriqué. Après quoi le DOM affiché et le tableau
+   * des gestionnaires venaient de deux passes différentes : les boutons du bas
+   * de l'écran ne répondaient plus, en silence.
+   *
+   * Mesuré : après avoir touché au nombre d'emplacements, « Ajouter » ne
+   * réagissait plus — ni pour le niveau, ni pour la zone — alors que la bascule
+   * Plan/Tableau, enregistrée plus tôt dans la passe, marchait encore.
+   */
   render(){
+    if (this._rendu) { this._rendUnDeplus = true; return; }
+    this._rendu = true;
+    try { this.rendreMaintenant(); } finally { this._rendu = false; }
+    if (this._rendUnDeplus) { this._rendUnDeplus = false; this.render(); }
+  }
+  rendreMaintenant(){
     this._h = [];
     const x = {
       A: fn => fn ? `data-h="${this.reg(fn)}"` : '',
