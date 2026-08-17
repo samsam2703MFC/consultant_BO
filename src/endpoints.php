@@ -265,7 +265,7 @@ function ep_pwa_tasks(): array
 
     $empty = ['date' => $date ?? date('Y-m-d'), 'dates' => [], 'shops' => [],
         'consultants' => [], 'totals' => ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0,
-            'aControler' => 0, 'nonRendues' => 0, 'noteMoy' => null],
+            'aControler' => 0, 'nonRendues' => 0, 'sansPhoto' => 0, 'noteMoy' => null],
         'indispo' => true];
 
     try {
@@ -318,6 +318,44 @@ function ep_pwa_tasks(): array
                     $nom = trim((string) ($t['task_name'] ?? $t['name'] ?? ''));
                     if ($nom !== '') { $apiNames[$sid . '|' . $tid] = $nom; }
                     $apiTaches[$sid . '|' . $tid] = $t + ['_shop' => (int) $sid, '_task' => $tid];
+                }
+            }
+
+            // LA PHOTO FAIT LA TÂCHE À NOTER. « status = DONE » ne suffit pas :
+            // c'est la photo de réalisation que le consultant regarde pour
+            // noter, et elle n'est pas dans la liste des tâches — elle vit dans
+            // l'avancement de la checklist, sous `attachment_id`. Sans ce
+            // second niveau d'appel, l'écran proposerait à la notation des
+            // tâches sans rien à voir.
+            $req2 = [];
+            foreach ($sids as $sid) { $req2[$sid] = '/consultant/shops/' . $sid . '/checklists?date=' . urlencode($date); }
+            $req3 = [];
+            foreach (PanelApi::getParallele($req2) as $sid => $rep) {
+                foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $cl) {
+                    $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+                    if ($cid > 0) {
+                        $req3[$sid . '#' . $cid] = '/consultant/shops/' . $sid . '/checklists/' . $cid
+                            . '/progress?date=' . urlencode($date);
+                    }
+                }
+            }
+            foreach (PanelApi::getParallele($req3) as $k3 => $rep) {
+                $sid = (int) strstr((string) $k3, '#', true);
+                $cid = (int) substr((string) $k3, strpos((string) $k3, '#') + 1);
+                foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $pr) {
+                    $tid = (int) ($pr['task_id'] ?? $pr['id'] ?? 0);
+                    if ($tid <= 0) { continue; }
+                    $cle3 = $sid . '|' . $tid;
+                    $att = (int) ($pr['attachment_id'] ?? 0);
+                    $apiTaches[$cle3] = ($apiTaches[$cle3] ?? ['_shop' => $sid, '_task' => $tid])
+                        + ['_att' => $att, '_cl' => $cid,
+                           '_completion' => (int) ($pr['completion_id'] ?? 0),
+                           '_statutProg' => (string) ($pr['status'] ?? '')];
+                    if ($att > 0) { $apiTaches[$cle3]['_att'] = $att; }
+                    if (!isset($apiNames[$cle3])) {
+                        $n3 = trim((string) ($pr['task_name'] ?? $pr['name'] ?? ''));
+                        if ($n3 !== '') { $apiNames[$cle3] = $n3; }
+                    }
                 }
             }
         }
@@ -388,8 +426,13 @@ function ep_pwa_tasks(): array
         foreach ($apiTaches as $cle => $t) {
             if (isset($deja[$cle])) { continue; }
             $sid = (int) $t['_shop']; $tid = (int) $t['_task'];
-            $st = strtoupper(trim((string) ($t['status'] ?? '')));
-            $faite = $st === 'DONE' || $st === 'COMPLETED' || !empty($t['completed_at']);
+            $st = strtoupper(trim((string) ($t['status'] ?? ($t['_statutProg'] ?? ''))));
+            $rendue = $st === 'DONE' || $st === 'COMPLETED' || !empty($t['completed_at']);
+            // À NOTER = une photo existe. Rendue sans photo, il n'y a rien à
+            // regarder : la tâche est faite mais non notable, et l'écran le dit
+            // au lieu de la ranger avec celles qui attendent un avis.
+            $photo = (int) ($t['_att'] ?? 0) > 0;
+            $faite = $photo;
             if (!isset($byShop[$sid])) {
                 $byShop[$sid] = ['shopId' => (string) $sid, 'shop' => $shopNames[$sid] ?? ('Boutique #' . $sid), 'taches' => []];
             }
@@ -403,18 +446,21 @@ function ep_pwa_tasks(): array
                 'ctrlDir' => false,
                 'majLe' => !empty($t['completed_at']) ? substr((string) $t['completed_at'], 0, 16) : null,
                 // Deux états bien séparés, portés jusqu'à l'écran.
-                'statut' => $faite ? 'aControler' : 'nonRendue',
+                'statut' => $photo ? 'aControler' : ($rendue ? 'sansPhoto' : 'nonRendue'),
+                'photo' => $photo,
                 'faitePar' => ($t['completed_by'] ?? null) ?: null,
                 'photoRequise' => !empty($t['requires_photo']),
                 'obligatoire' => !empty($t['is_mandatory']),
                 'checklist' => trim((string) ($t['checklist_name'] ?? '')) ?: null,
             ];
             $tot['taches']++;
-            if ($faite) { $tot['aControler'] = ($tot['aControler'] ?? 0) + 1; $tot['aValider']++; }
+            if ($photo) { $tot['aControler'] = ($tot['aControler'] ?? 0) + 1; $tot['aValider']++; }
+            elseif ($rendue) { $tot['sansPhoto'] = ($tot['sansPhoto'] ?? 0) + 1; }
             else { $tot['nonRendues'] = ($tot['nonRendues'] ?? 0) + 1; }
         }
         $tot['aControler'] = $tot['aControler'] ?? 0;
         $tot['nonRendues'] = $tot['nonRendues'] ?? 0;
+        $tot['sansPhoto']  = $tot['sansPhoto'] ?? 0;
 
         $consultants = array_map(fn ($c) => [
             'id' => $c['id'], 'nom' => $c['nom'], 'avis' => $c['avis'], 'refuses' => $c['refuses'], 'valides' => $c['valides'],

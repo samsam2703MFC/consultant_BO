@@ -1,5 +1,7 @@
-Rail : la graisse au titre de section, plus aux entrees.
+Taches a noter = celles qui ont une PHOTO.
 
-Le titre en 10 px gris passait DERRIERE ses propres items en 13 px noir : la
-section paraissait moins importante que son contenu. Titre en 700 et en noir,
-entrees explicitement en 400.
+« status = DONE » ne suffisait pas : c est la photo de realisation que le
+consultant regarde pour noter, et elle ne figure pas dans la liste des taches —
+elle vit dans l avancement de la checklist, sous attachment_id. Trois etats
+desormais : a noter (photo), rendue sans photo, non rendue.
+Rail : entrees allegees en 300, le titre de section garde la graisse.
