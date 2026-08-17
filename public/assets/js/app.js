@@ -1746,9 +1746,95 @@ class App {
           // vide, sans quoi « pas de réponse » se lit comme « pas de vente ».
           motif: p.valeur == null ? (p.motif || 'aucune donnée')
             : (p.enCours ? 'période en cours' : ''),
+          // Chaque période s'ouvre : la ligne du tableau ne dit que le réseau,
+          // et c'est le détail par magasin qu'on vient chercher — qui décroche,
+          // qui porte la hausse.
+          ouvrir: () => this.setState({ anDetail: { i: pts.indexOf(p), shop: null } }),
           enCours: p.enCours })) };
     }
+    common.anDetail = S.anDetail && d && (d.points || []).length
+      ? this.valsAnDetail(S.anDetail, d, common) : false;
     return common;
+  }
+  /**
+   * Le détail d'une période : ce que chaque magasin y a fait.
+   *
+   * Deux lectures dans la même modale. Par PÉRIODE, tous les magasins d'un
+   * coup : qui décroche, qui porte la hausse, et quelle part chacun pèse.
+   * Puis, un magasin choisi, sa trajectoire sur TOUTES les périodes — la
+   * question « est-ce un accident ou une tendance » ne se répond pas sur un
+   * point isolé.
+   *
+   * Aucun appel de plus : la ventilation par magasin voyage déjà avec la série.
+   */
+  valsAnDetail(det, d, common){
+    const pts = d.points || [];
+    const i = Math.max(0, Math.min(pts.length - 1, det.i || 0));
+    const p = pts[i];
+    if (!p) { return false; }
+    const euro = (d.unite || '') === '€';
+    const fmt = v => v == null ? '—' : (euro ? this.fE(v) : Math.round(v).toLocaleString('fr-BE') + ' u');
+    const noms = {};
+    (this.D.stores || []).forEach(s => { noms[String(s.id)] = s.nom; });
+    const parM = p.parMagasin || {};
+    const parN1 = p.parMagasinN1 || {};
+    const total = Object.keys(parM).reduce((a, k) => a + (+parM[k] || 0), 0);
+
+    const mags = Object.keys(parM).map(id => {
+      const v = +parM[id] || 0;
+      const n1 = parN1[id] == null ? null : +parN1[id];
+      const delta = (n1 == null || n1 === 0) ? null : (v - n1) / n1;
+      return { id, nom: noms[id] || ('Magasin ' + id), valeur: fmt(v),
+        part: total > 0 ? this.fP(v / total, 1) : '—',
+        partPct: total > 0 ? (100 * v / total) : 0,
+        n1: n1 == null ? '—' : fmt(n1),
+        delta: delta == null ? '—' : (delta >= 0 ? '+' : '') + this.fP(delta, 1),
+        deltaCol: delta == null ? 'var(--color-text-muted)' : (delta >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
+        // Sans N-1, pas de comparaison : le dire plutôt que d'afficher un tiret
+        // muet qu'on lirait comme une stabilité.
+        sansN1: n1 == null,
+        on: det.shop === id,
+        choisir: () => this.setState({ anDetail: { i, shop: det.shop === id ? null : id } }) };
+    }).sort((a, b) => b.partPct - a.partPct);
+
+    // Un magasin choisi : sa trajectoire sur toutes les périodes.
+    let serie = null;
+    if (det.shop) {
+      const lignes = pts.map(q => {
+        const v = (q.parMagasin || {})[det.shop];
+        const n1 = (q.parMagasinN1 || {})[det.shop];
+        const dl = (v == null || n1 == null || +n1 === 0) ? null : (+v - +n1) / +n1;
+        return { libelle: q.libelle, enCours: !!q.enCours,
+          valeur: v == null ? '—' : fmt(+v), n1: n1 == null ? '—' : fmt(+n1),
+          delta: dl == null ? '—' : (dl >= 0 ? '+' : '') + this.fP(dl, 1),
+          deltaCol: dl == null ? 'var(--color-text-muted)' : (dl >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
+          courant: q === p };
+      });
+      const clos = lignes.filter(l => !l.enCours);
+      serie = { nom: noms[det.shop] || ('Magasin ' + det.shop), lignes,
+        note: clos.length < 2 ? 'Trop peu de périodes closes pour lire une tendance.' : '' };
+    }
+
+    return {
+      titre: d.libelle || '', periode: p.libelle,
+      bornes: this.fD(p.du) + ' → ' + this.fD(p.au),
+      enCours: !!p.enCours,
+      mesure: d.mesure || '', unite: d.unite || '',
+      reseau: fmt(p.valeur), reseauN1: p.n1 == null ? '—' : fmt(p.n1),
+      delta: p.delta == null ? '—' : (p.delta >= 0 ? '+' : '') + this.fP(p.delta, 1),
+      deltaCol: p.delta == null ? 'var(--color-text-muted)'
+        : (p.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
+      mags, magsVide: !mags.length,
+      // La somme des magasins peut différer du total réseau : le dire plutôt
+      // que de laisser chercher l'erreur d'addition.
+      ecartTotal: (p.valeur != null && total > 0 && Math.abs(total - p.valeur) / p.valeur > 0.01)
+        ? 'La somme des magasins (' + fmt(total) + ') diffère du total réseau — la caisse ne ventile pas tout.'
+        : '',
+      serie,
+      prec: i > 0 ? () => this.setState({ anDetail: { i: i - 1, shop: det.shop } }) : null,
+      suiv: i < pts.length - 1 ? () => this.setState({ anDetail: { i: i + 1, shop: det.shop } }) : null,
+      close: () => this.setState({ anDetail: null }),
+    };
   }
   /**
    * Diagnostic : la vue d'ensemble des manques, et les appels lents.

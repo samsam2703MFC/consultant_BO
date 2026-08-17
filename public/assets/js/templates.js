@@ -146,6 +146,7 @@ export function render(c, x){
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
   ${c.plFiche ? tplPlanoFiche(c, x) : ''}
   ${c.plMw ? tplPlanoMeubleWizard(c, x) : ''}
+  ${c.anDetail ? tplAnalyseDetail(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
 
@@ -743,8 +744,8 @@ function tplAnalyse(c, x){
         <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">Écart</th>
         <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Lecture</th>
       </tr></thead>
-      <tbody>${g.lignes.map(l => `<tr>
-        <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">${esc(l.libelle)}${l.enCours ? ' <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>' : ''}</td>
+      <tbody>${g.lignes.map(l => `<tr ${x.A(l.ouvrir)} title="Voir le détail par magasin sur cette période" style="cursor:pointer">
+        <td style="padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)"><span style="text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${esc(l.libelle)}</span>${l.enCours ? ' <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>' : ''}</td>
         <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
         <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
         <td style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:${l.deltaCol}">${esc(l.delta)}</td>
@@ -2884,6 +2885,90 @@ function tplPlanoComptoir(c, x){
         <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b> — ${esc(m.quoi)}<div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
       </div>`).join('')}
     </div>` : ''}
+  </div>`;
+}
+
+/* --- Détail d'une période d'analyse ------------------------------------------
+   Deux lectures : tous les magasins sur la période choisie, puis un magasin
+   choisi sur toutes les périodes. La question « est-ce un accident ou une
+   tendance » ne se répond pas sur un point isolé. */
+function tplAnalyseDetail(c, x){
+  const { esc } = x;
+  const a = c.anDetail;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const th = 'text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px';
+  const td = 'padding:7px 10px;border-top:0.5px solid var(--color-border-tertiary)';
+  const nav = dispo => 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
+    + 'border-radius:8px;height:29px;padding:0 11px;font-family:var(--font-ui);font-size:12px;font-weight:500;'
+    + (dispo ? 'cursor:pointer' : 'cursor:not-allowed;opacity:0.4');
+  return `
+  <div ${x.A(a.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:820px;max-width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <div>
+          <div style="${lbl}">${esc(a.titre)} · ${esc(a.mesure)}</div>
+          <div style="font-size:17px;font-weight:500;margin-top:3px">${esc(a.periode)}${a.enCours ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-primary)">période en cours</span>` : ''}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(a.bornes)}</div>
+        </div>
+        <div style="display:flex;gap:7px;align-items:center;flex:0 0 auto">
+          <button ${x.A(a.prec)} title="Période précédente" style="${nav(!!a.prec)}">←</button>
+          <button ${x.A(a.suiv)} title="Période suivante" style="${nav(!!a.suiv)}">→</button>
+          <button ${x.A(a.close)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+        </div>
+      </div>
+
+      <div style="padding:15px 19px;overflow-y:auto" data-scroll="andet">
+        <div style="display:flex;gap:26px;flex-wrap:wrap;padding-bottom:13px;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <div><div style="${lbl}">Réseau</div><div style="font-size:20px;font-weight:500;margin-top:2px">${esc(a.reseau)}</div></div>
+          <div><div style="${lbl}">N-1</div><div style="font-size:20px;font-weight:400;margin-top:2px;color:var(--color-text-muted)">${esc(a.reseauN1)}</div></div>
+          <div><div style="${lbl}">Écart</div><div style="font-size:20px;font-weight:500;margin-top:2px;color:${a.deltaCol}">${esc(a.delta)}</div></div>
+        </div>
+
+        <div style="${lbl};margin:15px 0 7px">Par magasin — cliquez pour suivre un magasin sur toutes les périodes</div>
+        ${a.magsVide
+          ? `<div style="font-size:12px;color:var(--color-text-muted);line-height:1.55">Aucune ventilation par magasin sur cette période.</div>`
+          : `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="${th};padding-left:0">Magasin</th>
+                <th style="${th};text-align:right">Valeur</th>
+                <th style="${th};text-align:right">Part</th>
+                <th style="${th};text-align:right">N-1</th>
+                <th style="${th};text-align:right;padding-right:0">Écart</th>
+              </tr></thead>
+              <tbody>${a.mags.map(m => `<tr ${x.A(m.choisir)} title="Suivre ${esc(m.nom)}" style="cursor:pointer;${m.on ? 'background:rgba(141,29,44,0.05)' : ''}">
+                <td style="${td};padding-left:0">
+                  <span style="font-weight:500">${esc(m.nom)}</span>
+                  <div style="height:4px;border-radius:999px;background:var(--color-border-tertiary);margin-top:4px;max-width:220px"><i style="display:block;height:100%;border-radius:999px;width:${m.partPct.toFixed(1)}%;background:${m.on ? 'var(--color-primary)' : 'var(--color-secondary)'}"></i></div>
+                </td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(m.valeur)}</td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(m.part)}</td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(m.n1)}</td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums;padding-right:0;color:${m.deltaCol}">${esc(m.delta)}${m.sansN1 ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">pas de N-1</div>` : ''}</td>
+              </tr>`).join('')}</tbody>
+            </table>`}
+        ${a.ecartTotal ? `<div style="font-size:11px;color:var(--color-on-abricot);margin-top:9px;line-height:1.5">${esc(a.ecartTotal)}</div>` : ''}
+
+        ${a.serie ? `<div style="margin-top:20px;padding-top:15px;border-top:0.5px solid var(--color-border-tertiary)">
+          <div style="${lbl};margin-bottom:7px">${esc(a.serie.nom)} — toutes les périodes</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr>
+              <th style="${th};padding-left:0">Période</th>
+              <th style="${th};text-align:right">Valeur</th>
+              <th style="${th};text-align:right">N-1</th>
+              <th style="${th};text-align:right;padding-right:0">Écart</th>
+            </tr></thead>
+            <tbody>${a.serie.lignes.map(l => `<tr style="${l.courant ? 'background:rgba(141,29,44,0.04)' : ''}">
+              <td style="${td};padding-left:0">${esc(l.libelle)}${l.enCours ? ` <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>` : ''}</td>
+              <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
+              <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
+              <td style="${td};text-align:right;font-variant-numeric:tabular-nums;padding-right:0;color:${l.deltaCol}">${esc(l.delta)}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${a.serie.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">${esc(a.serie.note)}</div>` : ''}
+        </div>` : ''}
+      </div>
+    </div>
   </div>`;
 }
 
