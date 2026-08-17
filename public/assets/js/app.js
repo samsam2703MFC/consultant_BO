@@ -324,7 +324,7 @@ class App {
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -2439,6 +2439,37 @@ class App {
   /* --- tâches consultants --------------------------------------------------------- */
   valsTaches(common, flat){
     const S = this.state, D = this.D, M = this.M;
+    // --- Tableau de bord du consultant : ce qui l'attend, en cinq tuiles.
+    // Une tuile ne s'allume que si elle demande une action — un cadre coloré
+    // devant un compteur à zéro use l'attention pour rien, et le jour où un
+    // vrai retard apparaît il ne se distingue plus.
+    const PT = (D.pwaTasks || {}).totals || {};
+    const enRetard = flat.filter(t => !t.t.done && t.t.due < M.TODAY).length;
+    const aNoter = flat.filter(t => !!t.t.done && (t.t.note === null || t.t.note === undefined)).length;
+    const nProjLate = (D.projects || []).filter(pr => (pr.taches || [])
+      .some(t => !t.done && t.due && t.due < M.TODAY)).length;
+    const alertes = this.margeAlerts().length;
+    const tuile = (cle, n, lib, sous, ecran, urgent) => ({
+      cle, n, lib, sous,
+      valeur: n == null ? '—' : Math.round(n).toLocaleString('fr-BE'),
+      vif: !!n && urgent,
+      col: (!!n && urgent) ? 'var(--color-primary)' : (n ? 'var(--color-text)' : 'var(--color-text-muted)'),
+      go: ecran ? () => this.setState({ screen: ecran }) : null });
+    common.tkTuiles = [
+      tuile('controler', PT.aControler || 0, 'À contrôler',
+        'tâches photographiées, en attente de note', 'controle', true),
+      tuile('sansPhoto', PT.sansPhoto || 0, 'Rendues sans photo',
+        'faites, mais rien à juger', 'controle', false),
+      tuile('mesTaches', enRetard, 'Mes tâches en retard',
+        'échéance dépassée, non rendues', null, true),
+      tuile('aNoter', aNoter, 'À noter',
+        'mes tâches rendues, pas encore évaluées', null, false),
+      tuile('projets', nProjLate, 'Projets en retard',
+        'au moins un jalon dépassé', 'projets', true),
+      tuile('marge', alertes, 'Alertes marge',
+        'ratios au-delà des seuils', 'marge', true)
+    ];
+
     common.tkWho = S.tkWho;
     common.setTkWho = e => this.setState({ tkWho: e.target.value });
     common.tkPeople = [{ val: 'all', nom: 'Tous les intervenants' }]

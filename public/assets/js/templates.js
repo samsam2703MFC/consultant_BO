@@ -1573,6 +1573,17 @@ function tplTaches(c, x){
   const { esc } = x;
   return `
   <div data-screen="taches" style="display:flex;flex-direction:column;gap:14px">
+    <!-- Tableau de bord : les compteurs d'abord, la liste ensuite. Tuiles
+         sobres, un seul chiffre par tuile, et la couleur réservée à ce qui
+         demande une action — sinon elle ne veut plus rien dire. -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px">
+      ${(c.tkTuiles || []).map(t => `<${t.go ? 'button' : 'div'} ${t.go ? x.A(t.go) : ''} ${t.go ? 'class="hv-fade"' : ''}
+        style="text-align:left;font-family:var(--font-ui);background:var(--color-surface);border:0.5px solid ${t.vif ? 'rgba(141,29,44,0.28)' : 'var(--color-border-tertiary)'};border-radius:12px;padding:14px 15px;display:flex;flex-direction:column;gap:2px;${t.go ? 'cursor:pointer;' : ''}min-width:0">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">${esc(t.lib)}</span>
+        <span style="font-family:var(--font-display);font-size:30px;line-height:1.05;color:${t.col}">${esc(t.valeur)}</span>
+        <span style="font-size:11px;font-weight:300;color:var(--color-text-muted);line-height:1.35">${esc(t.sous)}</span>
+      </${t.go ? 'button' : 'div'}>`).join('')}
+    </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <select ${x.C(c.setTkWho)} style="${selCss}">${opts(c.tkPeople, c.tkWho, o => o.val, o => esc(o.nom))}</select>
       <select ${x.C(c.setTkStore)} style="${selCss}">${opts(c.tkStores, c.tkStore, o => o.val, o => esc(o.nom))}</select>
