@@ -297,6 +297,196 @@ function wr_alert_patch(string $id): array
     return ['ok' => true];
 }
 
+/* --- Contrôle des posts Facebook -------------------------------------------
+ *
+ * Le cycle : soumission → contrôle par l'agent → décision du CEO → publication.
+ * Aucune étape n'est implicite. En particulier, l'agent ne valide ni ne refuse :
+ * il note et liste les écarts, un humain tranche et signe (`decided_by`).
+ */
+
+/** Le post tel que l'agent le lit — une seule mise en forme, partagée. */
+function fbPostPourAgent(array $row): array
+{
+    return [
+        'id' => $row['id'], 'shopId' => $row['shop_id'], 'shopNom' => $row['shop_name'] ?? null,
+        'auteur' => $row['author'], 'format' => $row['format'],
+        'message' => $row['message'], 'lien' => $row['link'],
+        'medias' => $row['medias_json'] !== null ? (json_decode($row['medias_json'], true) ?: []) : [],
+        'publierLe' => $row['planned_at'],
+    ];
+}
+
+function fbPostRow(string $id): ?array
+{
+    return Db::row('SELECT p.*, s.name AS shop_name FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id WHERE p.id = ?', [$id]);
+}
+
+/**
+ * Passe l'agent sur un post et enregistre le résultat.
+ *
+ * Les écarts sont réécrits : ils décrivent le texte courant. Les codes de règle
+ * qu'un humain avait écartés (`ignore`) sont repris tels quels — une dérogation
+ * accordée ne se rejoue pas à chaque contrôle, et elle ne pèse pas sur la note.
+ */
+function fbEnregistrerControle(array $row): array
+{
+    $ignores = array_map(fn ($r) => (string) $r['rule_code'],
+        Db::rows("SELECT rule_code FROM ceo_fb_finding WHERE post_id = ? AND status = 'ignore'", [$row['id']]));
+    $res = fbControler(fbPostPourAgent($row), $ignores);
+
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        Db::exec('DELETE FROM ceo_fb_finding WHERE post_id = ?', [$row['id']]);
+        foreach ($res['ecarts'] as $e) {
+            Db::exec('INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                [$row['id'], $e['code'], $e['regle'], $e['famille'], $e['type'], $e['gravite'], $e['message'], $e['extrait'], $e['statut'], date('Y-m-d H:i:s')]);
+        }
+        Db::exec("UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ?, agent_ran_at = ?, agent_runs = agent_runs + 1,
+                    status = CASE WHEN status = 'brouillon' THEN status ELSE 'a_valider' END WHERE id = ?",
+            [$res['note'], $res['resume'], date('Y-m-d H:i:s'), $row['id']]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+    journalAdd('Agent de contrôle', 'Contrôle', $row['shop_name'] ?? '—',
+        'Post « ' . fbTitre($row['message']) . ' » contrôlé — ' . $res['note'] . '/5 · ' . $res['resume']);
+    return $res;
+}
+
+/** Les premiers mots d'un post, pour le journal et les toasts. */
+function fbTitre(string $message): string
+{
+    $m = trim((string) preg_replace('/\s+/u', ' ', $message));
+    return mb_strlen($m, 'UTF-8') > 60 ? mb_substr($m, 0, 60, 'UTF-8') . '…' : $m;
+}
+
+/** POST /facebook/posts — soumission d'un post par un magasin. */
+function wr_fb_post_create(): array
+{
+    $b = body();
+    $message = trim((string) ($b['message'] ?? ''));
+    if ($message === '') { http_response_code(422); return ['error' => 'message vide']; }
+    $shopId = ($b['magasinId'] ?? '') !== '' ? (string) $b['magasinId'] : null;
+    if ($shopId !== null && Db::row('SELECT id FROM ceo_shop WHERE id = ?', [$shopId]) === null) {
+        http_response_code(422); return ['error' => 'magasin inconnu'];
+    }
+    // Un brouillon reste au magasin : l'agent ne relit que ce qui est soumis.
+    $statut = ($b['statut'] ?? 'a_controler') === 'brouillon' ? 'brouillon' : 'a_controler';
+    $id = $b['id'] ?? ('fb' . substr((string) round(microtime(true) * 1000), -8));
+    Db::exec('INSERT INTO ceo_fb_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status) VALUES (?,?,?,?,?,?,?,?,?,?)', [
+        $id, $shopId, (string) ($b['auteur'] ?? 'Franchisé'), (string) ($b['format'] ?? 'Photo'),
+        $message, ($b['lien'] ?? '') !== '' ? (string) $b['lien'] : null,
+        isset($b['medias']) ? json_encode($b['medias'], JSON_UNESCAPED_UNICODE) : null,
+        $b['publierLe'] ?? null, date('Y-m-d H:i:s'), $statut,
+    ]);
+    $row = fbPostRow($id);
+    journalAdd((string) ($b['auteur'] ?? 'Franchisé'), 'Post Facebook', $row['shop_name'] ?? '—',
+        'Post « ' . fbTitre($message) . ' » ' . ($statut === 'brouillon' ? 'enregistré en brouillon' : 'soumis au contrôle'));
+    $res = $statut === 'brouillon' ? null : fbEnregistrerControle($row);
+    return ['ok' => true, 'id' => $id, 'controle' => $res];
+}
+
+/** POST /facebook/posts/{id}/controle — (re)passer l'agent, après correction. */
+function wr_fb_controle(string $id): array
+{
+    $row = fbPostRow($id);
+    if ($row === null) { http_response_code(404); return ['error' => 'post inconnu']; }
+    if ($row['status'] === 'publie') { http_response_code(409); return ['error' => 'post déjà publié']; }
+    return ['ok' => true, 'controle' => fbEnregistrerControle($row)];
+}
+
+/**
+ * PATCH /facebook/posts/{id} — la décision du CEO, ou la publication.
+ *
+ * Deux corps possibles, jamais mélangés :
+ *  - { note, decision: valide|refuse, famille, type, commentaire, par }
+ *  - { statut: 'publie', fbId? } — uniquement depuis un post validé.
+ */
+function wr_fb_decision(string $id): array
+{
+    $b = body();
+    $row = fbPostRow($id);
+    if ($row === null) { http_response_code(404); return ['error' => 'post inconnu']; }
+    $mag = $row['shop_name'] ?? '—';
+    $titre = fbTitre($row['message']);
+
+    if (($b['statut'] ?? '') === 'publie') {
+        if ($row['status'] !== 'valide') {
+            http_response_code(409);
+            return ['error' => 'seul un post validé peut être marqué publié'];
+        }
+        Db::exec("UPDATE ceo_fb_post SET status = 'publie', published_at = ?, fb_post_id = ? WHERE id = ?",
+            [date('Y-m-d H:i:s'), ($b['fbId'] ?? '') !== '' ? (string) $b['fbId'] : null, $id]);
+        journalAdd((string) ($b['par'] ?? 'CEO'), 'Publication', $mag, 'Post « ' . $titre . ' » marqué publié');
+        return ['ok' => true];
+    }
+
+    if ($row['status'] === 'publie') { http_response_code(409); return ['error' => 'post déjà publié']; }
+
+    $decision = (string) ($b['decision'] ?? '');
+    if ($decision !== 'valide' && $decision !== 'refuse') {
+        http_response_code(422); return ['error' => 'decision attendue : valide ou refuse'];
+    }
+    $note = (int) ($b['note'] ?? 0);
+    if ($note < 1 || $note > 5) { http_response_code(422); return ['error' => 'note hors échelle (1..5)']; }
+
+    // Sous le seuil, ou en cas de refus, la famille et le type sont obligatoires :
+    // un franchisé à qui l'on renvoie un post doit savoir quoi corriger, et six
+    // mois plus tard le suivi doit pouvoir se lire autrement qu'en « Autre ».
+    $seuil = fbSeuil();
+    $fam = trim((string) ($b['famille'] ?? ''));
+    $typ = trim((string) ($b['type'] ?? ''));
+    if (($decision === 'refuse' || $note < $seuil) && ($fam === '' || $typ === '')) {
+        http_response_code(422);
+        return ['error' => 'famille et type obligatoires en cas de refus ou sous la note de ' . $seuil];
+    }
+
+    $par = (string) ($b['par'] ?? 'CEO');
+    Db::exec('UPDATE ceo_fb_post SET status = ?, note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = ? WHERE id = ?', [
+        $decision === 'valide' ? 'valide' : 'refuse', $note,
+        $fam !== '' ? $fam : null, $typ !== '' ? $typ : null,
+        ($b['commentaire'] ?? '') !== '' ? (string) $b['commentaire'] : null,
+        date('Y-m-d H:i:s'), $par, $id,
+    ]);
+    $ecart = $fam !== '' ? ' — ' . $fam . ' · ' . $typ : '';
+    journalAdd($par, $decision === 'valide' ? 'Validation' : 'Refus', $mag,
+        'Post « ' . $titre . ' » ' . ($decision === 'valide' ? 'validé' : 'refusé') . ' ' . $note . '/5'
+        . $ecart . ($row['agent_note'] !== null && (int) $row['agent_note'] !== $note
+            ? ' (agent : ' . (int) $row['agent_note'] . '/5)' : ''));
+    return ['ok' => true];
+}
+
+/**
+ * PATCH /facebook/posts/{id}/ecarts/{ecartId} — écarter ou rouvrir un écart.
+ *
+ * Écarter, c'est accorder une dérogation : l'écart reste visible, sort du
+ * calcul de la note, et la note de l'agent est recalculée sur place — sinon
+ * l'écran afficherait une note qui ne correspond plus à ce qu'il montre.
+ */
+function wr_fb_ecart_patch(string $postId, int $ecartId): array
+{
+    $b = body();
+    $e = Db::row('SELECT * FROM ceo_fb_finding WHERE id = ? AND post_id = ?', [$ecartId, $postId]);
+    if ($e === null) { http_response_code(404); return ['error' => 'écart inconnu']; }
+    $statut = (string) ($b['statut'] ?? '');
+    if (!in_array($statut, ['ouvert', 'ignore', 'corrige'], true)) {
+        http_response_code(422); return ['error' => 'statut attendu : ouvert, ignore ou corrige'];
+    }
+    Db::exec('UPDATE ceo_fb_finding SET status = ? WHERE id = ?', [$statut, $ecartId]);
+
+    $row = fbPostRow($postId);
+    $ecarts = fbEcartsDuPost($postId);
+    $note = fbNote($ecarts);
+    $resume = fbResume($note, $ecarts);
+    Db::exec('UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $resume, $postId]);
+    journalAdd((string) ($b['par'] ?? 'CEO'), 'Contrôle', $row['shop_name'] ?? '—',
+        'Écart « ' . $e['type'] . ' » ' . ($statut === 'ignore' ? 'écarté' : ($statut === 'corrige' ? 'marqué corrigé' : 'rouvert'))
+        . ' sur « ' . fbTitre($row['message']) . ' » — note de l\'agent ' . $note . '/5');
+    return ['ok' => true, 'note' => $note, 'resume' => $resume];
+}
+
 /** PUT /parametres/{key} — seuils, modèles d'email, templates de projet. */
 function wr_param_put(string $key): array
 {

@@ -221,6 +221,11 @@ function journal(): array
 {
     return [
         ['2026-07-31 08:15', 'Système', 'Alerte', '—', 'Magasin LIE-01 en sous-performance pour le 3e mois consécutif — food-cost 36,1 %'],
+        ['2026-07-31 07:55', 'Agent de contrôle', 'Contrôle', 'Waterloo — Centre', 'Post « Parmis nos clients de Waterloo, beaucoup nous demandent la tarte… » contrôlé — 3/5 · 3 écarts — plus grave : mineur'],
+        ['2026-07-30 19:45', 'Agent de contrôle', 'Contrôle', 'Namur — Marché', 'Post « Nouveauté chez L\'Atelier by Namur : notre pain aux graines… » contrôlé — 2/5 · 1 écart — plus grave : majeur'],
+        ['2026-07-29 07:20', 'CEO', 'Refus', 'Liège — Le Carré', 'Post « GROSSE PROMO -50% SUR TOUTE LA PATISSERIE CE WEEK-END !!!… » refusé 1/5 — Mentions légales · Conditions de promotion absentes'],
+        ['2026-07-28 08:15', 'CEO', 'Refus', 'Louvain-la-Neuve — Grand-Place', 'Post « Les étudiants rentrent, les cookies aussi. Trois recettes… » refusé 2/5 — Charte de marque · Magasin non identifié'],
+        ['2026-07-21 09:04', 'CEO', 'Publication', 'Bruxelles — Châtelain', 'Post « Nouvelle fournée de pistolets au levain, sortie du four à 7 h… » marqué publié'],
         ['2026-07-30 17:40', 'CEO', 'Statut', 'Refonte planning équipes', 'Statut passé de « En cours » à « En retard » (jalon Modèle & outils dépassé)'],
         ['2026-07-30 09:12', 'Système', 'Relance', 'Programme fidélité PWA v2', 'Relance J+1 envoyée à AtelierTech — tâche « Sprint 2 — carte de fidélité »'],
         ['2026-07-29 16:05', 'CEO', 'Coût', 'Ouverture Knokke', 'Coût ajouté : Agencement Studio Nord — acompte 2, 12 400 €'],
@@ -276,6 +281,152 @@ function products(): array
         ['sn3', 'Focaccia mozzarella', 'Snacking salé', 6900, 5.60, 2.63, 1.14, 5], ['sn4', 'Wrap végétarien', 'Snacking salé', 3100, 5.90, 3.01, 0.93, 3],
         ['bo1', 'Café filtre', 'Boissons', 34500, 2.40, 0.31, 1.03, 9], ['bo2', 'Cappuccino', 'Boissons', 21700, 3.30, 0.62, 1.08, 9],
         ['bo3', 'Jus pressé orange', 'Boissons', 7800, 3.90, 1.68, 0.96, 6],
+    ];
+}
+
+/**
+ * Posts Facebook de démonstration, du brouillon soumis au post publié.
+ *
+ * Les écarts (`ecarts`) ne sont pas inventés : ils ont été produits par l'agent
+ * lui-même (`src/fbcontrole.php`) sur ces mêmes textes, puis figés ici. Un jeu
+ * de démonstration qui montrerait des écarts que le moteur ne trouve pas — ou
+ * l'inverse — ferait douter de l'agent avant même la première vraie relecture.
+ * En reprenant un texte, repassez l'agent : `POST /facebook/posts/{id}/controle`.
+ *
+ * `fb11` est volontairement laissé « à contrôler », sans écart en base : c'est
+ * l'état d'un post qui vient d'arriver, et le bouton « Contrôler » de l'écran
+ * montre l'agent travailler pour de vrai.
+ */
+function fbPosts(): array
+{
+    return [
+    ['id' => 'fb01', 'magasin' => 'cha', 'auteur' => 'M. Lambert', 'format' => 'Photo',
+        'message' => 'Nouvelle fournée de pistolets au levain, sortie du four à 7 h ce matin à L\'Atelier by Châtelain. Notre boulanger Yassine a repris la recette de la maison mère : 18 heures de pousse lente, farine belge de Wallonie, croûte fine et mie serrée. Passez avant midi, il en reste rarement l\'après-midi. #latelierby #chatelain #boulangerieartisanale',
+        'lien' => null, 'medias' => [['nom' => 'pistolets-levain.jpg', 'type' => 'image', 'alt' => 'Pistolets au levain sortant du four, en gros plan', 'largeur' => 1600, 'hauteur' => 1200]],
+        'publierLe' => '2026-07-21 09:00:00', 'soumisLe' => '2026-07-20 08:40:00', 'statut' => 'publie',
+        'agentNote' => 5, 'agentResume' => 'Aucun écart détecté — conforme à la charte.', 'agentLe' => '2026-07-20 08:40:00', 'agentPassages' => 1,
+        'note' => 5, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => '2026-07-20 17:10:00', 'decidePar' => 'CEO',
+        'publieLe' => '2026-07-21 09:04:00', 'fbId' => '1122334455_9001',
+        'ecarts' => []],
+    ['id' => 'fb02', 'magasin' => 'lie', 'auteur' => 'V. Martin', 'format' => 'Photo',
+        'message' => 'GROSSE PROMO -50% SUR TOUTE LA PATISSERIE CE WEEK-END !!! Venez vite au Carré, c\'est de la folie !!! Le meilleur prix de Liège, imbattable !!!',
+        'lien' => null, 'medias' => [['nom' => 'promo-week-end.jpg', 'type' => 'image', 'alt' => null, 'largeur' => 720, 'hauteur' => 720]],
+        'publierLe' => '2026-07-29 08:00:00', 'soumisLe' => '2026-07-28 21:15:00', 'statut' => 'refuse',
+        'agentNote' => 1, 'agentResume' => '8 écarts — plus grave : critique · Charte de marque (2) · Mentions légales (2) · Rédaction (2) · Visuel (2)', 'agentLe' => '2026-07-28 21:15:00', 'agentPassages' => 1,
+        'note' => 1, 'famille' => 'Mentions légales', 'type' => 'Conditions de promotion absentes',
+        'commentaire' => 'Reprends le visuel avec les dates de validité et la mention « dans la limite des stocks », et écris la marque en entier. On ne publie pas de -50 % sans période.', 'decideLe' => '2026-07-29 07:20:00', 'decidePar' => 'CEO',
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'marque-absente', 'regle' => 'Marque citée', 'famille' => 'Charte de marque', 'type' => 'Marque absente', 'gravite' => 3, 'message' => 'La marque « L\'Atelier by » n\'apparaît pas dans le message.', 'extrait' => null],
+            ['code' => 'hashtag-marque', 'regle' => 'Hashtag de marque', 'famille' => 'Charte de marque', 'type' => 'Hashtag de marque absent', 'gravite' => 1, 'message' => 'Le hashtag #latelierby est absent.', 'extrait' => null],
+            ['code' => 'promo-conditions', 'regle' => 'Conditions de promotion', 'famille' => 'Mentions légales', 'type' => 'Conditions de promotion absentes', 'gravite' => 3, 'message' => 'Promotion annoncée sans période de validité ni renvoi aux conditions.', 'extrait' => 'promo'],
+            ['code' => 'superlatif', 'regle' => 'Superlatif non justifié', 'famille' => 'Mentions légales', 'type' => 'Superlatif non justifié', 'gravite' => 1, 'message' => 'Superlatif comparatif à retirer ou à prouver.', 'extrait' => 'le meilleur'],
+            ['code' => 'majuscules', 'regle' => 'Majuscules excessives', 'famille' => 'Rédaction', 'type' => 'Majuscules excessives', 'gravite' => 1, 'message' => '44 % de capitales, maximum 30 %.', 'extrait' => null],
+            ['code' => 'ponctuation', 'regle' => 'Ponctuation excessive', 'famille' => 'Rédaction', 'type' => 'Ponctuation excessive', 'gravite' => 1, 'message' => '9 points d\'exclamation, maximum 3.', 'extrait' => null],
+            ['code' => 'visuel-alt', 'regle' => 'Texte alternatif', 'famille' => 'Visuel', 'type' => 'Texte alternatif absent', 'gravite' => 1, 'message' => '1 visuel sans texte alternatif.', 'extrait' => null],
+            ['code' => 'visuel-resolution', 'regle' => 'Résolution du visuel', 'famille' => 'Visuel', 'type' => 'Résolution insuffisante', 'gravite' => 1, 'message' => 'Largeur sous 1080 px : promo-week-end.jpg — 720 px.', 'extrait' => null],
+        ]],
+    ['id' => 'fb03', 'magasin' => 'gnd', 'auteur' => 'J. De Smet', 'format' => 'Carrousel',
+        'message' => 'Grand concours de rentrée à L\'Atelier by Korenmarkt ! 5 paniers gourmands à gagner : likez la publication, commentez votre viennoiserie préférée et taguez deux amis. Tirage au sort le 15 septembre en boutique, place du Korenmarkt. #latelierby #gand #concours',
+        'lien' => null, 'medias' => [['nom' => 'panier-gourmand-1.jpg', 'type' => 'image', 'alt' => 'Panier gourmand garni de viennoiseries', 'largeur' => 1440, 'hauteur' => 1440], ['nom' => 'panier-gourmand-2.jpg', 'type' => 'image', 'alt' => 'Comptoir de la boutique de Gand', 'largeur' => 1440, 'hauteur' => 1440]],
+        'publierLe' => '2026-08-03 11:30:00', 'soumisLe' => '2026-07-30 16:05:00', 'statut' => 'a_valider',
+        'agentNote' => 1, 'agentResume' => '1 écart — plus grave : critique · Mentions légales', 'agentLe' => '2026-07-30 16:05:00', 'agentPassages' => 1,
+        'note' => null, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => null, 'decidePar' => null,
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'concours-reglement', 'regle' => 'Règlement de concours', 'famille' => 'Mentions légales', 'type' => 'Règlement de concours absent', 'gravite' => 3, 'message' => 'Jeu-concours sans règlement cité ni lien vers celui-ci.', 'extrait' => 'concours'],
+        ]],
+    ['id' => 'fb04', 'magasin' => 'fla', 'auteur' => 'S. Peeters', 'format' => 'Photo',
+        'message' => 'Le samedi matin à L\'Atelier by Flagey, c\'est brunch : tartines de pain de campagne, œufs de la ferme de Rebecq et jus pressé devant vous. On vous garde une table côté vitrine, place Flagey, dès 8 h 30.',
+        'lien' => 'https://www.atelierby.be/flagey', 'medias' => [['nom' => 'brunch-flagey.jpg', 'type' => 'image', 'alt' => null, 'largeur' => 1350, 'hauteur' => 1080]],
+        'publierLe' => '2026-08-01 10:00:00', 'soumisLe' => '2026-07-29 12:20:00', 'statut' => 'valide',
+        'agentNote' => 4, 'agentResume' => '2 écarts — plus grave : mineur · Charte de marque · Visuel', 'agentLe' => '2026-07-29 12:20:00', 'agentPassages' => 1,
+        'note' => 4, 'famille' => null, 'type' => null,
+        'commentaire' => 'Bon post. Ajoute le hashtag du réseau et le texte alternatif la prochaine fois — validé pour cette fois.', 'decideLe' => '2026-07-29 18:02:00', 'decidePar' => 'CEO',
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'hashtag-marque', 'regle' => 'Hashtag de marque', 'famille' => 'Charte de marque', 'type' => 'Hashtag de marque absent', 'gravite' => 1, 'message' => 'Le hashtag #latelierby est absent.', 'extrait' => null],
+            ['code' => 'visuel-alt', 'regle' => 'Texte alternatif', 'famille' => 'Visuel', 'type' => 'Texte alternatif absent', 'gravite' => 1, 'message' => '1 visuel sans texte alternatif.', 'extrait' => null],
+        ]],
+    ['id' => 'fb05', 'magasin' => 'nam', 'auteur' => 'A. Rousseau', 'format' => 'Texte',
+        'message' => 'Nouveauté chez L\'Atelier by Namur : notre pain aux graines germées, sans sucre ajouté, parfait pour une cure détox de rentrée. Il est bon pour la santé et il tient tout le petit-déjeuner. À découvrir au Marché dès lundi. #latelierby #namur',
+        'lien' => null, 'medias' => [],
+        'publierLe' => '2026-08-04 09:15:00', 'soumisLe' => '2026-07-30 19:45:00', 'statut' => 'a_valider',
+        'agentNote' => 2, 'agentResume' => '1 écart — plus grave : majeur · Mentions légales', 'agentLe' => '2026-07-30 19:45:00', 'agentPassages' => 1,
+        'note' => null, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => null, 'decidePar' => null,
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'allegation-sante', 'regle' => 'Allégation santé', 'famille' => 'Mentions légales', 'type' => 'Allégation santé', 'gravite' => 2, 'message' => 'Allégation santé à retirer ou à justifier réglementairement.', 'extrait' => 'détox'],
+        ]],
+    ['id' => 'fb06', 'magasin' => 'wat', 'auteur' => 'C. Dubois', 'format' => 'Photo',
+        'message' => 'Parmis nos clients de Waterloo, beaucoup nous demandent la tarte au sucre de L\'ATELIER BY. Elle revient samedi, aujourdhui on prend les commandes. #latelierby',
+        'lien' => null, 'medias' => [['nom' => 'tarte-au-sucre.jpg', 'type' => 'image', 'alt' => 'Tarte au sucre entière sur une planche en bois', 'largeur' => 1280, 'hauteur' => 960]],
+        'publierLe' => '2026-08-02 14:00:00', 'soumisLe' => '2026-07-31 07:55:00', 'statut' => 'a_valider',
+        'agentNote' => 3, 'agentResume' => '3 écarts — plus grave : mineur · Charte de marque · Rédaction (2)', 'agentLe' => '2026-07-31 07:55:00', 'agentPassages' => 1,
+        'note' => null, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => null, 'decidePar' => null,
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'marque-casse', 'regle' => 'Casse officielle de la marque', 'famille' => 'Charte de marque', 'type' => 'Casse de marque', 'gravite' => 1, 'message' => 'La marque n\'est pas écrite « L\'Atelier by ».', 'extrait' => 'L\'ATELIER BY'],
+            ['code' => 'lexique', 'regle' => 'Fautes du lexique', 'famille' => 'Rédaction', 'type' => 'Faute de langue', 'gravite' => 1, 'message' => '« parmis » → « parmi ».', 'extrait' => 'parmis'],
+            ['code' => 'lexique', 'regle' => 'Fautes du lexique', 'famille' => 'Rédaction', 'type' => 'Faute de langue', 'gravite' => 1, 'message' => '« aujourdhui » → « aujourd\'hui ».', 'extrait' => 'aujourdhui'],
+        ]],
+    ['id' => 'fb07', 'magasin' => 'anv', 'auteur' => 'J. De Smet', 'format' => 'Lien',
+        'message' => 'Notre chef pâtissier d\'Anvers — Meir est passé chez Radio 2 pour parler du speculoos maison de L\'Atelier by. L\'interview complète est à écouter ici, ça vaut le détour. #latelierby #anvers',
+        'lien' => 'http://blog-gourmand-anvers.be/interview-speculoos', 'medias' => [],
+        'publierLe' => '2026-08-05 12:00:00', 'soumisLe' => '2026-07-30 10:10:00', 'statut' => 'a_valider',
+        'agentNote' => 2, 'agentResume' => '2 écarts — plus grave : majeur · Diffusion (2)', 'agentLe' => '2026-07-30 10:10:00', 'agentPassages' => 1,
+        'note' => null, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => null, 'decidePar' => null,
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'lien-http', 'regle' => 'Lien sécurisé', 'famille' => 'Diffusion', 'type' => 'Lien non sécurisé', 'gravite' => 2, 'message' => 'Lien non sécurisé.', 'extrait' => 'http://blog-gourmand-anvers.be/interview-speculoos'],
+            ['code' => 'lien-domaine', 'regle' => 'Domaine autorisé', 'famille' => 'Diffusion', 'type' => 'Domaine non autorisé', 'gravite' => 1, 'message' => 'Domaine « blog-gourmand-anvers.be » hors liste autorisée.', 'extrait' => 'http://blog-gourmand-anvers.be/interview-speculoos'],
+        ]],
+    ['id' => 'fb08', 'magasin' => 'lln', 'auteur' => 'C. Dubois', 'format' => 'Photo',
+        'message' => 'Les étudiants rentrent, les cookies aussi. Trois recettes chez L\'Atelier by cette semaine : chocolat noir 70 %, beurre salé et un nouveau spéculoos-noisette. Fournée toutes les deux heures jusqu\'à 18 h. #latelierby #cookies #rentree',
+        'lien' => null, 'medias' => [['nom' => 'cookies-rentree.jpg', 'type' => 'image', 'alt' => 'Trois cookies alignés sur du papier cuisson', 'largeur' => 1440, 'hauteur' => 1080]],
+        'publierLe' => '2026-07-28 17:00:00', 'soumisLe' => '2026-07-27 18:30:00', 'statut' => 'refuse',
+        'agentNote' => 2, 'agentResume' => '1 écart — plus grave : majeur · Charte de marque', 'agentLe' => '2026-07-27 18:30:00', 'agentPassages' => 1,
+        'note' => 2, 'famille' => 'Charte de marque', 'type' => 'Magasin non identifié',
+        'commentaire' => 'Le post pourrait venir de n\'importe quel magasin du réseau. Nomme Louvain-la-Neuve et la Grand-Place, sinon l\'ancrage local ne sert à rien.', 'decideLe' => '2026-07-28 08:15:00', 'decidePar' => 'CEO',
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'magasin-absent', 'regle' => 'Ancrage local', 'famille' => 'Charte de marque', 'type' => 'Magasin non identifié', 'gravite' => 2, 'message' => 'Ni la ville ni le quartier de « Louvain-la-Neuve — Grand-Place » n\'apparaissent dans le message.', 'extrait' => null],
+        ]],
+    ['id' => 'fb09', 'magasin' => 'ucc', 'auteur' => 'S. Peeters', 'format' => 'Photo',
+        'message' => 'Rentrée des classes à Uccle : L\'Atelier by Bascule prépare les boîtes à tartines. Sandwich du jour, fruit et biscuit maison pour 6,50 € à emporter, tous les matins de 7 h à 10 h à la Bascule. Commandez la veille par téléphone, c\'est prêt à l\'heure. #latelierby #uccle',
+        'lien' => 'https://www.atelierby.be/uccle/boite-a-tartines', 'medias' => [['nom' => 'boite-a-tartines.jpg', 'type' => 'image', 'alt' => 'Boîte à tartines garnie posée sur un comptoir', 'largeur' => 1620, 'hauteur' => 1080]],
+        'publierLe' => '2026-08-06 09:30:00', 'soumisLe' => '2026-07-30 09:05:00', 'statut' => 'valide',
+        'agentNote' => 5, 'agentResume' => 'Aucun écart détecté — conforme à la charte.', 'agentLe' => '2026-07-30 09:05:00', 'agentPassages' => 1,
+        'note' => 5, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => '2026-07-30 14:40:00', 'decidePar' => 'CEO',
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => []],
+    ['id' => 'fb10', 'magasin' => 'nam', 'auteur' => 'A. Rousseau', 'format' => 'Photo',
+        'message' => 'Nouvelle fournée de pistolets au levain, sortie du four à 7 h ce matin à L\'Atelier by Châtelain. Notre boulanger Yassine a repris la recette de la maison mère : 18 heures de pousse lente, farine belge de Wallonie, croûte fine et mie serrée. Passez avant midi, il en reste rarement l\'après-midi. #latelierby #chatelain #boulangerieartisanale',
+        'lien' => null, 'medias' => [['nom' => 'pistolets-namur.jpg', 'type' => 'image', 'alt' => 'Pistolets au levain en corbeille', 'largeur' => 1600, 'hauteur' => 1200]],
+        'publierLe' => '2026-08-07 09:00:00', 'soumisLe' => '2026-07-31 06:20:00', 'statut' => 'a_valider',
+        'agentNote' => 2, 'agentResume' => '2 écarts — plus grave : majeur · Charte de marque · Diffusion', 'agentLe' => '2026-07-31 06:20:00', 'agentPassages' => 1,
+        'note' => null, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => null, 'decidePar' => null,
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => [
+            ['code' => 'magasin-absent', 'regle' => 'Ancrage local', 'famille' => 'Charte de marque', 'type' => 'Magasin non identifié', 'gravite' => 2, 'message' => 'Ni la ville ni le quartier de « Namur — Marché » n\'apparaissent dans le message.', 'extrait' => null],
+            ['code' => 'doublon', 'regle' => 'Publication dupliquée', 'famille' => 'Diffusion', 'type' => 'Publication dupliquée', 'gravite' => 1, 'message' => 'Texte identique à 100 % à un post de Bruxelles — Châtelain.', 'extrait' => null],
+        ]],
+    ['id' => 'fb11', 'magasin' => 'kno', 'auteur' => 'L. Vermeulen', 'format' => 'Événement',
+        'message' => 'Save the date : L\'Atelier by ouvre Lippenslaan à Knokke le 3 octobre. Café offert toute la journée d\'ouverture et visite de l\'atelier de production toutes les heures. #latelierby #knokke #ouverture',
+        'lien' => 'https://www.atelierby.be/knokke', 'medias' => [],
+        'publierLe' => '2026-08-10 05:30:00', 'soumisLe' => '2026-07-31 05:40:00', 'statut' => 'a_controler',
+        'agentNote' => null, 'agentResume' => null, 'agentLe' => null, 'agentPassages' => 0,
+        'note' => null, 'famille' => null, 'type' => null,
+        'commentaire' => null, 'decideLe' => null, 'decidePar' => null,
+        'publieLe' => null, 'fbId' => null,
+        'ecarts' => []],
     ];
 }
 
@@ -429,6 +580,21 @@ function buildStatements(): array
         $sql[] = "INSERT INTO ceo_product_month_sales VALUES (" . q($id) . ", 2026, 7, $vol, $mags, $prix, $cout);";
         $volN1 = (int) round($vol / $tend);
         $sql[] = "INSERT INTO ceo_product_month_sales VALUES (" . q($id) . ", 2025, 7, $volN1, $mags, $prix, $cout);";
+    }
+
+    // --- posts Facebook soumis au contrôle + écarts relevés par l'agent
+    foreach (fbPosts() as $p) {
+        $sql[] = 'INSERT INTO ceo_fb_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status, agent_note, agent_summary, agent_ran_at, agent_runs, note, decision_famille, decision_type, decision_comment, decided_at, decided_by, published_at, fb_post_id) VALUES (' .
+            q($p['id']) . ', ' . q($p['magasin']) . ', ' . q($p['auteur']) . ', ' . q($p['format']) . ', ' . q($p['message']) . ', ' . q($p['lien']) . ', ' .
+            ($p['medias'] ? j($p['medias']) : 'NULL') . ', ' . q($p['publierLe']) . ', ' . q($p['soumisLe']) . ', ' . q($p['statut']) . ', ' .
+            n($p['agentNote']) . ', ' . q($p['agentResume']) . ', ' . q($p['agentLe']) . ', ' . $p['agentPassages'] . ', ' .
+            n($p['note']) . ', ' . q($p['famille']) . ', ' . q($p['type']) . ', ' . q($p['commentaire']) . ', ' . q($p['decideLe']) . ', ' . q($p['decidePar']) . ', ' .
+            q($p['publieLe']) . ', ' . q($p['fbId']) . ');';
+        foreach ($p['ecarts'] as $e) {
+            $sql[] = 'INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (' .
+                q($p['id']) . ', ' . q($e['code']) . ', ' . q($e['regle']) . ', ' . q($e['famille']) . ', ' . q($e['type']) . ', ' . $e['gravite'] . ', ' .
+                q($e['message']) . ', ' . q($e['extrait']) . ", 'ouvert', " . q($p['agentLe']) . ');';
+        }
     }
 
     // --- liens de partage du panel consultant (démo — table mac_report_share)

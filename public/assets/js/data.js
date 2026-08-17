@@ -35,6 +35,147 @@ export const SIGNALEMENT={
   {nom:'Qualité de service',types:['Injoignable','Compte rendu absent','Consigne non suivie']},
   {nom:'Budget',types:['Dépassement','Non justifié']},
   {nom:'Autre',types:['À préciser']}]};
+// Contrôle des posts Facebook — pack de règles de l'agent, en mode démonstration.
+//
+// En mode API il vient de `/referentiels/facebook-regles` (réglage
+// `ceo_app_setting.fbControle`). Comme SIGNALEMENT ci-dessus, c'est la SEULE
+// copie côté client : ni app.js ni templates.js ne redéclarent un libellé, une
+// gravité ou une famille.
+//
+// Les notes ne sont PAS redéfinies ici : l'agent note sur les cinq niveaux de
+// SIGNALEMENT. Un « majeur » veut dire la même chose sur un livrable de
+// consultant et sur un post de franchisé.
+export const FB_CONTROLE={
+ seuil:4,
+ familles:[
+  {nom:'Charte de marque',types:['Marque absente','Casse de marque','Hashtag de marque absent','Magasin non identifié','Ton non conforme']},
+  {nom:'Mentions légales',types:['Conditions de promotion absentes','Règlement de concours absent','Allégation santé','Superlatif non justifié']},
+  {nom:'Rédaction',types:['Faute de langue','Message trop court','Message trop long','Majuscules excessives','Ponctuation excessive','Hashtags excessifs']},
+  {nom:'Visuel',types:['Visuel absent','Texte alternatif absent','Résolution insuffisante']},
+  {nom:'Diffusion',types:['Créneau interdit','Lien non sécurisé','Domaine non autorisé','Publication dupliquée']},
+  {nom:'Autre',types:['À préciser']}],
+ regles:[
+  {code:'marque-absente',nom:'Marque citée',famille:'Charte de marque',type:'Marque absente',gravite:3,actif:true,aide:'Le post doit nommer la marque du réseau.'},
+  {code:'marque-casse',nom:'Casse officielle de la marque',famille:'Charte de marque',type:'Casse de marque',gravite:1,actif:true,aide:'La marque s\'écrit « L\'Atelier by » — ni tout en capitales, ni sans apostrophe.'},
+  {code:'hashtag-marque',nom:'Hashtag de marque',famille:'Charte de marque',type:'Hashtag de marque absent',gravite:1,actif:true,aide:'Le hashtag du réseau rend les posts des magasins retrouvables.'},
+  {code:'magasin-absent',nom:'Ancrage local',famille:'Charte de marque',type:'Magasin non identifié',gravite:2,actif:true,aide:'Un post de magasin doit dire de quel magasin il parle (ville ou quartier).'},
+  {code:'promo-conditions',nom:'Conditions de promotion',famille:'Mentions légales',type:'Conditions de promotion absentes',gravite:3,actif:true,aide:'Une promotion annoncée sans période de validité engage le réseau.'},
+  {code:'concours-reglement',nom:'Règlement de concours',famille:'Mentions légales',type:'Règlement de concours absent',gravite:3,actif:true,aide:'Un jeu-concours exige un règlement accessible.'},
+  {code:'allegation-sante',nom:'Allégation santé',famille:'Mentions légales',type:'Allégation santé',gravite:2,actif:true,aide:'Les allégations nutritionnelles et de santé sont encadrées (règlement CE 1924/2006).'},
+  {code:'superlatif',nom:'Superlatif non justifié',famille:'Mentions légales',type:'Superlatif non justifié',gravite:1,actif:true,aide:'Un superlatif comparatif doit être prouvé, sinon il relève de la publicité trompeuse.'},
+  {code:'longueur-min',nom:'Message trop court',famille:'Rédaction',type:'Message trop court',gravite:1,actif:true,aide:'Sous ce seuil, le post ne porte pas de message.'},
+  {code:'longueur-max',nom:'Message trop long',famille:'Rédaction',type:'Message trop long',gravite:1,actif:true,aide:'Au-delà, Facebook replie le texte et le message se perd.'},
+  {code:'majuscules',nom:'Majuscules excessives',famille:'Rédaction',type:'Majuscules excessives',gravite:1,actif:true,aide:'Écrire en capitales est hors charte de ton.'},
+  {code:'ponctuation',nom:'Ponctuation excessive',famille:'Rédaction',type:'Ponctuation excessive',gravite:1,actif:true,aide:'Trois points d\'exclamation suffisent rarement à convaincre.'},
+  {code:'hashtags-nb',nom:'Hashtags excessifs',famille:'Rédaction',type:'Hashtags excessifs',gravite:1,actif:true,aide:'Au-delà, la portée baisse et le post fait « spam ».'},
+  {code:'lexique',nom:'Fautes du lexique',famille:'Rédaction',type:'Faute de langue',gravite:1,actif:true,aide:'Liste de fautes fréquentes — à compléter au fil des relectures.'},
+  {code:'visuel-absent',nom:'Visuel attendu',famille:'Visuel',type:'Visuel absent',gravite:2,actif:true,aide:'Un post annoncé en photo, carrousel ou vidéo doit porter son média.'},
+  {code:'visuel-alt',nom:'Texte alternatif',famille:'Visuel',type:'Texte alternatif absent',gravite:1,actif:true,aide:'Sans texte alternatif, le visuel est invisible aux lecteurs d\'écran.'},
+  {code:'visuel-resolution',nom:'Résolution du visuel',famille:'Visuel',type:'Résolution insuffisante',gravite:1,actif:true,aide:'En dessous, Facebook recompresse et le visuel devient flou.'},
+  {code:'creneau',nom:'Créneau de publication',famille:'Diffusion',type:'Créneau interdit',gravite:1,actif:true,aide:'Hors de cette plage, le post sort sans audience et sans modération disponible.'},
+  {code:'lien-http',nom:'Lien sécurisé',famille:'Diffusion',type:'Lien non sécurisé',gravite:2,actif:true,aide:'Un lien en http:// est signalé « non sécurisé » aux clients.'},
+  {code:'lien-domaine',nom:'Domaine autorisé',famille:'Diffusion',type:'Domaine non autorisé',gravite:1,actif:true,aide:'Les liens sortants hors réseau se valident au cas par cas.'},
+  {code:'doublon',nom:'Publication dupliquée',famille:'Diffusion',type:'Publication dupliquée',gravite:1,actif:true,aide:'Le même texte publié par plusieurs magasins se voit — et se pénalise.'}]};
+// Posts de démonstration, du post publié au post qui vient d'arriver.
+//
+// Les écarts viennent de l'agent réel (`src/fbcontrole.php`) passé sur ces
+// mêmes textes, pas d'une écriture à la main : la maquette montre donc ce que
+// le moteur trouve vraiment. `fb11` est laissé « à contrôler » sans écart —
+// c'est l'état d'un post non encore relu.
+//
+// Le contrôle tourne côté serveur (aucune règle n'est dupliquée en JavaScript) :
+// en mode démonstration, le bouton « Contrôler » n'a donc rien à appeler et
+// l'écran le dit.
+export const FB_POSTS=[
+ {id:'fb01',magasinId:'cha',magasin:'Bruxelles — Châtelain',auteur:'M. Lambert',format:'Photo',
+  message:'Nouvelle fournée de pistolets au levain, sortie du four à 7 h ce matin à L\'Atelier by Châtelain. Notre boulanger Yassine a repris la recette de la maison mère : 18 heures de pousse lente, farine belge de Wallonie, croûte fine et mie serrée. Passez avant midi, il en reste rarement l\'après-midi. #latelierby #chatelain #boulangerieartisanale',lien:null,medias:[{nom:'pistolets-levain.jpg',type:'image',alt:'Pistolets au levain sortant du four, en gros plan',largeur:1600,hauteur:1200}],
+  publierLe:'2026-07-21 09:00',soumisLe:'2026-07-20 08:40',statut:'publie',
+  agent:{note:5,resume:'Aucun écart détecté — conforme à la charte.',le:'2026-07-20 08:40',passages:1},
+  ecarts:[],
+  decision:{note:5,famille:null,type:null,commentaire:null,le:'2026-07-20 17:10',par:'CEO'},
+  publie:{le:'2026-07-21 09:04',fbId:'1122334455_9001'}},
+ {id:'fb02',magasinId:'lie',magasin:'Liège — Le Carré',auteur:'V. Martin',format:'Photo',
+  message:'GROSSE PROMO -50% SUR TOUTE LA PATISSERIE CE WEEK-END !!! Venez vite au Carré, c\'est de la folie !!! Le meilleur prix de Liège, imbattable !!!',lien:null,medias:[{nom:'promo-week-end.jpg',type:'image',alt:null,largeur:720,hauteur:720}],
+  publierLe:'2026-07-29 08:00',soumisLe:'2026-07-28 21:15',statut:'refuse',
+  agent:{note:1,resume:'8 écarts — plus grave : critique · Charte de marque (2) · Mentions légales (2) · Rédaction (2) · Visuel (2)',le:'2026-07-28 21:15',passages:1},
+  ecarts:[{id:1,code:'marque-absente',regle:'Marque citée',famille:'Charte de marque',type:'Marque absente',gravite:3,message:'La marque « L\'Atelier by » n\'apparaît pas dans le message.',extrait:null,statut:'ouvert'},
+   {id:2,code:'hashtag-marque',regle:'Hashtag de marque',famille:'Charte de marque',type:'Hashtag de marque absent',gravite:1,message:'Le hashtag #latelierby est absent.',extrait:null,statut:'ouvert'},
+   {id:3,code:'promo-conditions',regle:'Conditions de promotion',famille:'Mentions légales',type:'Conditions de promotion absentes',gravite:3,message:'Promotion annoncée sans période de validité ni renvoi aux conditions.',extrait:'promo',statut:'ouvert'},
+   {id:4,code:'superlatif',regle:'Superlatif non justifié',famille:'Mentions légales',type:'Superlatif non justifié',gravite:1,message:'Superlatif comparatif à retirer ou à prouver.',extrait:'le meilleur',statut:'ouvert'},
+   {id:5,code:'majuscules',regle:'Majuscules excessives',famille:'Rédaction',type:'Majuscules excessives',gravite:1,message:'44 % de capitales, maximum 30 %.',extrait:null,statut:'ouvert'},
+   {id:6,code:'ponctuation',regle:'Ponctuation excessive',famille:'Rédaction',type:'Ponctuation excessive',gravite:1,message:'9 points d\'exclamation, maximum 3.',extrait:null,statut:'ouvert'},
+   {id:7,code:'visuel-alt',regle:'Texte alternatif',famille:'Visuel',type:'Texte alternatif absent',gravite:1,message:'1 visuel sans texte alternatif.',extrait:null,statut:'ouvert'},
+   {id:8,code:'visuel-resolution',regle:'Résolution du visuel',famille:'Visuel',type:'Résolution insuffisante',gravite:1,message:'Largeur sous 1080 px : promo-week-end.jpg — 720 px.',extrait:null,statut:'ouvert'}],
+  decision:{note:1,famille:'Mentions légales',type:'Conditions de promotion absentes',commentaire:'Reprends le visuel avec les dates de validité et la mention « dans la limite des stocks », et écris la marque en entier. On ne publie pas de -50 % sans période.',le:'2026-07-29 07:20',par:'CEO'},
+  publie:{le:null,fbId:null}},
+ {id:'fb03',magasinId:'gnd',magasin:'Gand — Korenmarkt',auteur:'J. De Smet',format:'Carrousel',
+  message:'Grand concours de rentrée à L\'Atelier by Korenmarkt ! 5 paniers gourmands à gagner : likez la publication, commentez votre viennoiserie préférée et taguez deux amis. Tirage au sort le 15 septembre en boutique, place du Korenmarkt. #latelierby #gand #concours',lien:null,medias:[{nom:'panier-gourmand-1.jpg',type:'image',alt:'Panier gourmand garni de viennoiseries',largeur:1440,hauteur:1440},{nom:'panier-gourmand-2.jpg',type:'image',alt:'Comptoir de la boutique de Gand',largeur:1440,hauteur:1440}],
+  publierLe:'2026-08-03 11:30',soumisLe:'2026-07-30 16:05',statut:'a_valider',
+  agent:{note:1,resume:'1 écart — plus grave : critique · Mentions légales',le:'2026-07-30 16:05',passages:1},
+  ecarts:[{id:9,code:'concours-reglement',regle:'Règlement de concours',famille:'Mentions légales',type:'Règlement de concours absent',gravite:3,message:'Jeu-concours sans règlement cité ni lien vers celui-ci.',extrait:'concours',statut:'ouvert'}],
+  decision:{note:null,famille:null,type:null,commentaire:null,le:null,par:null},
+  publie:{le:null,fbId:null}},
+ {id:'fb04',magasinId:'fla',magasin:'Ixelles — Flagey',auteur:'S. Peeters',format:'Photo',
+  message:'Le samedi matin à L\'Atelier by Flagey, c\'est brunch : tartines de pain de campagne, œufs de la ferme de Rebecq et jus pressé devant vous. On vous garde une table côté vitrine, place Flagey, dès 8 h 30.',lien:'https://www.atelierby.be/flagey',medias:[{nom:'brunch-flagey.jpg',type:'image',alt:null,largeur:1350,hauteur:1080}],
+  publierLe:'2026-08-01 10:00',soumisLe:'2026-07-29 12:20',statut:'valide',
+  agent:{note:4,resume:'2 écarts — plus grave : mineur · Charte de marque · Visuel',le:'2026-07-29 12:20',passages:1},
+  ecarts:[{id:10,code:'hashtag-marque',regle:'Hashtag de marque',famille:'Charte de marque',type:'Hashtag de marque absent',gravite:1,message:'Le hashtag #latelierby est absent.',extrait:null,statut:'ouvert'},
+   {id:11,code:'visuel-alt',regle:'Texte alternatif',famille:'Visuel',type:'Texte alternatif absent',gravite:1,message:'1 visuel sans texte alternatif.',extrait:null,statut:'ouvert'}],
+  decision:{note:4,famille:null,type:null,commentaire:'Bon post. Ajoute le hashtag du réseau et le texte alternatif la prochaine fois — validé pour cette fois.',le:'2026-07-29 18:02',par:'CEO'},
+  publie:{le:null,fbId:null}},
+ {id:'fb05',magasinId:'nam',magasin:'Namur — Marché',auteur:'A. Rousseau',format:'Texte',
+  message:'Nouveauté chez L\'Atelier by Namur : notre pain aux graines germées, sans sucre ajouté, parfait pour une cure détox de rentrée. Il est bon pour la santé et il tient tout le petit-déjeuner. À découvrir au Marché dès lundi. #latelierby #namur',lien:null,medias:[],
+  publierLe:'2026-08-04 09:15',soumisLe:'2026-07-30 19:45',statut:'a_valider',
+  agent:{note:2,resume:'1 écart — plus grave : majeur · Mentions légales',le:'2026-07-30 19:45',passages:1},
+  ecarts:[{id:12,code:'allegation-sante',regle:'Allégation santé',famille:'Mentions légales',type:'Allégation santé',gravite:2,message:'Allégation santé à retirer ou à justifier réglementairement.',extrait:'détox',statut:'ouvert'}],
+  decision:{note:null,famille:null,type:null,commentaire:null,le:null,par:null},
+  publie:{le:null,fbId:null}},
+ {id:'fb06',magasinId:'wat',magasin:'Waterloo — Centre',auteur:'C. Dubois',format:'Photo',
+  message:'Parmis nos clients de Waterloo, beaucoup nous demandent la tarte au sucre de L\'ATELIER BY. Elle revient samedi, aujourdhui on prend les commandes. #latelierby',lien:null,medias:[{nom:'tarte-au-sucre.jpg',type:'image',alt:'Tarte au sucre entière sur une planche en bois',largeur:1280,hauteur:960}],
+  publierLe:'2026-08-02 14:00',soumisLe:'2026-07-31 07:55',statut:'a_valider',
+  agent:{note:3,resume:'3 écarts — plus grave : mineur · Charte de marque · Rédaction (2)',le:'2026-07-31 07:55',passages:1},
+  ecarts:[{id:13,code:'marque-casse',regle:'Casse officielle de la marque',famille:'Charte de marque',type:'Casse de marque',gravite:1,message:'La marque n\'est pas écrite « L\'Atelier by ».',extrait:'L\'ATELIER BY',statut:'ouvert'},
+   {id:14,code:'lexique',regle:'Fautes du lexique',famille:'Rédaction',type:'Faute de langue',gravite:1,message:'« parmis » → « parmi ».',extrait:'parmis',statut:'ouvert'},
+   {id:15,code:'lexique',regle:'Fautes du lexique',famille:'Rédaction',type:'Faute de langue',gravite:1,message:'« aujourdhui » → « aujourd\'hui ».',extrait:'aujourdhui',statut:'ouvert'}],
+  decision:{note:null,famille:null,type:null,commentaire:null,le:null,par:null},
+  publie:{le:null,fbId:null}},
+ {id:'fb07',magasinId:'anv',magasin:'Anvers — Meir',auteur:'J. De Smet',format:'Lien',
+  message:'Notre chef pâtissier d\'Anvers — Meir est passé chez Radio 2 pour parler du speculoos maison de L\'Atelier by. L\'interview complète est à écouter ici, ça vaut le détour. #latelierby #anvers',lien:'http://blog-gourmand-anvers.be/interview-speculoos',medias:[],
+  publierLe:'2026-08-05 12:00',soumisLe:'2026-07-30 10:10',statut:'a_valider',
+  agent:{note:2,resume:'2 écarts — plus grave : majeur · Diffusion (2)',le:'2026-07-30 10:10',passages:1},
+  ecarts:[{id:16,code:'lien-http',regle:'Lien sécurisé',famille:'Diffusion',type:'Lien non sécurisé',gravite:2,message:'Lien non sécurisé.',extrait:'http://blog-gourmand-anvers.be/interview-speculoos',statut:'ouvert'},
+   {id:17,code:'lien-domaine',regle:'Domaine autorisé',famille:'Diffusion',type:'Domaine non autorisé',gravite:1,message:'Domaine « blog-gourmand-anvers.be » hors liste autorisée.',extrait:'http://blog-gourmand-anvers.be/interview-speculoos',statut:'ouvert'}],
+  decision:{note:null,famille:null,type:null,commentaire:null,le:null,par:null},
+  publie:{le:null,fbId:null}},
+ {id:'fb08',magasinId:'lln',magasin:'Louvain-la-Neuve — Grand-Place',auteur:'C. Dubois',format:'Photo',
+  message:'Les étudiants rentrent, les cookies aussi. Trois recettes chez L\'Atelier by cette semaine : chocolat noir 70 %, beurre salé et un nouveau spéculoos-noisette. Fournée toutes les deux heures jusqu\'à 18 h. #latelierby #cookies #rentree',lien:null,medias:[{nom:'cookies-rentree.jpg',type:'image',alt:'Trois cookies alignés sur du papier cuisson',largeur:1440,hauteur:1080}],
+  publierLe:'2026-07-28 17:00',soumisLe:'2026-07-27 18:30',statut:'refuse',
+  agent:{note:2,resume:'1 écart — plus grave : majeur · Charte de marque',le:'2026-07-27 18:30',passages:1},
+  ecarts:[{id:18,code:'magasin-absent',regle:'Ancrage local',famille:'Charte de marque',type:'Magasin non identifié',gravite:2,message:'Ni la ville ni le quartier de « Louvain-la-Neuve — Grand-Place » n\'apparaissent dans le message.',extrait:null,statut:'ouvert'}],
+  decision:{note:2,famille:'Charte de marque',type:'Magasin non identifié',commentaire:'Le post pourrait venir de n\'importe quel magasin du réseau. Nomme Louvain-la-Neuve et la Grand-Place, sinon l\'ancrage local ne sert à rien.',le:'2026-07-28 08:15',par:'CEO'},
+  publie:{le:null,fbId:null}},
+ {id:'fb09',magasinId:'ucc',magasin:'Uccle — Bascule',auteur:'S. Peeters',format:'Photo',
+  message:'Rentrée des classes à Uccle : L\'Atelier by Bascule prépare les boîtes à tartines. Sandwich du jour, fruit et biscuit maison pour 6,50 € à emporter, tous les matins de 7 h à 10 h à la Bascule. Commandez la veille par téléphone, c\'est prêt à l\'heure. #latelierby #uccle',lien:'https://www.atelierby.be/uccle/boite-a-tartines',medias:[{nom:'boite-a-tartines.jpg',type:'image',alt:'Boîte à tartines garnie posée sur un comptoir',largeur:1620,hauteur:1080}],
+  publierLe:'2026-08-06 09:30',soumisLe:'2026-07-30 09:05',statut:'valide',
+  agent:{note:5,resume:'Aucun écart détecté — conforme à la charte.',le:'2026-07-30 09:05',passages:1},
+  ecarts:[],
+  decision:{note:5,famille:null,type:null,commentaire:null,le:'2026-07-30 14:40',par:'CEO'},
+  publie:{le:null,fbId:null}},
+ {id:'fb10',magasinId:'nam',magasin:'Namur — Marché',auteur:'A. Rousseau',format:'Photo',
+  message:'Nouvelle fournée de pistolets au levain, sortie du four à 7 h ce matin à L\'Atelier by Châtelain. Notre boulanger Yassine a repris la recette de la maison mère : 18 heures de pousse lente, farine belge de Wallonie, croûte fine et mie serrée. Passez avant midi, il en reste rarement l\'après-midi. #latelierby #chatelain #boulangerieartisanale',lien:null,medias:[{nom:'pistolets-namur.jpg',type:'image',alt:'Pistolets au levain en corbeille',largeur:1600,hauteur:1200}],
+  publierLe:'2026-08-07 09:00',soumisLe:'2026-07-31 06:20',statut:'a_valider',
+  agent:{note:2,resume:'2 écarts — plus grave : majeur · Charte de marque · Diffusion',le:'2026-07-31 06:20',passages:1},
+  ecarts:[{id:19,code:'magasin-absent',regle:'Ancrage local',famille:'Charte de marque',type:'Magasin non identifié',gravite:2,message:'Ni la ville ni le quartier de « Namur — Marché » n\'apparaissent dans le message.',extrait:null,statut:'ouvert'},
+   {id:20,code:'doublon',regle:'Publication dupliquée',famille:'Diffusion',type:'Publication dupliquée',gravite:1,message:'Texte identique à 100 % à un post de Bruxelles — Châtelain.',extrait:null,statut:'ouvert'}],
+  decision:{note:null,famille:null,type:null,commentaire:null,le:null,par:null},
+  publie:{le:null,fbId:null}},
+ {id:'fb11',magasinId:'kno',magasin:'Knokke — Lippenslaan',auteur:'L. Vermeulen',format:'Événement',
+  message:'Save the date : L\'Atelier by ouvre Lippenslaan à Knokke le 3 octobre. Café offert toute la journée d\'ouverture et visite de l\'atelier de production toutes les heures. #latelierby #knokke #ouverture',lien:'https://www.atelierby.be/knokke',medias:[],
+  publierLe:'2026-08-10 05:30',soumisLe:'2026-07-31 05:40',statut:'a_controler',
+  agent:{note:null,resume:null,le:null,passages:0},
+  ecarts:[],
+  decision:{note:null,famille:null,type:null,commentaire:null,le:null,par:null},
+  publie:{le:null,fbId:null}}];
 export const FAMILLES=['Produits','Services','Organisation & coûts','Développement réseau'];
 export const KPI_LIST=['CA réseau','Trafic','Panier moyen','Récurrence client','Food cost %','Labour cost %','Overhead cost %','Marge nette franchisé %','Points de vente','Expérience client (mystère)'];
 export function buildData(){

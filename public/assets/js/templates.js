@@ -59,6 +59,7 @@ export function render(c, x){
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isTaches ? tplTaches(c, x) : ''}
+      ${c.isPosts ? tplPosts(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
       ${c.isParams ? tplParams(c, x) : ''}
@@ -72,6 +73,7 @@ export function render(c, x){
   ${c.eqRep ? tplEqRep(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
+  ${c.fbNew ? tplFbNew(c, x) : ''}
 
   ${c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:100;background:#222222;color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 10px 30px rgba(34,34,34,0.3);animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : ''}
 </div>`;
@@ -907,6 +909,219 @@ function tplTaches(c, x){
       ${c.tkVide ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12px;color:var(--color-text-muted)">Aucune tâche pour cet intervenant.</div>` : ''}
     </div>
     <div style="font-size:12px;color:var(--color-text-muted)">Cochez une tâche quand elle est rendue, ouvrez la ligne pour la noter de 1 à 5. Une note sous 4 ouvre un signalement — tout est tracé dans le journal.</div>
+  </div>`;
+}
+
+/* --- Contrôle des posts Facebook --------------------------------------------- */
+function tplPosts(c, x){
+  const { esc } = x;
+  return `
+  <div data-screen="posts" style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <select ${x.C(c.setFbStore)} style="${selCss}">${opts(c.fbStores, c.fbStore, o => o.val, o => esc(o.nom))}</select>
+        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+          ${c.fbEtatBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${b.nom}</button>`).join('')}
+        </div>
+        <span style="flex:1;min-width:0;font-size:12px;color:var(--color-text-muted)">${esc(c.fbResume)}</span>
+        <button ${x.A(c.fbNewOpen)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Soumettre un post</button>
+      </div>
+
+      ${c.fbGroups.map(g => `
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:9px;padding:11px 16px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <span style="${g.dotSt}"></span>
+            <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:${g.couleur}">${g.nom}</span>
+            <span style="font-size:11px;color:var(--color-text-muted)">${g.n}</span>
+          </div>
+          ${g.items.map(p => `
+            <div style="${p.rowSt}">
+              <div ${x.A(p.toggleOpen)} class="hv-bg" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;cursor:pointer">
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                    <span style="font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);white-space:nowrap">${esc(p.format)}</span>
+                    <span style="font-size:12.5px;font-weight:500">${esc(p.magasin)}</span>
+                    <span style="font-size:11px;color:var(--color-text-muted)">${esc(p.auteur)}</span>
+                    <span style="${p.etatSt}">${esc(p.etat)}</span>
+                  </div>
+                  <div style="font-size:12.5px;line-height:1.45;color:var(--color-text);margin-top:4px;text-wrap:pretty">${esc(p.extrait)}</div>
+                  <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px">
+                    ${p.hasAgent ? `<span style="${p.agentSt}"><i style="${p.agentNumSt}">${p.agentNum}</i>${esc(p.agentTxt)}</span>` : ''}
+                    ${p.hasDecision ? `<span style="${p.decisionSt}"><i style="${p.decisionNumSt}">${p.decisionNum}</i>${esc(p.decisionTxt)}</span>` : ''}
+                    ${p.nEcarts ? `<span style="${p.ecartsSt}">${p.nEcarts} écart${p.nEcarts > 1 ? 's' : ''} retenu${p.nEcarts > 1 ? 's' : ''}</span>` : ''}
+                  </div>
+                </div>
+                <span style="${p.quandSt}">${esc(p.quand)}</span>
+                <span style="${p.chevSt}">▾</span>
+              </div>
+              ${p.ouvert ? `
+                <div style="margin:0 16px 14px;display:grid;grid-template-columns:${p.vOuvert ? 'minmax(0,1fr) 372px' : 'minmax(0,1fr)'};gap:14px;align-items:start">
+                  <div style="padding:11px 14px;border-radius:9px;background:var(--color-background-secondary);min-width:0">
+                    <div style="${dcap};margin-bottom:6px">Le post, tel qu'il partirait</div>
+                    <div style="font-size:12.5px;line-height:1.6;white-space:pre-wrap;text-wrap:pretty;padding:10px 12px;border-radius:8px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary)">${esc(p.message)}</div>
+                    <div style="${dcap};margin:13px 0 6px">Visuels</div>
+                    ${p.sansMedia ? `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucun visuel joint.</div>` : ''}
+                    ${p.medias.map(m => `
+                      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+                        <span style="font-size:12px;font-weight:500">${esc(m.nom)}</span>
+                        <span style="font-size:11px;color:var(--color-text-muted)">${esc(m.dim)}</span>
+                        <span style="${m.altSt}">${esc(m.alt)}</span>
+                      </div>`).join('')}
+                    <div style="${dcap};margin:13px 0 6px">Fiche</div>
+                    <div style="${dkv}">
+                      ${p.rows.map(r => `
+                        <span style="${dk}">${r.k}</span>
+                        <span style="${dv}">${esc(r.v)}</span>`).join('')}
+                    </div>
+                    ${p.commentaireDecision ? `
+                      <div style="${dcap};margin:13px 0 6px">Retour au magasin</div>
+                      <div style="font-size:12px;line-height:1.5;text-wrap:pretty">${esc(p.commentaireDecision)}</div>` : ''}
+                  </div>
+
+                  ${p.vOuvert ? `
+                  <div style="padding:12px 14px;border-radius:9px;background:var(--color-surface);border:0.5px solid var(--color-border-secondary)">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                      <span style="${dcap}">Contrôle de l'agent</span>
+                      ${p.peutControler ? `<button ${x.A(p.controler)} class="hv-line" style="margin-left:auto;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-primary);padding:0">Contrôler à nouveau</button>` : ''}
+                    </div>
+                    <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.45;text-wrap:pretty">${esc(p.agentResume)}</div>
+                    ${p.ecarts.map(e => `
+                      <div style="${e.ligneSt}">
+                        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                          <span style="${e.gravSt}">${e.gravTxt}</span>
+                          <span style="font-size:11.5px;font-weight:500">${esc(e.type)}</span>
+                          <button ${x.A(e.toggle)} class="hv-line" style="margin-left:auto;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text-muted);padding:0">${e.toggleTxt}</button>
+                        </div>
+                        <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.4;text-wrap:pretty">${esc(e.message)}${e.hasExtrait ? ` <i style="font-style:normal;background:rgba(141,29,44,0.08);border-radius:4px;padding:1px 5px">${esc(e.extrait)}</i>` : ''}</div>
+                      </div>`).join('')}
+
+                    <div style="${dcap};margin:14px 0 6px">Votre décision</div>
+                    <div style="display:flex;align-items:center;gap:1px">
+                      ${[1, 2, 3, 4, 5].map(n => `<button ${x.A(() => p.setNote(n))} aria-label="${n}/5" style="${p.starSt(n)}">★</button>`).join('')}
+                    </div>
+                    ${p.hasLvb ? `
+                      <div style="${p.lvbSt}"><i style="${p.lvbNumSt}">${p.lvbNum}</i>${esc(p.lvbTxt)}
+                        <span style="margin-left:auto;font-size:10.5px;font-weight:500;opacity:0.75">${esc(p.lvbAide)}</span></div>` : ''}
+                    <div style="margin-top:10px;border:1px solid ${p.sousSeuil ? 'rgba(141,29,44,0.26)' : 'var(--color-border-tertiary)'};border-radius:9px;background:${p.sousSeuil ? 'rgba(141,29,44,0.035)' : 'transparent'};padding:10px">
+                      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:${p.sousSeuil ? 'var(--color-primary)' : 'var(--color-text-muted)'};margin-bottom:8px">${esc(p.motifTxt)}</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                        <select ${x.C(p.setFam)} style="${dsel}">${opts(p.fams, p.famCour)}</select>
+                        <select ${x.C(p.setTyp)} style="${dsel}">${opts(p.typs, p.typCour)}</select>
+                      </div>
+                    </div>
+                    <textarea ${x.C(p.setCom)} rows="2" placeholder="Retour au magasin (facultatif)" style="width:100%;margin-top:9px;border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:7px 9px;font-size:12px;font-family:var(--font-ui);color:var(--color-text);resize:vertical;box-sizing:border-box">${esc(p.commentaire)}</textarea>
+                    <div style="display:flex;gap:8px;margin-top:9px">
+                      <button ${x.A(p.valider)} class="hv-fade" style="flex:1;border:none;border-radius:999px;padding:9px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${p.peutValider ? '' : 'opacity:0.5;cursor:default'}">${esc(p.validerTxt)}</button>
+                      <button ${x.A(p.refuser)} class="hv-fade" style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:#8D1D2C;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${p.peutRefuser ? '' : 'opacity:0.5;cursor:default'}">Refuser</button>
+                    </div>
+                    ${p.estValide ? `
+                      <button ${x.A(p.publier)} class="hv-fade" style="width:100%;margin-top:8px;border:0.5px solid #2d7a3e;border-radius:999px;padding:8px;background:transparent;color:#2d7a3e;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Marquer publié sur Facebook</button>` : ''}
+                  </div>` : `
+                  <div style="padding:11px 14px;border-radius:9px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary)">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="${dcap}">Contrôle de l'agent</span>
+                      ${p.peutControler ? `<button ${x.A(p.controler)} class="hv-line" style="margin-left:auto;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-primary);padding:0">Contrôler</button>` : ''}
+                    </div>
+                    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.45">${esc(p.agentResume)}</div>
+                  </div>`}
+                </div>` : ''}
+            </div>`).join('')}
+        </div>`).join('')}
+      ${c.fbVide ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12px;color:var(--color-text-muted)">Aucun post pour ce filtre.</div>` : ''}
+      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">L'agent relit et propose ; il ne publie jamais. Un écart peut être écarté au cas par cas — il reste affiché et sort du calcul de la note. Tout est tracé dans le journal.</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:500">Règles de l'agent</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.45;text-wrap:pretty">${esc(c.fbSeuilTxt)}</div>
+        ${c.fbRegleFams.map(f => `
+          <div style="margin-top:13px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="${dcap}">${esc(f.nom)}</span>
+              <span style="font-size:10.5px;color:var(--color-text-muted);margin-left:auto">${f.n}</span>
+            </div>
+            ${f.regles.map(r => `
+              <div style="display:flex;flex-direction:column;gap:2px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                  <span style="${r.gravSt}">${r.gravTxt}</span>
+                  <span style="${r.nomSt}">${esc(r.nom)}</span>
+                  <span ${x.A(r.toggle)} style="${r.actifSt};margin-left:auto">${r.actifTxt}</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.4;text-wrap:pretty">${esc(r.aide)}</div>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:500">Échelle de conformité</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.45;text-wrap:pretty">La même que celle des tâches consultants — un « majeur » veut dire la même chose des deux côtés.</div>
+        ${c.fbEchelle.map(l => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">
+            <i style="${l.numSt};font-style:normal">${l.n}</i>
+            <span style="${l.nomSt}">${esc(l.nom)}</span>
+            <span style="font-size:10.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">${esc(l.aide)}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Soumettre un post au contrôle ------------------------------------------- */
+function tplFbNew(c, x){
+  const { esc } = x;
+  const n = c.fbNew;
+  const lab = 'display:block;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:12px 0 5px';
+  const inp = 'width:100%;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 11px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)';
+  return `
+  <div ${x.A(n.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(640px,94vw);max-height:92vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:24px 26px">
+    <div style="font-family:var(--font-display);font-size:20px">Soumettre un post au contrôle</div>
+    <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.5;text-wrap:pretty">Le post arrive normalement du magasin. Saisi ici, il suit le même chemin : l'agent le relit, puis vous décidez.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="${lab}">Magasin</label>
+        <select ${x.C(e => n.set('magasinId', e))} style="${inp}">${opts(n.stores, n.magasinId, o => o.val, o => esc(o.nom))}</select>
+      </div>
+      <div>
+        <label style="${lab}">Format</label>
+        <select ${x.C(e => n.set('format', e))} style="${inp}">${opts(n.formats, n.format)}</select>
+      </div>
+    </div>
+    <label style="${lab}">Auteur (à défaut, le franchisé du magasin)</label>
+    <input id="fbn-auteur" type="text" value="${esc(n.auteur)}" ${x.I(e => n.set('auteur', e))} style="${inp}">
+    <label style="${lab}">Message</label>
+    <textarea id="fbn-message" rows="6" ${x.I(e => n.set('message', e))} placeholder="Le texte du post, tel qu'il partirait sur la page du magasin." style="${inp};line-height:1.55;resize:vertical">${esc(n.message)}</textarea>
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${esc(n.nbCar)}</div>
+    <label style="${lab}">Lien (facultatif)</label>
+    <input id="fbn-lien" type="text" value="${esc(n.lien)}" ${x.I(e => n.set('lien', e))} placeholder="https://www.atelierby.be/…" style="${inp}">
+    <div style="display:grid;grid-template-columns:1fr 1fr 110px;gap:12px">
+      <div>
+        <label style="${lab}">Visuel</label>
+        <input id="fbn-visuel" type="text" value="${esc(n.visuel)}" ${x.I(e => n.set('visuel', e))} placeholder="vitrine.jpg" style="${inp}">
+      </div>
+      <div>
+        <label style="${lab}">Texte alternatif</label>
+        <input id="fbn-alt" type="text" value="${esc(n.alt)}" ${x.I(e => n.set('alt', e))} placeholder="Ce que montre le visuel" style="${inp}">
+      </div>
+      <div>
+        <label style="${lab}">Largeur px</label>
+        <input id="fbn-largeur" type="number" value="${esc(n.largeur)}" ${x.I(e => n.set('largeur', e))} style="${inp}">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 110px;gap:12px">
+      <div>
+        <label style="${lab}">Publication souhaitée</label>
+        <input id="fbn-date" type="date" value="${esc(n.publierLe)}" ${x.C(e => n.set('publierLe', e))} style="${inp}">
+      </div>
+      <div>
+        <label style="${lab}">Heure</label>
+        <input id="fbn-heure" type="time" value="${esc(n.heure)}" ${x.C(e => n.set('heure', e))} style="${inp}">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+      <button ${x.A(n.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:13px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(n.submit)} style="border:none;border-radius:8px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:500;cursor:pointer;${n.peut ? '' : 'opacity:0.5;cursor:default'}">Soumettre au contrôle</button>
+    </div>
   </div>`;
 }
 

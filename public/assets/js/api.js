@@ -34,7 +34,9 @@ export const ENDPOINTS = {
   reporting:      '/reporting',
   journal:        '/journal',
   products:       '/products/scoring?periode=2026-07',
-  pwaReports:     '/pwa/reports'
+  pwaReports:     '/pwa/reports',
+  fbRegles:       '/referentiels/facebook-regles',
+  fbPosts:        '/facebook/posts'
 };
 
 async function get(path, signal){
@@ -111,7 +113,11 @@ function shape(p, source){
       FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes,
       // Niveaux, seuil et référentiel du signalement — réglage serveur,
       // jamais une constante d'écran.
-      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
+      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] },
+      // Pack de règles de l'agent de contrôle Facebook. Les cinq niveaux de
+      // notes ne sont PAS ici : ce sont ceux de SIGNAL, une seule échelle de
+      // conformité pour les tâches consultants comme pour les posts.
+      FB: p.fbRegles || { seuil: 4, familles: [], regles: [] } },
     D: Object.assign({}, p.raw || {}, {
       stores: joinPerf(p.stores, p.perf),
       budgets: p.budgets,
@@ -127,7 +133,8 @@ function shape(p, source){
       alertRules: (p.reporting || {}).alertRules,
       logs: p.journal,
       products: p.products,
-      pwaReports: p.pwaReports
+      pwaReports: p.pwaReports,
+      fbPosts: p.fbPosts
     })
   };
 }
@@ -202,6 +209,9 @@ function demoPayload(m){
     stores: D.stores, perf: null, budgets, targets: D.targets, consultants: D.consultants, suppliers: D.suppliers,
     projects: D.projects, crm: D.crm, people: D.people,
     reporting: { reports: D.reports, alertRules: D.alertRules }, journal: D.logs, products: D.products,
-    pwaReports
+    pwaReports,
+    // Contrôle Facebook : le pack de règles et les posts, même forme que
+    // /referentiels/facebook-regles et /facebook/posts.
+    fbRegles: m.FB_CONTROLE, fbPosts: m.FB_POSTS
   };
 }
