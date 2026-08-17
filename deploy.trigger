@@ -1,4 +1,5 @@
-Reporting automatise : un panneau par ligne.
+Les reglages de la centrale rejoignent les Parametres.
 
-A deux colonnes, la liste des rapports — le contenu principal — se retrouvait
-comprimee par un panneau secondaire de 340 px, et la lecture partait en zigzag.
+Un moteur de marge et un referentiel fournisseurs sont des reglages, pas un
+ecran d exploitation : les chercher a deux endroits etait le vrai defaut.
+La centrale garde ses six ecrans d exploitation.

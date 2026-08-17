@@ -319,7 +319,7 @@ class App {
       caCommandes: ['Commandes franchisés', 'Commandes des magasins, de la préparation à la livraison.'],
       caStock: ['Stock', 'Stock, seuils et ruptures.'],
       caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
-      caReglages: ['Réglages de la centrale', 'Paramètres du moteur de marge et référentiel fournisseurs.'],
+      caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
@@ -541,8 +541,7 @@ class App {
         ['caAchats', 'Suivi fournisseurs', 0],
         ['caCommandes', 'Commandes franchisés', 0],
         ['caStock', 'Stock', 0],
-        ['caFacturation', 'Facturation magasins', 0],
-        ['caReglages', 'Réglages', 0]]],
+        ['caFacturation', 'Facturation magasins', 0]]],
       ['Projets & contrôle', [['projets', 'Projets', nLate],
         // Sous-menu : les deux écrans « tâches consultants » (panel) regroupés.
         { sub: 'Checklists consultants', children: [
@@ -550,7 +549,11 @@ class App {
           ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] }]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0],
         ['diagnostic', 'Diagnostic API', 0],
-        { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0]] }]]];
+        // Les réglages de la centrale rejoignent les Paramètres : un moteur de
+        // marge et un référentiel fournisseurs sont des réglages, pas un écran
+        // d'exploitation. Les chercher à deux endroits était le vrai défaut.
+        { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
+          ['caReglages', 'Centrale d’achat', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
