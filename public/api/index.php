@@ -49,6 +49,7 @@ function route(string $method, string $path): mixed
         return match (true) {
             $path === '/meta'                          => ep_meta(),
             $path === '/lacunes'                       => ep_lacunes(),
+            $path === '/audit/fraicheur'               => ep_audit_fraicheur(),
             $path === '/taches/suivi'                  => ep_taches_suivi($_GET['periode'] ?? 'mois'),
             $path === '/referentiels/leviers'          => ep_leviers(),
             $path === '/referentiels/kpis'             => ep_kpis(),

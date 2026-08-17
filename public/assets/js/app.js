@@ -1996,13 +1996,19 @@ class App {
   }
   /** Montant à deux décimales — un panier moyen arrondi à l'euro ne dit rien. */
   fEd(n){ return n == null ? '—' : n.toFixed(2).replace('.', ',') + ' €'; }
-  valsProduits(common){
-    const S = this.state, D = this.D;
+  /**
+   * Score des références — calcul UNIQUE, partagé par l'écran de scoring et
+   * par l'extraction sous seuil. Le dupliquer aurait suffi à le faire
+   * dériver : deux écrans annonçant deux scores pour la même référence
+   * ne se contredisent pas franchement, ils se contredisent discrètement.
+   */
+  pdCalcule(){
+    const D = this.D;
     const W = this.poids();
     const wtTot = (W.v + W.m + W.perte + W.comptoir) || 1;
     const pc4 = w => Math.round(100 * w / wtTot);
-    common.pdPond = 'volume ' + pc4(W.v) + ' · marge nette ' + pc4(W.m) + ' · perte ' + pc4(W.perte) + ' · comptoir ' + pc4(W.comptoir);
-    common.pdPeriode = 'dernier mois de ventes encodé';
+    const _pond = 'volume ' + pc4(W.v) + ' · marge nette ' + pc4(W.m) + ' · perte ' + pc4(W.perte) + ' · comptoir ' + pc4(W.comptoir);
+    const _per = 'dernier mois de ventes encodé';
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
@@ -2038,7 +2044,18 @@ class App {
       if (p.sComptoir != null) { num += W.comptoir * p.sComptoir; den += W.comptoir; }
       p.score = den ? num / den : 0; });
     const SC = this.scoringCfg();
-    const verdict = s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)'] : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)'] : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'];
+    return { base, cats, nbOuv, W, SC,
+      pond: _pond, periode: _per,
+      verdict: s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)']
+        : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
+        : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'] };
+  }
+  valsProduits(common){
+    const S = this.state, D = this.D;
+    const _c = this.pdCalcule();
+    const { base, cats, nbOuv, W, SC } = _c;
+    common.pdPond = _c.pond; common.pdPeriode = _c.periode;
+    const verdict = _c.verdict;
     common.pdCat = S.pdCat; common.setPdCat = e => this.setState({ pdCat: e.target.value });
     common.pdCatOptions = ['Toutes les catégories'].concat(Object.keys(cats));
     const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['pen', 'Trier par pénétration réseau'], ['ca', 'Trier par CA réseau'], ['marge', 'Trier par taux de marge'], ['mg', 'Trier par marge brute'], ['rang', 'Trier par rang catégorie']];

@@ -3743,3 +3743,86 @@ function ep_pwa_tasks_sonde(): array
     }
     return $out;
 }
+
+/**
+ * Audit de FRAÎCHEUR : jusqu'à quand chaque source va-t-elle, et l'API va-t-elle
+ * plus loin ?
+ *
+ * La caisse en base partagée s'arrête à une date qui n'est pas aujourd'hui.
+ * Tout écran qui la lit affiche donc des ventes périmées sans le dire — et rien
+ * ne le signale, puisqu'un total de juillet reste un total plausible en août.
+ * Cet audit met les deux côte à côte : la dernière date en base, la dernière
+ * que l'API accepte de servir, et l'écart entre les deux.
+ */
+function ep_audit_fraicheur(): array
+{
+    $auj = date('Y-m-d');
+    $out = ['aujourdhui' => $auj, 'sources' => [], 'api' => [], 'ecrans' => []];
+
+    // 1) Jusqu'où va chaque table lue par les écrans ?
+    $tables = [
+        'transaction'          => ['MAX(DATE(insert_timestamp))', 'ventes de caisse (ligne à ligne)'],
+        'product_movement'     => ['MAX(DATE(created_at))', 'production et rebut déclarés'],
+        'mac_shop_monthly_pnl' => [null, 'P&L mensuel du panel'],
+        'mac_task_review'      => ['MAX(review_date)', 'avis sur les tâches'],
+    ];
+    foreach ($tables as $t => $def) {
+        $e = ['table' => $t, 'quoi' => $def[1], 'derniere' => null, 'retard' => null, 'erreur' => null];
+        try {
+            if ($t === 'mac_shop_monthly_pnl') {
+                $r = Db::row("SELECT CONCAT(MAX(year), '-', LPAD(MAX(month), 2, '0')) d FROM mac_shop_monthly_pnl");
+                $e['derniere'] = $r['d'] ?? null;
+            } else {
+                $r = Db::row("SELECT {$def[0]} d FROM {$t}");
+                $e['derniere'] = $r['d'] ?? null;
+            }
+            if ($e['derniere'] !== null && strlen((string) $e['derniere']) >= 10) {
+                $e['retard'] = (int) floor((strtotime($auj) - strtotime((string) $e['derniere'])) / 86400);
+            }
+        } catch (PDOException $ex) { $e['erreur'] = 'table absente'; }
+        $out['sources'][] = $e;
+    }
+
+    // 2) Jusqu'où l'API accepte-t-elle d'aller ? On lui demande AUJOURD'HUI.
+    if (PanelApi::configured()) {
+        $r = PanelApi::shopsSalesKpisEntre($auj, $auj);
+        $n = count(analyseListe(is_array($r) ? $r : []));
+        $ca = 0.0;
+        foreach (analyseListe(is_array($r) ? $r : []) as $sh) {
+            $v = nombreOuNull($sh, ['ca', 'turnover', 'revenue']);
+            if ($v !== null) { $ca += $v; }
+        }
+        $out['api'][] = ['route' => '/consultant/shops/sales-kpis', 'date' => $auj,
+            'magasins' => $n, 'ca' => round($ca, 2),
+            'verdict' => $n > 0 ? 'sert le jour même' : 'rien rendu pour aujourd\'hui'];
+    } else {
+        $out['api'][] = ['route' => '—', 'verdict' => 'compte consultant non configuré'];
+    }
+
+    // 3) Quels écrans en dépendent, et que devraient-ils lire ?
+    $der = null;
+    foreach ($out['sources'] as $s) { if ($s['table'] === 'transaction') { $der = $s['derniere']; } }
+    $retard = $der !== null ? (int) floor((strtotime($auj) - strtotime((string) $der)) / 86400) : null;
+    $out['ecrans'] = [
+        ['ecran' => 'Scoring des références', 'route' => '/products/scoring',
+         'lit' => 'transaction (caisse en base)', 'consequence' => 'volumes arrêtés au ' . ($der ?? '?'),
+         'remplacer' => '/shops/{id}/products/waste — sold_qty, servi jusqu\'au jour même'],
+        ['ecran' => 'Suivi de production', 'route' => '/production/suivi',
+         'lit' => 'product_movement + transaction', 'consequence' => 'taux de perte sur un mois clos, pas sur le mois courant',
+         'remplacer' => '/shops/{id}/products/waste — waste_qty par magasin, à la journée'],
+        ['ecran' => 'Détail de perte d\'une référence', 'route' => '/products/waste',
+         'lit' => 'transaction pour le denominateur des ventes', 'consequence' => 'ventes périmées face à un rebut à jour',
+         'remplacer' => 'la même route waste porte déjà les deux'],
+        ['ecran' => 'Tableau des magasins / Marge', 'route' => '/stores/perf',
+         'lit' => 'mac_shop_monthly_pnl (snapshot mensuel)', 'consequence' => 'aucun mois en cours : le snapshot est mensuel',
+         'remplacer' => '/consultant/shops/sales-kpis entre deux dates, pour le mois courant'],
+        ['ecran' => 'P&L magasins', 'route' => '/exploitation',
+         'lit' => 'transaction, ancré sur la dernière journée encodée',
+         'consequence' => 'affiche « jour » = ' . ($der ?? '?') . ', pas aujourd\'hui',
+         'remplacer' => '/consultant/shops/sales-kpis — déjà utilisé par /exploitation/reseau'],
+    ];
+    $out['retardCaisse'] = $retard;
+    $out['resume'] = $retard === null ? 'caisse illisible'
+        : ($retard <= 1 ? 'la caisse en base est à jour' : 'la caisse en base a ' . $retard . ' jour(s) de retard sur aujourd\'hui');
+    return $out;
+}

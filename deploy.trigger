@@ -1,7 +1,7 @@
-Taches a noter = celles qui ont une PHOTO.
+Audit de fraicheur : la caisse en base contre l API.
 
-« status = DONE » ne suffisait pas : c est la photo de realisation que le
-consultant regarde pour noter, et elle ne figure pas dans la liste des taches —
-elle vit dans l avancement de la checklist, sous attachment_id. Trois etats
-desormais : a noter (photo), rendue sans photo, non rendue.
-Rail : entrees allegees en 300, le titre de section garde la graisse.
+Tout ecran qui lit la caisse en base affiche des ventes arretees a la derniere
+journee encodee, sans le dire — un total de juillet reste plausible en aout.
+La route /audit/fraicheur met les deux cote a cote : derniere date par source,
+ce que l API sert pour AUJOURD HUI, et la liste des ecrans concernes avec la
+route qui devrait les alimenter.
