@@ -716,6 +716,7 @@ function ep_prod_catalogue(): array
             'margeNettePct' => caMargeNettePct($prix, $mat),
             'must' => (bool) $r['must'], 'qmin' => (int) $r['qmin'],
             'periods' => $r['periods'], 'profil' => $r['profil'],
+            'parametre' => ficheRemplie($r),
             'pwaId' => $r['pwa_id'] !== null ? (int) $r['pwa_id'] : null,
             'zone' => $pl ? $pl['zone'] : null,
             'meuble' => $pl ? $pl['meuble'] : null,
@@ -1867,6 +1868,26 @@ function cataloguePrix(): array
  * Rend null — et non un tableau vide — si les tables ne sont pas là : un vide
  * se confondrait avec « catalogue sans produit » et masquerait la panne.
  */
+/**
+ * La fiche de production porte-t-elle au moins une valeur ?
+ *
+ * L'existence de la ligne ne suffit pas : cocher « obligatoire » puis décocher
+ * laisse une ligne à zéro derrière, et compter cette ligne comme une fiche
+ * remplie gonflait la couverture du catalogue sans qu'une seule donnée ait été
+ * saisie. On regarde donc le contenu, pas la présence.
+ */
+function ficheRemplie(?array $e): bool
+{
+    if ($e === null) { return false; }
+    foreach (['prep', 'cuisson', 'fin', 'bmin', 'four', 'dlv', 'qmin'] as $k) {
+        if ((int) ($e[$k] ?? 0) > 0) { return true; }
+    }
+    if ((int) ($e['bmult'] ?? 1) > 1) { return true; }
+    if (($e['mat'] ?? null) !== null || ($e['prix'] ?? null) !== null) { return true; }
+    if ((string) ($e['profil'] ?? '') !== '') { return true; }
+    return !empty($e['must']);
+}
+
 function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?array
 {
     // Catégorie + groupe. La liaison passe par une table dédiée ; si elle
@@ -1898,6 +1919,12 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
     $out = [];
     foreach ($prods as $p) {
         $pid = (int) $p['id'];
+        // Un identifiant négatif n'est pas une référence : le catalogue du panel
+        // en porte un (« 1/4 - Chocolat », id -99, catégorie -1 qui n'existe
+        // pas). Trié en tête, il ouvrait le référentiel sur une ligne qu'aucun
+        // magasin ne peut tenir. Il est écarté ici et DÉCLARÉ dans les lacunes,
+        // pour qu'on sache qu'il a été écarté au lieu de le croire absent.
+        if ($pid <= 0) { continue; }
         $c   = $cat[(int) $p['id_category']] ?? null;
         $e   = $enrich[$pid] ?? ($parRef[(string) $pid] ?? null);
         $ref = $e !== null ? (string) $e['ref'] : (string) $pid;
@@ -1961,7 +1988,7 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
             'recetteId' => $p['id_recipe'] !== null ? (int) $p['id_recipe'] : null,
             'prepare'   => (int) $p['is_prepared_before_sales'] === 1,
             'poids'     => (int) $p['single_weight'] ?: null,
-            'parametre' => $e !== null,   // la fiche de production est-elle remplie ?
+            'parametre' => ficheRemplie($e),
             'zone'   => $pl ? $pl['zone'] : null,
             'meuble' => $pl ? $pl['meuble'] : null,
             'niveau' => $pl ? $pl['niveau'] : null,
@@ -3687,6 +3714,18 @@ function ep_lacunes(): array
                 'le fournisseur de chacune des ' . $n . ' références',
                 'API achats — aucune source ne rattache une référence à un fournisseur');
         }
+        // Références écartées : identifiant négatif, donc inexploitable. On dit
+        // combien, et pourquoi — une exclusion silencieuse se lit comme un trou.
+        try {
+            $f = Db::row('SELECT COUNT(*) AS n FROM product WHERE is_active = 1 AND id <= 0');
+            if ((int) ($f['n'] ?? 0) > 0) {
+                $out['catalogue'][] = lacune('Référence fantôme',
+                    (int) $f['n'] . ' référence(s) écartée(s) du catalogue',
+                    'Catalogue du panel — identifiant négatif et catégorie inexistante ; à corriger côté panel, '
+                    . 'aucun magasin ne peut tenir une référence sans identifiant');
+                $out['assortiment'][] = end($out['catalogue']);
+            }
+        } catch (PDOException $e) { /* table de caisse absente */ }
     } catch (Throwable $e) { /* catalogue indisponible */ }
 
     // --- assortiment : rien n'est déclaré obligatoire
@@ -3695,7 +3734,8 @@ function ep_lacunes(): array
         if ((int) ($c2['n'] ?? 0) === 0) {
             $out['assortiment'][] = lacune('Références obligatoires',
                 'aucune référence déclarée obligatoire pour le réseau',
-                'Écran « Catalogue produit » — cocher les références que toute boutique doit tenir', 'saisie');
+                'Cet écran — « Afficher tout le catalogue », puis cocher les références '
+                . 'que toute boutique doit tenir', 'saisie');
         }
     } catch (PDOException $e) { /* table absente */ }
 
