@@ -2223,7 +2223,7 @@ function tplRepPrev(c, x){
   const rp = c.repPrev;
   return `
   <div ${x.A(c.repPrevClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.45);z-index:80;animation:fadeIn 140ms ease"></div>
-  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(880px,94vw);max-height:90vh;overflow-y:auto;background:var(--color-background-secondary);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.3);padding:20px;animation:toastIn 180ms ease">
+  <div data-scroll="modale-large" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(880px,94vw);max-height:90vh;overflow-y:auto;background:var(--color-background-secondary);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.3);padding:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:500">${esc(rp.nom)}</div>
       <div style="display:flex;align-items:center;gap:10px">
@@ -2291,7 +2291,7 @@ function tplEqRep(c, x){
   const q = c.eqRep;
   return `
   <div ${x.A(c.eqClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
-  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-height:86vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px;animation:toastIn 180ms ease">
+  <div data-scroll="modale-detail" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-height:86vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Rapport consultant</div>
@@ -2353,7 +2353,7 @@ function tplWizardProjet(c, x){
   const inpD = inp.replace('padding:10px 12px', 'padding:9px 12px');
   return `
   <div ${x.A(c.npClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
-  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:860px;max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px;animation:toastIn 180ms ease">
+  <div data-scroll="wizard-projet" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:860px;max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px">
     <div style="font-family:var(--font-display);font-size:20px">Nouveau projet</div>
     <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px">${esc(c.npStepSub)}</div>
     <div style="display:flex;align-items:center;gap:0;margin:20px 0 22px">
@@ -2372,9 +2372,12 @@ function tplWizardProjet(c, x){
           <input value="${esc(c.np.nom)}" ${x.C(c.npNom)} placeholder="Ex. Refonte carte automne" style="${inp}">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div>
+          <div style="grid-column:1 / -1">
             <div style="${lbl}">Levier principal</div>
-            <select ${x.C(c.npLev)} style="${inp}">${opts(c.npLevs, c.np.lev, o => o.slug, o => esc(o.nom))}</select>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              ${(c.npLevChips || []).map(l => `<button ${x.A(l.go)} title="${esc(l.desc)}" style="${l.st}">
+                <span style="${l.dotSt}"></span>${esc(l.nom)}</button>`).join('')}
+            </div>
           </div>
           <div>
             <div style="${lbl}">Axe</div>
@@ -2500,7 +2503,7 @@ function tplWizardTache(c, x){
   const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-family:var(--font-ui);font-size:13px;background:var(--color-background-secondary);color:var(--color-text)';
   return `
   <div ${x.A(c.ntClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
-  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:760px;max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px;animation:toastIn 180ms ease">
+  <div data-scroll="modale-note" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:760px;max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px">
     <div style="font-family:var(--font-display);font-size:20px">Nouvelle tâche</div>
     <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px">${esc(c.ntStepSub)}</div>
     <div style="display:flex;align-items:center;gap:0;margin:20px 0 22px">

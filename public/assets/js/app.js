@@ -82,9 +82,20 @@ class App {
     const selStart = focusId && active.selectionStart != null ? active.selectionStart : null;
     const mainEl = document.getElementById('main-scroll');
     const scrollTop = mainEl ? mainEl.scrollTop : 0;
+    // Tout conteneur qui défile et porte `data-scroll` garde sa position. Sans
+    // cela, chaque frappe recrée le nœud et le ramène en haut : dans une modale
+    // longue, valider une étape renvoyait le lecteur au titre — le « saut ».
+    const gardes = {};
+    document.querySelectorAll('[data-scroll]').forEach(e => {
+      if (e.scrollTop) { gardes[e.getAttribute('data-scroll')] = e.scrollTop; }
+    });
     this.root.innerHTML = tplRender(common, x);
     const main2 = document.getElementById('main-scroll');
     if (main2) main2.scrollTop = scrollTop;
+    Object.keys(gardes).forEach(k => {
+      const e = document.querySelector('[data-scroll="' + k + '"]');
+      if (e) { e.scrollTop = gardes[k]; }
+    });
     if (focusId){
       const el = document.getElementById(focusId);
       if (el){ el.focus(); if (selStart != null && el.setSelectionRange) el.setSelectionRange(selStart, selStart); }
@@ -469,12 +480,40 @@ class App {
     common.npOpen = () => this.setState({ np: { step: 1, reached: 1, nom: '',
       lev: (M.LEVIERS[0] || {}).slug || '', axe: 'Ventes', prio: 'Moyenne',
       debut: M.TODAY, fin: this.dansNJours(180), valeur: '', valeurTxt: '', kpi: '',
-      jalons: [{ nom: '', cible: this.dansNJours(180) }],
+      // Le rétroplanning du type de projet est posé dès l'ouverture : ouvrir sur
+      // une ligne vide obligeait à cliquer « charger le template » pour obtenir
+      // ce qui est de toute façon le point de départ attendu.
+      jalons: (((D.projTemplates || {})['Ventes'] || {}).jalons || []).length
+        ? D.projTemplates['Ventes'].jalons.map(j => ({ nom: j.nom, cible: addD(this.dansNJours(180), j.j) }))
+        : [{ nom: '', cible: this.dansNJours(180) }],
       taches: [{ nom: '', who: this.premierIntervenant(), due: this.dansNJours(60) }],
       couts: [{ poste: 'Jours-homme consultants', prevu: '' }] } });
     common.npClose = () => this.setState({ np: null });
     const npSet = k => e => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [k]: e.target.value }) }));
-    common.npNom = npSet('nom'); common.npLev = npSet('lev'); common.npAxe = npSet('axe'); common.npDebut = npSet('debut'); common.npFin = npSet('fin');
+    common.npNom = npSet('nom'); common.npLev = npSet('lev'); common.npDebut = npSet('debut'); common.npFin = npSet('fin');
+    // Le levier se choisit sur des pastilles PORTANT SA COULEUR : c'est la même
+    // couleur qui identifiera le projet partout ailleurs (cartes, kanban,
+    // rapports). Un menu déroulant la cachait, et il fallait créer le projet
+    // pour découvrir sa couleur.
+    common.npLevChips = (M.LEVIERS || []).map(l => { const on = S.np && S.np.lev === l.slug;
+      return { slug: l.slug, nom: l.nom, desc: l.desc || '', couleur: l.color || '#666',
+        st: 'display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:var(--font-ui);'
+          + 'font-size:12.5px;padding:7px 13px;border-radius:999px;'
+          + (on ? 'border:1px solid ' + (l.color || '#666') + ';background:' + (l.color || '#666') + '1f;font-weight:500;color:var(--color-text)'
+                : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'),
+        dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + (l.color || '#666'),
+        go: () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { lev: l.slug }) })) }; });
+    // Changer d'axe recharge le rétroplanning : un template de jalons par TYPE
+    // de projet, appliqué sans qu'on ait à y penser. Les jalons déjà saisis à
+    // la main ne sont pas écrasés — on ne détruit pas un travail en cours.
+    common.npAxe = e => { const ax = e.target.value;
+      this.setState(s2 => { const f2 = s2.np || {};
+        const tpl = (this.D.projTemplates || {})[ax];
+        const saisis = (f2.jalons || []).some(j => (j.nom || '').trim() !== '');
+        const jal = (tpl && !saisis)
+          ? tpl.jalons.map(j => ({ nom: j.nom, cible: addD(f2.fin, j.j) }))
+          : f2.jalons;
+        return { np: Object.assign({}, f2, { axe: ax, jalons: jal }) }; }); };
     common.npValeur = npSet('valeur'); common.npValeurTxt = npSet('valeurTxt'); common.npKpi = npSet('kpi');
     const npPrio = p => () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { prio: p }) }));
     const npPrioSt = p => 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;border-radius:999px;' + (S.np && S.np.prio === p ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)');
