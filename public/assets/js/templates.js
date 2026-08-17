@@ -413,6 +413,7 @@ function tplReferentiel(c, x){
     <span style="font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${c.refFiltres} / ${c.refTotal}</span>
   </div>
 
+  ${c.isCat && c.refScoresTxt ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${esc(c.refScoresTxt)}${c.refScorePond ? ' · pondération : ' + esc(c.refScorePond) : ''}</div>` : ''}
   ${c.isAsso ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refMust} référence(s) déclarée(s) obligatoire(s) sur ${c.refTotal}. ${c.refMust === 0 ? 'Aucune pour l’instant : affichez le catalogue et cochez celles que toute boutique doit tenir.' : ''}</div>` : ''}
   ${c.isPlano ? tplPlanoComptoir(c, x) : ''}
   ${c.isPlano ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refPlaces} référence(s) placée(s) au comptoir sur ${c.refTotal}. ${c.refPlaces === 0 ? 'Aucune encore : affichez le catalogue, ouvrez une référence et choisissez son emplacement.' : ''}</div>` : ''}
@@ -422,7 +423,7 @@ function tplReferentiel(c, x){
       <thead><tr>
         <th style="${TH}">Référence</th>
         <th style="${TH}">Catégorie</th>
-        ${c.isCat ? `<th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
+        ${c.isCat ? `<th style="${TH};${num}" title="Même calcul que l’écran Scoring produits — volume, marge nette, perte, présence au comptoir">Score</th><th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
         ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}" title="Quantité minimale à tenir. Le bouton « batch » reprend la fournée minimale de la fiche produit.">Qté min. · batch</th>` : ''}
         ${c.isPlano ? `<th style="${TH}">Zone</th><th style="${TH}">Meuble</th><th style="${TH}">Niveau</th><th style="${TH};${num}">Emplac.</th>` : ''}
         <th style="${TH};text-align:right">Fiche</th>
@@ -434,7 +435,8 @@ function tplReferentiel(c, x){
             <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.ref)}${l.gamme !== '—' ? ' · ' + esc(l.gamme) : ''}</div>
           </td>
           <td style="${TD};color:var(--color-text-muted)">${esc(l.categorie)}<div style="font-size:10.5px">${esc(l.groupe)}</div></td>
-          ${c.isCat ? `<td style="${TD};${num}">${esc(l.prix)}</td>
+          ${c.isCat ? `<td style="${TD};${num}"><span style="${l.scoreSt}">${esc(l.scoreTxt)}</span>${l.scoreVerdict ? `<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted);margin-top:2px">${esc(l.scoreVerdict)}</div>` : ''}</td>
+            <td style="${TD};${num}">${esc(l.prix)}</td>
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.cout)}</td>
             <td style="${TD};${num};color:${l.margeC}">${esc(l.marge)}</td>
             <td style="${TD};${num};color:var(--color-text-muted)">${esc(l.commission)}</td>
@@ -3419,7 +3421,7 @@ function tplCentrale(c, x){
           <th style="${TH}">À obtenir de</th>
         </tr></thead>
         <tbody>${c.caAttendu.map(a => `<tr>
-          <td style="${TD};font-weight:500;white-space:nowrap">${esc(a.col)}</td>
+          <td style="${TD};white-space:nowrap">${esc(a.col)}</td>
           <td style="${TD};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text-muted)">${esc(a.champ)}</td>
           <td style="${TD}">${a.dispo
             ? `<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:rgba(45,122,62,0.1);color:#2d7a3e;white-space:nowrap">déjà disponible</span>

@@ -1263,6 +1263,27 @@ class App {
       save: () => this.refSave()
     } : null;
 
+    // Score de la référence, sur le catalogue. Il vient du MÊME calcul que
+    // l'écran de scoring — jamais d'un second, qui finirait par en diverger.
+    // Le rapprochement se fait par la référence : /products/scoring rend un
+    // `id` qui est la référence catalogue (mesuré : « 1610004 » des deux côtés).
+    let scores = null, nScores = 0;
+    if (common.isCat) {
+      const c2 = this.pdCalcule();
+      scores = {};
+      (c2.base || []).forEach(s => { scores[String(s.id)] = s; });
+      nScores = Object.keys(scores).length;
+      common.refVerdict = c2.verdict;
+      common.refScorePond = c2.pond;
+      common.refScorePer = c2.periode;
+    }
+    common.refScoresN = nScores;
+    // Le scoring ne couvre que les références VENDUES sur la période : le dire
+    // évite de lire un tiret comme un mauvais score.
+    common.refScoresTxt = common.isCat
+      ? nScores + ' référence(s) notée(s) sur ' + cat.length + ' — le score porte sur ce qui s’est vendu ' + (common.refScorePer || '')
+      : '';
+
     common.refLignes = lignes.slice(0, 400).map(p => ({
       ref: String(p.ref), nom: p.nom, categorie: p.categorie || '—',
       groupe: p.groupe || '—',
@@ -1279,6 +1300,20 @@ class App {
       margeNette: p.margeNettePct == null ? '—' : this.fP(p.margeNettePct, 0),
       margeNetteEur: this.fU(p.margeNette),
       margeNetteC: this.echelleMarge(p.margeNettePct == null ? null : 100 * p.margeNettePct),
+      // Score : la note, son verdict et sa couleur — les trois ensemble, sinon
+      // un 62 ne dit rien sans le barème qui le juge.
+      score: (() => { const s = scores && scores[String(p.ref)];
+        return s ? Math.round(s.score) : null; })(),
+      scoreTxt: (() => { const s = scores && scores[String(p.ref)];
+        return s ? String(Math.round(s.score)) : '—'; })(),
+      scoreVerdict: (() => { const s = scores && scores[String(p.ref)];
+        return s && common.refVerdict ? common.refVerdict(s.score)[0] : ''; })(),
+      scoreSt: (() => { const s = scores && scores[String(p.ref)];
+        if (!s || !common.refVerdict) { return 'color:var(--color-text-muted)'; }
+        const v = common.refVerdict(s.score);
+        return 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:500;'
+          + 'background:' + v[2] + ';color:' + v[1];
+      })(),
       must: !!p.must, qmin: p.qmin || 0,
       // Assortiment : la quantité minimale se saisit EN LIGNE, et le batch de
       // la fiche produit est proposé à côté. Un minimum qui n'est pas un
