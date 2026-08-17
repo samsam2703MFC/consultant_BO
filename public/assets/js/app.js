@@ -680,6 +680,8 @@ class App {
         children: it.children.map(c => ({ type: 'leaf', label: c[1], badge: c[2] || false, go: goTo(c[0]), st: navSt(S.screen === c[0], true) })) };
     }) }));
 
+    this.valsRecherche(common, navDef, goTo, titles);
+
     ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd',
@@ -1817,6 +1819,132 @@ class App {
       caStock: '/centrale/stock', caFacturation: '/centrale/facturation',
       caReglages: '/centrale/reglages' }[this.state.screen];
   }
+  /* --- recherche globale : retrouver n'importe quoi depuis le rail ----------- */
+
+  /**
+   * Une seule barre pour tout ce que l'application détient.
+   *
+   * L'application compte une trentaine d'écrans et plusieurs milliers de
+   * lignes ; savoir QUEL écran porte « Citron Meringué » ou « Vitrine 1 »
+   * suppose de connaître le rangement. La recherche cherche donc dans les
+   * données elles-mêmes — références, emplacements du comptoir, magasins,
+   * projets, tâches, consultants, fournisseurs, rapports — et pas seulement
+   * dans le nom des écrans.
+   *
+   * Chaque résultat sait où il habite : il ouvre l'écran ET y pose le filtre
+   * qui isole la ligne. Sans cela on retombe sur une liste de 710 références.
+   */
+  valsRecherche(common, navDef, goTo, titles){
+    const S = this.state, D = this.D, M = this.M;
+    const q = (S.gq || '').trim().toLowerCase();
+    common.gq = S.gq || '';
+    common.gSet = e => this.setState({ gq: e.target.value });
+    common.gVider = q ? () => this.setState({ gq: '' }) : null;
+    common.gOuvert = q.length >= 2;
+    if (!common.gOuvert) { common.gGroupes = []; common.gTotal = 0; common.gTrop = 0; return; }
+
+    // Le catalogue n'est chargé que par les écrans du référentiel : sans lui,
+    // chercher une référence depuis le rail ne rendrait rien. On le demande une
+    // fois, à la première recherche.
+    if (!D.prodCatalogue && !this._gCatEnCours) {
+      this._gCatEnCours = true;
+      readOne('/production/catalogue').then(c => { this._gCatEnCours = false;
+        if (c) { this.D.prodCatalogue = c; this.setState({}); } });
+    }
+    if (!D.plano && !this._plEnCours) { this.plCharge(); }
+
+    const colle = (...v) => v.filter(Boolean).join(' ').toLowerCase();
+    const trouve = t => t.indexOf(q) >= 0;
+    const groupes = [];
+    const ajoute = (nom, lignes) => { if (lignes.length) { groupes.push({ nom, lignes }); } };
+    const MAX = 8;   // par groupe : au-delà, la liste cesse d'aider
+    let total = 0, tronque = 0;
+    const coupe = arr => { total += arr.length;
+      if (arr.length > MAX) { tronque += arr.length - MAX; }
+      return arr.slice(0, MAX); };
+
+    // 1. Les écrans eux-mêmes, avec leur description.
+    const ecrans = [];
+    navDef.forEach(g => (g[1] || []).forEach(it => {
+      const push = (id, label, section) => {
+        const aide = ((titles || {})[id] || [])[1] || '';
+        if (trouve(colle(label, section, aide))) {
+          ecrans.push({ titre: label, detail: section, aller: goTo(id) });
+        }
+      };
+      if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
+      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub)); }
+    }));
+    ajoute('Écrans', coupe(ecrans));
+
+    // 2. Références du catalogue produit.
+    const refs = (D.prodCatalogue || []).filter(p =>
+      trouve(colle(p.nom, p.ref, p.categorie, p.groupe))).map(p => ({
+        titre: p.nom, detail: [p.ref, p.categorie, p.groupe].filter(Boolean).join(' · '),
+        marque: p.zone ? 'au comptoir' : (p.must ? 'obligatoire' : ''),
+        aller: () => this.setState({ screen: 'catalogue', refQ: String(p.ref), gq: '' }) }));
+    ajoute('Références produit', coupe(refs));
+
+    // 3. Emplacements du comptoir.
+    const slots = ((D.plano || {}).slots || []).filter(s =>
+      trouve(colle(s.zone, s.meuble, s.niveau, String(s.position),
+        (s.occupants || []).map(o => o.nom + ' ' + o.ref).join(' ')))).map(s => ({
+        titre: s.meuble + ' · ' + s.niveau + ' · ' + s.position,
+        detail: s.zone + ((s.occupants || [])[0] ? ' — ' + s.occupants[0].nom : ''),
+        marque: (s.occupants || []).length ? '' : 'libre',
+        aller: () => this.setState({ screen: 'planogramme', plVue: 'tableau',
+          plQ: s.meuble + ' ' + s.niveau, plCible: s.id, gq: '' }) }));
+    ajoute('Comptoir', coupe(slots));
+
+    // 4. Magasins.
+    const mags = (D.stores || []).filter(s => trouve(colle(s.nom, s.ville, s.zone, s.id))).map(s => ({
+      titre: s.nom, detail: [s.ville, s.zone].filter(Boolean).join(' · '),
+      aller: () => this.setState({ screen: 'magasins', gq: '' }) }));
+    ajoute('Magasins', coupe(mags));
+
+    // 5. Projets et leurs tâches.
+    const projets = [];
+    (D.projects || []).forEach(p => {
+      if (trouve(colle(p.nom, p.famille, (p.leviers || []).join(' ')))) {
+        projets.push({ titre: p.nom, detail: this.pFamille(p) + ' · ' + this.pStatut(p),
+          aller: () => this.setState({ screen: 'projets', openProjId: p.id, gq: '' }) });
+      }
+      (p.taches || []).forEach(t => {
+        if (trouve(colle(t.nom, t.desc))) {
+          projets.push({ titre: t.nom, detail: 'tâche · ' + p.nom,
+            aller: () => this.setState({ screen: 'projets', openProjId: p.id, gq: '' }) });
+        }
+      });
+    });
+    ajoute('Projets & tâches', coupe(projets));
+
+    // 6. Intervenants : consultants et fournisseurs.
+    const gens = [];
+    (D.consultants || []).forEach(c => { if (trouve(colle(c.nom, c.email, c.role))) {
+      gens.push({ titre: c.nom, detail: 'consultant' + (c.email ? ' · ' + c.email : ''),
+        aller: () => this.setState({ screen: 'parametres', gq: '' }) }); } });
+    (D.suppliers || []).forEach(f => { if (trouve(colle(f.nom, f.email, f.metier))) {
+      gens.push({ titre: f.nom, detail: 'fournisseur' + (f.metier ? ' · ' + f.metier : ''),
+        aller: () => this.setState({ screen: 'parametres', gq: '' }) }); } });
+    ajoute('Intervenants', coupe(gens));
+
+    // 7. Rapports du reporting.
+    const rapports = ((D.reporting || {}).reports || []).filter(r =>
+      trouve(colle(r.nom, r.type, r.frequence))).map(r => ({
+        titre: r.nom, detail: [r.type, r.frequence].filter(Boolean).join(' · '),
+        aller: () => this.setState({ screen: 'reporting', gq: '' }) }));
+    ajoute('Rapports', coupe(rapports));
+
+    common.gGroupes = groupes;
+    common.gTotal = total;
+    common.gTrop = tronque;
+    common.gRien = total === 0;
+    // Dire ce qui n'est pas encore chargé vaut mieux que laisser croire à une
+    // absence : un catalogue en cours de lecture ne veut pas dire « rien ».
+    common.gAttente = [!D.prodCatalogue ? 'catalogue produit' : '', !D.plano ? 'comptoir' : '']
+      .filter(Boolean).join(' et ');
+  }
+
   /* --- planogramme : le comptoir, ses emplacements, ses consignes ------------ */
 
   /** Charge l'arbre du comptoir. Un seul appel : structure ET occupation. */

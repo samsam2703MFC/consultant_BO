@@ -39,6 +39,29 @@ export function render(c, x){
       <img src="${c.brandLogo}" alt="${esc(c.brandNom) || 'L’Atelier'}" style="width:176px;max-width:100%;height:auto;display:block">
       <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">${esc(c.brandSub)}</div>
     </div>
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div style="padding:0 12px 12px;position:relative">
+      <div style="position:relative">
+        <input id="rail-q" value="${esc(c.gq)}" ${x.I(c.gSet)} placeholder="Rechercher partout…"
+          style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text);border-radius:9px;height:32px;padding:0 ${c.gVider ? '28px' : '10px'} 0 10px;font-family:var(--font-ui);font-size:12px">
+        ${c.gVider ? `<button ${x.A(c.gVider)} title="Effacer" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:2px 4px;line-height:1">✕</button>` : ''}
+      </div>
+      ${c.gOuvert ? `<div data-scroll="railq" style="position:absolute;left:12px;right:12px;top:38px;z-index:40;max-height:62vh;overflow-y:auto;background:var(--color-surface);border:0.5px solid var(--color-border-secondary);border-radius:10px;box-shadow:0 14px 34px rgba(34,34,34,0.18)">
+        ${c.gRien
+          ? `<div style="padding:14px 13px;font-size:11.5px;color:var(--color-text-muted);line-height:1.5">Rien de ce nom.${c.gAttente ? ' Le ' + esc(c.gAttente) + ' est encore en lecture — réessayez dans un instant.' : ''}</div>`
+          : c.gGroupes.map(g => `
+            <div style="padding:9px 12px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${esc(g.nom)}</div>
+            ${g.lignes.map(l => `<button ${x.A(l.aller)} style="display:block;width:100%;text-align:left;border:none;background:transparent;cursor:pointer;padding:6px 12px;font-family:var(--font-ui)">
+              <div style="font-size:12px;font-weight:500;color:var(--color-text);line-height:1.35">${esc(l.titre)}${l.marque ? ` <span style="font-weight:400;font-size:10px;color:var(--color-primary)">${esc(l.marque)}</span>` : ''}</div>
+              ${l.detail ? `<div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.35">${esc(l.detail)}</div>` : ''}
+            </button>`).join('')}`).join('')}
+        ${c.gTrop ? `<div style="padding:8px 12px;font-size:10.5px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.gTrop} résultat(s) de plus — précisez la recherche.</div>` : ''}
+      </div>` : ''}
+    </div>
+
     <nav style="flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px">
       ${(c.nav || []).map(g => `
         <div style="display:flex;flex-direction:column;gap:2px">
