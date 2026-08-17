@@ -2590,17 +2590,30 @@ class App {
     this.zPatch({ comment: dej && dej !== txt ? dej + '\n' + txt : txt });
     this.notify(rep.length + ' repère(s) reportés dans le commentaire');
   }
-  /** Enregistre les repères. Une liste vide efface — c'est « tout effacer ». */
+  /**
+   * Enregistre les repères. Une liste vide efface — c'est « tout effacer ».
+   *
+   * La confirmation reste DANS la modale. Le bandeau de notification s'affiche
+   * en bas à droite de l'écran, c'est-à-dire pile sur les boutons de ce
+   * panneau : il recouvrait le « Enregistré ✓ » qu'on venait chercher et
+   * donnait l'impression que quelque chose sortait de la modale. L'échec suit
+   * le même chemin, écrit sous les boutons.
+   */
   zSave(){
     const dt = this.state.ctrlDet;
     if (!dt || dt.zBusy) { return; }
-    this.zPatch({ zBusy: true });
-    this.api('PUT', '/pwa/tasks/annotation', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
+    const n = (dt.rep || []).length;
+    this.zPatch({ zBusy: true, zErr: '' });
+    write(this.source, 'PUT', '/pwa/tasks/annotation', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
       reperes: (dt.rep || []).map(r => ({ x: r.x, y: r.y, l: r.l, h: r.h, niveau: r.niveau, txt: r.txt })) })
       .then(r => {
-        if (!r || r.ok === false) { this.zPatch({ zBusy: false }); return; }
-        this.zPatch({ zBusy: false, zSaved: true });
-        this.notify((dt.rep || []).length ? (dt.rep || []).length + ' repère(s) enregistrés' : 'Repères effacés');
+        if (!r || r.ok === false) {
+          this.zPatch({ zBusy: false, zSaved: false,
+            zErr: 'Non enregistré — ' + ((r && r.error) || 'refusé par le serveur') });
+          return;
+        }
+        this.zPatch({ zBusy: false, zSaved: true,
+          zSavedTxt: n ? (n > 1 ? n + ' repères enregistrés' : '1 repère enregistré') : 'Repères effacés' });
       });
   }
   ctrlSendNote(){
@@ -2810,6 +2823,7 @@ class App {
       down: e => this.zDown(e),
       n: rep.length,
       busy: !!dt.zBusy, saved: !!dt.zSaved,
+      savedTxt: dt.zSavedTxt || '', err: dt.zErr || '',
       // Gravité du PROCHAIN repère : on choisit avant de poser, comme on
       // choisit un feutre avant de tracer.
       niveaux: this.zNiveaux().map(lv => ({

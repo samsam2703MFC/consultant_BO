@@ -2793,6 +2793,11 @@ function tplCtrlZoom(c, x){
               <button ${x.A(z.save)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:34px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${z.busy ? 'wait' : 'pointer'};opacity:${z.busy ? '0.6' : '1'};flex:1">${z.busy ? 'Enregistrement…' : (z.saved ? 'Enregistré ✓' : 'Enregistrer les repères')}</button>
               <button ${x.A(z.close)} style="${tool(false, true)}">Fermer</button>
             </div>
+            <!-- La confirmation et l'échec s'écrivent ICI, sous les boutons : le
+                 bandeau de notification de l'application se pose en bas à droite
+                 de l'écran, donc sur ce panneau, et recouvrait la réponse. -->
+            ${z.err ? `<div style="margin-top:9px;padding:8px 10px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;line-height:1.45">${esc(z.err)}</div>` : ''}
+            ${!z.err && z.saved && z.savedTxt ? `<div style="margin-top:9px;font-size:11.5px;color:#2d7a3e">${esc(z.savedTxt)} — la modale reste ouverte, vous pouvez continuer.</div>` : ''}
           </div>
         </div>
       </div>
