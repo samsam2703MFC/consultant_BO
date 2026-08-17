@@ -715,7 +715,7 @@ final class PanelApi
     }
 
     /** Déballe une enveloppe API ({data:…}, {items:…}, liste nue…). */
-    private static function liste(array $d): array
+    public static function liste(array $d): array
     {
         if (array_is_list($d)) { return array_values(array_filter($d, 'is_array')); }
         foreach (['data', 'items', 'tasks', 'results', 'rows', 'content', 'checklists', 'products', 'grouped_products'] as $k) {

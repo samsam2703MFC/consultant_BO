@@ -1,7 +1,7 @@
-Diagnostic API : les manques de tout le projet, et les appels > 2 s.
+Controle des taches : partir des taches, plus des notes.
 
-Le « manque API » couvre desormais l ensemble des ecrans, detecte sur l etat
-reel : catalogue, scoring, analyse, controle des taches, centrale, magasins,
-marge, exploitation, parametres. Et chaque appel est chronometre : au-dela de
-deux secondes la route est retenue, avec sa moyenne et son pire temps — ce qu il
-faut pour demander qu une API soit amelioree.
+Sonde : l API rend 34 taches par boutique pour aujourd hui, avec status
+PENDING ou DONE — Halle en a deja des DONE. L ecran, lui, affichait zero, parce
+qu il lisait mac_task_review (les notes DEJA posees) et n interrogeait l API que
+pour les boutiques deja notees. Une tache rendue aujourd hui n apparaissait
+jamais. Source renversee, et « a controler » distingue de « non rendue ».

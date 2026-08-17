@@ -264,14 +264,23 @@ function ep_pwa_tasks(): array
     if ($date === null || !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date)) { $date = null; }
 
     $empty = ['date' => $date ?? date('Y-m-d'), 'dates' => [], 'shops' => [],
-        'consultants' => [], 'totals' => ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0, 'noteMoy' => null],
+        'consultants' => [], 'totals' => ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0,
+            'aControler' => 0, 'nonRendues' => 0, 'noteMoy' => null],
         'indispo' => true];
 
     try {
         // Journées réellement évaluées (sélecteur de date) + date active par défaut.
+        // Les dates proposées partaient des NOTES : aujourd'hui n'y figurait
+        // jamais, et le sélecteur ouvrait sur la dernière journée déjà notée.
+        // Or c'est précisément aujourd'hui qu'il y a à contrôler. La journée
+        // courante et la veille sont donc toujours offertes.
         $dates = array_map(fn ($r) => (string) $r['d'],
             Db::rows("SELECT DISTINCT review_date d FROM mac_task_review ORDER BY review_date DESC LIMIT 90"));
-        if ($date === null) { $date = $dates[0] ?? date('Y-m-d'); }
+        foreach ([date('Y-m-d'), date('Y-m-d', strtotime('-1 day'))] as $d) {
+            if (!in_array($d, $dates, true)) { $dates[] = $d; }
+        }
+        rsort($dates);
+        if ($date === null) { $date = date('Y-m-d'); }
 
         $taskNames = todoTaskNames();
         $shopNames = [];
@@ -285,14 +294,30 @@ function ep_pwa_tasks(): array
         // (la base ne garde que l'identifiant). On interroge une fois par
         // boutique concernée, et on complète le référentiel local `todo_task`.
         // Sans identifiants API configurés, on garde les noms disponibles.
+        // L'ÉCRAN PART DES TÂCHES, PLUS DES NOTES. Auparavant l'API n'était
+        // interrogée que pour les boutiques ayant déjà une note : sans note,
+        // aucun appel, donc rien à contrôler — jamais. Mesuré : au 17/08 la
+        // route rendait 34 tâches par boutique quand l'écran en affichait zéro.
+        // On interroge donc toutes les boutiques actives, et `status` (PENDING
+        // ou DONE) dit ce qui est rendu et attend un contrôle.
         $apiNames = [];
+        $apiTaches = [];        // sid|tid => tâche telle que rendue par le panel
         $apiOn = PanelApi::configured();
         if ($apiOn) {
-            foreach (array_unique(array_map(fn ($r) => (int) $r['id_shop'], $rows)) as $sid) {
-                foreach (PanelApi::shopTasks($sid, $date) as $t) {
+            try {
+                $actifs = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+            } catch (PDOException $eA) { $actifs = []; }
+            $sids = array_values(array_unique(array_merge($actifs,
+                array_map(fn ($r) => (int) $r['id_shop'], $rows))));
+            $req = [];
+            foreach ($sids as $sid) { $req[$sid] = '/consultant/shops/' . $sid . '/tasks?date=' . urlencode($date); }
+            foreach (PanelApi::getParallele($req) as $sid => $rep) {
+                foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $t) {
                     $tid = (int) ($t['task_id'] ?? $t['id'] ?? 0);
+                    if ($tid <= 0) { continue; }
                     $nom = trim((string) ($t['task_name'] ?? $t['name'] ?? ''));
-                    if ($tid > 0 && $nom !== '') { $apiNames[$sid . '|' . $tid] = $nom; }
+                    if ($nom !== '') { $apiNames[$sid . '|' . $tid] = $nom; }
+                    $apiTaches[$sid . '|' . $tid] = $t + ['_shop' => (int) $sid, '_task' => $tid];
                 }
             }
         }
@@ -333,6 +358,7 @@ function ep_pwa_tasks(): array
                                           : ($valide && $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null),
                 'ctrlDir'     => $ctrlDir,
                 'majLe'       => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+                'statut'      => $valide ? 'notee' : 'aControler',
             ];
             $tot['taches']++;
             if ($valide) { $tot['valides']++; } else { $tot['aValider']++; }
@@ -350,6 +376,45 @@ function ep_pwa_tasks(): array
             if ($valide) { $cons[$cid]['valides']++; }
             if ($note !== null) { $cons[$cid]['noteSum'] += $note; $cons[$cid]['noteN']++; }
         }
+
+        // --- LES TÂCHES RENDUES ET NON ENCORE NOTÉES : le reste à contrôler.
+        // C'était le trou : elles n'existent pas dans mac_task_review, donc
+        // l'écran les ignorait. Une tâche DONE sans note est exactement ce que
+        // le consultant doit regarder ; une PENDING n'est pas encore rendue et
+        // n'est pas contrôlable — on distingue les deux plutôt que de les
+        // mélanger sous un même « à valider ».
+        $deja = [];
+        foreach ($rows as $r) { $deja[(int) $r['id_shop'] . '|' . (int) $r['id_task']] = true; }
+        foreach ($apiTaches as $cle => $t) {
+            if (isset($deja[$cle])) { continue; }
+            $sid = (int) $t['_shop']; $tid = (int) $t['_task'];
+            $st = strtoupper(trim((string) ($t['status'] ?? '')));
+            $faite = $st === 'DONE' || $st === 'COMPLETED' || !empty($t['completed_at']);
+            if (!isset($byShop[$sid])) {
+                $byShop[$sid] = ['shopId' => (string) $sid, 'shop' => $shopNames[$sid] ?? ('Boutique #' . $sid), 'taches' => []];
+            }
+            $byShop[$sid]['taches'][] = [
+                'taskId' => (string) $tid,
+                'tache'  => $apiNames[$cle] ?? ('Tâche #' . $tid),
+                'note' => null, 'accepte' => null,
+                'comment' => ($t['note'] ?? null) !== '' ? ($t['note'] ?? null) : null,
+                'consultant' => null, 'consultantId' => 0, 'date' => $date,
+                'valide' => false, 'valideePar' => null, 'revuePar' => null, 'valideeLe' => null,
+                'ctrlDir' => false,
+                'majLe' => !empty($t['completed_at']) ? substr((string) $t['completed_at'], 0, 16) : null,
+                // Deux états bien séparés, portés jusqu'à l'écran.
+                'statut' => $faite ? 'aControler' : 'nonRendue',
+                'faitePar' => ($t['completed_by'] ?? null) ?: null,
+                'photoRequise' => !empty($t['requires_photo']),
+                'obligatoire' => !empty($t['is_mandatory']),
+                'checklist' => trim((string) ($t['checklist_name'] ?? '')) ?: null,
+            ];
+            $tot['taches']++;
+            if ($faite) { $tot['aControler'] = ($tot['aControler'] ?? 0) + 1; $tot['aValider']++; }
+            else { $tot['nonRendues'] = ($tot['nonRendues'] ?? 0) + 1; }
+        }
+        $tot['aControler'] = $tot['aControler'] ?? 0;
+        $tot['nonRendues'] = $tot['nonRendues'] ?? 0;
 
         $consultants = array_map(fn ($c) => [
             'id' => $c['id'], 'nom' => $c['nom'], 'avis' => $c['avis'], 'refuses' => $c['refuses'], 'valides' => $c['valides'],
