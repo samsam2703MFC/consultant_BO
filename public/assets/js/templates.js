@@ -613,8 +613,8 @@ function tplAnalyse(c, x){
           c.anLignes.exclu ? ' · période en cours exclue, un mois entamé n’est pas comparable' : ''}</span>
       </div>
       <svg viewBox="0 0 ${c.anLignes.W} ${c.anLignes.H}" style="width:100%;height:auto;display:block">
-      ${c.anLignes.ticks.map(t => `<line x1="0" x2="${c.anLignes.PD}" y1="${t.y}" y2="${t.y}" stroke="${t.ref ? 'rgba(34,34,34,0.3)' : 'rgba(34,34,34,0.08)'}" stroke-width="${t.ref ? 1 : 0.8}"/>
-        <text x="${c.anLignes.PD + 4}" y="${t.y + 4}" font-size="10.5" fill="var(--color-text-muted)" ${t.ref ? 'font-weight="500"' : ''}>${esc(t.t)}</text>`).join('')}
+      ${c.anLignes.ticks.map(t => `<line x1="40" x2="${c.anLignes.PD}" y1="${t.y}" y2="${t.y}" stroke="${t.ref ? 'rgba(34,34,34,0.32)' : 'rgba(34,34,34,0.08)'}" stroke-width="${t.ref ? 1.2 : 0.8}"/>
+        <text x="34" y="${t.y + 4}" text-anchor="end" font-size="10.5" fill="var(--color-text-muted)" ${t.ref ? 'font-weight="500"' : ''}>${esc(t.t)}</text>`).join('')}
       ${c.anLignes.reseau ? `<path d="${c.anLignes.reseau.d}" fill="none" stroke="var(--color-text)" stroke-width="2.5" stroke-dasharray="7 5" stroke-linejoin="round" opacity="0.6"/>
         ${c.anLignes.reseau.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4" fill="var(--color-surface)" stroke="var(--color-text)" stroke-width="1.8" opacity="0.75"><title>${esc(q.t)}</title></circle>`).join('')}
         <line x1="${c.anLignes.reseau.fin.xd + 5}" y1="${c.anLignes.reseau.fin.y}" x2="${c.anLignes.PD + 34}" y2="${c.anLignes.reseau.fin.ly}" stroke="var(--color-text)" stroke-width="0.9" opacity="0.35"/>
@@ -658,7 +658,7 @@ function tplAnalyse(c, x){
         </tr>` : ''}
       </tbody>
     </table></div>
-    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">« En phase » = moins de 5 points d’écart entre l’évolution du magasin et celle du réseau ; en deçà, on lirait du bruit comme un signal.</div>`)
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Le verdict mesure l’écart MOYEN à la courbe réseau, période par période, en points d’indice — la distance que l’œil voit entre la courbe et la pointillée. Jusqu’à 5 points : suit le réseau. De 5 à 12 : s’en écarte. Au-delà : trajectoire propre. La colonne « évolution » ne compare, elle, que le premier et le dernier point.</div>`)
     : `<svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
       ${g.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
       ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"><title>${esc(b.t || '')}</title></rect>`).join('')}

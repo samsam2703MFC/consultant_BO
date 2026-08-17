@@ -1,7 +1,7 @@
-Graphique par magasin : le rendre reellement lisible.
+Le verdict mesurait les extremites, pas la trajectoire.
 
-Quatre defauts vus a l ecran : le mois EN COURS faisait plonger les cinq
-courbes et ecrasait les mois clos dans une bande etroite ; le viewBox de 640
-etire sur 1500 grossissait tout texte de 2,3 fois ; aucune graduation chiffree,
-ni ligne 100 en base 100 ; etiquettes reentassees. Cadre propre 1180x380,
-periode en cours exclue, axe chiffre, ligne 100 tracee.
+Corbais bondit a 118 puis chute a 94 : il ne suit visiblement pas la pointillee,
+et l ecran le declarait « en phase ». Comparer seulement le premier et le
+dernier point declare en phase tout magasin qui revient au meme endroit. On
+mesure desormais l ecart MOYEN a la courbe reseau, periode par periode — la
+distance que l oeil voit. Axe des ordonnees passe a gauche.

@@ -1305,7 +1305,7 @@ class App {
         // même viewBox de 640 étiré sur 1500 pixels grossissait tout texte de
         // 2,3 fois : les libellés de mois criaient pendant que les courbes
         // chuchotaient. À cette échelle-ci, un corps 11 reste un corps 11.
-        const LW = 1180, LH = 380, LB = 42, LL = 8, PR = 150, PD = LW - PR;
+        const LW = 1180, LH = 380, LB = 42, LL = 44, PR = 150, PD = LW - PR;
 
         // La période EN COURS est écartée de cette vue. Un mois entamé fait
         // plonger les cinq courbes d'un coup : cette chute occupait la moitié
@@ -1368,14 +1368,26 @@ class App {
           return c.length > 1 && c[0] ? (c[c.length - 1] - c[0]) / c[0] : null; };
         const evoRes = evo(moy);
 
+        // Suivre le réseau, c'est épouser sa TRAJECTOIRE, pas retomber au même
+        // endroit. Comparer seulement le premier et le dernier point déclarait
+        // « en phase » une boutique qui bondit de +18 puis chute à -6 : le
+        // chiffre contredisait le dessin. On mesure donc l'écart moyen à la
+        // courbe réseau, période par période, en points d'indice — exactement
+        // la distance que l'œil voit entre la courbe et la pointillée.
+        const idxRes = indexer(moy);
+        const suivi = k => {
+          const a = indexer(brut[k]);
+          const d = a.map((v, i) => (v == null || idxRes[i] == null) ? null : Math.abs(v - idxRes[i]))
+                    .filter(v => v != null);
+          return d.length > 1 ? d.reduce((x, y) => x + y, 0) / d.length : null;
+        };
+
         const series = mags.map((m, k) => {
           const pt = [];
           aff[k].forEach((v, i) => { if (v != null) pt.push({ i, v, x: xi(i), y: yy(v) }); });
           const der = pt.length ? pt[pt.length - 1] : null;
           const e = evo(brut[k]);
-          // L'écart de TENDANCE, en points de pourcentage : la réponse à « ce
-          // magasin suit-il le réseau ? ». Sous cinq points on lirait du bruit.
-          const ph = (e != null && evoRes != null) ? (e - evoRes) * 100 : null;
+          const ph = suivi(k);
           return { id: m.id, nom: m.nom,
             court: (m.nom.split(/\s+[-–]\s+/).pop() || m.nom).trim(),
             col: PAL[k % PAL.length],
@@ -1384,11 +1396,13 @@ class App {
               + fmtM(brut[k][q.i]) + (base100 ? ' — base ' + Math.round(q.v) : '') })),
             evo: e == null ? '—' : (e >= 0 ? '+' : '') + this.fP(e, 1),
             phase: ph,
-            phaseTxt: ph == null ? '—' : (ph >= 0 ? '+' : '') + ph.toFixed(1).replace('.', ',') + ' pts',
-            verdict: ph == null ? 'indéterminé' : Math.abs(ph) <= 5 ? 'en phase'
-              : (ph > 0 ? 'au-dessus de la tendance' : 'décroche'),
-            vCol: ph == null ? 'var(--color-text-muted)' : Math.abs(ph) <= 5 ? '#2d7a3e'
-              : (ph > 0 ? '#1f6f7a' : 'var(--color-primary)'),
+            phaseTxt: ph == null ? '' : '± ' + ph.toFixed(1).replace('.', ',') + ' pts',
+            // Trois paliers, calés sur ce que l'œil distingue : coller à la
+            // pointillée, s'en éloigner par moments, ou mener sa propre vie.
+            verdict: ph == null ? 'indéterminé' : ph <= 5 ? 'suit le réseau'
+              : (ph <= 12 ? 's’en écarte' : 'trajectoire propre'),
+            vCol: ph == null ? 'var(--color-text-muted)' : ph <= 5 ? '#2d7a3e'
+              : (ph <= 12 ? '#B87512' : 'var(--color-primary)'),
             fin: der ? { y: der.y, xd: der.x } : null,
             cells: ptsC.map((p, i) => ({ v: brut[k][i] == null ? '—' : fmtM(brut[k][i]) })) };
         }).filter(s => s.pts.length);
