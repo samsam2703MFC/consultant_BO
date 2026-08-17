@@ -1,7 +1,5 @@
-Controle des taches : partir des taches, plus des notes.
+Rail : la graisse au titre de section, plus aux entrees.
 
-Sonde : l API rend 34 taches par boutique pour aujourd hui, avec status
-PENDING ou DONE — Halle en a deja des DONE. L ecran, lui, affichait zero, parce
-qu il lisait mac_task_review (les notes DEJA posees) et n interrogeait l API que
-pour les boutiques deja notees. Une tache rendue aujourd hui n apparaissait
-jamais. Source renversee, et « a controler » distingue de « non rendue ».
+Le titre en 10 px gris passait DERRIERE ses propres items en 13 px noir : la
+section paraissait moins importante que son contenu. Titre en 700 et en noir,
+entrees explicitement en 400.

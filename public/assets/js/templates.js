@@ -42,7 +42,11 @@ export function render(c, x){
     <nav style="flex:1;padding:0 12px 16px;display:flex;flex-direction:column;gap:18px">
       ${(c.nav || []).map(g => `
         <div style="display:flex;flex-direction:column;gap:2px">
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted);padding:0 10px 6px">${esc(g.titre)}</div>
+          <!-- L'intitulé de section porte la graisse, les entrées ne l'ont plus.
+               Auparavant l'inverse se lisait : le titre en 10 px gris passait
+               DERRIÈRE ses propres items en 13 px noir, et la section semblait
+               moins importante que son contenu. -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">${esc(g.titre)}</div>
           ${g.items.map(n => navBtn(n, x)).join('')}
         </div>`).join('')}
     </nav>
