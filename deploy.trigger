@@ -5,3 +5,4 @@ cocher est le geste meme de cet ecran. Decocher remet le minimum a zero : un
 minimum sur une reference facultative ne veut rien dire.
 
 
+
