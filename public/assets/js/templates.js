@@ -2935,6 +2935,32 @@ function tplDiagnostic(c, x){
       </tr>`).join('')}</tbody></table></div>`}
   </div>
 
+  ${(c.frSources || []).length ? `<div style="${CARD};margin-bottom:16px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:4px">Fraîcheur des sources</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px">Une source en retard ne provoque aucune erreur : elle rend un total d’hier qui reste plausible aujourd’hui. ${esc(c.frResume)} (référence : ${esc(c.frAuj)}).</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px">
+      <thead><tr><th style="${TH}">Source</th><th style="${TH}">Contenu</th><th style="${TH}">Dernière donnée</th><th style="${TH};text-align:right">Retard</th></tr></thead>
+      <tbody>${c.frSources.map(f => `<tr>
+        <td style="${TD};${MONO}">${esc(f.table)}</td>
+        <td style="${TD};color:var(--color-text-muted)">${esc(f.quoi)}</td>
+        <td style="${TD};font-variant-numeric:tabular-nums">${esc(f.derniere)}</td>
+        <td style="${TD};text-align:right;font-weight:500;color:${f.col}">${esc(f.retard)}</td>
+      </tr>`).join('')}
+      ${(c.frApi || []).map(a => `<tr>
+        <td style="${TD};${MONO};border-top:0.5px solid var(--color-border-secondary)">${esc(a.route)}</td>
+        <td style="${TD};color:var(--color-text-muted);border-top:0.5px solid var(--color-border-secondary)">API amont · ${esc(a.detail)}</td>
+        <td colspan="2" style="${TD};border-top:0.5px solid var(--color-border-secondary);color:${a.ok ? '#2d7a3e' : 'var(--color-primary)'};font-weight:500">${esc(a.verdict)}</td>
+      </tr>`).join('')}</tbody></table></div>
+    ${(c.frEcrans || []).length ? `<div style="margin-top:14px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Écrans alimentés par la base plutôt que par l’API</div>
+      ${c.frEcrans.map(e => `<div style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+        <div style="font-size:12.5px;font-weight:500">${esc(e.ecran)} <span style="${MONO};font-weight:400;color:var(--color-text-muted)">${esc(e.route)}</span></div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">lit ${esc(e.lit)} — ${esc(e.consequence)}</div>
+        <div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:2px">→ ${esc(e.remplacer)}</div>
+      </div>`).join('')}
+    </div>` : ''}
+  </div>` : ''}
+
   <div style="${CARD}">
     <div style="font-size:13px;font-weight:500;margin-bottom:4px">Ce que le cockpit ne peut pas afficher</div>
     <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:14px">Détecté sur l’état réel des données, écran par écran. « manque API » : personne ne l’expose, il faut le réclamer. « à renseigner » : la source existe et attend d’être remplie.</div>

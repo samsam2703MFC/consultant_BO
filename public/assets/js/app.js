@@ -1544,8 +1544,30 @@ class App {
    * corrigent au même endroit — l'API amont. Réunir les deux listes donne, en
    * une page, ce qu'il faut demander et ce qu'il faut faire accélérer.
    */
+  fraicheur(){
+    if (this.D.fraicheur || this._frEnCours) { return; }
+    this._frEnCours = true;
+    readOne('/audit/fraicheur').then(f => { this._frEnCours = false;
+      this.D.fraicheur = f || {}; this.setState({}); });
+  }
   valsDiag(common){
-    this.lacunes();
+    this.lacunes(); this.fraicheur();
+    const F = this.D.fraicheur || null;
+    common.frResume = F && F.resume ? F.resume : '';
+    common.frRetard = F ? (F.retardCaisse == null ? null : F.retardCaisse) : null;
+    common.frAuj = F && F.aujourdhui ? F.aujourdhui : '';
+    common.frSources = (F && F.sources || []).map(x => ({ table: x.table, quoi: x.quoi,
+      derniere: x.derniere || (x.erreur || '—'),
+      retard: x.retard == null ? '' : x.retard + ' j',
+      // Deux jours de décalage sur des avis se comprend ; trente-quatre sur la
+      // caisse est un écran qui ment sans le savoir.
+      col: x.retard == null ? 'var(--color-text-muted)'
+        : (x.retard > 7 ? 'var(--color-primary)' : (x.retard > 2 ? '#B87512' : '#2d7a3e')) }));
+    common.frApi = (F && F.api || []).map(a => ({ route: a.route,
+      detail: (a.magasins != null ? a.magasins + ' magasin(s)' : '') + (a.ca != null ? ' · ' + this.fMt(a.ca) : ''),
+      verdict: a.verdict, ok: /jour même/.test(a.verdict || '') }));
+    common.frEcrans = (F && F.ecrans || []).map(e => ({ ecran: e.ecran, route: e.route,
+      lit: e.lit, consequence: e.consequence, remplacer: e.remplacer }));
     const L = this.D.lacunes || {};
     const noms = { magasins: 'Tableau des magasins', marge: 'Marge & coûts',
       exploitation: 'P&L magasins', parametres: 'Paramètres', catalogue: 'Catalogue produit',
