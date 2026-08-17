@@ -2711,8 +2711,12 @@ function tplCtrlZoom(c, x){
             <!-- data-zsurf : la surface de tracé. Les cadres sont positionnés en
                  POURCENTAGE d'elle, jamais en pixels — la photo peut être
                  affichée à n'importe quelle taille. -->
-            <div ${x.PD(z.down)} data-zsurf style="position:relative;display:inline-block;line-height:0;touch-action:none;cursor:crosshair;flex:0 1 auto">
-              <img src="${z.photo}" alt="Photo de réalisation" style="display:block;max-width:100%;max-height:70vh;border-radius:2px">
+            <div ${x.PD(z.down)} data-zsurf style="position:relative;display:inline-block;line-height:0;touch-action:none;cursor:${z.imgErr ? 'not-allowed' : 'crosshair'};flex:0 1 auto;${z.imgErr ? 'min-width:380px;min-height:280px;background:#211c1a;border-radius:8px' : ''}">
+              <img data-zimg src="${z.photo}" alt="Photo de réalisation" style="display:block;max-width:100%;max-height:70vh;border-radius:2px${z.imgErr ? ';display:none' : ''}">
+              ${z.imgErr ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center">
+                <span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">photo indisponible</span>
+                <div style="font-size:12px;color:#c9bfb8;line-height:1.55;max-width:320px">${esc(z.imgErrTxt)}</div>
+              </div>` : ''}
               ${z.cadres.map(k => `<div ${x.A(k.pick)} data-zbox style="${k.boxSt}">
                 <span style="${k.badgeSt}">${k.n}</span>
                 <span style="${k.xSt}">✕</span>

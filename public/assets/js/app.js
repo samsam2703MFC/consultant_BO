@@ -2453,7 +2453,29 @@ class App {
   }
   zOpen(){
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet,
-      { zoom: true, zSel: null, zCompare: false, zBusy: false, zSaved: false }) }));
+      { zoom: true, zSel: null, zCompare: false, zBusy: false, zSaved: false, zImgErr: false }) }));
+    this.zSurveillePhoto();
+  }
+  /**
+   * Surveille le CHARGEMENT de la photo, et le dit quand il échoue.
+   *
+   * L'URL de la photo est signée et expire : une modale ouverte longtemps après
+   * la lecture du détail se retrouvait avec une image vide, donc une surface de
+   * tracé de 0 × 0 — on cliquait dans le vide sans qu'aucun message
+   * n'explique pourquoi. On ne peut pas l'apprendre au rendu : le navigateur
+   * ne sait lui-même que la photo est perdue qu'à la fin de la requête.
+   */
+  zSurveillePhoto(){
+    setTimeout(() => {
+      const img = document.querySelector('[data-zimg]');
+      if (!img) { return; }
+      const rate = () => { const dt = this.state.ctrlDet;
+        if (dt && dt.zoom && !dt.zImgErr) { this.zPatch({ zImgErr: true }); } };
+      if (img.complete) { if (!img.naturalWidth) { rate(); } return; }
+      img.addEventListener('error', rate, { once: true });
+      img.addEventListener('load', () => { const dt = this.state.ctrlDet;
+        if (dt && dt.zoom && dt.zImgErr) { this.zPatch({ zImgErr: false }); } }, { once: true });
+    }, 0);
   }
   zClose(){
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { zoom: false, zSel: null }) }));
@@ -2476,6 +2498,9 @@ class App {
     // second par-dessus. Sans ce garde-fou, corriger une remarque commencerait
     // par empiler un cadre sur celui qu'on visait.
     if (ev.target.closest('[data-zbox]')) { return; }
+    // Pas de repère sur une photo qu'on ne voit pas : le cadre porterait des
+    // coordonnées qui ne désignent rien.
+    if ((this.state.ctrlDet || {}).zImgErr) { return; }
     ev.preventDefault();
     const r = surf.getBoundingClientRect();
     if (r.width < 20 || r.height < 20) { return; }
@@ -2778,6 +2803,9 @@ class App {
       sous: [d.checklist || '', this.fDA(dt.date), (d.avis && d.avis.consultant) ? 'rendue par ' + d.avis.consultant : '']
         .filter(Boolean).join(' · '),
       photo: d.photo,
+      imgErr: !!dt.zImgErr,
+      imgErrTxt: 'La photo n’a pas pu être chargée depuis le stockage du panel : son lien signé a expiré, '
+        + 'ou le stockage est injoignable. Fermez et rouvrez la tâche pour obtenir un lien neuf.',
       close: () => this.zClose(),
       down: e => this.zDown(e),
       n: rep.length,
