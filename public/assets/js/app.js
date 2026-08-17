@@ -2225,34 +2225,69 @@ class App {
       bloc.push('</section>');
     });
     const t = pl.totaux || {};
+    // La fenêtre part d'une page vierge : sans `base`, aucun chemin relatif n'y
+    // résout — ni la feuille de style de la marque, ni ses polices, ni les
+    // photos annexées, qui sortaient donc en cadres vides.
+    const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+    const marque = (this.meta && this.meta.reseau) || {};
     const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-      + '<title>Planogramme comptoir — ' + esc(jour) + '</title><style>'
-      + 'body{font-family:Helvetica,Arial,sans-serif;color:#222;margin:18mm 14mm;font-size:11px;line-height:1.45}'
-      + 'h1{font-size:19px;margin:0 0 2px}h2{font-size:14px;margin:16px 0 4px;border-bottom:1.5px solid #222;padding-bottom:3px}'
-      + 'h3{font-size:12px;margin:10px 0 3px}.meta{font-weight:400;color:#666}'
-      + '.sous{color:#666;margin:0 0 10px}.note{margin:2px 0 6px;color:#444;font-style:italic}'
+      + '<base href="' + esc(base) + '">'
+      + '<title>Planogramme comptoir — ' + esc(jour) + '</title>'
+      + '<link rel="stylesheet" href="assets/ds/global.css">'
+      + '<style>'
+      // Les couleurs et les aplats doivent SORTIR à l'impression : sans cette
+      // règle le navigateur les retire, et la feuille perd ses repères.
+      + '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      + 'body{font-family:var(--font-ui),Helvetica,Arial,sans-serif;color:var(--color-text);'
+      + 'background:#fff;margin:0;font-size:11px;line-height:1.5;font-weight:var(--weight-regular,400)}'
+      + '.tete{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;'
+      + 'border-bottom:2px solid var(--color-primary);padding-bottom:8px;margin-bottom:14px}'
+      + '.tete img{height:13mm;width:auto;display:block}'
+      + 'h1{font-family:var(--font-display),var(--font-ui),serif;font-size:21px;font-weight:400;margin:0;'
+      + 'color:var(--color-primary);line-height:1.15}'
+      + '.sous{color:var(--color-text-muted);margin:3px 0 0;font-size:10.5px}'
+      + 'h2{font-family:var(--font-ui);font-size:13px;font-weight:600;margin:14px 0 5px;padding:4px 8px;'
+      + 'background:var(--color-secondary);color:var(--color-on-abricot);border-radius:4px;'
+      + 'text-transform:uppercase;letter-spacing:.07em}'
+      + 'h3{font-size:12px;font-weight:600;margin:9px 0 3px}'
+      + '.meta{font-weight:400;color:var(--color-text-muted)}'
+      + '.note{margin:2px 0 6px;color:var(--color-text);font-style:italic;'
+      + 'border-left:2px solid var(--color-secondary);padding-left:7px}'
       + 'table{width:100%;border-collapse:collapse;margin:0 0 5px;table-layout:fixed}'
-      + 'th{width:64px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#666;'
-      + 'border:0.5px solid #ccc;padding:5px 6px;vertical-align:top}'
-      + 'td{border:0.5px solid #ccc;padding:5px 6px;vertical-align:top;font-size:10px}'
-      + '.f{display:block;color:#666;font-size:8.5px}.n{font-style:italic}.libre{color:#999}'
-      + '.ph{max-width:74mm;max-height:52mm;border:0.5px solid #ccc;margin:2px 0 6px;display:block}'
+      + 'th{width:62px;text-align:left;font-size:8.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;'
+      + 'color:var(--color-text-muted);background:var(--color-background-secondary);'
+      + 'border:0.5px solid var(--color-border-secondary);padding:5px 6px;vertical-align:top}'
+      + 'td{border:0.5px solid var(--color-border-secondary);padding:5px 6px;vertical-align:top;font-size:10px}'
+      + 'td b{font-weight:600;color:var(--color-primary)}'
+      + '.f{display:block;color:var(--color-text-muted);font-size:8.5px;font-weight:400}'
+      + '.n{font-style:italic}.libre{color:#9a938c;font-weight:400}'
+      + '.ph{max-width:74mm;max-height:52mm;border:0.5px solid var(--color-border-secondary);'
+      + 'border-radius:3px;margin:3px 0 7px;display:block}'
       + 'section{break-inside:auto}h3,table{break-inside:avoid}'
       + '@page{size:A4;margin:14mm}</style></head><body>'
+      + '<div class="tete"><div>'
       + '<h1>Planogramme comptoir</h1>'
-      + '<p class="sous">' + esc(jour) + ' · ' + (t.slots || 0) + ' emplacement(s), '
-      + (t.places || 0) + ' référence(s) placée(s), ' + (t.libres || 0) + ' libre(s)</p>'
+      + '<p class="sous">' + esc(marque.nom || '') + (marque.nom ? ' · ' : '') + esc(jour) + ' · '
+      + (t.slots || 0) + ' emplacement(s), ' + (t.places || 0) + ' référence(s) placée(s), '
+      + (t.libres || 0) + ' libre(s)</p></div>'
+      + '<img src="assets/img/logo.png" alt="' + esc(marque.nom || '') + '"></div>'
       + bloc.join('') + '</body></html>';
 
     const w = window.open('', '_blank');
     if (!w) { this.notify('Le navigateur a bloqué la fenêtre d’impression.'); return; }
     w.document.write(html);
     w.document.close();
-    // Attendre les images : imprimer avant leur chargement sortirait des cadres
-    // vides à la place des photos.
-    const lancer = () => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } };
-    if (w.document.images.length === 0) { setTimeout(lancer, 120); }
-    else { w.onload = lancer; setTimeout(lancer, 2500); }
+    // Attendre les images ET les polices : imprimer trop tôt sortirait des
+    // cadres vides à la place des photos, et le texte dans la police de repli.
+    let lance = false;
+    const lancer = () => { if (lance) { return; } lance = true;
+      try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } };
+    const pret = () => {
+      const polices = w.document.fonts && w.document.fonts.ready;
+      if (polices && typeof polices.then === 'function') { polices.then(lancer); setTimeout(lancer, 3000); }
+      else { setTimeout(lancer, 400); }
+    };
+    if (w.document.readyState === 'complete') { pret(); } else { w.onload = pret; setTimeout(lancer, 4000); }
   }
 
   /* --- assistant de création d'un meuble ------------------------------------- */
