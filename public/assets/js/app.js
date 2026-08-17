@@ -1817,6 +1817,58 @@ class App {
     const sC = (pl.slots || []).find(s => s.id === cible) || null;
     common.plCibleTxt = sC ? (sC.meuble + ' · ' + sC.niveau + ' · position ' + sC.position) : '';
 
+    // --- la même chose en TABLEAU.
+    //
+    // Le plan montre la forme du comptoir, le tableau la porte en entier : à
+    // douze emplacements le dessin suffit, à deux cents il ne tient plus à
+    // l'écran et on ne peut ni trier, ni chercher, ni voir toutes les zones à
+    // la fois. Les deux vues lisent la MÊME donnée — aucun calcul n'est refait
+    // ici, sinon les deux finiraient par ne plus dire la même chose.
+    const vue = S.plVue === 'tableau' ? 'tableau' : 'plan';
+    common.plVue = vue;
+    common.plVueBtns = [['plan', 'Plan'], ['tableau', 'Tableau']].map(([v, nom]) => ({
+      nom, on: vue === v, go: () => this.setState({ plVue: v }) }));
+
+    const libresSeules = !!S.plLibres;
+    common.plLibresSeules = libresSeules;
+    common.plLibresGo = () => this.setState({ plLibres: !libresSeules });
+    const q = (S.plQ || '').trim().toLowerCase();
+    common.plQ = S.plQ || '';
+    common.plSetQ = e => this.setState({ plQ: e.target.value });
+
+    const tri = S.plTri || 'lieu';
+    common.plTri = tri;
+    const cols = [['lieu', 'Emplacement'], ['ref', 'Référence'], ['etat', 'État']];
+    common.plCols = cols.map(([k, nom]) => ({ nom, k, on: tri === k,
+      go: () => this.setState({ plTri: k }) }));
+
+    let rangs = (pl.slots || []).map(s => {
+      const occ = (s.occupants || [])[0] || null;
+      return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
+        taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '—',
+        ref: occ ? occ.ref : '', nom: occ ? occ.nom : '',
+        fronts: occ ? String(occ.fronts) : '—', libre: !occ,
+        etat: occ ? 'occupé' : 'libre',
+        vise: cible === s.id,
+        ouvrir: occ ? () => this.plFicheOuvrir(occ.ref) : () => this.setState({ plCible: cible === s.id ? null : s.id }) };
+    });
+    if (libresSeules) { rangs = rangs.filter(r => r.libre); }
+    if (q) {
+      rangs = rangs.filter(r => (r.nom + ' ' + r.ref + ' ' + r.zone + ' ' + r.meuble + ' ' + r.niveau)
+        .toLowerCase().indexOf(q) >= 0);
+    }
+    const cmp = { lieu: (a, b) => (a.zone + a.meuble + a.niveau).localeCompare(b.zone + b.meuble + b.niveau) || a.position - b.position,
+      ref: (a, b) => (a.nom || 'zzz').localeCompare(b.nom || 'zzz'),
+      etat: (a, b) => (a.libre === b.libre ? 0 : (a.libre ? -1 : 1)) };
+    rangs.sort(cmp[tri] || cmp.lieu);
+    common.plRangs = rangs.map(r => Object.assign({}, r, {
+      etatSt: 'display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;'
+        + (r.libre ? 'background:rgba(141,29,44,0.08);color:var(--color-primary)'
+                   : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+      trSt: 'border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;'
+        + (r.vise ? 'background:rgba(141,29,44,0.05)' : '') }));
+    common.plRangsN = rangs.length;
+
     // Déclaration de la structure : ouverte tant que rien n'existe, replaçable
     // ensuite — on ne fait pas chercher un formulaire à qui démarre de zéro.
     common.plOrg = S.plOrg == null ? common.plVide : !!S.plOrg;

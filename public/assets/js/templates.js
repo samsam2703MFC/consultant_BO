@@ -2700,6 +2700,9 @@ function tplCtrlDetail(c, x){
    attendre une API aurait laissé l'écran vide indéfiniment. */
 function tplPlanoComptoir(c, x){
   const { esc } = x;
+  // Style de cellule local : `TD` n'existe qu'à l'intérieur d'autres gabarits.
+  // Le lire d'ici passait le lint et cassait l'écran à l'exécution.
+  const TD = 'padding:9px 14px;font-size:12.5px;vertical-align:top';
   const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
   const btn = (on, dispo) => 'border-radius:8px;height:30px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;'
     + 'font-weight:500;white-space:nowrap;' + (dispo === false ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;')
@@ -2711,8 +2714,10 @@ function tplPlanoComptoir(c, x){
   return `
   <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px;margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="${lbl}">Plan du comptoir</div>
-      ${c.plZonesOpts.map(z => `<button ${x.A(z.go)} style="${btn(z.on)}">${esc(z.nom)}</button>`).join('')}
+      <div style="${lbl}">Le comptoir</div>
+      ${c.plVueBtns.map(v => `<button ${x.A(v.go)} style="${btn(v.on)}">${esc(v.nom)}</button>`).join('')}
+      ${c.plVue === 'plan' ? `<span style="width:1px;height:20px;background:var(--color-border-tertiary)"></span>
+        ${c.plZonesOpts.map(z => `<button ${x.A(z.go)} style="${btn(z.on)}">${esc(z.nom)}</button>`).join('')}` : ''}
       <div style="flex:1"></div>
       <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plTot.slots} emplacement(s) · ${c.plTot.libres} libre(s) · ${c.plTot.places} placée(s)</span>
       <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
@@ -2735,6 +2740,34 @@ function tplPlanoComptoir(c, x){
           <div style="font-size:13px;font-weight:500">Le comptoir n’est pas encore déclaré.</div>
           <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;max-width:560px;margin-left:auto;margin-right:auto">Commencez par une zone — « vitrine réfrigérée », « comptoir sec » — puis ses meubles et ses niveaux. Tant qu’aucun emplacement n’existe, il n’y a rien à choisir pour une référence.</div>
         </div>`
+      : c.plVue === 'tableau' ? `
+        <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:13px">
+          <input value="${esc(c.plQ)}" ${x.I(c.plSetQ)} placeholder="Chercher une référence, un meuble, un niveau…" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:31px;padding:0 10px;font-family:var(--font-ui);font-size:12px;flex:1;min-width:210px">
+          <button ${x.A(c.plLibresGo)} style="${btn(c.plLibresSeules)}">Emplacements libres</button>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plRangsN} ligne(s)</span>
+        </div>
+        <div style="margin-top:11px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px">
+            <thead><tr>
+              <th style="${TH}"><button ${x.A(c.plCols[0].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;${c.plCols[0].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Emplacement</button></th>
+              <th style="${TH}">Dimensions</th>
+              <th style="${TH}"><button ${x.A(c.plCols[1].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;${c.plCols[1].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Référence</button></th>
+              <th style="${TH};text-align:right">Fronts</th>
+              <th style="${TH}"><button ${x.A(c.plCols[2].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;${c.plCols[2].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">État</button></th>
+            </tr></thead>
+            <tbody>
+              ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement' : 'Ouvrir la fiche de ' + esc(r.nom)}">
+                <td style="${TD}"><span style="font-weight:500">${esc(r.meuble)} · ${esc(r.niveau)} · ${r.position}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.zone)}</div></td>
+                <td style="${TD};color:var(--color-text-muted)">${esc(r.taille)}</td>
+                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
+                <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(r.fronts)}</td>
+                <td style="${TD}"><span style="${r.etatSt}">${r.vise ? 'visé' : esc(r.etat)}</span></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+          ${c.plRangsN === 0 ? `<div style="padding:22px 16px;font-size:12px;color:var(--color-text-muted);text-align:center">Aucun emplacement ne correspond.</div>` : ''}
+        </div>
+        ${c.plCibleTxt ? `<div style="margin-top:10px;font-size:11.5px;color:var(--color-text)">Emplacement visé : <b style="font-weight:500">${esc(c.plCibleTxt)}</b> — ouvrez une référence pour l’y placer.</div>` : ''}`
       : `<div style="margin-top:14px;overflow-x:auto">
           <div style="display:grid;grid-template-columns:82px repeat(${Math.max(1, c.plMeubles.length)},minmax(190px,1fr));gap:10px;align-items:start;min-width:${82 + c.plMeubles.length * 200}px">
             <div></div>
