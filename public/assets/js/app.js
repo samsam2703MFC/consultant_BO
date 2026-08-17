@@ -1301,27 +1301,74 @@ class App {
       const grille = hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(1), w: W })) : [];
 
       if (parShop) {
+        // Marge de droite RÉSERVÉE aux étiquettes. Sans elle, les quatre noms
+        // se chevauchaient là où les courbes convergent — illisibles au moment
+        // précis où l'on compare.
+        const PR = 96, PD = W - PR;
+        const xi = i => +(PL + i * (PD - PL) / pts.length + (PD - PL) / pts.length / 2).toFixed(1);
+        labels.forEach((l, i) => { l.x = xi(i).toFixed(1); });
+        grille.forEach(g => { g.w = PD; });
+
         // Palette Okabe-Ito, éprouvée pour les déficiences de vision des
         // couleurs et vérifiée sur fond blanc (écarts CVD toutes paires ≥ 7,6).
         // La couleur suit le magasin, jamais son rang : filtrer la liste ne
         // doit pas repeindre ceux qui restent.
         const PAL = ['#D55E00', '#0072B2', '#009E73', '#CC79A7', '#E69F00'];
+
+        // Tendance réseau : la MOYENNE par magasin, pas le total. Le total
+        // vaut quatre fois une boutique et écraserait toutes les courbes sur
+        // le bas du cadre ; la moyenne se compare à vue, magasin par magasin.
+        const moy = pts.map(p => {
+          const v = mags.map(m => (p.parMagasin || {})[m.id]).filter(x => x != null);
+          return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+        });
+
         const series = mags.map((m, k) => {
           const pt = [];
           pts.forEach((p, i) => { const v = (p.parMagasin || {})[m.id];
-            if (v != null && hi > 0) pt.push({ i, v, x: +(PL + i * sw + sw / 2).toFixed(1), y: +y(v).toFixed(1) }); });
+            if (v != null && hi > 0) pt.push({ i, v, x: xi(i), y: +y(v).toFixed(1) }); });
           const der = pt.length ? pt[pt.length - 1] : null;
-          return { id: m.id, nom: m.nom, col: PAL[k % PAL.length],
+          // Écart au réseau, moyenné sur les périodes connues : c'est lui qui
+          // dit si la boutique suit le réseau ou s'en détache.
+          const ec = pt.filter(q => moy[q.i]).map(q => (q.v - moy[q.i]) / moy[q.i]);
+          return { id: m.id, nom: m.nom,
+            // Le nom de ville suffit à distinguer : « Atelier by » est commun à
+            // tous et ne fait qu'allonger une étiquette déjà à l'étroit.
+            court: (m.nom.split(/\s+[-–]\s+/).pop() || m.nom).trim(),
+            col: PAL[k % PAL.length],
             // Une ligne coupée en deux par un trou vaut mieux qu'une ligne
             // droite qui inventerait le point manquant.
             d: pt.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
-            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : ' + fmtM(q.v) })),
-            total: pt.reduce((a, q) => a + q.v, 0),
-            // Étiquette en bout de course : l'identité ne repose jamais sur la
-            // seule couleur, exigence d'autant plus nette avec cinq séries.
-            fin: der ? { x: Math.min(der.x + 6, W - 2), y: der.y, t: m.nom } : null };
+            pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + pts[q.i].libelle + ' : ' + fmtM(q.v)
+              + (moy[q.i] ? ' (' + (q.v >= moy[q.i] ? '+' : '') + this.fP((q.v - moy[q.i]) / moy[q.i], 0) + ' / réseau)' : '') })),
+            ecart: ec.length ? ec.reduce((a, b) => a + b, 0) / ec.length : null,
+            fin: der ? { y: der.y, xd: der.x } : null,
+            cells: pts.map((p, i) => { const v = (p.parMagasin || {})[m.id];
+              return { v: v == null ? '—' : fmtM(v),
+                e: (v == null || !moy[i]) ? '' : (v >= moy[i] ? '+' : '') + this.fP((v - moy[i]) / moy[i], 0),
+                col: (v == null || !moy[i]) ? 'var(--color-text-muted)'
+                  : (v >= moy[i] ? '#2d7a3e' : 'var(--color-primary)') }; }) };
         }).filter(s => s.pts.length);
-        common.anLignes = { W, H, grille, labels, series,
+
+        // Étiquettes écartées verticalement, de haut en bas : au dernier point
+        // les courbes se rejoignent, et sans cet écartement les noms se
+        // recouvrent exactement là où on cherche à les lire.
+        const finis = series.filter(s => s.fin).sort((a, b) => a.fin.y - b.fin.y);
+        let prec = -99;
+        finis.forEach(s => { s.fin.ly = Math.max(s.fin.y, prec + 12); prec = s.fin.ly; });
+
+        const mp = [];
+        moy.forEach((v, i) => { if (v != null && hi > 0) mp.push({ i, v, x: xi(i), y: +y(v).toFixed(1) }); });
+        const reseau = mp.length ? {
+          d: mp.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
+          pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + pts[q.i].libelle + ' : ' + fmtM(q.v) })),
+          fin: mp[mp.length - 1],
+          cells: moy.map(v => ({ v: v == null ? '—' : fmtM(v) }))
+        } : null;
+
+        common.fPct = v => this.fP(v, 1);
+        common.anLignes = { W, H, PD, grille, labels, series, reseau,
+          entetes: pts.map(p => ({ t: p.libelle, enCours: p.enCours })),
           vide: !series.length ? 'aucun magasin n’a de chiffre sur cette sélection' : '' };
       }
 

@@ -1,5 +1,6 @@
-Horodatage de version visible dans le rail.
+Vue par magasin : etiquettes lisibles, tendance reseau, ecart au reseau.
 
-« Je ne le vois pas en ligne » ne doit plus se trancher en tatonnant : le rail
-affiche la date du JS reellement servi. Plus ancienne que la livraison = cache
-du navigateur, pas le serveur.
+Les quatre noms se chevauchaient la ou les courbes convergent — illisibles au
+moment precis ou l on compare. Marge reservee, nom de ville, ecartement
+vertical et ligne de rappel. Ajout de la MOYENNE reseau (pas le total, qui
+ecraserait les courbes) et de l ecart de chaque magasin a cette moyenne.
