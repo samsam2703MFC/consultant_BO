@@ -1,6 +1,5 @@
-Vue par magasin : etiquettes lisibles, tendance reseau, ecart au reseau.
+Etiquettes de fin : le reseau entre dans le meme ecartement.
 
-Les quatre noms se chevauchaient la ou les courbes convergent — illisibles au
-moment precis ou l on compare. Marge reservee, nom de ville, ecartement
-vertical et ligne de rappel. Ajout de la MOYENNE reseau (pas le total, qui
-ecraserait les courbes) et de l ecart de chaque magasin a cette moyenne.
+Mesure : 8,6 px entre « Halle » et « reseau » la ou il en faut douze. L
+etiquette du reseau etait placee a part, hors du calcul d ecartement — donc
+elle retombait sur celle d un magasin.

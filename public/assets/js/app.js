@@ -1350,21 +1350,23 @@ class App {
                   : (v >= moy[i] ? '#2d7a3e' : 'var(--color-primary)') }; }) };
         }).filter(s => s.pts.length);
 
-        // Étiquettes écartées verticalement, de haut en bas : au dernier point
-        // les courbes se rejoignent, et sans cet écartement les noms se
-        // recouvrent exactement là où on cherche à les lire.
-        const finis = series.filter(s => s.fin).sort((a, b) => a.fin.y - b.fin.y);
-        let prec = -99;
-        finis.forEach(s => { s.fin.ly = Math.max(s.fin.y, prec + 12); prec = s.fin.ly; });
-
         const mp = [];
         moy.forEach((v, i) => { if (v != null && hi > 0) mp.push({ i, v, x: xi(i), y: +y(v).toFixed(1) }); });
         const reseau = mp.length ? {
           d: mp.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
           pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + pts[q.i].libelle + ' : ' + fmtM(q.v) })),
-          fin: mp[mp.length - 1],
+          fin: { xd: mp[mp.length - 1].x, y: mp[mp.length - 1].y },
           cells: moy.map(v => ({ v: v == null ? '—' : fmtM(v) }))
         } : null;
+
+        // Étiquettes écartées verticalement, de haut en bas. L'étiquette du
+        // réseau entre dans le MÊME calcul : traitée à part, elle retombait sur
+        // celle d'un magasin — mesuré, 8,6 px d'écart là où il en faut douze.
+        const bouts = series.filter(s => s.fin).map(s => s.fin);
+        if (reseau) { bouts.push(reseau.fin); }
+        bouts.sort((a, b) => a.y - b.y);
+        let prec = -99;
+        bouts.forEach(f => { f.ly = Math.max(f.y, prec + 12); prec = f.ly; });
 
         common.fPct = v => this.fP(v, 1);
         common.anLignes = { W, H, PD, grille, labels, series, reseau,

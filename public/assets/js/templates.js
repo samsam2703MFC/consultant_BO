@@ -607,7 +607,8 @@ function tplAnalyse(c, x){
       ${c.anLignes.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
       ${c.anLignes.reseau ? `<path d="${c.anLignes.reseau.d}" fill="none" stroke="var(--color-text)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round" opacity="0.55"/>
         ${c.anLignes.reseau.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="3.5" fill="var(--color-surface)" stroke="var(--color-text)" stroke-width="1.6" opacity="0.75"><title>${esc(q.t)}</title></circle>`).join('')}
-        <text x="${c.anLignes.reseau.fin.x + 9}" y="${c.anLignes.reseau.fin.y + 3}" font-size="9.5" fill="var(--color-text-muted)" font-style="italic">réseau</text>` : ''}
+        <line x1="${c.anLignes.reseau.fin.xd + 4}" y1="${c.anLignes.reseau.fin.y}" x2="${c.anLignes.PD + 6}" y2="${c.anLignes.reseau.fin.ly}" stroke="var(--color-text)" stroke-width="0.8" opacity="0.35"/>
+        <text x="${c.anLignes.PD + 16}" y="${c.anLignes.reseau.fin.ly + 3}" font-size="9.5" fill="var(--color-text-muted)" font-style="italic">réseau</text>` : ''}
       ${c.anLignes.series.map(s => `<path d="${s.d}" fill="none" stroke="${s.col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         ${s.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4" fill="${s.col}" stroke="var(--color-surface)" stroke-width="2"><title>${esc(q.t)}</title></circle>`).join('')}
         ${s.fin ? `<line x1="${s.fin.xd + 4}" y1="${s.fin.y}" x2="${c.anLignes.PD + 6}" y2="${s.fin.ly}" stroke="${s.col}" stroke-width="0.8" opacity="0.45"/>
