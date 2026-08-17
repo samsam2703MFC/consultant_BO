@@ -658,7 +658,7 @@ function tplAnalyse(c, x){
         </tr>` : ''}
       </tbody>
     </table></div>
-    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Le verdict mesure l’écart MOYEN à la courbe réseau, période par période, en points d’indice — la distance que l’œil voit entre la courbe et la pointillée. Jusqu’à 5 points : suit le réseau. De 5 à 12 : s’en écarte. Au-delà : trajectoire propre. La colonne « évolution » ne compare, elle, que le premier et le dernier point.</div>`)
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Écart à la courbe réseau, en points d’indice — la distance que l’œil voit entre la courbe et la pointillée. Le verdict retient le PLUS GRAND écart, pas la moyenne : moyenner dilue un décrochage d’un mois sur toute la période, et c’est justement ce décrochage sur lequel on peut agir. Jusqu’à 8 points : suit le réseau. De 8 à 20 : écart ponctuel, le mois est nommé. Au-delà : trajectoire propre. La colonne « évolution » ne compare, elle, que le premier et le dernier point.</div>`)
     : `<svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
       ${g.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
       ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"><title>${esc(b.t || '')}</title></rect>`).join('')}

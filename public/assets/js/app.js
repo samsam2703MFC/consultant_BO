@@ -1377,9 +1377,19 @@ class App {
         const idxRes = indexer(moy);
         const suivi = k => {
           const a = indexer(brut[k]);
-          const d = a.map((v, i) => (v == null || idxRes[i] == null) ? null : Math.abs(v - idxRes[i]))
-                    .filter(v => v != null);
-          return d.length > 1 ? d.reduce((x, y) => x + y, 0) / d.length : null;
+          const d = a.map((v, i) => (v == null || idxRes[i] == null) ? null : v - idxRes[i]);
+          const co = d.filter(v => v != null);
+          if (co.length < 2) { return null; }
+          // Le MAXIMUM commande, la moyenne accompagne. Moyenner diluait un
+          // décrochage d'un mois sur cinq périodes : Halle tombait à 4,74 et
+          // Corbais à 5,06 pour un accident de mai rigoureusement comparable —
+          // deux verdicts opposés de part et d'autre du seuil. Et un écart
+          // ponctuel est justement ce sur quoi on peut agir, à condition de
+          // savoir QUAND il s'est produit.
+          let pire = 0, iP = -1;
+          d.forEach((v, i) => { if (v != null && Math.abs(v) > Math.abs(pire)) { pire = v; iP = i; } });
+          return { moy: co.reduce((x, y) => x + Math.abs(y), 0) / co.length, max: pire,
+            quand: iP >= 0 ? ptsC[iP].libelle : null };
         };
 
         const series = mags.map((m, k) => {
@@ -1396,13 +1406,16 @@ class App {
               + fmtM(brut[k][q.i]) + (base100 ? ' — base ' + Math.round(q.v) : '') })),
             evo: e == null ? '—' : (e >= 0 ? '+' : '') + this.fP(e, 1),
             phase: ph,
-            phaseTxt: ph == null ? '' : '± ' + ph.toFixed(1).replace('.', ',') + ' pts',
-            // Trois paliers, calés sur ce que l'œil distingue : coller à la
-            // pointillée, s'en éloigner par moments, ou mener sa propre vie.
-            verdict: ph == null ? 'indéterminé' : ph <= 5 ? 'suit le réseau'
-              : (ph <= 12 ? 's’en écarte' : 'trajectoire propre'),
-            vCol: ph == null ? 'var(--color-text-muted)' : ph <= 5 ? '#2d7a3e'
-              : (ph <= 12 ? '#B87512' : 'var(--color-primary)'),
+            // Nommer la période du plus grand écart : « s'écarte » invite à
+            // chercher, « s'écarte en Mai » dit où regarder.
+            phaseTxt: ph == null ? '' : 'moy. ± ' + ph.moy.toFixed(1).replace('.', ',')
+              + ' · max ' + (ph.max >= 0 ? '+' : '') + ph.max.toFixed(0) + ' pts'
+              + (ph.quand ? ' en ' + ph.quand : ''),
+            // Trois paliers calés sur le PIRE écart, celui sur lequel on agit.
+            verdict: ph == null ? 'indéterminé' : Math.abs(ph.max) <= 8 ? 'suit le réseau'
+              : (Math.abs(ph.max) <= 20 ? 'écart ponctuel' : 'trajectoire propre'),
+            vCol: ph == null ? 'var(--color-text-muted)' : Math.abs(ph.max) <= 8 ? '#2d7a3e'
+              : (Math.abs(ph.max) <= 20 ? '#B87512' : 'var(--color-primary)'),
             fin: der ? { y: der.y, xd: der.x } : null,
             cells: ptsC.map((p, i) => ({ v: brut[k][i] == null ? '—' : fmtM(brut[k][i]) })) };
         }).filter(s => s.pts.length);

@@ -1,7 +1,6 @@
-Le verdict mesurait les extremites, pas la trajectoire.
+Le verdict retient le pire ecart, et nomme le mois.
 
-Corbais bondit a 118 puis chute a 94 : il ne suit visiblement pas la pointillee,
-et l ecran le declarait « en phase ». Comparer seulement le premier et le
-dernier point declare en phase tout magasin qui revient au meme endroit. On
-mesure desormais l ecart MOYEN a la courbe reseau, periode par periode — la
-distance que l oeil voit. Axe des ordonnees passe a gauche.
+Verification a la main : Halle 4,74 « suit » / Corbais 5,06 « s ecarte », pour
+un decrochage de mai rigoureusement comparable (15,8 et 17,7 points). La
+moyenne diluait l accident sur cinq periodes et le seuil les separait par
+hasard. Le maximum commande desormais, et l ecran nomme le mois.
