@@ -1152,6 +1152,10 @@ function wr_plano_photo(): array
             if (is_file($f)) { @unlink($f); }
         }
         Db::exec('UPDATE pla_note SET photo = NULL WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        // Une note qui ne porte plus ni texte ni photo n'a plus lieu d'être :
+        // la garder laisserait un « consigne présente » trompeur à l'écran.
+        Db::exec('DELETE FROM pla_note WHERE cible = ? AND cible_id = ?'
+            . ' AND (texte IS NULL OR texte = \'\') AND photo IS NULL', [$cible, $id]);
         return ['ok' => true, 'photo' => null, 'retiree' => true];
     }
 
