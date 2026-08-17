@@ -1871,13 +1871,67 @@ class App {
 
     // Déclaration de la structure : ouverte tant que rien n'existe, replaçable
     // ensuite — on ne fait pas chercher un formulaire à qui démarre de zéro.
+    //
+    // Tout se saisit EN LIGNE. La première version passait par window.prompt :
+    // une boîte que le navigateur peut bloquer, qui n'affiche pas ce qui existe
+    // déjà, et qui ne dit rien quand l'écriture a réussi. Résultat mesuré — deux
+    // zones « Tartes » créées coup sur coup, l'écran continuant d'annoncer un
+    // comptoir non déclaré parce qu'il ne comptait que les emplacements.
     common.plOrg = S.plOrg == null ? common.plVide : !!S.plOrg;
     common.plOrgGo = () => this.setState({ plOrg: !common.plOrg });
-    common.plZoneAdd = () => this.plCreer('zone', null);
-    common.plMeubleAdd = zid ? () => this.plCreer('meuble', zid) : null;
-    common.plNiveauAdd = (common.plMeubles[0] || null)
-      ? () => this.plCreerNiveau(common.plMeubles.map(m => ({ id: m.id, nom: m.nom }))) : null;
-    common.plZoneSuppr = zone ? () => this.plSupprimer('zone', zone.id, zone.nom) : null;
+
+    const champ = (k, val) => ({ val: S[k] == null ? val : S[k],
+      set: e => this.setState({ [k]: e.target.value }) });
+    common.plNZone = champ('plNZone', '');
+    common.plNMeuble = champ('plNMeuble', '');
+    common.plNNiveau = champ('plNNiveau', '');
+    common.plNSlots = champ('plNSlots', '4');
+
+    common.plZoneAdd = () => this.plAjouter('zone', null, S.plNZone, 'plNZone');
+    common.plMeubleAdd = zid ? () => this.plAjouter('meuble', zid, S.plNMeuble, 'plNMeuble') : null;
+
+    // Liste de ce qui existe, éditable sur place : c'est aussi la seule façon de
+    // voir — et de corriger — un doublon créé par mégarde.
+    common.plZonesListe = zones.map(z => ({ id: z.id, nom: z.nom,
+      nMeubles: (z.meubles || []).length,
+      on: z.id === zid,
+      choisir: () => this.setState({ plZone: z.id, plMeubleSel: null }),
+      renommer: e => this.plRenommer('zone', z.id, e.target.value),
+      supprimer: () => this.plSupprimer('zone', z.id, z.nom) }));
+
+    common.plMeublesListe = meubles.map(m => ({ id: m.id, nom: m.nom,
+      nNiveaux: (m.niveaux || []).length,
+      nSlots: (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0),
+      renommer: e => this.plRenommer('meuble', m.id, e.target.value),
+      supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
+
+    const msel = S.plMeubleSel && meubles.some(m => m.id === S.plMeubleSel)
+      ? S.plMeubleSel : (meubles[0] ? meubles[0].id : null);
+    common.plMeubleSel = msel;
+    common.plMeubleOpts = meubles.map(m => ({ id: m.id, nom: m.nom, on: m.id === msel }));
+    common.plMeubleSetSel = e => this.setState({ plMeubleSel: +e.target.value });
+    common.plNiveauAdd = msel ? () => this.plAjouterNiveau(msel) : null;
+
+    const mSel = meubles.find(m => m.id === msel) || null;
+    common.plNiveauxListe = mSel ? (mSel.niveaux || []).map(n => ({ id: n.id, nom: n.nom,
+      nSlots: (n.slots || []).length,
+      renommer: e => this.plRenommer('niveau', n.id, e.target.value),
+      ajouter: () => this.plAjouterSlots(n.id),
+      supprimer: () => this.plSupprimer('niveau', n.id, n.nom) })) : [];
+
+    // Où en est la déclaration : dire l'étape suivante plutôt qu'un « pas encore
+    // déclaré » qui ne bouge pas quand on avance.
+    common.plEtape = !zones.length ? 'zone'
+      : (!meubles.length ? 'meuble'
+        : (!(mSel && (mSel.niveaux || []).length) ? 'niveau'
+          : (common.plTot.slots === 0 ? 'slots' : 'fait')));
+    common.plEtapeTxt = {
+      zone: 'Commencez par une zone — « vitrine réfrigérée », « comptoir sec », « îlot boissons ».',
+      meuble: 'Zone créée. Ajoutez maintenant un meuble : la vitrine, la gondole, le présentoir.',
+      niveau: 'Meuble créé. Ajoutez un niveau — haut, médian, bas — avec son nombre d’emplacements.',
+      slots: 'Niveau créé, mais sans emplacement. Ajoutez-en pour pouvoir y placer des références.',
+      fait: '',
+    }[common.plEtape];
 
     // Références placées / à placer, dans la zone regardée.
     const parRef = {};
@@ -2032,47 +2086,54 @@ class App {
       });
   }
   /* --- déclaration de la structure ------------------------------------------- */
-  plCreer(type, parentId){
-    const quoi = type === 'zone' ? 'zone (vitrine réfrigérée, comptoir sec…)' : 'meuble (vitrine 1, gondole A…)';
-    const nom = window.prompt('Nom de la ' + quoi);
-    if (nom === null || !nom.trim()) { return; }
-    write(this.source, 'POST', '/planogramme/' + type, { nom: nom.trim(), parentId })
-      .then(r => { if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
-        this.plCharge(true); });
+
+  /**
+   * Ajoute un élément de structure, depuis le champ en ligne.
+   *
+   * Le champ est vidé au succès et l'écran RECHARGÉ : sans confirmation
+   * visible, on reclique — deux zones identiques ont été créées ainsi avant que
+   * cet écran ne dise ce qu'il avait enregistré.
+   */
+  plAjouter(type, parentId, nom, champ){
+    const v = String(nom || '').trim();
+    if (!v) { this.notify('Donnez un nom avant d’ajouter.'); return; }
+    write(this.source, 'POST', '/planogramme/' + type, { nom: v, parentId })
+      .then(r => {
+        if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
+        this.setState({ [champ]: '' });
+        this.plCharge(true);
+        this.notify(type === 'zone' ? 'Zone « ' + v + ' » créée' : 'Meuble « ' + v + ' » créé');
+      });
   }
   /**
    * Un niveau naît avec ses emplacements : les créer un par un ferait douze
-   * saisies pour une étagère. Le nombre est demandé au moment du nom.
+   * saisies pour une étagère.
    */
-  plCreerNiveau(meubles){
-    let mid = meubles[0].id;
-    if (meubles.length > 1) {
-      const q = meubles.map((m, i) => (i + 1) + ' — ' + m.nom).join('\n');
-      const c = window.prompt('Sur quel meuble ?\n' + q, '1');
-      const i = Math.max(1, Math.min(meubles.length, parseInt(c, 10) || 1));
-      mid = meubles[i - 1].id;
-    }
-    const nom = window.prompt('Nom du niveau (haut, médian, bas…)');
-    if (nom === null || !nom.trim()) { return; }
-    const n = window.prompt('Combien d’emplacements sur ce niveau ?', '4');
-    const slots = Math.max(0, Math.min(40, parseInt(n, 10) || 0));
-    write(this.source, 'POST', '/planogramme/niveau', { nom: nom.trim(), parentId: mid, slots })
-      .then(r => { if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
-        this.plCharge(true); });
+  plAjouterNiveau(meubleId){
+    const S = this.state;
+    const nom = String(S.plNNiveau || '').trim();
+    if (!nom) { this.notify('Donnez un nom de niveau (haut, médian, bas…).'); return; }
+    const slots = Math.max(0, Math.min(40, parseInt(S.plNSlots == null ? '4' : S.plNSlots, 10) || 0));
+    write(this.source, 'POST', '/planogramme/niveau', { nom, parentId: meubleId, slots })
+      .then(r => {
+        if (!r || r.ok === false) { this.notify('Non créé : ' + ((r && r.error) || 'échec')); return; }
+        this.setState({ plNNiveau: '' });
+        this.plCharge(true);
+        this.notify('Niveau « ' + nom + ' » créé' + (slots ? ' avec ' + slots + ' emplacement(s)' : ''));
+      });
   }
-  plAjouterSlots(niveauId, nom){
-    const n = window.prompt('Combien d’emplacements ajouter à « ' + nom + ' » ?', '1');
-    const nb = Math.max(1, Math.min(40, parseInt(n, 10) || 0));
-    if (!nb) { return; }
-    write(this.source, 'POST', '/planogramme/emplacement', { niveauId, nombre: nb })
+  plAjouterSlots(niveauId){
+    write(this.source, 'POST', '/planogramme/emplacement', { niveauId, nombre: 1 })
       .then(r => { if (!r || r.ok === false) { this.notify('Non ajouté : ' + ((r && r.error) || 'échec')); return; }
         this.plCharge(true); });
   }
+  /** Renomme depuis le champ en ligne — au changement, pas à chaque frappe. */
   plRenommer(type, id, nom){
-    const v = window.prompt('Nouveau nom', nom);
-    if (v === null || !v.trim() || v.trim() === nom) { return; }
-    write(this.source, 'PATCH', '/planogramme/' + type + '/' + id, { nom: v.trim() })
-      .then(() => this.plCharge(true));
+    const v = String(nom || '').trim();
+    if (!v) { this.plCharge(true); return; }   // champ vidé : on remet l'ancien nom
+    write(this.source, 'PATCH', '/planogramme/' + type + '/' + id, { nom: v })
+      .then(r => { if (!r || r.ok === false) { this.notify('Non renommé : ' + ((r && r.error) || 'échec')); }
+        this.plCharge(true); });
   }
   /**
    * Supprimer un élément de structure. Le serveur REFUSE d'abord s'il porte des

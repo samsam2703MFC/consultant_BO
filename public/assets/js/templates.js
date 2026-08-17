@@ -2704,6 +2704,8 @@ function tplPlanoComptoir(c, x){
   // Le lire d'ici passait le lint et cassait l'écran à l'exécution.
   const TD = 'padding:9px 14px;font-size:12.5px;vertical-align:top';
   const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
+    + 'border-radius:7px;height:29px;padding:0 9px;font-family:var(--font-ui);font-size:12px;box-sizing:border-box';
   const btn = (on, dispo) => 'border-radius:8px;height:30px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;'
     + 'font-weight:500;white-space:nowrap;' + (dispo === false ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;')
     + (on ? 'border:none;background:var(--color-primary);color:#fff'
@@ -2723,22 +2725,63 @@ function tplPlanoComptoir(c, x){
       <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
     </div>
 
-    ${c.plOrg ? `<div style="margin-top:12px;padding:11px 13px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <span style="${lbl}">Déclarer</span>
-        <button ${x.A(c.plZoneAdd)} style="${btn(false)}">+ Zone</button>
-        <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)}">+ Meuble</button>
-        <button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)}">+ Niveau &amp; emplacements</button>
-        <div style="flex:1"></div>
-        <button ${x.A(c.plZoneSuppr)} style="${btn(false, !!c.plZoneSuppr)};color:var(--color-primary)">Supprimer la zone</button>
+    ${c.plOrg ? `<div style="margin-top:12px;padding:12px 14px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
+      ${c.plEtapeTxt ? `<div style="font-size:12px;color:var(--color-text);line-height:1.5;margin-bottom:11px"><b style="font-weight:500">Étape suivante.</b> ${esc(c.plEtapeTxt)}</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:14px">
+
+        <div>
+          <div style="${lbl};margin-bottom:7px">Zones</div>
+          ${c.plZonesListe.map(z => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+            <button ${x.A(z.choisir)} title="Regarder cette zone" style="flex:0 0 auto;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid ${z.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${z.on ? 'var(--color-primary)' : 'transparent'}"></button>
+            <input value="${esc(z.nom)}" ${x.C(z.renommer)} style="${inp};flex:1;min-width:0">
+            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${z.nMeubles} meuble(s)</span>
+            <button ${x.A(z.supprimer)} title="Supprimer cette zone" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
+          </div>`).join('')}
+          <div style="display:flex;gap:6px;margin-top:7px">
+            <input value="${esc(c.plNZone.val)}" ${x.I(c.plNZone.set)} placeholder="Vitrine réfrigérée…" style="${inp};flex:1;min-width:0">
+            <button ${x.A(c.plZoneAdd)} style="${btn(false)}">Ajouter</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="${lbl};margin-bottom:7px">Meubles${c.plZonesListe.find(z => z.on) ? ' de « ' + esc((c.plZonesListe.find(z => z.on) || {}).nom) + ' »' : ''}</div>
+          ${c.plMeublesListe.length ? c.plMeublesListe.map(m => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+            <input value="${esc(m.nom)}" ${x.C(m.renommer)} style="${inp};flex:1;min-width:0">
+            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
+            <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
+          </div>`).join('') : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">Aucun meuble dans cette zone.</div>`}
+          <div style="display:flex;gap:6px;margin-top:7px">
+            <input value="${esc(c.plNMeuble.val)}" ${x.I(c.plNMeuble.set)} placeholder="Vitrine 1…" style="${inp};flex:1;min-width:0" ${c.plMeubleAdd ? '' : 'disabled'}>
+            <button ${x.A(c.plMeubleAdd)} style="${btn(false, !!c.plMeubleAdd)}">Ajouter</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="${lbl};margin-bottom:7px">Niveaux &amp; emplacements</div>
+          ${c.plMeubleOpts.length ? `<select ${x.C(c.plMeubleSetSel)} style="${inp};width:100%;margin-bottom:6px">${c.plMeubleOpts.map(m => `<option value="${m.id}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>` : ''}
+          ${c.plNiveauxListe.map(n => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+            <input value="${esc(n.nom)}" ${x.C(n.renommer)} style="${inp};flex:1;min-width:0">
+            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${n.nSlots} empl.</span>
+            <button ${x.A(n.ajouter)} title="Ajouter un emplacement" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1">+</button>
+            <button ${x.A(n.supprimer)} title="Supprimer ce niveau" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
+          </div>`).join('')}
+          <div style="display:flex;gap:6px;margin-top:7px">
+            <input value="${esc(c.plNNiveau.val)}" ${x.I(c.plNNiveau.set)} placeholder="Niveau haut…" style="${inp};flex:1;min-width:0" ${c.plNiveauAdd ? '' : 'disabled'}>
+            <input type="number" min="0" max="40" value="${esc(c.plNSlots.val)}" ${x.C(c.plNSlots.set)} title="Nombre d’emplacements" style="${inp};width:56px;text-align:right">
+            <button ${x.A(c.plNiveauAdd)} style="${btn(false, !!c.plNiveauAdd)}">Ajouter</button>
+          </div>
+        </div>
       </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">Une zone contient des meubles, un meuble des niveaux, un niveau des emplacements numérotés. Le nombre d’emplacements se donne à la création du niveau — les poser un par un ferait douze saisies pour une étagère.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:11px;line-height:1.5">Une zone contient des meubles, un meuble des niveaux, un niveau des emplacements numérotés. Renommer se fait dans le champ ; la suppression d’un élément qui porte des références est refusée puis reconfirmée.</div>
     </div>` : ''}
 
     ${c.plVide
-      ? `<div style="margin-top:14px;padding:26px 18px;border:1px dashed var(--color-border-secondary);border-radius:10px;text-align:center">
-          <div style="font-size:13px;font-weight:500">Le comptoir n’est pas encore déclaré.</div>
-          <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;max-width:560px;margin-left:auto;margin-right:auto">Commencez par une zone — « vitrine réfrigérée », « comptoir sec » — puis ses meubles et ses niveaux. Tant qu’aucun emplacement n’existe, il n’y a rien à choisir pour une référence.</div>
+      ? `<div style="margin-top:14px;padding:24px 18px;border:1px dashed var(--color-border-secondary);border-radius:10px;text-align:center">
+          <!-- Le message SUIT l'avancement. Fixe, il disait « pas encore
+               déclaré » alors qu'une zone venait d'être créée — on croyait
+               l'écriture perdue et on recommençait. -->
+          <div style="font-size:13px;font-weight:500">${c.plEtape === 'zone' ? 'Le comptoir n’est pas encore déclaré.' : 'Déclaration en cours.'}</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-top:6px;line-height:1.55;max-width:560px;margin-left:auto;margin-right:auto">${esc(c.plEtapeTxt || '')} Tant qu’aucun emplacement n’existe, il n’y a rien à choisir pour une référence.</div>
         </div>`
       : c.plVue === 'tableau' ? `
         <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:13px">
