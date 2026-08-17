@@ -145,6 +145,7 @@ export function render(c, x){
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
   ${c.plFiche ? tplPlanoFiche(c, x) : ''}
+  ${c.plMw ? tplPlanoMeubleWizard(c, x) : ''}
   ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
 
@@ -2770,7 +2771,7 @@ function tplPlanoComptoir(c, x){
           <div style="${lbl};margin-bottom:7px">Meubles${c.plZonesListe.find(z => z.on) ? ' de « ' + esc((c.plZonesListe.find(z => z.on) || {}).nom) + ' »' : ''}</div>
           ${c.plMeublesListe.length ? c.plMeublesListe.map(m => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
             <input value="${esc(m.nom)}" ${x.C(m.renommer)} style="${inp};flex:1;min-width:0">
-            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
+            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap" title="${esc(m.detail || '')}">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
             <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
           </div>`).join('') : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:5px">Aucun meuble dans cette zone.</div>`}
           <div style="display:flex;gap:6px;margin-top:7px">
@@ -2868,6 +2869,92 @@ function tplPlanoComptoir(c, x){
         <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b> — ${esc(m.quoi)}<div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
       </div>`).join('')}
     </div>` : ''}
+  </div>`;
+}
+
+/* --- Assistant de création d'un meuble --------------------------------------
+   Quatre étapes : ce que c'est, comment il conserve et présente, la taille d'un
+   emplacement, puis ce qu'on s'apprête à créer. Le meuble naît avec ses niveaux
+   et ses emplacements — le déclarer en trois écrans successifs faisait
+   abandonner à mi-chemin, et un meuble sans emplacement ne sert à rien. */
+function tplPlanoMeubleWizard(c, x){
+  const { esc } = x;
+  const w = c.plMw;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const inp = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
+    + 'border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px;box-sizing:border-box';
+  const puce = o => `<button ${x.A(o.pick)} style="border-radius:999px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.v)}</button>`;
+  const etapes = ['Le meuble', 'Conservation & présentation', 'Un emplacement', 'Récapitulatif'];
+  return `
+  <div ${x.A(w.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:90;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:91;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:660px;max-width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <div>
+          <div style="${lbl}">Nouveau meuble${w.zone ? ' — ' + esc(w.zone) : ''}</div>
+          <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(etapes[w.etape - 1])}</div>
+        </div>
+        <button ${x.A(w.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
+      </div>
+      <div style="display:flex;gap:5px;padding:11px 19px 0">
+        ${etapes.map((e, i) => `<div title="${esc(e)}" style="flex:1;height:3px;border-radius:999px;background:${i < w.etape ? 'var(--color-primary)' : 'var(--color-border-tertiary)'}"></div>`).join('')}
+      </div>
+
+      <div style="padding:16px 19px;overflow-y:auto" data-scroll="plmw">
+        ${w.etape === 1 ? `
+          <div style="${lbl};margin-bottom:6px">Nom du meuble</div>
+          <input id="plmw-nom" value="${esc(w.nom)}" ${x.I(w.set('nom'))} placeholder="Vitrine 1, Gondole A…" style="${inp};width:100%">
+          <div style="${lbl};margin:16px 0 7px">Type</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">${w.types.map(puce).join('')}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5">Le type sert à lire le plan d’un coup d’œil et à repérer ce qui ne peut pas y aller.</div>
+        ` : ''}
+
+        ${w.etape === 2 ? `
+          <div style="${lbl};margin-bottom:7px">Température</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">${w.temperatures.map(puce).join('')}</div>
+          <div style="${lbl};margin:18px 0 7px">Mode de présentation</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">${w.presentations.map(puce).join('')}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">La température décide de ce qu’on peut y poser ; le mode de présentation, de la façon dont on compte les fronts — une grille et un panier ne se remplissent pas pareil.</div>
+        ` : ''}
+
+        ${w.etape === 3 ? `
+          <div style="${lbl};margin-bottom:7px">Dimensions d’un emplacement, en millimètres</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Longueur</div><input id="plmw-lon" type="number" min="0" max="5000" value="${esc(w.longueur)}" ${x.C(w.set('longueur'))} style="${inp};width:96px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Largeur</div><input id="plmw-lar" type="number" min="0" max="5000" value="${esc(w.largeur)}" ${x.C(w.set('largeur'))} style="${inp};width:96px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Hauteur</div><input id="plmw-hau" type="number" min="0" max="5000" value="${esc(w.hauteur)}" ${x.C(w.set('hauteur'))} style="${inp};width:96px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Capacité (pièces)</div><input id="plmw-cap" type="number" min="0" max="999" value="${esc(w.capacite)}" ${x.C(w.set('capacite'))} placeholder="—" style="${inp};width:110px;text-align:right"></div>
+          </div>
+          <div style="${lbl};margin:20px 0 7px">Combien de niveaux, combien d’emplacements</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Niveaux</div><input id="plmw-nniv" type="number" min="1" max="40" value="${esc(w.nNiveaux)}" ${x.C(w.set('nNiveaux'))} style="${inp};width:88px;text-align:right"></div>
+            <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Emplacements par niveau</div><input id="plmw-nslot" type="number" min="0" max="40" value="${esc(w.nSlots)}" ${x.C(w.set('nSlots'))} style="${inp};width:130px;text-align:right"></div>
+            <div style="font-size:12px;color:var(--color-text-muted);padding-bottom:8px">→ ${w.total} emplacement(s) : ${esc(w.niveauxTxt)}</div>
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">Une dimension laissée vide reste inconnue — elle ne sera pas affichée comme un zéro. Tout se corrige ensuite, emplacement par emplacement.</div>
+        ` : ''}
+
+        ${w.etape === 4 ? `
+          <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden">
+            ${w.recap.map((r, i) => `<div style="display:flex;gap:14px;padding:9px 13px;${i ? 'border-top:0.5px solid var(--color-border-tertiary);' : ''}${i % 2 ? 'background:var(--color-background-secondary);' : ''}">
+              <span style="${lbl};flex:0 0 118px">${esc(r.k)}</span>
+              <span style="font-size:12.5px;line-height:1.45">${esc(r.v)}</span>
+            </div>`).join('')}
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5">Le meuble, ses niveaux et ses emplacements sont créés d’un seul geste.</div>
+        ` : ''}
+
+        ${w.err ? `<div style="margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(w.err)}</div>` : ''}
+      </div>
+
+      <div style="display:flex;gap:9px;align-items:center;padding:13px 19px;border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        ${w.precedent ? `<button ${x.A(w.precedent)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:33px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Retour</button>` : ''}
+        <div style="flex:1"></div>
+        <button ${x.A(w.fermer)} style="border:none;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;cursor:pointer;padding:0 8px">Annuler</button>
+        ${w.suivant ? `<button ${x.A(w.suivant)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Continuer</button>` : ''}
+        ${w.creer ? `<button ${x.A(w.creer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${w.busy ? 'wait' : 'pointer'};opacity:${w.busy ? '0.6' : '1'}">${w.busy ? 'Création…' : 'Créer le meuble'}</button>` : ''}
+      </div>
+    </div>
   </div>`;
 }
 

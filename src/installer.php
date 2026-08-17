@@ -123,6 +123,42 @@ function ensurePlanogramme(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
     planoMigrer();
+
+    // Un meuble n'est pas qu'un nom : sa température décide de ce qu'on peut y
+    // poser, son mode de présentation et les dimensions d'un emplacement
+    // décident de ce qui y tient. Ajoutés après coup, d'où l'ALTER.
+    foreach ([
+        'pla_meuble' => [
+            'type'         => "VARCHAR(40) NOT NULL DEFAULT ''",
+            'temperature'  => "VARCHAR(40) NOT NULL DEFAULT ''",
+            'presentation' => "VARCHAR(40) NOT NULL DEFAULT ''",
+        ],
+        'pla_slot' => [
+            'longueur_mm' => 'SMALLINT UNSIGNED NULL',
+            'hauteur_mm'  => 'SMALLINT UNSIGNED NULL',
+        ],
+    ] as $table => $cols) {
+        foreach ($cols as $col => $type) {
+            try { Db::exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $col . ' ' . $type); }
+            catch (PDOException $e) { /* colonne déjà présente */ }
+        }
+    }
+
+    // Référentiels du comptoir : des listes, donc un réglage — un réseau qui
+    // travaille en surgelé doit pouvoir ajouter sa température sans toucher au
+    // code. Ce sont des choix proposés, jamais des données inventées.
+    if (setting('planogramme') === null) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
+            ['planogramme', json_encode([
+                'types' => ['Vitrine réfrigérée', 'Vitrine sèche', 'Gondole', 'Présentoir',
+                    'Îlot', 'Comptoir chaud', 'Frigo boissons', 'Étagère murale'],
+                'temperatures' => ['Ambiante', 'Réfrigérée (0 à 4 °C)', 'Réfrigérée (4 à 8 °C)',
+                    'Surgelée (−18 °C)', 'Chaude (+63 °C)'],
+                'presentations' => ['Grilles', 'Paniers', 'Plateaux', 'Bacs', 'Étagères pleines',
+                    'Crochets', 'Vrac'],
+                'slotDefaut' => ['longueur' => 300, 'largeur' => 300, 'hauteur' => 250],
+            ], JSON_UNESCAPED_UNICODE)]);
+    }
 }
 
 /**

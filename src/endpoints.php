@@ -2524,8 +2524,19 @@ function ep_pwa_task_detail(): array
  */
 function ep_planogramme(): array
 {
+    $ref = setting('planogramme', []);
     $out = ['zones' => [], 'slots' => [], 'placements' => [], 'notes' => [],
         'totaux' => ['slots' => 0, 'libres' => 0, 'places' => 0, 'refs' => 0],
+        // Les choix proposés à la déclaration d'un meuble. Ce sont des listes
+        // de réglage, pas du code : un réseau qui travaille en surgelé ajoute
+        // sa température sans livraison.
+        'referentiels' => [
+            'types' => is_array($ref['types'] ?? null) ? $ref['types'] : [],
+            'temperatures' => is_array($ref['temperatures'] ?? null) ? $ref['temperatures'] : [],
+            'presentations' => is_array($ref['presentations'] ?? null) ? $ref['presentations'] : [],
+            'slotDefaut' => is_array($ref['slotDefaut'] ?? null) ? $ref['slotDefaut']
+                : ['longueur' => 300, 'largeur' => 300, 'hauteur' => 250],
+        ],
         'manque' => planoManque()];
 
     // Placements, indexés par emplacement — et par référence pour l'écran.
@@ -2570,7 +2581,9 @@ function ep_planogramme(): array
         $zl = ['id' => $zid, 'nom' => (string) $z['nom'], 'rang' => (int) $z['rang'], 'meubles' => []];
         foreach ($parZone[$zid] ?? [] as $m) {
             $mid = (int) $m['id'];
-            $ml = ['id' => $mid, 'nom' => (string) $m['nom'], 'rang' => (int) $m['rang'], 'niveaux' => []];
+            $ml = ['id' => $mid, 'nom' => (string) $m['nom'], 'rang' => (int) $m['rang'],
+                'type' => (string) ($m['type'] ?? ''), 'temperature' => (string) ($m['temperature'] ?? ''),
+                'presentation' => (string) ($m['presentation'] ?? ''), 'niveaux' => []];
             foreach ($parMeuble[$mid] ?? [] as $n) {
                 $nid = (int) $n['id'];
                 $nl = ['id' => $nid, 'nom' => (string) $n['nom'], 'rang' => (int) $n['rang'], 'slots' => []];
@@ -2580,9 +2593,14 @@ function ep_planogramme(): array
                     $ligne = [
                         'id' => $sid, 'position' => (int) $s['position'],
                         'largeurMm' => $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
+                        'longueurMm' => ($s['longueur_mm'] ?? null) !== null ? (int) $s['longueur_mm'] : null,
+                        'hauteurMm' => ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null,
                         'capacite' => $s['capacite'] !== null ? (int) $s['capacite'] : null,
                         'zoneId' => $zid, 'zone' => (string) $z['nom'],
                         'meubleId' => $mid, 'meuble' => (string) $m['nom'],
+                        'meubleType' => (string) ($m['type'] ?? ''),
+                        'meubleTemp' => (string) ($m['temperature'] ?? ''),
+                        'meublePres' => (string) ($m['presentation'] ?? ''),
                         'niveauId' => $nid, 'niveau' => (string) $n['nom'],
                         'occupants' => array_map(fn ($o) => [
                             'ref' => $o['ref'], 'nom' => $noms[$o['ref']] ?? $o['ref'],

@@ -826,6 +826,38 @@ function wr_plano_creer(string $type): array
     }
     $id = (int) Db::pdo()->lastInsertId();
 
+    // Un meuble porte aussi son type, sa température et son mode de
+    // présentation — ce qui décide de ce qu'on peut y poser. Écrits à part pour
+    // que l'insertion reste commune aux trois niveaux de structure.
+    if ($type === 'meuble') {
+        $court = static fn ($v) => mb_substr(trim((string) $v), 0, 40);
+        Db::exec('UPDATE pla_meuble SET type = ?, temperature = ?, presentation = ? WHERE id = ?',
+            [$court($b['type'] ?? ''), $court($b['temperature'] ?? ''), $court($b['presentation'] ?? ''), $id]);
+
+        // Le meuble peut naître AVEC ses niveaux et leurs emplacements : le
+        // déclarer en trois écrans successifs faisait abandonner à mi-chemin,
+        // et un meuble sans emplacement ne sert à rien.
+        $faits = 0;
+        foreach (is_array($b['niveaux'] ?? null) ? $b['niveaux'] : [] as $i => $n) {
+            if (!is_array($n)) { continue; }
+            $nn = mb_substr(trim((string) ($n['nom'] ?? '')), 0, 80);
+            if ($nn === '') { $nn = 'Niveau ' . ($i + 1); }
+            Db::exec('INSERT INTO pla_niveau (meuble_id, nom, rang) VALUES (?,?,?)', [$id, $nn, $i + 1]);
+            $nid = (int) Db::pdo()->lastInsertId();
+            $ns = max(0, min(40, (int) ($n['slots'] ?? 0)));
+            for ($k = 1; $k <= $ns; $k++) {
+                Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
+                    . ' VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE position = position',
+                    [$nid, $k,
+                     planoDim($b['largeurMm'] ?? null), planoDim($b['longueurMm'] ?? null),
+                     planoDim($b['hauteurMm'] ?? null),
+                     isset($b['capacite']) ? max(0, min(999, (int) $b['capacite'])) : null]);
+                $faits++;
+            }
+        }
+        if ($faits > 0) { return ['ok' => true, 'id' => $id, 'nom' => $nom, 'slots' => $faits]; }
+    }
+
     // Un niveau créé avec un nombre d'emplacements : les poser tout de suite
     // évite de saisir douze fois la même chose. `slots` absent = niveau vide.
     $poses = 0;
@@ -898,6 +930,19 @@ function wr_plano_supprimer(string $type, int $id): array
     return ['ok' => true, 'id' => $id];
 }
 
+/**
+ * Une dimension en millimètres, ou rien.
+ *
+ * Zéro n'est pas une dimension : un emplacement de 0 mm n'existe pas. Le
+ * garder ferait afficher « 0 mm » là où la mesure est simplement inconnue.
+ */
+function planoDim($v): ?int
+{
+    if ($v === null || $v === '') { return null; }
+    $n = (int) $v;
+    return ($n > 0 && $n <= 5000) ? $n : null;
+}
+
 /** Les identifiants d'emplacement situés sous un élément de structure. */
 function planoSlotsSous(string $type, int $id): array
 {
@@ -922,10 +967,11 @@ function wr_plano_slots(): array
     $r = Db::row('SELECT COALESCE(MAX(position), 0) AS p FROM pla_slot WHERE niveau_id = ?', [$nid]);
     $depart = (int) ($r['p'] ?? 0);
     for ($i = 1; $i <= $n; $i++) {
-        Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
-            . ' ON DUPLICATE KEY UPDATE position = position',
-            [$nid, $depart + $i, isset($b['largeurMm']) ? (int) $b['largeurMm'] : null,
-             isset($b['capacite']) ? (int) $b['capacite'] : null]);
+        Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, longueur_mm, hauteur_mm, capacite)'
+            . ' VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE position = position',
+            [$nid, $depart + $i, planoDim($b['largeurMm'] ?? null), planoDim($b['longueurMm'] ?? null),
+             planoDim($b['hauteurMm'] ?? null),
+             isset($b['capacite']) ? max(0, min(999, (int) $b['capacite'])) : null]);
     }
     return ['ok' => true, 'niveauId' => $nid, 'ajoutes' => $n];
 }

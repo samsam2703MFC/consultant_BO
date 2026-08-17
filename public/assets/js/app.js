@@ -2084,7 +2084,11 @@ class App {
     common.plNSlots = champ('plNSlots', '4');
 
     common.plZoneAdd = () => this.plAjouter('zone', null, S.plNZone, 'plNZone');
-    common.plMeubleAdd = zid ? () => this.plAjouter('meuble', zid, S.plNMeuble, 'plNMeuble') : null;
+    // Le meuble passe par un ASSISTANT : type, température, présentation et
+    // dimensions d'emplacement décident de ce qu'on peut y poser. Les demander
+    // sur une ligne de saisie unique revenait à ne jamais les demander.
+    common.plMeubleAdd = zid ? () => this.plMwOuvrir(zid) : null;
+    common.plMw = S.plMw ? this.valsPlMw(S.plMw, pl, zone) : false;
 
     // Liste de ce qui existe, éditable sur place : c'est aussi la seule façon de
     // voir — et de corriger — un doublon créé par mégarde.
@@ -2098,6 +2102,7 @@ class App {
     common.plMeublesListe = meubles.map(m => ({ id: m.id, nom: m.nom,
       nNiveaux: (m.niveaux || []).length,
       nSlots: (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0),
+      detail: [m.type, m.temperature, m.presentation].filter(Boolean).join(' · '),
       renommer: e => this.plRenommer('meuble', m.id, e.target.value),
       supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
 
@@ -2135,6 +2140,102 @@ class App {
     common.plParRef = parRef;
     common.plFiche = S.plFiche ? this.valsPlFiche(S.plFiche, pl) : false;
   }
+  /* --- assistant de création d'un meuble ------------------------------------- */
+
+  plMwOuvrir(zoneId){
+    const r = ((this.D.plano || {}).referentiels) || {};
+    const d = r.slotDefaut || {};
+    this.setState({ plMw: { zoneId, etape: 1, busy: false, err: '',
+      nom: '', type: (r.types || [])[0] || '', temperature: (r.temperatures || [])[0] || '',
+      presentation: (r.presentations || [])[0] || '',
+      longueur: String(d.longueur || 300), largeur: String(d.largeur || 300),
+      hauteur: String(d.hauteur || 250), capacite: '',
+      nNiveaux: '3', nSlots: '4' } });
+  }
+  plMwPatch(patch){ this.setState(s => ({ plMw: Object.assign({}, s.plMw, patch) })); }
+  /**
+   * Les niveaux proposés portent des noms parlants quand ils sont peu nombreux.
+   * « Haut / Médian / Bas » se lit sur un plan ; « Niveau 2 » demande de
+   * compter. Au-delà de trois, la numérotation redevient la plus claire.
+   */
+  plMwNiveaux(n){
+    const noms = { 1: ['Unique'], 2: ['Haut', 'Bas'], 3: ['Haut', 'Médian', 'Bas'] };
+    if (noms[n]) { return noms[n]; }
+    return Array.from({ length: n }, (_, i) => 'Niveau ' + (i + 1));
+  }
+  valsPlMw(w, pl, zone){
+    const r = (pl.referentiels) || {};
+    const nb = k => Math.max(0, Math.min(40, parseInt(w[k], 10) || 0));
+    const nNiveaux = Math.max(1, nb('nNiveaux'));
+    const nSlots = nb('nSlots');
+    const dims = [w.longueur, w.largeur, w.hauteur].map(v => parseInt(v, 10) || 0);
+    const listeNiv = this.plMwNiveaux(nNiveaux);
+    const opt = (liste, val, k) => (liste || []).map(v => ({ v, on: v === val,
+      pick: () => this.plMwPatch({ [k]: v }) }));
+    return {
+      etape: w.etape, busy: !!w.busy, err: w.err || '',
+      zone: zone ? zone.nom : '',
+      nom: w.nom, type: w.type, temperature: w.temperature, presentation: w.presentation,
+      longueur: w.longueur, largeur: w.largeur, hauteur: w.hauteur, capacite: w.capacite,
+      nNiveaux: w.nNiveaux, nSlots: w.nSlots,
+      types: opt(r.types, w.type, 'type'),
+      temperatures: opt(r.temperatures, w.temperature, 'temperature'),
+      presentations: opt(r.presentations, w.presentation, 'presentation'),
+      set: k => e => this.plMwPatch({ [k]: e.target.value }),
+      // Ce que l'assistant s'apprête à créer, en toutes lettres : on valide ce
+      // qu'on a compris, pas un formulaire qu'on a rempli de mémoire.
+      recap: [
+        { k: 'Meuble', v: (w.nom || '(sans nom)') + (w.type ? ' — ' + w.type : '') },
+        { k: 'Zone', v: zone ? zone.nom : '—' },
+        { k: 'Température', v: w.temperature || '—' },
+        { k: 'Présentation', v: w.presentation || '—' },
+        { k: 'Niveaux', v: nNiveaux + ' (' + listeNiv.join(', ') + ')' },
+        { k: 'Emplacements', v: nSlots ? (nSlots + ' par niveau, soit ' + (nSlots * nNiveaux) + ' au total')
+          : 'aucun pour l’instant' },
+        { k: 'Un emplacement', v: dims[0] && dims[1]
+          ? dims[0] + ' × ' + dims[1] + (dims[2] ? ' × ' + dims[2] : '') + ' mm'
+          : 'dimensions non renseignées' },
+      ],
+      niveauxTxt: listeNiv.join(' · '),
+      total: nSlots * nNiveaux,
+      precedent: w.etape > 1 ? () => this.plMwPatch({ etape: w.etape - 1, err: '' }) : null,
+      suivant: w.etape < 4 ? () => {
+        if (w.etape === 1 && !String(this.plLire('plmw-nom', w.nom) || '').trim()) {
+          this.plMwPatch({ err: 'Donnez un nom à ce meuble — « Vitrine 1 », « Gondole A ».' });
+          return;
+        }
+        this.plMwPatch({ nom: this.plLire('plmw-nom', w.nom), etape: w.etape + 1, err: '' });
+      } : null,
+      creer: w.etape === 4 ? () => this.plMwCreer() : null,
+      fermer: () => this.setState({ plMw: null }),
+    };
+  }
+  plMwCreer(){
+    const w = this.state.plMw;
+    if (!w || w.busy) { return; }
+    const nb = (v, min, max) => Math.max(min, Math.min(max, parseInt(v, 10) || 0));
+    const nNiveaux = nb(w.nNiveaux, 1, 40);
+    const nSlots = nb(w.nSlots, 0, 40);
+    const nom = String(w.nom || '').trim();
+    if (!nom) { this.plMwPatch({ etape: 1, err: 'Donnez un nom à ce meuble.' }); return; }
+    this.plMwPatch({ busy: true, err: '' });
+    write(this.source, 'POST', '/planogramme/meuble', {
+      nom, parentId: w.zoneId, type: w.type, temperature: w.temperature, presentation: w.presentation,
+      longueurMm: parseInt(w.longueur, 10) || null, largeurMm: parseInt(w.largeur, 10) || null,
+      hauteurMm: parseInt(w.hauteur, 10) || null,
+      capacite: w.capacite === '' ? null : parseInt(w.capacite, 10),
+      niveaux: this.plMwNiveaux(nNiveaux).map(n => ({ nom: n, slots: nSlots })),
+    }).then(res => {
+      if (!res || res.ok === false) {
+        this.plMwPatch({ busy: false, err: (res && res.error) || 'création refusée' });
+        return;
+      }
+      this.setState({ plMw: null });
+      this.plCharge(true);
+      this.notify('« ' + nom + ' » créé — ' + (res.slots || 0) + ' emplacement(s)');
+    });
+  }
+
   /** La fiche de présentation et de vente d'une référence. */
   valsPlFiche(f, pl){
     const d = f.d || {};
