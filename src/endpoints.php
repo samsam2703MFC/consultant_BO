@@ -1174,8 +1174,9 @@ function ep_produits_analyse(): array
             'delta' => ($val !== null && $n1 !== null && $n1 != 0) ? round(($val - $n1) / $n1, 4) : null,
             'parMagasin' => $par, 'parMagasinN1' => $parN1,
             'motif' => $val !== null ? null : (!$rendu ? 'aucune donnée'
-                : ($type === 'categorie' ? 'catégorie absente de la réponse'
-                                         : 'référence non vendue sur la période'))];
+                : ['categorie' => 'groupe absent de la réponse',
+                   'souscategorie' => 'catégorie sans vente sur la période',
+                   'produit' => 'référence non vendue sur la période'][$type])];
     }
 
 
@@ -3046,4 +3047,76 @@ function ep_products(): array
             'magasins' => (int) $r['nb_magasins'],
         ], $rows);
     }
+}
+
+/**
+ * Sonde : existe-t-il une source de ventes PAR MAGASIN sous le niveau groupe ?
+ *
+ * Diagnostic en lecture seule. Il répond à deux questions qu'on ne peut pas
+ * trancher en raisonnant : `sold_qty` varie-t-il d'un magasin à l'autre (donc
+ * est-il propre au magasin, ou réseau ?), et les routes câblées mais jamais
+ * exploitées — margin-heatmap, pnl — portent-elles une ventilation par
+ * catégorie ? Tant qu'on ne l'a pas mesuré, toute réponse est une supposition.
+ */
+function ep_produits_analyse_sonde(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $ref = setting('periodeProduits');
+    $per = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m', strtotime('-1 month'));
+    $du = $per . '-01'; $au = date('Y-m-t', strtotime($du));
+    $pid = trim((string) ($_GET['produit'] ?? '1610004'));
+    $out = ['periode' => $per, 'du' => $du, 'au' => $au, 'produit' => $pid,
+        'soldParMagasin' => [], 'routes' => []];
+
+    // 1. La même référence, magasin par magasin. Si `sold_qty` est identique
+    //    partout, c'est une valeur réseau et le détail par magasin n'existe pas.
+    $req = [];
+    foreach (analyseShops() as $sid) {
+        $req[$sid] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+            ['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
+    }
+    foreach (PanelApi::getParallele($req) as $sid => $r) {
+        $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
+        foreach ($lignes as $p) {
+            if (trim((string) ($p['id_product'] ?? '')) !== $pid) { continue; }
+            $out['soldParMagasin'][(string) $sid] = [
+                'sold_qty' => $p['sold_qty'] ?? null, 'waste_qty' => $p['waste_qty'] ?? null,
+                'net_turnover' => $p['net_turnover'] ?? null,
+                'total_sold_quantity' => $p['total_sold_quantity'] ?? null];
+            break;
+        }
+    }
+    $vus = array_values(array_unique(array_map(fn($x) => (string) $x['sold_qty'], $out['soldParMagasin'])));
+    $out['verdict'] = count($out['soldParMagasin']) < 2 ? 'indéterminé (moins de deux magasins)'
+        : (count($vus) === 1 ? 'sold_qty IDENTIQUE partout → valeur RÉSEAU, pas de détail par magasin'
+                             : 'sold_qty DIFFÈRE selon le magasin → valeur PROPRE au magasin');
+
+    // 2. Les routes jamais exploitées portent-elles une ventilation utilisable ?
+    $sid = analyseShop();
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return ['type' => gettype($v)]; }
+        if (array_is_list($v)) {
+            return ['liste' => count($v),
+                'clesPremier' => ($v && is_array($v[0])) ? array_keys($v[0]) : null,
+                'premier' => $v[0] ?? null];
+        }
+        return ['cles' => array_keys($v)];
+    };
+    foreach ([
+        'margin-heatmap' => '/consultant/shops/' . $sid . '/margin-heatmap?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'pnl'            => '/consultant/shops/' . $sid . '/pnl?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'category-sales' => '/consultant/shops/category-sales?' . http_build_query(['shop_id' => $sid, 'date_from' => $du, 'date_to' => $au]),
+    ] as $nom => $chemin) {
+        $r = PanelApi::brut($chemin);
+        $e = ['chemin' => $chemin, 'erreur' => PanelApi::$lastError];
+        if (is_array($r)) {
+            $e['cles'] = array_keys($r);
+            foreach (['categories', 'items', 'rows', 'data', 'heatmap', 'shops', 'lines'] as $k) {
+                if (isset($r[$k])) { $e[$k] = $apercu($r[$k]); }
+            }
+            if (array_is_list($r)) { $e['racine'] = $apercu($r); }
+        }
+        $out['routes'][$nom] = $e;
+    }
+    return $out;
 }

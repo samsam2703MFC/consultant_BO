@@ -1225,8 +1225,19 @@ class App {
     common.anCategories = pds(O && O.categories, ' €');
     common.anSousCategories = pds(O && O.souscategories, ' u');
     common.anProduits = pds(O && O.produits, ' u');
-    common.anListe = { categorie: common.anCategories, souscategorie: common.anSousCategories,
+    const toutes = { categorie: common.anCategories, souscategorie: common.anSousCategories,
       produit: common.anProduits }[type] || [];
+    // Recherche insensible aux accents : sur « Viennoiserie réduction » ou
+    // « Épicerie », taper au clavier plat ne doit pas rendre la liste muette.
+    const norm = v => (v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const q = norm((S.anFiltre || '').trim());
+    common.anFiltre = S.anFiltre || '';
+    common.anFiltrer = e => this.setState({ anFiltre: e.target.value });
+    common.anListeTotal = toutes.length;
+    // La sélection en cours reste toujours dans la liste, même si elle ne
+    // répond plus au filtre : sans quoi le sélecteur afficherait autre chose
+    // que le graphique tracé juste en dessous.
+    common.anListe = q ? toutes.filter(o => norm(o.nom).includes(q) || o.id === S.anCle) : toutes;
 
     const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
       + 'padding:6px 14px;border-radius:8px;'
@@ -1234,7 +1245,7 @@ class App {
             : 'background:transparent;color:var(--color-text-muted)');
     common.anTypeBtns = [['categorie', 'Groupe'], ['souscategorie', 'Catégorie'], ['produit', 'Référence']]
       .map(b => ({ label: b[1], st: onglet(type === b[0]),
-        go: () => this.setState({ anType: b[0], anCle: '', anData: null }) }));
+        go: () => this.setState({ anType: b[0], anCle: '', anData: null, anFiltre: '' }) }));
     // Réseau ou magasin par magasin. La bascule n'a de sens qu'au niveau des
     // groupes : ailleurs l'API ne rend qu'un volume réseau (cf. parMagasin).
     const vue = S.anVue === 'magasin' ? 'magasin' : 'reseau';

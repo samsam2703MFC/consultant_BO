@@ -361,7 +361,7 @@ function tplReferentiel(c, x){
   return `
   ${c.refVide ? `<div style="padding:50px 0;color:var(--color-text-muted);font-size:13px">Catalogue indisponible — l’API et la base partagée n’ont rien rendu.</div>` : `
   <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <input value="${esc(c.refQ)}" ${x.I(c.refSetQ)} placeholder="Rechercher une référence…" style="${SEL};flex:1;min-width:190px">
+    <input id="ref-search" value="${esc(c.refQ)}" ${x.I(c.refSetQ)} placeholder="Rechercher une référence…" style="${SEL};flex:1;min-width:190px">
     <select ${x.C(c.refSetG)} style="${SEL}">${c.refGroupes.map(g => `<option${g === c.refG ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
     <select ${x.C(c.refSetC)} style="${SEL}">${c.refCategories.map(g => `<option${g === c.refC ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
     <select ${x.C(c.refSetP)} style="${SEL}">${c.refGammes.map(g => `<option${g === c.refP ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
@@ -559,6 +559,9 @@ function tplAnalyse(c, x){
       </div>` : ''}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <input id="an-search" type="search" value="${esc(c.anFiltre)}" ${x.I(c.anFiltrer)}
+        placeholder="${c.anType === 'produit' ? 'Rechercher une référence…' : 'Rechercher…'}"
+        style="${SEL};min-width:200px;flex:0 1 240px">
       <select ${x.C(c.anChoisir)} style="${SEL}"${c.anOptChargement ? ' disabled' : ''}>
         <option value="">${c.anOptChargement ? 'Lecture des libellés de l’API…'
           : c.anType === 'produit' ? 'Choisir une référence…' : 'Choisir une catégorie…'}</option>
@@ -575,7 +578,9 @@ function tplAnalyse(c, x){
             : c.anType === 'souscategorie'
             ? `${c.anSousCategories.length} catégorie${c.anSousCategories.length > 1 ? 's' : ''} — en volume, le CA n’étant ventilé que par groupe`
             : `${c.anCategories.length} groupe${c.anCategories.length > 1 ? 's' : ''} — la ventilation du chiffre d’affaires de l’API`
-        }${c.anOptPeriode ? ` · relevé sur ${esc(c.anOptPeriode)}` : ''}</div>`}
+        }${c.anOptPeriode ? ` · relevé sur ${esc(c.anOptPeriode)}` : ''}${
+          c.anFiltre ? ` · <strong style="font-weight:500">${c.anListe.length} sur ${c.anListeTotal}</strong> pour « ${esc(c.anFiltre)} »` : ''
+        }</div>`}
   </div>
 
   ${c.anVide ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Choisissez ${c.anType === 'produit' ? 'une référence' : 'une catégorie'} pour construire la série.</div>`
