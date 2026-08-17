@@ -1585,6 +1585,40 @@ function tplTaches(c, x){
         <span style="font-size:11px;font-weight:300;color:var(--color-text-muted);line-height:1.35">${esc(t.sous)}</span>
       </${t.go ? 'button' : 'div'}>`).join('')}
     </div>
+    <!-- P&L court par magasin, sur le mois EN COURS. La source est l'API :
+         la caisse en base s'arrête au dernier jour encodé et ne peut pas
+         répondre à « où en sont-ils aujourd'hui ». -->
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:700">Chiffre d’affaires du mois par magasin</div>
+        <div style="font-size:11.5px;font-weight:300;color:var(--color-text-muted)">${esc(c.tkPnlPeriode)} · source API, mois en cours</div>
+      </div>
+      ${c.tkPnlEtat === 'chargement' ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:14px 0">Lecture de l’API…</div>`
+        : !(c.tkPnl || []).length ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:14px 0">Aucun magasin rendu par l’API sur le mois en cours.</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:660px">
+        <thead><tr>
+          ${['Magasin', 'CA du mois', 'N-1', 'Écart', 'Tickets', 'Panier', 'Objectif', 'Atteinte']
+            .map((h, i) => `<th style="text-align:${i ? 'right' : 'left'};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap">${esc(h)}</th>`).join('')}
+        </tr></thead>
+        <tbody>${c.tkPnl.map(m => `<tr>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px">
+            <div style="font-weight:500">${esc(m.nom)}</div>
+            <span style="${m.barre};margin-top:5px;max-width:200px"></span></td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500">${esc(m.ca)}</td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.n1)}</td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500;color:${m.ecartCol}">${esc(m.ecart) || '—'}</td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.tickets)}</td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.panier)}</td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-size:12.5px">${m.obj
+            ? `<span style="font-variant-numeric:tabular-nums">${esc(m.obj)}</span>`
+            : `<span style="font-size:10.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap">à renseigner</span>`}</td>
+          <td style="padding:9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:${m.attCol}">${m.att ? esc(m.att) : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      ${c.tkPnlSansObj ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">
+        <strong style="font-weight:700">${c.tkPnlSansObj} magasin${c.tkPnlSansObj > 1 ? 's' : ''} sur ${c.tkPnlTotal} sans objectif de CA encodé</strong> — l’atteinte reste vide : elle ne peut pas se calculer contre une cible absente. Le budget se saisit dans « Encodage du budget ». En attendant, l’écart N-1 est la seule référence disponible.</div>` : ''}`}
+    </div>
+
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <select ${x.C(c.setTkWho)} style="${selCss}">${opts(c.tkPeople, c.tkWho, o => o.val, o => esc(o.nom))}</select>
       <select ${x.C(c.setTkStore)} style="${selCss}">${opts(c.tkStores, c.tkStore, o => o.val, o => esc(o.nom))}</select>

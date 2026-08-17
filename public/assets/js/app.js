@@ -2509,6 +2509,13 @@ class App {
     } else { common.ctrlDet = false; }
   }
 
+  /** CA du mois en cours par magasin — via l'API, une seule fois. */
+  tkReseau(){
+    if (this.D.tkReseau || this._tkRsEnCours) { return; }
+    this._tkRsEnCours = true;
+    readOne('/exploitation/reseau?periode=mois').then(r => { this._tkRsEnCours = false;
+      this.D.tkReseau = r || { etat: 'erreur' }; this.setState({}); });
+  }
   /**
    * État de l'assistance IA, lu une fois. La clé n'arrive jamais au navigateur :
    * la route ne rend qu'une empreinte et le modèle retenu.
@@ -2604,6 +2611,41 @@ class App {
       go: ecran ? () => this.setState(Object.assign({ screen: ecran },
         cle === 'controler' ? { ctrlOnly: 'acontroler', ctrlShop: 'Toutes les boutiques' }
         : cle === 'sansPhoto' ? { ctrlOnly: 'sansphoto', ctrlShop: 'Toutes les boutiques' } : {})) : null });
+    // --- P&L court par magasin : où en est chacun sur le mois EN COURS.
+    // La source est l'API, pas la caisse en base : celle-ci s'arrête au dernier
+    // jour encodé (mesuré : 34 jours de retard), et un mois clos ne répond pas
+    // à « où en sont-ils aujourd'hui ».
+    this.tkReseau();
+    const R = this.D.tkReseau || null;
+    common.tkPnlEtat = R ? (R.etat || 'attente') : 'chargement';
+    common.tkPnlPeriode = R && R.du ? (this.fD(R.du) + ' → ' + this.fD(R.au)) : '';
+    const budgets = (D.budgets || []);
+    const objDe = id => { const b = budgets.find(x => String(x.storeId || x.shopId || x.id) === String(id));
+      const v = b ? (b.caObjectifMois != null ? b.caObjectifMois : (b.caT != null ? b.caT : null)) : null;
+      return (v != null && isFinite(v) && v > 0) ? +v : null; };
+    const mags = ((R && R.magasins) || []).slice().sort((a, b) => (b.n || 0) - (a.n || 0));
+    const hi = Math.max.apply(null, mags.map(m => m.n || 0).concat([1]));
+    common.tkPnl = mags.map(m => {
+      const obj = objDe(m.shopId);
+      const att = obj ? (m.n || 0) / obj : null;
+      return { nom: m.magasin, ca: this.fMt(m.n),
+        // Une barre relative au plus gros magasin, faute d'objectif : elle
+        // compare les tailles, et l'écran ne prétend pas mesurer une atteinte
+        // qui n'existe pas.
+        barre: 'display:block;height:6px;border-radius:999px;background:var(--color-primary);width:'
+          + Math.max(3, Math.round(100 * (m.n || 0) / hi)) + '%',
+        n1: m.n1 ? this.fMt(m.n1) : '—',
+        ecart: m.ecart == null ? '' : (m.ecart >= 0 ? '+' : '') + String(m.ecart).replace('.', ',') + ' %',
+        ecartCol: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
+        tickets: m.tickets ? Math.round(m.tickets).toLocaleString('fr-BE') : '—',
+        panier: m.panier ? this.fU(m.panier) : '—',
+        obj: obj ? this.fMt(obj) : null,
+        att: att == null ? null : this.fP(att, 0),
+        attCol: att == null ? '' : (att >= 0.95 ? '#2d7a3e' : att >= 0.8 ? '#B87512' : 'var(--color-primary)') };
+    });
+    common.tkPnlSansObj = common.tkPnl.filter(x => !x.obj).length;
+    common.tkPnlTotal = common.tkPnl.length;
+
     common.tkTuiles = [
       tuile('controler', PT.aControler || 0, 'À contrôler',
         'tâches photographiées, en attente de note', 'controle', true),
