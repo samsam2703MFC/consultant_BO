@@ -62,26 +62,26 @@ function ensureInstalled(): void
  */
 function ensurePlanogramme(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_zone ('
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_zone ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(80) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_meuble ('
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_meuble ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'zone_id INT UNSIGNED NOT NULL,'
         . 'nom VARCHAR(80) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
         . 'KEY idx_zone (zone_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_niveau ('
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_niveau ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'meuble_id INT UNSIGNED NOT NULL,'
         . 'nom VARCHAR(80) NOT NULL,'
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
         . 'KEY idx_meuble (meuble_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_slot ('
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_slot ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'niveau_id INT UNSIGNED NOT NULL,'
         . 'position SMALLINT UNSIGNED NOT NULL,'
@@ -90,23 +90,27 @@ function ensurePlanogramme(): void
         . 'UNIQUE KEY uniq_pos (niveau_id, position)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
-    // Le placement rejoint la table existante : `slot_id` la rattache à la
-    // structure, `fronts` et `ordre` disent comment le produit occupe la place.
-    foreach ([
-        'slot_id' => 'INT UNSIGNED NULL',
-        'fronts'  => 'SMALLINT UNSIGNED NOT NULL DEFAULT 1',
-        'ordre'   => 'SMALLINT UNSIGNED NOT NULL DEFAULT 1',
-    ] as $col => $type) {
-        try {
-            Db::exec('ALTER TABLE ceo_prod_planogram ADD COLUMN ' . $col . ' ' . $type);
-        } catch (PDOException $e) { /* colonne déjà présente */ }
-    }
+    // Le placement : quelle référence occupe quel emplacement, et comment.
+    // `slot_id` est la vérité ; zone / meuble / niveau / position sont recopiés
+    // en clair parce que le référentiel produit les lit sous cette forme et n'a
+    // pas à recharger tout l'arbre pour afficher « Vitrine 1 · haut · 4 ».
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_placement ('
+        . 'ref VARCHAR(24) PRIMARY KEY,'
+        . 'slot_id INT UNSIGNED NULL,'
+        . 'zone VARCHAR(160) NOT NULL DEFAULT \'\','
+        . 'meuble VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'niveau VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'slot SMALLINT UNSIGNED NULL,'
+        . 'fronts SMALLINT UNSIGNED NOT NULL DEFAULT 1,'
+        . 'ordre SMALLINT UNSIGNED NOT NULL DEFAULT 1,'
+        . 'KEY idx_slot (slot_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
     // Notes de présentation. `cible` distingue ce à quoi la note s'applique —
     // une consigne de meuble vaut pour tout ce qu'il contient, une consigne de
     // référence ne vaut que pour elle. Deux tables auraient dupliqué la même
     // forme et le même écran.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_note ('
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_note ('
         . 'cible VARCHAR(12) NOT NULL,'          // ref | zone | meuble
         . 'cible_id VARCHAR(24) NOT NULL,'
         . 'texte TEXT NULL,'
@@ -117,6 +121,53 @@ function ensurePlanogramme(): void
         . 'maj_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
         . 'PRIMARY KEY (cible, cible_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+    planoMigrer();
+}
+
+/**
+ * Reprise des tables antérieures vers le préfixe `pla_`.
+ *
+ * Une saisie peut être en cours au moment de la livraison : renommer sans
+ * reprendre les lignes ferait disparaître un comptoir déjà déclaré, sans erreur
+ * visible — l'écran se contenterait de redevenir vide. On COPIE donc, en
+ * gardant les identifiants (les enfants s'y rattachent), et seulement si la
+ * table d'arrivée est vide : rejouer la migration ne doit pas écraser ce qui a
+ * été saisi depuis.
+ *
+ * L'ancienne table n'est supprimée qu'après une copie vérifiée, ligne pour
+ * ligne. En cas de doute elle reste en place : une table de trop ne coûte rien,
+ * une table perdue si.
+ */
+function planoMigrer(): void
+{
+    $repris = [
+        'ceo_plano_zone'   => ['pla_zone', 'id, nom, rang'],
+        'ceo_plano_meuble' => ['pla_meuble', 'id, zone_id, nom, rang'],
+        'ceo_plano_niveau' => ['pla_niveau', 'id, meuble_id, nom, rang'],
+        'ceo_plano_slot'   => ['pla_slot', 'id, niveau_id, position, largeur_mm, capacite'],
+        'ceo_plano_note'   => ['pla_note', 'cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le'],
+        'ceo_prod_planogram' => ['pla_placement', 'ref, slot_id, zone, meuble, niveau, slot, fronts, ordre'],
+    ];
+    foreach ($repris as $ancienne => [$nouvelle, $colonnes]) {
+        try {
+            $n = Db::row('SELECT COUNT(*) AS n FROM ' . $ancienne);
+        } catch (PDOException $e) { continue; }   // déjà migrée, ou jamais créée
+        $avant = (int) ($n['n'] ?? 0);
+        try {
+            $dest = Db::row('SELECT COUNT(*) AS n FROM ' . $nouvelle);
+            if ((int) ($dest['n'] ?? 0) === 0 && $avant > 0) {
+                Db::exec('INSERT INTO ' . $nouvelle . ' (' . $colonnes . ') SELECT ' . $colonnes . ' FROM ' . $ancienne);
+            }
+            $apres = Db::row('SELECT COUNT(*) AS n FROM ' . $nouvelle);
+            if ((int) ($apres['n'] ?? 0) >= $avant) {
+                Db::exec('DROP TABLE ' . $ancienne);
+            }
+        } catch (PDOException $e) {
+            // Colonne absente d'une installation plus ancienne : on garde
+            // l'ancienne table plutôt que de perdre ce qu'elle contient.
+        }
+    }
 }
 
 /**
@@ -215,10 +266,9 @@ function ensureProduction(): void
         . 'profil VARCHAR(120) NOT NULL DEFAULT \'\', pwa_id BIGINT UNSIGNED NULL,'
         . 'actif TINYINT(1) NOT NULL DEFAULT 1, KEY idx_pwa (pwa_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_planogram ('
-        . 'ref VARCHAR(24) PRIMARY KEY, zone VARCHAR(160) NOT NULL DEFAULT \'\','
-        . 'meuble VARCHAR(40) NOT NULL DEFAULT \'\', niveau VARCHAR(40) NOT NULL DEFAULT \'\','
-        . 'slot SMALLINT UNSIGNED NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Le placement au comptoir a rejoint `pla_placement` (voir
+    // ensurePlanogramme). Le recréer ici le ferait naître à chaque appel pour
+    // être aussitôt repris et supprimé par la migration.
 
     // Réglages du moteur : structure indispensable au calcul, pas des données.
     if (setting('production') === null) {

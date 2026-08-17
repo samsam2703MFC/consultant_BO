@@ -755,24 +755,36 @@ function wr_prod_planogramme(string $ref): array
     if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
     $zone = trim((string) ($b['zone'] ?? ''));
     if ($zone === '') {
-        Db::exec('DELETE FROM ceo_prod_planogram WHERE ref = ?', [$ref]);
+        Db::exec('DELETE FROM pla_placement WHERE ref = ?', [$ref]);
         return ['ok' => true, 'ref' => $ref, 'retire' => true];
     }
-    $slot = isset($b['slot']) && is_numeric($b['slot']) ? (int) $b['slot'] : null;
-    Db::exec('INSERT INTO ceo_prod_planogram (ref, zone, meuble, niveau, slot) VALUES (?,?,?,?,?)
-              ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble),
-                                      niveau = VALUES(niveau), slot = VALUES(slot)',
-        [$ref, $zone, trim((string) ($b['meuble'] ?? '')), trim((string) ($b['niveau'] ?? '')), $slot]);
-    return ['ok' => true, 'ref' => $ref];
+    // Cette route désigne l'emplacement par ses NOMS. Depuis que le comptoir a
+    // une structure, un placement doit s'y rattacher : sans `slot_id` il serait
+    // compté comme placé dans le catalogue tout en restant invisible sur le
+    // plan. On résout donc les noms, et on refuse plutôt que d'écrire un
+    // placement qui ne désigne rien.
+    $s = Db::row('SELECT s.id FROM pla_slot s
+                    JOIN pla_niveau n ON n.id = s.niveau_id
+                    JOIN pla_meuble m ON m.id = n.meuble_id
+                    JOIN pla_zone   z ON z.id = m.zone_id
+                   WHERE z.nom = ? AND m.nom = ? AND n.nom = ? AND s.position = ?',
+        [$zone, trim((string) ($b['meuble'] ?? '')), trim((string) ($b['niveau'] ?? '')),
+         isset($b['slot']) && is_numeric($b['slot']) ? (int) $b['slot'] : 0]);
+    if ($s === null) {
+        http_response_code(422);
+        return ['error' => 'aucun emplacement de ce nom au comptoir — déclarez-le dans le planogramme, '
+            . 'ou utilisez PUT /planogramme/placement/{ref} avec son slotId'];
+    }
+    return wr_plano_placer($ref, array_merge($b, ['slotId' => (int) $s['id']]));
 }
 
 /* --- Planogramme : structure du comptoir, placements, consignes ------------- */
 
 /** Les trois niveaux de structure partagent leur forme : un nom, un rang, un parent. */
 const PLANO_NIVEAUX = [
-    'zone'   => ['table' => 'ceo_plano_zone',   'parent' => null,        'enfant' => 'ceo_plano_meuble', 'fkEnfant' => 'zone_id'],
-    'meuble' => ['table' => 'ceo_plano_meuble', 'parent' => 'zone_id',   'enfant' => 'ceo_plano_niveau', 'fkEnfant' => 'meuble_id'],
-    'niveau' => ['table' => 'ceo_plano_niveau', 'parent' => 'meuble_id', 'enfant' => 'ceo_plano_slot',   'fkEnfant' => 'niveau_id'],
+    'zone'   => ['table' => 'pla_zone',   'parent' => null,        'enfant' => 'pla_meuble', 'fkEnfant' => 'zone_id'],
+    'meuble' => ['table' => 'pla_meuble', 'parent' => 'zone_id',   'enfant' => 'pla_niveau', 'fkEnfant' => 'meuble_id'],
+    'niveau' => ['table' => 'pla_niveau', 'parent' => 'meuble_id', 'enfant' => 'pla_slot',   'fkEnfant' => 'niveau_id'],
 ];
 
 /**
@@ -808,7 +820,7 @@ function wr_plano_creer(string $type): array
     if ($type === 'niveau' && isset($b['slots'])) {
         $n = max(0, min(40, (int) $b['slots']));
         for ($i = 1; $i <= $n; $i++) {
-            Db::exec('INSERT INTO ceo_plano_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
+            Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
                 . ' ON DUPLICATE KEY UPDATE position = position',
                 [$id, $i, isset($b['largeurMm']) ? (int) $b['largeurMm'] : null,
                  isset($b['capacite']) ? (int) $b['capacite'] : null]);
@@ -850,25 +862,25 @@ function wr_plano_supprimer(string $type, int $id): array
     $slots = planoSlotsSous($type, $id);
     if ($slots) {
         $in = implode(',', array_fill(0, count($slots), '?'));
-        $r = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_planogram WHERE slot_id IN (' . $in . ')', $slots);
+        $r = Db::row('SELECT COUNT(*) AS n FROM pla_placement WHERE slot_id IN (' . $in . ')', $slots);
         $n = (int) ($r['n'] ?? 0);
         if ($n > 0 && empty(body()['force'])) {
             http_response_code(409);
             return ['error' => $n . ' référence(s) y sont placées — la suppression les retirerait du comptoir',
                 'placees' => $n];
         }
-        Db::exec('DELETE FROM ceo_prod_planogram WHERE slot_id IN (' . $in . ')', $slots);
-        Db::exec('DELETE FROM ceo_plano_slot WHERE id IN (' . $in . ')', $slots);
+        Db::exec('DELETE FROM pla_placement WHERE slot_id IN (' . $in . ')', $slots);
+        Db::exec('DELETE FROM pla_slot WHERE id IN (' . $in . ')', $slots);
     }
     // Puis la descendance de structure, du bas vers le haut.
     if ($type === 'zone') {
-        $ms = array_map(fn ($x) => (int) $x['id'], Db::rows('SELECT id FROM ceo_plano_meuble WHERE zone_id = ?', [$id]));
+        $ms = array_map(fn ($x) => (int) $x['id'], Db::rows('SELECT id FROM pla_meuble WHERE zone_id = ?', [$id]));
         foreach ($ms as $m) {
-            Db::exec('DELETE FROM ceo_plano_niveau WHERE meuble_id = ?', [$m]);
+            Db::exec('DELETE FROM pla_niveau WHERE meuble_id = ?', [$m]);
         }
-        Db::exec('DELETE FROM ceo_plano_meuble WHERE zone_id = ?', [$id]);
+        Db::exec('DELETE FROM pla_meuble WHERE zone_id = ?', [$id]);
     } elseif ($type === 'meuble') {
-        Db::exec('DELETE FROM ceo_plano_niveau WHERE meuble_id = ?', [$id]);
+        Db::exec('DELETE FROM pla_niveau WHERE meuble_id = ?', [$id]);
     }
     Db::exec('DELETE FROM ' . $def['table'] . ' WHERE id = ?', [$id]);
     return ['ok' => true, 'id' => $id];
@@ -878,12 +890,12 @@ function wr_plano_supprimer(string $type, int $id): array
 function planoSlotsSous(string $type, int $id): array
 {
     if ($type === 'niveau') {
-        $q = 'SELECT id FROM ceo_plano_slot WHERE niveau_id = ?';
+        $q = 'SELECT id FROM pla_slot WHERE niveau_id = ?';
     } elseif ($type === 'meuble') {
-        $q = 'SELECT s.id FROM ceo_plano_slot s JOIN ceo_plano_niveau n ON n.id = s.niveau_id WHERE n.meuble_id = ?';
+        $q = 'SELECT s.id FROM pla_slot s JOIN pla_niveau n ON n.id = s.niveau_id WHERE n.meuble_id = ?';
     } else {
-        $q = 'SELECT s.id FROM ceo_plano_slot s JOIN ceo_plano_niveau n ON n.id = s.niveau_id'
-           . ' JOIN ceo_plano_meuble m ON m.id = n.meuble_id WHERE m.zone_id = ?';
+        $q = 'SELECT s.id FROM pla_slot s JOIN pla_niveau n ON n.id = s.niveau_id'
+           . ' JOIN pla_meuble m ON m.id = n.meuble_id WHERE m.zone_id = ?';
     }
     return array_map(fn ($x) => (int) $x['id'], Db::rows($q, [$id]));
 }
@@ -895,10 +907,10 @@ function wr_plano_slots(): array
     $nid = (int) ($b['niveauId'] ?? 0);
     if ($nid <= 0) { http_response_code(422); return ['error' => 'le niveau est requis']; }
     $n = max(1, min(40, (int) ($b['nombre'] ?? 1)));
-    $r = Db::row('SELECT COALESCE(MAX(position), 0) AS p FROM ceo_plano_slot WHERE niveau_id = ?', [$nid]);
+    $r = Db::row('SELECT COALESCE(MAX(position), 0) AS p FROM pla_slot WHERE niveau_id = ?', [$nid]);
     $depart = (int) ($r['p'] ?? 0);
     for ($i = 1; $i <= $n; $i++) {
-        Db::exec('INSERT INTO ceo_plano_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
+        Db::exec('INSERT INTO pla_slot (niveau_id, position, largeur_mm, capacite) VALUES (?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE position = position',
             [$nid, $depart + $i, isset($b['largeurMm']) ? (int) $b['largeurMm'] : null,
              isset($b['capacite']) ? (int) $b['capacite'] : null]);
@@ -909,13 +921,13 @@ function wr_plano_slots(): array
 /** DELETE /planogramme/emplacement/{id} — retirer un emplacement. */
 function wr_plano_slot_supprimer(int $id): array
 {
-    $r = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_planogram WHERE slot_id = ?', [$id]);
+    $r = Db::row('SELECT COUNT(*) AS n FROM pla_placement WHERE slot_id = ?', [$id]);
     if ((int) ($r['n'] ?? 0) > 0 && empty(body()['force'])) {
         http_response_code(409);
         return ['error' => 'une référence y est placée — elle serait retirée du comptoir'];
     }
-    Db::exec('DELETE FROM ceo_prod_planogram WHERE slot_id = ?', [$id]);
-    Db::exec('DELETE FROM ceo_plano_slot WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM pla_placement WHERE slot_id = ?', [$id]);
+    Db::exec('DELETE FROM pla_slot WHERE id = ?', [$id]);
     return ['ok' => true, 'id' => $id];
 }
 
@@ -931,27 +943,29 @@ function wr_plano_slot_supprimer(int $id): array
  * Un emplacement plein est REFUSÉ avec son occupant : l'écran propose alors
  * l'échange, au lieu d'empiler deux produits au même endroit sans le dire.
  */
-function wr_plano_placer(string $ref): array
+function wr_plano_placer(string $ref, ?array $payload = null): array
 {
     $ref = trim($ref);
     if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
-    $b = body();
+    // `payload` permet à la route par NOMS de déléguer ici après avoir résolu
+    // l'emplacement : une seule règle d'occupation pour les deux chemins.
+    $b = $payload ?? body();
 
     if (empty($b['slotId'])) {
-        Db::exec('DELETE FROM ceo_prod_planogram WHERE ref = ?', [$ref]);
+        Db::exec('DELETE FROM pla_placement WHERE ref = ?', [$ref]);
         journalAdd('CEO', 'Planogramme', $ref, 'Référence retirée du comptoir');
         return ['ok' => true, 'ref' => $ref, 'retire' => true];
     }
     $sid = (int) $b['slotId'];
     $s = Db::row('SELECT s.id, s.position, s.capacite, n.nom AS niveau, m.nom AS meuble, z.nom AS zone
-                    FROM ceo_plano_slot s
-                    JOIN ceo_plano_niveau n ON n.id = s.niveau_id
-                    JOIN ceo_plano_meuble m ON m.id = n.meuble_id
-                    JOIN ceo_plano_zone   z ON z.id = m.zone_id
+                    FROM pla_slot s
+                    JOIN pla_niveau n ON n.id = s.niveau_id
+                    JOIN pla_meuble m ON m.id = n.meuble_id
+                    JOIN pla_zone   z ON z.id = m.zone_id
                    WHERE s.id = ?', [$sid]);
     if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
 
-    $occ = Db::rows('SELECT ref FROM ceo_prod_planogram WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    $occ = Db::rows('SELECT ref FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
     if ($occ && empty($b['partager'])) {
         http_response_code(409);
         return ['error' => 'emplacement déjà occupé',
@@ -960,7 +974,7 @@ function wr_plano_placer(string $ref): array
 
     $fronts = max(1, min(40, (int) ($b['fronts'] ?? 1)));
     $ordre  = max(1, min(40, (int) ($b['ordre'] ?? 1)));
-    Db::exec('INSERT INTO ceo_prod_planogram (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre)'
+    Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre)'
         . ' VALUES (?,?,?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble), niveau = VALUES(niveau),'
         . ' slot = VALUES(slot), slot_id = VALUES(slot_id), fronts = VALUES(fronts), ordre = VALUES(ordre)',
@@ -1016,7 +1030,7 @@ function wr_plano_note(): array
     $texte = trim((string) ($b['texte'] ?? ''));
 
     if ($texte === '') {
-        Db::exec('DELETE FROM ceo_plano_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
+        Db::exec('DELETE FROM pla_note WHERE cible = ? AND cible_id = ?', [$cible, $id]);
         return ['ok' => true, 'efface' => true];
     }
     $texte = mb_substr($texte, 0, 2000);
@@ -1035,7 +1049,7 @@ function wr_plano_note(): array
     $u = setting('utilisateur', []);
     $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
 
-    Db::exec('INSERT INTO ceo_plano_note (cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le)'
+    Db::exec('INSERT INTO pla_note (cible, cible_id, texte, epinglee, gravite, du, au, auteur, maj_le)'
         . ' VALUES (?,?,?,?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE texte = VALUES(texte), epinglee = VALUES(epinglee),'
         . ' gravite = VALUES(gravite), du = VALUES(du), au = VALUES(au),'

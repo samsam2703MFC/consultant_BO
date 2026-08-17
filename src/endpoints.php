@@ -691,7 +691,7 @@ function ep_prod_catalogue(): array
         if ($r['pwa_id'] !== null) { $enrich[(int) $r['pwa_id']] = $r; }
     }
     $plano = [];
-    foreach (Db::rows('SELECT * FROM ceo_prod_planogram') as $p) { $plano[(string) $p['ref']] = $p; }
+    foreach (Db::rows('SELECT * FROM pla_placement') as $p) { $plano[(string) $p['ref']] = $p; }
 
     $reel = ep_prod_catalogue_reel($enrich, $parRef, $plano);
     if ($reel !== null) { return $reel; }
@@ -2530,7 +2530,7 @@ function ep_planogramme(): array
 
     // Placements, indexés par emplacement — et par référence pour l'écran.
     $parSlot = []; $placements = [];
-    foreach (Db::rows('SELECT * FROM ceo_prod_planogram') as $p) {
+    foreach (Db::rows('SELECT * FROM pla_placement') as $p) {
         $sid = $p['slot_id'] !== null ? (int) $p['slot_id'] : null;
         $l = ['ref' => (string) $p['ref'], 'slotId' => $sid,
             'fronts' => (int) ($p['fronts'] ?? 1), 'ordre' => (int) ($p['ordre'] ?? 1),
@@ -2553,10 +2553,10 @@ function ep_planogramme(): array
         foreach (ep_prod_catalogue() as $c) { $noms[(string) $c['ref']] = (string) $c['nom']; }
     }
 
-    $zones = Db::rows('SELECT * FROM ceo_plano_zone ORDER BY rang, id');
-    $meubles = Db::rows('SELECT * FROM ceo_plano_meuble ORDER BY rang, id');
-    $niveaux = Db::rows('SELECT * FROM ceo_plano_niveau ORDER BY rang, id');
-    $slots = Db::rows('SELECT * FROM ceo_plano_slot ORDER BY niveau_id, position');
+    $zones = Db::rows('SELECT * FROM pla_zone ORDER BY rang, id');
+    $meubles = Db::rows('SELECT * FROM pla_meuble ORDER BY rang, id');
+    $niveaux = Db::rows('SELECT * FROM pla_niveau ORDER BY rang, id');
+    $slots = Db::rows('SELECT * FROM pla_slot ORDER BY niveau_id, position');
 
     $parNiveau = [];
     foreach ($slots as $s) { $parNiveau[(int) $s['niveau_id']][] = $s; }
@@ -2603,7 +2603,7 @@ function ep_planogramme(): array
     $out['totaux']['places'] = count(array_filter($placements, fn ($p) => $p['slotId'] !== null));
     $out['totaux']['refs'] = count($placements);
 
-    foreach (Db::rows('SELECT * FROM ceo_plano_note') as $n) {
+    foreach (Db::rows('SELECT * FROM pla_note') as $n) {
         $out['notes'][(string) $n['cible'] . ':' . (string) $n['cible_id']] = [
             'cible' => $n['cible'], 'cibleId' => (string) $n['cible_id'],
             'texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
@@ -2708,7 +2708,7 @@ function ep_prod_produit_fiche(): array
         } catch (PDOException $e) { /* table de caisse absente : fiche réduite */ }
     }
 
-    $n = Db::row('SELECT * FROM ceo_plano_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]);
+    $n = Db::row('SELECT * FROM pla_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]);
     if ($n !== null) {
         $out['note'] = ['texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
             'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],

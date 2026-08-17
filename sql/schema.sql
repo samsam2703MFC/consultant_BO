@@ -423,11 +423,67 @@ CREATE TABLE IF NOT EXISTS ceo_prod_product (
   KEY idx_pwa (pwa_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Emplacement au comptoir (planogramme) — un produit, une zone.
-CREATE TABLE IF NOT EXISTS ceo_prod_planogram (
-  ref      VARCHAR(24) PRIMARY KEY,
-  zone     VARCHAR(160) NOT NULL DEFAULT '',
-  meuble   VARCHAR(40)  NOT NULL DEFAULT '',
-  niveau   VARCHAR(40)  NOT NULL DEFAULT '',
-  slot     SMALLINT UNSIGNED NULL
+-- ---------------------------------------------------------------------------
+-- Planogramme (préfixe pla_) : la structure du comptoir et ce qui l'occupe.
+-- Quatre niveaux avec identité propre — renommer « Vitrine 1 » ne doit pas
+-- déplacer ce qu'elle porte, ce qu'un rattachement par libellé aurait fait.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pla_zone (
+  id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nom  VARCHAR(80) NOT NULL,
+  rang SMALLINT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pla_meuble (
+  id      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  zone_id INT UNSIGNED NOT NULL,
+  nom     VARCHAR(80) NOT NULL,
+  rang    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_zone (zone_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pla_niveau (
+  id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  meuble_id INT UNSIGNED NOT NULL,
+  nom       VARCHAR(80) NOT NULL,
+  rang      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_meuble (meuble_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pla_slot (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  niveau_id  INT UNSIGNED NOT NULL,
+  position   SMALLINT UNSIGNED NOT NULL,
+  largeur_mm SMALLINT UNSIGNED NULL,
+  capacite   SMALLINT UNSIGNED NULL,
+  UNIQUE KEY uniq_pos (niveau_id, position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Placement : slot_id est la vérité ; zone / meuble / niveau / slot sont
+-- recopiés en clair pour que le référentiel produit les lise sans recharger
+-- tout l'arbre.
+CREATE TABLE IF NOT EXISTS pla_placement (
+  ref     VARCHAR(24) PRIMARY KEY,
+  slot_id INT UNSIGNED NULL,
+  zone    VARCHAR(160) NOT NULL DEFAULT '',
+  meuble  VARCHAR(80)  NOT NULL DEFAULT '',
+  niveau  VARCHAR(80)  NOT NULL DEFAULT '',
+  slot    SMALLINT UNSIGNED NULL,
+  fronts  SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  ordre   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  KEY idx_slot (slot_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Consigne de présentation, sur une référence, une zone ou un meuble.
+CREATE TABLE IF NOT EXISTS pla_note (
+  cible    VARCHAR(12) NOT NULL,
+  cible_id VARCHAR(24) NOT NULL,
+  texte    TEXT NULL,
+  epinglee TINYINT(1) NOT NULL DEFAULT 0,
+  gravite  TINYINT NOT NULL DEFAULT 3,
+  du       DATE NULL,
+  au       DATE NULL,
+  auteur   VARCHAR(190) NOT NULL DEFAULT '',
+  maj_le   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (cible, cible_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
