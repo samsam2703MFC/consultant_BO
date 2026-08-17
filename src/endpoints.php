@@ -2559,12 +2559,14 @@ function annotationNormalise(array $liste): array
     $out = [];
     foreach ($liste as $r) {
         if (!is_array($r)) { continue; }
-        $x = $borne($r['x'] ?? 0);
-        $y = $borne($r['y'] ?? 0);
-        // Un cadre d'au moins 1,5 % de la photo : en dessous, le ✕ le recouvre
-        // et le repère n'indique plus rien.
-        $l = max(0.015, min(1 - $x, $borne($r['l'] ?? 0.1)));
-        $h = max(0.015, min(1 - $y, $borne($r['h'] ?? 0.1)));
+        // La TAILLE est bornée d'abord, l'origine ensuite : un cadre d'au moins
+        // 1,5 % de la photo (en dessous, le ✕ le recouvre et le repère
+        // n'indique plus rien) et jamais un bord au-delà de l'image. L'inverse
+        // — origine puis taille — laisse un x = 1 pousser le cadre hors cadre.
+        $l = max(0.015, min(1.0, $borne($r['l'] ?? 0.1)));
+        $h = max(0.015, min(1.0, $borne($r['h'] ?? 0.1)));
+        $x = min($borne($r['x'] ?? 0), round(1 - $l, 4));
+        $y = min($borne($r['y'] ?? 0), round(1 - $h, 4));
         $txt = trim((string) ($r['txt'] ?? ''));
         if (function_exists('mb_substr')) { $txt = mb_substr($txt, 0, 400); }
         $niv = (int) ($r['niveau'] ?? $defaut);
