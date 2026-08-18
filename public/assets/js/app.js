@@ -3673,10 +3673,16 @@ class App {
   /* --- contrôle des tâches (checklists consultants du panel) --------------------- */
   ctrlSetDate(d){
     if (!d) return;
-    if (this.source !== 'api'){ this.setState({ ctrlShop: 'tous' }); return; }
+    // Changer de journée remet le filtre boutique à « toutes ». Le sentinelle
+    // est le LIBELLÉ, pas « tous » : le filtre compare `s.shop === ctrlShop`,
+    // et poser « tous » ne correspondait à aucune boutique — la liste se
+    // vidait à chaque changement de date, avec un menu qui affichait pourtant
+    // « Toutes les boutiques ».
+    const TOUTES = 'Toutes les boutiques';
+    if (this.source !== 'api'){ this.setState({ ctrlShop: TOUTES }); return; }
     readOne('/pwa/tasks?date=' + encodeURIComponent(d)).then(pt => {
       if (pt) this.D.pwaTasks = pt;
-      this.setState({ ctrlShop: 'tous' });
+      this.setState({ ctrlShop: TOUTES });
     });
   }
   ctrlToggle(shopId, taskId, date, on){
