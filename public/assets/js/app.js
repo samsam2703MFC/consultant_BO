@@ -2947,12 +2947,11 @@ class App {
     });
   }
 
-  /** La fiche de présentation et de vente d'une référence. */
+  /** La fiche de présentation d'une référence : sa photo, sa consigne, sa place. */
   valsPlFiche(f, pl){
     const d = f.d || {};
     const cat = d.catalogue || {};
     const n = f.note || {};
-    const court = nom => String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, '');
     const slots = (pl.slots || []);
     const place = (pl.placements || []).find(p => p.ref === f.ref) || null;
     const cible = f.cible != null ? f.cible : (place ? place.slotId : null);
@@ -2998,15 +2997,6 @@ class App {
       qmin: f.qmin != null ? f.qmin : (cat.qmin || 0),
       set: k => e => { const v = e.target.value;
         this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche, { [k]: v }) })); },
-      // Vente : les chiffres du référentiel, sans recalcul local.
-      vente: [
-        { k: 'Prix de vente', v: this.fEd(cat.prix) },
-        { k: 'Coût matière', v: this.fEd(cat.mat) },
-        { k: 'Marge brute', v: cat.margePct == null ? '—' : this.fP(cat.margePct, 0) },
-        { k: 'Marge nette', v: cat.margeNettePct == null ? '—' : this.fP(cat.margeNettePct, 0), aide: 'commission déduite' },
-        { k: 'Poids', v: cat.poids ? cat.poids.toLocaleString('fr-BE') + ' g' : '—' },
-        { k: 'DLV', v: cat.dlv ? cat.dlv + ' h' : '—' },
-      ],
       technique: (d.technique || []).map(t => ({ k: t.champ, v: t.valeur })),
       techniqueVide: !(d.technique || []).length,
       manque: (d.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source })),
@@ -3018,7 +3008,10 @@ class App {
       photo: (d.note || {}).photo || null,
       photoDepose: ev => this.plPhoto('ref', f.ref, (ev.target.files || [])[0]),
       photoRetirer: (d.note || {}).photo ? () => this.plPhotoRetirer('ref', f.ref) : null,
-      // Consigne de présentation.
+      // Consigne de présentation : un texte, rien d'autre. La gravité,
+      // l'épinglage et la période ont été retirés de la fiche ; ce que le
+      // serveur porte est relu et RENVOYÉ tel quel, pour qu'enregistrer un
+      // texte n'efface pas ce qui a été posé ailleurs.
       noteTxt: n.texte != null ? n.texte : ((d.note || {}).texte || ''),
       notePin: n.epinglee != null ? !!n.epinglee : !!(d.note || {}).epinglee,
       noteGrav: n.gravite != null ? n.gravite : ((d.note || {}).gravite || 3),
@@ -3028,10 +3021,6 @@ class App {
       noteSet: k => e => { const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
           { note: Object.assign({}, s2.plFiche.note, { [k]: v }) }) })); },
-      noteNiveaux: this.zNiveaux().map(lv => ({ n: lv.n, nom: court(lv.nom), couleur: lv.couleur,
-        on: lv.n === (n.gravite != null ? n.gravite : ((d.note || {}).gravite || 3)),
-        pick: () => this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
-          { note: Object.assign({}, s2.plFiche.note, { gravite: lv.n }) }) })) })),
       placer: cible ? () => this.plPlacer() : null,
       retirer: place && place.slotId ? () => this.plRetirer() : null,
       enregistrerNote: () => this.plNote(),

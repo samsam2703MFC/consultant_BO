@@ -3460,7 +3460,7 @@ function tplPlanoFiche(c, x){
     <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;width:1180px;max-width:100%;max-height:100%">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
         <div>
-          <div style="${lbl}">Fiche de présentation &amp; de vente</div>
+          <div style="${lbl}">Fiche de présentation</div>
           <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(f.nom)}</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(f.ref)}${f.sous ? ' · ' + esc(f.sous) : ''} · ${f.placeTxt ? esc(f.placeTxt) : 'sans emplacement au comptoir'}</div>
         </div>
@@ -3491,17 +3491,6 @@ function tplPlanoFiche(c, x){
 
           <div style="${lbl};margin-top:18px">Consigne de présentation</div>
           <textarea id="plf-note" ${x.I(f.noteSet('texte'))} rows="5" placeholder="Comment ce produit doit être présenté au comptoir" style="width:100%;box-sizing:border-box;margin-top:7px;border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:8px 10px;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(f.noteTxt)}</textarea>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-            ${f.noteNiveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
-              <span style="width:8px;height:8px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</button>`).join('')}
-          </div>
-          <label style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:11.5px;cursor:pointer">
-            <input type="checkbox" ${f.notePin ? 'checked' : ''} ${x.C(f.noteSet('epinglee'))} style="width:15px;height:15px;accent-color:var(--color-primary);margin:0">
-            épingler à l’ouverture de la boutique</label>
-          <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
-            <span style="${k}">du</span><input type="date" value="${esc(f.noteDu)}" ${x.C(f.noteSet('du'))} style="${inp};width:135px">
-            <span style="${k}">au</span><input type="date" value="${esc(f.noteAu)}" ${x.C(f.noteSet('au'))} style="${inp};width:135px">
-          </div>
           <button ${x.A(f.enregistrerNote)} style="margin-top:11px;width:100%;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">Enregistrer la consigne</button>
           ${f.noteMaj ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">${esc(f.noteMaj)}</div>` : ''}
           ${(f.manque || []).filter(m => /diffusion/i.test(m.champ)).map(m => `
@@ -3540,12 +3529,6 @@ function tplPlanoFiche(c, x){
           ${f.err ? `<div style="margin-top:10px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;line-height:1.45">${esc(f.err)}</div>` : ''}
           ${!f.err && f.ok ? `<div style="margin-top:10px;font-size:11.5px;color:#2d7a3e">${esc(f.ok)}</div>` : ''}
 
-          <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:15px;padding-top:13px">
-            <div style="${lbl}">Informations de vente</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:9px">
-              ${f.vente.map(v => `<div><div style="${k}">${esc(v.k)}</div><div style="font-size:12.5px;font-weight:500">${esc(v.v)}${v.aide ? ` <span style="font-weight:400;color:var(--color-text-muted)">${esc(v.aide)}</span>` : ''}</div></div>`).join('')}
-            </div>
-          </div>
         </div>
 
         <div style="padding:14px 16px;overflow-y:auto;background:var(--color-background-secondary)" data-scroll="plf3">
