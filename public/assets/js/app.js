@@ -73,21 +73,39 @@ function fusionne(v, n){
 
   const nom = v.nodeName;
   // La VALEUR d'un champ ne vit pas dans un attribut : la recopier suppose de
-  // la lire sur la propriété. Et on ne touche jamais au champ qui a le focus —
-  // écrire dedans replacerait le curseur à la fin à chaque lettre.
+  // la lire sur la propriété. Deux pièges se répondent :
+  //
+  //  — écraser systématiquement la valeur remet le curseur à la fin, et
+  //    annule ce qui est tapé dans un champ que l'écran ne relit qu'à la
+  //    validation (l'assistant meuble lit le DOM au moment d'envoyer) ;
+  //  — ne jamais l'écraser empêche l'application d'effacer un champ qu'elle
+  //    tient (Échap sur la recherche laissait le texte à l'écran).
+  //
+  // On tranche sur ce que le RENDU dit : si la valeur rendue a changé depuis
+  // la passe précédente, c'est l'application qui décide et on l'applique ;
+  // sinon on laisse la frappe tranquille.
   const focus = document.activeElement === v;
-  if (nom === 'TEXTAREA') {
-    const val = n.textContent;
-    if (!focus && v.value !== val) { v.value = val; }
-  } else if (nom === 'INPUT') {
+  const pose = (val) => {
+    if (val == null) { return; }
+    const rendUChange = v.__rendu !== val;
+    v.__rendu = val;
+    if (v.value === val) { return; }
+    if (!focus || rendUChange) {
+      const fin = v.selectionStart;
+      v.value = val;
+      if (focus && v.setSelectionRange) {
+        const pos = Math.min(fin == null ? val.length : fin, val.length);
+        try { v.setSelectionRange(pos, pos); } catch (e) { /* champ sans sélection */ }
+      }
+    }
+  };
+  if (nom === 'TEXTAREA') { pose(n.textContent); }
+  else if (nom === 'INPUT') {
     const t = String(v.type || '').toLowerCase();
     if (t === 'checkbox' || t === 'radio') {
       const coche = n.hasAttribute('checked');
       if (v.checked !== coche) { v.checked = coche; }
-    } else {
-      const val = n.getAttribute('value');
-      if (!focus && val != null && v.value !== val) { v.value = val; }
-    }
+    } else { pose(n.getAttribute('value')); }
   }
 
   fusionneEnfants(v, n);
