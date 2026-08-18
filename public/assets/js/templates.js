@@ -1696,11 +1696,11 @@ function tplEncPalier(p, x){
     <td colspan="4" style="padding:9px 10px 9px 0">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--color-text-muted)">=</span>
-        <input value="${esc(p.nom)}" ${x.C(p.setNom)} placeholder="Nom de l’étape" style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:150px">
+        <input value="${esc(p.nom)}" ${x.C(p.setNom)} placeholder="Nom de l’étape" style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:130px;flex:0 1 auto">
+        <button ${x.A(p.retirer)} title="Retirer cette étape" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button>
         ${sel(p.gauche, p.setGauche)}
         <span style="font-size:12px;color:var(--color-text-muted)">−</span>
         ${sel(p.droite, p.setDroite)}
-        <button ${x.A(p.retirer)} title="Retirer cette étape" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button>
       </div>
     </td>
     <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--pkg-abricot)">${esc(p.pctT)}</td>
