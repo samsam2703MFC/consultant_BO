@@ -789,8 +789,13 @@ class App {
         { sub: 'Scoring & analyse', children: [
           ['produits', 'Scoring des références', 0],
           ['seuil', 'Références sous seuil', 0],
-          ['analyse', 'Analyse dans le temps', 0]] },
-        ['production', 'Suivi de production', 0]]],
+          ['analyse', 'Analyse dans le temps', 0]] }]],
+      // « Suivi de production » a quitté le rail : les fournées déclarées sont
+      // trop lacunaires pour en tirer quoi que ce soit (une boutique sur
+      // quatre n'en déclare aucune), et le taux de perte se lit déjà au
+      // scoring. L'écran reste dans le code, il ne s'atteint plus depuis la
+      // navigation.
+
       ['Centrale d’achat', [
         ['caCampagnes', 'Campagnes commerciales', 0],
         ['caDemande', 'Demande de prix', 0],
