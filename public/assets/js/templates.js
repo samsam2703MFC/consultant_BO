@@ -1328,6 +1328,7 @@ function tplEncodage(c, x){
                 <input value="${esc(cat.nom)}" ${x.C(cat.renommer)} style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:180px">
                 <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA · ${esc(cat.totalE)}</span>
                 <button ${x.A(cat.ajouter)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ poste</button>
+                <button ${x.A(cat.ajouterPalier)} title="Poser un résultat intermédiaire après cette catégorie — marge brute, marge sur coûts fixes…" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ étape</button>
               </div>
             </td></tr>
             ${cat.lignes.map(ch => `
@@ -1346,7 +1347,10 @@ function tplEncodage(c, x){
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500">${ch.montant}</td>
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${ch.montantR}</td>
               <td style="${ch.ecartSt}">${ch.ecart}</td>
-            </tr>`).join('')}`).join('')}
+            </tr>`).join('')}
+            ${cat.paliers.map(p2 => tplEncPalier(p2, x)).join('')}`).join('')}
+          ${(c.encPaliersOrphelins || []).length ? `<tr><td colspan="10" style="padding:12px 0 4px;font-size:11px;color:var(--color-text-muted)">Étapes sans catégorie d’ancrage — replacez-les ou retirez-les :</td></tr>
+            ${c.encPaliersOrphelins.map(p2 => tplEncPalier(p2, x)).join('')}` : ''}
           <tr style="border-top:0.5px solid var(--color-border-secondary)">
             <td colspan="4" style="padding:11px 10px 11px 0;font-weight:500">Total charges</td>
             <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--pkg-abricot)">${c.encPctTotT}</td>
@@ -1678,6 +1682,36 @@ function tplProjets(c, x){
 /* --- Fonds & Royalties : lu chez le module marketing -------------------------
    Le cockpit ne recopie pas le grand livre : il le lit là où il est tenu. Deux
    soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait. */
+/* --- Encodage · une étape intermédiaire du compte de résultat ----------------
+   « Marge brute = CA − coût matière ». L'étape ne porte aucun montant propre :
+   elle nomme une soustraction entre deux valeurs déjà présentes, et se
+   recalcule d'elle-même quand un taux bouge. */
+function tplEncPalier(p, x){
+  const { esc } = x;
+  const sel = (opts, set) => `<select ${x.C(set)} style="border:0.5px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:26px;padding:0 6px;font-family:var(--font-ui);font-size:11px;max-width:190px">
+    ${opts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+  </select>`;
+  return `
+  <tr style="border-top:1px solid var(--color-border-secondary);background:rgba(141,29,44,0.035)">
+    <td colspan="4" style="padding:9px 10px 9px 0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">=</span>
+        <input value="${esc(p.nom)}" ${x.C(p.setNom)} placeholder="Nom de l’étape" style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:150px">
+        ${sel(p.gauche, p.setGauche)}
+        <span style="font-size:12px;color:var(--color-text-muted)">−</span>
+        ${sel(p.droite, p.setDroite)}
+        <button ${x.A(p.retirer)} title="Retirer cette étape" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button>
+      </div>
+    </td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--pkg-abricot)">${esc(p.pctT)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${esc(p.montantT)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:600;color:${p.col}">${esc(p.pct)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:600;color:${p.col}">${esc(p.montant)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${esc(p.montantR)}</td>
+    <td style="padding:9px 0 9px 6px"></td>
+  </tr>`;
+}
+
 /* --- Fonds · écrire une ligne du grand livre ---------------------------------
    La saisie tient dans une carte, pas dans une modale : on la remplit en
    regardant le grand livre qui est juste dessous, et on voit tout de suite si

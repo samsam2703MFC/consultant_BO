@@ -3180,6 +3180,9 @@ function ep_budgets(): array
     if ($out !== []) {
         $mod = setting('budgetCharges');
         $out[0]['modele'] = is_array($mod) && isset($mod['categories']) ? $mod['categories'] : [];
+        // Les étapes intermédiaires voyagent avec le modèle : sans elles,
+        // l'écran ne saurait pas où poser « marge brute ».
+        $out[0]['paliers'] = is_array($mod) && isset($mod['paliers']) ? $mod['paliers'] : [];
     }
     return $out;
 }

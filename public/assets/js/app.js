@@ -1343,7 +1343,7 @@ class App {
     common.encReseauNote = 'Ces postes et ces taux valent pour TOUT le réseau : les modifier ici les change '
       + 'pour les ' + this.open().length + ' magasins. Ce qui diffère d’un magasin à l’autre, ce sont les '
       + 'euros — le même taux appliqué à son chiffre d’affaires.';
-    common.encChargesModifie = !!d.lignes;
+    common.encChargesModifie = !!d.lignes || !!d.paliers;
     // Enregistrement du MODÈLE, distinct du budget du magasin : on ne veut pas
     // qu'ajuster un taux réseau oblige à réenregistrer douze mois de CA.
     common.encChargesSave = () => {
@@ -1359,7 +1359,7 @@ class App {
       });
       const vides = lignes.filter(c3 => !String(c3.poste || '').trim()).length;
       if (vides) { this.notify(vides + ' poste(s) sans libellé ne seront pas enregistrés.'); }
-      this.api('PUT', '/parametres/budgetCharges', { valeur: { categories: cats } }).then(r => {
+      this.api('PUT', '/parametres/budgetCharges', { valeur: { categories: cats, paliers: paliersSrc } }).then(r => {
         if (!r || r.ok === false) { return; }
         this.notify('Modèle de charges du réseau enregistré — ' + (r.postes != null ? r.postes + ' poste(s)' : ''));
         this.log('Budget', null, 'Modèle de charges du réseau modifié depuis l’encodage');
@@ -1368,7 +1368,7 @@ class App {
           // Le brouillon est relâché : l'écran repart de ce que le serveur a
           // gardé, sinon on continuerait à regarder sa propre saisie.
           this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
-            { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: null }) }) }));
+            { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: null, paliers: null }) }) }));
         });
       });
     };
@@ -1405,15 +1405,93 @@ class App {
         retirer: () => { const l = lignes.slice(); l.splice(i, 1); poseLignes(l); },
       };
     };
-    common.encCats = ordre.map(cat => {
+    const sommeCat = {};
+    const catsBrut = ordre.map(cat => {
       const rows = parCat[cat].map(ligneVals);
       const somme = rows.reduce((a, r) => a + num(r.valeur), 0);
+      const sommeT = rows.reduce((a, r) => a + num(r.valeurT), 0);
+      sommeCat[cat] = { pct: somme, pctT: sommeT };
       return { nom: cat, lignes: rows, total: pc(somme), totalE: this.fE(caTot * somme / 100),
         renommer: e => { const nv = e.target.value; const l = lignes.map(c3 =>
             (c3.categorie || 'Sans catégorie') === cat ? Object.assign({}, c3, { categorie: nv }) : c3);
           poseLignes(l); },
         ajouter: common.encLigneAdd(cat) };
     });
+
+    // --- étapes intermédiaires : « marge brute = CA − coût matière ».
+    //
+    // Une étape ne porte aucun montant propre : elle NOMME une soustraction
+    // entre deux valeurs déjà là (le CA, le total d'une catégorie, une étape
+    // précédente). Elle se recalcule donc toute seule quand un taux bouge —
+    // c'est ce qui la distingue d'une ligne qu'on saisirait à la main et qui
+    // se contredirait au premier ajustement.
+    const paliersSrc = d.paliers ? d.paliers
+      : (((D.budgets || [])[0] || {}).paliers || []).map(z => Object.assign({}, z));
+    const posePaliers = pl => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
+      { [st.id]: Object.assign({}, s2.encDraft[st.id], { paliers: pl }) }) }));
+
+    // Les valeurs auxquelles une étape peut se référer, dans l'ordre où elles
+    // apparaissent : on ne propose pas une étape qui n'existe pas encore.
+    const valeursAvant = (iPal) => {
+      const opts = [{ v: 'ca', nom: 'Chiffre d’affaires (100 %)' }];
+      ordre.forEach(cat => opts.push({ v: 'cat:' + cat, nom: 'Total ' + cat }));
+      paliersSrc.slice(0, iPal).forEach(z => { if (z.nom) { opts.push({ v: 'pal:' + z.nom, nom: z.nom }); } });
+      return opts;
+    };
+    const valeurPct = (cle, jusqu) => {
+      if (!cle) { return 0; }
+      if (cle === 'ca') { return 100; }
+      if (cle.indexOf('cat:') === 0) { return (sommeCat[cle.slice(4)] || {}).pct || 0; }
+      if (cle.indexOf('pal:') === 0) {
+        const k = paliersSrc.findIndex(z => z.nom === cle.slice(4));
+        return (k >= 0 && k < jusqu) ? palPct(k) : 0;
+      }
+      return 0;
+    };
+    const valeurPctT = (cle, jusqu) => {
+      if (!cle) { return 0; }
+      if (cle === 'ca') { return 100; }
+      if (cle.indexOf('cat:') === 0) { return (sommeCat[cle.slice(4)] || {}).pctT || 0; }
+      if (cle.indexOf('pal:') === 0) {
+        const k = paliersSrc.findIndex(z => z.nom === cle.slice(4));
+        return (k >= 0 && k < jusqu) ? palPctT(k) : 0;
+      }
+      return 0;
+    };
+    function palPct(i2){ const z = paliersSrc[i2] || {}; return valeurPct(z.gauche, i2) - valeurPct(z.droite, i2); }
+    function palPctT(i2){ const z = paliersSrc[i2] || {}; return valeurPctT(z.gauche, i2) - valeurPctT(z.droite, i2); }
+
+    const setPal = (i2, k) => e => { const v = e.target.value; const pl = paliersSrc.slice();
+      pl[i2] = Object.assign({}, pl[i2], { [k]: v }); posePaliers(pl); };
+    const palVals = (z, i2) => {
+      const p2 = palPct(i2), pT = palPctT(i2);
+      const opts = valeursAvant(i2);
+      const marque = v => opts.map(o => Object.assign({}, o, { on: o.v === v }));
+      return { nom: z.nom || '', setNom: setPal(i2, 'nom'),
+        gauche: marque(z.gauche || 'ca'), droite: marque(z.droite || ''),
+        setGauche: setPal(i2, 'gauche'), setDroite: setPal(i2, 'droite'),
+        formule: (opts.find(o => o.v === (z.gauche || 'ca')) || {}).nom + ' − '
+          + ((opts.find(o => o.v === z.droite) || {}).nom || '(rien)'),
+        pct: pc(p2), pctT: pc(pT),
+        montant: this.fE(caTot * p2 / 100), montantT: this.fE(theoTot * pT / 100),
+        montantR: caReel ? this.fE(caReel * p2 / 100) : '—',
+        col: p2 < 0 ? '#8D1D2C' : '#2d7a3e',
+        retirer: () => { const pl = paliersSrc.slice(); pl.splice(i2, 1); posePaliers(pl); } };
+    };
+    common.encCats = catsBrut.map(cat => Object.assign({}, cat, {
+      // Les étapes se posent APRÈS une catégorie : c'est là qu'on trace le
+      // trait dans un compte de résultat.
+      paliers: paliersSrc.map((z, i2) => ({ z, i2 })).filter(o => (o.z.apres || '') === cat.nom)
+        .map(o => palVals(o.z, o.i2)),
+      ajouterPalier: () => { const pl = paliersSrc.slice();
+        pl.push({ nom: 'Nouvelle étape', gauche: 'ca', droite: 'cat:' + cat.nom, apres: cat.nom });
+        posePaliers(pl); },
+    }));
+    // Une étape dont la catégorie d'ancrage a été renommée ou retirée n'est pas
+    // perdue : elle se range à la fin, visible, pour être replacée.
+    const ancres = ordre.slice();
+    common.encPaliersOrphelins = paliersSrc.map((z, i2) => ({ z, i2 }))
+      .filter(o => ancres.indexOf(o.z.apres || '') < 0).map(o => palVals(o.z, o.i2));
     // Compatibilité : l'enregistrement et les totaux lisent encore une liste à
     // plat, c'est la même chose vue autrement.
     common.encCharges = common.encCats.reduce((a, c3) => a.concat(c3.lignes), []);

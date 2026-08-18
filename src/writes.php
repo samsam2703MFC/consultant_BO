@@ -690,13 +690,29 @@ function wr_param_put(string $key): array
             $cats[] = ['nom' => mb_substr(trim((string) ($cat['nom'] ?? '')), 0, 80) ?: 'Sans catégorie',
                 'lignes' => $lignes];
         }
+        // Les étapes intermédiaires : « marge brute = CA − coût matière ». Une
+        // étape ne porte AUCUN montant propre — elle nomme une soustraction
+        // entre deux valeurs déjà présentes, et se recalcule donc toute seule
+        // quand un taux bouge.
+        $paliers = [];
+        foreach ((array) ($b['valeur']['paliers'] ?? []) as $pa) {
+            if (!is_array($pa)) { continue; }
+            $nom = mb_substr(trim((string) ($pa['nom'] ?? '')), 0, 80);
+            if ($nom === '') { continue; }
+            $paliers[] = [
+                'nom' => $nom,
+                'gauche' => mb_substr(trim((string) ($pa['gauche'] ?? 'ca')), 0, 120),
+                'droite' => mb_substr(trim((string) ($pa['droite'] ?? '')), 0, 120),
+                'apres' => mb_substr(trim((string) ($pa['apres'] ?? '')), 0, 80),
+            ];
+        }
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['budgetCharges', json_encode(['categories' => $cats], JSON_UNESCAPED_UNICODE)]);
+            ['budgetCharges', json_encode(['categories' => $cats, 'paliers' => $paliers], JSON_UNESCAPED_UNICODE)]);
         $n = 0;
         foreach ($cats as $c) { $n += count($c['lignes']); }
         journalAdd('CEO', 'Budget', null, 'Modèle de charges du réseau enregistré — '
-            . count($cats) . ' catégorie(s), ' . $n . ' poste(s)');
-        return ['ok' => true, 'categories' => count($cats), 'postes' => $n];
+            . count($cats) . ' catégorie(s), ' . $n . ' poste(s), ' . count($paliers) . ' étape(s)');
+        return ['ok' => true, 'categories' => count($cats), 'postes' => $n, 'paliers' => count($paliers)];
     }
     if (str_starts_with($key, 'seuil-')) {                       // seuil-food | seuil-labour
         $code = substr($key, 6);
