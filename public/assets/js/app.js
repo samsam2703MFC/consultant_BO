@@ -42,6 +42,25 @@ function fusionneAttributs(v, n){
   }
 }
 
+/**
+ * Les enfants seulement — les attributs du conteneur ne sont pas touchés.
+ *
+ * C'est par là qu'on entre : la racine de l'application est un nœud du
+ * document, pas un nœud du rendu. Lui appliquer les attributs du <div>
+ * temporaire lui retirait son `id` (mesuré : `document.getElementById('app')`
+ * rendait null après le premier rendu).
+ */
+function fusionneEnfants(v, n){
+  let ev = v.firstChild, en = n.firstChild;
+  while (en) {
+    const suivN = en.nextSibling;
+    if (!ev) { v.appendChild(en); }
+    else { const suivV = ev.nextSibling; fusionne(ev, en); ev = suivV; }
+    en = suivN;
+  }
+  while (ev) { const s = ev.nextSibling; v.removeChild(ev); ev = s; }
+}
+
 function fusionne(v, n){
   if (v.nodeType !== n.nodeType || v.nodeName !== n.nodeName) { v.replaceWith(n); return; }
   // texte et commentaires : la valeur, rien d'autre.
@@ -71,15 +90,7 @@ function fusionne(v, n){
     }
   }
 
-  // Enfants, position par position.
-  let ev = v.firstChild, en = n.firstChild;
-  while (en) {
-    const suivN = en.nextSibling;
-    if (!ev) { v.appendChild(en); }
-    else { const suivV = ev.nextSibling; fusionne(ev, en); ev = suivV; }
-    en = suivN;
-  }
-  while (ev) { const s = ev.nextSibling; v.removeChild(ev); ev = s; }
+  fusionneEnfants(v, n);
 
   // Un <select> prend sa valeur de l'option marquée : après fusion des
   // options, on la repose, sinon le menu affiche l'ancienne.
@@ -220,7 +231,7 @@ class App {
     const neuf = document.createElement('div');
     neuf.innerHTML = html;
     let fondu = false;
-    try { fusionne(this.root, neuf); fondu = true; }
+    try { fusionneEnfants(this.root, neuf); fondu = true; }
     catch (e) { console.error('[cockpit] fusion impossible, remplacement complet :', e);
       this.root.innerHTML = html; }
     const banniere = document.getElementById('panne-rendu');
