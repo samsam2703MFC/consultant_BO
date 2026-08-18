@@ -1295,12 +1295,18 @@ function tplEncodage(c, x){
           <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">Un taux par poste, lu en euros sur trois bases : le CA théorique de l’étude, le CA validé avec le franchisé, et le CA réel déjà encaissé. Catégories, libellés et comptes se saisissent ici.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${c.encModeleDispo ? `<button ${x.A(c.encModele)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Reprendre le modèle réseau</button>` : ''}
           <button ${x.A(c.encCatAdd)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Catégorie</button>
+          <button ${x.A(c.encChargesSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Enregistrer pour le réseau</button>
         </div>
       </div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin:9px 0 14px">${esc(c.encReelNote)}</div>
-      ${c.encChargesVide ? `<div style="border:1px dashed var(--color-border-secondary);border-radius:10px;padding:20px;text-align:center;font-size:12.5px;color:var(--color-text-muted);line-height:1.6">Aucune charge encodée pour ce magasin.${c.encModeleDispo ? ' Reprenez le modèle réseau, puis ajustez les taux et les comptes.' : ' Ajoutez une catégorie pour commencer.'}</div>` : `
+      <!-- Les taux sont communs : le dire à l'endroit où on les modifie évite
+           de croire qu'on ajuste seulement le magasin qu'on regarde. -->
+      <div style="display:flex;gap:9px;align-items:flex-start;background:rgba(141,29,44,0.05);border:0.5px solid rgba(141,29,44,0.2);border-radius:9px;padding:10px 13px;margin:11px 0 12px">
+        <span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--color-primary);color:#fff;white-space:nowrap;flex:0 0 auto">réseau</span>
+        <div style="font-size:11.5px;line-height:1.5">${esc(c.encReseauNote)}${c.encChargesModifie ? ' <span style="font-weight:600;color:var(--color-primary)">Modifications non enregistrées.</span>' : ''}</div>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:0 0 14px">${esc(c.encReelNote)}</div>
+      ${c.encChargesVide ? `<div style="border:1px dashed var(--color-border-secondary);border-radius:10px;padding:20px;text-align:center;font-size:12.5px;color:var(--color-text-muted);line-height:1.6">Aucun poste de charge dans le modèle réseau. Ajoutez une catégorie pour commencer — ce que vous saisirez vaudra pour tous les magasins.</div>` : `
       <div style="overflow-x:auto">
       <table style="width:100%;min-width:1180px;border-collapse:collapse;font-size:12.5px">
         <thead><tr>

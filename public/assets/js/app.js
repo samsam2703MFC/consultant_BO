@@ -1313,27 +1313,64 @@ class App {
 
     // La liste vit dans l'état pendant la saisie : ajouter une ligne ne doit
     // pas passer par le serveur, et le brouillon garde ce qui a été tapé.
+    // Les taux valent pour TOUT le réseau : un loyer à 7 % est le même à
+    // Corbais et à Halle, seul le chiffre d'affaires qui les traduit en euros
+    // change. La grille éditée ici est donc le modèle réseau, pas une copie du
+    // magasin regardé — c'est ce que dit le bandeau au-dessus du tableau.
     const modele = ((D.budgets || [])[0] || {}).modele || [];
+    const depuisModele = () => {
+      const l = [];
+      modele.forEach(cat => (cat.lignes || []).forEach(x => l.push({
+        categorie: cat.nom || '', poste: x.poste || '', description: x.description || '',
+        gestion: x.gestion || '', pcmn: x.pcmn || '', levier: '',
+        pctBudget: x.pct != null ? x.pct : 0,
+        pctTheorique: x.pctTheo != null ? x.pctTheo : (x.pct != null ? x.pct : 0),
+        champReel: null })));
+      return l;
+    };
     const depuisBase = () => (bud.charges || []).map(c2 => ({
       categorie: c2.categorie || 'Charges d’exploitation', poste: c2.poste || '',
       description: c2.description || '', gestion: c2.gestion || '', pcmn: c2.pcmn || '',
       levier: c2.levier || '', pctBudget: c2.pctBudget, pctTheorique: c2.pctTheorique,
       champReel: c2.champReel || null }));
-    const lignes = d.lignes ? d.lignes : depuisBase();
+    const lignes = d.lignes ? d.lignes : (modele.length ? depuisModele() : depuisBase());
     const poseLignes = l => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
       { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: l }) }) }));
     const setL = (i, k) => e => { const v = e.target.value; const l = lignes.slice();
       l[i] = Object.assign({}, l[i], { [k]: v }); poseLignes(l); };
 
-    common.encModeleDispo = !lignes.length && modele.length > 0;
-    common.encModele = () => {
-      const l = [];
-      modele.forEach(cat => (cat.lignes || []).forEach(x => l.push({
-        categorie: cat.nom || '', poste: x.poste || '', description: x.description || '',
-        gestion: x.gestion || '', pcmn: x.pcmn || '', levier: '',
-        pctBudget: x.pct != null ? x.pct : 0, pctTheorique: x.pct != null ? x.pct : 0, champReel: null })));
-      poseLignes(l);
-      this.notify(l.length + ' poste(s) repris du modèle réseau — ajustez, puis enregistrez');
+    common.encModeleDispo = false;
+    common.encReseauNote = 'Ces postes et ces taux valent pour TOUT le réseau : les modifier ici les change '
+      + 'pour les ' + this.open().length + ' magasins. Ce qui diffère d’un magasin à l’autre, ce sont les '
+      + 'euros — le même taux appliqué à son chiffre d’affaires.';
+    common.encChargesModifie = !!d.lignes;
+    // Enregistrement du MODÈLE, distinct du budget du magasin : on ne veut pas
+    // qu'ajuster un taux réseau oblige à réenregistrer douze mois de CA.
+    common.encChargesSave = () => {
+      const cats = [];
+      lignes.forEach((c3, i) => {
+        const nom = c3.categorie || 'Sans catégorie';
+        let cat = cats.find(z => z.nom === nom);
+        if (!cat) { cat = { nom, lignes: [] }; cats.push(cat); }
+        cat.lignes.push({ poste: c3.poste || '', description: c3.description || '',
+          gestion: c3.gestion || '', pcmn: c3.pcmn || '',
+          pct: num(val('ch' + i, c3.pctBudget)),
+          pctTheo: num(val('cht' + i, c3.pctTheorique != null ? c3.pctTheorique : c3.pctBudget)) });
+      });
+      const vides = lignes.filter(c3 => !String(c3.poste || '').trim()).length;
+      if (vides) { this.notify(vides + ' poste(s) sans libellé ne seront pas enregistrés.'); }
+      this.api('PUT', '/parametres/budgetCharges', { valeur: { categories: cats } }).then(r => {
+        if (!r || r.ok === false) { return; }
+        this.notify('Modèle de charges du réseau enregistré — ' + (r.postes != null ? r.postes + ' poste(s)' : ''));
+        this.log('Budget', null, 'Modèle de charges du réseau modifié depuis l’encodage');
+        return readOne('/stores/budgets?exercice=' + this.meta.exercice).then(bs => {
+          if (bs) { this.D.budgets = bs; }
+          // Le brouillon est relâché : l'écran repart de ce que le serveur a
+          // gardé, sinon on continuerait à regarder sa propre saisie.
+          this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
+            { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: null }) }) }));
+        });
+      });
     };
     common.encLigneAdd = cat => () => { const l = lignes.slice();
       l.push({ categorie: cat || 'Nouvelle catégorie', poste: '', description: '', gestion: '',
@@ -1409,12 +1446,6 @@ class App {
           saisonnalite: common.encSais.map(s => num(s.valeur)),
           annexe: anxNom ? { nom: anxNom, url: common.encAnxUrl || null, taille: anxTaille || null, date: M.TODAY } : null
         },
-        charges: common.encCharges.map(c2 => { const src = lignes[c2.i] || {};
-          return { poste: c2.nom, levier: c2.lev,
-            categorie: src.categorie || '', description: c2.description,
-            gestion: c2.gestion, pcmn: c2.pcmn,
-            pctBudget: num(c2.valeur), pctTheorique: num(c2.valeurT),
-            champReel: src.champReel || null }; }),
         journal: jr
       }).then(r => {
         // Ne jamais annoncer « enregistré » sans la réponse du serveur : un

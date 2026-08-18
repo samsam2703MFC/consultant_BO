@@ -613,21 +613,11 @@ function wr_budget_put(string $shopId): array
                   ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget), ca_theorique = VALUES(ca_theorique)',
             [$shopId, $exercice, $m, (float) $ca, isset($caTheo[$i]) ? (float) $caTheo[$i] : null]);
     }
-    if (isset($b['charges'])) {
-        Db::exec('DELETE FROM ceo_shop_budget_line WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]);
-        $slugToTag = [];
-        foreach (LEVIER_DEFS as $l) { $slugToTag[$l['slug']] = $l['tag']; }
-        foreach (array_values($b['charges']) as $i => $c) {
-            $court = static fn ($v, $n) => mb_substr(trim((string) $v), 0, $n);
-            Db::exec('INSERT INTO ceo_shop_budget_line (shop_id, fiscal_year, label, levid, categorie, description, gestion, pcmn, pct_budget, pct_theorique, real_field, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [
-                $shopId, $exercice, (string) $c['poste'], $slugToTag[$c['levier'] ?? ''] ?? null,
-                $court($c['categorie'] ?? '', 80), $court($c['description'] ?? '', 200),
-                $court($c['gestion'] ?? '', 120), $court($c['pcmn'] ?? '', 20),
-                (float) ($c['pctBudget'] ?? 0), isset($c['pctTheorique']) ? (float) $c['pctTheorique'] : null,
-                $c['champReel'] ?? null, $i,
-            ]);
-        }
-    }
+    // Les charges ne s'écrivent plus magasin par magasin : leurs taux valent
+    // pour tout le réseau et vivent dans le réglage `budgetCharges`, enregistré
+    // par PUT /parametres/budgetCharges. Deux copies du même taux finissaient
+    // par diverger, et c'est celle qu'on ne regardait pas qui servait au suivi.
+
     journalAdd('CEO', 'Budget', $shop['name'], $b['journal'] ?? ("Budget $exercice encodé"));
     return ['ok' => true];
 }
@@ -676,6 +666,38 @@ function wr_alert_patch(string $id): array
 function wr_param_put(string $key): array
 {
     $b = body();
+    // Le modèle de charges vaut pour TOUT le réseau : un taux de loyer à 7 %
+    // est le même à Corbais et à Halle, seul le chiffre d'affaires diffère. Il
+    // s'enregistre donc une fois, ici, et non magasin par magasin.
+    if ($key === 'budgetCharges') {
+        $cats = [];
+        foreach ((array) ($b['valeur']['categories'] ?? []) as $cat) {
+            if (!is_array($cat)) { continue; }
+            $lignes = [];
+            foreach ((array) ($cat['lignes'] ?? []) as $l) {
+                if (!is_array($l)) { continue; }
+                $poste = mb_substr(trim((string) ($l['poste'] ?? '')), 0, 120);
+                if ($poste === '') { continue; }
+                $lignes[] = [
+                    'poste' => $poste,
+                    'description' => mb_substr(trim((string) ($l['description'] ?? '')), 0, 200),
+                    'gestion' => mb_substr(trim((string) ($l['gestion'] ?? '')), 0, 120),
+                    'pcmn' => mb_substr(trim((string) ($l['pcmn'] ?? '')), 0, 20),
+                    'pct' => max(0, min(100, (float) ($l['pct'] ?? 0))),
+                    'pctTheo' => max(0, min(100, (float) ($l['pctTheo'] ?? ($l['pct'] ?? 0)))),
+                ];
+            }
+            $cats[] = ['nom' => mb_substr(trim((string) ($cat['nom'] ?? '')), 0, 80) ?: 'Sans catégorie',
+                'lignes' => $lignes];
+        }
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['budgetCharges', json_encode(['categories' => $cats], JSON_UNESCAPED_UNICODE)]);
+        $n = 0;
+        foreach ($cats as $c) { $n += count($c['lignes']); }
+        journalAdd('CEO', 'Budget', null, 'Modèle de charges du réseau enregistré — '
+            . count($cats) . ' catégorie(s), ' . $n . ' poste(s)');
+        return ['ok' => true, 'categories' => count($cats), 'postes' => $n];
+    }
     if (str_starts_with($key, 'seuil-')) {                       // seuil-food | seuil-labour
         $code = substr($key, 6);
         Db::exec('UPDATE kpi SET seuil_haut = ? WHERE code = ?', [(float) $b['valeur'], $code]);

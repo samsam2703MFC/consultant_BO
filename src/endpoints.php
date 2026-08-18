@@ -3119,7 +3119,27 @@ function ep_budgets(): array
         $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM ceo_shop_month_perf
                         WHERE shop_id = ? AND year = ? AND revenue_budget IS NOT NULL AND revenue_budget > 0',
             [$sid, $exercice]);
-        $charges = array_map(fn ($l) => [
+        // Les charges viennent du modèle RÉSEAU : les taux sont communs à tous
+        // les magasins, seul le chiffre d'affaires qui les traduit en euros
+        // change. Les lignes par magasin ne sont plus lues — elles ne sont plus
+        // écrites non plus.
+        $modele = setting('budgetCharges');
+        $charges = [];
+        foreach ((array) ($modele['categories'] ?? []) as $cat) {
+            foreach ((array) ($cat['lignes'] ?? []) as $l) {
+                $charges[] = [
+                    'poste' => (string) ($l['poste'] ?? ''), 'levier' => '',
+                    'categorie' => (string) ($cat['nom'] ?? ''),
+                    'description' => (string) ($l['description'] ?? ''),
+                    'gestion' => (string) ($l['gestion'] ?? ''),
+                    'pcmn' => (string) ($l['pcmn'] ?? ''),
+                    'pctBudget' => (float) ($l['pct'] ?? 0),
+                    'pctTheorique' => (float) ($l['pctTheo'] ?? ($l['pct'] ?? 0)),
+                    'champReel' => null,
+                ];
+            }
+        }
+        $ancien = array_map(fn ($l) => [
             'poste' => $l['label'],
             'levier' => $l['levid'] !== null ? ($slugByTag[(int) $l['levid']] ?? '') : '',
             // Catégorie, description, mode de gestion et compte au plan
@@ -3133,6 +3153,9 @@ function ep_budgets(): array
             'pctTheorique' => $l['pct_theorique'] !== null ? (float) $l['pct_theorique'] : null,
             'champReel' => $l['real_field'],
         ], Db::rows('SELECT * FROM ceo_shop_budget_line WHERE shop_id = ? AND fiscal_year = ? ORDER BY sort_order', [$sid, $exercice]));
+        // Repli : tant que le modèle réseau est vide, ce qu'un magasin avait
+        // encodé reste lisible plutôt que de disparaître de l'écran.
+        if ($charges === []) { $charges = $ancien; }
         $out[] = [
             'storeId' => $sid, 'exercice' => $exercice,
             'moisEncodes' => (int) $enc['n'], 'moisTotal' => (int) $b['months_total'],
