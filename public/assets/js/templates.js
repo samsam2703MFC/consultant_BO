@@ -1328,19 +1328,18 @@ function tplEncodage(c, x){
             <tr style="border-top:0.5px solid var(--color-border-tertiary)">
               <td style="padding:7px 10px 7px 0">
                 <span style="display:inline-flex;align-items:center;gap:8px;width:100%"><span class="levier-dot" data-lev="${ch.lev}"></span>
-                <input value="${esc(ch.nom)}" ${x.C(ch.setNom)} placeholder="Libellé du poste" style="flex:1;min-width:0;border:0.5px solid transparent;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;padding:5px 6px;border-radius:6px"></span>
+                <input value="${esc(ch.nom)}" title="${esc(ch.nom)}" ${x.C(ch.setNom)} placeholder="Libellé du poste" style="flex:1;min-width:0;border:0.5px solid transparent;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;padding:5px 6px;border-radius:6px">
+                <button ${x.A(ch.retirer)} title="Retirer ce poste" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button></span>
               </td>
-              <td style="padding:5px 6px"><input value="${esc(ch.description)}" ${x.C(ch.setDesc)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
-              <td style="padding:5px 6px"><input value="${esc(ch.gestion)}" ${x.C(ch.setGestion)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
+              <td style="padding:5px 6px"><input value="${esc(ch.description)}" title="${esc(ch.description)}" ${x.C(ch.setDesc)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
+              <td style="padding:5px 6px"><input value="${esc(ch.gestion)}" title="${esc(ch.gestion)}" ${x.C(ch.setGestion)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
               <td style="padding:5px 6px"><input value="${esc(ch.pcmn)}" ${x.C(ch.setPcmn)} placeholder="—" title="Compte du plan comptable" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px;font-variant-numeric:tabular-nums"></td>
               <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeurT}" ${x.C(ch.setT)} style="${c.encInputSt}" /></td>
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${ch.montantT}</td>
               <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeur}" ${x.C(ch.set)} style="${c.encInputSt}" /></td>
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500">${ch.montant}</td>
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${ch.montantR}</td>
-              <td style="${ch.ecartSt}">${ch.ecart}
-                <button ${x.A(ch.retirer)} title="Retirer ce poste" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 0 0 6px">✕</button>
-              </td>
+              <td style="${ch.ecartSt}">${ch.ecart}</td>
             </tr>`).join('')}`).join('')}
           <tr style="border-top:0.5px solid var(--color-border-secondary)">
             <td colspan="4" style="padding:11px 10px 11px 0;font-weight:500">Total charges</td>
