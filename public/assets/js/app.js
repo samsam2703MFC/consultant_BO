@@ -11,6 +11,85 @@ function escHtml(v){
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/* --- fusion de l'arbre rendu dans l'arbre vivant ----------------------------
+ *
+ * Le rendu produit une chaîne HTML. La poser avec `innerHTML = …` DÉTRUIT puis
+ * recrée tous les nœuds — à chaque frappe au clavier. Conséquences mesurées
+ * dans le navigateur : la photo d'une tâche repart à zéro (élément neuf, non
+ * décodé : le navigateur peint une case vide avant l'image, c'est le « flash
+ * blanc »), les conteneurs qui défilent reviennent en haut, et l'écran entier
+ * se reconstruit — 2 051 nœuds pour la journée complète du contrôle — ce qui
+ * donne l'impression d'un rechargement de page à chaque lettre tapée.
+ *
+ * On fusionne donc : on parcourt les deux arbres en parallèle et on ne touche
+ * QUE ce qui diffère. Les nœuds qui ne changent pas survivent — avec leur
+ * image décodée, leur défilement, leur curseur et leur sélection.
+ *
+ * La comparaison se fait par POSITION, sans clé : le rendu est déterministe et
+ * produit la même structure pour le même état. Une position qui change de type
+ * de balise est remplacée, pas rafistolée.
+ */
+function fusionneAttributs(v, n){
+  const av = v.attributes;
+  for (let i = av.length - 1; i >= 0; i--) {
+    const a = av[i];
+    if (!n.hasAttribute(a.name)) { v.removeAttribute(a.name); }
+  }
+  const an = n.attributes;
+  for (let i = 0; i < an.length; i++) {
+    const a = an[i];
+    if (v.getAttribute(a.name) !== a.value) { v.setAttribute(a.name, a.value); }
+  }
+}
+
+function fusionne(v, n){
+  if (v.nodeType !== n.nodeType || v.nodeName !== n.nodeName) { v.replaceWith(n); return; }
+  // texte et commentaires : la valeur, rien d'autre.
+  if (v.nodeType === 3 || v.nodeType === 8) {
+    if (v.nodeValue !== n.nodeValue) { v.nodeValue = n.nodeValue; }
+    return;
+  }
+  if (v.nodeType !== 1) { return; }
+  fusionneAttributs(v, n);
+
+  const nom = v.nodeName;
+  // La VALEUR d'un champ ne vit pas dans un attribut : la recopier suppose de
+  // la lire sur la propriété. Et on ne touche jamais au champ qui a le focus —
+  // écrire dedans replacerait le curseur à la fin à chaque lettre.
+  const focus = document.activeElement === v;
+  if (nom === 'TEXTAREA') {
+    const val = n.textContent;
+    if (!focus && v.value !== val) { v.value = val; }
+  } else if (nom === 'INPUT') {
+    const t = String(v.type || '').toLowerCase();
+    if (t === 'checkbox' || t === 'radio') {
+      const coche = n.hasAttribute('checked');
+      if (v.checked !== coche) { v.checked = coche; }
+    } else {
+      const val = n.getAttribute('value');
+      if (!focus && val != null && v.value !== val) { v.value = val; }
+    }
+  }
+
+  // Enfants, position par position.
+  let ev = v.firstChild, en = n.firstChild;
+  while (en) {
+    const suivN = en.nextSibling;
+    if (!ev) { v.appendChild(en); }
+    else { const suivV = ev.nextSibling; fusionne(ev, en); ev = suivV; }
+    en = suivN;
+  }
+  while (ev) { const s = ev.nextSibling; v.removeChild(ev); ev = s; }
+
+  // Un <select> prend sa valeur de l'option marquée : après fusion des
+  // options, on la repose, sinon le menu affiche l'ancienne.
+  if (nom === 'SELECT' && !focus) {
+    const opt = v.querySelector('option[selected]');
+    const val = opt ? (opt.hasAttribute('value') ? opt.getAttribute('value') : opt.textContent) : null;
+    if (val != null && v.value !== val) { v.value = val; }
+  }
+}
+
 class App {
   constructor(root){
     this.root = root;
@@ -135,7 +214,15 @@ class App {
     });
     // Publication d'un seul geste : le HTML et les gestes qui vont avec.
     this._h = h;
-    this.root.innerHTML = html;
+    // On FUSIONNE au lieu de remplacer (voir `fusionne`). Si la fusion échoue
+    // pour une raison quelconque, on retombe sur le remplacement complet :
+    // un écran reconstruit vaut mieux qu'un écran figé.
+    const neuf = document.createElement('div');
+    neuf.innerHTML = html;
+    let fondu = false;
+    try { fusionne(this.root, neuf); fondu = true; }
+    catch (e) { console.error('[cockpit] fusion impossible, remplacement complet :', e);
+      this.root.innerHTML = html; }
     const banniere = document.getElementById('panne-rendu');
     if (banniere) { banniere.remove(); }
     const main2 = document.getElementById('main-scroll');
@@ -144,9 +231,14 @@ class App {
       const e = document.querySelector('[data-scroll="' + k + '"]');
       if (e) { e.scrollTop = gardes[k]; }
     });
-    if (focusId){
+    // La fusion garde le nœud qui avait le focus : il n'y a plus rien à
+    // restaurer. Le repli, lui, a tout recréé — et là seulement on remet le
+    // curseur là où il était.
+    if (focusId && !fondu){
       const el = document.getElementById(focusId);
-      if (el){ el.focus(); if (selStart != null && el.setSelectionRange) el.setSelectionRange(selStart, selStart); }
+      if (el && el !== document.activeElement){
+        el.focus(); if (selStart != null && el.setSelectionRange) el.setSelectionRange(selStart, selStart);
+      }
     }
   }
   /**
@@ -3912,15 +4004,45 @@ class App {
       this.notify('Commentaire obligatoire pour une non-conformité.'); return;
     }
     const d = dt.d || {};
-    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true, envoye: false }) }));
     write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
       note: dt.note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
-      .then(() => readOne('/pwa/tasks?date=' + encodeURIComponent(dt.date)))
-      .then(pt => { if (pt) this.D.pwaTasks = pt;
-        this.setState({ ctrlDet: null });
-        this.notify('Note ' + dt.note + '/5 envoyée au panel'); })
+      .then(() => {
+        // La modale RESTE ouverte : on la fermait d'office, et comme la
+        // fermeture attendait le rechargement complet de la journée (4 à 5 s
+        // sur /pwa/tasks), l'écran semblait se fermer tout seul, longtemps
+        // après le clic. La note est posée, on le dit, et c'est l'utilisateur
+        // qui referme.
+        this.ctrlPatchLigne(dt);
+        this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet,
+          { envoi: false, envoye: true, envoyeTxt: 'Note ' + dt.note + '/5 enregistrée et envoyée au panel.' }) }));
+        // La journée se recharge EN FOND : la liste dessous se met à jour sans
+        // que la modale n'attende.
+        readOne('/pwa/tasks?date=' + encodeURIComponent(dt.date))
+          .then(pt => { if (pt) { this.D.pwaTasks = pt; this.setState({}); } })
+          .catch(() => {});
+      })
       .catch(() => { this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: false }) }));
         this.notify('Échec de l’envoi de la note.'); });
+  }
+  /**
+   * La ligne de la liste prend la note tout de suite.
+   *
+   * Sans cela, le tableau dessous garde « pas encore noté » jusqu'à ce que le
+   * rechargement de fond réponde — et l'écran se contredit lui-même pendant
+   * plusieurs secondes.
+   */
+  ctrlPatchLigne(dt){
+    const pt = this.D.pwaTasks || {};
+    const qui = ((this.meta || {}).utilisateur || {}).nom || 'CEO';
+    const seuil = (this.M.SIGNAL && this.M.SIGNAL.seuil) || 4;
+    (pt.shops || []).forEach(sh => { if (String(sh.shopId) !== String(dt.shopId)) { return; }
+      (sh.taches || []).forEach(t => {
+        if (String(t.taskId) !== String(dt.taskId) || t.date !== dt.date) { return; }
+        t.note = dt.note; t.comment = dt.comment || ''; t.accepte = dt.note >= seuil;
+        t.valide = true; t.valideePar = qui; t.valideeLe = 'à l’instant'; t.statut = 'notee';
+      });
+    });
   }
   valsControle(common){
     const S = this.state, D = this.D, M = this.M;
@@ -4062,6 +4184,7 @@ class App {
           : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
         setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
         send: () => this.ctrlSendNote(),
+        envoye: !!dt.envoye, envoyeTxt: dt.envoyeTxt || '',
         close: () => this.setState({ ctrlDet: null }),
         peutNoter: !dt.chargement && (d.api ? d.api.configure !== false : true),
         // --- assistance IA : proposition, jamais décision
