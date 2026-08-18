@@ -542,7 +542,10 @@ class App {
         // Le rôle vient du référentiel d'atelierby_db (position / comptes
         // actifs) : un rôle saisi librement ne veut rien dire de commun avec
         // le panel. Si le référentiel est vide, on laisse le champ libre.
-        roles: (D.roles || []), aRoles: (D.roles || []).length > 0,
+        // `this.D` et non `D` : la constante locale n'est déclarée que plus
+        // bas dans la fonction, et l'y lire jetait « Cannot access 'D' before
+        // initialization » — ouvrir le panneau utilisateur figeait l'écran.
+        roles: (this.D.roles || []), aRoles: (this.D.roles || []).length > 0,
         identMsg: ud.msg || '',
         identMsgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (ud.ok ? '#2d7a3e' : '#8D1D2C'),
         canLogout: this.source === 'api', logout: common.logout,
