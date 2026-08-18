@@ -50,6 +50,30 @@ function fusionneAttributs(v, n){
  * temporaire lui retirait son `id` (mesuré : `document.getElementById('app')`
  * rendait null après le premier rendu).
  */
+/**
+ * Un nœud qui s'en va ne doit plus déclencher de geste.
+ *
+ * Mesuré : poser un repère pendant qu'on écrit dans le précédent rendait la
+ * main au précédent — la remarque suivante s'ajoutait à la fin de l'ancienne.
+ * Le champ qui disparaît perd le focus, le navigateur émet alors `change`, et
+ * cet événement retombait sur l'index d'un AUTRE geste, puisque les index sont
+ * republiés à chaque rendu.
+ *
+ * On retire donc les attributs de geste AVANT de rendre la main au navigateur,
+ * puis on relâche le focus : l'événement tardif ne trouve plus rien à appeler.
+ */
+const GESTES = ['data-h', 'data-c', 'data-i', 'data-sb', 'data-pd', 'data-ds', 'data-dp', 'data-en'];
+function neutralise(el){
+  if (!el || el.nodeType !== 1) { return; }
+  const nu = n2 => GESTES.forEach(a => n2.removeAttribute(a));
+  nu(el);
+  if (el.querySelectorAll) { el.querySelectorAll('[' + GESTES.join('],[') + ']').forEach(nu); }
+  const actif = document.activeElement;
+  if (actif && actif !== document.body && (el === actif || (el.contains && el.contains(actif)))) {
+    try { actif.blur(); } catch (e) { /* nœud déjà détaché */ }
+  }
+}
+
 function fusionneEnfants(v, n){
   let ev = v.firstChild, en = n.firstChild;
   while (en) {
@@ -58,11 +82,11 @@ function fusionneEnfants(v, n){
     else { const suivV = ev.nextSibling; fusionne(ev, en); ev = suivV; }
     en = suivN;
   }
-  while (ev) { const s = ev.nextSibling; v.removeChild(ev); ev = s; }
+  while (ev) { const s = ev.nextSibling; neutralise(ev); v.removeChild(ev); ev = s; }
 }
 
 function fusionne(v, n){
-  if (v.nodeType !== n.nodeType || v.nodeName !== n.nodeName) { v.replaceWith(n); return; }
+  if (v.nodeType !== n.nodeType || v.nodeName !== n.nodeName) { neutralise(v); v.replaceWith(n); return; }
   // texte et commentaires : la valeur, rien d'autre.
   if (v.nodeType === 3 || v.nodeType === 8) {
     if (v.nodeValue !== n.nodeValue) { v.nodeValue = n.nodeValue; }
