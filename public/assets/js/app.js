@@ -296,6 +296,13 @@ class App {
     this.root.addEventListener('dragstart', e => run('data-ds', e));
     this.root.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('[data-dp]')) e.preventDefault(); });
     this.root.addEventListener('drop', e => run('data-dp', e));
+    // Échap ferme la recherche du rail. Le panneau de résultats recouvre le
+    // rail : sans sortie au clavier, il fallait viser la croix pour retrouver
+    // la navigation.
+    this.root.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') { return; }
+      if (this.state.gq) { this.setState({ gq: '' }); e.stopPropagation(); }
+    });
     this.root.addEventListener('mouseover', e => {
       const el = e.target.closest && e.target.closest('[data-en]');
       if (!el) return;
