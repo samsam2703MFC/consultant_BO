@@ -135,21 +135,40 @@ export function authLogout(){
 }
 
 export async function load(opts){
-  // 9 s : certaines lectures réelles (agrégats caisse sur `transaction`) sont
-  // plus lentes que le jeu de démo ; ne pas abandonner tout le chargement (et
-  // basculer en « hors-ligne ») à cause d'un seul endpoint un peu long.
-  const timeoutMs = (opts && opts.timeoutMs) || 9000;
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), timeoutMs);
-  try {
-    const keys = Object.keys(ENDPOINTS);
-    const res = await Promise.all(keys.map(k => get(ENDPOINTS[k], ctl.signal)));
-    clearTimeout(t);
-    const p = {}; keys.forEach((k, i) => { p[k] = res[i]; });
-    return shape(p, 'api');
-  } catch (e) {
-    clearTimeout(t);
-    console.info('[cockpit] API indisponible (' + e.message + ') — affichage vide (aucune donnée de démonstration).');
+  // Chaque lecture a SON délai et SON échec.
+  //
+  // Un seul signal d'abandon partagé et un `Promise.all` faisaient tout perdre
+  // pour un seul endpoint lent : mesuré en production, `products/scoring` et
+  // `pwa/tasks` dépassaient les 9 s parce que trente appels partent ensemble
+  // et se disputent le serveur — les vingt-huit réponses déjà arrivées étaient
+  // jetées avec elles, et l'application basculait « hors-ligne » : catalogue
+  // vide, comptoir vide, compte API annoncé non configuré. Un écran sans
+  // données est bien pire qu'un écran auquel il manque une donnée.
+  //
+  // Désormais : ce qui répond est gardé, ce qui échoue vaut `null`, et l'écran
+  // concerné dit ce qui lui manque. Seul `meta` est indispensable — sans lui,
+  // il n'y a ni mois, ni exercice, ni barème, donc rien à afficher.
+  const timeoutMs = (opts && opts.timeoutMs) || 20000;
+  const keys = Object.keys(ENDPOINTS);
+  const un = async (k) => {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    try { return await get(ENDPOINTS[k], ctl.signal); }
+    catch (e) { console.warn('[cockpit] ' + ENDPOINTS[k] + ' : ' + e.message + ' — cet écran dira ce qui lui manque.');
+      return null; }
+    finally { clearTimeout(t); }
+  };
+  const res = await Promise.all(keys.map(un));
+  const p = {}; keys.forEach((k, i) => { p[k] = res[i]; });
+  const manquants = keys.filter(k => p[k] == null);
+  if (p.meta == null) {
+    console.info('[cockpit] API indisponible — affichage vide (aucune donnée de démonstration).');
+    return shape(emptyPayload(), 'offline');
+  }
+  if (manquants.length) { console.warn('[cockpit] chargement partiel — sans réponse : ' + manquants.join(', ')); }
+  try { return shape(p, 'api'); }
+  catch (e) {
+    console.warn('[cockpit] mise en forme impossible (' + e.message + ') — affichage vide.');
     return shape(emptyPayload(), 'offline');
   }
 }
@@ -200,7 +219,10 @@ function shape(p, source){
   const meta = p.meta;
   return {
     source, meta,
-    M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers, KPI_LIST: p.kpis.map(k => k.nom || k),
+    // Un référentiel sans réponse vaut une liste vide, jamais une exception :
+    // le chargement est désormais partiel par construction.
+    M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers || [],
+      KPI_LIST: (p.kpis || []).map(k => k.nom || k),
       FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes,
       // Niveaux, seuil et référentiel du signalement — réglage serveur,
       // jamais une constante d'écran. `ensureValidation()` garantit qu'il
@@ -241,6 +263,7 @@ function shape(p, source){
    champs à null. Sans ça, `perf[annee]` ou `perf[annee][mois]` est indéfini et
    les écrans Tableau/Heatmap/Marge plantent. */
 function joinPerf(stores, perf, exercice, etp){
+  stores = stores || [];
   perf = perf || [];
   const yEx = exercice || new Date().getFullYear();
   const years = new Set(perf.map(r => r.annee));
