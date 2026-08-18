@@ -19,7 +19,11 @@ on:
 
 concurrency:
   group: deploy-cockpit
-  cancel-in-progress: false
+  # La dernière livraison gagne. Avec `false`, une exécution bloquée (mesuré :
+  # `apt-get install sshpass` resté en cours 40 minutes) retenait la file, et
+  # les livraisons suivantes n'ont jamais démarré — le serveur restait sur une
+  # version ancienne sans qu'aucune erreur ne le dise.
+  cancel-in-progress: true
 
 env:
   SSH_HOST: "185.180.206.46"
@@ -55,8 +59,28 @@ jobs:
           [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
           exit $fail
 
+      # `apt-get` peut rester pendu sur un miroir qui ne répond pas : sans
+      # borne, le job occupe la file jusqu'au délai du workflow entier. On
+      # borne, on réessaie, et on retombe sur le paquet téléchargé directement
+      # si le dépôt reste injoignable.
       - name: Installer sshpass
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+        timeout-minutes: 4
+        run: |
+          set -u
+          for essai in 1 2 3; do
+            if sudo timeout 90 apt-get update -qq -o Acquire::Retries=2 \
+               && sudo timeout 90 apt-get install -y -qq sshpass; then
+              sshpass -V | head -1; exit 0
+            fi
+            echo "::warning title=apt::tentative $essai en échec, nouvelle tentative"
+            sleep 5
+          done
+          echo "::warning title=apt::dépôt injoignable — repli sur le paquet direct"
+          deb="$(mktemp -d)/sshpass.deb"
+          curl -fsSL --retry 3 --max-time 60 \
+            "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+          sudo dpkg -i "$deb"
+          sshpass -V | head -1
 
       - name: Vérifier le secret SSH
         env:
