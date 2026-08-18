@@ -1641,6 +1641,101 @@ function tplProjets(c, x){
 /* --- Fonds & Royalties : lu chez le module marketing -------------------------
    Le cockpit ne recopie pas le grand livre : il le lit là où il est tenu. Deux
    soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait. */
+/* --- Fonds · écrire une ligne du grand livre ---------------------------------
+   La saisie tient dans une carte, pas dans une modale : on la remplit en
+   regardant le grand livre qui est juste dessous, et on voit tout de suite si
+   la ligne qu'on écrit existe déjà. */
+function tplFondsForm(c, x){
+  const { esc } = x;
+  const f = c.foForm;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-primary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const sel = (nom, val, opts, vide) => `<select ${x.C(f.set(nom))} style="${inp}">
+    <option value=""${val ? '' : ' selected'}>${esc(vide)}</option>
+    ${opts.map(o => `<option value="${esc(o.id)}"${String(val) === String(o.id) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+  </select>`;
+  return `
+  <div style="${carte};padding:15px 17px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <span style="font-size:13.5px;font-weight:500">${esc(f.titre)}</span>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+      ${f.sensBtns.map(b => `<button ${x.A(b.pick)} style="border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px 13px">
+      <div style="grid-column:span 2"><span style="${k}">Libellé</span>
+        <input id="fo-lib" value="${esc(f.champs.libelle)}" ${x.I(f.set('libelle'))} placeholder="Ce que cette ligne finance ou apporte" style="${inp}"></div>
+      <div><span style="${k}">Date</span>
+        <input id="fo-date" type="date" value="${esc(f.champs.date)}" ${x.C(f.set('date'))} style="${inp}"></div>
+      <div><span style="${k}">Montant</span>
+        <input id="fo-mnt" value="${esc(f.champs.montant)}" ${x.I(f.set('montant'))} inputmode="decimal" placeholder="0,00" style="${inp};text-align:right;font-variant-numeric:tabular-nums"></div>
+      <div><span style="${k}">Nature</span>
+        <select ${x.C(f.set('source'))} style="${inp}">${(c.foSources || []).map(o => `<option value="${esc(o)}"${f.champs.source === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
+      <div><span style="${k}">Levier développé</span>${sel('levier', f.champs.levier, c.foLeviersOpts || [], 'aucun')}</div>
+      <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
+      <div><span style="${k}">Campagne</span>${sel('campagne', f.champs.campagne, c.foCampagnesOpts || [], 'aucune')}</div>
+      <div style="grid-column:span 2"><span style="${k}">Fournisseur</span>
+        <input id="fo-four" value="${esc(f.champs.fournisseur)}" ${x.I(f.set('fournisseur'))} placeholder="facultatif" style="${inp}"></div>
+      <div style="grid-column:span 2"><span style="${k}">Pièce</span>
+        <input id="fo-piece" value="${esc(f.champs.piece)}" ${x.I(f.set('piece'))} placeholder="n° de facture, bon de commande…" style="${inp}"></div>
+    </div>
+    ${f.avert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:11px;line-height:1.45">${esc(f.avert)}</div>` : ''}
+    ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger l’écriture' : 'Enregistrer au fonds')}</button>
+    </div>
+  </div>`;
+}
+
+/* --- Fonds · un frais qui revient -------------------------------------------- */
+function tplFondsRecForm(c, x){
+  const { esc } = x;
+  const f = c.foRecForm;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const puce = b => `<button ${x.A(b.pick)} style="border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
+  const sel = (nom, val, opts, vide) => `<select ${x.C(f.set(nom))} style="${inp}">
+    <option value=""${val ? '' : ' selected'}>${esc(vide)}</option>
+    ${opts.map(o => `<option value="${esc(o.id)}"${String(val) === String(o.id) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+  </select>`;
+  return `
+  <div style="${carte};padding:15px 17px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <span style="font-size:13.5px;font-weight:500">Un frais qui revient</span>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+      ${f.sensBtns.map(puce).join('')}
+      <span style="width:1px;height:22px;background:var(--color-border-tertiary);margin:4px 3px"></span>
+      ${f.rythmes.map(puce).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px 13px">
+      <div style="grid-column:span 2"><span style="${k}">Libellé</span>
+        <input id="fr-lib" value="${esc(f.champs.libelle)}" ${x.I(f.set('libelle'))} placeholder="Abonnement, honoraires, redevance…" style="${inp}"></div>
+      <div><span style="${k}">Montant d’une échéance</span>
+        <input id="fr-mnt" value="${esc(f.champs.montant)}" ${x.I(f.set('montant'))} inputmode="decimal" placeholder="0,00" style="${inp};text-align:right;font-variant-numeric:tabular-nums"></div>
+      <div><span style="${k}">Nature</span>
+        <select ${x.C(f.set('source'))} style="${inp}">${(c.foSources || []).map(o => `<option value="${esc(o)}"${f.champs.source === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
+      <div><span style="${k}">Première échéance</span>
+        <input id="fr-deb" type="date" value="${esc(f.champs.debut)}" ${x.C(f.set('debut'))} style="${inp}"></div>
+      <div><span style="${k}">Dernière échéance</span>
+        <input id="fr-fin" type="date" value="${esc(f.champs.fin)}" ${x.C(f.set('fin'))} style="${inp}"></div>
+      <div><span style="${k}">Levier développé</span>${sel('levier', f.champs.levier, c.foLeviersOpts || [], 'aucun')}</div>
+      <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un frais récurrent est borné : les échéances sont écrites au grand livre dès l’enregistrement, du début à la fin. Sans fin, il ne se budgète pas.</div>
+    ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Écriture…' : 'Écrire les échéances'}</button>
+    </div>
+  </div>`;
+}
+
 function tplFonds(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -1664,6 +1759,45 @@ function tplFonds(c, x){
         <div style="font-size:25px;font-weight:500;line-height:1.05;margin-top:3px${t.col ? ';color:' + t.col : ''}">${esc(t.v)}</div>
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
       </div>`).join('')}
+    </div>
+
+    <!-- Tout se tient depuis le pilotage réseau : plus besoin d'ouvrir l'autre
+         application pour écrire une ligne. Le module marketing reste le seul à
+         TENIR le grand livre — le cockpit adresse ses routes, il ne recopie
+         rien. -->
+    <div style="${carte};padding:13px 17px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:500;margin-right:4px">Écrire au fonds</span>
+      <button ${x.A(() => c.foNouveau('IN'))} style="border:none;background:#2d7a3e;color:#fff;border-radius:9px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Alimentation</button>
+      <button ${x.A(() => c.foNouveau('OUT'))} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Dépense</button>
+      <button ${x.A(c.foRecNouveau)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:33px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Frais récurrent</button>
+      <div style="flex:1"></div>
+      <span style="font-size:11px;color:var(--color-text-muted)">Les écritures partent dans le module qui tient le fonds ; elles y sont visibles aussitôt.</span>
+    </div>
+
+    ${c.foForm ? tplFondsForm(c, x) : ''}
+    ${c.foRecForm ? tplFondsRecForm(c, x) : ''}
+
+    <div style="${carte};overflow:hidden">
+      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:500">Frais récurrents</span>
+        <span style="font-size:11px;color:var(--color-text-muted)">Un modèle, autant d’échéances écrites d’un coup</span>
+      </div>
+      ${c.foRecVide ? `<div style="padding:16px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun frais récurrent déclaré.</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
+        <thead><tr>
+          <th style="${th};padding-left:17px">Frais</th><th style="${th}">Rythme</th>
+          <th style="${th}">Période</th><th style="${th}">Imputation</th>
+          <th style="${th};${num}">Échéance</th><th style="${th};padding-right:17px"></th>
+        </tr></thead>
+        <tbody>${c.foRecurrences.map(r => `<tr>
+          <td style="${td};padding-left:17px"><span style="font-weight:500">${esc(r.libelle)}</span><div style="font-size:10.5px;color:${r.col}">${esc(r.sens)}</div></td>
+          <td style="${td};color:var(--color-text-muted)">${esc(r.rythme)}</td>
+          <td style="${td};color:var(--color-text-muted);white-space:nowrap">${esc(r.periode)}</td>
+          <td style="${td};color:var(--color-text-muted)">${esc(r.magasin)}</td>
+          <td style="${td};${num};font-weight:500">${esc(r.montant)}</td>
+          <td style="${td};padding-right:17px;text-align:right"><button ${x.A(r.supprimer)} title="Supprimer ce frais et ses échéances" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`}
     </div>
 
     <div style="${carte};padding:14px 17px 16px">
@@ -1690,7 +1824,7 @@ function tplFonds(c, x){
       <div style="${carte};overflow:hidden">
         <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
           <span style="font-size:13px;font-weight:500">Grand livre du fonds</span>
-          <button ${x.A(c.foOuvrir)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Ouvrir le module marketing</button>
+          <span style="font-size:11px;color:var(--color-text-muted)">Cliquez une ligne pour la corriger</span>
         </div>
         ${c.foVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun mouvement enregistré.</div>` : `
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
@@ -1698,13 +1832,19 @@ function tplFonds(c, x){
             <th style="${th};padding-left:17px">Date</th>
             <th style="${th}">Mouvement</th>
             <th style="${th}">Rattachement</th>
-            <th style="${th};${num};padding-right:17px">Montant</th>
+            <th style="${th};${num}">Montant</th>
+            <th style="${th};padding-right:17px"></th>
           </tr></thead>
           <tbody>${c.foLignes.map(l => `<tr>
             <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
             <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.sens)}${l.source ? ' · ' + esc(l.source) : ''}</div></td>
             <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc([l.magasin, l.campagne].filter(Boolean).join(' · ')) || '—'}${l.levier ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</div>` : ''}</td>
-            <td style="${td};${num};padding-right:17px;color:${l.col};font-weight:500">${esc(l.montant)}</td>
+            <td style="${td};${num};color:${l.col};font-weight:500">${esc(l.montant)}</td>
+            <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
+              ${l.editer ? `<button ${x.A(l.editer)} title="Corriger cette écriture" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>` : ''}
+              ${l.supprimer ? `<button ${x.A(l.supprimer)} title="Supprimer cette écriture" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>` : ''}
+              ${!l.editer && !l.supprimer ? `<span style="font-size:10.5px;color:var(--color-text-muted)">frais récurrent</span>` : ''}
+            </td>
           </tr>`).join('')}</tbody>
         </table></div>
         ${c.foTronque ? `<div style="padding:9px 17px;font-size:11px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.foTronque} mouvement(s) plus anciens — le détail complet est dans le module marketing.</div>` : ''}`}
@@ -1729,9 +1869,17 @@ function tplFonds(c, x){
         </tr>`).join('')}</tbody>
       </table>`}
       ${c.foErp ? `<div style="padding:10px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Reprise ERP : ${esc(c.foErp)}</div>` : ''}
+      <!-- Ce que le cockpit ne peut pas encore piloter, dit à l'endroit où on
+           le cherche — et pourquoi, avec les routes exactes. -->
+      ${(c.foManque || []).map(m => `<div style="padding:13px 17px;border-top:0.5px solid var(--color-border-tertiary);display:flex;gap:9px;align-items:flex-start">
+        <span style="font-size:10px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque API</span>
+        <div><div style="font-size:12.5px;font-weight:500">${esc(m.champ)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5">${esc(m.quoi)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(m.source)}</div></div>
+      </div>`).join('')}
     </div>
 
-    <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">Lu en direct sur ${esc(c.foSource || 'le module marketing')} (${esc(c.foBase)}). Le cockpit n\u2019en garde aucune copie : le fonds se tient à un seul endroit, et les écritures s\u2019y font.</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">Lu et écrit en direct sur ${esc(c.foSource || 'le module marketing')} (${esc(c.foBase)}). Le cockpit n\u2019en garde aucune copie : le fonds se tient à un seul endroit, et les écritures s\u2019y font — depuis cet écran.</div>
   </div>`;
 }
 

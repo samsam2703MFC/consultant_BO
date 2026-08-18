@@ -2158,6 +2158,7 @@ class App {
         const sort = (m.direction || '') === 'OUT';
         if (sort) { s += mt; } else { e += mt; }
         lignes.push({
+          id: m.id != null ? +m.id : null,
           date: this.fD(m.movement_date), jour: m.movement_date || '', periode: cle,
           libelle: m.label || '—',
           sens: sort ? 'sortie' : 'entrée',
@@ -2165,6 +2166,11 @@ class App {
           col: sort ? 'var(--color-primary)' : '#2d7a3e',
           source: m.source || '', magasin: m.shop_name || '', campagne: m.campaign_name || '',
           levier: m.lever_label || '', levierCol: m.lever_color_hex || '#666666',
+          // Une écriture née d'un frais récurrent se corrige sur son modèle,
+          // pas ligne à ligne : la corriger ici la ferait réapparaître au
+          // prochain passage, à l'ancienne valeur.
+          recurrente: m.recurrence_id != null,
+          brut: m,
         });
       });
       if (p.entries_total != null) { e = +p.entries_total || 0; }
@@ -2268,7 +2274,171 @@ class App {
     });
     common.foRoyaltiesVide = !common.foRoyalties.length;
     common.foErp = (R.erp && R.erp.available === false) ? (R.erp.reason || 'reprise ERP indisponible') : '';
-    common.foOuvrir = () => { try { window.open(common.foBase.replace(/\/api\/v1\/marketing$/, '') || '/marketing/', '_blank'); } catch (e) { /* bloqué */ } };
+
+    // --- saisie : tout se tient depuis le pilotage réseau.
+    //
+    // Le module marketing reste le SEUL à tenir le grand livre — le cockpit ne
+    // recopie rien, il adresse ses routes. Ce qui change, c'est qu'on n'a plus
+    // à ouvrir l'autre application pour écrire une ligne.
+    const S2 = this.state;
+    const M2 = ((this.M || {}).MOIS) || [];
+    common.foSources = ['ROYALTY', 'REMISE_FOURNISSEUR', 'AGENCE', 'PRODUCTION', 'MEDIA', 'AUTRE'];
+    common.foMagasinsOpts = (f.magasins || []).map(m => ({ id: String(m.id), nom: m.name || ('Magasin ' + m.id) }));
+    common.foCampagnesOpts = (f.campagnes || []).map(c2 => ({ id: String(c2.id), nom: c2.name || ('Campagne ' + c2.id) }));
+    common.foLeviersOpts = (f.leviers || []).filter(l => l.lever_id != null)
+      .map(l => ({ id: String(l.lever_id), nom: l.lever_label || l.lever_code || ('Levier ' + l.lever_id) }));
+
+    const vide = (sens) => ({ sens, id: null, date: (this.M && this.M.TODAY) || '',
+      libelle: '', montant: '', source: 'AUTRE', magasin: '', campagne: '', levier: '',
+      fournisseur: '', piece: '', busy: false, err: '' });
+    const fm = S2.foForm || null;
+    common.foNouveau = sens => this.setState({ foForm: vide(sens) });
+    common.foForm = !fm ? null : {
+      titre: fm.id ? 'Corriger l’écriture' : (fm.sens === 'IN' ? 'Alimenter le fonds' : 'Enregistrer une dépense'),
+      sens: fm.sens, id: fm.id, busy: !!fm.busy, err: fm.err || '',
+      champs: { date: fm.date, libelle: fm.libelle, montant: fm.montant, source: fm.source,
+        magasin: fm.magasin, campagne: fm.campagne, levier: fm.levier,
+        fournisseur: fm.fournisseur, piece: fm.piece },
+      sensBtns: [['IN', 'Entrée — le réseau alimente'], ['OUT', 'Sortie — le fonds finance']]
+        .map(([v, nom]) => ({ v, nom, on: fm.sens === v, pick: () => this.foPatch({ sens: v }) })),
+      set: k => e => this.foPatch({ [k]: e.target.value }),
+      envoyer: () => this.foEnvoyer(),
+      fermer: () => this.setState({ foForm: null }),
+      // Une dépense sans levier ne dit pas ce qu'elle développe : on le
+      // signale sans l'interdire, c'est une saisie, pas un dogme.
+      avert: fm.sens === 'OUT' && !fm.levier
+        ? 'Sans levier, cette sortie pèsera sur le solde sans dire ce qu’elle développe.' : '',
+    };
+    common.foLignes.forEach(l => {
+      l.editer = l.id && !l.recurrente ? () => this.setState({ foForm: {
+        sens: (l.brut.direction || 'OUT') === 'IN' ? 'IN' : 'OUT', id: l.id,
+        date: l.brut.movement_date || '', libelle: l.brut.label || '',
+        montant: l.brut.amount != null ? String(l.brut.amount) : '',
+        source: l.brut.source || 'AUTRE',
+        magasin: l.brut.shop_id != null ? String(l.brut.shop_id) : '',
+        campagne: l.brut.campaign_id != null ? String(l.brut.campaign_id) : '',
+        levier: l.brut.lever_id != null ? String(l.brut.lever_id) : '',
+        fournisseur: l.brut.supplier_name || '', piece: l.brut.document_ref || '',
+        busy: false, err: '' } }) : null;
+      l.supprimer = l.id && !l.recurrente ? () => this.foSupprimer(l.id, l.libelle) : null;
+    });
+
+    // --- frais récurrents : un modèle, autant d'échéances écrites d'un coup.
+    const fr = S2.foRec || null;
+    common.foRecurrences = (f.recurrences || []).map(r => ({
+      id: r.id, libelle: r.label || '—',
+      sens: (r.direction || '') === 'IN' ? 'entrée' : 'sortie',
+      col: (r.direction || '') === 'IN' ? '#2d7a3e' : 'var(--color-primary)',
+      montant: this.fU(+r.amount || 0),
+      rythme: ({ month: 'chaque mois', quarter: 'chaque trimestre', year: 'chaque année' })[r.frequency] || (r.frequency || ''),
+      periode: this.fD(r.starts_on) + ' → ' + this.fD(r.ends_on),
+      magasin: r.shop_name || 'tout le réseau',
+      supprimer: () => this.foRecSupprimer(r.id, r.label || ''),
+    }));
+    common.foRecVide = !common.foRecurrences.length;
+    common.foRecNouveau = () => this.setState({ foRec: { sens: 'OUT', frequence: 'month',
+      libelle: '', montant: '', debut: (this.M && this.M.TODAY) || '', fin: '',
+      source: 'AUTRE', magasin: '', levier: '', busy: false, err: '' } });
+    common.foRecForm = !fr ? null : {
+      busy: !!fr.busy, err: fr.err || '',
+      champs: { libelle: fr.libelle, montant: fr.montant, debut: fr.debut, fin: fr.fin,
+        source: fr.source, magasin: fr.magasin, levier: fr.levier },
+      sensBtns: [['IN', 'Entrée'], ['OUT', 'Sortie']].map(([v, nom]) => ({ v, nom, on: fr.sens === v,
+        pick: () => this.foRecPatch({ sens: v }) })),
+      rythmes: [['month', 'Chaque mois'], ['quarter', 'Chaque trimestre'], ['year', 'Chaque année']]
+        .map(([v, nom]) => ({ v, nom, on: fr.frequence === v, pick: () => this.foRecPatch({ frequence: v }) })),
+      set: k => e => this.foRecPatch({ [k]: e.target.value }),
+      envoyer: () => this.foRecEnvoyer(),
+      fermer: () => this.setState({ foRec: null }),
+    };
+
+    // --- redevances : ce que la version déployée du module ne sert pas encore.
+    common.foManque = (f.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source }));
+  }
+
+  /* --- fonds : écrire depuis le pilotage réseau ------------------------------ */
+
+  foPatch(patch){ this.setState(s => ({ foForm: Object.assign({}, s.foForm, patch) })); }
+  foRecPatch(patch){ this.setState(s => ({ foRec: Object.assign({}, s.foRec, patch) })); }
+  /** Recharge le fonds après écriture : c'est le module qui fait foi. */
+  foRecharge(){
+    return readOne('/fonds').then(f => { if (f) { this.D.fonds = f; } this.setState({}); return f; });
+  }
+  /**
+   * Enregistre une écriture — création ou correction.
+   *
+   * Les règles du fonds (sens, montant, boutique du périmètre) appartiennent au
+   * module : on ne les rejoue pas ici. Seul le strict nécessaire est vérifié
+   * avant l'aller-retour, pour ne pas faire voyager une saisie visiblement
+   * incomplète ; le refus du module, lui, s'affiche tel quel.
+   */
+  foEnvoyer(){
+    const f = this.state.foForm;
+    if (!f || f.busy) { return; }
+    const montant = parseFloat(String(f.montant).replace(',', '.'));
+    if (!String(f.libelle || '').trim()) { this.foPatch({ err: 'Un libellé est nécessaire.' }); return; }
+    if (!isFinite(montant) || montant <= 0) { this.foPatch({ err: 'Le montant doit être un nombre supérieur à zéro.' }); return; }
+    if (!f.date) { this.foPatch({ err: 'La date du mouvement est nécessaire.' }); return; }
+    this.foPatch({ busy: true, err: '' });
+    const corps = {
+      direction: f.sens, movement_date: f.date, label: String(f.libelle).trim(), amount: montant,
+      source: f.source || 'AUTRE',
+      shop_id: f.magasin || null, campaign_id: f.campagne || null, lever_id: f.levier || null,
+      supplier_name: f.fournisseur || null, document_ref: f.piece || null,
+    };
+    const chemin = f.id ? '/fonds/mouvement/' + f.id : '/fonds/mouvement';
+    write(this.source, f.id ? 'PATCH' : 'POST', chemin, corps).then(r => {
+      if (!r || r.ok === false) { this.foPatch({ busy: false, err: (r && r.error) || 'refusé par le module' }); return; }
+      this.setState({ foForm: null });
+      this.notify(f.id ? 'Écriture corrigée' : (f.sens === 'IN' ? 'Alimentation enregistrée' : 'Dépense enregistrée'));
+      this.foRecharge();
+    });
+  }
+  /**
+   * Supprime une écriture, après confirmation.
+   *
+   * Une ligne du grand livre est une pièce comptable : on nomme ce qui va
+   * disparaître, plutôt que de demander « confirmer ? » sur un identifiant.
+   */
+  foSupprimer(id, libelle){
+    if (!window.confirm('Supprimer définitivement « ' + libelle + ' » du grand livre ?')) { return; }
+    write(this.source, 'DELETE', '/fonds/mouvement/' + id).then(r => {
+      if (!r || r.ok === false) { this.notify('Non supprimé — ' + ((r && r.error) || 'refusé')); return; }
+      this.notify('Écriture supprimée');
+      this.foRecharge();
+    });
+  }
+  /** Un frais qui revient : le module écrit toutes ses échéances d'un coup. */
+  foRecEnvoyer(){
+    const f = this.state.foRec;
+    if (!f || f.busy) { return; }
+    const montant = parseFloat(String(f.montant).replace(',', '.'));
+    if (!String(f.libelle || '').trim()) { this.foRecPatch({ err: 'Un libellé est nécessaire.' }); return; }
+    if (!isFinite(montant) || montant <= 0) { this.foRecPatch({ err: 'Le montant d’une échéance doit être supérieur à zéro.' }); return; }
+    if (!f.debut || !f.fin) { this.foRecPatch({ err: 'Un frais récurrent est borné : donnez le début ET la fin.' }); return; }
+    this.foRecPatch({ busy: true, err: '' });
+    write(this.source, 'POST', '/fonds/recurrence', {
+      direction: f.sens, frequency: f.frequence, label: String(f.libelle).trim(), amount: montant,
+      starts_on: f.debut, ends_on: f.fin, source: f.source || 'AUTRE',
+      shop_id: f.magasin || null, lever_id: f.levier || null,
+    }).then(r => {
+      if (!r || r.ok === false) { this.foRecPatch({ busy: false, err: (r && r.error) || 'refusé par le module' }); return; }
+      const rep = (r.reponse || {});
+      this.setState({ foRec: null });
+      // Le nombre d'échéances écrites fait partie de la nouvelle : « 12
+      // écritures » n'est pas la même chose que « 1 ».
+      this.notify('Frais récurrent enregistré'
+        + (rep.occurrences ? ' — ' + rep.occurrences + ' échéance(s)' : ''));
+      this.foRecharge();
+    });
+  }
+  foRecSupprimer(id, libelle){
+    if (!window.confirm('Supprimer « ' + libelle + ' » et les échéances qu’il a écrites ?')) { return; }
+    write(this.source, 'DELETE', '/fonds/recurrence/' + id).then(r => {
+      if (!r || r.ok === false) { this.notify('Non supprimé — ' + ((r && r.error) || 'refusé')); return; }
+      this.notify('Frais récurrent supprimé');
+      this.foRecharge();
+    });
   }
 
   /* --- recherche globale : retrouver n'importe quoi depuis le rail ----------- */
