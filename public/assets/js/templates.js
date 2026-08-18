@@ -1289,39 +1289,71 @@ function tplEncodage(c, x){
     </div>
 
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px">
-      <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Répartition des charges</div>
-      <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 16px">Deux jeux de taux par poste : celui de l'étude de marché et celui validé avec le franchisé. Les montants se recalculent à la saisie.</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Répartition des charges</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">Un taux par poste, lu en euros sur trois bases : le CA théorique de l’étude, le CA validé avec le franchisé, et le CA réel déjà encaissé. Catégories, libellés et comptes se saisissent ici.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${c.encModeleDispo ? `<button ${x.A(c.encModele)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Reprendre le modèle réseau</button>` : ''}
+          <button ${x.A(c.encCatAdd)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Catégorie</button>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:9px 0 14px">${esc(c.encReelNote)}</div>
+      ${c.encChargesVide ? `<div style="border:1px dashed var(--color-border-secondary);border-radius:10px;padding:20px;text-align:center;font-size:12.5px;color:var(--color-text-muted);line-height:1.6">Aucune charge encodée pour ce magasin.${c.encModeleDispo ? ' Reprenez le modèle réseau, puis ajustez les taux et les comptes.' : ' Ajoutez une catégorie pour commencer.'}</div>` : `
       <div style="overflow-x:auto">
-      <table style="width:100%;min-width:860px;border-collapse:collapse;font-size:12.5px">
+      <table style="width:100%;min-width:1180px;border-collapse:collapse;font-size:12.5px">
         <thead><tr>
           <th style="text-align:left;${lbl};padding:0 10px 9px 0">Poste</th>
-          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:110px">% théorique</th>
-          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:150px">Montant théorique</th>
-          <th style="text-align:right;${lbl};padding:0 6px 9px;width:110px">% validé</th>
-          <th style="text-align:right;${lbl};padding:0 6px 9px;width:150px">Montant validé</th>
-          <th style="text-align:right;${lbl};padding:0 0 9px 6px;width:110px">Écart</th>
+          <th style="text-align:left;${lbl};padding:0 6px 9px;width:170px">Description</th>
+          <th style="text-align:left;${lbl};padding:0 6px 9px;width:180px">Gestion</th>
+          <th style="text-align:left;${lbl};padding:0 6px 9px;width:96px" title="Plan comptable minimum normalisé">PCMN</th>
+          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:92px">% théo.</th>
+          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:120px">€ théorique</th>
+          <th style="text-align:right;${lbl};padding:0 6px 9px;width:92px">% validé</th>
+          <th style="text-align:right;${lbl};padding:0 6px 9px;width:120px">€ validé</th>
+          <th style="text-align:right;${lbl};padding:0 6px 9px;width:120px" title="Le même taux appliqué au CA réellement encaissé">€ réel</th>
+          <th style="text-align:right;${lbl};padding:0 0 9px 6px;width:96px">Écart</th>
         </tr></thead>
         <tbody>
-          ${c.encCharges.map(ch => `
+          ${c.encCats.map(cat => `
+            <tr><td colspan="10" style="padding:14px 0 6px">
+              <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                <input value="${esc(cat.nom)}" ${x.C(cat.renommer)} style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:180px">
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA · ${esc(cat.totalE)}</span>
+                <button ${x.A(cat.ajouter)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ poste</button>
+              </div>
+            </td></tr>
+            ${cat.lignes.map(ch => `
             <tr style="border-top:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:9px 10px 9px 0"><span style="display:inline-flex;align-items:center;gap:8px"><span class="levier-dot" data-lev="${ch.lev}"></span>${esc(ch.nom)}</span></td>
-              <td style="padding:7px 6px"><input type="number" step="0.1" value="${ch.valeurT}" ${x.C(ch.setT)} style="${c.encInputSt}" /></td>
+              <td style="padding:7px 10px 7px 0">
+                <span style="display:inline-flex;align-items:center;gap:8px;width:100%"><span class="levier-dot" data-lev="${ch.lev}"></span>
+                <input value="${esc(ch.nom)}" ${x.C(ch.setNom)} placeholder="Libellé du poste" style="flex:1;min-width:0;border:0.5px solid transparent;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;padding:5px 6px;border-radius:6px"></span>
+              </td>
+              <td style="padding:5px 6px"><input value="${esc(ch.description)}" ${x.C(ch.setDesc)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
+              <td style="padding:5px 6px"><input value="${esc(ch.gestion)}" ${x.C(ch.setGestion)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
+              <td style="padding:5px 6px"><input value="${esc(ch.pcmn)}" ${x.C(ch.setPcmn)} placeholder="—" title="Compte du plan comptable" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px;font-variant-numeric:tabular-nums"></td>
+              <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeurT}" ${x.C(ch.setT)} style="${c.encInputSt}" /></td>
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${ch.montantT}</td>
-              <td style="padding:7px 6px"><input type="number" step="0.1" value="${ch.valeur}" ${x.C(ch.set)} style="${c.encInputSt}" /></td>
+              <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeur}" ${x.C(ch.set)} style="${c.encInputSt}" /></td>
               <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500">${ch.montant}</td>
-              <td style="${ch.ecartSt}">${ch.ecart}</td>
-            </tr>`).join('')}
+              <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${ch.montantR}</td>
+              <td style="${ch.ecartSt}">${ch.ecart}
+                <button ${x.A(ch.retirer)} title="Retirer ce poste" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 0 0 6px">✕</button>
+              </td>
+            </tr>`).join('')}`).join('')}
           <tr style="border-top:0.5px solid var(--color-border-secondary)">
-            <td style="padding:11px 10px 11px 0;font-weight:500">Total charges</td>
+            <td colspan="4" style="padding:11px 10px 11px 0;font-weight:500">Total charges</td>
             <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--pkg-abricot)">${c.encPctTotT}</td>
             <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--pkg-abricot)">${c.encChTotT}</td>
             <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:500">${c.encPctTot}</td>
             <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:500">${c.encChTot}</td>
+            <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--color-text-muted)" title="Charges au taux validé, appliquées au CA réellement encaissé">${c.encChTotR}</td>
             <td style="padding:11px 0 11px 6px"></td>
           </tr>
         </tbody>
       </table>
-      </div>
+      </div>`}
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:14px">
         <div style="display:flex;gap:32px;flex-wrap:wrap">
           <div>

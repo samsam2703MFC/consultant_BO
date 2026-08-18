@@ -618,8 +618,11 @@ function wr_budget_put(string $shopId): array
         $slugToTag = [];
         foreach (LEVIER_DEFS as $l) { $slugToTag[$l['slug']] = $l['tag']; }
         foreach (array_values($b['charges']) as $i => $c) {
-            Db::exec('INSERT INTO ceo_shop_budget_line (shop_id, fiscal_year, label, levid, pct_budget, pct_theorique, real_field, sort_order) VALUES (?,?,?,?,?,?,?,?)', [
+            $court = static fn ($v, $n) => mb_substr(trim((string) $v), 0, $n);
+            Db::exec('INSERT INTO ceo_shop_budget_line (shop_id, fiscal_year, label, levid, categorie, description, gestion, pcmn, pct_budget, pct_theorique, real_field, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [
                 $shopId, $exercice, (string) $c['poste'], $slugToTag[$c['levier'] ?? ''] ?? null,
+                $court($c['categorie'] ?? '', 80), $court($c['description'] ?? '', 200),
+                $court($c['gestion'] ?? '', 120), $court($c['pcmn'] ?? '', 20),
                 (float) ($c['pctBudget'] ?? 0), isset($c['pctTheorique']) ? (float) $c['pctTheorique'] : null,
                 $c['champReel'] ?? null, $i,
             ]);

@@ -3122,6 +3122,13 @@ function ep_budgets(): array
         $charges = array_map(fn ($l) => [
             'poste' => $l['label'],
             'levier' => $l['levid'] !== null ? ($slugByTag[(int) $l['levid']] ?? '') : '',
+            // Catégorie, description, mode de gestion et compte au plan
+            // comptable : une charge se pilote et se comptabilise, le seul
+            // pourcentage ne suffisait ni à l'un ni à l'autre.
+            'categorie' => (string) ($l['categorie'] ?? ''),
+            'description' => (string) ($l['description'] ?? ''),
+            'gestion' => (string) ($l['gestion'] ?? ''),
+            'pcmn' => (string) ($l['pcmn'] ?? ''),
             'pctBudget' => (float) $l['pct_budget'],
             'pctTheorique' => $l['pct_theorique'] !== null ? (float) $l['pct_theorique'] : null,
             'champReel' => $l['real_field'],
@@ -3143,6 +3150,13 @@ function ep_budgets(): array
             ],
             'charges' => $charges,
         ];
+    }
+    // Le modèle de charges du réseau, joint à la lecture : un magasin qui n'a
+    // rien encodé doit pouvoir le reprendre d'un geste, sans que l'écran ait à
+    // le connaître par cœur.
+    if ($out !== []) {
+        $mod = setting('budgetCharges');
+        $out[0]['modele'] = is_array($mod) && isset($mod['categories']) ? $mod['categories'] : [];
     }
     return $out;
 }

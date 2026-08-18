@@ -1297,15 +1297,95 @@ class App {
 
     let pctTot = 0, pctTotT = 0;
     const pc = v => String(num(v).toFixed(1)).replace('.', ',') + ' %';
-    common.encCharges = (bud.charges || []).map((c2, i) => { const v = val('ch' + i, c2.pctBudget), vt = val('cht' + i, c2.pctTheorique != null ? c2.pctTheorique : c2.pctBudget);
+
+    // --- charges : des catégories, des lignes, et un pourcentage qui se lit en
+    // euros sur TROIS bases — le CA validé (le budget négocié), le CA théorique
+    // (l'étude de marché) et le CA RÉEL déjà encaissé. Un taux de 7 % ne veut
+    // pas dire la même somme selon celle qu'on regarde, et c'est l'écart entre
+    // la troisième et la première qui dit si la charge tient.
+    const reelMois = P.filter(r => r.ca != null && r.ca > 0);
+    const caReel = reelMois.reduce((a, r) => a + (r.ca || 0), 0);
+    common.encReelTot = caReel ? this.fE(caReel) : '—';
+    common.encReelMois = reelMois.length;
+    common.encReelNote = reelMois.length
+      ? 'Réel encaissé sur ' + reelMois.length + ' mois — les euros de la colonne « réel » portent sur cette période, pas sur l’année.'
+      : 'Aucun mois réel encaissé pour l’instant : la colonne « réel » reste vide plutôt que d’afficher zéro.';
+
+    // La liste vit dans l'état pendant la saisie : ajouter une ligne ne doit
+    // pas passer par le serveur, et le brouillon garde ce qui a été tapé.
+    const modele = ((D.budgets || [])[0] || {}).modele || [];
+    const depuisBase = () => (bud.charges || []).map(c2 => ({
+      categorie: c2.categorie || 'Charges d’exploitation', poste: c2.poste || '',
+      description: c2.description || '', gestion: c2.gestion || '', pcmn: c2.pcmn || '',
+      levier: c2.levier || '', pctBudget: c2.pctBudget, pctTheorique: c2.pctTheorique,
+      champReel: c2.champReel || null }));
+    const lignes = d.lignes ? d.lignes : depuisBase();
+    const poseLignes = l => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
+      { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: l }) }) }));
+    const setL = (i, k) => e => { const v = e.target.value; const l = lignes.slice();
+      l[i] = Object.assign({}, l[i], { [k]: v }); poseLignes(l); };
+
+    common.encModeleDispo = !lignes.length && modele.length > 0;
+    common.encModele = () => {
+      const l = [];
+      modele.forEach(cat => (cat.lignes || []).forEach(x => l.push({
+        categorie: cat.nom || '', poste: x.poste || '', description: x.description || '',
+        gestion: x.gestion || '', pcmn: x.pcmn || '', levier: '',
+        pctBudget: x.pct != null ? x.pct : 0, pctTheorique: x.pct != null ? x.pct : 0, champReel: null })));
+      poseLignes(l);
+      this.notify(l.length + ' poste(s) repris du modèle réseau — ajustez, puis enregistrez');
+    };
+    common.encLigneAdd = cat => () => { const l = lignes.slice();
+      l.push({ categorie: cat || 'Nouvelle catégorie', poste: '', description: '', gestion: '',
+        pcmn: '', levier: '', pctBudget: 0, pctTheorique: 0, champReel: null });
+      poseLignes(l); };
+    common.encCatAdd = () => { const l = lignes.slice();
+      l.push({ categorie: 'Nouvelle catégorie', poste: '', description: '', gestion: '',
+        pcmn: '', levier: '', pctBudget: 0, pctTheorique: 0, champReel: null });
+      poseLignes(l); };
+
+    // Groupement par catégorie, dans l'ordre d'apparition : la première ligne
+    // d'une catégorie décide de sa place, ce qui suit s'y range.
+    const ordre = [], parCat = {};
+    lignes.forEach((c2, i) => { const cat = c2.categorie || 'Sans catégorie';
+      if (!parCat[cat]) { parCat[cat] = []; ordre.push(cat); }
+      parCat[cat].push({ c: c2, i }); });
+
+    const ligneVals = ({ c: c2, i }) => {
+      const v = val('ch' + i, c2.pctBudget), vt = val('cht' + i, c2.pctTheorique != null ? c2.pctTheorique : c2.pctBudget);
       pctTot += num(v); pctTotT += num(vt);
       const ec = num(v) - num(vt);
-      return { nom: c2.poste, lev: c2.levier, valeur: v, set: set('ch' + i), valeurT: vt, setT: set('cht' + i),
+      return { i, nom: c2.poste, lev: c2.levier,
+        description: c2.description || '', gestion: c2.gestion || '', pcmn: c2.pcmn || '',
+        setNom: setL(i, 'poste'), setDesc: setL(i, 'description'),
+        setGestion: setL(i, 'gestion'), setPcmn: setL(i, 'pcmn'),
+        valeur: v, set: set('ch' + i), valeurT: vt, setT: set('cht' + i),
         montant: this.fE(caTot * num(v) / 100), montantT: this.fE(theoTot * num(vt) / 100),
+        // Le réel ne s'invente pas : sans mois encaissé, la case reste vide.
+        montantR: caReel ? this.fE(caReel * num(v) / 100) : '—',
         ecart: (ec >= 0 ? '+' : '−') + pc(Math.abs(ec)).replace(' %', ' pt'),
-        ecartSt: 'padding:9px 0 9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (Math.abs(ec) < 0.05 ? 'var(--color-text-muted)' : ec > 0 ? '#8D1D2C' : '#2d7a3e') }; });
+        ecartSt: 'padding:9px 0 9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (Math.abs(ec) < 0.05 ? 'var(--color-text-muted)' : ec > 0 ? '#8D1D2C' : '#2d7a3e'),
+        retirer: () => { const l = lignes.slice(); l.splice(i, 1); poseLignes(l); },
+      };
+    };
+    common.encCats = ordre.map(cat => {
+      const rows = parCat[cat].map(ligneVals);
+      const somme = rows.reduce((a, r) => a + num(r.valeur), 0);
+      return { nom: cat, lignes: rows, total: pc(somme), totalE: this.fE(caTot * somme / 100),
+        renommer: e => { const nv = e.target.value; const l = lignes.map(c3 =>
+            (c3.categorie || 'Sans catégorie') === cat ? Object.assign({}, c3, { categorie: nv }) : c3);
+          poseLignes(l); },
+        ajouter: common.encLigneAdd(cat) };
+    });
+    // Compatibilité : l'enregistrement et les totaux lisent encore une liste à
+    // plat, c'est la même chose vue autrement.
+    common.encCharges = common.encCats.reduce((a, c3) => a.concat(c3.lignes), []);
+    common.encChargesVide = !common.encCharges.length;
     common.encPctTot = pc(pctTot); common.encPctTotT = pc(pctTotT);
     common.encChTot = this.fE(caTot * pctTot / 100); common.encChTotT = this.fE(theoTot * pctTotT / 100);
+    // Ce que les charges pèsent sur ce qui est RÉELLEMENT rentré : sans mois
+    // encaissé, la case reste vide — un zéro se lirait comme « rien à payer ».
+    common.encChTotR = caReel ? this.fE(caReel * pctTot / 100) : '—';
     const mgPct = 100 - pctTot, mgPctT = 100 - pctTotT;
     common.encMarge = this.fE(caTot * mgPct / 100);
     common.encMargePct = pc(mgPct) + ' du CA budgété';
@@ -1329,7 +1409,12 @@ class App {
           saisonnalite: common.encSais.map(s => num(s.valeur)),
           annexe: anxNom ? { nom: anxNom, url: common.encAnxUrl || null, taille: anxTaille || null, date: M.TODAY } : null
         },
-        charges: common.encCharges.map((c2, i) => ({ poste: c2.nom, levier: c2.lev, pctBudget: num(c2.valeur), pctTheorique: num(c2.valeurT), champReel: (bud.charges[i] || {}).champReel || null })),
+        charges: common.encCharges.map(c2 => { const src = lignes[c2.i] || {};
+          return { poste: c2.nom, levier: c2.lev,
+            categorie: src.categorie || '', description: c2.description,
+            gestion: c2.gestion, pcmn: c2.pcmn,
+            pctBudget: num(c2.valeur), pctTheorique: num(c2.valeurT),
+            champReel: src.champReel || null }; }),
         journal: jr
       }).then(r => {
         // Ne jamais annoncer « enregistré » sans la réponse du serveur : un

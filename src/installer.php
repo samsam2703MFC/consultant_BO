@@ -124,6 +124,46 @@ function ensurePlanogramme(): void
 
     planoMigrer();
 
+    // Une charge n'est pas qu'un pourcentage : elle appartient à une catégorie,
+    // porte un libellé, la façon dont elle se pilote et son compte au plan
+    // comptable. Ajoutés après coup, d'où l'ALTER.
+    foreach ([
+        'categorie'   => "VARCHAR(80) NOT NULL DEFAULT ''",
+        'description' => "VARCHAR(200) NOT NULL DEFAULT ''",
+        'gestion'     => "VARCHAR(120) NOT NULL DEFAULT ''",
+        'pcmn'        => "VARCHAR(20) NOT NULL DEFAULT ''",
+    ] as $col => $type) {
+        try { Db::exec('ALTER TABLE ceo_shop_budget_line ADD COLUMN ' . $col . ' ' . $type); }
+        catch (PDOException $e) { /* colonne déjà présente */ }
+    }
+
+    // Le modèle de charges du réseau : un RÉGLAGE, pas du code. Les taux sont
+    // ceux du modèle économique de l'enseigne ; un magasin les reprend puis les
+    // ajuste. Les comptes PCMN sont laissés VIDES : inventer un numéro de
+    // compte aurait des conséquences comptables, il se renseigne.
+    if (setting('budgetCharges') === null) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
+            ['budgetCharges', json_encode(['categories' => [
+                ['nom' => 'Occupation', 'lignes' => [
+                    ['poste' => 'Loyer + charges locatives', 'description' => 'Selon emplacement', 'gestion' => 'Fixe', 'pct' => 7.0, 'pcmn' => ''],
+                    ['poste' => 'Énergie (eau, gaz, électricité)', 'description' => 'Variable selon la saison', 'gestion' => 'Groupement d’achat, appel d’offres', 'pct' => 5.0, 'pcmn' => ''],
+                    ['poste' => 'Maintenance & nettoyage', 'description' => 'Entretien du matériel', 'gestion' => 'Préventif et régulier', 'pct' => 1.0, 'pcmn' => ''],
+                    ['poste' => 'Assurances, licences, etc.', 'description' => '', 'gestion' => 'Suivi des échéances', 'pct' => 1.0, 'pcmn' => ''],
+                ]],
+                ['nom' => 'Redevances de marque', 'lignes' => [
+                    ['poste' => 'Royalties franchise', 'description' => 'Redevance marque', 'gestion' => 'Fixe', 'pct' => 2.0, 'pcmn' => ''],
+                    ['poste' => 'Redevance assistance', 'description' => 'Accompagnement franchiseur', 'gestion' => 'Fixe', 'pct' => 1.5, 'pcmn' => ''],
+                    ['poste' => 'Marketing national / local', 'description' => 'Communication', 'gestion' => 'Fixe', 'pct' => 1.5, 'pcmn' => ''],
+                ]],
+                ['nom' => 'Investissement', 'lignes' => [
+                    ['poste' => 'Amortissements / leasing matériel', 'description' => 'Machines, mobilier', 'gestion' => 'Fixe', 'pct' => 5.0, 'pcmn' => ''],
+                ]],
+                ['nom' => 'Frais généraux', 'lignes' => [
+                    ['poste' => 'Autres (comptabilité, banque, divers)', 'description' => '', 'gestion' => 'Optimisation des prestataires', 'pct' => 1.5, 'pcmn' => ''],
+                ]],
+            ]], JSON_UNESCAPED_UNICODE)]);
+    }
+
     // Un meuble n'est pas qu'un nom : sa température décide de ce qu'on peut y
     // poser, son mode de présentation et les dimensions d'un emplacement
     // décident de ce qui y tient. Ajoutés après coup, d'où l'ALTER.
