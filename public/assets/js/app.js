@@ -2643,18 +2643,34 @@ class App {
         if (nm && nm.texte) { bloc.push('<p class="note">' + esc(nm.texte) + '</p>'); }
         if (nm && nm.photo) { bloc.push('<img class="ph" src="' + esc(nm.photo) + '" alt="">'); }
         (m.niveaux || []).forEach(n => {
+          const nn = notes['niveau:' + n.id];
           const cases = (n.slots || []).map(s => {
-            const o = (s.occupants || [])[0];
-            const nr = o ? notes['ref:' + o.ref] : null;
+            // TOUS les occupants, pas seulement le premier : un emplacement
+            // qui en porte deux n'en montrait qu'un, sans le dire.
+            const occ = (s.occupants || []);
             const dim = [s.longueurMm, s.largeurMm].filter(Boolean).join('×');
-            return '<td>' + '<b>' + s.position + '</b> '
-              + (o ? esc(o.nom) + '<span class="f">' + o.fronts + ' front(s)</span>'
-                   : '<span class="libre">libre</span>')
+            const corps = occ.length
+              ? occ.map(o => { const nr = notes['ref:' + o.ref];
+                // La photo du produit sur la feuille : celui qui monte le
+                // comptoir compare ce qu'il a en main à ce qui est attendu.
+                // Sans visuel, « Cookie Chocolat Noir » ne dit pas comment il
+                // doit être présenté.
+                return (nr && nr.photo ? '<img class="pr" src="' + esc(nr.photo) + '" alt="">' : '')
+                  + '<span class="nom">' + esc(o.nom) + '</span>'
+                  + '<span class="f">' + o.fronts + ' front(s)</span>'
+                  + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : ''); }).join('')
+              : '<span class="libre">libre</span>';
+            return '<td>' + '<b>' + s.position + '</b> ' + corps
               + (dim ? '<span class="f">' + dim + ' mm</span>' : '')
-              + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : '')
               + '</td>';
           }).join('');
-          bloc.push('<table><tr><th>' + esc(n.nom) + '</th>' + (cases || '<td class="libre">aucun emplacement</td>') + '</tr></table>');
+          // Le niveau est la SECTION du meuble : sa photo de présentation et
+          // sa consigne se lisent avec sa rangée, pas trois pages plus loin.
+          bloc.push('<div class="niveau">'
+            + (nn && nn.texte ? '<p class="note">' + esc(n.nom) + ' — ' + esc(nn.texte) + '</p>' : '')
+            + (nn && nn.photo ? '<img class="phn" src="' + esc(nn.photo) + '" alt="">' : '')
+            + '<table><tr><th>' + esc(n.nom) + '</th>' + (cases || '<td class="libre">aucun emplacement</td>') + '</tr></table>'
+            + '</div>');
         });
       });
       bloc.push('</section>');
@@ -2698,7 +2714,16 @@ class App {
       + '.n{font-style:italic}.libre{color:#9a938c;font-weight:400}'
       + '.ph{max-width:74mm;max-height:52mm;border:0.5px solid var(--color-border-secondary);'
       + 'border-radius:3px;margin:3px 0 7px;display:block}'
-      + 'section{break-inside:auto}h3,table{break-inside:avoid}'
+      // Photo de la SECTION (le niveau) : plus petite que celle du meuble, elle
+      // accompagne sa rangée sans la repousser sur la page suivante.
+      + '.phn{max-width:58mm;max-height:36mm;border:0.5px solid var(--color-border-secondary);'
+      + 'border-radius:3px;margin:2px 0 4px;display:block}'
+      // Photo du PRODUIT, dans sa case : assez grande pour reconnaître le
+      // produit, assez petite pour qu'une rangée de six tienne en largeur.
+      + '.pr{width:100%;max-height:18mm;object-fit:cover;border:0.5px solid var(--color-border-secondary);'
+      + 'border-radius:2px;margin:2px 0 3px;display:block}'
+      + '.nom{display:block;font-weight:500}'
+      + 'section{break-inside:auto}h3,table,.niveau{break-inside:avoid}'
       + '@page{size:A4;margin:14mm}</style></head><body>'
       + '<div class="tete"><div>'
       + '<h1>Planogramme comptoir</h1>'
@@ -2722,7 +2747,15 @@ class App {
       if (polices && typeof polices.then === 'function') { polices.then(lancer); setTimeout(lancer, 3000); }
       else { setTimeout(lancer, 400); }
     };
-    if (w.document.readyState === 'complete') { pret(); } else { w.onload = pret; setTimeout(lancer, 4000); }
+    // Le filet de sécurité ne doit pas COUPER les images : avec une photo par
+    // produit et par section, quatre secondes ne suffisent plus, et imprimer
+    // trop tôt sort des cadres vides. On ne force qu'une fois les images
+    // chargées — ou au bout de quinze secondes, quoi qu'il arrive.
+    const filet = () => { try {
+      if (Array.prototype.every.call(w.document.images, i => i.complete)) { pret(); }
+    } catch (e) { lancer(); } };
+    if (w.document.readyState === 'complete') { pret(); }
+    else { w.onload = pret; setTimeout(filet, 4000); setTimeout(lancer, 15000); }
   }
 
   /* --- assistant de création d'un meuble ------------------------------------- */
