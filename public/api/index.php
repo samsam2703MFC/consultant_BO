@@ -141,6 +141,15 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/planogramme/placement/([\w-]+)$#', $path, $m)) { return wr_plano_placer($m[1]); }
     if ($method === 'PUT' && $path === '/planogramme/note') { return wr_plano_note(); }
     if ($method === 'POST' && $path === '/planogramme/photo') { return wr_plano_photo(); }
+    // --- fonds & redevances : le cockpit ÉCRIT dans le module marketing, qui
+    //     reste le seul tenant du grand livre. Aucune écriture locale.
+    if ($method === 'POST' && $path === '/fonds/mouvement') { return wr_fonds_mouvement(null); }
+    if ($method === 'PATCH' && preg_match('#^/fonds/mouvement/(\d+)$#', $path, $m)) { return wr_fonds_mouvement((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/fonds/mouvement/(\d+)$#', $path, $m)) { return wr_fonds_mouvement_suppr((int) $m[1]); }
+    if ($method === 'POST' && $path === '/fonds/recurrence') { return wr_fonds_recurrence(); }
+    if ($method === 'DELETE' && preg_match('#^/fonds/recurrence/(\d+)$#', $path, $m)) { return wr_fonds_recurrence_suppr((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/fonds/royalties') { return wr_fonds_royalties(); }
+    if ($method === 'POST' && $path === '/fonds/royalties/generer') { return wr_fonds_royalties_generer(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
 

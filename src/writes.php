@@ -1286,3 +1286,95 @@ function wr_ia_compte(): array
     journalAdd('Paramètres', 'Assistance IA — ' . ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour'));
     return ['ok' => true] + Anthropic::statut();
 }
+
+/* --- fonds & redevances : écriture DANS le module marketing ------------------
+ *
+ * Le cockpit ne tient pas de second grand livre. Ces fonctions relaient la
+ * saisie vers le module qui, lui, valide et écrit — et son refus revient tel
+ * quel à l'écran. Recopier ici les règles du fonds (sens du mouvement, montant
+ * positif, boutique du périmètre) donnerait deux jeux de règles à maintenir, et
+ * c'est celui qui diverge qu'on découvrirait trop tard.
+ */
+
+/** Les champs qu'un mouvement accepte, tels que le module les nomme. */
+function fondsChamps(array $b): array
+{
+    $out = [];
+    foreach (['direction', 'shop_id', 'campaign_id', 'lever_id', 'movement_date',
+        'period_from', 'period_to', 'label', 'amount', 'source', 'supplier_name',
+        'document_ref'] as $k) {
+        if (array_key_exists($k, $b)) { $out[$k] = $b[$k] === '' ? null : $b[$k]; }
+    }
+    return $out;
+}
+
+/**
+ * La réponse du module, rendue à l'écran sans être réécrite.
+ *
+ * Un 422 « Le libellé du mouvement est obligatoire » est plus utile que
+ * « échec » : c'est la phrase du module, elle dit quoi corriger.
+ */
+function fondsRendu(array $r, string $quoi): array
+{
+    if ($r['erreur'] !== null) {
+        http_response_code($r['code'] >= 400 ? $r['code'] : 502);
+        return ['error' => $r['erreur']];
+    }
+    $brut = $r['brut'] ?? [];
+    return ['ok' => true, 'quoi' => $quoi,
+        'id' => $brut['inserted_id'] ?? ($r['corps']['inserted_id'] ?? null),
+        'message' => $brut['message'] ?? ($r['corps']['message'] ?? null),
+        'reponse' => $r['corps']];
+}
+
+/** POST /fonds/mouvement — ou PATCH quand un identifiant est donné. */
+function wr_fonds_mouvement(?int $id): array
+{
+    $b = fondsChamps(body());
+    if ($id === null) {
+        return fondsRendu(marketingAppel('POST', '/funds/movements', $b), 'mouvement');
+    }
+    return fondsRendu(marketingAppel('PATCH', '/funds/movements/' . $id, $b), 'mouvement');
+}
+
+function wr_fonds_mouvement_suppr(int $id): array
+{
+    return fondsRendu(marketingAppel('DELETE', '/funds/movements/' . $id), 'mouvement');
+}
+
+/** POST /fonds/recurrence — un frais qui revient, écrit en autant d'échéances. */
+function wr_fonds_recurrence(): array
+{
+    $b = body();
+    $p = fondsChamps($b);
+    foreach (['frequency', 'starts_on', 'ends_on'] as $k) {
+        if (array_key_exists($k, $b)) { $p[$k] = $b[$k] === '' ? null : $b[$k]; }
+    }
+    return fondsRendu(marketingAppel('POST', '/funds/recurrences', $p), 'récurrence');
+}
+
+function wr_fonds_recurrence_suppr(int $id): array
+{
+    return fondsRendu(marketingAppel('DELETE', '/funds/recurrences/' . $id), 'récurrence');
+}
+
+/** PUT /fonds/royalties — taux et chiffres d'affaires du mois, ensemble. */
+function wr_fonds_royalties(): array
+{
+    $b = body();
+    return fondsRendu(marketingAppel('PUT', '/funds/royalties', [
+        'month' => (string) ($b['month'] ?? ''),
+        'rates' => is_array($b['rates'] ?? null) ? $b['rates'] : [],
+        'revenues' => is_array($b['revenues'] ?? null) ? $b['revenues'] : [],
+    ]), 'redevances');
+}
+
+/** POST /fonds/royalties/generer — écrit les redevances du mois au fonds. */
+function wr_fonds_royalties_generer(): array
+{
+    $b = body();
+    return fondsRendu(marketingAppel('POST', '/funds/royalties/generate', [
+        'month' => (string) ($b['month'] ?? ''),
+        'kinds' => is_array($b['kinds'] ?? null) ? $b['kinds'] : [],
+    ]), 'redevances');
+}

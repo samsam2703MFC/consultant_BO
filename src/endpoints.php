@@ -2520,42 +2520,105 @@ function ep_pwa_task_detail(): array
  * un appel depuis le navigateur y serait une requête d'origine différente, que
  * rien n'autorise aujourd'hui.
  */
+/**
+ * Un appel au module marketing, quelle que soit la méthode.
+ *
+ * Le fonds est tenu par le module ; le cockpit ne recopie pas son grand livre,
+ * il l'ADRESSE. Lectures et écritures passent donc par ici — un seul endroit
+ * qui sait construire l'URL, poser l'en-tête et rendre le corps.
+ *
+ * Rend `['code' => int, 'corps' => mixed, 'erreur' => ?string]`. Un refus du
+ * module est rendu TEL QUEL : c'est lui qui valide, pas nous, et réécrire son
+ * message ferait deux vocabulaires pour la même règle.
+ */
+function marketingAppel(string $methode, string $chemin, ?array $corps = null): array
+{
+    $base = (string) (setting('marketingApi') ?: '/marketing/api/v1/marketing');
+    // Relais local : on reconstruit l'URL absolue depuis l'hôte courant, sans
+    // quoi un chemin relatif ne veut rien dire pour curl.
+    $hote = ($_SERVER['HTTPS'] ?? '') === 'on' ? 'https://' : 'http://';
+    $hote .= $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
+    $url = preg_match('#^https?://#', $base) ? $base . $chemin : $hote . $base . $chemin;
+
+    $entetes = ['Accept: application/json'];
+    $ch = curl_init($url);
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15,
+        CURLOPT_CUSTOMREQUEST => strtoupper($methode),
+    ];
+    if ($corps !== null) {
+        $opts[CURLOPT_POSTFIELDS] = json_encode($corps, JSON_UNESCAPED_UNICODE);
+        $entetes[] = 'Content-Type: application/json';
+    }
+    $opts[CURLOPT_HTTPHEADER] = $entetes;
+    curl_setopt_array($ch, $opts);
+    $rep = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($rep === false) { return ['code' => 0, 'corps' => null, 'erreur' => $err !== '' ? $err : 'module injoignable']; }
+    $j = json_decode((string) $rep, true);
+    if (!is_array($j)) {
+        return ['code' => $code, 'corps' => null,
+            'erreur' => $code >= 400 ? 'HTTP ' . $code : 'réponse illisible'];
+    }
+    // Le module enveloppe ses lectures dans `data` ; certaines rendent la liste
+    // nue. On accepte les deux plutôt que d'imposer une forme.
+    $donnees = array_key_exists('data', $j) ? $j['data'] : $j;
+    $msg = null;
+    if ($code >= 400) {
+        $msg = (string) ($j['description'] ?? $j['message'] ?? ('HTTP ' . $code));
+    }
+    return ['code' => $code, 'corps' => $donnees, 'erreur' => $msg, 'brut' => $j];
+}
+
 function ep_fonds(): array
 {
     $base = (string) (setting('marketingApi') ?: '/marketing/api/v1/marketing');
     $out = ['base' => $base, 'ledger' => null, 'leviers' => [], 'royalties' => null,
-        'erreurs' => [], 'source' => null];
+        'recurrences' => [], 'magasins' => [], 'campagnes' => [],
+        'erreurs' => [], 'manque' => [], 'source' => null];
 
-    $lire = static function (string $chemin) use ($base, &$out) {
-        // Relais local : on reconstruit l'URL absolue depuis l'hôte courant,
-        // sans quoi un chemin relatif ne veut rien dire pour curl.
-        $hote = ($_SERVER['HTTPS'] ?? '') === 'on' ? 'https://' : 'http://';
-        $hote .= $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
-        $url = preg_match('#^https?://#', $base) ? $base . $chemin : $hote . $base . $chemin;
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 12,
-            CURLOPT_HTTPHEADER => ['Accept: application/json'],
-        ]);
-        $rep = curl_exec($ch);
-        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err = curl_error($ch);
-        curl_close($ch);
-        if ($rep === false || $code >= 400) {
-            $out['erreurs'][] = $chemin . ' : ' . ($err !== '' ? $err : 'HTTP ' . $code);
+    $lire = static function (string $chemin) use (&$out) {
+        $r = marketingAppel('GET', $chemin);
+        if ($r['erreur'] !== null || $r['corps'] === null) {
+            $out['erreurs'][] = $chemin . ' : ' . ($r['erreur'] ?? 'réponse vide');
             return null;
         }
-        $j = json_decode((string) $rep, true);
-        if (!is_array($j)) { $out['erreurs'][] = $chemin . ' : réponse illisible'; return null; }
-        // Le module enveloppe ses lectures dans `data` ; certaines rendent la
-        // liste nue. On accepte les deux plutôt que d'imposer une forme.
-        return array_key_exists('data', $j) ? $j['data'] : $j;
+        return $r['corps'];
     };
 
     $out['ledger'] = $lire('/funds/ledger');
     $lev = $lire('/funds/levers');
     $out['leviers'] = is_array($lev) ? $lev : [];
-    $out['royalties'] = $lire('/funds/royalties');
+    // Ce qu'il faut pour SAISIR depuis le cockpit : les frais récurrents, les
+    // boutiques et les campagnes auxquelles imputer une dépense.
+    $rec = $lire('/funds/recurrences');
+    $out['recurrences'] = is_array($rec) ? $rec : [];
+    $mag = $lire('/shops');
+    $out['magasins'] = is_array($mag) ? $mag : [];
+    $cam = $lire('/campaigns');
+    $out['campagnes'] = is_array($cam) ? $cam : [];
+
+    // Les redevances : le module DÉCLARE ces routes, la version déployée ne les
+    // sert pas (mesuré : 404 sur /funds/royalties, /funds/royalties/erp, alors
+    // que /funds/ledger et /funds/recurrences répondent). On ne fabrique pas
+    // une grille de remplacement — on dit ce qui manque et où.
+    $roy = marketingAppel('GET', '/funds/royalties');
+    if ($roy['erreur'] === null && is_array($roy['corps'])) {
+        $out['royalties'] = $roy['corps'];
+    } else {
+        $out['royalties'] = null;
+        $out['manque'][] = [
+            'champ' => 'Redevances par magasin',
+            'quoi' => 'la grille des taux, les chiffres d’affaires du mois et l’écriture des redevances au fonds',
+            'source' => 'Module marketing — les routes existent dans le dépôt '
+                . '(GET/PUT /funds/royalties, POST /funds/royalties/generate, GET /funds/royalties/erp) '
+                . 'mais la version déployée sur ce serveur ne les sert pas : ' . ($roy['erreur'] ?? 'HTTP 404')
+                . '. À obtenir : redéployer le module marketing.',
+        ];
+    }
     $out['source'] = $out['ledger'] !== null ? 'module marketing' : null;
     return $out;
 }
