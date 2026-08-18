@@ -3642,7 +3642,11 @@ function tplCtrlZoom(c, x){
               </div>`).join('')}
 
           <div style="padding:12px 13px;border-top:0.5px solid var(--color-border-tertiary);margin-top:auto">
-            <button ${x.A(z.compose)} style="${tool(false, !!z.compose)};width:100%;justify-content:center">Reporter dans le commentaire</button>
+            <!-- Le report dans le commentaire n'est plus un bouton : il se fait
+                 à l'enregistrement, et la modale se referme dans la foulée. Un
+                 avis partait sinon avec des repères que la boutique ne recevait
+                 pas — la photo annotée, elle, reste dans le cockpit. -->
+            <div style="font-size:11px;color:var(--color-text)">${z.reporte ? esc(String(z.reporte)) + ' repère(s) commenté(s) partiront dans le commentaire de l’avis.' : 'Aucun repère commenté : le commentaire de l’avis restera inchangé.'}</div>
             <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(z.envoiBesoin)}</div>
             <div style="display:flex;gap:8px;margin-top:11px">
               <button ${x.A(z.save)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:34px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${z.busy ? 'wait' : 'pointer'};opacity:${z.busy ? '0.6' : '1'};flex:1">${z.busy ? 'Enregistrement…' : (z.saved ? 'Enregistré ✓' : 'Enregistrer les repères')}</button>
@@ -3652,7 +3656,7 @@ function tplCtrlZoom(c, x){
                  bandeau de notification de l'application se pose en bas à droite
                  de l'écran, donc sur ce panneau, et recouvrait la réponse. -->
             ${z.err ? `<div style="margin-top:9px;padding:8px 10px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;line-height:1.45">${esc(z.err)}</div>` : ''}
-            ${!z.err && z.saved && z.savedTxt ? `<div style="margin-top:9px;font-size:11.5px;color:#2d7a3e">${esc(z.savedTxt)} — la modale reste ouverte, vous pouvez continuer.</div>` : ''}
+            ${!z.err && z.saved && z.savedTxt ? `<div style="margin-top:9px;font-size:11.5px;color:#2d7a3e">${esc(z.savedTxt)}</div>` : ''}
           </div>
         </div>
       </div>

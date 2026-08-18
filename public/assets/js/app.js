@@ -4115,16 +4115,28 @@ class App {
    * une composition, pas un verrou. Un commentaire déjà écrit n'est jamais
    * écrasé sans être proposé : on l'ajoute en dessous.
    */
-  zCompose(){
-    const dt = this.state.ctrlDet || {};
-    const rep = (dt.rep || []).filter(r => String(r.txt || '').trim());
-    if (!rep.length) { this.notify('Aucun repère commenté à reprendre.'); return; }
+  /**
+   * Le texte des repères, reporté dans le commentaire de l'avis.
+   *
+   * Report AUTOMATIQUE : tant qu'il fallait cliquer « Reporter », un avis
+   * partait régulièrement avec des repères que le franchisé ne recevait pas —
+   * la photo annotée reste dans le cockpit, le commentaire est le seul canal.
+   *
+   * L'opération est IDEMPOTENTE : les lignes déjà écrites par une passe
+   * précédente sont retirées avant d'écrire les nouvelles. Sans cela,
+   * enregistrer deux fois empilait deux listes, et corriger un repère laissait
+   * l'ancienne version juste au-dessus de la nouvelle. Ce qui a été écrit à la
+   * main, lui, est conservé.
+   */
+  zReporte(rep, commentaire){
     const court = nom => String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, '').toLowerCase();
-    const lignes = rep.map(r => r.n + '. [' + court((this.zNiveau(r.niveau) || {}).nom) + '] ' + String(r.txt).trim());
-    const dej = String(dt.comment || '').trim();
-    const txt = lignes.join('\n');
-    this.zPatch({ comment: dej && dej !== txt ? dej + '\n' + txt : txt });
-    this.notify(rep.length + ' repère(s) reportés dans le commentaire');
+    const lignes = (rep || []).filter(r => String(r.txt || '').trim())
+      .map(r => r.n + '. [' + court((this.zNiveau(r.niveau) || {}).nom) + '] ' + String(r.txt).trim());
+    const garde = String(commentaire || '').split('\n')
+      .filter(l => !/^\s*\d+\.\s*\[[^\]]*\]/.test(l));
+    const propre = garde.join('\n').trim();
+    if (!lignes.length) { return propre; }
+    return (propre ? propre + '\n' : '') + lignes.join('\n');
   }
   /**
    * Enregistre les repères. Une liste vide efface — c'est « tout effacer ».
@@ -4148,8 +4160,15 @@ class App {
             zErr: 'Non enregistré — ' + ((r && r.error) || 'refusé par le serveur') });
           return;
         }
-        this.zPatch({ zBusy: false, zSaved: true,
+        // Les repères sont reportés dans le commentaire, puis la modale se
+        // referme : l'annotation est finie, ce qui reste à faire est de poser
+        // la note — et cela se passe dans l'écran de dessous.
+        const commentaire = this.zReporte(dt.rep || [], dt.comment);
+        const nCom = (dt.rep || []).filter(r2 => String(r2.txt || '').trim()).length;
+        this.zPatch({ zBusy: false, zSaved: true, zoom: false, zSel: null, comment: commentaire,
           zSavedTxt: n ? (n > 1 ? n + ' repères enregistrés' : '1 repère enregistré') : 'Repères effacés' });
+        this.notify((n ? (n > 1 ? n + ' repères enregistrés' : '1 repère enregistré') : 'Repères effacés')
+          + (nCom ? ' · ' + nCom + ' reporté(s) dans le commentaire' : ''));
       });
   }
   ctrlSendNote(){
@@ -4440,7 +4459,9 @@ class App {
       undo: rep.length ? () => this.zRepDel(rep.length - 1) : null,
       clear: rep.length ? () => this.zPatch({ rep: [], zSel: null, zSaved: false }) : null,
       save: () => this.zSave(),
-      compose: rep.some(r => String(r.txt || '').trim()) ? () => this.zCompose() : null,
+      // Le report n'est plus un geste : il se fait à l'enregistrement. Le
+      // panneau annonce ce qui partira, plutôt que d'offrir un bouton de plus.
+      reporte: rep.filter(r => String(r.txt || '').trim()).length,
       // Option « comparer » : la photo de référence en face. Elle n'existe pas
       // encore côté panel — l'écran le dit au lieu de laisser un cadre noir.
       compare: !!dt.zCompare,
