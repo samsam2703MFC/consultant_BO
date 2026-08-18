@@ -831,8 +831,9 @@ function wr_plano_creer(string $type): array
     // que l'insertion reste commune aux trois niveaux de structure.
     if ($type === 'meuble') {
         $court = static fn ($v) => mb_substr(trim((string) $v), 0, 40);
-        Db::exec('UPDATE pla_meuble SET type = ?, temperature = ?, presentation = ? WHERE id = ?',
-            [$court($b['type'] ?? ''), $court($b['temperature'] ?? ''), $court($b['presentation'] ?? ''), $id]);
+        Db::exec('UPDATE pla_meuble SET type = ?, temperature = ?, presentation = ?, periodes = ? WHERE id = ?',
+            [$court($b['type'] ?? ''), $court($b['temperature'] ?? ''), $court($b['presentation'] ?? ''),
+                planoPeriodes($b['periodes'] ?? null), $id]);
 
         // Le meuble peut naître AVEC ses niveaux et leurs emplacements : le
         // déclarer en trois écrans successifs faisait abandonner à mi-chemin,
@@ -894,7 +895,42 @@ function wr_plano_patch(string $type, int $id): array
     if (isset($b['rang'])) {
         Db::exec('UPDATE ' . $def['table'] . ' SET rang = ? WHERE id = ?', [max(0, (int) $b['rang']), $id]);
     }
+    // Les moments de la journée se corrigent sans refaire le meuble : un
+    // comptoir chaud qu'on décide finalement de monter aussi le matin ne doit
+    // pas obliger à resaisir ses niveaux et ses emplacements.
+    if ($type === 'meuble' && array_key_exists('periodes', $b)) {
+        Db::exec('UPDATE pla_meuble SET periodes = ? WHERE id = ?', [planoPeriodes($b['periodes']), $id]);
+    }
     return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * Les moments de la journée d'un meuble, normalisés.
+ *
+ * Rendus sous forme de liste séparée par des virgules, dans l'ordre du
+ * référentiel — « midi,matin » et « matin,midi » désignent le même comptoir et
+ * doivent se relire pareil. Une liste VIDE veut dire « toute la journée » :
+ * c'est ce que portent les meubles saisis avant l'ajout de la notion, et c'est
+ * la lecture la moins fausse pour eux.
+ */
+function planoPeriodes(mixed $v): string
+{
+    $ref = [];
+    foreach ((array) (setting('planogramme')['periodes'] ?? []) as $p) {
+        if (is_array($p) && isset($p['slug'])) { $ref[] = (string) $p['slug']; }
+    }
+    if (!$ref) { $ref = ['matin', 'midi', 'apresmidi']; }
+    $vus = [];
+    foreach ((array) $v as $x) {
+        $slug = is_array($x) ? (string) ($x['slug'] ?? '') : (string) $x;
+        if (in_array($slug, $ref, true) && !in_array($slug, $vus, true)) { $vus[] = $slug; }
+    }
+    // Les trois : c'est « toute la journée », qu'on écrit comme tel — une liste
+    // complète et une liste vide voudraient dire la même chose, autant n'en
+    // garder qu'une seule écriture.
+    if (count($vus) === count($ref)) { return ''; }
+    usort($vus, static fn ($a, $b2) => array_search($a, $ref, true) <=> array_search($b2, $ref, true));
+    return implode(',', $vus);
 }
 
 /**

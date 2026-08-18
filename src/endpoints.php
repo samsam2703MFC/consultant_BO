@@ -2585,6 +2585,9 @@ function ep_planogramme(): array
             'types' => is_array($ref['types'] ?? null) ? $ref['types'] : [],
             'temperatures' => is_array($ref['temperatures'] ?? null) ? $ref['temperatures'] : [],
             'presentations' => is_array($ref['presentations'] ?? null) ? $ref['presentations'] : [],
+            // Les moments de la journée : le comptoir du matin n'est pas celui
+            // de midi, et un meuble peut n'être monté qu'à l'un des deux.
+            'periodes' => is_array($ref['periodes'] ?? null) ? $ref['periodes'] : [],
             'slotDefaut' => is_array($ref['slotDefaut'] ?? null) ? $ref['slotDefaut']
                 : ['longueur' => 300, 'largeur' => 300, 'hauteur' => 250],
         ],
@@ -2632,9 +2635,14 @@ function ep_planogramme(): array
         $zl = ['id' => $zid, 'nom' => (string) $z['nom'], 'rang' => (int) $z['rang'], 'meubles' => []];
         foreach ($parZone[$zid] ?? [] as $m) {
             $mid = (int) $m['id'];
+            // `periodes` vide = toute la journée. C'est ce que portent les
+            // meubles déclarés avant l'ajout de la notion : les compter comme
+            // « aucun moment » les ferait disparaître du plan.
+            $per = array_values(array_filter(explode(',', (string) ($m['periodes'] ?? ''))));
             $ml = ['id' => $mid, 'nom' => (string) $m['nom'], 'rang' => (int) $m['rang'],
                 'type' => (string) ($m['type'] ?? ''), 'temperature' => (string) ($m['temperature'] ?? ''),
-                'presentation' => (string) ($m['presentation'] ?? ''), 'niveaux' => []];
+                'presentation' => (string) ($m['presentation'] ?? ''),
+                'periodes' => $per, 'toutLeJour' => !$per, 'niveaux' => []];
             foreach ($parMeuble[$mid] ?? [] as $n) {
                 $nid = (int) $n['id'];
                 $nl = ['id' => $nid, 'nom' => (string) $n['nom'], 'rang' => (int) $n['rang'], 'slots' => []];
@@ -2652,6 +2660,7 @@ function ep_planogramme(): array
                         'meubleType' => (string) ($m['type'] ?? ''),
                         'meubleTemp' => (string) ($m['temperature'] ?? ''),
                         'meublePres' => (string) ($m['presentation'] ?? ''),
+                        'meublePeriodes' => $per,
                         'niveauId' => $nid, 'niveau' => (string) $n['nom'],
                         'occupants' => array_map(fn ($o) => [
                             'ref' => $o['ref'], 'nom' => $noms[$o['ref']] ?? $o['ref'],

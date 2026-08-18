@@ -132,6 +132,11 @@ function ensurePlanogramme(): void
             'type'         => "VARCHAR(40) NOT NULL DEFAULT ''",
             'temperature'  => "VARCHAR(40) NOT NULL DEFAULT ''",
             'presentation' => "VARCHAR(40) NOT NULL DEFAULT ''",
+            // Un comptoir ne se présente pas pareil à 7 h et à 12 h 30 : les
+            // viennoiseries cèdent la place au traiteur. Le meuble porte donc
+            // les moments de la journée où il est monté — vide = toute la
+            // journée, ce qui garde le comportement des meubles déjà saisis.
+            'periodes'     => "VARCHAR(60) NOT NULL DEFAULT ''",
         ],
         'pla_slot' => [
             'longueur_mm' => 'SMALLINT UNSIGNED NULL',
@@ -159,8 +164,27 @@ function ensurePlanogramme(): void
                     'Surgelée (−18 °C)', 'Chaude (+63 °C)'],
                 'presentations' => ['Grilles', 'Paniers', 'Plateaux', 'Bacs', 'Étagères pleines',
                     'Crochets', 'Vrac'],
+                'periodes' => [
+                    ['slug' => 'matin', 'nom' => 'Matin', 'aide' => 'ouverture → 11 h'],
+                    ['slug' => 'midi', 'nom' => 'Midi', 'aide' => '11 h → 14 h'],
+                    ['slug' => 'apresmidi', 'nom' => 'Après-midi', 'aide' => '14 h → fermeture'],
+                ],
                 'slotDefaut' => ['longueur' => 300, 'largeur' => 300, 'hauteur' => 250],
             ], JSON_UNESCAPED_UNICODE)]);
+    }
+
+    // Le réglage existe déjà sur les installations livrées : les clés ajoutées
+    // après coup y sont VERSÉES, sans toucher à ce qui a été personnalisé —
+    // réécrire le réglage entier effacerait une température ajoutée à la main.
+    $cfg = setting('planogramme');
+    if (is_array($cfg) && !isset($cfg['periodes'])) {
+        $cfg['periodes'] = [
+            ['slug' => 'matin', 'nom' => 'Matin', 'aide' => 'ouverture → 11 h'],
+            ['slug' => 'midi', 'nom' => 'Midi', 'aide' => '11 h → 14 h'],
+            ['slug' => 'apresmidi', 'nom' => 'Après-midi', 'aide' => '14 h → fermeture'],
+        ];
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['planogramme', json_encode($cfg, JSON_UNESCAPED_UNICODE)]);
     }
 }
 

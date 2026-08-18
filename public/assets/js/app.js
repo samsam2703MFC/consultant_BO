@@ -963,7 +963,10 @@ class App {
 
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso || common.isPlano) this.valsReferentiel(common);
-    if (common.isPlano) { this.plCharge(); this.valsPlano(common); }
+    // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
+    // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
+    // n'aurait aucun emplacement à proposer.
+    if (common.isPlano || this.state.plFiche) { this.plCharge(); this.valsPlano(common); }
     if (common.isFonds) this.valsFonds(common);
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
@@ -1481,6 +1484,17 @@ class App {
       zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
       slot: p.slot == null ? '' : String(p.slot),
       place: !!p.zone,
+      // Emplacement au comptoir, lisible d'un trait : une référence
+      // obligatoire sans place au comptoir est une consigne que la boutique ne
+      // peut pas tenir — c'est ce que cette colonne rend visible.
+      emplacement: p.zone
+        ? [p.zone, p.meuble, p.niveau].filter(Boolean).join(' · ')
+          + (p.slot == null ? '' : ' · emp. ' + p.slot)
+        : '',
+      // Le même geste depuis les deux écrans : la fiche de présentation porte
+      // le plan du comptoir, on y choisit l'emplacement sur le plan.
+      planoGo: () => this.plFicheOuvrir(String(p.ref)),
+      planoBtn: p.zone ? 'Modifier' : 'Attribuer',
       dlv: p.dlv ? p.dlv + ' h' : '—',
       parametre: !!p.parametre,
       // Au planogramme, la ligne ouvre la FICHE de présentation : c'est là que
@@ -2386,10 +2400,31 @@ class App {
     // meuble à l'autre ne coïncident pas forcément — on prend donc le rang
     // maximal et on laisse les cases manquantes vides, plutôt que de forcer
     // une grille qui mentirait sur la forme du comptoir.
-    const meubles = zone ? (zone.meubles || []) : [];
+    // Moment de la journée : le comptoir se regarde à une heure donnée. Un
+    // meuble sans période déclarée est monté toute la journée — il apparaît
+    // donc à tous les moments, jamais à aucun.
+    const refPer = ((pl.referentiels || {}).periodes || []);
+    const perSel = S.plPeriode && refPer.some(p2 => p2.slug === S.plPeriode) ? S.plPeriode : '';
+    common.plPeriodesOpts = [{ slug: '', nom: 'Toute la journée', aide: '', on: !perSel,
+      go: () => this.setState({ plPeriode: '' }) }].concat(refPer.map(p2 => ({
+      slug: p2.slug, nom: p2.nom || p2.slug, aide: p2.aide || '', on: p2.slug === perSel,
+      go: () => this.setState({ plPeriode: p2.slug }) })));
+    common.plPeriodeSel = perSel;
+    const montE = m => !perSel || !(m.periodes || []).length || (m.periodes || []).indexOf(perSel) >= 0;
+    const tousMeubles = zone ? (zone.meubles || []) : [];
+    const meubles = tousMeubles.filter(montE);
+    common.plPeriodeMasques = tousMeubles.length - meubles.length;
+    common.plPeriodeTxt = perSel
+      ? ((refPer.find(p2 => p2.slug === perSel) || {}).nom || perSel)
+      : '';
     const nMax = meubles.reduce((a, m) => Math.max(a, (m.niveaux || []).length), 0);
     const cible = S.plCible || null;
+    const perNoms = l => refPer.filter(p2 => (l || []).indexOf(p2.slug) >= 0)
+      .map(p2 => p2.nom || p2.slug).join(' · ');
     common.plMeubles = meubles.map(m => ({ id: m.id, nom: m.nom,
+      // « toute la journée » ne s'affiche pas : c'est le cas courant, l'écrire
+      // sur chaque meuble noierait ceux qui ont vraiment une contrainte.
+      periodes: (m.periodes || []).length ? perNoms(m.periodes) : '',
       renommer: () => this.plRenommer('meuble', m.id, m.nom),
       supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
     common.plLignes = [];
@@ -2525,7 +2560,17 @@ class App {
     common.plMeublesListe = meubles.map(m => Object.assign({ id: m.id, nom: m.nom,
       nNiveaux: (m.niveaux || []).length,
       nSlots: (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0),
-      detail: [m.type, m.temperature, m.presentation].filter(Boolean).join(' · '),
+      detail: [m.type, m.temperature, m.presentation,
+        (m.periodes || []).length ? perNoms(m.periodes) : 'toute la journée'].filter(Boolean).join(' · '),
+      periodesRef: refPer.map(p2 => ({ slug: p2.slug, nom: p2.nom || p2.slug,
+        on: !(m.periodes || []).length || (m.periodes || []).indexOf(p2.slug) >= 0,
+        // Décocher le dernier moment laisserait un meuble monté nulle part :
+        // on repasse alors à « toute la journée », qui est l'état neutre.
+        bascule: () => { const dej = (m.periodes || []).length ? m.periodes.slice()
+            : refPer.map(p3 => p3.slug);
+          const i = dej.indexOf(p2.slug);
+          if (i >= 0) { dej.splice(i, 1); } else { dej.push(p2.slug); }
+          this.plMeublePeriodes(m.id, dej); } })),
       renommer: e => this.plRenommer('meuble', m.id, e.target.value),
       supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }, photoCtrl('meuble', m.id)));
 
@@ -2587,7 +2632,13 @@ class App {
         + (nz && nz.texte ? '<p class="note">' + esc(nz.texte) + '</p>' : ''));
       (z.meubles || []).forEach(m => {
         const nm = notes['meuble:' + m.id];
-        const meta = [m.type, m.temperature, m.presentation].filter(Boolean).join(' · ');
+        // Sur la feuille, le moment de la journée compte autant que la
+        // température : c'est elle qui dit à quelle heure ce meuble est monté.
+        const perM = ((pl.referentiels || {}).periodes || [])
+          .filter(p2 => (m.periodes || []).indexOf(p2.slug) >= 0)
+          .map(p2 => p2.nom || p2.slug).join(' · ');
+        const meta = [m.type, m.temperature, m.presentation,
+          (m.periodes || []).length ? perM : 'toute la journée'].filter(Boolean).join(' · ');
         bloc.push('<h3>' + esc(m.nom) + (meta ? ' <span class="meta">' + esc(meta) + '</span>' : '') + '</h3>');
         if (nm && nm.texte) { bloc.push('<p class="note">' + esc(nm.texte) + '</p>'); }
         if (nm && nm.photo) { bloc.push('<img class="ph" src="' + esc(nm.photo) + '" alt="">'); }
@@ -2719,12 +2770,28 @@ class App {
       longueur: String(d.longueur || 300), largeur: String(d.largeur || 300),
       hauteur: String(d.hauteur || 250), capacite: '',
       nNiveaux: '3', nSlots: '4',
+      // Toute la journée par défaut : c'est le cas courant, et un meuble
+      // décoché partout ne serait monté à aucun moment — un plan vide.
+      periodes: ((r.periodes || []).map(p => p.slug)),
       // Photos collectées avant la création : une pour le meuble, une par
       // niveau, indexées par le rang du niveau. Elles partent une fois les
       // identifiants connus.
       photoMeuble: null, photosNiveau: {} } });
   }
   plMwPatch(patch){ this.setState(s => ({ plMw: Object.assign({}, s.plMw, patch) })); }
+  /**
+   * Change les moments de la journée d'un meuble déjà déclaré.
+   *
+   * Le PATCH ne touche que cette colonne : refaire passer le meuble par
+   * l'assistant pour corriger une case obligerait à resaisir ses niveaux.
+   */
+  plMeublePeriodes(id, liste){
+    write(this.source, 'PATCH', '/planogramme/meuble/' + id, { periodes: liste })
+      .then(r => {
+        if (!r || r.ok === false) { this.notify('Non enregistré : ' + ((r && r.error) || 'refusé')); return; }
+        this.plCharge(true);
+      });
+  }
   /**
    * Les niveaux proposés portent des noms parlants quand ils sont peu nombreux.
    * « Haut / Médian / Bas » se lit sur un plan ; « Niveau 2 » demande de
@@ -2753,6 +2820,25 @@ class App {
       types: opt(r.types, w.type, 'type'),
       temperatures: opt(r.temperatures, w.temperature, 'temperature'),
       presentations: opt(r.presentations, w.presentation, 'presentation'),
+      // Moments de la journée : plusieurs à la fois, donc des cases, pas un
+      // choix unique. Le comptoir chaud n'est monté qu'à midi ; la vitrine à
+      // viennoiseries, le matin.
+      periodes: (r.periodes || []).map(pr => ({
+        slug: pr.slug, nom: pr.nom || pr.slug, aide: pr.aide || '',
+        on: (w.periodes || []).indexOf(pr.slug) >= 0,
+        bascule: () => { const l = (this.state.plMw.periodes || []).slice();
+          const i = l.indexOf(pr.slug);
+          if (i >= 0) { l.splice(i, 1); } else { l.push(pr.slug); }
+          this.plMwPatch({ periodes: l }); },
+      })),
+      // Aucun moment coché : le meuble n'existerait à aucune heure. On le dit
+      // à l'étape plutôt que de créer un meuble invisible.
+      periodesVide: (r.periodes || []).length > 0 && (w.periodes || []).length === 0,
+      periodesTxt: (() => { const ref = r.periodes || [];
+        const l = (w.periodes || []);
+        if (!ref.length || l.length === ref.length) { return 'toute la journée'; }
+        if (!l.length) { return 'aucun moment'; }
+        return ref.filter(pr => l.indexOf(pr.slug) >= 0).map(pr => pr.nom || pr.slug).join(' · '); })(),
       set: k => e => this.plMwPatch({ [k]: e.target.value }),
       // Ce que l'assistant s'apprête à créer, en toutes lettres : on valide ce
       // qu'on a compris, pas un formulaire qu'on a rempli de mémoire.
@@ -2761,6 +2847,11 @@ class App {
         { k: 'Zone', v: zone ? zone.nom : '—' },
         { k: 'Température', v: w.temperature || '—' },
         { k: 'Présentation', v: w.presentation || '—' },
+        { k: 'Moments de la journée', v: (() => { const ref = r.periodes || [];
+          const l = (w.periodes || []);
+          if (!ref.length || l.length === ref.length) { return 'toute la journée'; }
+          if (!l.length) { return 'aucun — le meuble ne serait monté à aucune heure'; }
+          return ref.filter(pr => l.indexOf(pr.slug) >= 0).map(pr => pr.nom || pr.slug).join(', '); })() },
         { k: 'Niveaux', v: nNiveaux + ' (' + listeNiv.join(', ') + ')' },
         { k: 'Emplacements', v: nSlots ? (nSlots + ' par niveau, soit ' + (nSlots * nNiveaux) + ' au total')
           : 'aucun pour l’instant' },
@@ -2826,6 +2917,7 @@ class App {
     this.plMwPatch({ busy: true, err: '' });
     write(this.source, 'POST', '/planogramme/meuble', {
       nom, parentId: w.zoneId, type: w.type, temperature: w.temperature, presentation: w.presentation,
+      periodes: w.periodes || [],
       longueurMm: ent(lu('plmw-lon', w.longueur)), largeurMm: ent(lu('plmw-lar', w.largeur)),
       hauteurMm: ent(lu('plmw-hau', w.hauteur)),
       capacite: ent(lu('plmw-cap', w.capacite)),
