@@ -1323,8 +1323,14 @@ function tplEncodage(c, x){
         </tr></thead>
         <tbody>
           ${c.encCats.map(cat => `
-            <tr><td colspan="10" style="padding:14px 0 6px">
+            <!-- L'ordre des catégories EST la lecture du compte de résultat :
+                 il se change ici, à la souris ou aux flèches. Une catégorie
+                 emporte ses postes et les étapes qui s'y rattachent. -->
+            <tr draggable="true" ${x.DS(cat.prendre)} ${x.DP(cat.deposer)}><td colspan="10" style="padding:14px 0 6px;cursor:grab">
               <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                <span title="Glissez pour réordonner" style="color:var(--color-text-muted);font-size:12px;line-height:1;letter-spacing:1px">⠿</span>
+                <button ${x.A(cat.monter)} title="Remonter cette catégorie" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:${cat.monter ? 'var(--color-text-muted)' : 'var(--color-border-tertiary)'};border-radius:6px;width:22px;height:22px;font-size:11px;cursor:${cat.monter ? 'pointer' : 'not-allowed'};padding:0;line-height:1">↑</button>
+                <button ${x.A(cat.descendre)} title="Descendre cette catégorie" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:${cat.descendre ? 'var(--color-text-muted)' : 'var(--color-border-tertiary)'};border-radius:6px;width:22px;height:22px;font-size:11px;cursor:${cat.descendre ? 'pointer' : 'not-allowed'};padding:0;line-height:1">↓</button>
                 <input value="${esc(cat.nom)}" ${x.C(cat.renommer)} style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:2px 0;min-width:180px">
                 <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA · ${esc(cat.totalE)}</span>
                 <button ${x.A(cat.ajouter)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">+ poste</button>
@@ -1336,6 +1342,8 @@ function tplEncodage(c, x){
               <td style="padding:7px 10px 7px 0">
                 <span style="display:inline-flex;align-items:center;gap:8px;width:100%"><span class="levier-dot" data-lev="${ch.lev}"></span>
                 <input value="${esc(ch.nom)}" title="${esc(ch.nom)}" ${x.C(ch.setNom)} placeholder="Libellé du poste" style="flex:1;min-width:0;border:0.5px solid transparent;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;padding:5px 6px;border-radius:6px">
+                <button ${x.A(ch.monter)} title="Remonter ce poste dans sa catégorie" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:10px;cursor:pointer;padding:0 1px;line-height:1">↑</button>
+                <button ${x.A(ch.descendre)} title="Descendre ce poste dans sa catégorie" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:10px;cursor:pointer;padding:0 1px;line-height:1">↓</button>
                 <button ${x.A(ch.retirer)} title="Retirer ce poste" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button></span>
               </td>
               <td style="padding:5px 6px"><input value="${esc(ch.description)}" title="${esc(ch.description)}" ${x.C(ch.setDesc)} placeholder="—" style="width:100%;box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>

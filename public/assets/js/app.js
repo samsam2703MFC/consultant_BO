@@ -1403,10 +1403,53 @@ class App {
         ecart: (ec >= 0 ? '+' : '−') + pc(Math.abs(ec)).replace(' %', ' pt'),
         ecartSt: 'padding:9px 0 9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (Math.abs(ec) < 0.05 ? 'var(--color-text-muted)' : ec > 0 ? '#8D1D2C' : '#2d7a3e'),
         retirer: () => { const l = lignes.slice(); l.splice(i, 1); poseLignes(l); },
+        monter: bougePoste(i, -1), descendre: bougePoste(i, 1),
       };
     };
+    // --- remonter, descendre, déplacer.
+    //
+    // L'ordre des catégories EST la lecture du compte de résultat : le coût
+    // matière avant la marge brute, l'occupation après. On le change donc dans
+    // l'écran, par blocs — une catégorie emporte ses postes, et les étapes
+    // ancrées sur elle suivent puisqu'elles se rattachent par son nom.
+    const blocs = () => ordre.map(cat => ({ cat, items: lignes.filter(c3 => (c3.categorie || 'Sans catégorie') === cat) }));
+    const reposeBlocs = bs => poseLignes(bs.reduce((a, b2) => a.concat(b2.items), []));
+    const bougeCat = (cat, dir) => () => {
+      const bs = blocs();
+      const i = bs.findIndex(b2 => b2.cat === cat);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= bs.length) { return; }
+      const t = bs[i]; bs[i] = bs[j]; bs[j] = t;
+      reposeBlocs(bs);
+    };
+    const deposeCat = cat => e => {
+      e.preventDefault();
+      const pris = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
+      if (!pris || pris === cat) { return; }
+      const bs = blocs();
+      const i = bs.findIndex(b2 => b2.cat === pris);
+      const j = bs.findIndex(b2 => b2.cat === cat);
+      if (i < 0 || j < 0) { return; }
+      const [b3] = bs.splice(i, 1);
+      bs.splice(j, 0, b3);
+      reposeBlocs(bs);
+      this.notify('« ' + pris + ' » déplacée avant « ' + cat + ' »');
+    };
+    // Un poste se déplace DANS sa catégorie : le sortir de son groupe par une
+    // flèche serait un geste qu'on ferait sans le vouloir.
+    const bougePoste = (i, dir) => () => {
+      const cat = (lignes[i] || {}).categorie || 'Sans catégorie';
+      const idx = lignes.map((c3, k) => ({ c3, k })).filter(o => (o.c3.categorie || 'Sans catégorie') === cat).map(o => o.k);
+      const pos = idx.indexOf(i);
+      const cible = idx[pos + dir];
+      if (pos < 0 || cible == null) { return; }
+      const l = lignes.slice();
+      const t = l[i]; l[i] = l[cible]; l[cible] = t;
+      poseLignes(l);
+    };
+
     const sommeCat = {};
-    const catsBrut = ordre.map(cat => {
+    const catsBrut = ordre.map((cat, iCat) => {
       const rows = parCat[cat].map(ligneVals);
       const somme = rows.reduce((a, r) => a + num(r.valeur), 0);
       const sommeT = rows.reduce((a, r) => a + num(r.valeurT), 0);
@@ -1415,6 +1458,10 @@ class App {
         renommer: e => { const nv = e.target.value; const l = lignes.map(c3 =>
             (c3.categorie || 'Sans catégorie') === cat ? Object.assign({}, c3, { categorie: nv }) : c3);
           poseLignes(l); },
+        monter: iCat > 0 ? bougeCat(cat, -1) : null,
+        descendre: iCat < ordre.length - 1 ? bougeCat(cat, 1) : null,
+        prendre: e => { try { e.dataTransfer.setData('text/plain', cat); e.dataTransfer.effectAllowed = 'move'; } catch (e2) { /* navigateur sans DnD */ } },
+        deposer: deposeCat(cat),
         ajouter: common.encLigneAdd(cat) };
     });
 
