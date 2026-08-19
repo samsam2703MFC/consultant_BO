@@ -678,7 +678,13 @@ function wr_param_put(string $key): array
                 if (!is_array($l)) { continue; }
                 $poste = mb_substr(trim((string) ($l['poste'] ?? '')), 0, 120);
                 if ($poste === '') { continue; }
+                // Un identifiant STABLE par poste : les montants encodés chaque
+                // mois s'y rattachent, et renommer « Énergie » en « Fluides »
+                // ne doit pas décrocher douze mois de saisie.
+                $id = preg_replace('/[^a-z0-9]+/', '', strtolower((string) ($l['id'] ?? '')));
+                if ($id === '') { $id = 'p' . bin2hex(random_bytes(4)); }
                 $lignes[] = [
+                    'id' => $id,
                     'poste' => $poste,
                     'description' => mb_substr(trim((string) ($l['description'] ?? '')), 0, 200),
                     'gestion' => mb_substr(trim((string) ($l['gestion'] ?? '')), 0, 120),
@@ -1418,4 +1424,42 @@ function wr_fonds_royalties_generer(): array
         'month' => (string) ($b['month'] ?? ''),
         'kinds' => is_array($b['kinds'] ?? null) ? $b['kinds'] : [],
     ]), 'redevances');
+}
+
+/**
+ * PUT /stores/{id}/charges?exercice=…&mois=… — les charges du mois.
+ *
+ * Les charges s'encodent chaque mois : un montant par poste, pour ce
+ * magasin-là. Un montant vide EFFACE la case au lieu d'écrire zéro — « pas
+ * encore encodé » et « rien dépensé » ne sont pas la même nouvelle, et l'écran
+ * de suivi doit pouvoir les distinguer.
+ */
+function wr_shop_charges(string $shopId): array
+{
+    $shop = Db::row('SELECT name FROM ceo_shop WHERE id = ?', [$shopId]);
+    if ($shop === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $exercice = (int) ($_GET['exercice'] ?? date('Y'));
+    $mois = (int) ($_GET['mois'] ?? 0);
+    if ($mois < 1 || $mois > 12) { http_response_code(422); return ['error' => 'mois attendu entre 1 et 12']; }
+
+    $b = body();
+    $postes = is_array($b['postes'] ?? null) ? $b['postes'] : [];
+    $ecrits = 0; $effaces = 0;
+    foreach ($postes as $id => $montant) {
+        $id = preg_replace('/[^a-z0-9]+/', '', strtolower((string) $id));
+        if ($id === '') { continue; }
+        if ($montant === null || $montant === '') {
+            Db::exec('DELETE FROM ceo_shop_charge_month WHERE shop_id = ? AND fiscal_year = ? AND month = ? AND poste_id = ?',
+                [$shopId, $exercice, $mois, $id]);
+            $effaces++;
+            continue;
+        }
+        Db::exec('INSERT INTO ceo_shop_charge_month (shop_id, fiscal_year, month, poste_id, amount)
+                  VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE amount = VALUES(amount)',
+            [$shopId, $exercice, $mois, $id, (float) $montant]);
+        $ecrits++;
+    }
+    journalAdd('CEO', 'Budget', $shop['name'], 'Charges encodées — ' . $exercice . '/' . str_pad((string) $mois, 2, '0', STR_PAD_LEFT)
+        . ' : ' . $ecrits . ' poste(s)' . ($effaces ? ', ' . $effaces . ' effacé(s)' : ''));
+    return ['ok' => true, 'ecrits' => $ecrits, 'effaces' => $effaces];
 }

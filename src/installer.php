@@ -137,6 +137,20 @@ function ensurePlanogramme(): void
         catch (PDOException $e) { /* colonne déjà présente */ }
     }
 
+    // Les charges s'encodent CHAQUE MOIS, magasin par magasin : le modèle donne
+    // le taux attendu, cette table garde ce qui a réellement été dépensé. Sans
+    // elle, l'écran de suivi ne pouvait que recalculer un pourcentage — il
+    // affichait « frais encodés » ce qui n'était qu'une projection.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_charge_month ('
+        . 'shop_id VARCHAR(40) NOT NULL,'
+        . 'fiscal_year SMALLINT UNSIGNED NOT NULL,'
+        . 'month TINYINT UNSIGNED NOT NULL,'
+        . 'poste_id VARCHAR(40) NOT NULL,'
+        . 'amount DECIMAL(12,2) NOT NULL,'
+        . 'encoded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,'
+        . 'PRIMARY KEY (shop_id, fiscal_year, month, poste_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
     // Le modèle de charges du réseau : un RÉGLAGE, pas du code. Les taux sont
     // ceux du modèle économique de l'enseigne ; un magasin les reprend puis les
     // ajuste. Les comptes PCMN sont laissés VIDES : inventer un numéro de

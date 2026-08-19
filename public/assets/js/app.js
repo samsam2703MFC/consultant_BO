@@ -1146,20 +1146,42 @@ class App {
     common.bTotBud = fn(budgetAnC); common.bTotReel = fn(reelC);
 
     const chDefs = (bud.charges || []);
+    // Ce qui a été ENCODÉ pour ce mois, s'il l'a été. À défaut, la projection
+    // du taux sur le chiffre d'affaires — mais l'écran doit dire laquelle des
+    // deux il montre : « frais encodés » sur une projection était un titre qui
+    // mentait.
+    const encDe = (b2, i, id) => (((b2 || {}).chargesMois || {})[String(i + 1)] || {})[id];
+    let nEnc = 0, nProj = 0;
     const monthCharge = (d, i) => {
       if (scope === 'reseau'){
         let v = null;
         perStore.forEach(x2 => { const r = x2.P[i]; if (r.ca == null) return;
-          v = (v || 0) + r.ca * (d.champReel ? r[d.champReel] : d.pctBudget) / 100; });
+          const b2 = (D.budgets || []).find(z => z.storeId === x2.id);
+          const e = d.id ? encDe(b2, i, d.id) : undefined;
+          if (e != null) { v = (v || 0) + e; nEnc++; }
+          else { v = (v || 0) + r.ca * (d.champReel ? r[d.champReel] : d.pctBudget) / 100; nProj++; }
+        });
         return v;
       }
-      const r = P[i]; return r.ca == null ? null : r.ca * (d.champReel ? r[d.champReel] : d.pctBudget) / 100;
+      const e = d.id ? encDe(bud, i, d.id) : undefined;
+      if (e != null) { nEnc++; return e; }
+      const r = P[i];
+      if (r.ca == null) { return null; }
+      nProj++;
+      return r.ca * (d.champReel ? r[d.champReel] : d.pctBudget) / 100;
     };
     // Le détail des groupes de frais est REPLIÉ par défaut : neuf lignes de
     // douze mois passent avant le total et la marge, qui sont ce qu'on vient
     // lire. On l'ouvre quand on cherche d'où vient un écart.
     common.bChOuvert = !!S.bChOuvert;
     common.bChToggle = () => this.setState({ bChOuvert: !S.bChOuvert });
+    // Compté APRÈS la construction des lignes : on dit combien de cases sont
+    // encodées et combien restent projetées, pour qu'aucun chiffre ne se fasse
+    // passer pour un relevé.
+    common.bChSource = () => nEnc === 0
+      ? 'Aucune charge encodée sur la période : les montants sont projetés depuis le taux du modèle appliqué au CA réel.'
+      : (nProj === 0 ? 'Tous les montants viennent des charges encodées mois par mois.'
+        : nEnc + ' case(s) encodée(s), ' + nProj + ' projetée(s) depuis le taux du modèle — les secondes sont une estimation, pas un relevé.');
     common.bChRows = chDefs.map(d => {
       let tot = 0, totCa = 0;
       const cells = Pc.map((r, i) => { const v = monthCharge(d, i);
@@ -1326,6 +1348,7 @@ class App {
     const depuisModele = () => {
       const l = [];
       modele.forEach(cat => (cat.lignes || []).forEach(x => l.push({
+        id: x.id || '',
         categorie: cat.nom || '', poste: x.poste || '', description: x.description || '',
         gestion: x.gestion || '', pcmn: x.pcmn || '', levier: '',
         pctBudget: x.pct != null ? x.pct : 0,
@@ -1357,7 +1380,7 @@ class App {
         const nom = c3.categorie || 'Sans catégorie';
         let cat = cats.find(z => z.nom === nom);
         if (!cat) { cat = { nom, lignes: [] }; cats.push(cat); }
-        cat.lignes.push({ poste: c3.poste || '', description: c3.description || '',
+        cat.lignes.push({ id: c3.id || '', poste: c3.poste || '', description: c3.description || '',
           gestion: c3.gestion || '', pcmn: c3.pcmn || '',
           pct: num(val('ch' + i, c3.pctBudget)),
           pctTheo: num(val('cht' + i, c3.pctTheorique != null ? c3.pctTheorique : c3.pctBudget)) });
@@ -1560,6 +1583,71 @@ class App {
     common.encMargeT = theoTot ? this.fE(theoTot * mgPctT / 100) : '—';
     common.encMargePctT = theoTot ? pc(mgPctT) + ' du CA théorique' : 'CA théorique non renseigné';
     common.encAlerte = pctTot > 100 ? 'La somme des charges validées dépasse 100 % du CA : le budget est déficitaire.' : false;
+
+    // --- les charges du MOIS : ce qui est réellement sorti, poste par poste.
+    //
+    // Le modèle donne le taux attendu ; il ne dit pas ce qui a été dépensé. Les
+    // charges s'encodent donc chaque mois, magasin par magasin, et c'est cette
+    // saisie que le suivi compare au budget — un pourcentage appliqué au CA
+    // n'est pas un relevé, c'est une projection.
+    const moisIdx = (() => { const m2 = +String(val('chMois', '')) || 0;
+      if (m2 >= 1 && m2 <= 12) { return m2; }
+      // Par défaut le dernier mois qui a du réel : c'est celui qu'on encode.
+      let d2 = 1; P.forEach((r, i) => { if (r.ca != null && r.ca > 0) { d2 = i + 1; } });
+      return d2; })();
+    common.encChMois = String(moisIdx);
+    common.encChMoisOpts = M.MOIS.map((nom, i) => ({ v: String(i + 1), nom: nom + ' ' + this.meta.exercice,
+      on: i + 1 === moisIdx }));
+    common.setEncChMois = set('chMois');
+    const encodees = ((bud.chargesMois || {})[String(moisIdx)]) || {};
+    const caMoisReel = (P[moisIdx - 1] || {}).ca;
+    const caMoisBud = num(val('ca' + (moisIdx - 1), (P[moisIdx - 1] || {}).caT != null ? Math.round((P[moisIdx - 1] || {}).caT) : ''));
+    common.encChCaMois = caMoisReel != null ? this.fE(caMoisReel) : '—';
+    common.encChCaMoisBud = caMoisBud ? this.fE(caMoisBud) : '—';
+    let chSaisi = 0, chAttendu = 0, nSaisis = 0;
+    common.encChLignes = common.encCharges.map(c3 => {
+      const src = lignes[c3.i] || {};
+      const id = src.id || '';
+      const brut = d['chm' + moisIdx + ':' + id];
+      const enc = brut != null ? brut : (encodees[id] != null ? String(encodees[id]) : '');
+      const attendu = (caMoisReel != null ? caMoisReel : caMoisBud) * num(c3.valeur) / 100;
+      chAttendu += attendu;
+      if (String(enc).trim() !== '') { chSaisi += num(enc); nSaisis++; }
+      const ec = String(enc).trim() === '' ? null : num(enc) - attendu;
+      return { id, nom: c3.nom, categorie: src.categorie || '', pct: c3.valeur,
+        valeur: enc, set: set('chm' + moisIdx + ':' + id),
+        attendu: attendu ? this.fE(attendu) : '—',
+        // Sans saisie, pas d'écart : une case vide n'est pas un dépassement.
+        ecart: ec == null ? '—' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
+        ecartCol: ec == null ? 'var(--color-text-muted)' : (ec > 0 ? '#8D1D2C' : '#2d7a3e'),
+        manque: String(enc).trim() === '' };
+    });
+    common.encChSansId = common.encChLignes.some(l => !l.id);
+    common.encChTotSaisi = this.fE(chSaisi);
+    common.encChTotAttendu = this.fE(chAttendu);
+    common.encChNSaisis = nSaisis + ' / ' + common.encChLignes.length + ' poste(s) encodé(s)';
+    common.encChPct = caMoisReel ? pc(100 * chSaisi / caMoisReel) + ' du CA réel du mois' : 'CA réel du mois non connu';
+    common.encChSave = () => {
+      if (common.encChSansId) {
+        this.notify('Enregistrez d’abord le modèle réseau : les postes ont besoin de leur identifiant.');
+        return;
+      }
+      const postes = {};
+      common.encChLignes.forEach(l => { postes[l.id] = String(l.valeur).trim() === '' ? null : num(l.valeur); });
+      this.api('PUT', '/stores/' + st.id + '/charges?exercice=' + this.meta.exercice + '&mois=' + moisIdx, { postes })
+        .then(r => {
+          if (!r || r.ok === false) { return; }
+          this.notify('Charges de ' + M.MOIS[moisIdx - 1] + ' enregistrées — ' + st.nom);
+          this.log('Budget', st.nom, 'Charges encodées pour ' + M.MOIS[moisIdx - 1] + ' ' + this.meta.exercice);
+          return readOne('/stores/budgets?exercice=' + this.meta.exercice).then(bs => {
+            if (bs) { this.D.budgets = bs; }
+            // On relâche la saisie du mois : l'écran repart de la base.
+            this.setState(s2 => { const dd = Object.assign({}, (s2.encDraft || {})[st.id] || {});
+              Object.keys(dd).forEach(k => { if (k.indexOf('chm' + moisIdx + ':') === 0) { delete dd[k]; } });
+              return { encDraft: Object.assign({}, s2.encDraft, { [st.id]: dd }) }; });
+          });
+        });
+    };
 
     common.encReset = () => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: {} }) }));
     common.encSave = () => {

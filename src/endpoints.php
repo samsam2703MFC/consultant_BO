@@ -3128,6 +3128,7 @@ function ep_budgets(): array
         foreach ((array) ($modele['categories'] ?? []) as $cat) {
             foreach ((array) ($cat['lignes'] ?? []) as $l) {
                 $charges[] = [
+                    'id' => (string) ($l['id'] ?? ''),
                     'poste' => (string) ($l['poste'] ?? ''), 'levier' => '',
                     'categorie' => (string) ($cat['nom'] ?? ''),
                     'description' => (string) ($l['description'] ?? ''),
@@ -3172,6 +3173,9 @@ function ep_budgets(): array
                 'annexe' => $b['etude_annexe'] !== null ? json_decode($b['etude_annexe'], true) : null,
             ],
             'charges' => $charges,
+            // Ce qui a été RÉELLEMENT encodé, mois par mois et poste par poste.
+            // Le modèle dit ce qui est attendu ; ceci dit ce qui est sorti.
+            'chargesMois' => chargesEncodees($sid, $exercice),
         ];
     }
     // Le modèle de charges du réseau, joint à la lecture : un magasin qui n'a
@@ -3183,6 +3187,25 @@ function ep_budgets(): array
         // Les étapes intermédiaires voyagent avec le modèle : sans elles,
         // l'écran ne saurait pas où poser « marge brute ».
         $out[0]['paliers'] = is_array($mod) && isset($mod['paliers']) ? $mod['paliers'] : [];
+    }
+    return $out;
+}
+
+/**
+ * Les charges encodées d'un magasin, par mois et par poste.
+ *
+ * Rendu en table indexée `mois => poste => montant` : l'écran interroge un
+ * couple, il ne parcourt pas une liste de cent lignes pour trouver la case
+ * qu'il affiche.
+ */
+function chargesEncodees(string $shopId, int $exercice): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT month, poste_id, amount FROM ceo_shop_charge_month
+                       WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]) as $r) {
+        $m = (string) (int) $r['month'];
+        if (!isset($out[$m])) { $out[$m] = []; }
+        $out[$m][(string) $r['poste_id']] = (float) $r['amount'];
     }
     return $out;
 }
