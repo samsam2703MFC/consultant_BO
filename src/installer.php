@@ -182,18 +182,22 @@ function ensurePlanogramme(): void
     // montants encodés chaque mois n'auraient rien à quoi se rattacher, et
     // l'écran demanderait de réenregistrer le modèle avant de pouvoir saisir.
     $cfgCh = setting('budgetCharges');
-    if (is_array($cfgCh) && isset($cfgCh['categories'])) {
+    if (is_array($cfgCh) && isset($cfgCh['categories']) && is_array($cfgCh['categories'])) {
+        // Par INDEX, pas par référence : `foreach ($x['lignes'] ?? [] as &$l)`
+        // itère sur une copie temporaire et n'écrit nulle part — le réglage
+        // repartait identique, sans erreur, et les postes restaient sans
+        // identifiant.
         $touche = false;
-        foreach ($cfgCh['categories'] as &$catRef) {
-            foreach (($catRef['lignes'] ?? []) as &$ligRef) {
-                if (!isset($ligRef['id']) || $ligRef['id'] === '') {
-                    $ligRef['id'] = 'p' . bin2hex(random_bytes(4));
+        foreach (array_keys($cfgCh['categories']) as $ci) {
+            $lignes = $cfgCh['categories'][$ci]['lignes'] ?? [];
+            if (!is_array($lignes)) { continue; }
+            foreach (array_keys($lignes) as $li) {
+                if (($lignes[$li]['id'] ?? '') === '') {
+                    $cfgCh['categories'][$ci]['lignes'][$li]['id'] = 'p' . bin2hex(random_bytes(4));
                     $touche = true;
                 }
             }
-            unset($ligRef);
         }
-        unset($catRef);
         if ($touche) {
             Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
                 ['budgetCharges', json_encode($cfgCh, JSON_UNESCAPED_UNICODE)]);
