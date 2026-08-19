@@ -1618,8 +1618,8 @@ class App {
     const cleCh = (idMag, poste) => 'chm' + moisIdx + ':' + idMag + ':' + poste;
 
     let totAttendu = 0, nSaisis = 0, nCases = 0;
-    const totMag = {};
-    magasins.forEach(x2 => { totMag[x2.id] = 0; });
+    const totMag = {}, nMag = {};
+    magasins.forEach(x2 => { totMag[x2.id] = 0; nMag[x2.id] = 0; });
     common.encChLignes = common.encCharges.map(c3 => {
       const src = lignes[c3.i] || {};
       const id = src.id || '';
@@ -1631,7 +1631,7 @@ class App {
         const stock = encDe(x2.id, id);
         const enc = brut != null ? brut : (stock != null ? String(stock) : '');
         nCases++;
-        if (String(enc).trim() !== '') { nSaisis++; totMag[x2.id] += num(enc); }
+        if (String(enc).trim() !== '') { nSaisis++; totMag[x2.id] += num(enc); nMag[x2.id]++; }
         totAttendu += attendu;
         const ec = String(enc).trim() === '' ? null : num(enc) - attendu;
         return { magasin: x2.id, valeur: enc, set: set(cleCh(x2.id, id)),
@@ -1642,10 +1642,15 @@ class App {
       return { id, nom: c3.nom, categorie: src.categorie || '', pct: c3.valeur, cells };
     });
     common.encChSansId = common.encChLignes.some(l => !l.id);
+    // Une colonne sans aucune saisie rend « — », pas « 0 € » : un zéro se
+    // lirait comme « ce magasin n'a rien dépensé ce mois-ci ».
     common.encChTotaux = magasins.map(x2 => { const ca = caMoisDe(x2);
       const base = ca.reel != null ? ca.reel : (ca.budget || 0);
-      return { nom: x2.nom, total: this.fE(totMag[x2.id]),
-        pct: base ? pc(100 * totMag[x2.id] / base) : '—' }; });
+      const vide = nMag[x2.id] === 0;
+      return { nom: x2.nom, total: vide ? '—' : this.fE(totMag[x2.id]),
+        pct: vide ? 'aucune saisie' : (base ? pc(100 * totMag[x2.id] / base) + ' du CA' : '—'),
+        partiel: !vide && nMag[x2.id] < common.encCharges.length
+          ? nMag[x2.id] + ' / ' + common.encCharges.length + ' poste(s)' : '' }; });
     common.encChTotAttendu = this.fE(totAttendu);
     common.encChNSaisis = nSaisis + ' / ' + nCases + ' case(s) encodée(s)';
     common.encChSave = () => {

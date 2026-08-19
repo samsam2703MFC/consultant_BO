@@ -1418,7 +1418,7 @@ function tplEncodage(c, x){
             <tr style="border-top:0.5px solid var(--color-border-secondary)">
               <td style="padding:10px 10px 10px 0;font-weight:500">Total du mois</td>
               <td style="padding:10px;text-align:right;color:var(--color-text-muted);white-space:nowrap;font-size:11px">attendu<br>${esc(c.encChTotAttendu)}</td>
-              ${(c.encChTotaux || []).map(t2 => `<td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500">${esc(t2.total)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(t2.pct)} du CA</div></td>`).join('')}
+              ${(c.encChTotaux || []).map(t2 => `<td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500">${esc(t2.total)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(t2.pct)}${t2.partiel ? ' · ' + esc(t2.partiel) : ''}</div></td>`).join('')}
             </tr>
           </tbody>
         </table>
