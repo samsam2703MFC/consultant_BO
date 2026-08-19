@@ -178,6 +178,28 @@ function ensurePlanogramme(): void
             ]], JSON_UNESCAPED_UNICODE)]);
     }
 
+    // Les postes déjà enregistrés reçoivent leur identifiant : sans lui, les
+    // montants encodés chaque mois n'auraient rien à quoi se rattacher, et
+    // l'écran demanderait de réenregistrer le modèle avant de pouvoir saisir.
+    $cfgCh = setting('budgetCharges');
+    if (is_array($cfgCh) && isset($cfgCh['categories'])) {
+        $touche = false;
+        foreach ($cfgCh['categories'] as &$catRef) {
+            foreach (($catRef['lignes'] ?? []) as &$ligRef) {
+                if (!isset($ligRef['id']) || $ligRef['id'] === '') {
+                    $ligRef['id'] = 'p' . bin2hex(random_bytes(4));
+                    $touche = true;
+                }
+            }
+            unset($ligRef);
+        }
+        unset($catRef);
+        if ($touche) {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['budgetCharges', json_encode($cfgCh, JSON_UNESCAPED_UNICODE)]);
+        }
+    }
+
     // Un meuble n'est pas qu'un nom : sa température décide de ce qu'on peut y
     // poser, son mode de présentation et les dimensions d'un emplacement
     // décident de ce qui y tient. Ajoutés après coup, d'où l'ALTER.
