@@ -4734,30 +4734,49 @@ class App {
           + (nCom ? ' · ' + nCom + ' reporté(s) dans le commentaire' : ''));
       });
   }
+  /**
+   * Le niveau déduit des repères posés sur la photo.
+   *
+   * Le plus SÉVÈRE l'emporte : un repère critique et trois mineurs font une
+   * tâche critique, jamais l'inverse. C'est la seule agrégation défendable —
+   * une moyenne dirait « conforme » d'une photo qui porte un manquement grave.
+   * Rend `null` s'il n'y a aucun repère : on ne devine pas une note sans
+   * matière.
+   */
+  ctrlNoteDeduite(rep){
+    const l = (rep || []).map(r => +r.niveau).filter(n => isFinite(n) && n > 0);
+    return l.length ? Math.min.apply(null, l) : null;
+  }
   ctrlSendNote(){
     const dt = this.state.ctrlDet;
-    if (!dt || !dt.note) { this.notify('Choisissez un niveau de conformité.'); return; }
+    if (!dt) { return; }
+    // La note posée à la main prime ; à défaut, celle que disent les repères.
+    const deduite = this.ctrlNoteDeduite(dt.rep);
+    const note = dt.note || deduite;
+    if (!note) { this.notify('Choisissez un niveau de conformité, ou posez des repères sur la photo.'); return; }
     // Sous le seuil, le commentaire est obligatoire : une non-conformité sans
     // motif est ininterprétable un mois plus tard.
     const seuil = (this.M.SIGNAL && this.M.SIGNAL.seuil) || 4;
-    if (dt.note < seuil && !String(dt.comment || '').trim()) {
+    if (note < seuil && !String(dt.comment || '').trim()) {
       this.notify('Commentaire obligatoire pour une non-conformité.'); return;
     }
     const d = dt.d || {};
-    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true, envoye: false }) }));
+    this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
     write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
-      note: dt.note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
+      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
       .then(() => {
         // La modale RESTE ouverte : on la fermait d'office, et comme la
         // fermeture attendait le rechargement complet de la journée (4 à 5 s
         // sur /pwa/tasks), l'écran semblait se fermer tout seul, longtemps
         // après le clic. La note est posée, on le dit, et c'est l'utilisateur
         // qui referme.
-        this.ctrlPatchLigne(dt);
-        this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet,
-          { envoi: false, envoye: true, envoyeTxt: 'Note ' + dt.note + '/5 enregistrée et envoyée au panel.' }) }));
-        // La journée se recharge EN FOND : la liste dessous se met à jour sans
-        // que la modale n'attende.
+        // La fenêtre se referme une fois la note partie, sans attendre le
+        // rechargement de la journée : c'est ce qui la faisait disparaître
+        // quatre secondes trop tard, comme d'elle-même. La ligne prend la note
+        // tout de suite, la journée se recharge derrière.
+        this.ctrlPatchLigne(Object.assign({}, dt, { note }));
+        this.setState({ ctrlDet: null });
+        this.notify('Note ' + note + '/5 enregistrée' + (dt.note ? '' : ' — niveau déduit des repères'));
         readOne('/pwa/tasks?date=' + encodeURIComponent(dt.date))
           .then(pt => { if (pt) { this.D.pwaTasks = pt; this.setState({}); } })
           .catch(() => {});
@@ -4906,25 +4925,38 @@ class App {
         // Barème des cinq niveaux — le MÊME référentiel que l'écran de
         // validation (réglage `signalement`), jamais une échelle d'étoiles
         // muette : « majeur » doit vouloir dire la même chose partout.
-        niveaux: ((M.SIGNAL || {}).niveaux || []).map(lv => { const on = dt.note === lv.n;
+        // Le niveau déduit des repères : proposé, montré, jamais imposé en
+        // silence. Le plus sévère l'emporte — un repère critique et trois
+        // mineurs font une tâche critique.
+        niveauDeduit: (() => { const n2 = this.ctrlNoteDeduite(dt.rep);
+          if (dt.note || n2 == null) { return ''; }
+          const lv = ((M.SIGNAL || {}).niveaux || []).find(z => z.n === n2) || {};
+          return lv.nom || (n2 + '/5'); })(),
+        niveauDeduitCol: (() => { const n2 = this.ctrlNoteDeduite(dt.rep);
+          const lv = ((M.SIGNAL || {}).niveaux || []).find(z => z.n === n2) || {};
+          return lv.couleur || 'var(--color-text-muted)'; })(),
+        niveaux: ((M.SIGNAL || {}).niveaux || []).map(lv => {
+          const deduit = !dt.note && this.ctrlNoteDeduite(dt.rep) === lv.n;
+          const on = dt.note === lv.n || deduit;
           return { n: lv.n, nom: lv.nom, aide: lv.aide || '',
             conforme: lv.n >= ((M.SIGNAL || {}).seuil || 4),
+            deduit,
             st: 'display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;'
               + 'font-family:var(--font-ui);font-size:12.5px;padding:9px 12px;border-radius:9px;margin-bottom:6px;'
-              + (on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '14;font-weight:600;color:var(--color-text)'
+              + (on ? 'border:' + (deduit ? '1px dashed ' : '1px solid ') + lv.couleur + ';background:' + lv.couleur + '14;font-weight:600;color:var(--color-text)'
                     : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text)'),
             dotSt: 'width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:' + lv.couleur,
             pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: lv.n }) })) }; }),
-        verdict: dt.note == null ? '' : (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'Conforme' : 'Non conforme'),
+        verdict: (() => { const n2 = dt.note || this.ctrlNoteDeduite(dt.rep);
+          return n2 == null ? '' : (n2 >= ((M.SIGNAL || {}).seuil || 4) ? 'Conforme' : 'Non conforme'); })(),
         verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
           + (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
-        commentRequis: dt.note != null && dt.note < ((M.SIGNAL || {}).seuil || 4),
+        commentRequis: (dt.note || this.ctrlNoteDeduite(dt.rep) || 99) < ((M.SIGNAL || {}).seuil || 4),
         produit: d.produit || '', photoRef: d.photoRef || null,
         photoRefTxt: d.produitId ? (d.photoRef ? '' : 'Fiche technique sans visuel pour ce produit.')
           : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
         setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
         send: () => this.ctrlSendNote(),
-        envoye: !!dt.envoye, envoyeTxt: dt.envoyeTxt || '',
         close: () => this.setState({ ctrlDet: null }),
         peutNoter: !dt.chargement && (d.api ? d.api.configure !== false : true),
         // --- assistance IA : proposition, jamais décision

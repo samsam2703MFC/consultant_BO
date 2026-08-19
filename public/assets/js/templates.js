@@ -3320,18 +3320,21 @@ function tplCtrlDetail(c, x){
         <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'}">Votre évaluation</div>
         ${d.verdict ? `<span style="${d.verdictSt}">${esc(d.verdict)}</span>` : ''}
       </div>
+      ${d.niveauDeduit ? `<div style="display:flex;gap:8px;align-items:flex-start;margin:2px 0 9px;font-size:11.5px;line-height:1.5;color:var(--color-text-muted)">
+        <span style="width:9px;height:9px;border-radius:2px;background:${d.niveauDeduitCol};flex:0 0 auto;margin-top:4px"></span>
+        <div>Déduit des repères : <span style="font-weight:600;color:var(--color-text)">${esc(d.niveauDeduit)}</span> — le plus sévère l’emporte. Choisissez un niveau pour le remplacer.</div>
+      </div>` : ''}
       ${d.niveaux.map(lv => `
         <button ${x.A(lv.pick)} style="${lv.st}">
           <span style="${lv.dotSt}"></span>
-          <span style="flex:1">${esc(lv.nom)}</span>
+          <span style="flex:1">${esc(lv.nom)}${lv.deduit ? ' <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)">— déduit</span>' : ''}</span>
           ${lv.aide ? `<span style="font-size:11px;color:var(--color-text-muted);font-weight:400">${esc(lv.aide)}</span>` : ''}
         </button>`).join('')}
       <textarea ${x.C(d.setComment)} rows="4" placeholder="${d.commentRequis ? 'Commentaire obligatoire pour une non-conformité' : 'Commentaire (facultatif)'}" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:13px;border:0.5px solid ${d.commentRequis && !d.comment ? '#8D1D2C' : 'var(--color-border-secondary)'};border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
       ${d.erreur ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(d.erreur)}</div>` : ''}
-      ${d.envoye ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(45,122,62,0.10);color:#2d7a3e;font-size:12px;font-weight:500">${esc(d.envoyeTxt)} La fenêtre reste ouverte — fermez-la quand vous avez fini.</div>` : ''}
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
         <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
-        ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : (d.envoye ? 'Renvoyer la note' : 'Envoyer la note')}</button>` : ''}
+        ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
     </div>
