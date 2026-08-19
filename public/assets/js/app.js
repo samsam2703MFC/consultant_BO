@@ -559,6 +559,9 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
+      mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
+      mktTypes: ['Types de campagne', 'Le référentiel des types : libellé, levier proposé, KPI attendu. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
@@ -878,7 +881,11 @@ class App {
     const navDef = [
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
-        ['exploitation', 'P&L magasins', 0]]],
+        ['exploitation', 'P&L magasins', 0],
+        // Repris du module marketing autonome, qui disparaît : le cockpit lit
+        // et écrit les tables mar_* directement, comme il le fait pour pla_*.
+        ['mktCalendrier', 'Calendrier marketing', 0],
+        ['mktCampagnes', 'Campagnes', 0]]],
       ['Performance magasins', [
         ['magasins', 'Tableau des magasins', 0],
         ['heatmap', 'Heatmap mensuelle', 0],
@@ -928,7 +935,8 @@ class App {
       ['Administration', [
         ['diagnostic', 'Diagnostic API', 0],
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
-          ['caReglages', 'Centrale d’achat', 0], ['journal', 'Journal', 0]] }]]];
+          ['caReglages', 'Centrale d’achat', 0], ['mktTypes', 'Types de campagne', 0],
+          ['journal', 'Journal', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
@@ -945,9 +953,10 @@ class App {
 
     this.valsRecherche(common, navDef, goTo, titles);
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1083,6 +1092,7 @@ class App {
     // n'aurait aucun emplacement à proposer.
     if (common.isPlano || this.state.plFiche) { this.plCharge(); this.valsPlano(common); }
     if (common.isFonds) this.valsFonds(common);
+    if (common.isMktCal || common.isMktCamp || common.isMktTypes) this.valsMkt(common);
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isCentrale) this.valsCentrale(common);
@@ -2505,6 +2515,37 @@ class App {
       this.D.fraicheur = f || {}; this.setState({}); });
   }
   valsDiag(common){
+    // --- nettoyage du module marketing : montrer la liste AVANT d'exécuter.
+    // La suppression est une action explicite de cet écran, jamais un effet
+    // de bord du déploiement.
+    const S0 = this.state;
+    if (!this.D.marNet && !this._marNetEnCours) {
+      this._marNetEnCours = true;
+      readOne('/admin/marketing-nettoyage').then(n2 => { this._marNetEnCours = false;
+        this.D.marNet = n2 || { indispo: true }; this.setState({}); });
+    }
+    const mn = this.D.marNet;
+    common.marNet = !mn ? { chargement: true } : {
+      chargement: false,
+      indispo: !!mn.indispo,
+      garde: mn.garde || [], tombe: mn.tombe || [],
+      dejaFait: mn.dejaFait ? (mn.dejaFait.supprimees || []).length + ' objet(s) supprimés le '
+        + String(mn.dejaFait.fait || '').slice(0, 10) : '',
+      busy: !!S0.marNetBusy,
+      executer: (mn.tombe || []).length ? () => {
+        const n3 = mn.tombe.length;
+        if (!window.confirm('Supprimer DÉFINITIVEMENT ' + n3 + ' table(s)/vue(s) du module marketing ?\n\n'
+          + mn.tombe.map(t => t.nom).join(', ') + '\n\nLes données qu’elles portent seront perdues.')) { return; }
+        this.setState({ marNetBusy: true });
+        this.api('POST', '/admin/marketing-nettoyage', { confirmer: true }).then(r => {
+          this.setState({ marNetBusy: false });
+          if (!r || r.ok === false) { return; }
+          this.notify((r.supprimees || []).length + ' objet(s) supprimé(s) — journalisé');
+          this.D.marNet = null; this.setState({});
+        });
+      } : null,
+    };
+
     this.lacunes(); this.fraicheur();
     const F = this.D.fraicheur || null;
     common.frResume = F && F.resume ? F.resume : '';
@@ -2831,6 +2872,152 @@ class App {
 
     // --- redevances : ce que la version déployée du module ne sert pas encore.
     common.foManque = (f.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source }));
+  }
+
+  /* --- campagnes marketing : calendrier, liste, types ------------------------ */
+
+  /**
+   * Les trois écrans repris du module marketing.
+   *
+   * Un seul chargement (`/marketing`) sert le calendrier, la liste et le
+   * référentiel des types : ce sont trois lectures des mêmes campagnes.
+   */
+  valsMkt(common){
+    const S = this.state, D = this.D;
+    if (!D.mkt && !this._mktEnCours) {
+      this._mktEnCours = true;
+      readOne('/marketing').then(m2 => { this._mktEnCours = false;
+        this.D.mkt = m2 || { indispo: true, raison: 'lecture impossible' }; this.setState({}); });
+    }
+    const mk = D.mkt;
+    common.mkChargement = !mk;
+    if (!mk) { return; }
+    common.mkIndispo = !!mk.indispo;
+    common.mkRaison = mk.raison || '';
+    if (mk.indispo) { return; }
+    const camps = mk.campagnes || [];
+    const recharge = () => { this.D.mkt = null; this.setState({}); };
+
+    // --- calendrier : une ligne par campagne, une barre sur ses mois.
+    const annee = S.mkAnnee || new Date((camps[0] || {}).debut || this.M.TODAY).getFullYear();
+    common.mkAnnee = String(annee);
+    common.mkAnneePrec = () => this.setState({ mkAnnee: annee - 1 });
+    common.mkAnneeSuiv = () => this.setState({ mkAnnee: annee + 1 });
+    common.mkMois = (this.M.MOIS || []);
+    common.mkCalLignes = camps
+      .filter(c2 => c2.debut && c2.fin)
+      .filter(c2 => +String(c2.debut).slice(0, 4) <= annee && +String(c2.fin).slice(0, 4) >= annee)
+      .map(c2 => {
+        const d0 = new Date(c2.debut + 'T00:00:00'), f0 = new Date(c2.fin + 'T00:00:00');
+        const m1 = d0.getFullYear() < annee ? 0 : d0.getMonth();
+        const m2 = f0.getFullYear() > annee ? 11 : f0.getMonth();
+        return { id: c2.id, nom: c2.nom, type: c2.type || '—',
+          couleur: c2.typeCouleur || '#8D1D2C',
+          statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
+          debut: this.fD(c2.debut), fin: this.fD(c2.fin),
+          col1: m1 + 1, col2: m2 + 2,
+          ouvrir: () => this.setState({ mkEdit: this.mkVersForm(c2) }) };
+      });
+    common.mkCalVide = !common.mkCalLignes.length;
+
+    // --- liste des campagnes.
+    common.mkCampagnes = camps.map(c2 => ({
+      id: c2.id, nom: c2.nom, type: c2.type || '—', typeCouleur: c2.typeCouleur || '#666',
+      scope: c2.scope === 'LOCALE' ? 'Locale' : 'Réseau',
+      statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
+      periode: (c2.debut ? this.fD(c2.debut) : '—') + ' → ' + (c2.fin ? this.fD(c2.fin) : '—'),
+      budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '—',
+      nBoutiques: c2.nBoutiques,
+      editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
+      supprimer: () => {
+        if (!window.confirm('Supprimer définitivement la campagne « ' + c2.nom + ' » ?')) { return; }
+        this.api('DELETE', '/marketing/campagne/' + c2.id).then(r => {
+          if (r && r.ok === false) { return; }
+          this.notify('Campagne supprimée'); recharge();
+        });
+      },
+    }));
+    common.mkVide = !camps.length;
+    common.mkNouvelle = () => this.setState({ mkEdit: { id: null, nom: '', typeId: '',
+      scope: 'RESEAU', statut: 'draft', debut: this.M.TODAY, fin: this.dansNJours(30), budget: '' } });
+
+    // --- formulaire (création et correction, même carte).
+    const ed = S.mkEdit;
+    const patch = pl => this.setState(s2 => ({ mkEdit: Object.assign({}, s2.mkEdit, pl) }));
+    common.mkEdit = !ed ? null : {
+      id: ed.id, titre: ed.id ? 'Corriger la campagne' : 'Nouvelle campagne',
+      nom: ed.nom, setNom: e => patch({ nom: e.target.value }),
+      types: (mk.types || []).filter(t => t.actif || String(t.id) === String(ed.typeId))
+        .map(t => ({ id: String(t.id), nom: t.nom, on: String(t.id) === String(ed.typeId) })),
+      setType: e => patch({ typeId: e.target.value }),
+      statuts: (mk.statuts || []).map(st => ({ code: st.code, nom: st.nom, on: st.code === ed.statut,
+        pick: () => patch({ statut: st.code }) })),
+      scopes: [['RESEAU', 'Réseau'], ['LOCALE', 'Locale']].map(([v, nom]) => ({ v, nom, on: ed.scope === v,
+        pick: () => patch({ scope: v }) })),
+      debut: ed.debut || '', setDebut: e => patch({ debut: e.target.value }),
+      fin: ed.fin || '', setFin: e => patch({ fin: e.target.value }),
+      budget: ed.budget, setBudget: e => patch({ budget: e.target.value }),
+      busy: !!ed.busy, err: ed.err || '',
+      fermer: () => this.setState({ mkEdit: null }),
+      envoyer: () => {
+        const f2 = this.state.mkEdit || {};
+        if (!String(f2.nom || '').trim()) { patch({ err: 'Le nom de la campagne est requis.' }); return; }
+        patch({ busy: true, err: '' });
+        const corps = { nom: String(f2.nom).trim(), typeId: f2.typeId || null, scope: f2.scope,
+          statut: f2.statut, debut: f2.debut || '', fin: f2.fin || '',
+          budget: parseFloat(String(f2.budget || '0').replace(',', '.')) || 0 };
+        this.api(f2.id ? 'PATCH' : 'POST', '/marketing/campagne' + (f2.id ? '/' + f2.id : ''), corps)
+          .then(r => {
+            if (!r || r.ok === false) { patch({ busy: false, err: (r && r.error) || 'refusé' }); return; }
+            this.setState({ mkEdit: null });
+            this.notify(f2.id ? 'Campagne corrigée' : 'Campagne créée');
+            this.log('Campagne', corps.nom, f2.id ? 'Corrigée depuis le pilotage' : 'Créée depuis le pilotage');
+            recharge();
+          });
+      },
+    };
+
+    // --- référentiel des types (Paramètres).
+    common.mkTypes = (mk.types || []).map(t => ({
+      id: t.id, nom: t.nom, levier: t.levier || '', kpi: t.kpi || '',
+      couleur: t.couleur || '#8D1D2C', actif: t.actif, nCampagnes: t.nCampagnes,
+      renommer: e => this.api('PATCH', '/marketing/type/' + t.id, { nom: e.target.value }).then(recharge),
+      setLevier: e => this.api('PATCH', '/marketing/type/' + t.id, { levier: e.target.value }).then(recharge),
+      setKpi: e => this.api('PATCH', '/marketing/type/' + t.id, { kpi: e.target.value }).then(recharge),
+      basculer: () => this.api('PATCH', '/marketing/type/' + t.id, { actif: !t.actif }).then(r => {
+        if (r && r.ok === false) { return; }
+        this.notify(t.actif ? '« ' + t.nom + ' » désactivé' : '« ' + t.nom + ' » réactivé'); recharge(); }),
+      supprimer: () => {
+        if (!window.confirm(t.nCampagnes
+          ? t.nCampagnes + ' campagne(s) portent « ' + t.nom + ' » : il sera DÉSACTIVÉ, pas effacé. Continuer ?'
+          : 'Supprimer le type « ' + t.nom + ' » ?')) { return; }
+        this.api('DELETE', '/marketing/type/' + t.id).then(r => {
+          if (r && r.ok === false) { return; }
+          this.notify(r.desactive ? 'Type désactivé — l’historique garde son étiquette' : 'Type supprimé');
+          recharge(); });
+      },
+    }));
+    const nt = S.mkTypeNeuf || null;
+    common.mkTypeNouveau = () => this.setState({ mkTypeNeuf: { nom: '', levier: '', kpi: '' } });
+    common.mkTypeNeuf = !nt ? null : {
+      nom: nt.nom, setNom: e => this.setState(s2 => ({ mkTypeNeuf: Object.assign({}, s2.mkTypeNeuf, { nom: e.target.value }) })),
+      levier: nt.levier, setLevier: e => this.setState(s2 => ({ mkTypeNeuf: Object.assign({}, s2.mkTypeNeuf, { levier: e.target.value }) })),
+      kpi: nt.kpi, setKpi: e => this.setState(s2 => ({ mkTypeNeuf: Object.assign({}, s2.mkTypeNeuf, { kpi: e.target.value }) })),
+      fermer: () => this.setState({ mkTypeNeuf: null }),
+      envoyer: () => {
+        const f3 = this.state.mkTypeNeuf || {};
+        if (!String(f3.nom || '').trim()) { this.notify('Donnez un libellé au type.'); return; }
+        this.api('POST', '/marketing/type', { nom: f3.nom, levier: f3.levier, kpi: f3.kpi }).then(r => {
+          if (!r || r.ok === false) { return; }
+          this.setState({ mkTypeNeuf: null }); this.notify('Type créé'); recharge(); });
+      },
+    };
+  }
+  /** La campagne telle que le formulaire la mange. */
+  mkVersForm(c2){
+    return { id: c2.id, nom: c2.nom, typeId: c2.typeId ? String(c2.typeId) : '',
+      scope: c2.scope, statut: c2.statut, debut: c2.debut || '', fin: c2.fin || '',
+      budget: c2.budget ? String(c2.budget) : '' };
   }
 
   /* --- fonds : écrire depuis le pilotage réseau ------------------------------ */

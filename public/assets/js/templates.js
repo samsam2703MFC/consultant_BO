@@ -117,6 +117,9 @@ export function render(c, x){
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isSeuil ? tplSeuil(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
+      ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
+      ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
+      ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -1836,6 +1839,176 @@ function tplEncPalier(p, x){
     <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${esc(p.montantR)}</td>
     <td style="padding:9px 0 9px 6px"></td>
   </tr>`;
+}
+
+/* --- Campagnes marketing · les trois écrans repris du module ----------------- */
+
+/** Le bandeau commun quand les tables mar_* manquent ou chargent. */
+function tplMktGarde(c){
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  if (c.mkChargement) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des campagnes…</div>`; }
+  if (c.mkIndispo) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;line-height:1.6"><span style="font-size:10px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0">indisponible</span><div style="margin-top:8px">${c.mkRaison}</div></div>`; }
+  return '';
+}
+
+/** Le formulaire d'une campagne — création et correction, même carte. */
+function tplMktForm(c, x){
+  const { esc } = x;
+  const f = c.mkEdit;
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const puce = b => `<button ${x.A(b.pick)} style="border-radius:999px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
+  return `
+  <div style="background:var(--color-surface);border:1px solid var(--color-primary);border-radius:12px;padding:15px 17px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <span style="font-size:13.5px;font-weight:500">${esc(f.titre)}</span>
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:11px 13px">
+      <div><span style="${k}">Nom</span><input id="mk-nom" value="${esc(f.nom)}" ${x.I(f.setNom)} placeholder="Saint-Nicolas, Rentrée…" style="${inp}"></div>
+      <div><span style="${k}">Type</span><select ${x.C(f.setType)} style="${inp}">
+        <option value=""${f.types.some(t => t.on) ? '' : ' selected'}>— sans type —</option>
+        ${f.types.map(t => `<option value="${esc(t.id)}"${t.on ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select></div>
+      <div><span style="${k}">Budget (€)</span><input id="mk-bud" value="${esc(String(f.budget))}" ${x.I(f.setBudget)} inputmode="decimal" placeholder="0" style="${inp};text-align:right"></div>
+      <div><span style="${k}">Du</span><input type="date" value="${esc(f.debut)}" ${x.C(f.setDebut)} style="${inp}"></div>
+      <div><span style="${k}">Au</span><input type="date" value="${esc(f.fin)}" ${x.C(f.setFin)} style="${inp}"></div>
+      <div><span style="${k}">Périmètre</span><div style="display:flex;gap:6px;padding-top:2px">${f.scopes.map(puce).join('')}</div></div>
+    </div>
+    <div style="margin-top:11px"><span style="${k}">Statut</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${f.statuts.map(puce).join('')}</div></div>
+    ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(f.err)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:13px">
+      <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:33px;padding:0 15px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:33px;padding:0 18px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger' : 'Créer la campagne')}</button>
+    </div>
+  </div>`;
+}
+
+function tplMktCalendrier(c, x){
+  const { esc } = x;
+  const garde = tplMktGarde(c);
+  if (garde) { return garde; }
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  return `
+  <div data-screen="mktcal" style="display:flex;flex-direction:column;gap:14px">
+    ${c.mkEdit ? tplMktForm(c, x) : ''}
+    <div style="${carte};overflow:hidden">
+      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <span style="font-size:13px;font-weight:500">Calendrier ${esc(c.mkAnnee)}</span>
+        <button ${x.A(c.mkAnneePrec)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:7px;width:26px;height:26px;cursor:pointer;color:var(--color-text)">‹</button>
+        <button ${x.A(c.mkAnneeSuiv)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:7px;width:26px;height:26px;cursor:pointer;color:var(--color-text)">›</button>
+        <div style="flex:1"></div>
+        <span style="font-size:11px;color:var(--color-text-muted)">Cliquez une barre pour corriger la campagne</span>
+      </div>
+      ${c.mkCalVide ? `<div style="padding:24px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucune campagne datée sur ${esc(c.mkAnnee)}.</div>` : `
+      <div style="overflow-x:auto;padding:14px 17px">
+        <div style="display:grid;grid-template-columns:210px repeat(12,minmax(52px,1fr));gap:3px 0;min-width:880px">
+          <div></div>
+          ${c.mkMois.map(m2 => `<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);text-align:center;padding-bottom:7px;border-bottom:0.5px solid var(--color-border-tertiary)">${esc(m2)}</div>`).join('')}
+          ${c.mkCalLignes.map(l => `
+            <div style="padding:9px 10px 9px 0;font-size:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.nom)}">${esc(l.nom)}</div>
+              <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.type)} · ${esc(l.debut)} → ${esc(l.fin)}</div>
+            </div>
+            <div style="grid-column:2 / span 12;display:grid;grid-template-columns:repeat(12,1fr);align-items:center;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <button ${x.A(l.ouvrir)} title="${esc(l.nom)} — ${esc(l.statutNom)}" style="grid-column:${l.col1} / ${l.col2};height:22px;border:none;border-radius:999px;cursor:pointer;background:${l.couleur}33;border-left:4px solid ${l.couleur};display:flex;align-items:center;padding:0 9px;overflow:hidden">
+                <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;background:${l.statutFond};color:${l.statutTexte};white-space:nowrap">${esc(l.statutNom)}</span>
+              </button>
+            </div>`).join('')}
+        </div>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+function tplMktCampagnes(c, x){
+  const { esc } = x;
+  const garde = tplMktGarde(c);
+  if (garde) { return garde; }
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 10px 7px';
+  const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
+  return `
+  <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:flex-end">
+      <button ${x.A(c.mkNouvelle)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle campagne</button>
+    </div>
+    ${c.mkEdit ? tplMktForm(c, x) : ''}
+    <div style="${carte};overflow:hidden">
+      ${c.mkVide ? `<div style="padding:24px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucune campagne. Créez la première — elle apparaîtra aussi au calendrier.</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:820px">
+        <thead><tr>
+          <th style="${th};padding-left:17px">Campagne</th><th style="${th}">Type</th>
+          <th style="${th}">Périmètre</th><th style="${th}">Statut</th><th style="${th}">Période</th>
+          <th style="${th};text-align:right">Budget</th><th style="${th};text-align:right">Dépensé</th>
+          <th style="${th};text-align:right">Boutiques</th><th style="${th};padding-right:17px"></th>
+        </tr></thead>
+        <tbody>${c.mkCampagnes.map(l => `<tr>
+          <td style="${td};padding-left:17px"><button ${x.A(l.editer)} class="hv-line" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left">${esc(l.nom)}</button></td>
+          <td style="${td}"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:${l.typeCouleur}"></span>${esc(l.type)}</span></td>
+          <td style="${td};color:var(--color-text-muted)">${esc(l.scope)}</td>
+          <td style="${td}"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:${l.statutFond};color:${l.statutTexte}">${esc(l.statutNom)}</span></td>
+          <td style="${td};white-space:nowrap;color:var(--color-text-muted)">${esc(l.periode)}</td>
+          <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(l.budget)}</td>
+          <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.depense)}</td>
+          <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || '—'}</td>
+          <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
+            <button ${x.A(l.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>
+            <button ${x.A(l.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>`}
+    </div>
+  </div>`;
+}
+
+function tplMktTypes(c, x){
+  const { esc } = x;
+  const garde = tplMktGarde(c);
+  if (garde) { return garde; }
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const inp = 'box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text);border-radius:7px;padding:5px 7px;font-family:var(--font-ui);font-size:12px;width:100%';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
+  return `
+  <div data-screen="mkttypes" style="display:flex;flex-direction:column;gap:14px">
+    <div style="${carte};padding:15px 17px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500">Types de campagne</span>
+        <button ${x.A(c.mkTypeNouveau)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:31px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau type</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">Chaque type pré-remplit le levier et le KPI attendu à la création d’une campagne. Un type porté par des campagnes se désactive — l’historique garde son étiquette.</div>
+      ${c.mkTypeNeuf ? `<div style="border:1px solid var(--color-primary);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div><span style="${k}">Libellé</span><input id="mkt-nom" value="${esc(c.mkTypeNeuf.nom)}" ${x.I(c.mkTypeNeuf.setNom)} placeholder="Ouverture, Fidélité…" style="${inp};border-color:var(--color-border-secondary)"></div>
+          <div><span style="${k}">Levier proposé</span><input id="mkt-lev" value="${esc(c.mkTypeNeuf.levier)}" ${x.I(c.mkTypeNeuf.setLevier)} placeholder="Trafic / notoriété" style="${inp};border-color:var(--color-border-secondary)"></div>
+          <div><span style="${k}">KPI attendu</span><input id="mkt-kpi" value="${esc(c.mkTypeNeuf.kpi)}" ${x.I(c.mkTypeNeuf.setKpi)} placeholder="Nouveaux clients, tickets/jour" style="${inp};border-color:var(--color-border-secondary)"></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+          <button ${x.A(c.mkTypeNeuf.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
+          <button ${x.A(c.mkTypeNeuf.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Créer le type</button>
+        </div>
+      </div>` : ''}
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px">
+        <thead><tr>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px 0">Type</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px">Levier proposé</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px">KPI attendu</th>
+          <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px">Campagnes</th>
+          <th style="padding:0 0 7px"></th>
+        </tr></thead>
+        <tbody>${c.mkTypes.map(t => `<tr style="border-top:0.5px solid var(--color-border-tertiary);${t.actif ? '' : 'opacity:.5'}">
+          <td style="padding:6px 8px 6px 0"><span style="display:inline-flex;align-items:center;gap:7px;width:100%"><span style="width:9px;height:9px;border-radius:3px;background:${t.couleur};flex:0 0 auto"></span><input value="${esc(t.nom)}" ${x.C(t.renommer)} style="${inp}"></span></td>
+          <td style="padding:6px 8px"><input value="${esc(t.levier)}" ${x.C(t.setLevier)} placeholder="—" style="${inp}"></td>
+          <td style="padding:6px 8px"><input value="${esc(t.kpi)}" ${x.C(t.setKpi)} placeholder="—" style="${inp}"></td>
+          <td style="padding:6px 8px;text-align:right;font-size:12px;color:var(--color-text-muted)">${t.nCampagnes || '—'}</td>
+          <td style="padding:6px 0;text-align:right;white-space:nowrap">
+            <button ${x.A(t.basculer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">${t.actif ? 'Désactiver' : 'Réactiver'}</button>
+            <button ${x.A(t.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:3px">✕</button>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
 }
 
 /* --- Fonds · écrire une ligne du grand livre ---------------------------------
@@ -4385,6 +4558,23 @@ function tplDiagnostic(c, x){
   const MONO = 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px';
 
   return `
+  <!-- Nettoyage du module marketing : la liste exacte AVANT le geste, et le
+       geste ne part que sur confirmation. Un DROP ne se rejoue pas. -->
+  ${c.marNet && !c.marNet.chargement && !c.marNet.indispo ? `
+  <div style="${CARD};margin-bottom:16px;border:1px solid ${c.marNet.tombe.length ? 'rgba(141,29,44,0.4)' : 'var(--color-border-tertiary)'}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:600">Nettoyage du module marketing</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5">
+          Gardées : ${c.marNet.garde.length} table(s) — campagnes (mar_campaign*), fonds &amp; redevances (mar_fund*, mar_royalt*), référentiels (mar_brand, mar_shop, mar_lever).
+          ${c.marNet.dejaFait ? ' Déjà fait : ' + esc(c.marNet.dejaFait) + '.' : ''}
+        </div>
+      </div>
+      ${c.marNet.executer ? `<button ${x.A(c.marNet.executer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:34px;padding:0 17px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.marNet.busy ? 'wait' : 'pointer'}">${c.marNet.busy ? 'Suppression…' : 'Supprimer ' + c.marNet.tombe.length + ' table(s) inutilisée(s)'}</button>`
+        : `<span style="font-size:12px;color:#2d7a3e;font-weight:500">Rien à supprimer — la base ne porte que le nécessaire.</span>`}
+    </div>
+    ${c.marNet.tombe.length ? `<div style="margin-top:10px;font-size:11px;color:var(--color-text-muted);line-height:1.6">Tomberaient : ${c.marNet.tombe.map(t => `<span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:1px 7px;margin:1px 3px 1px 0;font-family:ui-monospace,Menlo,monospace;font-size:10.5px">${esc(t.nom)}${t.lignes ? ' · ' + t.lignes + ' l.' : ''}</span>`).join('')}</div>` : ''}
+  </div>` : ''}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
     <div style="${CARD}">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">À réclamer à l’API</div>

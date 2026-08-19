@@ -1379,37 +1379,132 @@ function fondsRendu(array $r, string $quoi): array
         'reponse' => $r['corps']];
 }
 
+/**
+ * Lecture commune des champs d'un mouvement, validée comme le module le
+ * faisait : sens IN/OUT, montant strictement positif, date réelle, libellé.
+ */
+function fondsMouvementLit(array $b): array
+{
+    $dir = strtoupper(trim((string) ($b['direction'] ?? '')));
+    if (!in_array($dir, ['IN', 'OUT'], true)) { throw new RuntimeException('sens du mouvement inconnu : attendu IN ou OUT'); }
+    $montant = (float) ($b['amount'] ?? 0);
+    if ($montant <= 0) { throw new RuntimeException('le montant doit être strictement positif'); }
+    $date = trim((string) ($b['movement_date'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { throw new RuntimeException('date attendue au format AAAA-MM-JJ'); }
+    $label = mb_substr(trim((string) ($b['label'] ?? '')), 0, 300);
+    if ($label === '') { throw new RuntimeException('le libellé du mouvement est obligatoire'); }
+    $sources = ['ROYALTY', 'REMISE_FOURNISSEUR', 'AGENCE', 'PRODUCTION', 'MEDIA', 'AUTRE'];
+    $source = strtoupper(trim((string) ($b['source'] ?? 'AUTRE')));
+    if (!in_array($source, $sources, true)) { $source = 'AUTRE'; }
+    return ['direction' => $dir, 'amount' => $montant, 'movement_date' => $date, 'label' => $label,
+        'source' => $source,
+        'shop_id' => ($b['shop_id'] ?? null) ? (int) $b['shop_id'] : null,
+        'campaign_id' => ($b['campaign_id'] ?? null) ? (int) $b['campaign_id'] : null,
+        'lever_id' => ($b['lever_id'] ?? null) ? (int) $b['lever_id'] : null,
+        'supplier_name' => mb_substr(trim((string) ($b['supplier_name'] ?? '')), 0, 160) ?: null,
+        'document_ref' => mb_substr(trim((string) ($b['document_ref'] ?? '')), 0, 120) ?: null];
+}
+
 /** POST /fonds/mouvement — ou PATCH quand un identifiant est donné. */
 function wr_fonds_mouvement(?int $id): array
 {
-    $b = fondsChamps(body());
+    $b = body();
     fournisseurAssure($b['supplier_name'] ?? null);
+    try { $v = fondsMouvementLit($b); }
+    catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
+
     if ($id === null) {
-        return fondsRendu(marketingAppel('POST', '/funds/movements', $b), 'mouvement');
+        Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, campaign_id, lever_id, movement_date, label, amount, source, supplier_name, document_ref)
+                  VALUES (?,?,?,?,?,?,?,?,?,?)', [
+            $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['movement_date'],
+            $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'],
+        ]);
+        $nid = (int) Db::pdo()->lastInsertId();
+        journalAdd('CEO', 'Fonds', $v['label'], ($v['direction'] === 'IN' ? 'Alimentation' : 'Dépense')
+            . ' de ' . number_format($v['amount'], 2, ',', ' ') . ' € écrite au fonds');
+        return ['ok' => true, 'id' => $nid, 'inserted_id' => $nid];
     }
-    return fondsRendu(marketingAppel('PATCH', '/funds/movements/' . $id, $b), 'mouvement');
+    $dej = Db::row('SELECT label, recurrence_id FROM mar_fund_movement WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
+    // Une échéance née d'un frais récurrent se corrige sur son modèle : la
+    // corriger ici la ferait diverger des autres sans que rien ne le dise.
+    if ($dej['recurrence_id'] !== null) {
+        http_response_code(409);
+        return ['error' => 'cette écriture vient d’un frais récurrent — corrigez le frais, pas l’échéance'];
+    }
+    Db::exec('UPDATE mar_fund_movement SET direction = ?, shop_id = ?, campaign_id = ?, lever_id = ?,
+              movement_date = ?, label = ?, amount = ?, source = ?, supplier_name = ?, document_ref = ?
+              WHERE id = ?', [
+        $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['movement_date'],
+        $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'], $id,
+    ]);
+    journalAdd('CEO', 'Fonds', $v['label'], 'Écriture ' . $id . ' corrigée');
+    return ['ok' => true, 'id' => $id];
 }
 
 function wr_fonds_mouvement_suppr(int $id): array
 {
-    return fondsRendu(marketingAppel('DELETE', '/funds/movements/' . $id), 'mouvement');
+    $dej = Db::row('SELECT label FROM mar_fund_movement WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'mouvement introuvable']; }
+    Db::exec('DELETE FROM mar_fund_movement WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Fonds', $dej['label'], 'Écriture ' . $id . ' supprimée du grand livre');
+    return ['ok' => true];
 }
 
-/** POST /fonds/recurrence — un frais qui revient, écrit en autant d'échéances. */
+/**
+ * POST /fonds/recurrence — un frais qui revient, écrit en autant d'échéances.
+ *
+ * Le modèle ET ses échéances s'écrivent d'un coup, comme le module le
+ * faisait ; la suppression du modèle emporte les échéances (FK en CASCADE).
+ */
 function wr_fonds_recurrence(): array
 {
     $b = body();
-    $p = fondsChamps($b);
-    fournisseurAssure($p['supplier_name'] ?? null);
-    foreach (['frequency', 'starts_on', 'ends_on'] as $k) {
-        if (array_key_exists($k, $b)) { $p[$k] = $b[$k] === '' ? null : $b[$k]; }
+    fournisseurAssure($b['supplier_name'] ?? null);
+    try { $v = fondsMouvementLit(array_merge($b, ['movement_date' => $b['starts_on'] ?? ''])); }
+    catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
+    $freq = (string) ($b['frequency'] ?? '');
+    if (!in_array($freq, ['month', 'quarter', 'year'], true)) {
+        http_response_code(422); return ['error' => 'fréquence inconnue : month, quarter ou year'];
     }
-    return fondsRendu(marketingAppel('POST', '/funds/recurrences', $p), 'récurrence');
+    $fin = trim((string) ($b['ends_on'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fin) || $fin < $v['movement_date']) {
+        http_response_code(422); return ['error' => 'un frais récurrent est borné : donnez une fin postérieure au début'];
+    }
+
+    Db::exec('INSERT INTO mar_fund_recurrence (direction, frequency, label, amount, starts_on, ends_on, shop_id, campaign_id, lever_id, source, supplier_name, document_ref)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [
+        $v['direction'], $freq, $v['label'], $v['amount'], $v['movement_date'], $fin,
+        $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['source'], $v['supplier_name'], $v['document_ref'],
+    ]);
+    $rid = (int) Db::pdo()->lastInsertId();
+
+    $pas = ['month' => '+1 month', 'quarter' => '+3 months', 'year' => '+1 year'][$freq];
+    $d = new DateTimeImmutable($v['movement_date']);
+    $limite = new DateTimeImmutable($fin);
+    $n = 0;
+    while ($d <= $limite && $n < 120) {
+        Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, campaign_id, lever_id, movement_date, label, amount, source, supplier_name, document_ref, recurrence_id)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?)', [
+            $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $d->format('Y-m-d'),
+            $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'], $rid,
+        ]);
+        $n++;
+        $d = $d->modify($pas);
+    }
+    journalAdd('CEO', 'Fonds', $v['label'], 'Frais récurrent créé — ' . $n . ' échéance(s), '
+        . number_format($v['amount'] * $n, 2, ',', ' ') . ' € au total');
+    return ['ok' => true, 'inserted_id' => $rid, 'occurrences' => $n, 'total_amount' => $v['amount'] * $n];
 }
 
 function wr_fonds_recurrence_suppr(int $id): array
 {
-    return fondsRendu(marketingAppel('DELETE', '/funds/recurrences/' . $id), 'récurrence');
+    $dej = Db::row('SELECT label FROM mar_fund_recurrence WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'frais récurrent introuvable']; }
+    // La FK est en CASCADE : les échéances écrites partent avec le modèle.
+    Db::exec('DELETE FROM mar_fund_recurrence WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Fonds', $dej['label'], 'Frais récurrent supprimé, échéances comprises');
+    return ['ok' => true];
 }
 
 /** PUT /fonds/royalties — taux et chiffres d'affaires du mois, ensemble. */
@@ -1571,4 +1666,221 @@ function wr_consultant_note(): array
     ]);
     journalAdd('CEO', 'Note consultant', $cons['name'], $journal . ' → tâche ' . $tid . ', échéance ' . $due);
     return ['ok' => true, 'comme' => 'tache', 'tacheId' => $tid, 'due' => $due];
+}
+
+/* --- campagnes marketing : le cockpit écrit dans les tables mar_* ------------
+ *
+ * Le module autonome disparaît ; ces écritures reprennent le strict nécessaire
+ * de son assistant — créer, corriger, supprimer une campagne, et tenir le
+ * référentiel des types. Les règles reprises sont celles du module : un statut
+ * doit exister dans mar_campaign_status, les dates restent des dates.
+ */
+
+/** POST /marketing/campagne — ou PATCH /marketing/campagne/{id}. */
+function wr_mkt_campagne(?int $id): array
+{
+    $b = body();
+    $statuts = array_column(Db::rows('SELECT code FROM mar_campaign_status'), 'code');
+    $lit = static function (array $b) use ($statuts): array {
+        $out = [];
+        if (array_key_exists('nom', $b)) {
+            $nom = mb_substr(trim((string) $b['nom']), 0, 200);
+            if ($nom === '') { throw new RuntimeException('le nom de la campagne est requis'); }
+            $out['name'] = $nom;
+        }
+        if (array_key_exists('typeId', $b)) { $out['type_id'] = $b['typeId'] ? (int) $b['typeId'] : null; }
+        if (array_key_exists('scope', $b)) { $out['scope'] = $b['scope'] === 'LOCALE' ? 'LOCALE' : 'RESEAU'; }
+        if (array_key_exists('statut', $b)) {
+            if (!in_array($b['statut'], $statuts, true)) { throw new RuntimeException('statut inconnu : ' . $b['statut']); }
+            $out['status_code'] = $b['statut'];
+        }
+        foreach (['debut' => 'starts_on', 'fin' => 'ends_on'] as $k => $col) {
+            if (!array_key_exists($k, $b)) { continue; }
+            $v = trim((string) $b[$k]);
+            if ($v !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) { throw new RuntimeException($k . ' : date attendue au format AAAA-MM-JJ'); }
+            $out[$col] = $v === '' ? null : $v;
+        }
+        if (array_key_exists('budget', $b)) { $out['budget_amount'] = max(0, (float) $b['budget']); }
+        return $out;
+    };
+
+    try { $vals = $lit($b); }
+    catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
+
+    if ($id === null) {
+        if (!isset($vals['name'])) { http_response_code(422); return ['error' => 'le nom de la campagne est requis']; }
+        $marque = Db::row('SELECT id FROM mar_brand ORDER BY id LIMIT 1');
+        if ($marque === null) { http_response_code(422); return ['error' => 'aucune marque dans mar_brand']; }
+        Db::exec('INSERT INTO mar_campaign (brand_id, type_id, name, scope, status_code, starts_on, ends_on, budget_amount)
+                  VALUES (?,?,?,?,?,?,?,?)', [
+            (int) $marque['id'], $vals['type_id'] ?? null, $vals['name'],
+            $vals['scope'] ?? 'RESEAU', $vals['status_code'] ?? 'draft',
+            $vals['starts_on'] ?? null, $vals['ends_on'] ?? null, $vals['budget_amount'] ?? 0,
+        ]);
+        $nid = (int) Db::pdo()->lastInsertId();
+        journalAdd('CEO', 'Campagne', $vals['name'], 'Campagne créée depuis le pilotage réseau');
+        return ['ok' => true, 'id' => $nid];
+    }
+
+    $dej = Db::row('SELECT name FROM mar_campaign WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    if ($vals === []) { return ['ok' => true, 'id' => $id]; }
+    $set = []; $args = [];
+    foreach ($vals as $col => $v) { $set[] = $col . ' = ?'; $args[] = $v; }
+    $args[] = $id;
+    Db::exec('UPDATE mar_campaign SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    journalAdd('CEO', 'Campagne', $dej['name'], 'Campagne modifiée — ' . implode(', ', array_keys($vals)));
+    return ['ok' => true, 'id' => $id];
+}
+
+/** DELETE /marketing/campagne/{id}. */
+function wr_mkt_campagne_suppr(int $id): array
+{
+    $dej = Db::row('SELECT name FROM mar_campaign WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    // Les campagnes locales greffées dessus seraient orphelines : on refuse,
+    // en le disant, plutôt que de les détacher en silence.
+    $filles = Db::row('SELECT COUNT(*) n FROM mar_campaign WHERE parent_campaign_id = ?', [$id]);
+    if ((int) $filles['n'] > 0) {
+        http_response_code(409);
+        return ['error' => $filles['n'] . ' campagne(s) locale(s) sont greffées sur celle-ci — supprimez-les d’abord'];
+    }
+    Db::exec('DELETE FROM mar_campaign_shop WHERE campaign_id = ?', [$id]);
+    Db::exec('DELETE FROM mar_campaign WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Campagne', $dej['name'], 'Campagne supprimée');
+    return ['ok' => true];
+}
+
+/** POST /marketing/type — ou PATCH /marketing/type/{id}, DELETE. */
+function wr_mkt_type(?int $id): array
+{
+    $b = body();
+    if ($id === null) {
+        $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 120);
+        if ($nom === '') { http_response_code(422); return ['error' => 'le libellé du type est requis']; }
+        $code = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $nom));
+        $code = trim(mb_substr($code, 0, 40), '-') ?: ('type-' . bin2hex(random_bytes(3)));
+        if (Db::row('SELECT id FROM mar_campaign_type WHERE code = ?', [$code]) !== null) {
+            $code = mb_substr($code, 0, 32) . '-' . bin2hex(random_bytes(3));
+        }
+        $rang = Db::row('SELECT COALESCE(MAX(sort_order), 0) + 1 r FROM mar_campaign_type');
+        Db::exec('INSERT INTO mar_campaign_type (code, label, default_lever_code, default_kpi_label, sort_order, is_active)
+                  VALUES (?,?,?,?,?,1)', [
+            $code, $nom,
+            mb_substr(trim((string) ($b['levier'] ?? '')), 0, 60) ?: null,
+            mb_substr(trim((string) ($b['kpi'] ?? '')), 0, 160) ?: null,
+            (int) $rang['r'],
+        ]);
+        journalAdd('CEO', 'Paramètre', $nom, 'Type de campagne créé');
+        return ['ok' => true, 'id' => (int) Db::pdo()->lastInsertId()];
+    }
+    $dej = Db::row('SELECT label FROM mar_campaign_type WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'type inconnu']; }
+    $set = []; $args = [];
+    if (array_key_exists('nom', $b)) { $set[] = 'label = ?'; $args[] = mb_substr(trim((string) $b['nom']), 0, 120); }
+    if (array_key_exists('levier', $b)) { $set[] = 'default_lever_code = ?'; $args[] = mb_substr(trim((string) $b['levier']), 0, 60) ?: null; }
+    if (array_key_exists('kpi', $b)) { $set[] = 'default_kpi_label = ?'; $args[] = mb_substr(trim((string) $b['kpi']), 0, 160) ?: null; }
+    if (array_key_exists('actif', $b)) { $set[] = 'is_active = ?'; $args[] = $b['actif'] ? 1 : 0; }
+    if ($set !== []) {
+        $args[] = $id;
+        Db::exec('UPDATE mar_campaign_type SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    }
+    journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne modifié');
+    return ['ok' => true, 'id' => $id];
+}
+
+function wr_mkt_type_suppr(int $id): array
+{
+    $dej = Db::row('SELECT label FROM mar_campaign_type WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'type inconnu']; }
+    // Un type porté par des campagnes ne disparaît pas : on le désactive, pour
+    // que l'historique garde son étiquette.
+    $n = Db::row('SELECT COUNT(*) n FROM mar_campaign WHERE type_id = ?', [$id]);
+    if ((int) $n['n'] > 0) {
+        Db::exec('UPDATE mar_campaign_type SET is_active = 0 WHERE id = ?', [$id]);
+        journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne désactivé (' . $n['n'] . ' campagne(s) le portent)');
+        return ['ok' => true, 'desactive' => true, 'campagnes' => (int) $n['n']];
+    }
+    Db::exec('DELETE FROM mar_campaign_type WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne supprimé');
+    return ['ok' => true];
+}
+
+/* --- nettoyage du module marketing : une action EXPLICITE --------------------
+ *
+ * Le module autonome est supprimé ; seuls restent au cockpit le Calendrier,
+ * les Campagnes, les Types (mar_campaign*), le Fonds & Royalties (mar_fund*,
+ * mar_royalt*) et leurs référentiels (mar_brand, mar_shop, mar_lever).
+ *
+ * Des DROP en masse ne partent PAS tout seuls au déploiement : l'écran
+ * Diagnostic montre d'abord la liste exacte de ce qui tomberait (GET), et
+ * l'exécution exige une confirmation explicite (POST {confirmer:true}).
+ * Chaque objet supprimé est journalisé — un DROP ne se rejoue pas, la liste
+ * doit pouvoir se relire.
+ */
+
+/** Une table mar_* est-elle nécessaire à ce que le cockpit sert encore ? */
+function marTableGardee(string $t): bool
+{
+    foreach (['mar_brand', 'mar_shop', 'mar_lever'] as $exact) {
+        if ($t === $exact) { return true; }
+    }
+    foreach (['mar_campaign', 'mar_fund', 'mar_royalt'] as $pfx) {
+        if (str_starts_with($t, $pfx)) { return true; }
+    }
+    return false;
+}
+
+/** GET /admin/marketing-nettoyage — ce qui serait gardé, ce qui tomberait. */
+function ep_mar_nettoyage(): array
+{
+    $fait = setting('marNettoyage');
+    try {
+        $objets = Db::rows(
+            "SELECT TABLE_NAME nom, TABLE_TYPE type, TABLE_ROWS lignes FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'mar\\\\_%' ORDER BY TABLE_NAME");
+    } catch (PDOException $e) {
+        return ['indispo' => true, 'raison' => 'information_schema inaccessible'];
+    }
+    $garde = []; $tombe = [];
+    foreach ($objets as $o) {
+        $l = ['nom' => $o['nom'], 'vue' => $o['type'] === 'VIEW',
+            'lignes' => $o['type'] === 'VIEW' ? null : (int) $o['lignes']];
+        if (marTableGardee($o['nom'])) { $garde[] = $l; } else { $tombe[] = $l; }
+    }
+    return ['garde' => $garde, 'tombe' => $tombe, 'dejaFait' => is_array($fait) ? $fait : null];
+}
+
+/** POST /admin/marketing-nettoyage — exécute, sur confirmation explicite. */
+function wr_mar_nettoyage(): array
+{
+    $b = body();
+    if (($b['confirmer'] ?? false) !== true) {
+        http_response_code(422);
+        return ['error' => 'confirmation requise : ces suppressions sont définitives'];
+    }
+    $etat = ep_mar_nettoyage();
+    if (!empty($etat['indispo'])) { http_response_code(500); return ['error' => $etat['raison']]; }
+    $tombees = [];
+    Db::exec('SET FOREIGN_KEY_CHECKS = 0');
+    try {
+        // Les vues d'abord : elles dépendent des tables.
+        foreach ($etat['tombe'] as $o) {
+            if (!$o['vue']) { continue; }
+            Db::exec('DROP VIEW IF EXISTS `' . str_replace('`', '', $o['nom']) . '`');
+            $tombees[] = $o['nom'] . ' (vue)';
+        }
+        foreach ($etat['tombe'] as $o) {
+            if ($o['vue']) { continue; }
+            Db::exec('DROP TABLE IF EXISTS `' . str_replace('`', '', $o['nom']) . '`');
+            $tombees[] = $o['nom'];
+        }
+    } finally {
+        Db::exec('SET FOREIGN_KEY_CHECKS = 1');
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['marNettoyage', json_encode(['fait' => date('c'), 'supprimees' => $tombees], JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Maintenance', null, 'Nettoyage du module marketing : '
+        . count($tombees) . ' objet(s) supprimé(s) — ' . implode(', ', $tombees));
+    return ['ok' => true, 'supprimees' => $tombees];
 }

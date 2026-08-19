@@ -68,6 +68,8 @@ function route(string $method, string $path): mixed
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
+            $path === '/marketing'                     => ep_mkt(),
+            $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
             $path === '/projects'                      => ep_projects(),
             $path === '/projects/crm'                  => ep_crm(),
             $path === '/people'                        => ep_people(),
@@ -133,6 +135,14 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/charges$#', $path, $m)) { return wr_shop_charges($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
+    // --- campagnes marketing (tables mar_*, reprises du module supprimé)
+    if ($method === 'POST' && $path === '/marketing/campagne') { return wr_mkt_campagne(null); }
+    if ($method === 'PATCH' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne_suppr((int) $m[1]); }
+    if ($method === 'POST' && $path === '/marketing/type') { return wr_mkt_type(null); }
+    if ($method === 'PATCH' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type_suppr((int) $m[1]); }
+    if ($method === 'POST' && $path === '/admin/marketing-nettoyage') { return wr_mar_nettoyage(); }
     if ($method === 'PUT' && preg_match('#^/production/produit/([\w-]+)$#', $path, $m)) { return wr_prod_produit($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/planogramme/([\w-]+)$#', $path, $m)) { return wr_prod_planogramme($m[1]); }
     // --- planogramme : structure du comptoir, placements, consignes
