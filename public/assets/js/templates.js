@@ -1810,7 +1810,9 @@ function tplFondsForm(c, x){
       <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
       <div><span style="${k}">Campagne</span>${sel('campagne', f.champs.campagne, c.foCampagnesOpts || [], 'aucune')}</div>
       <div style="grid-column:span 2"><span style="${k}">Fournisseur</span>
-        <input id="fo-four" value="${esc(f.champs.fournisseur)}" ${x.I(f.set('fournisseur'))} placeholder="facultatif" style="${inp}"></div>
+        <input id="fo-four" list="fo-fournisseurs" value="${esc(f.champs.fournisseur)}" ${x.I(f.set('fournisseur'))} placeholder="choisissez ou tapez un nouveau nom" style="${inp}">
+        <datalist id="fo-fournisseurs">${(c.foFournisseurs || []).map(n => `<option value="${esc(n)}"></option>`).join('')}</datalist>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Repris de la centrale d’achat ; un nom inconnu y est ajouté à l’enregistrement.</div></div>
       <div style="grid-column:span 2"><span style="${k}">Pièce</span>
         <input id="fo-piece" value="${esc(f.champs.piece)}" ${x.I(f.set('piece'))} placeholder="n° de facture, bon de commande…" style="${inp}"></div>
     </div>
@@ -1964,14 +1966,20 @@ function tplFonds(c, x){
           <thead><tr>
             <th style="${th};padding-left:17px">Date</th>
             <th style="${th}">Mouvement</th>
-            <th style="${th}">Rattachement</th>
+            <th style="${th}">Levier</th>
+            <th style="${th}">Réseau / boutique</th>
             <th style="${th};${num}">Montant</th>
             <th style="${th};padding-right:17px"></th>
           </tr></thead>
           <tbody>${c.foLignes.map(l => `<tr>
             <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
             <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.sens)}${l.source ? ' · ' + esc(l.source) : ''}</div></td>
-            <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc([l.magasin, l.campagne].filter(Boolean).join(' · ')) || '—'}${l.levier ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</div>` : ''}</td>
+            <td style="${td}">${l.levier
+              ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</span>`
+              : `<span style="font-size:11px;color:var(--color-on-abricot)">aucun levier</span>`}</td>
+            <td style="${td};font-size:11.5px">${l.reseau
+              ? `<span style="font-weight:500">Tout le réseau</span>`
+              : `<span style="font-weight:500">${esc(l.magasin)}</span>`}${l.campagne ? `<div style="color:var(--color-text-muted)">${esc(l.campagne)}</div>` : ''}${l.fournisseur ? `<div style="color:var(--color-text-muted)">${esc(l.fournisseur)}</div>` : ''}</td>
             <td style="${td};${num};color:${l.col};font-weight:500">${esc(l.montant)}</td>
             <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
               ${l.editer ? `<button ${x.A(l.editer)} title="Corriger cette écriture" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>` : ''}

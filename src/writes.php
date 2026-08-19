@@ -1378,6 +1378,7 @@ function fondsRendu(array $r, string $quoi): array
 function wr_fonds_mouvement(?int $id): array
 {
     $b = fondsChamps(body());
+    fournisseurAssure($b['supplier_name'] ?? null);
     if ($id === null) {
         return fondsRendu(marketingAppel('POST', '/funds/movements', $b), 'mouvement');
     }
@@ -1394,6 +1395,7 @@ function wr_fonds_recurrence(): array
 {
     $b = body();
     $p = fondsChamps($b);
+    fournisseurAssure($p['supplier_name'] ?? null);
     foreach (['frequency', 'starts_on', 'ends_on'] as $k) {
         if (array_key_exists($k, $b)) { $p[$k] = $b[$k] === '' ? null : $b[$k]; }
     }
@@ -1424,6 +1426,29 @@ function wr_fonds_royalties_generer(): array
         'month' => (string) ($b['month'] ?? ''),
         'kinds' => is_array($b['kinds'] ?? null) ? $b['kinds'] : [],
     ]), 'redevances');
+}
+
+/**
+ * Le fournisseur nommé dans une écriture rejoint le référentiel.
+ *
+ * On ne crée PAS une seconde table de fournisseurs : c'est `ceo_supplier`, celle
+ * de la centrale d'achat, qui s'enrichit. Taper un nom dans le grand livre le
+ * rend disponible partout ensuite — et évite les dix orthographes du même
+ * fournisseur qu'une saisie libre finit toujours par produire.
+ *
+ * Rapprochement insensible à la casse et aux espaces : « Sodexo » et « sodexo »
+ * sont le même fournisseur.
+ */
+function fournisseurAssure(?string $nom): void
+{
+    $nom = trim((string) $nom);
+    if ($nom === '') { return; }
+    $nom = mb_substr($nom, 0, 160);
+    $dej = Db::row('SELECT id FROM ceo_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
+    if ($dej !== null) { return; }
+    Db::exec('INSERT INTO ceo_supplier (id, name, perimeter, email) VALUES (?,?,?,?)',
+        ['f' . bin2hex(random_bytes(4)), $nom, 'Fonds marketing', null]);
+    journalAdd('CEO', 'Fournisseur', $nom, 'Fournisseur ajouté depuis le grand livre du fonds');
 }
 
 /**

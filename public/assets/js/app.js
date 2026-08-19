@@ -832,17 +832,19 @@ class App {
       // l'autre.
       ['Marque & développement', [
         ['projets', 'Projets de développement', nLate],
-        ['fonds', 'Fonds & Royalties', 0],
-        ['reporting', 'Reporting', 0]]],
+        ['fonds', 'Fonds & Royalties', 0]]],
+      // Le reporting EST un contrôle : il rend compte de ce qui a été fait, au
+      // même endroit que les checklists. Le journal, lui, est une trace
+      // d'administration — il rejoint les paramètres.
       ['Contrôle', [
         { sub: 'Checklists consultants', children: [
           ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
           ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0]] },
-        ['journal', 'Journal', 0]]],
+        ['reporting', 'Reporting automatisé', 0]]],
       ['Administration', [
         ['diagnostic', 'Diagnostic API', 0],
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
-          ['caReglages', 'Centrale d’achat', 0]] }]]];
+          ['caReglages', 'Centrale d’achat', 0], ['journal', 'Journal', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
@@ -2535,6 +2537,11 @@ class App {
           col: sort ? 'var(--color-primary)' : '#2d7a3e',
           source: m.source || '', magasin: m.shop_name || '', campagne: m.campaign_name || '',
           levier: m.lever_label || '', levierCol: m.lever_color_hex || '#666666',
+          // Une écriture sans magasin porte sur TOUT le réseau : le dire en
+          // toutes lettres vaut mieux qu'une case vide qu'on lirait comme un
+          // oubli de saisie.
+          reseau: !m.shop_name,
+          fournisseur: m.supplier_name || '',
           // Une écriture née d'un frais récurrent se corrige sur son modèle,
           // pas ligne à ligne : la corriger ici la ferait réapparaître au
           // prochain passage, à l'ancienne valeur.
@@ -2656,6 +2663,9 @@ class App {
     common.foCampagnesOpts = (f.campagnes || []).map(c2 => ({ id: String(c2.id), nom: c2.name || ('Campagne ' + c2.id) }));
     common.foLeviersOpts = (f.leviers || []).filter(l => l.lever_id != null)
       .map(l => ({ id: String(l.lever_id), nom: l.lever_label || l.lever_code || ('Levier ' + l.lever_id) }));
+    // Fournisseurs : ceux de la centrale d'achat. Le champ reste libre — un
+    // nouveau nom s'y tape et rejoint le référentiel à l'enregistrement.
+    common.foFournisseurs = (f.fournisseurs || []).map(x2 => x2.nom).filter(Boolean);
 
     const vide = (sens) => ({ sens, id: null, date: (this.M && this.M.TODAY) || '',
       libelle: '', montant: '', source: 'AUTRE', magasin: '', campagne: '', levier: '',

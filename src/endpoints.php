@@ -2589,6 +2589,11 @@ function ep_fonds(): array
         return $r['corps'];
     };
 
+    // Le référentiel fournisseurs de la centrale d'achat, joint au fonds : la
+    // saisie propose ce qui existe déjà plutôt que d'ouvrir un champ libre où
+    // le même fournisseur s'écrit de dix façons.
+    $out['fournisseurs'] = array_map(fn ($f) => ['id' => (string) $f['id'], 'nom' => (string) $f['name']],
+        Db::rows('SELECT id, name FROM ceo_supplier ORDER BY name'));
     $out['ledger'] = $lire('/funds/ledger');
     $lev = $lire('/funds/levers');
     $out['leviers'] = is_array($lev) ? $lev : [];
