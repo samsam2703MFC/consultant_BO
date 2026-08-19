@@ -1010,8 +1010,17 @@ function tplBudget(c, x){
             ${c.bLigneReel.map(v => `<td style="padding:9px 6px;text-align:right;white-space:nowrap">${v}</td>`).join('')}
             <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;padding-left:14px;border-left:0.5px solid var(--color-border-tertiary)">${c.bTotReel}</td>
           </tr>
-          <tr><td colspan="14" style="padding:18px 0 8px;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">Groupes de frais encodés — montant, % du CA réel dessous</td></tr>
-          ${c.bChRows.map(ch => `
+          <!-- Replié par défaut : le total et la marge sont ce qu'on vient lire ;
+               le détail des groupes s'ouvre quand on cherche d'où vient un
+               écart. -->
+          <tr><td colspan="14" style="padding:18px 0 8px">
+            <button ${x.A(c.bChToggle)} style="display:inline-flex;align-items:center;gap:8px;border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">
+              <span style="display:inline-block;width:11px;transition:transform 120ms ease;transform:rotate(${c.bChOuvert ? '90' : '0'}deg)">▸</span>
+              Groupes de frais encodés — montant, % du CA réel dessous
+              <span style="text-transform:none;letter-spacing:0;font-weight:400">(${c.bChRows.length} poste${c.bChRows.length > 1 ? 's' : ''}${c.bChOuvert ? '' : ' — replié'})</span>
+            </button>
+          </td></tr>
+          ${!c.bChOuvert ? '' : c.bChRows.map(ch => `
             <tr style="border-top:0.5px solid var(--color-border-tertiary)">
               <td style="padding:9px 10px 9px 0"><span style="display:inline-flex;align-items:center;gap:8px"><span class="levier-dot" data-lev="${ch.lev}"></span>${esc(ch.nom)}</span></td>
               ${ch.cells.map(v => `<td style="${v.st}">${v.txt}<div style="font-size:11px;color:var(--color-text-muted)">${v.pct}</div></td>`).join('')}

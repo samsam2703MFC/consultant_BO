@@ -1155,6 +1155,11 @@ class App {
       }
       const r = P[i]; return r.ca == null ? null : r.ca * (d.champReel ? r[d.champReel] : d.pctBudget) / 100;
     };
+    // Le détail des groupes de frais est REPLIÉ par défaut : neuf lignes de
+    // douze mois passent avant le total et la marge, qui sont ce qu'on vient
+    // lire. On l'ouvre quand on cherche d'où vient un écart.
+    common.bChOuvert = !!S.bChOuvert;
+    common.bChToggle = () => this.setState({ bChOuvert: !S.bChOuvert });
     common.bChRows = chDefs.map(d => {
       let tot = 0, totCa = 0;
       const cells = Pc.map((r, i) => { const v = monthCharge(d, i);
