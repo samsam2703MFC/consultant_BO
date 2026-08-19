@@ -1599,54 +1599,84 @@ class App {
     common.encChMoisOpts = M.MOIS.map((nom, i) => ({ v: String(i + 1), nom: nom + ' ' + this.meta.exercice,
       on: i + 1 === moisIdx }));
     common.setEncChMois = set('chMois');
-    const encodees = ((bud.chargesMois || {})[String(moisIdx)]) || {};
-    const caMoisReel = (P[moisIdx - 1] || {}).ca;
-    const caMoisBud = num(val('ca' + (moisIdx - 1), (P[moisIdx - 1] || {}).caT != null ? Math.round((P[moisIdx - 1] || {}).caT) : ''));
-    common.encChCaMois = caMoisReel != null ? this.fE(caMoisReel) : '—';
-    common.encChCaMoisBud = caMoisBud ? this.fE(caMoisBud) : '—';
-    let chSaisi = 0, chAttendu = 0, nSaisis = 0;
+    // Les charges se saisissent pour TOUS les magasins d'un coup : c'est un
+    // geste mensuel, et ouvrir quatre fois le même écran pour taper quatre
+    // colonnes est le meilleur moyen d'en oublier une. Une colonne par
+    // boutique, une ligne par poste.
+    const magasins = this.open();
+    const caMoisDe = (x2) => { const r = (x2.perf[this.meta.exercice] || [])[moisIdx - 1] || {};
+      return { reel: r.ca, budget: r.caT }; };
+    common.encChMagasins = magasins.map(x2 => { const ca = caMoisDe(x2);
+      return { id: x2.id, nom: x2.nom,
+        ca: ca.reel != null ? this.fE(ca.reel) : (ca.budget ? this.fE(ca.budget) + ' (budget)' : '—'),
+        sansCa: ca.reel == null && !ca.budget }; });
+
+    const budDe = id2 => (D.budgets || []).find(z => z.storeId === id2) || {};
+    const encDe = (id2, poste) => (((budDe(id2).chargesMois || {})[String(moisIdx)]) || {})[poste];
+    // Le brouillon est indexé magasin + mois + poste : on peut saisir les
+    // quatre colonnes avant d'enregistrer, sans que l'une écrase l'autre.
+    const cleCh = (idMag, poste) => 'chm' + moisIdx + ':' + idMag + ':' + poste;
+
+    let totAttendu = 0, nSaisis = 0, nCases = 0;
+    const totMag = {};
+    magasins.forEach(x2 => { totMag[x2.id] = 0; });
     common.encChLignes = common.encCharges.map(c3 => {
       const src = lignes[c3.i] || {};
       const id = src.id || '';
-      const brut = d['chm' + moisIdx + ':' + id];
-      const enc = brut != null ? brut : (encodees[id] != null ? String(encodees[id]) : '');
-      const attendu = (caMoisReel != null ? caMoisReel : caMoisBud) * num(c3.valeur) / 100;
-      chAttendu += attendu;
-      if (String(enc).trim() !== '') { chSaisi += num(enc); nSaisis++; }
-      const ec = String(enc).trim() === '' ? null : num(enc) - attendu;
-      return { id, nom: c3.nom, categorie: src.categorie || '', pct: c3.valeur,
-        valeur: enc, set: set('chm' + moisIdx + ':' + id),
-        attendu: attendu ? this.fE(attendu) : '—',
-        // Sans saisie, pas d'écart : une case vide n'est pas un dépassement.
-        ecart: ec == null ? '—' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
-        ecartCol: ec == null ? 'var(--color-text-muted)' : (ec > 0 ? '#8D1D2C' : '#2d7a3e'),
-        manque: String(enc).trim() === '' };
+      const cells = magasins.map(x2 => {
+        const ca = caMoisDe(x2);
+        const base = ca.reel != null ? ca.reel : (ca.budget || 0);
+        const attendu = base * num(c3.valeur) / 100;
+        const brut = d[cleCh(x2.id, id)];
+        const stock = encDe(x2.id, id);
+        const enc = brut != null ? brut : (stock != null ? String(stock) : '');
+        nCases++;
+        if (String(enc).trim() !== '') { nSaisis++; totMag[x2.id] += num(enc); }
+        totAttendu += attendu;
+        const ec = String(enc).trim() === '' ? null : num(enc) - attendu;
+        return { magasin: x2.id, valeur: enc, set: set(cleCh(x2.id, id)),
+          attendu: attendu ? this.fE(attendu) : '—',
+          ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
+          ecartCol: ec == null ? 'var(--color-text-muted)' : (ec > 0 ? '#8D1D2C' : '#2d7a3e') };
+      });
+      return { id, nom: c3.nom, categorie: src.categorie || '', pct: c3.valeur, cells };
     });
     common.encChSansId = common.encChLignes.some(l => !l.id);
-    common.encChTotSaisi = this.fE(chSaisi);
-    common.encChTotAttendu = this.fE(chAttendu);
-    common.encChNSaisis = nSaisis + ' / ' + common.encChLignes.length + ' poste(s) encodé(s)';
-    common.encChPct = caMoisReel ? pc(100 * chSaisi / caMoisReel) + ' du CA réel du mois' : 'CA réel du mois non connu';
+    common.encChTotaux = magasins.map(x2 => { const ca = caMoisDe(x2);
+      const base = ca.reel != null ? ca.reel : (ca.budget || 0);
+      return { nom: x2.nom, total: this.fE(totMag[x2.id]),
+        pct: base ? pc(100 * totMag[x2.id] / base) : '—' }; });
+    common.encChTotAttendu = this.fE(totAttendu);
+    common.encChNSaisis = nSaisis + ' / ' + nCases + ' case(s) encodée(s)';
     common.encChSave = () => {
       if (common.encChSansId) {
         this.notify('Enregistrez d’abord le modèle réseau : les postes ont besoin de leur identifiant.');
         return;
       }
-      const postes = {};
-      common.encChLignes.forEach(l => { postes[l.id] = String(l.valeur).trim() === '' ? null : num(l.valeur); });
-      this.api('PUT', '/stores/' + st.id + '/charges?exercice=' + this.meta.exercice + '&mois=' + moisIdx, { postes })
-        .then(r => {
-          if (!r || r.ok === false) { return; }
-          this.notify('Charges de ' + M.MOIS[moisIdx - 1] + ' enregistrées — ' + st.nom);
-          this.log('Budget', st.nom, 'Charges encodées pour ' + M.MOIS[moisIdx - 1] + ' ' + this.meta.exercice);
-          return readOne('/stores/budgets?exercice=' + this.meta.exercice).then(bs => {
-            if (bs) { this.D.budgets = bs; }
-            // On relâche la saisie du mois : l'écran repart de la base.
-            this.setState(s2 => { const dd = Object.assign({}, (s2.encDraft || {})[st.id] || {});
-              Object.keys(dd).forEach(k => { if (k.indexOf('chm' + moisIdx + ':') === 0) { delete dd[k]; } });
-              return { encDraft: Object.assign({}, s2.encDraft, { [st.id]: dd }) }; });
-          });
+      // Une écriture par magasin, mais seulement pour ceux dont une case a
+      // bougé : réenvoyer les quatre à chaque fois écrirait des lignes que
+      // personne n'a touchées.
+      const aEcrire = magasins.filter(x2 => common.encChLignes.some(l => d[cleCh(x2.id, l.id)] !== undefined));
+      if (!aEcrire.length) { this.notify('Aucune modification à enregistrer.'); return; }
+      const envois = aEcrire.map(x2 => {
+        const postes = {};
+        common.encChLignes.forEach(l => { const cell = l.cells.find(z => z.magasin === x2.id) || {};
+          postes[l.id] = String(cell.valeur).trim() === '' ? null : num(cell.valeur); });
+        return this.api('PUT', '/stores/' + x2.id + '/charges?exercice=' + this.meta.exercice + '&mois=' + moisIdx, { postes });
+      });
+      Promise.all(envois).then(rs => {
+        const rates = rs.filter(r => !r || r.ok === false).length;
+        if (rates) { this.notify(rates + ' magasin(s) refusé(s) — rien n’a été perdu à l’écran.'); }
+        else { this.notify('Charges de ' + M.MOIS[moisIdx - 1] + ' enregistrées — ' + aEcrire.length + ' magasin(s)'); }
+        this.log('Budget', null, 'Charges encodées pour ' + M.MOIS[moisIdx - 1] + ' ' + this.meta.exercice
+          + ' — ' + aEcrire.map(x2 => x2.nom).join(', '));
+        return readOne('/stores/budgets?exercice=' + this.meta.exercice).then(bs => {
+          if (bs) { this.D.budgets = bs; }
+          this.setState(s2 => { const dd = Object.assign({}, (s2.encDraft || {})[st.id] || {});
+            Object.keys(dd).forEach(k => { if (k.indexOf('chm' + moisIdx + ':') === 0) { delete dd[k]; } });
+            return { encDraft: Object.assign({}, s2.encDraft, { [st.id]: dd }) }; });
         });
+      });
     };
 
     common.encReset = () => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: {} }) }));

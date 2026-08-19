@@ -1388,7 +1388,7 @@ function tplEncodage(c, x){
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap">
           <div>
             <div style="font-family:var(--font-display);font-size:17px;line-height:1.3">Charges encodées du mois</div>
-            <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">Ce qui est réellement sorti, poste par poste, pour ce magasin. Une case laissée vide n’est pas un zéro : elle reste « non encodée ».</div>
+            <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">Ce qui est réellement sorti, poste par poste et magasin par magasin. Une case laissée vide n’est pas un zéro : elle reste « non encodée ».</div>
           </div>
           <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
             <select ${x.C(c.setEncChMois)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px">
@@ -1397,30 +1397,28 @@ function tplEncodage(c, x){
             <button ${x.A(c.encChSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Enregistrer les charges du mois</button>
           </div>
         </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin:9px 0 12px">CA réel du mois ${esc(c.encChCaMois)} · budget ${esc(c.encChCaMoisBud)} — ${esc(c.encChNSaisis)}${c.encChSansId ? ' · <span style="color:var(--color-primary);font-weight:500">enregistrez d’abord le modèle réseau pour attacher les postes</span>' : ''}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin:9px 0 12px">${esc(c.encChNSaisis)}${c.encChSansId ? ' · <span style="color:var(--color-primary);font-weight:500">enregistrez d’abord le modèle réseau pour attacher les postes</span>' : ''}</div>
         <div style="overflow-x:auto">
-        <table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12.5px">
+        <table style="width:100%;min-width:${320 + (c.encChMagasins || []).length * 190}px;border-collapse:collapse;font-size:12.5px">
           <thead><tr>
             <th style="text-align:left;${lbl};padding:0 10px 9px 0">Poste</th>
-            <th style="text-align:right;${lbl};padding:0 6px 9px;width:80px">Taux</th>
-            <th style="text-align:right;${lbl};padding:0 6px 9px;width:140px">Attendu ce mois</th>
-            <th style="text-align:right;${lbl};padding:0 6px 9px;width:150px">Encodé</th>
-            <th style="text-align:right;${lbl};padding:0 0 9px 6px;width:130px">Écart</th>
+            <th style="text-align:right;${lbl};padding:0 10px 9px;width:70px">Taux</th>
+            ${(c.encChMagasins || []).map(m2 => `<th style="text-align:right;${lbl};padding:0 6px 9px;min-width:150px">
+              ${esc(m2.nom)}<div style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-muted);margin-top:2px">CA ${esc(m2.ca)}</div></th>`).join('')}
           </tr></thead>
           <tbody>
             ${c.encChLignes.map(l => `<tr style="border-top:0.5px solid var(--color-border-tertiary)">
               <td style="padding:8px 10px 8px 0"><span style="font-weight:500">${esc(l.nom)}</span>${l.categorie ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.categorie)}</div>` : ''}</td>
-              <td style="padding:8px 6px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(String(l.pct))} %</td>
-              <td style="padding:8px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${esc(l.attendu)}</td>
-              <td style="padding:5px 6px"><input value="${esc(String(l.valeur))}" ${x.C(l.set)} inputmode="decimal" placeholder="non encodé" style="${c.encInputSt}"></td>
-              <td style="padding:8px 0 8px 6px;text-align:right;white-space:nowrap;font-weight:500;color:${l.ecartCol}">${esc(l.ecart)}</td>
+              <td style="padding:8px 10px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(String(l.pct))} %</td>
+              ${l.cells.map(k2 => `<td style="padding:5px 6px;vertical-align:top">
+                <input value="${esc(String(k2.valeur))}" ${x.C(k2.set)} inputmode="decimal" placeholder="non encodé" style="${c.encInputSt}">
+                <div style="font-size:10px;color:var(--color-text-muted);text-align:right;margin-top:3px">attendu ${esc(k2.attendu)}${k2.ecart ? ` · <span style="color:${k2.ecartCol};font-weight:500">${esc(k2.ecart)}</span>` : ''}</div>
+              </td>`).join('')}
             </tr>`).join('')}
             <tr style="border-top:0.5px solid var(--color-border-secondary)">
               <td style="padding:10px 10px 10px 0;font-weight:500">Total du mois</td>
-              <td style="padding:10px 6px"></td>
-              <td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:var(--color-text-muted)">${esc(c.encChTotAttendu)}</td>
-              <td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500">${esc(c.encChTotSaisi)}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${esc(c.encChPct)}</div></td>
-              <td style="padding:10px 0 10px 6px"></td>
+              <td style="padding:10px;text-align:right;color:var(--color-text-muted);white-space:nowrap;font-size:11px">attendu<br>${esc(c.encChTotAttendu)}</td>
+              ${(c.encChTotaux || []).map(t2 => `<td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500">${esc(t2.total)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(t2.pct)} du CA</div></td>`).join('')}
             </tr>
           </tbody>
         </table>
