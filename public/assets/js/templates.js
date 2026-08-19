@@ -3102,13 +3102,41 @@ function tplWizardProjet(c, x){
             <button ${x.A(c.npPrioB)} style="${c.npPrioBSt}">Basse</button>
           </div>
         </div>
+
+        <!-- L'économie du projet : trois saisies, le reste se déduit et reste
+             modifiable. Un chiffre corrigé à la main n'est plus recalculé. -->
+        <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
+          <div style="${lbl};margin-bottom:2px">Économie du projet</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">Ce que le projet rapporte, et à qui. Les trois premières cases suffisent : le reste se calcule et se corrige.</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div><div style="${lbl}">Marge ciblée franchisé (%)</div>
+              <input type="number" step="0.1" min="0" max="100" value="${esc(String(c.npEco.margeCible))}" ${x.C(c.npEco.setMargeCible)} placeholder="Ex. 62" style="${inpD}"></div>
+            <div><div style="${lbl}">Prix de vente global (€)</div>
+              <input type="number" step="0.01" min="0" value="${esc(String(c.npEco.prixVente))}" ${x.C(c.npEco.setPrixVente)} placeholder="Ex. 3,90" style="${inpD}"></div>
+            <div><div style="${lbl}">Volume prévisionnel / magasin</div>
+              <input type="number" step="1" min="0" value="${esc(String(c.npEco.volMag))}" ${x.C(c.npEco.setVolMag)} placeholder="pièces / an" style="${inpD}"></div>
+            <div><div style="${lbl}">Volume prévisionnel réseau${c.npEco.volReseauAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculé</span>' : ''}</div>
+              <input type="number" step="1" min="0" value="${esc(String(c.npEco.volReseau))}" ${x.C(c.npEco.setVolReseau)} placeholder="${esc(c.npEco.volReseauAide)}" style="${inpD}"></div>
+            <div><div style="${lbl}">Retour royalties marque (€)${c.npEco.royaltiesAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculé</span>' : ''}</div>
+              <input type="number" step="1" min="0" value="${esc(String(c.npEco.royaltiesEuro))}" ${x.C(c.npEco.setRoyaltiesEuro)} placeholder="au taux ${esc(String(c.npEco.royaltiesTaux || '—'))} %" style="${inpD}"></div>
+            <div><div style="${lbl}">Marge moyenne / magasin / an (€)${c.npEco.margeMagAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculée</span>' : ''}</div>
+              <input type="number" step="1" min="0" value="${esc(String(c.npEco.margeMagAn))}" ${x.C(c.npEco.setMargeMagAn)} placeholder="prix × volume × marge" style="${inpD}"></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">${esc(c.npEco.resume)}</div>
+        </div>
       </div>` : ''}
       ${c.npS3 ? `
       <div style="display:flex;flex-direction:column;gap:14px">
         <div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
             <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Rétroplanning — jalons</div>
-            <button ${x.A(c.npLoadJalons)} title="Jalons types de l'axe, datés depuis l'échéance. Modifiables dans Paramètres." style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Charger le template de l'axe</button>
+          </div>
+          <!-- Plusieurs modèles : un projet produit et une ouverture ne se
+               jalonnent pas pareil, et un même projet peut emprunter aux deux.
+               Les jalons s'AJOUTENT, ils ne remplacent pas. -->
+          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
+            <span style="font-size:11px;color:var(--color-text-muted);align-self:center">Modèles :</span>
+            ${(c.npJalonModeles || []).map(m2 => `<button ${x.A(m2.charger)} title="Ajoute les ${m2.n} jalons du modèle « ${esc(m2.axe)} », datés depuis l’échéance" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">+ ${esc(m2.axe)} <span style="color:var(--color-text-muted)">(${m2.n})</span></button>`).join('')}
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             ${c.npJalons.map(jl => `

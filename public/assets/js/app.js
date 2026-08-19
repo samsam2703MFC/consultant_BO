@@ -716,7 +716,13 @@ class App {
         ? D.projTemplates['Ventes'].jalons.map(j => ({ nom: j.nom, cible: addD(this.dansNJours(180), j.j) }))
         : [{ nom: '', cible: this.dansNJours(180) }],
       taches: [{ nom: '', who: this.premierIntervenant(), due: this.dansNJours(60) }],
-      couts: [{ poste: 'Jours-homme consultants', prevu: '' }] } });
+      couts: [{ poste: 'Jours-homme consultants', prevu: '' }],
+      // Hypothèses économiques : ce que le projet doit rapporter, et à qui.
+      // Vides au départ — un projet dont on n'a pas encore chiffré l'économie
+      // doit pouvoir se créer, et des zéros pré-remplis se seraient enregistrés
+      // comme des hypothèses posées.
+      margeCible: '', prixVente: '', volMag: '', volReseau: '', royaltiesTaux: '',
+      royaltiesEuro: '', margeMagAn: '' } });
     common.npClose = () => this.setState({ np: null });
     const npSet = k => e => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [k]: e.target.value }) }));
     common.npNom = npSet('nom'); common.npLev = npSet('lev'); common.npDebut = npSet('debut'); common.npFin = npSet('fin');
@@ -763,10 +769,78 @@ class App {
         this.setState(s2 => ({ np: Object.assign({}, s2.np, { couts: tpl.couts.map(c => ({ poste: c.poste, prevu: String(c.prevu) })) }) }));
         this.notify('Template coûts « ' + f.axe + ' » chargé (' + tpl.couts.length + ' postes)'); };
       common.npBudgetTot = this.fE(f.couts.reduce((a, c) => a + (+c.prevu || 0), 0));
+
+      // --- l'économie du projet : ce qu'il rapporte, et à qui.
+      //
+      // Trois saisies suffisent — marge visée, prix de vente, volume par
+      // magasin. Le reste se déduit, s'affiche, et reste MODIFIABLE : le calcul
+      // est une proposition, pas une contrainte. Un chiffre corrigé à la main
+      // n'est plus recalculé, sinon on écraserait ce que quelqu'un a voulu
+      // poser.
+      const nb = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
+      const nOuv = this.open().length || 1;
+      const tauxRoy = f.royaltiesTaux !== '' ? nb(f.royaltiesTaux)
+        : ((this.meta && this.meta.seuils && this.meta.seuils.royalties) || 0);
+      const volMag = nb(f.volMag);
+      const volRes = f.volReseau !== '' ? nb(f.volReseau) : volMag * nOuv;
+      const prix = nb(f.prixVente);
+      const caRes = prix * volRes;
+      const caMag = prix * volMag;
+      const margeMag = f.margeMagAn !== '' ? nb(f.margeMagAn) : caMag * nb(f.margeCible) / 100;
+      const roy = f.royaltiesEuro !== '' ? nb(f.royaltiesEuro) : caRes * tauxRoy / 100;
+      const npEcoSet = k => e => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [k]: e.target.value }) }));
+      common.npEco = {
+        margeCible: f.margeCible, setMargeCible: npEcoSet('margeCible'),
+        prixVente: f.prixVente, setPrixVente: npEcoSet('prixVente'),
+        volMag: f.volMag, setVolMag: npEcoSet('volMag'),
+        // Le volume réseau se déduit du volume magasin ; le corriger le fige.
+        volReseau: f.volReseau !== '' ? f.volReseau : (volMag ? String(Math.round(volRes)) : ''),
+        setVolReseau: npEcoSet('volReseau'),
+        volReseauAuto: f.volReseau === '' && volMag > 0,
+        volReseauAide: nOuv + ' boutique(s) ouvertes',
+        royaltiesTaux: f.royaltiesTaux !== '' ? f.royaltiesTaux : (tauxRoy ? String(tauxRoy) : ''),
+        setRoyaltiesTaux: npEcoSet('royaltiesTaux'),
+        royaltiesEuro: f.royaltiesEuro !== '' ? f.royaltiesEuro : (roy ? String(Math.round(roy)) : ''),
+        setRoyaltiesEuro: npEcoSet('royaltiesEuro'),
+        royaltiesAuto: f.royaltiesEuro === '' && roy > 0,
+        margeMagAn: f.margeMagAn !== '' ? f.margeMagAn : (margeMag ? String(Math.round(margeMag)) : ''),
+        setMargeMagAn: npEcoSet('margeMagAn'),
+        margeMagAuto: f.margeMagAn === '' && margeMag > 0,
+        caReseau: caRes ? this.fE(caRes) : '—',
+        caMagasin: caMag ? this.fE(caMag) : '—',
+        // Une ligne de lecture, en français : c'est elle qu'on relira dans six
+        // mois pour savoir ce qui avait été promis.
+        resume: (prix && volMag)
+          ? 'Prix ' + this.fE(prix) + ' × ' + Math.round(volMag) + ' pièces par boutique = '
+            + this.fE(caMag) + ' de CA magasin, ' + this.fE(caRes) + ' réseau'
+            + (nb(f.margeCible) ? ' · marge visée ' + String(f.margeCible).replace('.', ',') + ' % → ' + this.fE(margeMag) + ' par boutique' : '')
+            + (roy ? ' · royalties marque ' + this.fE(roy) : '')
+          : 'Renseignez le prix et le volume par boutique pour chiffrer le projet.',
+      };
+
+      // --- jalons : plusieurs modèles selon le type de développement.
+      //
+      // Un projet produit et un projet d'ouverture ne se jalonnent pas pareil,
+      // et un même projet peut emprunter aux deux. Les modèles s'AJOUTENT donc
+      // au rétroplanning au lieu de le remplacer — sauf quand il est vide.
+      common.npJalonModeles = Object.keys(D.projTemplates || {}).map(ax => {
+        const tpl = (D.projTemplates || {})[ax] || {};
+        return { axe: ax, n: (tpl.jalons || []).length,
+          charger: () => this.setState(s2 => { const f2 = s2.np || {};
+            const vides = (f2.jalons || []).filter(j => (j.nom || '').trim() !== '');
+            const neufs = (tpl.jalons || []).map(j => ({ nom: j.nom, cible: addD(f2.fin, j.j) }));
+            const fusion = vides.concat(neufs.filter(n2 => !vides.some(v => v.nom === n2.nom)));
+            this.notify(neufs.length + ' jalon(s) « ' + ax + ' » ajouté(s)'
+              + (vides.length ? ' au rétroplanning existant' : ''));
+            return { np: Object.assign({}, f2, { jalons: fusion.length ? fusion : neufs }) }; }) };
+      }).filter(m => m.n > 0);
     }
     const FAM_BY_AXE = { 'Ventes': 'Produits', 'Marge nette franchisé': 'Organisation & coûts', 'Développement réseau': 'Développement réseau', 'Produit — Interne (production)': 'Produits', 'Produit — Externe (achat)': 'Produits' };
     common.npCreate = () => { const f = S.np; if (!f) return;
       if (!f.nom.trim()){ this.notify('Donnez un nom au projet.'); return; }
+      // Les valeurs déduites partent telles qu'elles sont AFFICHÉES : ce que
+      // l'écran montre est ce qui s'enregistre.
+      const eco = common.npEco || {};
       const id = 'px' + Date.now();
       const couts = f.couts.filter(c => c.poste.trim()).map(c => ({ poste: c.poste.trim(), prevu: +c.prevu || 0, reel: 0 }));
       const budget = couts.reduce((a, c) => a + c.prevu, 0);
@@ -778,7 +852,17 @@ class App {
       const jr = 'Projet créé — statut « À lancer », échéance ' + this.fD(f.fin) + ', budget ' + this.fE(budget) + ', ' + taches.length + ' tâche(s), ' + jalons.length + ' jalon(s)';
       this.api('POST', '/projects', { id, nom: f.nom.trim(), famille, statut: 'À lancer', prio: f.prio, debut: f.debut, fin: f.fin,
         axes: [f.axe], leviers: [f.lev], budget, valeurEst: +f.valeur || null, valeurTxt: f.valeurTxt.trim() || 'à chiffrer',
-        kpis: f.kpi.trim() ? [f.kpi.trim()] : [], jalons, couts, taches: taches.map(t => ({ id: t.id, nom: t.nom, owner: t.owner, due: t.due })), journal: jr });
+        kpis: f.kpi.trim() ? [f.kpi.trim()] : [], jalons, couts, taches: taches.map(t => ({ id: t.id, nom: t.nom, owner: t.owner, due: t.due })),
+        economie: {
+          margeCible: f.margeCible === '' ? null : +String(f.margeCible).replace(',', '.'),
+          prixVente: f.prixVente === '' ? null : +String(f.prixVente).replace(',', '.'),
+          volMagasin: f.volMag === '' ? null : +String(f.volMag).replace(',', '.'),
+          volReseau: eco.volReseau === '' ? null : +String(eco.volReseau).replace(',', '.'),
+          royaltiesTaux: eco.royaltiesTaux === '' ? null : +String(eco.royaltiesTaux).replace(',', '.'),
+          royaltiesEuro: eco.royaltiesEuro === '' ? null : +String(eco.royaltiesEuro).replace(',', '.'),
+          margeMagasinAn: eco.margeMagAn === '' ? null : +String(eco.margeMagAn).replace(',', '.'),
+        },
+        journal: jr });
       this.log('Création', f.nom.trim(), jr);
       this.setState({ np: null, openProjId: id }); this.notify('Projet « ' + f.nom.trim() + ' » créé'); };
     const flat = this.tasksFlat();

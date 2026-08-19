@@ -32,11 +32,16 @@ function wr_project_create(): array
 {
     $b = body();
     $id = $b['id'] ?? ('px' . substr((string) round(microtime(true) * 1000), -8));
-    Db::exec('INSERT INTO ceo_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)', [
+    Db::exec('INSERT INTO ceo_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real, economie_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?)', [
         $id, (string) $b['nom'], (string) ($b['famille'] ?? 'Organisation & coûts'), (string) ($b['statut'] ?? 'À lancer'),
         (string) ($b['prio'] ?? 'Moyenne'), (string) ($b['axes'][0] ?? ''), json_encode($b['axes'] ?? [], JSON_UNESCAPED_UNICODE),
         json_encode($b['kpis'] ?? [], JSON_UNESCAPED_UNICODE), (string) ($b['valeurTxt'] ?? ''),
         $b['debut'] ?? null, $b['fin'] ?? null, $b['budget'] ?? null, $b['valeurEst'] ?? null,
+        // Les hypothèses économiques voyagent telles quelles : on n'en garde
+        // que les nombres, et seulement ceux que l'écran a posés.
+        isset($b['economie']) && is_array($b['economie'])
+            ? json_encode(array_map(fn ($v) => is_numeric($v) ? (float) $v : null, $b['economie']), JSON_UNESCAPED_UNICODE)
+            : null,
     ]);
     $slugToTag = [];
     foreach (LEVIER_DEFS as $l) { $slugToTag[$l['slug']] = $l['tag']; }

@@ -3368,6 +3368,9 @@ function ep_projects(): array
             'valeurReal' => $p['value_real'] !== null ? (float) $p['value_real'] : null,
             'valeurTxt' => $p['value_txt'],
             'kpis' => $p['kpis_json'] ? json_decode($p['kpis_json'], true) : [],
+            // Les hypothèses économiques du projet, telles qu'elles ont été
+            // posées à sa création : marge visée, prix, volumes, royalties.
+            'economie' => ($p['economie_json'] ?? null) ? json_decode($p['economie_json'], true) : null,
             'jalons' => $jalons, 'taches' => $taches, 'couts' => $couts,
         ];
     }

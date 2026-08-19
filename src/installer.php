@@ -137,6 +137,12 @@ function ensurePlanogramme(): void
         catch (PDOException $e) { /* colonne déjà présente */ }
     }
 
+    // L'économie d'un projet : marge visée, prix, volumes, retour en royalties.
+    // Un JSON, parce que ce sont des hypothèses qui se lisent ensemble et qui
+    // évolueront — pas dix colonnes qu'il faudrait migrer à chaque ajout.
+    try { Db::exec("ALTER TABLE ceo_project ADD COLUMN economie_json TEXT NULL"); }
+    catch (PDOException $e) { /* colonne déjà présente */ }
+
     // Les charges s'encodent CHAQUE MOIS, magasin par magasin : le modèle donne
     // le taux attendu, cette table garde ce qui a réellement été dépensé. Sans
     // elle, l'écran de suivi ne pouvait que recalculer un pourcentage — il
