@@ -1493,3 +1493,82 @@ function wr_shop_charges(string $shopId): array
         . ' : ' . $ecrits . ' poste(s)' . ($effaces ? ', ' . $effaces . ' effacé(s)' : ''));
     return ['ok' => true, 'ecrits' => $ecrits, 'effaces' => $effaces];
 }
+
+/**
+ * PUT /production/fin/{ref} — programmer (ou annuler) l'arrêt d'une référence.
+ *
+ * Une date vide ANNULE l'arrêt : la ligne disparaît, la référence redevient
+ * ordinaire. On n'écrit pas un « statut annulé » qu'il faudrait filtrer
+ * partout — l'absence dit déjà tout.
+ */
+function wr_prod_fin(string $ref): array
+{
+    $b = body();
+    $date = trim((string) ($b['date'] ?? ''));
+    if ($date === '') {
+        Db::exec('DELETE FROM ceo_prod_fin WHERE ref = ?', [$ref]);
+        journalAdd('CEO', 'Produit', $ref, 'Arrêt de la référence annulé');
+        return ['ok' => true, 'annule' => true];
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(422);
+        return ['error' => 'date attendue au format AAAA-MM-JJ'];
+    }
+    $note = mb_substr(trim((string) ($b['note'] ?? '')), 0, 300);
+    Db::exec('INSERT INTO ceo_prod_fin (ref, end_on, note) VALUES (?,?,?)
+              ON DUPLICATE KEY UPDATE end_on = VALUES(end_on), note = VALUES(note)', [$ref, $date, $note]);
+    journalAdd('CEO', 'Produit', $ref, 'Arrêt programmé au ' . $date . ($note !== '' ? ' — ' . $note : ''));
+    return ['ok' => true, 'date' => $date];
+}
+
+/**
+ * POST /consultants/note — une note au consultant, envoyée comme tâche.
+ *
+ * La tâche vit dans un projet dédié « Suivi consultants », créé au premier
+ * envoi : l'API du panel n'expose aucun dépôt de tâche consultant (mesuré),
+ * et une note qui ne vit nulle part ne serait jamais suivie. Le projet la
+ * porte, l'écran Tâches consultants la montre, l'échéance la rappelle.
+ */
+function wr_consultant_note(): array
+{
+    $b = body();
+    $qui = (string) ($b['consultantId'] ?? '');
+    $texte = trim((string) ($b['note'] ?? ''));
+    if ($qui === '' || $texte === '') {
+        http_response_code(422);
+        return ['error' => 'le consultant et la note sont requis'];
+    }
+    $type = mb_substr(trim((string) ($b['type'] ?? 'Note')), 0, 40);
+    $cons = Db::row('SELECT name FROM ceo_consultant WHERE id = ?', [$qui]);
+    if ($cons === null) { http_response_code(404); return ['error' => 'consultant inconnu']; }
+
+    $contexte = trim((string) ($b['contexte'] ?? ''));
+    $journal = 'Note au consultant ' . $cons['name'] . ' — [' . $type . '] ' . mb_substr($texte, 0, 160)
+        . ($contexte !== '' ? ' (' . $contexte . ')' : '');
+
+    if (($b['comme'] ?? 'tache') !== 'tache') {
+        journalAdd('CEO', 'Note consultant', $cons['name'], $journal);
+        return ['ok' => true, 'comme' => 'note'];
+    }
+
+    // VARCHAR(16) sur ceo_project.id : l'identifiant reste court.
+    $pid = 'px-suivi-cons';
+    if (Db::row('SELECT id FROM ceo_project WHERE id = ?', [$pid]) === null) {
+        Db::exec('INSERT INTO ceo_project (id, name, famille, status, priority, axe, axes_json, kpis_json, value_txt, starts_on, ends_on, budget, value_est, value_real) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL)', [
+            $pid, 'Suivi consultants', 'Organisation & coûts', 'En cours', 'Moyenne', '',
+            json_encode([]), json_encode([]),
+            'Les notes posées depuis le contrôle des tâches : chaque note envoyée comme tâche vit ici.',
+            date('Y-m-d'), null,
+        ]);
+    }
+    $tid = 'cn' . substr((string) round(microtime(true) * 1000), -8);
+    $due = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['due'] ?? '')) ? $b['due'] : date('Y-m-d', time() + 7 * 86400);
+    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description) VALUES (?,?,?,?,?,?,?,NULL,?)', [
+        // owner_kind est un ENUM('c','s') : « c » = consultant.
+        $tid, $pid, '[' . $type . '] ' . mb_substr($texte, 0, 160), 'c', $qui,
+        ($b['shopId'] ?? null) ?: null, $due,
+        $texte . ($contexte !== '' ? "\n\nContexte : " . $contexte : ''),
+    ]);
+    journalAdd('CEO', 'Note consultant', $cons['name'], $journal . ' → tâche ' . $tid . ', échéance ' . $due);
+    return ['ok' => true, 'comme' => 'tache', 'tacheId' => $tid, 'due' => $due];
+}

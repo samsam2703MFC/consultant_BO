@@ -137,6 +137,17 @@ function ensurePlanogramme(): void
         catch (PDOException $e) { /* colonne déjà présente */ }
     }
 
+    // Les fins de gamme annoncées : une référence qu'on arrête porte sa date et
+    // sa note au réseau. Table dédiée — une colonne dans le produit du panel
+    // n'est pas à nous, et un réglage JSON ne se joint pas au catalogue.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_fin ('
+        . 'ref VARCHAR(40) NOT NULL,'
+        . 'end_on DATE NOT NULL,'
+        . "note VARCHAR(300) NOT NULL DEFAULT '',"
+        . 'created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
+        . 'PRIMARY KEY (ref)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
     // L'économie d'un projet : marge visée, prix, volumes, retour en royalties.
     // Un JSON, parce que ce sont des hypothèses qui se lisent ensemble et qui
     // évolueront — pas dix colonnes qu'il faudrait migrer à chaque ajout.

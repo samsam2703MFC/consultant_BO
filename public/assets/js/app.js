@@ -1888,6 +1888,13 @@ class App {
     // l'information principale — pas ce qui est déjà renseigné.
     common.refMust = cat.filter(p => p.must).length;
     common.refPlaces = cat.filter(p => p.zone).length;
+    // Fins de gamme annoncées : le réseau doit les voir là où il regarde les
+    // références — au catalogue et à l'assortiment, pas dans un écran à part.
+    common.refFins = cat.filter(p => p.finLe)
+      .sort((a, b) => (a.finLe < b.finLe ? -1 : 1))
+      .map(p => ({ ref: String(p.ref), nom: p.nom,
+        date: this.fD(p.finLe) + '/' + String(p.finLe).slice(0, 4),
+        note: p.finNote || '' }));
 
     const ed = S.refEdit;
     common.refEdit = ed ? {
@@ -1965,6 +1972,7 @@ class App {
       qminBatch: p.bmin ? () => this.refQminPut(p.ref, p.bmin) : null,
       // Un minimum inférieur au batch ne peut pas être produit tel quel.
       qminSousBatch: !!(p.must && p.bmin && (p.qmin || 0) > 0 && (p.qmin || 0) < p.bmin),
+      finLe: p.finLe ? this.fD(p.finLe) + '/' + String(p.finLe).slice(0, 4) : '',
       zone: p.zone || '', meuble: p.meuble || '', niveau: p.niveau || '',
       slot: p.slot == null ? '' : String(p.slot),
       place: !!p.zone,
@@ -2800,7 +2808,7 @@ class App {
     }));
     common.foRecVide = !common.foRecurrences.length;
     common.foRecNouveau = () => this.setState({ foRec: { sens: 'OUT', frequence: 'month',
-      libelle: '', montant: '', debut: (this.M && this.M.TODAY) || '', fin: '',
+      semaines: '6', libelle: '', montant: '', debut: (this.M && this.M.TODAY) || '', fin: '',
       source: 'AUTRE', magasin: '', levier: '', busy: false, err: '' } });
     common.foRecForm = !fr ? null : {
       busy: !!fr.busy, err: fr.err || '',
@@ -2808,8 +2816,14 @@ class App {
         source: fr.source, magasin: fr.magasin, levier: fr.levier },
       sensBtns: [['IN', 'Entrée'], ['OUT', 'Sortie']].map(([v, nom]) => ({ v, nom, on: fr.sens === v,
         pick: () => this.foRecPatch({ sens: v }) })),
-      rythmes: [['month', 'Chaque mois'], ['quarter', 'Chaque trimestre'], ['year', 'Chaque année']]
+      rythmes: [['month', 'Chaque mois'], ['weeks', 'Toutes les N semaines'], ['quarter', 'Chaque trimestre'], ['year', 'Chaque année']]
         .map(([v, nom]) => ({ v, nom, on: fr.frequence === v, pick: () => this.foRecPatch({ frequence: v }) })),
+      semaines: fr.semaines || '6',
+      setSemaines: e => this.foRecPatch({ semaines: e.target.value }),
+      estSemaines: fr.frequence === 'weeks',
+      // L'aperçu : on VOIT les dates avant d'écrire. Calculé pour tous les
+      // rythmes — pour ceux du module c'est une prévision, il reste le maître.
+      apercu: this.foRecApercu(fr),
       set: k => e => this.foRecPatch({ [k]: e.target.value }),
       envoyer: () => this.foRecEnvoyer(),
       fermer: () => this.setState({ foRec: null }),
@@ -2871,6 +2885,37 @@ class App {
       this.foRecharge();
     });
   }
+  /**
+   * Les échéances qu'un frais va écrire, datées avant l'enregistrement.
+   *
+   * « Toutes les 6 semaines » ne se devine pas de tête : l'aperçu montre les
+   * dates et le total, et l'utilisateur valide ce qu'il VOIT. Pour les rythmes
+   * du module (mois, trimestre, année) c'est une prévision — le module reste
+   * le maître de ses écritures.
+   */
+  foRecApercu(fr){
+    if (!fr || !fr.debut || !fr.fin) { return null; }
+    const montant = parseFloat(String(fr.montant || '').replace(',', '.'));
+    const nSem = Math.max(1, Math.min(52, parseInt(fr.semaines, 10) || 6));
+    const dates = [];
+    let d2 = new Date(fr.debut + 'T00:00:00');
+    const fin = new Date(fr.fin + 'T00:00:00');
+    if (isNaN(d2.getTime()) || isNaN(fin.getTime()) || d2 > fin) { return null; }
+    for (let k = 0; k < 60 && d2 <= fin; k++) {
+      dates.push(d2.toISOString().slice(0, 10));
+      if (fr.frequence === 'weeks') { d2 = new Date(d2.getTime() + nSem * 7 * 86400000); }
+      else if (fr.frequence === 'quarter') { d2.setMonth(d2.getMonth() + 3); }
+      else if (fr.frequence === 'year') { d2.setFullYear(d2.getFullYear() + 1); }
+      else { d2.setMonth(d2.getMonth() + 1); }
+    }
+    if (!dates.length) { return null; }
+    return { n: dates.length,
+      dates: dates.slice(0, 10).map(x2 => this.fD(x2)),
+      tronque: dates.length > 10 ? dates.length - 10 : 0,
+      brutes: dates,
+      total: isFinite(montant) && montant > 0 ? this.fU(montant * dates.length) : null,
+      previsionModule: fr.frequence !== 'weeks' };
+  }
   /** Un frais qui revient : le module écrit toutes ses échéances d'un coup. */
   foRecEnvoyer(){
     const f = this.state.foRec;
@@ -2880,6 +2925,36 @@ class App {
     if (!isFinite(montant) || montant <= 0) { this.foRecPatch({ err: 'Le montant d’une échéance doit être supérieur à zéro.' }); return; }
     if (!f.debut || !f.fin) { this.foRecPatch({ err: 'Un frais récurrent est borné : donnez le début ET la fin.' }); return; }
     this.foRecPatch({ busy: true, err: '' });
+    if (f.frequence === 'weeks') {
+      // Le module ne connaît pas « toutes les N semaines » : le cockpit écrit
+      // les échéances une à une, comme des mouvements datés. Elles se lisent
+      // et se corrigent ensuite ligne à ligne au grand livre.
+      const ap = this.foRecApercu(f);
+      if (!ap) { this.foRecPatch({ busy: false, err: 'Les dates ne donnent aucune échéance.' }); return; }
+      const suite = (i) => {
+        if (i >= ap.brutes.length) {
+          this.setState({ foRec: null });
+          this.notify(ap.brutes.length + ' échéance(s) écrite(s) au fonds — ' + String(f.libelle).trim());
+          this.foRecharge();
+          return;
+        }
+        write(this.source, 'POST', '/fonds/mouvement', {
+          direction: f.sens, movement_date: ap.brutes[i], label: String(f.libelle).trim(),
+          amount: montant, source: f.source || 'AUTRE',
+          shop_id: f.magasin || null, lever_id: f.levier || null,
+        }).then(r2 => {
+          if (!r2 || r2.ok === false) {
+            this.foRecPatch({ busy: false, err: 'Échéance ' + (i + 1) + '/' + ap.brutes.length
+              + ' refusée — ' + ((r2 && r2.error) || 'refusé') + '. Les ' + i + ' précédentes sont écrites.' });
+            this.foRecharge();
+            return;
+          }
+          suite(i + 1);
+        });
+      };
+      suite(0);
+      return;
+    }
     write(this.source, 'POST', '/fonds/recurrence', {
       direction: f.sens, frequency: f.frequence, label: String(f.libelle).trim(), amount: montant,
       starts_on: f.debut, ends_on: f.fin, source: f.source || 'AUTRE',
@@ -4469,7 +4544,8 @@ class App {
     const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
     const eur = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €';
     common.pdRows = rows.map(p => { const vd = verdict(p.score); const t = this.trend(p.tend, 1);
-      return { nom: p.nom, cat: p.cat, vol: Math.round(p.vol).toLocaleString('fr-BE'), tend: t.txt, tendSt: t.st + ';font-weight:400',
+      return { nom: p.nom, cat: p.cat,
+        ouvrirDetail: () => this.setState({ pdDet: { id: p.id } }), vol: Math.round(p.vol).toLocaleString('fr-BE'), tend: t.txt, tendSt: t.st + ';font-weight:400',
         prix: eur(p.prix), mu: eur(p.mu), mp: p.mp == null ? '—' : this.fP(p.mp, 0) + ' de marge', mg: this.fK(p.mg),
         perteTxt: p.perte == null ? '—' : this.fP(p.perte, 1),
         perteSt: p.perte == null ? 'color:var(--color-text-muted)'
@@ -4485,6 +4561,81 @@ class App {
         mgDispo: p.sMg != null, perteDispo: p.sPerte != null, comptoirDispo: p.sComptoir != null,
         score: String(Math.round(p.score)), scoreSt: 'font-size:17px;font-weight:500;line-height:1;color:' + vd[1], scoreBar: bar(p.score, vd[1]),
         verdict: vd[0], verdictSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + vd[2] + ';color:' + vd[1] }; });
+    // --- détail d'une référence : le score décomposé, et les deux suites
+    // possibles — l'envoyer aux projets, ou programmer son arrêt.
+    const det = S.pdDet ? base.find(p2 => String(p2.id) === String(S.pdDet.id)) : null;
+    if (S.pdDet && det) {
+      const dd = S.pdDet;
+      const vd2 = verdict(det.score);
+      const patchDet = pl => this.setState(s2 => ({ pdDet: Object.assign({}, s2.pdDet, pl) }));
+      const wt = k => Math.round(100 * (W[k] || 0) / ((W.v + W.m + W.perte + W.comptoir) || 1));
+      const cat2 = (D.prodCatalogue || []).find(p2 => String(p2.ref) === String(det.id)) || {};
+      common.pdDet = {
+        nom: det.nom, ref: String(det.id), cat: det.cat,
+        score: String(Math.round(det.score)), verdict: vd2[0], col: vd2[1], fond: vd2[2],
+        periode: _c.periode,
+        criteres: [
+          { nom: 'Volume vendu', poids: wt('v') + ' %', note: det.sVol, brut: Math.round(det.vol).toLocaleString('fr-BE') + ' pièces', col: '#8D1D2C' },
+          { nom: 'Marge nette', poids: wt('m') + ' %', note: det.sMg, brut: det.mp == null ? 'marge indisponible' : this.fP(det.mp, 0) + ' de marge', col: '#2d7a3e' },
+          { nom: 'Taux de perte', poids: wt('perte') + ' %', note: det.sPerte, brut: det.perte == null ? 'perte non mesurée' : this.fP(det.perte, 1) + ' jeté', col: '#C17A2A' },
+          { nom: 'Présence comptoir', poids: wt('comptoir') + ' %', note: det.sComptoir, brut: det.mags + ' / ' + nbOuv + ' magasins', col: '#6b7fa8' },
+        ].map(cr => ({ nom: cr.nom, poids: cr.poids, col: cr.col,
+          note: cr.note == null ? '—' : String(Math.round(cr.note)) + ' / 100',
+          barre: cr.note == null ? 0 : Math.max(2, Math.min(100, cr.note)),
+          brut: cr.brut, absent: cr.note == null })),
+        // Fin de gamme déjà programmée ? Elle s'affiche, et s'annule d'ici.
+        finLe: cat2.finLe ? this.fD(cat2.finLe) + '/' + String(cat2.finLe).slice(0, 4) : '',
+        finNote: cat2.finNote || '',
+        adaptations: ['Adapter la recette', 'Revoir le prix', 'Changer la présentation / packaging',
+          'Repositionner au comptoir', 'Campagne de relance'],
+        adaptation: dd.adaptation || 'Adapter la recette',
+        setAdaptation: e => patchDet({ adaptation: e.target.value }),
+        precision: dd.precision || '',
+        setPrecision: e => patchDet({ precision: e.target.value }),
+        envoyerProjet: () => {
+          const d2 = this.state.pdDet || {};
+          const adaptation = d2.adaptation || 'Adapter la recette';
+          const id2 = 'px' + Date.now();
+          const nom2 = adaptation + ' — ' + det.nom;
+          const valeurTxt = (d2.precision || '').trim() || ('Issu du scoring produit : score ' + Math.round(det.score) + ' (' + vd2[0] + '), ' + _c.periode);
+          const corps = { id: id2, nom: nom2, famille: 'Produits', statut: 'À lancer', prio: 'Moyenne',
+            debut: (M2t => M2t)(this.M.TODAY), fin: this.dansNJours(90), axes: ['Produit — Interne (production)'],
+            leviers: [], budget: 0, valeurEst: null, valeurTxt, kpis: [], jalons: [], couts: [], taches: [],
+            journal: 'Ligne créée depuis le scoring — ' + det.nom + ' (' + det.id + '), ' + adaptation };
+          this.api('POST', '/projects', corps).then(r => {
+            if (r && r.ok === false) { return; }
+            D.projects.push({ id: id2, nom: nom2, famille: 'Produits', statut: 'À lancer', prio: 'Moyenne',
+              debut: this.M.TODAY, fin: this.dansNJours(90), axes: ['Produit — Interne (production)'], leviers: [],
+              budget: 0, valeurEst: null, valeurReal: null, valeurTxt, kpis: [], jalons: [], taches: [], couts: [] });
+            this.log('Projet', nom2, 'Créé depuis le scoring produit');
+            this.setState({ pdDet: null });
+            this.notify('« ' + nom2 + ' » créé dans les projets');
+          });
+        },
+        finDate: dd.finDate || '',
+        setFinDate: e => patchDet({ finDate: e.target.value }),
+        finTexte: dd.finTexte || '',
+        setFinTexte: e => patchDet({ finTexte: e.target.value }),
+        arreter: () => {
+          const d2 = this.state.pdDet || {};
+          if (!d2.finDate) { this.notify('Choisissez la date de fin.'); return; }
+          this.api('PUT', '/production/fin/' + encodeURIComponent(det.id), { date: d2.finDate, note: (d2.finTexte || '').trim() })
+            .then(r => { if (r && r.ok === false) { return; }
+              this.log('Produit', det.nom, 'Arrêt programmé au ' + this.fD(d2.finDate));
+              this.setState({ pdDet: null });
+              this.notify('Arrêt de « ' + det.nom + ' » programmé — le réseau le voit au catalogue');
+              this.D.prodCatalogue = null; });
+        },
+        annulerFin: cat2.finLe ? () => {
+          this.api('PUT', '/production/fin/' + encodeURIComponent(det.id), { date: '' }).then(r => {
+            if (r && r.ok === false) { return; }
+            this.setState({ pdDet: null }); this.notify('Arrêt annulé — la référence redevient ordinaire');
+            this.D.prodCatalogue = null; });
+        } : null,
+        fermer: () => this.setState({ pdDet: null }),
+      };
+    } else { common.pdDet = false; }
+
     const nMot = base.filter(p => p.score >= SC.moteur).length, nArb = base.filter(p => p.score < SC.conforter).length;
     const mgVals = base.map(p => p.mg).filter(v => v != null);
     const caTot = caProd, mgTot = mgVals.length ? mgVals.reduce((a, v) => a + v, 0) : null;
@@ -5051,6 +5202,57 @@ class App {
           : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
         setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
         send: () => this.ctrlSendNote(),
+        // --- note au consultant : depuis le contrôle, sans changer d'écran.
+        //
+        // Replié par défaut : c'est un geste occasionnel, pas une étape de la
+        // notation. Envoyée « comme tâche », la note vit dans le projet
+        // « Suivi consultants » et suit le circuit normal des tâches —
+        // échéance, relance, validation.
+        cn: (() => {
+          const c2 = dt.cn || {};
+          const consultants = (D.consultants || []).map(x2 => ({ id: String(x2.id), nom: x2.nom }));
+          const patch = pl => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet,
+            { cn: Object.assign({}, (s2.ctrlDet || {}).cn, pl) }) }));
+          return {
+            ouvert: !!c2.ouvert,
+            basculer: () => patch({ ouvert: !c2.ouvert }),
+            consultants,
+            qui: c2.qui || (consultants[0] || {}).id || '',
+            setQui: e => patch({ qui: e.target.value }),
+            types: ['À corriger sur place', 'Rappel de procédure', 'Point de formation', 'Félicitations'],
+            type: c2.type || 'À corriger sur place',
+            setType: e => patch({ type: e.target.value }),
+            texte: c2.texte || '',
+            setTexte: e => patch({ texte: e.target.value }),
+            comme: c2.comme || 'tache',
+            commeBtns: [['tache', 'Tâche à échéance'], ['note', 'Simple note (journal)']]
+              .map(([v, nom]) => ({ v, nom, on: (c2.comme || 'tache') === v, pick: () => patch({ comme: v }) })),
+            due: c2.due || this.dansNJours(7),
+            setDue: e => patch({ due: e.target.value }),
+            busy: !!c2.busy,
+            envoyer: () => {
+              const cc = this.state.ctrlDet && this.state.ctrlDet.cn || {};
+              const qui = cc.qui || (consultants[0] || {}).id || '';
+              const texte = String(cc.texte || '').trim();
+              if (!texte) { this.notify('Écrivez la note avant de l’envoyer.'); return; }
+              patch({ busy: true });
+              write(this.source, 'POST', '/consultants/note', {
+                consultantId: qui, type: cc.type || 'À corriger sur place', note: texte,
+                comme: cc.comme || 'tache', due: cc.due || this.dansNJours(7),
+                shopId: dt.shopId || null,
+                contexte: (d.tache || dt.nom || '') + ' — ' + (this.fDA ? this.fDA(dt.date) : dt.date),
+              }).then(r => {
+                if (!r || r.ok === false) { patch({ busy: false }); this.notify('Note non envoyée — ' + ((r && r.error) || 'refusé')); return; }
+                const nomC = (consultants.find(x2 => x2.id === qui) || {}).nom || '';
+                patch({ busy: false, ouvert: false, texte: '' });
+                this.notify(r.comme === 'tache'
+                  ? 'Tâche envoyée à ' + nomC + ' — échéance ' + this.fD(r.due)
+                  : 'Note consignée au journal pour ' + nomC);
+                if (r.comme === 'tache') { readOne('/projects').then(pj => { if (pj) { this.D.projects = pj; this.setState({}); } }); }
+              });
+            },
+          };
+        })(),
         close: () => this.setState({ ctrlDet: null }),
         peutNoter: !dt.chargement && (d.api ? d.api.configure !== false : true),
         // --- assistance IA : proposition, jamais décision

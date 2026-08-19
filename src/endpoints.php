@@ -1913,6 +1913,10 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
                              FROM product WHERE is_active = 1 ORDER BY id_category, name');
     } catch (PDOException $e) { return null; }
     if (!$prods) { return null; }
+    $fins = [];
+    foreach (Db::rows('SELECT ref, end_on, note FROM ceo_prod_fin') as $fx) {
+        $fins[(string) $fx['ref']] = ['end_on' => $fx['end_on'], 'note' => $fx['note']];
+    }
 
     $couts = catalogueCouts();
     $prixR = cataloguePrix();
@@ -1958,8 +1962,12 @@ function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?ar
             $dlv = (int) round(((int) $p['shelf_life_minutes']) / 60);
         }
 
+        $fin = $fins[$ref] ?? null;
         $out[] = [
             'ref' => $ref, 'pwaId' => $pid, 'nom' => (string) $p['name'],
+            // Fin de gamme annoncée : la date et la note voyagent avec la
+            // référence, chaque écran qui l'affiche peut la marquer.
+            'finLe' => $fin['end_on'] ?? null, 'finNote' => $fin['note'] ?? null,
             'categorie' => $c['nom'] ?? '', 'groupe' => $c['groupe'] ?? null,
             'categorieId' => (int) $p['id_category'],
             'prep'    => $e ? (int) $e['prep'] : 0,

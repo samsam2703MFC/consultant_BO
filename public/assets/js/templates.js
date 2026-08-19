@@ -142,6 +142,7 @@ export function render(c, x){
   ${c.repPrev ? tplRepPrev(c, x) : ''}
   ${c.eqRep ? tplEqRep(c, x) : ''}
   ${c.pdWaste ? tplPerteMagasins(c, x) : ''}
+  ${c.pdDet ? tplScoringDetail(c, x) : ''}
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
@@ -416,6 +417,11 @@ function tplReferentiel(c, x){
   </div>
 
   ${c.isCat && c.refScoresTxt ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${esc(c.refScoresTxt)}${c.refScorePond ? ' · pondération : ' + esc(c.refScorePond) : ''}</div>` : ''}
+  ${(c.refFins || []).length ? `<div style="background:var(--color-surface);border:0.5px solid rgba(141,29,44,0.3);border-left:3px solid var(--color-primary);border-radius:10px;padding:12px 16px;margin-bottom:12px">
+    <div style="font-size:12.5px;font-weight:600">Fins de gamme annoncées</div>
+    ${c.refFins.map(f2 => `<div style="font-size:12px;margin-top:5px"><span style="font-weight:500">${esc(f2.nom)}</span>
+      <span style="color:var(--color-text-muted)">(${esc(f2.ref)})</span> — fin le <span style="font-weight:600;color:var(--color-primary)">${esc(f2.date)}</span>${f2.note ? ` · <span style="color:var(--color-text-muted)">${esc(f2.note)}</span>` : ''}</div>`).join('')}
+  </div>` : ''}
   ${c.isAsso ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refMust} référence(s) déclarée(s) obligatoire(s) sur ${c.refTotal}. ${c.refMust === 0 ? 'Aucune pour l’instant : affichez le catalogue et cochez celles que toute boutique doit tenir.' : ''}</div>` : ''}
   ${c.isPlano ? tplPlanoComptoir(c, x) : ''}
   ${c.isPlano ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-bottom:12px">${c.refPlaces} référence(s) placée(s) au comptoir sur ${c.refTotal}. ${c.refPlaces === 0 ? 'Aucune encore : affichez le catalogue, ouvrez une référence et choisissez son emplacement.' : ''}</div>` : ''}
@@ -434,6 +440,7 @@ function tplReferentiel(c, x){
         ${c.refLignes.map(l => `<tr>
           <td style="${TD}">
             <button ${x.A(l.ouvrir)} style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(l.nom)}</button>
+            ${l.finLe ? `<span style="display:inline-block;margin-left:7px;font-size:10px;font-weight:600;padding:1px 8px;border-radius:999px;background:rgba(141,29,44,0.09);color:var(--color-primary)">fin le ${esc(l.finLe)}</span>` : ''}
             <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.ref)}${l.gamme !== '—' ? ' · ' + esc(l.gamme) : ''}</div>
           </td>
           <td style="${TD};color:var(--color-text-muted)">${esc(l.categorie)}<div style="font-size:10.5px">${esc(l.groupe)}</div></td>
@@ -1487,7 +1494,7 @@ function tplProduits(c, x){
           ${c.pdRows.map(r => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
               <td style="padding:10px 14px">
-                <div style="font-weight:500">${esc(r.nom)}</div>
+                <button ${x.A(r.ouvrirDetail)} title="Le score décomposé, et les suites possibles" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(r.nom)}</button>
                 <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:1px">${esc(r.cat)}</div>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
@@ -1744,6 +1751,63 @@ function tplProjets(c, x){
 /* --- Fonds & Royalties : lu chez le module marketing -------------------------
    Le cockpit ne recopie pas le grand livre : il le lit là où il est tenu. Deux
    soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait. */
+/* --- Scoring · le détail d'une référence, et ses deux suites -----------------
+   Le score décomposé critère par critère (avec les poids des réglages), puis
+   les deux gestes qu'un mauvais score appelle : envoyer la référence aux
+   projets avec l'adaptation demandée, ou programmer son arrêt et l'annoncer. */
+function tplScoringDetail(c, x){
+  const { esc } = x;
+  const d = c.pdDet;
+  const lbl = 'font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)';
+  return `
+  <div ${x.A(d.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:760px;max-width:100%;max-height:100%;overflow-y:auto;padding:18px 22px" data-scroll="pddet">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="${lbl}">Détail du score — ${esc(d.periode)}</div>
+          <div style="font-size:17px;font-weight:500;margin-top:3px">${esc(d.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(d.ref)} · ${esc(d.cat)}${d.finLe ? ` · <span style="color:var(--color-primary);font-weight:600">fin programmée le ${esc(d.finLe)}</span>` : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="text-align:right"><div style="font-size:30px;font-weight:600;line-height:1;color:${d.col}">${esc(d.score)}</div>
+            <span style="display:inline-block;margin-top:4px;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:500;background:${d.fond};color:${d.col}">${esc(d.verdict)}</span></div>
+          <button ${x.A(d.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        ${d.criteres.map(cr => `<div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+          <span style="width:190px;font-size:12.5px">${esc(cr.nom)} <span style="color:var(--color-text-muted);font-size:10.5px">· poids ${esc(cr.poids)}</span></span>
+          <div style="flex:1;height:8px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${cr.barre}%;background:${cr.col}"></i></div>
+          <span style="width:66px;text-align:right;font-size:12px;font-weight:600;${cr.absent ? 'color:var(--color-text-muted);font-weight:400' : ''}">${esc(cr.note)}</span>
+          <span style="width:170px;text-align:right;font-size:11px;color:var(--color-text-muted)">${esc(cr.brut)}</span>
+        </div>`).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+        <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px">
+          <div style="font-size:13px;font-weight:600">→ Envoyer aux projets</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Crée une ligne dans Projets de développement, rattachée à la référence, avec l’adaptation demandée.</div>
+          <select ${x.C(d.setAdaptation)} style="${inp};margin-bottom:8px">${d.adaptations.map(a => `<option${a === d.adaptation ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>
+          <input id="pdd-prec" value="${esc(d.precision)}" ${x.I(d.setPrecision)} placeholder="Précision (facultatif)" style="${inp};margin-bottom:10px">
+          <button ${x.A(d.envoyerProjet)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer la ligne projet</button>
+        </div>
+        <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px">
+          <div style="font-size:13px;font-weight:600">⏹ Arrêter le produit</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Programme la fin de la référence et l’annonce au réseau — bandeau au Catalogue et à l’Assortiment.</div>
+          <input type="date" value="${esc(d.finDate)}" ${x.C(d.setFinDate)} style="${inp};margin-bottom:8px">
+          <input id="pdd-fin" value="${esc(d.finTexte)}" ${x.I(d.setFinTexte)} placeholder="Note au réseau — ex. remplacé par… dès octobre" style="${inp};margin-bottom:10px">
+          <button ${x.A(d.arreter)} style="border:none;background:#666;color:#fff;border-radius:999px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Programmer l’arrêt et informer</button>
+          ${d.annulerFin ? `<button ${x.A(d.annulerFin)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:999px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;margin-left:7px">Annuler l’arrêt</button>` : ''}
+          ${d.finNote ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Note actuelle : ${esc(d.finNote)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 /* --- Encodage · une étape intermédiaire du compte de résultat ----------------
    « Marge brute = CA − coût matière ». L'étape ne porte aucun montant propre :
    elle nomme une soustraction entre deux valeurs déjà présentes, et se
@@ -1843,10 +1907,12 @@ function tplFondsRecForm(c, x){
       <span style="font-size:13.5px;font-weight:500">Un frais qui revient</span>
       <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
     </div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
       ${f.sensBtns.map(puce).join('')}
       <span style="width:1px;height:22px;background:var(--color-border-tertiary);margin:4px 3px"></span>
       ${f.rythmes.map(puce).join('')}
+      ${f.estSemaines ? `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-muted)">N =
+        <input id="fr-sem" type="number" min="1" max="52" value="${esc(f.semaines)}" ${x.I(f.setSemaines)} style="width:56px;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:30px;font-family:var(--font-ui);font-size:12.5px;background:var(--color-surface);color:var(--color-text)"> semaines</span>` : ''}
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px 13px">
       <div style="grid-column:span 2"><span style="${k}">Libellé</span>
@@ -1862,7 +1928,12 @@ function tplFondsRecForm(c, x){
       <div><span style="${k}">Levier développé</span>${sel('levier', f.champs.levier, c.foLeviersOpts || [], 'aucun')}</div>
       <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
     </div>
-    <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un frais récurrent est borné : les échéances sont écrites au grand livre dès l’enregistrement, du début à la fin. Sans fin, il ne se budgète pas.</div>
+    ${f.apercu ? `<div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 14px;margin-top:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--color-primary)">${f.apercu.n} échéance(s) seront écrites au fonds${f.apercu.total ? ' — ' + esc(f.apercu.total) + ' au total' : ''}${f.apercu.previsionModule ? ' (prévision — le module arrête les dates)' : ''}</div>
+      <div style="margin-top:6px">${f.apercu.dates.map(d2 => `<span style="display:inline-block;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:7px;padding:2px 9px;margin:2px 4px 0 0;font-size:11px;font-variant-numeric:tabular-nums">${esc(d2)}</span>`).join('')}${f.apercu.tronque ? `<span style="font-size:11px;color:var(--color-text-muted)"> … et ${f.apercu.tronque} de plus</span>` : ''}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Ces écritures comptent au budget du fonds dès l’enregistrement — les mois futurs se lisent au grand livre comme des sorties déjà engagées.</div>
+    </div>` : ''}
+    <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un frais récurrent est borné : les échéances sont écrites au grand livre dès l’enregistrement, du début à la fin. Sans fin, il ne se budgète pas.${f.estSemaines ? ' En semaines, les échéances s’écrivent comme des mouvements datés : elles se corrigent ensuite ligne à ligne.' : ''}</div>
     ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
       <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
@@ -3368,6 +3439,31 @@ function tplCtrlDetail(c, x){
         </button>`).join('')}
       <textarea ${x.C(d.setComment)} rows="4" placeholder="${d.commentRequis ? 'Commentaire obligatoire pour une non-conformité' : 'Commentaire (facultatif)'}" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:13px;border:0.5px solid ${d.commentRequis && !d.comment ? '#8D1D2C' : 'var(--color-border-secondary)'};border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
       ${d.erreur ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px">${esc(d.erreur)}</div>` : ''}
+      <!-- Note au consultant : un geste occasionnel, replié par défaut. -->
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:11px">
+        <button ${x.A(d.cn.basculer)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--color-primary)">
+          ${d.cn.ouvert ? '− Note au consultant' : '+ Ajouter une note au consultant'}</button>
+        ${d.cn.ouvert ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px">
+          <div><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Consultant</div>
+            <select ${x.C(d.cn.setQui)} style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+              ${d.cn.consultants.map(o => `<option value="${esc(o.id)}"${o.id === d.cn.qui ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>
+          <div><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Type de note</div>
+            <select ${x.C(d.cn.setType)} style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+              ${d.cn.types.map(t => `<option${t === d.cn.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+        </div>
+        <textarea id="cn-note" ${x.I(d.cn.setTexte)} rows="3" placeholder="Ce que le consultant doit reprendre, rappeler ou savoir" style="width:100%;box-sizing:border-box;margin-top:9px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-family:var(--font-ui);font-size:12px;line-height:1.5;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(d.cn.texte)}</textarea>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px">
+          ${d.cn.commeBtns.map(b2 => `<button ${x.A(b2.pick)} style="border-radius:999px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${b2.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'}">${esc(b2.nom)}</button>`).join('')}
+          ${d.cn.comme === 'tache' ? `<span style="font-size:10.5px;color:var(--color-text-muted)">échéance</span>
+            <input type="date" value="${esc(d.cn.due)}" ${x.C(d.cn.setDue)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;height:30px;padding:0 8px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">` : ''}
+          <div style="flex:1"></div>
+          <button ${x.A(d.cn.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:31px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:${d.cn.busy ? 'wait' : 'pointer'}">${d.cn.busy ? 'Envoi…' : 'Envoyer'}</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Envoyée comme tâche, la note vit dans le projet « Suivi consultants » et suit le circuit normal — échéance, relance, validation. L’API du panel n’expose pas de dépôt de tâche consultant (manque API) : la tâche vit dans le cockpit.</div>
+        ` : ''}
+      </div>
+
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
         <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
         ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
