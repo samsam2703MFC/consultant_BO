@@ -6,8 +6,10 @@ import type { Role } from '../../lib/navigation'
 import { describeError } from '../../state/auth'
 import ObjectivesStep from './ObjectivesStep'
 import PricingStep from './PricingStep'
+import PhotosStep from './PhotosStep'
 import ProspectList from './ProspectList'
 import RangeCalendar from '../../components/RangeCalendar'
+import { familyImage, seasonImage, seasonLabel } from './illustrations'
 
 /**
  * Assistant de création de campagne, en sept étapes.
@@ -80,7 +82,21 @@ interface OfferElement {
    * du total, sans qu'on lui dise de quoi il est fait.
    */
   target_pieces: string
+
+  /**
+   * Photos, posées à l'étape « Photos produits ».
+   *
+   * `show_photo` : cette photo part-elle à l'impression. Vrai par défaut, ce
+   * qui est le comportement qu'avait le module avant que l'écran ne pose la
+   * question.
+   *
+   * `image_url` : la photo retenue **pour cette campagne**. Vide = celle du
+   * catalogue, qui reste la référence.
+   */
+  show_photo: boolean
+  image_url: string
 }
+
 
 /** Codes de `mar_promotion_mechanic`. */
 export type MechanicCode =
@@ -101,6 +117,8 @@ export function blankPricing(): Omit<OfferElement, 'offer_item_id' | 'label' | '
     baseline_price: '',
     margin_pct: '',
     target_pieces: '',
+    show_photo: true,
+    image_url: '',
   }
 }
 
@@ -369,6 +387,16 @@ const STEPS: Step[] = [
     },
   },
   {
+    // Après le prix, avant le budget : on choisit les photos une fois que
+    // l'offre et ses prix sont arrêtés, et avant de parler d'argent — c'est
+    // le dernier geste qui touche encore aux produits eux-mêmes.
+    key: 'photos',
+    label: 'Photos produits',
+    // Jamais bloquante : une campagne peut s'imprimer sans photo, et un
+    // produit sans photo au catalogue ne doit pas retenir tout l'assistant.
+    blocking: () => null,
+  },
+  {
     key: 'budget',
     label: 'Budget & leviers',
     blocking: (d) =>
@@ -600,6 +628,7 @@ export default function CampaignBuilder({
         {here === 'offer' ? <OfferStep {...shared} /> : null}
         {here === 'objectives' ? <ObjectivesStep {...shared} /> : null}
         {here === 'pricing' ? <PricingStep {...shared} /> : null}
+        {here === 'photos' ? <PhotosStep {...shared} /> : null}
         {here === 'budget' ? <BudgetStep {...shared} /> : null}
         {here === 'communication' ? <CommunicationStep {...shared} agencies={agencies.data ?? []} /> : null}
         {here === 'planning' ? <PlanningStep {...shared} /> : null}
@@ -716,6 +745,8 @@ function fromState(state: api.CampaignDraftState, refs: References, role: Role):
       baseline_price: numberOrBlank(item.baseline_price),
       margin_pct: numberOrBlank(item.margin_pct),
       target_pieces: numberOrBlank(item.target_pieces),
+      show_photo: item.show_photo ?? true,
+      image_url: item.image_url ?? '',
     })),
 
     color_primary_hex: state.colors?.color_primary_hex ?? '',
@@ -857,6 +888,8 @@ function toPayload(draft: Draft, brandId: number | 'all', stepKey?: string): Cam
       baseline_price: num(item.baseline_price),
       margin_pct: num(item.margin_pct),
       target_pieces: num(item.target_pieces),
+      show_photo: item.show_photo,
+      image_url: item.image_url.trim() || null,
     }))
     .filter((item) => item.label !== '')
 
@@ -1666,79 +1699,6 @@ function FramingStep({
 // ---------------------------------------------------------------------------
 // 2 — Offre
 // ---------------------------------------------------------------------------
-
-/** Libellé court d'une gamme : sans emoji de tête, préfixes ni parenthèses. */
-function seasonLabel(name: string): string {
-  const cleaned = name
-    .replace(/^[^\p{L}\p{N}]+/u, '')
-    .replace(/^Icône\s*[-–]\s*/iu, '')
-    .replace(/^Gamme\s+/iu, '')
-    .replace(/\s*\(.*\)\s*$/u, '')
-    .split(/\s+[–—]\s+/u)[0]
-    .trim()
-
-  if (/^B[.\s-]*2[.\s-]*B[.\s-]*$/iu.test(cleaned)) return 'B2B'
-
-  return cleaned || name
-}
-
-/** Forme comparable d'un libellé : minuscule, sans accent ni ponctuation. */
-function compact(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]/g, '')
-}
-
-/** Illustration d'une gamme, reconnue au mot-clé de son nom. */
-function seasonImage(name: string): string | null {
-  const flat = compact(name)
-  const match = (
-    [
-      ['printan', 'printemps'],
-      ['estival', 'ete'],
-      ['automn', 'automne'],
-      ['hivern', 'hiver'],
-      ['noel', 'noel'],
-      ['nicolas', 'saint-nicolas'],
-      ['epiphanie', 'epiphanie'],
-      ['mere', 'fete-des-meres'],
-      ['pascal', 'paques'],
-      ['paque', 'paques'],
-      ['valentin', 'saint-valentin'],
-      ['chandeleur', 'chandeleur'],
-      ['glace', 'glace'],
-      ['b2b', 'b2b'],
-      ['standard', 'standard'],
-    ] as const
-  ).find(([key]) => flat.includes(key))
-
-  return match ? `${import.meta.env.BASE_URL}img/seasons/${match[1]}.png` : null
-}
-
-/** Illustration d'une famille de produits, même principe. */
-function familyImage(family: string): string | null {
-  const flat = compact(family)
-  const match = (
-    [
-      ['tarte', 'sweet-tart-small'],
-      ['patisserie', 'cake-slice'],
-      ['viennoiserie', 'croissant'],
-      ['pain', 'bread-1'],
-      ['boulangerie', 'rolls'],
-      ['salade', 'salads'],
-      ['plat', 'salads'],
-      ['traiteur', 'salads'],
-      ['biscuit', 'cookies'],
-      ['cookie', 'cookies'],
-      ['quiche', 'savoury-tart'],
-      ['snack', 'savoury-tart'],
-    ] as const
-  ).find(([key]) => flat.includes(key))
-
-  return match ? `${import.meta.env.BASE_URL}img/${match[1]}.png` : null
-}
 
 function OfferStep({ draft, patch }: StepProps) {
   // Le catalogue repris de l'ERP (`mar_offer_item`) : gammes saisonnières et

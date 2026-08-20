@@ -429,6 +429,10 @@ export interface OfferItemPayload {
   margin_pct?: number | string | null
   /** Objectif réseau de pièces sur ce produit ; nul = aucun objectif posé. */
   target_pieces?: number | string | null
+  /** La photo de ce produit part-elle dans le dossier d'impression. */
+  show_photo?: boolean
+  /** Photo propre à cette campagne ; nulle = celle du catalogue. */
+  image_url?: string | null
 }
 
 export interface CampaignDraft {
@@ -672,6 +676,8 @@ export interface OfferItem {
   /** Famille de produits, quand la reprise l'a trouvée. */
   detail: string | null
   price_amount: number | null
+  /** Photo du catalogue, quand la reprise en a trouvé une. */
+  image_url: string | null
   /** Gammes saisonnières où le produit est actif (`mar_offer_item_season`). */
   season_ids: number[]
 }
@@ -1201,9 +1207,6 @@ export interface LedgerRow {
   recurrence_id: number | null
   /** Faux : ligne réservée à la marque, invisible pour le réseau. */
   is_public: boolean
-  /** Base et taux, quand le montant a été calculé — une redevance. */
-  base_amount: number | null
-  rate_pct: number | null
   /** Vrai si la ligne est rattachée à une campagne (badge de liaison). */
   is_linked: boolean
 }
@@ -1312,152 +1315,6 @@ export function addRecurrence(
 
 export function deleteRecurrence(id: number): Promise<{ message: string }> {
   return request(`${BASE}/funds/recurrences/${id}`, { method: 'DELETE' })
-}
-
-/**
- * Les trois redevances. `MARKETING` alimente le fonds et se lit par le réseau ;
- * les deux autres sont les revenus de la marque et ne sortent pas de chez elle.
- */
-export type RoyaltyKind = 'MARKETING' | 'ASSISTANCE' | 'MARQUE'
-
-export const ROYALTY_KINDS: Array<{ kind: RoyaltyKind; label: string; public: boolean }> = [
-  { kind: 'MARKETING', label: 'Marketing', public: true },
-  { kind: 'ASSISTANCE', label: 'Assistance', public: false },
-  { kind: 'MARQUE', label: 'Marque', public: false },
-]
-
-export interface RoyaltyRate {
-  rate_pct: number
-  /** Date d'effet du taux : c'est elle qui protège les mois déjà facturés. */
-  valid_from: string
-  /** Vrai quand le taux vient de la grille de marque, faute d'un taux propre. */
-  from_default: boolean
-}
-
-export interface RoyaltyShop {
-  shop_id: number
-  shop_name: string
-  city: string | null
-  /** `null` = pas encore déclaré, ce qui n'est pas « zéro euro ». */
-  revenue_amount: number | null
-  rates: Partial<Record<RoyaltyKind, RoyaltyRate>>
-  /** Ce qui est déjà au grand livre pour ce mois, nature par nature. */
-  movements: Partial<Record<RoyaltyKind, { id: number; amount: number; base_amount: number | null; rate_pct: number | null }>>
-  /** La facture de l'ERP pour ce magasin et ce mois, quand il y en a une. */
-  erp: {
-    document_ref: string
-    revenue: number | null
-    total: number | null
-    lines: Partial<
-      Record<
-        RoyaltyKind,
-        {
-          amount: number
-          rate: number | null
-          base: number | null
-          /** L'assiette a été retrouvée depuis le montant et le taux, faute d'être stockée. */
-          base_derived: boolean
-          label: string | null
-        }
-      >
-    >
-    unknown_lines: number
-  } | null
-}
-
-export function getRoyalties(month: string): Promise<{
-  month: string
-  shops: RoyaltyShop[]
-  erp: {
-    available: boolean
-    reason: string | null
-    invoices: number
-    inventory: Record<string, { 'non reconnues': string[]; disponibles: string[] }>
-    /** Libellés de ligne que la lecture n'a pas su classer, tels quels. */
-    unknown_labels: string[]
-  } | null
-}> {
-  return request(`${BASE}/funds/royalties`, { query: { month } })
-}
-
-export function saveRoyalties(payload: {
-  month: string
-  rates: Array<{ shop_id: number; kind: RoyaltyKind; rate_pct: number }>
-  revenues: Array<{ shop_id: number; revenue_amount: number | null }>
-}): Promise<{
-  rates_changed: number
-  rates_unchanged: number
-  revenues_saved: number
-  revenues_cleared: number
-}> {
-  return request(`${BASE}/funds/royalties`, { method: 'PUT', body: payload })
-}
-
-/**
- * Ce que l'ERP a facturé, tel que le module le lit.
- *
- * `available: false` n'est pas une panne : c'est une réponse — la table manque,
- * ou une colonne n'a pas été reconnue. `reason` le dit en clair, et `inventory`
- * donne les colonnes réellement présentes pour qu'on puisse trancher.
- */
-export interface ErpRoyaltyLine {
-  label: string | null
-  kind: RoyaltyKind | null
-  rate: number | null
-  base: number | null
-  amount: number
-}
-
-export interface ErpRoyaltyInvoice {
-  erp_id: string
-  shop_id: number | null
-  shop_name: string
-  erp_shop_id: string
-  document_ref: string
-  invoice_date: string
-  period_from: string
-  period_to: string
-  revenue: number | null
-  total: number | null
-  status: string | null
-  lines: ErpRoyaltyLine[]
-}
-
-export interface ErpRoyaltyPreview {
-  available: boolean
-  reason: string | null
-  mapping: { invoice?: Record<string, string>; line?: Record<string, string> }
-  inventory: Record<string, { 'non reconnues': string[]; disponibles: string[] }>
-  invoices: ErpRoyaltyInvoice[]
-}
-
-export function getErpRoyalties(month: string): Promise<ErpRoyaltyPreview> {
-  return request(`${BASE}/funds/royalties/erp`, { query: { month } })
-}
-
-export function importErpRoyalties(month: string): Promise<{
-  created: number
-  skipped: number
-  unmatched_shop: number
-  unknown_kind: number
-  total_amount: number
-}> {
-  return request(`${BASE}/funds/royalties/erp/import`, { method: 'POST', body: { month } })
-}
-
-export function generateRoyalties(
-  month: string,
-  kinds: RoyaltyKind[] = [],
-): Promise<{
-  created: number
-  skipped: number
-  without_rate: number
-  without_revenue: number
-  /** Combien viennent d'une facture ERP plutôt que d'un calcul local. */
-  from_erp: number
-  total_amount: number
-}> {
-  return request(`${BASE}/funds/royalties/generate`, { method: 'POST', body: { month, kinds } })
 }
 
 export interface LeverPerformance {

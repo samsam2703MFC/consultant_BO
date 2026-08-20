@@ -378,6 +378,17 @@ ALTER TABLE mar_offer_item
   DROP INDEX ix_mar_offer_item_sku,
   ADD UNIQUE KEY uq_mar_offer_item_sku (sku_ref);
 
+-- Migration 033 du module : photo par produit dans le dossier d'impression.
+-- L'étape « Photos produits » de l'assistant écrit ces deux colonnes.
+-- Rejouée à blanc si elles existent déjà (l'ALTER échoue et se fait ignorer).
+ALTER TABLE mar_campaign_offer_item
+  ADD COLUMN show_photo TINYINT(1) NOT NULL DEFAULT 1
+    COMMENT '1 = la photo part dans le dossier d''impression'
+    AFTER label,
+  ADD COLUMN image_url VARCHAR(500) NULL
+    COMMENT 'Photo propre à cette campagne ; NULL = celle du catalogue'
+    AFTER show_photo;
+
 INSERT INTO mar_client_target (code, label, sort_order) VALUES
   ('b2c',   'B2C — particuliers',    1),
   ('b2b',   'B2B — professionnels',  2),
