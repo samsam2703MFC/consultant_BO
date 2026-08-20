@@ -2944,8 +2944,29 @@ class App {
       },
     }));
     common.mkVide = !camps.length;
-    common.mkNouvelle = () => this.setState({ mkEdit: { id: null, nom: '', typeId: '',
-      scope: 'RESEAU', statut: 'draft', debut: this.M.TODAY, fin: this.dansNJours(30), budget: '' } });
+    // La création rapide est retirée : toute campagne naît COMPLÈTE, dans
+    // l'assistant. La carte d'édition ne sert plus qu'à corriger l'existant.
+
+    // --- vignettes « en attente » : brouillons et planifiées, à finir ou à
+    // lancer. Illustration, nom complet, levier du type — trois par rangée.
+    const parTypeId = {};
+    (mk.types || []).forEach(t => { parTypeId[String(t.id)] = t; });
+    const imageSrc = im => !im ? null
+      : (im.startsWith('http') || im.startsWith('/')) ? im : 'assistant/' + im;
+    common.mkAttente = camps
+      .filter(c2 => c2.statut === 'draft' || c2.statut === 'planned')
+      .map(c2 => {
+        const t = parTypeId[String(c2.typeId)] || {};
+        return { id: c2.id, nom: c2.nom, image: imageSrc(c2.image),
+          couleur: c2.typeCouleur || '#8D1D2C', type: c2.type || '—',
+          levier: t.levier || '—',
+          statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
+          periode: (c2.debut ? this.fD(c2.debut) : '—') + ' → ' + (c2.fin ? this.fD(c2.fin) : '—'),
+          // Un brouillon se finit dans l'assistant ; une planifiée se corrige.
+          ouvrir: c2.statut === 'draft'
+            ? () => { try { window.open(new URL('assistant/?id=' + c2.id, window.location.href).href, '_blank'); } catch (e2) { /* bloqué */ } }
+            : () => this.setState({ mkEdit: this.mkVersForm(c2) }) };
+      });
     // L'assistant COMPLET (cadrage, offre, objectifs, prix, photos, budget,
     // communication, planning, récap, leads) est désormais HÉBERGÉ PAR LE
     // COCKPIT (page /assistant/, API /api/marketing/) : il travaille sur les

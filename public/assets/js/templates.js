@@ -1931,11 +1931,29 @@ function tplMktCampagnes(c, x){
   return `
   <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;justify-content:flex-end;gap:9px;align-items:center">
-      <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">L’assistant complet (offre, objectifs, prix, photos, budget, communication, planning, leads) est hébergé par le cockpit : ce qu’il crée apparaît ici.</span>
-      <button ${x.A(c.mkAssistant)} style="border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 16px;border-radius:999px">Assistant complet ↗</button>
-      <button ${x.A(c.mkNouvelle)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Campagne rapide</button>
+      <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">Toute campagne se crée dans l’assistant complet (cadrage, offre, objectifs, prix, photos, budget, communication, planning, leads) : elle apparaît ici, où elle se corrige et se reprend.</span>
+      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle campagne ↗</button>
     </div>
     ${c.mkEdit ? tplMktForm(c, x) : ''}
+    ${c.mkAttente && c.mkAttente.length ? `
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500;margin-bottom:8px">En attente — à finir ou à lancer</div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        ${c.mkAttente.map(v => `
+        <div ${x.A(v.ouvrir)} class="hv-fade" style="${carte};padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:110px;background:${v.couleur}1f ${v.image ? `url('${esc(v.image)}') center/cover no-repeat` : ''};border-bottom:0.5px solid var(--color-border-tertiary);position:relative">
+            ${v.image ? '' : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:${v.couleur}">${esc((v.nom || '?').trim().charAt(0).toUpperCase())}</span>`}
+            <span style="position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:${v.statutFond};color:${v.statutTexte}">${esc(v.statutNom)}</span>
+          </div>
+          <div style="padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:13px;font-weight:600;color:var(--color-text);line-height:1.35">${esc(v.nom)}</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:${v.couleur}"></span>${esc(v.type)}</span>
+            <span><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:${v.couleur}1f;color:${v.couleur}">${esc(v.levier)}</span></span>
+            <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(v.periode)}</span>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
     <div style="${carte};overflow:hidden">
       ${c.mkVide ? `<div style="padding:24px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucune campagne. Créez la première — elle apparaîtra aussi au calendrier.</div>` : `
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:820px">
