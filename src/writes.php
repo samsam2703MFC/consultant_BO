@@ -1367,7 +1367,7 @@ function wr_ia_compte(): array
     if ($mod !== '') { $cur['modele'] = $mod; }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['anthropic', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
-    journalAdd('Paramètres', 'Assistance IA — ' . ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour'));
+    journalAdd('CEO', 'Paramètre', '—', 'Assistance IA — ' . ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour'));
     return ['ok' => true] + Anthropic::statut();
 }
 
