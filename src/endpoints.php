@@ -4419,7 +4419,9 @@ function ep_ca_stock(): array
                 'stock' => $stock, 'mini' => $mini,
                 'unite' => (string) ($m['unit_name'] ?? ''),
                 'modif' => substr((string) ($m['last_modified'] ?? ''), 0, 10),
-                'alerte' => $mini > 0 && $stock < $mini,
+                // En alerte : stock NÉGATIF (écart de caisse ou comptage) ou
+                // sous le minimum journalier — les deux appellent un geste.
+                'alerte' => $stock < 0 || ($mini > 0 && $stock < $mini),
             ];
         }
     }
