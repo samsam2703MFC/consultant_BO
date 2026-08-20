@@ -5318,9 +5318,23 @@ function ep_reputation(): array
             'raison' => 'Les tables de réputation sont absentes de cette base.'];
     }
 
+    // Les magasins viennent de la table PARTAGÉE `shops` — la même autorité que
+    // `ep_stores()`. `ceo_shop` n'est qu'un miroir local rempli à la demande, et
+    // il n'a pas de colonne `city` : le lire ici cassait la requête et, même
+    // corrigée, n'aurait montré que les magasins déjà passés par l'encodage
+    // budget. Le miroir reste le repli des installations autonomes (démo).
+    try {
+        $shops = array_map(fn ($s) => ['id' => (string) $s['id'], 'name' => $s['name'],
+            'ville' => (string) ($s['city'] ?: ($s['zone'] ?: ($s['region'] ?: '')))],
+            Db::rows('SELECT id, name, city, zone, region FROM shops WHERE active = 1 ORDER BY name'));
+    } catch (PDOException $e) {
+        $shops = array_map(fn ($s) => ['id' => (string) $s['id'], 'name' => $s['name'], 'ville' => (string) $s['zone']],
+            Db::rows("SELECT id, name, zone FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name"));
+    }
+
     $magasins = [];
     $sommeNotes = 0.0; $sommeAvis = 0;
-    foreach (Db::rows("SELECT id, name, city FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name") as $s) {
+    foreach ($shops as $s) {
         $a = $agr[$s['id']] ?? null;
         $note = ($a && $a['rating_avg'] !== null) ? (float) $a['rating_avg'] : null;
         $n    = $a ? (int) $a['rating_count'] : 0;
@@ -5341,7 +5355,7 @@ function ep_reputation(): array
         ], Db::rows('SELECT * FROM ceo_shop_review WHERE shop_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 5', [$s['id']]));
 
         $magasins[] = [
-            'id' => $s['id'], 'nom' => $s['name'], 'ville' => $s['city'] ?? '',
+            'id' => $s['id'], 'nom' => $s['name'], 'ville' => $s['ville'],
             'note' => $note, 'avis' => $n,
             'ecart' => $note !== null ? round($note - $cible, 2) : null,
             'avis5Requis' => reputationAvis5($note, $n, $cible),

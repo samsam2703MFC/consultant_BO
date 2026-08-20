@@ -2335,15 +2335,19 @@ function ep_reputation_recherche(): array
 function wr_reputation_fiche(string $shopId): array
 {
     $b = body();
-    $shop = Db::row('SELECT id, name FROM ceo_shop WHERE id = ?', [$shopId]);
-    if ($shop === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    // L'écran propose les magasins de la table partagée `shops`, mais les tables
+    // de réputation portent une clé vers le miroir `ceo_shop` — même situation
+    // que l'encodage budget : on recopie le magasin au moment du raccordement,
+    // sinon tout magasin jamais budgété répondait « magasin inconnu ».
+    $nomShop = magasinConnu($shopId);
+    if ($nomShop === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
 
     $placeId = trim((string) ($b['placeId'] ?? ''));
     if ($placeId === '') {
         // Détacher : la fiche s'en va, les avis déjà rapatriés restent. Ils
         // décrivent ce qui a été dit ; les effacer réécrirait l'histoire.
         Db::exec('DELETE FROM ceo_shop_reputation WHERE shop_id = ?', [$shopId]);
-        journalAdd('CEO', 'Paramètre', $shop['name'], 'Fiche Google détachée');
+        journalAdd('CEO', 'Paramètre', $nomShop, 'Fiche Google détachée');
         return ['ok' => true, 'detache' => true];
     }
 
@@ -2355,7 +2359,7 @@ function wr_reputation_fiche(string $shopId): array
 
     Db::exec('INSERT INTO ceo_shop_reputation (shop_id, place_id) VALUES (?, ?)
               ON DUPLICATE KEY UPDATE place_id = VALUES(place_id)', [$shopId, $placeId]);
-    journalAdd('CEO', 'Paramètre', $shop['name'], 'Fiche Google raccordée (' . $placeId . ')');
+    journalAdd('CEO', 'Paramètre', $nomShop, 'Fiche Google raccordée (' . $placeId . ')');
     // Synchroniser dans la foulée : raccorder sans lire laisserait une carte
     // vide, et personne ne saurait si le raccordement a pris.
     $r = reputationSynchroniser($shopId);
