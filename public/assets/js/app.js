@@ -4303,6 +4303,32 @@ class App {
         { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
         { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
       common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
+    } else if (ecr === 'caStock') {
+      // Inventaire matière réel par magasin (API panel). L'alerte colore la
+      // quantité : un stock sous le minimum journalier est une rupture qui vient.
+      common.caCols = ['Magasin', 'Référence', 'Catégorie', 'Stock', 'Mini / jour', 'Unité', 'Compté le'];
+      common.caRows = (d.lignes || []).map(x => ({ cells: [
+        { t: x.magasin, mut: true }, { t: x.ref }, { t: x.categorie, mut: true },
+        { t: (+x.stock).toLocaleString('fr-BE'), num: true, col: x.alerte ? '#8D1D2C' : '' },
+        { t: x.mini > 0 ? (+x.mini).toLocaleString('fr-BE') : '—', num: true, mut: true },
+        { t: x.unite || '—', mut: true }, { t: x.modif || '—', mut: true } ] }));
+      common.caRien = 'Aucun inventaire matière remonté par le panel.';
+      if (d.tronque) { common.caNote = d.tronque + ' ligne(s) au-delà des 600 affichées — les alertes passent en premier.'; }
+    } else if (ecr === 'caCommandes') {
+      common.caCols = ['Réquisition', 'Magasin', 'Début', 'Jours', 'Type', 'Statut', 'Valeur estimée', 'Par'];
+      common.caRows = (d.lignes || []).map(x => ({ cells: [
+        { t: '#' + x.id }, { t: x.magasin, mut: true }, { t: x.debut || '—', mut: true },
+        { t: String(x.jours || '—'), num: true, mut: true }, { t: x.type || '—', mut: true },
+        { t: x.statut || '—', col: x.statut === 'PENDING' ? '#8a5a13' : '' },
+        { t: this.fE(x.valeur), num: true }, { t: x.par || '—', mut: true } ] }));
+      common.caRien = 'Aucune réquisition matière remontée par le panel.';
+    } else if (ecr === 'caAchats') {
+      common.caCols = ['Fournisseur', 'Ville', 'Téléphone', 'Courriel', 'Devise', 'Références', 'Actives'];
+      common.caRows = (d.lignes || []).map(x => ({ cells: [
+        { t: x.nom }, { t: x.ville || '—', mut: true }, { t: x.telephone || '—', mut: true },
+        { t: x.email || '—', mut: true }, { t: x.devise || '—', mut: true },
+        { t: String(x.nbRefs), num: true }, { t: String(x.nbActives), num: true } ] }));
+      common.caRien = 'Aucun fournisseur au référentiel du panel.';
     }
     return common;
   }

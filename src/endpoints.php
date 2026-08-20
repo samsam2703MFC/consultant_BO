@@ -3288,6 +3288,39 @@ function ep_perf(): array
             }
         }
 
+        // 2ter) FOOD COST par magasin et par mois — la heatmap de marge du
+        //       panel, seule source : le P&L mensuel ne porte pas le poste
+        //       matière (ticket T5a). UN appel par boutique sur l'exercice
+        //       entier ; le volet `days` (CA + marge brute par jour) s'agrège
+        //       en mois, et food cost = (CA − marge brute) / CA.
+        if (PanelApi::configured()) {
+            try {
+                $shopIds = array_map(fn ($r2) => (int) $r2['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+            } catch (PDOException $eS) { $shopIds = []; }
+            $qHm = http_build_query(['date_from' => max($annees) . '-01-01', 'date_to' => date('Y-m-d')]);
+            $chemins = [];
+            foreach ($shopIds as $sid) {
+                $chemins[$sid] = '/consultant/shops/' . $sid . '/margin-heatmap?' . $qHm;
+            }
+            foreach (PanelApi::getParallele($chemins) as $sid => $hm) {
+                if (!is_array($hm) || empty($hm['days']) || !is_array($hm['days'])) { continue; }
+                $parMois = [];
+                foreach ($hm['days'] as $j2) {
+                    if (empty($j2['date']) || empty($j2['has_data'])) { continue; }
+                    $mm = (int) substr((string) $j2['date'], 5, 2);
+                    $parMois[$mm]['ca']    = ($parMois[$mm]['ca'] ?? 0) + (float) ($j2['ca'] ?? 0);
+                    $parMois[$mm]['marge'] = ($parMois[$mm]['marge'] ?? 0) + (float) ($j2['margin_value'] ?? 0);
+                }
+                foreach ($parMois as $mm => $x2) {
+                    if ($x2['ca'] <= 0) { continue; }
+                    $k = $key($sid, max($annees), $mm);
+                    if (isset($cells[$k])) {
+                        $cells[$k]['foodCostPct'] = round((($x2['ca'] - $x2['marge']) / $x2['ca']) * 100, 1);
+                    }
+                }
+            }
+        }
+
         // 3) Le BUDGET encodé (`ceo_shop_month_perf`) — table du cockpit, la
         //    seule qui le porte. Ni `mac_shop_monthly_pnl` ni `transaction` ne
         //    connaissent le budget : sans cette passe, l'encodage était écrit
@@ -4335,6 +4368,145 @@ function ep_ca_demandes(): array
  * spécification du branchement — et l'on voit du même coup si une colonne est
  * déjà servie par une source existante.
  */
+/**
+ * GET /centrale/stock — l'inventaire matière RÉEL de chaque magasin.
+ *
+ * Source : /shops/{id}/material-inventory (API panel), un appel par boutique
+ * en parallèle. L'alerte est un calcul local : stock courant sous le minimum
+ * journalier. L'écran n'affiche que ce qui existe à l'inventaire — une
+ * référence jamais comptée n'est pas « à zéro », elle est absente.
+ */
+function ep_ca_stock(): array
+{
+    if (!PanelApi::configured()) {
+        return ['etat' => 'attente', 'titre' => 'Stock',
+            'source' => 'API panel — compte consultant non configuré (Mon compte)', 'colonnes' => [], 'lignes' => []];
+    }
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
+    } catch (PDOException $e) { $shops = []; }
+    $noms = []; $chemins = [];
+    foreach ($shops as $s) {
+        $noms[(int) $s['id']] = (string) $s['name'];
+        $chemins[(int) $s['id']] = '/shops/' . (int) $s['id'] . '/material-inventory';
+    }
+    $lignes = [];
+    foreach (PanelApi::getParallele($chemins) as $sid => $inv) {
+        foreach (analyseListe(is_array($inv) ? $inv : []) as $m) {
+            if ((int) ($m['exist_in_inventory'] ?? 0) !== 1) { continue; }
+            $stock = (float) ($m['current_quantity'] ?? 0);
+            $mini  = (float) ($m['minimum_quantity_per_day'] ?? 0);
+            $lignes[] = [
+                'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+                'ref' => trim((string) ($m['material_name'] ?? '')),
+                'categorie' => (string) ($m['category_name'] ?? ''),
+                'stock' => $stock, 'mini' => $mini,
+                'unite' => (string) ($m['unit_name'] ?? ''),
+                'modif' => substr((string) ($m['last_modified'] ?? ''), 0, 10),
+                'alerte' => $mini > 0 && $stock < $mini,
+            ];
+        }
+    }
+    usort($lignes, fn ($a, $b) => [$b['alerte'], $a['magasin'], $a['categorie'], $a['ref']]
+        <=> [$a['alerte'], $b['magasin'], $b['categorie'], $b['ref']]);
+    $tronque = max(0, count($lignes) - 600);
+    return ['etat' => 'ok', 'titre' => 'Stock',
+        'source' => 'API panel — inventaire matière par magasin (/shops/{id}/material-inventory)',
+        'lignes' => array_slice($lignes, 0, 600), 'tronque' => $tronque,
+        'manquants' => [lacune('Rotation & délai de réappro',
+            'la rotation attendue et le délai de réapprovisionnement par référence',
+            'API panel — l’inventaire ne porte que le stock courant et le minimum journalier')]];
+}
+
+/**
+ * GET /centrale/commandes — les réquisitions matière des magasins.
+ *
+ * Source : /shops/{id}/material-requisitions (API panel) : période, prévision
+ * de ventes, statut et valeur estimée. C'est le vrai flux de commande des
+ * franchisés vers la centrale — PENDING attend une conversion en commande.
+ */
+function ep_ca_commandes(): array
+{
+    if (!PanelApi::configured()) {
+        return ['etat' => 'attente', 'titre' => 'Commandes franchisés',
+            'source' => 'API panel — compte consultant non configuré (Mon compte)', 'colonnes' => [], 'lignes' => []];
+    }
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
+    } catch (PDOException $e) { $shops = []; }
+    $noms = []; $chemins = [];
+    foreach ($shops as $s) {
+        $noms[(int) $s['id']] = (string) $s['name'];
+        $chemins[(int) $s['id']] = '/shops/' . (int) $s['id'] . '/material-requisitions';
+    }
+    $lignes = [];
+    foreach (PanelApi::getParallele($chemins) as $sid => $reqs) {
+        foreach (analyseListe(is_array($reqs) ? $reqs : []) as $r) {
+            $lignes[] = [
+                'id' => (int) ($r['id'] ?? 0),
+                'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+                'debut' => (string) ($r['beginning_of_period'] ?? ''),
+                'jours' => (int) ($r['requisition_period_days'] ?? 0),
+                'type' => (string) ($r['type_of_requisition'] ?? ''),
+                'statut' => (string) ($r['status'] ?? ''),
+                'valeur' => (float) ($r['estimated_value'] ?? 0),
+                'par' => (string) ($r['employee']['display_name'] ?? ''),
+            ];
+        }
+    }
+    usort($lignes, fn ($a, $b) => $b['debut'] <=> $a['debut']);
+    return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
+        'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions)',
+        'lignes' => $lignes,
+        'manquants' => [lacune('Lignes de la commande',
+            'le détail produit par produit d’une réquisition',
+            'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne')]];
+}
+
+/**
+ * GET /centrale/achats — le suivi fournisseurs : référentiel réel du panel.
+ *
+ * Source : /material-suppliers, complété du volume de catalogue par
+ * fournisseur. Les commandes fournisseurs, réceptions et litiges ne sont pas
+ * exposés en lecture (seuls des webhooks entrants existent) : annoncé.
+ */
+function ep_ca_achats(): array
+{
+    if (!PanelApi::configured()) {
+        return ['etat' => 'attente', 'titre' => 'Suivi fournisseurs',
+            'source' => 'API panel — compte consultant non configuré (Mon compte)', 'colonnes' => [], 'lignes' => []];
+    }
+    $fournisseurs = analyseListe(PanelApi::get('/material-suppliers') ?? []);
+    $chemins = [];
+    foreach ($fournisseurs as $f) {
+        $id = (int) ($f['id'] ?? 0);
+        if ($id > 0) { $chemins[$id] = '/material-suppliers/' . $id . '/catalog/products'; }
+    }
+    $catalogues = PanelApi::getParallele($chemins);
+    $lignes = [];
+    foreach ($fournisseurs as $f) {
+        $id = (int) ($f['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $cat = analyseListe(is_array($catalogues[$id] ?? null) ? $catalogues[$id] : []);
+        $actives = 0;
+        foreach ($cat as $p) { if ((int) ($p['is_active'] ?? 0) === 1) { $actives++; } }
+        $lignes[] = [
+            'id' => $id, 'nom' => (string) ($f['name'] ?? ''),
+            'ville' => (string) ($f['city'] ?? ''),
+            'telephone' => (string) ($f['phone'] ?? ''),
+            'email' => (string) ($f['email'] ?? ''),
+            'devise' => (string) ($f['currency'] ?? ''),
+            'nbRefs' => count($cat), 'nbActives' => $actives,
+        ];
+    }
+    return ['etat' => 'ok', 'titre' => 'Suivi fournisseurs',
+        'source' => 'API panel — référentiel fournisseurs et catalogues (/material-suppliers)',
+        'lignes' => $lignes,
+        'manquants' => [lacune('Commandes, réception, litiges',
+            'les commandes fournisseurs avec quantités commandées/reçues et l’état des factures',
+            'API panel — seuls des webhooks entrants existent pour les commandes fournisseurs, aucune route de lecture. À réclamer : GET /material-orders')]];
+}
+
 function ep_ca_manquant(string $ecran): array
 {
     $def = [
@@ -4574,16 +4746,28 @@ function ep_lacunes(): array
     // Les repères se posent et se gardent ; c'est le canal RETOUR qui manque.
     $out['controle'][] = annotationLacune();
 
-    // --- centrale d'achat : six écrans sans source, détaillés colonne par
-    //     colonne sur leurs propres écrans. Résumés ici pour la vue d'ensemble.
-    foreach (['campagnes' => 'Campagnes commerciales', 'achats' => 'Suivi fournisseurs',
-              'commandes' => 'Commandes franchisés', 'stock' => 'Stock',
+    // --- centrale d'achat. Stock, commandes franchisés et suivi fournisseurs
+    //     sont désormais servis par l'API du panel : ne restent en manque que
+    //     ce que leurs endpoints déclarent eux-mêmes, et les écrans encore
+    //     sans source.
+    foreach (['campagnes' => 'Campagnes commerciales',
               'facturation' => 'Facturation magasins'] as $k => $lib) {
         $m = ep_ca_manquant($k);
         $n = 0;
         foreach ($m['colonnes'] as $c) { if (!preg_match('/déjà|calcul local/i', (string) $c['src'])) { $n++; } }
         $out['centrale'][] = lacune($lib, $n . ' colonne(s) sur ' . count($m['colonnes']), $m['source']);
     }
+    // Résidus des trois écrans désormais branchés — déclarés ici sans rappeler
+    // leurs endpoints, qui font chacun un appel amont par boutique.
+    $out['centrale'][] = lacune('Commandes fournisseurs, réception, litiges',
+        'les commandes fournisseurs avec quantités commandées/reçues et l’état des factures',
+        'API panel — seuls des webhooks entrants existent, aucune route de lecture. À réclamer : GET /material-orders');
+    $out['centrale'][] = lacune('Détail d’une réquisition franchisé',
+        'les lignes produit par produit d’une commande',
+        'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne');
+    $out['centrale'][] = lacune('Rotation & délai de réappro',
+        'la rotation attendue et le délai de réapprovisionnement par référence en stock',
+        'API panel — l’inventaire ne porte que le stock courant et le minimum journalier');
     return $out;
 }
 

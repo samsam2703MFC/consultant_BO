@@ -628,6 +628,18 @@ final class PanelApi
         ]);
     }
 
+    /**
+     * Même heatmap sur des bornes explicites. Le volet `days` (CA et marge
+     * BRUTE par jour) permet d'agréger par mois côté cockpit : c'est la seule
+     * source du food cost par magasin — le P&L mensuel ne porte pas le poste
+     * matière (ticket T5a du panel).
+     */
+    public static function marginHeatmapEntre(int $shopId, string $du, string $au): ?array
+    {
+        $q = http_build_query(['date_from' => $du, 'date_to' => $au]);
+        return self::premierObjet(['/consultant/shops/' . $shopId . '/margin-heatmap?' . $q]);
+    }
+
     /** Gammes saisonnières du réseau. */
     public static function availabilityPeriods(): array
     {
