@@ -2795,6 +2795,23 @@ function ep_fonds(): array
         }
         $fiches = PanelApi::consultantShops() ?? [];
         if ($fiches !== []) {
+            // La liste ne porte pas les taux : ils vivent sur la FICHE complète
+            // (/shops/{id} — royalties_enabled, royalty_*_percentage). Une
+            // lecture parallèle par boutique, fusionnée dans la ligne.
+            $chemins = [];
+            foreach ($fiches as $sh) {
+                $id = (int) ($sh['id'] ?? 0);
+                if ($id > 0) { $chemins[$id] = '/shops/' . $id; }
+            }
+            $details = PanelApi::getParallele($chemins);
+            foreach ($fiches as $i => $sh) {
+                $id = (int) ($sh['id'] ?? 0);
+                $d2 = $details[$id] ?? null;
+                if (is_array($d2)) {
+                    if (isset($d2['shop']) && is_array($d2['shop'])) { $d2 = $d2['shop']; }
+                    $fiches[$i] = $d2 + $sh;
+                }
+            }
             // Écritures ROYALTY du mois déjà au fonds, par magasin.
             $ecrit = [];
             foreach ($mvts as $m) {
