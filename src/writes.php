@@ -2099,19 +2099,39 @@ function wr_erp_token(): array
 }
 
 /**
- * GET /admin/erp-essai?routes=a,b — sonde des routes de l'API ERP avec le jeton
- * déposé, DEPUIS LE SERVEUR. Renvoie par route le code HTTP et un extrait du
+ * GET /admin/erp-essai?routes=a,b&compte=admin|panel — sonde des routes de
+ * l'API ERP DEPUIS LE SERVEUR. Renvoie par route le code HTTP et un extrait du
  * corps : de quoi découvrir les contrats que le swagger ne documente pas.
  * Lecture seule : uniquement des GET, uniquement vers l'hôte de l'API du panel.
+ *
+ * compte=panel : passe par le compte consultant (PanelApi), qui gère lui-même
+ * sa connexion — utile pour les routes du réalm /consultant/…
  */
 function ep_erp_essai(): array
 {
+    if (($_GET['compte'] ?? '') === 'panel') {
+        if (!PanelApi::configured()) { return ['error' => 'Compte panel non configuré.']; }
+        $demande = trim((string) ($_GET['routes'] ?? ''));
+        $routes = array_filter(array_map('trim', explode(',', $demande)));
+        $out = [];
+        foreach (array_slice($routes, 0, 8) as $r) {
+            if (!preg_match('#^[a-z0-9/_-]+(\?[a-z0-9=&_\[\]-]*)?$#i', $r) || str_contains($r, '..')) {
+                $out[$r] = ['erreur' => 'chemin refusé']; continue;
+            }
+            PanelApi::$lastError = null;
+            $res = PanelApi::get('/' . ltrim($r, '/'));
+            $out[$r] = $res === null
+                ? ['erreur' => PanelApi::$lastError ?? 'réponse vide']
+                : ['code' => 200, 'extrait' => mb_substr(json_encode($res, JSON_UNESCAPED_UNICODE), 0, 2000)];
+        }
+        return ['hote' => PanelApi::config()['base'], 'compte' => 'panel', 'routes' => $out];
+    }
+
     $tok = setting('erpAdminToken', '');
-    if (!is_string($tok) || $tok === '') {
-        return ['error' => 'Aucun jeton déposé — POST /admin/erp-token d’abord.'];
+    if ((!is_string($tok) || $tok === '') && !ErpApi::configured()) {
+        return ['error' => 'Aucun jeton déposé ni compte admin — POST /admin/erp-token ou Paramètres.'];
     }
     // Même hôte que l'API du panel (config Paramètres / config.php / défaut).
-    $racine = preg_replace('#/api/v1/?$#', '', PanelApi::config()['base']);
     $demande = trim((string) ($_GET['routes'] ?? ''));
     $routes = $demande === ''
         ? ['product-availability-periods', 'product-availability-periods/name-aliases',
@@ -2124,20 +2144,11 @@ function ep_erp_essai(): array
         if (!preg_match('#^[a-z0-9/_-]+(\?[a-z0-9=&_\[\]-]*)?$#i', $r) || str_contains($r, '..')) {
             $out[$r] = ['erreur' => 'chemin refusé']; continue;
         }
-        $ch = curl_init($racine . '/api/v1/' . ltrim($r, '/'));
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
-            CURLOPT_TIMEOUT        => 15,
-            CURLOPT_CONNECTTIMEOUT => 6,
-        ]);
-        $corps = curl_exec($ch);
-        $code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err   = curl_error($ch);
-        curl_close($ch);
-        $out[$r] = $corps === false
-            ? ['code' => 0, 'erreur' => $err]
-            : ['code' => $code, 'extrait' => mb_substr((string) $corps, 0, 2000)];
+        ErpApi::$lastError = null;
+        $res = ErpApi::get('/' . ltrim($r, '/'));
+        $out[$r] = $res === null
+            ? ['erreur' => ErpApi::$lastError ?? 'réponse vide']
+            : ['code' => 200, 'extrait' => mb_substr(json_encode($res, JSON_UNESCAPED_UNICODE), 0, 2000)];
     }
-    return ['hote' => $racine, 'routes' => $out];
+    return ['hote' => ErpApi::config()['base'], 'compte' => 'admin', 'routes' => $out];
 }
