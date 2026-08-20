@@ -1930,10 +1930,6 @@ function wr_mar_restaure(): array
                   WHERE a.sku_ref IS NOT NULL');
         try { Db::exec('ALTER TABLE mar_offer_item ADD UNIQUE KEY uq_mar_offer_item_sku (sku_ref)'); }
         catch (PDOException $e) { /* clé déjà en place */ }
-        // Purge d'un repeuplement simplifié antérieur (sku_ref numérique nu,
-        // tout en catégorie « produit ») : il masquait familles et gammes.
-        // La vraie reprise ci-dessous écrit des sku_ref « erp-<id> ».
-        Db::exec("DELETE FROM mar_offer_item WHERE sku_ref REGEXP '^[0-9]+$'");
     } catch (PDOException $e) { /* table absente : la reprise le dira */ }
 
     // Le catalogue, les gammes saisonnières et leurs liens — par la reprise du
@@ -1956,6 +1952,25 @@ function wr_mar_restaure(): array
             'liens'    => $bilan($sync['season_links'] ?? []),
             'vivier'   => $bilan($sync['prospects'] ?? []),
         ];
+        // Purge d'un repeuplement simplifié antérieur (sku_ref numérique nu,
+        // tout en catégorie « produit », sans famille ni gamme). APRÈS la
+        // reprise, pour que chaque référence encore utilisée (objectifs par
+        // produit — FK sans cascade —, lignes d'offre) soit d'abord REMAPPÉE
+        // vers son équivalent « erp-<id> » : même produit, vraie fiche.
+        foreach (['mar_campaign_shop_item_target', 'mar_campaign_offer_item'] as $tRef) {
+            try {
+                Db::exec("UPDATE $tRef r
+                          JOIN mar_offer_item vieux ON vieux.id = r.offer_item_id
+                               AND vieux.sku_ref REGEXP '^[0-9]+\$'
+                          JOIN mar_offer_item neuf ON neuf.sku_ref = CONCAT('erp-', vieux.sku_ref)
+                          SET r.offer_item_id = neuf.id");
+            } catch (PDOException $e) { /* table absente ou collision : la désactivation couvrira */ }
+        }
+        try { Db::exec("DELETE FROM mar_offer_item WHERE sku_ref REGEXP '^[0-9]+\$'"); }
+        catch (PDOException $e) { /* une référence résiste (FK) : au moins la cacher */
+            try { Db::exec("UPDATE mar_offer_item SET is_active = 0 WHERE sku_ref REGEXP '^[0-9]+\$'"); }
+            catch (PDOException $e2) { /* rien de plus à faire */ }
+        }
         $n = Db::row("SELECT COUNT(*) n FROM mar_offer_item WHERE is_active = 1");
         $items = (int) $n['n'];
     } catch (Throwable $e) {
