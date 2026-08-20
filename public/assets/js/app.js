@@ -2940,6 +2940,11 @@ class App {
     common.mkVide = !camps.length;
     common.mkNouvelle = () => this.setState({ mkEdit: { id: null, nom: '', typeId: '',
       scope: 'RESEAU', statut: 'draft', debut: this.M.TODAY, fin: this.dansNJours(30), budget: '' } });
+    // L'assistant COMPLET (7 étapes : cadrage, offre, objectifs, prix, budget,
+    // communication, planning) est celui du module marketing, toujours déployé
+    // sur ce serveur et travaillant sur les MÊMES tables : ce que l'on y crée
+    // apparaît ici. La carte rapide ci-dessous couvre le cas simple.
+    common.mkAssistant = () => { try { window.open('/marketing/', '_blank'); } catch (e2) { /* bloqué */ } };
 
     // --- formulaire (création et correction, même carte).
     const ed = S.mkEdit;

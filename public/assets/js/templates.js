@@ -1930,8 +1930,10 @@ function tplMktCampagnes(c, x){
   const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
   return `
   <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
-    <div style="display:flex;justify-content:flex-end">
-      <button ${x.A(c.mkNouvelle)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle campagne</button>
+    <div style="display:flex;justify-content:flex-end;gap:9px;align-items:center">
+      <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">L’assistant complet (7 étapes — offre, objectifs, prix, communication, planning) travaille sur les mêmes tables : ce qu’il crée apparaît ici.</span>
+      <button ${x.A(c.mkAssistant)} style="border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 16px;border-radius:999px">Assistant complet ↗</button>
+      <button ${x.A(c.mkNouvelle)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Campagne rapide</button>
     </div>
     ${c.mkEdit ? tplMktForm(c, x) : ''}
     <div style="${carte};overflow:hidden">

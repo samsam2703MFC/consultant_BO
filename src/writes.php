@@ -1884,3 +1884,58 @@ function wr_mar_nettoyage(): array
         . count($tombees) . ' objet(s) supprimé(s) — ' . implode(', ', $tombees));
     return ['ok' => true, 'supprimees' => $tombees];
 }
+
+/**
+ * POST /admin/marketing-restaure — les référentiels de l'assistant de campagne.
+ *
+ * Le nettoyage a emporté les tables dont l'ASSISTANT du module a besoin
+ * (canaux, formats, tons, cibles, mécaniques de promotion, rétroplanning,
+ * catalogue d'offres). Constructif uniquement : CREATE TABLE IF NOT EXISTS et
+ * seeds rejoués depuis le dépôt marketing, versés dans sql/mar-referentiels.sql
+ * — puis le catalogue d'offres est REPEUPLÉ depuis la table `product` de
+ * l'ERP, exactement comme la reprise du module le faisait (sku_ref = ref).
+ */
+function wr_mar_restaure(): array
+{
+    $fichier = __DIR__ . '/../sql/mar-referentiels.sql';
+    if (!is_file($fichier)) { http_response_code(500); return ['error' => 'sql/mar-referentiels.sql absent']; }
+    $sql = (string) file_get_contents($fichier);
+    $faits = 0; $ignores = 0; $tables = [];
+    foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+        if ($stmt === '' || str_starts_with($stmt, '--')) { continue; }
+        // Un INSERT de seed ne se rejoue pas sur une table déjà garnie : les
+        // clés uniques le refuseraient, et doubler des libellés n'aide pas.
+        if (preg_match('/^INSERT INTO (\w+)/i', $stmt, $m)) {
+            $t = $m[1];
+            if (!isset($tables[$t])) {
+                try { $n = Db::row('SELECT COUNT(*) n FROM ' . $t); $tables[$t] = (int) $n['n']; }
+                catch (PDOException $e) { $tables[$t] = -1; }
+            }
+            if ($tables[$t] !== 0) { $ignores++; continue; }
+        }
+        try { Db::exec($stmt); $faits++; }
+        catch (PDOException $e) { $ignores++; }
+    }
+
+    // Le catalogue d'offres, repeuplé depuis l'ERP. La colonne de prix varie
+    // selon l'installation : on prend la première qui existe, sinon NULL.
+    $items = 0;
+    try {
+        $cols = array_column(Db::rows(
+            "SELECT COLUMN_NAME c FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product'"), 'c');
+        $prix = 'NULL';
+        foreach (['suggested_sale_price', 'price', 'price_amount', 'prix', 'sale_price'] as $cand) {
+            if (in_array($cand, $cols, true)) { $prix = 'p.' . $cand; break; }
+        }
+        Db::exec("INSERT INTO mar_offer_item (category, sku_ref, name, price_amount, is_active)
+                  SELECT 'produit', p.id, p.name, $prix, 1 FROM product p WHERE p.id > 0
+                  ON DUPLICATE KEY UPDATE name = VALUES(name), price_amount = VALUES(price_amount)");
+        $n = Db::row('SELECT COUNT(*) n FROM mar_offer_item');
+        $items = (int) $n['n'];
+    } catch (PDOException $e) { /* table product absente : catalogue vide, l'assistant le dira */ }
+
+    journalAdd('CEO', 'Maintenance', null, 'Référentiels de l’assistant de campagne restaurés — '
+        . $faits . ' instruction(s), catalogue d’offres repeuplé (' . $items . ' référence(s))');
+    return ['ok' => true, 'instructions' => $faits, 'ignorees' => $ignores, 'offres' => $items];
+}
