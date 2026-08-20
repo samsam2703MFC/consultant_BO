@@ -1427,6 +1427,79 @@ function ep_exploitation_rentabilite(): array
 }
 
 /**
+ * GET /stores/kpis-annuels — trois lectures mensuelles sur l'année en cours,
+ * par magasin : clients par jour, ticket moyen, articles par ticket.
+ *
+ * Une passe sales-kpis PAR MOIS écoulé (janvier → aujourd'hui), en parallèle :
+ * l'API ne rend pas de série mensuelle, on la reconstruit borne à borne — même
+ * technique que le CA mensuel de la centrale d'achat.
+ *
+ *  - clients/jour = tickets du mois ÷ jours du mois (mois en cours : jours
+ *    écoulés). Le réseau ouvre 7 j/7 (mesuré sur margin-heatmap) : le jour
+ *    calendaire EST le jour d'ouverture ;
+ *  - ticket moyen = CA ÷ tickets — recalculé plutôt que lu (avg_basket sert de
+ *    repli), pour que les trois tableaux sortent des mêmes deux chiffres ;
+ *  - articles/ticket = produits vendus ÷ tickets.
+ */
+function ep_stores_kpis_annuels(): array
+{
+    if (!PanelApi::configured()) {
+        return ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
+    }
+    $annee = (int) date('Y');
+    $moisMax = (int) date('n');
+    $auj = date('Y-m-d');
+    $paths = [];
+    for ($m = 1; $m <= $moisMax; $m++) {
+        $du = sprintf('%04d-%02d-01', $annee, $m);
+        $au = min(date('Y-m-t', strtotime($du)), $auj);
+        $paths['m' . $m] = '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $du, 'date_to' => $au]);
+    }
+    $res = PanelApi::getParallele($paths, 4);
+
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) {
+            $noms[(int) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* référentiel indisponible : les numéros feront foi */ }
+
+    $par = [];
+    for ($m = 1; $m <= $moisMax; $m++) {
+        $liste = analyseListe($res['m' . $m] ?? []);
+        $jours = ($m < $moisMax) ? (int) date('t', strtotime(sprintf('%04d-%02d-01', $annee, $m))) : (int) date('j');
+        foreach ($liste as $x) {
+            if (!is_array($x)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+            }
+            if ($id <= 0) { continue; }
+            $ca = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+            $tk = nombreOuNull($x, ['tickets', 'receipts', 'transactions']);
+            $pr = nombreOuNull($x, ['products', 'items', 'product_count']);
+            // Même règle que le P&L : une entrée que le référentiel ne connaît
+            // pas et qui n'a rien vendu est technique, pas commerciale.
+            if (!isset($noms[$id]) && ($ca ?? 0) <= 0) { continue; }
+            $panier = ($ca !== null && $tk !== null && $tk > 0) ? $ca / $tk
+                : nombreOuNull($x, ['avg_basket', 'average_basket']);
+            $par[$id][$m] = [
+                'clientsJour' => ($tk !== null && $jours > 0) ? round($tk / $jours, 1) : null,
+                'panier' => $panier !== null ? round($panier, 2) : null,
+                'items' => ($pr !== null && $tk !== null && $tk > 0) ? round($pr / $tk, 2) : null,
+            ];
+        }
+    }
+    $magasins = [];
+    foreach ($par as $id => $mois) {
+        $magasins[] = ['id' => (string) $id, 'nom' => $noms[$id] ?? ('Magasin ' . $id), 'mois' => $mois];
+    }
+    usort($magasins, fn ($a, $b) => strcmp($a['nom'], $b['nom']));
+    return ['annee' => $annee, 'moisMax' => $moisMax, 'magasins' => $magasins,
+        'source' => 'API panel — sales-kpis mois par mois ; clients/jour = tickets ÷ jours du mois (mois en cours : jours écoulés)'];
+}
+
+/**
  * Analyse d'une catégorie ou d'une référence dans le temps.
  *
  * Une série se construit en interrogeant l'API sur des bornes successives :

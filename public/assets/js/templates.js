@@ -881,6 +881,31 @@ function tplMagasins(c, x){
         </table>
       </div>
     </div>
+    ${c.mgAn.chargement ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel (année en cours, mois par mois)…</div>`
+      : (c.mgAn.indispo ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.mgAn.indispo)}</div>` : `
+    ${c.mgAn.tables.map(t => `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <span style="font-size:13px;font-weight:500">${esc(t.titre)} — ${esc(c.mgAn.annee)}, mois par mois</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted);margin-left:8px">${esc(t.sous)}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:${190 + c.mgAn.moisLabels.length * 74}px">
+          <thead><tr>
+            <th style="${TH}">Magasin</th>
+            ${c.mgAn.moisLabels.map(mL => `<th style="text-align:right;${TH2}">${esc(mL)}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${t.rows.map(r => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                <td style="padding:9px 14px;font-weight:500;white-space:nowrap">${esc(r.nom)}</td>
+                ${r.cells.map(v => `<td style="padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${esc(v)}</td>`).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('')}
+    <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.mgAn.source)}</div>`)}
   </div>`;
 }
 

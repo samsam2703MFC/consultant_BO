@@ -981,6 +981,29 @@ class App {
           ca: this.fK(r._ca), caT: this.fK(r.s.perf[E][MI].caT), caPct: this.fP(r._caPct, 0), caPctSt: this.pill(r._caPct),
           tickets: r._tickets != null ? r._tickets.toLocaleString('fr-BE') : '—', tickEvo: te.txt + ' vs N-1', tickEvoSt: te.st + ';font-size:10.5px',
           panier: r._panier != null ? r._panier.toFixed(2).replace('.', ',') + ' €' : '—', panEvo: pe.txt + ' vs N-1', panEvoSt: pe.st + ';font-size:10.5px' }; });
+
+      // --- trois tableaux annuels (une colonne par mois), servis par l'API :
+      // clients/jour, ticket moyen, articles par ticket. Lecture paresseuse.
+      const anz = S.mgAn;
+      if (!anz) { setTimeout(() => this.mgAnCharge(), 0); }
+      const ad = anz && anz.d;
+      const nMois = ad ? ad.moisMax : 0;
+      const fN = (v, dec) => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      common.mgAn = {
+        chargement: !anz || anz.chargement,
+        indispo: ad && ad.indispo ? (ad.motif || 'API indisponible')
+          : (anz && !anz.chargement && !ad ? 'La lecture de /stores/kpis-annuels a échoué — voir Diagnostic API.' : ''),
+        annee: ad ? String(ad.annee) : '',
+        moisLabels: ad ? M.MOIS.slice(0, nMois) : [],
+        source: ad ? (ad.source || '') : '',
+        tables: !ad || ad.indispo ? [] : [
+          ['Clients par jour', 'moyenne journalière du mois (tickets ÷ jours)', 'clientsJour', 1, ''],
+          ['Ticket moyen', 'CA du mois ÷ tickets du mois', 'panier', 2, ' €'],
+          ['Articles par ticket', 'produits vendus ÷ tickets du mois', 'items', 2, ''],
+        ].map(t => ({ titre: t[0], sous: t[1],
+          rows: (ad.magasins || []).map(m => ({ nom: m.nom,
+            cells: Array.from({ length: nMois }, (_, i) => fN((m.mois[i + 1] || {})[t[2]], t[3]) + (((m.mois[i + 1] || {})[t[2]]) != null ? t[4] : '')) })) })),
+      };
     }
 
     // --- heatmap
@@ -1840,6 +1863,15 @@ class App {
       .then(d => { this._exReseauEnCours = null;
         this.setState(s => (s.exReseau && s.exReseau.per === per)
           ? { exReseau: { per, chargement: false, d: d || null } } : {}); });
+  }
+  /** KPIs mensuels de l'année (clients/jour, ticket moyen, articles/ticket). */
+  mgAnCharge(){
+    if (this._mgAnEnCours) return;
+    this._mgAnEnCours = true;
+    this.setState({ mgAn: { chargement: true, d: null } });
+    readOne('/stores/kpis-annuels')
+      .then(d => { this._mgAnEnCours = false;
+        this.setState({ mgAn: { chargement: false, d: d || null } }); });
   }
   /** Rentabilité par jour (heatmap PWA) : semaine pleine ou mois courant. */
   exRentCharge(per){
