@@ -874,26 +874,15 @@ class App {
     const nLate = projEff.filter(p => p.statut === 'En retard').length;
 
     // Le rail suit le geste, pas l'organigramme : on pilote sa journée, puis on
-    // regarde ce que la marque met en avant, puis la performance des magasins,
-    // puis les produits qui la font, puis les achats, puis ce que la marque
-    // investit, puis ce qu'on contrôle.
+    // regarde la performance des magasins, puis les produits qui la font, puis
+    // les achats, puis ce que la marque investit et ce qu'elle met en avant,
+    // puis ce qu'on contrôle.
     // « Exploitation » et « Réseau & marque » ne portaient qu'une entrée
     // chacune : une section d'un seul item coûte un titre pour rien.
     const navDef = [
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
         ['exploitation', 'P&L magasins', 0]]],
-      // Repris du module marketing autonome, qui disparaît : le cockpit lit et
-      // écrit les tables mar_* directement, comme il le fait pour pla_*. Sa
-      // propre section plutôt que deux entrées glissées dans « Pilotage » : on
-      // ne pilote pas sa journée dans le calendrier de la marque, et la place
-      // est faite pour ce qui suivra (posts des magasins, retombées).
-      // « Types de campagne » descend d'Administration : c'est un réglage, mais
-      // celui-là s'ouvre en écrivant une campagne, pas en administrant l'appli.
-      ['Marketing', [
-        ['mktCalendrier', 'Calendrier marketing', 0],
-        ['mktCampagnes', 'Campagnes', 0],
-        ['mktTypes', 'Types de campagne', 0]]],
       ['Performance magasins', [
         ['magasins', 'Tableau des magasins', 0],
         ['heatmap', 'Heatmap mensuelle', 0],
@@ -932,6 +921,16 @@ class App {
       ['Marque & développement', [
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
+      // Le marketing suit la marque : le fonds finance les campagnes, et une
+      // campagne se lit à côté de ce qu'elle a coûté. Repris du module
+      // marketing autonome, qui disparaît — le cockpit lit et écrit les tables
+      // mar_* directement, comme il le fait pour pla_*.
+      // « Types de campagne » vient d'Administration : c'est un réglage, mais
+      // celui-là s'ouvre en écrivant une campagne, pas en administrant l'appli.
+      ['Marketing', [
+        ['mktCalendrier', 'Calendrier marketing', 0],
+        ['mktCampagnes', 'Campagnes', 0],
+        ['mktTypes', 'Types de campagne', 0]]],
       // Le reporting EST un contrôle : il rend compte de ce qui a été fait, au
       // même endroit que les checklists. Le journal, lui, est une trace
       // d'administration — il rejoint les paramètres.
