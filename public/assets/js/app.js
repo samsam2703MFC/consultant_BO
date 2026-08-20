@@ -490,26 +490,9 @@ class App {
   seuils(){ const d = (this.meta && this.meta.seuils) || {};
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
       l: this.state.sLabour != null ? +this.state.sLabour : d.labour, o: d.overhead }; }
-  margeAlerts(){ const s = this.seuils(); const out = [];
-    for (const st of this.open()){ const r = st.perf[this.exo()][this.moisIdxComplet()];
-      if (r.food > s.f) out.push({ store: st.nom, lev: 'food-cost', levNom: 'Food Cost', msg: 'food-cost ' + String(r.food).replace('.', ',') + ' % (seuil ' + s.f + ' %)', action: 'Revoir fiches techniques, contrôle réception ProdAtelier et gestion casse.' });
-      if (r.labour > s.l) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'labour-cost ' + String(r.labour).replace('.', ',') + ' % (seuil ' + s.l + ' %)', action: 'Adapter les plannings au flux, suivre le ratio CA/ETP par tranche horaire.' });
-      // ETP RÉEL (planning du panel : heures du mois ÷ 168). Sans planning
-      // connu, aucune alerte : mieux vaut ne rien dire que déclencher une
-      // alerte de dimensionnement d'équipe sur un effectif déduit du CA.
-      const sEtp = this.seuilCaEtp();
-      if (r.etp != null && r.etp > 0 && r.ca != null) {
-        const ce = r.ca / r.etp;
-        if (ce < sEtp) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'CA/ETP ' + this.fE(ce) + ' sous le minimum de ' + this.fE(sEtp) + ' (' + r.etp.toFixed(1).replace('.', ',') + ' ETP planifiés)', action: 'Revoir le dimensionnement d’équipe et la productivité horaire.' });
-      }
-      if (r.overhead > s.o) out.push({ store: st.nom, lev: 'overhead-cost', levNom: 'Overhead Cost', msg: 'overhead ' + String(r.overhead).replace('.', ',') + ' % (seuil ' + String(s.o).replace('.', ',') + ' %)', action: 'Auditer loyer, énergies et abonnements ; renégocier les contrats.' }); }
-    return out; }
   openRelTask(x){ const tpl = this.state.tpl; const late = x.st === 'En retard'; const base = this.D.emailTemplates[late ? 1 : 0]; const corps = (tpl[base.id] || base.corps);
     const sub = s => s.replace('{tache}', x.t.nom).replace('{projet}', x.p.nom).replace('{echeance}', this.fDA(x.t.due)).replace('{destinataire}', x.o.nom).replace('{zone}', '');
     this.setState({ rel: { kind: 'task', id: x.t.id, projet: x.p.nom, to: x.o.nom, email: x.o.email, sujet: sub(base.sujet), corps: sub(corps) } }); }
-  spark(series, w, h){ const vals = series.filter(v => v != null); if (!vals.length) return ''; const mn = Math.min(...vals), mx = Math.max(...vals); const sp = mx - mn || 1;
-    return series.map((v, i) => v == null ? null : (4 + i * (w - 8) / (series.length - 1)).toFixed(1) + ',' + (h - 6 - (v - mn) / sp * (h - 12)).toFixed(1)).filter(Boolean).join(' '); }
-
   /* --- valeurs de rendu (port de renderVals) --------------------------------- */
   renderVals(){
     const S = this.state;
@@ -888,7 +871,7 @@ class App {
         ['magasins', 'Tableau des magasins', 0],
         ['heatmap', 'Heatmap mensuelle', 0],
         ['objectifs', 'Objectifs de CA', 0],
-        ['marge', 'Marge & coûts', this.margeAlerts().length],
+        ['marge', 'Marge & coûts', 0],
         // Le badge compte les magasins sous la cible : il n'apparaît qu'une
         // fois l'écran ouvert une première fois, la lecture étant paresseuse.
         ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0],
@@ -912,9 +895,10 @@ class App {
       // scoring. L'écran reste dans le code, il ne s'atteint plus depuis la
       // navigation.
 
+      // « Campagnes commerciales » et « Demande de prix » ont quitté le rail à
+      // la demande — les écrans restent dans le code, comme le suivi de
+      // production, ils ne s'atteignent plus depuis la navigation.
       ['Centrale d’achat', [
-        ['caCampagnes', 'Campagnes commerciales', 0],
-        ['caDemande', 'Demande de prix', 0],
         ['caAchats', 'Suivi fournisseurs', 0],
         ['caCommandes', 'Commandes franchisés', 0],
         ['caStock', 'Stock', 0],
@@ -1120,8 +1104,8 @@ class App {
     if (common.isEncodage) this.valsEncodage(common);
     // --- scoring produits
     if (common.isProduits) this.valsProduits(common);
-    // --- marge
-    if (common.isMarge) this.valsMarge(common);
+    // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
+    if (common.isMarge || common.isExploit) this.valsMarge(common);
     // --- projets
     if (common.isProjets) this.valsProjets(common, projEff);
     // --- contrôle des tâches (checklists consultants du panel)
@@ -5382,9 +5366,9 @@ class App {
   /* --- marge & coûts ------------------------------------------------------------ */
   valsMarge(common){
     // Les tuiles « Marge nette réseau » et « Alertes actives » ont été retirées
-    // à la demande : l'écran ne garde que les ratios par magasin. Les alertes
-    // elles-mêmes (margeAlerts) vivent encore — le badge du rail et la tuile
-    // d'accueil les comptent, et la colonne Statut du tableau les résume.
+    // à la demande, comme le badge du rail et la tuile d'accueil qui les
+    // comptaient : l'écran ne garde que les ratios par magasin, et la colonne
+    // Statut suffit à dire combien de leviers dépassent leur seuil.
     const s = this.seuils();
     const E = this.exo(), MI = this.moisIdxComplet();
     const moisNom = (this.M.MOIS && this.M.MOIS[MI]) || '';
@@ -6403,7 +6387,6 @@ class App {
     const aNoter = flat.filter(t => !!t.t.done && (t.t.note === null || t.t.note === undefined)).length;
     const nProjLate = (D.projects || []).filter(pr => (pr.taches || [])
       .some(t => !t.done && t.due && t.due < M.TODAY)).length;
-    const alertes = this.margeAlerts().length;
     const tuile = (cle, n, lib, sous, ecran, urgent) => ({
       cle, n, lib, sous,
       valeur: n == null ? '—' : Math.round(n).toLocaleString('fr-BE'),
@@ -6460,9 +6443,7 @@ class App {
       tuile('aNoter', aNoter, 'À noter',
         'mes tâches rendues, pas encore évaluées', null, false),
       tuile('projets', nProjLate, 'Projets en retard',
-        'au moins un jalon dépassé', 'projets', true),
-      tuile('marge', alertes, 'Alertes marge',
-        'ratios au-delà des seuils', 'marge', true)
+        'au moins un jalon dépassé', 'projets', true)
     ];
 
     common.tkWho = S.tkWho;

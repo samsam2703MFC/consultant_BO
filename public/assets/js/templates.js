@@ -307,6 +307,7 @@ function tplExploitation(c, x){
         </tr>`).join('')}</tbody>
       </table>`)}
     </div>
+    <div style="margin-top:16px">${tplRatiosCouts(c, x)}</div>
     ${c.exDetail ? tplExploitDetail(c, x) : ''}
     <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
       <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
@@ -1118,10 +1119,11 @@ function tplBudget(c, x){
 }
 
 /* --- Marge & coûts ---------------------------------------------------------- */
-function tplMarge(c, x){
+/* La carte des ratios est partagée : elle s'affiche sur « Marge & coûts » et,
+   à la demande, sur « P&L magasins » — même calcul, même rendu, un seul code. */
+function tplRatiosCouts(c, x){
   const { esc } = x;
   return `
-  <div data-screen="marge" style="display:flex;flex-direction:column;gap:16px">
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Ratios de coûts par magasin — ${c.mgHdrPeriode} · où se gagne / se perd la marge</div>
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -1149,7 +1151,13 @@ function tplMarge(c, x){
             </tr>`).join('')}
         </tbody>
       </table>
-    </div>
+    </div>`;
+}
+
+function tplMarge(c, x){
+  return `
+  <div data-screen="marge" style="display:flex;flex-direction:column;gap:16px">
+    ${tplRatiosCouts(c, x)}
   </div>`;
 }
 
