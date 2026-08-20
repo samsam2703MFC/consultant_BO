@@ -1900,14 +1900,13 @@ function wr_mar_restaure(): array
     $fichier = __DIR__ . '/../sql/mar-referentiels.sql';
     if (!is_file($fichier)) { http_response_code(500); return ['error' => 'sql/mar-referentiels.sql absent']; }
     $sql = (string) file_get_contents($fichier);
+    // Les commentaires se retirent AVANT le découpage sur « ; » : un
+    // point-virgule dans un commentaire (« à l'import ; sinon… ») coupait un
+    // CREATE en deux fragments invalides, ignorés en silence à chaque passage.
+    $sql = implode("\n", array_filter(explode("\n", $sql),
+        static fn ($l) => !str_starts_with(trim($l), '--')));
     $faits = 0; $ignores = 0; $tables = [];
     foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-        // Les lignes de commentaire se retirent DANS l'énoncé, pas l'énoncé
-        // entier : un INSERT précédé de « -- seed » est un INSERT, et le
-        // sauter silencieusement a laissé toutes les tables vides au premier
-        // passage.
-        $stmt = trim(implode("\n", array_filter(explode("\n", $stmt),
-            static fn ($l) => !str_starts_with(trim($l), '--'))));
         if ($stmt === '') { continue; }
         // Un INSERT de seed ne se rejoue pas sur une table déjà garnie : les
         // clés uniques le refuseraient, et doubler des libellés n'aide pas.

@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS mar_b2b_prospect (
   potential_amount DECIMAL(12,2)       NULL,
   city             VARCHAR(120)        NULL,
   postal_code      VARCHAR(20)         NULL,
-  -- Boutique référente si elle est connue à l'import ; sinon la génération
+  -- Boutique référente si elle est connue à l'import, sinon la génération
   -- répartit sur les boutiques de la campagne.
   shop_id          BIGINT UNSIGNED     NULL,
   source           VARCHAR(80)         NULL COMMENT 'Provenance du fichier ou du connecteur',
