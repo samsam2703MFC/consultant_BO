@@ -4265,7 +4265,10 @@ class App {
     common.caMotif = d && d.motif ? d.motif : '';
     common.caSource = d && d.source ? d.source : '';
     common.caTitreSrc = d && d.titre ? d.titre : '';
-    common.caManquants = (d && d.manquants) || [];
+    // Le bandeau « Reste à brancher » affiche des phrases ; un endpoint peut
+    // aussi livrer des lacunes structurées {champ, quoi, source} — aplaties ici.
+    common.caManquants = ((d && d.manquants) || []).map(m2 => typeof m2 === 'string' ? m2
+      : ((m2.champ || '') + ' — ' + (m2.quoi || '') + (m2.source ? ' (' + m2.source + ')' : '')));
     common.caPeriode = per;
     const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
       + 'padding:6px 14px;border-radius:8px;'
