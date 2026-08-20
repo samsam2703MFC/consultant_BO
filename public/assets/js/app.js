@@ -989,16 +989,20 @@ class App {
       const ad = anz && anz.d;
       const nMois = ad ? ad.moisMax : 0;
       const fN = (v, dec) => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-      // Écart à la moyenne réseau, du NOIR (−20 % et moins) au DORÉ (+20 % et
-      // plus). La référence du panier et des articles est la ligne réseau
-      // elle-même (pondérée par les tickets) ; pour les clients/jour la ligne
-      // réseau est un TOTAL — la référence de couleur est donc ce total ramené
-      // au nombre de magasins actifs du mois.
-      const PLAGE = 0.20;
+      // Le CHIFFRE se colore (pas la cellule) selon son écart à la moyenne
+      // réseau du mois, par paliers : +5 % vert clair, +10 % vert foncé,
+      // +20 % doré ; −5 % orange, −10 % rouge, −20 % rouge vif. Entre −5 et
+      // +5 %, couleur normale. La référence du panier et des articles est la
+      // ligne réseau elle-même (pondérée par les tickets) ; pour les
+      // clients/jour la ligne réseau est un TOTAL — la référence est donc ce
+      // total ramené au nombre de magasins actifs du mois.
       const teinteEcart = (v, ref) => {
-        if (v == null || ref == null || ref <= 0) { return v == null ? 'color:var(--color-text-muted)' : ''; }
-        const t = Math.max(0, Math.min(1, (v / ref - 1 + PLAGE) / (2 * PLAGE)));
-        return 'background:' + this.mix('#141414', '#C9A227', t) + ';color:' + (t < 0.62 ? '#fff' : '#1F1B16');
+        if (v == null) { return 'color:var(--color-text-muted)'; }
+        if (ref == null || ref <= 0) { return ''; }
+        const e = v / ref - 1;
+        const c = e >= 0.20 ? '#C9A227' : e >= 0.10 ? '#2d7a3e' : e >= 0.05 ? '#7CB342'
+          : e <= -0.20 ? '#E0261A' : e <= -0.10 ? '#8D1D2C' : e <= -0.05 ? '#C17A2A' : null;
+        return c ? 'color:' + c + ';font-weight:600' : '';
       };
       common.mgAn = {
         chargement: !anz || anz.chargement,
@@ -1008,7 +1012,7 @@ class App {
         moisLabels: ad ? M.MOIS.slice(0, nMois) : [],
         source: ad ? (ad.source || '')
           + ' · ligne Réseau : totaux réels (panier et articles pondérés par les tickets)'
-          + ' · couleur : écart à la moyenne réseau du mois, du noir (−20 %) au doré (+20 %)' : '',
+          + ' · couleur du chiffre : écart à la moyenne réseau du mois — +5 % vert clair, +10 % vert foncé, +20 % doré · −5 % orange, −10 % rouge, −20 % rouge vif' : '',
         tables: !ad || ad.indispo ? [] : [
           ['Clients par jour', 'moyenne journalière du mois (tickets ÷ jours)', 'clientsJour', 1, ''],
           ['Ticket moyen', 'CA du mois ÷ tickets du mois', 'panier', 2, ' €'],
