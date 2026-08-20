@@ -989,20 +989,46 @@ class App {
       const ad = anz && anz.d;
       const nMois = ad ? ad.moisMax : 0;
       const fN = (v, dec) => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      // Écart à la moyenne réseau, du NOIR (−20 % et moins) au DORÉ (+20 % et
+      // plus). La référence du panier et des articles est la ligne réseau
+      // elle-même (pondérée par les tickets) ; pour les clients/jour la ligne
+      // réseau est un TOTAL — la référence de couleur est donc ce total ramené
+      // au nombre de magasins actifs du mois.
+      const PLAGE = 0.20;
+      const teinteEcart = (v, ref) => {
+        if (v == null || ref == null || ref <= 0) { return v == null ? 'color:var(--color-text-muted)' : ''; }
+        const t = Math.max(0, Math.min(1, (v / ref - 1 + PLAGE) / (2 * PLAGE)));
+        return 'background:' + this.mix('#141414', '#C9A227', t) + ';color:' + (t < 0.62 ? '#fff' : '#1F1B16');
+      };
       common.mgAn = {
         chargement: !anz || anz.chargement,
         indispo: ad && ad.indispo ? (ad.motif || 'API indisponible')
           : (anz && !anz.chargement && !ad ? 'La lecture de /stores/kpis-annuels a échoué — voir Diagnostic API.' : ''),
         annee: ad ? String(ad.annee) : '',
         moisLabels: ad ? M.MOIS.slice(0, nMois) : [],
-        source: ad ? (ad.source || '') : '',
+        source: ad ? (ad.source || '')
+          + ' · ligne Réseau : totaux réels (panier et articles pondérés par les tickets)'
+          + ' · couleur : écart à la moyenne réseau du mois, du noir (−20 %) au doré (+20 %)' : '',
         tables: !ad || ad.indispo ? [] : [
           ['Clients par jour', 'moyenne journalière du mois (tickets ÷ jours)', 'clientsJour', 1, ''],
           ['Ticket moyen', 'CA du mois ÷ tickets du mois', 'panier', 2, ' €'],
           ['Articles par ticket', 'produits vendus ÷ tickets du mois', 'items', 2, ''],
-        ].map(t => ({ titre: t[0], sous: t[1],
-          rows: (ad.magasins || []).map(m => ({ nom: m.nom,
-            cells: Array.from({ length: nMois }, (_, i) => fN((m.mois[i + 1] || {})[t[2]], t[3]) + (((m.mois[i + 1] || {})[t[2]]) != null ? t[4] : '')) })) })),
+        ].map(t => {
+          const refMois = Array.from({ length: nMois }, (_, i) => {
+            const r = ((ad.reseau || {})[i + 1] || {})[t[2]];
+            if (r == null) { return null; }
+            if (t[2] !== 'clientsJour') { return r; }
+            const actifs = (ad.magasins || []).filter(m => ((m.mois[i + 1] || {})[t[2]]) != null && ((m.mois[i + 1] || {})[t[2]]) > 0).length;
+            return actifs > 0 ? r / actifs : null;
+          });
+          return { titre: t[0], sous: t[1],
+            rows: (ad.magasins || []).map(m => ({ nom: m.nom, reseau: false,
+              cells: Array.from({ length: nMois }, (_, i) => { const v = (m.mois[i + 1] || {})[t[2]];
+                return { t: fN(v, t[3]) + (v != null ? t[4] : ''), st: teinteEcart(v, refMois[i]) }; }) }))
+              .concat([{ nom: 'Réseau', reseau: true,
+                cells: Array.from({ length: nMois }, (_, i) => { const v = ((ad.reseau || {})[i + 1] || {})[t[2]];
+                  return { t: fN(v, t[3]) + (v != null ? t[4] : ''), st: v == null ? 'color:var(--color-text-muted)' : '' }; }) }]) };
+        }),
       };
     }
 

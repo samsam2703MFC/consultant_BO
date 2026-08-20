@@ -897,9 +897,9 @@ function tplMagasins(c, x){
           </tr></thead>
           <tbody>
             ${t.rows.map(r => `
-              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                <td style="padding:9px 14px;font-weight:500;white-space:nowrap">${esc(r.nom)}</td>
-                ${r.cells.map(v => `<td style="padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${esc(v)}</td>`).join('')}
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)${r.reseau ? ';border-top:1.5px solid var(--color-border-secondary)' : ''}">
+                <td style="padding:9px 14px;font-weight:${r.reseau ? '600' : '500'};white-space:nowrap">${esc(r.nom)}</td>
+                ${r.cells.map(v => `<td style="padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;${r.reseau ? 'font-weight:600;' : ''}${v.st}">${esc(v.t)}</td>`).join('')}
               </tr>`).join('')}
           </tbody>
         </table>

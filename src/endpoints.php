@@ -1464,10 +1464,11 @@ function ep_stores_kpis_annuels(): array
         }
     } catch (PDOException $e) { /* référentiel indisponible : les numéros feront foi */ }
 
-    $par = [];
+    $par = []; $reseau = [];
     for ($m = 1; $m <= $moisMax; $m++) {
         $liste = analyseListe($res['m' . $m] ?? []);
         $jours = ($m < $moisMax) ? (int) date('t', strtotime(sprintf('%04d-%02d-01', $annee, $m))) : (int) date('j');
+        $tCa = 0.0; $tTk = 0; $tPr = 0; $aTk = false; $aPr = false;
         foreach ($liste as $x) {
             if (!is_array($x)) { continue; }
             $id = 0;
@@ -1488,14 +1489,25 @@ function ep_stores_kpis_annuels(): array
                 'panier' => $panier !== null ? round($panier, 2) : null,
                 'items' => ($pr !== null && $tk !== null && $tk > 0) ? round($pr / $tk, 2) : null,
             ];
+            if ($ca !== null) { $tCa += $ca; }
+            if ($tk !== null) { $tTk += (int) $tk; $aTk = true; }
+            if ($pr !== null) { $tPr += (int) $pr; $aPr = true; }
         }
+        // La ligne réseau se calcule sur les SOMMES, pas sur la moyenne des
+        // moyennes : un panier réseau est le CA total ÷ les tickets totaux —
+        // pondéré de fait par la taille de chaque magasin.
+        $reseau[$m] = [
+            'clientsJour' => ($aTk && $jours > 0) ? round($tTk / $jours, 1) : null,
+            'panier' => ($aTk && $tTk > 0) ? round($tCa / $tTk, 2) : null,
+            'items' => ($aPr && $tTk > 0) ? round($tPr / $tTk, 2) : null,
+        ];
     }
     $magasins = [];
     foreach ($par as $id => $mois) {
         $magasins[] = ['id' => (string) $id, 'nom' => $noms[$id] ?? ('Magasin ' . $id), 'mois' => $mois];
     }
     usort($magasins, fn ($a, $b) => strcmp($a['nom'], $b['nom']));
-    return ['annee' => $annee, 'moisMax' => $moisMax, 'magasins' => $magasins,
+    return ['annee' => $annee, 'moisMax' => $moisMax, 'magasins' => $magasins, 'reseau' => $reseau,
         'source' => 'API panel — sales-kpis mois par mois ; clients/jour = tickets ÷ jours du mois (mois en cours : jours écoulés)'];
 }
 
