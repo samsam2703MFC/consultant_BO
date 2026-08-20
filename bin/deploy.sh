@@ -107,6 +107,7 @@ rsync -a --delete \
   --exclude '.git' --exclude 'config/config.php' \
   --exclude 'node_modules' --exclude '.deployenv' \
   --exclude 'public/uploads' \
+  --exclude 'public/assistant/uploads' \
   "$REPO_SRC/" "$TARGET_DIR/"
 
 # Photos annexées au planogramme : elles vivent HORS du dépôt et doivent
@@ -115,6 +116,11 @@ rsync -a --delete \
 mkdir -p "$TARGET_DIR/public/uploads/plano"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
+
+# Visuels des campagnes de l'assistant : même règle que les photos plano.
+mkdir -p "$TARGET_DIR/public/assistant/uploads"
+chown -R www-data:www-data "$TARGET_DIR/public/assistant/uploads"
+chmod -R u+rwX,g+rX "$TARGET_DIR/public/assistant/uploads"
 
 # --- 3. Identifiants MySQL du panel -------------------------------------
 if [[ -z "$COCKPIT_DB_USER" || -z "$COCKPIT_DB_PASSWORD" ]]; then

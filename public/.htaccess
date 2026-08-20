@@ -17,19 +17,24 @@ RewriteEngine On
 # API REST → contrôleur frontal
 RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
 
-# Photos annexées au planogramme.
+# API de l'assistant de campagne (copie du module marketing). L'assistant
+# appelle ../api/v1/marketing/… depuis /assistant/ ; sans cette règle, le
+# repli SPA renverrait le shell HTML avec un statut 200.
+RewriteRule ^api/v1/marketing(/.*)?$ api/marketing/index.php [L,QSA]
+
+# Photos annexées au planogramme, et visuels de l'assistant de campagne.
 #
 # Rien n'y est EXÉCUTÉ : un fichier déposé dont le nom finirait en .php doit
 # rester un fichier. La règle vient avant tout le reste, pour qu'aucune
 # réécriture ultérieure ne puisse l'atteindre.
-RewriteRule ^uploads/.*\.(php|phtml|phar|phps|cgi|pl|py|sh|htaccess)$ - [F,L]
+RewriteRule ^(uploads|assistant/uploads)/.*\.(php|phtml|phar|phps|cgi|pl|py|sh|htaccess)$ - [F,L]
 
 # Et une photo ABSENTE rend un 404, pas la page de l'application. Sans cette
 # règle, la réécriture SPA plus bas renvoyait le shell HTML avec un statut 200 :
 # la balise <img> recevait du HTML, affichait une image cassée, et rien
 # n'indiquait que le fichier manquait.
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^uploads/ - [R=404,L]
+RewriteRule ^(uploads|assistant/uploads)/ - [R=404,L]
 
 # SPA : tout chemin qui n'est pas un fichier réel → index.html
 RewriteCond %{REQUEST_FILENAME} !-f

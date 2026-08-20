@@ -2929,6 +2929,12 @@ class App {
       budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '—',
       nBoutiques: c2.nBoutiques,
       editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
+      // Un brouillon se FINIT dans l'assistant : la carte rapide ne porte ni
+      // l'offre, ni les objectifs, ni le planning qu'il reste à remplir.
+      reprendre: c2.statut !== 'draft' ? null : () => {
+        try { window.open(new URL('assistant/?id=' + c2.id, window.location.href).href, '_blank'); }
+        catch (e2) { /* bloqué */ }
+      },
       supprimer: () => {
         if (!window.confirm('Supprimer définitivement la campagne « ' + c2.nom + ' » ?')) { return; }
         this.api('DELETE', '/marketing/campagne/' + c2.id).then(r => {
@@ -2940,11 +2946,15 @@ class App {
     common.mkVide = !camps.length;
     common.mkNouvelle = () => this.setState({ mkEdit: { id: null, nom: '', typeId: '',
       scope: 'RESEAU', statut: 'draft', debut: this.M.TODAY, fin: this.dansNJours(30), budget: '' } });
-    // L'assistant COMPLET (7 étapes : cadrage, offre, objectifs, prix, budget,
-    // communication, planning) est celui du module marketing, toujours déployé
-    // sur ce serveur et travaillant sur les MÊMES tables : ce que l'on y crée
-    // apparaît ici. La carte rapide ci-dessous couvre le cas simple.
-    common.mkAssistant = () => { try { window.open('/marketing/', '_blank'); } catch (e2) { /* bloqué */ } };
+    // L'assistant COMPLET (cadrage, offre, objectifs, prix, photos, budget,
+    // communication, planning, récap, leads) est désormais HÉBERGÉ PAR LE
+    // COCKPIT (page /assistant/, API /api/marketing/) : il travaille sur les
+    // mêmes tables, et survivra à la suppression du module marketing.
+    // La carte rapide ci-dessous couvre le cas simple.
+    common.mkAssistant = () => {
+      try { window.open(new URL('assistant/', window.location.href).href, '_blank'); }
+      catch (e2) { /* bloqué */ }
+    };
 
     // --- formulaire (création et correction, même carte).
     const ed = S.mkEdit;

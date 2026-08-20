@@ -1931,7 +1931,7 @@ function tplMktCampagnes(c, x){
   return `
   <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;justify-content:flex-end;gap:9px;align-items:center">
-      <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">L’assistant complet (7 étapes — offre, objectifs, prix, communication, planning) travaille sur les mêmes tables : ce qu’il crée apparaît ici.</span>
+      <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">L’assistant complet (offre, objectifs, prix, photos, budget, communication, planning, leads) est hébergé par le cockpit : ce qu’il crée apparaît ici.</span>
       <button ${x.A(c.mkAssistant)} style="border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 16px;border-radius:999px">Assistant complet ↗</button>
       <button ${x.A(c.mkNouvelle)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Campagne rapide</button>
     </div>
@@ -1955,6 +1955,7 @@ function tplMktCampagnes(c, x){
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.depense)}</td>
           <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || '—'}</td>
           <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
+            ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Finir ce brouillon dans l’assistant" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Reprendre ↗</button>` : ''}
             <button ${x.A(l.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>
             <button ${x.A(l.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>
           </td>

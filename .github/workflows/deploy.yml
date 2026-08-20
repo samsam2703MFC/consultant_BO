@@ -53,7 +53,10 @@ jobs:
           for f in $(find src public -name '*.php'); do
             php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP invalide"; fail=1; }
           done
-          for f in $(find public -name '*.js'); do
+          # public/assistant : bundle Vite minifié (modules ES), déjà validé
+          # par sa compilation — `node --check` le lirait comme un script
+          # CommonJS et le refuserait à tort.
+          for f in $(find public -name '*.js' -not -path 'public/assistant/*'); do
             node --check "$f" >/dev/null 2>&1 || { echo "::error file=$f::syntaxe JS invalide"; fail=1; }
           done
           [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
