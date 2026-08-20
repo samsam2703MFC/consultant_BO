@@ -487,3 +487,43 @@ CREATE TABLE IF NOT EXISTS pla_note (
   maj_le   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (cible, cible_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Réputation digitale — avis Google par magasin
+--
+-- Deux tables, parce que ce sont deux faits différents :
+--
+--  - `ceo_shop_reputation` porte ce que Google affiche sur la fiche : la note
+--    moyenne et le NOMBRE TOTAL d'avis. C'est la seule base de calcul valable
+--    pour « combien d'avis 5 étoiles pour atteindre la cible » — le compter sur
+--    les avis rapatriés donnerait un chiffre faux d'un ordre de grandeur.
+--  - `ceo_shop_review` porte les avis eux-mêmes, dont on n'affiche que les cinq
+--    derniers. C'est un échantillon de lecture, pas la source des moyennes.
+--
+-- L'import (API Google Business Profile) n'est pas branché : ces tables sont
+-- alimentées par le connecteur le jour où il existera. Vides, l'écran le dit.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_shop_reputation (
+  shop_id      VARCHAR(8)   PRIMARY KEY,
+  place_id     VARCHAR(120) NULL,           -- identifiant Google de la fiche
+  profile_url  VARCHAR(400) NULL,           -- lien public, pour ouvrir la fiche
+  rating_avg   DECIMAL(3,2) NULL,           -- note moyenne affichée par Google
+  rating_count INT          NOT NULL DEFAULT 0,
+  synced_at    DATETIME     NULL,
+  CONSTRAINT fk_reput_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_shop_review (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  shop_id     VARCHAR(8)   NOT NULL,
+  source      VARCHAR(20)  NOT NULL DEFAULT 'google',
+  external_id VARCHAR(160) NULL,            -- id de l'avis chez la source
+  author      VARCHAR(120) NULL,
+  rating      TINYINT      NOT NULL,        -- 1..5
+  comment     TEXT         NULL,
+  reviewed_at DATETIME     NOT NULL,
+  replied_at  DATETIME     NULL,            -- réponse du magasin, si elle existe
+  UNIQUE KEY uq_review_source (source, external_id),
+  KEY idx_review_shop (shop_id, reviewed_at),
+  CONSTRAINT fk_review_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

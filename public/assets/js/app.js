@@ -163,7 +163,7 @@ class App {
       suiviPeriode: 'semaine', suiviData: null, suiviNote: {},
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
-      pdCat: 'Toutes les catégories', pdSort: 'score' };
+      repCible: null, pdCat: 'Toutes les catégories', pdSort: 'score' };
     this._h = [];
     this._tt = null;
     this._lastEn = null;
@@ -561,6 +561,7 @@ class App {
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
+      reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mktTypes: ['Types de campagne', 'Le référentiel des types : libellé, levier proposé, KPI attendu. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
@@ -888,6 +889,9 @@ class App {
         ['heatmap', 'Heatmap mensuelle', 0],
         ['objectifs', 'Objectifs de CA', 0],
         ['marge', 'Marge & coûts', this.margeAlerts().length],
+        // Le badge compte les magasins sous la cible : il n'apparaît qu'une
+        // fois l'écran ouvert une première fois, la lecture étant paresseuse.
+        ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0],
         { sub: 'Budget magasin', children: [
           ['budget', 'Suivi du budget', 0],
           ['encodage', 'Encodage du budget', 0]] }]],
@@ -960,10 +964,10 @@ class App {
 
     this.valsRecherche(common, navDef, goTo, titles);
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', reputation: 'isReput',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1108,6 +1112,8 @@ class App {
     if (common.isSeuil) this.valsSeuil(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
+    // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
+    if (common.isReput) { this.repCharge(); this.valsReputation(common); }
     // --- suivi budget magasin
     if (common.isBudget) this.valsBudget(common);
     // --- encodage du budget
@@ -3345,6 +3351,111 @@ class App {
   /* --- planogramme : le comptoir, ses emplacements, ses consignes ------------ */
 
   /** Charge l'arbre du comptoir. Un seul appel : structure ET occupation. */
+  /* --- réputation digitale ---------------------------------------------------
+   * La note et le nombre d'avis viennent de Google (via /reputation) ; les cinq
+   * avis affichés sont un échantillon de lecture. Aucun calcul de moyenne n'est
+   * refait ici : l'écran montre ce que le serveur a compté.
+   */
+  repCharge(force){
+    if (this._repEnCours) { return; }
+    if (this.D.reput && !force) { return; }
+    this._repEnCours = true;
+    readOne('/reputation').then(d => { this._repEnCours = false;
+      this.D.reput = d || { erreur: true }; this.setState({}); });
+  }
+  /** Cinq glyphes, pleins jusqu'à la note arrondie. La valeur chiffrée est
+   *  toujours affichée à côté : les étoiles donnent l'allure, pas la mesure. */
+  repEtoiles(note, taille){
+    const pleines = note == null ? 0 : Math.round(note);
+    return [1, 2, 3, 4, 5].map(i => ({
+      st: 'font-size:' + (taille || 13) + 'px;line-height:1;color:' + (i <= pleines ? '#C9A227' : '#ddd7cd') }));
+  }
+  valsReputation(common){
+    const S = this.state, D = this.D;
+    const r = D.reput;
+    common.repChargement = !r;
+    common.repErreur = !!(r && (r.erreur || r.indispo));
+    common.repErreurTxt = r && r.indispo ? r.raison : 'La lecture de /reputation a échoué — voir Diagnostic API.';
+    if (!r || common.repErreur) { common.repMagasins = []; return; }
+
+    const cible = r.cible, res = r.reseau || {};
+    const fN = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
+    const fInt = v => (v == null ? 0 : v).toLocaleString('fr-BE');
+
+    common.repCible = fN(cible);
+    common.repMoyenne = fN(res.moyenne);
+    common.repMoyenneSt = 'font-family:var(--font-display);font-size:38px;line-height:1;color:'
+      + (res.moyenne == null ? 'var(--color-text-muted)' : (res.moyenne >= cible ? '#2d7a3e' : '#8D1D2C'));
+    common.repEtoilesReseau = this.repEtoiles(res.moyenne, 17);
+    common.repAvis = fInt(res.avis) + ' avis Google · ' + fInt(res.notes) + ' magasin' + (res.notes > 1 ? 's' : '') + ' noté' + (res.notes > 1 ? 's' : '')
+      + (res.magasins > res.notes ? ' sur ' + fInt(res.magasins) : '');
+    common.repSousCible = res.sousCible || 0;
+    common.repSousCibleTxt = (res.sousCible || 0) === 0
+      ? 'Tous les magasins notés sont à la cible.'
+      : res.sousCible + ' magasin' + (res.sousCible > 1 ? 's' : '') + ' sous ' + fN(cible);
+    // Le chiffre qui donne un ordre de grandeur : l'effort réseau, pas un objectif
+    // à distribuer tel quel — chaque magasin a le sien, plus bas.
+    // Une moyenne pondérée à la cible ne dit pas que tout va bien : les gros
+    // magasins portent les petits. Quand c'est le cas, la phrase renvoie à
+    // l'endroit où l'effort se fait vraiment, magasin par magasin.
+    common.repEffort = res.avis5Requis == null
+      ? (res.moyenne == null ? 'Aucune note connue.' : 'Cible inatteignable par ajout d’avis.')
+      : (res.avis5Requis > 0 ? fInt(res.avis5Requis) + ' avis 5★ pour ramener le réseau à ' + fN(cible)
+        : ((res.sousCible || 0) > 0
+          ? 'Réseau à la cible en moyenne pondérée — l’effort porte sur les ' + res.sousCible + ' magasins en dessous.'
+          : 'Aucun avis à obtenir : tous les magasins sont à la cible.'));
+    common.repEffortFort = (res.avis5Requis || 0) > 0;
+    common.repVide = (r.magasins || []).length === 0 || res.avis === 0;
+
+    // Les plus loin de la cible en premier : c'est là que l'action se décide.
+    // Les magasins sans note ferment la marche — ils demandent un raccordement
+    // de fiche, pas un plan d'avis.
+    const tri = (r.magasins || []).slice().sort((a, b) => {
+      if (a.note == null && b.note == null) { return a.nom < b.nom ? -1 : 1; }
+      if (a.note == null) { return 1; }
+      if (b.note == null) { return -1; }
+      return a.note - b.note;
+    });
+
+    common.repMagasins = tri.map(m => {
+      const ok = m.note != null && m.note >= cible;
+      const sans = m.note == null || m.avis === 0;
+      return {
+        nom: m.nom, ville: m.ville || '',
+        note: fN(m.note), etoiles: this.repEtoiles(m.note, 14),
+        noteSt: 'font-family:var(--font-display);font-size:21px;line-height:1;color:'
+          + (sans ? 'var(--color-text-muted)' : (ok ? '#2d7a3e' : '#8D1D2C')),
+        avis: sans ? 'Fiche Google non raccordée' : fInt(m.avis) + ' avis',
+        synchro: m.synchro ? 'maj ' + this.fD(m.synchro.slice(0, 10)) : '',
+        hasUrl: !!m.url, url: m.url || '#',
+        badge: sans ? 'Sans note' : (ok ? 'À la cible' : (m.ecart > 0 ? '+' : '') + fN(m.ecart)),
+        badgeSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+          + (sans ? 'var(--color-background-secondary);color:var(--color-text-muted)'
+            : (ok ? 'rgba(45,122,62,.12);color:#2d7a3e' : 'rgba(141,29,44,.10);color:#8D1D2C')),
+        // La phrase que le CEO cherche : combien d'avis parfaits pour revenir à
+        // la cible, sur CE magasin.
+        effort: m.avis5Requis == null
+          ? (sans ? 'Raccordez la fiche pour suivre la note.' : 'Cible inatteignable par ajout d’avis.')
+          : (m.avis5Requis === 0 ? 'À la cible — rien à rattraper.'
+            : m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible)),
+        effortSt: 'font-size:12px;font-weight:500;border-radius:8px;padding:7px 10px;margin-top:9px;background:'
+          + (sans ? 'var(--color-background-secondary);color:var(--color-text-muted)'
+            : (ok ? 'rgba(45,122,62,.08);color:#2d7a3e' : 'rgba(141,29,44,.05);color:#8D1D2C')),
+        vide: (m.derniers || []).length === 0,
+        derniers: (m.derniers || []).map(a => ({
+          auteur: a.auteur, le: this.fD(a.le), note: a.note,
+          etoiles: this.repEtoiles(a.note, 11),
+          texte: a.texte ? (a.texte.length > 190 ? a.texte.slice(0, 190) + '…' : a.texte) : 'Note sans commentaire.',
+          texteSt: 'font-size:11.5px;line-height:1.45;color:' + (a.texte ? 'var(--color-text)' : 'var(--color-text-muted)') + ';text-wrap:pretty',
+          repondu: a.repondu,
+          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:1px 7px;white-space:nowrap;background:'
+            + (a.repondu ? 'rgba(45,122,62,.10);color:#2d7a3e' : 'rgba(193,122,42,.14);color:#8a5a13'),
+          reponduTxt: a.repondu ? 'Répondu' : 'Sans réponse',
+        })),
+      };
+    });
+  }
+
   plCharge(force){
     if (this._plEnCours) { return; }
     if (this.D.plano && !force) { return; }
@@ -6606,6 +6717,18 @@ class App {
     common.sFoodVal = s.f; common.sLabourVal = s.l;
     common.setSFood = e => { this.setState({ sFood: e.target.value }); this.api('PUT', '/parametres/seuil-food', { valeur: +e.target.value }); };
     common.setSLabour = e => { this.setState({ sLabour: e.target.value }); this.api('PUT', '/parametres/seuil-labour', { valeur: +e.target.value }); };
+    // Cible de note Google. Elle vit dans ceo_app_setting, comme les autres
+    // réglages : l'écran Réputation la relit à chaque lecture, rien n'est figé
+    // dans le JavaScript.
+    common.repCibleVal = S.repCible != null ? S.repCible
+      : (((this.D.reput || {}).cible) != null ? this.D.reput.cible : 4.5);
+    common.setRepCible = e => {
+      const v = Math.min(5, Math.max(1, parseFloat(String(e.target.value).replace(',', '.')) || 4.5));
+      this.setState({ repCible: v });
+      this.api('PUT', '/parametres/reputationCible', { valeur: v })
+        .then(() => { this.D.reput = null; this.repCharge(true); });
+      this.log('Paramètre', '—', 'Cible de note Google portée à ' + String(v).replace('.', ','));
+    };
     common.paramTpls = D.emailTemplates.map(t => ({ nom: t.nom, sujet: t.sujet, corps: S.tpl[t.id] != null ? S.tpl[t.id] : t.corps,
       set: e => { this.setState(s2 => ({ tpl: Object.assign({}, s2.tpl, { [t.id]: e.target.value }) })); this.api('PUT', '/parametres/email-' + t.id, { corps: e.target.value }); } }));
   }

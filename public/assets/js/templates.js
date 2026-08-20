@@ -120,6 +120,7 @@ export function render(c, x){
       ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
+      ${c.isReput ? tplReputation(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -2032,6 +2033,86 @@ function tplMktTypes(c, x){
   </div>`;
 }
 
+/* --- Réputation digitale · ce que Google dit de chaque magasin ----------------
+   Un bandeau réseau, puis une carte par magasin, les plus mal notés d'abord :
+   c'est là que la décision se prend. Chaque carte porte son propre effort — le
+   chiffre réseau ne se distribue pas, il donne l'ordre de grandeur. */
+function tplReputation(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  if (c.repChargement) {
+    return `<div data-screen="reputation" style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture des avis…</div>`;
+  }
+  if (c.repErreur) {
+    return `<div data-screen="reputation" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.repErreurTxt)}</div>`;
+  }
+  const etoiles = (list) => list.map(e => `<span style="${e.st}">★</span>`).join('');
+  return `
+  <div data-screen="reputation" style="display:flex;flex-direction:column;gap:16px">
+
+    <div style="${carte};padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center">
+      <div>
+        <div style="${cap};margin-bottom:6px">Moyenne réseau</div>
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <span style="${c.repMoyenneSt}">${c.repMoyenne}</span>
+          <span style="display:inline-flex;gap:1px;padding-bottom:3px">${etoiles(c.repEtoilesReseau)}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px">${esc(c.repAvis)}</div>
+      </div>
+      <div style="border-left:0.5px solid var(--color-border-tertiary);padding-left:26px">
+        <div style="${cap};margin-bottom:6px">Cible ${c.repCible}</div>
+        <div style="font-size:13px;font-weight:500">${esc(c.repSousCibleTxt)}</div>
+        <div style="font-size:12.5px;margin-top:7px;font-weight:${c.repEffortFort ? '500' : '400'};color:${c.repEffortFort ? '#8D1D2C' : 'var(--color-text-muted)'}">${esc(c.repEffort)}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:var(--color-text-muted);max-width:210px;text-wrap:pretty">
+        La cible se règle dans Paramètres. La moyenne réseau est pondérée par le nombre d’avis de chaque magasin.
+      </div>
+    </div>
+
+    ${c.repVide ? `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">
+      Aucun avis n’est encore remonté. Les notes et les avis viennent des fiches Google des magasins ; le raccordement des fiches n’est pas branché — les tables restent vides jusque-là.
+    </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;align-items:start">
+      ${c.repMagasins.map(m => `
+        <div style="${carte};padding:15px 17px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:13.5px;font-weight:500">${esc(m.nom)}</span>
+                <span style="${m.badgeSt}">${esc(m.badge)}</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">
+                ${esc(m.avis)}${m.synchro ? ' · ' + esc(m.synchro) : ''}
+                ${m.hasUrl ? ` · <a href="${esc(m.url)}" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:none">fiche Google ↗</a>` : ''}
+              </div>
+            </div>
+            <div style="text-align:right;flex:0 0 auto">
+              <div style="${m.noteSt}">${m.note}</div>
+              <div style="display:inline-flex;gap:1px;margin-top:3px">${etoiles(m.etoiles)}</div>
+            </div>
+          </div>
+
+          <div style="${m.effortSt}">${esc(m.effort)}</div>
+
+          <div style="${cap};margin:14px 0 2px">5 derniers avis</div>
+          ${m.vide ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding:7px 0">Aucun avis rapatrié pour ce magasin.</div>` : ''}
+          ${m.derniers.map(a => `
+            <div style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="display:inline-flex;gap:1px">${etoiles(a.etoiles)}</span>
+                <span style="font-size:11.5px;font-weight:500">${esc(a.auteur)}</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${a.le}</span>
+                <span style="${a.reponduSt};margin-left:auto">${a.reponduTxt}</span>
+              </div>
+              <div style="${a.texteSt};margin-top:3px">${esc(a.texte)}</div>
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
 /* --- Fonds · écrire une ligne du grand livre ---------------------------------
    La saisie tient dans une carte, pas dans une modale : on la remplit en
    regardant le grand livre qui est juste dessous, et on voit tout de suite si
@@ -2985,6 +3066,13 @@ function tplParams(c, x){
           </label>
         </div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Appliqués aux alertes du module Marge &amp; coûts.</div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px">Réputation digitale</div>
+        <label style="font-size:12px;color:var(--color-text-muted)">Note Google visée (sur 5)
+          <input type="number" min="1" max="5" step="0.1" value="${c.repCibleVal}" ${x.C(c.setRepCible)} style="${inputCss}">
+        </label>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Sert de cible à l’écran Réputation digitale : un magasin sous cette note affiche le nombre d’avis 5★ qu’il lui faudrait pour y revenir.</div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Modèles d'email de relance</div>

@@ -43,6 +43,7 @@ function ensureInstalled(): void
     ensureCentrale();
     ensureAnnotation();
     ensurePlanogramme();
+    ensureReputation();
 }
 
 /**
@@ -616,6 +617,46 @@ function seedEnabled(): bool
     if ((string) (getenv('COCKPIT_SEED') ?: '') === '1') { return true; }
     $cfg = Db::config();
     return !empty($cfg['seed']);
+}
+
+/**
+ * Les deux tables de la réputation digitale, à chaque démarrage.
+ *
+ * Même raison qu'ailleurs : sur une base déjà en service, `schema.sql` ne
+ * repasse pas. Sans ce bloc, l'écran « Réputation digitale » tomberait sur des
+ * tables absentes et l'API répondrait 503 « base indisponible », ce qui
+ * n'apprend rien à personne.
+ *
+ * Les clés étrangères de `schema.sql` sont volontairement omises ici : sur une
+ * base où `ceo_shop.id` a une collation différente (reprise ancienne), la
+ * contrainte fait échouer la création et emporte tout le démarrage. La table
+ * sans contrainte rend le service ; l'intégrité est tenue par le code, qui
+ * n'écrit que des magasins lus dans `ceo_shop`.
+ */
+function ensureReputation(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_reputation ('
+        . 'shop_id VARCHAR(8) PRIMARY KEY,'
+        . 'place_id VARCHAR(120) NULL,'
+        . 'profile_url VARCHAR(400) NULL,'
+        . 'rating_avg DECIMAL(3,2) NULL,'
+        . 'rating_count INT NOT NULL DEFAULT 0,'
+        . 'synced_at DATETIME NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_review ('
+        . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . "source VARCHAR(20) NOT NULL DEFAULT 'google',"
+        . 'external_id VARCHAR(160) NULL,'
+        . 'author VARCHAR(120) NULL,'
+        . 'rating TINYINT NOT NULL,'
+        . 'comment TEXT NULL,'
+        . 'reviewed_at DATETIME NOT NULL,'
+        . 'replied_at DATETIME NULL,'
+        . 'UNIQUE KEY uq_review_source (source, external_id),'
+        . 'KEY idx_review_shop (shop_id, reviewed_at)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
 function isMissingTable(PDOException $e): bool

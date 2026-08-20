@@ -5028,3 +5028,97 @@ function ep_mkt(): array
         'marqueId' => $marques ? (int) $marques[0]['id'] : null,
         'marque' => $marques ? (string) $marques[0]['name'] : ''];
 }
+
+/**
+ * GET /reputation — la réputation digitale du réseau, magasin par magasin.
+ *
+ * Trois chiffres, et un seul calcul qui compte :
+ *
+ *  - la note et le nombre d'avis viennent de `ceo_shop_reputation`, c'est-à-dire
+ *    de ce que Google affiche. Les cinq avis rapatriés sont un échantillon de
+ *    lecture : les moyennes ne s'en déduisent pas ;
+ *  - la moyenne réseau est PONDÉRÉE par le nombre d'avis. Une moyenne de
+ *    moyennes donnerait le même poids à un magasin qui a 12 avis et à un qui en
+ *    a 400, et flatterait le réseau ;
+ *  - `avis5Requis` répond à « combien d'avis 5 étoiles pour remonter à la
+ *    cible ». Depuis une moyenne A sur n avis, ajouter x avis à 5 donne
+ *    (A·n + 5x)/(n + x) ≥ C, soit x ≥ n(C − A)/(5 − C). On arrondit au
+ *    supérieur : un demi-avis n'existe pas.
+ *
+ * Cible dans `ceo_app_setting.reputationCible` (Paramètres), 4,5 par défaut.
+ */
+function ep_reputation(): array
+{
+    $cible = (float) setting('reputationCible', 4.5);
+    if ($cible < 1 || $cible > 5) { $cible = 4.5; }
+
+    try {
+        $agr = [];
+        foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) { $agr[$r['shop_id']] = $r; }
+    } catch (PDOException $e) {
+        return ['indispo' => true, 'cible' => $cible,
+            'raison' => 'Les tables de réputation sont absentes de cette base.'];
+    }
+
+    $magasins = [];
+    $sommeNotes = 0.0; $sommeAvis = 0;
+    foreach (Db::rows("SELECT id, name, city FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name") as $s) {
+        $a = $agr[$s['id']] ?? null;
+        $note = ($a && $a['rating_avg'] !== null) ? (float) $a['rating_avg'] : null;
+        $n    = $a ? (int) $a['rating_count'] : 0;
+        if ($note !== null && $n > 0) { $sommeNotes += $note * $n; $sommeAvis += $n; }
+
+        // Les cinq derniers avis du magasin — une requête bornée par magasin
+        // plutôt qu'un balayage de toute la table à découper ensuite.
+        $derniers = array_map(fn ($v) => [
+            'auteur' => $v['author'] ?: 'Client Google',
+            'note'   => (int) $v['rating'],
+            'texte'  => $v['comment'],
+            'le'     => substr((string) $v['reviewed_at'], 0, 10),
+            'repondu' => $v['replied_at'] !== null,
+        ], Db::rows('SELECT * FROM ceo_shop_review WHERE shop_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 5', [$s['id']]));
+
+        $magasins[] = [
+            'id' => $s['id'], 'nom' => $s['name'], 'ville' => $s['city'] ?? '',
+            'note' => $note, 'avis' => $n,
+            'ecart' => $note !== null ? round($note - $cible, 2) : null,
+            'avis5Requis' => reputationAvis5($note, $n, $cible),
+            'url' => $a['profile_url'] ?? null,
+            'synchro' => ($a && $a['synced_at'] !== null) ? substr((string) $a['synced_at'], 0, 16) : null,
+            'derniers' => $derniers,
+        ];
+    }
+
+    $moyenne = $sommeAvis > 0 ? round($sommeNotes / $sommeAvis, 2) : null;
+    $notes = array_values(array_filter(array_column($magasins, 'note'), fn ($v) => $v !== null));
+
+    return [
+        'cible' => $cible,
+        'reseau' => [
+            'moyenne' => $moyenne,
+            'avis' => $sommeAvis,
+            'magasins' => count($magasins),
+            'notes' => count($notes),
+            'sousCible' => count(array_filter($notes, fn ($v) => $v < $cible)),
+            'avis5Requis' => reputationAvis5($moyenne, $sommeAvis, $cible),
+        ],
+        'magasins' => $magasins,
+    ];
+}
+
+/**
+ * Combien d'avis 5 étoiles pour atteindre la cible — null si la question n'a
+ * pas de réponse.
+ *
+ * Deux cas rendent `null` plutôt que zéro, parce que ce n'est pas la même
+ * chose : aucune note connue (rien à calculer), et une cible à 5 sur une
+ * moyenne inférieure (aucun nombre d'avis parfaits n'y suffit, la moyenne
+ * tend vers 5 sans l'atteindre).
+ */
+function reputationAvis5(?float $note, int $avis, float $cible): ?int
+{
+    if ($note === null || $avis <= 0) { return null; }
+    if ($note >= $cible) { return 0; }
+    if ($cible >= 5) { return null; }
+    return (int) ceil($avis * ($cible - $note) / (5 - $cible));
+}
