@@ -874,16 +874,21 @@ class App {
     const nLate = projEff.filter(p => p.statut === 'En retard').length;
 
     // Le rail suit le geste, pas l'organigramme : on pilote sa journée, puis on
-    // regarde la performance des magasins, puis les produits qui la font, puis
-    // les achats, puis ce que la marque investit, puis ce qu'on contrôle.
+    // regarde ce que la marque met en avant, puis la performance des magasins,
+    // puis les produits qui la font, puis les achats, puis ce que la marque
+    // investit, puis ce qu'on contrôle.
     // « Exploitation » et « Réseau & marque » ne portaient qu'une entrée
     // chacune : une section d'un seul item coûte un titre pour rien.
     const navDef = [
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
-        ['exploitation', 'P&L magasins', 0],
-        // Repris du module marketing autonome, qui disparaît : le cockpit lit
-        // et écrit les tables mar_* directement, comme il le fait pour pla_*.
+        ['exploitation', 'P&L magasins', 0]]],
+      // Repris du module marketing autonome, qui disparaît : le cockpit lit et
+      // écrit les tables mar_* directement, comme il le fait pour pla_*. Sa
+      // propre section plutôt que deux entrées glissées dans « Pilotage » : on
+      // ne pilote pas sa journée dans le calendrier de la marque, et la place
+      // est faite pour ce qui suivra (posts des magasins, retombées).
+      ['Marketing', [
         ['mktCalendrier', 'Calendrier marketing', 0],
         ['mktCampagnes', 'Campagnes', 0]]],
       ['Performance magasins', [
