@@ -1922,36 +1922,48 @@ function wr_mar_restaure(): array
         catch (PDOException $e) { $ignores++; }
     }
 
-    // Le catalogue d'offres, repeuplé depuis l'ERP. La colonne de prix varie
-    // selon l'installation : on prend la première qui existe, sinon NULL.
-    //
-    // AVANT de repeupler : dédoublonner puis garantir l'unicité de sku_ref.
-    // Sans cet ordre, un repeuplement rejoué a déjà triplé le catalogue —
-    // l'ON DUPLICATE KEY ne protège rien tant que la clé unique n'existe pas.
-    $items = 0;
+    // La clé unique de la migration 020 avant toute reprise : sans elle,
+    // chaque reprise recréerait le catalogue au lieu de le mettre à jour.
     try {
         Db::exec('DELETE a FROM mar_offer_item a
                   JOIN mar_offer_item b ON b.sku_ref = a.sku_ref AND b.id < a.id
                   WHERE a.sku_ref IS NOT NULL');
         try { Db::exec('ALTER TABLE mar_offer_item ADD UNIQUE KEY uq_mar_offer_item_sku (sku_ref)'); }
         catch (PDOException $e) { /* clé déjà en place */ }
-    } catch (PDOException $e) { /* table absente : le bloc suivant le dira */ }
+        // Purge d'un repeuplement simplifié antérieur (sku_ref numérique nu,
+        // tout en catégorie « produit ») : il masquait familles et gammes.
+        // La vraie reprise ci-dessous écrit des sku_ref « erp-<id> ».
+        Db::exec("DELETE FROM mar_offer_item WHERE sku_ref REGEXP '^[0-9]+$'");
+    } catch (PDOException $e) { /* table absente : la reprise le dira */ }
+
+    // Le catalogue, les gammes saisonnières et leurs liens — par la reprise du
+    // MODULE lui-même, portée dans le cockpit : familles produits, gammes
+    // (catégorie « saison »), liaisons produit ↔ gamme, boutiques et vivier
+    // B2B. C'est elle qui rend l'étape « Offre » identique à l'origine.
+    $items = 0; $reprise = null;
     try {
-        $cols = array_column(Db::rows(
-            "SELECT COLUMN_NAME c FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product'"), 'c');
-        $prix = 'NULL';
-        foreach (['suggested_sale_price', 'price', 'price_amount', 'prix', 'sale_price'] as $cand) {
-            if (in_array($cand, $cols, true)) { $prix = 'p.' . $cand; break; }
-        }
-        Db::exec("INSERT INTO mar_offer_item (category, sku_ref, name, price_amount, is_active)
-                  SELECT 'produit', p.id, p.name, $prix, 1 FROM product p WHERE p.id > 0
-                  ON DUPLICATE KEY UPDATE name = VALUES(name), price_amount = VALUES(price_amount)");
-        $n = Db::row('SELECT COUNT(*) n FROM mar_offer_item');
+        require_once __DIR__ . '/../public/api/marketing/src/autoload.php';
+        \Marketing\Support\Database::setConnection(Db::pdo());
+        \Marketing\Support\AuthContext::set(1, 'BRAND_ADMIN');
+        $marque = Db::row('SELECT id FROM mar_brand ORDER BY id LIMIT 1');
+        $sync = (new \Marketing\Repository\ErpSyncRepository())
+            ->sync(\Marketing\Support\AuthContext::current(), (int) ($marque['id'] ?? 1));
+        $bilan = static fn ($p) => isset($p['error']) ? $p
+            : ['lus' => $p['read'] ?? null, 'crees' => $p['created'] ?? null, 'maj' => $p['updated'] ?? null];
+        $reprise = [
+            'produits' => $bilan($sync['products'] ?? []),
+            'saisons'  => $bilan($sync['seasons'] ?? []),
+            'liens'    => $bilan($sync['season_links'] ?? []),
+            'vivier'   => $bilan($sync['prospects'] ?? []),
+        ];
+        $n = Db::row("SELECT COUNT(*) n FROM mar_offer_item WHERE is_active = 1");
         $items = (int) $n['n'];
-    } catch (PDOException $e) { /* table product absente : catalogue vide, l'assistant le dira */ }
+    } catch (Throwable $e) {
+        $reprise = ['erreur' => $e->getMessage()];
+    }
 
     journalAdd('CEO', 'Maintenance', null, 'Référentiels de l’assistant de campagne restaurés — '
-        . $faits . ' instruction(s), catalogue d’offres repeuplé (' . $items . ' référence(s))');
-    return ['ok' => true, 'instructions' => $faits, 'ignorees' => $ignores, 'offres' => $items];
+        . $faits . ' instruction(s), catalogue repris depuis l’ERP (' . $items . ' référence(s) actives)');
+    return ['ok' => true, 'instructions' => $faits, 'ignorees' => $ignores,
+        'offres' => $items, 'reprise' => $reprise];
 }
