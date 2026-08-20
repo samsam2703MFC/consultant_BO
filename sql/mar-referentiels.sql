@@ -92,6 +92,21 @@ CREATE TABLE IF NOT EXISTS mar_cost_kind (
   PRIMARY KEY (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS mar_review_platform (
+  code       VARCHAR(20)  NOT NULL,
+  label      VARCHAR(80)  NOT NULL,
+  sort_order SMALLINT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Canaux de distribution d'un bon : web-shop, caisse, office, B2B.
+CREATE TABLE IF NOT EXISTS mar_sales_channel (
+  code       VARCHAR(10)  NOT NULL,
+  label      VARCHAR(80)  NOT NULL,
+  sort_order SMALLINT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS mar_lead_status (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   code        VARCHAR(20)     NOT NULL COMMENT 'todo | called | sent | ordered | dropped',
@@ -383,6 +398,20 @@ INSERT INTO mar_promotion_mechanic (code, label, sort_order) VALUES
   ('CROSSED_PRICE', 'Prix barré',         4),
   ('FREE_DELIVERY', 'Livraison offerte',  5);
 
+INSERT INTO mar_review_platform (code, label, sort_order) VALUES
+  ('GOOGLE',      'Google Business', 1),
+  ('FACEBOOK',    'Facebook',        2),
+  ('INSTAGRAM',   'Instagram',       3),
+  ('TRIPADVISOR', 'Tripadvisor',     4),
+  ('DELIVEROO',   'Deliveroo',       5),
+  ('UBEREATS',    'Uber Eats',       6);
+
+INSERT INTO mar_sales_channel (code, label, sort_order) VALUES
+  ('WS',  'Web shop', 1),
+  ('POS', 'Caisse',   2),
+  ('OFF', 'Office',   3),
+  ('B2B', 'B2B',      4);
+
 INSERT INTO mar_client_target (code, label, sort_order)
 SELECT DISTINCT c.client_target, c.client_target, 99
   FROM mar_campaign c
@@ -494,3 +523,163 @@ SELECT 'Mise en ligne digitale', 5, p.id, 4 FROM mar_position p WHERE p.label = 
 
 INSERT INTO mar_retroplanning_default (label, days_before_launch, position_id, sort_order)
 SELECT 'Go live', 0, p.id, 5 FROM mar_position p WHERE p.label = 'Chef de projet marketing';
+
+-- =============================================================================
+-- Périmètre & rendus — le reste du chemin de création de campagne.
+--
+-- mar_shop_user : rattachement utilisateur → boutique. Sans elle, un appelant
+-- non-admin fait tomber Scope::shopIds() en erreur au premier écran.
+-- mar_asset_render : rendus par format d'un visuel de campagne, écrits dès
+-- l'enregistrement de l'étape Communication de l'assistant.
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS mar_shop_user (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id     BIGINT UNSIGNED NOT NULL COMMENT 'Utilisateur du SI hôte',
+  shop_id     BIGINT UNSIGNED NOT NULL,
+  role        VARCHAR(20)     NOT NULL COMMENT 'BRAND_ADMIN | FRANCHISEE | SHOP_STAFF',
+  created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by  BIGINT UNSIGNED     NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_shop_user (user_id, shop_id),
+  KEY ix_mar_shop_user_shop (shop_id),
+  CONSTRAINT fk_mar_shop_user_shop FOREIGN KEY (shop_id) REFERENCES mar_shop (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_asset_render (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  campaign_asset_id BIGINT UNSIGNED NOT NULL,
+  format_id         BIGINT UNSIGNED NOT NULL,
+  file_url          VARCHAR(500)        NULL,
+  override_file_url VARCHAR(500)        NULL,
+  status            VARCHAR(20)     NOT NULL DEFAULT 'pending',
+  created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_asset_render (campaign_asset_id, format_id),
+  KEY ix_mar_ar_format (format_id),
+  CONSTRAINT fk_mar_ar_asset  FOREIGN KEY (campaign_asset_id) REFERENCES mar_campaign_asset (id) ON DELETE CASCADE,
+  CONSTRAINT fk_mar_ar_format FOREIGN KEY (format_id)         REFERENCES mar_format (id)         ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================================
+-- Vues de lecture. CREATE OR REPLACE : rejouables sans condition. Seules les
+-- vues dont TOUTES les tables sous-jacentes existent encore sont recréées —
+-- mar_v_roi_quarterly reste écartée (elle exige mar_roi_cost, hors périmètre).
+-- =============================================================================
+
+CREATE OR REPLACE VIEW mar_v_fund_ledger_by_period AS
+SELECT
+  fm.id,
+  fm.movement_date,
+  DATE_FORMAT(fm.movement_date, '%Y-%m-01')            AS period_month,
+  CONCAT(YEAR(fm.movement_date), '-T', QUARTER(fm.movement_date)) AS period_quarter,
+  YEAR(fm.movement_date)                                AS period_year,
+  fm.direction,
+  fm.label,
+  fm.amount,
+  CASE WHEN fm.direction = 'IN' THEN fm.amount ELSE -fm.amount END AS signed_amount,
+  fm.source,
+  fm.supplier_name,
+  fm.document_ref,
+  fm.shop_id,
+  s.name                                                AS shop_name,
+  fm.campaign_id,
+  c.name                                                AS campaign_name,
+  fm.lever_id,
+  l.code                                                AS lever_code,
+  l.label                                               AS lever_label,
+  l.color_hex                                           AS lever_color_hex
+FROM mar_fund_movement fm
+LEFT JOIN mar_shop     s ON s.id = fm.shop_id
+LEFT JOIN mar_campaign c ON c.id = fm.campaign_id
+LEFT JOIN mar_lever    l ON l.id = fm.lever_id;
+
+CREATE OR REPLACE VIEW mar_v_lever_performance AS
+SELECT
+  l.id                                    AS lever_id,
+  l.code                                  AS lever_code,
+  l.label                                 AS lever_label,
+  l.color_hex,
+  COALESCE(spend.spent_amount, 0)         AS spent_amount,
+  COALESCE(target.target_value, 0)        AS target_value,
+  COALESCE(target.actual_value, 0)        AS actual_value,
+  CASE
+    WHEN COALESCE(spend.spent_amount, 0) = 0 THEN NULL
+    ELSE ROUND(COALESCE(target.actual_value, 0) / spend.spent_amount, 2)
+  END                                     AS roi_value
+FROM mar_lever l
+LEFT JOIN (
+  SELECT lever_id, SUM(amount) AS spent_amount
+  FROM mar_fund_movement
+  WHERE direction = 'OUT' AND lever_id IS NOT NULL
+  GROUP BY lever_id
+) spend ON spend.lever_id = l.id
+LEFT JOIN (
+  SELECT clt.lever_id, SUM(clt.target_value) AS target_value, SUM(clt.actual_value) AS actual_value
+  FROM mar_campaign_lever_target clt
+  JOIN mar_campaign c ON c.id = clt.campaign_id AND c.status_code <> 'draft'
+  GROUP BY clt.lever_id
+) target ON target.lever_id = l.id;
+
+CREATE OR REPLACE VIEW mar_v_campaign_monitor AS
+SELECT
+  k.campaign_id,
+  k.shop_id,
+  s.name        AS shop_name,
+  k.kpi_code,
+  k.kpi_label,
+  k.value,
+  k.target_value,
+  k.unit,
+  k.measured_at,
+  CASE
+    WHEN k.target_value IS NULL OR k.target_value = 0 THEN NULL
+    ELSE ROUND(k.value / k.target_value * 100, 1)
+  END           AS attainment_pct
+FROM mar_campaign_kpi_snapshot k
+LEFT JOIN mar_shop s ON s.id = k.shop_id
+WHERE k.measured_at = (
+  SELECT MAX(k2.measured_at)
+  FROM mar_campaign_kpi_snapshot k2
+  WHERE k2.campaign_id = k.campaign_id
+    AND k2.kpi_code    = k.kpi_code
+    AND (k2.shop_id = k.shop_id OR (k2.shop_id IS NULL AND k.shop_id IS NULL))
+);
+
+CREATE OR REPLACE VIEW mar_v_lead_funnel AS
+SELECT
+  c.id          AS campaign_id,
+  st.code       AS status_code,
+  st.label      AS status_label,
+  st.color_hex,
+  st.bg_hex,
+  st.border_hex,
+  st.sort_order,
+  COUNT(ld.id)  AS leads_count
+FROM mar_campaign c
+CROSS JOIN mar_lead_status st
+LEFT JOIN mar_crm_lead ld
+       ON ld.campaign_id = c.id
+      AND ld.status_code = st.code
+GROUP BY c.id, st.code, st.label, st.color_hex, st.bg_hex, st.border_hex, st.sort_order;
+
+CREATE OR REPLACE VIEW mar_v_lead_funnel_by_shop AS
+SELECT
+  cs.campaign_id,
+  cs.shop_id,
+  s.name        AS shop_name,
+  st.code       AS status_code,
+  st.label      AS status_label,
+  st.color_hex,
+  st.sort_order,
+  COUNT(ld.id)  AS leads_count
+FROM mar_campaign_shop cs
+JOIN mar_shop s ON s.id = cs.shop_id
+CROSS JOIN mar_lead_status st
+LEFT JOIN mar_crm_lead ld
+       ON ld.campaign_id = cs.campaign_id
+      AND ld.shop_id     = cs.shop_id
+      AND ld.status_code = st.code
+GROUP BY cs.campaign_id, cs.shop_id, s.name, st.code, st.label, st.color_hex, st.sort_order;
