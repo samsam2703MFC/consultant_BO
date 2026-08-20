@@ -1122,45 +1122,6 @@ function tplMarge(c, x){
   const { esc } = x;
   return `
   <div data-screen="marge" style="display:flex;flex-direction:column;gap:16px">
-    <!-- Une tuile par ligne : la marge réseau et les alertes se lisent l'une
-         après l'autre. Côte à côte, la première était comprimée à 380 px — son
-         graphique de trajectoire y perdait sa pente — et la seconde étalait des
-         phrases courtes sur toute la largeur restante. -->
-    <div style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px;display:grid;grid-template-columns:290px 1fr;gap:24px;align-items:start">
-        <div>
-          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Marge nette réseau — juillet</div>
-          <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px;flex-wrap:wrap"><span style="font-size:32px;font-weight:500">${c.mgReseau}</span><span style="${c.mgTrSt}">${c.mgTr}</span></div>
-          <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px">
-            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Food Cost</span><span style="font-weight:500">≤ ${c.sFoodTxt}</span></div>
-            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Labour Cost</span><span style="font-weight:500">≤ ${c.sLabourTxt}</span></div>
-            <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--color-text-muted)">Seuil Overhead Cost</span><span style="font-weight:500">≤ 13,5 %</span></div>
-          </div>
-        </div>
-        <!-- La trajectoire prend la largeur libérée. L'attribut
-             vector-effect est indispensable ici : la boîte s'étire sans garder
-             ses proportions, et sans lui le trait s'amincirait à mesure
-             qu'elle s'élargit. (Pas d'accent grave dans ce commentaire : il est
-             DANS un littéral de gabarit, un seul le refermerait.) -->
-        <div>
-          <svg width="100%" height="132" viewBox="0 0 320 70" preserveAspectRatio="none" style="display:block"><polyline points="${c.mgTraj}" fill="none" stroke="#8D1D2C" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
-          <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">${c.mgEvoLabel}</div>
-        </div>
-      </div>
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:12px">Alertes actives — action recommandée par levier</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          ${c.mgAlerts.map(a => `
-            <div class="levier-item" data-lev="${a.lev}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 8px 14px">
-              <div>
-                <div style="font-size:13px;font-weight:500">${esc(a.store)} — ${esc(a.msg)}</div>
-                <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(a.action)}</div>
-              </div>
-              <span class="levier-badge" data-lev="${a.lev}"><span class="levier-dot"></span>${esc(a.levNom)}</span>
-            </div>`).join('')}
-        </div>
-      </div>
-    </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Ratios de coûts par magasin — ${c.mgHdrPeriode} · où se gagne / se perd la marge</div>
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">

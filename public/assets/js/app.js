@@ -5381,18 +5381,14 @@ class App {
 
   /* --- marge & coûts ------------------------------------------------------------ */
   valsMarge(common){
+    // Les tuiles « Marge nette réseau » et « Alertes actives » ont été retirées
+    // à la demande : l'écran ne garde que les ratios par magasin. Les alertes
+    // elles-mêmes (margeAlerts) vivent encore — le badge du rail et la tuile
+    // d'accueil les comptent, et la colonne Statut du tableau les résume.
     const s = this.seuils();
-    common.sFoodTxt = s.f + ' %'; common.sLabourTxt = s.l + ' %';
     const E = this.exo(), MI = this.moisIdxComplet();
     const moisNom = (this.M.MOIS && this.M.MOIS[MI]) || '';
-    common.mgEvoLabel = 'Évolution mensuelle ' + E + ' (janv. → ' + moisNom + ')';
     common.mgHdrPeriode = moisNom + ' ' + E + (this.moisPartiel() ? ' — dernier mois complet' : '');
-    const mg26 = this.sum(E, MI, 'marge') / this.sum(E, MI, 'ca'), mg25 = this.sum(E - 1, MI, 'marge') / this.sum(E - 1, MI, 'ca');
-    common.mgReseau = this.fP(mg26); const tr = this.trend(mg26, mg25); common.mgTr = tr.txt + ' vs N-1'; common.mgTrSt = tr.st;
-    const series = []; for (let m = 0; m <= MI; m++) series.push(this.sum(E, m, 'marge') / this.sum(E, m, 'ca'));
-    common.mgTraj = this.spark(series, 320, 70);
-    common.mgAlerts = this.margeAlerts();
-    if (!common.mgAlerts.length) common.mgAlerts = [{ store: 'Aucune alerte', lev: 'food-cost', levNom: '—', msg: 'tous les ratios sont sous les seuils', action: '' }];
     // Un ratio absent du P&L (le panel n'expose pas le food cost) s'affichait
     // « null % » : le mot « null » n'est pas une valeur, et une pastille verte
     // sur une donnée manquante se lit comme une performance.
