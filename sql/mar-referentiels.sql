@@ -1,6 +1,8 @@
--- Référentiels de l'assistant de campagne, repris du dépôt marketing
--- (migrations + seeds). Rejoués tels quels — CREATE TABLE IF NOT EXISTS
--- pour pouvoir repasser sans casser.
+-- Référentiels et structures de l'assistant de campagne, repris du dépôt
+-- marketing (migrations + seeds). CREATE TABLE IF NOT EXISTS : rejouable.
+-- Les tables de DONNÉES perdues au nettoyage (prospects B2B, leads CRM)
+-- reviennent VIDES : la structure permet aux écrans de rendre, les 893
+-- prospects supprimés ne se réinventent pas.
 SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS mar_channel (
@@ -83,6 +85,175 @@ CREATE TABLE IF NOT EXISTS mar_pos_answer_type (
   PRIMARY KEY (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS mar_cost_kind (
+  code       VARCHAR(20)  NOT NULL,
+  label      VARCHAR(80)  NOT NULL,
+  sort_order SMALLINT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_lead_status (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code        VARCHAR(20)     NOT NULL COMMENT 'todo | called | sent | ordered | dropped',
+  label       VARCHAR(80)     NOT NULL,
+  color_hex   CHAR(7)         NOT NULL,
+  bg_hex      VARCHAR(40)     NOT NULL COMMENT 'Valeur CSS complète (rgba) — la maquette utilise de la transparence',
+  border_hex  VARCHAR(40)     NOT NULL,
+  sort_order  SMALLINT        NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_lead_status_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_b2b_sector (
+  id                     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code                   VARCHAR(40)     NOT NULL,
+  label                  VARCHAR(120)    NOT NULL,
+  estimated_leads_count  INT UNSIGNED    NOT NULL DEFAULT 0,
+  sort_order             SMALLINT        NOT NULL DEFAULT 0,
+  is_active              TINYINT(1)      NOT NULL DEFAULT 1,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_b2b_sector_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_b2b_option (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code        VARCHAR(40)     NOT NULL,
+  label       VARCHAR(160)    NOT NULL,
+  description VARCHAR(400)        NULL,
+  sort_order  SMALLINT        NOT NULL DEFAULT 0,
+  is_active   TINYINT(1)      NOT NULL DEFAULT 1,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_b2b_option_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_agency (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name            VARCHAR(160)    NOT NULL,
+  speciality      VARCHAR(160)        NULL,
+  main_lever_id   BIGINT UNSIGNED     NULL,
+  avg_roi         DECIMAL(8,2)        NULL,
+  hit_rate_pct    DECIMAL(5,2)        NULL,
+  avg_cost_amount DECIMAL(12,2)       NULL,
+  campaigns_count INT UNSIGNED    NOT NULL DEFAULT 0,
+  created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by      BIGINT UNSIGNED     NULL,
+  PRIMARY KEY (id),
+  KEY ix_mar_agency_lever (main_lever_id),
+  CONSTRAINT fk_mar_agency_lever FOREIGN KEY (main_lever_id) REFERENCES mar_lever (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_agency_ask (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code       VARCHAR(40)     NOT NULL,
+  label      VARCHAR(160)    NOT NULL,
+  sort_order SMALLINT        NOT NULL DEFAULT 0,
+  is_active  TINYINT(1)      NOT NULL DEFAULT 1,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_agency_ask_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_agency_campaign (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  agency_id   BIGINT UNSIGNED NOT NULL,
+  campaign_id BIGINT UNSIGNED NOT NULL,
+  channel_id  BIGINT UNSIGNED     NULL,
+  fee_amount  DECIMAL(12,2)   NOT NULL DEFAULT 0.00,
+  roi_value   DECIMAL(8,2)        NULL,
+  created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by  BIGINT UNSIGNED     NULL,
+  PRIMARY KEY (id),
+  KEY ix_mar_ac_agency (agency_id),
+  KEY ix_mar_ac_campaign (campaign_id),
+  CONSTRAINT fk_mar_ac_agency   FOREIGN KEY (agency_id)   REFERENCES mar_agency (id)   ON DELETE CASCADE,
+  CONSTRAINT fk_mar_ac_campaign FOREIGN KEY (campaign_id) REFERENCES mar_campaign (id) ON DELETE CASCADE,
+  CONSTRAINT fk_mar_ac_channel  FOREIGN KEY (channel_id)  REFERENCES mar_channel (id)  ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_crm_segment (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code       VARCHAR(40)     NOT NULL,
+  label      VARCHAR(120)    NOT NULL,
+  color_hex  CHAR(7)         NOT NULL DEFAULT '#8A847C',
+  rule_json  JSON                NULL,
+  sort_order SMALLINT        NOT NULL DEFAULT 0,
+  is_active  TINYINT(1)      NOT NULL DEFAULT 1,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_crm_segment_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_crm_lead (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  campaign_id      BIGINT UNSIGNED NOT NULL,
+  sector_id        BIGINT UNSIGNED     NULL,
+  shop_id          BIGINT UNSIGNED     NULL COMMENT 'Boutique référente, responsable du contact',
+  company_name     VARCHAR(200)    NOT NULL,
+  contact_name     VARCHAR(160)        NULL,
+  contact_email    VARCHAR(190)        NULL,
+  contact_phone    VARCHAR(40)         NULL,
+  size_label       VARCHAR(80)         NULL,
+  potential_amount DECIMAL(12,2)       NULL,
+  status_code      VARCHAR(20)     NOT NULL DEFAULT 'todo'
+                   COMMENT 'État courant dénormalisé — l''historique vit dans mar_crm_lead_event',
+  assigned_user_id BIGINT UNSIGNED     NULL,
+  created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by       BIGINT UNSIGNED     NULL,
+  PRIMARY KEY (id),
+  KEY ix_mar_lead_campaign (campaign_id, status_code),
+  KEY ix_mar_lead_shop (shop_id),
+  KEY ix_mar_lead_sector (sector_id),
+  CONSTRAINT fk_mar_lead_campaign FOREIGN KEY (campaign_id) REFERENCES mar_campaign (id)      ON DELETE CASCADE,
+  CONSTRAINT fk_mar_lead_sector   FOREIGN KEY (sector_id)   REFERENCES mar_b2b_sector (id)    ON DELETE SET NULL,
+  CONSTRAINT fk_mar_lead_shop     FOREIGN KEY (shop_id)     REFERENCES mar_shop (id)          ON DELETE SET NULL,
+  CONSTRAINT fk_mar_lead_status   FOREIGN KEY (status_code) REFERENCES mar_lead_status (code) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_b2b_prospect (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  brand_id         BIGINT UNSIGNED NOT NULL,
+  sector_id        BIGINT UNSIGNED     NULL,
+  -- Référence d'origine : c'est elle qui rend l'import rejouable. Réimporter
+  -- le même fichier met à jour les comptes au lieu de les dupliquer.
+  external_ref     VARCHAR(120)        NULL,
+  company_name     VARCHAR(200)    NOT NULL,
+  contact_name     VARCHAR(160)        NULL,
+  contact_email    VARCHAR(190)        NULL,
+  contact_phone    VARCHAR(40)         NULL,
+  size_label       VARCHAR(80)         NULL COMMENT 'Volumétrie estimée (« ~450 couverts/sem »)',
+  potential_amount DECIMAL(12,2)       NULL,
+  city             VARCHAR(120)        NULL,
+  postal_code      VARCHAR(20)         NULL,
+  -- Boutique référente si elle est connue à l'import ; sinon la génération
+  -- répartit sur les boutiques de la campagne.
+  shop_id          BIGINT UNSIGNED     NULL,
+  source           VARCHAR(80)         NULL COMMENT 'Provenance du fichier ou du connecteur',
+  is_active        TINYINT(1)      NOT NULL DEFAULT 1,
+  created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by       BIGINT UNSIGNED     NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_b2b_prospect_ref (brand_id, external_ref),
+  KEY ix_mar_b2b_prospect_sector (sector_id),
+  KEY ix_mar_b2b_prospect_shop (shop_id),
+  CONSTRAINT fk_mar_bp_brand  FOREIGN KEY (brand_id)  REFERENCES mar_brand (id)      ON DELETE CASCADE,
+  CONSTRAINT fk_mar_bp_sector FOREIGN KEY (sector_id) REFERENCES mar_b2b_sector (id) ON DELETE SET NULL,
+  CONSTRAINT fk_mar_bp_shop   FOREIGN KEY (shop_id)   REFERENCES mar_shop (id)       ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_b2b_prospect_sector (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  prospect_id BIGINT UNSIGNED NOT NULL,
+  sector_id   BIGINT UNSIGNED NOT NULL,
+  created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_bps (prospect_id, sector_id),
+  KEY ix_mar_bps_sector (sector_id),
+  CONSTRAINT fk_mar_bps_prospect FOREIGN KEY (prospect_id) REFERENCES mar_b2b_prospect (id) ON DELETE CASCADE,
+  CONSTRAINT fk_mar_bps_sector   FOREIGN KEY (sector_id)   REFERENCES mar_b2b_sector (id)   ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS mar_retroplanning_default (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   label              VARCHAR(200)    NOT NULL,
@@ -114,13 +285,6 @@ CREATE TABLE IF NOT EXISTS mar_retroplanning_step (
   CONSTRAINT fk_mar_rs_position FOREIGN KEY (position_id) REFERENCES mar_position (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS mar_cost_kind (
-  code       VARCHAR(20)  NOT NULL,
-  label      VARCHAR(80)  NOT NULL,
-  sort_order SMALLINT     NOT NULL DEFAULT 0,
-  PRIMARY KEY (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS mar_offer_template (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   code        VARCHAR(40)     NOT NULL,
@@ -130,6 +294,19 @@ CREATE TABLE IF NOT EXISTS mar_offer_template (
   is_active   TINYINT(1)      NOT NULL DEFAULT 1,
   PRIMARY KEY (id),
   UNIQUE KEY uq_mar_offer_template_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS mar_offer_template_item (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  template_id   BIGINT UNSIGNED NOT NULL,
+  offer_item_id BIGINT UNSIGNED NOT NULL,
+  quantity      SMALLINT        NOT NULL DEFAULT 1,
+  sort_order    SMALLINT        NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_oti (template_id, offer_item_id),
+  KEY ix_mar_oti_item (offer_item_id),
+  CONSTRAINT fk_mar_oti_template FOREIGN KEY (template_id)   REFERENCES mar_offer_template (id) ON DELETE CASCADE,
+  CONSTRAINT fk_mar_oti_item     FOREIGN KEY (offer_item_id) REFERENCES mar_offer_item (id)     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS mar_offer_item (
@@ -159,18 +336,38 @@ CREATE TABLE IF NOT EXISTS mar_offer_item_season (
   CONSTRAINT fk_mar_ois_season FOREIGN KEY (season_item_id) REFERENCES mar_offer_item (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 020_reprise_produits.sql
+ALTER TABLE mar_crm_lead
+  ADD COLUMN prospect_id BIGINT UNSIGNED NULL
+    COMMENT 'Compte du vivier à l''origine du lead'
+    AFTER sector_id,
+  ADD UNIQUE KEY uq_mar_crm_lead_prospect (campaign_id, prospect_id),
+  ADD CONSTRAINT fk_mar_cl_prospect
+    FOREIGN KEY (prospect_id) REFERENCES mar_b2b_prospect (id) ON DELETE SET NULL;
+
+ALTER TABLE mar_b2b_prospect
+  MODIFY COLUMN postal_code VARCHAR(40) NULL,
+  MODIFY COLUMN contact_phone VARCHAR(80) NULL,
+  MODIFY COLUMN size_label VARCHAR(160) NULL;
+
+ALTER TABLE mar_b2b_prospect
+  DROP FOREIGN KEY fk_mar_bp_sector,
+  DROP COLUMN sector_id;
+
+ALTER TABLE mar_b2b_sector
+  ADD COLUMN erp_type_id BIGINT UNSIGNED NULL
+    COMMENT 'Type de compte B2B d''origine, côté ERP'
+    AFTER code,
+  ADD UNIQUE KEY uq_mar_b2b_sector_erp (erp_type_id);
+
 ALTER TABLE mar_offer_item
   DROP INDEX ix_mar_offer_item_sku,
   ADD UNIQUE KEY uq_mar_offer_item_sku (sku_ref);
 
--- 014_referentiels_libelles.sql (mar_client_target)
 INSERT INTO mar_client_target (code, label, sort_order) VALUES
   ('b2c',   'B2C — particuliers',    1),
   ('b2b',   'B2B — professionnels',  2),
   ('mixte', 'Mixte B2C + B2B',       3);
 
--- 014_referentiels_libelles.sql (mar_cost_kind)
 INSERT INTO mar_cost_kind (code, label, sort_order) VALUES
   ('MEDIA',      'Achat média',             1),
   ('PRODUCTION', 'Production & impression', 2),
@@ -179,7 +376,6 @@ INSERT INTO mar_cost_kind (code, label, sort_order) VALUES
   ('LOGISTIQUE', 'Logistique',              5),
   ('AUTRE',      'Autres',                  6);
 
--- 014_referentiels_libelles.sql (mar_promotion_mechanic)
 INSERT INTO mar_promotion_mechanic (code, label, sort_order) VALUES
   ('PERCENT',       'Pourcentage',        1),
   ('BUNDLE_FIXED',  'Prix de formule',    2),
@@ -187,13 +383,11 @@ INSERT INTO mar_promotion_mechanic (code, label, sort_order) VALUES
   ('CROSSED_PRICE', 'Prix barré',         4),
   ('FREE_DELIVERY', 'Livraison offerte',  5);
 
--- 014_referentiels_libelles.sql (mar_client_target)
 INSERT INTO mar_client_target (code, label, sort_order)
 SELECT DISTINCT c.client_target, c.client_target, 99
   FROM mar_campaign c
  WHERE c.client_target NOT IN (SELECT code FROM mar_client_target);
 
--- 017_questionnaire_pos.sql (mar_pos_answer_type)
 INSERT INTO mar_pos_answer_type (code, label, hint, sort_order) VALUES
   ('yes_no',  'Oui / Non',        'Réponse binaire, la plus rapide en caisse',      1),
   ('choice',  'Choix dans une liste', 'Les propositions se saisissent dans la question', 2),
@@ -201,7 +395,24 @@ INSERT INTO mar_pos_answer_type (code, label, hint, sort_order) VALUES
   ('number',  'Nombre',           'Quantité, âge, nombre de convives',                4),
   ('text',    'Réponse libre',    'À réserver aux questions ouvertes : long à saisir', 5);
 
--- 001_referentiels.sql (mar_format)
+INSERT INTO mar_b2b_prospect_sector (prospect_id, sector_id)
+SELECT id, sector_id FROM mar_b2b_prospect WHERE sector_id IS NOT NULL;
+
+INSERT INTO mar_lead_status (code, label, color_hex, bg_hex, border_hex, sort_order) VALUES
+  ('todo',    'À appeler',       '#8a6d0f', 'rgba(216,170,30,.18)', 'rgba(216,170,30,.55)', 1),
+  ('called',  'Contacté · reçu', '#2b6a8f', 'rgba(43,106,143,.13)', 'rgba(43,106,143,.4)',  2),
+  ('sent',    'Offre envoyée',   '#b26a00', 'rgba(200,120,20,.15)', 'rgba(200,120,20,.45)', 3),
+  ('ordered', 'Commande passée', '#3f7a52', 'rgba(63,122,82,.15)',  'rgba(63,122,82,.45)',  4),
+  ('dropped', 'Sans suite',      '#8A847C', 'rgba(34,34,34,.06)',   'rgba(34,34,34,.16)',   5);
+
+INSERT INTO mar_b2b_sector (code, label, estimated_leads_count, sort_order) VALUES
+  ('offices',       'Offices & entreprises', 184, 1),
+  ('ecoles',        'Écoles & universités',   62, 2),
+  ('horeca',        'Horeca',                 97, 3),
+  ('evenementiel',  'Événementiel',           41, 4),
+  ('administrations','Administrations',       38, 5),
+  ('sante',         'Santé & hôpitaux',       29, 6);
+
 INSERT INTO mar_format (code, name, width_px, height_px, note, sort_order) VALUES
   ('landing',   'Landing page',    800,  800, 'Carré site campagne', 1),
   ('pwa',       'PWA',            1080, 1920, 'Écran mobile plein',  2),
@@ -209,7 +420,6 @@ INSERT INTO mar_format (code, name, width_px, height_px, note, sort_order) VALUE
   ('ig_post',   'Post Instagram', 1080, 1080, 'Carré feed',          4),
   ('fb_header', 'Header Facebook', 820,  312, 'Couverture de page',  5);
 
--- 001_referentiels.sql (mar_position)
 INSERT INTO mar_position (code, label, sort_order) VALUES
   ('chef_projet',  'Chef de projet marketing', 1),
   ('dir_artistique','Directeur artistique',    2),
@@ -217,14 +427,12 @@ INSERT INTO mar_position (code, label, sort_order) VALUES
   ('consultant_digital','Consultant digital',  4),
   ('community',    'Community manager',        5);
 
--- 001_referentiels.sql (mar_offer_template)
 INSERT INTO mar_offer_template (code, label, description, sort_order) VALUES
   ('menu',       'Menu complet',      'Bundle repas + boisson + dessert',        1),
   ('prixbarre',  'Prix barré',        'Produit phare à prix réduit',             2),
   ('decouverte', 'Bundle découverte', 'Nouveauté + best-seller',                 3),
   ('office',     'Offre office B2B',  'Plateau + livraison + voucher B2B',       4);
 
--- 001_referentiels.sql (mar_uniform)
 INSERT INTO mar_uniform (code, name, description, icon_path, sort_order) VALUES
   ('tablier',  'Tablier brandé été',       'Tablier lin coréen aux couleurs de la saison',    'M8 3h8l-1 4a4 4 0 0 1-6 0zM7 21v-7a5 5 0 0 1 10 0v7z', 1),
   ('couronne', 'Couronne Galette des Rois','Couronne carton dorée portée en boutique',        'M4 18h16l-1-9-4 4-3-6-3 6-4-4z', 2),
@@ -232,7 +440,6 @@ INSERT INTO mar_uniform (code, name, description, icon_path, sort_order) VALUES
   ('tshirt',   'T-shirt événement',        'T-shirt co-brandé (partenariats, portes ouvertes)','M4 7l4-3 4 2 4-2 4 3-2 3-2-1v9H8v-9L6 10z', 4),
   ('badge',    'Badge / pin''s thématique','Épinglette message campagne sur la tenue',        'M12 3a4 4 0 0 1 4 4c0 3-4 8-4 8s-4-5-4-8a4 4 0 0 1 4-4z', 5);
 
--- 001_referentiels.sql (mar_channel)
 INSERT INTO mar_channel (code, label, family, sort_order) VALUES
   ('meta_ads',    'Meta Ads',            'DIGITAL',  1),
   ('google_local','Google Search local', 'DIGITAL',  2),
@@ -243,7 +450,13 @@ INSERT INTO mar_channel (code, label, family, sort_order) VALUES
   ('affichage',   'Affichage extérieur', 'PHYSIQUE', 7),
   ('flyer',       'Flyer / toutes-boîtes','PHYSIQUE',8);
 
--- 004_assistant.sql (mar_tone)
+INSERT INTO mar_crm_segment (code, label, color_hex, sort_order) VALUES
+  ('nouveaux',  'Nouveaux clients',  '#4A6D8C', 1),
+  ('reguliers', 'Clients réguliers', '#6B8E5A', 2),
+  ('vip',       'VIP',               '#8D1D2C', 3),
+  ('dormants',  'Dormants',          '#b26a00', 4),
+  ('perdus',    'Perdus',            '#8A847C', 5);
+
 INSERT INTO mar_tone (code, label, sort_order) VALUES
   ('gourmand',   'Gourmand',   1),
   ('festif',     'Festif',     2),
@@ -251,22 +464,33 @@ INSERT INTO mar_tone (code, label, sort_order) VALUES
   ('convivial',  'Convivial',  4),
   ('chaleureux', 'Chaleureux', 5);
 
--- 004_assistant.sql (mar_retroplanning_default)
+INSERT INTO mar_agency_ask (code, label, sort_order) VALUES
+  ('cobranding',  'Collaboration / co-branding',  1),
+  ('influenceurs','Influenceurs locaux',          2),
+  ('shooting',    'Shooting photo produits',      3),
+  ('jeu',         'Jeu concours',                 4),
+  ('presse',      'Relations presse locale',      5),
+  ('video',       'Vidéo réseaux sociaux',        6);
+
+INSERT INTO mar_b2b_option (code, label, description, sort_order) VALUES
+  ('page',        'Page boutique co-brandée',      'Logo du client + habillage campagne sur son espace WS', 1),
+  ('catalogue',   'Catalogue restreint',           'Assortiment dédié (plateaux office, formules réunion)', 2),
+  ('tarifs',      'Tarifs négociés',               'Grille B2B + remise volume appliquée automatiquement',  3),
+  ('code',        'Code d''accès entreprise',      'Accès réservé aux collaborateurs (SSO / code)',         4),
+  ('facturation', 'Facturation centralisée',       'Commande groupée, facture mensuelle unique',            5),
+  ('livraison',   'Créneaux de livraison dédiés',  'Plages réservées au site du grand compte',              6);
+
 INSERT INTO mar_retroplanning_default (label, days_before_launch, position_id, sort_order)
 SELECT 'Brief agence', 30, p.id, 1 FROM mar_position p WHERE p.label = 'Chef de projet marketing';
 
--- 004_assistant.sql (mar_retroplanning_default)
 INSERT INTO mar_retroplanning_default (label, days_before_launch, position_id, sort_order)
 SELECT 'Validation créa (BAT)', 21, p.id, 2 FROM mar_position p WHERE p.label = 'Directeur artistique';
 
--- 004_assistant.sql (mar_retroplanning_default)
 INSERT INTO mar_retroplanning_default (label, days_before_launch, position_id, sort_order)
 SELECT 'Production physique', 15, p.id, 3 FROM mar_position p WHERE p.label = 'Chargé de production';
 
--- 004_assistant.sql (mar_retroplanning_default)
 INSERT INTO mar_retroplanning_default (label, days_before_launch, position_id, sort_order)
 SELECT 'Mise en ligne digitale', 5, p.id, 4 FROM mar_position p WHERE p.label = 'Consultant digital';
 
--- 004_assistant.sql (mar_retroplanning_default)
 INSERT INTO mar_retroplanning_default (label, days_before_launch, position_id, sort_order)
 SELECT 'Go live', 0, p.id, 5 FROM mar_position p WHERE p.label = 'Chef de projet marketing';
