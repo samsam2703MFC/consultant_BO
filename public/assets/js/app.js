@@ -2932,8 +2932,7 @@ class App {
       // Un brouillon se FINIT dans l'assistant : la carte rapide ne porte ni
       // l'offre, ni les objectifs, ni le planning qu'il reste à remplir.
       reprendre: c2.statut !== 'draft' ? null : () => {
-        try { window.open(new URL('assistant/?id=' + c2.id, window.location.href).href, '_blank'); }
-        catch (e2) { /* bloqué */ }
+        window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href);
       },
       supprimer: () => {
         if (!window.confirm('Supprimer définitivement la campagne « ' + c2.nom + ' » ?')) { return; }
@@ -2964,17 +2963,17 @@ class App {
           periode: (c2.debut ? this.fD(c2.debut) : '—') + ' → ' + (c2.fin ? this.fD(c2.fin) : '—'),
           // Un brouillon se finit dans l'assistant ; une planifiée se corrige.
           ouvrir: c2.statut === 'draft'
-            ? () => { try { window.open(new URL('assistant/?id=' + c2.id, window.location.href).href, '_blank'); } catch (e2) { /* bloqué */ } }
+            ? () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); }
             : () => this.setState({ mkEdit: this.mkVersForm(c2) }) };
       });
     // L'assistant COMPLET (cadrage, offre, objectifs, prix, photos, budget,
     // communication, planning, récap, leads) est désormais HÉBERGÉ PAR LE
     // COCKPIT (page /assistant/, API /api/marketing/) : il travaille sur les
     // mêmes tables, et survivra à la suppression du module marketing.
-    // La carte rapide ci-dessous couvre le cas simple.
+    // Navigation directe, PAS de nouvel onglet : l'assistant ramène ici par
+    // « ← Retour au cockpit », par « Annuler » et à la publication.
     common.mkAssistant = () => {
-      try { window.open(new URL('assistant/', window.location.href).href, '_blank'); }
-      catch (e2) { /* bloqué */ }
+      window.location.assign(new URL('assistant/', window.location.href).href);
     };
 
     // --- formulaire (création et correction, même carte).

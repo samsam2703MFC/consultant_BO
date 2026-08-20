@@ -1932,7 +1932,7 @@ function tplMktCampagnes(c, x){
   <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;justify-content:flex-end;gap:9px;align-items:center">
       <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">Toute campagne se crée dans l’assistant complet (cadrage, offre, objectifs, prix, photos, budget, communication, planning, leads) : elle apparaît ici, où elle se corrige et se reprend.</span>
-      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle campagne ↗</button>
+      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px">+ Nouvelle campagne</button>
     </div>
     ${c.mkEdit ? tplMktForm(c, x) : ''}
     ${c.mkAttente && c.mkAttente.length ? `
@@ -1940,8 +1940,8 @@ function tplMktCampagnes(c, x){
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500;margin-bottom:8px">En attente — à finir ou à lancer</div>
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
         ${c.mkAttente.map(v => `
-        <div ${x.A(v.ouvrir)} class="hv-fade" style="${carte};padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui);overflow:hidden;display:flex;flex-direction:column">
-          <div style="height:110px;background:${v.couleur}1f ${v.image ? `url('${esc(v.image)}') center/cover no-repeat` : ''};border-bottom:0.5px solid var(--color-border-tertiary);position:relative">
+        <div ${x.A(v.ouvrir)} class="hv-fade" style="${carte};padding:0;cursor:pointer;text-align:left;font-family:var(--font-ui);overflow:hidden;display:flex;flex-direction:column;aspect-ratio:1/1">
+          <div style="flex:1;min-height:0;background:${v.couleur}1f ${v.image ? `url('${esc(v.image)}') center/cover no-repeat` : ''};border-bottom:0.5px solid var(--color-border-tertiary);position:relative">
             ${v.image ? '' : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:${v.couleur}">${esc((v.nom || '?').trim().charAt(0).toUpperCase())}</span>`}
             <span style="position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:${v.statutFond};color:${v.statutTexte}">${esc(v.statutNom)}</span>
           </div>
@@ -1973,7 +1973,7 @@ function tplMktCampagnes(c, x){
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.depense)}</td>
           <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || '—'}</td>
           <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
-            ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Finir ce brouillon dans l’assistant" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Reprendre ↗</button>` : ''}
+            ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Finir ce brouillon dans l’assistant" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Reprendre</button>` : ''}
             <button ${x.A(l.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>
             <button ${x.A(l.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>
           </td>
