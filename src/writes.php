@@ -1925,7 +1925,18 @@ function wr_mar_restaure(): array
 
     // Le catalogue d'offres, repeuplé depuis l'ERP. La colonne de prix varie
     // selon l'installation : on prend la première qui existe, sinon NULL.
+    //
+    // AVANT de repeupler : dédoublonner puis garantir l'unicité de sku_ref.
+    // Sans cet ordre, un repeuplement rejoué a déjà triplé le catalogue —
+    // l'ON DUPLICATE KEY ne protège rien tant que la clé unique n'existe pas.
     $items = 0;
+    try {
+        Db::exec('DELETE a FROM mar_offer_item a
+                  JOIN mar_offer_item b ON b.sku_ref = a.sku_ref AND b.id < a.id
+                  WHERE a.sku_ref IS NOT NULL');
+        try { Db::exec('ALTER TABLE mar_offer_item ADD UNIQUE KEY uq_mar_offer_item_sku (sku_ref)'); }
+        catch (PDOException $e) { /* clé déjà en place */ }
+    } catch (PDOException $e) { /* table absente : le bloc suivant le dira */ }
     try {
         $cols = array_column(Db::rows(
             "SELECT COLUMN_NAME c FROM information_schema.COLUMNS
