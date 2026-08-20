@@ -1982,3 +1982,75 @@ function wr_mar_restaure(): array
     return ['ok' => true, 'instructions' => $faits, 'ignorees' => $ignores,
         'offres' => $items, 'reprise' => $reprise];
 }
+
+/**
+ * POST /admin/erp-token { token } — dépose un jeton d'API ERP (TFBuddy, appli
+ * ADMIN) dans la table des réglages (ceo_app_setting, clé erpAdminToken).
+ *
+ * Le jeton ne sert QUE côté serveur : c'est le cockpit qui appelle l'ERP avec,
+ * jamais le navigateur — même règle que panelApiToken et que la clé Anthropic.
+ * Les jetons ADMIN expirent vite (~30 min) : en redéposer un avant une
+ * campagne d'essais.
+ */
+function wr_erp_token(): array
+{
+    $t = trim((string) (body()['token'] ?? ''));
+    if ($t === '' || substr_count($t, '.') !== 2) {
+        http_response_code(422);
+        return ['error' => 'Jeton JWT attendu : { "token": "…" }'];
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['erpAdminToken', json_encode($t)]);
+    $exp = null; $iss = null;
+    $claims = json_decode((string) base64_decode(strtr(explode('.', $t)[1], '-_', '+/')), true);
+    if (is_array($claims)) {
+        $exp = isset($claims['exp']) ? date('c', (int) $claims['exp']) : null;
+        $iss = $claims['iss'] ?? null;
+    }
+    journalAdd('CEO', 'Maintenance', null, 'Jeton d’API ERP déposé (expire ' . ($exp ?? '?') . ')');
+    return ['ok' => true, 'expire' => $exp, 'emetteur' => $iss];
+}
+
+/**
+ * GET /admin/erp-essai?routes=a,b — sonde des routes de l'API ERP avec le jeton
+ * déposé, DEPUIS LE SERVEUR. Renvoie par route le code HTTP et un extrait du
+ * corps : de quoi découvrir les contrats que le swagger ne documente pas.
+ * Lecture seule : uniquement des GET, uniquement vers l'hôte de l'API du panel.
+ */
+function ep_erp_essai(): array
+{
+    $tok = setting('erpAdminToken', '');
+    if (!is_string($tok) || $tok === '') {
+        return ['error' => 'Aucun jeton déposé — POST /admin/erp-token d’abord.'];
+    }
+    // Même hôte que l'API du panel (config Paramètres / config.php / défaut).
+    $racine = preg_replace('#/api/v1/?$#', '', PanelApi::config()['base']);
+    $demande = trim((string) ($_GET['routes'] ?? ''));
+    $routes = $demande === ''
+        ? ['product-availability-periods', 'product-availability-periods/name-aliases',
+           'categories-availability/all-shops']
+        : array_filter(array_map('trim', explode(',', $demande)));
+    $out = [];
+    foreach (array_slice($routes, 0, 8) as $r) {
+        // Chemin borné : pas de schéma, pas d'hôte, pas de « .. » — l'appelant
+        // choisit une route de l'API, jamais une autre destination.
+        if (!preg_match('#^[a-z0-9/_-]+(\?[a-z0-9=&_\[\]-]*)?$#i', $r) || str_contains($r, '..')) {
+            $out[$r] = ['erreur' => 'chemin refusé']; continue;
+        }
+        $ch = curl_init($racine . '/api/v1/' . ltrim($r, '/'));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_CONNECTTIMEOUT => 6,
+        ]);
+        $corps = curl_exec($ch);
+        $code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err   = curl_error($ch);
+        curl_close($ch);
+        $out[$r] = $corps === false
+            ? ['code' => 0, 'erreur' => $err]
+            : ['code' => $code, 'extrait' => mb_substr((string) $corps, 0, 2000)];
+    }
+    return ['hote' => $racine, 'routes' => $out];
+}

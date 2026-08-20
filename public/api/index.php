@@ -70,6 +70,7 @@ function route(string $method, string $path): mixed
             $path === '/fournisseurs'                  => ep_suppliers(),
             $path === '/marketing'                     => ep_mkt(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
+            $path === '/admin/erp-essai'               => ep_erp_essai(),
             $path === '/projects'                      => ep_projects(),
             $path === '/projects/crm'                  => ep_crm(),
             $path === '/people'                        => ep_people(),
@@ -144,6 +145,7 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/admin/marketing-nettoyage') { return wr_mar_nettoyage(); }
     if ($method === 'POST' && $path === '/admin/marketing-restaure') { return wr_mar_restaure(); }
+    if ($method === 'POST' && $path === '/admin/erp-token') { return wr_erp_token(); }
     if ($method === 'PUT' && preg_match('#^/production/produit/([\w-]+)$#', $path, $m)) { return wr_prod_produit($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/planogramme/([\w-]+)$#', $path, $m)) { return wr_prod_planogramme($m[1]); }
     // --- planogramme : structure du comptoir, placements, consignes
