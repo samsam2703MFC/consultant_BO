@@ -4573,6 +4573,10 @@ function ep_ca_achats(): array
             'telephone' => (string) ($f['phone'] ?? ''),
             'email' => (string) ($f['email'] ?? ''),
             'devise' => (string) ($f['currency'] ?? ''),
+            // CENTRAL = la centrale d'achat elle-même ; le drapeau « intégré »
+            // dit si la commande part électroniquement chez ce fournisseur.
+            'type' => (string) ($f['type'] ?? ''),
+            'integre' => (int) ($f['integrated_supplier'] ?? 0) === 1,
             'nbRefs' => count($cat), 'nbActives' => $actives,
             'margePct' => isset($p2['marge']) ? (float) $p2['marge'] : null,
             'redevancePct' => isset($p2['redevance']) ? (float) $p2['redevance'] : null,
@@ -4620,6 +4624,31 @@ function ep_ca_achats_catalogue(): array
     $id = (int) ($_GET['fournisseur'] ?? 0);
     if ($id <= 0) { http_response_code(400); return ['error' => 'fournisseur requis']; }
     if (!PanelApi::configured()) { return ['etat' => 'attente', 'lignes' => []]; }
+
+    // La fiche d'identité (/material-suppliers/{id}) porte ce que la liste
+    // tait : type (CENTRAL = la centrale elle-même), intégration électronique,
+    // adresse, TVA, site. Affichée en tête du catalogue — sans l'IBAN, qui n'a
+    // rien à faire à l'écran.
+    $fiche = null;
+    $f = PanelApi::get('/material-suppliers/' . $id);
+    if (is_array($f)) {
+        if (isset($f[0]) && is_array($f[0])) { $f = $f[0]; }
+        $adresse = trim(implode(' ', array_filter([
+            $f['street'] ?? '', $f['street_number'] ?? ''])));
+        $villeLigne = trim(implode(' ', array_filter([$f['zip'] ?? '', $f['city'] ?? ''])));
+        $fiche = [
+            'nom' => (string) ($f['name'] ?? ''),
+            'type' => (string) ($f['type'] ?? ''),
+            'integre' => (int) ($f['integrated_supplier'] ?? 0) === 1,
+            'adresse' => trim($adresse . ($villeLigne !== '' ? ', ' . $villeLigne : ''), ', '),
+            'pays' => (string) ($f['country_code'] ?? ''),
+            'telephone' => (string) ($f['phone'] ?? ''),
+            'email' => (string) ($f['email'] ?? ''),
+            'tva' => (string) ($f['tax_number'] ?? ''),
+            'web' => (string) ($f['website_url'] ?? ''),
+            'notes' => (string) ($f['notes'] ?? ''),
+        ];
+    }
     $lignes = [];
     foreach (analyseListe(PanelApi::get('/material-suppliers/' . $id . '/catalog/products') ?? []) as $p) {
         $lignes[] = [
@@ -4634,7 +4663,7 @@ function ep_ca_achats_catalogue(): array
         ];
     }
     usort($lignes, fn ($a, $b) => [$b['actif'], $a['nom']] <=> [$a['actif'], $b['nom']]);
-    return ['etat' => 'ok', 'fournisseurId' => $id, 'lignes' => $lignes];
+    return ['etat' => 'ok', 'fournisseurId' => $id, 'fiche' => $fiche, 'lignes' => $lignes];
 }
 
 /**

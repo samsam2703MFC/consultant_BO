@@ -4740,6 +4740,10 @@ function tplCentrale(c, x){
       ${c.caChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? ch.texte : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? ch.fond : 'transparent'};color:${ch.texte}">${esc(ch.nom)}</button>`).join('')}
       ${c.caChips.some(ch => ch.on) ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">re-cliquer pour tout afficher</span>` : ''}
     </div>` : ''}
+    ${c.caFiche ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 22px;margin-bottom:14px;padding:12px 14px;background:var(--color-background-secondary);border-radius:10px">
+      ${c.caFiche.map(f2 => `<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">${esc(f2[0])}</div>
+        <div style="font-size:12.5px;margin-top:2px">${esc(f2[1])}</div></div>`).join('')}
+    </div>` : ''}
     ${c.caVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:16px 0">${esc(c.caVide)}</div>` : !c.caRows.length ? `
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
       <thead><tr>${c.caCols.map((h, i) => `<th style="${TH}${i ? ';text-align:right' : ''}">${esc(h)}</th>`).join('')}</tr></thead>

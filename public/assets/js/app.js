@@ -4662,6 +4662,15 @@ class App {
         const cat = this._caCat[cle2];
         common.caChips = [{ nom: '← ' + fCat.nom + ' — catalogue', texte: 'var(--color-primary)',
           fond: 'rgba(141,29,44,0.08)', on: true, pick: () => this.setState({ caFournCat: null }) }];
+        // Fiche d'identité du fournisseur, au-dessus de son catalogue.
+        const fi = cat && cat.fiche;
+        common.caFiche = fi ? [
+          ['Type', fi.type === 'CENTRAL' ? 'Centrale d’achat' : (fi.type || '—')],
+          ['Commande électronique', fi.integre ? 'intégrée' : 'non intégrée'],
+          ['Adresse', (fi.adresse || '—') + (fi.pays ? ' (' + fi.pays + ')' : '')],
+          ['Téléphone', fi.telephone || '—'], ['Courriel', fi.email || '—'],
+          ['TVA', fi.tva || '—'], ['Site', fi.web || '—'],
+        ].concat(fi.notes ? [['Notes', fi.notes]] : []) : null;
         common.caCols = ['Référence', 'Produit', 'Colis', 'Portion', 'Poids', 'DLC', 'TVA', 'Actif'];
         common.caRows = ((cat && cat.lignes) || []).map(p => ({ cells: [
           { t: p.sku || '—', mut: true }, { t: p.nom },
@@ -4690,10 +4699,12 @@ class App {
           .catch(() => this.notify('Enregistrement impossible'));
       };
       const fPct = v => v != null ? String(v).replace('.', ',') + ' %' : 'à saisir';
-      common.caCols = ['Fournisseur', 'Ville', 'Références', 'Actives',
+      common.caCols = ['Fournisseur', 'Type', 'Ville', 'Références', 'Actives',
         'Marge centrale → franchisé', 'Redevance fournisseur → centrale'];
       common.caRows = (d.lignes || []).map(x => ({ cells: [
         { t: x.nom, act: () => this.setState({ caFournCat: { id: x.id, nom: x.nom } }) },
+        { t: (x.type === 'CENTRAL' ? 'Centrale' : 'Externe') + (x.integre ? ' · intégré' : ''),
+          col: x.type === 'CENTRAL' ? 'var(--color-primary)' : '', mut: x.type !== 'CENTRAL' },
         { t: x.ville || '—', mut: true },
         { t: String(x.nbRefs), num: true }, { t: String(x.nbActives), num: true },
         { t: fPct(x.margePct), num: true, mut: x.margePct == null, act: majPct(x, 'marge', 'Marge centrale → franchisé') },
