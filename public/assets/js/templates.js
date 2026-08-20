@@ -2136,6 +2136,21 @@ function tplReputation(c, x){
           <span style="display:inline-flex;gap:1px;padding-bottom:3px">${etoiles(c.repEtoilesReseau)}</span>
         </div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px">${esc(c.repAvis)}</div>
+        <!-- Répartition par étoiles : cinq jauges, la plus longue étant la plus
+             fréquente. Les pourcentages portent sur les avis LUS, et la ligne
+             sous les jauges le dit — pas sur le total de la fiche Google. -->
+        <div style="margin-top:12px;min-width:230px">
+          ${c.repBarres.map(b2 => `
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+              <span style="width:26px;text-align:right;font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.note}<i style="${b2.etoileSt};font-style:normal">★</i></span>
+              <span style="flex:1;min-width:0;height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
+                <span style="display:block;${b2.jaugeSt}"></span>
+              </span>
+              <span style="width:34px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums">${b2.n}</span>
+              <span style="width:34px;text-align:right;font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.pct}</span>
+            </div>`).join('')}
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.4;text-wrap:pretty">${esc(c.repEchantillon)}</div>
+        </div>
       </div>
       <div style="border-left:0.5px solid var(--color-border-tertiary);padding-left:26px">
         <div style="${cap};margin-bottom:6px">Cible ${c.repCible}</div>

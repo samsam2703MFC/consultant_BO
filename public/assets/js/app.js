@@ -3523,6 +3523,30 @@ class App {
     common.repEtoilesReseau = this.repEtoiles(res.moyenne, 17);
     common.repAvis = fInt(res.avis) + ' avis Google · ' + fInt(res.notes) + ' magasin' + (res.notes > 1 ? 's' : '') + ' noté' + (res.notes > 1 ? 's' : '')
       + (res.magasins > res.notes ? ' sur ' + fInt(res.magasins) : '');
+    // --- la répartition par étoiles, en jauges linéaires
+    //
+    // Les pourcentages sont ceux des avis LUS, jamais des `avis` de Google :
+    // l'API ne publie pas l'histogramme d'une fiche. L'écran affiche donc les
+    // deux nombres — sinon on lirait « 62 % de 5★ » en croyant que c'est vrai
+    // des 989 avis de la fiche.
+    const rp = res.repartition || { lus: 0, niveaux: [] };
+    const COUL = { 5: '#C9A227', 4: '#2d7a3e', 3: '#D97706', 2: '#C0182B', 1: '#8D1D2C' };
+    common.repLus = rp.lus || 0;
+    common.repEchantillon = !rp.lus
+      ? 'Aucun avis rapatrié pour l’instant.'
+      : fInt(rp.lus) + ' avis lus sur ' + fInt(res.avis) + ' — Google ne publie pas la répartition complète d’une fiche.';
+    common.repBarres = (rp.niveaux || []).map(l => {
+      const part = rp.lus ? l.n / rp.lus : 0;
+      return {
+        note: String(l.note), n: fInt(l.n),
+        pct: rp.lus ? (part * 100).toFixed(0) + ' %' : '—',
+        // Une part non nulle garde au moins un filet visible : à 1 % sur 200
+        // avis, une barre à 1 px se confond avec l'absence de barre.
+        jaugeSt: 'height:7px;border-radius:999px;background:' + COUL[l.note]
+          + ';width:' + (l.n === 0 ? 0 : Math.max(2, part * 100)) + '%',
+        etoileSt: 'font-size:11px;color:' + COUL[l.note] + ';line-height:1',
+      };
+    });
     common.repSousCible = res.sousCible || 0;
     common.repSousCibleTxt = (res.sousCible || 0) === 0
       ? 'Tous les magasins notés sont à la cible.'

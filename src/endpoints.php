@@ -5532,9 +5532,44 @@ function ep_reputation(): array
             'notes' => count($notes),
             'sousCible' => count(array_filter($notes, fn ($v) => $v < $cible)),
             'avis5Requis' => reputationAvis5($moyenne, $sommeAvis, $cible),
+            // La répartition par étoiles porte sur les avis RAPATRIÉS, pas sur
+            // les `avis` de Google : l'API Places ne publie pas l'histogramme
+            // d'une fiche, seulement la moyenne et le total. Les deux chiffres
+            // voyagent donc ensemble, et l'écran dit sur quoi il compte —
+            // présenter 24 avis lus comme la répartition de 989 serait faux.
+            'repartition' => reputationRepartition(array_column($magasins, 'id')),
         ],
         'magasins' => $magasins,
     ];
+}
+
+/**
+ * La répartition par étoiles des avis que NOUS détenons.
+ *
+ * Google ne publie pas l'histogramme d'une fiche : l'API Places rend la
+ * moyenne, le nombre total, et cinq avis. Notre table accumule ces cinq-là à
+ * chaque synchronisation — l'échantillon grossit avec le temps, mais il reste
+ * un échantillon. Le total lu part avec la répartition pour que l'écran puisse
+ * le dire.
+ *
+ * @param list<string> $shopIds les magasins affichés, pour ne pas compter ceux
+ *                              qui ont quitté le réseau
+ */
+function reputationRepartition(array $shopIds): array
+{
+    $vide = ['lus' => 0, 'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => 0], [5, 4, 3, 2, 1])];
+    if ($shopIds === []) { return $vide; }
+    $in = implode(',', array_fill(0, count($shopIds), '?'));
+    try {
+        $rows = Db::rows("SELECT rating, COUNT(*) n FROM ceo_shop_review
+                           WHERE shop_id IN ($in) GROUP BY rating", $shopIds);
+    } catch (PDOException $e) {
+        return $vide;
+    }
+    $par = [];
+    foreach ($rows as $r) { $par[(int) $r['rating']] = (int) $r['n']; }
+    $lus = array_sum($par);
+    return ['lus' => $lus, 'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => $par[$n] ?? 0], [5, 4, 3, 2, 1])];
 }
 
 /**
