@@ -3290,34 +3290,50 @@ function ep_perf(): array
 
         // 2ter) FOOD COST par magasin et par mois — la heatmap de marge du
         //       panel, seule source : le P&L mensuel ne porte pas le poste
-        //       matière (ticket T5a). UN appel par boutique sur l'exercice
-        //       entier ; le volet `days` (CA + marge brute par jour) s'agrège
-        //       en mois, et food cost = (CA − marge brute) / CA.
+        //       matière (ticket T5a). La route plafonne sa fenêtre à 31 jours
+        //       (mesuré : 422 au-delà) : UN appel par boutique ET par mois,
+        //       avec les bornes `from`/`to` — les seules qu'elle honore.
+        //       Un mois CLOS ne change plus : son ratio est mis en cache
+        //       (ceo_app_setting), seul le mois courant se recalcule.
         if (PanelApi::configured()) {
             try {
                 $shopIds = array_map(fn ($r2) => (int) $r2['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
             } catch (PDOException $eS) { $shopIds = []; }
-            $qHm = http_build_query(['date_from' => max($annees) . '-01-01', 'date_to' => date('Y-m-d')]);
+            $yF = max($annees);
+            $cache = setting('foodCostApi', []);
+            if (!is_array($cache)) { $cache = []; }
+            $moisFin = $yF < (int) date('Y') ? 12 : (int) date('n');
             $chemins = [];
             foreach ($shopIds as $sid) {
-                $chemins[$sid] = '/consultant/shops/' . $sid . '/margin-heatmap?' . $qHm;
+                for ($mm = 1; $mm <= $moisFin; $mm++) {
+                    $cle = $sid . '-' . $yF . '-' . $mm;
+                    $clos = !($yF === (int) date('Y') && $mm === (int) date('n'));
+                    if ($clos && array_key_exists($cle, $cache)) { continue; }
+                    $du = sprintf('%04d-%02d-01', $yF, $mm);
+                    $au = $clos ? date('Y-m-t', strtotime($du)) : date('Y-m-d');
+                    $chemins[$cle] = '/consultant/shops/' . $sid . '/margin-heatmap?'
+                        . http_build_query(['from' => $du, 'to' => $au]);
+                }
             }
-            foreach (PanelApi::getParallele($chemins) as $sid => $hm) {
-                if (!is_array($hm) || empty($hm['days']) || !is_array($hm['days'])) { continue; }
-                $parMois = [];
-                foreach ($hm['days'] as $j2) {
-                    if (empty($j2['date']) || empty($j2['has_data'])) { continue; }
-                    $mm = (int) substr((string) $j2['date'], 5, 2);
-                    $parMois[$mm]['ca']    = ($parMois[$mm]['ca'] ?? 0) + (float) ($j2['ca'] ?? 0);
-                    $parMois[$mm]['marge'] = ($parMois[$mm]['marge'] ?? 0) + (float) ($j2['margin_value'] ?? 0);
-                }
-                foreach ($parMois as $mm => $x2) {
-                    if ($x2['ca'] <= 0) { continue; }
-                    $k = $key($sid, max($annees), $mm);
-                    if (isset($cells[$k])) {
-                        $cells[$k]['foodCostPct'] = round((($x2['ca'] - $x2['marge']) / $x2['ca']) * 100, 1);
-                    }
-                }
+            $change = false;
+            foreach (PanelApi::getParallele($chemins) as $cle => $hm) {
+                $tot = is_array($hm) ? ($hm['totals'] ?? null) : null;
+                $ca2 = is_array($tot) ? (float) ($tot['ca'] ?? 0) : 0.0;
+                $mg2 = is_array($tot) ? (float) ($tot['margin_value'] ?? 0) : 0.0;
+                $cache[$cle] = $ca2 > 0 ? round((($ca2 - $mg2) / $ca2) * 100, 1) : null;
+                $change = true;
+            }
+            if ($change) {
+                try {
+                    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                        ['foodCostApi', json_encode($cache)]);
+                } catch (PDOException $eFc) { /* cache facultatif */ }
+            }
+            foreach ($cache as $cle => $pct) {
+                if ($pct === null) { continue; }
+                [$sid2, $y2, $m2] = array_map('intval', explode('-', (string) $cle));
+                $k = $key($sid2, $y2, $m2);
+                if (isset($cells[$k])) { $cells[$k]['foodCostPct'] = (float) $pct; }
             }
         }
 
