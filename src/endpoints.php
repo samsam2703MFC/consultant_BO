@@ -1290,6 +1290,137 @@ function ep_exploitation_reseau(): array
 }
 
 /**
+ * GET /exploitation/rentabilite?periode=semaine|mois — le résultat net par jour
+ * et par magasin, comme l'« Analyse rentabilité » de la PWA consultant.
+ *
+ * La construction est celle de la PWA, vérifiée chiffre à chiffre sur ses
+ * écrans (Halle, mardi 11/08 : CA 1 186 €, marge brute 765,24 €, overhead
+ * 420,73 €/jour = 13 042,65 ÷ 31) :
+ *
+ *  - le CA et la marge BRUTE par jour viennent de margin-heatmap (volet
+ *    `days`) — le coût matière est CA − marge brute ;
+ *  - labour et overhead viennent du P&L MENSUEL, répartis par jour
+ *    d'ouverture : jours du mois plein dont le jour de semaine a montré de
+ *    l'activité sur le mois courant (une boutique 7 j/7 en août → 31) ;
+ *  - résultat net du jour = marge brute − labour/j − overhead/j.
+ *
+ * LIMITE ASSUMÉE : le panel ne rend le P&L mensuel que pour le mois COURANT
+ * (/pnl/monthly répond 422 sur toute forme d'appel, la route générique ignore
+ * la date transmise — mesuré). Un jour d'un autre mois garde donc son CA et sa
+ * marge brute, mais son résultat net est nul avec le motif dit : inventer un
+ * labour de juillet à partir d'août serait un chiffre faux présenté juste.
+ */
+function ep_exploitation_rentabilite(): array
+{
+    $per = (($_GET['periode'] ?? 'semaine') === 'mois') ? 'mois' : 'semaine';
+    if (!PanelApi::configured()) {
+        return ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
+    }
+    $auj = new DateTimeImmutable('today');
+    if ($per === 'semaine') {
+        // Dernière semaine PLEINE : le lundi précédant le lundi de la semaine
+        // en cours. Une semaine entamée mélangerait jours réels et cases vides.
+        $du = $auj->modify('monday this week')->modify('-7 days');
+        $au = $du->modify('+6 days');
+    } else {
+        $du = $auj->modify('first day of this month');
+        $au = $auj; // les jours à venir n'ont pas de ventes, inutile de les demander
+    }
+    $duS = $du->format('Y-m-d'); $auS = $au->format('Y-m-d');
+    $moisCourant = $auj->format('Y-m');
+    $mDebut = $auj->modify('first day of this month')->format('Y-m-d');
+
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    } catch (PDOException $e) {
+        $shops = Db::rows("SELECT id, name FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name");
+    }
+
+    $paths = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $paths['hm' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from=' . $duS . '&to=' . $auS;
+        // En vue mois, la fenêtre EST le mois courant : un seul appel sert les
+        // jours et la détection des jours d'ouverture.
+        if ($per === 'semaine') {
+            $paths['hmM' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from=' . $mDebut . '&to=' . $auj->format('Y-m-d');
+        }
+        $paths['pnl' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj->format('Y-m-d');
+    }
+    $res = PanelApi::getParallele($paths, 6);
+
+    $joursMois = (int) $auj->format('t');
+    $premier = new DateTimeImmutable($moisCourant . '-01');
+    $magasins = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $hm = $res['hm' . $id] ?? null;
+        if (!is_array($hm) || !isset($hm['days'])) {
+            $magasins[] = ['id' => (string) $id, 'nom' => $s['name'], 'indispo' => true,
+                'motif' => 'margin-heatmap sans réponse pour ce magasin'];
+            continue;
+        }
+        // Jours d'ouverture du mois plein : les jours de semaine vus actifs sur
+        // le mois courant, comptés sur tout le mois. C'est le diviseur de la
+        // PWA (« mois ÷ jours ouverts »).
+        $hmM = $per === 'semaine' ? ($res['hmM' . $id] ?? null) : $hm;
+        $wdActifs = [];
+        foreach ((array) ($hmM['days'] ?? []) as $d) {
+            if (!empty($d['has_data']) && (float) ($d['ca'] ?? 0) > 0) { $wdActifs[(int) $d['weekday']] = true; }
+        }
+        $joursOuverts = 0;
+        for ($i = 0; $i < $joursMois; $i++) {
+            if (isset($wdActifs[(int) $premier->modify('+' . $i . ' days')->format('N')])) { $joursOuverts++; }
+        }
+        $pnl = $res['pnl' . $id] ?? null;
+        $labourM = is_array($pnl) ? ($pnl['labour']['value'] ?? null) : null;
+        $overM   = is_array($pnl) ? ($pnl['overhead']['value'] ?? null) : null;
+        $labJ = ($labourM !== null && $joursOuverts > 0) ? $labourM / $joursOuverts : null;
+        $ovJ  = ($overM !== null && $joursOuverts > 0) ? $overM / $joursOuverts : null;
+
+        $jours = []; $caTot = 0.0; $netTot = 0.0; $netOk = true;
+        foreach ((array) $hm['days'] as $d) {
+            $ca = (float) ($d['ca'] ?? 0); $mb = (float) ($d['margin_value'] ?? 0);
+            $ouvert = !empty($d['has_data']) && $ca > 0;
+            $dansMois = str_starts_with((string) ($d['date'] ?? ''), $moisCourant);
+            $lj = $dansMois ? $labJ : null; $oj = $dansMois ? $ovJ : null;
+            $net = ($ouvert && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null;
+            if ($ouvert) { $caTot += $ca; if ($net === null) { $netOk = false; } else { $netTot += $net; } }
+            $jours[] = [
+                'date' => $d['date'], 'wd' => (int) ($d['weekday'] ?? 0),
+                'ouvert' => $ouvert,
+                'ca' => $ouvert ? round($ca, 2) : null,
+                'tickets' => $ouvert ? (int) ($d['tickets'] ?? 0) : null,
+                'panier' => $ouvert ? round((float) ($d['avg_basket'] ?? 0), 2) : null,
+                'coutMatiere' => $ouvert ? round($ca - $mb, 2) : null,
+                'margeBrute' => $ouvert ? round($mb, 2) : null,
+                'margePct' => $ouvert && $ca > 0 ? round($mb / $ca * 100, 1) : null,
+                'labourJour' => $ouvert && $lj !== null ? round($lj, 2) : null,
+                'overheadJour' => $ouvert && $oj !== null ? round($oj, 2) : null,
+                'net' => $net !== null ? round($net, 2) : null,
+                'netPct' => $net !== null && $ca > 0 ? round($net / $ca * 100, 1) : null,
+                'motifNet' => $ouvert && $net === null
+                    ? ($dansMois ? 'P&L mensuel sans réponse — labour et overhead indisponibles'
+                                 : 'le panel ne rend le P&L mensuel que pour le mois courant — labour et overhead de ce mois-là indisponibles')
+                    : null,
+            ];
+        }
+        $magasins[] = ['id' => (string) $id, 'nom' => $s['name'],
+            'joursOuverts' => $joursOuverts,
+            'labourMois' => $labourM !== null ? round((float) $labourM, 2) : null,
+            'overheadMois' => $overM !== null ? round((float) $overM, 2) : null,
+            'jours' => $jours,
+            'total' => ['ca' => round($caTot, 2),
+                'net' => $netOk && $caTot > 0 ? round($netTot, 2) : null,
+                'netPct' => $netOk && $caTot > 0 ? round($netTot / $caTot * 100, 1) : null]];
+    }
+
+    return ['periode' => $per, 'du' => $duS, 'au' => $auS, 'mois' => $moisCourant,
+        'magasins' => $magasins,
+        'source' => 'API panel — margin-heatmap par jour ; labour et overhead du P&L mensuel répartis par jour d\'ouverture'];
+}
+
+/**
  * Analyse d'une catégorie ou d'une référence dans le temps.
  *
  * Une série se construit en interrogeant l'API sur des bornes successives :

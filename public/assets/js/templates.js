@@ -279,6 +279,45 @@ function tplExploitation(c, x){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px">
       ${c.exMagasins.map(carte).join('')}
     </div>
+    <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:500">Analyse rentabilité — résultat net par jour</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.exRent.periode)}</div>
+        </div>
+        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
+          ${c.exRent.btns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+        </div>
+      </div>
+      ${c.exRent.chargement ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel…</div>`
+        : (c.exRent.indispo ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">${esc(c.exRent.indispo)}</div>` : `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${c.exRent.lignes.map(l => `
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="width:210px;flex:none">
+              <div style="font-weight:500;font-size:12.5px">${esc(l.nom)}</div>
+              ${l.total ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(l.total)}</div>` : ''}
+            </div>
+            ${l.motif ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.motif)}</div>` : `
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              ${l.chips.map(ch => ch.go ? `
+                <button ${x.A(ch.go)} title="${esc(ch.title)}" style="border:none;cursor:pointer;font-family:var(--font-ui);border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
+                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:${ch.semaine ? '12px' : '10px'};font-weight:600;margin-top:1px">${esc(ch.pct)}</span>
+                </button>` : `
+                <span title="${esc(ch.title)}" style="display:inline-block;border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
+                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:${ch.semaine ? '11px' : '10px'};margin-top:1px">${esc(ch.pct)}</span>
+                </span>`).join('')}
+            </div>`}
+          </div>`).join('')}
+      </div>
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--color-text-muted)">
+        <span style="font-weight:500">Résultat net :</span>
+        ${c.exRent.legende.map(g => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;${g.st}"></i> ${esc(g.lib)}</span>`).join('')}
+        ${c.exRent.source ? `<span style="margin-left:auto">${esc(c.exRent.source)}</span>` : ''}
+      </div>`)}
+    </div>
     <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
         <div>
@@ -308,6 +347,7 @@ function tplExploitation(c, x){
       </table>`)}
     </div>
     <div style="margin-top:16px">${tplRatiosCouts(c, x)}</div>
+    ${c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}
     ${c.exDetail ? tplExploitDetail(c, x) : ''}
     <div style="margin-top:11px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
       <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
@@ -319,6 +359,34 @@ function tplExploitation(c, x){
     </div>`}`;
 }
 
+
+/* La modale d'un jour de la heatmap de rentabilité : l'addition ligne à
+   ligne, comme dans la PWA consultant — CA, coût matière, marge brute, labour
+   et overhead répartis par jour d'ouverture, résultat net. */
+function tplExploitRentModal(d, x){
+  const { esc } = x;
+  return `
+  <div ${x.A(d.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.45);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(460px,92vw);max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:16px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.3);padding:22px 24px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--color-primary)">${esc(d.titre)}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(d.magasin)}${d.sous ? ' · ' + esc(d.sous) : ''}</div>
+      </div>
+      <button ${x.A(d.close)} aria-label="Fermer" style="border:none;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text);width:28px;height:28px;border-radius:50%;font-size:14px;line-height:1">×</button>
+    </div>
+    <div style="margin-top:12px">
+      ${d.lignes.map(l => `
+        <div style="display:flex;align-items:baseline;gap:10px;padding:9px 8px;border-bottom:0.5px solid var(--color-border-tertiary);${l.fort ? 'background:var(--color-background-secondary);border-radius:8px;border-bottom:none;margin:2px 0' : ''}">
+          <span style="width:14px;flex:none;color:var(--color-text-muted)">${esc(l.op)}</span>
+          <span style="flex:1;${l.fort ? 'font-weight:600' : ''}">${esc(l.lib)}${l.pct ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-text-muted)">(${esc(l.pct)})</span>` : ''}</span>
+          <span style="font-weight:${l.fort ? '600' : '500'};white-space:nowrap;font-variant-numeric:tabular-nums;${l.col ? 'color:' + l.col : ''}">${esc(l.v)}</span>
+        </div>`).join('')}
+    </div>
+    ${d.motif ? `<div style="margin-top:10px;font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 10px;border-radius:8px">${esc(d.motif)}</div>` : ''}
+    <div style="margin-top:10px;font-size:11px;color:var(--color-text-muted)">${esc(d.note)}</div>
+  </div>`;
+}
 
 /* P&L détaillé d'un magasin. Chaque bloc affiche soit ses données, soit la
    raison pour laquelle il n'en a pas : tant qu'un endpoint du panel n'a pas
