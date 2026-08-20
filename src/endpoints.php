@@ -5554,6 +5554,8 @@ function ep_reputation(): array
             Db::rows("SELECT id, name, zone FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name"));
     }
 
+    $repartitions = reputationRepartitions(array_map(fn ($s2) => (string) $s2['id'], $shops));
+
     $magasins = [];
     $sommeNotes = 0.0; $sommeAvis = 0;
     foreach ($shops as $s) {
@@ -5581,6 +5583,7 @@ function ep_reputation(): array
             'note' => $note, 'avis' => $n,
             'ecart' => $note !== null ? round($note - $cible, 2) : null,
             'avis5Requis' => reputationAvis5($note, $n, $cible),
+            'repartition' => $repartitions['magasins'][(string) $s['id']] ?? null,
             'placeId' => $a['place_id'] ?? null,
             'url' => $a['profile_url'] ?? null,
             'synchro' => ($a && $a['synced_at'] !== null) ? substr((string) $a['synced_at'], 0, 16) : null,
@@ -5622,14 +5625,14 @@ function ep_reputation(): array
             // d'une fiche, seulement la moyenne et le total. Les deux chiffres
             // voyagent donc ensemble, et l'écran dit sur quoi il compte —
             // présenter 24 avis lus comme la répartition de 989 serait faux.
-            'repartition' => reputationRepartition(array_column($magasins, 'id')),
+            'repartition' => $repartitions['reseau'],
         ],
         'magasins' => $magasins,
     ];
 }
 
 /**
- * La répartition par étoiles des avis que NOUS détenons.
+ * La répartition par étoiles des avis que NOUS détenons, réseau et magasins.
  *
  * Google ne publie pas l'histogramme d'une fiche : l'API Places rend la
  * moyenne, le nombre total, et cinq avis. Notre table accumule ces cinq-là à
@@ -5637,24 +5640,42 @@ function ep_reputation(): array
  * un échantillon. Le total lu part avec la répartition pour que l'écran puisse
  * le dire.
  *
+ * Une seule requête, groupée par magasin ET par note : le réseau est la somme
+ * des magasins, il ne se redemande pas à la base. À neuf magasins la
+ * différence est mince ; à cinquante, ce serait cinquante et un allers-retours
+ * pour un bloc décoratif.
+ *
  * @param list<string> $shopIds les magasins affichés, pour ne pas compter ceux
  *                              qui ont quitté le réseau
+ * @return array{reseau: array, magasins: array<string, array>}
  */
-function reputationRepartition(array $shopIds): array
+function reputationRepartitions(array $shopIds): array
 {
-    $vide = ['lus' => 0, 'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => 0], [5, 4, 3, 2, 1])];
-    if ($shopIds === []) { return $vide; }
+    $vide = static fn (): array => ['lus' => 0,
+        'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => 0], [5, 4, 3, 2, 1])];
+    $out = ['reseau' => $vide(), 'magasins' => []];
+    foreach ($shopIds as $id) { $out['magasins'][$id] = $vide(); }
+    if ($shopIds === []) { return $out; }
+
     $in = implode(',', array_fill(0, count($shopIds), '?'));
     try {
-        $rows = Db::rows("SELECT rating, COUNT(*) n FROM ceo_shop_review
-                           WHERE shop_id IN ($in) GROUP BY rating", $shopIds);
+        $rows = Db::rows("SELECT shop_id, rating, COUNT(*) n FROM ceo_shop_review
+                           WHERE shop_id IN ($in) GROUP BY shop_id, rating", $shopIds);
     } catch (PDOException $e) {
-        return $vide;
+        return $out;
     }
-    $par = [];
-    foreach ($rows as $r) { $par[(int) $r['rating']] = (int) $r['n']; }
-    $lus = array_sum($par);
-    return ['lus' => $lus, 'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => $par[$n] ?? 0], [5, 4, 3, 2, 1])];
+
+    $parMag = []; $parReseau = [];
+    foreach ($rows as $r) {
+        $sid = (string) $r['shop_id']; $note = (int) $r['rating']; $n = (int) $r['n'];
+        $parMag[$sid][$note] = ($parMag[$sid][$note] ?? 0) + $n;
+        $parReseau[$note] = ($parReseau[$note] ?? 0) + $n;
+    }
+    $forme = static fn (array $par): array => ['lus' => array_sum($par),
+        'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => $par[$n] ?? 0], [5, 4, 3, 2, 1])];
+    $out['reseau'] = $forme($parReseau);
+    foreach ($shopIds as $id) { $out['magasins'][$id] = $forme($parMag[$id] ?? []); }
+    return $out;
 }
 
 /**

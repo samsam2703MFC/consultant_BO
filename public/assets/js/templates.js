@@ -2150,6 +2150,22 @@ function tplReputation(c, x){
     return `<div data-screen="reputation" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.repErreurTxt)}</div>`;
   }
   const etoiles = (list) => list.map(e => `<span style="${e.st}">★</span>`).join('');
+  // Les cinq jauges, dessinées à l'identique pour le réseau et pour un magasin :
+  // on compare les deux d'un coup d'œil, ce qui suppose la même échelle et la
+  // même mise en page. `note` sert de repère à gauche, la part à droite.
+  const jauges = (j, compact) => !j ? '' : `
+    <div style="margin-top:${compact ? '10' : '12'}px">
+      ${j.barres.map(b2 => `
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+          <span style="width:26px;text-align:right;font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.note}<i style="${b2.etoileSt};font-style:normal">★</i></span>
+          <span style="flex:1;min-width:0;height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
+            <span style="display:block;${b2.jaugeSt}"></span>
+          </span>
+          <span style="width:34px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums">${b2.n}</span>
+          <span style="width:34px;text-align:right;font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.pct}</span>
+        </div>`).join('')}
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.4;text-wrap:pretty">${esc(j.echantillon)}</div>
+    </div>`;
   return `
   <div data-screen="reputation" style="display:flex;flex-direction:column;gap:16px">
 
@@ -2164,18 +2180,7 @@ function tplReputation(c, x){
         <!-- Répartition par étoiles : cinq jauges, la plus longue étant la plus
              fréquente. Les pourcentages portent sur les avis LUS, et la ligne
              sous les jauges le dit — pas sur le total de la fiche Google. -->
-        <div style="margin-top:12px;min-width:230px">
-          ${c.repBarres.map(b2 => `
-            <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-              <span style="width:26px;text-align:right;font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.note}<i style="${b2.etoileSt};font-style:normal">★</i></span>
-              <span style="flex:1;min-width:0;height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
-                <span style="display:block;${b2.jaugeSt}"></span>
-              </span>
-              <span style="width:34px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums">${b2.n}</span>
-              <span style="width:34px;text-align:right;font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.pct}</span>
-            </div>`).join('')}
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.4;text-wrap:pretty">${esc(c.repEchantillon)}</div>
-        </div>
+        <div style="min-width:230px">${jauges({ barres: c.repBarres, echantillon: c.repEchantillon }, false)}</div>
       </div>
       <div style="border-left:0.5px solid var(--color-border-tertiary);padding-left:26px">
         <div style="${cap};margin-bottom:6px">Cible ${c.repCible}</div>
@@ -2218,6 +2223,8 @@ function tplReputation(c, x){
           </div>
 
           <div style="${m.effortSt}">${esc(m.effort)}</div>
+
+          ${m.jauges && !m.jauges.vide ? jauges(m.jauges, true) : ''}
 
           ${!m.raccorde ? `
             <button ${x.A(m.ouvrirRech)} style="margin-top:9px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:999px;height:28px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Raccorder la fiche Google</button>` : ''}

@@ -3533,6 +3533,10 @@ class App {
     readOne('/reputation').then(d => { this._repEnCours = false;
       this.D.reput = d || { erreur: true }; this.setState({}); });
   }
+  /** L'or des étoiles pour 5, puis vert, orange et les deux rouges. Une seule
+   *  palette pour les jauges du réseau et celles des magasins. */
+  get COUL_ETOILE(){ return { 5: '#C9A227', 4: '#2d7a3e', 3: '#D97706', 2: '#C0182B', 1: '#8D1D2C' }; }
+
   /** Cinq glyphes, pleins jusqu'à la note arrondie. La valeur chiffrée est
    *  toujours affichée à côté : les étoiles donnent l'allure, pas la mesure. */
   repEtoiles(note, taille){
@@ -3591,24 +3595,36 @@ class App {
     // l'API ne publie pas l'histogramme d'une fiche. L'écran affiche donc les
     // deux nombres — sinon on lirait « 62 % de 5★ » en croyant que c'est vrai
     // des 989 avis de la fiche.
-    const rp = res.repartition || { lus: 0, niveaux: [] };
-    const COUL = { 5: '#C9A227', 4: '#2d7a3e', 3: '#D97706', 2: '#C0182B', 1: '#8D1D2C' };
-    common.repLus = rp.lus || 0;
-    common.repEchantillon = !rp.lus
-      ? 'Aucun avis rapatrié pour l’instant.'
-      : fInt(rp.lus) + ' avis lus sur ' + fInt(res.avis) + ' — Google ne publie pas la répartition complète d’une fiche.';
-    common.repBarres = (rp.niveaux || []).map(l => {
-      const part = rp.lus ? l.n / rp.lus : 0;
+    //
+    // Une seule fabrique pour le réseau et pour les magasins : les jauges
+    // doivent se lire de la même façon aux deux endroits, et deux copies se
+    // seraient mises à diverger sur un arrondi.
+    const jauges = (rp, avisGoogle) => {
+      const lus = (rp && rp.lus) || 0;
       return {
-        note: String(l.note), n: fInt(l.n),
-        pct: rp.lus ? (part * 100).toFixed(0) + ' %' : '—',
-        // Une part non nulle garde au moins un filet visible : à 1 % sur 200
-        // avis, une barre à 1 px se confond avec l'absence de barre.
-        jaugeSt: 'height:7px;border-radius:999px;background:' + COUL[l.note]
-          + ';width:' + (l.n === 0 ? 0 : Math.max(2, part * 100)) + '%',
-        etoileSt: 'font-size:11px;color:' + COUL[l.note] + ';line-height:1',
+        lus,
+        vide: lus === 0,
+        echantillon: !lus
+          ? 'Aucun avis rapatrié pour l’instant.'
+          : fInt(lus) + ' avis lus sur ' + fInt(avisGoogle) + ' — Google ne publie pas la répartition complète d’une fiche.',
+        barres: ((rp && rp.niveaux) || []).map(l => {
+          const part = lus ? l.n / lus : 0;
+          return {
+            note: String(l.note), n: fInt(l.n),
+            pct: lus ? (part * 100).toFixed(0) + ' %' : '—',
+            // Une part non nulle garde au moins un filet visible : à 1 % sur
+            // 200 avis, une barre à 1 px se confond avec l'absence de barre.
+            jaugeSt: 'height:7px;border-radius:999px;background:' + this.COUL_ETOILE[l.note]
+              + ';width:' + (l.n === 0 ? 0 : Math.max(2, part * 100)) + '%',
+            etoileSt: 'font-size:11px;color:' + this.COUL_ETOILE[l.note] + ';line-height:1',
+          };
+        }),
       };
-    });
+    };
+    const jReseau = jauges(res.repartition, res.avis);
+    common.repLus = jReseau.lus;
+    common.repEchantillon = jReseau.echantillon;
+    common.repBarres = jReseau.barres;
     common.repSousCible = res.sousCible || 0;
     common.repSousCibleTxt = (res.sousCible || 0) === 0
       ? 'Tous les magasins notés sont à la cible.'
@@ -3672,6 +3688,7 @@ class App {
           this.api('PUT', '/reputation/' + m.id + '/fiche', { placeId: '' }).then(() => {
             this.D.reput = null; this.repCharge(true); this.notify('Fiche détachée'); });
         },
+        jauges: jauges(m.repartition, m.avis),
         vide: (m.derniers || []).length === 0,
         derniers: (m.derniers || []).map(a => ({
           auteur: a.auteur, le: this.fD(a.le), note: a.note,
