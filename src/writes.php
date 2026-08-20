@@ -229,6 +229,38 @@ function wr_erp_compte_test(): array
 }
 
 /**
+ * PUT /centrale/fournisseur-pct { id, marge?, redevance? } — les pourcentages
+ * d'un fournisseur : marge centrale → franchisé et redevance
+ * fournisseur → centrale. Réglage du cockpit (le panel ne les porte pas),
+ * saisi d'un clic sur la cellule du suivi. Une valeur vide efface.
+ */
+function wr_ca_fournisseur_pct(): array
+{
+    $b = body();
+    $id = (int) ($b['id'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['error' => 'id fournisseur requis']; }
+    $pct = setting('caFournPct', []);
+    if (!is_array($pct)) { $pct = []; }
+    $cle = (string) $id;
+    $cur = is_array($pct[$cle] ?? null) ? $pct[$cle] : [];
+    foreach (['marge', 'redevance'] as $k) {
+        if (!array_key_exists($k, $b)) { continue; }
+        $v = $b[$k];
+        if ($v === null || $v === '') { unset($cur[$k]); continue; }
+        $n = (float) str_replace(',', '.', (string) $v);
+        if ($n < 0 || $n > 100) { http_response_code(422); return ['error' => $k . ' hors échelle (0..100)']; }
+        $cur[$k] = round($n, 2);
+    }
+    if ($cur === []) { unset($pct[$cle]); } else { $pct[$cle] = $cur; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caFournPct', json_encode($pct)]);
+    journalAdd('CEO', 'Paramètre', null, 'Pourcentages du fournisseur #' . $id . ' mis à jour ('
+        . (isset($cur['marge']) ? 'marge ' . $cur['marge'] . ' %' : 'marge —') . ', '
+        . (isset($cur['redevance']) ? 'redevance ' . $cur['redevance'] . ' %' : 'redevance —') . ')');
+    return ['ok' => true, 'id' => $id, 'pct' => $cur];
+}
+
+/**
  * POST /pwa/tasks/review — noter une tâche (note 1-5, conformité, commentaire).
  *
  * L'API du panel est la SOURCE DE VÉRITÉ (c'est elle qui porte review_rating /

@@ -4609,12 +4609,68 @@ class App {
       common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
         : 'Aucune réquisition matière remontée par le panel.';
     } else if (ecr === 'caAchats') {
-      common.caCols = ['Fournisseur', 'Ville', 'Téléphone', 'Courriel', 'Devise', 'Références', 'Actives'];
+      const fCat = S.caFournCat || null;   // {id, nom} : catalogue ouvert
+      if (fCat) {
+        // --- mode catalogue : le tableau devient celui du fournisseur cliqué.
+        this._caCat = this._caCat || {};
+        const cle2 = String(fCat.id);
+        if (!this._caCat[cle2] && !this._caCatEnCours) {
+          this._caCatEnCours = true;
+          readOne('/centrale/achats/catalogue?fournisseur=' + fCat.id).then(r => {
+            this._caCatEnCours = false; this._caCat[cle2] = r || { lignes: [] }; this.setState({});
+          });
+        }
+        const cat = this._caCat[cle2];
+        common.caChips = [{ nom: '← ' + fCat.nom + ' — catalogue', texte: 'var(--color-primary)',
+          fond: 'rgba(141,29,44,0.08)', on: true, pick: () => this.setState({ caFournCat: null }) }];
+        common.caCols = ['Référence', 'Produit', 'Colis', 'Portion', 'Poids', 'DLC', 'TVA', 'Actif'];
+        common.caRows = ((cat && cat.lignes) || []).map(p => ({ cells: [
+          { t: p.sku || '—', mut: true }, { t: p.nom },
+          { t: p.colis || '—', mut: true }, { t: p.portion || '—', mut: true },
+          { t: p.poidsG != null ? p.poidsG + ' g' : '—', num: true, mut: true },
+          { t: p.dlcJours != null ? p.dlcJours + ' j' : '—', num: true, mut: true },
+          { t: p.tvaPct != null ? String(p.tvaPct).replace('.', ',') + ' %' : '—', num: true, mut: true },
+          { t: p.actif ? 'active' : 'inactive', col: p.actif ? '#2d7a3e' : '#8a5a13' } ] }));
+        common.caRien = cat ? 'Catalogue vide chez ce fournisseur.' : 'Chargement du catalogue…';
+        return common;
+      }
+      // --- pourcentages : réglage du cockpit, saisi d'un clic sur la cellule.
+      const majPct = (x, champ, libelle) => () => {
+        const cur = champ === 'marge' ? x.margePct : x.redevancePct;
+        const v = window.prompt(libelle + ' pour « ' + x.nom + ' » (%, vide pour effacer) :',
+          cur != null ? String(cur).replace('.', ',') : '');
+        if (v === null) { return; }
+        fetch(this.apiBase() + '/centrale/fournisseur-pct', { method: 'PUT', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ id: x.id, [champ]: v.trim() }) })
+          .then(r => r.json())
+          .then(r => { if (r && r.error) { this.notify(r.error); return; }
+            this.notify('Pourcentage enregistré');
+            this.setState(s2 => { const cd = Object.assign({}, s2.caData); delete cd[ecr + '|' + per]; return { caData: cd }; });
+          })
+          .catch(() => this.notify('Enregistrement impossible'));
+      };
+      const fPct = v => v != null ? String(v).replace('.', ',') + ' %' : 'à saisir';
+      common.caCols = ['Fournisseur', 'Ville', 'Références', 'Actives',
+        'Marge centrale → franchisé', 'Redevance fournisseur → centrale'];
       common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: x.nom }, { t: x.ville || '—', mut: true }, { t: x.telephone || '—', mut: true },
-        { t: x.email || '—', mut: true }, { t: x.devise || '—', mut: true },
-        { t: String(x.nbRefs), num: true }, { t: String(x.nbActives), num: true } ] }));
+        { t: x.nom, act: () => this.setState({ caFournCat: { id: x.id, nom: x.nom } }) },
+        { t: x.ville || '—', mut: true },
+        { t: String(x.nbRefs), num: true }, { t: String(x.nbActives), num: true },
+        { t: fPct(x.margePct), num: true, mut: x.margePct == null, act: majPct(x, 'marge', 'Marge centrale → franchisé') },
+        { t: fPct(x.redevancePct), num: true, mut: x.redevancePct == null, act: majPct(x, 'redevance', 'Redevance fournisseur → centrale') } ] }));
       common.caRien = 'Aucun fournisseur au référentiel du panel.';
+      common.caNote = 'Cliquez un fournisseur pour ouvrir son catalogue ; cliquez un pourcentage pour le saisir (réglage du cockpit — le panel ne les porte pas).';
+      // --- CA du réseau, mois par mois avec cumul : l'assiette des redevances.
+      const M3 = (this.M && this.M.MOIS) || [];
+      common.caTable2 = (d.caMensuel && d.caMensuel.length) ? {
+        titre: 'Chiffre d’affaires réseau ' + (d.exercice || '') + ' — cumul par mois',
+        cols: ['Mois', 'CA du mois', 'Cumul année'],
+        rows: d.caMensuel.map(m2 => ({ cells: [
+          { t: (M3[m2.mois - 1] || String(m2.mois)) + (m2.enCours ? ' (en cours)' : ''), mut: !!m2.enCours },
+          { t: m2.ca != null ? this.fE(m2.ca) : '—', num: true },
+          { t: this.fE(m2.cumul), num: true } ] })),
+      } : null;
     }
     return common;
   }

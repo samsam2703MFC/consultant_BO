@@ -4522,6 +4522,11 @@ function ep_ca_achats(): array
         if ($id > 0) { $chemins[$id] = '/material-suppliers/' . $id . '/catalog/products'; }
     }
     $catalogues = PanelApi::getParallele($chemins);
+    // Les pourcentages sont un RÉGLAGE du cockpit : le panel ne porte ni la
+    // marge centrale → franchisé, ni la redevance fournisseur → centrale.
+    // Saisis à l'écran (clic sur la cellule), gardés dans ceo_app_setting.
+    $pct = setting('caFournPct', []);
+    if (!is_array($pct)) { $pct = []; }
     $lignes = [];
     foreach ($fournisseurs as $f) {
         $id = (int) ($f['id'] ?? 0);
@@ -4529,6 +4534,7 @@ function ep_ca_achats(): array
         $cat = analyseListe(is_array($catalogues[$id] ?? null) ? $catalogues[$id] : []);
         $actives = 0;
         foreach ($cat as $p) { if ((int) ($p['is_active'] ?? 0) === 1) { $actives++; } }
+        $p2 = is_array($pct[(string) $id] ?? null) ? $pct[(string) $id] : [];
         $lignes[] = [
             'id' => $id, 'nom' => (string) ($f['name'] ?? ''),
             'ville' => (string) ($f['city'] ?? ''),
@@ -4536,14 +4542,67 @@ function ep_ca_achats(): array
             'email' => (string) ($f['email'] ?? ''),
             'devise' => (string) ($f['currency'] ?? ''),
             'nbRefs' => count($cat), 'nbActives' => $actives,
+            'margePct' => isset($p2['marge']) ? (float) $p2['marge'] : null,
+            'redevancePct' => isset($p2['redevance']) ? (float) $p2['redevance'] : null,
         ];
     }
+
+    // CA du réseau, mois par mois avec le cumul de l'année : la même route de
+    // ventes fraîches, posée une fois par mois écoulé (en parallèle). C'est le
+    // chiffre d'affaires MAGASINS — l'assiette des redevances et le volume que
+    // la centrale sert.
+    $caMensuel = []; $moisN = (int) date('n'); $annee = (int) date('Y');
+    $cheminsCa = [];
+    for ($mm = 1; $mm <= $moisN; $mm++) {
+        $du = sprintf('%04d-%02d-01', $annee, $mm);
+        $au = $mm === $moisN ? date('Y-m-d') : date('Y-m-t', strtotime($du));
+        $cheminsCa[$mm] = '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $du, 'date_to' => $au]);
+    }
+    $parMois = PanelApi::getParallele($cheminsCa);
+    $cumul = 0.0;
+    for ($mm = 1; $mm <= $moisN; $mm++) {
+        $tot = 0.0; $ok = false;
+        foreach (analyseListe(is_array($parMois[$mm] ?? null) ? $parMois[$mm] : []) as $x) {
+            $v = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+            if ($v !== null) { $tot += $v; $ok = true; }
+        }
+        $cumul += $tot;
+        $caMensuel[] = ['mois' => $mm, 'annee' => $annee, 'ca' => $ok ? round($tot, 2) : null,
+            'cumul' => round($cumul, 2), 'enCours' => $mm === $moisN];
+    }
+
     return ['etat' => 'ok', 'titre' => 'Suivi fournisseurs',
-        'source' => 'API panel — référentiel fournisseurs et catalogues (/material-suppliers)',
-        'lignes' => $lignes,
+        'source' => 'API panel — référentiel fournisseurs et catalogues (/material-suppliers), ventes du réseau (sales-kpis)',
+        'lignes' => $lignes, 'caMensuel' => $caMensuel, 'exercice' => $annee,
         'manquants' => [lacune('Commandes, réception, litiges',
             'les commandes fournisseurs avec quantités commandées/reçues et l’état des factures',
             'API panel — seuls des webhooks entrants existent pour les commandes fournisseurs, aucune route de lecture. À réclamer : GET /material-orders')]];
+}
+
+/**
+ * GET /centrale/achats/catalogue?fournisseur=N — le catalogue d'UN
+ * fournisseur, ouvert d'un clic sur son nom dans le suivi.
+ */
+function ep_ca_achats_catalogue(): array
+{
+    $id = (int) ($_GET['fournisseur'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['error' => 'fournisseur requis']; }
+    if (!PanelApi::configured()) { return ['etat' => 'attente', 'lignes' => []]; }
+    $lignes = [];
+    foreach (analyseListe(PanelApi::get('/material-suppliers/' . $id . '/catalog/products') ?? []) as $p) {
+        $lignes[] = [
+            'sku' => (string) ($p['sku'] ?? ''),
+            'nom' => trim((string) ($p['name'] ?? '')),
+            'colis' => trim(((string) ($p['package_size'] ?? '')) . ' ' . ((string) ($p['package_unit'] ?? ''))),
+            'portion' => trim(((string) ($p['portion_size'] ?? '')) . ' ' . ((string) ($p['portion_unit'] ?? ''))),
+            'poidsG' => isset($p['weight_grams']) ? (int) $p['weight_grams'] : null,
+            'dlcJours' => isset($p['shelf_life_days']) ? (int) $p['shelf_life_days'] : null,
+            'tvaPct' => isset($p['vat_rate']) ? (float) $p['vat_rate'] : null,
+            'actif' => (int) ($p['is_active'] ?? 0) === 1,
+        ];
+    }
+    usort($lignes, fn ($a, $b) => [$b['actif'], $a['nom']] <=> [$a['actif'], $b['nom']]);
+    return ['etat' => 'ok', 'fournisseurId' => $id, 'lignes' => $lignes];
 }
 
 function ep_ca_manquant(string $ecran): array

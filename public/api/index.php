@@ -102,6 +102,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/demandes'             => ep_ca_demandes(),
             $path === '/centrale/campagnes'            => ep_ca_manquant('campagnes'),
             $path === '/centrale/achats'               => ep_ca_achats(),
+            $path === '/centrale/achats/catalogue'     => ep_ca_achats_catalogue(),
             $path === '/centrale/commandes'            => ep_ca_commandes(),
             $path === '/centrale/stock'                => ep_ca_stock(),
             $path === '/centrale/facturation'          => ep_ca_manquant('facturation'),
@@ -129,6 +130,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/pwa/compte/test') { return wr_pwa_compte_test(); }
     if ($method === 'PUT'  && $path === '/erp/compte') { return wr_erp_compte(); }
     if ($method === 'POST' && $path === '/erp/compte/test') { return wr_erp_compte_test(); }
+    if ($method === 'PUT' && $path === '/centrale/fournisseur-pct') { return wr_ca_fournisseur_pct(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_patch($m[1]); }

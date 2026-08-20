@@ -4749,13 +4749,25 @@ function tplCentrale(c, x){
     <table style="width:100%;border-collapse:collapse;min-width:720px">
       <thead><tr>${c.caCols.map((h, i) => `<th style="${TH}${i ? ';text-align:right' : ''}">${esc(h)}</th>`).join('')}</tr></thead>
       <tbody>${c.caRows.map(r => `<tr>${r.cells.map(q => `<td style="${TD}${q.num ? ';text-align:right;font-variant-numeric:tabular-nums' : ''}${q.mut ? ';color:var(--color-text-muted)' : ''}${q.col ? ';color:' + q.col : ''}">${
-        q.vide ? `<span style="${MANQUE}">${esc(q.t)}</span>` : esc(q.t)}</td>`).join('')}</tr>`).join('')}</tbody>
+        q.vide ? `<span style="${MANQUE}">${esc(q.t)}</span>`
+        : q.act ? `<button ${x.A(q.act)} class="hv-line" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left">${esc(q.t)}</button>`
+        : esc(q.t)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div>`}
     ${c.caNote ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">${esc(c.caNote)}</div>` : ''}
     ${c.caSource ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">source : ${esc(c.caSource)}</div>` : ''}
   </div>` : '';
 
-  return periodes + kpis + manquants + params + recherche + table;
+  // Second tableau optionnel (ex. CA réseau cumulé sous le suivi fournisseurs) —
+  // même rendu de cellules que le tableau principal.
+  const table2 = c.caTable2 ? `<div style="${CARD};margin-top:14px">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:10px">${esc(c.caTable2.titre || '')}</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:420px">
+      <thead><tr>${c.caTable2.cols.map((h, i) => `<th style="${TH}${i ? ';text-align:right' : ''}">${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${c.caTable2.rows.map(r => `<tr>${r.cells.map(q => `<td style="${TD}${q.num ? ';text-align:right;font-variant-numeric:tabular-nums' : ''}${q.mut ? ';color:var(--color-text-muted)' : ''}">${esc(q.t)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>
+  </div>` : '';
+
+  return periodes + kpis + manquants + params + recherche + table + table2;
 }
 
 
