@@ -4458,13 +4458,42 @@ function ep_ca_commandes(): array
         $noms[(int) $s['id']] = (string) $s['name'];
         $chemins[(int) $s['id']] = '/shops/' . (int) $s['id'] . '/material-requisitions';
     }
+    // Le fournisseur d'une réquisition n'est enregistré NULLE PART par l'ERP
+    // (mesuré : `suppliers` vide sur toutes, réalisées comprises, réalm admin
+    // inclus). On le DÉRIVE pour les réquisitions EN ATTENTE : les besoins
+    // actuels du magasin (/list) croisés avec le mapping matière → fournisseur
+    // (catalog-mappings). Une réquisition réalisée garde « — » : son contenu
+    // n'a pas été retenu par l'ERP, inventer un nom serait pire.
+    $fournParMatiere = [];
+    $nomsFourn = [];
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+        $fid = (int) ($f['id'] ?? 0);
+        if ($fid > 0) { $nomsFourn[$fid] = (string) ($f['name'] ?? ('Fournisseur ' . $fid)); }
+    }
+    $chMap = [];
+    foreach ($nomsFourn as $fid => $n2) { $chMap[$fid] = '/material-suppliers/' . $fid . '/catalog-mappings'; }
+    foreach (PanelApi::getParallele($chMap) as $fid => $maps) {
+        foreach (analyseListe(is_array($maps) ? $maps : []) as $m2) {
+            $mid = (int) ($m2['material_id'] ?? 0);
+            if ($mid > 0) { $fournParMatiere[$mid] = $nomsFourn[$fid]; }
+        }
+    }
+    $chBesoins = [];
+    foreach (array_keys($noms) as $sid2) { $chBesoins[$sid2] = '/shops/' . $sid2 . '/material-requisitions/list'; }
+    $fournParShop = [];
+    foreach (PanelApi::getParallele($chBesoins) as $sid2 => $besoins) {
+        $vus = [];
+        foreach (analyseListe(is_array($besoins) ? $besoins : []) as $b2) {
+            if ((float) ($b2['qty_to_order'] ?? 0) <= 0) { continue; }
+            $n2 = $fournParMatiere[(int) ($b2['id_material'] ?? 0)] ?? null;
+            if ($n2 !== null) { $vus[$n2] = true; }
+        }
+        $fournParShop[$sid2] = array_keys($vus);
+    }
+
     $lignes = []; $avecFournisseur = 0;
     foreach (PanelApi::getParallele($chemins) as $sid => $reqs) {
         foreach (analyseListe(is_array($reqs) ? $reqs : []) as $r) {
-            // Les fournisseurs de la réquisition voyagent DANS la ligne
-            // (`suppliers`) — mesuré vide sur toutes les réquisitions
-            // actuelles, réalisées comprises : affiché quand même, il se
-            // remplira côté ERP sans retoucher le cockpit.
             $fours = [];
             foreach ((array) ($r['suppliers'] ?? []) as $f) {
                 if (is_string($f) && $f !== '') { $fours[] = $f; continue; }
@@ -4473,6 +4502,9 @@ function ep_ca_commandes(): array
                         if (!empty($f[$c2]) && is_string($f[$c2])) { $fours[] = trim($f[$c2]); break; }
                     }
                 }
+            }
+            if ($fours === [] && (string) ($r['status'] ?? '') === 'PENDING') {
+                $fours = $fournParShop[$sid] ?? [];
             }
             if ($fours !== []) { $avecFournisseur++; }
             $lignes[] = [
@@ -4492,12 +4524,11 @@ function ep_ca_commandes(): array
     $manquants = [lacune('Lignes de la commande',
         'le détail produit par produit d’une réquisition',
         'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne')];
-    if ($avecFournisseur === 0 && $lignes !== []) {
-        $manquants[] = lacune('Fournisseur de la réquisition',
-            'quel fournisseur sert chaque commande',
-            'API panel — le champ `suppliers` existe sur chaque réquisition mais aucune n’en porte, '
-            . 'réalisées comprises (mesuré) : le rattachement se fait côté ERP');
-    }
+    $manquants[] = lacune('Fournisseur des réquisitions réalisées',
+        'quel fournisseur a servi une commande passée',
+        'API panel — l’ERP n’enregistre le fournisseur sur aucune réquisition (mesuré, réalm admin compris). '
+        . 'Pour les EN ATTENTE, il est dérivé des besoins actuels croisés au mapping matière → fournisseur ; '
+        . 'l’historique, lui, est perdu côté ERP');
     return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
         'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions)',
         'lignes' => $lignes, 'manquants' => $manquants];
