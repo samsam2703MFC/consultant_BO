@@ -21,7 +21,17 @@ import type {
  * ce préfixe, les appels partiraient à la racine du domaine et tomberaient à
  * côté. Vide en développement, où le proxy Vite sert `/api`.
  */
-const API_ROOT = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
+// « auto » : la racine d'API est le RÉPERTOIRE PARENT de la page, résolu à
+// l'exécution. La page vit à /<install>/assistant/, l'API à
+// /<install>/api/v1/marketing/… — le préfixe d'installation suit tout seul,
+// qu'il soit /consulant_bo ou la racine du domaine. Un chemin relatif dans
+// VITE_API_BASE ne suffit pas : buildUrl le préfixe de « / » et le navigateur
+// normalise « /../ » en avalant le sous-répertoire.
+const CONFIGURE = import.meta.env.VITE_API_BASE ?? ''
+const API_ROOT = (CONFIGURE === 'auto'
+  ? new URL('..', window.location.href).pathname.replace(/\/$/, '')
+  : CONFIGURE
+).replace(/\/+$/, '')
 
 const BASE = `${API_ROOT}/api/v1/marketing`
 
