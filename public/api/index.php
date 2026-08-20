@@ -16,6 +16,7 @@ require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
+require __DIR__ . '/../../src/connecteurs.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -71,6 +72,7 @@ function route(string $method, string $path): mixed
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
+            $path === '/connecteurs'                   => ep_connecteurs(),
             $path === '/reputation'                    => ep_reputation(),
             $path === '/reputation/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),

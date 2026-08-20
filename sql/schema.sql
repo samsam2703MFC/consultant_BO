@@ -527,3 +527,30 @@ CREATE TABLE IF NOT EXISTS ceo_shop_review (
   KEY idx_review_shop (shop_id, reviewed_at),
   CONSTRAINT fk_review_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Connecteurs — l'état des systèmes extérieurs dont le cockpit dépend
+--
+-- Les SECRETS ne sont pas ici : chaque client lit le sien dans
+-- `ceo_app_setting`, avec ses règles propres. Cette table porte ce qu'aucun
+-- réglage ne dit — quand le connecteur a tourné, et ce qu'il a répondu.
+--
+-- Écrite sur les GESTES seulement (synchronisation, test de compte, appel au
+-- modèle), jamais sur les lectures : le panel fait des dizaines d'appels en
+-- parallèle pour un seul écran, une ligne par appel n'apprendrait rien et
+-- coûterait une écriture à chaque fois.
+--
+-- `last_ok_at` survit à un échec : savoir que ça marchait encore hier distingue
+-- une panne d'une configuration jamais faite.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_connecteur (
+  code          VARCHAR(40)  PRIMARY KEY,   -- panel | erp | google | anthropic
+  label         VARCHAR(80)  NOT NULL,
+  last_run_at   DATETIME     NULL,          -- dernier geste, réussi ou non
+  last_ok_at    DATETIME     NULL,          -- dernier geste réussi
+  last_error    VARCHAR(400) NULL,          -- message du dernier échec, effacé au succès suivant
+  last_error_at DATETIME     NULL,
+  runs          INT          NOT NULL DEFAULT 0,
+  items         INT          NOT NULL DEFAULT 0,   -- éléments traités au dernier passage
+  detail        VARCHAR(400) NULL                  -- résumé lisible du dernier passage
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

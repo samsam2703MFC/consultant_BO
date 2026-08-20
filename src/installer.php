@@ -44,6 +44,7 @@ function ensureInstalled(): void
     ensureAnnotation();
     ensurePlanogramme();
     ensureReputation();
+    connecteurTable();
 }
 
 /**

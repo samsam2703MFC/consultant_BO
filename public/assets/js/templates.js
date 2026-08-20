@@ -4790,6 +4790,39 @@ function tplDiagnostic(c, x){
   const MONO = 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px';
 
   return `
+  <!-- Les quatre systèmes extérieurs dont le cockpit dépend. L'état vient de
+       ceo_connecteur, écrite sur les GESTES (synchronisation, test de compte,
+       appel au modèle) ; « configuré » est demandé au client à chaque lecture,
+       pour qu'une clé retirée se voie sans attendre un appel. -->
+  <div style="${CARD};margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600">Connecteurs</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5;text-wrap:pretty">
+      Les systèmes dont dépendent les écrans. « Dernier succès » date le dernier geste qui a abouti — il survit à un échec, pour distinguer une panne d'une configuration jamais faite.
+    </div>
+    ${c.coChargement ? `<div style="font-size:12px;color:var(--color-text-muted);padding:12px 0 2px">Lecture de l'état…</div>` : `
+    <div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;min-width:640px">
+      <thead><tr>
+        <th style="${TH}">Connecteur</th>
+        <th style="${TH}">État</th>
+        <th style="${TH}">Dernier succès</th>
+        <th style="${TH}">Dernier appel</th>
+        <th style="${TH};text-align:right">Passages</th>
+      </tr></thead>
+      <tbody>${c.coLignes.map(l => `
+        <tr>
+          <td style="${TD}">
+            <div style="font-size:12.5px;font-weight:500">${esc(l.nom)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);line-height:1.35">${esc(l.quoi)}</div>
+            ${l.detail ? `<div style="${l.detailSt};margin-top:3px">${esc(l.detail)}</div>` : ''}
+          </td>
+          <td style="${TD}"><span style="${l.etatSt}">${esc(l.etat)}</span></td>
+          <td style="${TD};white-space:nowrap">${esc(l.succes)}</td>
+          <td style="${TD};white-space:nowrap;color:var(--color-text-muted)">${esc(l.appel)}</td>
+          <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.passages)}</td>
+        </tr>`).join('')}</tbody>
+    </table></div>`}
+  </div>
+
   <!-- Nettoyage du module marketing : la liste exacte AVANT le geste, et le
        geste ne part que sur confirmation. Un DROP ne se rejoue pas. -->
   ${c.marNet && !c.marNet.chargement && !c.marNet.indispo ? `

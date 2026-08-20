@@ -186,6 +186,7 @@ function wr_pwa_compte(): array
 
     // Test immédiat : un réglage enregistré mais refusé doit se voir tout de suite.
     [$ok, $msg] = PanelApi::tester();
+    connecteurNote('panel', $ok, $msg);
     return ['ok' => true, 'testOk' => $ok, 'message' => $msg, 'statut' => PanelApi::statut()];
 }
 
@@ -193,6 +194,7 @@ function wr_pwa_compte(): array
 function wr_pwa_compte_test(): array
 {
     [$ok, $msg] = PanelApi::tester();
+    connecteurNote('panel', $ok, $msg);
     return ['ok' => $ok, 'message' => $msg, 'statut' => PanelApi::statut()];
 }
 
@@ -218,6 +220,7 @@ function wr_erp_compte(): array
 
     // Test immédiat : un réglage enregistré mais refusé doit se voir tout de suite.
     [$ok, $msg] = ErpApi::tester();
+    connecteurNote('erp', $ok, $msg);
     return ['ok' => true, 'testOk' => $ok, 'message' => $msg, 'statut' => ErpApi::statut()];
 }
 
@@ -225,6 +228,7 @@ function wr_erp_compte(): array
 function wr_erp_compte_test(): array
 {
     [$ok, $msg] = ErpApi::tester();
+    connecteurNote('erp', $ok, $msg);
     return ['ok' => $ok, 'message' => $msg, 'statut' => ErpApi::statut()];
 }
 
@@ -2413,6 +2417,9 @@ function reputationSynchroniser(?string $shopId): array
 
     $msg = $faits . ' magasin(s) synchronisé(s), ' . $nouveaux . ' nouvel(s) avis'
         . ($erreurs !== [] ? ' — ' . count($erreurs) . ' en échec' : '');
+    // L'état du connecteur : une synchro qui n'atteint aucune fiche est un
+    // échec, pas un succès à zéro — sinon « dernier succès » ment.
+    connecteurNote('google', $faits > 0, $erreurs !== [] ? $msg . ' · ' . $erreurs[0] : $msg, $nouveaux);
     journalAdd('CEO', 'Réputation', $shopId !== null ? ($cibles[0]['name'] ?? '—') : '—', 'Synchronisation Google : ' . $msg);
     return ['ok' => true, 'magasins' => $faits, 'nouveaux' => $nouveaux, 'erreurs' => $erreurs,
         'aucuneFiche' => $cibles === []];

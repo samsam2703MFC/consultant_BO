@@ -1108,7 +1108,7 @@ class App {
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isCentrale) this.valsCentrale(common);
     this.valsLacunes(common);
-    if (common.isDiag) this.valsDiag(common);
+    if (common.isDiag) { this.coCharge(); this.valsDiag(common); }
     if (common.isSeuil) this.valsSeuil(common);
     // --- exploitation (P&L court des magasins)
     if (common.isExploit) this.valsExploitation(common);
@@ -2527,7 +2527,46 @@ class App {
     readOne('/audit/fraicheur').then(f => { this._frEnCours = false;
       this.D.fraicheur = f || {}; this.setState({}); });
   }
+  /* --- les connecteurs : état et dernier passage ------------------------------
+   * Lecture paresseuse, comme la réputation : l'écran Diagnostic n'est pas
+   * ouvert à chaque visite, et la table ne bouge qu'aux gestes.
+   */
+  coCharge(force){
+    if (this._coEnCours) { return; }
+    if (this.D.connecteurs && !force) { return; }
+    this._coEnCours = true;
+    readOne('/connecteurs').then(d => { this._coEnCours = false;
+      this.D.connecteurs = (d && d.connecteurs) || []; this.setState({}); });
+  }
+  valsConnecteurs(common){
+    const liste = this.D.connecteurs;
+    common.coChargement = !liste;
+    // Un état, une couleur, une phrase : ce qu'il faut faire, pas ce qui s'est
+    // passé. « Jamais appelé » n'est pas une anomalie — le connecteur attend
+    // son premier geste.
+    const ETATS = {
+      'ok': ['À jour', '#2d7a3e'],
+      'en-echec': ['En échec', '#8D1D2C'],
+      'a-configurer': ['À configurer', '#8a5a13'],
+      'jamais': ['Jamais appelé', '#666666'],
+    };
+    common.coLignes = (liste || []).map(c2 => {
+      const [txt, coul] = ETATS[c2.etat] || ETATS.jamais;
+      return {
+        nom: c2.nom, quoi: c2.quoi,
+        etat: txt,
+        etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+          + coul + '1f;color:' + coul,
+        succes: c2.dernierSucces ? this.fD(c2.dernierSucces.slice(0, 10)) + ' à ' + c2.dernierSucces.slice(11, 16) : '—',
+        appel: c2.dernierAppel ? this.fD(c2.dernierAppel.slice(0, 10)) + ' à ' + c2.dernierAppel.slice(11, 16) : '—',
+        passages: c2.passages ? String(c2.passages) : '—',
+        detail: c2.erreur || c2.detail || '',
+        detailSt: 'font-size:11px;line-height:1.4;text-wrap:pretty;color:' + (c2.erreur ? '#8D1D2C' : 'var(--color-text-muted)'),
+      };
+    });
+  }
   valsDiag(common){
+    this.valsConnecteurs(common);
     // --- nettoyage du module marketing : montrer la liste AVANT d'exécuter.
     // La suppression est une action explicite de cet écran, jamais un effet
     // de bord du déploiement.

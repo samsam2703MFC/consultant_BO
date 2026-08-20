@@ -5128,6 +5128,10 @@ function ep_ia_note(): array
         (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx);
 
     $out['modele'] = $r['modele'];
+    // L'état du connecteur : une proposition rendue est un succès, un refus du
+    // modèle ou une panne réseau un échec — c'est le seul geste que le cockpit
+    // fait vers Anthropic, donc le seul qui puisse le renseigner.
+    connecteurNote('anthropic', $r['niveau'] !== null, (string) ($r['erreur'] ?? ('niveau ' . $r['niveau'])));
     if ($r['erreur'] !== null && $r['niveau'] === null) { $out['motif'] = $r['erreur']; return $out; }
     $out['etat'] = 'ok';
     $out['niveau'] = $r['niveau'];
@@ -5319,7 +5323,11 @@ function ep_reputation(): array
         'cible' => $cible,
         // L'état du connecteur voyage avec les données : l'écran doit pouvoir
         // dire « aucune clé » plutôt que d'afficher un réseau vide sans raison.
-        'connecteur' => GoogleApi::statut() + [
+        // La dernière synchro vient de la table des connecteurs : c'est elle qui
+        // enregistre les gestes. La déduire de `synced_at` des fiches donnait la
+        // même réponse tant que tout allait bien, et une réponse fausse dès
+        // qu'une synchro échouait — les fiches gardaient leur ancienne date.
+        'connecteur' => GoogleApi::statut() + (connecteurEtat('google') ?? []) + [
             'raccordes' => count(array_filter($agr, fn ($r) => ($r['place_id'] ?? '') !== '')),
             'derniereSynchro' => $derniereSynchro !== null ? substr((string) $derniereSynchro, 0, 16) : null,
         ],
