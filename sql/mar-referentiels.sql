@@ -547,6 +547,28 @@ CREATE TABLE IF NOT EXISTS mar_shop_user (
   CONSTRAINT fk_mar_shop_user_shop FOREIGN KEY (shop_id) REFERENCES mar_shop (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Bons et codes. Le détail d'une campagne fait un LEFT JOIN dessus (l'offre
+-- peut porter un bon) : sans la table, GET /campaigns/{id} — et donc la
+-- suppression, qui relit la campagne — tombe en erreur.
+CREATE TABLE IF NOT EXISTS mar_voucher (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  campaign_id       BIGINT UNSIGNED     NULL,
+  code              VARCHAR(60)     NOT NULL,
+  mechanic_label    VARCHAR(200)        NULL,
+  scope_label       VARCHAR(120)        NULL,
+  usage_limit_label VARCHAR(80)         NULL,
+  status            VARCHAR(20)     NOT NULL DEFAULT 'Actif',
+  source            VARCHAR(40)         NULL COMMENT 'partner | office_referral | …',
+  partner_name      VARCHAR(160)        NULL,
+  created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by        BIGINT UNSIGNED     NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_mar_voucher_code (code),
+  KEY ix_mar_voucher_campaign (campaign_id),
+  CONSTRAINT fk_mar_voucher_campaign FOREIGN KEY (campaign_id) REFERENCES mar_campaign (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Historique d'un lead : écrit à chaque changement d'état depuis la fiche
 -- campagne. Vide après restauration — l'historique d'avant est perdu.
 CREATE TABLE IF NOT EXISTS mar_crm_lead_event (
