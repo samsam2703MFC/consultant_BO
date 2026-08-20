@@ -2854,10 +2854,11 @@ function ep_fonds(): array
                 'source' => 'API panel — fiche boutique (taux) et ventes du mois (CA, jour même)',
                 'erp' => ['available' => true]];
             if (ErpApi::disponible()) {
+                // Réponses enveloppées ({invoices: […]}, {settlements: […]}).
                 $fac = ErpApi::get('/admin/royalties/invoices');
                 $reg = ErpApi::get('/admin/royalties/settlements');
-                if (is_array($fac)) { $roy['factures'] = array_slice(analyseListe($fac), 0, 24); }
-                if (is_array($reg)) { $roy['reglements'] = array_slice(analyseListe($reg), 0, 24); }
+                if (is_array($fac)) { $roy['factures'] = array_slice((array) ($fac['invoices'] ?? (analyseListe($fac) ?: [])), 0, 24); }
+                if (is_array($reg)) { $roy['reglements'] = array_slice((array) ($reg['settlements'] ?? (analyseListe($reg) ?: [])), 0, 24); }
             } else {
                 $roy['facturesNote'] = 'Factures et règlements émis : renseignez le compte admin ERP (Mon compte) pour les lire.';
             }
