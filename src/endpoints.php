@@ -924,6 +924,12 @@ function ep_exploitation_api(array $out): ?array
 
     $tot = ['jour' => [], 'semaine' => [], 'mois' => []];
     foreach ($parPer['mois'] as $sid => $dMois) {
+        // sales-kpis rend aussi des entrées techniques : un identifiant que le
+        // référentiel `shops` ne connaît pas, zéro partout (« Magasin 10 »).
+        // Sans nom ET sans la moindre vente du mois, la carte n'apprend rien —
+        // on la retire. Un inconnu AVEC du chiffre resterait affiché sous son
+        // numéro : masquer un CA réel serait pire qu'un nom manquant.
+        if (!isset($noms[$sid]) && (float) ($dMois['ca'] ?? 0) <= 0) { continue; }
         $b = $budget[(string) $sid] ?? null;
         $ligne = ['shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
             'budgetMois' => $b,
