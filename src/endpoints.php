@@ -4478,18 +4478,32 @@ function ep_ca_commandes(): array
             if ($mid > 0) { $fournParMatiere[$mid] = $nomsFourn[$fid]; }
         }
     }
+    // UNE COMMANDE = UN FOURNISSEUR (règle du réseau). Les besoins courants de
+    // chaque magasin se ventilent donc par fournisseur : autant de commandes à
+    // passer que de fournisseurs concernés, chacune avec son nombre de
+    // références et son montant estimé (qty_to_order × prix unitaire net).
     $chBesoins = [];
     foreach (array_keys($noms) as $sid2) { $chBesoins[$sid2] = '/shops/' . $sid2 . '/material-requisitions/list'; }
-    $fournParShop = [];
+    $fournParShop = []; $aCommander = [];
     foreach (PanelApi::getParallele($chBesoins) as $sid2 => $besoins) {
-        $vus = [];
+        $parFourn = [];
         foreach (analyseListe(is_array($besoins) ? $besoins : []) as $b2) {
-            if ((float) ($b2['qty_to_order'] ?? 0) <= 0) { continue; }
+            $q2 = (float) ($b2['qty_to_order'] ?? 0);
+            if ($q2 <= 0) { continue; }
             $n2 = $fournParMatiere[(int) ($b2['id_material'] ?? 0)] ?? null;
-            if ($n2 !== null) { $vus[$n2] = true; }
+            if ($n2 === null) { continue; }
+            $parFourn[$n2]['refs'] = ($parFourn[$n2]['refs'] ?? 0) + 1;
+            $parFourn[$n2]['montant'] = ($parFourn[$n2]['montant'] ?? 0)
+                + $q2 * (float) ($b2['base_unit_price_net'] ?? 0);
         }
-        $fournParShop[$sid2] = array_keys($vus);
+        $fournParShop[$sid2] = array_keys($parFourn);
+        foreach ($parFourn as $n2 => $x2) {
+            $aCommander[] = ['magasin' => $noms[$sid2] ?? ('Magasin ' . $sid2),
+                'fournisseur' => $n2, 'nbRefs' => (int) $x2['refs'],
+                'montant' => round($x2['montant'], 2)];
+        }
     }
+    usort($aCommander, fn ($a, $b) => [$a['magasin'], -$b['montant']] <=> [$b['magasin'], -$a['montant']]);
 
     $lignes = []; $avecFournisseur = 0;
     foreach (PanelApi::getParallele($chemins) as $sid => $reqs) {
@@ -4530,8 +4544,8 @@ function ep_ca_commandes(): array
         . 'Pour les EN ATTENTE, il est dérivé des besoins actuels croisés au mapping matière → fournisseur ; '
         . 'l’historique, lui, est perdu côté ERP');
     return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
-        'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions)',
-        'lignes' => $lignes, 'manquants' => $manquants];
+        'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions) et besoins courants (/list × catalog-mappings)',
+        'lignes' => $lignes, 'aCommander' => $aCommander, 'manquants' => $manquants];
 }
 
 /**

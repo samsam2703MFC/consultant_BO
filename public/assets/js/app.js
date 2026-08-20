@@ -4636,10 +4636,14 @@ class App {
           on: fSt === code,
           pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
       common.caCols = ['Réquisition', 'Magasin', 'Fournisseur', 'Début', 'Jours', 'Type', 'Statut', 'Valeur estimée', 'Par'];
+      // Une commande = UN fournisseur : quand les besoins du magasin couvrent
+      // plusieurs fournisseurs, la réquisition est « à répartir » — le tableau
+      // du dessous donne la ventilation, une commande par fournisseur.
       common.caRows = lgs.filter(x => !fSt || x.statut === fSt).map(x => ({ cells: [
         { t: '#' + x.id }, { t: x.magasin, mut: true },
-        { t: (x.fournisseurs && x.fournisseurs.length) ? x.fournisseurs.join(', ') : '—',
-          mut: !(x.fournisseurs && x.fournisseurs.length) },
+        { t: !(x.fournisseurs && x.fournisseurs.length) ? '—'
+          : (x.fournisseurs.length === 1 ? x.fournisseurs[0] : 'à répartir : ' + x.fournisseurs.join(' + ')),
+          mut: !(x.fournisseurs && x.fournisseurs.length === 1) },
         { t: x.debut || '—', mut: true },
         { t: String(x.jours || '—'), num: true, mut: true }, { t: x.type || '—', mut: true },
         { t: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
@@ -4647,6 +4651,15 @@ class App {
         { t: this.fE(x.valeur), num: true }, { t: x.par || '—', mut: true } ] }));
       common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
         : 'Aucune réquisition matière remontée par le panel.';
+      // La ventilation actionnable : une ligne = UNE commande à passer chez UN
+      // fournisseur, avec ses références et son montant estimé.
+      common.caTable2 = (d.aCommander && d.aCommander.length) ? {
+        titre: 'À commander maintenant — une commande par fournisseur',
+        cols: ['Magasin', 'Fournisseur', 'Références à commander', 'Montant estimé (HT)'],
+        rows: d.aCommander.map(a => ({ cells: [
+          { t: a.magasin, mut: true }, { t: a.fournisseur },
+          { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
+      } : null;
     } else if (ecr === 'caAchats') {
       const fCat = S.caFournCat || null;   // {id, nom} : catalogue ouvert
       if (fCat) {
