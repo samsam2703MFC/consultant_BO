@@ -15,6 +15,7 @@ require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
+require __DIR__ . '/../../src/google_api.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -71,6 +72,7 @@ function route(string $method, string $path): mixed
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
             $path === '/reputation'                    => ep_reputation(),
+            $path === '/reputation/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
             $path === '/admin/erp-essai'               => ep_erp_essai(),
@@ -147,6 +149,9 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne_suppr((int) $m[1]); }
     if ($method === 'PUT' && $path === '/marketing/types/ordre') { return wr_mkt_types_ordre(); }
+    if ($method === 'POST' && $path === '/reputation/sync') { return wr_reputation_sync(); }
+    if ($method === 'PUT' && preg_match('#^/reputation/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
+    if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
     if ($method === 'POST' && $path === '/marketing/type') { return wr_mkt_type(null); }
     if ($method === 'PATCH' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type_suppr((int) $m[1]); }

@@ -163,7 +163,7 @@ class App {
       suiviPeriode: 'semaine', suiviData: null, suiviNote: {},
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
-      repCible: null, pdCat: 'Toutes les catégories', pdSort: 'score' };
+      repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
     this._h = [];
     this._tt = null;
     this._lastEn = null;
@@ -3454,6 +3454,32 @@ class App {
     const fN = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
     const fInt = v => (v == null ? 0 : v).toLocaleString('fr-BE');
 
+    // --- le connecteur : son état voyage avec les données, l'écran ne devine rien
+    const co = r.connecteur || {};
+    common.repConfigure = !!co.configure;
+    common.repEmpreinte = co.empreinte || '';
+    common.repRaccordes = co.raccordes || 0;
+    common.repSynchroTxt = co.derniereSynchro
+      ? 'Dernière synchronisation le ' + this.fD(co.derniereSynchro.slice(0, 10)) + ' à ' + co.derniereSynchro.slice(11, 16)
+      : 'Jamais synchronisé';
+    common.repBusy = S.repBusy;
+    // La synchronisation est un geste : elle appelle Google une fois par fiche,
+    // et ces appels sont facturés. La lancer à chaque affichage coûterait cher
+    // pour des notes qui bougent de quelques centièmes par semaine.
+    common.repSync = () => {
+      if (S.repBusy) { return; }
+      this.setState({ repBusy: true });
+      this.api('POST', '/reputation/sync', {}).then(async r2 => {
+        const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
+        this.setState({ repBusy: false });
+        if (!j || j.error) { this.notify((j && j.error) || 'Synchronisation impossible.'); return; }
+        this.D.reput = null; this.repCharge(true);
+        this.notify(j.magasins + ' magasin(s) synchronisé(s), ' + j.nouveaux + ' nouvel(s) avis'
+          + (j.erreurs && j.erreurs.length ? ' — ' + j.erreurs.length + ' en échec' : ''));
+        if (j.erreurs && j.erreurs.length) { console.warn('[cockpit] réputation :', j.erreurs); }
+      });
+    };
+
     common.repCible = fN(cible);
     common.repMoyenne = fN(res.moyenne);
     common.repMoyenneSt = 'font-family:var(--font-display);font-size:38px;line-height:1;color:'
@@ -3513,19 +3539,69 @@ class App {
         effortSt: 'font-size:12px;font-weight:500;border-radius:8px;padding:7px 10px;margin-top:9px;background:'
           + (sans ? 'var(--color-background-secondary);color:var(--color-text-muted)'
             : (ok ? 'rgba(45,122,62,.08);color:#2d7a3e' : 'rgba(141,29,44,.05);color:#8D1D2C')),
+        // Le raccordement se fait à la main : deux boulangeries de la même
+        // enseigne dans la même ville ne se distinguent que par l'adresse.
+        raccorde: !!m.placeId,
+        rechOuverte: !!(S.repRech && S.repRech.magasinId === m.id),
+        ouvrirRech: () => this.setState({ repRech: { magasinId: m.id,
+          q: (m.nom || '').replace(/\s+—\s+/g, ' ') + (m.ville ? ' ' + m.ville : ''), candidats: null, busy: false } }),
+        detacher: () => {
+          if (!window.confirm('Détacher la fiche Google de « ' + m.nom + ' » ? Les avis déjà rapatriés sont conservés.')) { return; }
+          this.api('PUT', '/reputation/' + m.id + '/fiche', { placeId: '' }).then(() => {
+            this.D.reput = null; this.repCharge(true); this.notify('Fiche détachée'); });
+        },
         vide: (m.derniers || []).length === 0,
         derniers: (m.derniers || []).map(a => ({
           auteur: a.auteur, le: this.fD(a.le), note: a.note,
           etoiles: this.repEtoiles(a.note, 11),
           texte: a.texte ? (a.texte.length > 190 ? a.texte.slice(0, 190) + '…' : a.texte) : 'Note sans commentaire.',
           texteSt: 'font-size:11.5px;line-height:1.45;color:' + (a.texte ? 'var(--color-text)' : 'var(--color-text-muted)') + ';text-wrap:pretty',
-          repondu: a.repondu,
-          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:1px 7px;white-space:nowrap;background:'
-            + (a.repondu ? 'rgba(45,122,62,.10);color:#2d7a3e' : 'rgba(193,122,42,.14);color:#8a5a13'),
-          reponduTxt: a.repondu ? 'Répondu' : 'Sans réponse',
+          // Tri-état : la pastille n'apparaît que si la source SAIT. L'API Places
+          // ne rend pas les réponses du magasin — écrire « Sans réponse »
+          // partout serait une affirmation fausse, pas une information.
+          repondu: a.repondu === true,
+          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:1px 7px;white-space:nowrap;background:rgba(45,122,62,.10);color:#2d7a3e',
+          reponduTxt: 'Répondu',
         })),
       };
     });
+
+    // --- le panneau de recherche de fiche (un seul ouvert à la fois)
+    const rr = S.repRech;
+    common.repRech = !rr ? null : {
+      magasinId: rr.magasinId, q: rr.q, busy: !!rr.busy, err: rr.err || '',
+      setQ: e => this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { q: e.target.value }) })),
+      fermer: () => this.setState({ repRech: null }),
+      chercher: () => {
+        const q = (this.state.repRech || {}).q || '';
+        if (!q.trim()) { return; }
+        this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: true, err: '' }) }));
+        readOne('/reputation/recherche?q=' + encodeURIComponent(q)).then(d => {
+          this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: false,
+            candidats: (d && d.candidats) || [],
+            err: d ? '' : 'Recherche impossible — vérifiez la clé Google dans Paramètres.' }) }));
+        });
+      },
+      jamais: rr.candidats === null,
+      aucun: Array.isArray(rr.candidats) && rr.candidats.length === 0,
+      candidats: (rr.candidats || []).map(c => ({
+        nom: c.nom, adresse: c.adresse || '',
+        note: c.note == null ? 'sans note' : c.note.toFixed(1).replace('.', ',') + '★ · ' + (c.avis || 0) + ' avis',
+        choisir: () => {
+          this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: true }) }));
+          this.api('PUT', '/reputation/' + rr.magasinId + '/fiche', { placeId: c.placeId }).then(async r2 => {
+            const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
+            if (!j || j.error) {
+              this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: false, err: (j && j.error) || 'Raccordement refusé.' }) }));
+              return;
+            }
+            this.setState({ repRech: null });
+            this.D.reput = null; this.repCharge(true);
+            this.notify('Fiche raccordée — ' + (j.nouveaux || 0) + ' avis rapatriés');
+          });
+        },
+      })),
+    };
   }
 
   plCharge(force){
@@ -6818,6 +6894,27 @@ class App {
     // dans le JavaScript.
     common.repCibleVal = S.repCible != null ? S.repCible
       : (((this.D.reput || {}).cible) != null ? this.D.reput.cible : 4.5);
+    // La clé Google : saisie ici, jamais relue. L'écran n'en connaît que
+    // l'empreinte, servie par /reputation avec l'état du connecteur.
+    const gco = ((this.D.reput || {}).connecteur) || {};
+    common.gCleDefinie = !!gco.configure;
+    common.gEmpreinte = gco.empreinte || '';
+    common.setGCle = e => {
+      const v = String(e.target.value || '').trim();
+      if (v === '') { return; }
+      e.target.value = '';
+      this.api('PUT', '/parametres/google-cle', { cle: v }).then(() => {
+        this.D.reput = null; this.repCharge(true);
+        this.notify('Clé Google enregistrée'); });
+      this.log('Paramètre', '—', 'Connecteur Google — clé enregistrée');
+    };
+    common.gEffacer = () => {
+      if (!window.confirm('Effacer la clé Google ? La synchronisation des avis s’arrêtera.')) { return; }
+      this.api('PUT', '/parametres/google-cle', { effacer: true }).then(() => {
+        this.D.reput = null; this.repCharge(true);
+        this.notify('Clé Google effacée'); });
+      this.log('Paramètre', '—', 'Connecteur Google — clé effacée');
+    };
     common.setRepCible = e => {
       const v = Math.min(5, Math.max(1, parseFloat(String(e.target.value).replace(',', '.')) || 4.5));
       this.setState({ repCible: v });

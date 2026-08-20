@@ -5130,7 +5130,11 @@ function ep_reputation(): array
             'note'   => (int) $v['rating'],
             'texte'  => $v['comment'],
             'le'     => substr((string) $v['reviewed_at'], 0, 10),
-            'repondu' => $v['replied_at'] !== null,
+            // Tri-état : vrai si l'on sait que le magasin a répondu, NUL si la
+            // source ne le dit pas. L'API Places ne rend pas les réponses :
+            // afficher « Sans réponse » sur chaque avis serait une affirmation
+            // fausse, pas une information manquante.
+            'repondu' => $v['replied_at'] !== null ? true : null,
         ], Db::rows('SELECT * FROM ceo_shop_review WHERE shop_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 5', [$s['id']]));
 
         $magasins[] = [
@@ -5138,6 +5142,7 @@ function ep_reputation(): array
             'note' => $note, 'avis' => $n,
             'ecart' => $note !== null ? round($note - $cible, 2) : null,
             'avis5Requis' => reputationAvis5($note, $n, $cible),
+            'placeId' => $a['place_id'] ?? null,
             'url' => $a['profile_url'] ?? null,
             'synchro' => ($a && $a['synced_at'] !== null) ? substr((string) $a['synced_at'], 0, 16) : null,
             'derniers' => $derniers,
@@ -5147,8 +5152,21 @@ function ep_reputation(): array
     $moyenne = $sommeAvis > 0 ? round($sommeNotes / $sommeAvis, 2) : null;
     $notes = array_values(array_filter(array_column($magasins, 'note'), fn ($v) => $v !== null));
 
+    $derniereSynchro = null;
+    foreach ($agr as $r) {
+        if ($r['synced_at'] !== null && ($derniereSynchro === null || $r['synced_at'] > $derniereSynchro)) {
+            $derniereSynchro = $r['synced_at'];
+        }
+    }
+
     return [
         'cible' => $cible,
+        // L'état du connecteur voyage avec les données : l'écran doit pouvoir
+        // dire « aucune clé » plutôt que d'afficher un réseau vide sans raison.
+        'connecteur' => GoogleApi::statut() + [
+            'raccordes' => count(array_filter($agr, fn ($r) => ($r['place_id'] ?? '') !== '')),
+            'derniereSynchro' => $derniereSynchro !== null ? substr((string) $derniereSynchro, 0, 16) : null,
+        ],
         'reseau' => [
             'moyenne' => $moyenne,
             'avis' => $sommeAvis,

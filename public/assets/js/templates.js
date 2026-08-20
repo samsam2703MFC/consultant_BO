@@ -2105,8 +2105,13 @@ function tplReputation(c, x){
         <div style="font-size:13px;font-weight:500">${esc(c.repSousCibleTxt)}</div>
         <div style="font-size:12.5px;margin-top:7px;font-weight:${c.repEffortFort ? '500' : '400'};color:${c.repEffortFort ? '#8D1D2C' : 'var(--color-text-muted)'}">${esc(c.repEffort)}</div>
       </div>
-      <div style="text-align:right;font-size:11px;color:var(--color-text-muted);max-width:210px;text-wrap:pretty">
-        La cible se règle dans Paramètres. La moyenne réseau est pondérée par le nombre d’avis de chaque magasin.
+      <div style="text-align:right;min-width:210px">
+        <div style="${cap};margin-bottom:6px">Connecteur Google</div>
+        ${c.repConfigure
+          ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${c.repRaccordes} fiche${c.repRaccordes > 1 ? 's' : ''} raccordée${c.repRaccordes > 1 ? 's' : ''}<br>${esc(c.repSynchroTxt)}</div>
+             <button ${x.A(c.repSync)} class="hv-fade" style="margin-top:8px;border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:29px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.repBusy ? 'opacity:.6;cursor:default' : ''}">${c.repBusy ? 'Synchronisation…' : 'Synchroniser'}</button>`
+          : `<div style="font-size:11.5px;color:#8D1D2C;font-weight:500;line-height:1.5">Aucune clé Google</div>
+             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45">Renseignez-la dans Paramètres pour rapatrier les notes et les avis.</div>`}
       </div>
     </div>
 
@@ -2126,6 +2131,7 @@ function tplReputation(c, x){
               <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">
                 ${esc(m.avis)}${m.synchro ? ' · ' + esc(m.synchro) : ''}
                 ${m.hasUrl ? ` · <a href="${esc(m.url)}" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:none">fiche Google ↗</a>` : ''}
+                ${m.raccorde ? ` · <button ${x.A(m.detacher)} class="hv-line" style="border:none;background:none;padding:0;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;cursor:pointer">détacher</button>` : ''}
               </div>
             </div>
             <div style="text-align:right;flex:0 0 auto">
@@ -2135,6 +2141,29 @@ function tplReputation(c, x){
           </div>
 
           <div style="${m.effortSt}">${esc(m.effort)}</div>
+
+          ${!m.raccorde ? `
+            <button ${x.A(m.ouvrirRech)} style="margin-top:9px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:999px;height:28px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Raccorder la fiche Google</button>` : ''}
+
+          ${m.rechOuverte && c.repRech ? `
+            <div style="margin-top:10px;border:1px solid var(--color-primary);border-radius:10px;padding:11px 13px">
+              <div style="${cap};margin-bottom:7px">Chercher la fiche</div>
+              <div style="display:flex;gap:7px">
+                <input id="rep-q" value="${esc(c.repRech.q)}" ${x.I(c.repRech.setQ)} placeholder="Nom du magasin et ville" style="flex:1;min-width:0;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:30px;padding:0 10px;font-family:var(--font-ui);font-size:12px">
+                <button ${x.A(c.repRech.chercher)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.repRech.busy ? 'opacity:.6;cursor:default' : ''}">${c.repRech.busy ? '…' : 'Chercher'}</button>
+                <button ${x.A(c.repRech.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Fermer</button>
+              </div>
+              ${c.repRech.err ? `<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px;font-weight:500">${esc(c.repRech.err)}</div>` : ''}
+              ${c.repRech.aucun ? `<div style="margin-top:8px;font-size:11.5px;color:var(--color-text-muted)">Aucune fiche trouvée pour cette recherche.</div>` : ''}
+              ${c.repRech.candidats.map(k => `
+                <div ${x.A(k.choisir)} class="hv-bg" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);cursor:pointer">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;font-weight:500">${esc(k.nom)}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.adresse)}</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap">${esc(k.note)}</span>
+                </div>`).join('')}
+            </div>` : ''}
 
           <div style="${cap};margin:14px 0 2px">5 derniers avis</div>
           ${m.vide ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding:7px 0">Aucun avis rapatrié pour ce magasin.</div>` : ''}
@@ -3113,6 +3142,15 @@ function tplParams(c, x){
           <input type="number" min="1" max="5" step="0.1" value="${c.repCibleVal}" ${x.C(c.setRepCible)} style="${inputCss}">
         </label>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Sert de cible à l’écran Réputation digitale : un magasin sous cette note affiche le nombre d’avis 5★ qu’il lui faudrait pour y revenir.</div>
+        <div style="border-top:0.5px solid var(--color-border-tertiary);margin:14px 0 12px"></div>
+        <label style="font-size:12px;color:var(--color-text-muted)">Clé API Google (Places API)
+          <input type="password" autocomplete="off" placeholder="${c.gCleDefinie ? 'Clé enregistrée — saisir pour la remplacer' : 'AIza…'}" ${x.C(c.setGCle)} style="${inputCss}">
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <span style="font-size:11.5px;color:${c.gCleDefinie ? '#2d7a3e' : 'var(--color-text-muted)'};font-weight:500">${c.gCleDefinie ? 'Clé en place · ' + esc(c.gEmpreinte) : 'Aucune clé'}</span>
+          ${c.gCleDefinie ? `<button ${x.A(c.gEffacer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:26px;padding:0 11px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Effacer</button>` : ''}
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Modèles d'email de relance</div>

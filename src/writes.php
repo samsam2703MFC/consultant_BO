@@ -2241,3 +2241,147 @@ function ep_erp_essai(): array
     }
     return ['hote' => ErpApi::config()['base'], 'compte' => 'admin', 'routes' => $out];
 }
+
+/* --- Réputation digitale : le connecteur Google ------------------------------
+ *
+ * La synchronisation est un GESTE, pas un effet de bord d'affichage : chaque
+ * ouverture de l'écran déclencherait autant d'appels facturés que de magasins,
+ * pour des notes qui bougent de quelques centièmes par semaine. L'écran lit la
+ * base, le bouton « Synchroniser » va chercher chez Google, et la date de
+ * dernière synchro est affichée pour qu'on sache ce qu'on regarde.
+ */
+
+/** PUT /parametres/google-cle — la clé, qui ne repart jamais vers l'écran. */
+function wr_google_compte(): array
+{
+    $b = body();
+    $cur = setting('google');
+    if (!is_array($cur)) { $cur = []; }
+    $cle = trim((string) ($b['cle'] ?? ''));
+    // Champ laissé vide = on ne touche pas à la clé en place. Sans cette règle,
+    // changer la langue effacerait la clé.
+    if ($cle !== '') { $cur['cle'] = $cle; }
+    if (!empty($b['effacer'])) { unset($cur['cle']); }
+    $langue = trim((string) ($b['langue'] ?? ''));
+    if ($langue !== '') { $cur['langue'] = mb_substr($langue, 0, 8); }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['google', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Paramètre', '—', 'Connecteur Google — '
+        . (!empty($b['effacer']) ? 'clé effacée' : ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour')));
+    return ['ok' => true] + GoogleApi::statut();
+}
+
+/**
+ * GET /reputation/recherche?q=… — les fiches Google candidates.
+ *
+ * Le raccordement se fait à la main, une fois par magasin : deux boulangeries
+ * de la même enseigne dans la même ville ne se distinguent que par l'adresse,
+ * et un rapprochement automatique sur le nom se tromperait en silence.
+ */
+function ep_reputation_recherche(): array
+{
+    if (!GoogleApi::configured()) {
+        http_response_code(422);
+        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
+    }
+    $q = trim((string) ($_GET['q'] ?? ''));
+    if ($q === '') { http_response_code(422); return ['error' => 'recherche vide']; }
+    GoogleApi::$lastError = null;
+    $res = GoogleApi::chercher($q);
+    if ($res === null) {
+        http_response_code(502);
+        return ['error' => 'Google : ' . (GoogleApi::$lastError ?? 'réponse vide')];
+    }
+    return ['candidats' => $res];
+}
+
+/** PUT /reputation/{shopId}/fiche — raccorde un magasin à une fiche Google. */
+function wr_reputation_fiche(string $shopId): array
+{
+    $b = body();
+    $shop = Db::row('SELECT id, name FROM ceo_shop WHERE id = ?', [$shopId]);
+    if ($shop === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+
+    $placeId = trim((string) ($b['placeId'] ?? ''));
+    if ($placeId === '') {
+        // Détacher : la fiche s'en va, les avis déjà rapatriés restent. Ils
+        // décrivent ce qui a été dit ; les effacer réécrirait l'histoire.
+        Db::exec('DELETE FROM ceo_shop_reputation WHERE shop_id = ?', [$shopId]);
+        journalAdd('CEO', 'Paramètre', $shop['name'], 'Fiche Google détachée');
+        return ['ok' => true, 'detache' => true];
+    }
+
+    $dejaPris = Db::row('SELECT shop_id FROM ceo_shop_reputation WHERE place_id = ? AND shop_id <> ?', [$placeId, $shopId]);
+    if ($dejaPris !== null) {
+        http_response_code(409);
+        return ['error' => 'Cette fiche Google est déjà raccordée à un autre magasin.'];
+    }
+
+    Db::exec('INSERT INTO ceo_shop_reputation (shop_id, place_id) VALUES (?, ?)
+              ON DUPLICATE KEY UPDATE place_id = VALUES(place_id)', [$shopId, $placeId]);
+    journalAdd('CEO', 'Paramètre', $shop['name'], 'Fiche Google raccordée (' . $placeId . ')');
+    // Synchroniser dans la foulée : raccorder sans lire laisserait une carte
+    // vide, et personne ne saurait si le raccordement a pris.
+    $r = reputationSynchroniser($shopId);
+    return ['ok' => true] + $r;
+}
+
+/** POST /reputation/sync — va chercher chez Google, pour un magasin ou tous. */
+function wr_reputation_sync(): array
+{
+    $b = body();
+    if (!GoogleApi::configured()) {
+        http_response_code(422);
+        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
+    }
+    $un = trim((string) ($b['magasinId'] ?? ''));
+    return reputationSynchroniser($un !== '' ? $un : null);
+}
+
+/**
+ * La synchronisation elle-même.
+ *
+ * Les avis sont AJOUTÉS, jamais remplacés : Google n'en rend que cinq et fait
+ * tourner sa sélection. Effacer les anciens à chaque passage nous ferait perdre
+ * ce qu'il a cessé de montrer — et l'écran des cinq derniers deviendrait « les
+ * cinq que Google a bien voulu rendre aujourd'hui ».
+ */
+function reputationSynchroniser(?string $shopId): array
+{
+    $sql = "SELECT s.id, s.name, r.place_id FROM ceo_shop s
+              JOIN ceo_shop_reputation r ON r.shop_id = s.id
+             WHERE r.place_id IS NOT NULL AND r.place_id <> ''";
+    $args = [];
+    if ($shopId !== null) { $sql .= ' AND s.id = ?'; $args[] = $shopId; }
+    $cibles = Db::rows($sql . ' ORDER BY s.name', $args);
+
+    $faits = 0; $nouveaux = 0; $erreurs = [];
+    foreach ($cibles as $c) {
+        GoogleApi::$lastError = null;
+        $lieu = GoogleApi::lieu((string) $c['place_id']);
+        if ($lieu === null) {
+            $erreurs[] = $c['name'] . ' : ' . (GoogleApi::$lastError ?? 'réponse vide');
+            continue;
+        }
+        Db::exec('UPDATE ceo_shop_reputation SET rating_avg = ?, rating_count = ?, profile_url = ?, synced_at = ? WHERE shop_id = ?',
+            [$lieu['note'], $lieu['avis'], $lieu['url'], date('Y-m-d H:i:s'), $c['id']]);
+        foreach ($lieu['derniers'] as $a) {
+            // INSERT IGNORE sur (source, external_id) : un avis déjà connu ne
+            // se réécrit pas — son texte peut avoir été traduit d'un appel à
+            // l'autre, et le premier reçu fait foi.
+            $avant = Db::row("SELECT id FROM ceo_shop_review WHERE source = 'google' AND external_id = ?", [$a['externalId']]);
+            if ($avant !== null) { continue; }
+            Db::exec('INSERT INTO ceo_shop_review (shop_id, source, external_id, author, rating, comment, reviewed_at)
+                      VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$c['id'], 'google', $a['externalId'], $a['auteur'], $a['note'], $a['texte'], $a['le']]);
+            $nouveaux++;
+        }
+        $faits++;
+    }
+
+    $msg = $faits . ' magasin(s) synchronisé(s), ' . $nouveaux . ' nouvel(s) avis'
+        . ($erreurs !== [] ? ' — ' . count($erreurs) . ' en échec' : '');
+    journalAdd('CEO', 'Réputation', $shopId !== null ? ($cibles[0]['name'] ?? '—') : '—', 'Synchronisation Google : ' . $msg);
+    return ['ok' => true, 'magasins' => $faits, 'nouveaux' => $nouveaux, 'erreurs' => $erreurs,
+        'aucuneFiche' => $cibles === []];
+}
