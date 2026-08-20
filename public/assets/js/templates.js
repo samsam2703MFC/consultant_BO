@@ -2173,7 +2173,7 @@ function tplReputation(c, x){
                 <span style="display:inline-flex;gap:1px">${etoiles(a.etoiles)}</span>
                 <span style="font-size:11.5px;font-weight:500">${esc(a.auteur)}</span>
                 <span style="font-size:11px;color:var(--color-text-muted)">${a.le}</span>
-                <span style="${a.reponduSt};margin-left:auto">${a.reponduTxt}</span>
+                ${a.repondu ? `<span style="${a.reponduSt};margin-left:auto">${a.reponduTxt}</span>` : ''}
               </div>
               <div style="${a.texteSt};margin-top:3px">${esc(a.texte)}</div>
             </div>`).join('')}
