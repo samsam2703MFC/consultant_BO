@@ -4501,13 +4501,29 @@ class App {
       common.caRien = 'Aucun inventaire matière remonté par le panel.';
       if (d.tronque) { common.caNote = d.tronque + ' ligne(s) au-delà des 600 affichées — les alertes passent en premier.'; }
     } else if (ecr === 'caCommandes') {
-      common.caCols = ['Réquisition', 'Magasin', 'Début', 'Jours', 'Type', 'Statut', 'Valeur estimée', 'Par'];
-      common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: '#' + x.id }, { t: x.magasin, mut: true }, { t: x.debut || '—', mut: true },
+      // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
+      // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
+      // jeu complet, pas sur le filtre — sinon ils mentent dès qu'on filtre.
+      const lgs = d.lignes || [];
+      const fSt = S.caCmdStatut || '';
+      const nSt = code => lgs.filter(x => x.statut === code).length;
+      common.caChips = [['PENDING', 'En attente', '#8a5a13', 'rgba(193,122,42,0.16)'],
+                        ['REALISED', 'Réalisée', '#2d7a3e', 'rgba(45,122,62,0.12)']]
+        .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
+          on: fSt === code,
+          pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
+      common.caCols = ['Réquisition', 'Magasin', 'Fournisseur', 'Début', 'Jours', 'Type', 'Statut', 'Valeur estimée', 'Par'];
+      common.caRows = lgs.filter(x => !fSt || x.statut === fSt).map(x => ({ cells: [
+        { t: '#' + x.id }, { t: x.magasin, mut: true },
+        { t: (x.fournisseurs && x.fournisseurs.length) ? x.fournisseurs.join(', ') : '—',
+          mut: !(x.fournisseurs && x.fournisseurs.length) },
+        { t: x.debut || '—', mut: true },
         { t: String(x.jours || '—'), num: true, mut: true }, { t: x.type || '—', mut: true },
-        { t: x.statut || '—', col: x.statut === 'PENDING' ? '#8a5a13' : '' },
+        { t: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
+          col: x.statut === 'PENDING' ? '#8a5a13' : (x.statut === 'REALISED' ? '#2d7a3e' : '') },
         { t: this.fE(x.valeur), num: true }, { t: x.par || '—', mut: true } ] }));
-      common.caRien = 'Aucune réquisition matière remontée par le panel.';
+      common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
+        : 'Aucune réquisition matière remontée par le panel.';
     } else if (ecr === 'caAchats') {
       common.caCols = ['Fournisseur', 'Ville', 'Téléphone', 'Courriel', 'Devise', 'Références', 'Actives'];
       common.caRows = (d.lignes || []).map(x => ({ cells: [

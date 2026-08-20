@@ -4455,12 +4455,27 @@ function ep_ca_commandes(): array
         $noms[(int) $s['id']] = (string) $s['name'];
         $chemins[(int) $s['id']] = '/shops/' . (int) $s['id'] . '/material-requisitions';
     }
-    $lignes = [];
+    $lignes = []; $avecFournisseur = 0;
     foreach (PanelApi::getParallele($chemins) as $sid => $reqs) {
         foreach (analyseListe(is_array($reqs) ? $reqs : []) as $r) {
+            // Les fournisseurs de la réquisition voyagent DANS la ligne
+            // (`suppliers`) — mesuré vide sur toutes les réquisitions
+            // actuelles, réalisées comprises : affiché quand même, il se
+            // remplira côté ERP sans retoucher le cockpit.
+            $fours = [];
+            foreach ((array) ($r['suppliers'] ?? []) as $f) {
+                if (is_string($f) && $f !== '') { $fours[] = $f; continue; }
+                if (is_array($f)) {
+                    foreach (['name', 'display_name', 'label'] as $c2) {
+                        if (!empty($f[$c2]) && is_string($f[$c2])) { $fours[] = trim($f[$c2]); break; }
+                    }
+                }
+            }
+            if ($fours !== []) { $avecFournisseur++; }
             $lignes[] = [
                 'id' => (int) ($r['id'] ?? 0),
                 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+                'fournisseurs' => $fours,
                 'debut' => (string) ($r['beginning_of_period'] ?? ''),
                 'jours' => (int) ($r['requisition_period_days'] ?? 0),
                 'type' => (string) ($r['type_of_requisition'] ?? ''),
@@ -4471,12 +4486,18 @@ function ep_ca_commandes(): array
         }
     }
     usort($lignes, fn ($a, $b) => $b['debut'] <=> $a['debut']);
+    $manquants = [lacune('Lignes de la commande',
+        'le détail produit par produit d’une réquisition',
+        'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne')];
+    if ($avecFournisseur === 0 && $lignes !== []) {
+        $manquants[] = lacune('Fournisseur de la réquisition',
+            'quel fournisseur sert chaque commande',
+            'API panel — le champ `suppliers` existe sur chaque réquisition mais aucune n’en porte, '
+            . 'réalisées comprises (mesuré) : le rattachement se fait côté ERP');
+    }
     return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
         'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions)',
-        'lignes' => $lignes,
-        'manquants' => [lacune('Lignes de la commande',
-            'le détail produit par produit d’une réquisition',
-            'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne')]];
+        'lignes' => $lignes, 'manquants' => $manquants];
 }
 
 /**
