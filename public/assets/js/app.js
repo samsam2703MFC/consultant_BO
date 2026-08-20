@@ -874,7 +874,10 @@ class App {
         ['marge', 'Marge & coûts', 0],
         // Le badge compte les magasins sous la cible : il n'apparaît qu'une
         // fois l'écran ouvert une première fois, la lecture étant paresseuse.
-        ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0],
+        ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]]],
+      // Le budget est une affaire de finance, pas de performance : il a sa
+      // section, demandée telle quelle, et garde son sous-menu.
+      ['Finance', [
         { sub: 'Budget magasin', children: [
           ['budget', 'Suivi du budget', 0],
           ['encodage', 'Encodage du budget', 0]] }]],
@@ -4877,13 +4880,14 @@ class App {
           titre: (JRL[j.wd - 1] || '') + ' ' + this.fDA(j.date),
           magasin: mg.nom,
           close: () => this.setState({ exRentDet: null }),
+          // Montants au centime, comme la PWA : l'addition doit tomber juste.
           lignes: [
-            { op: '', lib: 'Chiffre d’affaires', pct: null, v: this.fE(j.ca), fort: false },
-            { op: '−', lib: 'Coût matière', pct: null, v: this.fE(j.coutMatiere), fort: false },
-            { op: '=', lib: 'Marge brute', pct: fp1(j.margePct), v: this.fE(j.margeBrute), fort: true },
-            { op: '−', lib: 'Labour (mois ÷ jours ouverts)', pct: pc(j.labourJour), v: j.labourJour != null ? this.fE(j.labourJour) : 'manque API', fort: false },
-            { op: '−', lib: 'Overhead (mois ÷ jours ouverts)', pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fE(j.overheadJour) : 'manque API', fort: false },
-            { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fE(j.net) : '—', fort: true,
+            { op: '', lib: 'Chiffre d’affaires', pct: null, v: this.fU(j.ca), fort: false },
+            { op: '−', lib: 'Coût matière', pct: null, v: this.fU(j.coutMatiere), fort: false },
+            { op: '=', lib: 'Marge brute', pct: fp1(j.margePct), v: this.fU(j.margeBrute), fort: true },
+            { op: '−', lib: 'Labour (mois ÷ jours ouverts)', pct: pc(j.labourJour), v: j.labourJour != null ? this.fU(j.labourJour) : 'manque API', fort: false },
+            { op: '−', lib: 'Overhead (mois ÷ jours ouverts)', pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fU(j.overheadJour) : 'manque API', fort: false },
+            { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fU(j.net) : '—', fort: true,
               col: j.net == null ? 'var(--color-text-muted)' : (j.net >= 0 ? '#2d7a3e' : '#8D1D2C') },
           ],
           sous: j.tickets != null ? (j.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + this.fU(j.panier)) : '',
