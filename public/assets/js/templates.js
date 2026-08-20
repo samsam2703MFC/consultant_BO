@@ -2271,9 +2271,11 @@ function tplFonds(c, x){
           <td style="${td};padding-left:17px"><span style="font-weight:500">${esc(r.nom)}</span>${r.ville ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ville)}</div>` : ''}</td>
           <td style="${td};${num}">${esc(r.ca)}${r.manque ? `<div style="font-size:10px;color:var(--color-on-abricot);font-weight:400">${esc(r.manque)}</div>` : ''}</td>
           <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc(r.taux)}</td>
-          <td style="${td};${num};padding-right:17px">${esc(r.du)}</td>
+          <td style="${td};${num};padding-right:17px">${esc(r.du)}${r.ecrit ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(r.ecrit)}</div>` : ''}</td>
         </tr>`).join('')}</tbody>
       </table>`}
+      ${c.foRoySource ? `<div style="padding:9px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoySource)}</div>` : ''}
+      ${c.foRoyNote ? `<div style="padding:9px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoyNote)}</div>` : ''}
       ${c.foErp ? `<div style="padding:10px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Reprise ERP : ${esc(c.foErp)}</div>` : ''}
       <!-- Ce que le cockpit ne peut pas encore piloter, dit à l'endroit où on
            le cherche — et pourquoi, avec les routes exactes. -->

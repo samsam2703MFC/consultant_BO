@@ -2775,21 +2775,29 @@ class App {
       ? sansLev + ' sortie(s) ne portent aucun levier : elles pèsent sur le solde sans dire ce qu’elles développent.'
       : '';
 
-    // --- redevances par magasin.
+    // --- redevances par magasin. Le CA du mois vient de l'API de ventes
+    //     (jour même), les taux de la fiche boutique ; le dû théorique en
+    //     découle, et « écrit au fonds » rappelle ce qui y est déjà passé.
     const R = f.royalties || {};
     common.foMois = R.month || '';
     common.foRoyalties = (R.shops || []).map(s => {
       const ca = s.revenue_amount == null ? null : +s.revenue_amount;
-      const du = (s.movements || []).reduce((a, m) => a + (+m.amount || 0), 0);
+      const ecrit = (s.movements || []).reduce((a, m) => a + (+m.amount || 0), 0);
+      const du = s.due_theorique != null ? +s.due_theorique : (ecrit > 0 ? ecrit : null);
       return { nom: s.shop_name || ('Magasin ' + s.shop_id), ville: s.city || '',
         ca: ca == null ? '—' : this.fE(ca),
         taux: (s.rates || []).map(t => (t.label || t.code || '') + ' ' + (t.rate_pct != null ? t.rate_pct + ' %' : '—')).join(' · ') || '—',
-        du: du > 0 ? this.fU(du) : '—',
+        du: du != null ? this.fU(du) : '—',
+        ecrit: ecrit > 0 ? 'écrit au fonds : ' + this.fU(ecrit) : '',
         // Sans chiffre d'affaires, la redevance ne peut pas être calculée :
         // le dire vaut mieux qu'un tiret qu'on lirait comme un zéro.
-        manque: ca == null ? 'chiffre d’affaires du mois non repris' : '' };
+        manque: ca == null
+          ? 'chiffre d’affaires du mois non repris'
+          : (s.royalties_enabled === false ? 'redevances désactivées pour ce magasin' : '') };
     });
     common.foRoyaltiesVide = !common.foRoyalties.length;
+    common.foRoySource = R.source || '';
+    common.foRoyNote = R.facturesNote || '';
     common.foErp = (R.erp && R.erp.available === false) ? (R.erp.reason || 'reprise ERP indisponible') : '';
 
     // --- saisie : tout se tient depuis le pilotage réseau.

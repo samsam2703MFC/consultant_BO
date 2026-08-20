@@ -749,6 +749,16 @@ function ep_exploitation(): array
         'reseau' => [], 'objectifBase' => 'budget mensuel au prorata des jours',
         'avertissement' => null];
 
+    // FRAÎCHEUR : quand le compte consultant est là, les trois blocs viennent
+    // de l'API du panel — ancrés sur AUJOURD'HUI, pas sur la dernière journée
+    // encodée en base (la caisse partagée a des jours de retard). Trois
+    // plages, mêmes définitions que le calcul de repli ci-dessous. Si l'API
+    // ne répond pas, on retombe sans bruit sur la caisse en base.
+    if (PanelApi::configured()) {
+        $api = ep_exploitation_api($out);
+        if ($api !== null) { return $api; }
+    }
+
     try {
         $d = Db::rows('SELECT MAX(DATE(insert_timestamp)) j FROM transaction');
     } catch (PDOException $e) { return $out + ['erreur' => 'caisse indisponible']; }
@@ -829,6 +839,102 @@ function ep_exploitation(): array
         foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
     }
     usort($out['magasins'], fn($a, $b2) => $b2['mois']['ca'] <=> $a['mois']['ca']);
+
+    foreach (['jour', 'semaine', 'mois'] as $p) {
+        $ca = 0.0; $tk = 0; $ob = 0.0; $aucun = true;
+        foreach ($tot[$p] as $x) {
+            $ca += $x['ca']; $tk += $x['tickets'];
+            if ($x['objectif'] !== null) { $ob += $x['objectif']; $aucun = false; }
+        }
+        $out['reseau'][$p] = ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $aucun ? null : round($ob, 2),
+            'atteinte' => (!$aucun && $ob > 0) ? round($ca / $ob, 4) : null];
+    }
+    $out['magasinsSansBudget'] = count($out['magasins']) - count($budget);
+    return $out;
+}
+
+/**
+ * Le tableau d'exploitation par l'API du panel — le chemin FRAIS.
+ *
+ * Trois appels (jour, semaine, mois), chacun agrégé par boutique côté ERP :
+ * mêmes définitions que le calcul sur la caisse en base, mais servies jusqu'au
+ * jour même. Renvoie null si l'API ne rend rien — l'appelant retombe alors sur
+ * la caisse.
+ */
+function ep_exploitation_api(array $out): ?array
+{
+    $auj = date('Y-m-d');
+    $ts = strtotime($auj);
+    $plages = [
+        'jour'    => [$auj, $auj],
+        'semaine' => [date('Y-m-d', strtotime('monday this week', $ts)), $auj],
+        'mois'    => [date('Y-m-01', $ts), $auj],
+    ];
+    $parPer = [];
+    foreach ($plages as $p => [$du, $au]) {
+        $liste = analyseListe(PanelApi::shopsSalesKpisEntre($du, $au) ?? []);
+        if ($liste === [] && $p === 'mois') { return null; }   // l'API ne sert rien : repli
+        foreach ($liste as $x) {
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+            }
+            if ($id <= 0) { continue; }
+            $parPer[$p][$id] = [
+                'ca' => (float) (nombreOuNull($x, ['ca', 'turnover', 'revenue']) ?? 0),
+                'tk' => (int) (nombreOuNull($x, ['tickets', 'receipts', 'transactions']) ?? 0)];
+        }
+    }
+    if (empty($parPer['mois'])) { return null; }
+
+    $out['jour'] = $auj;
+    $out['semaine'] = $plages['semaine'][0];
+    $out['mois'] = substr($plages['mois'][0], 0, 7);
+    $out['source'] = 'API panel — ventes servies jusqu’au jour même';
+
+    $budget = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, revenue_budget FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+            [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
+            if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
+                $budget[(string) $b['shop_id']] = (float) $b['revenue_budget'];
+            }
+        }
+    } catch (PDOException $e) { /* budget non encodé */ }
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) {
+            $noms[(int) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* noms indisponibles */ }
+
+    $joursMois   = (int) date('t', $ts);
+    $joursEcoule = (int) date('j', $ts);
+    $joursSem    = (int) round((strtotime($auj) - strtotime($plages['semaine'][0])) / 86400) + 1;
+
+    $bloc = static function (?array $x, ?float $obj): array {
+        $ca = $x['ca'] ?? 0.0; $tk = $x['tk'] ?? 0;
+        return ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $obj !== null ? round($obj, 2) : null,
+            'atteinte' => ($obj !== null && $obj > 0) ? round($ca / $obj, 4) : null];
+    };
+
+    $tot = ['jour' => [], 'semaine' => [], 'mois' => []];
+    foreach ($parPer['mois'] as $sid => $dMois) {
+        $b = $budget[(string) $sid] ?? null;
+        $ligne = ['shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+            'budgetMois' => $b,
+            'jour'    => $bloc($parPer['jour'][$sid] ?? null,    $b !== null ? $b / $joursMois : null),
+            'semaine' => $bloc($parPer['semaine'][$sid] ?? null, $b !== null ? $b * $joursSem / $joursMois : null),
+            'mois'    => $bloc($dMois,                           $b !== null ? $b * $joursEcoule / $joursMois : null),
+            'moisPlein' => $b];
+        $out['magasins'][] = $ligne;
+        foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
+    }
+    usort($out['magasins'], fn ($a, $b2) => $b2['mois']['ca'] <=> $a['mois']['ca']);
 
     foreach (['jour', 'semaine', 'mois'] as $p) {
         $ca = 0.0; $tk = 0; $ob = 0.0; $aucun = true;
@@ -2670,14 +2776,86 @@ function ep_fonds(): array
     $out['campagnes'] = array_map(fn ($c2) => ['id' => (int) $c2['id'], 'name' => (string) $c2['name']],
         Db::rows('SELECT id, name FROM mar_campaign ORDER BY starts_on DESC, id DESC'));
 
-    // Les redevances : la reprise directe (taux, CA du mois, génération,
-    // reprise ERP) n'est pas encore écrite. Annoncé, pas remplacé.
-    $out['manque'][] = [
-        'champ' => 'Redevances par magasin',
-        'quoi' => 'la grille des taux, les chiffres d’affaires du mois et l’écriture des redevances au fonds',
-        'source' => 'Reprise du module marketing — le grand livre, les leviers et les frais récurrents sont '
-            . 'désormais lus directement dans les tables mar_*. Les redevances restent à reprendre de la même façon.',
-    ];
+    // Les redevances : grille des taux depuis la FICHE BOUTIQUE du panel
+    // (royalty_*_percentage), chiffre d'affaires du MOIS COURANT depuis l'API
+    // de ventes (jour même) — deux lectures du compte consultant déjà en
+    // place. Les écritures ROYALTY déjà passées au fonds ce mois-ci sont
+    // rappelées en face du dû théorique. Factures et règlements émis relèvent
+    // du réalm ADMIN (compte « admin ERP » des Paramètres).
+    $royFait = false;
+    if (PanelApi::configured()) {
+        $moisCle = date('Y-m');
+        $caPar = [];
+        foreach (analyseListe(PanelApi::shopsSalesKpisEntre(date('Y-m-01'), date('Y-m-d')) ?? []) as $x) {
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+            }
+            if ($id > 0) { $caPar[$id] = nombreOuNull($x, ['ca', 'turnover', 'revenue']); }
+        }
+        $fiches = PanelApi::consultantShops() ?? [];
+        if ($fiches !== []) {
+            // Écritures ROYALTY du mois déjà au fonds, par magasin.
+            $ecrit = [];
+            foreach ($mvts as $m) {
+                if (($m['source'] ?? '') === 'ROYALTY' && $m['direction'] === 'IN'
+                    && str_starts_with((string) $m['movement_date'], $moisCle) && $m['shop_id'] !== null) {
+                    $ecrit[(int) $m['shop_id']][] = ['amount' => (float) $m['amount'], 'label' => $m['label']];
+                }
+            }
+            $shops = [];
+            foreach ($fiches as $sh) {
+                $id = (int) ($sh['id'] ?? 0);
+                if ($id <= 0) { continue; }
+                // Les taux sont stockés en FRACTION (0.0100 = 1 %).
+                $rates = [];
+                foreach ([['royalty_marketing_percentage', 'Marketing'],
+                          ['royalty_brand_percentage', 'Marque'],
+                          ['royalty_assistance_percentage', 'Assistance'],
+                          ['royalties_percentage', 'Générale']] as [$k, $lab]) {
+                    $v = isset($sh[$k]) ? (float) $sh[$k] : 0.0;
+                    if ($v > 0) { $rates[] = ['code' => $k, 'label' => $lab, 'rate_pct' => round($v * 100, 2)]; }
+                }
+                $ca    = $caPar[$id] ?? null;
+                $mkt   = isset($sh['royalty_marketing_percentage']) ? (float) $sh['royalty_marketing_percentage'] : 0.0;
+                $actif = (int) ($sh['royalties_enabled'] ?? 0) === 1;
+                $nom = '';
+                foreach (['representative_name', 'name'] as $c2) {
+                    if (!empty($sh[$c2]) && is_string($sh[$c2])) { $nom = trim((string) $sh[$c2]); break; }
+                }
+                $shops[] = [
+                    'shop_id' => $id, 'shop_name' => $nom, 'city' => (string) ($sh['city'] ?? ''),
+                    'revenue_amount' => $ca, 'rates' => $rates,
+                    'royalties_enabled' => $actif,
+                    'billing_frequency' => $sh['royalty_billing_frequency'] ?? null,
+                    // Dû MARKETING du mois : c'est lui qui alimente le fonds.
+                    'due_theorique' => ($actif && $mkt > 0 && $ca !== null) ? round($ca * $mkt, 2) : null,
+                    'movements' => $ecrit[$id] ?? [],
+                ];
+            }
+            $roy = ['month' => $moisCle, 'shops' => $shops,
+                'source' => 'API panel — fiche boutique (taux) et ventes du mois (CA, jour même)',
+                'erp' => ['available' => true]];
+            if (ErpApi::disponible()) {
+                $fac = ErpApi::get('/admin/royalties/invoices');
+                $reg = ErpApi::get('/admin/royalties/settlements');
+                if (is_array($fac)) { $roy['factures'] = array_slice(analyseListe($fac), 0, 24); }
+                if (is_array($reg)) { $roy['reglements'] = array_slice(analyseListe($reg), 0, 24); }
+            } else {
+                $roy['facturesNote'] = 'Factures et règlements émis : renseignez le compte admin ERP (Mon compte) pour les lire.';
+            }
+            $out['royalties'] = $roy;
+            $royFait = true;
+        }
+    }
+    if (!$royFait) {
+        $out['manque'][] = [
+            'champ' => 'Redevances par magasin',
+            'quoi' => 'la grille des taux, les chiffres d’affaires du mois et l’écriture des redevances au fonds',
+            'source' => 'La grille et le CA se lisent sur l’API du panel : configurez le compte consultant '
+                . '(Mon compte) pour les afficher ici. ' . (PanelApi::$lastError ? 'Dernière erreur : ' . PanelApi::$lastError : ''),
+        ];
+    }
     $out['source'] = 'tables mar_* (module marketing repris)';
     return $out;
 }
@@ -3063,6 +3241,35 @@ function ep_perf(): array
                 }
             }
         } catch (PDOException $eTx) { /* transaction lente/absente : P&L seul */ }
+
+        // 2bis) Le MOIS COURANT vient de l'API du panel : la caisse en base
+        //       s'arrête à sa dernière journée encodée, l'API sert le jour
+        //       même. Seule la cellule du mois en cours est rafraîchie —
+        //       l'historique reste celui du P&L mensuel et de la caisse.
+        if (in_array((int) date('Y'), $annees, true) && PanelApi::configured()) {
+            foreach (analyseListe(PanelApi::shopsSalesKpisEntre(date('Y-m-01'), date('Y-m-d')) ?? []) as $x) {
+                $id = 0;
+                foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                    if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+                }
+                if ($id <= 0) { continue; }
+                $caF = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+                $tkF = nombreOuNull($x, ['tickets', 'receipts', 'transactions']);
+                $paF = nombreOuNull($x, ['avg_basket', 'basket_avg', 'panier']);
+                $k = $key($id, (int) date('Y'), (int) date('n'));
+                if (!isset($cells[$k])) {
+                    $cells[$k] = [
+                        'storeId' => (string) $id, 'annee' => (int) date('Y'), 'mois' => (int) date('n'),
+                        'ca' => null, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
+                        'tickets' => null, 'panierMoyen' => null, 'foodCostPct' => null,
+                        'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null,
+                    ];
+                }
+                if ($caF !== null) { $cells[$k]['ca'] = round($caF, 2); }
+                if ($tkF !== null) { $cells[$k]['tickets'] = (int) $tkF; }
+                if ($paF !== null) { $cells[$k]['panierMoyen'] = round($paF, 2); }
+            }
+        }
 
         // 3) Le BUDGET encodé (`ceo_shop_month_perf`) — table du cockpit, la
         //    seule qui le porte. Ni `mac_shop_monthly_pnl` ni `transaction` ne
