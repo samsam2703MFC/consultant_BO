@@ -2201,9 +2201,17 @@ function tplReputation(c, x){
       Aucun avis n’est encore remonté. Les notes et les avis viennent des fiches Google des magasins ; le raccordement des fiches n’est pas branché — les tables restent vides jusque-là.
     </div>` : ''}
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;align-items:start">
+    <!-- Toutes les tuiles à la même taille. Un alignement sur le début laissait
+         chaque carte se dimensionner sur ses avis : deux magasins côte à côte
+         n'avaient ni la même hauteur, ni leurs jauges à la même ligne, et l'œil
+         ne pouvait plus les comparer sans les relire. Des rangées d'une même
+         fraction les alignent aussi entre elles ; le blanc qui reste en bas
+         d'une carte courte coûte moins que la comparaison qu'on perdait.
+         (Pas d'accent grave dans ce commentaire : on est dans un littéral de
+         gabarit, il refermerait la chaîne.) -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;align-items:stretch;grid-auto-rows:1fr">
       ${c.repMagasins.map(m => `
-        <div style="${carte};padding:15px 17px">
+        <div style="${carte};padding:15px 17px;display:flex;flex-direction:column">
           <div style="display:flex;align-items:flex-start;gap:12px">
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
