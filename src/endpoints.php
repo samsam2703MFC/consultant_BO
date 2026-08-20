@@ -4605,6 +4605,67 @@ function ep_ca_achats_catalogue(): array
     return ['etat' => 'ok', 'fournisseurId' => $id, 'lignes' => $lignes];
 }
 
+/**
+ * GET /centrale/facturation — ce que les magasins doivent et paient.
+ *
+ * Deux flux, tous deux du réalm ADMIN de l'ERP (compte « admin ERP » des
+ * Paramètres) :
+ *   · les factures de REDEVANCES émises aux magasins (/admin/royalties/
+ *     invoices) — numéro, échéance, montant, état de paiement ;
+ *   · les factures d'ABONNEMENT TFBuddy par magasin (/admin/billing/invoices,
+ *     Stripe) — le coût logiciel du réseau.
+ */
+function ep_ca_facturation(): array
+{
+    if (!ErpApi::disponible()) {
+        $m = ep_ca_manquant('facturation');
+        $m['source'] = 'Réalm admin de l’ERP — renseignez le compte « admin ERP » (Mon compte) pour lire '
+            . 'les factures de redevances et les abonnements TFBuddy.';
+        return $m;
+    }
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
+    } catch (PDOException $e) { /* noms indisponibles */ }
+
+    $redevances = [];
+    $rep = ErpApi::get('/admin/royalties/invoices');
+    $liste = is_array($rep) ? ($rep['invoices'] ?? (analyseListe($rep) ?: [])) : [];
+    foreach ((array) $liste as $f) {
+        $redevances[] = [
+            'numero' => (string) ($f['invoice_number'] ?? ('#' . ($f['id'] ?? '?'))),
+            'magasin' => $noms[(int) ($f['id_shop'] ?? 0)] ?? ('Magasin ' . ($f['id_shop'] ?? '?')),
+            'emise' => (string) ($f['issue_date'] ?? ''),
+            'echeance' => (string) ($f['due_date'] ?? ''),
+            'montant' => (float) ($f['gross_amount'] ?? 0),
+            'statut' => (string) ($f['status'] ?? ''),
+            'paiement' => (string) ($f['payment_status'] ?? ''),
+            'payeLe' => $f['paid_at'] ?? null,
+            'relanceLe' => $f['last_reminder_sent_at'] ?? null,
+        ];
+    }
+    usort($redevances, fn ($a, $b) => $b['emise'] <=> $a['emise']);
+
+    $abonnements = [];
+    foreach (analyseListe(ErpApi::get('/admin/billing/invoices') ?? []) as $f) {
+        $abonnements[] = [
+            'magasin' => (string) ($f['store_name'] ?? ''),
+            'offre' => (string) ($f['package_code'] ?? ''),
+            'montant' => (float) ($f['amount_due'] ?? 0),
+            'paye' => (float) ($f['amount_paid'] ?? 0),
+            'statut' => (string) ($f['status'] ?? ''),
+            'pdf' => (string) ($f['invoice_pdf_url'] ?? ($f['invoice_pdf'] ?? '')),
+        ];
+    }
+
+    return ['etat' => 'ok', 'titre' => 'Facturation magasins',
+        'source' => 'Réalm admin ERP — factures de redevances (/admin/royalties/invoices) et abonnements TFBuddy (/admin/billing/invoices)',
+        'redevances' => $redevances, 'abonnements' => array_slice($abonnements, 0, 60),
+        'manquants' => [lacune('Factures clients B2B des magasins',
+            'les factures qu’un magasin émet à ses propres clients professionnels',
+            '/shops/{id}/invoices exige une date jour par jour — à câbler avec un sélecteur si le besoin se confirme')]];
+}
+
 function ep_ca_manquant(string $ecran): array
 {
     $def = [
@@ -4848,8 +4909,12 @@ function ep_lacunes(): array
     //     sont désormais servis par l'API du panel : ne restent en manque que
     //     ce que leurs endpoints déclarent eux-mêmes, et les écrans encore
     //     sans source.
-    foreach (['campagnes' => 'Campagnes commerciales',
-              'facturation' => 'Facturation magasins'] as $k => $lib) {
+    $ecransSansSource = ['campagnes' => 'Campagnes commerciales'];
+    if (!ErpApi::disponible()) {
+        // Servie par le réalm admin de l'ERP dès que le compte est renseigné.
+        $ecransSansSource['facturation'] = 'Facturation magasins';
+    }
+    foreach ($ecransSansSource as $k => $lib) {
         $m = ep_ca_manquant($k);
         $n = 0;
         foreach ($m['colonnes'] as $c) { if (!preg_match('/déjà|calcul local/i', (string) $c['src'])) { $n++; } }

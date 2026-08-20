@@ -105,7 +105,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/achats/catalogue'     => ep_ca_achats_catalogue(),
             $path === '/centrale/commandes'            => ep_ca_commandes(),
             $path === '/centrale/stock'                => ep_ca_stock(),
-            $path === '/centrale/facturation'          => ep_ca_manquant('facturation'),
+            $path === '/centrale/facturation'          => ep_ca_facturation(),
             $path === '/products/scoring'              => ep_products(),
             $path === '/products/waste'                => ep_product_waste(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),

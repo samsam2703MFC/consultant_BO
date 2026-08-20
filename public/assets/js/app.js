@@ -4661,6 +4661,32 @@ class App {
         { t: fPct(x.redevancePct), num: true, mut: x.redevancePct == null, act: majPct(x, 'redevance', 'Redevance fournisseur → centrale') } ] }));
       common.caRien = 'Aucun fournisseur au référentiel du panel.';
       common.caNote = 'Cliquez un fournisseur pour ouvrir son catalogue ; cliquez un pourcentage pour le saisir (réglage du cockpit — le panel ne les porte pas).';
+    } else if (ecr === 'caFacturation') {
+      // Factures de redevances émises aux magasins, l'impayé en tête et en
+      // couleur ; les abonnements TFBuddy en second tableau.
+      const fmtD = v => v ? this.fD(v) : '—';
+      common.caCols = ['Facture', 'Magasin', 'Émise', 'Échéance', 'Montant', 'Paiement', 'Relance'];
+      common.caRows = (d.redevances || []).map(x => {
+        const enRetard = x.paiement !== 'paid' && x.echeance && x.echeance < (this.M && this.M.TODAY || '');
+        return { cells: [
+          { t: x.numero }, { t: x.magasin, mut: true },
+          { t: fmtD(x.emise), mut: true },
+          { t: fmtD(x.echeance), col: enRetard ? '#8D1D2C' : '' },
+          { t: this.fU(x.montant), num: true },
+          { t: x.paiement === 'paid' ? 'payée' + (x.payeLe ? ' le ' + this.fD(x.payeLe) : '')
+              : (enRetard ? 'impayée — en retard' : 'impayée'),
+            col: x.paiement === 'paid' ? '#2d7a3e' : (enRetard ? '#8D1D2C' : '#8a5a13') },
+          { t: x.relanceLe ? this.fD(x.relanceLe) : '—', mut: true } ] };
+      });
+      common.caRien = 'Aucune facture de redevances émise.';
+      common.caTable2 = (d.abonnements && d.abonnements.length) ? {
+        titre: 'Abonnements TFBuddy par magasin (Stripe)',
+        cols: ['Magasin', 'Offre', 'Montant', 'Payé', 'Statut'],
+        rows: d.abonnements.map(a => ({ cells: [
+          { t: a.magasin || '—' }, { t: a.offre || '—', mut: true },
+          { t: this.fU(a.montant), num: true }, { t: this.fU(a.paye), num: true },
+          { t: a.statut || '—', mut: a.statut === 'paid' } ] })),
+      } : null;
       // --- CA du réseau, mois par mois avec cumul : l'assiette des redevances.
       const M3 = (this.M && this.M.MOIS) || [];
       common.caTable2 = (d.caMensuel && d.caMensuel.length) ? {
