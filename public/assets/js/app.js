@@ -6441,6 +6441,45 @@ class App {
         .then(r => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: !!r.ok, msg: r.message || '' }) })))
         .catch(() => this.setState(s2 => ({ paCompte: Object.assign({}, s2.paCompte, { busy: false, ok: false, msg: 'Test impossible.' }) })));
     };
+
+    // --- Compte ADMIN de l'API ERP (TFBuddy) : la reprise de l'assistant de
+    //     campagne (gammes, alias, liens produit ↔ gamme) passe par l'API dès
+    //     que ce compte est là. Même mécanique que le compte panel ci-dessus.
+    const er = S.erCompte || {};
+    const erSt = D.erpCompte || { base: '', phone: '', motDePasseDefini: false, configure: false };
+    common.erBase = er.base != null ? er.base : (erSt.base || '');
+    common.erPhone = er.phone != null ? er.phone : (erSt.phone || '');
+    common.erPass = er.password || '';
+    common.erPassPlaceholder = erSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte admin';
+    common.erEtat = erSt.configure ? 'Compte configuré' : 'Compte non configuré';
+    common.erEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+      + (erSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
+    common.erMsg = er.msg || '';
+    common.erMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (er.ok ? '#2d7a3e' : '#8D1D2C');
+    common.erBusy = !!er.busy;
+    const erSet = k => e => { const v = e.target.value; this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { [k]: v }) })); };
+    common.setErBase = erSet('base'); common.setErPhone = erSet('phone'); common.setErPass = erSet('password');
+    const erRefresh = () => readOne('/erp/compte').then(st => { if (st) this.D.erpCompte = st; this.setState({}); });
+    common.erSave = () => {
+      const p = this.state.erCompte || {};
+      this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { busy: true, msg: '' }) }));
+      fetch(this.apiBase() + '/erp/compte', { method: 'PUT', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ base: p.base || '', phone: p.phone || '', password: p.password || '' }) })
+        .then(r => r.json())
+        .then(r => { this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { busy: false, password: '',
+            ok: !!r.testOk, msg: r.message || (r.testOk ? 'Connexion réussie.' : 'Enregistré.') }) }));
+          this.log('Paramètre', null, 'Compte admin de l’API ERP mis à jour');
+          return erRefresh(); })
+        .catch(() => this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) })));
+    };
+    common.erTest = () => {
+      this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { busy: true, msg: '' }) }));
+      fetch(this.apiBase() + '/erp/compte/test', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(r => r.json())
+        .then(r => this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { busy: false, ok: !!r.ok, msg: r.message || '' }) })))
+        .catch(() => this.setState(s2 => ({ erCompte: Object.assign({}, s2.erCompte, { busy: false, ok: false, msg: 'Test impossible.' }) })));
+    };
   }
 
   /* --- paramètres ---------------------------------------------------------------------- */

@@ -12,6 +12,7 @@ require __DIR__ . '/../../src/writes.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
+require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -110,6 +111,7 @@ function route(string $method, string $path): mixed
             $path === '/ia/note'                       => ep_ia_note(),
             $path === '/ia/statut'                     => ep_ia_statut(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
+            $path === '/erp/compte'                    => ErpApi::statut(),
             default                                    => notFound(),
         };
     }
@@ -121,6 +123,8 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
     if ($method === 'PUT'  && $path === '/pwa/compte') { return wr_pwa_compte(); }
     if ($method === 'POST' && $path === '/pwa/compte/test') { return wr_pwa_compte_test(); }
+    if ($method === 'PUT'  && $path === '/erp/compte') { return wr_erp_compte(); }
+    if ($method === 'POST' && $path === '/erp/compte/test') { return wr_erp_compte_test(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_patch($m[1]); }

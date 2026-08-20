@@ -196,6 +196,38 @@ function wr_pwa_compte_test(): array
     return ['ok' => $ok, 'message' => $msg, 'statut' => PanelApi::statut()];
 }
 
+/** PUT /erp/compte — compte ADMIN de l'API ERP (reprise de l'assistant). */
+function wr_erp_compte(): array
+{
+    $b = body();
+    $cur = setting('erpAdmin', []);
+    if (!is_array($cur)) { $cur = []; }
+    $conf = [
+        'base'  => trim((string) ($b['base'] ?? $cur['base'] ?? '')),
+        'phone' => trim((string) ($b['phone'] ?? $cur['phone'] ?? '')),
+        'password' => (string) ($b['password'] ?? ''),
+    ];
+    if ($conf['password'] === '') { $conf['password'] = (string) ($cur['password'] ?? ''); }
+    if ($conf['base'] === '') { unset($conf['base']); }               // → défaut du client
+
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['erpAdmin', json_encode($conf, JSON_UNESCAPED_UNICODE)]);
+    ErpApi::oublierJeton();
+    journalAdd('CEO', 'Paramètre', null, 'Compte admin de l’API ERP mis à jour ('
+        . ($conf['phone'] !== '' ? $conf['phone'] : 'téléphone vide') . ')');
+
+    // Test immédiat : un réglage enregistré mais refusé doit se voir tout de suite.
+    [$ok, $msg] = ErpApi::tester();
+    return ['ok' => true, 'testOk' => $ok, 'message' => $msg, 'statut' => ErpApi::statut()];
+}
+
+/** POST /erp/compte/test — vérifie la connexion sans rien modifier. */
+function wr_erp_compte_test(): array
+{
+    [$ok, $msg] = ErpApi::tester();
+    return ['ok' => $ok, 'message' => $msg, 'statut' => ErpApi::statut()];
+}
+
 /**
  * POST /pwa/tasks/review — noter une tâche (note 1-5, conformité, commentaire).
  *
@@ -1971,6 +2003,61 @@ function wr_mar_restaure(): array
             try { Db::exec("UPDATE mar_offer_item SET is_active = 0 WHERE sku_ref REGEXP '^[0-9]+\$'"); }
             catch (PDOException $e2) { /* rien de plus à faire */ }
         }
+
+        // Raffinage par l'API ERP (« on ne travaille qu'avec des API ») : dès
+        // que le compte admin est configuré — ou qu'un jeton frais est déposé —
+        // les gammes, leurs noms d'affichage (alias) et les liens
+        // produit ↔ gamme viennent de l'API. Repli silencieux sur la reprise
+        // par tables, déjà faite ci-dessus, si l'API ne répond pas.
+        if (ErpApi::disponible()) {
+            $gammes = ErpApi::get('/product-availability-periods');
+            if (is_array($gammes)) {
+                $api = ['gammes' => 0, 'alias' => 0, 'liens' => 0];
+                $alias = ErpApi::get('/product-availability-periods/name-aliases');
+                $nomPar = [];
+                foreach (is_array($alias) ? $alias : [] as $a) {
+                    if (!empty($a['alias_value']) && isset($a['fk_id'])) {
+                        $nomPar[(int) $a['fk_id']] = (string) ($a['effective_value'] ?? $a['alias_value']);
+                    }
+                }
+                $liens = [];
+                foreach ($gammes as $g) {
+                    if (!isset($g['id'])) { continue; }
+                    $gid = (int) $g['id'];
+                    $nom = $nomPar[$gid] ?? trim((string) ($g['name'] ?? ''));
+                    if ($nom === '') { continue; }
+                    Db::exec("INSERT INTO mar_offer_item (category, sku_ref, name, is_active)
+                              VALUES ('saison', ?, ?, ?)
+                              ON DUPLICATE KEY UPDATE name = VALUES(name), is_active = VALUES(is_active)",
+                        ['erp-saison-' . $gid, mb_substr($nom, 0, 200), (int) ($g['is_active'] ?? 1)]);
+                    $api['gammes']++;
+                    if (isset($nomPar[$gid])) { $api['alias']++; }
+                    if ((int) ($g['is_active'] ?? 1) !== 1) { continue; }
+                    foreach ((array) (ErpApi::get('/product-availability-periods/' . $gid . '/products') ?? []) as $p) {
+                        if (isset($p['id'])) { $liens[] = [$gid, (int) $p['id']]; }
+                    }
+                }
+                // Les liens se reconstruisent en bloc, par sku_ref : mêmes clés
+                // que la reprise du module (erp-<id> / erp-saison-<id>).
+                if ($liens !== []) {
+                    Db::exec('DELETE FROM mar_offer_item_season');
+                    $st = Db::pdo()->prepare(
+                        'INSERT IGNORE INTO mar_offer_item_season (item_id, season_item_id)
+                         SELECT p.id, s.id FROM mar_offer_item p JOIN mar_offer_item s
+                             ON p.sku_ref = ? AND s.sku_ref = ?');
+                    foreach ($liens as [$gid, $pid]) {
+                        $st->execute(['erp-' . $pid, 'erp-saison-' . $gid]);
+                        $api['liens'] += $st->rowCount();
+                    }
+                }
+                $reprise['api'] = $api;
+            } else {
+                $reprise['api'] = 'repli tables — ' . (ErpApi::$lastError ?? 'API ERP muette');
+            }
+        } else {
+            $reprise['api'] = 'repli tables — compte admin ERP non configuré';
+        }
+
         $n = Db::row("SELECT COUNT(*) n FROM mar_offer_item WHERE is_active = 1");
         $items = (int) $n['n'];
     } catch (Throwable $e) {

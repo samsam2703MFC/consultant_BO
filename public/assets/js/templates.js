@@ -4346,6 +4346,33 @@ function tplUserPanel(c, x){
         <button ${x.A(c.paSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
       </div>
 
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin:26px 0 0"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px">
+        <div style="${sec}">Compte admin ERP (API TFBuddy)</div>
+        <span style="${c.erEtatSt}">${esc(c.erEtat)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.55;text-wrap:pretty">La reprise du catalogue de l\u2019assistant de campagne (gammes saisonni\u00e8res, alias de noms, liens produit \u2194 gamme) passe par l\u2019API de l\u2019ERP d\u00e8s que ce compte est renseign\u00e9 \u2014 m\u00eames identifiants que l\u2019admin TFBuddy. Sans compte, la reprise retombe sur la lecture des tables. Le mot de passe n\u2019est jamais r\u00e9affich\u00e9 ; le laisser vide conserve celui d\u00e9j\u00e0 enregistr\u00e9.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">T\u00e9l\u00e9phone du compte</div>
+          <input type="text" value="${esc(c.erPhone)}" ${x.C(c.setErPhone)} placeholder="+32\u2026" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Mot de passe</div>
+          <input type="password" value="${esc(c.erPass)}" ${x.C(c.setErPass)} placeholder="${esc(c.erPassPlaceholder)}" autocomplete="new-password" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Base d\u2019URL de l\u2019API (vide = valeur par d\u00e9faut)</div>
+        <input type="text" value="${esc(c.erBase)}" ${x.C(c.setErBase)} placeholder="https://atelierby.tfbuddy.com/api/v1" style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+      </div>
+      ${c.erMsg ? `<div style="${c.erMsgSt}">${esc(c.erMsg)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+        <button ${x.A(c.erTest)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.erBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+        <button ${x.A(c.erSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${c.erBusy ? 'wait' : 'pointer'};opacity:${c.erBusy ? '0.6' : '1'}">${c.erBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
+      </div>
+
       ${u.canLogout ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:26px;padding-top:16px;display:flex;justify-content:flex-end">
         <button ${x.A(u.logout)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Se d\u00e9connecter</button>
       </div>` : ''}
