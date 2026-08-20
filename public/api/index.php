@@ -9,6 +9,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/Db.php';
 require __DIR__ . '/../../src/endpoints.php';
 require __DIR__ . '/../../src/writes.php';
+require __DIR__ . '/../../src/mkt_types.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
@@ -145,6 +146,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/marketing/campagne') { return wr_mkt_campagne(null); }
     if ($method === 'PATCH' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne_suppr((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/marketing/types/ordre') { return wr_mkt_types_ordre(); }
     if ($method === 'POST' && $path === '/marketing/type') { return wr_mkt_type(null); }
     if ($method === 'PATCH' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type_suppr((int) $m[1]); }

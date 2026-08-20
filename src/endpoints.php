@@ -4990,15 +4990,38 @@ function ep_mkt(): array
         'texte' => $s['text_hex'], 'fond' => $s['bg_rgba'], 'ordre' => (int) $s['sort_order']],
         Db::rows('SELECT * FROM mar_campaign_status ORDER BY sort_order, id'));
 
-    $types = array_map(fn ($t) => ['id' => (int) $t['id'], 'code' => $t['code'], 'nom' => $t['label'],
-        'levier' => $t['default_lever_code'], 'kpi' => $t['default_kpi_label'],
-        'couleur' => $t['color_hex'] ?? null, 'ordre' => (int) $t['sort_order'],
+    // Les types, avec TOUT ce que le module en connaissait : description, couleur,
+    // icône et levier lié. N'en lire qu'une partie donnait une fiche à moitié
+    // vide dès qu'un type venait de l'assistant — et la réécrivait à moitié
+    // vide au premier enregistrement.
+    //
+    // `lever_label` : le badge du type s'il en porte un, sinon le nom du levier
+    // lié. Même COALESCE que le module, pour que les deux affichent le même mot.
+    // `default_lever_code` reste lu en dernier recours : les types d'avant la
+    // liaison ne portent que ça.
+    $colLevier = mktTypeAColonne('lever_id');
+    $sqlTypes = $colLevier
+        ? 'SELECT t.*, COALESCE(t.lever_badge_label, l.label) AS lever_label, l.color_hex AS lever_color
+             FROM mar_campaign_type t LEFT JOIN mar_lever l ON l.id = t.lever_id
+            ORDER BY t.sort_order, t.id'
+        : 'SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id';
+    $types = array_map(fn ($t) => [
+        'id' => (int) $t['id'], 'code' => $t['code'], 'nom' => $t['label'],
+        'description' => $t['description'] ?? null,
+        'levier' => $t['lever_label'] ?? $t['default_lever_code'] ?? null,
+        'levierId' => isset($t['lever_id']) && $t['lever_id'] !== null ? (int) $t['lever_id'] : null,
+        'levierBadge' => $t['lever_badge_label'] ?? null,
+        'levierCouleur' => $t['lever_color'] ?? null,
+        'kpi' => $t['default_kpi_label'],
+        'couleur' => $t['color_hex'] ?? null,
+        'icone' => $t['icon_key'] ?? null, 'iconePath' => $t['icon_path'] ?? null,
+        'ordre' => (int) $t['sort_order'],
         'actif' => (bool) $t['is_active'],
-        'nCampagnes' => 0],
-        Db::rows('SELECT * FROM mar_campaign_type ORDER BY sort_order, id'));
-    $parType = [];
-    foreach ($types as $i => $t) { $parType[$t['id']] = $i; }
-
+        // Compté en base, pas sur les campagnes chargées : c'est lui qui décide
+        // si « Supprimer » a un sens, et une liste tronquée le rendrait faux.
+        'nCampagnes' => (int) ($t['campagnes'] ?? 0)],
+        Db::rows(str_replace('SELECT t.*',
+            'SELECT t.*, (SELECT COUNT(*) FROM mar_campaign c WHERE c.type_id = t.id) AS campagnes', $sqlTypes)));
     $nShops = [];
     foreach (Db::rows('SELECT campaign_id, COUNT(*) n FROM mar_campaign_shop GROUP BY campaign_id') as $r) {
         $nShops[(int) $r['campaign_id']] = (int) $r['n'];
@@ -5011,7 +5034,6 @@ function ep_mkt(): array
                        LEFT JOIN mar_campaign_status s ON s.code = c.status_code
                        ORDER BY c.starts_on IS NULL, c.starts_on DESC, c.id DESC') as $c) {
         $tid = $c['type_id'] !== null ? (int) $c['type_id'] : null;
-        if ($tid !== null && isset($parType[$tid])) { $types[$parType[$tid]]['nCampagnes']++; }
         $campagnes[] = [
             'id' => (int) $c['id'], 'nom' => (string) $c['name'],
             'typeId' => $tid, 'type' => $c['type_label'], 'typeCouleur' => $c['type_color'],
@@ -5024,7 +5046,17 @@ function ep_mkt(): array
             'image' => $c['image_url'] ?: null,
         ];
     }
+    // Les leviers et la bibliothèque d'icônes accompagnent les types : l'écran
+    // ne redéclare ni les uns ni les autres, il affiche ce que le serveur sert.
+    $leviers = [];
+    try {
+        $leviers = array_map(fn ($l) => ['id' => (int) $l['id'], 'code' => $l['code'],
+            'nom' => $l['label'], 'couleur' => $l['color_hex']],
+            Db::rows('SELECT id, code, label, color_hex FROM mar_lever WHERE is_active = 1 ORDER BY sort_order, id'));
+    } catch (PDOException $e) { /* mar_lever absente : le choix de levier se réduit à « aucun » */ }
+
     return ['campagnes' => $campagnes, 'types' => $types, 'statuts' => $statuts,
+        'leviers' => $leviers, 'icones' => mktIcones(),
         'marqueId' => $marques ? (int) $marques[0]['id'] : null,
         'marque' => $marques ? (string) $marques[0]['name'] : ''];
 }

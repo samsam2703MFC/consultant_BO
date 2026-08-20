@@ -1787,37 +1787,96 @@ function wr_mkt_campagne_suppr(int $id): array
 function wr_mkt_type(?int $id): array
 {
     $b = body();
-    if ($id === null) {
-        $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 120);
-        if ($nom === '') { http_response_code(422); return ['error' => 'le libellé du type est requis']; }
-        $code = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $nom));
-        $code = trim(mb_substr($code, 0, 40), '-') ?: ('type-' . bin2hex(random_bytes(3)));
-        if (Db::row('SELECT id FROM mar_campaign_type WHERE code = ?', [$code]) !== null) {
-            $code = mb_substr($code, 0, 32) . '-' . bin2hex(random_bytes(3));
+    $cols = mktTypeColonnes();
+    // On n'écrit que les colonnes que la base porte réellement : le schéma des
+    // tables mar_* vient des migrations du module, et une base restée en
+    // arrière ferait échouer l'UPDATE entier sur une colonne absente.
+    $gardeCols = static function (array $champs) use ($cols): array {
+        return array_filter($champs, fn ($k) => in_array($k, $cols, true), ARRAY_FILTER_USE_KEY);
+    };
+
+    // Le corps de l'écran parle français, la table parle le schéma du module.
+    // Une seule traduction, ici, pour la création comme pour la modification.
+    $duCorps = static function (array $b): array {
+        $out = [];
+        foreach ([['nom', 'label'], ['description', 'description'], ['couleur', 'color_hex'],
+                  ['icone', 'icon_key'], ['badge', 'lever_badge_label'], ['kpi', 'default_kpi_label']] as [$k, $col]) {
+            if (array_key_exists($k, $b)) { $out[$col] = $b[$k]; }
         }
-        $rang = Db::row('SELECT COALESCE(MAX(sort_order), 0) + 1 r FROM mar_campaign_type');
-        Db::exec('INSERT INTO mar_campaign_type (code, label, default_lever_code, default_kpi_label, sort_order, is_active)
-                  VALUES (?,?,?,?,?,1)', [
-            $code, $nom,
-            mb_substr(trim((string) ($b['levier'] ?? '')), 0, 60) ?: null,
-            mb_substr(trim((string) ($b['kpi'] ?? '')), 0, 160) ?: null,
-            (int) $rang['r'],
-        ]);
-        journalAdd('CEO', 'Paramètre', $nom, 'Type de campagne créé');
-        return ['ok' => true, 'id' => (int) Db::pdo()->lastInsertId()];
+        if (array_key_exists('levierId', $b)) { $out['lever_id'] = $b['levierId']; }
+        return $out;
+    };
+
+    if ($id === null) {
+        try { $champs = mktTypeValide($duCorps($b)); }
+        catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
+
+        // Le code se dérive du nom quand il n'est pas donné : il n'est ni
+        // affiché ni traduit, et le faire saisir n'apporte qu'une occasion de
+        // se tromper. Il reste modifiable à la création, jamais après.
+        $code = mktSlug(trim((string) ($b['code'] ?? '')) !== '' ? (string) $b['code'] : $champs['label']);
+        if ($code === '') { http_response_code(422); return ['error' => 'Le nom ne donne aucun code exploitable : ajoutez des lettres.']; }
+        if (Db::row('SELECT 1 FROM mar_campaign_type WHERE code = ?', [$code]) !== null) {
+            http_response_code(422); return ['error' => 'Un type porte déjà le code « ' . $code . ' ».'];
+        }
+
+        // En fin de liste : un type nouveau n'a pas à s'insérer avant ceux que
+        // l'équipe a l'habitude de voir en premier.
+        $rang = (int) Db::row('SELECT COALESCE(MAX(sort_order), 0) + 1 r FROM mar_campaign_type')['r'];
+        $ins = $gardeCols($champs) + ['code' => $code, 'sort_order' => $rang, 'is_active' => 1];
+        $noms = array_keys($ins);
+        Db::exec('INSERT INTO mar_campaign_type (' . implode(', ', $noms) . ') VALUES ('
+            . implode(', ', array_fill(0, count($noms), '?')) . ')', array_values($ins));
+        // L'id se lit AVANT le journal : `lastInsertId()` porte le dernier
+        // AUTO_INCREMENT de la connexion, et journalAdd() en insère un autre.
+        // L'écran recevait jusqu'ici l'identifiant de la ligne de journal.
+        $nid = (int) Db::pdo()->lastInsertId();
+        journalAdd('CEO', 'Paramètre', $champs['label'], 'Type de campagne créé');
+        return ['ok' => true, 'id' => $nid];
     }
-    $dej = Db::row('SELECT label FROM mar_campaign_type WHERE id = ?', [$id]);
+
+    $lecture = 'SELECT ' . implode(', ', array_intersect(
+        ['label', 'description', 'color_hex', 'icon_key', 'icon_path', 'lever_id',
+         'lever_badge_label', 'default_kpi_label', 'is_active'], $cols)) . ' FROM mar_campaign_type WHERE id = ?';
+    $dej = Db::row($lecture, [$id]);
     if ($dej === null) { http_response_code(404); return ['error' => 'type inconnu']; }
-    $set = []; $args = [];
-    if (array_key_exists('nom', $b)) { $set[] = 'label = ?'; $args[] = mb_substr(trim((string) $b['nom']), 0, 120); }
-    if (array_key_exists('levier', $b)) { $set[] = 'default_lever_code = ?'; $args[] = mb_substr(trim((string) $b['levier']), 0, 60) ?: null; }
-    if (array_key_exists('kpi', $b)) { $set[] = 'default_kpi_label = ?'; $args[] = mb_substr(trim((string) $b['kpi']), 0, 160) ?: null; }
-    if (array_key_exists('actif', $b)) { $set[] = 'is_active = ?'; $args[] = $b['actif'] ? 1 : 0; }
-    if ($set !== []) {
-        $args[] = $id;
-        Db::exec('UPDATE mar_campaign_type SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+
+    // Fusion, pas remplacement. Un appel qui ne porte que le nom ne doit pas
+    // effacer l'icône, la couleur et le levier au passage : c'est ce que fait
+    // une mise à jour partielle interprétée comme une réécriture, et rien ne le
+    // signale — la carte se vide, simplement.
+    $recu = $duCorps($b);
+    $fusion = [];
+    foreach (['label', 'description', 'color_hex', 'icon_key', 'lever_id', 'lever_badge_label', 'default_kpi_label'] as $col) {
+        $fusion[$col] = array_key_exists($col, $recu) ? $recu[$col] : ($dej[$col] ?? null);
+        // Vider un champ reste possible : c'est la chaîne vide qui l'exprime,
+        // explicitement, là où l'absence de clé ne dit rien.
+        if (array_key_exists($col, $recu) && ($recu[$col] === '' || $recu[$col] === null)) { $fusion[$col] = null; }
     }
-    journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne modifié');
+
+    try { $champs = mktTypeValide($fusion); }
+    catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
+
+    // Les types livrés portent un tracé sans clé : ils sont antérieurs à la
+    // bibliothèque. Redériver le tracé depuis la clé les effacerait au premier
+    // changement de nom — l'icône disparaîtrait de la carte sans qu'on y ait
+    // touché. Tant que l'appel ne parle pas d'icône, on laisse la sienne.
+    if (!array_key_exists('icone', $b)) {
+        $champs['icon_key'] = $dej['icon_key'] ?? null;
+        $champs['icon_path'] = $dej['icon_path'] ?? null;
+    }
+    // Absent du corps = inchangé : l'éditeur n'envoie pas toujours l'activation,
+    // et la ramener à 1 par défaut réactiverait un type qu'on venait de retirer.
+    $champs['is_active'] = array_key_exists('actif', $b)
+        ? (filter_var($b['actif'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0)
+        : (int) ($dej['is_active'] ?? 1);
+
+    $maj = $gardeCols($champs);
+    if ($maj !== []) {
+        $set = implode(', ', array_map(fn ($c) => $c . ' = ?', array_keys($maj)));
+        Db::exec('UPDATE mar_campaign_type SET ' . $set . ' WHERE id = ?', [...array_values($maj), $id]);
+    }
+    journalAdd('CEO', 'Paramètre', $champs['label'], 'Type de campagne modifié');
     return ['ok' => true, 'id' => $id];
 }
 
@@ -1825,17 +1884,47 @@ function wr_mkt_type_suppr(int $id): array
 {
     $dej = Db::row('SELECT label FROM mar_campaign_type WHERE id = ?', [$id]);
     if ($dej === null) { http_response_code(404); return ['error' => 'type inconnu']; }
-    // Un type porté par des campagnes ne disparaît pas : on le désactive, pour
-    // que l'historique garde son étiquette.
-    $n = Db::row('SELECT COUNT(*) n FROM mar_campaign WHERE type_id = ?', [$id]);
-    if ((int) $n['n'] > 0) {
-        Db::exec('UPDATE mar_campaign_type SET is_active = 0 WHERE id = ?', [$id]);
-        journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne désactivé (' . $n['n'] . ' campagne(s) le portent)');
-        return ['ok' => true, 'desactive' => true, 'campagnes' => (int) $n['n']];
+
+    // Refuser plutôt que délier ou désactiver d'office : les campagnes passées
+    // portent cet identifiant, et l'effacer rendrait muet le pilotage par type,
+    // les couleurs du calendrier et les briefs déjà imprimés. Le nombre part
+    // avec le refus pour que l'écran propose la désactivation en connaissance
+    // de cause — c'est le contrat du module, et deux comportements différents
+    // pour un même geste finissent par surprendre quelqu'un.
+    $n = (int) Db::row('SELECT COUNT(*) n FROM mar_campaign WHERE type_id = ?', [$id])['n'];
+    if ($n > 0) {
+        http_response_code(409);
+        return ['error' => $n . ' campagne(s) portent ce type : désactivez-le plutôt que de le supprimer.',
+            'campagnes' => $n];
     }
     Db::exec('DELETE FROM mar_campaign_type WHERE id = ?', [$id]);
     journalAdd('CEO', 'Paramètre', $dej['label'], 'Type de campagne supprimé');
     return ['ok' => true];
+}
+
+/**
+ * PUT /marketing/types/ordre — l'ordre d'affichage, tel que l'écran vient de le
+ * composer. La grille de cartes de l'assistant suit `sort_order` : ranger les
+ * types ici, c'est ranger la première étape de la création de campagne.
+ */
+function wr_mkt_types_ordre(): array
+{
+    $b = body();
+    $ids = array_values(array_filter(array_map('intval', (array) ($b['ids'] ?? []))));
+    if ($ids === []) { http_response_code(422); return ['error' => 'liste d\'identifiants vide']; }
+
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        $rang = 0;
+        foreach ($ids as $tid) { Db::exec('UPDATE mar_campaign_type SET sort_order = ? WHERE id = ?', [++$rang, $tid]); }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+    journalAdd('CEO', 'Paramètre', '—', 'Ordre des types de campagne modifié (' . count($ids) . ' types)');
+    return ['ok' => true, 'n' => count($ids)];
 }
 
 /* --- nettoyage du module marketing : une action EXPLICITE --------------------

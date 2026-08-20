@@ -1989,8 +1989,11 @@ function tplMktTypes(c, x){
   const garde = tplMktGarde(c);
   if (garde) { return garde; }
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const inp = 'box-sizing:border-box;border:0.5px solid transparent;background:transparent;color:var(--color-text);border-radius:7px;padding:5px 7px;font-family:var(--font-ui);font-size:12px;width:100%';
   const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px';
+  const svg = (path, taille, couleur) => `<svg viewBox="0 0 24 24" width="${taille}" height="${taille}" fill="none" stroke="${couleur}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+  const f = c.mkTypeForm;
   return `
   <div data-screen="mkttypes" style="display:flex;flex-direction:column;gap:14px">
     <div style="${carte};padding:15px 17px">
@@ -1998,117 +2001,74 @@ function tplMktTypes(c, x){
         <span style="font-size:13px;font-weight:500">Types de campagne</span>
         <button ${x.A(c.mkTypeNouveau)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:31px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau type</button>
       </div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">Chaque type pré-remplit le levier et le KPI attendu à la création d’une campagne. Un type porté par des campagnes se désactive — l’historique garde son étiquette.</div>
-      ${c.mkTypeNeuf ? `<div style="border:1px solid var(--color-primary);border-radius:10px;padding:12px 14px;margin-bottom:12px">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div><span style="${k}">Libellé</span><input id="mkt-nom" value="${esc(c.mkTypeNeuf.nom)}" ${x.I(c.mkTypeNeuf.setNom)} placeholder="Ouverture, Fidélité…" style="${inp};border-color:var(--color-border-secondary)"></div>
-          <div><span style="${k}">Levier proposé</span><input id="mkt-lev" value="${esc(c.mkTypeNeuf.levier)}" ${x.I(c.mkTypeNeuf.setLevier)} placeholder="Trafic / notoriété" style="${inp};border-color:var(--color-border-secondary)"></div>
-          <div><span style="${k}">KPI attendu</span><input id="mkt-kpi" value="${esc(c.mkTypeNeuf.kpi)}" ${x.I(c.mkTypeNeuf.setKpi)} placeholder="Nouveaux clients, tickets/jour" style="${inp};border-color:var(--color-border-secondary)"></div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque type ouvre la première étape de l’assistant : sa carte y porte son icône, sa couleur et son levier. L’ordre ci-dessous est celui de la grille. Un type porté par des campagnes ne se supprime pas — il se désactive, et l’historique garde son étiquette.</div>
+
+      ${f ? `
+      <div style="border:1px solid var(--color-primary);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+          <span style="font-size:13px;font-weight:500">${esc(f.titre)}</span>
+          ${f.edition ? `<span style="font-size:11px;color:var(--color-text-muted)">code <i style="font-style:normal;font-family:var(--font-mono,monospace)">${esc(f.code)}</i> — non modifiable</span>` : ''}
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
-          <button ${x.A(c.mkTypeNeuf.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
-          <button ${x.A(c.mkTypeNeuf.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Créer le type</button>
+        ${f.err ? `<div style="margin-bottom:10px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(f.err)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:2fr 120px;gap:12px">
+          <div><span style="${k}">Nom</span><input id="mkt-nom" value="${esc(f.nom)}" ${x.I(f.setNom)} placeholder="Fêtes, Ouverture, Fidélité…" style="${inp}"></div>
+          <div><span style="${k}">Couleur</span><input type="color" value="${esc(f.couleur)}" ${x.C(f.setCouleur)} style="${inp};padding:3px 5px"></div>
+        </div>
+        <div style="margin-top:11px"><span style="${k}">Description</span>
+          <textarea id="mkt-desc" rows="2" ${x.I(f.setDescription)} placeholder="Ce que ce type recouvre, pour celui qui crée la campagne." style="${inp};height:auto;padding:8px 10px;line-height:1.5;resize:vertical">${esc(f.description)}</textarea>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(f.nbCar)}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:11px">
+          <div><span style="${k}">Levier</span>
+            <select ${x.C(f.setLevier)} style="${inp}">${opts(f.leviers, f.levierId, o => o.val, o => esc(o.nom))}</select>
+          </div>
+          <div><span style="${k}">Badge levier</span><input id="mkt-badge" value="${esc(f.badge)}" ${x.I(f.setBadge)} placeholder="Affiché à la place du levier" style="${inp}"></div>
+          <div><span style="${k}">KPI attendu</span><input id="mkt-kpi" value="${esc(f.kpi)}" ${x.I(f.setKpi)} placeholder="Nouveaux clients, tickets/jour" style="${inp}"></div>
+        </div>
+        <div style="margin-top:12px">
+          <span style="${k}">Icône — ${esc(f.iconeNom)}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${f.icones.map(ic => `<button ${x.A(ic.choisir)} title="${esc(ic.nom)}" style="${ic.st}">${svg(ic.path, 19, ic.choisi ? 'var(--color-primary)' : 'var(--color-text-muted)')}</button>`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+          <button ${x.A(f.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
+          <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${f.edition ? 'Enregistrer' : 'Créer le type'}</button>
         </div>
       </div>` : ''}
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px">
+
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:820px">
         <thead><tr>
-          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px 0">Type</th>
-          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px">Levier proposé</th>
-          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px">KPI attendu</th>
-          <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 7px">Campagnes</th>
-          <th style="padding:0 0 7px"></th>
+          <th style="${th};padding-left:0">Type</th>
+          <th style="${th}">Levier</th>
+          <th style="${th}">KPI attendu</th>
+          <th style="${th};text-align:right">Campagnes</th>
+          <th style="${th};padding-right:0"></th>
         </tr></thead>
         <tbody>${c.mkTypes.map(t => `<tr style="border-top:0.5px solid var(--color-border-tertiary);${t.actif ? '' : 'opacity:.5'}">
-          <td style="padding:6px 8px 6px 0"><span style="display:inline-flex;align-items:center;gap:7px;width:100%"><span style="width:9px;height:9px;border-radius:3px;background:${t.couleur};flex:0 0 auto"></span><input value="${esc(t.nom)}" ${x.C(t.renommer)} style="${inp}"></span></td>
-          <td style="padding:6px 8px"><input value="${esc(t.levier)}" ${x.C(t.setLevier)} placeholder="—" style="${inp}"></td>
-          <td style="padding:6px 8px"><input value="${esc(t.kpi)}" ${x.C(t.setKpi)} placeholder="—" style="${inp}"></td>
-          <td style="padding:6px 8px;text-align:right;font-size:12px;color:var(--color-text-muted)">${t.nCampagnes || '—'}</td>
-          <td style="padding:6px 0;text-align:right;white-space:nowrap">
-            <button ${x.A(t.basculer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">${t.actif ? 'Désactiver' : 'Réactiver'}</button>
+          <td style="padding:8px 8px 8px 0">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:26px;height:26px;border-radius:8px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:${t.couleur}1f">
+                ${t.iconePath ? svg(t.iconePath, 15, t.couleur) : `<i style="width:9px;height:9px;border-radius:3px;background:${t.couleur}"></i>`}
+              </span>
+              <span style="min-width:0">
+                <span style="font-size:12.5px;font-weight:500;display:block">${esc(t.nom)}</span>
+                ${t.description ? `<span style="font-size:11px;color:var(--color-text-muted);display:block;line-height:1.35;text-wrap:pretty">${esc(t.description)}</span>` : ''}
+              </span>
+            </div>
+          </td>
+          <td style="padding:8px">${t.levier ? `<span style="${t.levierSt}">${esc(t.levier)}</span>` : `<span style="font-size:11.5px;color:var(--color-text-muted)">—</span>`}</td>
+          <td style="padding:8px;font-size:11.5px;color:var(--color-text-muted)">${esc(t.kpi)}</td>
+          <td style="padding:8px;text-align:right;font-size:12px;color:var(--color-text-muted)">${t.nCampagnes || '—'}</td>
+          <td style="padding:8px 0;text-align:right;white-space:nowrap">
+            <button ${x.A(t.monter)} title="Monter" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.premier ? 'default' : 'pointer'};padding:0 3px;${t.premier ? 'opacity:.3' : ''}">▲</button>
+            <button ${x.A(t.descendre)} title="Descendre" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.dernier ? 'default' : 'pointer'};padding:0 3px;${t.dernier ? 'opacity:.3' : ''}">▼</button>
+            <button ${x.A(t.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-left:6px">Modifier</button>
+            <button ${x.A(t.basculer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-left:3px">${t.actif ? 'Désactiver' : 'Réactiver'}</button>
             <button ${x.A(t.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:3px">✕</button>
           </td>
         </tr>`).join('')}</tbody>
       </table></div>
-    </div>
-  </div>`;
-}
-
-/* --- Réputation digitale · ce que Google dit de chaque magasin ----------------
-   Un bandeau réseau, puis une carte par magasin, les plus mal notés d'abord :
-   c'est là que la décision se prend. Chaque carte porte son propre effort — le
-   chiffre réseau ne se distribue pas, il donne l'ordre de grandeur. */
-function tplReputation(c, x){
-  const { esc } = x;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
-  if (c.repChargement) {
-    return `<div data-screen="reputation" style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture des avis…</div>`;
-  }
-  if (c.repErreur) {
-    return `<div data-screen="reputation" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.repErreurTxt)}</div>`;
-  }
-  const etoiles = (list) => list.map(e => `<span style="${e.st}">★</span>`).join('');
-  return `
-  <div data-screen="reputation" style="display:flex;flex-direction:column;gap:16px">
-
-    <div style="${carte};padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center">
-      <div>
-        <div style="${cap};margin-bottom:6px">Moyenne réseau</div>
-        <div style="display:flex;align-items:flex-end;gap:10px">
-          <span style="${c.repMoyenneSt}">${c.repMoyenne}</span>
-          <span style="display:inline-flex;gap:1px;padding-bottom:3px">${etoiles(c.repEtoilesReseau)}</span>
-        </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px">${esc(c.repAvis)}</div>
-      </div>
-      <div style="border-left:0.5px solid var(--color-border-tertiary);padding-left:26px">
-        <div style="${cap};margin-bottom:6px">Cible ${c.repCible}</div>
-        <div style="font-size:13px;font-weight:500">${esc(c.repSousCibleTxt)}</div>
-        <div style="font-size:12.5px;margin-top:7px;font-weight:${c.repEffortFort ? '500' : '400'};color:${c.repEffortFort ? '#8D1D2C' : 'var(--color-text-muted)'}">${esc(c.repEffort)}</div>
-      </div>
-      <div style="text-align:right;font-size:11px;color:var(--color-text-muted);max-width:210px;text-wrap:pretty">
-        La cible se règle dans Paramètres. La moyenne réseau est pondérée par le nombre d’avis de chaque magasin.
-      </div>
-    </div>
-
-    ${c.repVide ? `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">
-      Aucun avis n’est encore remonté. Les notes et les avis viennent des fiches Google des magasins ; le raccordement des fiches n’est pas branché — les tables restent vides jusque-là.
-    </div>` : ''}
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;align-items:start">
-      ${c.repMagasins.map(m => `
-        <div style="${carte};padding:15px 17px">
-          <div style="display:flex;align-items:flex-start;gap:12px">
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span style="font-size:13.5px;font-weight:500">${esc(m.nom)}</span>
-                <span style="${m.badgeSt}">${esc(m.badge)}</span>
-              </div>
-              <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">
-                ${esc(m.avis)}${m.synchro ? ' · ' + esc(m.synchro) : ''}
-                ${m.hasUrl ? ` · <a href="${esc(m.url)}" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:none">fiche Google ↗</a>` : ''}
-              </div>
-            </div>
-            <div style="text-align:right;flex:0 0 auto">
-              <div style="${m.noteSt}">${m.note}</div>
-              <div style="display:inline-flex;gap:1px;margin-top:3px">${etoiles(m.etoiles)}</div>
-            </div>
-          </div>
-
-          <div style="${m.effortSt}">${esc(m.effort)}</div>
-
-          <div style="${cap};margin:14px 0 2px">5 derniers avis</div>
-          ${m.vide ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding:7px 0">Aucun avis rapatrié pour ce magasin.</div>` : ''}
-          ${m.derniers.map(a => `
-            <div style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span style="display:inline-flex;gap:1px">${etoiles(a.etoiles)}</span>
-                <span style="font-size:11.5px;font-weight:500">${esc(a.auteur)}</span>
-                <span style="font-size:11px;color:var(--color-text-muted)">${a.le}</span>
-                <span style="${a.reponduSt};margin-left:auto">${a.reponduTxt}</span>
-              </div>
-              <div style="${a.texteSt};margin-top:3px">${esc(a.texte)}</div>
-            </div>`).join('')}
-        </div>`).join('')}
     </div>
   </div>`;
 }

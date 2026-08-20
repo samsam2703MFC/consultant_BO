@@ -151,7 +151,7 @@ class App {
       horizon: 'h1', logType: 'Tous les types', logQui: 'Tous les auteurs', logQ: '', rel: null, toast: null,
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
       repFreq: {}, repDest: {}, repCc: {}, repPostes: {}, repPrev: null, repPrevTab: 'pdf', alertOn: {},
-      np: null, nt: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
+      np: null, nt: null, mkTypeForm: null, encStore: 'cha', encDraft: {}, openCards: {}, openInfo: {}, tkWho: 'all', tkOv: {},
       navOpen: {}, scDraft: {}, pdWaste: null,   // sous-menus ; brouillon scoring ; modale perte par magasin
       userPanel: false, userDraft: {},   // panneau « Mon compte » (identité + compte API)
       // Brouillon de validation par tâche : { note, famille, type, commentaire }.
@@ -562,7 +562,7 @@ class App {
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
-      mktTypes: ['Types de campagne', 'Le référentiel des types : libellé, levier proposé, KPI attendu. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
+      mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
@@ -3033,39 +3033,111 @@ class App {
       },
     };
 
-    // --- référentiel des types (Paramètres).
-    common.mkTypes = (mk.types || []).map(t => ({
-      id: t.id, nom: t.nom, levier: t.levier || '', kpi: t.kpi || '',
-      couleur: t.couleur || '#8D1D2C', actif: t.actif, nCampagnes: t.nCampagnes,
-      renommer: e => this.api('PATCH', '/marketing/type/' + t.id, { nom: e.target.value }).then(recharge),
-      setLevier: e => this.api('PATCH', '/marketing/type/' + t.id, { levier: e.target.value }).then(recharge),
-      setKpi: e => this.api('PATCH', '/marketing/type/' + t.id, { kpi: e.target.value }).then(recharge),
+    // --- référentiel des types.
+    //
+    // Le formulaire porte les mêmes champs et les mêmes règles que celui du
+    // module marketing : description, couleur, icône prise dans la bibliothèque
+    // servie par l'API, levier LIÉ (mar_lever) et son badge, KPI attendu. Un
+    // type créé ici doit se dessiner exactement comme un type créé là-bas —
+    // même carte dans l'assistant, même couleur au calendrier, même tracé à
+    // l'impression.
+    const leviers = mk.leviers || [];
+    const icones = mk.icones || [];
+    const parIcone = {};
+    icones.forEach(i => { parIcone[i.cle] = i; });
+
+    const ordreIds = (mk.types || []).map(t => t.id);
+    const reordonner = (id, sens) => {
+      const i = ordreIds.indexOf(id), j = i + sens;
+      if (i < 0 || j < 0 || j >= ordreIds.length) { return; }
+      const ids = ordreIds.slice();
+      ids[i] = ids[j]; ids[j] = id;
+      this.api('PUT', '/marketing/types/ordre', { ids }).then(r => {
+        if (!r || r.ok === false) { return; }
+        this.notify('Ordre des types enregistré'); recharge();
+      });
+    };
+
+    common.mkTypes = (mk.types || []).map((t, i) => ({
+      id: t.id, nom: t.nom, code: t.code, kpi: t.kpi || '—',
+      description: t.description || '',
+      couleur: t.couleur || '#8D1D2C',
+      // Le tracé vient du serveur (colonne icon_path) ; la bibliothèque sert de
+      // repli pour les types dont la clé est connue mais le tracé pas encore
+      // recopié.
+      iconePath: t.iconePath || (t.icone && parIcone[t.icone] ? parIcone[t.icone].path : null),
+      levier: t.levier || '', levierCouleur: t.levierCouleur || null,
+      levierSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+        + (t.levierCouleur || '#78746e') + '1f;color:' + (t.levierCouleur || '#666666'),
+      actif: t.actif, nCampagnes: t.nCampagnes,
+      premier: i === 0, dernier: i === (mk.types || []).length - 1,
+      monter: () => reordonner(t.id, -1),
+      descendre: () => reordonner(t.id, 1),
+      editer: () => this.setState({ mkTypeForm: {
+        id: t.id, code: t.code, nom: t.nom, description: t.description || '',
+        couleur: t.couleur || '#8D1D2C', icone: t.icone || '',
+        levierId: t.levierId ? String(t.levierId) : '', badge: t.levierBadge || '', kpi: t.kpi || '', err: '' } }),
       basculer: () => this.api('PATCH', '/marketing/type/' + t.id, { actif: !t.actif }).then(r => {
         if (r && r.ok === false) { return; }
         this.notify(t.actif ? '« ' + t.nom + ' » désactivé' : '« ' + t.nom + ' » réactivé'); recharge(); }),
+      // Le serveur refuse de supprimer un type porté par des campagnes (409) —
+      // il ne désactive pas d'office. L'écran propose alors la désactivation,
+      // qui est le geste que l'on voulait.
       supprimer: () => {
-        if (!window.confirm(t.nCampagnes
-          ? t.nCampagnes + ' campagne(s) portent « ' + t.nom + ' » : il sera DÉSACTIVÉ, pas effacé. Continuer ?'
-          : 'Supprimer le type « ' + t.nom + ' » ?')) { return; }
+        if (!window.confirm('Supprimer le type « ' + t.nom + ' » ?')) { return; }
         this.api('DELETE', '/marketing/type/' + t.id).then(r => {
-          if (r && r.ok === false) { return; }
-          this.notify(r.desactive ? 'Type désactivé — l’historique garde son étiquette' : 'Type supprimé');
-          recharge(); });
+          if (r && r.error) {
+            if (r.campagnes && window.confirm(r.error + '\n\nLe désactiver maintenant ?')) {
+              this.api('PATCH', '/marketing/type/' + t.id, { actif: false })
+                .then(() => { this.notify('« ' + t.nom + ' » désactivé'); recharge(); });
+            } else { this.notify(r.error); }
+            return;
+          }
+          this.notify('Type supprimé'); recharge(); });
       },
     }));
-    const nt = S.mkTypeNeuf || null;
-    common.mkTypeNouveau = () => this.setState({ mkTypeNeuf: { nom: '', levier: '', kpi: '' } });
-    common.mkTypeNeuf = !nt ? null : {
-      nom: nt.nom, setNom: e => this.setState(s2 => ({ mkTypeNeuf: Object.assign({}, s2.mkTypeNeuf, { nom: e.target.value }) })),
-      levier: nt.levier, setLevier: e => this.setState(s2 => ({ mkTypeNeuf: Object.assign({}, s2.mkTypeNeuf, { levier: e.target.value }) })),
-      kpi: nt.kpi, setKpi: e => this.setState(s2 => ({ mkTypeNeuf: Object.assign({}, s2.mkTypeNeuf, { kpi: e.target.value }) })),
-      fermer: () => this.setState({ mkTypeNeuf: null }),
+
+    // --- le formulaire, un seul pour la création et la reprise
+    const tf = S.mkTypeForm || null;
+    common.mkTypeNouveau = () => this.setState({ mkTypeForm: { id: null, nom: '', description: '',
+      couleur: '#8D1D2C', icone: '', levierId: '', badge: '', kpi: '', err: '' } });
+    const majF = f2 => this.setState(s2 => ({ mkTypeForm: Object.assign({}, s2.mkTypeForm, f2) }));
+    common.mkTypeForm = !tf ? null : {
+      edition: tf.id != null, code: tf.code || '',
+      titre: tf.id != null ? 'Modifier le type' : 'Nouveau type de campagne',
+      err: tf.err || '',
+      nom: tf.nom, setNom: e => majF({ nom: e.target.value }),
+      description: tf.description, setDescription: e => majF({ description: e.target.value }),
+      nbCar: (tf.description || '').length + '/300',
+      couleur: tf.couleur, setCouleur: e => majF({ couleur: e.target.value }),
+      kpi: tf.kpi, setKpi: e => majF({ kpi: e.target.value }),
+      badge: tf.badge, setBadge: e => majF({ badge: e.target.value }),
+      levierId: tf.levierId, setLevier: e => majF({ levierId: e.target.value }),
+      leviers: [{ val: '', nom: 'Aucun levier' }].concat(leviers.map(l => ({ val: String(l.id), nom: l.nom }))),
+      // La bibliothèque est fermée et vient du serveur : le même tracé sera
+      // redessiné dans l'assistant, au calendrier et à l'impression.
+      icones: icones.map(ic => ({ cle: ic.cle, nom: ic.nom, path: ic.path,
+        choisi: tf.icone === ic.cle,
+        choisir: () => majF({ icone: tf.icone === ic.cle ? '' : ic.cle }),
+        st: 'display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;cursor:pointer;background:transparent;border:1px solid '
+          + (tf.icone === ic.cle ? 'var(--color-primary)' : 'var(--color-border-tertiary)') })),
+      iconeNom: tf.icone && parIcone[tf.icone] ? parIcone[tf.icone].nom : 'Aucune',
+      fermer: () => this.setState({ mkTypeForm: null }),
       envoyer: () => {
-        const f3 = this.state.mkTypeNeuf || {};
-        if (!String(f3.nom || '').trim()) { this.notify('Donnez un libellé au type.'); return; }
-        this.api('POST', '/marketing/type', { nom: f3.nom, levier: f3.levier, kpi: f3.kpi }).then(r => {
-          if (!r || r.ok === false) { return; }
-          this.setState({ mkTypeNeuf: null }); this.notify('Type créé'); recharge(); });
+        const f3 = this.state.mkTypeForm || {};
+        if (!String(f3.nom || '').trim()) { majF({ err: 'Le nom du type est obligatoire.' }); return; }
+        const corps = { nom: f3.nom, description: f3.description, couleur: f3.couleur,
+          icone: f3.icone, levierId: f3.levierId ? +f3.levierId : null, badge: f3.badge, kpi: f3.kpi };
+        this.api(f3.id != null ? 'PATCH' : 'POST', '/marketing/type' + (f3.id != null ? '/' + f3.id : ''), corps)
+          .then(r => {
+            // Le serveur porte les mêmes contrôles que le module (couleur,
+            // icône, levier, longueurs) : son message est affiché tel quel
+            // plutôt que reformulé ici, sinon les deux se mettent à diverger.
+            if (!r || r.error) { majF({ err: (r && r.error) || 'Enregistrement refusé.' }); return; }
+            this.setState({ mkTypeForm: null });
+            this.notify(f3.id != null ? 'Type modifié' : 'Type créé');
+            recharge();
+          });
       },
     };
   }
