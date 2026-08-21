@@ -752,26 +752,13 @@ function ep_rapports(): array
         'leviers' => RAP_LEVIERS,
         // Les postes proposés au compositeur : ceux du réseau, puis les VRAIS
         // profils RH du panel (/positions) — saisie libre conservée à l'écran.
+        // Les postes proposés : la liste /positions du panel telle quelle
+        // (profils consultants ET employés) — demandé ainsi, rien d'autre.
         'postes' => rapCtx('positions', function () {
-            $out = ['CEO / direction réseau', 'Consultant réseau', 'Franchisé', 'Centrale d’achat'];
+            $out = [];
             if (PanelApi::configured()) {
-                $noms = [];
                 foreach ((array) (PanelApi::get('/positions') ?? []) as $p) {
-                    if (is_array($p) && !empty($p['name'])) {
-                        $noms[(int) ($p['id'] ?? 0)] = trim((string) $p['name']);
-                        $out[] = trim((string) $p['name']);
-                    }
-                }
-                // Les niveaux de carrière (/position-levels) affinent le poste :
-                // « Opérateur Vente — Responsable d'équipe ». Ordre du panel.
-                $niveaux = (array) (PanelApi::get('/position-levels') ?? []);
-                usort($niveaux, fn ($a, $b2) => [(int) ($a['position_id'] ?? 0), (int) ($a['level_order'] ?? 0)]
-                    <=> [(int) ($b2['position_id'] ?? 0), (int) ($b2['level_order'] ?? 0)]);
-                foreach ($niveaux as $n2) {
-                    $pid = (int) ($n2['position_id'] ?? 0);
-                    if (isset($noms[$pid]) && !empty($n2['name'])) {
-                        $out[] = $noms[$pid] . ' — ' . trim((string) $n2['name']);
-                    }
+                    if (is_array($p) && !empty($p['name'])) { $out[] = trim((string) $p['name']); }
                 }
             }
             return array_values(array_unique($out));

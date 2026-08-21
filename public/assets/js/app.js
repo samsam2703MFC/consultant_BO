@@ -7160,26 +7160,6 @@ class App {
   /* --- reporting -------------------------------------------------------------------- */
   valsReporting(common, navDef, titles){
     const S = this.state, D = this.D, M = this.M;
-    const consultLev = c => { const ls = []; for (const p of D.projects) if (p.taches.some(t => t.owner.t === 'c' && t.owner.id === c.id && !t.done)) p.leviers.forEach(l => ls.indexOf(l) < 0 && ls.push(l)); return ls; };
-    common.distRows = D.consultants.map(c => { const st = [...new Set(c.visites.map(v => v.store.split(' — ')[0]))];
-      const levs = consultLev(c).map(sl => { const l = M.LEVIERS.find(x2 => x2.slug === sl); return { id: sl, nom: l ? l.nom : sl }; });
-      return { nom: c.nom + ' — ' + c.role, stores: st.length ? st.join(' · ') : 'Aucun magasin visité',
-        leviers: levs.length ? levs : [{ id: 'xp', nom: 'Aucun levier ouvert' }],
-        send: () => { this.log('Rapport', '—', 'Rapport district envoyé à ' + c.nom + ' (' + c.email + ') — ' + st.length + ' magasin(s), ' + levs.length + ' levier(s)');
-          this.notify('Rapport district envoyé à ' + c.nom); } }; });
-    // Statut d'ouverture des plans par le franchisé : pas de source réelle en
-    // base (le panel ne l'expose pas) → état neutre, aucune donnée inventée.
-    // Lien de plan : base d'URL du panel (réglage pwaBase), période dérivée de
-    // la date du jour — plus de « 2026s2 » ni de statut fabriqué.
-    const basePlan = ((this.D.pwaReports || {}).base || '').replace(/\/$/, '');
-    const _t = new Date(M.TODAY), _ok = !isNaN(_t);
-    const sem = (_ok ? _t.getMonth() : this.moisIdx()) < 6 ? 's1' : 's2';
-    const yr = _ok ? _t.getFullYear() : this.exo();
-    common.dlRows = this.open().map((s) => {
-      const url = (basePlan || 'plan') + '/plan/' + s.nom.split(' — ')[0].toLowerCase().replace(/[^a-z]/g, '') + '-' + yr + sem;
-      return { store: s.nom, etat: 'Statut non suivi', etatCol: 'var(--color-text-muted)', url,
-        copy: () => { navigator.clipboard && navigator.clipboard.writeText('https://' + url); this.notify('Lien copié — ' + s.nom); },
-        relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
     // --- générateur de rapports RÉEL (table ceo_rapport, HTML par levier).
     // L'ancienne liste de démonstration a cédé la place : ces rapports-ci se
     // génèrent, se relisent (HTML du run) et s'envoient vraiment.
@@ -7357,136 +7337,9 @@ class App {
             else { this.notify((g && g.error) || 'Enregistrement refusé'); } });
       },
     };
-    const pById = id => D.people.find(p => p.id === id);
-    common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role + (p.email ? '' : ' (adresse manquante)') }));
-    // Ordre FIGÉ, indépendant du menu : `postes_json` stocke « p1 », « p3 »…
-    // Tant que la numérotation venait de l'index dans navDef, ajouter un écran
-    // au milieu redirigeait silencieusement tous les rapports enregistrés vers
-    // d'autres écrans. Un nouvel écran s'ajoute EN FIN de liste, jamais ailleurs.
-    const POSTES = ['taches', 'magasins', 'heatmap', 'objectifs', 'budget', 'encodage',
-      'marge', 'produits', 'projets', 'reporting', 'journal', 'parametres', 'suivi'];
-    const labelDe = sid => (navDef.flatMap(g => g[1]).find(it => it[0] === sid) || [sid, sid])[1];
-    const posteDefs = POSTES.map((sid, i) => ({ id: 'p' + (i + 1), tag: 'P' + (i + 1), sid, label: labelDe(sid) }));
-    // La base d'URL est celle d'où l'application est servie : un domaine écrit
-    // en dur donne un lien mort dès que le cockpit change d'adresse.
-    const baseCockpit = (typeof location !== 'undefined' ? location.origin + location.pathname.replace(/\/[^/]*$/, '') : '');
-    const repUrl = (r, sel, email) => baseCockpit + '/rapports/rapport.html?id=' + r.id + '&postes=' + sel.join(',') + '&periode={AAAA-MM}&dest=' + (email || '') + '&format=pdf';
-    const isOn = r => S.alertOn['rep:' + r.id] != null ? S.alertOn['rep:' + r.id] : r.actif;
-    const fFreq = S.repFFreq || 'Toutes les fréquences', fEtat = S.repFEtat || 'tous', fType = S.repFType || 'Tous les types';
-    common.repFFreq = fFreq; common.setRepFFreq = e => this.setState({ repFFreq: e.target.value });
-    common.repFFreqOpts = ['Toutes les fréquences', 'Hebdomadaire', 'Mensuel', 'Trimestriel', 'Annuel'];
-    common.repFType = fType; common.setRepFType = e => this.setState({ repFType: e.target.value });
-    common.repFTypeOpts = ['Tous les types'].concat(M.REPORT_TYPES || []);
-    const etatBtn = (v, nom) => ({ nom, st: 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:500;padding:6px 13px;' + (fEtat === v ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'),
-      go: () => this.setState({ repFEtat: v }) });
-    common.repEtatBtns = [etatBtn('tous', 'Tous'), etatBtn('actif', 'Actifs'), etatBtn('inactif', 'Inactifs')];
-    const repList = D.reports.filter(r => (fFreq === 'Toutes les fréquences' || (S.repFreq[r.id] || r.freq) === fFreq)
-      && (fType === 'Tous les types' || r.type === fType)
-      && (fEtat === 'tous' || (fEtat === 'actif' ? isOn(r) : !isOn(r))));
-    common.repCount = repList.length + ' rapport' + (repList.length > 1 ? 's' : '') + ' sur ' + D.reports.length
-      + ' · ' + D.reports.filter(isOn).length + ' actifs';
-    common.repVide = repList.length === 0;
-    common.repRows = repList.map(r => { const dest = S.repDest[r.id] != null ? S.repDest[r.id] : r.destId; const cc = S.repCc[r.id] != null ? S.repCc[r.id] : r.ccId;
-      const pd = pById(dest), pc = pById(cc);
-      const sel = S.repPostes[r.id] || r.postes;
-      const url = repUrl(r, sel, pd && pd.email);
-      const on = isOn(r);
-      return { nom: r.nom, desc: r.desc, dest, cc: cc || '', destEmail: pd ? (pd.email || 'adresse manquante') : '', ccEmail: pc ? (pc.email || 'adresse manquante') : '', destSt: 'font-size:10.5px;white-space:nowrap;color:' + (pd && !pd.email ? '#8D1D2C' : 'var(--color-text-muted)'), ccSt: 'font-size:10.5px;white-space:nowrap;color:' + (pc && !pc.email ? '#8D1D2C' : 'var(--color-text-muted)'), dernier: this.fDA(r.dernier), freq: S.repFreq[r.id] || r.freq,
-        type: r.type || '—', actif: on, actifTxt: on ? 'Actif' : 'Inactif',
-        actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;' + (on ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
-        toggleActif: () => { this.setState(s2 => ({ alertOn: Object.assign({}, s2.alertOn, { ['rep:' + r.id]: !on }) }));
-          this.api('PATCH', '/reporting/reports/' + r.id, { actif: !on });
-          this.notify('« ' + r.nom + ' » ' + (on ? 'désactivé' : 'activé')); },
-        url,
-        postes: posteDefs.map(p => { const on2 = sel.includes(p.id);
-          return { tag: p.tag, label: p.label, on: on2,
-            st: 'border-radius:999px;padding:3px 8px;font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;' + (on2 ? 'border:0.5px solid var(--color-primary);background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'),
-            toggle: () => { const next = on2 ? sel.filter(x2 => x2 !== p.id) : posteDefs.filter(q => sel.includes(q.id) || q.id === p.id).map(q => q.id);
-              this.setState(s2 => ({ repPostes: Object.assign({}, s2.repPostes, { [r.id]: next }) }));
-              this.api('PATCH', '/reporting/reports/' + r.id, { postes: next }); } }; }),
-        copy: () => { try { navigator.clipboard.writeText(url); } catch (e) {} this.notify('URL du rapport copiée'); },
-        prev: () => this.setState({ repPrev: r.id, repPrevTab: 'pdf' }),
-        setDest: e => { this.setState(s2 => ({ repDest: Object.assign({}, s2.repDest, { [r.id]: e.target.value }) })); this.api('PATCH', '/reporting/reports/' + r.id, { destId: e.target.value }); },
-        setCc: e => { this.setState(s2 => ({ repCc: Object.assign({}, s2.repCc, { [r.id]: e.target.value }) })); this.api('PATCH', '/reporting/reports/' + r.id, { ccId: e.target.value }); },
-        setFreq: e => { this.setState(s2 => ({ repFreq: Object.assign({}, s2.repFreq, { [r.id]: e.target.value }) })); this.api('PATCH', '/reporting/reports/' + r.id, { freq: e.target.value }); this.notify('Fréquence de « ' + r.nom + ' » : ' + e.target.value); },
-        gen: () => { this.api('POST', '/reporting/reports/' + r.id + '/send', { journal: 'Rapport « ' + r.nom + ' » généré manuellement (PDF)' }); this.log('Rapport', '—', 'Rapport « ' + r.nom + ' » généré manuellement (PDF)'); this.notify('PDF généré — « ' + r.nom + ' »'); },
-        send: () => { const to = pd ? pd.nom + ' <' + pd.email + '>' : '—'; const ccTxt = pc ? pc.nom + ' <' + pc.email + '>' : '';
-          const jr = 'Rapport « ' + r.nom + ' » envoyé à : ' + to + (ccTxt ? ' — copie : ' + ccTxt : '');
-          this.api('POST', '/reporting/reports/' + r.id + '/send', { journal: jr });
-          this.log('Rapport', '—', jr);
-          this.notify('Rapport envoyé à ' + (pd ? pd.nom : '—') + (pc ? ' (cc ' + pc.nom + ')' : '')); } }; });
-    common.alertRows = D.alertRules.map(a => ({ nom: a.nom, canal: a.canal, actif: S.alertOn[a.id] != null ? S.alertOn[a.id] : a.actif,
-      toggle: e => { const on = e.target.checked; this.setState(s2 => ({ alertOn: Object.assign({}, s2.alertOn, { [a.id]: on }) }));
-        this.api('PATCH', '/reporting/alerts/' + a.id, { actif: on });
-        this.notify('Alerte « ' + a.nom + ' » ' + (on ? 'activée' : 'désactivée')); } }));
-    common.repPrevClose = () => this.setState({ repPrev: null });
-    const rp = S.repPrev && D.reports.find(r => r.id === S.repPrev);
-    common.repPrevTabPdf = () => this.setState({ repPrevTab: 'pdf' });
-    common.repPrevTabCode = () => this.setState({ repPrevTab: 'code' });
-    if (rp){ const dest = S.repDest[rp.id] != null ? S.repDest[rp.id] : rp.destId; const cc = S.repCc[rp.id] != null ? S.repCc[rp.id] : rp.ccId;
-      const pd = pById(dest), pc = pById(cc); const sel = S.repPostes[rp.id] || rp.postes;
-      const secs = posteDefs.filter(p => sel.includes(p.id)).map(p => ({ tag: p.tag, label: p.label, desc: (titles[p.sid] && titles[p.sid][1]) || '' }));
-      const tab = S.repPrevTab || 'pdf';
-      const tabSt = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:500;padding:6px 14px;' + (on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)');
-      const htmlCode = ['<!DOCTYPE html>', '<html lang="fr">', '<head>', '  <meta charset="utf-8">', '  <title>' + rp.nom + ' — {periode}</title>', '  <link rel="stylesheet" href="rapport.css">', '</head>', '<body>', '  <header class="entete">', '    <span class="marque">L’Atelier by</span>', '    <span class="periode">Rapport automatique · {periode}</span>', '  </header>', '  <h1>' + rp.nom + '</h1>', '  <p class="destinataires">À : {dest} · Cc : {cc} · Fréquence : ' + (S.repFreq[rp.id] || rp.freq) + '</p>']
-        .concat(secs.flatMap(s => ['  <section class="poste" data-poste="' + s.tag.toLowerCase() + '">', '    <h2><span class="tag">' + s.tag + '</span> ' + s.label + '</h2>', '    <p class="desc">' + s.desc + '</p>', '    <div class="donnees" data-source="cockpit/' + s.tag.toLowerCase() + '" data-periode="{periode}">', '      <!-- tableaux & graphes du poste, injectés à la génération -->', '    </div>', '  </section>']))
-        .concat(['  <footer>Généré le {date_generation} — cockpit L’Atelier by</footer>', '</body>', '</html>']).join('\n');
-      const cssCode = ['/* rapport.css — mise en forme PDF (A4, Chromium headless) */', '@page { size: A4 portrait; margin: 20mm 18mm; }', 'body { font-family: "Gotham", sans-serif; color: #222222; font-size: 11pt; line-height: 1.5; margin: 0; }', '', '.entete { display: flex; justify-content: space-between; align-items: baseline;', '  border-bottom: 1.5pt solid #222222; padding-bottom: 8pt; }', '.entete .marque { font-size: 14pt; font-weight: 500; }', '.entete .periode { font-size: 8pt; color: #666666; text-transform: uppercase; letter-spacing: 0.08em; }', '', 'h1 { font-size: 20pt; font-weight: 500; margin: 18pt 0 4pt; }', '.destinataires { font-size: 9pt; color: #666666; margin: 0 0 16pt; }', '', '.poste { margin-top: 14pt; break-inside: avoid; }', '.poste h2 { font-size: 12pt; font-weight: 600; border-bottom: 0.5pt solid #dddddd;', '  padding-bottom: 4pt; margin: 0 0 6pt; }', '.poste .tag { color: #8D1D2C; font-size: 8pt; font-weight: 600; margin-right: 6pt; }', '.poste .desc { font-size: 9pt; color: #555555; margin: 0 0 8pt; }', '.poste .donnees table { width: 100%; border-collapse: collapse; font-size: 9pt; }', '.poste .donnees th, .poste .donnees td { border-bottom: 0.5pt solid #eeeeee;', '  padding: 4pt 6pt; text-align: left; }', '', 'footer { position: running(footer); font-size: 7.5pt; color: #999999;', '  border-top: 0.5pt solid #dddddd; padding-top: 6pt; margin-top: 20pt; }'].join('\n');
-      common.repPrev = { nom: rp.nom, freq: S.repFreq[rp.id] || rp.freq, url: repUrl(rp, sel, pd && pd.email),
-        periodeLabel: this.moisLabel() + ' ' + this.exo(), dateGenLabel: this.fDA(M.TODAY),
-        to: pd ? pd.nom + ' <' + pd.email + '>' : '—', ccTxt: pc ? ' · Cc : ' + pc.nom + ' <' + pc.email + '>' : '',
-        isPdf: tab === 'pdf', isCode: tab === 'code', tabPdfSt: tabSt(tab === 'pdf'), tabCodeSt: tabSt(tab === 'code'),
-        htmlCode, cssCode,
-        copyHtml: () => { try { navigator.clipboard.writeText(htmlCode); } catch (e) {} this.notify('Structure HTML copiée'); },
-        copyCss: () => { try { navigator.clipboard.writeText(cssCode); } catch (e) {} this.notify('CSS copié'); },
-        sections: secs };
-    } else common.repPrev = null;
-    common.eqRep = null; common.eqClose = () => {};
+    // Les cartes héritées (liste démo, alertes, panels PWA, district, Direct
+    // Link) ont quitté l'écran à la demande — leurs valeurs avec elles.
 
-    // --- rapports du panel consultant (pwa_consultant) : générer + récupérer
-    const pwa = D.pwaReports || { base: '', magasins: [], partages: [] };
-    common.pwaHasBase = !!pwa.base;
-    common.pwaBase = pwa.base || 'Base d’URL du panel non configurée (paramètre pwaBase)';
-    const [pwaKind, pwaPer] = (S.pwaType || 'gestion:month').split(':');
-    common.pwaTypes = [
-      { val: 'gestion:week', nom: 'Gestion — hebdomadaire' }, { val: 'gestion:month', nom: 'Gestion — mensuel' },
-      { val: 'checklist:week', nom: 'Checklist tâches — semaine' }, { val: 'checklist:month', nom: 'Checklist tâches — mois' }];
-    common.pwaType = S.pwaType;
-    common.setPwaType = e => { const v = e.target.value;
-      // la checklist n'existe que par boutique : quitter « Réseau » si besoin
-      this.setState(s2 => ({ pwaType: v, pwaScope: v.startsWith('checklist') && s2.pwaScope === 'all' ? ((pwa.magasins[0] || {}).id || 'all') : s2.pwaScope })); };
-    const magOk = pwa.magasins.filter(m => m.pwaId != null);
-    common.pwaScopes = (pwaKind === 'gestion' ? [{ val: 'all', nom: 'Réseau — toutes les boutiques' }] : [])
-      .concat(magOk.map(m => ({ val: m.id, nom: m.nom })));
-    common.pwaScope = S.pwaScope;
-    common.setPwaScope = e => this.setState({ pwaScope: e.target.value });
-    const pwaMag = magOk.find(m => m.id === S.pwaScope);
-    const pwaScopeArg = S.pwaScope === 'all' ? 'all' : (pwaMag ? String(pwaMag.pwaId) : 'all');
-    const pwaPath = pwaKind === 'gestion'
-      ? '/reports/view?type=' + pwaPer + '&scope=' + pwaScopeArg
-      : '/reports/checklist/' + pwaPer + '?scope=' + pwaScopeArg;
-    const pwaUrl = (pwa.base || '') + pwaPath;
-    common.pwaUrl = pwaUrl;
-    const pwaTypeNom = (common.pwaTypes.find(t => t.val === S.pwaType) || {}).nom || '';
-    const pwaScopeNom = S.pwaScope === 'all' ? 'Réseau' : (pwaMag ? pwaMag.nom : '');
-    common.pwaNote = 'Le rapport est construit par le panel à l’ouverture (imprimable / « Enregistrer en PDF »). '
-      + 'Les liens figés ci-contre sont ceux partagés par les consultants — récupérés de mac_report_share, avec ouvertures et expiration.';
-    common.pwaGen = () => { if (!pwa.base){ this.notify('Configurez la base d’URL du panel (paramètre pwaBase).'); return; }
-      window.open(pwaUrl, '_blank', 'noopener');
-      this.log('Rapport', '—', 'Rapport du panel consultant généré — ' + pwaTypeNom + ' · ' + pwaScopeNom);
-      this.notify('Rapport du panel ouvert — ' + pwaTypeNom); };
-    common.pwaCopy = () => { try { navigator.clipboard.writeText(pwaUrl); } catch (e) {} this.notify('URL du rapport du panel copiée'); };
-    const etatCl = { 'Actif': ['rgba(45,122,62,0.10)', '#2d7a3e'], 'Expiré': ['rgba(193,122,42,0.16)', '#8a5a13'], 'Révoqué': ['rgba(141,29,44,0.10)', '#8D1D2C'] };
-    common.pwaShares = (pwa.partages || []).map(p => { const cl = etatCl[p.etat] || etatCl['Expiré'];
-      return { label: p.label, magasin: p.magasin, ym: p.ym, consultant: p.consultant || '—', url: p.url,
-        meta: (p.consultant ? p.consultant + ' · ' : '') + 'créé le ' + this.fD(p.cree) + ' · expire le ' + this.fD(p.expire)
-          + ' · ' + p.opens + ' ouverture' + (p.opens > 1 ? 's' : '') + (p.derniereOuverture ? ' (dern. ' + this.fD(p.derniereOuverture) + ')' : ''),
-        etat: p.etat, etatSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;white-space:nowrap;background:' + cl[0] + ';color:' + cl[1],
-        actif: p.etat === 'Actif',
-        open: () => { window.open(p.url, '_blank', 'noopener');
-          this.log('Rapport', '—', 'Rapport partagé du panel ouvert — ' + p.label); },
-        copy: () => { try { navigator.clipboard.writeText(p.url); } catch (e) {} this.notify('Lien de partage copié — ' + p.magasin); } }; });
-    common.pwaSharesVide = common.pwaShares.length === 0;
   }
 
   /* --- journal ------------------------------------------------------------------------ */
