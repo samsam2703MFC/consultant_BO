@@ -397,8 +397,9 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                         (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''));
                     if ($f !== '') { $fiches[] = $f; }
                 }
+                [$col, $rang] = rapGrilleDe($periode);
                 $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
-                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv, $fiches)];
+                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv, $fiches, $col, $rang)];
             }
             break;
         }
@@ -436,9 +437,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 $b['infos'][] = ['', $sautees . ' fiche(s) photo laissée(s) de côté — le rapport atteignait '
                     . round(RAP_POIDS_FICHES / 1000000) . ' Mo d’images ; elles se consultent dans le cockpit.'];
             }
-            // Deux cartes par rangée, magasin par magasin — la grille A4.
+            // La grille A4 qui convient à la période, magasin par magasin.
+            [$col, $rang] = rapGrilleDe($periode);
             foreach ($cartesParMag ?? [] as $mag => $cartes) {
-                $b['htmlPar'][] = [$mag, rapFichesGrille($cartes)];
+                $b['htmlPar'][] = [$mag, rapFichesGrille($cartes, $col, $rang)];
             }
             break;
         }
@@ -1400,11 +1402,18 @@ function rapPdfHtml(string $html): string
         // sa voisine et la grille se déforme d'une page à l'autre.
         . 'table[data-page-fiches]{page-break-after:always;page-break-inside:avoid}'
         . 'table[data-page-fiches]:last-child{page-break-after:auto}'
-        . 'tr[data-rangee-fiches]>td{height:84mm}'
-        . 'tr[data-rangee-fiches] div[data-fiche]{height:80mm;overflow:hidden;box-sizing:border-box}'
+        . 'table[data-grille="2x3"] tr[data-rangee-fiches]>td{height:84mm}'
+        . 'table[data-grille="2x3"] div[data-fiche]{height:80mm;overflow:hidden;box-sizing:border-box}'
+        . 'table[data-grille="2x3"] div[data-fiche] img{max-height:44mm}'
+        // Douze vignettes sur une page : chaque cadre fait le quart de la
+        // hauteur utile, l'écriture se resserre d'un point.
+        . 'table[data-grille="3x4"] tr[data-rangee-fiches]>td{height:63mm}'
+        . 'table[data-grille="3x4"] div[data-fiche]{height:59mm;overflow:hidden;box-sizing:border-box;padding:7px 8px !important}'
+        . 'table[data-grille="3x4"] div[data-fiche] img{max-height:30mm}'
+        . 'table[data-grille="3x4"] div[data-fiche] div{font-size:9.5px !important;line-height:1.3 !important}'
         // L'image garde ses proportions et tient dans son cadre : la fiche
         // reste de taille constante, la photo n'est ni étirée ni rognée.
-        . 'div[data-fiche] img{max-height:44mm;width:auto !important;max-width:100%;margin:0 auto}'
+        . 'div[data-fiche] img{width:auto !important;max-width:100%;margin:0 auto}'
         . 'img{max-width:100% !important;height:auto}'
         . '</style>';
     // Injectée EN DERNIER dans <head> : la dernière feuille gagne à égalité de
@@ -1456,7 +1465,7 @@ function rapPdfRendu(string $html): ?string
  */
 function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                       ?float $moyenne, array $dist, array $exemplaires, array $niveaux,
-                      array $fichesExemplaires = []): string
+                      array $fichesExemplaires = [], int $colonnes = 2, int $rangees = 3): string
 {
     $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
     $F = "font-family:'Segoe UI',Arial,sans-serif";
@@ -1527,7 +1536,7 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                 . '</div>';
         }
         if ($fichesExemplaires !== []) {
-            $h .= '<div style="padding-top:8px">' . rapFichesGrille($fichesExemplaires) . '</div>';
+            $h .= '<div style="padding-top:8px">' . rapFichesGrille($fichesExemplaires, $colonnes, $rangees) . '</div>';
             if (count($exemplaires) > count($fichesExemplaires)) {
                 $h .= '<div style="' . $F . ';font-size:10.5px;color:#8b8177;padding-top:2px">Photos limitées aux '
                     . count($fichesExemplaires) . ' premières — les autres se consultent dans le cockpit.</div>';
@@ -1926,26 +1935,45 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
 }
 
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
-function rapFichesGrille(array $cartes): string
+function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3): string
 {
-    // Une PAGE A4 = six fiches, deux par rangée sur trois rangées, toutes de
-    // la même taille. Les fiches sont donc découpées par paquets de six, un
-    // paquet par table : le PDF pose un saut de page entre elles (voir
-    // rapPdfHtml), et à l'écran comme dans l'email elles s'enchaînent.
+    // Une PAGE A4 = colonnes × rangées fiches, toutes de la même taille. Un
+    // rapport du JOUR porte deux ou trois écarts : de grandes cartes (2 × 3).
+    // Un rapport de la SEMAINE en porte vingt : des vignettes (3 × 4), sinon
+    // il fait huit pages. Les fiches partent donc par paquets d'une page, un
+    // paquet par table — le PDF pose le saut de page entre elles.
+    $colonnes = max(1, min(4, $colonnes));
+    $rangees = max(1, min(6, $rangees));
+    $largeur = round(100 / $colonnes, 4);
     $h = '';
-    foreach (array_chunk($cartes, 6) as $page) {
-        $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1" data-page-fiches="1">';
-        foreach (array_chunk($page, 2) as $paire) {
+    foreach (array_chunk($cartes, $colonnes * $rangees) as $page) {
+        $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1"'
+            . ' data-page-fiches="1" data-grille="' . $colonnes . 'x' . $rangees . '">';
+        foreach (array_chunk($page, $colonnes) as $rangee) {
             $h .= '<tr data-rangee-fiches="1">';
-            $h .= '<td valign="top" width="50%" style="padding:5px 6px 5px 0"><div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[0] . '</div></td>';
-            $h .= '<td valign="top" width="50%" style="padding:5px 0 5px 6px">'
-                . (isset($paire[1]) ? '<div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[1] . '</div>' : '&nbsp;')
-                . '</td>';
+            for ($i = 0; $i < $colonnes; $i++) {
+                $pad = 'padding:5px ' . ($i === $colonnes - 1 ? '0' : '6px') . ' 5px ' . ($i === 0 ? '0' : '6px');
+                $h .= '<td valign="top" width="' . $largeur . '%" style="' . $pad . '">'
+                    . (isset($rangee[$i])
+                        ? '<div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $rangee[$i] . '</div>'
+                        : '&nbsp;')
+                    . '</td>';
+            }
             $h .= '</tr>';
         }
         $h .= '</table>';
     }
     return $h;
+}
+
+/**
+ * La grille qui convient à la période : de grandes cartes pour une journée,
+ * des vignettes dès qu'on couvre plusieurs jours (semaine, mois).
+ */
+function rapGrilleDe(array $periode): array
+{
+    $jours = 1 + (int) round((strtotime((string) $periode['au']) - strtotime((string) $periode['du'])) / 86400);
+    return $jours >= 2 ? [3, 4] : [2, 3];
 }
 
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
