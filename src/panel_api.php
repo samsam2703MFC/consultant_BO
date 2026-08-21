@@ -636,7 +636,10 @@ final class PanelApi
      */
     public static function marginHeatmapEntre(int $shopId, string $du, string $au): ?array
     {
-        $q = http_build_query(['date_from' => $du, 'date_to' => $au]);
+        // MESURÉ : cette route ignore date_from/date_to en silence et rend
+        // alors LE JOUR SEUL — les totaux passaient pour un mois et valaient
+        // une journée. Seuls `from`/`to` sont honorés (echo dans la réponse).
+        $q = http_build_query(['from' => $du, 'to' => $au]);
         return self::premierObjet(['/consultant/shops/' . $shopId . '/margin-heatmap?' . $q]);
     }
 
