@@ -225,8 +225,12 @@ function rapBlocDefs(): array
         'recurrence-panier' => ['levier' => 'recurrence', 'nom' => 'Ticket moyen et articles par ticket'],
         'recurrence-avis' => ['levier' => 'recurrence', 'nom' => 'Réputation Google'],
         'xp-ticket' => ['levier' => 'xp', 'nom' => 'Ticket moyen — magasin, réseau, comparaison'],
-        'xp-bilan' => ['levier' => 'xp', 'nom' => 'Bilan des tâches de la période'],
-        'xp-taches' => ['levier' => 'xp', 'nom' => 'Tâches sous le seuil'],
+        // `famille = taches` : ces deux blocs parlent des mêmes tâches et se
+        // lisent l'un après l'autre. Un KPI chiffré coché entre les deux les
+        // séparait au milieu du rapport ; ils passent toujours en dernier de
+        // leur levier, quel que soit l'ordre des cases cochées.
+        'xp-bilan' => ['levier' => 'xp', 'nom' => 'Bilan des tâches de la période', 'famille' => 'taches'],
+        'xp-taches' => ['levier' => 'xp', 'nom' => 'Tâches sous le seuil', 'famille' => 'taches'],
         'food-cost' => ['levier' => 'food-cost', 'nom' => 'Food cost du mois'],
         'food-stock' => ['levier' => 'food-cost', 'nom' => 'Stocks négatifs'],
         'labour-caetp' => ['levier' => 'labour-cost', 'nom' => 'CA par ETP'],
@@ -397,7 +401,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                         (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
-                    if ($f !== '') { $fiches[] = rapFondNote(5) + ['html' => $f]; }
+                    if ($f !== '') { $fiches[] = rapFondNote(5, true) + ['html' => $f]; }
                 }
                 [$col, $rang] = rapGrilleDe($periode);
                 $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
@@ -776,6 +780,7 @@ function rapportGenerer(array $rep): array
         $b = rapBloc($slug, $seuils, $periode + ['magasins' => $filtre, 'comparaison' => $comparaison]);
         $b['nom'] = $defs[$slug]['nom'];
         $b['levier'] = $defs[$slug]['levier'];
+        $b['famille'] = $defs[$slug]['famille'] ?? '';
         // Mode « tableau complet » : le tableau tel qu'à l'écran remplace la
         // liste des seuls dépassements. Un bloc sans rendu complet le dit.
         if (($modes[$slug] ?? '') === 'complet') {
@@ -794,7 +799,14 @@ function rapportGenerer(array $rep): array
         if ($b['lignes'] !== [] || $b['infos'] !== [] || $b['htmlPar'] !== [] || $b['motif'] !== null) { $sections[] = $b; }
     }
     $ordre = array_keys(RAP_LEVIERS);
-    usort($sections, fn ($a, $b2) => array_search($a['levier'], $ordre, true) <=> array_search($b2['levier'], $ordre, true));
+    // Par levier d'abord ; puis les blocs de TÂCHES en fin de levier, pour
+    // qu'un KPI chiffré ne vienne pas s'intercaler entre le bilan des tâches
+    // et la liste des écarts. À égalité, l'ordre des cases cochées décide
+    // (le tri de PHP 8 est stable).
+    usort($sections, function ($a, $b2) use ($ordre) {
+        $l = array_search($a['levier'], $ordre, true) <=> array_search($b2['levier'], $ordre, true);
+        return $l !== 0 ? $l : ((($a['famille'] ?? '') === 'taches' ? 1 : 0) <=> (($b2['famille'] ?? '') === 'taches' ? 1 : 0));
+    });
 
     $nPoints = array_sum(array_map(fn ($s) => count($s['lignes']) + count($s['pointsCaches'] ?? []), $sections));
     $nMotifs = count(array_filter($sections, fn ($s) => $s['motif'] !== null));
@@ -1954,8 +1966,10 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         // La couleur de la note suit les niveaux de validation : doré pour
         // l'exemplaire, vert pour le conforme — une fiche 5/5 ne doit pas
         // porter la couleur d'un écart.
-        $coulN = $note >= 5 ? '#C9A227' : ($note >= 4 ? '#2d7a3e' : ($note === 3 ? '#C17A2A' : '#E0261A'));
-        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><b style="color:' . $coulN . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
+        $coulN = rapCouleurNote($note);
+        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0">'
+            . '<span style="color:' . $coulN . ';font-size:13px;line-height:1">&#9679;</span> '
+            . '<b style="color:' . $coulN . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
     }
     // Le commentaire du panel EST la concaténation des repères : « 1. [mineur]
     // Il serait pas mieux au mur ? » puis, juste dessous, le repère numéroté
@@ -1984,15 +1998,22 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
 /** Le fond et le filet d'une fiche, selon la note — les couleurs du
  *  référentiel de validation, éclaircies pour rester lisibles sous le texte. */
-function rapFondNote(?int $note): array
+function rapCouleurNote(?int $note): string
 {
-    return [
-        5 => ['fond' => '#FBF6E7', 'trait' => '#C9A227'],
-        4 => ['fond' => '#EFF6F0', 'trait' => '#2D7A3E'],
-        3 => ['fond' => '#FDF2E5', 'trait' => '#D97706'],
-        2 => ['fond' => '#FBEBED', 'trait' => '#C0182B'],
-        1 => ['fond' => '#F7E4E7', 'trait' => '#8D1D2C'],
-    ][$note] ?? ['fond' => '#FBF9F5', 'trait' => ''];
+    return [5 => '#C9A227', 4 => '#2D7A3E', 3 => '#D97706', 2 => '#C0182B', 1 => '#8D1D2C'][$note] ?? '#8b8177';
+}
+
+/**
+ * Le fond d'une fiche selon sa note — teinté pour les écarts, BLANC dans
+ * l'encadré des 5/5 : le doré y est déjà celui de l'encadré, deux fonds l'un
+ * sur l'autre ne disent rien de plus. Le niveau se lit au point de couleur
+ * devant la note, pas à une arête sur tout le côté.
+ */
+function rapFondNote(?int $note, bool $surFondTeinte = false): array
+{
+    if ($surFondTeinte) { return ['fond' => '#FFFFFF']; }
+    return ['fond' => [5 => '#FBF6E7', 4 => '#EFF6F0', 3 => '#FDF2E5',
+        2 => '#FBEBED', 1 => '#F7E4E7'][$note] ?? '#FBF9F5'];
 }
 
 function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, bool $paginer = true): string
@@ -2022,11 +2043,9 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, boo
                 $carte = $rangee[$i] ?? null;
                 $html = is_array($carte) ? (string) ($carte['html'] ?? '') : (string) $carte;
                 $fond = is_array($carte) ? (string) ($carte['fond'] ?? '#FBF9F5') : '#FBF9F5';
-                $trait = is_array($carte) ? (string) ($carte['trait'] ?? '') : '';
                 $h .= '<td valign="top" width="' . $largeur . '%" style="' . $pad . '">'
                     . ($carte !== null
-                        ? '<div data-fiche="1" style="background:' . $fond . ';border-radius:10px;padding:10px 12px'
-                            . ($trait !== '' ? ';border-left:3px solid ' . $trait : '') . '">' . $html . '</div>'
+                        ? '<div data-fiche="1" style="background:' . $fond . ';border-radius:10px;padding:10px 12px">' . $html . '</div>'
                         : '&nbsp;')
                     . '</td>';
             }
