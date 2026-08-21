@@ -772,7 +772,17 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         // chercher. Sans levier imprimé (rapport sans matière), le poste
         // reprend sa place plutôt qu'un blanc.
         . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">'
-        . $e($leviersVus === [] ? (string) $rep['poste'] : implode(' · ', $leviersVus)) . '</td>'
+        . ($leviersVus === []
+            ? $e((string) $rep['poste'])
+            // Le levier en pastille à SA couleur, la même que la barre du bloc
+            // plus bas : deux fois la même couleur, donc un seul repère à
+            // apprendre. Vaut pour tous les rapports.
+            : implode('', array_map(fn ($code, $nom) => '<span style="display:inline-block;background:'
+                . (RAP_LEVIERS[$code]['couleur'] ?? '#8b8177') . ';color:#ffffff;border-radius:999px;'
+                . 'padding:4px 11px;margin-left:6px;font-size:9.5px;font-weight:700;letter-spacing:1.2px;'
+                . 'text-transform:uppercase;white-space:nowrap">' . $e($nom) . '</span>',
+                array_keys($leviersVus), $leviersVus)))
+        . '</td>'
         . '</tr></table></td></tr>'
         // — en-tête du rapport
         . '<tr><td style="background:#ffffff;padding:26px 30px 4px">'
