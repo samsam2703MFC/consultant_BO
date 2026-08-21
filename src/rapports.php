@@ -696,7 +696,7 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
     $base = rapBaseUrl();
     $lien = $base !== '' && $runId > 0 ? $base . '/api/cockpit/rapports/run/' . $runId : '';
     $bouton = $lien === '' ? '' :
-        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:2px 0 14px"><tr>'
+        '<table data-cta="1" role="presentation" cellpadding="0" cellspacing="0" style="margin:2px 0 14px"><tr>'
         . '<td style="background:#8D1D2C;border-radius:999px" align="center">'
         . '<a href="' . $e($lien) . '" style="display:inline-block;padding:11px 24px;color:#ffffff;' . $F . ';font-size:13px;font-weight:700;text-decoration:none">Ouvrir dans le cockpit &rarr;</a>'
         . '</td></tr></table>';
@@ -709,13 +709,17 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . 'div[data-fiche]{page-break-inside:avoid}table[data-fiches] td{page-break-inside:avoid}'
         . '.ecran-seul{display:none !important}}</style></head>'
         . '<body style="margin:0;padding:0;background:#EFE9DF">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF"><tr><td align="center" style="padding:28px 12px">'
+        // Les prises `data-fond`, `data-marge`, `data-carte` et `data-cta` ne
+        // servent qu'au PDF : rapPdfHtml() s'en sert pour poser une mise en
+        // page de PAPIER (pleine largeur, fond blanc, sans bouton) sans avoir
+        // à deviner des styles en ligne.
+        . '<table data-fond="1" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF"><tr><td data-marge="1" align="center" style="padding:28px 12px">'
         . '<!--ecran--><div class="ecran-seul" style="' . $F . ';max-width:680px;margin:0 auto 10px;text-align:right">'
         . ($base !== '' && $runId > 0
             ? '<a href="' . $e($base . '/api/cockpit/rapports/run/' . $runId . '/pdf') . '" style="display:inline-block;border:none;border-radius:999px;padding:9px 18px;color:#ffffff;font-size:12px;font-weight:700;text-decoration:none;background:#8D1D2C;margin-right:8px">Télécharger le PDF</a>'
             : '')
         . '<a href="javascript:window.print()" style="display:inline-block;border:1px solid #CFC6B8;border-radius:999px;padding:8px 16px;color:#221E1A;font-size:12px;font-weight:600;text-decoration:none;background:#ffffff">Imprimer (A4)</a></div><!--/ecran-->'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" width="680" style="width:680px;max-width:96%">'
+        . '<table data-carte="1" role="presentation" cellpadding="0" cellspacing="0" width="680" style="width:680px;max-width:96%">'
         // — bandeau de marque : le LOGO OFFICIEL sur fond clair (le noir du
         //   logo serait invisible sur bordeaux), liseré bordeaux au-dessous.
         . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
@@ -1123,16 +1127,67 @@ function ep_rapport_run_pdf(int $id): array
  * écran, chromium qui bloque) retiendrait sinon un worker Apache sans fin —
  * quelques requêtes suffisent alors à coucher toute l'API. Mesuré.
  */
+/**
+ * Le même rapport, mis en page pour du PAPIER.
+ *
+ * Rendu tel quel, le document sort comme ce qu'il est à l'écran : une carte de
+ * 680 px flottant au milieu d'une page A4, sur fond beige, avec les boutons
+ * d'écran — « on dirait le mail ». Ici il devient une feuille : pleine largeur,
+ * fond blanc, coins carrés, sans bouton d'action (le PDF ne se clique pas),
+ * les fiches photo et les lignes de tableau insécables.
+ *
+ * Rien n'est réécrit dans le contenu : seules des prises posées à la
+ * fabrication (data-fond, data-marge, data-carte, data-cta) sont neutralisées,
+ * ce qui évite de deviner des styles en ligne au risque de casser la page.
+ */
+function rapPdfHtml(string $html): string
+{
+    $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
+    $css = '<style>'
+        . '@page{size:A4;margin:12mm 10mm 14mm}'
+        . 'html,body{background:#ffffff !important;margin:0 !important;padding:0 !important;'
+        . '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        . 'table[data-fond]{background:#ffffff !important}'
+        . 'td[data-marge]{padding:0 !important}'
+        . 'table[data-carte]{width:100% !important;max-width:100% !important}'
+        . 'table[data-cta]{display:none !important}'
+        . '.ecran-seul{display:none !important}'
+        // Les runs DÉJÀ enregistrés n'ont pas les prises : on vise alors leurs
+        // styles en ligne, pour qu'un rapport d'hier s'imprime aussi bien
+        // qu'un rapport de demain.
+        . 'table[style*="background:#EFE9DF"]{background:#ffffff !important}'
+        . 'td[style*="padding:28px 12px"]{padding:0 !important}'
+        . 'table[style*="width:680px"]{width:100% !important;max-width:100% !important}'
+        // Les coins arrondis de la carte n'ont pas de sens sur une feuille.
+        . 'td[style*="border-radius:14px 14px 0 0"]{border-radius:0 !important}'
+        . 'td[style*="border-radius:0 0 14px 14px"]{border-radius:0 !important}'
+        // Ce qui ne doit pas se couper entre deux pages.
+        . 'div[data-fiche],table[data-fiches] td,tr{page-break-inside:avoid}'
+        . 'img{max-width:100% !important;height:auto}'
+        . '</style>';
+    // Injectée EN DERNIER dans <head> : la dernière feuille gagne à égalité de
+    // spécificité, et l'`!important` passe devant les styles en ligne.
+    $pos = stripos($html, '</head>');
+    return $pos === false ? $css . $html : substr($html, 0, $pos) . $css . substr($html, $pos);
+}
+
 function rapPdfRendu(string $html): ?string
 {
     if (!function_exists('shell_exec')) { return null; }
     $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
-    file_put_contents($tmpH, $html);
+    file_put_contents($tmpH, rapPdfHtml($html));
+    // `--print-media-type` : le document porte déjà ses règles @media print
+    // (sauts de page des fiches) — sans ce drapeau wkhtmltopdf les ignore.
+    // Le numéro de page en pied : un rapport de trois feuilles agrafées sans
+    // pagination se relit mal.
+    $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
+        . ' --margin-top 12mm --margin-bottom 14mm --margin-left 10mm --margin-right 10mm'
+        . ' --footer-font-size 7 --footer-spacing 5 --footer-right "[page]/[topage]"';
     $essais = [
         // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
-        'timeout 25 xvfb-run -a wkhtmltopdf --quiet --page-size A4 --enable-local-file-access %1$s %2$s 2>&1',
-        'timeout 25 wkhtmltopdf --quiet --page-size A4 --enable-local-file-access %1$s %2$s 2>&1',
+        'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
+        'timeout 25 wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
         'timeout 25 chromium --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
         'timeout 25 chromium-browser --headless --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
         'timeout 25 google-chrome --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
