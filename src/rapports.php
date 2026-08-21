@@ -321,6 +321,37 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             }
             break;
         }
+        case 'xp-bilan': {
+            // Le bilan de la période AVANT la liste des écarts : combien de
+            // tâches ont été demandées, combien rendues, comment les cotes se
+            // distribuent — et ce qui a été fait de mieux. Un rapport qui ne
+            // montre que les manquements donne une image fausse de la semaine.
+            // (Le périmètre de magasins est appliqué par le générateur, sur la
+            // première case de chaque ligne — ici le nom du magasin.)
+            $b['action'] = 'Regarder ce qui a été rendu avant ce qui reste à reprendre.';
+            $ts = rapTaches($periode['du'], $periode['au']);
+            if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
+            $niv = (array) ((array) setting('signalement', []))['niveaux'] ?? [];
+            $par = [];
+            foreach ($ts as $t) { $par[(string) ($t['magasin'] ?? '')][] = $t; }
+            foreach ($par as $mag => $liste) {
+                $n = count($liste); $rendues = 0; $notees = 0; $somme = 0; $sansPhoto = 0;
+                $dist = []; $exemplaires = [];
+                foreach ($liste as $t) {
+                    $st = (string) ($t['statut'] ?? '');
+                    if ($st === 'sansPhoto') { $sansPhoto++; }
+                    if ($st !== 'nonRendue') { $rendues++; }
+                    $note = $t['note'] ?? null;
+                    if ($note === null) { continue; }
+                    $notees++; $somme += (int) $note;
+                    $dist[(int) $note] = ($dist[(int) $note] ?? 0) + 1;
+                    if ((int) $note >= 5) { $exemplaires[] = $t; }
+                }
+                $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
+                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv)];
+            }
+            break;
+        }
         case 'xp-taches': {
             $b['action'] = 'Photo annotée et commentaire dans le cockpit — à revoir avec l’équipe.';
             $ts = rapTaches($periode['du'], $periode['au']);
@@ -1224,6 +1255,90 @@ function rapPdfRendu(string $html): ?string
     }
     @unlink($tmpH); @unlink($tmpP);
     return null;
+}
+
+/**
+ * Le bilan d'une période pour UN magasin : les comptes, la dispersion des
+ * cotes, et les tâches exemplaires.
+ *
+ * Tout en tables et styles en ligne : c'est la seule mise en page qu'un client
+ * mail respecte, et le PDF part du même HTML. Les barres sont des cellules de
+ * tableau — ni SVG ni CSS externe, que Gmail retirerait.
+ */
+function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
+                      ?float $moyenne, array $dist, array $exemplaires, array $niveaux): string
+{
+    $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $pct = fn (int $n) => $demandees > 0 ? round($n / $demandees * 100) : 0;
+    $nonRendues = max(0, $demandees - $rendues);
+
+    // --- les comptes, en quatre cases lisibles d'un coup d'œil
+    $cases = [
+        ['Demandées', (string) $demandees, ''],
+        ['Rendues', (string) $rendues, $pct($rendues) . ' %'],
+        ['Non rendues', (string) $nonRendues, $nonRendues > 0 ? $pct($nonRendues) . ' %' : '—'],
+        ['Note moyenne', $moyenne === null ? '—' : str_replace('.', ',', (string) $moyenne) . '/5',
+            $notees . ' notée' . ($notees > 1 ? 's' : '')],
+    ];
+    $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 10px"><tr>';
+    foreach ($cases as [$lib, $val, $sous]) {
+        $h .= '<td width="25%" valign="top" style="padding:0 5px 0 0">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-radius:9px">'
+            . '<tr><td style="padding:9px 11px;' . $F . '">'
+            . '<div style="font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#8b8177">' . $e($lib) . '</div>'
+            . '<div style="font-size:19px;font-weight:700;color:#221E1A;line-height:1.2">' . $e($val) . '</div>'
+            . ($sous !== '' ? '<div style="font-size:10.5px;color:#8b8177">' . $e($sous) . '</div>' : '')
+            . '</td></tr></table></td>';
+    }
+    $h .= '</tr></table>';
+    if ($sansPhoto > 0) {
+        $h .= '<div style="' . $F . ';font-size:11px;color:#8b8177;margin:-4px 0 10px">Dont ' . $sansPhoto
+            . ' tâche(s) rendue(s) sans photo.</div>';
+    }
+
+    // --- la dispersion des cotes : une barre par niveau, à sa couleur
+    if ($notees > 0) {
+        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:2px 0 6px">Dispersion des cotes</div>'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
+        foreach ($niveaux as $nv) {
+            $n = (int) ($nv['n'] ?? 0);
+            $nb = (int) ($dist[$n] ?? 0);
+            $part = $notees > 0 ? $nb / $notees : 0;
+            // Une part non nulle garde au moins un filet visible : à 2 % sur
+            // 300 px, une barre d'un pixel se confond avec l'absence de barre.
+            $largeur = $nb === 0 ? 0 : max(2, round($part * 100));
+            $coul = (string) ($nv['couleur'] ?? '#8b8177');
+            $h .= '<tr>'
+                . '<td width="26" style="' . $F . ';font-size:11.5px;font-weight:700;color:' . $coul . ';padding:2px 0">' . $n . '/5</td>'
+                . '<td width="150" style="' . $F . ';font-size:10.5px;color:#6E645A;padding:2px 8px 2px 0">' . $e($nv['nom'] ?? '') . '</td>'
+                . '<td style="padding:2px 0">'
+                . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F0EAE1;border-radius:999px"><tr>'
+                . ($largeur > 0
+                    ? '<td width="' . $largeur . '%" style="background:' . $coul . ';border-radius:999px;font-size:0;line-height:0;height:9px">&nbsp;</td>'
+                    : '')
+                . '<td style="font-size:0;line-height:0;height:9px">&nbsp;</td></tr></table></td>'
+                . '<td width="64" align="right" style="' . $F . ';font-size:11px;color:#221E1A;padding:2px 0 2px 8px">'
+                . $nb . ($nb > 0 ? ' <span style="color:#8b8177">· ' . round($part * 100) . ' %</span>' : '')
+                . '</td></tr>';
+        }
+        $h .= '</table>';
+    }
+
+    // --- ce qui a été fait de mieux, nommé
+    if ($exemplaires !== []) {
+        $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 4px">'
+            . '<tr><td style="background:#FBF6E7;border-left:4px solid #C9A227;border-radius:0 9px 9px 0;padding:10px 14px;' . $F . '">'
+            . '<div style="font-size:12.5px;font-weight:700;color:#221E1A">Cette semaine, vous vous êtes distingué avec celles-ci</div>';
+        foreach ($exemplaires as $t) {
+            $h .= '<div style="font-size:12px;color:#221E1A;padding:4px 0 0">'
+                . '<span style="color:#C9A227;font-weight:700">5/5</span> &middot; ' . $e($t['tache'] ?? 'Tâche')
+                . '<span style="color:#8b8177"> — le ' . $e(substr((string) ($t['date'] ?? ''), 8, 2) . '/' . substr((string) ($t['date'] ?? ''), 5, 2)) . '</span>'
+                . '</div>';
+        }
+        $h .= '</td></tr></table>';
+    }
+    return $h;
 }
 
 /** Un nom de fichier lisible : « rapport-non-conformites-2026-08-21.pdf ». */
