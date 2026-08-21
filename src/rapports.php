@@ -1066,10 +1066,12 @@ function ep_rapport_run_pdf(int $id): array
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
     file_put_contents($tmpH, (string) $run['html']);
     $essais = [
+        // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
+        'xvfb-run -a wkhtmltopdf --quiet --page-size A4 --enable-local-file-access %1$s %2$s 2>&1',
+        'wkhtmltopdf --quiet --page-size A4 --enable-local-file-access %1$s %2$s 2>&1',
         'chromium --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
         'chromium-browser --headless --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
         'google-chrome --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
-        'wkhtmltopdf --quiet --page-size A4 %1$s %2$s 2>&1',
     ];
     foreach ($essais as $cmd) {
         @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));

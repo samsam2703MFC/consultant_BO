@@ -54,6 +54,10 @@ command -v php       >/dev/null 2>&1 || need+=(php-cli)
 php -m 2>/dev/null | grep -qi '^pdo_mysql$' || need+=(php-mysql)
 command -v rsync     >/dev/null 2>&1 || need+=(rsync)
 command -v curl      >/dev/null 2>&1 || need+=(curl)
+# GD dessine les repères sur les photos des rapports ; wkhtmltopdf (+ xvfb,
+# le build Ubuntu n'est pas headless) rend le PDF téléchargeable.
+php -m 2>/dev/null | grep -qi '^gd$' || need+=(php-gd)
+command -v wkhtmltopdf >/dev/null 2>&1 || need+=(wkhtmltopdf xvfb)
 if [[ ${#need[@]} -gt 0 ]]; then
   log "Paquets manquants : ${need[*]} (attente du verrou apt si nécessaire, max 10 min)…"
   if ! aptget update -qq; then
