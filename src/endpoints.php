@@ -1426,6 +1426,25 @@ function ep_exploitation_rentabilite(): array
         'source' => 'API panel — margin-heatmap par jour ; labour et overhead du P&L mensuel répartis par jour d\'ouverture'];
 }
 
+/** Les six mêmes jours de semaine précédant une date : six vendredis avant un
+ *  vendredi. C'est la référence de comparaison de l'écran — un vendredi ne se
+ *  compare pas à un mardi, et l'an dernier compare deux saisons différentes. */
+function jourReference(string $date, int $n = 6): array
+{
+    $out = [];
+    for ($i = 1; $i <= $n; $i++) { $out[] = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); }
+    return $out;
+}
+
+/** Le nom du jour de la semaine, au pluriel — « vendredis ». */
+function jourNomSemaine(string $date, bool $pluriel = false): string
+{
+    $noms = [1 => 'lundi', 2 => 'mardi', 3 => 'mercredi', 4 => 'jeudi', 5 => 'vendredi',
+        6 => 'samedi', 7 => 'dimanche'];
+    $n = $noms[(int) date('N', strtotime($date))] ?? '';
+    return $pluriel ? $n . 's' : $n;
+}
+
 /**
  * GET /exploitation/jour[?date=YYYY-MM-DD] — le résultat d'UNE journée, magasin
  * par magasin, puis le détail du magasin qu'on ouvre.
@@ -1441,8 +1460,16 @@ function ep_exploitation_rentabilite(): array
  *    d'ouverture, et la ligne le dit (`labourSource`) ;
  *  · frais généraux : le panel ne les tient qu'au MOIS. Ils sont donc toujours
  *    répartis par jour d'ouverture — jamais présentés comme une mesure ;
- *  · ventilation par catégorie : mesurée à la date demandée ; l'évolution
- *    vs N-1 n'existe que pour aujourd'hui, elle vient du /pnl du jour.
+ *  · ventilation par catégorie : mesurée à la date demandée.
+ *
+ * LA COMPARAISON. Pas « vs N-1 » : la moyenne des SIX MÊMES JOURS DE SEMAINE
+ * qui précèdent — six vendredis avant un vendredi. Un jour de boulangerie
+ * ressemble d'abord au même jour de la semaine d'avant : comparer un vendredi
+ * à un mardi, ou à un vendredi d'il y a un an (autre saison, autre gamme,
+ * autres prix), fabrique un écart qui ne dit rien. Six jours lissent une
+ * fermeture ou un jour de fête sans diluer la tendance. Les jours fermés sont
+ * écartés du calcul, et le nombre de jours réellement retenus voyage avec la
+ * réponse (`refJours`) — comparer sur deux jours n'a pas le poids de six.
  *
  * Le résultat du jour = CA − coût matière − main-d'œuvre − frais généraux.
  * Il n'est jamais deviné : sans l'un des quatre, il vaut null et le motif suit.
@@ -1453,6 +1480,8 @@ function ep_exploitation_jour(): array
     $date = (string) ($_GET['date'] ?? $auj);
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
     $estAuj = $date === $auj;
+    $refDates = jourReference($date);
+    $refLibelle = 'moyenne des 6 derniers ' . jourNomSemaine($date, true);
 
     $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
     try {
@@ -1465,6 +1494,12 @@ function ep_exploitation_jour(): array
 
     $out = ['date' => $date, 'aujourdhui' => $auj, 'estAujourdhui' => $estAuj,
         'seuils' => $seuils, 'magasins' => [], 'reseau' => null,
+        'reference' => ['libelle' => $refLibelle, 'jours' => $refDates,
+            'jourSemaine' => jourNomSemaine($date), 'nom' => jourNomSemaine($date, true),
+            'explication' => 'Chaque écart compare la journée à la ' . $refLibelle
+                . ' (' . implode(', ', array_map(fn ($d) => date('d/m', strtotime($d)), $refDates))
+                . '). Les jours de fermeture sont écartés du calcul. Un même jour de semaine se'
+                . ' compare à lui-même : le trafic d’une boulangerie dépend d’abord du jour, pas du mois.'],
         'source' => 'API panel — ventes et marge brute mesurées à la date, frais généraux mensuels répartis par jour d’ouverture'];
     if (!PanelApi::configured()) {
         return $out + ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
@@ -1477,38 +1512,58 @@ function ep_exploitation_jour(): array
     }
     if (!$shops) { return $out + ['indispo' => true, 'motif' => 'aucun magasin actif']; }
 
-    $mois1 = date('Y-m-01', strtotime($date));
+    $mois1  = date('Y-m-01', strtotime($date));
+    $depuis = min($mois1, $refDates[count($refDates) - 1]);
     $paths = ['cats' => '/consultant/shops/category-sales?'
         . http_build_query(['date_from' => $date, 'date_to' => $date])];
+    // Une lecture par jour de référence, pour TOUS les magasins à la fois :
+    // six appels au total, pas six par magasin.
+    foreach ($refDates as $i => $rd) {
+        $paths['catsR' . $i] = '/consultant/shops/category-sales?'
+            . http_build_query(['date_from' => $rd, 'date_to' => $rd]);
+    }
     foreach ($shops as $s) {
         $id = (int) $s['id'];
-        // Le mois entier en un appel : il sert la journée ET la série du bas.
+        // Une seule fenêtre par magasin : elle porte la journée, la série du
+        // mois ET les six jours de référence.
         $paths['hm' . $id]   = '/consultant/shops/' . $id . '/margin-heatmap?'
-            . http_build_query(['from' => $mois1, 'to' => $date]);
+            . http_build_query(['from' => $depuis, 'to' => $date]);
         $paths['kpi' . $id]  = '/shops/' . $id . '/statistics/sales/kpis?'
             . http_build_query(['date_from' => $date, 'date_to' => $date]);
         $paths['pnlM' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj;
         // Le /pnl du jour ne sert QUE pour aujourd'hui : sur une date passée il
-        // rendrait le jour courant, donc la main-d'œuvre et les évolutions
-        // d'un autre jour que celui affiché.
+        // rendrait la main-d'œuvre du jour courant.
         if ($estAuj) { $paths['pnlJ' . $id] = '/consultant/shops/' . $id . '/pnl'; }
     }
     $res = PanelApi::getParallele($paths, 6);
 
-    $parCat = [];
-    $cs = $res['cats'] ?? null;
-    $listeCs = is_array($cs) ? ($cs['shops'] ?? (array_is_list($cs) ? $cs : [])) : [];
-    foreach ((array) $listeCs as $e) {
-        if (!is_array($e)) { continue; }
-        $id = 0;
-        foreach (['shop_id', 'id_shop', 'id'] as $c) {
-            if (isset($e[$c]) && is_numeric($e[$c])) { $id = (int) $e[$c]; break; }
+    /** La ventilation d'une réponse category-sales : [magasin => [catégorie => CA]]. */
+    $lireCats = static function ($cs): array {
+        $par = [];
+        $liste = is_array($cs) ? ($cs['shops'] ?? (array_is_list($cs) ? $cs : [])) : [];
+        foreach ((array) $liste as $e) {
+            if (!is_array($e)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                if (isset($e[$c]) && is_numeric($e[$c])) { $id = (int) $e[$c]; break; }
+            }
+            if ($id <= 0 || !isset($e['categories']) || !is_array($e['categories'])) { continue; }
+            foreach ($e['categories'] as $c) {
+                $v = nombreOuNull($c, ['ca', 'value', 'amount', 'turnover']);
+                $nom = (string) ($c['name'] ?? $c['label'] ?? '');
+                if ($nom === '' || $v === null) { continue; }
+                $par[$id][$nom] = ($par[$id][$nom] ?? 0) + $v;
+            }
         }
-        if ($id > 0 && isset($e['categories']) && is_array($e['categories'])) { $parCat[$id] = $e['categories']; }
-    }
+        return $par;
+    };
+    $catsJour = $lireCats($res['cats'] ?? null);
+    $catsRef = [];
+    foreach ($refDates as $i => $rd) { $catsRef[$rd] = $lireCats($res['catsR' . $i] ?? null); }
 
     $joursMois = (int) date('t', strtotime($date));
     $premier   = new DateTimeImmutable($mois1);
+    $moisAff   = substr($date, 0, 7);
     $lignes = [];
     foreach ($shops as $s) {
         $id = (int) $s['id']; $nom = (string) $s['name'];
@@ -1518,11 +1573,21 @@ function ep_exploitation_jour(): array
                 'motif' => 'margin-heatmap sans réponse pour ce magasin'];
             continue;
         }
-        // Jours d'ouverture : les jours de semaine vus actifs sur le mois,
-        // comptés sur le mois entier. Même diviseur que l'écran rentabilité.
-        $wdActifs = [];
+        $parJour = [];
         foreach ((array) $hm['days'] as $d) {
-            if (!empty($d['has_data']) && (float) ($d['ca'] ?? 0) > 0) { $wdActifs[(int) $d['weekday']] = true; }
+            $j = (string) ($d['date'] ?? '');
+            if ($j === '') { continue; }
+            $ca = (float) ($d['ca'] ?? 0);
+            $parJour[$j] = ['ca' => $ca, 'mb' => (float) ($d['margin_value'] ?? 0),
+                'tickets' => (int) ($d['tickets'] ?? 0), 'weekday' => (int) ($d['weekday'] ?? 0),
+                'ouvert' => !empty($d['has_data']) && $ca > 0];
+        }
+
+        // Jours d'ouverture du mois : les jours de semaine vus actifs, comptés
+        // sur le mois entier. Même diviseur que l'écran rentabilité.
+        $wdActifs = [];
+        foreach ($parJour as $j => $d) {
+            if ($d['ouvert'] && str_starts_with($j, $moisAff)) { $wdActifs[$d['weekday']] = true; }
         }
         $joursOuverts = 0;
         for ($i = 0; $i < $joursMois; $i++) {
@@ -1546,30 +1611,39 @@ function ep_exploitation_jour(): array
         $ohJ  = ($ohMois !== null && $joursOuverts > 0) ? $ohMois / $joursOuverts : null;
 
         $serie = [];
-        $jour = null;
-        foreach ((array) $hm['days'] as $d) {
-            $ca = (float) ($d['ca'] ?? 0); $mb = (float) ($d['margin_value'] ?? 0);
-            $ouvert = !empty($d['has_data']) && $ca > 0;
-            $net = ($ouvert && $labJ !== null && $ohJ !== null) ? $mb - $labJ - $ohJ : null;
-            $ligne = ['date' => (string) ($d['date'] ?? ''), 'ouvert' => $ouvert,
-                'ca' => $ouvert ? round($ca, 2) : null,
-                'tickets' => $ouvert ? (int) ($d['tickets'] ?? 0) : null,
+        foreach ($parJour as $j => $d) {
+            if (!str_starts_with($j, $moisAff)) { continue; }   // la série montre le MOIS
+            $net = ($d['ouvert'] && $labJ !== null && $ohJ !== null) ? $d['mb'] - $labJ - $ohJ : null;
+            $serie[] = ['date' => $j, 'ouvert' => $d['ouvert'],
+                'ca' => $d['ouvert'] ? round($d['ca'], 2) : null,
+                'tickets' => $d['ouvert'] ? $d['tickets'] : null,
                 'net' => $net !== null ? round($net, 2) : null,
-                'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null];
-            $serie[] = $ligne;
-            if ($ligne['date'] === $date) { $jour = $d + ['ouvert' => $ouvert]; }
+                'netPct' => ($net !== null && $d['ca'] > 0) ? round($net / $d['ca'] * 100, 1) : null];
         }
-        if ($jour === null || empty($jour['ouvert'])) {
+
+        $jour = $parJour[$date] ?? null;
+        if ($jour === null || !$jour['ouvert']) {
             $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => false,
                 'motif' => 'aucune vente ce jour-là', 'serie' => $serie];
             continue;
         }
 
-        $ca = (float) ($jour['ca'] ?? 0);
-        $mb = (float) ($jour['margin_value'] ?? 0);
+        // --- la référence : les mêmes jours de semaine, fermetures écartées
+        $refOuverts = [];
+        foreach ($refDates as $rd) {
+            if (isset($parJour[$rd]) && $parJour[$rd]['ouvert']) { $refOuverts[] = $rd; }
+        }
+        $refN = count($refOuverts);
+        $refCa = $refN ? array_sum(array_map(fn ($d2) => $parJour[$d2]['ca'], $refOuverts)) / $refN : null;
+        $refTickets = $refN ? array_sum(array_map(fn ($d2) => $parJour[$d2]['tickets'], $refOuverts)) / $refN : null;
+        $ecart = static fn (?float $v, ?float $ref): ?float
+            => ($v !== null && $ref !== null && $ref > 0) ? round(($v / $ref - 1) * 100, 1) : null;
+
+        $ca = $jour['ca'];
+        $mb = $jour['mb'];
         $fc = $ca - $mb;
         $k = $res['kpi' . $id] ?? null;
-        $tickets  = (int) (nombreOuNull(is_array($k) ? $k : [], ['tickets', 'ticket_count']) ?? ($jour['tickets'] ?? 0));
+        $tickets  = (int) (nombreOuNull(is_array($k) ? $k : [], ['tickets', 'ticket_count']) ?? $jour['tickets']);
         $produits = nombreOuNull(is_array($k) ? $k : [], ['products', 'product_count']);
         $panier   = nombreOuNull(is_array($k) ? $k : [], ['avg_basket', 'average_basket'])
             ?? ($tickets > 0 ? $ca / $tickets : null);
@@ -1583,21 +1657,23 @@ function ep_exploitation_jour(): array
         $oh = $ohJ;
         $net = ($labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
 
-        // Évolutions par catégorie : elles n'existent que pour aujourd'hui.
-        $deltas = [];
-        if (is_array($pnlJ)) {
-            foreach ((array) ($pnlJ['turnover']['categories'] ?? []) as $c) {
-                if (!empty($c['name'])) { $deltas[(string) $c['name']] = nombreOuNull($c, ['delta', 'variation']); }
-            }
-        }
+        // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
+        // Une catégorie absente d'un jour de référence OUVERT compte zéro : ne
+        // pas la compter reviendrait à comparer à ses seuls bons jours.
         $cats = [];
         $totCat = 0.0;
-        foreach ((array) ($parCat[$id] ?? []) as $c) {
-            $v = nombreOuNull($c, ['ca', 'value', 'amount', 'turnover']);
-            if ($v === null || $v <= 0) { continue; }
+        foreach (($catsJour[$id] ?? []) as $nomCat => $v) {
+            if ($v <= 0) { continue; }
             $totCat += $v;
-            $cats[] = ['categorie' => (string) ($c['name'] ?? $c['label'] ?? '—'), 'ca' => round($v, 2),
-                'delta' => $deltas[(string) ($c['name'] ?? '')] ?? null];
+            $refCat = null;
+            if ($refN) {
+                $somme = 0.0;
+                foreach ($refOuverts as $rd) { $somme += (float) ($catsRef[$rd][$id][$nomCat] ?? 0); }
+                $refCat = $somme / $refN;
+            }
+            $cats[] = ['categorie' => (string) $nomCat, 'ca' => round($v, 2),
+                'ref' => $refCat !== null ? round($refCat, 2) : null,
+                'delta' => $ecart($v, $refCat)];
         }
         foreach ($cats as &$c) { $c['part'] = $totCat > 0 ? round($c['ca'] / $totCat, 4) : null; }
         unset($c);
@@ -1605,8 +1681,13 @@ function ep_exploitation_jour(): array
 
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
             'ca' => round($ca, 2),
-            'caDelta' => is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['turnover'] ?? []), ['delta', 'variation']) : null,
-            'tickets' => $tickets, 'panier' => $panier !== null ? round($panier, 2) : null,
+            'refCa' => $refCa !== null ? round($refCa, 2) : null,
+            'refJours' => $refN,
+            'caDelta' => $ecart($ca, $refCa),
+            'tickets' => $tickets,
+            'refTickets' => $refTickets !== null ? round($refTickets) : null,
+            'ticketsDelta' => $ecart((float) $tickets, $refTickets),
+            'panier' => $panier !== null ? round($panier, 2) : null,
             'produits' => $produits !== null ? (int) $produits : null,
             'produitsParClient' => $ppc !== null ? round($ppc, 2) : null,
             'coutMatiere' => round($fc, 2), 'coutMatierePct' => $ca > 0 ? round($fc / $ca * 100, 1) : null,
@@ -1614,7 +1695,6 @@ function ep_exploitation_jour(): array
             'labour' => $labour !== null ? round($labour, 2) : null,
             'labourPct' => ($labour !== null && $ca > 0) ? round($labour / $ca * 100, 1) : null,
             'labourSource' => $labourSource,
-            'labourDelta' => is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['labour'] ?? []), ['delta', 'variation']) : null,
             'overhead' => $oh !== null ? round($oh, 2) : null,
             'overheadPct' => ($oh !== null && $ca > 0) ? round($oh / $ca * 100, 1) : null,
             'overheadMois' => $ohMois !== null ? round($ohMois, 2) : null,
@@ -1629,20 +1709,22 @@ function ep_exploitation_jour(): array
     $out['magasins'] = $lignes;
 
     // --- Réseau : la somme de ce qui est connu, jamais une extrapolation.
-    $t = ['ca' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
+    $t = ['ca' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
         'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0];
-    $ouverts = 0; $netComplet = true; $cats = [];
+    $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = [];
     foreach ($lignes as $l) {
         if (empty($l['ouvert'])) { continue; }
         $ouverts++;
         $t['ca'] += $l['ca']; $t['coutMatiere'] += $l['coutMatiere']; $t['margeBrute'] += $l['margeBrute'];
         $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
+        if ($l['refCa'] === null) { $refComplet = false; }
+        else { $t['refCa'] += $l['refCa']; $refMin = $refMin === null ? $l['refJours'] : min($refMin, $l['refJours']); }
         if ($l['labour'] === null || $l['overhead'] === null) { $netComplet = false; }
         else { $t['labour'] += $l['labour']; $t['overhead'] += $l['overhead']; $t['net'] += $l['net']; }
         foreach ($l['categories'] as $c) {
-            $e = $cats[$c['categorie']] ?? ['categorie' => $c['categorie'], 'ca' => 0.0, 'p' => 0.0, 'w' => 0.0];
+            $e = $cats[$c['categorie']] ?? ['categorie' => $c['categorie'], 'ca' => 0.0, 'ref' => 0.0, 'sansRef' => false];
             $e['ca'] += $c['ca'];
-            if ($c['delta'] !== null) { $e['p'] += $c['delta'] * $c['ca']; $e['w'] += $c['ca']; }
+            if ($c['ref'] === null) { $e['sansRef'] = true; } else { $e['ref'] += $c['ref']; }
             $cats[$c['categorie']] = $e;
         }
     }
@@ -1651,12 +1733,16 @@ function ep_exploitation_jour(): array
     foreach ($cats as $c) {
         $catsR[] = ['categorie' => $c['categorie'], 'ca' => round($c['ca'], 2),
             'part' => $totR > 0 ? round($c['ca'] / $totR, 4) : null,
-            'delta' => $c['w'] > 0 ? round($c['p'] / $c['w'], 1) : null];
+            'ref' => $c['sansRef'] ? null : round($c['ref'], 2),
+            'delta' => (!$c['sansRef'] && $c['ref'] > 0) ? round(($c['ca'] / $c['ref'] - 1) * 100, 1) : null];
     }
     usort($catsR, fn ($a, $b) => $b['ca'] <=> $a['ca']);
     $ca = $t['ca'];
     $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'tickets' => $t['tickets'],
         'produits' => $t['produits'],
+        'refCa' => $refComplet ? round($t['refCa'], 2) : null,
+        'refJours' => $refMin,
+        'caDelta' => ($refComplet && $t['refCa'] > 0) ? round(($ca / $t['refCa'] - 1) * 100, 1) : null,
         'panier' => $t['tickets'] > 0 ? round($ca / $t['tickets'], 2) : null,
         'produitsParClient' => $t['tickets'] > 0 ? round($t['produits'] / $t['tickets'], 2) : null,
         'coutMatiere' => round($t['coutMatiere'], 2),

@@ -28,6 +28,14 @@ demandée. Merci de conserver `date_from` / `date_to` sur les nouveaux endpoints
 et d'ignorer proprement les alias inconnus plutôt que de changer de
 comportement.
 
+**Comparaison retenue par le cockpit.** L'écran « Résultat du jour » ne compare
+pas à N-1 mais à la **moyenne des six mêmes jours de semaine précédents** (six
+vendredis avant un vendredi), fermetures écartées : le trafic d'une boulangerie
+dépend d'abord du jour de la semaine, et un an d'écart change la saison, la
+gamme et les prix. Elle est reconstruite côté cockpit à partir de
+`margin-heatmap` et de `category-sales`, une lecture par jour de référence. Un
+endpoint qui la servirait directement épargnerait sept appels par affichage.
+
 **`/pnl` ignore les bornes.** Mesuré le 21/08/2026 : `GET
 /consultant/shops/2/pnl?date_from=2026-08-19&date_to=2026-08-19` — comme
 `?period=day&date=2026-08-19` — répond `date_from: 2026-08-21`, c'est-à-dire la

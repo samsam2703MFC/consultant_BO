@@ -3575,7 +3575,7 @@ class App {
    *  que possible. Les positions sortent en POURCENTAGE — la grille suit la
    *  largeur de la carte au lieu d'être figée en pixels ; les dimensions en
    *  pixels ne servent qu'à décider ce qui tient comme étiquette. */
-  rjTuiles(cats, largeurPx, hauteurPx, mini){
+  rjTuiles(cats, largeurPx, hauteurPx){
     const vals = (cats || []).filter(c => (c.ca || 0) > 0).sort((a, b) => b.ca - a.ca);
     if (!vals.length) { return []; }
     const W = 1000, H = Math.max(1, Math.round(1000 * hauteurPx / largeurPx));
@@ -3621,11 +3621,7 @@ class App {
         ca: fE(c.ca),
         part: part == null ? '' : (part * 100).toFixed(0).replace('.', ',') + ' %',
         delta: c.delta == null ? '' : (c.delta > 0 ? '+' : '') + c.delta.toFixed(1).replace('.', ',') + ' %',
-        // Une petite ventilation n'a pas la place du détail : elle garde le
-        // nom, le montant et la part sur une ligne, sinon le texte déborde de
-        // la tuile et se coupe au milieu d'un mot.
-        gros: !mini && wpx > 92 && hpx > 52,
-        semi: !!mini && wpx > 78 && hpx > 46,
+        gros: wpx > 92 && hpx > 52,
         moyen: wpx > 62 && hpx > 32,
         minuscule: !(wpx > 34 && hpx > 15),
         st: 'position:absolute;left:' + (t.x / W * 100).toFixed(3) + '%;top:' + (t.y / H * 100).toFixed(3)
@@ -3643,7 +3639,7 @@ class App {
     common.rjErreur = !!(r && (r.erreur || r.indispo));
     common.rjErreurTxt = r && r.indispo ? r.motif
       : 'La lecture de /exploitation/jour a échoué — voir Diagnostic API.';
-    common.rjLignes = []; common.rjMinis = []; common.rjDetail = null;
+    common.rjLignes = []; common.rjDetail = null; common.rjInvite = '';
     if (!r || common.rjErreur) { return; }
 
     const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
@@ -3674,18 +3670,27 @@ class App {
     common.rjSuiv = jour < auj ? () => this.setState({ rjDate: decale(1) }) : null;
     common.rjAuj = jour < auj ? () => this.setState({ rjDate: null }) : null;
     common.rjEstAuj = !!r.estAujourdhui;
+    // La comparaison : la moyenne des six mêmes jours de semaine, pas N-1.
+    const ref = r.reference || {};
+    common.rjRefEntete = 'vs 6 ' + (ref.nom || 'jours');
+    common.rjRefAide = ref.explication || '';
+    common.rjRefLibelle = ref.libelle || 'moyenne des 6 mêmes jours';
     common.rjSeuilsTxt = 'Seuils du réseau : matière ' + fPct(seuils.food, 0)
       + ' · main-d’œuvre ' + fPct(seuils.labour, 0) + ' · frais généraux ' + fPct(seuils.overhead);
     // Ce que la journée doit à une répartition plutôt qu'à une mesure. La
     // phrase change avec la date : aujourd'hui la masse salariale est mesurée,
     // hier elle ne l'est plus — le panel ne rend le P&L quotidien que du jour.
-    common.rjNote = r.estAujourdhui
-      ? 'Frais généraux : montant mensuel réparti sur les jours d’ouverture — le panel ne les mesure pas au jour le jour. Main-d’œuvre : mesurée du jour.'
-      : 'Frais généraux ET main-d’œuvre : montants mensuels répartis sur les jours d’ouverture — le panel ne rend le compte de résultat quotidien que pour aujourd’hui. Aucune comparaison à N-1 sur une date passée.';
+    common.rjNote = (r.estAujourdhui
+      ? 'Frais généraux : montant mensuel réparti sur les jours d’ouverture — le panel ne les mesure pas au jour le jour. Main-d’œuvre : mesurée du jour. '
+      : 'Frais généraux ET main-d’œuvre : montants mensuels répartis sur les jours d’ouverture — le panel ne rend le compte de résultat quotidien que pour aujourd’hui. ')
+      + 'Comparaison : ' + common.rjRefLibelle + ', jours de fermeture écartés.';
 
     const res = r.reseau || {};
     common.rjReseau = {
       ca: fE(res.ca), tickets: fInt(res.tickets), panier: fU(res.panier),
+      delta: fDelta(res.caDelta), deltaCoul: coulDelta(res.caDelta),
+      deltaTitre: res.refCa == null ? 'aucune référence complète'
+        : fE(res.refCa) + ' en moyenne sur les mêmes jours',
       net: fE(res.net), netPct: fPct(res.netPct), netCoul: feuRes(res.netPct),
       fc: fE(res.coutMatiere), fcPct: fPct(res.coutMatierePct), fcCoul: feu(res.coutMatierePct, seuils.food),
       mb: fE(res.margeBrute), mbPct: fPct(res.margeBrutePct),
@@ -3705,7 +3710,13 @@ class App {
           ? (m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') + ' produits par client' : '—')
           : (m.motif || 'sans réponse'),
         ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
-        tickets: fInt(m.tickets), panier: fU(m.panier),
+        // L'infobulle donne la référence en clair : un écart sans son point de
+        // comparaison ne se vérifie pas.
+        deltaTitre: m.refCa == null ? 'aucun jour de référence ouvert'
+          : fE(m.refCa) + ' en moyenne sur ' + m.refJours + ' ' + (ref.nom || 'jours'),
+        tickets: fInt(m.tickets),
+        ticketsDelta: fDelta(m.ticketsDelta), ticketsCoul: coulDelta(m.ticketsDelta),
+        panier: fU(m.panier),
         fc: fE(m.coutMatiere), fcPct: fPct(m.coutMatierePct), fcCoul: feu(m.coutMatierePct, seuils.food),
         mb: fE(m.margeBrute), mbPct: fPct(m.margeBrutePct),
         labour: fE(m.labour), labourPct: fPct(m.labourPct), labourCoul: feu(m.labourPct, seuils.labour),
@@ -3721,17 +3732,14 @@ class App {
     const ouverts = (r.magasins || []).filter(m => m.ouvert);
     const magSel = ouverts.filter(m => m.shopId === sel)[0] || null;
 
-    // Sans sélection, la page garde une image : une petite ventilation par
-    // magasin, qui donne l'envie de cliquer plutôt qu'un blanc.
-    if (!magSel) {
-      common.rjMinis = ouverts.map(m => ({
-        nom: m.magasin, ca: fE(m.ca), ouvrir: () => this.setState({ rjSel: m.shopId }),
-        tuiles: this.rjTuiles(m.categories, 280, 158, true),
-      }));
-    }
+    // Aucune ventilation sur la page elle-même : les treemaps ne vivent que
+    // dans le détail qu'on ouvre. La page reste une table, lisible d'un trait.
+    common.rjInvite = (!magSel && ouverts.length)
+      ? 'Ouvrez une ligne du tableau pour le compte de résultat du magasin, sa ventilation par catégorie et la place du jour dans son mois.'
+      : '';
 
     common.rjEchelle = [['#C0182B', '≤ -15 %'], ['#D97706', '-15 à -3 %'], ['#C9A227', 'stable'],
-      ['#5f9e5f', '+3 à +15 %'], ['#2d7a3e', '≥ +15 %'], ['#B9B2A8', 'sans N-1']]
+      ['#5f9e5f', '+3 à +15 %'], ['#2d7a3e', '≥ +15 %'], ['#B9B2A8', 'sans référence']]
       .map(e => ({ coul: e[0], label: e[1] }));
 
     if (!magSel) { return; }
@@ -3748,7 +3756,7 @@ class App {
       { l: 'Marge brute', v: fE(m.margeBrute), p: fPct(m.margeBrutePct), w: barre(m.margeBrutePct),
         coul: 'var(--color-text)', fort: true, d: '', dCoul: '', seuil: '' },
       { l: 'Main-d’œuvre', v: fE(m.labour == null ? null : -m.labour), p: fPct(m.labourPct), w: barre(m.labourPct),
-        coul: feu(m.labourPct, seuils.labour), fort: false, d: fDelta(m.labourDelta), dCoul: coulDelta(m.labourDelta, true),
+        coul: feu(m.labourPct, seuils.labour), fort: false, d: '', dCoul: '',
         seuil: 'seuil ' + fPct(seuils.labour, 0) + (m.labourSource === 'reparti' ? ' · réparti' : '') },
       { l: 'Frais généraux', v: fE(m.overhead == null ? null : -m.overhead), p: fPct(m.overheadPct),
         w: barre(m.overheadPct), coul: feu(m.overheadPct, seuils.overhead), fort: false, d: '', dCoul: '',
@@ -3766,7 +3774,11 @@ class App {
       id: m.shopId, nom: m.magasin,
       fermer: () => this.setState({ rjSel: null }),
       ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
-      deltaTxt: m.caDelta == null ? 'aucune comparaison N-1 sur une date passée' : 'vs même jour N-1',
+      deltaTxt: m.caDelta == null
+        ? 'aucun ' + (ref.jourSemaine || 'jour') + ' de référence ouvert'
+        : 'vs ' + fE(m.refCa) + ' — ' + common.rjRefLibelle
+          + (m.refJours < 6 ? ' (' + m.refJours + ' jours retenus)' : ''),
+      refAide: common.rjRefAide,
       cascade: casc,
       note: (m.overheadMois != null
         ? 'Frais généraux : ' + fE(m.overheadMois) + ' par mois ramenés au jour d’ouverture (' + fInt(m.joursOuverts) + ' j).'
@@ -3775,6 +3787,9 @@ class App {
           ? ' Main-d’œuvre : ' + fE(m.labourMois) + ' sur le mois, répartie de la même façon.' : ''),
       motifNet: m.motifNet || '',
       tuiles: this.rjTuiles(m.categories, 620, 300),
+      // Le libellé complet de la référence tient dans le (i) : en clair, il
+      // pousse le titre de la carte sur deux lignes.
+      catsLegende: 'surface : poids dans le CA · couleur : écart à la référence',
       sansCat: !(m.categories || []).length,
       kpis: [
         { l: 'Tickets', v: fInt(m.tickets), s: 'clients servis' },

@@ -2156,23 +2156,23 @@ function tplResultatJour(c, x){
   if (c.rjErreur) {
     return `<div data-screen="resultatJour" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjErreurTxt)}</div>`;
   }
-  const ent = ['Magasin', 'CA du jour', 'vs N-1', 'Tickets', 'Panier', 'Coût matière', 'Marge brute',
+  const ent = ['Magasin', 'CA du jour', c.rjRefEntete, 'Tickets', 'Panier', 'Coût matière', 'Marge brute',
     'Main-d’œuvre', 'Frais gén.', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
-  const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  const cel = (v, coul, sous, fort, titre, sousCoul) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:${sousCoul || 'var(--color-text-muted)'};font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  // Le (i) d'une notion qui a besoin d'être expliquée : au survol, la phrase
+  // entière — la place manque dans un en-tête de colonne.
+  const aide = txt => txt ? ` <span title="${esc(txt)}" style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid var(--color-border-secondary);color:var(--color-text-muted);font-size:9px;font-style:italic;font-weight:600;cursor:help;vertical-align:1px">i</span>` : '';
   const treemap = (tuiles, hauteur) => `
     <div style="position:relative;width:100%;height:${hauteur}px">
       ${tuiles.map(t => `<div style="${t.st}">
-        ${t.semi ? `<div style="font-size:11px;font-weight:500;line-height:1.15">${esc(t.nom)}</div>
-          <div style="font-family:var(--font-display);font-size:12px;margin-top:2px;${num}">${esc(t.ca)}</div>
-          <div style="font-size:9.5px;opacity:.92;white-space:nowrap;${num}">${esc(t.part)}${t.delta ? ' · ' + esc(t.delta) : ''}</div>`
-        : (t.gros ? `<div style="font-size:12px;font-weight:500;line-height:1.15">${esc(t.nom)}</div>
+        ${t.gros ? `<div style="font-size:12px;font-weight:500;line-height:1.15">${esc(t.nom)}</div>
           <div style="font-family:var(--font-display);font-size:14px;margin-top:3px;${num}">${esc(t.ca)}</div>
-          <div style="font-size:10.5px;opacity:.92;${num}">${esc(t.part)} du CA${t.delta ? ' · ' + esc(t.delta) + ' vs N-1' : ''}</div>`
+          <div style="font-size:10.5px;opacity:.92;${num}">${esc(t.part)} du CA${t.delta ? ' · ' + esc(t.delta) + ' vs réf.' : ''}</div>`
         : (t.moyen ? `<div style="font-size:10.5px;font-weight:500;line-height:1.1">${esc(t.nom)}</div>
           <div style="font-size:10px;opacity:.92;white-space:nowrap;${num}">${esc(t.part)}${t.delta ? ' · ' + esc(t.delta) : ''}</div>`
-        : (t.minuscule ? '' : `<div style="font-size:9.5px;line-height:1.05;opacity:.95">${esc(t.nom)}</div>`)))}
+        : (t.minuscule ? '' : `<div style="font-size:9.5px;line-height:1.05;opacity:.95">${esc(t.nom)}</div>`))}
       </div>`).join('')}
     </div>`;
   const echelle = `<div style="display:flex;gap:11px;flex-wrap:wrap;margin-top:7px;font-size:10px;color:var(--color-text-muted)">
@@ -2210,7 +2210,7 @@ function tplResultatJour(c, x){
 
       <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:940px">
-        <tr>${ent.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}</th>`).join('')}</tr>
+        <tr>${ent.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}${i === 2 ? aide(c.rjRefAide) : ''}</th>`).join('')}</tr>
         ${c.rjLignes.map(l => `
           <tr ${x.A(l.ouvrir)} class="hv-bg" style="${l.st}">
             <td style="padding:9px 10px;${bord}">
@@ -2218,8 +2218,8 @@ function tplResultatJour(c, x){
               <div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>
             </td>
             ${l.ouvert
-              ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false)
-                + cel(l.tickets, '', '', false) + cel(l.panier, '', '', false)
+              ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
+                + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
                 + cel(l.fc, l.fcCoul, l.fcPct, false)
                 + cel(l.mb, '', l.mbPct, false)
                 + cel(l.labour, l.labourCoul, l.labourPct + (l.labourReparti ? ' ·  réparti' : ''), false, l.labourTitre)
@@ -2230,7 +2230,7 @@ function tplResultatJour(c, x){
         <tr style="background:var(--color-background-secondary)">
           <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:500">Réseau
             <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
-          ${cel(c.rjReseau.ca, '', '', true)}${cel('', '', '', false)}
+          ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
           ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
           ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false)}
           ${cel(c.rjReseau.mb, '', c.rjReseau.mbPct, false)}
@@ -2253,7 +2253,7 @@ function tplResultatJour(c, x){
         <div style="display:flex;align-items:flex-start;gap:14px">
           <div style="text-align:right">
             <div style="font-family:var(--font-display);font-size:29px;line-height:1;${num}">${esc(c.rjDetail.ca)}</div>
-            <div style="font-size:11.5px;color:${c.rjDetail.deltaCoul};${num}">${c.rjDetail.delta ? esc(c.rjDetail.delta) + ' ' : ''}${esc(c.rjDetail.deltaTxt)}</div>
+            <div style="font-size:11.5px;color:${c.rjDetail.deltaCoul};${num}">${c.rjDetail.delta ? esc(c.rjDetail.delta) + ' ' : ''}${esc(c.rjDetail.deltaTxt)}${aide(c.rjDetail.refAide)}</div>
           </div>
           <button ${x.A(c.rjDetail.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
         </div>
@@ -2279,7 +2279,7 @@ function tplResultatJour(c, x){
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
             <div style="${cap}">Ventes par catégorie</div>
-            <div style="font-size:10.5px;color:var(--color-text-muted)">surface : poids dans le CA · couleur : évolution vs N-1</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rjDetail.catsLegende)}${aide(c.rjDetail.refAide)}</div>
           </div>
           ${c.rjDetail.sansCat
             ? `<div style="padding:26px 0;font-size:12px;color:var(--color-text-muted)">Le panel ne rend pas de ventilation par catégorie pour cette journée.</div>`
@@ -2311,20 +2311,9 @@ function tplResultatJour(c, x){
             </div>`}
         </div>
       </div>
-    </div>` : `
-    <div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:stretch;grid-auto-rows:1fr">
-        ${c.rjMinis.map(m => `
-          <div ${x.A(m.ouvrir)} class="hv-bg" style="${carte};padding:13px 15px;cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px">
-              <div style="font-size:12px;font-weight:500">${esc(m.nom)}</div>
-              <div style="font-size:11px;color:var(--color-text-muted);${num}">${esc(m.ca)}</div>
-            </div>
-            ${treemap(m.tuiles, 158)}
-          </div>`).join('')}
-      </div>
-      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Ventes par catégorie · surface : poids dans le CA du magasin · couleur : évolution vs N-1. Ouvrez une ligne du tableau pour le détail complet.${echelle}</div>
-    </div>`}
+    </div>` : (c.rjInvite ? `
+    <div style="font-size:11.5px;color:var(--color-text-muted);padding:2px 2px 0;text-wrap:pretty">${esc(c.rjInvite)}</div>` : '')}
+
   </div>`;
 }
 
