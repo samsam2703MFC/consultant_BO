@@ -889,7 +889,7 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // Le titre du bloc, seul. Le levier est annoncé UNE fois, au
             // bandeau : le répéter en pastille et en barre au-dessus de chaque
             // section faisait trois fois la même information sur une page.
-            $h .= '<div style="' . $F . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:20px 0 6px">'
+            $h .= '<div data-titre-bloc="1" style="' . $F . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:24px 0 7px">'
                 . $e($s['nom']) . '</div>';
             if ($s['motif'] !== null) {
                 $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:8px 12px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
@@ -1422,6 +1422,9 @@ function rapPdfHtml(string $html): string
         // retrouvait au milieu d'une double marge. La page respire dehors, la
         // carte se resserre dedans.
         . 'table[data-carte]>tbody>tr>td{padding-left:10px !important;padding-right:10px !important}'
+        // Entre deux sections, une respiration franche : sur écran on fait
+        // défiler, sur papier l'œil a besoin de la coupure.
+        . 'div[data-titre-bloc]{margin-top:30px !important}'
         // Un peu d'air entre le bandeau et le titre, et entre les blocs.
         . 'table[data-carte]>tbody>tr:first-child>td{padding-top:6px !important;padding-bottom:12px !important}'
         . 'table[data-cta]{display:none !important}'
@@ -1559,7 +1562,7 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
 
     // --- la dispersion des cotes : une barre par niveau, à sa couleur
     if ($notees > 0) {
-        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:2px 0 6px">Dispersion des cotes</div>'
+        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:14px 0 6px">Dispersion des cotes</div>'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
         foreach ($niveaux as $nv) {
             $n = (int) ($nv['n'] ?? 0);
@@ -1609,7 +1612,7 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
         // tient déjà.
         usort($lignes, fn ($a, $b2) => ($a['moy'] ?? 9) <=> ($b2['moy'] ?? 9));
         $cols = count($lignes) > 10 ? 3 : 2;
-        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:12px 0 5px">Détail par tâche</div>'
+        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:18px 0 6px">Détail par tâche</div>'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
         foreach (array_chunk($lignes, $cols) as $rangee) {
             $h .= '<tr>';
