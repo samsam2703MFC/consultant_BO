@@ -1395,6 +1395,16 @@ function rapPdfHtml(string $html): string
         . 'td[style*="border-radius:0 0 14px 14px"]{border-radius:0 !important}'
         // Ce qui ne doit pas se couper entre deux pages.
         . 'div[data-fiche],table[data-fiches] td,tr{page-break-inside:avoid}'
+        // Six fiches par page A4 : deux par rangée, trois rangées, toutes de
+        // la MÊME hauteur. Sans hauteur fixe, une fiche à deux photos écrase
+        // sa voisine et la grille se déforme d'une page à l'autre.
+        . 'table[data-page-fiches]{page-break-after:always;page-break-inside:avoid}'
+        . 'table[data-page-fiches]:last-child{page-break-after:auto}'
+        . 'tr[data-rangee-fiches]>td{height:84mm}'
+        . 'tr[data-rangee-fiches] div[data-fiche]{height:80mm;overflow:hidden;box-sizing:border-box}'
+        // L'image garde ses proportions et tient dans son cadre : la fiche
+        // reste de taille constante, la photo n'est ni étirée ni rognée.
+        . 'div[data-fiche] img{max-height:44mm;width:auto !important;max-width:100%;margin:0 auto}'
         . 'img{max-width:100% !important;height:auto}'
         . '</style>';
     // Injectée EN DERNIER dans <head> : la dernière feuille gagne à égalité de
@@ -1918,16 +1928,24 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
 function rapFichesGrille(array $cartes): string
 {
-    $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1">';
-    foreach (array_chunk($cartes, 2) as $paire) {
-        $h .= '<tr>';
-        $h .= '<td valign="top" width="50%" style="padding:5px 6px 5px 0"><div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[0] . '</div></td>';
-        $h .= '<td valign="top" width="50%" style="padding:5px 0 5px 6px">'
-            . (isset($paire[1]) ? '<div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[1] . '</div>' : '&nbsp;')
-            . '</td>';
-        $h .= '</tr>';
+    // Une PAGE A4 = six fiches, deux par rangée sur trois rangées, toutes de
+    // la même taille. Les fiches sont donc découpées par paquets de six, un
+    // paquet par table : le PDF pose un saut de page entre elles (voir
+    // rapPdfHtml), et à l'écran comme dans l'email elles s'enchaînent.
+    $h = '';
+    foreach (array_chunk($cartes, 6) as $page) {
+        $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1" data-page-fiches="1">';
+        foreach (array_chunk($page, 2) as $paire) {
+            $h .= '<tr data-rangee-fiches="1">';
+            $h .= '<td valign="top" width="50%" style="padding:5px 6px 5px 0"><div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[0] . '</div></td>';
+            $h .= '<td valign="top" width="50%" style="padding:5px 0 5px 6px">'
+                . (isset($paire[1]) ? '<div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[1] . '</div>' : '&nbsp;')
+                . '</td>';
+            $h .= '</tr>';
+        }
+        $h .= '</table>';
     }
-    return $h . '</table>';
+    return $h;
 }
 
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
