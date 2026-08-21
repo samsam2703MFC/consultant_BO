@@ -2187,7 +2187,7 @@ function tplResultatJour(c, x){
         <div>
           <div style="${cap}">Résultat du jour, magasin par magasin</div>
           <div style="font-family:var(--font-display);font-size:17px;margin-top:3px">${esc(c.rjDateTxt)}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.rjSeuilsTxt)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.rjSeuilsTxt)}${aide(c.rjSeuilsAide)}</div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:22px">
           <div style="display:flex;align-items:center;gap:7px">

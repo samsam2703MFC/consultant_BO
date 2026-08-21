@@ -3677,6 +3677,15 @@ class App {
     common.rjRefLibelle = ref.libelle || 'moyenne des 6 mêmes jours';
     common.rjSeuilsTxt = 'Seuils du réseau : matière ' + fPct(seuils.food, 0)
       + ' · main-d’œuvre ' + fPct(seuils.labour, 0) + ' · frais généraux ' + fPct(seuils.overhead);
+    // Le même (i) que sur la comparaison : d'où viennent les seuils, et ce que
+    // les couleurs veulent dire. Une cellule rouge sans règle affichée se lit
+    // comme une opinion de l'écran.
+    common.rjSeuilsAide = 'Seuils du réseau, réglés dans Paramètres — ils valent pour tous les magasins. '
+      + 'Un coût est vert tant qu’il tient son seuil (matière ' + fPct(seuils.food, 0)
+      + ', main-d’œuvre ' + fPct(seuils.labour, 0) + ', frais généraux ' + fPct(seuils.overhead)
+      + ' du CA), orange au-dessus, rouge au-delà d’un tiers de dépassement. '
+      + 'Le résultat, lui, se colore sur sa part du CA : vert à partir de 15 %, orange à partir de 5 %, rouge en dessous. '
+      + 'Frais généraux et main-d’œuvre répartis se comparent au même seuil que s’ils étaient mesurés : le ratio d’une journée seule bouge donc plus qu’un ratio mensuel.';
     // Ce que la journée doit à une répartition plutôt qu'à une mesure. La
     // phrase change avec la date : aujourd'hui la masse salariale est mesurée,
     // hier elle ne l'est plus — le panel ne rend le P&L quotidien que du jour.
