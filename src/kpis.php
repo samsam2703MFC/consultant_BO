@@ -247,8 +247,8 @@ function kpiFormatValeur(array $def, float $v): string
 
 /* --- Endpoints --------------------------------------------------------------- */
 
-/** GET /kpis — le référentiel + le catalogue des mesures et des leviers. */
-function ep_kpis(): array
+/** GET /kpi-defs — le référentiel + le catalogue des mesures et des leviers. */
+function ep_kpi_referentiel(): array
 {
     ensureKpiDefs();
     $defs = array_values(kpiDefs());
@@ -268,7 +268,7 @@ function ep_kpis(): array
     ];
 }
 
-/** POST /kpis — créer un KPI dérivé depuis le formulaire. */
+/** POST /kpi-defs — créer un KPI dérivé depuis le formulaire. */
 function wr_kpi(): array
 {
     ensureKpiDefs();
@@ -298,7 +298,7 @@ function wr_kpi(): array
     return ['ok' => true, 'code' => $code];
 }
 
-/** PUT /kpis/{id} — nom, description, seuils, sens, actif (et formule si dérivé). */
+/** PUT /kpi-defs/{id} — nom, description, seuils, sens, actif (et formule si dérivé). */
 function wr_kpi_patch(int $id): array
 {
     ensureKpiDefs();
@@ -346,7 +346,7 @@ function wr_kpi_patch(int $id): array
     return ['ok' => true];
 }
 
-/** DELETE /kpis/{id} — seulement les KPI dérivés ; le reste se désactive. */
+/** DELETE /kpi-defs/{id} — seulement les KPI dérivés ; le reste se désactive. */
 function wr_kpi_suppr(int $id): array
 {
     ensureKpiDefs();

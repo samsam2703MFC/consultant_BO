@@ -7345,11 +7345,11 @@ class App {
 
     // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les
     // seuils des écrans et des rapports, et où se créent les KPI dérivés.
-    if (!this._kpisLus) { this._kpisLus = true; readOne('/kpis').then(d2 => { this.D.kpiDefs = d2 || null; this.setState({}); }); }
+    if (!this._kpisLus) { this._kpisLus = true; readOne('/kpi-defs').then(d2 => { this.D.kpiDefs = d2 || null; this.setState({}); }); }
     const kd = this.D.kpiDefs;
     const kDraft = S.kpiDraft || {};
     const kSet = k => e => { const v = e.target.value; this.setState(s2 => ({ kpiDraft: Object.assign({}, s2.kpiDraft, { [k]: v }) })); };
-    const kMaj = (id, patch, msg) => this.api('PUT', '/kpis/' + id, patch)
+    const kMaj = (id, patch, msg) => this.api('PUT', '/kpi-defs/' + id, patch)
       .then(() => { this._kpisLus = false; this.notify(msg || 'KPI mis à jour'); this.setState({}); });
     const kLev = sl => ((kd && kd.leviers && kd.leviers[sl]) || {});
     const kMes = m => ((kd && kd.mesures) || {})[m] || m;
@@ -7375,7 +7375,7 @@ class App {
         toggle: () => kMaj(k.id, { actif: !k.actif }, '« ' + k.nom + ' » ' + (k.actif ? 'désactivé' : 'activé')),
         supprimable: !!k.supprimable,
         suppr: () => { if (!window.confirm('Supprimer le KPI « ' + k.nom + ' » ?')) { return; }
-          this.api('DELETE', '/kpis/' + k.id, {}).then(() => { this._kpisLus = false; this.notify('KPI supprimé'); this.setState({}); }); },
+          this.api('DELETE', '/kpi-defs/' + k.id, {}).then(() => { this._kpisLus = false; this.notify('KPI supprimé'); this.setState({}); }); },
       })),
       mesures: Object.entries((kd && kd.mesures) || {}).map(([val, nomM]) => ({ val, nom: nomM })),
       leviers: Object.entries((kd && kd.leviers) || {}).map(([val, l]) => ({ val, nom: l.nom })),
@@ -7390,7 +7390,7 @@ class App {
       creer: () => {
         const d3 = this.state.kpiDraft || {};
         if (!String(d3.nom || '').trim()) { this.notify('Donnez un nom au KPI.'); return; }
-        this.api('POST', '/kpis', { nom: d3.nom, num: d3.num || 'ca', den: d3.den || 'tickets',
+        this.api('POST', '/kpi-defs', { nom: d3.nom, num: d3.num || 'ca', den: d3.den || 'tickets',
           echelle: d3.echelle || 'unite', levier: d3.levier || 'transverse',
           seuilAlerte: d3.alerte, seuilCritique: d3.critique, sens: d3.sens || 'bas',
           sortie: d3.sortie || 'tableau' })
