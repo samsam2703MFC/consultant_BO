@@ -736,7 +736,12 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '<td>' . (rapLogoDataUri() !== ''
             ? '<img src="' . rapLogoDataUri() . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
             : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>') . '</td>'
-        . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">' . $e($rep['poste']) . '</td>'
+        // À droite du logo : le LEVIER dont parle le rapport, pas le poste du
+        // destinataire — celui-ci le connaît, le levier est ce qu'il vient
+        // chercher. Sans levier imprimé (rapport sans matière), le poste
+        // reprend sa place plutôt qu'un blanc.
+        . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">'
+        . $e($leviersVus === [] ? (string) $rep['poste'] : implode(' · ', $leviersVus)) . '</td>'
         . '</tr></table></td></tr>'
         // — en-tête du rapport
         . '<tr><td style="background:#ffffff;padding:26px 30px 4px">'
@@ -744,11 +749,6 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($periode['label'])) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr>'
         . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td>'
-        // Ce que le rapport couvre, dit dès l'en-tête : les leviers vraiment
-        // imprimés, dans l'ordre du réseau.
-        . ($leviersVus === [] ? '' : '<td style="padding-left:10px;' . $F
-            . ';font-size:11px;color:#8b8177;white-space:nowrap">Levier' . (count($leviersVus) > 1 ? 's' : '') . ' : '
-            . $e(implode(' · ', $leviersVus)) . '</td>')
         . '</tr></table>'
         . '</td></tr>'
         // — corps
