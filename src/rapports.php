@@ -724,6 +724,24 @@ function ep_rapports(): array
             }
             return array_values(array_unique($out));
         }) ?? [],
+        // L'annuaire des consultants du panel (/panel/consultants) : les
+        // destinataires se choisissent en cliquant une personne. Sans email
+        // dans le panel, la personne n'apparaît pas — on n'invente rien.
+        'annuaire' => rapCtx('annuaire', function () {
+            $out = []; $vus = [];
+            if (PanelApi::configured()) {
+                foreach ((array) (PanelApi::get('/panel/consultants') ?? []) as $c2) {
+                    if (!is_array($c2) || empty($c2['is_active'])) { continue; }
+                    $email = trim((string) ($c2['email'] ?? ''));
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || isset($vus[$email])) { continue; }
+                    $vus[$email] = true;
+                    $out[] = ['nom' => trim(($c2['first_name'] ?? '') . ' ' . ($c2['last_name'] ?? '')),
+                        'email' => $email, 'poste' => (string) ($c2['position_name'] ?? '')];
+                }
+            }
+            usort($out, fn ($a, $b2) => strcmp($a['nom'], $b2['nom']));
+            return $out;
+        }) ?? [],
     ];
 }
 

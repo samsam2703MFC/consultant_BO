@@ -7009,6 +7009,12 @@ class App {
       postes: (rd && rd.postes) || [],
       heure: rc.heure || '7', setHeure: e => rcSet({ heure: e.target.value }),
       dest: rc.dest || '', setDest: e => rcSet({ dest: e.target.value }),
+      annuaire: ((rd && rd.annuaire) || []).map(a2 => {
+        const dests = String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean);
+        const on = dests.indexOf(a2.email) >= 0;
+        return { nom: a2.nom, poste: a2.poste, email: a2.email, on,
+          toggle: () => rcSet({ dest: (on ? dests.filter(d7 => d7 !== a2.email) : dests.concat([a2.email])).join(', ') }) };
+      }),
       dows: [1, 2, 3, 4, 5, 6, 7].map(d5 => ({ nom: JSEM2[d5], on: !!dows[d5],
         toggle: () => rcSet({ dows: Object.assign({}, dows, { [d5]: !dows[d5] }) }) })),
       doms: Array.from({ length: 31 }, (_, i2) => i2 + 1).map(d5 => ({ nom: String(d5), on: !!doms[d5],
