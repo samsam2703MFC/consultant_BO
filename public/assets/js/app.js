@@ -7342,6 +7342,63 @@ class App {
             msg: (r && (r.message || r.error)) || 'Test impossible.' }) })));
       },
     };
+
+    // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les
+    // seuils des écrans et des rapports, et où se créent les KPI dérivés.
+    if (!this._kpisLus) { this._kpisLus = true; readOne('/kpis').then(d2 => { this.D.kpiDefs = d2 || null; this.setState({}); }); }
+    const kd = this.D.kpiDefs;
+    const kDraft = S.kpiDraft || {};
+    const kSet = k => e => { const v = e.target.value; this.setState(s2 => ({ kpiDraft: Object.assign({}, s2.kpiDraft, { [k]: v }) })); };
+    const kMaj = (id, patch, msg) => this.api('PUT', '/kpis/' + id, patch)
+      .then(() => { this._kpisLus = false; this.notify(msg || 'KPI mis à jour'); this.setState({}); });
+    const kLev = sl => ((kd && kd.leviers && kd.leviers[sl]) || {});
+    const kMes = m => ((kd && kd.mesures) || {})[m] || m;
+    common.kpiCat = {
+      chargement: !kd,
+      lignes: ((kd && kd.kpis) || []).map(k => ({
+        nom: k.nom, desc: k.description || '',
+        levNom: kLev(k.levier).nom || k.levier, levCoul: kLev(k.levier).couleur || '#999999',
+        type: k.calcul && k.calcul.type === 'derive'
+          ? 'Formule : ' + kMes(k.calcul.num) + ' ÷ ' + kMes(k.calcul.den) + (k.calcul.echelle === 'pct' ? ' × 100' : '')
+          : (k.calcul && k.calcul.type === 'ecran' ? 'Seuil d’écran (' + (k.calcul.ecran || '') + ')' : 'Câblé sur l’API'),
+        alerte: k.seuilAlerte != null ? String(k.seuilAlerte) : '',
+        critique: k.seuilCritique != null ? String(k.seuilCritique) : '',
+        sens: k.sens,
+        setAlerte: e => kMaj(k.id, { seuilAlerte: e.target.value }, 'Seuil d’alerte de « ' + k.nom + ' » : ' + e.target.value),
+        setCritique: e => kMaj(k.id, { seuilCritique: e.target.value }, 'Seuil critique de « ' + k.nom + ' » : ' + e.target.value),
+        setSens: e => kMaj(k.id, { sens: e.target.value }),
+        sortie: k.sortie || 'tableau',
+        setSortie: e => kMaj(k.id, { sortie: e.target.value }, 'Sortie de « ' + k.nom + ' » : ' + e.target.value),
+        actif: !!k.actif, actifTxt: k.actif ? 'Actif' : 'Inactif',
+        actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap;'
+          + (k.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        toggle: () => kMaj(k.id, { actif: !k.actif }, '« ' + k.nom + ' » ' + (k.actif ? 'désactivé' : 'activé')),
+        supprimable: !!k.supprimable,
+        suppr: () => { if (!window.confirm('Supprimer le KPI « ' + k.nom + ' » ?')) { return; }
+          this.api('DELETE', '/kpis/' + k.id, {}).then(() => { this._kpisLus = false; this.notify('KPI supprimé'); this.setState({}); }); },
+      })),
+      mesures: Object.entries((kd && kd.mesures) || {}).map(([val, nomM]) => ({ val, nom: nomM })),
+      leviers: Object.entries((kd && kd.leviers) || {}).map(([val, l]) => ({ val, nom: l.nom })),
+      sorties: Object.entries((kd && kd.sorties) || { tableau: 'Tableau' }).map(([val, nomS]) => ({ val, nom: nomS })),
+      d: { nom: kDraft.nom || '', num: kDraft.num || 'ca', den: kDraft.den || 'tickets',
+        echelle: kDraft.echelle || 'unite', levier: kDraft.levier || 'transverse',
+        alerte: kDraft.alerte || '', critique: kDraft.critique || '', sens: kDraft.sens || 'bas',
+        sortie: kDraft.sortie || 'tableau' },
+      set: { nom: kSet('nom'), num: kSet('num'), den: kSet('den'), echelle: kSet('echelle'),
+        levier: kSet('levier'), alerte: kSet('alerte'), critique: kSet('critique'), sens: kSet('sens'),
+        sortie: kSet('sortie') },
+      creer: () => {
+        const d3 = this.state.kpiDraft || {};
+        if (!String(d3.nom || '').trim()) { this.notify('Donnez un nom au KPI.'); return; }
+        this.api('POST', '/kpis', { nom: d3.nom, num: d3.num || 'ca', den: d3.den || 'tickets',
+          echelle: d3.echelle || 'unite', levier: d3.levier || 'transverse',
+          seuilAlerte: d3.alerte, seuilCritique: d3.critique, sens: d3.sens || 'bas',
+          sortie: d3.sortie || 'tableau' })
+          .then(r2 => { if (r2 && r2.ok) { this._kpisLus = false;
+              this.setState({ kpiDraft: {} }); this.notify('KPI créé — évalué dès le prochain rapport'); }
+            else { this.notify((r2 && r2.error) || 'Création refusée'); } });
+      },
+    };
   }
 }
 

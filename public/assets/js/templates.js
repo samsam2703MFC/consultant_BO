@@ -3260,6 +3260,67 @@ function tplParams(c, x){
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Le mot de passe ne quitte pas le serveur (ceo_app_setting.smtp) — l’écran ne le relit jamais. Sans SMTP configuré, l’envoi des rapports retombe sur mail() du serveur. Gmail : créez un « mot de passe d’application », hôte smtp.gmail.com, port 587, STARTTLS.</div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Catalogue des KPI</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le référentiel qui pilote les écrans et les rapports : un seuil changé ici s’applique partout au prochain calcul. « Alerte » déclenche la ligne dans les rapports, « Critique » la marque en rouge vif.</div>
+        ${c.kpiCat.chargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Lecture du référentiel…</div>` : `
+        <div style="display:flex;flex-direction:column">
+          ${c.kpiCat.lignes.map(k => `
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
+              <div style="flex:1;min-width:230px">
+                <span style="font-size:12.5px;font-weight:500"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${k.levCoul};margin-right:6px;vertical-align:0"></i>${esc(k.nom)}</span>
+                <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(k.type)} · ${esc(k.levNom)}</div>
+              </div>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Alerte
+                <input value="${esc(k.alerte)}" ${x.C(k.setAlerte)} style="display:block;width:74px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text);text-align:right">
+              </label>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Critique
+                <input value="${esc(k.critique)}" ${x.C(k.setCritique)} style="display:block;width:74px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text);text-align:right">
+              </label>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Mauvais
+                <select ${x.C(k.setSens)} style="display:block;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text)">
+                  <option value="haut"${k.sens === 'haut' ? ' selected' : ''}>au-dessus</option>
+                  <option value="bas"${k.sens === 'bas' ? ' selected' : ''}>en dessous</option>
+                </select>
+              </label>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Sortie
+                <select ${x.C(k.setSortie)} style="display:block;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text)">
+                  ${c.kpiCat.sorties.map(so => `<option value="${so.val}"${k.sortie === so.val ? ' selected' : ''}>${esc(so.nom)}</option>`).join('')}
+                </select>
+              </label>
+              <span ${x.A(k.toggle)} style="${k.actifSt}">${k.actifTxt}</span>
+              ${k.supprimable ? `<button ${x.A(k.suppr)} title="Supprimer ce KPI dérivé" style="border:none;background:none;color:var(--color-text-muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button>` : `<span style="width:21px"></span>`}
+            </div>`).join('')}
+        </div>
+        <div style="margin-top:14px;padding:13px 15px;background:var(--color-background-secondary);border-radius:10px">
+          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Nouveau KPI — une formule sur les mesures du mois</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <input value="${esc(c.kpiCat.d.nom)}" ${x.C(c.kpiCat.set.nom)} placeholder="Nom du KPI" style="flex:2;min-width:170px;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <select ${x.C(c.kpiCat.set.num)} style="flex:1;min-width:150px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">${c.kpiCat.mesures.map(mm => `<option value="${mm.val}"${c.kpiCat.d.num === mm.val ? ' selected' : ''}>${esc(mm.nom)}</option>`).join('')}</select>
+            <span style="font-size:14px;color:var(--color-text-muted);padding-bottom:7px">÷</span>
+            <select ${x.C(c.kpiCat.set.den)} style="flex:1;min-width:150px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">${c.kpiCat.mesures.map(mm => `<option value="${mm.val}"${c.kpiCat.d.den === mm.val ? ' selected' : ''}>${esc(mm.nom)}</option>`).join('')}</select>
+            <select ${x.C(c.kpiCat.set.echelle)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
+              <option value="unite"${c.kpiCat.d.echelle === 'unite' ? ' selected' : ''}>unité</option>
+              <option value="eur"${c.kpiCat.d.echelle === 'eur' ? ' selected' : ''}>€</option>
+              <option value="pct"${c.kpiCat.d.echelle === 'pct' ? ' selected' : ''}>× 100 (%)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+            <select ${x.C(c.kpiCat.set.levier)} style="flex:1;min-width:140px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">${c.kpiCat.leviers.map(lv => `<option value="${lv.val}"${c.kpiCat.d.levier === lv.val ? ' selected' : ''}>${esc(lv.nom)}</option>`).join('')}</select>
+            <input value="${esc(c.kpiCat.d.alerte)}" ${x.C(c.kpiCat.set.alerte)} placeholder="Seuil alerte" style="width:96px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text);text-align:right">
+            <input value="${esc(c.kpiCat.d.critique)}" ${x.C(c.kpiCat.set.critique)} placeholder="Critique" style="width:82px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text);text-align:right">
+            <select ${x.C(c.kpiCat.set.sens)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
+              <option value="bas"${c.kpiCat.d.sens === 'bas' ? ' selected' : ''}>mauvais en dessous</option>
+              <option value="haut"${c.kpiCat.d.sens === 'haut' ? ' selected' : ''}>mauvais au-dessus</option>
+            </select>
+            <select ${x.C(c.kpiCat.set.sortie)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
+              ${c.kpiCat.sorties.map(so => `<option value="${so.val}"${c.kpiCat.d.sortie === so.val ? ' selected' : ''}>Sortie : ${esc(so.nom)}</option>`).join('')}
+            </select>
+            <button ${x.A(c.kpiCat.creer)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer le KPI</button>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;text-wrap:pretty">Évalué par magasin sur le mois en cours, dès le prochain rapport (bloc « KPI personnalisés »). Un KPI qui exige une nouvelle source API reste un ajout de code — sa fiche portera « source à câbler ».</div>
+        </div>`}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Modèles d'email de relance</div>
         <div style="display:flex;flex-direction:column;gap:12px">
           ${c.paramTpls.map(t => `

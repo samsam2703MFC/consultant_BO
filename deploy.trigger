@@ -1,1 +1,1 @@
-2026-08-21T10:41:24Z smtp-change
+2026-08-21T12:04:14Z referentiel-kpi

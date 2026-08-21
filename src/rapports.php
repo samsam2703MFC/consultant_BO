@@ -62,14 +62,21 @@ function ensureRapports(): void
 
     $n = Db::row('SELECT COUNT(*) n FROM ceo_rapport');
     if ((int) ($n['n'] ?? 0) > 0) {
-        // Évolution des semis : la heatmap de rentabilité rejoint les rapports
-        // CEO et franchisé déjà en base — une fois, sans toucher au reste.
-        foreach (['ceo-hebdo', 'franchise-hebdo'] as $code) {
+        // Évolution des semis : les blocs nés après le premier semis rejoignent
+        // les rapports déjà en base — une fois, sans toucher au reste.
+        $evolutions = [
+            'ceo-hebdo' => ['rentab-heatmap', 'kpi-derives'],
+            'franchise-hebdo' => ['rentab-heatmap'],
+        ];
+        foreach ($evolutions as $code => $nouveaux) {
             $r = Db::row('SELECT id, blocs FROM ceo_rapport WHERE code = ?', [$code]);
             if ($r === null) { continue; }
             $blocs = json_decode((string) $r['blocs'], true) ?: [];
-            if (!in_array('rentab-heatmap', $blocs, true)) {
-                $blocs[] = 'rentab-heatmap';
+            $avant = count($blocs);
+            foreach ($nouveaux as $nb) {
+                if (!in_array($nb, $blocs, true)) { $blocs[] = $nb; }
+            }
+            if (count($blocs) > $avant) {
                 Db::exec('UPDATE ceo_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), (int) $r['id']]);
             }
         }
@@ -82,7 +89,7 @@ function ensureRapports(): void
         ['franchise-hebdo', 'Votre semaine, par levier', 'Franchisé', 'hebdo', 8, 1,
             ['trafic-clients', 'recurrence-panier', 'recurrence-avis', 'xp-taches', 'overhead-jours', 'rentab-heatmap'], 1],
         ['ceo-hebdo', 'Synthèse réseau de la semaine', 'CEO / direction réseau', 'hebdo', 7, 1,
-            ['trafic-nvn1', 'trafic-clients', 'recurrence-panier', 'recurrence-avis', 'food-cost', 'labour-caetp', 'overhead-jours', 'rentab-heatmap', 'royalties-retard'], 0],
+            ['trafic-nvn1', 'trafic-clients', 'recurrence-panier', 'recurrence-avis', 'food-cost', 'labour-caetp', 'overhead-jours', 'rentab-heatmap', 'kpi-derives', 'royalties-retard'], 0],
         ['ceo-mensuel', 'Clôture mensuelle du réseau', 'CEO / direction réseau', 'mensuel', 7, 3,
             ['trafic-nvn1', 'trafic-clients', 'recurrence-panier', 'food-cost', 'labour-caetp', 'overhead-jours', 'royalties-retard'], 0],
         ['centrale-hebdo', 'Approvisionnement et factures', 'Centrale d’achat', 'hebdo', 7, 4,
@@ -95,24 +102,22 @@ function ensureRapports(): void
     }
 }
 
-/** Les seuils — ceux du cockpit (table kpi + cible Google), pas un doublon. */
+/**
+ * Les seuils — lus dans le RÉFÉRENTIEL des KPI (ceo_kpi_def, éditable dans
+ * Paramètres). Plus rien en dur : changer un seuil à l'écran change les
+ * rapports au prochain run. Les défauts ne servent que si une ligne manque.
+ */
 function rapportSeuils(): array
 {
-    $s = [];
-    try {
-        foreach (Db::rows('SELECT code, seuil_bas, seuil_haut FROM kpi WHERE code IS NOT NULL') as $k) {
-            $s[$k['code']] = $k['seuil_haut'] !== null ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
-        }
-    } catch (PDOException $e) { /* défauts ci-dessous */ }
     return [
-        'food' => $s['food'] ?? 32.0, 'labour' => $s['labour'] ?? 33.0,
-        'overhead' => $s['overhead'] ?? 13.5, 'caEtp' => $s['ca_etp'] ?? 13000.0,
-        'cibleGoogle' => (float) setting('reputationCible', 4.5),
-        'tacheNote' => 3,          // tâche « sous le seuil » : note ≤ 3/5
-        'ecartTrafic' => -10.0,    // clients/jour vs moyenne réseau, en %
-        'ecartPanier' => -5.0,     // ticket moyen et articles/ticket, en %
-        'ecartNvn1' => -5.0,       // CA N vs N-1, en %
-        'joursRouges' => 3,        // jours à résultat net négatif sur la semaine
+        'food' => kpiSeuil('food-cost-pct', 32.0), 'labour' => kpiSeuil('labour-pct', 33.0),
+        'overhead' => kpiSeuil('overhead-pct', 13.5), 'caEtp' => kpiSeuil('ca-etp', 13000.0),
+        'cibleGoogle' => kpiSeuil('note-google', (float) setting('reputationCible', 4.5)),
+        'tacheNote' => (int) kpiSeuil('taches', 3),
+        'ecartTrafic' => kpiSeuil('trafic-clients', -10.0),
+        'ecartPanier' => kpiSeuil('panier-ecart', -5.0),
+        'ecartNvn1' => kpiSeuil('nvn1', -5.0),
+        'joursRouges' => (int) kpiSeuil('jours-rouges', 3),
     ];
 }
 
@@ -199,6 +204,7 @@ function rapBlocDefs(): array
         'labour-caetp' => ['levier' => 'labour-cost', 'nom' => 'CA par ETP'],
         'overhead-jours' => ['levier' => 'overhead-cost', 'nom' => 'Jours à résultat net négatif'],
         'rentab-heatmap' => ['levier' => 'overhead-cost', 'nom' => 'Rentabilité par jour (heatmap)'],
+        'kpi-derives' => ['levier' => 'transverse', 'nom' => 'KPI personnalisés'],
         'royalties-retard' => ['levier' => 'transverse', 'nom' => 'Redevances en retard'],
         'centrale-commandes' => ['levier' => 'transverse', 'nom' => 'Commandes fournisseurs à passer'],
     ];
@@ -401,6 +407,33 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     '<table cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:4px 0 2px"><tr>' . $cells . '</tr></table>'
                     . ($sous !== '' ? '<div style="font-size:11px;color:#6E645A">' . htmlspecialchars($sous) . '</div>' : '')];
             }
+            break;
+        }
+        case 'kpi-derives': {
+            // Les KPI créés au formulaire (Paramètres → Catalogue des KPI) :
+            // chacun évalué par magasin sur le mois en cours, seuls les
+            // dépassements s'impriment — même règle que les blocs câblés.
+            $b['action'] = 'Seuils, formules et types de sortie dans Paramètres → Catalogue des KPI.';
+            $aucunActif = true;
+            foreach (kpiDefs() as $def) {
+                if (!$def['actif'] || ($def['calcul']['type'] ?? '') !== 'derive') { continue; }
+                $aucunActif = false;
+                $lignes = kpiEvalDerive($def);
+                if (($def['sortie'] ?? 'tableau') !== 'tableau') {
+                    // Sortie visuelle (heatmap, barres, treemap) : tous les
+                    // magasins s'affichent, la couleur porte les seuils.
+                    $visu = kpiRenduVisuel($def, $lignes);
+                    if ($visu !== '') { $b['htmlPar'][] = [$def['nom'], $visu]; }
+                    continue;
+                }
+                foreach ($lignes as $l) {
+                    if ($l['niveau'] === 0) { continue; }
+                    $b['lignes'][] = [$l['magasin'], $def['nom'] . ' : ' . kpiFormatValeur($def, $l['valeur'])
+                        . ' (' . ($def['sens'] === 'haut' ? 'seuil' : 'minimum') . ' '
+                        . kpiFormatValeur($def, (float) $def['seuil_alerte']) . ')', $l['niveau'] >= 2];
+                }
+            }
+            if ($aucunActif) { $b['motif'] = 'aucun KPI dérivé actif — créez-en dans Paramètres'; }
             break;
         }
         case 'royalties-retard': {

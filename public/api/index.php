@@ -18,6 +18,7 @@ require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
+require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/connecteurs.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -78,6 +79,7 @@ function route(string $method, string $path): mixed
             $path === '/fournisseurs'                  => ep_suppliers(),
             $path === '/connecteurs'                   => ep_connecteurs(),
             $path === '/rapports'                      => ep_rapports(),
+            $path === '/kpis'                          => ep_kpis(),
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
@@ -161,6 +163,10 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne_suppr((int) $m[1]); }
     if ($method === 'PUT' && $path === '/marketing/types/ordre') { return wr_mkt_types_ordre(); }
+    // --- référentiel des KPI (catalogue + seuils, éditable au formulaire)
+    if ($method === 'POST' && $path === '/kpis') { return wr_kpi(); }
+    if ($method === 'PUT' && preg_match('#^/kpis/(\d+)$#', $path, $m)) { return wr_kpi_patch((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/kpis/(\d+)$#', $path, $m)) { return wr_kpi_suppr((int) $m[1]); }
     // --- machine d'envoi SMTP (identifiants côté serveur uniquement)
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }
