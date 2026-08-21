@@ -216,6 +216,7 @@ function rapBlocDefs(): array
         'trafic-nvn1' => ['levier' => 'trafic', 'nom' => 'CA N vs N-1'],
         'recurrence-panier' => ['levier' => 'recurrence', 'nom' => 'Ticket moyen et articles par ticket'],
         'recurrence-avis' => ['levier' => 'recurrence', 'nom' => 'Réputation Google'],
+        'xp-bilan' => ['levier' => 'xp', 'nom' => 'Bilan des tâches de la période'],
         'xp-taches' => ['levier' => 'xp', 'nom' => 'Tâches sous le seuil'],
         'food-cost' => ['levier' => 'food-cost', 'nom' => 'Food cost du mois'],
         'food-stock' => ['levier' => 'food-cost', 'nom' => 'Stocks négatifs'],
