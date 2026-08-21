@@ -708,16 +708,11 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             if ($lignes === [] && $infos === [] && $htmls === [] && $s['motif'] === null) { continue; }
             $lev = RAP_LEVIERS[$s['levier']];
             $leviersVus[$s['levier']] = $lev['nom'];
-            // Le levier en PASTILLE pleine, pas en surtitre gris : sur papier,
-            // « de quel levier me parle-t-on » doit se voir sans chercher.
-            $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 6px"><tr>'
-                . '<td width="4" style="background:' . $lev['couleur'] . ';border-radius:2px;font-size:0;line-height:0">&nbsp;</td>'
-                . '<td style="padding-left:11px;' . $F . '">'
-                . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:4px"><tr>'
-                . '<td style="background:' . $lev['couleur'] . ';border-radius:999px;padding:3px 10px;' . $F
-                . ';font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;color:#ffffff;white-space:nowrap">'
-                . 'Levier ' . $e($lev['nom']) . '</td></tr></table>'
-                . '<span style="font-size:14.5px;font-weight:700;color:#221E1A">' . $e($s['nom']) . '</span></td></tr></table>';
+            // Le titre du bloc, seul. Le levier est annoncé UNE fois, au
+            // bandeau : le répéter en pastille et en barre au-dessus de chaque
+            // section faisait trois fois la même information sur une page.
+            $h .= '<div style="' . $F . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:20px 0 6px">'
+                . $e($s['nom']) . '</div>';
             if ($s['motif'] !== null) {
                 $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:8px 12px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
             }
