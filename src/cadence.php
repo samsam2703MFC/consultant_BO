@@ -79,10 +79,13 @@ function cadenceCalculePlan(int $semaines): array
     $semaines = max(1, min(12, $semaines));
     $t0 = microtime(true);
     $auj = new DateTimeImmutable('today');
-    $d = $auj->modify('-' . ($semaines * 7) . ' days');
-    $groupes = []; $lus = 0; $partiel = false; $premierJour = $d->format('Y-m-d');
-    for (; $d <= $auj; $d = $d->modify('+1 day')) {
+    $limite = $auj->modify('-' . ($semaines * 7) . ' days');
+    // Du plus RÉCENT au plus ancien : si le budget API tombe, on perd les
+    // vieux jours, jamais les derniers contrôles — ce sont eux qui décident.
+    $groupes = []; $lus = 0; $partiel = false; $premierJour = $auj->format('Y-m-d');
+    for ($d = $auj; $d >= $limite; $d = $d->modify('-1 day')) {
         if (microtime(true) - $t0 > CADENCE_BUDGET_S) { $partiel = true; break; }
+        $premierJour = $d->format('Y-m-d');
         $j = rapAppel('ep_pwa_tasks', ['date' => $d->format('Y-m-d')]);
         foreach ((array) ($j['shops'] ?? []) as $sh) {
             foreach ((array) ($sh['taches'] ?? []) as $t) {

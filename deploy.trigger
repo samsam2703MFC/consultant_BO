@@ -1,1 +1,1 @@
-2026-08-21T19:39:55Z cadence-dynamique
+2026-08-21T19:41:55Z cadence-balayage
