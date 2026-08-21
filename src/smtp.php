@@ -75,8 +75,93 @@ final class Smtp
             'source' => $c['source']];
     }
 
-    /** Envoie un HTML. Rend vrai/faux ; le détail d'un échec est dans $lastError. */
-    public static function envoyer(string $a, string $sujet, string $html): bool
+    /**
+     * Le message MIME complet : [en-têtes, corps].
+     *
+     * Sorti de la conversation SMTP pour être VÉRIFIABLE sans serveur : un
+     * multipart mal fermé ne se voit pas à l'œil, il se voit dans un test.
+     */
+    public static function message(string $expediteur, string $a, string $sujet, string $html, array $pieces = []): array
+    {
+        // Les images incorporées en data URI (photos annotées des rapports)
+        // deviennent des pièces jointes intégrées (multipart/related, CID) :
+        // Gmail n'affiche pas les data URI, il affiche les CID.
+        // Les blocs réservés à l'écran (bouton Imprimer/PDF) sortent de
+        // l'email — un window.print() n'a aucun sens dans une boîte mail.
+        $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
+        $images = [];
+        $html = preg_replace_callback('#"data:image/(jpeg|png);base64,([A-Za-z0-9+/=]+)"#',
+            function ($m2) use (&$images) {
+                $cid = 'img' . (count($images) + 1) . '@cockpit';
+                $images[] = ['cid' => $cid, 'type' => $m2[1], 'b64' => $m2[2]];
+                return '"cid:' . $cid . '"';
+            }, $html);
+        // Le contenu du message, écrit comme une PARTIE MIME complète
+        // (ses propres en-têtes, puis son corps) : html seul, ou html +
+        // images incorporées. Une seule écriture, qu'il y ait des pièces
+        // jointes ou non.
+        if ($images === []) {
+            $partie = 'Content-Type: text/html; charset=UTF-8' . "\r\n"
+                . 'Content-Transfer-Encoding: base64' . "\r\n\r\n"
+                . chunk_split(base64_encode($html), 76, "\r\n");
+        } else {
+            $lim = 'lim' . bin2hex(random_bytes(10));
+            $partie = 'Content-Type: multipart/related; boundary="' . $lim . '"' . "\r\n\r\n"
+                . '--' . $lim . "\r\n"
+                . 'Content-Type: text/html; charset=UTF-8' . "\r\n"
+                . 'Content-Transfer-Encoding: base64' . "\r\n\r\n"
+                . chunk_split(base64_encode($html), 76, "\r\n");
+            foreach ($images as $img) {
+                $partie .= '--' . $lim . "\r\n"
+                    . 'Content-Type: image/' . $img['type'] . "\r\n"
+                    . 'Content-Transfer-Encoding: base64' . "\r\n"
+                    . 'Content-ID: <' . $img['cid'] . '>' . "\r\n"
+                    . 'Content-Disposition: inline' . "\r\n\r\n"
+                    . chunk_split($img['b64'], 76, "\r\n");
+            }
+            $partie .= '--' . $lim . '--' . "\r\n";
+        }
+
+        $entetes = 'From: ' . $expediteur . "\r\n"
+            . 'To: ' . $a . "\r\n"
+            . 'Subject: =?UTF-8?B?' . base64_encode($sujet) . "?=\r\n"
+            . 'MIME-Version: 1.0' . "\r\n"
+            . 'Date: ' . date('r') . "\r\n";
+        if ($pieces === []) {
+            // Sans pièce jointe, le contenu EST le message : ses en-têtes
+            // rejoignent ceux du message, comme avant.
+            $coupe = strpos($partie, "\r\n\r\n");
+            $entetes .= substr($partie, 0, $coupe + 2);
+            $corps = substr($partie, $coupe + 4);
+        } else {
+            $mix = 'mix' . bin2hex(random_bytes(10));
+            $entetes .= 'Content-Type: multipart/mixed; boundary="' . $mix . '"' . "\r\n";
+            $corps = '--' . $mix . "\r\n" . $partie;
+            foreach ($pieces as $p) {
+                // Un nom de fichier ne porte ni guillemet ni retour à la
+                // ligne : sinon il casserait l'en-tête qui le transporte.
+                $nom = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) ($p['nom'] ?? 'piece-jointe'));
+                $corps .= '--' . $mix . "\r\n"
+                    . 'Content-Type: ' . ($p['type'] ?? 'application/octet-stream') . '; name="' . $nom . '"' . "\r\n"
+                    . 'Content-Transfer-Encoding: base64' . "\r\n"
+                    . 'Content-Disposition: attachment; filename="' . $nom . '"' . "\r\n\r\n"
+                    . chunk_split(base64_encode((string) ($p['contenu'] ?? '')), 76, "\r\n");
+            }
+            $corps .= '--' . $mix . '--' . "\r\n";
+        }
+        return [$entetes, $corps];
+    }
+
+    /**
+     * Envoie un HTML, avec d'éventuelles pièces jointes.
+     *
+     * `$pieces` : [['nom' => 'rapport.pdf', 'type' => 'application/pdf',
+     *              'contenu' => <octets>], …]. Sans pièce, le message garde
+     * exactement la forme d'avant (html seul, ou multipart/related quand des
+     * images sont incorporées) ; avec pièces, le tout est emballé dans un
+     * multipart/mixed — la forme que tous les clients savent lire.
+     */
+    public static function envoyer(string $a, string $sujet, string $html, array $pieces = []): bool
     {
         self::$lastError = null;
         $c = self::config();
@@ -126,45 +211,7 @@ final class Smtp
             if (!$dire('MAIL FROM:<' . $exp . '>', [250])) { return false; }
             if (!$dire('RCPT TO:<' . $a . '>', [250, 251])) { return false; }
             if (!$dire('DATA', [354])) { return false; }
-            // Les images incorporées en data URI (photos annotées des rapports)
-            // deviennent des pièces jointes intégrées (multipart/related, CID) :
-            // Gmail n'affiche pas les data URI, il affiche les CID.
-            // Les blocs réservés à l'écran (bouton Imprimer/PDF) sortent de
-            // l'email — un window.print() n'a aucun sens dans une boîte mail.
-            $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
-            $images = [];
-            $html = preg_replace_callback('#"data:image/(jpeg|png);base64,([A-Za-z0-9+/=]+)"#',
-                function ($m2) use (&$images) {
-                    $cid = 'img' . (count($images) + 1) . '@cockpit';
-                    $images[] = ['cid' => $cid, 'type' => $m2[1], 'b64' => $m2[2]];
-                    return '"cid:' . $cid . '"';
-                }, $html);
-            $entetes = 'From: ' . $c['expediteur'] . "\r\n"
-                . 'To: ' . $a . "\r\n"
-                . 'Subject: =?UTF-8?B?' . base64_encode($sujet) . "?=\r\n"
-                . 'MIME-Version: 1.0' . "\r\n"
-                . 'Date: ' . date('r') . "\r\n";
-            if ($images === []) {
-                $entetes .= 'Content-Type: text/html; charset=UTF-8' . "\r\n"
-                    . 'Content-Transfer-Encoding: base64' . "\r\n";
-                $corps = chunk_split(base64_encode($html), 76, "\r\n");
-            } else {
-                $lim = 'lim' . bin2hex(random_bytes(10));
-                $entetes .= 'Content-Type: multipart/related; boundary="' . $lim . '"' . "\r\n";
-                $corps = '--' . $lim . "\r\n"
-                    . 'Content-Type: text/html; charset=UTF-8' . "\r\n"
-                    . 'Content-Transfer-Encoding: base64' . "\r\n\r\n"
-                    . chunk_split(base64_encode($html), 76, "\r\n");
-                foreach ($images as $img) {
-                    $corps .= '--' . $lim . "\r\n"
-                        . 'Content-Type: image/' . $img['type'] . "\r\n"
-                        . 'Content-Transfer-Encoding: base64' . "\r\n"
-                        . 'Content-ID: <' . $img['cid'] . '>' . "\r\n"
-                        . 'Content-Disposition: inline' . "\r\n\r\n"
-                        . chunk_split($img['b64'], 76, "\r\n");
-                }
-                $corps .= '--' . $lim . '--' . "\r\n";
-            }
+            [$entetes, $corps] = self::message($c['expediteur'], $a, $sujet, $html, $pieces);
             if (!$dire($entetes . "\r\n" . $corps . "\r\n.", [250])) { return false; }
             $dire('QUIT', [221]);
             return true;

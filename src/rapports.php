@@ -758,10 +758,28 @@ function rapportEnvoyer(array $rep, int $runId): array
     $sujet = '[' . $rep['poste'] . '] ' . $rep['nom'] . ' — ' . ($run['resume'] ?? '');
     // SMTP configuré (Paramètres) d'abord ; mail() de PHP en repli seulement.
     $viaSmtp = Smtp::configured();
+
+    // Le rapport EN PIÈCE JOINTE, rendu UNE fois pour tous les destinataires —
+    // un rendu par adresse coûterait 25 s chacun pour le même fichier. Sans
+    // moteur de rendu, l'email part quand même : le rapport est dans le corps
+    // du message, et la réponse dit pourquoi le PDF manque plutôt que de
+    // laisser chercher une pièce jointe qui n'existe pas.
+    $pieces = []; $notePdf = null;
+    if ($viaSmtp) {
+        $pdf = rapPdfRendu((string) $run['html']);
+        if ($pdf !== null) {
+            $pieces[] = ['nom' => rapPdfNom($rep, $run), 'type' => 'application/pdf', 'contenu' => $pdf];
+        } else {
+            $notePdf = 'PDF non joint — aucun moteur de rendu n’a répondu sur le serveur ; le rapport reste lisible dans le corps du message.';
+        }
+    } else {
+        $notePdf = 'PDF non joint — envoi par mail() de PHP ; configurez la machine SMTP dans Paramètres pour l’avoir en pièce jointe.';
+    }
+
     $ok = []; $derniereErreur = null;
     foreach ($dests as $d) {
         if ($viaSmtp) {
-            $ok[$d] = Smtp::envoyer($d, $sujet, (string) $run['html']);
+            $ok[$d] = Smtp::envoyer($d, $sujet, (string) $run['html'], $pieces);
             if (!$ok[$d]) { $derniereErreur = Smtp::$lastError; }
         } else {
             $exp = (string) setting('rapportsExpediteur', 'cockpit@' . ($_SERVER['HTTP_HOST'] ?? 'atelierby.local'));
@@ -773,11 +791,14 @@ function rapportEnvoyer(array $rep, int $runId): array
     $tous = !in_array(false, $ok, true);
     Db::exec('UPDATE ceo_rapport_run SET statut = ?, envoye_a = ? WHERE id = ?',
         [$tous ? 'envoye' : $run['statut'], json_encode(array_keys(array_filter($ok))), $runId]);
-    journalAdd('CEO', 'Rapport', $rep['nom'], $tous ? 'Envoyé (' . ($viaSmtp ? 'SMTP' : 'mail()') . ') à ' . implode(', ', $dests)
+    journalAdd('CEO', 'Rapport', $rep['nom'], $tous
+        ? 'Envoyé (' . ($viaSmtp ? 'SMTP' : 'mail()') . ', ' . ($pieces !== [] ? 'PDF joint' : 'sans PDF') . ') à ' . implode(', ', $dests)
         : 'Envoi échoué — ' . ($derniereErreur ?? implode(', ', array_keys(array_filter($ok, fn ($v) => !$v)))));
     return ['ok' => $tous, 'envoyes' => array_keys(array_filter($ok)),
         'echecs' => array_keys(array_filter($ok, fn ($v) => !$v)),
         'via' => $viaSmtp ? 'smtp' : 'mail',
+        'pdf' => $pieces !== [] ? $pieces[0]['nom'] : null,
+        'notePdf' => $notePdf,
         'note' => $tous ? null : $derniereErreur];
 }
 
@@ -1081,12 +1102,33 @@ function ep_rapport_run_pdf(int $id): array
         http_response_code(501);
         return ['error' => 'exec désactivé sur ce serveur — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
     }
+    $pdf = rapPdfRendu((string) $run['html']);
+    if ($pdf === null) {
+        http_response_code(501);
+        return ['error' => 'aucun moteur PDF sur le serveur (Chromium/wkhtmltopdf absents) — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="rapport-' . $id . '.pdf"');
+    echo $pdf;
+    exit;
+}
+
+/**
+ * Le PDF d'un HTML de rapport — les octets, ou null si aucun moteur ne rend.
+ *
+ * Un seul endroit pour la liste des moteurs : la route de téléchargement et le
+ * mailer (qui joint le PDF à l'email) doivent produire le MÊME fichier.
+ *
+ * CHAQUE essai est borné par `timeout` : un moteur qui attend (xvfb sans
+ * écran, chromium qui bloque) retiendrait sinon un worker Apache sans fin —
+ * quelques requêtes suffisent alors à coucher toute l'API. Mesuré.
+ */
+function rapPdfRendu(string $html): ?string
+{
+    if (!function_exists('shell_exec')) { return null; }
     $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
-    file_put_contents($tmpH, (string) $run['html']);
-    // CHAQUE essai est borné par `timeout` : un moteur qui attend (xvfb sans
-    // écran, chromium qui bloque) retiendrait sinon un worker Apache sans fin
-    // — quelques requêtes suffisent alors à coucher toute l'API. Mesuré.
+    file_put_contents($tmpH, $html);
     $essais = [
         // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
         'timeout 25 xvfb-run -a wkhtmltopdf --quiet --page-size A4 --enable-local-file-access %1$s %2$s 2>&1',
@@ -1098,17 +1140,23 @@ function ep_rapport_run_pdf(int $id): array
     foreach ($essais as $cmd) {
         @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));
         if (is_file($tmpP) && filesize($tmpP) > 1000) {
-            @unlink($tmpH);
-            header('Content-Type: application/pdf');
-            header('Content-Disposition: attachment; filename="rapport-' . $id . '.pdf"');
-            readfile($tmpP);
-            @unlink($tmpP);
-            exit;
+            $octets = (string) file_get_contents($tmpP);
+            @unlink($tmpH); @unlink($tmpP);
+            return $octets;
         }
     }
     @unlink($tmpH); @unlink($tmpP);
-    http_response_code(501);
-    return ['error' => 'aucun moteur PDF sur le serveur (Chromium/wkhtmltopdf absents) — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
+    return null;
+}
+
+/** Un nom de fichier lisible : « rapport-non-conformites-2026-08-21.pdf ». */
+function rapPdfNom(array $rep, array $run): string
+{
+    $nom = (string) ($rep['nom'] ?? 'rapport');
+    $nom = @iconv('UTF-8', 'ASCII//TRANSLIT', $nom) ?: $nom;
+    $nom = trim(preg_replace('/[^A-Za-z0-9]+/', '-', $nom), '-');
+    $jour = substr((string) ($run['genere_le'] ?? date('Y-m-d')), 0, 10);
+    return strtolower(($nom !== '' ? $nom : 'rapport') . '-' . $jour) . '.pdf';
 }
 
 /* --- Machine d'envoi (SMTP) — réglages dans Paramètres ---------------------- */
