@@ -1,1 +1,1 @@
-2026-08-21T20:00:00Z pdf-sans-pied-de-mail
+2026-08-21T20:15:00Z levier-visible
