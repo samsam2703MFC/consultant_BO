@@ -64,7 +64,9 @@ function ensureRapports(): void
     // dépassements par bloc. Sur une base déjà en service, on complète.
     foreach (['ADD COLUMN jours TEXT NULL', 'ADD COLUMN magasins TEXT NULL',
               "ADD COLUMN periode VARCHAR(14) NULL", 'ADD COLUMN periode_du DATE NULL',
-              'ADD COLUMN periode_au DATE NULL', 'ADD COLUMN modes TEXT NULL'] as $alter) {
+              'ADD COLUMN periode_au DATE NULL', 'ADD COLUMN modes TEXT NULL',
+              "ADD COLUMN envoi_mode VARCHAR(12) NOT NULL DEFAULT 'groupe'",
+              'ADD COLUMN dest_par_magasin TEXT NULL'] as $alter) {
         try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
     }
 
@@ -737,6 +739,69 @@ function rapportEnvoyer(array $rep, int $runId): array
         'note' => $tous ? null : $derniereErreur];
 }
 
+/**
+ * Distribution « un email par magasin » : UNE définition, N envois ciblés.
+ *
+ *  - chaque magasin du périmètre reçoit SA version (ses seules lignes), aux
+ *    adresses du carnet magasin → emails ; sans matière, pas d'envoi — la
+ *    règle s'applique magasin par magasin ;
+ *  - les destinataires « réseau » (le consultant) reçoivent la version
+ *    complète, tous magasins en chapitres.
+ *
+ * Le cache de contexte (rapCtx) est partagé dans la requête : les lectures
+ * API ne se font qu'une fois, les versions par magasin n'en refont aucune.
+ */
+function rapportDistribuer(array $rep): array
+{
+    $carnet = json_decode((string) ($rep['dest_par_magasin'] ?? ''), true) ?: [];
+    $perim = json_decode((string) ($rep['magasins'] ?? ''), true) ?: [];
+    if ($perim === []) {
+        try { $perim = array_map(fn ($r2) => (string) $r2['name'], Db::rows('SELECT name FROM shops WHERE active = 1 ORDER BY name')); }
+        catch (PDOException $e) { $perim = []; }
+    }
+    $bilan = ['reseau' => null, 'magasins' => []];
+
+    // La version complète d'abord — elle sert aussi de run « principal ».
+    $g = rapportGenerer($rep);
+    $bilan['runId'] = $g['runId'];
+    $bilan['resume'] = $g['resume'];
+    $destsReseau = array_values(array_filter(json_decode((string) ($rep['destinataires'] ?? '[]'), true) ?: [],
+        fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+    if ($destsReseau !== []) {
+        $bilan['reseau'] = $g['statut'] === 'vide'
+            ? ['statut' => 'vide', 'note' => 'rien à signaler — non envoyé']
+            : rapportEnvoyer($rep, $g['runId']);
+    }
+
+    foreach ($perim as $mag) {
+        $dests = array_values(array_filter((array) ($carnet[$mag] ?? []), fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+        if ($dests === []) {
+            $bilan['magasins'][] = ['magasin' => $mag, 'statut' => 'sans-adresse',
+                'note' => 'aucune adresse dans le carnet — version non générée'];
+            continue;
+        }
+        $repMag = $rep;
+        $repMag['nom'] = $rep['nom'] . ' — ' . $mag;
+        $repMag['magasins'] = json_encode([$mag]);
+        $repMag['destinataires'] = json_encode($dests);
+        $repMag['par_magasin'] = 0;
+        $gm = rapportGenerer($repMag);
+        if ($gm['statut'] === 'vide') {
+            $bilan['magasins'][] = ['magasin' => $mag, 'statut' => 'vide', 'runId' => $gm['runId'],
+                'note' => 'rien à signaler — non envoyé'];
+            continue;
+        }
+        $env = rapportEnvoyer($repMag, $gm['runId']);
+        $bilan['magasins'][] = ['magasin' => $mag, 'statut' => $env['ok'] ? 'envoye' : 'echec',
+            'runId' => $gm['runId'], 'envoyes' => $env['envoyes'] ?? [], 'note' => $env['note'] ?? null];
+    }
+    journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Distribution par magasin — '
+        . count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' envoyé(s), '
+        . count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'vide')) . ' sans matière, '
+        . count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'sans-adresse')) . ' sans adresse');
+    return $bilan;
+}
+
 /* --- Endpoints -------------------------------------------------------------- */
 
 function ep_rapports(): array
@@ -763,6 +828,8 @@ function ep_rapports(): array
                 'destinataires' => json_decode((string) ($r['destinataires'] ?? '[]'), true) ?: [],
                 'parMagasin' => (bool) $r['par_magasin'], 'actif' => (bool) $r['actif'],
                 'jours' => json_decode((string) ($r['jours'] ?? ''), true) ?: null,
+                'envoiMode' => $r['envoi_mode'] ?? 'groupe',
+                'destParMagasin' => json_decode((string) ($r['dest_par_magasin'] ?? ''), true) ?: [],
                 'magasins' => json_decode((string) ($r['magasins'] ?? ''), true) ?: [],
                 'periode' => $r['periode'] ?? null,
                 'modes' => json_decode((string) ($r['modes'] ?? ''), true) ?: [],
@@ -840,6 +907,17 @@ function wr_rapport_patch(int $id): array
         Db::exec('UPDATE ceo_rapport SET magasins = ? WHERE id = ?',
             [json_encode(array_values(array_filter($b['magasins'], 'is_string'))), $id]);
     }
+    if (isset($b['envoiMode']) && in_array($b['envoiMode'], ['groupe', 'par-magasin'], true)) {
+        Db::exec('UPDATE ceo_rapport SET envoi_mode = ? WHERE id = ?', [$b['envoiMode'], $id]);
+    }
+    if (isset($b['destParMagasin']) && is_array($b['destParMagasin'])) {
+        $carnet = [];
+        foreach ($b['destParMagasin'] as $mag => $emails) {
+            $ok2 = array_values(array_filter((array) $emails, fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+            if (is_string($mag) && $ok2 !== []) { $carnet[$mag] = $ok2; }
+        }
+        Db::exec('UPDATE ceo_rapport SET dest_par_magasin = ? WHERE id = ?', [json_encode($carnet, JSON_UNESCAPED_UNICODE), $id]);
+    }
     if (isset($b['jours']) && is_array($b['jours'])) {
         $jrs = ['dows' => [], 'doms' => []];
         foreach ((array) ($b['jours']['dows'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 7) { $jrs['dows'][] = (int) $d2; } }
@@ -863,6 +941,9 @@ function wr_rapport_envoyer(int $id): array
     ensureRapports();
     $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
+    if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
+        return ['ok' => true, 'mode' => 'par-magasin'] + rapportDistribuer($rep);
+    }
     $g = rapportGenerer($rep);
     if ($g['statut'] === 'vide') { return ['ok' => false, 'runId' => $g['runId'], 'error' => 'rapport sans matière — non envoyé']; }
     return ['runId' => $g['runId']] + rapportEnvoyer($rep, $g['runId']);
@@ -923,6 +1004,12 @@ function ep_rapports_cron(): array
         $deja = Db::row('SELECT id FROM ceo_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
             [(int) $rep['id'], date('Y-m-d 00:00:00'), 'erreur']);
         if ($deja !== null) { continue; }
+        if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
+            $bilan = rapportDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'], 'statut' => 'distribue',
+                'envoi' => count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s)'];
+            continue;
+        }
         $g = rapportGenerer($rep);
         $env = null;
         if ($g['statut'] !== 'vide') { $env = rapportEnvoyer($rep, $g['runId']); }
@@ -1359,13 +1446,20 @@ function wr_rapport_creer(): array
         : (count($jours['dows']) >= 7 ? 'quotidien' : 'hebdo');
     $code = 'perso-' . trim(mb_substr(preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($rep['nom'])), 0, 30), '-');
     if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
+    $envoiMode = ($b['envoiMode'] ?? '') === 'par-magasin' ? 'par-magasin' : 'groupe';
+    $carnet = [];
+    foreach ((array) ($b['destParMagasin'] ?? []) as $mag => $emails) {
+        $ok2 = array_values(array_filter((array) $emails, fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+        if (is_string($mag) && $ok2 !== []) { $carnet[$mag] = $ok2; }
+    }
     Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif,
-                                       jours, magasins, periode, periode_du, periode_au, modes)
-              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?)',
+                                       jours, magasins, periode, periode_du, periode_au, modes, envoi_mode, dest_par_magasin)
+              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?,?,?)',
         [$code, $rep['nom'], $rep['poste'], $freq, $heure,
          $jours['dows'][0] ?? ($jours['doms'][0] ?? 1),
          $rep['blocs'], $rep['destinataires'],
-         json_encode($jours), $rep['magasins'], $rep['periode'], $rep['periode_du'], $rep['periode_au'], $rep['modes']]);
+         json_encode($jours), $rep['magasins'], $rep['periode'], $rep['periode_du'], $rep['periode_au'], $rep['modes'],
+         $envoiMode, json_encode($carnet, JSON_UNESCAPED_UNICODE)]);
     journalAdd('CEO', 'Rapport', $rep['nom'], 'Rapport composé enregistré (' . $code . ')');
     return ['ok' => true, 'code' => $code,
         'planifie' => $jours['dows'] !== [] || $jours['doms'] !== [],

@@ -7194,7 +7194,8 @@ class App {
         const setBusy = v => this.setState(s2 => ({ rapBusy: Object.assign({}, s2.rapBusy, { [r.id]: v }) }));
         return {
           nom: r.nom, poste: r.poste,
-          freq: freqLabel(r) + (r.parMagasin ? ' · un chapitre par magasin' : ''),
+          freq: freqLabel(r) + (r.parMagasin ? ' · un chapitre par magasin' : '')
+            + (r.envoiMode === 'par-magasin' ? ' · un email par magasin' : ''),
           actifTxt: r.actif ? 'Actif' : 'Inactif',
           actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;'
             + (r.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
@@ -7212,8 +7213,16 @@ class App {
               if (g && g.runId) { try { window.open(API_BASE + '/rapports/run/' + g.runId, '_blank'); } catch (e2) {} } }); },
           env: () => { if (busy) return; setBusy(true);
             this.api('POST', '/rapports/' + r.id + '/envoyer', {}).then(g => { setBusy(false);
-              this.notify(g && g.ok ? 'Envoyé à ' + (g.envoyes || []).join(', ')
-                : 'Non envoyé — ' + ((g && (g.error || g.note)) || 'échec'));
+              if (g && g.mode === 'par-magasin') {
+                const ms = g.magasins || [];
+                this.notify('Distribué — ' + ms.filter(m5 => m5.statut === 'envoye').length + ' magasin(s) servi(s), '
+                  + ms.filter(m5 => m5.statut === 'vide').length + ' sans matière, '
+                  + ms.filter(m5 => m5.statut === 'sans-adresse').length + ' sans adresse'
+                  + (g.reseau && g.reseau.ok ? ' · version complète envoyée' : ''));
+              } else {
+                this.notify(g && g.ok ? 'Envoyé à ' + (g.envoyes || []).join(', ')
+                  : 'Non envoyé — ' + ((g && (g.error || g.note)) || 'échec'));
+              }
               this.rapCharge(true); }); },
           blocs: (r.blocs || []).map(sl => { const d2 = defs[sl] || { levier: 'transverse', nom: sl };
             const lv = levs[d2.levier] || { couleur: '#999999' };
@@ -7228,9 +7237,12 @@ class App {
             } else if (r.frequence === 'quotidien') { [1, 2, 3, 4, 5, 6, 7].forEach(d7 => { dw[d7] = true; }); }
             else if (r.frequence === 'mensuel') { dm[r.jour || 1] = true; }
             else { dw[r.jour || 1] = true; }
+            const dpm0 = {};
+            Object.entries(r.destParMagasin || {}).forEach(([nomM, em]) => { dpm0[nomM] = (em || []).join(', '); });
             this.setState({ rapComposeOn: true, rapEditId: r.id, rapCompo: {
               blocs: bl, modes: r.modes || {}, mags: mg2, nom: r.nom, poste: r.poste || '',
-              heure: String(r.heure), dows: dw, doms: dm, dest: (r.destinataires || []).join(', ') } });
+              heure: String(r.heure), dows: dw, doms: dm, dest: (r.destinataires || []).join(', '),
+              envoiMode: r.envoiMode || 'groupe', dpm: dpm0 } });
           },
           suppr: () => {
             if (!window.confirm('Supprimer le rapport « ' + r.nom + ' » ? Ses générations passées restent lisibles dans l’historique.')) { return; }
@@ -7298,6 +7310,12 @@ class App {
       postes: (rd && rd.postes) || [],
       heure: rc.heure || '7', setHeure: e => rcSet({ heure: e.target.value }),
       dest: rc.dest || '', setDest: e => rcSet({ dest: e.target.value }),
+      envoiMode: rc.envoiMode || 'groupe',
+      envoiGroupe: () => rcSet({ envoiMode: 'groupe' }),
+      envoiParMagasin: () => rcSet({ envoiMode: 'par-magasin' }),
+      carnet: (magsOn.length ? magsOn : this.open().map(st3 => st3.nom)).map(nomM => ({
+        nom: nomM, val: (rc.dpm || {})[nomM] || '',
+        set: e => rcSet({ dpm: Object.assign({}, rc.dpm, { [nomM]: e.target.value }) }) })),
       annuaire: ((rd && rd.annuaire) || []).map(a2 => {
         const dests = String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean);
         const on = dests.indexOf(a2.email) >= 0;
@@ -7332,8 +7350,14 @@ class App {
         if (!String(rc.nom || '').trim()) { this.notify('Donnez un nom au rapport.'); return; }
         const jrs = { dows: Object.keys(dows).filter(d5 => dows[d5]).map(Number),
           doms: Object.keys(doms).filter(d5 => doms[d5]).map(Number) };
+        const dpm = {};
+        Object.entries(rc.dpm || {}).forEach(([nomM, v5]) => {
+          const em = String(v5 || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean);
+          if (em.length) { dpm[nomM] = em; }
+        });
         const corps = Object.assign(composition(), { nom: rc.nom, poste: rc.poste,
           heure: rc.heure, jours: jrs,
+          envoiMode: rc.envoiMode || 'groupe', destParMagasin: dpm,
           destinataires: String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean) });
         const editId = S.rapEditId;
         rcSet({ busy: true });

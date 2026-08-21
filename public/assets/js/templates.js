@@ -3145,13 +3145,29 @@ function tplReporting(c, x){
             <input value="${esc(c.rapCompo.poste)}" ${x.C(c.rapCompo.setPoste)} list="rap-postes" placeholder="Poste destinataire (profils du panel + réseau)" style="flex:2;min-width:220px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
             <datalist id="rap-postes">${c.rapCompo.postes.map(po => `<option value="${esc(po)}"></option>`).join('')}</datalist>
           </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Mode d'envoi</span>
+            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600">
+              <button ${x.A(c.rapCompo.envoiGroupe)} style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${c.rapCompo.envoiMode === 'groupe' ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">Groupé</button>
+              <button ${x.A(c.rapCompo.envoiParMagasin)} style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${c.rapCompo.envoiMode === 'par-magasin' ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">Un email par magasin</button>
+            </span>
+            ${c.rapCompo.envoiMode === 'par-magasin' ? `<span style="font-size:10.5px;color:var(--color-text-muted)">chaque magasin reçoit SA version ; sans matière ou sans adresse, il ne reçoit rien</span>` : ''}
+          </div>
+          ${c.rapCompo.envoiMode === 'par-magasin' ? `
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:9px">
+            ${c.rapCompo.carnet.map(cm => `
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="width:220px;flex:none;font-size:11.5px;font-weight:500">${esc(cm.nom)}</span>
+                <input value="${esc(cm.val)}" ${x.C(cm.set)} placeholder="emails du franchisé (virgules)" style="flex:1;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text)">
+              </div>`).join('')}
+          </div>` : ''}
           ${c.rapCompo.annuaire.length ? `
           <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:7px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Annuaire</span>
             ${c.rapCompo.annuaire.map(a2 => `<span ${x.A(a2.toggle)} title="${esc(a2.email)}${a2.poste ? ' · ' + esc(a2.poste) : ''}" style="display:inline-block;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:500;cursor:pointer;${a2.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text)'}">${esc(a2.nom)}</span>`).join('')}
           </div>` : ''}
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <input value="${esc(c.rapCompo.dest)}" ${x.C(c.rapCompo.setDest)} placeholder="destinataires (emails, virgules — ou cliquez l'annuaire)" style="flex:1;min-width:240px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <input value="${esc(c.rapCompo.dest)}" ${x.C(c.rapCompo.setDest)} placeholder="${c.rapCompo.envoiMode === 'par-magasin' ? 'destinataires réseau — la version complète (consultant)' : 'destinataires (emails, virgules — ou cliquez l’annuaire)'}" style="flex:1;min-width:240px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
             <button ${x.A(c.rapCompo.enregistrer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">${c.rapCompo.edit ? 'Enregistrer les modifications' : 'Enregistrer comme rapport récurrent'}</button>
           </div>
         </div>
