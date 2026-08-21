@@ -640,7 +640,10 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
     $reseau = setting('reseau', []);
     $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier By') : 'L’Atelier By';
 
-    $rendSections = function (array $secs, ?string $magasin) use ($e, $F): string {
+    // Les leviers RÉELLEMENT imprimés — un rapport par magasin n'en porte pas
+    // toujours autant que le rapport réseau. Servent le rappel sous le titre.
+    $leviersVus = [];
+    $rendSections = function (array $secs, ?string $magasin) use ($e, $F, &$leviersVus): string {
         $h = '';
         foreach ($secs as $s) {
             $lignes = $magasin === null ? $s['lignes'] : array_values(array_filter($s['lignes'], fn ($l) => $l[0] === $magasin));
@@ -648,10 +651,16 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             $htmls = $magasin === null ? ($s['htmlPar'] ?? []) : array_values(array_filter($s['htmlPar'] ?? [], fn ($l) => $l[0] === $magasin));
             if ($lignes === [] && $infos === [] && $htmls === [] && $s['motif'] === null) { continue; }
             $lev = RAP_LEVIERS[$s['levier']];
+            $leviersVus[$s['levier']] = $lev['nom'];
+            // Le levier en PASTILLE pleine, pas en surtitre gris : sur papier,
+            // « de quel levier me parle-t-on » doit se voir sans chercher.
             $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 6px"><tr>'
                 . '<td width="4" style="background:' . $lev['couleur'] . ';border-radius:2px;font-size:0;line-height:0">&nbsp;</td>'
                 . '<td style="padding-left:11px;' . $F . '">'
-                . '<span style="font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:#8b8177">' . $e($lev['nom']) . '</span><br>'
+                . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:4px"><tr>'
+                . '<td style="background:' . $lev['couleur'] . ';border-radius:999px;padding:3px 10px;' . $F
+                . ';font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;color:#ffffff;white-space:nowrap">'
+                . 'Levier ' . $e($lev['nom']) . '</td></tr></table>'
                 . '<span style="font-size:14.5px;font-weight:700;color:#221E1A">' . $e($s['nom']) . '</span></td></tr></table>';
             if ($s['motif'] !== null) {
                 $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:8px 12px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
@@ -734,7 +743,13 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '<div style="' . $F . ';font-size:21px;font-weight:700;color:#221E1A">' . $e($rep['nom']) . '</div>'
         . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($periode['label'])) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr>'
-        . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td></tr></table>'
+        . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td>'
+        // Ce que le rapport couvre, dit dès l'en-tête : les leviers vraiment
+        // imprimés, dans l'ordre du réseau.
+        . ($leviersVus === [] ? '' : '<td style="padding-left:10px;' . $F
+            . ';font-size:11px;color:#8b8177;white-space:nowrap">Levier' . (count($leviersVus) > 1 ? 's' : '') . ' : '
+            . $e(implode(' · ', $leviersVus)) . '</td>')
+        . '</tr></table>'
         . '</td></tr>'
         // — corps
         . '<tr><td style="background:#ffffff;padding:4px 30px 18px">' . $corps . '</td></tr>'
