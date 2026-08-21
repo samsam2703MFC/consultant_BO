@@ -739,7 +739,7 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         // — corps
         . '<tr><td style="background:#ffffff;padding:4px 30px 18px">' . $corps . '</td></tr>'
         // — pied
-        . '<tr><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:20px 30px">'
+        . '<tr data-pied="1"><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:20px 30px">'
         . $bouton
         . '<div style="' . $F . ';font-size:10.5px;color:#8b8177;line-height:1.6">Seuils : food ' . $seuils['food'] . ' % &middot; labour ' . $seuils['labour'] . ' % &middot; overhead ' . $seuils['overhead']
         . ' % &middot; CA/ETP ' . number_format($seuils['caEtp'], 0, ',', ' ') . ' &euro; &middot; tâches &le; ' . $seuils['tacheNote'] . '/5 &middot; cible Google '
@@ -1143,6 +1143,9 @@ function ep_rapport_run_pdf(int $id): array
 function rapPdfHtml(string $html): string
 {
     $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
+    // Repli pour les runs enregistrés avant la prise `data-pied` : le rappel
+    // des seuils s'y reconnaît à son texte.
+    $html = (string) preg_replace('#<div[^>]*>Seuils\s*:\s*food.*?</div>#s', '', $html);
     $css = '<style>'
         . '@page{size:A4;margin:12mm 10mm 14mm}'
         . 'html,body{background:#ffffff !important;margin:0 !important;padding:0 !important;'
@@ -1151,6 +1154,10 @@ function rapPdfHtml(string $html): string
         . 'td[data-marge]{padding:0 !important}'
         . 'table[data-carte]{width:100% !important;max-width:100% !important}'
         . 'table[data-cta]{display:none !important}'
+        // Le pied — bouton « Ouvrir dans le cockpit » et rappel des seuils —
+        // s'adresse au lecteur d'un EMAIL. Sur une feuille remise en boutique,
+        // il n'ajoute rien : le rapport dit déjà ce qui est hors seuil.
+        . 'tr[data-pied]{display:none !important}'
         . '.ecran-seul{display:none !important}'
         // Les runs DÉJÀ enregistrés n'ont pas les prises : on vise alors leurs
         // styles en ligne, pour qu'un rapport d'hier s'imprime aussi bien
