@@ -1514,6 +1514,17 @@ function ep_exploitation_jour(): array
 
     $mois1  = date('Y-m-01', strtotime($date));
     $depuis = min($mois1, $refDates[count($refDates) - 1]);
+    // « The heatmap window cannot exceed 31 days » (mesuré sur la route) : la
+    // fenêtre qui va du plus ancien jour de référence à aujourd'hui fait 43
+    // jours, elle part donc en tranches de 31 jours au plus. Les jours des
+    // deux tranches sont ensuite recollés.
+    $fenetres = [];
+    $cur = $depuis;
+    while ($cur <= $date) {
+        $fin = date('Y-m-d', min(strtotime($cur . ' +30 days'), strtotime($date)));
+        $fenetres[] = [$cur, $fin];
+        $cur = date('Y-m-d', strtotime($fin . ' +1 day'));
+    }
     $paths = ['cats' => '/consultant/shops/category-sales?'
         . http_build_query(['date_from' => $date, 'date_to' => $date])];
     // Une lecture par jour de référence, pour TOUS les magasins à la fois :
@@ -1524,10 +1535,12 @@ function ep_exploitation_jour(): array
     }
     foreach ($shops as $s) {
         $id = (int) $s['id'];
-        // Une seule fenêtre par magasin : elle porte la journée, la série du
-        // mois ET les six jours de référence.
-        $paths['hm' . $id]   = '/consultant/shops/' . $id . '/margin-heatmap?'
-            . http_build_query(['from' => $depuis, 'to' => $date]);
+        // Les fenêtres portent la journée, la série du mois ET les six jours
+        // de référence.
+        foreach ($fenetres as $k => [$du, $au2]) {
+            $paths['hm' . $id . '_' . $k] = '/consultant/shops/' . $id . '/margin-heatmap?'
+                . http_build_query(['from' => $du, 'to' => $au2]);
+        }
         $paths['kpi' . $id]  = '/shops/' . $id . '/statistics/sales/kpis?'
             . http_build_query(['date_from' => $date, 'date_to' => $date]);
         $paths['pnlM' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj;
@@ -1567,21 +1580,26 @@ function ep_exploitation_jour(): array
     $lignes = [];
     foreach ($shops as $s) {
         $id = (int) $s['id']; $nom = (string) $s['name'];
-        $hm = $res['hm' . $id] ?? null;
-        if (!is_array($hm) || !isset($hm['days'])) {
+        $parJour = []; $repondu = false;
+        foreach (array_keys($fenetres) as $k) {
+            $hm = $res['hm' . $id . '_' . $k] ?? null;
+            if (!is_array($hm) || !isset($hm['days'])) { continue; }
+            $repondu = true;
+            foreach ((array) $hm['days'] as $d) {
+                $j = (string) ($d['date'] ?? '');
+                if ($j === '') { continue; }
+                $ca = (float) ($d['ca'] ?? 0);
+                $parJour[$j] = ['ca' => $ca, 'mb' => (float) ($d['margin_value'] ?? 0),
+                    'tickets' => (int) ($d['tickets'] ?? 0), 'weekday' => (int) ($d['weekday'] ?? 0),
+                    'ouvert' => !empty($d['has_data']) && $ca > 0];
+            }
+        }
+        if (!$repondu) {
             $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => false,
                 'motif' => 'margin-heatmap sans réponse pour ce magasin'];
             continue;
         }
-        $parJour = [];
-        foreach ((array) $hm['days'] as $d) {
-            $j = (string) ($d['date'] ?? '');
-            if ($j === '') { continue; }
-            $ca = (float) ($d['ca'] ?? 0);
-            $parJour[$j] = ['ca' => $ca, 'mb' => (float) ($d['margin_value'] ?? 0),
-                'tickets' => (int) ($d['tickets'] ?? 0), 'weekday' => (int) ($d['weekday'] ?? 0),
-                'ouvert' => !empty($d['has_data']) && $ca > 0];
-        }
+        ksort($parJour);
 
         // Jours d'ouverture du mois : les jours de semaine vus actifs, comptés
         // sur le mois entier. Même diviseur que l'écran rentabilité.

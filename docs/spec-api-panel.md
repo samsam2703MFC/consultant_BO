@@ -36,6 +36,12 @@ gamme et les prix. Elle est reconstruite côté cockpit à partir de
 `margin-heatmap` et de `category-sales`, une lecture par jour de référence. Un
 endpoint qui la servirait directement épargnerait sept appels par affichage.
 
+**`margin-heatmap` plafonne à 31 jours.** `from=2026-07-10&to=2026-08-21` →
+`422 : The heatmap window cannot exceed 31 days.` La fenêtre des six jours de
+référence (43 jours) part donc en deux tranches recollées côté cockpit. Porter
+le plafond à ~60 jours, ou accepter une liste de dates, ramènerait cet écran à
+un appel par magasin.
+
 **`/pnl` ignore les bornes.** Mesuré le 21/08/2026 : `GET
 /consultant/shops/2/pnl?date_from=2026-08-19&date_to=2026-08-19` — comme
 `?period=day&date=2026-08-19` — répond `date_from: 2026-08-21`, c'est-à-dire la
