@@ -203,27 +203,6 @@ done
 apache2ctl configtest
 systemctl restart apache2
 
-# --- 5 ter. Cron des rapports --------------------------------------------
-# La ligne crontab du serveur : chaque heure (minute 7), la route
-# /rapports/cron est appelée en local. bin/rapports_cron.sh lit le jeton en
-# base à chaque exécution — le secret ne s'écrit nulle part ailleurs. La
-# route ne génère et n'envoie que ce qui est dû à l'heure courante, et un
-# rapport déjà servi aujourd'hui n'est pas renvoyé.
-log "Cron des rapports : /etc/cron.d/cockpit-rapports…"
-chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
-cat > /etc/cron.d/cockpit-rapports <<CRON
-# Cockpit CEO — envoi automatique des rapports planifiés (écran Reporting).
-# Posé par bin/deploy.sh à chaque livraison ; modifier le dépôt, pas ce fichier.
-7 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/rapports_cron.sh >/dev/null 2>&1
-CRON
-chmod 644 /etc/cron.d/cockpit-rapports
-# Essai immédiat : prouve le chemin complet (jeton en base, route, envoi).
-if "$TARGET_DIR/bin/rapports_cron.sh"; then
-  log "Essai cron : OK — route appelée avec le jeton lu en base."
-else
-  warn "Essai cron : échec — l'entrée crontab est posée, vérifier jeton/route."
-fi
-
 # --- 5b. Opérations base de données (client MySQL) -----------------------
 # Deux modes, mutuellement exclusifs, pilotés par le workflow :
 #   COCKPIT_WIPE=1  → drop des tables ceo_*, recréation du schéma VIDE, aucun
@@ -487,30 +466,29 @@ done
 # l'heure passe et rien ne part. Le cron appelle l'horloge toutes les heures ;
 # c'est le cockpit qui décide, à chaque passage, quels rapports sont dus.
 #
-# Le jeton est LU sur l'API (il naît tout seul au premier chargement) et n'est
-# jamais imprimé : ce journal de déploiement se lit plus largement que le
-# serveur. L'appel se fait en loopback — ni DNS ni réseau sortant en jeu.
-CRON_JETON="$(curl -fsS --max-time 30 "${LOCAL_BASE}/api/cockpit/rapports" 2>/dev/null \
-  | php -r '$r = json_decode(file_get_contents("php://stdin"), true);
-            $u = (string) ($r["cronUrl"] ?? "");
-            echo str_contains($u, "jeton=") ? substr($u, strpos($u, "jeton=") + 6) : "";' 2>/dev/null || true)"
-if [[ -n "${CRON_JETON}" ]]; then
-  # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
-  # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
-  # passer les tâches de l'heure pile.
-  {
-    echo "# Cockpit CEO — horloge des rapports (écrite par bin/deploy.sh, ne pas éditer)."
-    echo "SHELL=/bin/sh"
-    echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
-    echo "5 * * * * root curl -fsS --max-time 900 '${LOCAL_BASE}/api/cockpit/rapports/cron?jeton=${CRON_JETON}' >/dev/null 2>&1"
-  } > /etc/cron.d/cockpit-rapports
-  # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
-  chown root:root /etc/cron.d/cockpit-rapports
-  chmod 600 /etc/cron.d/cockpit-rapports
-  systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
-  log "Horloge des rapports : /etc/cron.d/cockpit-rapports — toutes les heures à :05 (jeton masqué)."
+# Le jeton est LU EN BASE par bin/rapports_cron.sh à CHAQUE exécution : rien
+# de secret dans le fichier cron, une rotation du jeton ne casse rien, et la
+# ligne se pose même si l'API est indisponible au moment de la livraison
+# (le jeton cuit dans le fichier avait ces deux faiblesses).
+chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
+# /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
+# chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
+# passer les tâches de l'heure pile.
+{
+  echo "# Cockpit CEO — horloge des rapports (écrite par bin/deploy.sh, ne pas éditer)."
+  echo "SHELL=/bin/sh"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+  echo "5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/rapports_cron.sh >/dev/null 2>&1"
+} > /etc/cron.d/cockpit-rapports
+# cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
+chown root:root /etc/cron.d/cockpit-rapports
+chmod 600 /etc/cron.d/cockpit-rapports
+systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
+# Essai immédiat : prouve le chemin complet (jeton en base, route, horloge).
+if "$TARGET_DIR/bin/rapports_cron.sh"; then
+  log "Horloge des rapports : /etc/cron.d/cockpit-rapports — toutes les heures à :05 ; essai immédiat OK (jeton lu en base)."
 else
-  warn "Jeton de cron introuvable — l'envoi automatique des rapports reste manuel (écran Reporting)."
+  warn "Horloge posée, mais l'essai immédiat a échoué — vérifier le jeton en base et la route /rapports/cron."
 fi
 
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
