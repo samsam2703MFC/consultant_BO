@@ -332,9 +332,15 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $b['action'] = 'Regarder ce qui a été rendu avant ce qui reste à reprendre.';
             $ts = rapTaches($periode['du'], $periode['au']);
             if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
-            $niv = (array) ((array) setting('signalement', []))['niveaux'] ?? [];
+            $sig = (array) setting('signalement', []);
+            $niv = (array) ($sig['niveaux'] ?? []);
+            $perim = (array) ($periode['magasins'] ?? []);
             $par = [];
-            foreach ($ts as $t) { $par[(string) ($t['magasin'] ?? '')][] = $t; }
+            foreach ($ts as $t) {
+                $mag = (string) ($t['magasin'] ?? '');
+                if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
+                $par[$mag][] = $t;
+            }
             foreach ($par as $mag => $liste) {
                 $n = count($liste); $rendues = 0; $notees = 0; $somme = 0; $sansPhoto = 0;
                 $dist = []; $exemplaires = [];
@@ -368,8 +374,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $b['action'] = 'Photo annotée et commentaire dans le cockpit — à revoir avec l’équipe.';
             $ts = rapTaches($periode['du'], $periode['au']);
             if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
+            $perim = (array) ($periode['magasins'] ?? []);
             $fiches = 0; $cartesParMag = [];
             foreach ($ts as $t) {
+                if ($perim !== [] && !in_array((string) $t['magasin'], $perim, true)) { continue; }
                 $note = $t['note'] ?? null;
                 if ($note !== null && (int) $note <= $seuils['tacheNote']) {
                     $b['lignes'][] = [$t['magasin'], '« ' . ($t['tache'] ?? ('Tâche #' . ($t['taskId'] ?? '?'))) . ' » notée ' . $note . '/5 le '
@@ -605,7 +613,12 @@ function rapportGenerer(array $rep): array
     foreach ($blocs as $slug) {
         if (!isset($defs[$slug])) { continue; }
         if (($modes[$slug] ?? '') === 'complet') { $periode['avisComplets'] = true; }
-        $b = rapBloc($slug, $seuils, $periode);
+        // Le périmètre voyage jusqu'au bloc : sans lui, un bloc qui BORNE son
+        // travail (les photos, limitées à huit) dépense son budget sur des
+        // magasins que le filtre écartera juste après — et le magasin du
+        // rapport se retrouve sans image. Mesuré sur le rapport hebdomadaire
+        // d'un franchisé : dix écarts listés, aucune photo.
+        $b = rapBloc($slug, $seuils, $periode + ['magasins' => $filtre]);
         $b['nom'] = $defs[$slug]['nom'];
         $b['levier'] = $defs[$slug]['levier'];
         // Mode « tableau complet » : le tableau tel qu'à l'écran remplace la
