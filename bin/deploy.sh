@@ -190,8 +190,18 @@ Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 </Directory>
 APACHE
 a2enconf consulant_bo >/dev/null
+# --- Récupération : des rendus PDF suspendus (xvfb/wkhtmltopdf sans timeout,
+# corrigé depuis) ont retenu des workers PHP jusqu'à coucher l'API — le temps
+# passé dans un process externe échappe à max_execution_time. On tue les
+# traînards et on REDÉMARRE PHP et Apache (un reload garde les workers).
+pkill -9 -f wkhtmltopdf 2>/dev/null || true
+pkill -9 -f xvfb-run    2>/dev/null || true
+pkill -9 -f Xvfb        2>/dev/null || true
+systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
+  systemctl restart "$u" || true
+done
 apache2ctl configtest
-systemctl reload apache2
+systemctl restart apache2
 
 # --- 5b. Opérations base de données (client MySQL) -----------------------
 # Deux modes, mutuellement exclusifs, pilotés par le workflow :
