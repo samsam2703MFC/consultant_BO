@@ -3229,10 +3229,10 @@ function tplParams(c, x){
         </div>
         <div style="display:grid;grid-template-columns:1fr 110px 130px;gap:12px">
           <label style="font-size:12px;color:var(--color-text-muted)">Hôte SMTP
-            <input value="${esc(c.sm.hote)}" ${x.I(c.sm.setHote)} placeholder="smtp.gmail.com" style="${inputCss}">
+            <input value="${esc(c.sm.hote)}" ${x.C(c.sm.setHote)} placeholder="smtp.gmail.com" style="${inputCss}">
           </label>
           <label style="font-size:12px;color:var(--color-text-muted)">Port
-            <input type="number" value="${esc(c.sm.port)}" ${x.I(c.sm.setPort)} style="${inputCss}">
+            <input type="number" value="${esc(c.sm.port)}" ${x.C(c.sm.setPort)} style="${inputCss}">
           </label>
           <label style="font-size:12px;color:var(--color-text-muted)">Sécurité
             <select ${x.C(c.sm.setSecurite)} style="${inputCss}">
@@ -3242,18 +3242,18 @@ function tplParams(c, x){
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
           <label style="font-size:12px;color:var(--color-text-muted)">Utilisateur
-            <input value="${esc(c.sm.utilisateur)}" ${x.I(c.sm.setUtilisateur)} autocomplete="off" placeholder="compte@atelierby.be" style="${inputCss}">
+            <input value="${esc(c.sm.utilisateur)}" ${x.C(c.sm.setUtilisateur)} autocomplete="off" placeholder="compte@atelierby.be" style="${inputCss}">
           </label>
           <label style="font-size:12px;color:var(--color-text-muted)">Mot de passe
-            <input type="password" ${x.I(c.sm.setMdp)} autocomplete="new-password" placeholder="${c.sm.mdpDefini ? 'En place — saisir pour remplacer' : 'mot de passe ou mot de passe d’application'}" style="${inputCss}">
+            <input type="password" ${x.C(c.sm.setMdp)} autocomplete="new-password" placeholder="${c.sm.mdpDefini ? 'En place — saisir pour remplacer' : 'mot de passe ou mot de passe d’application'}" style="${inputCss}">
           </label>
         </div>
         <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Expéditeur
-          <input value="${esc(c.sm.expediteur)}" ${x.I(c.sm.setExpediteur)} placeholder="Cockpit L’Atelier By &lt;rapports@atelierby.be&gt;" style="${inputCss}">
+          <input value="${esc(c.sm.expediteur)}" ${x.C(c.sm.setExpediteur)} placeholder="Cockpit L’Atelier By &lt;rapports@atelierby.be&gt;" style="${inputCss}">
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
           <button ${x.A(c.sm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.sm.busy ? 'opacity:.6' : ''}">${c.sm.busy ? 'En cours…' : 'Enregistrer'}</button>
-          <input value="${esc(c.sm.testA)}" ${x.I(c.sm.setTestA)} placeholder="adresse de test" style="flex:1;min-width:180px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
+          <input value="${esc(c.sm.testA)}" ${x.C(c.sm.setTestA)} placeholder="adresse de test" style="flex:1;min-width:180px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
           <button ${x.A(c.sm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un test</button>
         </div>
         ${c.sm.msg ? `<div style="${c.sm.msgSt}">${esc(c.sm.msg)}</div>` : ''}
