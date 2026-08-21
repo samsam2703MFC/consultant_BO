@@ -391,7 +391,9 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 // Bornée à quatre par magasin — au-delà, l'email pèserait
                 // plusieurs mégaoctets pour des félicitations.
                 $fiches = [];
-                foreach (array_slice($exemplaires, 0, 6) as $t) {
+                // Douze vignettes : une page A4 pleine (3 × 4), pas davantage —
+                // au-delà, les félicitations deviennent un catalogue.
+                foreach (array_slice($exemplaires, 0, 12) as $t) {
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                         (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
@@ -1402,9 +1404,10 @@ function rapPdfHtml(string $html): string
         // la MÊME hauteur. Sans hauteur fixe, une fiche à deux photos écrase
         // sa voisine et la grille se déforme d'une page à l'autre.
         . 'table[data-page-fiches]{page-break-after:always;page-break-inside:avoid}'
-        // L'encadré des 5/5 tient d'un bloc : le couper en deux ferait deux
-        // demi-félicitations.
-        . 'table[data-encadre]{page-break-inside:avoid;page-break-after:auto}'
+        // L'encadré des 5/5 a SA page : ce qui a été bien fait ne se lit pas
+        // en bas d'une page d'écarts. Douze vignettes remplissent exactement
+        // une A4, et la page suivante reprend les non-conformités.
+        . 'table[data-encadre]{page-break-before:always;page-break-after:always}'
         . 'table[data-page-fiches]:last-child{page-break-after:auto}'
         . 'table[data-grille="2x3"] tr[data-rangee-fiches]>td{height:84mm}'
         . 'table[data-grille="2x3"] div[data-fiche]{height:80mm;overflow:hidden;box-sizing:border-box}'
