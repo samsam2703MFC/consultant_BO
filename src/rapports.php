@@ -1931,7 +1931,13 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         $coulN = $note >= 5 ? '#C9A227' : ($note >= 4 ? '#2d7a3e' : ($note === 3 ? '#C17A2A' : '#E0261A'));
         $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><b style="color:' . $coulN . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
     }
-    if (trim($commentaire) !== '') {
+    // Le commentaire du panel EST la concaténation des repères : « 1. [mineur]
+    // Il serait pas mieux au mur ? » puis, juste dessous, le repère numéroté
+    // qui dit la même chose. On ne garde que les repères — ceux qui portent le
+    // numéro en couleur et renvoient au cadre dessiné sur la photo. Le
+    // commentaire ne s'affiche donc que s'il est SEUL à parler.
+    $reperesParlants = array_filter($reperes, fn ($r) => trim((string) ($r['txt'] ?? '')) !== '');
+    if (trim($commentaire) !== '' && $reperesParlants === []) {
         $exp .= '<div style="' . $F . ';font-size:11px;color:#4a443c;padding:2px 0;line-height:1.45">' . $e(mb_substr($commentaire, 0, 260)) . '</div>';
     }
     $n = 0;
