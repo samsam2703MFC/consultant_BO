@@ -983,7 +983,10 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // Le titre du bloc, seul. Le levier est annoncé UNE fois, au
             // bandeau : le répéter en pastille et en barre au-dessus de chaque
             // section faisait trois fois la même information sur une page.
-            $h .= '<div data-titre-bloc="1" style="' . $F . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:24px 0 7px">'
+            // Le slug voyage avec le titre : le PDF s'en sert pour décider
+            // ce qui commence une page (le bilan des tâches, par exemple).
+            $h .= '<div data-titre-bloc="1" data-bloc="' . $e($s['slug'] ?? '') . '" style="' . $F
+                . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:24px 0 7px">'
                 . $e($s['nom']) . '</div>';
             if ($s['motif'] !== null) {
                 $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:8px 12px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
@@ -1519,6 +1522,10 @@ function rapPdfHtml(string $html): string
         // Entre deux sections, une respiration franche : sur écran on fait
         // défiler, sur papier l'œil a besoin de la coupure.
         . 'div[data-titre-bloc]{margin-top:30px !important}'
+        // Le bilan des tâches ouvre une page : il porte quatre compteurs, une
+        // dispersion et le détail tâche par tâche — coincé en bas d'une page
+        // de KPI, il se lisait en deux morceaux.
+        . 'div[data-bloc="xp-bilan"]{page-break-before:always;margin-top:0 !important}'
         // Un peu d'air entre le bandeau et le titre, et entre les blocs.
         . 'table[data-carte]>tbody>tr:first-child>td{padding-top:6px !important;padding-bottom:12px !important}'
         . 'table[data-cta]{display:none !important}'
