@@ -170,7 +170,9 @@ function route(string $method, string $path): mixed
     // --- machine d'envoi SMTP (identifiants côté serveur uniquement)
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }
-    // --- générateur de rapports (par levier, à seuils)
+    // --- générateur de rapports (par levier, à seuils) + compositeur
+    if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }
+    if ($method === 'POST' && $path === '/rapports/apercu') { return wr_rapport_apercu(); }
     if ($method === 'PUT' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_patch((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/generer$#', $path, $m)) { return wr_rapport_generer((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/envoyer$#', $path, $m)) { return wr_rapport_envoyer((int) $m[1]); }

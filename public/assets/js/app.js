@@ -6952,6 +6952,98 @@ class App {
       runs: ((rd && rd.runs) || []).map(u => ({ le: u.le, rapport: u.rapport, statut: u.statut,
         resume: u.resume || '', st: stRun(u.statut), url: API_BASE + '/rapports/run/' + u.runId })),
     };
+
+    // --- COMPOSITEUR : cocher les KPI, le périmètre, la période, puis générer
+    // à la demande, envoyer, ou enregistrer comme rapport récurrent (poste +
+    // jours cochés : semaine et calendrier du mois).
+    const rc = S.rapCompo || {};
+    const rcSet = patch => this.setState(s2 => ({ rapCompo: Object.assign({}, s2.rapCompo, patch) }));
+    common.rapComposeOn = !!S.rapComposeOn;
+    common.rapComposeOuvrir = () => this.setState({ rapComposeOn: true });
+    common.rapComposeFermer = () => this.setState({ rapComposeOn: false });
+    const rcBlocs = rc.blocs || {};
+    const rcModes = rc.modes || {};
+    const rcMags = rc.mags || {};
+    const slugsOn = Object.keys(rcBlocs).filter(sl => rcBlocs[sl]);
+    const magsOn = Object.keys(rcMags).filter(n2 => rcMags[n2]);
+    const composition = () => ({
+      blocs: slugsOn, modes: rcModes, magasins: magsOn,
+      periode: rc.periode || 'semaine-passee', du: rc.du || '', au: rc.au || '',
+    });
+    const ordreLev = Object.keys((rd && rd.leviers) || {});
+    const groupes = [];
+    ordreLev.forEach(lev => {
+      const items = Object.entries((rd && rd.blocs) || {}).filter(([, d4]) => d4.levier === lev)
+        .map(([sl, d4]) => ({ slug: sl, nom: d4.nom, on: !!rcBlocs[sl],
+          toggle: () => rcSet({ blocs: Object.assign({}, rcBlocs, { [sl]: !rcBlocs[sl] }) }),
+          mode: rcModes[sl] || 'complet',
+          setModeComplet: () => rcSet({ modes: Object.assign({}, rcModes, { [sl]: 'complet' }) }),
+          setModeDep: () => rcSet({ modes: Object.assign({}, rcModes, { [sl]: 'depassements' }) }) }));
+      if (items.length) { const lv = (rd.leviers || {})[lev] || {}; groupes.push({ nom: lv.nom || lev, couleur: lv.couleur || '#999', items }); }
+    });
+    const JSEM2 = ['', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
+    const dows = rc.dows || {};
+    const doms = rc.doms || {};
+    common.rapCompo = {
+      groupes,
+      modeles: [{ id: 0, nom: '— Vide —' }].concat(((rd && rd.rapports) || []).map(r => ({ id: r.id, nom: r.nom }))),
+      chargerModele: e => {
+        const r = ((rd && rd.rapports) || []).find(x => String(x.id) === String(e.target.value));
+        if (!r) { rcSet({ blocs: {}, modes: {} }); return; }
+        const bl = {}; (r.blocs || []).forEach(sl => { bl[sl] = true; });
+        rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '' });
+        this.notify('Modèle « ' + r.nom + ' » chargé — ajustez puis générez');
+      },
+      magasins: this.open().map(st2 => ({ nom: st2.nom, on: !!rcMags[st2.nom],
+        toggle: () => rcSet({ mags: Object.assign({}, rcMags, { [st2.nom]: !rcMags[st2.nom] }) }) })),
+      tous: magsOn.length === 0,
+      toutLeReseau: () => rcSet({ mags: {} }),
+      periode: rc.periode || 'semaine-passee',
+      periodes: [['hier', 'Hier'], ['semaine-passee', 'Semaine passée'], ['mois-en-cours', 'Mois en cours'], ['mois-passe', 'Mois passé'], ['libre', 'Libre']]
+        .map(p => ({ val: p[0], nom: p[1], on: (rc.periode || 'semaine-passee') === p[0], pick: () => rcSet({ periode: p[0] }) })),
+      du: rc.du || '', au: rc.au || '',
+      setDu: e => rcSet({ du: e.target.value }), setAu: e => rcSet({ au: e.target.value }),
+      recap: slugsOn.length + ' KPI · ' + (magsOn.length === 0 ? 'tout le réseau' : magsOn.length + ' magasin(s)'),
+      nom: rc.nom || '', setNom: e => rcSet({ nom: e.target.value }),
+      poste: rc.poste || '', setPoste: e => rcSet({ poste: e.target.value }),
+      heure: rc.heure || '7', setHeure: e => rcSet({ heure: e.target.value }),
+      dest: rc.dest || '', setDest: e => rcSet({ dest: e.target.value }),
+      dows: [1, 2, 3, 4, 5, 6, 7].map(d5 => ({ nom: JSEM2[d5], on: !!dows[d5],
+        toggle: () => rcSet({ dows: Object.assign({}, dows, { [d5]: !dows[d5] }) }) })),
+      doms: Array.from({ length: 31 }, (_, i2) => i2 + 1).map(d5 => ({ nom: String(d5), on: !!doms[d5],
+        toggle: () => rcSet({ doms: Object.assign({}, doms, { [d5]: !doms[d5] }) }) })),
+      busy: !!rc.busy,
+      apercu: () => {
+        if (!slugsOn.length) { this.notify('Cochez au moins un KPI.'); return; }
+        rcSet({ busy: true });
+        this.api('POST', '/rapports/apercu', composition()).then(g => { rcSet({ busy: false });
+          if (g && g.runId) { this.notify('Généré — ' + (g.resume || '')); this.rapCharge(true);
+            try { window.open(API_BASE + '/rapports/run/' + g.runId, '_blank'); } catch (e3) {} }
+          else { this.notify((g && g.error) || 'Génération échouée'); } });
+      },
+      envoyer: () => {
+        const dests = String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean);
+        if (!dests.length) { this.notify('Renseignez les destinataires (pavé Enregistrer).'); return; }
+        rcSet({ busy: true });
+        this.api('POST', '/rapports/apercu', Object.assign(composition(), { envoyer: true, destinataires: dests }))
+          .then(g => { rcSet({ busy: false });
+            this.notify(g && g.ok ? 'Envoyé à ' + (g.envoyes || []).join(', ') : ((g && (g.error || g.note)) || 'échec'));
+            this.rapCharge(true); });
+      },
+      enregistrer: () => {
+        if (!String(rc.nom || '').trim()) { this.notify('Donnez un nom au rapport.'); return; }
+        const jrs = { dows: Object.keys(dows).filter(d5 => dows[d5]).map(Number),
+          doms: Object.keys(doms).filter(d5 => doms[d5]).map(Number) };
+        rcSet({ busy: true });
+        this.api('POST', '/rapports', Object.assign(composition(), { nom: rc.nom, poste: rc.poste,
+          heure: rc.heure, jours: jrs,
+          destinataires: String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean) }))
+          .then(g => { rcSet({ busy: false });
+            if (g && g.ok) { this.notify('Rapport enregistré' + (g.note ? ' — ' + g.note : '')); this.rapCharge(true);
+              this.setState({ rapComposeOn: false, rapCompo: {} }); }
+            else { this.notify((g && g.error) || 'Enregistrement refusé'); } });
+      },
+    };
     const pById = id => D.people.find(p => p.id === id);
     common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role + (p.email ? '' : ' (adresse manquante)') }));
     // Ordre FIGÉ, indépendant du menu : `postes_json` stocke « p1 », « p3 »…

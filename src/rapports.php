@@ -59,6 +59,14 @@ function ensureRapports(): void
         . 'html MEDIUMTEXT NULL,'
         . 'KEY idx_run_rapport (rapport_id, genere_le)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Colonnes nées avec le COMPOSITEUR : jours cochés (semaine et calendrier
+    // du mois), filtre de magasins, période explicite, mode complet ou
+    // dépassements par bloc. Sur une base déjà en service, on complète.
+    foreach (['ADD COLUMN jours TEXT NULL', 'ADD COLUMN magasins TEXT NULL',
+              "ADD COLUMN periode VARCHAR(14) NULL", 'ADD COLUMN periode_du DATE NULL',
+              'ADD COLUMN periode_au DATE NULL', 'ADD COLUMN modes TEXT NULL'] as $alter) {
+        try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
+    }
 
     $n = Db::row('SELECT COUNT(*) n FROM ceo_rapport');
     if ((int) ($n['n'] ?? 0) > 0) {
@@ -469,17 +477,27 @@ function rapBloc(string $slug, array $seuils, array $periode): array
  * Génération, rendu, envoi, cron.
  * ------------------------------------------------------------------------ */
 
-function rapPeriode(string $freq): array
+function rapPeriode(string $freq, ?string $periode = null, ?string $du = null, ?string $au = null): array
 {
     $auj = new DateTimeImmutable('today');
-    if ($freq === 'quotidien') {
+    if ($periode === 'libre' && $du !== null && $au !== null
+        && preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) && $du <= $au) {
+        $n = (new DateTimeImmutable($du))->diff(new DateTimeImmutable($au))->days + 1;
+        return ['du' => $du, 'au' => $au, 'nvn1' => $n <= 1 ? 'jour' : ($n <= 7 ? 'semaine' : 'mois'),
+            'label' => 'du ' . date('d/m/Y', strtotime($du)) . ' au ' . date('d/m/Y', strtotime($au))];
+    }
+    if ($periode === 'hier' || ($periode === null && $freq === 'quotidien')) {
         $h = $auj->modify('-1 day')->format('Y-m-d');
         return ['du' => $h, 'au' => $h, 'nvn1' => 'jour', 'label' => 'journée du ' . $h];
     }
-    if ($freq === 'mensuel') {
-        $du = $auj->modify('first day of last month');
-        return ['du' => $du->format('Y-m-d'), 'au' => $du->modify('last day of this month')->format('Y-m-d'),
-            'nvn1' => 'mois', 'label' => 'mois de ' . $du->format('m/Y')];
+    if ($periode === 'mois-passe' || ($periode === null && $freq === 'mensuel')) {
+        $du2 = $auj->modify('first day of last month');
+        return ['du' => $du2->format('Y-m-d'), 'au' => $du2->modify('last day of this month')->format('Y-m-d'),
+            'nvn1' => 'mois', 'label' => 'mois de ' . $du2->format('m/Y')];
+    }
+    if ($periode === 'mois-en-cours') {
+        return ['du' => $auj->format('Y-m-01'), 'au' => $auj->format('Y-m-d'),
+            'nvn1' => 'mois', 'label' => 'mois en cours (au ' . $auj->format('d/m') . ')'];
     }
     $lundi = $auj->modify('monday this week')->modify('-7 days');
     return ['du' => $lundi->format('Y-m-d'), 'au' => $lundi->modify('+6 days')->format('Y-m-d'),
@@ -490,17 +508,33 @@ function rapportGenerer(array $rep): array
 {
     ensureRapports();
     $seuils = rapportSeuils();
-    $periode = rapPeriode((string) $rep['frequence']);
+    $periode = rapPeriode((string) $rep['frequence'], $rep['periode'] ?? null,
+        $rep['periode_du'] ?? null, $rep['periode_au'] ?? null);
     if ((string) $rep['code'] === 'franchise-hebdo') { $periode['avisComplets'] = true; }
 
     $blocs = json_decode((string) $rep['blocs'], true) ?: [];
+    $modes = json_decode((string) ($rep['modes'] ?? ''), true) ?: [];
+    $filtre = json_decode((string) ($rep['magasins'] ?? ''), true) ?: [];
     $defs = rapBlocDefs();
     $sections = [];
     foreach ($blocs as $slug) {
         if (!isset($defs[$slug])) { continue; }
+        if (($modes[$slug] ?? '') === 'complet') { $periode['avisComplets'] = true; }
         $b = rapBloc($slug, $seuils, $periode);
         $b['nom'] = $defs[$slug]['nom'];
         $b['levier'] = $defs[$slug]['levier'];
+        // Mode « tableau complet » : le tableau tel qu'à l'écran remplace la
+        // liste des seuls dépassements. Un bloc sans rendu complet le dit.
+        if (($modes[$slug] ?? '') === 'complet') {
+            $complet = rapBlocComplet($slug, $seuils, $periode, $filtre);
+            if ($complet !== null) { $b['htmlPar'] = array_merge($complet, $b['htmlPar']); $b['lignes'] = []; }
+        }
+        // Filtre de magasins (compositeur) : les lignes des autres sortent.
+        if ($filtre !== []) {
+            $b['lignes'] = array_values(array_filter($b['lignes'], fn ($l) => in_array($l[0], $filtre, true)));
+            $b['infos'] = array_values(array_filter($b['infos'], fn ($l) => in_array($l[0], $filtre, true)));
+            $b['htmlPar'] = array_values(array_filter($b['htmlPar'], fn ($l) => $l[0] === '' || in_array($l[0], $filtre, true)));
+        }
         if ($b['lignes'] !== [] || $b['infos'] !== [] || $b['htmlPar'] !== [] || $b['motif'] !== null) { $sections[] = $b; }
     }
     $ordre = array_keys(RAP_LEVIERS);
@@ -553,9 +587,10 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
                     . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</div>';
             }
             foreach ($htmls as $l) {
-                // Contenu déjà en HTML (heatmap) : construit par nos soins,
-                // jamais issu d'une saisie — il ne passe pas par l'échappement.
-                $h .= ($magasin === null ? '<div style="font-size:12.5px;font-weight:600;margin-top:8px">' . $e($l[0]) . '</div>' : '')
+                // Contenu déjà en HTML (heatmap, tableaux complets) : construit
+                // par nos soins, jamais issu d'une saisie — pas d'échappement.
+                // Une clé vide = contenu réseau, qui se passe d'intitulé.
+                $h .= ($magasin === null && $l[0] !== '' ? '<div style="font-size:12.5px;font-weight:600;margin-top:8px">' . $e($l[0]) . '</div>' : '')
                     . $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
@@ -633,9 +668,10 @@ function ep_rapports(): array
 {
     ensureRapports();
     $reps = Db::rows('SELECT * FROM ceo_rapport ORDER BY id');
-    $runs = Db::rows('SELECT r.id, r.rapport_id, r.genere_le, r.statut, r.resume, p.nom
-                        FROM ceo_rapport_run r JOIN ceo_rapport p ON p.id = r.rapport_id
-                       ORDER BY r.id DESC LIMIT 12');
+    $runs = Db::rows("SELECT r.id, r.rapport_id, r.genere_le, r.statut, r.resume,
+                             COALESCE(p.nom, 'Aperçu à la demande') nom
+                        FROM ceo_rapport_run r LEFT JOIN ceo_rapport p ON p.id = r.rapport_id
+                       ORDER BY r.id DESC LIMIT 12");
     $dernier = [];
     foreach (Db::rows('SELECT rapport_id, MAX(id) mid FROM ceo_rapport_run GROUP BY rapport_id') as $x) {
         $dernier[(int) $x['rapport_id']] = (int) $x['mid'];
@@ -651,6 +687,10 @@ function ep_rapports(): array
                 'blocs' => json_decode((string) $r['blocs'], true) ?: [],
                 'destinataires' => json_decode((string) ($r['destinataires'] ?? '[]'), true) ?: [],
                 'parMagasin' => (bool) $r['par_magasin'], 'actif' => (bool) $r['actif'],
+                'jours' => json_decode((string) ($r['jours'] ?? ''), true) ?: null,
+                'magasins' => json_decode((string) ($r['magasins'] ?? ''), true) ?: [],
+                'periode' => $r['periode'] ?? null,
+                'modes' => json_decode((string) ($r['modes'] ?? ''), true) ?: [],
                 'dernier' => $d ? ['runId' => (int) $d['id'], 'le' => substr((string) $d['genere_le'], 0, 16),
                     'statut' => $d['statut'], 'resume' => $d['resume']] : null];
         }, $reps),
@@ -676,6 +716,15 @@ function wr_rapport_patch(int $id): array
     }
     if (isset($b['heure']) && is_numeric($b['heure'])) {
         Db::exec('UPDATE ceo_rapport SET heure = ? WHERE id = ?', [max(0, min(23, (int) $b['heure'])), $id]);
+    }
+    if (isset($b['poste']) && trim((string) $b['poste']) !== '') {
+        Db::exec('UPDATE ceo_rapport SET poste = ? WHERE id = ?', [trim((string) $b['poste']), $id]);
+    }
+    if (isset($b['jours']) && is_array($b['jours'])) {
+        $jrs = ['dows' => [], 'doms' => []];
+        foreach ((array) ($b['jours']['dows'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 7) { $jrs['dows'][] = (int) $d2; } }
+        foreach ((array) ($b['jours']['doms'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 31) { $jrs['doms'][] = (int) $d2; } }
+        Db::exec('UPDATE ceo_rapport SET jours = ? WHERE id = ?', [json_encode($jrs), $id]);
     }
     journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Réglages mis à jour');
     return ['ok' => true];
@@ -727,9 +776,18 @@ function ep_rapports_cron(): array
     $h = (int) date('G'); $dow = (int) date('N'); $dom = (int) date('j');
     $faits = [];
     foreach (Db::rows('SELECT * FROM ceo_rapport WHERE actif = 1') as $rep) {
-        $du = ((string) $rep['frequence'] === 'quotidien' && (int) $rep['heure'] === $h)
-            || ((string) $rep['frequence'] === 'hebdo' && (int) $rep['jour'] === $dow && (int) $rep['heure'] === $h)
-            || ((string) $rep['frequence'] === 'mensuel' && (int) $rep['jour'] === $dom && (int) $rep['heure'] === $h);
+        $jrs = json_decode((string) ($rep['jours'] ?? ''), true);
+        if (is_array($jrs)) {
+            // Planification par jours cochés (compositeur) : jours de semaine
+            // et/ou jours du mois. Aucun jour coché = à la demande, jamais dû.
+            $du = (int) $rep['heure'] === $h
+                && (in_array($dow, (array) ($jrs['dows'] ?? []), true)
+                 || in_array($dom, (array) ($jrs['doms'] ?? []), true));
+        } else {
+            $du = ((string) $rep['frequence'] === 'quotidien' && (int) $rep['heure'] === $h)
+                || ((string) $rep['frequence'] === 'hebdo' && (int) $rep['jour'] === $dow && (int) $rep['heure'] === $h)
+                || ((string) $rep['frequence'] === 'mensuel' && (int) $rep['jour'] === $dom && (int) $rep['heure'] === $h);
+        }
         if (!$du) { continue; }
         $deja = Db::row('SELECT id FROM ceo_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
             [(int) $rep['id'], date('Y-m-d 00:00:00'), 'erreur']);
@@ -790,4 +848,269 @@ function wr_smtp_test(): array
     journalAdd('CEO', 'Paramètre', '—', $ok ? 'Test SMTP réussi vers ' . $a : 'Test SMTP échoué — ' . (Smtp::$lastError ?? '?'));
     return $ok ? ['ok' => true, 'message' => 'Envoyé à ' . $a . ' — vérifiez la boîte (et les spams).']
         : ['ok' => false, 'error' => Smtp::$lastError ?? 'échec sans détail'];
+}
+
+/* --------------------------------------------------------------------------
+ * Mode « tableau complet » — les tableaux tels qu'à l'écran, en HTML d'email.
+ * Rend null quand le bloc n'a pas de version complète : le générateur garde
+ * alors les dépassements et le dit.
+ * ------------------------------------------------------------------------ */
+
+/** Un tableau d'email générique : colonnes, lignes de cellules [texte, style]. */
+function rapTableHtml(array $cols, array $rows): string
+{
+    $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    $th = 'text-align:right;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;color:#8b8177;padding:6px 8px;border-bottom:1px solid #D8CEC0;font-family:sans-serif';
+    $h = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin:6px 0;font-family:sans-serif;font-size:12px"><tr>';
+    foreach ($cols as $i => $c2) { $h .= '<th style="' . $th . ($i === 0 ? ';text-align:left' : '') . '">' . $e($c2) . '</th>'; }
+    $h .= '</tr>';
+    foreach ($rows as $r) {
+        $h .= '<tr>';
+        foreach ($r as $i => $cell) {
+            [$txt, $st] = is_array($cell) ? $cell : [$cell, ''];
+            $h .= '<td style="padding:6px 8px;border-bottom:1px solid #EDE7DE;text-align:' . ($i === 0 ? 'left' : 'right')
+                . ';white-space:nowrap;' . $st . '">' . $e($txt) . '</td>';
+        }
+        $h .= '</tr>';
+    }
+    return $h . '</table>';
+}
+
+/** La couleur du chiffre selon l'écart à une référence — paliers de l'écran. */
+function rapCouleurEcart(?float $v, ?float $ref): string
+{
+    if ($v === null || $ref === null || $ref <= 0) { return 'color:#8b8177'; }
+    $eC = $v / $ref - 1;
+    $c = $eC >= 0.20 ? '#C9A227' : ($eC >= 0.10 ? '#2d7a3e' : ($eC >= 0.05 ? '#7CB342'
+        : ($eC <= -0.20 ? '#E0261A' : ($eC <= -0.10 ? '#8D1D2C' : ($eC <= -0.05 ? '#C17A2A' : '')))));
+    return $c !== '' ? 'color:' . $c . ';font-weight:700' : '';
+}
+
+function rapBlocComplet(string $slug, array $seuils, array $periode, array $filtre): ?array
+{
+    $fmtE = fn ($v) => $v === null ? '—' : number_format((float) $v, 2, ',', ' ') . ' €';
+    $fmtP = fn ($v) => $v === null ? '—' : str_replace('.', ',', (string) round((float) $v, 1)) . ' %';
+    $garde = fn (string $nom) => $filtre === [] || in_array($nom, $filtre, true);
+    $stSeuil = function (?float $v, float $alerte, ?float $critique, string $sens): string {
+        if ($v === null) { return 'color:#8b8177'; }
+        $mauvais = $sens === 'haut' ? $v >= $alerte : $v <= $alerte;
+        $grave = $critique !== null && ($sens === 'haut' ? $v >= $critique : $v <= $critique);
+        return $grave ? 'color:#E0261A;font-weight:700' : ($mauvais ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e');
+    };
+
+    switch ($slug) {
+        case 'trafic-nvn1': {
+            $r = rapReseau($periode['nvn1'] ?? 'semaine');
+            if (!is_array($r) || ($r['etat'] ?? '') !== 'ok') { return null; }
+            $rows = [];
+            foreach ((array) $r['magasins'] as $m) {
+                if (!$garde($m['magasin'])) { continue; }
+                $rows[] = [$m['magasin'], $fmtE($m['n']), [$fmtE($m['n1']), 'color:#8b8177'],
+                    [$m['ecart'] === null ? '—' : ($m['ecart'] > 0 ? '+' : '') . $fmtP($m['ecart']),
+                     $m['ecart'] === null ? 'color:#8b8177' : $stSeuil((float) $m['ecart'], $seuils['ecartNvn1'], $seuils['ecartNvn1'] * 3, 'bas')]];
+            }
+            return [['', rapTableHtml(['Magasin', 'CA N', 'CA N-1', 'Écart'], $rows)]];
+        }
+        case 'trafic-clients':
+        case 'recurrence-panier': {
+            $k = rapKpis();
+            if (!is_array($k) || !empty($k['indispo'])) { return null; }
+            $mMax = (int) ($k['moisMax'] ?? 0);
+            $MOIS = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+            $mesures = $slug === 'trafic-clients'
+                ? [['clientsJour', 'Clients par jour', 1, '']]
+                : [['panier', 'Ticket moyen', 2, ' €'], ['items', 'Articles par ticket', 2, '']];
+            $out = [];
+            foreach ($mesures as [$cle, $titre, $dec, $suf]) {
+                $cols = ['Magasin'];
+                for ($m = 1; $m <= $mMax; $m++) { $cols[] = $MOIS[$m]; }
+                $rows = [];
+                foreach ((array) $k['magasins'] as $mg) {
+                    if (!$garde($mg['nom'])) { continue; }
+                    $row = [$mg['nom']];
+                    for ($m = 1; $m <= $mMax; $m++) {
+                        $v = ($mg['mois'][$m] ?? [])[$cle] ?? null;
+                        $ref = (($k['reseau'] ?? [])[$m] ?? [])[$cle] ?? null;
+                        if ($cle === 'clientsJour' && $ref !== null) {
+                            $actifs = max(1, count(array_filter((array) $k['magasins'],
+                                fn ($x) => (($x['mois'][$m] ?? [])[$cle] ?? 0) > 0)));
+                            $ref = $ref / $actifs;
+                        }
+                        $row[] = [$v === null ? '—' : number_format((float) $v, $dec, ',', ' ') . $suf, rapCouleurEcart($v, $ref)];
+                    }
+                    $rows[] = $row;
+                }
+                $resRow = ['Réseau'];
+                for ($m = 1; $m <= $mMax; $m++) {
+                    $v = (($k['reseau'] ?? [])[$m] ?? [])[$cle] ?? null;
+                    $resRow[] = [$v === null ? '—' : number_format((float) $v, $dec, ',', ' ') . $suf, 'font-weight:700'];
+                }
+                $rows[] = $resRow;
+                $out[] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:6px">' . htmlspecialchars($titre) . ' — mois par mois</div>'
+                    . rapTableHtml($cols, $rows)];
+            }
+            return $out;
+        }
+        case 'food-cost': {
+            try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name'); }
+            catch (PDOException $e2) { return null; }
+            $rows = [];
+            foreach ($shops as $s) {
+                if (!$garde((string) $s['name'])) { continue; }
+                $hm = rapCtx('hm-mois-' . $s['id'], fn () => PanelApi::marginHeatmapEntre((int) $s['id'], date('Y-m-01'), date('Y-m-d')));
+                $t = is_array($hm) ? ($hm['totals'] ?? []) : [];
+                $ca = (float) ($t['ca'] ?? 0);
+                $fc = $ca > 0 ? ($ca - (float) ($t['margin_value'] ?? 0)) / $ca * 100 : null;
+                $rows[] = [$s['name'], [$fmtP($fc), $stSeuil($fc, $seuils['food'], kpiDefs()['food-cost-pct']['seuil_critique'] ?? null, 'haut')],
+                    [$fmtE($ca), 'color:#8b8177']];
+            }
+            return [['', rapTableHtml(['Magasin', 'Food cost (mois en cours)', 'CA du mois'], $rows)]];
+        }
+        case 'labour-caetp': {
+            $r = rapReseau('mois'); $etp = rapEtp();
+            if (!is_array($r) || ($r['etat'] ?? '') !== 'ok') { return null; }
+            $eParShop = [];
+            foreach ((array) $etp as $e2) {
+                if ((int) $e2['annee'] === (int) date('Y') && (int) $e2['mois'] === (int) date('n')) {
+                    $eParShop[(string) $e2['storeId']] = $e2;
+                }
+            }
+            $rows = [];
+            foreach ((array) $r['magasins'] as $m) {
+                if (!$garde($m['magasin'])) { continue; }
+                $e2 = $eParShop[(string) $m['shopId']] ?? null;
+                $ce = ($e2 && (float) $e2['etp'] > 0 && $m['n'] !== null) ? $m['n'] / (float) $e2['etp'] : null;
+                $rows[] = [$m['magasin'],
+                    [$fmtE($ce), $stSeuil($ce, $seuils['caEtp'], kpiDefs()['ca-etp']['seuil_critique'] ?? null, 'bas')],
+                    [$e2 ? str_replace('.', ',', (string) $e2['etp']) . ' ETP' : 'planning inconnu', 'color:#8b8177'],
+                    [$e2 ? str_replace('.', ',', (string) $e2['heures']) . ' h' : '—', 'color:#8b8177']];
+            }
+            return [['', rapTableHtml(['Magasin', 'CA / ETP (mois)', 'ETP planifiés', 'Heures'], $rows)]];
+        }
+        case 'overhead-jours': {
+            $r = rapRentab();
+            if (!is_array($r) || !empty($r['indispo'])) { return null; }
+            $rows = [];
+            foreach ((array) $r['magasins'] as $m) {
+                if (!empty($m['indispo']) || !$garde((string) $m['nom'])) { continue; }
+                $rouges = array_values(array_filter((array) $m['jours'], fn ($j) => $j['net'] !== null && $j['net'] < 0));
+                $pire = null;
+                foreach ($rouges as $j) { if ($pire === null || $j['netPct'] < $pire['netPct']) { $pire = $j; } }
+                $tot = $m['total'] ?? [];
+                $rows[] = [$m['nom'],
+                    [count($rouges) . ' / 7', $stSeuil((float) count($rouges), $seuils['joursRouges'], 5, 'haut')],
+                    [$pire ? $fmtP($pire['netPct']) . ' (' . date('D d/m', strtotime($pire['date'])) . ')' : '—', 'color:#8b8177'],
+                    [isset($tot['netPct']) ? $fmtP($tot['netPct']) : '—', ($tot['netPct'] ?? 0) < 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e']];
+            }
+            return [['', rapTableHtml(['Magasin', 'Jours négatifs', 'Pire jour', 'Résultat net semaine'], $rows)]];
+        }
+        case 'recurrence-avis': {
+            $r = rapReput();
+            if (!is_array($r) || !empty($r['indispo'])) { return null; }
+            $rows = [];
+            foreach ((array) $r['magasins'] as $m) {
+                if (!$garde((string) $m['nom'])) { continue; }
+                $rows[] = [$m['nom'],
+                    [$m['note'] === null ? '—' : str_replace('.', ',', (string) $m['note']) . ' ★',
+                     $stSeuil($m['note'] !== null ? (float) $m['note'] : null, $seuils['cibleGoogle'], kpiDefs()['note-google']['seuil_critique'] ?? null, 'bas')],
+                    [(string) $m['avis'] . ' avis', 'color:#8b8177'],
+                    [$m['avis5Requis'] === null ? '—' : $m['avis5Requis'] . ' avis 5★ requis', 'color:#8b8177']];
+            }
+            return [['', rapTableHtml(['Magasin', 'Note Google', 'Volume', 'Pour atteindre la cible'], $rows)]];
+        }
+        case 'xp-taches': {
+            $ts = rapTaches($periode['du'], $periode['au']);
+            if ($ts === []) { return null; }
+            $par = [];
+            foreach ($ts as $t) {
+                $mag = (string) $t['magasin'];
+                if (!$garde($mag)) { continue; }
+                $par[$mag] ??= ['n' => 0, 'notees' => 0, 'somme' => 0.0, 'sous' => 0];
+                $par[$mag]['n']++;
+                if ($t['note'] !== null) {
+                    $par[$mag]['notees']++; $par[$mag]['somme'] += (float) $t['note'];
+                    if ((int) $t['note'] <= $seuils['tacheNote']) { $par[$mag]['sous']++; }
+                }
+            }
+            $rows = [];
+            foreach ($par as $mag => $x) {
+                $moy = $x['notees'] > 0 ? $x['somme'] / $x['notees'] : null;
+                $rows[] = [$mag, [(string) $x['n'], 'color:#8b8177'], [(string) $x['notees'], 'color:#8b8177'],
+                    [$moy === null ? '—' : str_replace('.', ',', (string) round($moy, 1)) . ' / 5',
+                     $stSeuil($moy, (float) $seuils['tacheNote'], 2.0, 'bas')],
+                    [(string) $x['sous'], $x['sous'] > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e']];
+            }
+            return [['', rapTableHtml(['Magasin', 'Tâches', 'Notées', 'Note moyenne', '≤ ' . $seuils['tacheNote'] . '/5'], $rows)]];
+        }
+    }
+    return null;
+}
+
+/* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
+
+/** Le pseudo-rapport d'une composition envoyée par l'écran. */
+function rapCompositionRep(array $b): array
+{
+    $blocs = array_values(array_filter((array) ($b['blocs'] ?? []), fn ($s) => isset(rapBlocDefs()[$s])));
+    return [
+        'id' => 0, 'code' => 'apercu', 'nom' => trim((string) ($b['nom'] ?? '')) ?: 'Rapport à la demande',
+        'poste' => trim((string) ($b['poste'] ?? '')) ?: 'À la demande',
+        'frequence' => 'hebdo', 'par_magasin' => 0,
+        'blocs' => json_encode($blocs),
+        'modes' => json_encode(is_array($b['modes'] ?? null) ? $b['modes'] : []),
+        'magasins' => json_encode(array_values(array_filter((array) ($b['magasins'] ?? []), 'is_string'))),
+        'periode' => in_array($b['periode'] ?? '', ['hier', 'semaine-passee', 'mois-en-cours', 'mois-passe', 'libre'], true) ? $b['periode'] : 'semaine-passee',
+        'periode_du' => (string) ($b['du'] ?? '') ?: null,
+        'periode_au' => (string) ($b['au'] ?? '') ?: null,
+        'destinataires' => json_encode(array_values(array_filter((array) ($b['destinataires'] ?? []), fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)))),
+    ];
+}
+
+/** POST /rapports/apercu — générer une composition, sans rien enregistrer. */
+function wr_rapport_apercu(): array
+{
+    ensureRapports();
+    $b = body();
+    $rep = rapCompositionRep($b);
+    if (json_decode((string) $rep['blocs'], true) === []) {
+        http_response_code(422);
+        return ['error' => 'aucun KPI coché'];
+    }
+    $g = rapportGenerer($rep);
+    if (!empty($b['envoyer'])) {
+        if ($g['statut'] === 'vide') { return ['ok' => false, 'runId' => $g['runId'], 'error' => 'rapport sans matière — non envoyé']; }
+        return ['runId' => $g['runId']] + rapportEnvoyer($rep, $g['runId']);
+    }
+    return ['ok' => true] + $g;
+}
+
+/** POST /rapports — enregistrer une composition comme rapport récurrent. */
+function wr_rapport_creer(): array
+{
+    ensureRapports();
+    $b = body();
+    $rep = rapCompositionRep($b);
+    if (json_decode((string) $rep['blocs'], true) === []) { http_response_code(422); return ['error' => 'aucun KPI coché']; }
+    if ($rep['nom'] === 'Rapport à la demande') { http_response_code(422); return ['error' => 'donnez un nom au rapport']; }
+    $jours = ['dows' => [], 'doms' => []];
+    foreach ((array) (($b['jours'] ?? [])['dows'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 7) { $jours['dows'][] = (int) $d2; } }
+    foreach ((array) (($b['jours'] ?? [])['doms'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 31) { $jours['doms'][] = (int) $d2; } }
+    $heure = is_numeric($b['heure'] ?? null) ? max(0, min(23, (int) $b['heure'])) : 7;
+    // La fréquence héritée sert à l'affichage et aux périodes par défaut — la
+    // planification réelle est dans `jours` (aucun jour coché = à la demande).
+    $freq = $jours['doms'] !== [] && $jours['dows'] === [] ? 'mensuel'
+        : (count($jours['dows']) >= 7 ? 'quotidien' : 'hebdo');
+    $code = 'perso-' . trim(mb_substr(preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($rep['nom'])), 0, 30), '-');
+    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
+    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif,
+                                       jours, magasins, periode, periode_du, periode_au, modes)
+              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?)',
+        [$code, $rep['nom'], $rep['poste'], $freq, $heure,
+         $jours['dows'][0] ?? ($jours['doms'][0] ?? 1),
+         $rep['blocs'], $rep['destinataires'],
+         json_encode($jours), $rep['magasins'], $rep['periode'], $rep['periode_du'], $rep['periode_au'], $rep['modes']]);
+    journalAdd('CEO', 'Rapport', $rep['nom'], 'Rapport composé enregistré (' . $code . ')');
+    return ['ok' => true, 'code' => $code,
+        'planifie' => $jours['dows'] !== [] || $jours['doms'] !== [],
+        'note' => $jours['dows'] === [] && $jours['doms'] === [] ? 'aucun jour coché — rapport à la demande, le cron ne l\'enverra pas' : null];
 }

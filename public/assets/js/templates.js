@@ -2897,10 +2897,84 @@ function tplReporting(c, x){
        se retrouvait comprimée par un panneau secondaire. -->
   <div data-screen="reporting" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
-        <div style="font-size:13px;font-weight:500">Générateur de rapports — par levier, à seuils</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : cron horaire sur <code>/api/cockpit/rapports/cron?jeton=…</code> (réglage <code>rapportsJeton</code>).</div>
+      <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <div style="font-size:13px;font-weight:500">Générateur de rapports — par levier, à seuils</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : cron horaire sur <code>/api/cockpit/rapports/cron?jeton=…</code> (réglage <code>rapportsJeton</code>).</div>
+        </div>
+        ${c.rapComposeOn
+          ? `<button ${x.A(c.rapComposeFermer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">← Retour à la liste</button>`
+          : `<button ${x.A(c.rapComposeOuvrir)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">+ Nouveau rapport</button>`}
       </div>
+      ${c.rapComposeOn ? `
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Partir d'un modèle</span>
+          <select ${x.C(c.rapCompo.chargerModele)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 9px;background:var(--color-surface);color:var(--color-text)">
+            ${c.rapCompo.modeles.map(mo => `<option value="${mo.id}">${esc(mo.nom)}</option>`).join('')}
+          </select>
+          <span style="margin-left:auto;font-size:12px;font-weight:500">${esc(c.rapCompo.recap)}</span>
+        </div>
+        <div>
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">1 · Les KPI <span style="font-weight:400;color:var(--color-text-muted);font-size:11px">— « Complet » = le tableau tel qu'à l'écran · « Dépassements » = seulement les seuils franchis</span></div>
+          ${c.rapCompo.groupes.map(g => `
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:9px 0 5px"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${g.couleur};margin-right:6px"></i>${esc(g.nom)}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:6px">
+              ${g.items.map(it => `
+                <div style="display:flex;align-items:center;gap:8px;border:${it.on ? '1.5px solid var(--color-primary)' : '0.5px solid var(--color-border-tertiary)'};border-radius:9px;padding:7px 10px;background:${it.on ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
+                  <span ${x.A(it.toggle)} style="width:15px;height:15px;border-radius:4px;flex:none;cursor:pointer;border:1.5px solid ${it.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${it.on ? 'var(--color-primary)' : 'transparent'};color:#fff;font-size:10px;line-height:14px;text-align:center">${it.on ? '✓' : ''}</span>
+                  <span ${x.A(it.toggle)} style="flex:1;font-size:12px;font-weight:500;cursor:pointer">${esc(it.nom)}</span>
+                  ${it.on ? `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:9.5px;font-weight:600">
+                    <button ${x.A(it.setModeComplet)} style="border:none;cursor:pointer;padding:2px 7px;font-family:var(--font-ui);${it.mode === 'complet' ? 'background:var(--color-text);color:var(--color-surface)' : 'background:transparent;color:var(--color-text-muted)'}">Complet</button>
+                    <button ${x.A(it.setModeDep)} style="border:none;cursor:pointer;padding:2px 7px;font-family:var(--font-ui);${it.mode !== 'complet' ? 'background:var(--color-text);color:var(--color-surface)' : 'background:transparent;color:var(--color-text-muted)'}">Dépass.</button>
+                  </span>` : ''}
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:26px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">2 · Les magasins</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;max-width:440px">
+              <span ${x.A(c.rapCompo.toutLeReseau)} style="display:inline-block;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${c.rapCompo.tous ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">Tout le réseau</span>
+              ${c.rapCompo.magasins.map(mg => `<span ${x.A(mg.toggle)} style="display:inline-block;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${mg.on ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">${esc(mg.nom)}</span>`).join('')}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">3 · La période</div>
+            <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px;flex-wrap:wrap">
+              ${c.rapCompo.periodes.map(p => `<button ${x.A(p.pick)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:500;padding:5px 11px;border-radius:7px;${p.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(p.nom)}</button>`).join('')}
+            </div>
+            <div style="margin-top:7px;font-size:11.5px;color:var(--color-text-muted)">du <input value="${esc(c.rapCompo.du)}" ${x.C(c.rapCompo.setDu)} placeholder="2026-08-01" style="width:96px;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 7px;background:var(--color-surface);color:var(--color-text)"> au <input value="${esc(c.rapCompo.au)}" ${x.C(c.rapCompo.setAu)} placeholder="2026-08-21" style="width:96px;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 7px;background:var(--color-surface);color:var(--color-text)"> <span>(si « Libre », AAAA-MM-JJ)</span></div>
+          </div>
+        </div>
+        <div style="background:var(--color-background-secondary);border-radius:10px;padding:13px 15px">
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">4 · Générer, envoyer, ou planifier</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
+            <button ${x.A(c.rapCompo.apercu)} style="border:none;border-radius:999px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer;${c.rapCompo.busy ? 'opacity:.6' : ''}">${c.rapCompo.busy ? 'En cours…' : 'Générer l’aperçu →'}</button>
+            <button ${x.A(c.rapCompo.envoyer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Envoyer par email</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <input value="${esc(c.rapCompo.nom)}" ${x.C(c.rapCompo.setNom)} placeholder="Nom du rapport" style="flex:2;min-width:180px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <input value="${esc(c.rapCompo.poste)}" ${x.C(c.rapCompo.setPoste)} placeholder="Poste destinataire (CEO, consultant, franchisé…)" style="flex:2;min-width:220px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <label style="font-size:11px;color:var(--color-text-muted)">à <select ${x.C(c.rapCompo.setHeure)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 7px;background:var(--color-surface);color:var(--color-text)">${Array.from({ length: 24 }, (_, h4) => `<option value="${h4}"${String(c.rapCompo.heure) === String(h4) ? ' selected' : ''}>${h4} h</option>`).join('')}</select></label>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:7px">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Jours de semaine</span>
+            ${c.rapCompo.dows.map(d6 => `<span ${x.A(d6.toggle)} style="display:inline-block;width:40px;text-align:center;border-radius:7px;padding:5px 0;font-size:10.5px;font-weight:600;cursor:pointer;${d6.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text-muted)'}">${esc(d6.nom)}</span>`).join('')}
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:flex-start;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px;padding-top:6px">Jours du mois</span>
+            <span style="display:grid;grid-template-columns:repeat(16,26px);gap:3px">
+              ${c.rapCompo.doms.map(d6 => `<span ${x.A(d6.toggle)} style="display:inline-block;text-align:center;border-radius:6px;padding:4px 0;font-size:10px;font-weight:600;cursor:pointer;${d6.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text-muted)'}">${esc(d6.nom)}</span>`).join('')}
+            </span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input value="${esc(c.rapCompo.dest)}" ${x.C(c.rapCompo.setDest)} placeholder="destinataires (emails, virgules)" style="flex:1;min-width:240px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <button ${x.A(c.rapCompo.enregistrer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">Enregistrer comme rapport récurrent</button>
+          </div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">Aucun jour coché = rapport à la demande (jamais envoyé par le cron). Jours de semaine ET jours du mois se cumulent.</div>
+        </div>
+      </div>` : `
       ${c.rapGen.chargement ? `<div style="padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Lecture des rapports…</div>`
         : (c.rapGen.indispo ? `<div style="padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.rapGen.indispo)}</div>` : `
       <div style="display:flex;flex-direction:column">
@@ -2938,7 +3012,7 @@ function tplReporting(c, x){
             <span style="color:var(--color-text-muted)">${esc(u.resume)}</span>
             <a href="${u.url}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11.5px;font-weight:500;color:var(--color-primary)">ouvrir</a>
           </div>`).join('')}
-      </div>` : ''}`)}
+      </div>` : ''}`)}`}
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
       <div style="font-size:13px;font-weight:500;margin-bottom:12px">Alertes automatiques — push + email</div>
