@@ -208,7 +208,8 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 if ($v === null || $ref === null || $ref <= 0) { continue; }
                 $e = ($v / $ref - 1) * 100;
                 if ($e < $seuils['ecartTrafic']) {
-                    $b['lignes'][] = [$m['nom'], round($v, 1) . ' clients/jour, ' . $fmtP($e) . ' sous la moyenne réseau (' . round($ref, 1) . ')', true];
+                    $b['lignes'][] = [$m['nom'], str_replace('.', ',', (string) round($v, 1)) . ' clients/jour, '
+                        . $fmtP($e) . ' sous la moyenne réseau (' . str_replace('.', ',', (string) round($ref, 1)) . ')', true];
                 }
             }
             break;
@@ -343,7 +344,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $pire = null;
                     foreach ($rouges as $j) { if ($pire === null || $j['netPct'] < $pire['netPct']) { $pire = $j; } }
                     $b['lignes'][] = [$m['nom'], count($rouges) . ' jours à résultat net négatif sur la semaine '
-                        . substr($r['du'], 5) . ' → ' . substr($r['au'], 5)
+                        . date('d/m', strtotime($r['du'])) . ' → ' . date('d/m', strtotime($r['au']))
                         . ($pire ? ' (jusqu’à ' . $fmtP($pire['netPct']) . ')' : ''), count($rouges) >= 5];
                 }
             }
@@ -355,6 +356,9 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             if (!is_array($f) || ($f['etat'] ?? '') !== 'ok') { $b['motif'] = 'compte admin ERP non configuré'; break; }
             $auj = date('Y-m-d');
             foreach ((array) ($f['redevances'] ?? []) as $r2) {
+                // Une facture à 0 € « en retard » est un artefact d'émission,
+                // pas une créance : elle ne mérite pas une ligne d'action.
+                if ((float) ($r2['montant'] ?? 0) <= 0) { continue; }
                 if (($r2['paiement'] ?? '') !== 'paid' && ($r2['echeance'] ?? '') !== '' && $r2['echeance'] < $auj) {
                     $b['lignes'][] = [$r2['magasin'], 'Facture ' . $r2['numero'] . ' de ' . $fmtE($r2['montant'])
                         . ' échue le ' . $r2['echeance'] . ($r2['relanceLe'] ? ' (relancée le ' . substr((string) $r2['relanceLe'], 0, 10) . ')' : ' — jamais relancée'), true];
