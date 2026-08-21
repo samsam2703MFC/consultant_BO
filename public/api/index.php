@@ -175,6 +175,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }
     if ($method === 'POST' && $path === '/rapports/apercu') { return wr_rapport_apercu(); }
     if ($method === 'PUT' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_patch((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_suppr((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/generer$#', $path, $m)) { return wr_rapport_generer((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/envoyer$#', $path, $m)) { return wr_rapport_envoyer((int) $m[1]); }
     if ($method === 'POST' && $path === '/reputation/sync') { return wr_reputation_sync(); }

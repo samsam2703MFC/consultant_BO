@@ -816,6 +816,20 @@ function wr_rapport_patch(int $id): array
     if (isset($b['poste']) && trim((string) $b['poste']) !== '') {
         Db::exec('UPDATE ceo_rapport SET poste = ? WHERE id = ?', [trim((string) $b['poste']), $id]);
     }
+    if (isset($b['nom']) && trim((string) $b['nom']) !== '') {
+        Db::exec('UPDATE ceo_rapport SET nom = ? WHERE id = ?', [trim((string) $b['nom']), $id]);
+    }
+    if (isset($b['blocs']) && is_array($b['blocs'])) {
+        $blocs = array_values(array_filter($b['blocs'], fn ($s2) => isset(rapBlocDefs()[$s2])));
+        if ($blocs !== []) { Db::exec('UPDATE ceo_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), $id]); }
+    }
+    if (isset($b['modes']) && is_array($b['modes'])) {
+        Db::exec('UPDATE ceo_rapport SET modes = ? WHERE id = ?', [json_encode($b['modes']), $id]);
+    }
+    if (isset($b['magasins']) && is_array($b['magasins'])) {
+        Db::exec('UPDATE ceo_rapport SET magasins = ? WHERE id = ?',
+            [json_encode(array_values(array_filter($b['magasins'], 'is_string'))), $id]);
+    }
     if (isset($b['jours']) && is_array($b['jours'])) {
         $jrs = ['dows' => [], 'doms' => []];
         foreach ((array) ($b['jours']['dows'] ?? []) as $d2) { if (is_numeric($d2) && $d2 >= 1 && $d2 <= 7) { $jrs['dows'][] = (int) $d2; } }
@@ -842,6 +856,17 @@ function wr_rapport_envoyer(int $id): array
     $g = rapportGenerer($rep);
     if ($g['statut'] === 'vide') { return ['ok' => false, 'runId' => $g['runId'], 'error' => 'rapport sans matière — non envoyé']; }
     return ['runId' => $g['runId']] + rapportEnvoyer($rep, $g['runId']);
+}
+
+/** DELETE /rapports/{id} — la définition part, l'historique des runs reste. */
+function wr_rapport_suppr(int $id): array
+{
+    ensureRapports();
+    $rep = Db::row('SELECT nom FROM ceo_rapport WHERE id = ?', [$id]);
+    if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
+    Db::exec('DELETE FROM ceo_rapport WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Rapport supprimé — ses générations passées restent lisibles');
+    return ['ok' => true];
 }
 
 /** GET /rapports/run/{id} — la page HTML du rapport, telle qu'envoyée. */

@@ -251,6 +251,13 @@ function kpiFormatValeur(array $def, float $v): string
     return str_replace('.', ',', (string) round($v, 2));
 }
 
+/** Un nombre saisi à l'écran — virgule française acceptée, null si vide. */
+function kpiNombre($v): ?float
+{
+    if (is_string($v)) { $v = str_replace(',', '.', trim($v)); }
+    return is_numeric($v) ? (float) $v : null;
+}
+
 /* --- Endpoints --------------------------------------------------------------- */
 
 /** GET /kpi-defs — le référentiel + le catalogue des mesures et des leviers. */
@@ -296,8 +303,8 @@ function wr_kpi(): array
               VALUES (?,?,?,?,?,?,?,?,?,1,200)',
         [$code, $nom, trim((string) ($b['description'] ?? '')) ?: (KPI_MESURES[$num] . ' ÷ ' . KPI_MESURES[$den]),
          $levier, json_encode($calcul, JSON_UNESCAPED_UNICODE),
-         is_numeric($b['seuilAlerte'] ?? null) ? (float) $b['seuilAlerte'] : null,
-         is_numeric($b['seuilCritique'] ?? null) ? (float) $b['seuilCritique'] : null,
+         kpiNombre($b['seuilAlerte'] ?? null),
+         kpiNombre($b['seuilCritique'] ?? null),
          ($b['sens'] ?? '') === 'bas' ? 'bas' : 'haut',
          isset(KPI_SORTIES[$b['sortie'] ?? '']) ? $b['sortie'] : 'tableau']);
     journalAdd('CEO', 'Paramètre', $nom, 'KPI dérivé créé (' . $code . ')');
@@ -318,7 +325,7 @@ function wr_kpi_patch(int $id): array
     foreach ([['seuilAlerte', 'seuil_alerte'], ['seuilCritique', 'seuil_critique']] as [$k, $col]) {
         if (array_key_exists($k, $b)) {
             $set[] = $col . ' = ?';
-            $args[] = is_numeric($b[$k]) ? (float) $b[$k] : null;
+            $args[] = kpiNombre($b[$k]);
         }
     }
     if (isset($b['sens']) && in_array($b['sens'], ['haut', 'bas'], true)) { $set[] = 'sens = ?'; $args[] = $b['sens']; }
@@ -340,13 +347,13 @@ function wr_kpi_patch(int $id): array
 
     // Pont : les seuils historiques que les écrans lisent encore suivent.
     $pont = KPI_PONT_TABLE[(string) $d['code']] ?? null;
-    if ($pont !== null && array_key_exists('seuilAlerte', $b) && is_numeric($b['seuilAlerte'])) {
-        try { Db::exec('UPDATE kpi SET seuil_haut = ? WHERE code = ?', [(float) $b['seuilAlerte'], $pont]); }
+    if ($pont !== null && array_key_exists('seuilAlerte', $b) && kpiNombre($b['seuilAlerte']) !== null) {
+        try { Db::exec('UPDATE kpi SET seuil_haut = ? WHERE code = ?', [kpiNombre($b['seuilAlerte']), $pont]); }
         catch (PDOException $e) { /* table absente : rien à synchroniser */ }
     }
-    if ((string) $d['code'] === 'note-google' && array_key_exists('seuilAlerte', $b) && is_numeric($b['seuilAlerte'])) {
+    if ((string) $d['code'] === 'note-google' && array_key_exists('seuilAlerte', $b) && kpiNombre($b['seuilAlerte']) !== null) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['reputationCible', json_encode((float) $b['seuilAlerte'])]);
+            ['reputationCible', json_encode(kpiNombre($b['seuilAlerte']))]);
     }
     journalAdd('CEO', 'Paramètre', (string) $d['nom'], 'KPI mis à jour');
     return ['ok' => true];

@@ -3135,7 +3135,7 @@ function tplReporting(c, x){
           <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">La fenêtre de données suit la cadence : envoi quotidien → la veille · hebdo → la semaine passée · mensuel → le mois passé. Aucun jour coché = rapport à la demande.</div>
         </div>
         <div style="background:var(--color-background-secondary);border-radius:10px;padding:13px 15px">
-          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">4 · Générer, envoyer, ou enregistrer</div>
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">4 · Générer, envoyer, ou enregistrer${c.rapCompo.edit ? ` <span style="font-weight:500;color:var(--color-primary)">— modification de « ${esc(c.rapCompo.editNom)} »</span>` : ''}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
             <button ${x.A(c.rapCompo.apercu)} style="border:none;border-radius:999px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer;${c.rapCompo.busy ? 'opacity:.6' : ''}">${c.rapCompo.busy ? 'En cours…' : 'Générer l’aperçu →'}</button>
             <button ${x.A(c.rapCompo.envoyer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Envoyer par email</button>
@@ -3152,7 +3152,7 @@ function tplReporting(c, x){
           </div>` : ''}
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input value="${esc(c.rapCompo.dest)}" ${x.C(c.rapCompo.setDest)} placeholder="destinataires (emails, virgules — ou cliquez l'annuaire)" style="flex:1;min-width:240px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
-            <button ${x.A(c.rapCompo.enregistrer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">Enregistrer comme rapport récurrent</button>
+            <button ${x.A(c.rapCompo.enregistrer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer">${c.rapCompo.edit ? 'Enregistrer les modifications' : 'Enregistrer comme rapport récurrent'}</button>
           </div>
         </div>
       </div>` : `
@@ -3170,6 +3170,8 @@ function tplReporting(c, x){
               ${r.ouvrirUrl ? `<a href="${r.ouvrirUrl}" target="_blank" rel="noopener" style="font-size:11.5px;font-weight:500;color:var(--color-primary)">Ouvrir</a>` : ''}
               <button ${x.A(r.gen)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${esc(r.genTxt)}</button>
               <button ${x.A(r.env)} style="border:none;border-radius:7px;padding:6px 10px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Envoyer</button>
+              <button ${x.A(r.modifier)} title="Recharger ce rapport dans le compositeur" style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Modifier</button>
+              <button ${x.A(r.suppr)} title="Supprimer ce rapport" style="border:none;background:none;color:var(--color-text-muted);font-size:14px;cursor:pointer;padding:2px 4px">✕</button>
             </div>
             ${r.resume ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(r.resume)}</div>` : ''}
             <div style="display:flex;gap:5px;flex-wrap:wrap">

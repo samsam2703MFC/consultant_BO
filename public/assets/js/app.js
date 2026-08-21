@@ -7229,6 +7229,24 @@ class App {
           blocs: (r.blocs || []).map(sl => { const d2 = defs[sl] || { levier: 'transverse', nom: sl };
             const lv = levs[d2.levier] || { couleur: '#999999' };
             return { nom: d2.nom, c: lv.couleur }; }),
+          modifier: () => {
+            const bl = {}; (r.blocs || []).forEach(sl => { bl[sl] = true; });
+            const mg2 = {}; (r.magasins || []).forEach(n3 => { mg2[n3] = true; });
+            const dw = {}; const dm = {};
+            if (r.jours) {
+              ((r.jours.dows) || []).forEach(d7 => { dw[d7] = true; });
+              ((r.jours.doms) || []).forEach(d7 => { dm[d7] = true; });
+            } else if (r.frequence === 'quotidien') { [1, 2, 3, 4, 5, 6, 7].forEach(d7 => { dw[d7] = true; }); }
+            else if (r.frequence === 'mensuel') { dm[r.jour || 1] = true; }
+            else { dw[r.jour || 1] = true; }
+            this.setState({ rapComposeOn: true, rapEditId: r.id, rapCompo: {
+              blocs: bl, modes: r.modes || {}, mags: mg2, nom: r.nom, poste: r.poste || '',
+              heure: String(r.heure), dows: dw, doms: dm, dest: (r.destinataires || []).join(', ') } });
+          },
+          suppr: () => {
+            if (!window.confirm('Supprimer le rapport « ' + r.nom + ' » ? Ses générations passées restent lisibles dans l’historique.')) { return; }
+            this.api('DELETE', '/rapports/' + r.id, {}).then(() => { this.notify('Rapport supprimé'); this.rapCharge(true); });
+          },
           destTxt,
           setDest: e => this.setState(s2 => ({ rapDestTxt: Object.assign({}, s2.rapDestTxt, { [r.id]: e.target.value }) })),
           saveDest: () => this.api('PUT', '/rapports/' + r.id,
@@ -7246,8 +7264,8 @@ class App {
     const rc = S.rapCompo || {};
     const rcSet = patch => this.setState(s2 => ({ rapCompo: Object.assign({}, s2.rapCompo, patch) }));
     common.rapComposeOn = !!S.rapComposeOn;
-    common.rapComposeOuvrir = () => this.setState({ rapComposeOn: true });
-    common.rapComposeFermer = () => this.setState({ rapComposeOn: false });
+    common.rapComposeOuvrir = () => this.setState({ rapComposeOn: true, rapEditId: null, rapCompo: {} });
+    common.rapComposeFermer = () => this.setState({ rapComposeOn: false, rapEditId: null });
     const rcBlocs = rc.blocs || {};
     const rcModes = rc.modes || {};
     const rcMags = rc.mags || {};
@@ -7319,17 +7337,23 @@ class App {
             this.notify(g && g.ok ? 'Envoyé à ' + (g.envoyes || []).join(', ') : ((g && (g.error || g.note)) || 'échec'));
             this.rapCharge(true); });
       },
+      edit: !!S.rapEditId,
+      editNom: S.rapEditId ? (rc.nom || '') : '',
       enregistrer: () => {
         if (!String(rc.nom || '').trim()) { this.notify('Donnez un nom au rapport.'); return; }
         const jrs = { dows: Object.keys(dows).filter(d5 => dows[d5]).map(Number),
           doms: Object.keys(doms).filter(d5 => doms[d5]).map(Number) };
-        rcSet({ busy: true });
-        this.api('POST', '/rapports', Object.assign(composition(), { nom: rc.nom, poste: rc.poste,
+        const corps = Object.assign(composition(), { nom: rc.nom, poste: rc.poste,
           heure: rc.heure, jours: jrs,
-          destinataires: String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean) }))
+          destinataires: String(rc.dest || '').split(/[,;]/).map(s5 => s5.trim()).filter(Boolean) });
+        const editId = S.rapEditId;
+        rcSet({ busy: true });
+        (editId ? this.api('PUT', '/rapports/' + editId, corps) : this.api('POST', '/rapports', corps))
           .then(g => { rcSet({ busy: false });
-            if (g && g.ok) { this.notify('Rapport enregistré' + (g.note ? ' — ' + g.note : '')); this.rapCharge(true);
-              this.setState({ rapComposeOn: false, rapCompo: {} }); }
+            if (g && g.ok) {
+              this.notify(editId ? 'Rapport mis à jour' : ('Rapport enregistré' + (g.note ? ' — ' + g.note : '')));
+              this.rapCharge(true);
+              this.setState({ rapComposeOn: false, rapCompo: {}, rapEditId: null }); }
             else { this.notify((g && g.error) || 'Enregistrement refusé'); } });
       },
     };
