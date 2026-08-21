@@ -758,8 +758,9 @@ function rapTableComparaison(array $now, array $avant, array $fen, string $cle, 
     $ra = ($avant['reseau'] ?? [])[$cle] ?? null;
     $rows[] = [['Réseau', 'font-weight:700'], [$fmt($rn), 'font-weight:700'], [$fmt($ra), 'color:#8b8177;font-weight:700'],
         $ecart($rn === null ? null : (float) $rn, $ra === null ? null : (float) $ra)];
-    return '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:6px">' . $e($titre) . '</div>'
-        . rapTableHtml(['Magasin', 'Période', $fen['code'], 'Écart'], $rows)
+    // Le titre du bloc, juste au-dessus, dit déjà « Passage clients par jour » :
+    // le réécrire ici donnait deux titres pour un tableau.
+    return rapTableHtml(['Magasin', 'Période', $fen['code'], 'Écart'], $rows)
         . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
         . $e($fen['code'] . ' = ' . $fen['label']) . ' — du ' . $e(date('d/m/Y', strtotime($fen['du'])))
         . ' au ' . $e(date('d/m/Y', strtotime($fen['au']))) . '.</div>';
@@ -1408,12 +1409,21 @@ function rapPdfHtml(string $html): string
     // des seuils s'y reconnaît à son texte.
     $html = (string) preg_replace('#<div[^>]*>Seuils\s*:\s*food.*?</div>#s', '', $html);
     $css = '<style>'
-        . '@page{size:A4;margin:12mm 10mm 14mm}'
+        // Des marges de PAPIER, pas d'écran : 15 mm sur les côtés — la feuille
+        // respire, et un rapport agrafé ou perforé ne mange pas son texte.
+        . '@page{size:A4;margin:14mm 15mm 16mm}'
         . 'html,body{background:#ffffff !important;margin:0 !important;padding:0 !important;'
         . '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         . 'table[data-fond]{background:#ffffff !important}'
         . 'td[data-marge]{padding:0 !important}'
         . 'table[data-carte]{width:100% !important;max-width:100% !important}'
+        // La carte occupait toute la largeur ET gardait ses 30 px de marge
+        // intérieure d'email : additionnés aux marges de la page, le texte se
+        // retrouvait au milieu d'une double marge. La page respire dehors, la
+        // carte se resserre dedans.
+        . 'table[data-carte]>tbody>tr>td{padding-left:10px !important;padding-right:10px !important}'
+        // Un peu d'air entre le bandeau et le titre, et entre les blocs.
+        . 'table[data-carte]>tbody>tr:first-child>td{padding-top:6px !important;padding-bottom:12px !important}'
         . 'table[data-cta]{display:none !important}'
         // Le pied — bouton « Ouvrir dans le cockpit » et rappel des seuils —
         // s'adresse au lecteur d'un EMAIL. Sur une feuille remise en boutique,
@@ -1480,8 +1490,8 @@ function rapPdfRendu(string $html): ?string
     // Le numéro de page en pied : un rapport de trois feuilles agrafées sans
     // pagination se relit mal.
     $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
-        . ' --margin-top 12mm --margin-bottom 14mm --margin-left 10mm --margin-right 10mm'
-        . ' --footer-font-size 7 --footer-spacing 5 --footer-right "[page]/[topage]"';
+        . ' --margin-top 14mm --margin-bottom 16mm --margin-left 15mm --margin-right 15mm'
+        . ' --footer-font-size 7 --footer-spacing 6 --footer-right "[page]/[topage]"';
     $essais = [
         // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
         'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
