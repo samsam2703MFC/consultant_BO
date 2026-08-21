@@ -285,10 +285,22 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $r = rapReput();
             if (!is_array($r) || !empty($r['indispo'])) { $b['motif'] = $r['raison'] ?? 'tables de réputation absentes'; break; }
             $cible = (float) ($r['cible'] ?? $seuils['cibleGoogle']);
+            $vCible = str_replace('.', ',', (string) $cible);
+            // Le chiffre qui rend la note actionnable : COMBIEN d'avis 5★ il
+            // faut obtenir pour repasser la cible. Sans lui, « 4,1 sous 4,5 »
+            // ne dit pas si l'effort est de dix avis ou de mille.
+            $res = (array) ($r['reseau'] ?? []);
+            if (($res['moyenne'] ?? null) !== null && (float) $res['moyenne'] < $cible) {
+                $b['lignes'][] = ['Réseau', 'Moyenne ' . str_replace('.', ',', (string) $res['moyenne'])
+                    . ' sur ' . (int) ($res['avis'] ?? 0) . ' avis — '
+                    . (($res['avis5Requis'] ?? null) !== null
+                        ? $res['avis5Requis'] . ' avis 5★ à obtenir pour revenir à ' . $vCible
+                        : 'cible hors d’atteinte par ajout d’avis'), false];
+            }
             foreach ((array) $r['magasins'] as $m) {
                 if ($m['note'] !== null && $m['note'] < $cible) {
                     $b['lignes'][] = [$m['nom'], 'Note Google ' . str_replace('.', ',', (string) $m['note']) . ' (' . $m['avis'] . ' avis) — '
-                        . ($m['avis5Requis'] !== null ? $m['avis5Requis'] . ' avis 5★ pour atteindre ' . str_replace('.', ',', (string) $cible) : 'sous la cible'), false];
+                        . ($m['avis5Requis'] !== null ? $m['avis5Requis'] . ' avis 5★ à obtenir pour atteindre ' . $vCible : 'sous la cible'), false];
                 }
                 foreach ((array) ($m['derniers'] ?? []) as $a) {
                     if ((int) $a['note'] <= 3) {
@@ -302,6 +314,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                             . mb_substr((string) ($a['texte'] ?? ''), 0, 180) . (mb_strlen((string) ($a['texte'] ?? '')) > 180 ? '…' : '') . ' »'];
                     }
                 }
+            }
+            if ($b['lignes'] !== []) {
+                $b['infos'][] = ['Méthode', 'Avis 5★ à obtenir = avis × (cible − note) ÷ (5 − cible), arrondi au supérieur — '
+                    . 'le nombre d’avis parfaits qui ramène la moyenne à ' . $vCible . '. Cible réglable dans Paramètres.'];
             }
             break;
         }
@@ -1298,6 +1314,16 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
         case 'recurrence-avis': {
             $r = rapReput();
             if (!is_array($r) || !empty($r['indispo'])) { return null; }
+            $cible = (float) ($r['cible'] ?? $seuils['cibleGoogle']);
+            $vCible = str_replace('.', ',', (string) $cible);
+            // « Pour atteindre la cible » ne doit jamais rester muet : un
+            // magasin à la cible le dit, un magasin sans fiche aussi.
+            $effort = static function (?int $requis, $note) use ($cible): array {
+                if ($note === null) { return ['fiche non raccordée', 'color:#8b8177']; }
+                if ($requis === null) { return ['hors d’atteinte par ajout d’avis', 'color:#8b8177']; }
+                if ($requis === 0) { return ['cible atteinte', 'color:#2d7a3e;font-weight:700']; }
+                return [$requis . ' avis 5★ à obtenir', 'color:#8D1D2C;font-weight:700'];
+            };
             $rows = [];
             foreach ((array) $r['magasins'] as $m) {
                 if (!$garde((string) $m['nom'])) { continue; }
@@ -1305,9 +1331,19 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
                     [$m['note'] === null ? '—' : str_replace('.', ',', (string) $m['note']) . ' ★',
                      $stSeuil($m['note'] !== null ? (float) $m['note'] : null, $seuils['cibleGoogle'], kpiDefs()['note-google']['seuil_critique'] ?? null, 'bas')],
                     [(string) $m['avis'] . ' avis', 'color:#8b8177'],
-                    [$m['avis5Requis'] === null ? '—' : $m['avis5Requis'] . ' avis 5★ requis', 'color:#8b8177']];
+                    $effort($m['avis5Requis'] === null ? null : (int) $m['avis5Requis'], $m['note'])];
             }
-            return [['', rapTableHtml(['Magasin', 'Note Google', 'Volume', 'Pour atteindre la cible'], $rows)]];
+            $res = (array) ($r['reseau'] ?? []);
+            if ($rows !== [] && ($res['moyenne'] ?? null) !== null) {
+                $rows[] = [['Réseau', 'font-weight:700'],
+                    [str_replace('.', ',', (string) $res['moyenne']) . ' ★', 'font-weight:700'],
+                    [(int) ($res['avis'] ?? 0) . ' avis', 'color:#8b8177;font-weight:700'],
+                    $effort($res['avis5Requis'] === null ? null : (int) $res['avis5Requis'], $res['moyenne'])];
+            }
+            return [['', rapTableHtml(['Magasin', 'Note Google', 'Volume', 'Pour atteindre ' . $vCible], $rows)
+                . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:2px 0 8px">'
+                . 'Avis 5★ à obtenir = avis × (cible − note) ÷ (5 − cible), arrondi au supérieur — '
+                . 'le nombre d’avis parfaits qui ramène la moyenne à ' . $vCible . '.</div>']];
         }
         case 'xp-taches': {
             $ts = rapTaches($periode['du'], $periode['au']);
