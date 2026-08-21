@@ -777,7 +777,10 @@ function rapVentesFenetre(string $du, string $au): array
             // vers le bas sans exister nulle part ailleurs.
             if (!isset($noms[$id]) && $tickets === 0 && $ca <= 0) { continue; }
             $out['magasins'][$noms[$id] ?? ('Magasin ' . $id)] = [
-                'tickets' => $tickets, 'ca' => round($ca, 2),
+                // Zéro vente n'est pas une vente à zéro : un magasin qui
+                // n'existait pas encore l'an dernier ne vaut pas « 0 € », il
+                // ne vaut rien du tout — et l'écart ne se calcule pas.
+                'tickets' => $tickets, 'ca' => $ca > 0 ? round($ca, 2) : null,
                 // Aucun ticket sur la fenêtre : « 0 client par jour » se lirait
                 // comme une mesure, alors que c'est une absence — un magasin
                 // qui n'existait pas encore l'an dernier, ou fermé. Rien à
