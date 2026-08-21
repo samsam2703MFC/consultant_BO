@@ -404,8 +404,18 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     if ($f !== '') { $fiches[] = rapFondNote(5) + ['html' => $f]; }
                 }
                 [$col, $rang] = rapGrilleDe($periode);
+                // Le détail tâche par tâche : chaque passage noté de la période,
+                // dans l'ordre du temps, et la moyenne de la tâche. C'est là
+                // qu'on voit qu'une tâche tenue toute la semaine a lâché un
+                // jour — ce qu'aucune moyenne globale ne montre.
+                $parTache = [];
+                foreach ($liste as $t) {
+                    if (($t['note'] ?? null) === null) { continue; }
+                    $parTache[(string) ($t['tache'] ?? 'Tâche')][(string) ($t['date'] ?? '')] = (int) $t['note'];
+                }
                 $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
-                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv, $fiches, $col, $rang)];
+                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv, $fiches, $col, $rang,
+                    $parTache, rapJoursDe($periode))];
             }
             break;
         }
@@ -1502,7 +1512,8 @@ function rapPdfRendu(string $html): ?string
  */
 function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                       ?float $moyenne, array $dist, array $exemplaires, array $niveaux,
-                      array $fichesExemplaires = [], int $colonnes = 2, int $rangees = 3): string
+                      array $fichesExemplaires = [], int $colonnes = 2, int $rangees = 3,
+                      array $parTache = [], array $joursPeriode = []): string
 {
     $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
     $F = "font-family:'Segoe UI',Arial,sans-serif";
@@ -1560,6 +1571,66 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                 . '<td width="64" align="right" style="' . $F . ';font-size:11px;color:#221E1A;padding:2px 0 2px 8px">'
                 . $nb . ($nb > 0 ? ' <span style="color:#8b8177">· ' . round($part * 100) . ' %</span>' : '')
                 . '</td></tr>';
+        }
+        $h .= '</table>';
+    }
+
+    // --- le détail par tâche : les notes de chaque passage, et la moyenne
+    //
+    // Deux ou trois colonnes selon le nombre de tâches : une seule colonne
+    // ferait trois pages de lignes courtes, quatre rendraient les pastilles
+    // illisibles.
+    if ($parTache !== []) {
+        $lignes = [];
+        foreach ($parTache as $nom => $notesParJour) {
+            ksort($notesParJour);
+            // Une case par JOUR de la période — grise les jours sans tâche.
+            // Sans elles, deux tâches notées 4 et 4 se ressemblent, qu'elles
+            // aient été faites deux fois ou sept fois dans la semaine.
+            $cases = [];
+            foreach (($joursPeriode !== [] ? $joursPeriode : array_keys($notesParJour)) as $j) {
+                $cases[] = ['date' => $j, 'note' => $notesParJour[$j] ?? null];
+            }
+            $notes = array_values($notesParJour);
+            $lignes[] = ['nom' => $nom, 'cases' => $cases,
+                'moy' => $notes === [] ? null : array_sum($notes) / count($notes)];
+        }
+        // La plus basse d'abord : on lit ce qu'il y a à reprendre avant ce qui
+        // tient déjà.
+        usort($lignes, fn ($a, $b2) => ($a['moy'] ?? 9) <=> ($b2['moy'] ?? 9));
+        $cols = count($lignes) > 10 ? 3 : 2;
+        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:12px 0 5px">Détail par tâche</div>'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
+        foreach (array_chunk($lignes, $cols) as $rangee) {
+            $h .= '<tr>';
+            for ($i = 0; $i < $cols; $i++) {
+                $l = $rangee[$i] ?? null;
+                $h .= '<td valign="top" width="' . round(100 / $cols, 2) . '%" style="padding:0 '
+                    . ($i === $cols - 1 ? '0' : '8px') . ' 6px 0">';
+                if ($l !== null) {
+                    $pastilles = '';
+                    foreach ($l['cases'] as $ca) {
+                        $vide = $ca['note'] === null;
+                        $pastilles .= '<span title="' . $e(substr($ca['date'], 8, 2) . '/' . substr($ca['date'], 5, 2)) . '"'
+                            . ' style="display:inline-block;min-width:13px;text-align:center;background:'
+                            . ($vide ? '#E4DCD0' : rapCouleurNote($ca['note']))
+                            . ';color:' . ($vide ? '#B4A99A' : '#ffffff')
+                            . ';border-radius:4px;padding:1px 4px;margin-right:2px;font-size:9px;font-weight:700">'
+                            . ($vide ? '·' : $ca['note']) . '</span>';
+                    }
+                    $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-radius:8px">'
+                        . '<tr><td style="padding:6px 9px;' . $F . '">'
+                        . '<div style="font-size:10px;font-weight:700;color:#221E1A;line-height:1.25">' . $e($l['nom']) . '</div>'
+                        . '<div style="margin-top:3px;white-space:nowrap">' . $pastilles
+                        . '<span style="font-size:10px;color:#4a443c;font-weight:700;margin-left:4px">'
+                        . ($l['moy'] === null ? '—' : str_replace('.', ',', (string) round($l['moy'], 1)) . ' / 5') . '</span></div>'
+                        . '</td></tr></table>';
+                } else {
+                    $h .= '&nbsp;';
+                }
+                $h .= '</td>';
+            }
+            $h .= '</tr>';
         }
         $h .= '</table>';
     }
@@ -2066,6 +2137,25 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, boo
  * La grille qui convient à la période : de grandes cartes pour une journée,
  * des vignettes dès qu'on couvre plusieurs jours (semaine, mois).
  */
+/**
+ * Les jours d'une période, du premier au dernier — au plus quatorze.
+ *
+ * Le détail par tâche pose une case PAR JOUR : sur une semaine, les sept
+ * cases se lisent d'un coup et les jours sans tâche restent gris, ce qui dit
+ * autant que les jours notés. Au-delà de deux semaines, une case par jour
+ * deviendrait une frise illisible : seuls les jours notés s'affichent alors.
+ */
+function rapJoursDe(array $periode): array
+{
+    $du = new DateTimeImmutable((string) $periode['du']);
+    $au = new DateTimeImmutable((string) $periode['au']);
+    $n = $du->diff($au)->days + 1;
+    if ($n > 14) { return []; }
+    $out = [];
+    for ($i = 0; $i < $n; $i++) { $out[] = $du->modify('+' . $i . ' days')->format('Y-m-d'); }
+    return $out;
+}
+
 function rapGrilleDe(array $periode): array
 {
     $jours = 1 + (int) round((strtotime((string) $periode['au']) - strtotime((string) $periode['du'])) / 86400);
