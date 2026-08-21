@@ -130,25 +130,31 @@ function kpiRenduVisuel(array $def, array $lignes): string
             return '<table cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:4px 0"><tr>' . $cells . '</tr></table>';
         }
         case 'barres': {
-            $h = '';
+            // Tables imbriquées : la seule barre de progression que les
+            // clients mail rendent fidèlement (les flex y sont ignorés).
+            $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:5px 0">';
             foreach ($lignes as $l) {
-                $w = max(4, (int) round($l['valeur'] / $max * 100));
-                $h .= '<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:11.5px;font-family:sans-serif">'
-                    . '<span style="width:170px;flex:none">' . $e($l['magasin']) . '</span>'
-                    . '<span style="flex:1;background:#EFE9DF;border-radius:5px"><span style="display:block;width:' . $w . '%;background:' . $coul($l['niveau']) . ';border-radius:5px;color:#fff;font-size:10.5px;font-weight:700;padding:3px 7px;white-space:nowrap;box-sizing:border-box">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</span></span></div>';
+                $w = max(6, (int) round($l['valeur'] / $max * 100));
+                $h .= '<tr><td width="170" style="font-family:sans-serif;font-size:11.5px;padding:3px 8px 3px 0;color:#221E1A;white-space:nowrap">' . $e($l['magasin']) . '</td>'
+                    . '<td style="padding:3px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    . '<td width="' . $w . '%" style="background:' . $coul($l['niveau']) . ';border-radius:5px;padding:4px 8px;font-family:sans-serif;font-size:10.5px;font-weight:700;color:#ffffff;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</td>'
+                    . '<td style="background:#EFE9DF;border-radius:0 5px 5px 0;font-size:0;line-height:0">&nbsp;</td>'
+                    . '</tr></table></td></tr>';
             }
-            return '<div style="margin:5px 0">' . $h . '</div>';
+            return $h . '</table>';
         }
         case 'treemap': {
-            $h = '';
+            // Une rangée de cellules dont la largeur suit la part de valeur —
+            // l'approximation email d'un treemap, sans flex ni JS.
+            $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:5px 0"><tr>';
             foreach ($lignes as $l) {
                 $w = max(9, (int) round(max(0, $l['valeur']) / $somme * 100));
-                $h .= '<div style="width:' . $w . '%;background:' . $coul($l['niveau']) . ';color:#fff;padding:11px 8px;box-sizing:border-box;font-family:sans-serif;overflow:hidden;border-radius:6px">'
-                    . '<div style="font-size:9px;opacity:0.85;white-space:nowrap">' . $e($l['magasin']) . '</div>'
-                    . '<div style="font-size:11.5px;font-weight:700;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</div></div>';
+                $h .= '<td width="' . $w . '%" style="background:' . $coul($l['niveau']) . ';border-radius:6px;padding:10px 8px;font-family:sans-serif;color:#ffffff">'
+                    . '<div style="font-size:9px;opacity:0.85;white-space:nowrap;overflow:hidden">' . $e($l['magasin']) . '</div>'
+                    . '<div style="font-size:11.5px;font-weight:700;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</div></td>';
             }
-            return '<div style="display:flex;gap:3px;margin:5px 0">' . $h . '</div>'
-                . '<div style="font-size:10px;color:#6E645A;font-family:sans-serif">Largeur ∝ part de la valeur · couleur = position vs seuils</div>';
+            return $h . '</tr></table>'
+                . '<div style="font-size:10px;color:#6E645A;font-family:sans-serif">Largeur &prop; part de la valeur &middot; couleur = position vs seuils</div>';
         }
     }
     return '';

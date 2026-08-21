@@ -547,24 +547,45 @@ function rapportGenerer(array $rep): array
         . ' — ' . $periode['label'];
     $vide = $nPoints === 0 && !array_filter($sections, fn ($s) => $s['infos'] !== [] || $s['htmlPar'] !== []);
 
-    $html = rapportHtml($rep, $sections, $periode, $seuils, $resume);
+    // Le run d'abord, le HTML ensuite : le pied du rapport porte un lien
+    // absolu vers sa propre page, qui exige l'identifiant.
     Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html)
-              VALUES (?,?,?,?,?,?,?)',
+              VALUES (?,?,?,?,?,?,NULL)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), $periode['du'], $periode['au'],
-         $vide ? 'vide' : 'genere', $resume, $html]);
+         $vide ? 'vide' : 'genere', $resume]);
     $runId = (int) Db::pdo()->lastInsertId();
+    $html = rapportHtml($rep, $sections, $periode, $seuils, $resume, $runId);
+    Db::exec('UPDATE ceo_rapport_run SET html = ? WHERE id = ?', [$html, $runId]);
     journalAdd('CEO', 'Rapport', $rep['nom'], 'Généré — ' . $resume);
     return ['runId' => $runId, 'statut' => $vide ? 'vide' : 'genere', 'resume' => $resume];
 }
 
-function rapportHtml(array $rep, array $sections, array $periode, array $seuils, string $resume): string
+/** L'adresse publique du cockpit — pour le lien « ouvrir » dans l'email. */
+function rapBaseUrl(): string
+{
+    $conf = trim((string) setting('cockpitBase', ''));
+    if ($conf !== '') { return rtrim($conf, '/'); }
+    $hote = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    if ($hote === '') { return ''; }
+    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $chemin = (string) preg_replace('#/api/cockpit.*$#', '', (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?? ''));
+    return ($https ? 'https' : 'http') . '://' . $hote . $chemin;
+}
+
+/**
+ * Le rapport en TEMPLATE D'EMAIL : tables imbriquées et styles inline — la
+ * seule mise en page que Gmail et Outlook respectent. Bandeau de marque,
+ * pastille de résumé, sections à barre de levier, bouton vers le cockpit.
+ */
+function rapportHtml(array $rep, array $sections, array $periode, array $seuils, string $resume, int $runId = 0): string
 {
     $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:'Segoe UI',Arial,sans-serif";
     $parMagasin = !empty($rep['par_magasin']);
     $reseau = setting('reseau', []);
-    $marque = is_array($reseau) ? ($reseau['nom'] ?? 'Réseau') : 'Réseau';
+    $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier By') : 'L’Atelier By';
 
-    $rendSections = function (array $secs, ?string $magasin) use ($e): string {
+    $rendSections = function (array $secs, ?string $magasin) use ($e, $F): string {
         $h = '';
         foreach ($secs as $s) {
             $lignes = $magasin === null ? $s['lignes'] : array_values(array_filter($s['lignes'], fn ($l) => $l[0] === $magasin));
@@ -572,32 +593,36 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             $htmls = $magasin === null ? ($s['htmlPar'] ?? []) : array_values(array_filter($s['htmlPar'] ?? [], fn ($l) => $l[0] === $magasin));
             if ($lignes === [] && $infos === [] && $htmls === [] && $s['motif'] === null) { continue; }
             $lev = RAP_LEVIERS[$s['levier']];
-            $h .= '<div style="margin:18px 0 6px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' . $lev['couleur'] . ';margin-right:7px"></span>'
-                . '<b style="font-size:14px">' . $e($lev['nom']) . ' — ' . $e($s['nom']) . '</b></div>';
+            $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 6px"><tr>'
+                . '<td width="4" style="background:' . $lev['couleur'] . ';border-radius:2px;font-size:0;line-height:0">&nbsp;</td>'
+                . '<td style="padding-left:11px;' . $F . '">'
+                . '<span style="font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:#8b8177">' . $e($lev['nom']) . '</span><br>'
+                . '<span style="font-size:14.5px;font-weight:700;color:#221E1A">' . $e($s['nom']) . '</span></td></tr></table>';
             if ($s['motif'] !== null) {
-                $h .= '<div style="color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:7px 11px;font-size:12.5px">Donnée indisponible : ' . $e($s['motif']) . '</div>';
+                $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:8px 12px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
             }
             foreach ($lignes as $l) {
-                $h .= '<div style="padding:7px 0;border-bottom:1px solid #EDE7DE;font-size:13px">'
-                    . ($l[2] ? '<span style="color:#8D1D2C;font-weight:700">● </span>' : '<span style="color:#C17A2A;font-weight:700">● </span>')
-                    . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</div>';
+                $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    . '<td width="16" valign="top" style="' . $F . ';padding:7px 0;font-size:12px;color:' . ($l[2] ? '#E0261A' : '#C17A2A') . ';font-weight:700">&#9679;</td>'
+                    . '<td style="' . $F . ';padding:7px 0;font-size:13px;color:#221E1A;border-bottom:1px solid #F0EAE1;line-height:1.5">'
+                    . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</td></tr></table>';
             }
             foreach ($infos as $l) {
-                $h .= '<div style="padding:6px 0;border-bottom:1px solid #F3EEE6;font-size:12.5px;color:#6E645A">'
-                    . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</div>';
+                $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    . '<td style="' . $F . ';padding:6px 0 6px 16px;font-size:12px;color:#6E645A;border-bottom:1px solid #F5F0E8;line-height:1.5">'
+                    . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</td></tr></table>';
             }
             foreach ($htmls as $l) {
-                // Contenu déjà en HTML (heatmap, tableaux complets) : construit
-                // par nos soins, jamais issu d'une saisie — pas d'échappement.
-                // Une clé vide = contenu réseau, qui se passe d'intitulé.
-                $h .= ($magasin === null && $l[0] !== '' ? '<div style="font-size:12.5px;font-weight:600;margin-top:8px">' . $e($l[0]) . '</div>' : '')
+                // Construit par nos soins, jamais issu d'une saisie — pas d'échappement.
+                $h .= ($magasin === null && $l[0] !== '' ? '<div style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>' : '')
                     . $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
-                $h .= '<div style="font-size:12px;color:#6E645A;padding:6px 0 0">Action : ' . $e($s['action']) . '</div>';
+                $h .= '<div style="' . $F . ';font-size:11.5px;color:#8b8177;padding:7px 0 0;font-style:italic">&rarr; ' . $e($s['action']) . '</div>';
             }
         }
-        return $h !== '' ? $h : '<div style="padding:12px 0;color:#2d7a3e;font-size:13px">Rien à signaler — tous les seuils sont respectés.</div>';
+        return $h !== '' ? $h
+            : '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';padding:14px;background:#EDF5EE;border-radius:8px;color:#2d7a3e;font-size:13px;font-weight:600">Rien à signaler — tous les seuils sont respectés.</td></tr></table>';
     };
 
     $corps = '';
@@ -605,26 +630,53 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         try { $shops = Db::rows('SELECT name FROM shops WHERE active = 1 ORDER BY name'); }
         catch (PDOException $ex) { $shops = []; }
         foreach ($shops as $s) {
-            $corps .= '<h2 style="font-size:16px;margin:26px 0 2px;border-top:2px solid #E4DCD0;padding-top:16px">' . $e($s['name']) . '</h2>'
+            $corps .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:26px"><tr>'
+                . '<td style="' . $F . ';background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0;padding:10px 15px;font-size:15px;font-weight:700;color:#221E1A">' . $e($s['name']) . '</td></tr></table>'
                 . $rendSections($sections, (string) $s['name']);
         }
     } else {
         $corps = $rendSections($sections, null);
     }
 
+    $base = rapBaseUrl();
+    $lien = $base !== '' && $runId > 0 ? $base . '/api/cockpit/rapports/run/' . $runId : '';
+    $bouton = $lien === '' ? '' :
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:2px 0 14px"><tr>'
+        . '<td style="background:#8D1D2C;border-radius:999px" align="center">'
+        . '<a href="' . $e($lien) . '" style="display:inline-block;padding:11px 24px;color:#ffffff;' . $F . ';font-size:13px;font-weight:700;text-decoration:none">Ouvrir dans le cockpit &rarr;</a>'
+        . '</td></tr></table>';
+
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<title>' . $e($rep['nom']) . ' — ' . $e($periode['label']) . '</title></head>'
-        . '<body style="margin:0;background:#F6F2EB;padding:26px 14px;font-family:\'Avenir Next\',\'Segoe UI\',system-ui,sans-serif;color:#221E1A">'
-        . '<div style="max-width:760px;margin:0 auto;background:#fff;border:1px solid #E4DCD0;border-radius:12px;padding:26px 30px">'
-        . '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#6E645A">' . $e($marque) . ' · ' . $e($rep['poste']) . '</div>'
-        . '<h1 style="font-size:21px;margin:4px 0 2px">' . $e($rep['nom']) . '</h1>'
-        . '<div style="font-size:12.5px;color:#6E645A;margin-bottom:6px">' . $e($periode['label']) . ' · généré le ' . date('d/m/Y à H:i') . ' · ' . $e($resume) . '</div>'
-        . $corps
-        . '<div style="margin-top:22px;padding-top:12px;border-top:1px solid #E4DCD0;font-size:11px;color:#6E645A">'
-        . 'Seuils : food ' . $seuils['food'] . ' % · labour ' . $seuils['labour'] . ' % · overhead ' . $seuils['overhead']
-        . ' % · CA/ETP ' . number_format($seuils['caEtp'], 0, ',', ' ') . ' € · tâches ≤ ' . $seuils['tacheNote'] . '/5 · cible Google '
-        . str_replace('.', ',', (string) $seuils['cibleGoogle']) . ' — réglables dans le cockpit. Le détail vit dans le cockpit ; ce rapport ne liste que les seuils franchis.'
-        . '</div></div></body></html>';
+        . '<body style="margin:0;padding:0;background:#EFE9DF">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF"><tr><td align="center" style="padding:28px 12px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" width="680" style="width:680px;max-width:96%">'
+        // — bandeau de marque
+        . '<tr><td style="background:#8D1D2C;border-radius:14px 14px 0 0;padding:18px 30px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td style="' . $F . ';color:#ffffff;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</td>'
+        . '<td align="right" style="' . $F . ';color:#E8C9CE;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">' . $e($rep['poste']) . '</td>'
+        . '</tr></table></td></tr>'
+        // — en-tête du rapport
+        . '<tr><td style="background:#ffffff;padding:26px 30px 4px">'
+        . '<div style="' . $F . ';font-size:21px;font-weight:700;color:#221E1A">' . $e($rep['nom']) . '</div>'
+        . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($periode['label'])) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr>'
+        . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td></tr></table>'
+        . '</td></tr>'
+        // — corps
+        . '<tr><td style="background:#ffffff;padding:4px 30px 18px">' . $corps . '</td></tr>'
+        // — pied
+        . '<tr><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:20px 30px">'
+        . $bouton
+        . '<div style="' . $F . ';font-size:10.5px;color:#8b8177;line-height:1.6">Seuils : food ' . $seuils['food'] . ' % &middot; labour ' . $seuils['labour'] . ' % &middot; overhead ' . $seuils['overhead']
+        . ' % &middot; CA/ETP ' . number_format($seuils['caEtp'], 0, ',', ' ') . ' &euro; &middot; tâches &le; ' . $seuils['tacheNote'] . '/5 &middot; cible Google '
+        . str_replace('.', ',', (string) $seuils['cibleGoogle']) . ' — réglables dans le cockpit (Catalogue des KPI). Sauf mode « complet », ce rapport ne liste que les seuils franchis.</div>'
+        . '</td></tr>'
+        . '</table>'
+        . '<div style="' . $F . ';font-size:10px;color:#a89f93;padding:14px">Généré automatiquement par le cockpit ' . $e($marque) . '</div>'
+        . '</td></tr></table></body></html>';
 }
 
 function rapportEnvoyer(array $rep, int $runId): array
