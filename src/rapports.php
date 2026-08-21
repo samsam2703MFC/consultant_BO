@@ -391,7 +391,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 // Bornée à quatre par magasin — au-delà, l'email pèserait
                 // plusieurs mégaoctets pour des félicitations.
                 $fiches = [];
-                foreach (array_slice($exemplaires, 0, 4) as $t) {
+                foreach (array_slice($exemplaires, 0, 6) as $t) {
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                         (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
@@ -1402,6 +1402,9 @@ function rapPdfHtml(string $html): string
         // la MÊME hauteur. Sans hauteur fixe, une fiche à deux photos écrase
         // sa voisine et la grille se déforme d'une page à l'autre.
         . 'table[data-page-fiches]{page-break-after:always;page-break-inside:avoid}'
+        // L'encadré des 5/5 tient d'un bloc : le couper en deux ferait deux
+        // demi-félicitations.
+        . 'table[data-encadre]{page-break-inside:avoid;page-break-after:auto}'
         . 'table[data-page-fiches]:last-child{page-break-after:auto}'
         . 'table[data-grille="2x3"] tr[data-rangee-fiches]>td{height:84mm}'
         . 'table[data-grille="2x3"] div[data-fiche]{height:80mm;overflow:hidden;box-sizing:border-box}'
@@ -1489,11 +1492,14 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
     $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 10px"><tr>';
     foreach ($cases as [$lib, $val, $sous]) {
         $h .= '<td width="25%" valign="top" style="padding:0 5px 0 0">'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-radius:9px">'
-            . '<tr><td style="padding:9px 11px;' . $F . '">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-radius:9px;height:62px">'
+            // Hauteur imposée ET troisième ligne toujours présente : sans
+            // elles, la case « Demandées » — qui n'a rien à mettre dessous —
+            // était plus courte que ses voisines, et la rangée bancale.
+            . '<tr><td valign="top" height="62" style="height:62px;padding:9px 11px;' . $F . '">'
             . '<div style="font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#8b8177">' . $e($lib) . '</div>'
             . '<div style="font-size:19px;font-weight:700;color:#221E1A;line-height:1.2">' . $e($val) . '</div>'
-            . ($sous !== '' ? '<div style="font-size:10.5px;color:#8b8177">' . $e($sous) . '</div>' : '')
+            . '<div style="font-size:10.5px;color:#8b8177">' . ($sous !== '' ? $e($sous) : '&nbsp;') . '</div>'
             . '</td></tr></table></td>';
     }
     $h .= '</tr></table>';
@@ -1530,25 +1536,32 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
         $h .= '</table>';
     }
 
-    // --- ce qui a été fait de mieux, nommé
+    // --- ce qui a été fait de mieux
+    //
+    // Les vignettes disent déjà le nom, la date et la note : les relister
+    // au-dessus doublait l'encadré pour rien. Ne restent en texte que les
+    // tâches SANS photo, et une ligne ferme le bloc — la seule séparation
+    // avec les non-conformités qui suivent, sans saut de page.
     if ($exemplaires !== []) {
-        $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 4px">'
-            . '<tr><td style="background:#FBF6E7;border-left:4px solid #C9A227;border-radius:0 9px 9px 0;padding:10px 14px;' . $F . '">'
-            . '<div style="font-size:12.5px;font-weight:700;color:#221E1A">Cette semaine, vous vous êtes distingué avec celles-ci</div>';
+        $nommees = [];
         foreach ($exemplaires as $t) {
-            $h .= '<div style="font-size:12px;color:#221E1A;padding:4px 0 0">'
-                . '<span style="color:#C9A227;font-weight:700">5/5</span> &middot; ' . $e($t['tache'] ?? 'Tâche')
-                . '<span style="color:#8b8177"> — le ' . $e(substr((string) ($t['date'] ?? ''), 8, 2) . '/' . substr((string) ($t['date'] ?? ''), 5, 2)) . '</span>'
-                . '</div>';
+            $nommees[] = $e($t['tache'] ?? 'Tâche') . ' (le '
+                . $e(substr((string) ($t['date'] ?? ''), 8, 2) . '/' . substr((string) ($t['date'] ?? ''), 5, 2)) . ')';
         }
-        if ($fichesExemplaires !== []) {
-            $h .= '<div style="padding-top:8px">' . rapFichesGrille($fichesExemplaires, $colonnes, $rangees) . '</div>';
-            if (count($exemplaires) > count($fichesExemplaires)) {
-                $h .= '<div style="' . $F . ';font-size:10.5px;color:#8b8177;padding-top:2px">Photos limitées aux '
-                    . count($fichesExemplaires) . ' premières — les autres se consultent dans le cockpit.</div>';
-            }
-        }
-        $h .= '</td></tr></table>';
+        $reste = array_slice($nommees, count($fichesExemplaires));
+        $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 6px" data-encadre="5sur5">'
+            . '<tr><td style="background:#FBF6E7;border-left:4px solid #C9A227;border-radius:0 9px 9px 0;padding:9px 12px;' . $F . '">'
+            . '<div style="font-size:12.5px;font-weight:700;color:#221E1A">Cette semaine, vous vous êtes distingué avec celles-ci'
+            . '<span style="font-weight:400;color:#8b8177"> — ' . count($exemplaires) . ' tâche(s) à 5/5</span></div>'
+            . ($fichesExemplaires !== []
+                ? '<div style="padding-top:6px">' . rapFichesGrille($fichesExemplaires, $colonnes, $rangees, false) . '</div>'
+                : '')
+            . ($reste !== []
+                ? '<div style="font-size:11px;color:#4a443c;padding-top:' . ($fichesExemplaires !== [] ? '4' : '6') . 'px;line-height:1.45">'
+                    . ($fichesExemplaires !== [] ? 'Aussi : ' : '') . implode(' &middot; ', $reste) . '</div>'
+                : '')
+            . '</td></tr></table>'
+            . '<div style="border-top:1px solid #E4DCD0;margin:2px 0 10px"></div>';
     }
     return $h;
 }
@@ -1956,7 +1969,7 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
 }
 
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
-function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3): string
+function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, bool $paginer = true): string
 {
     // Une PAGE A4 = colonnes × rangées fiches, toutes de la même taille. Un
     // rapport du JOUR porte deux ou trois écarts : de grandes cartes (2 × 3).
@@ -1967,9 +1980,12 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3): st
     $rangees = max(1, min(6, $rangees));
     $largeur = round(100 / $colonnes, 4);
     $h = '';
-    foreach (array_chunk($cartes, $colonnes * $rangees) as $page) {
+    // `$paginer` à faux : une seule table, aucun saut de page — pour une grille
+    // POSÉE DANS un encadré (les tâches exemplaires), où un saut couperait
+    // l'encadré en deux.
+    foreach (array_chunk($cartes, $paginer ? $colonnes * $rangees : max(1, count($cartes))) as $page) {
         $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1"'
-            . ' data-page-fiches="1" data-grille="' . $colonnes . 'x' . $rangees . '">';
+            . ($paginer ? ' data-page-fiches="1"' : '') . ' data-grille="' . $colonnes . 'x' . $rangees . '">';
         foreach (array_chunk($page, $colonnes) as $rangee) {
             $h .= '<tr data-rangee-fiches="1">';
             for ($i = 0; $i < $colonnes; $i++) {
