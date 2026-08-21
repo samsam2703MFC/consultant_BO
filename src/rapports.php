@@ -586,6 +586,16 @@ function rapportGenerer(array $rep): array
     return ['runId' => $runId, 'statut' => $vide ? 'vide' : 'genere', 'resume' => $resume];
 }
 
+/** Le logo officiel de la marque, incorporé (CID dans l'email). */
+function rapLogoDataUri(): string
+{
+    static $uri = null;
+    if ($uri !== null) { return $uri; }
+    $chemin = __DIR__ . '/../public/assets/img/logo.png';
+    $uri = is_file($chemin) ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($chemin)) : '';
+    return $uri;
+}
+
 /** L'adresse publique du cockpit — pour le lien « ouvrir » dans l'email. */
 function rapBaseUrl(): string
 {
@@ -682,13 +692,19 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '<body style="margin:0;padding:0;background:#EFE9DF">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF"><tr><td align="center" style="padding:28px 12px">'
         . '<!--ecran--><div class="ecran-seul" style="' . $F . ';max-width:680px;margin:0 auto 10px;text-align:right">'
-        . '<a href="javascript:window.print()" style="display:inline-block;border:1px solid #CFC6B8;border-radius:999px;padding:8px 16px;color:#221E1A;font-size:12px;font-weight:600;text-decoration:none;background:#ffffff">Imprimer / Enregistrer en PDF (A4)</a></div><!--/ecran-->'
+        . ($base !== '' && $runId > 0
+            ? '<a href="' . $e($base . '/api/cockpit/rapports/run/' . $runId . '/pdf') . '" style="display:inline-block;border:none;border-radius:999px;padding:9px 18px;color:#ffffff;font-size:12px;font-weight:700;text-decoration:none;background:#8D1D2C;margin-right:8px">Télécharger le PDF</a>'
+            : '')
+        . '<a href="javascript:window.print()" style="display:inline-block;border:1px solid #CFC6B8;border-radius:999px;padding:8px 16px;color:#221E1A;font-size:12px;font-weight:600;text-decoration:none;background:#ffffff">Imprimer (A4)</a></div><!--/ecran-->'
         . '<table role="presentation" cellpadding="0" cellspacing="0" width="680" style="width:680px;max-width:96%">'
-        // — bandeau de marque
-        . '<tr><td style="background:#8D1D2C;border-radius:14px 14px 0 0;padding:18px 30px">'
+        // — bandeau de marque : le LOGO OFFICIEL sur fond clair (le noir du
+        //   logo serait invisible sur bordeaux), liseré bordeaux au-dessous.
+        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td style="' . $F . ';color:#ffffff;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</td>'
-        . '<td align="right" style="' . $F . ';color:#E8C9CE;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">' . $e($rep['poste']) . '</td>'
+        . '<td>' . (rapLogoDataUri() !== ''
+            ? '<img src="' . rapLogoDataUri() . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
+            : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>') . '</td>'
+        . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">' . $e($rep['poste']) . '</td>'
         . '</tr></table></td></tr>'
         // — en-tête du rapport
         . '<tr><td style="background:#ffffff;padding:26px 30px 4px">'
@@ -1027,6 +1043,48 @@ function ep_rapports_cron(): array
             'envoi' => $env ? ($env['ok'] ? 'envoyé' : ($env['error'] ?? 'échec')) : 'non dû'];
     }
     return ['ok' => true, 'heure' => $h, 'faits' => $faits];
+}
+
+/**
+ * GET /rapports/run/{id}/pdf — le rapport en vrai fichier PDF.
+ *
+ * Le rendu s'appuie sur un moteur présent sur le serveur (Chromium headless ou
+ * wkhtmltopdf). S'il n'y en a aucun — ou si exec() est désactivé — la route
+ * répond 501 en expliquant, et la page garde le bouton « Imprimer (A4) » qui
+ * produit le même PDF depuis le navigateur.
+ */
+function ep_rapport_run_pdf(int $id): array
+{
+    ensureRapports();
+    $run = Db::row('SELECT html FROM ceo_rapport_run WHERE id = ?', [$id]);
+    if ($run === null || $run['html'] === null) { http_response_code(404); return ['error' => 'run inconnu']; }
+    if (!function_exists('shell_exec')) {
+        http_response_code(501);
+        return ['error' => 'exec désactivé sur ce serveur — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
+    }
+    $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
+    $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
+    file_put_contents($tmpH, (string) $run['html']);
+    $essais = [
+        'chromium --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
+        'chromium-browser --headless --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
+        'google-chrome --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
+        'wkhtmltopdf --quiet --page-size A4 %1$s %2$s 2>&1',
+    ];
+    foreach ($essais as $cmd) {
+        @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));
+        if (is_file($tmpP) && filesize($tmpP) > 1000) {
+            @unlink($tmpH);
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="rapport-' . $id . '.pdf"');
+            readfile($tmpP);
+            @unlink($tmpP);
+            exit;
+        }
+    }
+    @unlink($tmpH); @unlink($tmpP);
+    http_response_code(501);
+    return ['error' => 'aucun moteur PDF sur le serveur (Chromium/wkhtmltopdf absents) — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
 }
 
 /* --- Machine d'envoi (SMTP) — réglages dans Paramètres ---------------------- */

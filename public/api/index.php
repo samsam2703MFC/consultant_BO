@@ -84,6 +84,7 @@ function route(string $method, string $path): mixed
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
+            preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
             $path === '/reputation'                    => ep_reputation(),
             $path === '/reputation/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
