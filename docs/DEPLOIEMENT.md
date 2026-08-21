@@ -109,6 +109,27 @@ chmod 640 config/config.php && chown www-data:www-data config/config.php
 
 ---
 
+### Horloge des rapports (posée par `bin/deploy.sh`)
+
+Un rapport porte sa planification en base — « tous les lundis à 10 h » est un
+réglage de l'écran Reporting. Quelqu'un doit néanmoins réveiller le cockpit :
+le script de déploiement écrit `/etc/cron.d/cockpit-rapports`, qui appelle
+l'horloge **toutes les heures à :05** en loopback. À chaque passage, le
+cockpit décide seul quels rapports sont dus, et n'envoie rien deux fois le
+même jour.
+
+```bash
+cat /etc/cron.d/cockpit-rapports        # root, 0600 — le jeton y figure
+# 5 * * * * root curl -fsS … /api/cockpit/rapports/cron?jeton=…
+```
+
+Le jeton (`ceo_app_setting.rapportsJeton`) naît au premier chargement ; le
+script le relit sur l'API et ne l'imprime jamais dans le journal de livraison.
+Un rapport GÉNÉRÉ à la main dans la journée n'est plus envoyé automatiquement
+le même jour — c'est la garde qui évite les doublons.
+
+---
+
 ## 5. Accès — redirection depuis l'ERP (auth désactivée par défaut)
 
 L'accès au cockpit est **ouvert** : les utilisateurs y arrivent redirigés

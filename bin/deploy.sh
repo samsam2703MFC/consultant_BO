@@ -459,6 +459,39 @@ for ep in meta stores pwa/reports; do
   echo
 done
 
+# --- 6b. Horloge des rapports : la ligne cron horaire ---------------------
+#
+# La planification vit en base — « tous les lundis à 10 h » est un réglage du
+# rapport. Encore faut-il que QUELQU'UN réveille le cockpit : sans cette ligne,
+# l'heure passe et rien ne part. Le cron appelle l'horloge toutes les heures ;
+# c'est le cockpit qui décide, à chaque passage, quels rapports sont dus.
+#
+# Le jeton est LU sur l'API (il naît tout seul au premier chargement) et n'est
+# jamais imprimé : ce journal de déploiement se lit plus largement que le
+# serveur. L'appel se fait en loopback — ni DNS ni réseau sortant en jeu.
+CRON_JETON="$(curl -fsS --max-time 30 "${LOCAL_BASE}/api/cockpit/rapports" 2>/dev/null \
+  | php -r '$r = json_decode(file_get_contents("php://stdin"), true);
+            $u = (string) ($r["cronUrl"] ?? "");
+            echo str_contains($u, "jeton=") ? substr($u, strpos($u, "jeton=") + 6) : "";' 2>/dev/null || true)"
+if [[ -n "${CRON_JETON}" ]]; then
+  # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
+  # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
+  # passer les tâches de l'heure pile.
+  {
+    echo "# Cockpit CEO — horloge des rapports (écrite par bin/deploy.sh, ne pas éditer)."
+    echo "SHELL=/bin/sh"
+    echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+    echo "5 * * * * root curl -fsS --max-time 900 '${LOCAL_BASE}/api/cockpit/rapports/cron?jeton=${CRON_JETON}' >/dev/null 2>&1"
+  } > /etc/cron.d/cockpit-rapports
+  # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
+  chown root:root /etc/cron.d/cockpit-rapports
+  chmod 600 /etc/cron.d/cockpit-rapports
+  systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
+  log "Horloge des rapports : /etc/cron.d/cockpit-rapports — toutes les heures à :05 (jeton masqué)."
+else
+  warn "Jeton de cron introuvable — l'envoi automatique des rapports reste manuel (écran Reporting)."
+fi
+
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
 # tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre
 # faux qui a l'air juste. On mesure donc la couverture et la vraisemblance.
