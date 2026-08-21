@@ -169,6 +169,7 @@ function rapTaches(string $du, string $au): array
             foreach ((array) ($r['shops'] ?? []) as $sh) {
                 foreach ((array) ($sh['taches'] ?? []) as $t) {
                     $t['magasin'] = (string) ($sh['shop'] ?? '');
+                    $t['shopId'] = (string) ($sh['shopId'] ?? '');
                     $out[] = $t;
                 }
             }
@@ -299,11 +300,23 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $b['action'] = 'Photo annotée et commentaire dans le cockpit — à revoir avec l’équipe.';
             $ts = rapTaches($periode['du'], $periode['au']);
             if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
+            $fiches = 0;
             foreach ($ts as $t) {
                 $note = $t['note'] ?? null;
                 if ($note !== null && (int) $note <= $seuils['tacheNote']) {
                     $b['lignes'][] = [$t['magasin'], '« ' . ($t['tache'] ?? ('Tâche #' . ($t['taskId'] ?? '?'))) . ' » notée ' . $note . '/5 le '
                         . substr((string) ($t['date'] ?? ''), 5) . ($t['comment'] ? ' — ' . mb_substr((string) $t['comment'], 0, 160) : ''), (int) $note <= 2];
+                    // La FICHE : photo annotée des repères + référence attendue.
+                    // Bornée à 8 — au-delà, le rapport le dit plutôt que de
+                    // peser plusieurs mégaoctets dans une boîte mail.
+                    if ($fiches < 8 && ($t['shopId'] ?? '') !== '') {
+                        $fiche = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
+                            (string) ($t['tache'] ?? ''), (string) $t['magasin']);
+                        if ($fiche !== '') { $b['htmlPar'][] = [(string) $t['magasin'], $fiche]; $fiches++; }
+                    } elseif ($fiches === 8) {
+                        $b['infos'][] = [(string) $t['magasin'], 'Photos limitées aux 8 premières tâches — le reste se consulte dans le cockpit.'];
+                        $fiches++;
+                    }
                 }
             }
             break;
@@ -1152,6 +1165,112 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
         }
     }
     return null;
+}
+
+/* --------------------------------------------------------------------------
+ * Photos des non-conformités : la photo de boutique avec les REPÈRES dessinés
+ * dessus (GD, au moment de la génération — les URL signées du panel expirent),
+ * et la photo de référence du produit lié. Incorporées en data URI dans le
+ * HTML ; l'envoi SMTP les convertit en pièces jointes intégrées (CID), la
+ * seule forme que Gmail affiche.
+ * ------------------------------------------------------------------------ */
+
+/** Télécharge et redimensionne une image ; rend un GD ou null, sans bruit. */
+function rapImageGd(string $url, int $maxW = 520)
+{
+    if ($url === '' || !function_exists('imagecreatefromstring')) { return null; }
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 18,
+        CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3]);
+    $brut = curl_exec($ch);
+    curl_close($ch);
+    if (!is_string($brut) || $brut === '') { return null; }
+    $im = @imagecreatefromstring($brut);
+    if ($im === false) { return null; }
+    $w = imagesx($im); $h = imagesy($im);
+    if ($w > $maxW) {
+        $nh = (int) round($h * $maxW / $w);
+        $petit = imagecreatetruecolor($maxW, $nh);
+        imagecopyresampled($petit, $im, 0, 0, 0, 0, $maxW, $nh, $w, $h);
+        imagedestroy($im);
+        $im = $petit;
+    }
+    return $im;
+}
+
+/** Dessine les repères (cadres numérotés, couleur de gravité) sur l'image. */
+function rapDessineReperes($im, array $reperes): void
+{
+    $W = imagesx($im); $H = imagesy($im);
+    $n = 0;
+    foreach ($reperes as $r) {
+        $n++;
+        $x = (int) round((float) ($r['x'] ?? 0) * $W);
+        $y = (int) round((float) ($r['y'] ?? 0) * $H);
+        $l = (int) round((float) ($r['l'] ?? 0) * $W);
+        $h = (int) round((float) ($r['h'] ?? 0) * $H);
+        $niv = (int) ($r['niveau'] ?? 3);
+        [$cr, $cg, $cb] = $niv <= 2 ? [224, 38, 26] : ($niv === 3 ? [193, 122, 42] : [45, 122, 62]);
+        $coul = imagecolorallocate($im, $cr, $cg, $cb);
+        for ($e = 0; $e < 3; $e++) { imagerectangle($im, $x - $e, $y - $e, $x + $l + $e, $y + $h + $e, $coul); }
+        // La pastille numérotée au coin du cadre — lisible sur toute photo.
+        imagefilledellipse($im, max(11, $x), max(11, $y), 24, 24, $coul);
+        $blanc = imagecolorallocate($im, 255, 255, 255);
+        imagestring($im, 5, max(11, $x) - (strlen((string) $n) * 4), max(11, $y) - 7, (string) $n, $blanc);
+    }
+}
+
+/** L'image en data URI JPEG — le HTML du run l'affiche, le mailer l'attache. */
+function rapImageDataUri($im): string
+{
+    ob_start();
+    imagejpeg($im, null, 74);
+    $jpg = (string) ob_get_clean();
+    imagedestroy($im);
+    return 'data:image/jpeg;base64,' . base64_encode($jpg);
+}
+
+/** La fiche HTML d'une tâche non conforme : photo annotée + référence + repères. */
+function rapFicheTache(string $shopId, string $taskId, string $date, string $nomTache, string $magasin): string
+{
+    $det = rapCtx('tache-' . $shopId . '-' . $taskId . '-' . $date,
+        fn () => rapAppel('ep_pwa_task_detail', ['shop' => $shopId, 'task' => $taskId, 'date' => $date]));
+    if (!is_array($det)) { return ''; }
+    $e = fn ($s2) => htmlspecialchars((string) $s2, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $reperes = (array) ((($det['reperes'] ?? [])['liste']) ?? []);
+
+    $cols = '';
+    $photo = rapImageGd((string) ($det['photo'] ?? ''));
+    if ($photo !== null) {
+        if ($reperes !== []) { rapDessineReperes($photo, $reperes); }
+        $cols .= '<td valign="top" width="50%" style="padding:4px 6px 4px 0">'
+            . '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:8px" alt="Photo en boutique">'
+            . '<div style="' . $F . ';font-size:10px;color:#8b8177;margin-top:3px">Photo en boutique' . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '') . '</div></td>';
+    }
+    $ref = rapImageGd((string) ($det['photoRef'] ?? ''));
+    if ($ref !== null) {
+        $cols .= '<td valign="top" width="50%" style="padding:4px 0 4px 6px">'
+            . '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:8px" alt="Référence attendue">'
+            . '<div style="' . $F . ';font-size:10px;color:#8b8177;margin-top:3px">Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '') . '</div></td>';
+    }
+    if ($cols === '' && $reperes === []) { return ''; }
+
+    $rep = '';
+    $n = 0;
+    foreach ($reperes as $r) {
+        $n++;
+        $niv = (int) ($r['niveau'] ?? 3);
+        $coulR = $niv <= 2 ? '#E0261A' : ($niv === 3 ? '#C17A2A' : '#2d7a3e');
+        if (trim((string) ($r['txt'] ?? '')) === '') { continue; }
+        $rep .= '<div style="' . $F . ';font-size:11.5px;color:#221E1A;padding:2px 0">'
+            . '<span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
+    }
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 10px;background:#FBF9F5;border-radius:10px"><tr><td style="padding:10px 12px">'
+        . '<div style="' . $F . ';font-size:12px;font-weight:700;color:#221E1A;margin-bottom:2px">' . $e($nomTache) . '</div>'
+        . ($cols !== '' ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' . $cols . '</tr></table>' : '')
+        . $rep
+        . '</td></tr></table>';
 }
 
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */

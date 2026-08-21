@@ -126,14 +126,42 @@ final class Smtp
             if (!$dire('MAIL FROM:<' . $exp . '>', [250])) { return false; }
             if (!$dire('RCPT TO:<' . $a . '>', [250, 251])) { return false; }
             if (!$dire('DATA', [354])) { return false; }
+            // Les images incorporées en data URI (photos annotées des rapports)
+            // deviennent des pièces jointes intégrées (multipart/related, CID) :
+            // Gmail n'affiche pas les data URI, il affiche les CID.
+            $images = [];
+            $html = preg_replace_callback('#"data:image/(jpeg|png);base64,([A-Za-z0-9+/=]+)"#',
+                function ($m2) use (&$images) {
+                    $cid = 'img' . (count($images) + 1) . '@cockpit';
+                    $images[] = ['cid' => $cid, 'type' => $m2[1], 'b64' => $m2[2]];
+                    return '"cid:' . $cid . '"';
+                }, $html);
             $entetes = 'From: ' . $c['expediteur'] . "\r\n"
                 . 'To: ' . $a . "\r\n"
                 . 'Subject: =?UTF-8?B?' . base64_encode($sujet) . "?=\r\n"
                 . 'MIME-Version: 1.0' . "\r\n"
-                . 'Content-Type: text/html; charset=UTF-8' . "\r\n"
-                . 'Content-Transfer-Encoding: base64' . "\r\n"
                 . 'Date: ' . date('r') . "\r\n";
-            $corps = chunk_split(base64_encode($html), 76, "\r\n");
+            if ($images === []) {
+                $entetes .= 'Content-Type: text/html; charset=UTF-8' . "\r\n"
+                    . 'Content-Transfer-Encoding: base64' . "\r\n";
+                $corps = chunk_split(base64_encode($html), 76, "\r\n");
+            } else {
+                $lim = 'lim' . bin2hex(random_bytes(10));
+                $entetes .= 'Content-Type: multipart/related; boundary="' . $lim . '"' . "\r\n";
+                $corps = '--' . $lim . "\r\n"
+                    . 'Content-Type: text/html; charset=UTF-8' . "\r\n"
+                    . 'Content-Transfer-Encoding: base64' . "\r\n\r\n"
+                    . chunk_split(base64_encode($html), 76, "\r\n");
+                foreach ($images as $img) {
+                    $corps .= '--' . $lim . "\r\n"
+                        . 'Content-Type: image/' . $img['type'] . "\r\n"
+                        . 'Content-Transfer-Encoding: base64' . "\r\n"
+                        . 'Content-ID: <' . $img['cid'] . '>' . "\r\n"
+                        . 'Content-Disposition: inline' . "\r\n\r\n"
+                        . chunk_split($img['b64'], 76, "\r\n");
+                }
+                $corps .= '--' . $lim . '--' . "\r\n";
+            }
             if (!$dire($entetes . "\r\n" . $corps . "\r\n.", [250])) { return false; }
             $dire('QUIT', [221]);
             return true;
