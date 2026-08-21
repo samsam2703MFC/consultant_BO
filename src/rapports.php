@@ -1334,7 +1334,10 @@ function ep_rapports_cron(): array
         $faits[] = ['rapport' => $rep['nom'], 'runId' => $g['runId'], 'statut' => $g['statut'],
             'envoi' => $env ? ($env['ok'] ? 'envoyé' : ($env['error'] ?? 'échec')) : 'non dû'];
     }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits];
+    // Le plan de cadence des contrôles suit le même battement : une fois par
+    // jour au premier passage après 5 h (voir cadenceCron), sans cron dédié.
+    $cadence = function_exists('cadenceCron') ? cadenceCron() : 'module absent';
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence];
 }
 
 /**

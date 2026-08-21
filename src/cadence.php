@@ -168,15 +168,39 @@ function wr_cadence(): array
     return ['ok' => true, 'regles' => $r];
 }
 
-/** POST /cadence/plan — recalcule le plan (lent : historique API) et le fige. */
+/** Recalcule le plan, le fige en base et le journalise. Lent : historique API. */
+function cadenceRafraichirPlan(int $semaines, string $par): array
+{
+    $plan = cadenceCalculePlan($semaines);
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['cadencePlan', json_encode($plan, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Paramètre', 'Cadence dynamique', 'Plan recalculé (' . $par . ') — ' . count($plan['lignes'])
+        . ' tâche(s) suivie(s), ' . $plan['controlesLus'] . ' contrôle(s) lus sur ' . $plan['semaines'] . ' semaine(s)'
+        . ($plan['partiel'] ? ' (partiel : budget API atteint)' : ''));
+    return $plan;
+}
+
+/** POST /cadence/plan — recalcule le plan à la demande (bouton de l'écran). */
 function wr_cadence_plan(): array
 {
     $b = body();
-    $plan = cadenceCalculePlan((int) ($b['semaines'] ?? 4));
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['cadencePlan', json_encode($plan, JSON_UNESCAPED_UNICODE)]);
-    journalAdd('CEO', 'Paramètre', 'Cadence dynamique', 'Plan recalculé — ' . count($plan['lignes'])
-        . ' tâche(s) suivie(s), ' . $plan['controlesLus'] . ' contrôle(s) lus sur ' . $plan['semaines'] . ' semaine(s)'
-        . ($plan['partiel'] ? ' (partiel : budget API atteint)' : ''));
-    return ['ok' => true, 'plan' => $plan];
+    return ['ok' => true, 'plan' => cadenceRafraichirPlan((int) ($b['semaines'] ?? 4), 'écran')];
+}
+
+/**
+ * Le passage horaire du cron : rafraîchit le plan UNE fois par jour, au
+ * premier passage à partir de 5 h — avant l'arrivée du consultant, hors des
+ * heures chargées. Un plan encore jamais calculé se calcule au premier
+ * passage venu. Rend l'état, que le recalcul ait eu lieu ou non — le cron
+ * dit toujours ce qu'il a décidé.
+ */
+function cadenceCron(): string
+{
+    if (!cadenceRegles()['actif']) { return 'désactivée'; }
+    $plan = setting('cadencePlan');
+    $duJour = is_array($plan) && str_starts_with((string) ($plan['calculeLe'] ?? ''), date('Y-m-d'));
+    if ($duJour) { return 'plan à jour (' . substr((string) $plan['calculeLe'], 11) . ')'; }
+    if (is_array($plan) && (int) date('G') < 5) { return 'recalcul attendu à 5 h'; }
+    $p = cadenceRafraichirPlan(4, 'cron');
+    return 'plan recalculé — ' . count($p['lignes']) . ' tâche(s), ' . $p['controlesLus'] . ' contrôle(s) lus';
 }
