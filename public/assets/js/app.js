@@ -7271,7 +7271,7 @@ class App {
             this.setState({ rapComposeOn: true, rapEditId: r.id, rapCompo: {
               blocs: bl, modes: r.modes || {}, mags: mg2, nom: r.nom, poste: r.poste || '',
               heure: String(r.heure), dows: dw, doms: dm, dest: (r.destinataires || []).join(', '),
-              envoiMode: r.envoiMode || 'groupe', dpm: dpm0 } });
+              envoiMode: r.envoiMode || 'groupe', dpm: dpm0, comparaison: r.comparaison || 'A-1' } });
           },
           suppr: () => {
             if (!window.confirm('Supprimer le rapport « ' + r.nom + ' » ? Ses générations passées restent lisibles dans l’historique.')) { return; }
@@ -7303,7 +7303,10 @@ class App {
     // La fenêtre de données n'est plus choisie à l'écran : elle suit la
     // cadence (quotidien → la veille, hebdo → semaine passée, mensuel → mois
     // passé). L'aperçu sans planification lit la semaine passée.
-    const composition = () => ({ blocs: slugsOn, modes: rcModes, magasins: magsOn });
+    // Le repère de comparaison des KPI chiffrés (passage clients, ticket
+    // moyen) : A-1 par défaut — le seul qui neutralise la saison.
+    const rcComp = rc.comparaison || 'A-1';
+    const composition = () => ({ blocs: slugsOn, modes: rcModes, magasins: magsOn, comparaison: rcComp });
     const ordreLev = Object.keys((rd && rd.leviers) || {});
     const groupes = [];
     ordreLev.forEach(lev => {
@@ -7320,12 +7323,15 @@ class App {
     const doms = rc.doms || {};
     common.rapCompo = {
       groupes,
+      comparaison: rcComp,
+      comparaisons: Object.entries((rd && rd.comparaisons) || { 'A-1': 'même période l’an dernier' })
+        .map(([code, aide]) => ({ code, aide, on: code === rcComp, choisir: () => rcSet({ comparaison: code }) })),
       modeles: [{ id: 0, nom: '— Vide —' }].concat(((rd && rd.rapports) || []).map(r => ({ id: r.id, nom: r.nom }))),
       chargerModele: e => {
         const r = ((rd && rd.rapports) || []).find(x => String(x.id) === String(e.target.value));
         if (!r) { rcSet({ blocs: {}, modes: {} }); return; }
         const bl = {}; (r.blocs || []).forEach(sl => { bl[sl] = true; });
-        rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '' });
+        rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '', comparaison: r.comparaison || 'A-1' });
         this.notify('Modèle « ' + r.nom + ' » chargé — ajustez puis générez');
       },
       magasins: this.open().map(st2 => ({ nom: st2.nom, on: !!rcMags[st2.nom],

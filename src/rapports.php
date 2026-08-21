@@ -72,7 +72,8 @@ function ensureRapports(): void
               "ADD COLUMN periode VARCHAR(14) NULL", 'ADD COLUMN periode_du DATE NULL',
               'ADD COLUMN periode_au DATE NULL', 'ADD COLUMN modes TEXT NULL',
               "ADD COLUMN envoi_mode VARCHAR(12) NOT NULL DEFAULT 'groupe'",
-              'ADD COLUMN dest_par_magasin TEXT NULL'] as $alter) {
+              'ADD COLUMN dest_par_magasin TEXT NULL',
+              "ADD COLUMN comparaison VARCHAR(4) NOT NULL DEFAULT 'A-1'"] as $alter) {
         try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
     }
 
@@ -219,9 +220,11 @@ function rapBlocDefs(): array
 {
     return [
         'trafic-clients' => ['levier' => 'trafic', 'nom' => 'Clients par jour vs moyenne réseau'],
+        'trafic-passage' => ['levier' => 'trafic', 'nom' => 'Passage clients par jour — magasin, réseau, comparaison'],
         'trafic-nvn1' => ['levier' => 'trafic', 'nom' => 'CA N vs N-1'],
         'recurrence-panier' => ['levier' => 'recurrence', 'nom' => 'Ticket moyen et articles par ticket'],
         'recurrence-avis' => ['levier' => 'recurrence', 'nom' => 'Réputation Google'],
+        'xp-ticket' => ['levier' => 'xp', 'nom' => 'Ticket moyen — magasin, réseau, comparaison'],
         'xp-bilan' => ['levier' => 'xp', 'nom' => 'Bilan des tâches de la période'],
         'xp-taches' => ['levier' => 'xp', 'nom' => 'Tâches sous le seuil'],
         'food-cost' => ['levier' => 'food-cost', 'nom' => 'Food cost du mois'],
@@ -326,6 +329,29 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 $b['infos'][] = ['Méthode', 'Avis 5★ à obtenir = avis × (cible − note) ÷ (5 − cible), arrondi au supérieur — '
                     . 'le nombre d’avis parfaits qui ramène la moyenne à ' . $vCible . '. Cible réglable dans Paramètres.'];
             }
+            break;
+        }
+        case 'trafic-passage':
+        case 'xp-ticket': {
+            // Deux mesures, un même geste : la période, le réseau, et la même
+            // période décalée (A-1 par défaut, M-1 ou S-1 au choix du
+            // rapport). Bloc d'information : il s'imprime toujours, il ne
+            // compte pas de « point à traiter ».
+            $b['action'] = $slug === 'trafic-passage'
+                ? 'Visibilité locale, vitrine, animations — ce qui fait entrer.'
+                : 'Montée en gamme, vente additionnelle, conseil au comptoir.';
+            $fen = rapFenetreComparaison($periode, (string) ($periode['comparaison'] ?? 'A-1'));
+            $now = rapVentesFenetre((string) $periode['du'], (string) $periode['au']);
+            if ($now['magasins'] === []) { $b['motif'] = 'aucune vente lue sur la période (API panel)'; break; }
+            $avant = rapVentesFenetre($fen['du'], $fen['au']);
+            $perim = (array) ($periode['magasins'] ?? []);
+            $t = $slug === 'trafic-passage'
+                ? rapTableComparaison($now, $avant, $fen, 'clientsJour', 'Passage clients par jour',
+                    fn ($v) => $v === null ? '—' : str_replace('.', ',', (string) round((float) $v, 1)), $perim)
+                : rapTableComparaison($now, $avant, $fen, 'panier', 'Ticket moyen',
+                    fn ($v) => $v === null ? '—' : number_format((float) $v, 2, ',', ' ') . ' €', $perim);
+            if ($t === '') { $b['motif'] = 'aucun magasin du périmètre n’a vendu sur la période'; break; }
+            $b['htmlPar'][] = ['', $t];
             break;
         }
         case 'xp-bilan': {
@@ -612,6 +638,104 @@ function rapPeriode(string $freq, ?string $periode = null, ?string $du = null, ?
         'nvn1' => 'semaine', 'label' => 'semaine ' . $lundi->format('d/m') . ' → ' . $lundi->modify('+6 days')->format('d/m')];
 }
 
+/**
+ * La fenêtre de COMPARAISON d'une période : la même durée, décalée d'un an,
+ * d'un mois ou d'une semaine.
+ *
+ * A-1 est le repère par défaut d'un commerce saisonnier — comparer une semaine
+ * d'août à celle de juillet dirait surtout que c'est l'été. M-1 et S-1 servent
+ * quand on suit une action récente. La durée ne change jamais : sinon l'écart
+ * mesurerait le calendrier, pas le magasin.
+ */
+const RAP_COMPARAISONS = ['A-1' => 'même période l’an dernier', 'M-1' => 'même période le mois dernier',
+    'S-1' => 'même période la semaine passée'];
+
+function rapFenetreComparaison(array $periode, string $code): array
+{
+    $decal = ['A-1' => '-1 year', 'M-1' => '-1 month', 'S-1' => '-7 days'][$code] ?? '-1 year';
+    $du = (new DateTimeImmutable((string) $periode['du']))->modify($decal);
+    $au = (new DateTimeImmutable((string) $periode['au']))->modify($decal);
+    return ['du' => $du->format('Y-m-d'), 'au' => $au->format('Y-m-d'), 'code' => $code,
+        'label' => RAP_COMPARAISONS[$code] ?? RAP_COMPARAISONS['A-1']];
+}
+
+/**
+ * Les indicateurs de vente par magasin sur une fenêtre : tickets, CA, et ce
+ * qu'on en tire — clients par jour et ticket moyen.
+ *
+ * Une seule lecture par fenêtre (cache de contexte), partagée par les blocs
+ * trafic et expérience client : deux blocs, un aller-retour.
+ */
+function rapVentesFenetre(string $du, string $au): array
+{
+    return rapCtx('ventes-' . $du . '-' . $au, function () use ($du, $au) {
+        $liste = analyseListe(PanelApi::shopsSalesKpisEntre($du, $au) ?? []);
+        $jours = max(1, (int) (new DateTimeImmutable($du))->diff(new DateTimeImmutable($au))->days + 1);
+        $noms = [];
+        try {
+            foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $sh) { $noms[(int) $sh['id']] = (string) $sh['name']; }
+        } catch (PDOException $e) { /* noms indisponibles */ }
+        $out = ['jours' => $jours, 'magasins' => [], 'reseau' => null];
+        $ttTickets = 0; $ttCa = 0.0; $actifs = 0;
+        foreach ($liste as $x) {
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+            }
+            $tickets = (int) (nombreOuNull($x, ['tickets', 'ticket_count', 'receipts']) ?? 0);
+            $ca = (float) (nombreOuNull($x, ['ca', 'turnover', 'revenue']) ?? 0);
+            // Une entrée technique du panel — inconnue du référentiel ET sans
+            // vente — n'est pas un magasin : elle tirerait la moyenne réseau
+            // vers le bas sans exister nulle part ailleurs.
+            if (!isset($noms[$id]) && $tickets === 0 && $ca <= 0) { continue; }
+            $out['magasins'][$noms[$id] ?? ('Magasin ' . $id)] = [
+                'tickets' => $tickets, 'ca' => round($ca, 2),
+                'clientsJour' => round($tickets / $jours, 1),
+                'panier' => $tickets > 0 ? round($ca / $tickets, 2) : null];
+            $ttTickets += $tickets; $ttCa += $ca;
+            if ($tickets > 0) { $actifs++; }
+        }
+        if ($out['magasins'] !== []) {
+            $out['reseau'] = ['tickets' => $ttTickets, 'ca' => round($ttCa, 2),
+                // Clients/jour réseau = le total ramené au nombre de magasins
+                // OUVERTS sur la fenêtre — même définition qu'à l'écran.
+                'clientsJour' => $actifs > 0 ? round($ttTickets / $jours / $actifs, 1) : null,
+                'panier' => $ttTickets > 0 ? round($ttCa / $ttTickets, 2) : null];
+        }
+        return $out;
+    }) ?? ['jours' => 1, 'magasins' => [], 'reseau' => null];
+}
+
+/** Un tableau magasin / réseau / comparaison, pour une mesure donnée. */
+function rapTableComparaison(array $now, array $avant, array $fen, string $cle, string $titre,
+                             callable $fmt, array $perim = []): string
+{
+    $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
+    $ecart = function (?float $a, ?float $b): array {
+        if ($a === null || $b === null || $b == 0.0) { return ['—', 'color:#8b8177']; }
+        $v = ($a / $b - 1) * 100;
+        $txt = ($v > 0 ? '+' : '') . str_replace('.', ',', (string) round($v, 1)) . ' %';
+        return [$txt, abs($v) < 1 ? 'color:#8b8177' : ($v > 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')];
+    };
+    $rows = [];
+    foreach ($now['magasins'] as $mag => $v) {
+        if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
+        $a = $v[$cle] ?? null;
+        $b = ($avant['magasins'][$mag] ?? [])[$cle] ?? null;
+        $rows[] = [$mag, $fmt($a), [$fmt($b), 'color:#8b8177'], $ecart($a === null ? null : (float) $a, $b === null ? null : (float) $b)];
+    }
+    if ($rows === []) { return ''; }
+    $rn = $now['reseau'][$cle] ?? null;
+    $ra = ($avant['reseau'] ?? [])[$cle] ?? null;
+    $rows[] = [['Réseau', 'font-weight:700'], [$fmt($rn), 'font-weight:700'], [$fmt($ra), 'color:#8b8177;font-weight:700'],
+        $ecart($rn === null ? null : (float) $rn, $ra === null ? null : (float) $ra)];
+    return '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:6px">' . $e($titre) . '</div>'
+        . rapTableHtml(['Magasin', 'Période', $fen['code'], 'Écart'], $rows)
+        . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
+        . $e($fen['code'] . ' = ' . $fen['label']) . ' — du ' . $e(date('d/m/Y', strtotime($fen['du'])))
+        . ' au ' . $e(date('d/m/Y', strtotime($fen['au']))) . '.</div>';
+}
+
 function rapportGenerer(array $rep): array
 {
     ensureRapports();
@@ -623,6 +747,7 @@ function rapportGenerer(array $rep): array
     $blocs = json_decode((string) $rep['blocs'], true) ?: [];
     $modes = json_decode((string) ($rep['modes'] ?? ''), true) ?: [];
     $filtre = json_decode((string) ($rep['magasins'] ?? ''), true) ?: [];
+    $comparaison = isset(RAP_COMPARAISONS[(string) ($rep['comparaison'] ?? '')]) ? (string) $rep['comparaison'] : 'A-1';
     $defs = rapBlocDefs();
     $sections = [];
     foreach ($blocs as $slug) {
@@ -633,7 +758,7 @@ function rapportGenerer(array $rep): array
         // magasins que le filtre écartera juste après — et le magasin du
         // rapport se retrouve sans image. Mesuré sur le rapport hebdomadaire
         // d'un franchisé : dix écarts listés, aucune photo.
-        $b = rapBloc($slug, $seuils, $periode + ['magasins' => $filtre]);
+        $b = rapBloc($slug, $seuils, $periode + ['magasins' => $filtre, 'comparaison' => $comparaison]);
         $b['nom'] = $defs[$slug]['nom'];
         $b['levier'] = $defs[$slug]['levier'];
         // Mode « tableau complet » : le tableau tel qu'à l'écran remplace la
@@ -991,6 +1116,7 @@ function ep_rapports(): array
                 'magasins' => json_decode((string) ($r['magasins'] ?? ''), true) ?: [],
                 'periode' => $r['periode'] ?? null,
                 'modes' => json_decode((string) ($r['modes'] ?? ''), true) ?: [],
+                'comparaison' => (string) ($r['comparaison'] ?? 'A-1'),
                 'dernier' => $d ? ['runId' => (int) $d['id'], 'le' => substr((string) $d['genere_le'], 0, 16),
                     'statut' => $d['statut'], 'resume' => $d['resume']] : null];
         }, $reps),
@@ -1001,6 +1127,7 @@ function ep_rapports(): array
             ? rapBaseUrl() . '/api/cockpit/rapports/cron?jeton=' . (string) setting('rapportsJeton', '')
             : null,
         'leviers' => RAP_LEVIERS,
+        'comparaisons' => RAP_COMPARAISONS,
         // Les postes proposés au compositeur : ceux du réseau, puis les VRAIS
         // profils RH du panel (/positions) — saisie libre conservée à l'écran.
         // Les postes proposés : la liste /positions du panel telle quelle
@@ -1063,6 +1190,9 @@ function wr_rapport_patch(int $id): array
     }
     if (isset($b['modes']) && is_array($b['modes'])) {
         Db::exec('UPDATE ceo_rapport SET modes = ? WHERE id = ?', [json_encode($b['modes']), $id]);
+    }
+    if (isset($b['comparaison']) && isset(RAP_COMPARAISONS[(string) $b['comparaison']])) {
+        Db::exec('UPDATE ceo_rapport SET comparaison = ? WHERE id = ?', [(string) $b['comparaison'], $id]);
     }
     if (isset($b['magasins']) && is_array($b['magasins'])) {
         Db::exec('UPDATE ceo_rapport SET magasins = ? WHERE id = ?',
@@ -1816,6 +1946,9 @@ function rapCompositionRep(array $b): array
         'periode_du' => (string) ($b['du'] ?? '') ?: null,
         'periode_au' => (string) ($b['au'] ?? '') ?: null,
         'destinataires' => json_encode(array_values(array_filter((array) ($b['destinataires'] ?? []), fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)))),
+        // Le repère de comparaison : A-1 par défaut, le seul qui neutralise la
+        // saison. Une valeur inconnue retombe dessus plutôt que d'être crue.
+        'comparaison' => isset(RAP_COMPARAISONS[(string) ($b['comparaison'] ?? '')]) ? (string) $b['comparaison'] : 'A-1',
     ];
 }
 
@@ -1862,13 +1995,13 @@ function wr_rapport_creer(): array
         if (is_string($mag) && $ok2 !== []) { $carnet[$mag] = $ok2; }
     }
     Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif,
-                                       jours, magasins, periode, periode_du, periode_au, modes, envoi_mode, dest_par_magasin)
-              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?,?,?)',
+                                       jours, magasins, periode, periode_du, periode_au, modes, envoi_mode, dest_par_magasin, comparaison)
+              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?,?,?,?)',
         [$code, $rep['nom'], $rep['poste'], $freq, $heure,
          $jours['dows'][0] ?? ($jours['doms'][0] ?? 1),
          $rep['blocs'], $rep['destinataires'],
          json_encode($jours), $rep['magasins'], $rep['periode'], $rep['periode_du'], $rep['periode_au'], $rep['modes'],
-         $envoiMode, json_encode($carnet, JSON_UNESCAPED_UNICODE)]);
+         $envoiMode, json_encode($carnet, JSON_UNESCAPED_UNICODE), $rep['comparaison']]);
     journalAdd('CEO', 'Rapport', $rep['nom'], 'Rapport composé enregistré (' . $code . ')');
     return ['ok' => true, 'code' => $code,
         'planifie' => $jours['dows'] !== [] || $jours['doms'] !== [],
