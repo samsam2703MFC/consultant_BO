@@ -7167,6 +7167,29 @@ class App {
   }
 
   /* --- reporting -------------------------------------------------------------------- */
+  /** « Dernières générations » : une liste DÉROULANTE, pas une pile de lignes.
+   *  Douze runs prenaient une demi-page pour un seul qu'on ouvre. On choisit
+   *  dans la liste, et le détail du choix — état, résumé, lien — s'affiche à
+   *  côté. Le plus récent est proposé d'office ; une génération nouvelle passe
+   *  donc devant sans qu'on ait à la chercher. */
+  valsRapportsRuns(runs, stRun, motRun, dateRun){
+    const S = this.state;
+    const liste = runs.map(u => ({
+      id: String(u.runId), le: dateRun(u.le), rapport: u.rapport,
+      statut: motRun(u.statut), st: stRun(u.statut),
+      resume: u.resume || '', url: API_BASE + '/rapports/run/' + u.runId }));
+    // Une sélection qui n'existe plus — le run a quitté les douze derniers —
+    // retombe sur le plus récent plutôt que de vider le bloc.
+    const choisi = liste.filter(u => u.id === S.rapRunSel)[0] || liste[0] || null;
+    return {
+      runs: liste,
+      runOptions: liste.map(u => ({ v: u.id, sel: !!choisi && u.id === choisi.id,
+        label: u.le + ' · ' + u.rapport + ' · ' + u.statut })),
+      runSel: choisi,
+      setRun: e => this.setState({ rapRunSel: e.target.value }),
+    };
+  }
+
   valsReporting(common, navDef, titles){
     const S = this.state, D = this.D, M = this.M;
     // --- générateur de rapports RÉEL (table ceo_rapport, HTML par levier).
@@ -7179,6 +7202,11 @@ class App {
     const freqLabel = r => r.frequence === 'quotidien' ? 'Quotidien · ' + r.heure + ' h'
       : r.frequence === 'hebdo' ? 'Hebdo · ' + (JSEM[r.jour] || 'lundi') + ' ' + r.heure + ' h'
       : 'Mensuel · le ' + r.jour + ' à ' + r.heure + ' h';
+    // Le même mot partout : la ligne du rapport disait « envoye » là où la
+    // liste des générations dit « envoyé ».
+    const motRun = s3 => ({ envoye: 'envoyé', vide: 'sans matière', erreur: 'erreur' })[s3] || (s3 ? 'généré' : '');
+    // « 2026-08-21 17:28 » → « 21/08 à 17:28 », l'écriture du reste du cockpit.
+    const dateRun = t => t ? (this.fD(String(t).slice(0, 10)) + ' à ' + String(t).slice(11, 16)) : '';
     const stRun = s3 => 'display:inline-block;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:600;'
       + (s3 === 'envoye' ? 'background:rgba(45,122,62,0.10);color:#2d7a3e'
         : s3 === 'vide' ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
@@ -7201,8 +7229,8 @@ class App {
           actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;'
             + (r.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
           toggleActif: () => this.api('PUT', '/rapports/' + r.id, { actif: !r.actif }).then(() => this.rapCharge(true)),
-          dernier: r.dernier ? ('Dernier : ' + r.dernier.le) : 'Jamais généré',
-          dernierStatut: r.dernier ? (r.dernier.statut || '') : '',
+          dernier: r.dernier ? ('Dernier : ' + dateRun(r.dernier.le)) : 'Jamais généré',
+          dernierStatut: r.dernier ? motRun(r.dernier.statut) : '',
           dernierSt: stRun(r.dernier ? r.dernier.statut : ''),
           resume: r.dernier ? (r.dernier.resume || '') : '',
           ouvrirUrl: r.dernier ? (API_BASE + '/rapports/run/' + r.dernier.runId) : '',
@@ -7256,8 +7284,7 @@ class App {
             .then(() => { this.notify('Destinataires enregistrés'); this.rapCharge(true); }),
         };
       }),
-      runs: ((rd && rd.runs) || []).map(u => ({ le: u.le, rapport: u.rapport, statut: u.statut,
-        resume: u.resume || '', st: stRun(u.statut), url: API_BASE + '/rapports/run/' + u.runId })),
+      ...this.valsRapportsRuns((rd && rd.runs) || [], stRun, motRun, dateRun),
     };
 
     // --- COMPOSITEUR : cocher les KPI, le périmètre, la période, puis générer

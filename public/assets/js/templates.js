@@ -3203,14 +3203,15 @@ function tplReporting(c, x){
       ${c.rapGen.runs.length ? `
       <div style="padding:12px 18px">
         <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Dernières générations</div>
-        ${c.rapGen.runs.map(u => `
-          <div style="display:flex;gap:10px;align-items:baseline;padding:3px 0;font-size:12px;flex-wrap:wrap">
-            <span style="color:var(--color-text-muted);white-space:nowrap">${esc(u.le)}</span>
-            <span style="font-weight:500">${esc(u.rapport)}</span>
-            <span style="${u.st}">${esc(u.statut)}</span>
-            <span style="color:var(--color-text-muted)">${esc(u.resume)}</span>
-            <a href="${u.url}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11.5px;font-weight:500;color:var(--color-primary)">ouvrir</a>
-          </div>`).join('')}
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px">
+          <select ${x.C(c.rapGen.setRun)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:100%">
+            ${c.rapGen.runOptions.map(o => `<option value="${esc(o.v)}"${o.sel ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}
+          </select>
+          ${c.rapGen.runSel ? `
+            <span style="${c.rapGen.runSel.st}">${esc(c.rapGen.runSel.statut)}</span>
+            ${c.rapGen.runSel.resume ? `<span style="color:var(--color-text-muted)">${esc(c.rapGen.runSel.resume)}</span>` : ''}
+            <a href="${c.rapGen.runSel.url}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11.5px;font-weight:500;color:var(--color-primary);white-space:nowrap">Ouvrir cette génération</a>` : ''}
+        </div>
       </div>` : ''}`)}`}
     </div>
   </div>`;
