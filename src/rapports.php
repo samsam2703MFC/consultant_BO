@@ -219,6 +219,7 @@ function rapKpisMois(): array
 function rapBlocDefs(): array
 {
     return [
+        'trafic-ca' => ['levier' => 'trafic', 'nom' => 'Chiffre d’affaires — période, cumul du mois, objectif'],
         'trafic-clients' => ['levier' => 'trafic', 'nom' => 'Clients par jour vs moyenne réseau'],
         'trafic-passage' => ['levier' => 'trafic', 'nom' => 'Passage clients par jour — magasin, réseau, comparaison'],
         'trafic-nvn1' => ['levier' => 'trafic', 'nom' => 'CA N vs N-1'],
@@ -332,6 +333,68 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             if ($b['lignes'] !== []) {
                 $b['infos'][] = ['Méthode', 'Avis 5★ à obtenir = avis × (cible − note) ÷ (5 − cible), arrondi au supérieur — '
                     . 'le nombre d’avis parfaits qui ramène la moyenne à ' . $vCible . '. Cible réglable dans Paramètres.'];
+            }
+            break;
+        }
+        case 'trafic-ca': {
+            // Le chiffre d'affaires sur trois horizons : la période et son
+            // A-1, le cumul du mois et son A-1, puis l'objectif du mois et ce
+            // qu'il reste à faire. Trois questions qu'on pose toujours l'une
+            // après l'autre — « combien cette semaine », « où en est le mois »,
+            // « est-ce que j'y serai ».
+            $b['action'] = 'Animation commerciale, panier, trafic — les trois leviers du chiffre.';
+            $fen = rapFenetreComparaison($periode, (string) ($periode['comparaison'] ?? 'A-1'));
+            $now = rapVentesFenetre((string) $periode['du'], (string) $periode['au']);
+            if ($now['magasins'] === []) { $b['motif'] = 'aucune vente lue sur la période (API panel)'; break; }
+            $avant = rapVentesFenetre($fen['du'], $fen['au']);
+            $perim = (array) ($periode['magasins'] ?? []);
+            $b['htmlPar'][] = ['', rapTableComparaison($now, $avant, $fen, 'ca', 'Chiffre d’affaires de la période',
+                fn ($v) => $v === null ? '—' : number_format((float) $v, 0, ',', ' ') . ' €', $perim)];
+
+            // Le cumul : du premier du mois au dernier jour de la période — pas
+            // au jour même, sinon un rapport relu la semaine suivante changerait
+            // de chiffre.
+            $mois1 = substr((string) $periode['au'], 0, 8) . '01';
+            $cumul = rapVentesFenetre($mois1, (string) $periode['au']);
+            $cumulA = rapVentesFenetre(
+                (new DateTimeImmutable($mois1))->modify('-1 year')->format('Y-m-d'),
+                (new DateTimeImmutable((string) $periode['au']))->modify('-1 year')->format('Y-m-d'));
+            $objectifs = rapObjectifsMois((string) $periode['au']);
+            $e2 = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
+            $euro = fn ($v) => $v === null ? '—' : number_format((float) $v, 0, ',', ' ') . ' €';
+            $rows = []; $ttCum = 0.0; $ttA = 0.0; $ttObj = 0.0; $objConnu = false;
+            foreach ($cumul['magasins'] as $mag => $v) {
+                if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
+                $c = (float) ($v['ca'] ?? 0);
+                $a = (float) ((($cumulA['magasins'][$mag] ?? [])['ca']) ?? 0);
+                $obj = $objectifs[$mag] ?? null;
+                $reste = $obj !== null ? $obj - $c : null;
+                $ttCum += $c; $ttA += $a;
+                if ($obj !== null) { $ttObj += $obj; $objConnu = true; }
+                $ecart = $a > 0 ? ($c / $a - 1) * 100 : null;
+                $rows[] = [$mag, $euro($c), [$a > 0 ? $euro($a) : '—', 'color:#8b8177'],
+                    [$ecart === null ? '—' : ($ecart > 0 ? '+' : '') . str_replace('.', ',', (string) round($ecart, 1)) . ' %',
+                     $ecart === null ? 'color:#8b8177' : ($ecart >= 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')],
+                    [$obj === null ? '—' : $euro($obj), 'color:#8b8177'],
+                    [$obj === null ? 'objectif non encodé' : ($reste > 0 ? $euro($reste) : 'atteint'),
+                     $obj === null ? 'color:#8b8177' : ($reste > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e;font-weight:700')]];
+            }
+            if ($rows !== []) {
+                $ecartR = $ttA > 0 ? ($ttCum / $ttA - 1) * 100 : null;
+                $resteR = $objConnu ? $ttObj - $ttCum : null;
+                $rows[] = [['Réseau', 'font-weight:700'], [$euro($ttCum), 'font-weight:700'],
+                    [$ttA > 0 ? $euro($ttA) : '—', 'color:#8b8177;font-weight:700'],
+                    [$ecartR === null ? '—' : ($ecartR > 0 ? '+' : '') . str_replace('.', ',', (string) round($ecartR, 1)) . ' %',
+                     $ecartR === null ? 'color:#8b8177' : ($ecartR >= 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')],
+                    [$objConnu ? $euro($ttObj) : '—', 'color:#8b8177;font-weight:700'],
+                    [$resteR === null ? '—' : ($resteR > 0 ? $euro($resteR) : 'atteint'),
+                     $resteR === null ? 'color:#8b8177' : ($resteR > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e;font-weight:700')]];
+                $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:14px">'
+                    . 'Cumul du mois — du ' . $e2(date('d/m', strtotime($mois1))) . ' au ' . $e2(date('d/m', strtotime((string) $periode['au']))) . '</div>'
+                    . rapTableHtml(['Magasin', 'Cumul', 'A-1', 'Écart', 'Objectif du mois', 'Reste à faire'], $rows)
+                    . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
+                    . 'Objectif : le budget de CA encodé pour le mois (écran Encodage du budget). « Reste à faire » = objectif − cumul, '
+                    . 'sur le mois entier — pas au prorata des jours écoulés.</div>'];
             }
             break;
         }
@@ -733,6 +796,34 @@ function rapVentesFenetre(string $du, string $au): array
         }
         return $out;
     }) ?? ['jours' => 1, 'magasins' => [], 'reseau' => null];
+}
+
+/**
+ * L'objectif de CA du mois, par NOM de magasin.
+ *
+ * Il vit dans ceo_shop_month_perf (encodage du budget) et se lit par
+ * identifiant : on le rapproche des noms, seule clé que les blocs manipulent.
+ * Un magasin sans budget encodé n'a pas d'objectif — pas d'objectif inventé.
+ */
+function rapObjectifsMois(string $date): array
+{
+    return rapCtx('objectifs-' . substr($date, 0, 7), function () use ($date) {
+        $noms = [];
+        try {
+            foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $sh) { $noms[(int) $sh['id']] = (string) $sh['name']; }
+        } catch (PDOException $e) { return []; }
+        $out = [];
+        try {
+            foreach (Db::rows('SELECT shop_id, revenue_budget FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+                [(int) substr($date, 0, 4), (int) substr($date, 5, 2)]) as $b) {
+                $v = $b['revenue_budget'];
+                if ($v === null || (float) $v <= 0) { continue; }
+                $nom = $noms[(int) $b['shop_id']] ?? null;
+                if ($nom !== null) { $out[$nom] = (float) $v; }
+            }
+        } catch (PDOException $e) { /* budget non encodé */ }
+        return $out;
+    }) ?? [];
 }
 
 /** Un tableau magasin / réseau / comparaison, pour une mesure donnée. */
