@@ -401,7 +401,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                         (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
-                    if ($f !== '') { $fiches[] = rapFondNote(5, true) + ['html' => $f]; }
+                    if ($f !== '') { $fiches[] = rapFondNote(5) + ['html' => $f]; }
                 }
                 [$col, $rang] = rapGrilleDe($periode);
                 $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
@@ -1574,12 +1574,15 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                 . $e(substr((string) ($t['date'] ?? ''), 8, 2) . '/' . substr((string) ($t['date'] ?? ''), 5, 2)) . ')';
         }
         $reste = array_slice($nommees, count($fichesExemplaires));
+        // Présentées comme les écarts : un titre, puis la grille. Le cadre
+        // doré autour n'apportait rien — la teinte des cartes dit déjà de
+        // quoi il s'agit. La table ne sert plus qu'à porter le saut de page.
         $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 6px" data-encadre="5sur5">'
-            . '<tr><td style="background:#FBF6E7;border-left:4px solid #C9A227;border-radius:0 9px 9px 0;padding:9px 12px;' . $F . '">'
-            . '<div style="font-size:12.5px;font-weight:700;color:#221E1A">Cette semaine, vous vous êtes distingué avec celles-ci'
-            . '<span style="font-weight:400;color:#8b8177"> — ' . count($exemplaires) . ' tâche(s) à 5/5</span></div>'
+            . '<tr><td style="' . $F . '">'
+            . '<div style="font-size:14.5px;font-weight:700;color:#221E1A;margin:0 0 6px">Cette semaine, vous vous êtes distingué avec celles-ci'
+            . '<span style="font-weight:400;font-size:12px;color:#8b8177"> — ' . count($exemplaires) . ' tâche(s) à 5/5</span></div>'
             . ($fichesExemplaires !== []
-                ? '<div style="padding-top:6px">' . rapFichesGrille($fichesExemplaires, $colonnes, $rangees, false) . '</div>'
+                ? rapFichesGrille($fichesExemplaires, $colonnes, $rangees, false)
                 : '')
             . ($reste !== []
                 ? '<div style="font-size:11px;color:#4a443c;padding-top:' . ($fichesExemplaires !== [] ? '4' : '6') . 'px;line-height:1.45">'
@@ -1968,7 +1971,7 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         // porter la couleur d'un écart.
         $coulN = rapCouleurNote($note);
         $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0">'
-            . '<span style="color:' . $coulN . ';font-size:13px;line-height:1">&#9679;</span> '
+            . '<span style="color:' . $coulN . ';font-size:9px;line-height:1">&#9679;</span> '
             . '<b style="color:' . $coulN . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
     }
     // Le commentaire du panel EST la concaténation des repères : « 1. [mineur]
