@@ -698,6 +698,17 @@ function ep_rapports(): array
             'le' => substr((string) $r['genere_le'], 0, 16), 'statut' => $r['statut'], 'resume' => $r['resume']], $runs),
         'blocs' => rapBlocDefs(),
         'leviers' => RAP_LEVIERS,
+        // Les postes proposés au compositeur : ceux du réseau, puis les VRAIS
+        // profils RH du panel (/positions) — saisie libre conservée à l'écran.
+        'postes' => rapCtx('positions', function () {
+            $out = ['CEO / direction réseau', 'Consultant réseau', 'Franchisé', 'Centrale d’achat'];
+            if (PanelApi::configured()) {
+                foreach ((array) (PanelApi::get('/positions') ?? []) as $p) {
+                    if (is_array($p) && !empty($p['name'])) { $out[] = (string) $p['name']; }
+                }
+            }
+            return array_values(array_unique($out));
+        }) ?? [],
     ];
 }
 

@@ -7006,6 +7006,7 @@ class App {
       recap: slugsOn.length + ' KPI · ' + (magsOn.length === 0 ? 'tout le réseau' : magsOn.length + ' magasin(s)'),
       nom: rc.nom || '', setNom: e => rcSet({ nom: e.target.value }),
       poste: rc.poste || '', setPoste: e => rcSet({ poste: e.target.value }),
+      postes: (rd && rd.postes) || [],
       heure: rc.heure || '7', setHeure: e => rcSet({ heure: e.target.value }),
       dest: rc.dest || '', setDest: e => rcSet({ dest: e.target.value }),
       dows: [1, 2, 3, 4, 5, 6, 7].map(d5 => ({ nom: JSEM2[d5], on: !!dows[d5],
