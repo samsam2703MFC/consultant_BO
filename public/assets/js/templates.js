@@ -3223,6 +3223,43 @@ function tplParams(c, x){
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:500">Envoi des rapports — machine SMTP</div>
+          <span style="${c.sm.etatSt}">${esc(c.sm.etatTxt)}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 110px 130px;gap:12px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Hôte SMTP
+            <input value="${esc(c.sm.hote)}" ${x.I(c.sm.setHote)} placeholder="smtp.gmail.com" style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Port
+            <input type="number" value="${esc(c.sm.port)}" ${x.I(c.sm.setPort)} style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Sécurité
+            <select ${x.C(c.sm.setSecurite)} style="${inputCss}">
+              ${['tls', 'ssl', 'aucune'].map(v => `<option value="${v}"${c.sm.securite === v ? ' selected' : ''}>${v === 'tls' ? 'STARTTLS (587)' : v === 'ssl' ? 'SSL (465)' : 'Aucune'}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Utilisateur
+            <input value="${esc(c.sm.utilisateur)}" ${x.I(c.sm.setUtilisateur)} autocomplete="off" placeholder="compte@atelierby.be" style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Mot de passe
+            <input type="password" ${x.I(c.sm.setMdp)} autocomplete="new-password" placeholder="${c.sm.mdpDefini ? 'En place — saisir pour remplacer' : 'mot de passe ou mot de passe d’application'}" style="${inputCss}">
+          </label>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Expéditeur
+          <input value="${esc(c.sm.expediteur)}" ${x.I(c.sm.setExpediteur)} placeholder="Cockpit L’Atelier By &lt;rapports@atelierby.be&gt;" style="${inputCss}">
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button ${x.A(c.sm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.sm.busy ? 'opacity:.6' : ''}">${c.sm.busy ? 'En cours…' : 'Enregistrer'}</button>
+          <input value="${esc(c.sm.testA)}" ${x.I(c.sm.setTestA)} placeholder="adresse de test" style="flex:1;min-width:180px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
+          <button ${x.A(c.sm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un test</button>
+        </div>
+        ${c.sm.msg ? `<div style="${c.sm.msgSt}">${esc(c.sm.msg)}</div>` : ''}
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Le mot de passe ne quitte pas le serveur (ceo_app_setting.smtp) — l’écran ne le relit jamais. Sans SMTP configuré, l’envoi des rapports retombe sur mail() du serveur. Gmail : créez un « mot de passe d’application », hôte smtp.gmail.com, port 587, STARTTLS.</div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Modèles d'email de relance</div>
         <div style="display:flex;flex-direction:column;gap:12px">
           ${c.paramTpls.map(t => `

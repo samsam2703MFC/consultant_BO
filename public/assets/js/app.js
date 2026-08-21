@@ -7302,6 +7302,46 @@ class App {
     };
     common.paramTpls = D.emailTemplates.map(t => ({ nom: t.nom, sujet: t.sujet, corps: S.tpl[t.id] != null ? S.tpl[t.id] : t.corps,
       set: e => { this.setState(s2 => ({ tpl: Object.assign({}, s2.tpl, { [t.id]: e.target.value }) })); this.api('PUT', '/parametres/email-' + t.id, { corps: e.target.value }); } }));
+
+    // --- machine d'envoi SMTP (rapports) : les identifiants vivent côté
+    // serveur ; l'écran affiche l'hôte et l'utilisateur, jamais le mot de passe.
+    if (!this._smtpLu) { this._smtpLu = true; readOne('/parametres/smtp').then(st => { this.D.smtpStatut = st || null; this.setState({}); }); }
+    const smSt = this.D.smtpStatut || {};
+    const smD = S.smDraft || {};
+    const smVal = (k, def) => smD[k] != null ? smD[k] : (smSt[k] != null && smSt[k] !== 0 ? String(smSt[k]) : def);
+    const smSet = k => e => { const v = e.target.value; this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { [k]: v }) })); };
+    common.sm = {
+      configure: !!smSt.configure, mdpDefini: !!smSt.motDePasseDefini,
+      hote: smVal('hote', ''), port: smVal('port', '587'), securite: smVal('securite', 'tls'),
+      utilisateur: smVal('utilisateur', ''), expediteur: smVal('expediteur', ''), testA: smVal('testA', ''),
+      busy: !!smD.busy, msg: smD.msg || '',
+      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (smD.ok ? '#2d7a3e' : '#8D1D2C'),
+      etatTxt: smSt.configure ? 'Configuré · ' + (smSt.hote || '') + (smSt.motDePasseDefini ? ' · mot de passe en place' : ' · sans authentification') : 'Non configuré',
+      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        + (smSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
+      setHote: smSet('hote'), setPort: smSet('port'), setSecurite: smSet('securite'),
+      setUtilisateur: smSet('utilisateur'), setMdp: smSet('motDePasse'),
+      setExpediteur: smSet('expediteur'), setTestA: smSet('testA'),
+      save: () => {
+        const d2 = this.state.smDraft || {};
+        this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: true, msg: '' }) }));
+        fetch(this.apiBase() + '/parametres/smtp', { method: 'PUT', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ hote: smVal('hote', ''), port: smVal('port', '587'), securite: smVal('securite', 'tls'),
+            utilisateur: smVal('utilisateur', ''), expediteur: smVal('expediteur', ''), motDePasse: d2.motDePasse || '' }) })
+          .then(r => r.json())
+          .then(r => { this.D.smtpStatut = r;
+            this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, motDePasse: '', ok: true, msg: 'Enregistré.' }) }));
+            this.log('Paramètre', '—', 'Machine d’envoi SMTP mise à jour'); })
+          .catch(() => this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) })));
+      },
+      test: () => {
+        this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: true, msg: '' }) }));
+        this.api('POST', '/parametres/smtp/test', { a: smVal('testA', '') }).then(r =>
+          this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: !!(r && r.ok),
+            msg: (r && (r.message || r.error)) || 'Test impossible.' }) })));
+      },
+    };
   }
 }
 

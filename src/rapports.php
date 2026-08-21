@@ -61,15 +61,28 @@ function ensureRapports(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
     $n = Db::row('SELECT COUNT(*) n FROM ceo_rapport');
-    if ((int) ($n['n'] ?? 0) > 0) { return; }
+    if ((int) ($n['n'] ?? 0) > 0) {
+        // Évolution des semis : la heatmap de rentabilité rejoint les rapports
+        // CEO et franchisé déjà en base — une fois, sans toucher au reste.
+        foreach (['ceo-hebdo', 'franchise-hebdo'] as $code) {
+            $r = Db::row('SELECT id, blocs FROM ceo_rapport WHERE code = ?', [$code]);
+            if ($r === null) { continue; }
+            $blocs = json_decode((string) $r['blocs'], true) ?: [];
+            if (!in_array('rentab-heatmap', $blocs, true)) {
+                $blocs[] = 'rentab-heatmap';
+                Db::exec('UPDATE ceo_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), (int) $r['id']]);
+            }
+        }
+        return;
+    }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
     $seed = [
         ['consultant-quotidien', 'Exceptions de la veille', 'Consultant réseau', 'quotidien', 7, 1,
             ['xp-taches', 'recurrence-avis', 'food-stock'], 0],
         ['franchise-hebdo', 'Votre semaine, par levier', 'Franchisé', 'hebdo', 8, 1,
-            ['trafic-clients', 'recurrence-panier', 'recurrence-avis', 'xp-taches', 'overhead-jours'], 1],
+            ['trafic-clients', 'recurrence-panier', 'recurrence-avis', 'xp-taches', 'overhead-jours', 'rentab-heatmap'], 1],
         ['ceo-hebdo', 'Synthèse réseau de la semaine', 'CEO / direction réseau', 'hebdo', 7, 1,
-            ['trafic-nvn1', 'trafic-clients', 'recurrence-panier', 'recurrence-avis', 'food-cost', 'labour-caetp', 'overhead-jours', 'royalties-retard'], 0],
+            ['trafic-nvn1', 'trafic-clients', 'recurrence-panier', 'recurrence-avis', 'food-cost', 'labour-caetp', 'overhead-jours', 'rentab-heatmap', 'royalties-retard'], 0],
         ['ceo-mensuel', 'Clôture mensuelle du réseau', 'CEO / direction réseau', 'mensuel', 7, 3,
             ['trafic-nvn1', 'trafic-clients', 'recurrence-panier', 'food-cost', 'labour-caetp', 'overhead-jours', 'royalties-retard'], 0],
         ['centrale-hebdo', 'Approvisionnement et factures', 'Centrale d’achat', 'hebdo', 7, 4,
@@ -185,6 +198,7 @@ function rapBlocDefs(): array
         'food-stock' => ['levier' => 'food-cost', 'nom' => 'Stocks négatifs'],
         'labour-caetp' => ['levier' => 'labour-cost', 'nom' => 'CA par ETP'],
         'overhead-jours' => ['levier' => 'overhead-cost', 'nom' => 'Jours à résultat net négatif'],
+        'rentab-heatmap' => ['levier' => 'overhead-cost', 'nom' => 'Rentabilité par jour (heatmap)'],
         'royalties-retard' => ['levier' => 'transverse', 'nom' => 'Redevances en retard'],
         'centrale-commandes' => ['levier' => 'transverse', 'nom' => 'Commandes fournisseurs à passer'],
     ];
@@ -194,7 +208,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
 {
     $fmtE = fn ($v) => number_format((float) $v, 2, ',', ' ') . ' €';
     $fmtP = fn ($v) => str_replace('.', ',', (string) round((float) $v, 1)) . ' %';
-    $b = ['slug' => $slug, 'lignes' => [], 'infos' => [], 'motif' => null, 'action' => ''];
+    $b = ['slug' => $slug, 'lignes' => [], 'infos' => [], 'htmlPar' => [], 'motif' => null, 'action' => ''];
 
     switch ($slug) {
         case 'trafic-clients': {
@@ -350,6 +364,45 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             }
             break;
         }
+        case 'rentab-heatmap': {
+            // La heatmap de l'écran P&L, en version email : un tableau à
+            // cellules colorées (les clients mail ne lisent ni CSS externe ni
+            // SVG — des <td> à fond plein passent partout). Bloc informatif :
+            // il s'affiche toujours, il ne dépend d'aucun seuil.
+            $b['action'] = '';
+            $r = rapRentab();
+            if (!is_array($r) || !empty($r['indispo'])) { $b['motif'] = $r['motif'] ?? 'API panel indisponible'; break; }
+            $JR = [1 => 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
+            $teinte = function (?float $p): array {
+                if ($p === null) { return ['#EEE9E1', '#8a8177']; }
+                if ($p < 0) { return ['#8D1D2C', '#ffffff']; }
+                if ($p < 5) { return ['#C17A2A', '#ffffff']; }
+                if ($p < 10) { return ['#A8B545', '#ffffff']; }
+                if ($p < 15) { return ['#7CB342', '#ffffff']; }
+                if ($p < 25) { return ['#3D8B44', '#ffffff']; }
+                return ['#C9A227', '#ffffff'];
+            };
+            foreach ((array) $r['magasins'] as $m) {
+                if (!empty($m['indispo'])) { continue; }
+                $cells = '';
+                foreach ((array) $m['jours'] as $j) {
+                    [$fond, $txt] = $teinte($j['ouvert'] ? $j['netPct'] : null);
+                    $val = !$j['ouvert'] ? 'fermé'
+                        : ($j['netPct'] === null ? '—' : str_replace('.', ',', (string) $j['netPct']) . ' %');
+                    $cells .= '<td style="background:' . $fond . ';color:' . $txt . ';border-radius:6px;padding:6px 9px;'
+                        . 'text-align:center;font-family:sans-serif;font-size:11px;white-space:nowrap">'
+                        . '<div style="font-size:9px;letter-spacing:0.04em;opacity:0.85">' . ($JR[(int) $j['wd']] ?? '') . '</div>'
+                        . '<div style="font-weight:700;margin-top:1px">' . $val . '</div></td>';
+                }
+                $tot = $m['total'] ?? [];
+                $sous = isset($tot['netPct']) && $tot['netPct'] !== null
+                    ? 'semaine : ' . str_replace('.', ',', (string) $tot['netPct']) . ' % de résultat net' : '';
+                $b['htmlPar'][] = [$m['nom'],
+                    '<table cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:4px 0 2px"><tr>' . $cells . '</tr></table>'
+                    . ($sous !== '' ? '<div style="font-size:11px;color:#6E645A">' . htmlspecialchars($sous) . '</div>' : '')];
+            }
+            break;
+        }
         case 'royalties-retard': {
             $b['action'] = 'Relancer — la relance et la date de paiement se suivent dans Facturation magasins.';
             $f = rapFactu();
@@ -415,7 +468,7 @@ function rapportGenerer(array $rep): array
         $b = rapBloc($slug, $seuils, $periode);
         $b['nom'] = $defs[$slug]['nom'];
         $b['levier'] = $defs[$slug]['levier'];
-        if ($b['lignes'] !== [] || $b['infos'] !== [] || $b['motif'] !== null) { $sections[] = $b; }
+        if ($b['lignes'] !== [] || $b['infos'] !== [] || $b['htmlPar'] !== [] || $b['motif'] !== null) { $sections[] = $b; }
     }
     $ordre = array_keys(RAP_LEVIERS);
     usort($sections, fn ($a, $b2) => array_search($a['levier'], $ordre, true) <=> array_search($b2['levier'], $ordre, true));
@@ -449,7 +502,8 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         foreach ($secs as $s) {
             $lignes = $magasin === null ? $s['lignes'] : array_values(array_filter($s['lignes'], fn ($l) => $l[0] === $magasin));
             $infos = $magasin === null ? $s['infos'] : array_values(array_filter($s['infos'], fn ($l) => $l[0] === $magasin));
-            if ($lignes === [] && $infos === [] && $s['motif'] === null) { continue; }
+            $htmls = $magasin === null ? ($s['htmlPar'] ?? []) : array_values(array_filter($s['htmlPar'] ?? [], fn ($l) => $l[0] === $magasin));
+            if ($lignes === [] && $infos === [] && $htmls === [] && $s['motif'] === null) { continue; }
             $lev = RAP_LEVIERS[$s['levier']];
             $h .= '<div style="margin:18px 0 6px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' . $lev['couleur'] . ';margin-right:7px"></span>'
                 . '<b style="font-size:14px">' . $e($lev['nom']) . ' — ' . $e($s['nom']) . '</b></div>';
@@ -464,6 +518,12 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             foreach ($infos as $l) {
                 $h .= '<div style="padding:6px 0;border-bottom:1px solid #F3EEE6;font-size:12.5px;color:#6E645A">'
                     . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</div>';
+            }
+            foreach ($htmls as $l) {
+                // Contenu déjà en HTML (heatmap) : construit par nos soins,
+                // jamais issu d'une saisie — il ne passe pas par l'échappement.
+                $h .= ($magasin === null ? '<div style="font-size:12.5px;font-weight:600;margin-top:8px">' . $e($l[0]) . '</div>' : '')
+                    . $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
                 $h .= '<div style="font-size:12px;color:#6E645A;padding:6px 0 0">Action : ' . $e($s['action']) . '</div>';
@@ -508,20 +568,30 @@ function rapportEnvoyer(array $rep, int $runId): array
     if ($dests === []) { return ['ok' => false, 'error' => 'aucun destinataire valide — renseignez les emails sur la ligne du rapport']; }
     if (($run['statut'] ?? '') === 'vide') { return ['ok' => false, 'error' => 'rapport sans matière — non envoyé, c’est la règle']; }
 
-    $exp = (string) setting('rapportsExpediteur', 'cockpit@' . (parse_url((string) ($_SERVER['HTTP_HOST'] ?? 'atelierby.local'), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'atelierby.local')));
     $sujet = '[' . $rep['poste'] . '] ' . $rep['nom'] . ' — ' . ($run['resume'] ?? '');
-    $entetes = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: " . $exp . "\r\n";
-    $ok = [];
+    // SMTP configuré (Paramètres) d'abord ; mail() de PHP en repli seulement.
+    $viaSmtp = Smtp::configured();
+    $ok = []; $derniereErreur = null;
     foreach ($dests as $d) {
-        $ok[$d] = function_exists('mail') && @mail($d, '=?UTF-8?B?' . base64_encode($sujet) . '?=', (string) $run['html'], $entetes);
+        if ($viaSmtp) {
+            $ok[$d] = Smtp::envoyer($d, $sujet, (string) $run['html']);
+            if (!$ok[$d]) { $derniereErreur = Smtp::$lastError; }
+        } else {
+            $exp = (string) setting('rapportsExpediteur', 'cockpit@' . ($_SERVER['HTTP_HOST'] ?? 'atelierby.local'));
+            $entetes = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: " . $exp . "\r\n";
+            $ok[$d] = function_exists('mail') && @mail($d, '=?UTF-8?B?' . base64_encode($sujet) . '?=', (string) $run['html'], $entetes);
+            if (!$ok[$d]) { $derniereErreur = 'mail() a refusé — configurez le SMTP dans Paramètres'; }
+        }
     }
     $tous = !in_array(false, $ok, true);
     Db::exec('UPDATE ceo_rapport_run SET statut = ?, envoye_a = ? WHERE id = ?',
         [$tous ? 'envoye' : $run['statut'], json_encode(array_keys(array_filter($ok))), $runId]);
-    journalAdd('CEO', 'Rapport', $rep['nom'], $tous ? 'Envoyé à ' . implode(', ', $dests) : 'Envoi partiel/échoué — ' . implode(', ', array_keys(array_filter($ok, fn ($v) => !$v))));
+    journalAdd('CEO', 'Rapport', $rep['nom'], $tous ? 'Envoyé (' . ($viaSmtp ? 'SMTP' : 'mail()') . ') à ' . implode(', ', $dests)
+        : 'Envoi échoué — ' . ($derniereErreur ?? implode(', ', array_keys(array_filter($ok, fn ($v) => !$v)))));
     return ['ok' => $tous, 'envoyes' => array_keys(array_filter($ok)),
         'echecs' => array_keys(array_filter($ok, fn ($v) => !$v)),
-        'note' => $tous ? null : 'mail() a refusé — vérifier la configuration SMTP du serveur'];
+        'via' => $viaSmtp ? 'smtp' : 'mail',
+        'note' => $tous ? null : $derniereErreur];
 }
 
 /* --- Endpoints -------------------------------------------------------------- */
@@ -638,4 +708,53 @@ function ep_rapports_cron(): array
             'envoi' => $env ? ($env['ok'] ? 'envoyé' : ($env['error'] ?? 'échec')) : 'non dû'];
     }
     return ['ok' => true, 'heure' => $h, 'faits' => $faits];
+}
+
+/* --- Machine d'envoi (SMTP) — réglages dans Paramètres ---------------------- */
+
+/** GET /parametres/smtp — l'état, jamais le mot de passe. */
+function ep_smtp(): array
+{
+    return Smtp::statut();
+}
+
+/** PUT /parametres/smtp — hôte, port, sécurité, utilisateur, mot de passe, expéditeur. */
+function wr_smtp(): array
+{
+    $b = body();
+    $cur = setting('smtp');
+    if (!is_array($cur)) { $cur = []; }
+    foreach (['hote', 'utilisateur', 'expediteur'] as $k) {
+        if (array_key_exists($k, $b)) { $cur[$k] = trim((string) $b[$k]); }
+    }
+    if (isset($b['port']) && is_numeric($b['port'])) { $cur['port'] = max(1, min(65535, (int) $b['port'])); }
+    if (isset($b['securite']) && in_array($b['securite'], ['ssl', 'tls', 'aucune'], true)) { $cur['securite'] = $b['securite']; }
+    // Le mot de passe n'est réécrit que s'il est saisi — un champ vide garde
+    // l'ancien (l'écran ne le relit jamais, il ne peut pas le renvoyer).
+    if (isset($b['motDePasse']) && (string) $b['motDePasse'] !== '') { $cur['motDePasse'] = (string) $b['motDePasse']; }
+    if (!empty($b['effacerMotDePasse'])) { unset($cur['motDePasse']); }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['smtp', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Paramètre', '—', 'Machine d’envoi SMTP mise à jour (' . ($cur['hote'] ?? '—') . ')');
+    return ['ok' => true] + Smtp::statut();
+}
+
+/** POST /parametres/smtp/test {a} — un email d'essai, verdict honnête. */
+function wr_smtp_test(): array
+{
+    $b = body();
+    $a = trim((string) ($b['a'] ?? ''));
+    if (!filter_var($a, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(422);
+        return ['ok' => false, 'error' => 'adresse de test invalide'];
+    }
+    if (!Smtp::configured()) {
+        return ['ok' => false, 'error' => 'SMTP non configuré — renseignez au moins l’hôte et l’expéditeur'];
+    }
+    $ok = Smtp::envoyer($a, 'Cockpit — test d’envoi SMTP',
+        '<p>Ce message confirme que la machine d’envoi du cockpit fonctionne.</p>'
+        . '<p style="color:#6E645A;font-size:12px">Envoyé le ' . date('d/m/Y à H:i') . ' depuis les Paramètres.</p>');
+    journalAdd('CEO', 'Paramètre', '—', $ok ? 'Test SMTP réussi vers ' . $a : 'Test SMTP échoué — ' . (Smtp::$lastError ?? '?'));
+    return $ok ? ['ok' => true, 'message' => 'Envoyé à ' . $a . ' — vérifiez la boîte (et les spams).']
+        : ['ok' => false, 'error' => Smtp::$lastError ?? 'échec sans détail'];
 }
