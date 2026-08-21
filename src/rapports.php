@@ -348,8 +348,19 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $dist[(int) $note] = ($dist[(int) $note] ?? 0) + 1;
                     if ((int) $note >= 5) { $exemplaires[] = $t; }
                 }
+                // La PHOTO de chaque tâche exemplaire, comme pour les écarts :
+                // on montre ce qui a été bien fait, pas seulement son intitulé.
+                // Bornée à quatre par magasin — au-delà, l'email pèserait
+                // plusieurs mégaoctets pour des félicitations.
+                $fiches = [];
+                foreach (array_slice($exemplaires, 0, 4) as $t) {
+                    if ((string) ($t['shopId'] ?? '') === '') { continue; }
+                    $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
+                        (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''));
+                    if ($f !== '') { $fiches[] = $f; }
+                }
                 $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
-                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv)];
+                    $notees > 0 ? round($somme / $notees, 1) : null, $dist, $exemplaires, $niv, $fiches)];
             }
             break;
         }
@@ -1277,7 +1288,8 @@ function rapPdfRendu(string $html): ?string
  * tableau — ni SVG ni CSS externe, que Gmail retirerait.
  */
 function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
-                      ?float $moyenne, array $dist, array $exemplaires, array $niveaux): string
+                      ?float $moyenne, array $dist, array $exemplaires, array $niveaux,
+                      array $fichesExemplaires = []): string
 {
     $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
     $F = "font-family:'Segoe UI',Arial,sans-serif";
@@ -1346,6 +1358,13 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                 . '<span style="color:#C9A227;font-weight:700">5/5</span> &middot; ' . $e($t['tache'] ?? 'Tâche')
                 . '<span style="color:#8b8177"> — le ' . $e(substr((string) ($t['date'] ?? ''), 8, 2) . '/' . substr((string) ($t['date'] ?? ''), 5, 2)) . '</span>'
                 . '</div>';
+        }
+        if ($fichesExemplaires !== []) {
+            $h .= '<div style="padding-top:8px">' . rapFichesGrille($fichesExemplaires) . '</div>';
+            if (count($exemplaires) > count($fichesExemplaires)) {
+                $h .= '<div style="' . $F . ';font-size:10.5px;color:#8b8177;padding-top:2px">Photos limitées aux '
+                    . count($fichesExemplaires) . ' premières — les autres se consultent dans le cockpit.</div>';
+            }
         }
         $h .= '</td></tr></table>';
     }
@@ -1719,7 +1738,11 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
 
     $exp = '';
     if ($note !== null) {
-        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><b style="color:' . ($note <= 2 ? '#E0261A' : '#C17A2A') . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
+        // La couleur de la note suit les niveaux de validation : doré pour
+        // l'exemplaire, vert pour le conforme — une fiche 5/5 ne doit pas
+        // porter la couleur d'un écart.
+        $coulN = $note >= 5 ? '#C9A227' : ($note >= 4 ? '#2d7a3e' : ($note === 3 ? '#C17A2A' : '#E0261A'));
+        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><b style="color:' . $coulN . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
     }
     if (trim($commentaire) !== '') {
         $exp .= '<div style="' . $F . ';font-size:11px;color:#4a443c;padding:2px 0;line-height:1.45">' . $e(mb_substr($commentaire, 0, 260)) . '</div>';
