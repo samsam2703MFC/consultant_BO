@@ -1155,7 +1155,10 @@ function rapCompositionRep(array $b): array
         'blocs' => json_encode($blocs),
         'modes' => json_encode(is_array($b['modes'] ?? null) ? $b['modes'] : []),
         'magasins' => json_encode(array_values(array_filter((array) ($b['magasins'] ?? []), 'is_string'))),
-        'periode' => in_array($b['periode'] ?? '', ['hier', 'semaine-passee', 'mois-en-cours', 'mois-passe', 'libre'], true) ? $b['periode'] : 'semaine-passee',
+        // Sans période explicite, la fenêtre de données SUIT LA CADENCE du
+        // rapport (quotidien → la veille, hebdo → semaine passée, mensuel →
+        // mois passé) — c'est rapPeriode() qui tranche sur la fréquence.
+        'periode' => in_array($b['periode'] ?? '', ['hier', 'semaine-passee', 'mois-en-cours', 'mois-passe', 'libre'], true) ? $b['periode'] : null,
         'periode_du' => (string) ($b['du'] ?? '') ?: null,
         'periode_au' => (string) ($b['au'] ?? '') ?: null,
         'destinataires' => json_encode(array_values(array_filter((array) ($b['destinataires'] ?? []), fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)))),

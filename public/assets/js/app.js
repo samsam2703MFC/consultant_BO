@@ -7253,10 +7253,10 @@ class App {
     const rcMags = rc.mags || {};
     const slugsOn = Object.keys(rcBlocs).filter(sl => rcBlocs[sl]);
     const magsOn = Object.keys(rcMags).filter(n2 => rcMags[n2]);
-    const composition = () => ({
-      blocs: slugsOn, modes: rcModes, magasins: magsOn,
-      periode: rc.periode || 'semaine-passee', du: rc.du || '', au: rc.au || '',
-    });
+    // La fenêtre de données n'est plus choisie à l'écran : elle suit la
+    // cadence (quotidien → la veille, hebdo → semaine passée, mensuel → mois
+    // passé). L'aperçu sans planification lit la semaine passée.
+    const composition = () => ({ blocs: slugsOn, modes: rcModes, magasins: magsOn });
     const ordreLev = Object.keys((rd && rd.leviers) || {});
     const groupes = [];
     ordreLev.forEach(lev => {
@@ -7285,11 +7285,6 @@ class App {
         toggle: () => rcSet({ mags: Object.assign({}, rcMags, { [st2.nom]: !rcMags[st2.nom] }) }) })),
       tous: magsOn.length === 0,
       toutLeReseau: () => rcSet({ mags: {} }),
-      periode: rc.periode || 'semaine-passee',
-      periodes: [['hier', 'Hier'], ['semaine-passee', 'Semaine passée'], ['mois-en-cours', 'Mois en cours'], ['mois-passe', 'Mois passé'], ['libre', 'Libre']]
-        .map(p => ({ val: p[0], nom: p[1], on: (rc.periode || 'semaine-passee') === p[0], pick: () => rcSet({ periode: p[0] }) })),
-      du: rc.du || '', au: rc.au || '',
-      setDu: e => rcSet({ du: e.target.value }), setAu: e => rcSet({ au: e.target.value }),
       recap: slugsOn.length + ' KPI · ' + (magsOn.length === 0 ? 'tout le réseau' : magsOn.length + ' magasin(s)'),
       nom: rc.nom || '', setNom: e => rcSet({ nom: e.target.value }),
       poste: rc.poste || '', setPoste: e => rcSet({ poste: e.target.value }),
