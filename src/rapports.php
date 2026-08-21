@@ -23,6 +23,12 @@ declare(strict_types=1);
  * (résumé + HTML complet, relisible depuis l'écran Reporting).
  */
 
+/* Le poids d'images qu'un rapport peut porter, en caractères de HTML (les
+   photos y sont en data URI, donc en base64 : ~1,33 caractère par octet).
+   Six millions ≈ 4,5 Mo d'images — un email lourd mais qui passe partout, et
+   MEDIUMTEXT en base tient seize fois cela. */
+const RAP_POIDS_FICHES = 6000000;
+
 const RAP_LEVIERS = [
     'trafic'     => ['nom' => 'Trafic',            'couleur' => '#6366f1'],
     'recurrence' => ['nom' => 'Récurrence',        'couleur' => '#ec4899'],
@@ -375,7 +381,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $ts = rapTaches($periode['du'], $periode['au']);
             if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
             $perim = (array) ($periode['magasins'] ?? []);
-            $fiches = 0; $cartesParMag = [];
+            $fiches = 0; $poidsFiches = 0; $sautees = 0; $cartesParMag = [];
             foreach ($ts as $t) {
                 if ($perim !== [] && !in_array((string) $t['magasin'], $perim, true)) { continue; }
                 $note = $t['note'] ?? null;
@@ -383,17 +389,26 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $b['lignes'][] = [$t['magasin'], '« ' . ($t['tache'] ?? ('Tâche #' . ($t['taskId'] ?? '?'))) . ' » notée ' . $note . '/5 le '
                         . substr((string) ($t['date'] ?? ''), 5) . ($t['comment'] ? ' — ' . mb_substr((string) $t['comment'], 0, 160) : ''), (int) $note <= 2];
                     // La FICHE : photo annotée des repères + référence attendue.
-                    // Bornée à 8 — au-delà, le rapport le dit plutôt que de
-                    // peser plusieurs mégaoctets dans une boîte mail.
-                    if ($fiches < 8 && ($t['shopId'] ?? '') !== '') {
+                    // TOUTES les tâches sous le seuil en portent une — un écart
+                    // sans photo se conteste, avec photo il se corrige. La
+                    // seule borne est le POIDS : au-delà de RAP_POIDS_FICHES
+                    // d'images, l'email ne passerait plus, et le rapport dit
+                    // alors combien de fiches il a laissées de côté.
+                    if (($t['shopId'] ?? '') !== '' && $poidsFiches < RAP_POIDS_FICHES) {
                         $fiche = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                             (string) ($t['tache'] ?? ''), (string) $t['magasin'], (int) $note, (string) ($t['comment'] ?? ''));
-                        if ($fiche !== '') { $cartesParMag[(string) $t['magasin']][] = $fiche; $fiches++; }
-                    } elseif ($fiches === 8) {
-                        $b['infos'][] = [(string) $t['magasin'], 'Photos limitées aux 8 premières tâches — le reste se consulte dans le cockpit.'];
-                        $fiches++;
+                        if ($fiche !== '') {
+                            $cartesParMag[(string) $t['magasin']][] = $fiche;
+                            $fiches++; $poidsFiches += strlen($fiche);
+                        }
+                    } elseif (($t['shopId'] ?? '') !== '') {
+                        $sautees++;
                     }
                 }
+            }
+            if ($sautees > 0) {
+                $b['infos'][] = ['', $sautees . ' fiche(s) photo laissée(s) de côté — le rapport atteignait '
+                    . round(RAP_POIDS_FICHES / 1000000) . ' Mo d’images ; elles se consultent dans le cockpit.'];
             }
             // Deux cartes par rangée, magasin par magasin — la grille A4.
             foreach ($cartesParMag ?? [] as $mag => $cartes) {
