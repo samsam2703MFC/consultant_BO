@@ -545,7 +545,7 @@ function rapportGenerer(array $rep): array
     $resume = $nPoints . ' point(s) à traiter'
         . ($nMotifs ? ' · ' . $nMotifs . ' bloc(s) sans donnée' : '')
         . ' — ' . $periode['label'];
-    $vide = $nPoints === 0 && !array_filter($sections, fn ($s) => $s['infos'] !== []);
+    $vide = $nPoints === 0 && !array_filter($sections, fn ($s) => $s['infos'] !== [] || $s['htmlPar'] !== []);
 
     $html = rapportHtml($rep, $sections, $periode, $seuils, $resume);
     Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html)
