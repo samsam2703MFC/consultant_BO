@@ -2898,69 +2898,47 @@ function tplReporting(c, x){
   <div data-screen="reporting" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
-        <div style="font-size:13px;font-weight:500">Rapports récurrents — génération et envoi automatiques (PDF)</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:11px">
-          <select ${x.C(c.setRepFFreq)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">${opts(c.repFFreqOpts, c.repFFreq)}</select>
-          <select ${x.C(c.setRepFType)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">${opts(c.repFTypeOpts, c.repFType)}</select>
-          <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
-            ${c.repEtatBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${b.nom}</button>`).join('')}
-          </div>
-          <span style="margin-left:auto;font-size:11.5px;color:var(--color-text-muted)">${esc(c.repCount)}</span>
-        </div>
+        <div style="font-size:13px;font-weight:500">Générateur de rapports — par levier, à seuils</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : cron horaire sur <code>/api/cockpit/rapports/cron?jeton=…</code> (réglage <code>rapportsJeton</code>).</div>
       </div>
+      ${c.rapGen.chargement ? `<div style="padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Lecture des rapports…</div>`
+        : (c.rapGen.indispo ? `<div style="padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.rapGen.indispo)}</div>` : `
       <div style="display:flex;flex-direction:column">
-        ${c.repVide ? `<div style="padding:18px;font-size:12px;color:var(--color-text-muted)">Aucun rapport ne correspond à ces filtres.</div>` : ''}
-        ${c.repRows.map(r => `
-          <div style="display:flex;flex-direction:column;gap:10px;padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div style="flex:1;min-width:220px">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                  <span style="font-size:13px;font-weight:500">${esc(r.nom)}</span>
-                  <span style="font-size:11px;color:var(--color-text-muted)">${esc(r.type)}</span>
-                  <span ${x.A(r.toggleActif)} style="${r.actifSt}">${r.actifTxt}</span>
-                </div>
-                <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(r.desc)}</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <select ${x.C(r.setFreq)} style="${selCss}">${opts(['Hebdomadaire', 'Mensuel', 'Trimestriel', 'Annuel'], r.freq)}</select>
-                <div style="font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">Dernier : ${r.dernier}</div>
-                <div style="display:flex;gap:6px">
-                  <button ${x.A(r.gen)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">PDF</button>
-                  <button ${x.A(r.send)} style="border:none;border-radius:7px;padding:6px 10px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Envoyer</button>
-                </div>
-              </div>
+        ${c.rapGen.lignes.map(r => `
+          <div style="display:flex;flex-direction:column;gap:8px;padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:500">${esc(r.nom)}</span>
+              <span style="font-size:11px;color:var(--color-text-muted)">${esc(r.poste)} · ${esc(r.freq)}</span>
+              <span ${x.A(r.toggleActif)} style="${r.actifSt}">${r.actifTxt}</span>
+              <span style="margin-left:auto;font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${esc(r.dernier)}</span>
+              ${r.dernierStatut ? `<span style="${r.dernierSt}">${esc(r.dernierStatut)}</span>` : ''}
+              ${r.ouvrirUrl ? `<a href="${r.ouvrirUrl}" target="_blank" rel="noopener" style="font-size:11.5px;font-weight:500;color:var(--color-primary)">Ouvrir</a>` : ''}
+              <button ${x.A(r.gen)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:6px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${esc(r.genTxt)}</button>
+              <button ${x.A(r.env)} style="border:none;border-radius:7px;padding:6px 10px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Envoyer</button>
             </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-              <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:240px">
-                <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);width:20px">À</span>
-                <select ${x.C(r.setDest)} style="flex:1;min-width:0;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 7px;background:var(--color-surface);color:var(--color-text)">
-                  ${opts(c.repPeople, r.dest, o => o.val, o => esc(o.nom))}
-                </select>
-                <span style="${r.destSt}">${r.destEmail}</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:240px">
-                <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);width:20px">Cc</span>
-                <select ${x.C(r.setCc)} style="flex:1;min-width:0;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 7px;background:var(--color-surface);color:var(--color-text)">
-                  <option value=""${r.cc === '' ? ' selected' : ''}>— Aucune copie —</option>
-                  ${opts(c.repPeople, r.cc, o => o.val, o => esc(o.nom))}
-                </select>
-                <span style="${r.ccSt}">${r.ccEmail}</span>
-              </div>
+            ${r.resume ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(r.resume)}</div>` : ''}
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              ${r.blocs.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;border:0.5px solid var(--color-border-tertiary);border-radius:999px;padding:2px 8px;color:var(--color-text-muted)"><i style="width:7px;height:7px;border-radius:2px;background:${b.c};display:inline-block"></i>${esc(b.nom)}</span>`).join('')}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Postes</span>
-              <div style="display:flex;gap:4px;flex-wrap:wrap">
-                ${r.postes.map(p => `<button ${x.A(p.toggle)} title="${esc(p.label)}" style="${p.st}">${p.tag}</button>`).join('')}
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">URL</span>
-              <code style="flex:1;min-width:260px;font-size:11px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:6px;padding:5px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.url)}</code>
-              <button ${x.A(r.copy)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Copier</button>
-              <button ${x.A(r.prev)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Aperçu PDF</button>
+              <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">À</span>
+              <input value="${esc(r.destTxt)}" ${x.I(r.setDest)} placeholder="emails séparés par des virgules" style="flex:1;min-width:240px;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+              <button ${x.A(r.saveDest)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Enregistrer</button>
             </div>
           </div>`).join('')}
       </div>
+      ${c.rapGen.runs.length ? `
+      <div style="padding:12px 18px">
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Dernières générations</div>
+        ${c.rapGen.runs.map(u => `
+          <div style="display:flex;gap:10px;align-items:baseline;padding:3px 0;font-size:12px;flex-wrap:wrap">
+            <span style="color:var(--color-text-muted);white-space:nowrap">${esc(u.le)}</span>
+            <span style="font-weight:500">${esc(u.rapport)}</span>
+            <span style="${u.st}">${esc(u.statut)}</span>
+            <span style="color:var(--color-text-muted)">${esc(u.resume)}</span>
+            <a href="${u.url}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11.5px;font-weight:500;color:var(--color-primary)">ouvrir</a>
+          </div>`).join('')}
+      </div>` : ''}`)}
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
       <div style="font-size:13px;font-weight:500;margin-bottom:12px">Alertes automatiques — push + email</div>

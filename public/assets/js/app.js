@@ -1894,6 +1894,15 @@ class App {
         this.setState(s => (s.exReseau && s.exReseau.per === per)
           ? { exReseau: { per, chargement: false, d: d || null } } : {}); });
   }
+  /** Rapports réels (table ceo_rapport) : définitions + dernières générations. */
+  rapCharge(force){
+    if (this._rapEnCours) return;
+    if (!force && this.state.rapGen) return;
+    this._rapEnCours = true;
+    if (!this.state.rapGen) this.setState({ rapGen: { chargement: true, d: null } });
+    readOne('/rapports').then(d => { this._rapEnCours = false;
+      this.setState({ rapGen: { chargement: false, d: d || null } }); });
+  }
   /** KPIs mensuels de l'année (clients/jour, ticket moyen, articles/ticket). */
   mgAnCharge(){
     if (this._mgAnEnCours) return;
@@ -6884,6 +6893,65 @@ class App {
       return { store: s.nom, etat: 'Statut non suivi', etatCol: 'var(--color-text-muted)', url,
         copy: () => { navigator.clipboard && navigator.clipboard.writeText('https://' + url); this.notify('Lien copié — ' + s.nom); },
         relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
+    // --- générateur de rapports RÉEL (table ceo_rapport, HTML par levier).
+    // L'ancienne liste de démonstration a cédé la place : ces rapports-ci se
+    // génèrent, se relisent (HTML du run) et s'envoient vraiment.
+    const rz = S.rapGen;
+    if (!rz) { setTimeout(() => this.rapCharge(), 0); }
+    const rd = rz && rz.d;
+    const JSEM = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    const freqLabel = r => r.frequence === 'quotidien' ? 'Quotidien · ' + r.heure + ' h'
+      : r.frequence === 'hebdo' ? 'Hebdo · ' + (JSEM[r.jour] || 'lundi') + ' ' + r.heure + ' h'
+      : 'Mensuel · le ' + r.jour + ' à ' + r.heure + ' h';
+    const stRun = s3 => 'display:inline-block;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:600;'
+      + (s3 === 'envoye' ? 'background:rgba(45,122,62,0.10);color:#2d7a3e'
+        : s3 === 'vide' ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
+        : s3 === 'erreur' ? 'background:rgba(141,29,44,0.12);color:#8D1D2C'
+        : 'background:#FBEFE0;color:#8a5a13');
+    common.rapGen = {
+      chargement: !rz || rz.chargement,
+      indispo: rz && !rz.chargement && !rd ? 'La lecture de /rapports a échoué — voir Diagnostic API.' : '',
+      lignes: ((rd && rd.rapports) || []).map(r => {
+        const defs = (rd && rd.blocs) || {}, levs = (rd && rd.leviers) || {};
+        const destTxt = (S.rapDestTxt && S.rapDestTxt[r.id] != null) ? S.rapDestTxt[r.id] : (r.destinataires || []).join(', ');
+        const busy = !!(S.rapBusy && S.rapBusy[r.id]);
+        const setBusy = v => this.setState(s2 => ({ rapBusy: Object.assign({}, s2.rapBusy, { [r.id]: v }) }));
+        return {
+          nom: r.nom, poste: r.poste,
+          freq: freqLabel(r) + (r.parMagasin ? ' · un chapitre par magasin' : ''),
+          actifTxt: r.actif ? 'Actif' : 'Inactif',
+          actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;'
+            + (r.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+          toggleActif: () => this.api('PUT', '/rapports/' + r.id, { actif: !r.actif }).then(() => this.rapCharge(true)),
+          dernier: r.dernier ? ('Dernier : ' + r.dernier.le) : 'Jamais généré',
+          dernierStatut: r.dernier ? (r.dernier.statut || '') : '',
+          dernierSt: stRun(r.dernier ? r.dernier.statut : ''),
+          resume: r.dernier ? (r.dernier.resume || '') : '',
+          ouvrirUrl: r.dernier ? (API_BASE + '/rapports/run/' + r.dernier.runId) : '',
+          genTxt: busy ? 'Génération…' : 'Générer',
+          gen: () => { if (busy) return; setBusy(true);
+            this.api('POST', '/rapports/' + r.id + '/generer', {}).then(g => { setBusy(false);
+              this.notify(g && g.resume ? 'Généré — ' + g.resume : 'Génération échouée — voir Diagnostic API');
+              this.rapCharge(true);
+              if (g && g.runId) { try { window.open(API_BASE + '/rapports/run/' + g.runId, '_blank'); } catch (e2) {} } }); },
+          env: () => { if (busy) return; setBusy(true);
+            this.api('POST', '/rapports/' + r.id + '/envoyer', {}).then(g => { setBusy(false);
+              this.notify(g && g.ok ? 'Envoyé à ' + (g.envoyes || []).join(', ')
+                : 'Non envoyé — ' + ((g && (g.error || g.note)) || 'échec'));
+              this.rapCharge(true); }); },
+          blocs: (r.blocs || []).map(sl => { const d2 = defs[sl] || { levier: 'transverse', nom: sl };
+            const lv = levs[d2.levier] || { couleur: '#999999' };
+            return { nom: d2.nom, c: lv.couleur }; }),
+          destTxt,
+          setDest: e => this.setState(s2 => ({ rapDestTxt: Object.assign({}, s2.rapDestTxt, { [r.id]: e.target.value }) })),
+          saveDest: () => this.api('PUT', '/rapports/' + r.id,
+            { destinataires: destTxt.split(/[,;]/).map(s4 => s4.trim()).filter(Boolean) })
+            .then(() => { this.notify('Destinataires enregistrés'); this.rapCharge(true); }),
+        };
+      }),
+      runs: ((rd && rd.runs) || []).map(u => ({ le: u.le, rapport: u.rapport, statut: u.statut,
+        resume: u.resume || '', st: stRun(u.statut), url: API_BASE + '/rapports/run/' + u.runId })),
+    };
     const pById = id => D.people.find(p => p.id === id);
     common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role + (p.email ? '' : ' (adresse manquante)') }));
     // Ordre FIGÉ, indépendant du menu : `postes_json` stocke « p1 », « p3 »…

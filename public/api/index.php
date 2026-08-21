@@ -16,6 +16,7 @@ require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
+require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/connecteurs.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -75,6 +76,9 @@ function route(string $method, string $path): mixed
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
             $path === '/connecteurs'                   => ep_connecteurs(),
+            $path === '/rapports'                      => ep_rapports(),
+            $path === '/rapports/cron'                 => ep_rapports_cron(),
+            preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             $path === '/reputation'                    => ep_reputation(),
             $path === '/reputation/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
@@ -155,6 +159,10 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne_suppr((int) $m[1]); }
     if ($method === 'PUT' && $path === '/marketing/types/ordre') { return wr_mkt_types_ordre(); }
+    // --- générateur de rapports (par levier, à seuils)
+    if ($method === 'PUT' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_patch((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/rapports/(\d+)/generer$#', $path, $m)) { return wr_rapport_generer((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/rapports/(\d+)/envoyer$#', $path, $m)) { return wr_rapport_envoyer((int) $m[1]); }
     if ($method === 'POST' && $path === '/reputation/sync') { return wr_reputation_sync(); }
     if ($method === 'PUT' && preg_match('#^/reputation/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
