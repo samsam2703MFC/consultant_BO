@@ -3504,6 +3504,71 @@ function tplParams(c, x){
         </div>`}
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px">
+          <div style="font-size:13px;font-weight:500">Cadence dynamique des contrôles</div>
+          <span ${x.A(c.cad.toggle)} style="${c.cad.actifSt}">${c.cad.actifTxt}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Une tâche bien tenue se contrôle moins souvent ; une tâche qui glisse revient au quotidien. La cadence se calcule par tâche et par magasin, sur les notes réelles du panel.</div>
+        ${c.cad.chargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Lecture des règles…</div>` : `
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Contrôles consécutifs
+            <input value="${esc(c.cad.serie)}" ${x.C(c.cad.setSerie)} style="display:block;width:64px;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);text-align:center;margin-top:4px">
+          </label>
+          <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Moyenne exigée (≥)
+            <input value="${esc(c.cad.moyenneMin)}" ${x.C(c.cad.setMoyenneMin)} style="display:block;width:64px;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);text-align:center;margin-top:4px">
+          </label>
+          <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em" title="Une note sous cette valeur remet la série de promotion à zéro">Casse la série (&lt;)
+            <input value="${esc(c.cad.noteCasse)}" ${x.C(c.cad.setNoteCasse)} style="display:block;width:64px;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);text-align:center;margin-top:4px">
+          </label>
+          <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em" title="Une note à cette valeur ou en dessous ramène la tâche au quotidien, sans étape">Rechute (≤)
+            <input value="${esc(c.cad.noteRechute)}" ${x.C(c.cad.setNoteRechute)} style="display:block;width:64px;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);text-align:center;margin-top:4px">
+          </label>
+          <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Paliers (jours)
+            <input value="${esc(c.cad.paliersTxt)}" ${x.C(c.cad.setPaliers)} placeholder="1, 2, 3, 5, 7" style="display:block;width:120px;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);text-align:center;margin-top:4px">
+          </label>
+          <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Périmètre
+            <select ${x.C(c.cad.setPerimetre)} style="display:block;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);margin-top:4px">
+              <option value="par-magasin"${c.cad.perimetre === 'par-magasin' ? ' selected' : ''}>Par magasin</option>
+              <option value="reseau"${c.cad.perimetre === 'reseau' ? ' selected' : ''}>Réseau entier</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:11px;flex-wrap:wrap">
+          ${c.cad.paliersVis.map((pj, i) => `${i ? '<span style="color:var(--color-text-muted)">→</span>' : ''}<span style="display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;border-radius:8px;border:${i === 0 ? '1.5px solid var(--color-primary);background:rgba(141,29,44,0.07);color:var(--color-primary)' : '0.5px solid var(--color-border-secondary)'};font-size:12px;font-weight:600">${pj} j</span>`).join('')}
+          <span style="font-size:11px;color:var(--color-text-muted)">maximum ${c.cad.palierMax} jours — une tâche ne sort jamais du radar</span>
+        </div>
+        <div style="border-top:0.5px solid var(--color-border-tertiary);margin:14px 0 12px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <div>
+            <span style="font-size:12.5px;font-weight:500">Plan de contrôle</span>
+            <span style="font-size:11px;color:var(--color-text-muted);margin-left:8px">${esc(c.cad.planInfo)}</span>
+          </div>
+          <button ${x.A(c.cad.recalc)} style="border:none;border-radius:999px;padding:7px 14px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${c.cad.busy ? 'opacity:.6' : ''}">${c.cad.busy ? 'Calcul en cours… (historique API)' : 'Recalculer (' + c.cad.semaines + ' semaines)'}</button>
+        </div>
+        ${c.cad.planLignes.length === 0 ? `<div style="font-size:12px;color:var(--color-text-muted)">${c.cad.busy ? 'Lecture de l’historique des contrôles du panel…' : 'Aucun plan calculé — « Recalculer » lit l’historique des contrôles et pose le palier de chaque tâche.'}</div>` : `
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:640px">
+          <tr>${['Tâche · magasin', '5 derniers', 'Moyenne', 'Cadence', 'Prochain', 'Mouvement'].map(h => `<th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:7px 9px;border-bottom:0.5px solid var(--color-border-secondary)">${h}</th>`).join('')}</tr>
+          ${c.cad.planLignes.map(l => `
+          <tr>
+            <td style="padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px"><b>${esc(l.tache)}</b><br><span style="color:var(--color-text-muted);font-size:11px">${esc(l.magasin)}</span></td>
+            <td style="padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap">${l.notes.map(nn => `<span style="display:inline-flex;width:21px;height:21px;border-radius:5px;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;margin-right:3px;background:${nn.coul}">${nn.n}</span>`).join('')}</td>
+            <td style="padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;font-weight:600">${esc(l.moyenne)} / 5</td>
+            <td style="padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px">${esc(l.cadence)}</td>
+            <td style="padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;${l.du ? 'color:var(--color-primary);font-weight:600' : ''}">${esc(l.prochain)}</td>
+            <td style="padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="${l.mouvSt}">${esc(l.mouvTxt)}</span></td>
+          </tr>`).join('')}
+        </table></div>`}
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Les notes viennent du panel (contrôles réels) ; le palier et la série vivent côté cockpit. Chaque changement de règle est journalisé ; le plan se recalcule sur demande.</div>`}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px">
+          <div style="font-size:13px;font-weight:500">Écriture de la planification — contrat API à prévoir côté panel</div>
+          <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500;background:rgba(193,122,42,0.16);color:#8a5a13">manque API</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;text-wrap:pretty">${esc(c.cad.apiNote)}</div>
+        <pre style="margin:0;background:var(--color-background-secondary);border-radius:10px;padding:13px 15px;font-size:11.5px;line-height:1.55;overflow-x:auto;color:var(--color-text)">${esc(c.cad.apiPre)}</pre>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Modèles d'email de relance</div>
         <div style="display:flex;flex-direction:column;gap:12px">
           ${c.paramTpls.map(t => `

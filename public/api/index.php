@@ -19,6 +19,7 @@ require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/kpis.php';
+require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -81,6 +82,7 @@ function route(string $method, string $path): mixed
             $path === '/connecteurs'                   => ep_connecteurs(),
             $path === '/rapports'                      => ep_rapports(),
             $path === '/kpi-defs'                      => ep_kpi_referentiel(),
+            $path === '/cadence'                       => ep_cadence(),
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
@@ -169,6 +171,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/kpi-defs') { return wr_kpi(); }
     if ($method === 'PUT' && preg_match('#^/kpi-defs/(\d+)$#', $path, $m)) { return wr_kpi_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/kpi-defs/(\d+)$#', $path, $m)) { return wr_kpi_suppr((int) $m[1]); }
+    // --- cadence dynamique des contrôles (règles + plan calculé)
+    if ($method === 'PUT' && $path === '/cadence') { return wr_cadence(); }
+    if ($method === 'POST' && $path === '/cadence/plan') { return wr_cadence_plan(); }
     // --- machine d'envoi SMTP (identifiants côté serveur uniquement)
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }

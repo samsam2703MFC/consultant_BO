@@ -7727,6 +7727,73 @@ class App {
             else { this.notify((r2 && r2.error) || 'Création refusée'); } });
       },
     };
+
+    // --- cadence dynamique des contrôles : règles + plan calculé (maquette
+    // validée). Les notes viennent du panel ; les règles et le plan vivent
+    // côté serveur (ceo_app_setting) — l'écran ne fige rien.
+    if (!this._cadenceLue) { this._cadenceLue = true; readOne('/cadence').then(d2 => { this.D.cadence = d2 || null; this.setState({}); }); }
+    const cdD = this.D.cadence;
+    const cdReg = (cdD && cdD.regles) || {};
+    const cdPlan = (cdD && cdD.plan) || null;
+    const cdMaj = (patch, msg) => this.api('PUT', '/cadence', patch)
+      .then(r2 => { if (r2 && r2.regles && this.D.cadence) { this.D.cadence.regles = r2.regles; }
+        this.notify(msg || 'Règle de cadence enregistrée'); this.setState({}); });
+    const cdDate = d3 => d3 ? d3.slice(8, 10) + '/' + d3.slice(5, 7) : '—';
+    const cdCoul = { 5: '#1F7A3D', 4: '#6FA84C', 3: '#D9A226', 2: '#C64B22', 1: '#A31220' };
+    const cdPaliers = (cdReg.paliers && cdReg.paliers.length ? cdReg.paliers : [1, 2, 3, 5, 7]);
+    const cdMouv = m => m === 'espacee' ? ['↗ espacée', 'background:rgba(45,122,62,0.12);color:#2d7a3e']
+      : m === 'resserree' ? ['↘ resserrée', 'background:rgba(193,75,34,0.14);color:#a34012']
+      : m === 'rechute' ? ['↘ rechute', 'background:rgba(163,18,32,0.13);color:#A31220']
+      : ['→ stable', 'background:var(--color-background-secondary);color:var(--color-text-muted)'];
+    common.cad = {
+      chargement: !cdD,
+      actifTxt: cdReg.actif === false ? 'Désactivée' : 'Activée',
+      actifSt: 'display:inline-block;padding:3px 11px;border-radius:999px;font-size:11.5px;font-weight:500;cursor:pointer;'
+        + (cdReg.actif === false ? 'background:var(--color-background-secondary);color:var(--color-text-muted)' : 'background:rgba(45,122,62,0.12);color:#2d7a3e'),
+      toggle: () => cdMaj({ actif: cdReg.actif === false }, 'Cadence dynamique ' + (cdReg.actif === false ? 'activée' : 'désactivée')),
+      serie: cdReg.serie != null ? String(cdReg.serie) : '5',
+      moyenneMin: cdReg.moyenneMin != null ? String(cdReg.moyenneMin).replace('.', ',') : '4,5',
+      noteCasse: cdReg.noteCasse != null ? String(cdReg.noteCasse) : '4',
+      noteRechute: cdReg.noteRechute != null ? String(cdReg.noteRechute) : '3',
+      setSerie: e => cdMaj({ serie: e.target.value }, 'Série requise : ' + e.target.value + ' contrôles'),
+      setMoyenneMin: e => cdMaj({ moyenneMin: e.target.value }, 'Moyenne exigée : ' + e.target.value),
+      setNoteCasse: e => cdMaj({ noteCasse: e.target.value }, 'Une note < ' + e.target.value + ' casse la série'),
+      setNoteRechute: e => cdMaj({ noteRechute: e.target.value }, 'Rechute : note ≤ ' + e.target.value + ' → quotidien'),
+      paliersTxt: cdPaliers.join(', '),
+      setPaliers: e => cdMaj({ paliers: e.target.value }, 'Paliers : ' + e.target.value + ' jours'),
+      paliersVis: cdPaliers,
+      palierMax: cdPaliers[cdPaliers.length - 1],
+      perimetre: cdReg.perimetre || 'par-magasin',
+      setPerimetre: e => cdMaj({ perimetre: e.target.value },
+        e.target.value === 'reseau' ? 'Cadence calculée sur le réseau entier' : 'Cadence calculée par magasin'),
+      semaines: 4,
+      busy: !!S.cadBusy,
+      planInfo: cdPlan ? 'calculé le ' + cdPlan.calculeLe + ' — ' + cdPlan.controlesLus + ' contrôle(s) lus sur '
+        + cdPlan.semaines + ' semaine(s)' + (cdPlan.partiel ? ' · PARTIEL (budget API atteint)' : '') : '',
+      recalc: () => { if (this.state.cadBusy) { return; }
+        this.setState({ cadBusy: true });
+        this.api('POST', '/cadence/plan', { semaines: 4 }).then(r2 => {
+          if (r2 && r2.plan && this.D.cadence) { this.D.cadence.plan = r2.plan; }
+          this.setState({ cadBusy: false });
+          this.notify(r2 && r2.plan ? 'Plan recalculé — ' + r2.plan.lignes.length + ' tâche(s) suivie(s)' : 'Recalcul impossible');
+          this.log('Paramètre', '—', 'Cadence dynamique — plan de contrôle recalculé'); }); },
+      planLignes: ((cdPlan && cdPlan.lignes) || []).map(l => {
+        const [mTxt, mSt] = cdMouv(l.mouvement);
+        return { tache: l.tache, magasin: l.magasin,
+          notes: (l.notes || []).map(nn => ({ n: nn.n, coul: cdCoul[nn.n] || '#999999' })),
+          moyenne: String(l.moyenne).replace('.', ','),
+          cadence: l.palierJours + ' j' + (l.palierIdx === 0 ? ' (quotidien)'
+            : l.serieEnCours ? ' · série ' + l.serieEnCours + '/' + (cdReg.serie || 5) : ''),
+          prochain: cdDate(l.prochain) + (l.du ? ' — dû' : ''), du: !!l.du,
+          mouvTxt: mTxt + (l.mouvementDate ? ' (' + cdDate(l.mouvementDate) + ')' : ''),
+          mouvSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;' + mSt };
+      }),
+      apiNote: (cdD && cdD.apiPost && cdD.apiPost.note) || '',
+      apiPre: cdD && cdD.apiPost
+        ? cdD.apiPost.endpoint + '\n\n' + JSON.stringify(cdD.apiPost.corps, null, 2)
+          + '\n\n→ réponse attendue : ' + JSON.stringify(cdD.apiPost.reponse)
+        : '',
+    };
   }
 }
 
