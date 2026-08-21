@@ -690,7 +690,11 @@ function rapVentesFenetre(string $du, string $au): array
             if (!isset($noms[$id]) && $tickets === 0 && $ca <= 0) { continue; }
             $out['magasins'][$noms[$id] ?? ('Magasin ' . $id)] = [
                 'tickets' => $tickets, 'ca' => round($ca, 2),
-                'clientsJour' => round($tickets / $jours, 1),
+                // Aucun ticket sur la fenêtre : « 0 client par jour » se lirait
+                // comme une mesure, alors que c'est une absence — un magasin
+                // qui n'existait pas encore l'an dernier, ou fermé. Rien à
+                // comparer, donc rien à afficher.
+                'clientsJour' => $tickets > 0 ? round($tickets / $jours, 1) : null,
                 'panier' => $tickets > 0 ? round($ca / $tickets, 2) : null];
             $ttTickets += $tickets; $ttCa += $ca;
             if ($tickets > 0) { $actifs++; }
