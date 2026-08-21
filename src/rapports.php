@@ -569,20 +569,23 @@ function rapportGenerer(array $rep): array
         // liste des seuls dépassements. Un bloc sans rendu complet le dit.
         if (($modes[$slug] ?? '') === 'complet') {
             $complet = rapBlocComplet($slug, $seuils, $periode, $filtre);
-            if ($complet !== null) { $b['htmlPar'] = array_merge($complet, $b['htmlPar']); $b['lignes'] = []; }
+            // Les dépassements restent comptés dans la pastille de résumé même
+            // quand le tableau complet remplace leurs lignes.
+            if ($complet !== null) { $b['htmlPar'] = array_merge($complet, $b['htmlPar']); $b['pointsCaches'] = $b['lignes']; $b['lignes'] = []; }
         }
         // Filtre de magasins (compositeur) : les lignes des autres sortent.
         if ($filtre !== []) {
             $b['lignes'] = array_values(array_filter($b['lignes'], fn ($l) => in_array($l[0], $filtre, true)));
             $b['infos'] = array_values(array_filter($b['infos'], fn ($l) => in_array($l[0], $filtre, true)));
             $b['htmlPar'] = array_values(array_filter($b['htmlPar'], fn ($l) => $l[0] === '' || in_array($l[0], $filtre, true)));
+            $b['pointsCaches'] = array_values(array_filter($b['pointsCaches'] ?? [], fn ($l) => in_array($l[0], $filtre, true)));
         }
         if ($b['lignes'] !== [] || $b['infos'] !== [] || $b['htmlPar'] !== [] || $b['motif'] !== null) { $sections[] = $b; }
     }
     $ordre = array_keys(RAP_LEVIERS);
     usort($sections, fn ($a, $b2) => array_search($a['levier'], $ordre, true) <=> array_search($b2['levier'], $ordre, true));
 
-    $nPoints = array_sum(array_map(fn ($s) => count($s['lignes']), $sections));
+    $nPoints = array_sum(array_map(fn ($s) => count($s['lignes']) + count($s['pointsCaches'] ?? []), $sections));
     $nMotifs = count(array_filter($sections, fn ($s) => $s['motif'] !== null));
     $resume = $nPoints . ' point(s) à traiter'
         . ($nMotifs ? ' · ' . $nMotifs . ' bloc(s) sans donnée' : '')
