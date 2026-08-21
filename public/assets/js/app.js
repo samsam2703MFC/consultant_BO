@@ -544,6 +544,7 @@ class App {
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
+      resultatJour: ['Résultat du jour', 'Le compte de résultat d\u2019une journée, magasin par magasin : ventes, coût matière, main-d\u2019œuvre, frais généraux et résultat. Ouvrez une ligne pour la cascade du magasin, sa ventilation par catégorie et la place du jour dans le mois.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
@@ -866,6 +867,9 @@ class App {
     const navDef = [
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
+        // Le résultat du JOUR précède le P&L : c'est ce qu'on regarde le matin,
+        // magasin par magasin, avant de dérouler le mois.
+        ['resultatJour', 'Résultat du jour', 0],
         ['exploitation', 'P&L magasins', 0]]],
       ['Performance magasins', [
         ['magasins', 'Tableau des magasins', 0],
@@ -951,10 +955,10 @@ class App {
 
     this.valsRecherche(common, navDef, goTo, titles);
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', reputation: 'isReput',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1154,6 +1158,8 @@ class App {
     if (common.isExploit) this.valsExploitation(common);
     // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
     if (common.isReput) { this.repCharge(); this.valsReputation(common); }
+    // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
+    if (common.isRJour) { this.rjCharge(); this.valsResultatJour(common); }
     // --- suivi budget magasin
     if (common.isBudget) this.valsBudget(common);
     // --- encodage du budget
@@ -3528,6 +3534,272 @@ class App {
   }
 
   /* --- planogramme : le comptoir, ses emplacements, ses consignes ------------ */
+
+  /* --- résultat du jour ------------------------------------------------------
+   * Une journée, tous les magasins, un compte de résultat par ligne. Ouvrir une
+   * ligne déplie le détail du magasin : cascade du résultat, ventilation par
+   * catégorie, indicateurs de vente et place du jour dans le mois.
+   *
+   * Lecture paresseuse et cache PAR DATE : reculer d'un jour puis revenir ne
+   * redemande rien au panel — chaque date coûte une volée d'appels.
+   */
+  rjCle(){ return this.state.rjDate || ''; }
+  rjCharge(){
+    const cle = this.rjCle();
+    if (!this.D.rjour) { this.D.rjour = {}; }
+    if (this.D.rjour[cle] || this._rjEnCours === cle) { return; }
+    this._rjEnCours = cle;
+    readOne('/exploitation/jour' + (cle ? '?date=' + encodeURIComponent(cle) : '')).then(d => {
+      this._rjEnCours = null;
+      const v = d || { erreur: true };
+      this.D.rjour[cle] = v;
+      // La réponse porte la date RETENUE : elle sert aussi de clé, sinon
+      // revenir sur « aujourd'hui » par la flèche rechargerait tout.
+      if (v.date) { this.D.rjour[v.date] = v; }
+      this.setState({});
+    });
+  }
+
+  /** L'évolution vs N-1 d'une catégorie, en couleur : du rouge au vert, gris
+   *  quand l'API ne rend pas de comparaison (une date passée n'en a pas). */
+  rjCoulDelta(d){
+    if (d == null) { return '#B9B2A8'; }
+    if (d >= 15) { return '#2d7a3e'; }
+    if (d >= 3) { return '#5f9e5f'; }
+    if (d > -3) { return '#C9A227'; }
+    if (d > -15) { return '#D97706'; }
+    return '#C0182B';
+  }
+
+  /** Découpe « squarified » : des tuiles proportionnelles au CA, aussi carrées
+   *  que possible. Les positions sortent en POURCENTAGE — la grille suit la
+   *  largeur de la carte au lieu d'être figée en pixels ; les dimensions en
+   *  pixels ne servent qu'à décider ce qui tient comme étiquette. */
+  rjTuiles(cats, largeurPx, hauteurPx, mini){
+    const vals = (cats || []).filter(c => (c.ca || 0) > 0).sort((a, b) => b.ca - a.ca);
+    if (!vals.length) { return []; }
+    const W = 1000, H = Math.max(1, Math.round(1000 * hauteurPx / largeurPx));
+    const tot = vals.reduce((s, c) => s + c.ca, 0);
+    const ech = (W * H) / tot;
+    const items = vals.map(c => ({ c, a: c.ca * ech }));
+    const out = [];
+    let x = 0, y = 0, w = W, h = H, row = [];
+    const pire = (rw, l) => {
+      const s = rw.reduce((t, r) => t + r.a, 0);
+      if (s <= 0 || l <= 0) { return Infinity; }
+      const mx = Math.max.apply(null, rw.map(r => r.a)), mn = Math.min.apply(null, rw.map(r => r.a));
+      return Math.max((l * l * mx) / (s * s), (s * s) / (l * l * mn));
+    };
+    const poser = (rw, horiz) => {
+      const s = rw.reduce((t, r) => t + r.a, 0);
+      if (s <= 0) { return; }
+      if (horiz) {
+        const rh = s / w; let cx = x;
+        rw.forEach(r => { const rl = r.a / rh; out.push({ c: r.c, x: cx, y, w: rl, h: rh }); cx += rl; });
+        y += rh; h -= rh;
+      } else {
+        const rl = s / h; let cy = y;
+        rw.forEach(r => { const rh = r.a / rl; out.push({ c: r.c, x, y: cy, w: rl, h: rh }); cy += rh; });
+        x += rl; w -= rl;
+      }
+    };
+    let garde = 0;
+    while (items.length && garde++ < 400) {
+      const horiz = w <= h, l = horiz ? w : h, it = items[0];
+      if (!row.length || pire(row, l) >= pire(row.concat([it]), l)) { row.push(items.shift()); }
+      else { poser(row, horiz); row = []; }
+    }
+    if (row.length) { poser(row, w <= h); }
+
+    const fE = n => this.fE(n);
+    return out.map(t => {
+      const wpx = t.w / W * largeurPx, hpx = t.h / H * hauteurPx;
+      const c = t.c;
+      const part = c.part != null ? c.part : null;
+      return {
+        nom: c.categorie,
+        ca: fE(c.ca),
+        part: part == null ? '' : (part * 100).toFixed(0).replace('.', ',') + ' %',
+        delta: c.delta == null ? '' : (c.delta > 0 ? '+' : '') + c.delta.toFixed(1).replace('.', ',') + ' %',
+        // Une petite ventilation n'a pas la place du détail : elle garde le
+        // nom, le montant et la part sur une ligne, sinon le texte déborde de
+        // la tuile et se coupe au milieu d'un mot.
+        gros: !mini && wpx > 92 && hpx > 52,
+        semi: !!mini && wpx > 78 && hpx > 46,
+        moyen: wpx > 62 && hpx > 32,
+        minuscule: !(wpx > 34 && hpx > 15),
+        st: 'position:absolute;left:' + (t.x / W * 100).toFixed(3) + '%;top:' + (t.y / H * 100).toFixed(3)
+          + '%;width:' + Math.max(t.w / W * 100 - 0.35, 0).toFixed(3) + '%;height:' + Math.max(t.h / H * 100 - 0.7, 0).toFixed(3)
+          + '%;background:' + this.rjCoulDelta(c.delta) + ';color:#fff;border-radius:5px;box-sizing:border-box;'
+          + 'padding:' + (wpx > 92 && hpx > 52 ? '7px 9px' : '4px 6px') + ';overflow:hidden',
+      };
+    });
+  }
+
+  valsResultatJour(common){
+    const S = this.state, D = this.D;
+    const r = (D.rjour || {})[this.rjCle()];
+    common.rjChargement = !r;
+    common.rjErreur = !!(r && (r.erreur || r.indispo));
+    common.rjErreurTxt = r && r.indispo ? r.motif
+      : 'La lecture de /exploitation/jour a échoué — voir Diagnostic API.';
+    common.rjLignes = []; common.rjMinis = []; common.rjDetail = null;
+    if (!r || common.rjErreur) { return; }
+
+    const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
+    const fE = n => this.fE(n);
+    const fPct = (n, d) => (n == null) ? '—' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
+    const fInt = n => (n == null) ? '—' : Math.round(n).toLocaleString('fr-BE');
+    const fU = n => (n == null) ? '—' : n.toFixed(2).replace('.', ',') + ' €';
+    const fDelta = n => (n == null) ? '' : (n > 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + ' %';
+    // Un écart de moins d'un point ne mérite pas de couleur : au jour le jour,
+    // ±0,4 % est du bruit, et le colorier ferait lire une tendance.
+    const coulDelta = (n, inverse) => (n == null || Math.abs(n) < 1) ? 'var(--color-text-muted)'
+      : (((n > 0) !== !!inverse) ? '#2d7a3e' : '#C0182B');
+    // Un coût se lit contre son seuil : tenu, débordé, débordé d'un tiers.
+    const feu = (v, s) => (v == null) ? 'var(--color-text-muted)'
+      : (v <= s ? '#2d7a3e' : (v <= s * 1.3 ? '#D97706' : '#C0182B'));
+    const feuRes = p => (p == null) ? 'var(--color-text-muted)'
+      : (p >= 15 ? '#2d7a3e' : (p >= 5 ? '#D97706' : '#C0182B'));
+
+    // --- la date affichée et sa navigation
+    const jour = r.date, auj = r.aujourdhui;
+    const decale = n => { const d2 = new Date(jour + 'T12:00:00'); d2.setDate(d2.getDate() + n); return d2.toISOString().slice(0, 10); };
+    // « Vendredi 21 août 2026 » : capitaliser en CSS mettait aussi « Août »
+    // en majuscule, ce qui ne s'écrit pas ainsi en français.
+    const dTxt = new Date(jour + 'T12:00:00')
+      .toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    common.rjDateTxt = dTxt.charAt(0).toUpperCase() + dTxt.slice(1);
+    common.rjPrec = () => this.setState({ rjDate: decale(-1) });
+    common.rjSuiv = jour < auj ? () => this.setState({ rjDate: decale(1) }) : null;
+    common.rjAuj = jour < auj ? () => this.setState({ rjDate: null }) : null;
+    common.rjEstAuj = !!r.estAujourdhui;
+    common.rjSeuilsTxt = 'Seuils du réseau : matière ' + fPct(seuils.food, 0)
+      + ' · main-d’œuvre ' + fPct(seuils.labour, 0) + ' · frais généraux ' + fPct(seuils.overhead);
+    // Ce que la journée doit à une répartition plutôt qu'à une mesure. La
+    // phrase change avec la date : aujourd'hui la masse salariale est mesurée,
+    // hier elle ne l'est plus — le panel ne rend le P&L quotidien que du jour.
+    common.rjNote = r.estAujourdhui
+      ? 'Frais généraux : montant mensuel réparti sur les jours d’ouverture — le panel ne les mesure pas au jour le jour. Main-d’œuvre : mesurée du jour.'
+      : 'Frais généraux ET main-d’œuvre : montants mensuels répartis sur les jours d’ouverture — le panel ne rend le compte de résultat quotidien que pour aujourd’hui. Aucune comparaison à N-1 sur une date passée.';
+
+    const res = r.reseau || {};
+    common.rjReseau = {
+      ca: fE(res.ca), tickets: fInt(res.tickets), panier: fU(res.panier),
+      net: fE(res.net), netPct: fPct(res.netPct), netCoul: feuRes(res.netPct),
+      fc: fE(res.coutMatiere), fcPct: fPct(res.coutMatierePct), fcCoul: feu(res.coutMatierePct, seuils.food),
+      mb: fE(res.margeBrute), mbPct: fPct(res.margeBrutePct),
+      labour: fE(res.labour), labourPct: fPct(res.labourPct), labourCoul: feu(res.labourPct, seuils.labour),
+      oh: fE(res.overhead), ohPct: fPct(res.overheadPct), ohCoul: feu(res.overheadPct, seuils.overhead),
+      magasins: fInt(res.magasins),
+    };
+
+    const sel = S.rjSel;
+    common.rjLignes = (r.magasins || []).map(m => {
+      const actif = m.shopId === sel;
+      return {
+        id: m.shopId, nom: m.magasin, ouvert: !!m.ouvert, actif,
+        // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
+        ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        sousTitre: m.ouvert
+          ? (m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') + ' produits par client' : '—')
+          : (m.motif || 'sans réponse'),
+        ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
+        tickets: fInt(m.tickets), panier: fU(m.panier),
+        fc: fE(m.coutMatiere), fcPct: fPct(m.coutMatierePct), fcCoul: feu(m.coutMatierePct, seuils.food),
+        mb: fE(m.margeBrute), mbPct: fPct(m.margeBrutePct),
+        labour: fE(m.labour), labourPct: fPct(m.labourPct), labourCoul: feu(m.labourPct, seuils.labour),
+        labourTitre: m.labourSource === 'reparti' ? 'masse salariale du mois répartie sur les jours d’ouverture' : 'mesurée sur la journée',
+        labourReparti: m.labourSource === 'reparti',
+        oh: fE(m.overhead), ohPct: fPct(m.overheadPct), ohCoul: feu(m.overheadPct, seuils.overhead),
+        net: fE(m.net), netPct: fPct(m.netPct), netCoul: feuRes(m.netPct),
+        chevron: actif ? '▾' : '▸',
+        st: 'cursor:pointer;background:' + (actif ? 'var(--color-background-secondary)' : 'transparent'),
+      };
+    });
+
+    const ouverts = (r.magasins || []).filter(m => m.ouvert);
+    const magSel = ouverts.filter(m => m.shopId === sel)[0] || null;
+
+    // Sans sélection, la page garde une image : une petite ventilation par
+    // magasin, qui donne l'envie de cliquer plutôt qu'un blanc.
+    if (!magSel) {
+      common.rjMinis = ouverts.map(m => ({
+        nom: m.magasin, ca: fE(m.ca), ouvrir: () => this.setState({ rjSel: m.shopId }),
+        tuiles: this.rjTuiles(m.categories, 280, 158, true),
+      }));
+    }
+
+    common.rjEchelle = [['#C0182B', '≤ -15 %'], ['#D97706', '-15 à -3 %'], ['#C9A227', 'stable'],
+      ['#5f9e5f', '+3 à +15 %'], ['#2d7a3e', '≥ +15 %'], ['#B9B2A8', 'sans N-1']]
+      .map(e => ({ coul: e[0], label: e[1] }));
+
+    if (!magSel) { return; }
+
+    // --- le détail du magasin ouvert
+    const m = magSel;
+    const barre = (p) => Math.min(Math.abs(p || 0), 100);
+    const casc = [
+      { l: 'Chiffre d’affaires', v: fE(m.ca), p: fPct(100, 1), w: 100, coul: 'var(--color-text)', fort: true,
+        d: fDelta(m.caDelta), dCoul: coulDelta(m.caDelta), seuil: '' },
+      { l: 'Coût matière', v: fE(m.coutMatiere == null ? null : -m.coutMatiere), p: fPct(m.coutMatierePct),
+        w: barre(m.coutMatierePct), coul: feu(m.coutMatierePct, seuils.food), fort: false, d: '', dCoul: '',
+        seuil: 'seuil ' + fPct(seuils.food, 0) },
+      { l: 'Marge brute', v: fE(m.margeBrute), p: fPct(m.margeBrutePct), w: barre(m.margeBrutePct),
+        coul: 'var(--color-text)', fort: true, d: '', dCoul: '', seuil: '' },
+      { l: 'Main-d’œuvre', v: fE(m.labour == null ? null : -m.labour), p: fPct(m.labourPct), w: barre(m.labourPct),
+        coul: feu(m.labourPct, seuils.labour), fort: false, d: fDelta(m.labourDelta), dCoul: coulDelta(m.labourDelta, true),
+        seuil: 'seuil ' + fPct(seuils.labour, 0) + (m.labourSource === 'reparti' ? ' · réparti' : '') },
+      { l: 'Frais généraux', v: fE(m.overhead == null ? null : -m.overhead), p: fPct(m.overheadPct),
+        w: barre(m.overheadPct), coul: feu(m.overheadPct, seuils.overhead), fort: false, d: '', dCoul: '',
+        seuil: 'seuil ' + fPct(seuils.overhead) + ' · réparti' },
+      { l: 'Résultat du jour', v: fE(m.net), p: fPct(m.netPct), w: barre(m.netPct), coul: feuRes(m.netPct),
+        fort: true, d: '', dCoul: '', seuil: '' },
+    ];
+
+    const serie = (m.serie || []).filter(j => j.ouvert);
+    const maxNet = serie.reduce((t, j) => Math.max(t, Math.abs(j.net || 0)), 0) || 1;
+    const moisNet = serie.reduce((t, j) => t + (j.net || 0), 0);
+    const moisCa = serie.reduce((t, j) => t + (j.ca || 0), 0);
+
+    common.rjDetail = {
+      id: m.shopId, nom: m.magasin,
+      fermer: () => this.setState({ rjSel: null }),
+      ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
+      deltaTxt: m.caDelta == null ? 'aucune comparaison N-1 sur une date passée' : 'vs même jour N-1',
+      cascade: casc,
+      note: (m.overheadMois != null
+        ? 'Frais généraux : ' + fE(m.overheadMois) + ' par mois ramenés au jour d’ouverture (' + fInt(m.joursOuverts) + ' j).'
+        : 'Frais généraux mensuels indisponibles pour ce magasin.')
+        + (m.labourSource === 'reparti' && m.labourMois != null
+          ? ' Main-d’œuvre : ' + fE(m.labourMois) + ' sur le mois, répartie de la même façon.' : ''),
+      motifNet: m.motifNet || '',
+      tuiles: this.rjTuiles(m.categories, 620, 300),
+      sansCat: !(m.categories || []).length,
+      kpis: [
+        { l: 'Tickets', v: fInt(m.tickets), s: 'clients servis' },
+        { l: 'Ticket moyen', v: fU(m.panier), s: 'réseau ' + fU(res.panier) },
+        { l: 'Produits vendus', v: fInt(m.produits), s: (m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') : '—') + ' par client' },
+        { l: 'Marge brute', v: fE(m.margeBrute), s: fPct(m.margeBrutePct) },
+        { l: 'Résultat', v: fE(m.net), s: fPct(m.netPct) },
+      ],
+      serie: serie.map(j => {
+        const v = j.net || 0, haut = Math.abs(v) / maxNet * 29;
+        const dern = j.date === r.date;
+        return {
+          hautHaut: v >= 0 ? haut : 0, hautBas: v < 0 ? haut : 0,
+          coul: v >= 0 ? '#2d7a3e' : '#C0182B',
+          contour: dern ? 'outline:2px solid var(--color-text);outline-offset:1px' : '',
+          titre: this.fD(j.date) + ' · ' + fE(j.ca) + ' · résultat ' + fE(j.net),
+        };
+      }),
+      serieDebut: this.fD((serie[0] || {}).date || ''),
+      serieFin: this.fD((serie[serie.length - 1] || {}).date || ''),
+      serieTxt: 'résultat net par jour — ' + fE(moisNet) + ' cumulés sur '
+        + fE(moisCa) + ' de ventes, main-d’œuvre et frais généraux répartis',
+      serieVide: !serie.length,
+    };
+  }
 
   /** Charge l'arbre du comptoir. Un seul appel : structure ET occupation. */
   /* --- réputation digitale ---------------------------------------------------

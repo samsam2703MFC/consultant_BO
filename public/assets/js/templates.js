@@ -121,6 +121,7 @@ export function render(c, x){
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
+      ${c.isRJour ? tplResultatJour(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -2139,6 +2140,194 @@ function tplMktTypes(c, x){
    Un bandeau réseau, puis une carte par magasin, les plus mal notés d'abord :
    c'est là que la décision se prend. Chaque carte porte son propre effort — le
    chiffre réseau ne se distribue pas, il donne l'ordre de grandeur. */
+/* Résultat du jour — le réseau en une table, le magasin en un clic.
+   La table donne la journée de tout le monde ; ouvrir une ligne déplie
+   dessous la cascade du magasin, sa ventilation par catégorie et la place du
+   jour dans son mois. Sans sélection, la page garde les petites ventilations :
+   elles montrent où cliquer. */
+function tplResultatJour(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  if (c.rjChargement) {
+    return `<div data-screen="resultatJour" style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture du compte de résultat de la journée…</div>`;
+  }
+  if (c.rjErreur) {
+    return `<div data-screen="resultatJour" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjErreurTxt)}</div>`;
+  }
+  const ent = ['Magasin', 'CA du jour', 'vs N-1', 'Tickets', 'Panier', 'Coût matière', 'Marge brute',
+    'Main-d’œuvre', 'Frais gén.', 'Résultat'];
+  const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
+  // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
+  const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  const treemap = (tuiles, hauteur) => `
+    <div style="position:relative;width:100%;height:${hauteur}px">
+      ${tuiles.map(t => `<div style="${t.st}">
+        ${t.semi ? `<div style="font-size:11px;font-weight:500;line-height:1.15">${esc(t.nom)}</div>
+          <div style="font-family:var(--font-display);font-size:12px;margin-top:2px;${num}">${esc(t.ca)}</div>
+          <div style="font-size:9.5px;opacity:.92;white-space:nowrap;${num}">${esc(t.part)}${t.delta ? ' · ' + esc(t.delta) : ''}</div>`
+        : (t.gros ? `<div style="font-size:12px;font-weight:500;line-height:1.15">${esc(t.nom)}</div>
+          <div style="font-family:var(--font-display);font-size:14px;margin-top:3px;${num}">${esc(t.ca)}</div>
+          <div style="font-size:10.5px;opacity:.92;${num}">${esc(t.part)} du CA${t.delta ? ' · ' + esc(t.delta) + ' vs N-1' : ''}</div>`
+        : (t.moyen ? `<div style="font-size:10.5px;font-weight:500;line-height:1.1">${esc(t.nom)}</div>
+          <div style="font-size:10px;opacity:.92;white-space:nowrap;${num}">${esc(t.part)}${t.delta ? ' · ' + esc(t.delta) : ''}</div>`
+        : (t.minuscule ? '' : `<div style="font-size:9.5px;line-height:1.05;opacity:.95">${esc(t.nom)}</div>`)))}
+      </div>`).join('')}
+    </div>`;
+  const echelle = `<div style="display:flex;gap:11px;flex-wrap:wrap;margin-top:7px;font-size:10px;color:var(--color-text-muted)">
+      ${c.rjEchelle.map(e => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${e.coul};vertical-align:-1px"></i> ${esc(e.label)}</span>`).join('')}
+    </div>`;
+
+  return `
+  <div data-screen="resultatJour" style="display:flex;flex-direction:column;gap:14px">
+
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:11px">
+        <div>
+          <div style="${cap}">Résultat du jour, magasin par magasin</div>
+          <div style="font-family:var(--font-display);font-size:17px;margin-top:3px">${esc(c.rjDateTxt)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.rjSeuilsTxt)}</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:22px">
+          <div style="display:flex;align-items:center;gap:7px">
+            <button ${x.A(c.rjPrec)} title="Jour précédent" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text)">◂</button>
+            <button ${x.A(c.rjSuiv)} title="Jour suivant" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rjSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rjSuiv ? '1' : '.35'}">▸</button>
+            ${c.rjAuj ? `<button ${x.A(c.rjAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Aujourd’hui</button>` : ''}
+          </div>
+          <div style="text-align:right">
+            <div style="${cap}">CA réseau</div>
+            <div style="font-family:var(--font-display);font-size:25px;line-height:1.1;${num}">${esc(c.rjReseau.ca)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);${num}">${esc(c.rjReseau.tickets)} tickets · panier ${esc(c.rjReseau.panier)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="${cap}">Résultat réseau</div>
+            <div style="font-family:var(--font-display);font-size:25px;line-height:1.1;color:${c.rjReseau.netCoul};${num}">${esc(c.rjReseau.net)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);${num}">${esc(c.rjReseau.netPct)} du CA</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:940px">
+        <tr>${ent.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}</th>`).join('')}</tr>
+        ${c.rjLignes.map(l => `
+          <tr ${x.A(l.ouvrir)} class="hv-bg" style="${l.st}">
+            <td style="padding:9px 10px;${bord}">
+              <div style="font-weight:500"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nom)}</div>
+              <div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>
+            </td>
+            ${l.ouvert
+              ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false)
+                + cel(l.tickets, '', '', false) + cel(l.panier, '', '', false)
+                + cel(l.fc, l.fcCoul, l.fcPct, false)
+                + cel(l.mb, '', l.mbPct, false)
+                + cel(l.labour, l.labourCoul, l.labourPct + (l.labourReparti ? ' ·  réparti' : ''), false, l.labourTitre)
+                + cel(l.oh, l.ohCoul, l.ohPct + ' · réparti', false)
+                + cel(l.net, l.netCoul, l.netPct, true)
+              : `<td colspan="9" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
+          </tr>`).join('')}
+        <tr style="background:var(--color-background-secondary)">
+          <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:500">Réseau
+            <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
+          ${cel(c.rjReseau.ca, '', '', true)}${cel('', '', '', false)}
+          ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
+          ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false)}
+          ${cel(c.rjReseau.mb, '', c.rjReseau.mbPct, false)}
+          ${cel(c.rjReseau.labour, c.rjReseau.labourCoul, c.rjReseau.labourPct, false)}
+          ${cel(c.rjReseau.oh, c.rjReseau.ohCoul, c.rjReseau.ohPct, false)}
+          ${cel(c.rjReseau.net, c.rjReseau.netCoul, c.rjReseau.netPct, true)}
+        </tr>
+      </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rjNote)}</div>
+    </div>
+
+    ${c.rjDetail ? `
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div>
+          <div style="${cap}">Compte de résultat du jour</div>
+          <div style="font-family:var(--font-display);font-size:19px;margin-top:3px">${esc(c.rjDetail.nom)}</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="text-align:right">
+            <div style="font-family:var(--font-display);font-size:29px;line-height:1;${num}">${esc(c.rjDetail.ca)}</div>
+            <div style="font-size:11.5px;color:${c.rjDetail.deltaCoul};${num}">${c.rjDetail.delta ? esc(c.rjDetail.delta) + ' ' : ''}${esc(c.rjDetail.deltaTxt)}</div>
+          </div>
+          <button ${x.A(c.rjDetail.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.02fr 1fr;gap:22px;margin-top:13px">
+        <div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            ${c.rjDetail.cascade.map(l => `
+              <tr style="${l.fort ? 'font-weight:500' : ''}">
+                <td style="padding:7px 0;${bord};width:150px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
+                <td style="padding:7px 8px;${bord}">
+                  <span style="display:block;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
+                    <i style="display:block;height:100%;width:${l.w}%;border-radius:999px;background:${l.coul}"></i></span></td>
+                <td style="padding:7px 0;${bord};text-align:right;${num};width:96px">${esc(l.v)}</td>
+                <td style="padding:7px 0 7px 12px;${bord};text-align:right;${num};width:64px;color:${l.coul}">${esc(l.p)}</td>
+                <td style="padding:7px 0 7px 10px;${bord};text-align:right;${num};width:74px;font-weight:400;font-size:11px;color:${l.dCoul || 'var(--color-text-muted)'}">${esc(l.d)}</td>
+              </tr>`).join('')}
+          </table>
+          ${c.rjDetail.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(c.rjDetail.motifNet)}</div>` : ''}
+          <div style="margin-top:10px;font-size:10.5px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:8px;padding:8px 10px;line-height:1.5;text-wrap:pretty">${esc(c.rjDetail.note)}</div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+            <div style="${cap}">Ventes par catégorie</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted)">surface : poids dans le CA · couleur : évolution vs N-1</div>
+          </div>
+          ${c.rjDetail.sansCat
+            ? `<div style="padding:26px 0;font-size:12px;color:var(--color-text-muted)">Le panel ne rend pas de ventilation par catégorie pour cette journée.</div>`
+            : `<div style="margin-top:9px">${treemap(c.rjDetail.tuiles, 300)}</div>${echelle}`}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:22px;margin-top:16px;border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+          ${c.rjDetail.kpis.map(k => `<div style="background:var(--color-background-secondary);border-radius:9px;padding:10px 12px">
+            <div style="${cap}">${esc(k.l)}</div>
+            <div style="font-family:var(--font-display);font-size:20px;line-height:1.1;margin-top:3px;${num}">${esc(k.v)}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(k.s)}</div>
+          </div>`).join('')}
+        </div>
+        <div>
+          <div style="${cap};margin-bottom:7px">Le jour dans le mois</div>
+          ${c.rjDetail.serieVide
+            ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucun jour ouvert ce mois-ci.</div>`
+            : `<div style="display:flex;gap:3px;align-items:center">
+              ${c.rjDetail.serie.map(j => `<div title="${esc(j.titre)}" style="flex:1;display:flex;flex-direction:column;height:64px;justify-content:center">
+                <div style="height:29px;display:flex;align-items:flex-end"><i style="display:block;width:100%;height:${j.hautHaut}px;background:${j.coul};border-radius:3px 3px 0 0;${j.contour}"></i></div>
+                <div style="height:1px;background:var(--color-border-secondary)"></div>
+                <div style="height:29px"><i style="display:block;width:100%;height:${j.hautBas}px;background:${j.coul};border-radius:0 0 3px 3px;${j.contour}"></i></div>
+              </div>`).join('')}
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--color-text-muted);margin-top:4px">
+              <span>${esc(c.rjDetail.serieDebut)}</span><span style="text-align:center;text-wrap:pretty">${esc(c.rjDetail.serieTxt)}</span><span>${esc(c.rjDetail.serieFin)}</span>
+            </div>`}
+        </div>
+      </div>
+    </div>` : `
+    <div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:stretch;grid-auto-rows:1fr">
+        ${c.rjMinis.map(m => `
+          <div ${x.A(m.ouvrir)} class="hv-bg" style="${carte};padding:13px 15px;cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px">
+              <div style="font-size:12px;font-weight:500">${esc(m.nom)}</div>
+              <div style="font-size:11px;color:var(--color-text-muted);${num}">${esc(m.ca)}</div>
+            </div>
+            ${treemap(m.tuiles, 158)}
+          </div>`).join('')}
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Ventes par catégorie · surface : poids dans le CA du magasin · couleur : évolution vs N-1. Ouvrez une ligne du tableau pour le détail complet.${echelle}</div>
+    </div>`}
+  </div>`;
+}
+
 function tplReputation(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';

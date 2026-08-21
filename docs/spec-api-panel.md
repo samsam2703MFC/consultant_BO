@@ -28,6 +28,17 @@ demandée. Merci de conserver `date_from` / `date_to` sur les nouveaux endpoints
 et d'ignorer proprement les alias inconnus plutôt que de changer de
 comportement.
 
+**`/pnl` ignore les bornes.** Mesuré le 21/08/2026 : `GET
+/consultant/shops/2/pnl?date_from=2026-08-19&date_to=2026-08-19` — comme
+`?period=day&date=2026-08-19` — répond `date_from: 2026-08-21`, c'est-à-dire la
+journée courante. Conséquence pour le cockpit : sur une date passée, ni la
+main-d'œuvre du jour ni l'évolution vs N-1 par catégorie ne sont lisibles ; le
+résultat du jour se reconstitue alors à partir des montants MENSUELS répartis
+sur les jours d'ouverture, et l'écran le dit. `margin-heatmap` (`from`/`to`),
+`sales/kpis` et `category-sales` (`date_from`/`date_to`), eux, honorent bien la
+période demandée. Faire honorer les bornes à `/pnl` supprimerait cette
+reconstitution.
+
 **Enveloppe d'erreur.** Une forme unique, sur tous les endpoints :
 
 ```json

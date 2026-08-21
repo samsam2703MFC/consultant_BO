@@ -1427,6 +1427,253 @@ function ep_exploitation_rentabilite(): array
 }
 
 /**
+ * GET /exploitation/jour[?date=YYYY-MM-DD] — le résultat d'UNE journée, magasin
+ * par magasin, puis le détail du magasin qu'on ouvre.
+ *
+ * Ce que l'API du panel mesure vraiment, et ce qui est reconstitué :
+ *  · ventes, tickets, panier, produits par client : mesurés, pour la date
+ *    demandée (sales/kpis et margin-heatmap acceptent des bornes) ;
+ *  · coût matière et marge brute : margin-heatmap — la marge est brute, donc
+ *    coût matière = CA − marge ;
+ *  · main-d'œuvre : mesurée AU JOUR seulement pour aujourd'hui (le /pnl
+ *    quotidien ignore la date demandée et rend toujours le jour courant). Pour
+ *    une date passée, la masse salariale du mois est répartie sur les jours
+ *    d'ouverture, et la ligne le dit (`labourSource`) ;
+ *  · frais généraux : le panel ne les tient qu'au MOIS. Ils sont donc toujours
+ *    répartis par jour d'ouverture — jamais présentés comme une mesure ;
+ *  · ventilation par catégorie : mesurée à la date demandée ; l'évolution
+ *    vs N-1 n'existe que pour aujourd'hui, elle vient du /pnl du jour.
+ *
+ * Le résultat du jour = CA − coût matière − main-d'œuvre − frais généraux.
+ * Il n'est jamais deviné : sans l'un des quatre, il vaut null et le motif suit.
+ */
+function ep_exploitation_jour(): array
+{
+    $auj  = date('Y-m-d');
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    $estAuj = $date === $auj;
+
+    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    try {
+        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
+                            WHERE code IN ('food','labour','overhead')") as $k) {
+            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
+                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
+        }
+    } catch (PDOException $e) { /* seuils par défaut */ }
+
+    $out = ['date' => $date, 'aujourdhui' => $auj, 'estAujourdhui' => $estAuj,
+        'seuils' => $seuils, 'magasins' => [], 'reseau' => null,
+        'source' => 'API panel — ventes et marge brute mesurées à la date, frais généraux mensuels répartis par jour d’ouverture'];
+    if (!PanelApi::configured()) {
+        return $out + ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
+    }
+
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    } catch (PDOException $e) {
+        $shops = Db::rows("SELECT id, name FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name");
+    }
+    if (!$shops) { return $out + ['indispo' => true, 'motif' => 'aucun magasin actif']; }
+
+    $mois1 = date('Y-m-01', strtotime($date));
+    $paths = ['cats' => '/consultant/shops/category-sales?'
+        . http_build_query(['date_from' => $date, 'date_to' => $date])];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        // Le mois entier en un appel : il sert la journée ET la série du bas.
+        $paths['hm' . $id]   = '/consultant/shops/' . $id . '/margin-heatmap?'
+            . http_build_query(['from' => $mois1, 'to' => $date]);
+        $paths['kpi' . $id]  = '/shops/' . $id . '/statistics/sales/kpis?'
+            . http_build_query(['date_from' => $date, 'date_to' => $date]);
+        $paths['pnlM' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj;
+        // Le /pnl du jour ne sert QUE pour aujourd'hui : sur une date passée il
+        // rendrait le jour courant, donc la main-d'œuvre et les évolutions
+        // d'un autre jour que celui affiché.
+        if ($estAuj) { $paths['pnlJ' . $id] = '/consultant/shops/' . $id . '/pnl'; }
+    }
+    $res = PanelApi::getParallele($paths, 6);
+
+    $parCat = [];
+    $cs = $res['cats'] ?? null;
+    $listeCs = is_array($cs) ? ($cs['shops'] ?? (array_is_list($cs) ? $cs : [])) : [];
+    foreach ((array) $listeCs as $e) {
+        if (!is_array($e)) { continue; }
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($e[$c]) && is_numeric($e[$c])) { $id = (int) $e[$c]; break; }
+        }
+        if ($id > 0 && isset($e['categories']) && is_array($e['categories'])) { $parCat[$id] = $e['categories']; }
+    }
+
+    $joursMois = (int) date('t', strtotime($date));
+    $premier   = new DateTimeImmutable($mois1);
+    $lignes = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id']; $nom = (string) $s['name'];
+        $hm = $res['hm' . $id] ?? null;
+        if (!is_array($hm) || !isset($hm['days'])) {
+            $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => false,
+                'motif' => 'margin-heatmap sans réponse pour ce magasin'];
+            continue;
+        }
+        // Jours d'ouverture : les jours de semaine vus actifs sur le mois,
+        // comptés sur le mois entier. Même diviseur que l'écran rentabilité.
+        $wdActifs = [];
+        foreach ((array) $hm['days'] as $d) {
+            if (!empty($d['has_data']) && (float) ($d['ca'] ?? 0) > 0) { $wdActifs[(int) $d['weekday']] = true; }
+        }
+        $joursOuverts = 0;
+        for ($i = 0; $i < $joursMois; $i++) {
+            if (isset($wdActifs[(int) $premier->modify('+' . $i . ' days')->format('N')])) { $joursOuverts++; }
+        }
+
+        $pnlM = $res['pnlM' . $id] ?? null;
+        $labourMois = is_array($pnlM) ? nombreOuNull((array) ($pnlM['labour'] ?? []), ['value', 'amount']) : null;
+        // Frais généraux : le détail mensuel PRIME sur la valeur de tête. Mesuré
+        // en ligne, /pnl rend `overhead.value = 0` et le vrai montant dans
+        // `overhead.breakdown.month` — lire la tête d'abord donnait un zéro
+        // parfaitement crédible, et un résultat du jour surévalué d'autant.
+        $ohMois = is_array($pnlM)
+            ? nombreOuNull((array) ($pnlM['overhead']['breakdown']['month'] ?? []), ['value', 'amount'])
+            : null;
+        if (($ohMois === null || $ohMois <= 0) && is_array($pnlM)) {
+            $v = nombreOuNull((array) ($pnlM['overhead'] ?? []), ['value', 'amount']);
+            if ($v !== null && $v > 0) { $ohMois = $v; }
+        }
+        $labJ = ($labourMois !== null && $joursOuverts > 0) ? $labourMois / $joursOuverts : null;
+        $ohJ  = ($ohMois !== null && $joursOuverts > 0) ? $ohMois / $joursOuverts : null;
+
+        $serie = [];
+        $jour = null;
+        foreach ((array) $hm['days'] as $d) {
+            $ca = (float) ($d['ca'] ?? 0); $mb = (float) ($d['margin_value'] ?? 0);
+            $ouvert = !empty($d['has_data']) && $ca > 0;
+            $net = ($ouvert && $labJ !== null && $ohJ !== null) ? $mb - $labJ - $ohJ : null;
+            $ligne = ['date' => (string) ($d['date'] ?? ''), 'ouvert' => $ouvert,
+                'ca' => $ouvert ? round($ca, 2) : null,
+                'tickets' => $ouvert ? (int) ($d['tickets'] ?? 0) : null,
+                'net' => $net !== null ? round($net, 2) : null,
+                'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null];
+            $serie[] = $ligne;
+            if ($ligne['date'] === $date) { $jour = $d + ['ouvert' => $ouvert]; }
+        }
+        if ($jour === null || empty($jour['ouvert'])) {
+            $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => false,
+                'motif' => 'aucune vente ce jour-là', 'serie' => $serie];
+            continue;
+        }
+
+        $ca = (float) ($jour['ca'] ?? 0);
+        $mb = (float) ($jour['margin_value'] ?? 0);
+        $fc = $ca - $mb;
+        $k = $res['kpi' . $id] ?? null;
+        $tickets  = (int) (nombreOuNull(is_array($k) ? $k : [], ['tickets', 'ticket_count']) ?? ($jour['tickets'] ?? 0));
+        $produits = nombreOuNull(is_array($k) ? $k : [], ['products', 'product_count']);
+        $panier   = nombreOuNull(is_array($k) ? $k : [], ['avg_basket', 'average_basket'])
+            ?? ($tickets > 0 ? $ca / $tickets : null);
+        $ppc      = nombreOuNull(is_array($k) ? $k : [], ['products_per_ticket', 'products_per_client'])
+            ?? (($produits !== null && $tickets > 0) ? $produits / $tickets : null);
+
+        $pnlJ = $estAuj ? ($res['pnlJ' . $id] ?? null) : null;
+        $labourReel = is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['labour'] ?? []), ['value', 'amount']) : null;
+        $labour = $labourReel !== null ? $labourReel : $labJ;
+        $labourSource = $labourReel !== null ? 'mesure' : ($labJ !== null ? 'reparti' : null);
+        $oh = $ohJ;
+        $net = ($labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
+
+        // Évolutions par catégorie : elles n'existent que pour aujourd'hui.
+        $deltas = [];
+        if (is_array($pnlJ)) {
+            foreach ((array) ($pnlJ['turnover']['categories'] ?? []) as $c) {
+                if (!empty($c['name'])) { $deltas[(string) $c['name']] = nombreOuNull($c, ['delta', 'variation']); }
+            }
+        }
+        $cats = [];
+        $totCat = 0.0;
+        foreach ((array) ($parCat[$id] ?? []) as $c) {
+            $v = nombreOuNull($c, ['ca', 'value', 'amount', 'turnover']);
+            if ($v === null || $v <= 0) { continue; }
+            $totCat += $v;
+            $cats[] = ['categorie' => (string) ($c['name'] ?? $c['label'] ?? '—'), 'ca' => round($v, 2),
+                'delta' => $deltas[(string) ($c['name'] ?? '')] ?? null];
+        }
+        foreach ($cats as &$c) { $c['part'] = $totCat > 0 ? round($c['ca'] / $totCat, 4) : null; }
+        unset($c);
+        usort($cats, fn ($a, $b) => $b['ca'] <=> $a['ca']);
+
+        $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
+            'ca' => round($ca, 2),
+            'caDelta' => is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['turnover'] ?? []), ['delta', 'variation']) : null,
+            'tickets' => $tickets, 'panier' => $panier !== null ? round($panier, 2) : null,
+            'produits' => $produits !== null ? (int) $produits : null,
+            'produitsParClient' => $ppc !== null ? round($ppc, 2) : null,
+            'coutMatiere' => round($fc, 2), 'coutMatierePct' => $ca > 0 ? round($fc / $ca * 100, 1) : null,
+            'margeBrute' => round($mb, 2), 'margeBrutePct' => $ca > 0 ? round($mb / $ca * 100, 1) : null,
+            'labour' => $labour !== null ? round($labour, 2) : null,
+            'labourPct' => ($labour !== null && $ca > 0) ? round($labour / $ca * 100, 1) : null,
+            'labourSource' => $labourSource,
+            'labourDelta' => is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['labour'] ?? []), ['delta', 'variation']) : null,
+            'overhead' => $oh !== null ? round($oh, 2) : null,
+            'overheadPct' => ($oh !== null && $ca > 0) ? round($oh / $ca * 100, 1) : null,
+            'overheadMois' => $ohMois !== null ? round($ohMois, 2) : null,
+            'labourMois' => $labourMois !== null ? round($labourMois, 2) : null,
+            'joursOuverts' => $joursOuverts,
+            'net' => $net !== null ? round($net, 2) : null,
+            'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null,
+            'motifNet' => $net === null ? 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles' : null,
+            'categories' => $cats, 'serie' => $serie];
+    }
+    usort($lignes, fn ($a, $b) => ($b['ca'] ?? -1) <=> ($a['ca'] ?? -1));
+    $out['magasins'] = $lignes;
+
+    // --- Réseau : la somme de ce qui est connu, jamais une extrapolation.
+    $t = ['ca' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
+        'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0];
+    $ouverts = 0; $netComplet = true; $cats = [];
+    foreach ($lignes as $l) {
+        if (empty($l['ouvert'])) { continue; }
+        $ouverts++;
+        $t['ca'] += $l['ca']; $t['coutMatiere'] += $l['coutMatiere']; $t['margeBrute'] += $l['margeBrute'];
+        $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
+        if ($l['labour'] === null || $l['overhead'] === null) { $netComplet = false; }
+        else { $t['labour'] += $l['labour']; $t['overhead'] += $l['overhead']; $t['net'] += $l['net']; }
+        foreach ($l['categories'] as $c) {
+            $e = $cats[$c['categorie']] ?? ['categorie' => $c['categorie'], 'ca' => 0.0, 'p' => 0.0, 'w' => 0.0];
+            $e['ca'] += $c['ca'];
+            if ($c['delta'] !== null) { $e['p'] += $c['delta'] * $c['ca']; $e['w'] += $c['ca']; }
+            $cats[$c['categorie']] = $e;
+        }
+    }
+    $catsR = [];
+    $totR = array_sum(array_map(fn ($c) => $c['ca'], $cats)) ?: 0.0;
+    foreach ($cats as $c) {
+        $catsR[] = ['categorie' => $c['categorie'], 'ca' => round($c['ca'], 2),
+            'part' => $totR > 0 ? round($c['ca'] / $totR, 4) : null,
+            'delta' => $c['w'] > 0 ? round($c['p'] / $c['w'], 1) : null];
+    }
+    usort($catsR, fn ($a, $b) => $b['ca'] <=> $a['ca']);
+    $ca = $t['ca'];
+    $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'tickets' => $t['tickets'],
+        'produits' => $t['produits'],
+        'panier' => $t['tickets'] > 0 ? round($ca / $t['tickets'], 2) : null,
+        'produitsParClient' => $t['tickets'] > 0 ? round($t['produits'] / $t['tickets'], 2) : null,
+        'coutMatiere' => round($t['coutMatiere'], 2),
+        'coutMatierePct' => $ca > 0 ? round($t['coutMatiere'] / $ca * 100, 1) : null,
+        'margeBrute' => round($t['margeBrute'], 2),
+        'margeBrutePct' => $ca > 0 ? round($t['margeBrute'] / $ca * 100, 1) : null,
+        'labour' => $netComplet ? round($t['labour'], 2) : null,
+        'labourPct' => ($netComplet && $ca > 0) ? round($t['labour'] / $ca * 100, 1) : null,
+        'overhead' => $netComplet ? round($t['overhead'], 2) : null,
+        'overheadPct' => ($netComplet && $ca > 0) ? round($t['overhead'] / $ca * 100, 1) : null,
+        'net' => $netComplet ? round($t['net'], 2) : null,
+        'netPct' => ($netComplet && $ca > 0) ? round($t['net'] / $ca * 100, 1) : null,
+        'categories' => $catsR];
+    return $out;
+}
+
+/**
  * GET /stores/kpis-annuels — trois lectures mensuelles sur l'année en cours,
  * par magasin : clients par jour, ticket moyen, articles par ticket.
  *
