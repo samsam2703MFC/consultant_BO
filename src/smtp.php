@@ -129,6 +129,9 @@ final class Smtp
             // Les images incorporées en data URI (photos annotées des rapports)
             // deviennent des pièces jointes intégrées (multipart/related, CID) :
             // Gmail n'affiche pas les data URI, il affiche les CID.
+            // Les blocs réservés à l'écran (bouton Imprimer/PDF) sortent de
+            // l'email — un window.print() n'a aucun sens dans une boîte mail.
+            $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
             $images = [];
             $html = preg_replace_callback('#"data:image/(jpeg|png);base64,([A-Za-z0-9+/=]+)"#',
                 function ($m2) use (&$images) {

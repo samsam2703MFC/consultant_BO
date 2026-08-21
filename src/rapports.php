@@ -300,7 +300,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $b['action'] = 'Photo annotée et commentaire dans le cockpit — à revoir avec l’équipe.';
             $ts = rapTaches($periode['du'], $periode['au']);
             if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
-            $fiches = 0;
+            $fiches = 0; $cartesParMag = [];
             foreach ($ts as $t) {
                 $note = $t['note'] ?? null;
                 if ($note !== null && (int) $note <= $seuils['tacheNote']) {
@@ -311,13 +311,17 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     // peser plusieurs mégaoctets dans une boîte mail.
                     if ($fiches < 8 && ($t['shopId'] ?? '') !== '') {
                         $fiche = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
-                            (string) ($t['tache'] ?? ''), (string) $t['magasin']);
-                        if ($fiche !== '') { $b['htmlPar'][] = [(string) $t['magasin'], $fiche]; $fiches++; }
+                            (string) ($t['tache'] ?? ''), (string) $t['magasin'], (int) $note, (string) ($t['comment'] ?? ''));
+                        if ($fiche !== '') { $cartesParMag[(string) $t['magasin']][] = $fiche; $fiches++; }
                     } elseif ($fiches === 8) {
                         $b['infos'][] = [(string) $t['magasin'], 'Photos limitées aux 8 premières tâches — le reste se consulte dans le cockpit.'];
                         $fiches++;
                     }
                 }
+            }
+            // Deux cartes par rangée, magasin par magasin — la grille A4.
+            foreach ($cartesParMag ?? [] as $mag => $cartes) {
+                $b['htmlPar'][] = [$mag, rapFichesGrille($cartes)];
             }
             break;
         }
@@ -661,9 +665,15 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
 
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        . '<title>' . $e($rep['nom']) . ' — ' . $e($periode['label']) . '</title></head>'
+        . '<title>' . $e($rep['nom']) . ' — ' . $e($periode['label']) . '</title>'
+        . '<style>@page{size:A4;margin:12mm}'
+        . '@media print{body{background:#ffffff !important;padding:0 !important}'
+        . 'div[data-fiche]{page-break-inside:avoid}table[data-fiches] td{page-break-inside:avoid}'
+        . '.ecran-seul{display:none !important}}</style></head>'
         . '<body style="margin:0;padding:0;background:#EFE9DF">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF"><tr><td align="center" style="padding:28px 12px">'
+        . '<!--ecran--><div class="ecran-seul" style="' . $F . ';max-width:680px;margin:0 auto 10px;text-align:right">'
+        . '<a href="javascript:window.print()" style="display:inline-block;border:1px solid #CFC6B8;border-radius:999px;padding:8px 16px;color:#221E1A;font-size:12px;font-weight:600;text-decoration:none;background:#ffffff">Imprimer / Enregistrer en PDF (A4)</a></div><!--/ecran-->'
         . '<table role="presentation" cellpadding="0" cellspacing="0" width="680" style="width:680px;max-width:96%">'
         // — bandeau de marque
         . '<tr><td style="background:#8D1D2C;border-radius:14px 14px 0 0;padding:18px 30px">'
@@ -1230,8 +1240,11 @@ function rapImageDataUri($im): string
     return 'data:image/jpeg;base64,' . base64_encode($jpg);
 }
 
-/** La fiche HTML d'une tâche non conforme : photo annotée + référence + repères. */
-function rapFicheTache(string $shopId, string $taskId, string $date, string $nomTache, string $magasin): string
+/**
+ * La CARTE d'une tâche non conforme : photo annotée, référence, explications.
+ * Contenu seul — l'appelant les range deux par rangée (lecture A4).
+ */
+function rapFicheTache(string $shopId, string $taskId, string $date, string $nomTache, string $magasin, ?int $note = null, string $commentaire = ''): string
 {
     $det = rapCtx('tache-' . $shopId . '-' . $taskId . '-' . $date,
         fn () => rapAppel('ep_pwa_task_detail', ['shop' => $shopId, 'task' => $taskId, 'date' => $date]));
@@ -1240,37 +1253,51 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     $F = "font-family:'Segoe UI',Arial,sans-serif";
     $reperes = (array) ((($det['reperes'] ?? [])['liste']) ?? []);
 
-    $cols = '';
-    $photo = rapImageGd((string) ($det['photo'] ?? ''));
+    $imgs = '';
+    $photo = rapImageGd((string) ($det['photo'] ?? ''), 420);
     if ($photo !== null) {
         if ($reperes !== []) { rapDessineReperes($photo, $reperes); }
-        $cols .= '<td valign="top" width="50%" style="padding:4px 6px 4px 0">'
-            . '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:8px" alt="Photo en boutique">'
-            . '<div style="' . $F . ';font-size:10px;color:#8b8177;margin-top:3px">Photo en boutique' . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '') . '</div></td>';
+        $imgs .= '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">'
+            . '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Photo en boutique' . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '') . '</div>';
     }
-    $ref = rapImageGd((string) ($det['photoRef'] ?? ''));
+    $ref = rapImageGd((string) ($det['photoRef'] ?? ''), 420);
     if ($ref !== null) {
-        $cols .= '<td valign="top" width="50%" style="padding:4px 0 4px 6px">'
-            . '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:8px" alt="Référence attendue">'
-            . '<div style="' . $F . ';font-size:10px;color:#8b8177;margin-top:3px">Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '') . '</div></td>';
+        $imgs .= '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Référence attendue">'
+            . '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '') . '</div>';
     }
-    if ($cols === '' && $reperes === []) { return ''; }
+    if ($imgs === '' && $reperes === []) { return ''; }
 
-    $rep = '';
+    $exp = '';
+    if ($note !== null) {
+        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><b style="color:' . ($note <= 2 ? '#E0261A' : '#C17A2A') . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
+    }
+    if (trim($commentaire) !== '') {
+        $exp .= '<div style="' . $F . ';font-size:11px;color:#4a443c;padding:2px 0;line-height:1.45">' . $e(mb_substr($commentaire, 0, 260)) . '</div>';
+    }
     $n = 0;
     foreach ($reperes as $r) {
         $n++;
+        if (trim((string) ($r['txt'] ?? '')) === '') { continue; }
         $niv = (int) ($r['niveau'] ?? 3);
         $coulR = $niv <= 2 ? '#E0261A' : ($niv === 3 ? '#C17A2A' : '#2d7a3e');
-        if (trim((string) ($r['txt'] ?? '')) === '') { continue; }
-        $rep .= '<div style="' . $F . ';font-size:11.5px;color:#221E1A;padding:2px 0">'
-            . '<span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
+        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
     }
-    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 10px;background:#FBF9F5;border-radius:10px"><tr><td style="padding:10px 12px">'
-        . '<div style="' . $F . ';font-size:12px;font-weight:700;color:#221E1A;margin-bottom:2px">' . $e($nomTache) . '</div>'
-        . ($cols !== '' ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' . $cols . '</tr></table>' : '')
-        . $rep
-        . '</td></tr></table>';
+    return '<div style="' . $F . ';font-size:12px;font-weight:700;color:#221E1A;margin-bottom:5px">' . $e($nomTache) . '</div>' . $imgs . $exp;
+}
+
+/** Range les cartes deux par rangée — la grille qui tient sur un A4. */
+function rapFichesGrille(array $cartes): string
+{
+    $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1">';
+    foreach (array_chunk($cartes, 2) as $paire) {
+        $h .= '<tr>';
+        $h .= '<td valign="top" width="50%" style="padding:5px 6px 5px 0"><div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[0] . '</div></td>';
+        $h .= '<td valign="top" width="50%" style="padding:5px 0 5px 6px">'
+            . (isset($paire[1]) ? '<div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $paire[1] . '</div>' : '&nbsp;')
+            . '</td>';
+        $h .= '</tr>';
+    }
+    return $h . '</table>';
 }
 
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
