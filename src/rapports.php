@@ -394,7 +394,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 foreach (array_slice($exemplaires, 0, 4) as $t) {
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
-                        (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''));
+                        (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
                     if ($f !== '') { $fiches[] = $f; }
                 }
                 [$col, $rang] = rapGrilleDe($periode);
@@ -423,7 +423,8 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     // alors combien de fiches il a laissées de côté.
                     if (($t['shopId'] ?? '') !== '' && $poidsFiches < RAP_POIDS_FICHES) {
                         $fiche = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
-                            (string) ($t['tache'] ?? ''), (string) $t['magasin'], (int) $note, (string) ($t['comment'] ?? ''));
+                            (string) ($t['tache'] ?? ''), (string) $t['magasin'], (int) $note, (string) ($t['comment'] ?? ''),
+                            rapGrilleDe($periode)[0] >= 3);
                         if ($fiche !== '') {
                             $cartesParMag[(string) $t['magasin']][] = $fiche;
                             $fiches++; $poidsFiches += strlen($fiche);
@@ -1407,10 +1408,15 @@ function rapPdfHtml(string $html): string
         . 'table[data-grille="2x3"] div[data-fiche] img{max-height:44mm}'
         // Douze vignettes sur une page : chaque cadre fait le quart de la
         // hauteur utile, l'écriture se resserre d'un point.
-        . 'table[data-grille="3x4"] tr[data-rangee-fiches]>td{height:63mm}'
-        . 'table[data-grille="3x4"] div[data-fiche]{height:59mm;overflow:hidden;box-sizing:border-box;padding:7px 8px !important}'
-        . 'table[data-grille="3x4"] div[data-fiche] img{max-height:30mm}'
-        . 'table[data-grille="3x4"] div[data-fiche] div{font-size:9.5px !important;line-height:1.3 !important}'
+        // Douze vignettes : quatre rangées sur les 271 mm utiles d'une A4, et
+        // dans chaque cadre la PHOTO prend tout ce que le texte ne prend pas.
+        . 'table[data-grille="3x4"] tr[data-rangee-fiches]>td{height:67mm}'
+        . 'table[data-grille="3x4"] div[data-fiche]{height:65mm;overflow:hidden;box-sizing:border-box;padding:5px 6px !important}'
+        // « Aussi grande que possible » ne veut pas dire déformée : largeur et
+        // hauteur bornées, proportions libres — l'image remplit ce qu'elle
+        // peut du cadre sans jamais s'étirer.
+        . 'table[data-grille="3x4"] div[data-fiche] img{max-height:46mm;max-width:100%;width:auto !important;height:auto}'
+        . 'table[data-grille="3x4"] div[data-fiche] div{font-size:9px !important;line-height:1.25 !important}'
         // L'image garde ses proportions et tient dans son cadre : la fiche
         // reste de taille constante, la photo n'est ni étirée ni rognée.
         . 'div[data-fiche] img{width:auto !important;max-width:100%;margin:0 auto}'
@@ -1889,7 +1895,7 @@ function rapImageDataUri($im): string
  * La CARTE d'une tâche non conforme : photo annotée, référence, explications.
  * Contenu seul — l'appelant les range deux par rangée (lecture A4).
  */
-function rapFicheTache(string $shopId, string $taskId, string $date, string $nomTache, string $magasin, ?int $note = null, string $commentaire = ''): string
+function rapFicheTache(string $shopId, string $taskId, string $date, string $nomTache, string $magasin, ?int $note = null, string $commentaire = '', bool $compact = false): string
 {
     $det = rapCtx('tache-' . $shopId . '-' . $taskId . '-' . $date,
         fn () => rapAppel('ep_pwa_task_detail', ['shop' => $shopId, 'task' => $taskId, 'date' => $date]));
@@ -1903,9 +1909,14 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     if ($photo !== null) {
         if ($reperes !== []) { rapDessineReperes($photo, $reperes); }
         $imgs .= '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">'
-            . '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Photo en boutique' . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '') . '</div>';
+            // En vignette, la légende de la photo mange la place de la photo :
+            // douze par page, chaque millimètre compte.
+            . ($compact ? '' : '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Photo en boutique'
+                . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '') . '</div>');
     }
-    $ref = rapImageGd((string) ($det['photoRef'] ?? ''), 420);
+    // La photo de RÉFÉRENCE ne suit qu'en grande carte : en vignette, deux
+    // images dans un cadre de six centimètres n'en montrent aucune.
+    $ref = $compact ? null : rapImageGd((string) ($det['photoRef'] ?? ''), 420);
     if ($ref !== null) {
         $imgs .= '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Référence attendue">'
             . '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '') . '</div>';
@@ -1931,7 +1942,11 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         $coulR = $niv <= 2 ? '#E0261A' : ($niv === 3 ? '#C17A2A' : '#2d7a3e');
         $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
     }
-    return '<div style="' . $F . ';font-size:12px;font-weight:700;color:#221E1A;margin-bottom:5px">' . $e($nomTache) . '</div>' . $imgs . $exp;
+    // En vignette : la PHOTO d'abord, aussi grande que le cadre le permet, le
+    // titre et la note dessous. En grande carte, le titre reste en tête.
+    $titre = '<div style="' . $F . ';font-size:' . ($compact ? '10px' : '12px')
+        . ';font-weight:700;color:#221E1A;margin:' . ($compact ? '5px 0 1px' : '0 0 5px') . '">' . $e($nomTache) . '</div>';
+    return $compact ? $imgs . $titre . $exp : $titre . $imgs . $exp;
 }
 
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
