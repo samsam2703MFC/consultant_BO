@@ -3078,7 +3078,7 @@ function tplReporting(c, x){
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:260px">
           <div style="font-size:13px;font-weight:500">Générateur de rapports — par levier, à seuils</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : cron horaire sur <code>/api/cockpit/rapports/cron?jeton=…</code> (réglage <code>rapportsJeton</code>).</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : une ligne crontab horaire sur ${c.rapGen.cronUrl ? `<code>${esc(c.rapGen.cronUrl)}</code>` : `l'URL de cron (se génère au premier chargement)`}.</div>
         </div>
         ${c.rapComposeOn
           ? `<button ${x.A(c.rapComposeFermer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">← Retour à la liste</button>`

@@ -7186,6 +7186,7 @@ class App {
         : 'background:#FBEFE0;color:#8a5a13');
     common.rapGen = {
       chargement: !rz || rz.chargement,
+      cronUrl: (rd && rd.cronUrl) || '',
       indispo: rz && !rz.chargement && !rd ? 'La lecture de /rapports a échoué — voir Diagnostic API.' : '',
       lignes: ((rd && rd.rapports) || []).map(r => {
         const defs = (rd && rd.blocs) || {}, levs = (rd && rd.leviers) || {};

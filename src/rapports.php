@@ -70,6 +70,13 @@ function ensureRapports(): void
         try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
     }
 
+    // Le jeton du cron naît tout seul : personne ne doit inventer un secret à
+    // la main. L'écran Reporting affiche l'URL complète, prête pour crontab.
+    if ((string) setting('rapportsJeton', '') === '') {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['rapportsJeton', json_encode(bin2hex(random_bytes(24)))]);
+    }
+
     $n = Db::row('SELECT COUNT(*) n FROM ceo_rapport');
     if ((int) ($n['n'] ?? 0) > 0) {
         // Évolution des semis : les blocs nés après le premier semis rejoignent
@@ -839,6 +846,9 @@ function ep_rapports(): array
         'runs' => array_map(fn ($r) => ['runId' => (int) $r['id'], 'rapport' => $r['nom'],
             'le' => substr((string) $r['genere_le'], 0, 16), 'statut' => $r['statut'], 'resume' => $r['resume']], $runs),
         'blocs' => rapBlocDefs(),
+        'cronUrl' => rapBaseUrl() !== ''
+            ? rapBaseUrl() . '/api/cockpit/rapports/cron?jeton=' . (string) setting('rapportsJeton', '')
+            : null,
         'leviers' => RAP_LEVIERS,
         // Les postes proposés au compositeur : ceux du réseau, puis les VRAIS
         // profils RH du panel (/positions) — saisie libre conservée à l'écran.
