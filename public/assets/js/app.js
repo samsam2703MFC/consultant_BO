@@ -7415,7 +7415,10 @@ class App {
       utilisateur: smVal('utilisateur', ''), expediteur: smVal('expediteur', ''), testA: smVal('testA', ''),
       busy: !!smD.busy, msg: smD.msg || '',
       msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (smD.ok ? '#2d7a3e' : '#8D1D2C'),
-      etatTxt: smSt.configure ? 'Configuré · ' + (smSt.hote || '') + (smSt.motDePasseDefini ? ' · mot de passe en place' : ' · sans authentification') : 'Non configuré',
+      etatTxt: smSt.configure
+        ? (smSt.source === 'crm' ? 'Réglages repris du CRM candidat · ' : 'Configuré · ') + (smSt.hote || '')
+          + (smSt.motDePasseDefini ? ' · mot de passe en place' : ' · sans authentification')
+        : 'Non configuré',
       etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
         + (smSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
       setHote: smSet('hote'), setPort: smSet('port'), setSecurite: smSet('securite'),

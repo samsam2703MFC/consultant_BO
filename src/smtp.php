@@ -21,14 +21,42 @@ final class Smtp
     {
         $s = setting('smtp');
         if (!is_array($s)) { $s = []; }
-        return [
+        $c = [
             'hote' => trim((string) ($s['hote'] ?? '')),
             'port' => (int) ($s['port'] ?? 587),
             'securite' => in_array($s['securite'] ?? '', ['ssl', 'tls', 'aucune'], true) ? $s['securite'] : 'tls',
             'utilisateur' => trim((string) ($s['utilisateur'] ?? '')),
             'motDePasse' => (string) ($s['motDePasse'] ?? ''),
             'expediteur' => trim((string) ($s['expediteur'] ?? '')),
+            'source' => 'cockpit',
         ];
+        // La config du cockpit prime quand elle est COMPLÈTE : hôte, expéditeur,
+        // et le mot de passe si un utilisateur est posé. Incomplète, on retombe
+        // sur les réglages du CRM candidat (crm_settings, MÊME base partagée) —
+        // le mot de passe reste en base, il ne transite jamais par un écran.
+        $complet = $c['hote'] !== '' && $c['expediteur'] !== ''
+            && ($c['utilisateur'] === '' || $c['motDePasse'] !== '');
+        if ($complet) { return $c; }
+        try {
+            $crm = [];
+            foreach (Db::rows("SELECT skey, svalue FROM crm_settings WHERE skey LIKE 'smtp\\_%'") as $r) {
+                $crm[(string) $r['skey']] = (string) $r['svalue'];
+            }
+            if (($crm['smtp_host'] ?? '') !== '' && ($crm['smtp_from'] ?? '') !== '') {
+                $sec = strtolower($crm['smtp_secure'] ?? 'tls');
+                $nom = trim($crm['smtp_from_name'] ?? '');
+                return [
+                    'hote' => trim((string) preg_replace('#^\w+://#', '', $crm['smtp_host'])),
+                    'port' => (int) (($crm['smtp_port'] ?? '') ?: 587),
+                    'securite' => $sec === 'ssl' || $sec === 'smtps' ? 'ssl' : ($sec === 'none' ? 'aucune' : 'tls'),
+                    'utilisateur' => trim($crm['smtp_user'] ?? ''),
+                    'motDePasse' => $crm['smtp_pass'] ?? '',
+                    'expediteur' => $nom !== '' ? $nom . ' <' . $crm['smtp_from'] . '>' : $crm['smtp_from'],
+                    'source' => 'crm',
+                ];
+            }
+        } catch (PDOException $e) { /* table du CRM absente : rien à reprendre */ }
+        return $c;
     }
 
     public static function configured(): bool
@@ -43,7 +71,8 @@ final class Smtp
         $c = self::config();
         return ['configure' => self::configured(), 'hote' => $c['hote'], 'port' => $c['port'],
             'securite' => $c['securite'], 'utilisateur' => $c['utilisateur'],
-            'expediteur' => $c['expediteur'], 'motDePasseDefini' => $c['motDePasse'] !== ''];
+            'expediteur' => $c['expediteur'], 'motDePasseDefini' => $c['motDePasse'] !== '',
+            'source' => $c['source']];
     }
 
     /** Envoie un HTML. Rend vrai/faux ; le détail d'un échec est dans $lastError. */
