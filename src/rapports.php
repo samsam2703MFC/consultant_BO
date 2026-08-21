@@ -397,7 +397,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                         (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
-                    if ($f !== '') { $fiches[] = $f; }
+                    if ($f !== '') { $fiches[] = rapFondNote(5) + ['html' => $f]; }
                 }
                 [$col, $rang] = rapGrilleDe($periode);
                 $b['htmlPar'][] = [$mag, rapBilanHtml($n, $rendues, $notees, $sansPhoto,
@@ -411,6 +411,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             if ($ts === []) { $b['motif'] = 'aucune tâche lue sur la période (API panel)'; break; }
             $perim = (array) ($periode['magasins'] ?? []);
             $fiches = 0; $poidsFiches = 0; $sautees = 0; $cartesParMag = [];
+            $b['pointsCaches'] = [];
             foreach ($ts as $t) {
                 if ($perim !== [] && !in_array((string) $t['magasin'], $perim, true)) { continue; }
                 $note = $t['note'] ?? null;
@@ -428,8 +429,13 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                             (string) ($t['tache'] ?? ''), (string) $t['magasin'], (int) $note, (string) ($t['comment'] ?? ''),
                             rapGrilleDe($periode)[0] >= 3);
                         if ($fiche !== '') {
-                            $cartesParMag[(string) $t['magasin']][] = $fiche;
+                            $cartesParMag[(string) $t['magasin']][] = rapFondNote((int) $note) + ['html' => $fiche];
                             $fiches++; $poidsFiches += strlen($fiche);
+                            // La fiche dit tout : magasin, tâche, date, note et
+                            // repères. Reprendre la même chose en ligne de texte
+                            // au-dessus faisait doublon — le point reste COMPTÉ
+                            // dans la pastille de résumé, il n'est plus réécrit.
+                            $b['pointsCaches'][] = array_pop($b['lignes']);
                         }
                     } elseif (($t['shopId'] ?? '') !== '') {
                         $sautees++;
@@ -1416,6 +1422,10 @@ function rapPdfHtml(string $html): string
         // hauteur utile, l'écriture se resserre d'un point.
         // Douze vignettes : quatre rangées sur les 271 mm utiles d'une A4, et
         // dans chaque cadre la PHOTO prend tout ce que le texte ne prend pas.
+        . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:54mm}'
+        . 'table[data-grille="3x5"] div[data-fiche]{height:52mm;overflow:hidden;box-sizing:border-box;padding:4px 6px !important}'
+        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:34mm;max-width:100%;width:auto !important;height:auto}'
+        . 'table[data-grille="3x5"] div[data-fiche] div{font-size:8.5px !important;line-height:1.2 !important}'
         . 'table[data-grille="3x4"] tr[data-rangee-fiches]>td{height:67mm}'
         . 'table[data-grille="3x4"] div[data-fiche]{height:65mm;overflow:hidden;box-sizing:border-box;padding:5px 6px !important}'
         // « Aussi grande que possible » ne veut pas dire déformée : largeur et
@@ -1972,6 +1982,19 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
 }
 
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
+/** Le fond et le filet d'une fiche, selon la note — les couleurs du
+ *  référentiel de validation, éclaircies pour rester lisibles sous le texte. */
+function rapFondNote(?int $note): array
+{
+    return [
+        5 => ['fond' => '#FBF6E7', 'trait' => '#C9A227'],
+        4 => ['fond' => '#EFF6F0', 'trait' => '#2D7A3E'],
+        3 => ['fond' => '#FDF2E5', 'trait' => '#D97706'],
+        2 => ['fond' => '#FBEBED', 'trait' => '#C0182B'],
+        1 => ['fond' => '#F7E4E7', 'trait' => '#8D1D2C'],
+    ][$note] ?? ['fond' => '#FBF9F5', 'trait' => ''];
+}
+
 function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, bool $paginer = true): string
 {
     // Une PAGE A4 = colonnes × rangées fiches, toutes de la même taille. Un
@@ -1993,9 +2016,17 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, boo
             $h .= '<tr data-rangee-fiches="1">';
             for ($i = 0; $i < $colonnes; $i++) {
                 $pad = 'padding:5px ' . ($i === $colonnes - 1 ? '0' : '6px') . ' 5px ' . ($i === 0 ? '0' : '6px');
+                // Une carte est soit du HTML nu, soit du HTML AVEC sa couleur :
+                // le fond dit le niveau (doré pour l'exemplaire, du orange au
+                // bordeaux pour les écarts) sans qu'on ait à lire la note.
+                $carte = $rangee[$i] ?? null;
+                $html = is_array($carte) ? (string) ($carte['html'] ?? '') : (string) $carte;
+                $fond = is_array($carte) ? (string) ($carte['fond'] ?? '#FBF9F5') : '#FBF9F5';
+                $trait = is_array($carte) ? (string) ($carte['trait'] ?? '') : '';
                 $h .= '<td valign="top" width="' . $largeur . '%" style="' . $pad . '">'
-                    . (isset($rangee[$i])
-                        ? '<div data-fiche="1" style="background:#FBF9F5;border-radius:10px;padding:10px 12px">' . $rangee[$i] . '</div>'
+                    . ($carte !== null
+                        ? '<div data-fiche="1" style="background:' . $fond . ';border-radius:10px;padding:10px 12px'
+                            . ($trait !== '' ? ';border-left:3px solid ' . $trait : '') . '">' . $html . '</div>'
                         : '&nbsp;')
                     . '</td>';
             }
@@ -2013,7 +2044,7 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, boo
 function rapGrilleDe(array $periode): array
 {
     $jours = 1 + (int) round((strtotime((string) $periode['au']) - strtotime((string) $periode['du'])) / 86400);
-    return $jours >= 2 ? [3, 4] : [2, 3];
+    return $jours >= 2 ? [3, 5] : [2, 3];
 }
 
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
