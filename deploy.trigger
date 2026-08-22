@@ -1,1 +1,1 @@
-2026-08-22T14:55:00Z lecture-exercice
+2026-08-22T15:15:00Z suivi-theorique
