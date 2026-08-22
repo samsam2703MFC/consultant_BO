@@ -1063,7 +1063,9 @@ class App {
       common.hmY25 = () => this.setState({ hmYear: E - 1 }); common.hmY26 = () => this.setState({ hmYear: E });
       common.hmNote = year === E - 1 ? ('Année ' + (E - 1) + ' : CA constaté (pas d’objectif défini).')
         : (!aDesCibles ? 'Aucun objectif encodé pour ' + year + ' : les cellules montrent le CA constaté. Encodez un budget (Encodage du budget) pour activer le % d’atteinte.'
-        : (metric === 'pct' ? 'Cellules colorées selon le % d’atteinte de l’objectif mensuel du magasin.' : 'Cellules colorées du CA le plus faible au plus élevé.'));
+        : (metric === 'pct'
+          ? 'Atteinte de l’objectif mensuel : or dès 100 %, puis orange à −5 %, rouge à −10 %, rouge foncé à −15 %, noir au-delà. Un mois sans objectif encodé reste vide.'
+          : 'Cellules colorées du CA le plus faible au plus élevé.'));
       common.hmMois = M.MOIS;
       let mn = Infinity, mx = -Infinity;
       if (metric === 'ca') for (const s of this.open()) for (const r of s.perf[year]) if (r.ca != null){ mn = Math.min(mn, r.ca); mx = Math.max(mx, r.ca); }
@@ -1071,8 +1073,22 @@ class App {
       const mkCell = (nomM, mi, ca, caT) => { let st = cellBase, txt = '—';
         if (ca == null){ st += 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
         else if (metric === 'ca'){ const t = (ca - mn) / (mx - mn || 1); st += 'background:' + this.mix('#F7F2EA', '#8D1D2C', t) + ';color:' + (t > 0.55 ? '#fff' : '#222'); txt = Math.round(ca / 1000) + 'k'; }
-        else { const pct = ca / caT; const t = Math.max(0, Math.min(1, (pct - 0.85) / 0.3));
-          st += 'background:' + (t < 0.5 ? this.mix('#8D1D2C', '#EDE7DE', t * 2) : this.mix('#EDE7DE', '#2d7a3e', (t - 0.5) * 2)) + ';color:' + (t < 0.16 || t > 0.86 ? '#fff' : '#222'); txt = Math.round(pct * 100) + '%'; }
+        else if (!caT) {
+          // Pas d'objectif encodé pour ce mois : « Infinity % » s'affichait,
+          // c'est-à-dire un CA divisé par zéro. Une case sans objectif n'a
+          // pas de taux d'atteinte — elle reste vide et le dit au survol.
+          st += 'background:var(--color-background-secondary);color:var(--color-text-muted)';
+        }
+        else { const pct = 100 * ca / caT, ecart = pct - 100;
+          // L'échelle demandée : l'objectif atteint est de l'OR, et le retard
+          // s'assombrit par paliers de cinq points — orange, rouge, rouge
+          // foncé, noir. Pas de dégradé continu : on doit pouvoir nommer la
+          // couleur d'une case, et savoir ce qu'elle vaut.
+          const c3 = ecart >= 0 ? ['#C9A227', '#221E1A']
+            : (ecart >= -5 ? ['#C17A2A', '#ffffff']
+            : (ecart >= -10 ? ['#C0182B', '#ffffff']
+            : (ecart >= -15 ? ['#7E1220', '#ffffff'] : ['#151515', '#ffffff'])));
+          st += 'background:' + c3[0] + ';color:' + c3[1]; txt = Math.round(pct) + ' %'; }
         return { txt, st, enter: () => this.setState({ hmHover: { nomM, mi, ca, caT } }) }; };
       common.hmRows = this.open().map(s => ({ nom: s.nom, cells: s.perf[year].map((r, mi) => mkCell(s.nom, mi, r.ca, r.caT)) }));
       const resCells = [];
@@ -1081,7 +1097,11 @@ class App {
         else resCells.push(mkCell('Réseau', mi, ca, caT)); }
       common.hmReseau = resCells;
       const h = S.hmHover;
-      common.hmDetail = h ? (h.nomM + ' — ' + M.MOIS[h.mi] + ' ' + year + ' : CA ' + this.fE(h.ca) + (h.caT ? ' · objectif ' + this.fE(h.caT) + ' · écart ' + (h.ca != null ? this.fE(h.ca - h.caT) + ' (' + this.fP(h.ca / h.caT - 1) + ')' : '—') : '')) : 'Survolez une cellule pour le détail (magasin, mois, CA, objectif, écart).';
+      common.hmDetail = h
+        ? (h.nomM + ' — ' + M.MOIS[h.mi] + ' ' + year + ' : CA ' + (h.ca != null ? this.fE(h.ca) : '—')
+          + (h.caT ? ' · objectif ' + this.fE(h.caT) + ' · écart ' + (h.ca != null ? this.fE(h.ca - h.caT) + ' (' + this.fP(h.ca / h.caT - 1) + ')' : '—')
+            : ' · aucun objectif encodé pour ce mois'))
+        : 'Survolez une cellule pour le détail (magasin, mois, CA, objectif, écart).';
     }
 
     // --- objectifs
