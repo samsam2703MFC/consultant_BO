@@ -1817,6 +1817,14 @@ function rapPdfPiedHtml(array $meta): string
     $logo = rapLogoDataUri();
     $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
+    // Un rapport composé porte souvent le magasin DANS son nom (« … —
+    // Gosselies ») : le pied l'écrivait alors deux fois. Le magasin reste à
+    // gauche, le nom du rapport perd ce qui fait doublon.
+    $magasin = trim((string) ($meta['magasin'] ?? ''));
+    $rapport = trim((string) ($meta['rapport'] ?? ''));
+    if ($magasin !== '' && $rapport !== '' && mb_stripos($rapport, $magasin) !== false) {
+        $rapport = trim(str_ireplace($magasin, '', $rapport), " \t—–-·|");
+    }
     return '<!doctype html><html><head><meta charset="utf-8"><style>'
         . 'html,body{margin:0;padding:0}'
         . 'table{width:100%;border-collapse:collapse;border-top:0.5pt solid #DED6C9}'
@@ -1829,8 +1837,8 @@ function rapPdfPiedHtml(array $meta): string
         // Le logo tient dans SA colonne : sans largeur, il passait sous le
         // texte du magasin.
         . '<td style="width:26mm">' . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
-        . '<td style="padding-left:4mm"><span style="color:#221E1A;font-weight:bold">' . $e($meta['magasin'] ?? '') . '</span>'
-        . (($meta['rapport'] ?? '') !== '' ? ' · ' . $e($meta['rapport']) : '') . '</td>'
+        . '<td style="padding-left:4mm"><span style="color:#221E1A;font-weight:bold">' . $e($magasin) . '</span>'
+        . ($rapport !== '' ? ' · ' . $e($rapport) : '') . '</td>'
         // Les dates et la pagination ne se coupent jamais en deux lignes.
         . '<td align="right" style="white-space:nowrap">' . $dates . ' · <span id="pg"></span></td>'
         . '</tr></table></body></html>';
