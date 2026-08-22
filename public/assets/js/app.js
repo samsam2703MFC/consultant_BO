@@ -1054,7 +1054,11 @@ class App {
       // Le mode « % d'atteinte » suppose des objectifs encodés. Tant qu'il n'y
       // en a pas, il n'affiche que des cases vides — l'écran paraît mort alors
       // que le CA réel est là. On bascule alors sur le CA, sauf choix explicite.
-      const aDesCibles = this.open().some(st => (st.perf[year] || []).some(c => c && c.caT));
+      // Un objectif, c'est le budget validé — et à défaut le CA théorique de
+      // l'étude de marché. Sans ce repli, un magasin qui a une étude mais pas
+      // encore de budget négocié (Sombreffe) n'avait aucun chiffre à donner.
+      const cibleDe = c => (c && c.caT) ? c.caT : ((c && c.theo) ? c.theo : null);
+      const aDesCibles = this.open().some(st => (st.perf[year] || []).some(c => cibleDe(c)));
       const metric = (year === E - 1 || !aDesCibles) ? (S.hmMetric === 'pct' && aDesCibles ? 'pct' : 'ca') : S.hmMetric;
       common.hmYearCur = String(E); common.hmYearPrev = String(E - 1);
       const tb = act => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:7px 14px;' + (act ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)');
@@ -1064,22 +1068,22 @@ class App {
       common.hmNote = year === E - 1 ? ('Année ' + (E - 1) + ' : CA constaté (pas d’objectif défini).')
         : (!aDesCibles ? 'Aucun objectif encodé pour ' + year + ' : les cellules montrent le CA constaté. Encodez un budget (Encodage du budget) pour activer le % d’atteinte.'
         : (metric === 'pct'
-          ? 'Atteinte de l’objectif mensuel : or dès 100 %, puis orange à −5 %, rouge à −10 %, rouge foncé à −15 %, noir au-delà. Un mois sans objectif encodé reste vide.'
+          ? 'Atteinte de l’objectif mensuel — le budget validé, ou le CA théorique de l’étude à défaut : or dès 100 %, puis orange à −5 %, rouge à −10 %, rouge foncé à −15 %, noir au-delà. Un mois sans l’un ni l’autre reste vide.'
           : 'Cellules colorées du CA le plus faible au plus élevé.'));
       common.hmMois = M.MOIS;
       let mn = Infinity, mx = -Infinity;
       if (metric === 'ca') for (const s of this.open()) for (const r of s.perf[year]) if (r.ca != null){ mn = Math.min(mn, r.ca); mx = Math.max(mx, r.ca); }
       const cellBase = 'border-radius:5px;min-height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;cursor:default;';
-      const mkCell = (nomM, mi, ca, caT) => { let st = cellBase, txt = '—';
+      const mkCell = (nomM, mi, ca, caT, theorique) => { let st = cellBase, txt = '—';
         if (ca == null){ st += 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
         else if (metric === 'ca'){ const t = (ca - mn) / (mx - mn || 1); st += 'background:' + this.mix('#F7F2EA', '#8D1D2C', t) + ';color:' + (t > 0.55 ? '#fff' : '#222'); txt = Math.round(ca / 1000) + 'k'; }
-        else if (!caT) {
+        else if (!caT && !theorique) {
           // Pas d'objectif encodé pour ce mois : « Infinity % » s'affichait,
           // c'est-à-dire un CA divisé par zéro. Une case sans objectif n'a
           // pas de taux d'atteinte — elle reste vide et le dit au survol.
           st += 'background:var(--color-background-secondary);color:var(--color-text-muted)';
         }
-        else { const pct = 100 * ca / caT, ecart = pct - 100;
+        else { const cible = caT || theorique, pct = 100 * ca / cible, ecart = pct - 100;
           // L'échelle demandée : l'objectif atteint est de l'OR, et le retard
           // s'assombrit par paliers de cinq points — orange, rouge, rouge
           // foncé, noir. Pas de dégradé continu : on doit pouvoir nommer la
@@ -1089,17 +1093,22 @@ class App {
             : (ecart >= -10 ? ['#C0182B', '#ffffff']
             : (ecart >= -15 ? ['#7E1220', '#ffffff'] : ['#151515', '#ffffff'])));
           st += 'background:' + c3[0] + ';color:' + c3[1]; txt = Math.round(pct) + ' %'; }
-        return { txt, st, enter: () => this.setState({ hmHover: { nomM, mi, ca, caT } }) }; };
-      common.hmRows = this.open().map(s => ({ nom: s.nom, cells: s.perf[year].map((r, mi) => mkCell(s.nom, mi, r.ca, r.caT)) }));
+        return { txt, st, enter: () => this.setState({ hmHover: { nomM, mi, ca, caT, theo: theorique } }) }; };
+      common.hmRows = this.open().map(s => ({ nom: s.nom, cells: s.perf[year].map((r, mi) => mkCell(s.nom, mi, r.ca, r.caT, r.theo)) }));
       const resCells = [];
-      for (let mi = 0; mi < 12; mi++){ const ca = this.open().every(s => s.perf[year][mi].ca == null) ? null : this.sum(year, mi, 'ca'); const caT = this.sum(year, mi, 'caT') || null;
-        if (metric === 'ca'){ const c2 = mkCell('Réseau', mi, ca == null ? null : ca / this.open().length, caT); if (ca != null) c2.txt = Math.round(ca / 1000) + 'k'; c2.enter = () => this.setState({ hmHover: { nomM: 'Réseau', mi, ca, caT } }); resCells.push(c2); }
-        else resCells.push(mkCell('Réseau', mi, ca, caT)); }
+      for (let mi = 0; mi < 12; mi++){ const ca = this.open().every(s => s.perf[year][mi].ca == null) ? null : this.sum(year, mi, 'ca');
+        // La cible du réseau additionne, magasin par magasin, ce qui fait
+        // référence chez lui : son budget, ou son théorique.
+        const cible = this.open().reduce((a, s2) => a + (cibleDe(s2.perf[year][mi]) || 0), 0) || null;
+        if (metric === 'ca'){ const c2 = mkCell('Réseau', mi, ca == null ? null : ca / this.open().length, cible, null); if (ca != null) c2.txt = Math.round(ca / 1000) + 'k'; c2.enter = () => this.setState({ hmHover: { nomM: 'Réseau', mi, ca, caT: cible } }); resCells.push(c2); }
+        else resCells.push(mkCell('Réseau', mi, ca, cible, null)); }
       common.hmReseau = resCells;
       const h = S.hmHover;
+      const cibleH = h ? (h.caT || h.theo || null) : null;
       common.hmDetail = h
         ? (h.nomM + ' — ' + M.MOIS[h.mi] + ' ' + year + ' : CA ' + (h.ca != null ? this.fE(h.ca) : '—')
-          + (h.caT ? ' · objectif ' + this.fE(h.caT) + ' · écart ' + (h.ca != null ? this.fE(h.ca - h.caT) + ' (' + this.fP(h.ca / h.caT - 1) + ')' : '—')
+          + (cibleH ? ' · objectif ' + this.fE(cibleH) + (h.caT ? '' : ' (théorique — budget non encodé)')
+              + ' · écart ' + (h.ca != null ? this.fE(h.ca - cibleH) + ' (' + this.fP(h.ca / cibleH - 1) + ')' : '—')
             : ' · aucun objectif encodé pour ce mois'))
         : 'Survolez une cellule pour le détail (magasin, mois, CA, objectif, écart).';
     }
