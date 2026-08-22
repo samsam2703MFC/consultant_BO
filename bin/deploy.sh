@@ -48,6 +48,11 @@ export DEBIAN_FRONTEND=noninteractive
 # apt-get qui ATTEND le verrou (unattended-upgrades / apt daily le tiennent
 # souvent quelques minutes sur un serveur Ubuntu) au lieu d'échouer aussitôt.
 aptget() { apt-get -o DPkg::Lock::Timeout=600 "$@"; }
+# Un état dpkg à moitié configuré (installation interrompue, dépendances non
+# satisfaites) fait échouer TOUTE installation suivante, y compris celle des
+# modules PHP dont dépend le cockpit. On répare d'abord, sans bruit ni échec.
+dpkg --configure -a >/dev/null 2>&1 || true
+aptget -f install -y -qq >/dev/null 2>&1 || true
 need=()
 command -v apache2ctl >/dev/null 2>&1 || command -v apachectl >/dev/null 2>&1 || need+=(apache2)
 command -v php       >/dev/null 2>&1 || need+=(php-cli)
@@ -89,9 +94,10 @@ else
     WKLOG=/tmp/wkhtmltox-install.log
     if ! aptget install -y -qq "$WKDEB" >"$WKLOG" 2>&1; then
       aptget update -qq >>"$WKLOG" 2>&1 || true
-      if ! aptget install -y -qq "$WKDEB" >>"$WKLOG" 2>&1; then
-        dpkg -i "$WKDEB" >>"$WKLOG" 2>&1 || aptget -f install -y -qq >>"$WKLOG" 2>&1 || true
-      fi
+      # Pas de `dpkg -i` en secours : il installe sans les dépendances et
+      # laisse le gestionnaire de paquets cassé — c'est ce qui a fait échouer
+      # le déploiement suivant (php-mysql et php-gd devenus non installables).
+      aptget install -y -qq "$WKDEB" >>"$WKLOG" 2>&1 || true
     fi
     /usr/local/bin/wkhtmltopdf --version 2>/dev/null | grep -q 'patched qt' \
       || warn "wkhtmltopdf corrigé : installation refusée — $(tail -n 3 "$WKLOG" 2>/dev/null | tr '\n' ' ')"
