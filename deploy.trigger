@@ -1,1 +1,1 @@
-2026-08-22T19:25:00Z assistant-categories-ouvertes
+2026-08-22T19:50:00Z assistant-statut
