@@ -1012,18 +1012,20 @@ function rapportGenerer(array $rep): array
         $l = array_search($a['levier'], $ordre, true) <=> array_search($b2['levier'], $ordre, true);
         return $l !== 0 ? $l : ((($a['famille'] ?? '') === 'taches' ? 1 : 0) <=> (($b2['famille'] ?? '') === 'taches' ? 1 : 0));
     });
-    // Le bilan des tâches et les photos ne se séparent pas : où que l'ordre
-    // place le bilan, les photos le suivent immédiatement.
+    // Le bilan des tâches et les photos ne se séparent pas. La PAIRE se pose
+    // là où l'ordre demandé plaçait le premier des deux — mettre les photos en
+    // tête, c'est demander les tâches en tête —, et se lit toujours dans le
+    // même sens : le bilan, puis les photos qu'il commente.
     $iB = null; $iT = null;
     foreach ($sections as $i2 => $s2) {
         if (($s2['slug'] ?? '') === 'xp-bilan') { $iB = $i2; }
         if (($s2['slug'] ?? '') === 'xp-taches') { $iT = $i2; }
     }
     if ($iB !== null && $iT !== null && $iT !== $iB + 1) {
-        $t = $sections[$iT];
-        array_splice($sections, $iT, 1);
-        $iB = $iT < $iB ? $iB - 1 : $iB;
-        array_splice($sections, $iB + 1, 0, [$t]);
+        $ancre = min($iB, $iT);
+        $paire = [$sections[$iB], $sections[$iT]];
+        foreach ([max($iB, $iT), min($iB, $iT)] as $i3) { array_splice($sections, $i3, 1); }
+        array_splice($sections, $ancre, 0, $paire);
     }
     // Qui ouvre une page : ce que le compositeur a demandé, plus les sauts
     // que le rapport impose de lui-même. Jamais le tout premier bloc — une
