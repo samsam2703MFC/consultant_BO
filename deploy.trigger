@@ -1,1 +1,1 @@
-2026-08-22T04:10:00Z encodage-auto
+2026-08-22T04:35:00Z jauge-objectif
