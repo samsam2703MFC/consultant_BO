@@ -2373,7 +2373,11 @@ function rapJoursDe(array $periode): array
 function rapHauteursVignettes(): string
 {
     $css = '';
-    foreach ([5 => [48, 30], 4 => [60, 42], 3 => [78, 56], 2 => [78, 56], 1 => [78, 56]] as $rangs => [$h, $photo]) {
+    // Chaque rangée porte en plus ~2,6 mm de gouttière (5 px de padding en
+    // haut et en bas) : les hauteurs ci-dessous en tiennent compte, sans quoi
+    // cinq rangées débordaient la feuille de quelques millimètres et la
+    // dernière basculait sur une page presque vide.
+    foreach ([5 => [45, 29], 4 => [57, 40], 3 => [75, 54], 2 => [75, 54], 1 => [75, 54]] as $rangs => [$h, $photo]) {
         $t = 'table[data-grille="3x5"][data-rangees="' . $rangs . '"] ';
         $css .= $t . 'tr[data-rangee-fiches]>td{height:' . $h . 'mm}'
             . $t . 'div[data-fiche]{height:' . ($h - 2) . 'mm}'
@@ -2381,9 +2385,9 @@ function rapHauteursVignettes(): string
     }
     // Une grille sans compte de rangées (rapport ancien, test) : la valeur qui
     // remplit une page pleine.
-    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:48mm}'
-        . 'table[data-grille="3x5"] div[data-fiche]{height:46mm}'
-        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:30mm}';
+    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:45mm}'
+        . 'table[data-grille="3x5"] div[data-fiche]{height:43mm}'
+        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:29mm}';
 }
 
 function rapGrilleDe(array $periode): array
