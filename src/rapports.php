@@ -76,6 +76,12 @@ function ensureRapports(): void
               "ADD COLUMN comparaison VARCHAR(4) NOT NULL DEFAULT 'A-1'"] as $alter) {
         try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
     }
+    // Le contexte d'un run : magasin et nom du rapport, pour le pied de page
+    // du PDF. Il vit sur le RUN parce qu'un aperçu (composition non
+    // enregistrée) n'a pas de ligne dans ceo_rapport à relire, et parce que
+    // le périmètre d'un envoi par magasin n'est pas celui de la définition.
+    try { Db::exec('ALTER TABLE ceo_rapport_run ADD COLUMN contexte TEXT NULL'); }
+    catch (PDOException $e) { /* déjà là */ }
 
     // Le jeton du cron naît tout seul : personne ne doit inventer un secret à
     // la main. L'écran Reporting affiche l'URL complète, prête pour crontab.
@@ -1001,10 +1007,12 @@ function rapportGenerer(array $rep): array
 
     // Le run d'abord, le HTML ensuite : le pied du rapport porte un lien
     // absolu vers sa propre page, qui exige l'identifiant.
-    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html)
-              VALUES (?,?,?,?,?,?,NULL)',
+    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+              VALUES (?,?,?,?,?,?,NULL,?)',
         [(int) $rep['id'], date('Y-m-d H:i:s'), $periode['du'], $periode['au'],
-         $vide ? 'vide' : 'genere', $resume]);
+         $vide ? 'vide' : 'genere', $resume,
+         json_encode(['magasin' => rapMagasinLabel($rep), 'rapport' => (string) ($rep['nom'] ?? '')],
+             JSON_UNESCAPED_UNICODE)]);
     $runId = (int) Db::pdo()->lastInsertId();
     $html = rapportHtml($rep, $sections, $periode, $seuils, $resume, $runId);
     Db::exec('UPDATE ceo_rapport_run SET html = ? WHERE id = ?', [$html, $runId]);
@@ -1651,10 +1659,14 @@ function ep_rapport_run_pdf(int $id): array
     }
     // Le même pied de page que le PDF envoyé par email : magasin, rapport et
     // dates — un téléchargement depuis le cockpit n'est pas un autre document.
+    // Le contexte du RUN prime sur la définition : un aperçu n'a pas de
+    // définition en base, et un envoi par magasin porte un périmètre plus
+    // étroit que celui du rapport.
+    $ctx = json_decode((string) ($run['contexte'] ?? ''), true) ?: [];
     $rep = Db::row('SELECT nom, magasins FROM ceo_rapport WHERE id = ?', [(int) ($run['rapport_id'] ?? 0)]) ?? [];
     $pdf = rapPdfRendu((string) $run['html'], [
-        'magasin' => rapMagasinLabel($rep),
-        'rapport' => (string) ($rep['nom'] ?? ''),
+        'magasin' => (string) ($ctx['magasin'] ?? '') !== '' ? (string) $ctx['magasin'] : rapMagasinLabel($rep),
+        'rapport' => (string) ($ctx['rapport'] ?? '') !== '' ? (string) $ctx['rapport'] : (string) ($rep['nom'] ?? ''),
         'genere' => date('d/m/Y à H:i', strtotime((string) ($run['genere_le'] ?? 'now'))),
         'envoye' => (($run['statut'] ?? '') === 'envoye') ? date('d/m/Y', strtotime((string) ($run['genere_le'] ?? 'now'))) : '',
     ]);
