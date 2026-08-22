@@ -3557,10 +3557,15 @@ function tplJournal(c, x){
       ${c.vuesJamais ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">Jamais ouverts sur la période : ${esc(c.vuesJamais)}</div>` : ''}`)}
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <select ${x.C(c.setLogType)} style="${selCss}">${opts(c.logTypes, c.logType)}</select>
+      <select ${x.C(c.setLogPeriode)} style="${selCss}">${opts(c.logPeriodes, c.logPeriode)}</select>
       <select ${x.C(c.setLogQui)} style="${selCss}">${opts(c.logQuis, c.logQui)}</select>
+      <select ${x.C(c.setLogType)} style="${selCss}">${opts(c.logTypes, c.logType)}</select>
+      <select ${x.C(c.setLogProjet)} style="${selCss}">${opts(c.logProjets, c.logProjet)}</select>
       <input type="text" id="log-search" placeholder="Rechercher (projet, tâche, magasin…)" value="${esc(c.logQ)}" ${x.I(c.setLogQ)} style="flex:1;max-width:340px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
-      <button ${x.A(c.exportCsv)} style="margin-left:auto;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Exporter CSV</button>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.logCompte || '')}</span>
+        <button ${x.A(c.exportCsv)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Exporter CSV</button>
+      </span>
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">

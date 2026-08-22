@@ -8082,14 +8082,32 @@ class App {
       .map(k => noms[k]).join(' · ');
     common.vuesVide = !common.vuesChargement && !(v.ecrans || []).length;
     const all = S.logsExtra.concat(D.logs);
+    // Chaque colonne du tableau a sa liste : période, auteur, type, projet.
+    // Les valeurs sortent des lignes elles-mêmes — une liste qui propose ce
+    // qui n'existe pas ferait chercher pour rien.
     common.logTypes = ['Tous les types'].concat([...new Set(all.map(l => l.type))]);
     common.logQuis = ['Tous les auteurs'].concat([...new Set(all.map(l => l.qui))]);
+    common.logProjets = ['Tous les projets'].concat([...new Set(all.map(l => l.projet).filter(p2 => p2 && p2 !== '—'))].sort());
+    common.logPeriodes = ['Toute la période', 'Aujourd’hui', '7 derniers jours', '30 derniers jours'];
+    const logProjet = S.logProjet || 'Tous les projets';
+    const logPeriode = S.logPeriode || 'Toute la période';
     common.logType = S.logType; common.logQui = S.logQui; common.logQ = S.logQ;
+    common.logProjet = logProjet; common.logPeriode = logPeriode;
     common.setLogType = e => this.setState({ logType: e.target.value });
     common.setLogQui = e => this.setState({ logQui: e.target.value });
+    common.setLogProjet = e => this.setState({ logProjet: e.target.value });
+    common.setLogPeriode = e => this.setState({ logPeriode: e.target.value });
     common.setLogQ = e => this.setState({ logQ: e.target.value });
     const q = S.logQ.toLowerCase();
-    const rows = all.filter(l => (S.logType === 'Tous les types' || l.type === S.logType) && (S.logQui === 'Tous les auteurs' || l.qui === S.logQui) && (!q || (l.msg + ' ' + l.projet).toLowerCase().includes(q)));
+    const jours = { 'Aujourd’hui': 0, '7 derniers jours': 6, '30 derniers jours': 29 }[logPeriode];
+    const borne = jours === undefined ? null
+      : new Date(Date.now() - jours * 86400000).toISOString().slice(0, 10);
+    const rows = all.filter(l => (S.logType === 'Tous les types' || l.type === S.logType)
+      && (S.logQui === 'Tous les auteurs' || l.qui === S.logQui)
+      && (logProjet === 'Tous les projets' || l.projet === logProjet)
+      && (borne === null || String(l.ts).slice(0, 10) >= borne)
+      && (!q || (l.msg + ' ' + l.projet).toLowerCase().includes(q)));
+    common.logCompte = rows.length + ' événement(s)' + (all.length > rows.length ? ' sur ' + all.length : '');
     const tCl = { 'Alerte': ['rgba(141,29,44,0.12)', '#8D1D2C'], 'Relance': ['rgba(99,102,241,0.12)', '#4649c4'], 'Statut': ['rgba(193,122,42,0.16)', '#8a5a13'], 'Rapport': ['rgba(45,122,62,0.10)', '#2d7a3e'] };
     common.logRows = rows.map(l => { const c = tCl[l.type] || ['var(--color-background-secondary)', '#666666'];
       return { ts: l.ts, qui: l.qui, type: l.type, projet: l.projet, msg: l.msg, typeSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;background:' + c[0] + ';color:' + c[1] }; });
