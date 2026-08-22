@@ -1832,34 +1832,58 @@ function rapPdfRendu(string $html, array $meta = []): ?string
     if (!function_exists('shell_exec')) { return null; }
     $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
+    $profil = sys_get_temp_dir() . '/rapchrome-' . getmypid() . '-' . substr(sha1($tmpH), 0, 8);
     file_put_contents($tmpH, rapPdfHtml($html, $meta));
-    // `--print-media-type` : le document porte déjà ses règles @media print
-    // (sauts de page des fiches) — sans ce drapeau wkhtmltopdf les ignore.
-    // Le numéro de page en pied : un rapport de trois feuilles agrafées sans
-    // pagination se relit mal.
-    $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
+
+    // CHROMIUM D'ABORD. Mesuré : le build wkhtmltopdf des dépôts (0.12.6 sur
+    // Qt non corrigé) ignore `--print-media-type` ET tous les `--footer-*`,
+    // et il ne répète ni les éléments en position fixe, ni un <thead> — le
+    // pied de page ne s'imprimait que sur la dernière feuille. Chromium
+    // respecte le média « print », les marges de @page, et repeint la bande
+    // de pied sur chaque page. Il rend aussi le même rapport en une fraction
+    // du temps.
+    //   --user-data-dir : sans profil inscriptible, Chromium refuse de
+    //     démarrer sous le compte du serveur web (HOME non inscriptible).
+    //   --no-pdf-header-footer : sinon Chromium ajoute SON pied (URL du
+    //     fichier temporaire et date au format américain).
+    $ch = '--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage'
+        . ' --no-first-run --no-default-browser-check --no-pdf-header-footer'
+        . ' --user-data-dir=' . escapeshellarg($profil);
+    // Repli wkhtmltopdf : le pied n'y sera que sur la dernière page, mais un
+    // rapport au pied incomplet vaut mieux qu'un rapport sans PDF.
+    $wk = '--quiet --page-size A4 --enable-local-file-access'
         . ' --margin-top 14mm --margin-bottom 20mm --margin-left 15mm --margin-right 15mm';
-    // Aucun `--footer-*` : ce build les accepte sans les honorer (mesuré — les
-    // PDF n'ont jamais porté la pagination demandée). Le pied est dans le
-    // document, en position fixe.
     $essais = [
+        'timeout 25 chromium ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
+        'timeout 25 chromium-browser ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
+        'timeout 25 google-chrome ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
+        'timeout 25 google-chrome-stable ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
         // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
         'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
         'timeout 25 wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
-        'timeout 25 chromium --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
-        'timeout 25 chromium-browser --headless --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
-        'timeout 25 google-chrome --headless=new --disable-gpu --no-sandbox --print-to-pdf=%2$s %1$s 2>&1',
     ];
     foreach ($essais as $cmd) {
         @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));
         if (is_file($tmpP) && filesize($tmpP) > 1000) {
             $octets = (string) file_get_contents($tmpP);
-            @unlink($tmpH); @unlink($tmpP);
+            rapNettoyer($tmpH, $tmpP, $profil);
             return $octets;
         }
     }
-    @unlink($tmpH); @unlink($tmpP);
+    rapNettoyer($tmpH, $tmpP, $profil);
     return null;
+}
+
+/** Les fichiers de travail d'un rendu — dont le profil jetable de Chromium. */
+function rapNettoyer(string $tmpH, string $tmpP, string $profil): void
+{
+    @unlink($tmpH); @unlink($tmpP);
+    if (!is_dir($profil)) { return; }
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($profil, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST);
+    foreach ($it as $f) { $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname()); }
+    @rmdir($profil);
 }
 
 /**
