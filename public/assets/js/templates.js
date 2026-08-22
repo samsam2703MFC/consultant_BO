@@ -1515,6 +1515,10 @@ function tplEncodage(c, x){
         <div style="display:flex;gap:10px">
           <button ${x.A(c.encReset)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);padding:9px 16px;border-radius:999px">Réinitialiser</button>
           <button ${x.A(c.encSave)} style="border:none;background:var(--color-primary);cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:#fff;padding:9px 20px;border-radius:999px">Enregistrer le budget</button>
+          <!-- L'état de l'enregistrement AUTOMATIQUE : chaque saisie part en
+               base après une pause de frappe, le bouton ne sert plus qu'à
+               confirmer et à laisser une ligne de journal. -->
+          ${c.encAutoEtat ? `<span style="${c.encAutoSt};margin-left:10px">${esc(c.encAutoEtat)}</span>` : ''}
         </div>
       </div>
       ${c.encAlerte ? `<div style="margin-top:12px;padding:10px 13px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(c.encAlerte)}</div>` : ''}

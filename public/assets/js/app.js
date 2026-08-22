@@ -1401,8 +1401,13 @@ class App {
     const P = st.perf[this.meta.exercice];
     const d = S.encDraft[st.id] || {};
     const val = (k, def) => d[k] != null ? d[k] : def;
+    // Chaque saisie part en base après une pause de frappe. Le bouton
+    // « Enregistrer le budget » reste — il journalise et confirme —, mais plus
+    // personne ne perd une grille remplie faute d'avoir cliqué : c'est arrivé
+    // sur douze mois de budget, jamais écrits.
     const set = k => e => { const v = e.target.value;
-      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) })); };
+      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) }));
+      this.encAuto(st.id); };
     const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; };
 
     common.encStore = st.id; common.setEncStore = e => this.setState({ encStore: e.target.value });
@@ -1840,22 +1845,32 @@ class App {
     };
 
     common.encReset = () => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: {} }) }));
+    // Le corps de la requête, recalculé à chaque rendu : l'enregistrement
+    // automatique le lit au moment où il part, jamais une copie périmée.
+    this._encCorps = (journal) => ({
+      caMensuel: mois.map(m => num(m.valeur)),
+      caTheoriqueMensuel: mois.map(m => num(m.theo)),
+      panierEngagement: bud.panierEngagement || null,
+      etudeMarche: {
+        date: common.encEtudeDate || null, source: common.encEtudeSrc || null,
+        potentielMenages: num(common.encMenages) || null, potentielMaturite: num(baseTheo) || null,
+        anneeExploitation: +anneeEx, monteeEnRegime: { a1: ramp.a1, a2: ramp.a2, a3: ramp.a3 },
+        saisonnalite: common.encSais.map(s => num(s.valeur)),
+        annexe: anxNom ? { nom: anxNom, url: common.encAnxUrl || null, taille: anxTaille || null, date: M.TODAY } : null
+      },
+      journal
+    });
+    this._encTotal = caTot;
+    common.encAutoEtat = { 'en-cours': 'Enregistrement…', ok: 'Enregistré ✓', echec: 'Échec — réessayez' }[S.encAuto] || '';
+    common.encAutoSt = 'font-size:11.5px;color:' + (S.encAuto === 'echec' ? '#8D1D2C' : 'var(--color-text-muted)');
     common.encSave = () => {
       const jr = 'Budget ' + this.meta.exercice + ' encodé — CA validé ' + this.fE(caTot) + ', CA théorique ' + this.fE(theoTot) + ', charges validées ' + common.encPctTot + ' (théoriques ' + common.encPctTotT + '), marge ' + common.encMargePct;
       if (!caTot) { this.notify('Renseignez au moins un mois de CA avant d’enregistrer.'); return; }
-      this.api('PUT', '/stores/' + st.id + '/budget?exercice=' + this.meta.exercice, {
-        caMensuel: mois.map(m => num(m.valeur)),
-        caTheoriqueMensuel: mois.map(m => num(m.theo)),
-        panierEngagement: bud.panierEngagement || null,
-        etudeMarche: {
-          date: common.encEtudeDate || null, source: common.encEtudeSrc || null,
-          potentielMenages: num(common.encMenages) || null, potentielMaturite: num(baseTheo) || null,
-          anneeExploitation: +anneeEx, monteeEnRegime: { a1: ramp.a1, a2: ramp.a2, a3: ramp.a3 },
-          saisonnalite: common.encSais.map(s => num(s.valeur)),
-          annexe: anxNom ? { nom: anxNom, url: common.encAnxUrl || null, taille: anxTaille || null, date: M.TODAY } : null
-        },
-        journal: jr
-      }).then(r => {
+      // Un enregistrement automatique encore en attente n'a plus lieu d'être :
+      // celui-ci écrit la même chose, et journalise.
+      clearTimeout(this._encT);
+      this.api('PUT', '/stores/' + st.id + '/budget?exercice=' + this.meta.exercice,
+        this._encCorps(jr)).then(r => {
         // Ne jamais annoncer « enregistré » sans la réponse du serveur : un
         // 404/422 se résout normalement côté fetch, et l'écran mentait.
         if (r && r.ok === false) { this.notify('Échec de l’enregistrement : ' + (r.error || 'refusé par le serveur')); return; }
@@ -1866,6 +1881,24 @@ class App {
       });
     };
     common.encNote = 'À l’enregistrement, la série validée devient le budget de référence du magasin et la série théorique alimente le CA d’étude de marché : elles servent de référence au suivi mensuel et au calcul des écarts. Le CA théorique et l’étude de marché restent indépendants du budget négocié avec ' + st.fr + '.';
+  }
+
+  /**
+   * Enregistrement automatique du budget, après une pause de frappe.
+   *
+   * `journal: ''` dit au serveur de ne PAS journaliser : douze champs remplis
+   * écriraient douze lignes et le journal ne raconterait plus rien. Le bouton
+   * garde sa ligne, avec son résumé.
+   */
+  encAuto(shopId){
+    clearTimeout(this._encT);
+    this._encT = setTimeout(() => {
+      if (!this._encCorps || !this._encTotal) { return; }   // rien de saisi : rien à écrire
+      this.setState({ encAuto: 'en-cours' });
+      this.api('PUT', '/stores/' + shopId + '/budget?exercice=' + this.meta.exercice, this._encCorps(''))
+        .then(r => this.setState({ encAuto: (r && r.ok === false) ? 'echec' : 'ok' }))
+        .catch(() => this.setState({ encAuto: 'echec' }));
+    }, 900);
   }
 
   /* --- scoring produits -------------------------------------------------------- */

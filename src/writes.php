@@ -691,7 +691,13 @@ function wr_budget_put(string $shopId): array
     // par PUT /parametres/budgetCharges. Deux copies du même taux finissaient
     // par diverger, et c'est celle qu'on ne regardait pas qui servait au suivi.
 
-    journalAdd('CEO', 'Budget', $shop['name'], $b['journal'] ?? ("Budget $exercice encodé"));
+    // `journal: ''` = enregistrement AUTOMATIQUE (la saisie au fil de l'eau) :
+    // pas de ligne de journal, sinon douze champs remplis en écriraient douze
+    // et le journal ne raconterait plus rien. Le bouton « Enregistrer le
+    // budget », lui, envoie son texte et laisse sa trace.
+    if (($b['journal'] ?? null) !== '') {
+        journalAdd('CEO', 'Budget', $shop['name'], $b['journal'] ?? ("Budget $exercice encodé"));
+    }
     return ['ok' => true];
 }
 
