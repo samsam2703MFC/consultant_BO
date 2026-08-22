@@ -93,7 +93,9 @@ function mesFenetres(array $camp, array $p): array
     $auj = date('Y-m-d');
     $campDu = (string) $camp['debut'];
     $campFin = (string) $camp['fin'];
-    $campAu = min($campFin, $auj);
+    // Une campagne à venir garde SA fenêtre : borner au jour même donnerait
+    // « du 01/11 au 22/08 », une période à l'envers.
+    $campAu = $campDu > $auj ? $campFin : min($campFin, $auj);
     $duree = max(1, mesJours($campDu, $campFin));
     // Semaines PLEINES, au plus près de la durée de campagne : 30 jours de
     // campagne se comparent à quatre semaines (28 jours), pas à cinq. On
@@ -116,7 +118,8 @@ function mesFenetres(array $camp, array $p): array
     return [
         'pre'  => ['du' => $preDu, 'au' => $preAu, 'jours' => mesJours($preDu, $preAu), 'lu' => $preAu <= $auj],
         'ref'  => ['du' => $refDu, 'au' => $refAu, 'jours' => $refLong, 'lu' => $refAu <= $auj],
-        'camp' => ['du' => $campDu, 'au' => $campAu, 'jours' => $duree, 'ecoulee' => mesJours($campDu, $campAu),
+        'camp' => ['du' => $campDu, 'au' => $campAu, 'jours' => $duree,
+                   'ecoulee' => $campDu > $auj ? 0 : mesJours($campDu, min($campFin, $auj)),
                    'encours' => $campFin > $auj, 'commencee' => $campDu <= $auj],
         'rem'  => ['du' => $remDu, 'au' => $remAu, 'lu' => $remLu, 'jours' => $rem,
                    'dispo' => $rem > 0 && $remDu <= $auj],
@@ -311,7 +314,21 @@ function ep_mesure(): array
     $camp = null;
     foreach ($liste as $c) { if ($c['id'] === $choisie) { $camp = $c; } }
     if ($camp === null) {
-        foreach ($liste as $c) { if ($c['debut'] <= date('Y-m-d')) { $camp = $c; break; } }
+        // La campagne la plus proche du présent : celle en cours, sinon la
+        // dernière terminée, sinon la prochaine. Ouvrir sur une campagne de
+        // novembre au mois d'août n'apprend rien à personne.
+        $auj = date('Y-m-d');
+        foreach ($liste as $c) { if ($c['debut'] <= $auj && $c['fin'] >= $auj) { $camp = $c; break; } }
+        if ($camp === null) {
+            foreach ($liste as $c) {
+                if ($c['fin'] < $auj && ($camp === null || $c['fin'] > $camp['fin'])) { $camp = $c; }
+            }
+        }
+        if ($camp === null) {
+            foreach ($liste as $c) {
+                if ($c['debut'] > $auj && ($camp === null || $c['debut'] < $camp['debut'])) { $camp = $c; }
+            }
+        }
         $camp = $camp ?? $liste[0];
     }
     $out['campagne'] = $camp;
