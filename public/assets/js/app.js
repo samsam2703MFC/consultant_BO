@@ -7339,7 +7339,11 @@ class App {
     // Le repère de comparaison des KPI chiffrés (passage clients, ticket
     // moyen) : A-1 par défaut — le seul qui neutralise la saison.
     const rcComp = rc.comparaison || 'A-1';
-    const composition = () => ({ blocs: slugsOn, modes: rcModes, magasins: magsOn, comparaison: rcComp });
+    // Le rapport auquel la composition se rattache : celui qu'on édite, sinon
+    // celui qu'on a chargé comme modèle. L'historique range alors la
+    // génération sous son nom plutôt que sous « Aperçu à la demande ».
+    const composition = () => ({ blocs: slugsOn, modes: rcModes, magasins: magsOn, comparaison: rcComp,
+      rapportId: S.rapEditId || rc.modeleId || 0 });
     const ordreLev = Object.keys((rd && rd.leviers) || {});
     const groupes = [];
     ordreLev.forEach(lev => {
@@ -7362,9 +7366,10 @@ class App {
       modeles: [{ id: 0, nom: '— Vide —' }].concat(((rd && rd.rapports) || []).map(r => ({ id: r.id, nom: r.nom }))),
       chargerModele: e => {
         const r = ((rd && rd.rapports) || []).find(x => String(x.id) === String(e.target.value));
-        if (!r) { rcSet({ blocs: {}, modes: {} }); return; }
+        if (!r) { rcSet({ blocs: {}, modes: {}, modeleId: 0 }); return; }
         const bl = {}; (r.blocs || []).forEach(sl => { bl[sl] = true; });
-        rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '', comparaison: r.comparaison || 'A-1' });
+        rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '', comparaison: r.comparaison || 'A-1',
+          modeleId: r.id });
         this.notify('Modèle « ' + r.nom + ' » chargé — ajustez puis générez');
       },
       magasins: this.open().map(st2 => ({ nom: st2.nom, on: !!rcMags[st2.nom],

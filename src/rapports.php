@@ -2615,9 +2615,17 @@ function rapGrilleDe(array $periode): array
 function rapCompositionRep(array $b): array
 {
     $blocs = array_values(array_filter((array) ($b['blocs'] ?? []), fn ($s) => isset(rapBlocDefs()[$s])));
+    // Une composition RATTACHÉE à un rapport enregistré (on l'édite, ou on
+    // l'a chargée comme modèle) : ses générations se rangent sous SON nom
+    // dans l'historique, au lieu d'aller grossir « Aperçu à la demande ».
+    // C'est le seul moyen de retrouver ce qui a été essayé sur un rapport.
+    $lie = (int) ($b['rapportId'] ?? 0);
+    $ref = $lie > 0 ? Db::row('SELECT id, nom, poste FROM ceo_rapport WHERE id = ?', [$lie]) : null;
     return [
-        'id' => 0, 'code' => 'apercu', 'nom' => trim((string) ($b['nom'] ?? '')) ?: 'Rapport à la demande',
-        'poste' => trim((string) ($b['poste'] ?? '')) ?: 'À la demande',
+        'id' => $ref !== null ? (int) $ref['id'] : 0,
+        'code' => $ref !== null ? 'apercu-' . (int) $ref['id'] : 'apercu',
+        'nom' => trim((string) ($b['nom'] ?? '')) ?: (string) ($ref['nom'] ?? 'Rapport à la demande'),
+        'poste' => trim((string) ($b['poste'] ?? '')) ?: (string) ($ref['poste'] ?? 'À la demande'),
         'frequence' => 'hebdo', 'par_magasin' => 0,
         'blocs' => json_encode($blocs),
         'modes' => json_encode(is_array($b['modes'] ?? null) ? $b['modes'] : []),
