@@ -1276,6 +1276,7 @@ function tplEncodage(c, x){
       </span>
     </div>
     ${c.encChargement ? `<div style="font-size:12px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:9px;padding:9px 13px">Lecture de l'exercice ${esc(c.encExercice)}…</div>` : ''}
+    ${c.encChargement ? '' : `
 
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px">
       <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Chiffre d'affaires, mois par mois</div>
@@ -1372,6 +1373,7 @@ function tplEncodage(c, x){
       ${c.encAlerte ? `<div style="margin-top:12px;padding:10px 13px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(c.encAlerte)}</div>` : ''}
       <div style="font-size:11.5px;line-height:1.5;color:var(--color-text-muted);margin-top:12px;text-wrap:pretty">${esc(c.encNote)}</div>
     </div>
+    `}
   </div>`;
 }
 

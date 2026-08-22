@@ -1885,7 +1885,9 @@ class App {
       let d2 = 1; P.forEach((r, i) => { if (r.ca != null && r.ca > 0) { d2 = i + 1; } });
       return d2; })();
     common.encChMois = String(moisIdx);
-    common.encChMoisOpts = M.MOIS.map((nom, i) => ({ v: String(i + 1), nom: nom + ' ' + this.meta.exercice,
+    // Le mois porte l'exercice REGARDÉ : « Jan 2026 » sur un écran ouvert en
+    // 2027 laissait croire qu'on encodait l'année passée.
+    common.encChMoisOpts = M.MOIS.map((nom, i) => ({ v: String(i + 1), nom: nom + ' ' + anEnc,
       on: i + 1 === moisIdx }));
     common.setEncChMois = set('chMois');
     // Les charges se saisissent pour TOUS les magasins d'un coup : c'est un
