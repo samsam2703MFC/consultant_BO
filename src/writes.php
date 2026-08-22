@@ -686,6 +686,55 @@ function wr_budget_put(string $shopId): array
                   ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget), ca_theorique = VALUES(ca_theorique)',
             [$shopId, $exercice, $m, (float) $ca, isset($caTheo[$i]) ? (float) $caTheo[$i] : null]);
     }
+    // ── Le THÉORIQUE des trois exercices suivants.
+    //
+    // L'étude de marché ne parle pas d'une année : elle dit un potentiel à
+    // maturité et la vitesse à laquelle un magasin l'atteint. L'encoder une
+    // fois doit donc suffire à poser le théorique de la montée en régime —
+    // sinon il faudrait revenir le saisir chaque janvier, et le suivi n'aurait
+    // aucune référence pour comparer une année qui commence.
+    //
+    // Seul le THÉORIQUE est écrit : le budget validé se négocie avec le
+    // franchisé, année après année, et ne se projette pas. Les lignes déjà
+    // posées gardent donc leur revenue_budget.
+    $projection = [];
+    $potentiel = (float) ($em['potentielMaturite'] ?? 0);
+    $sais = array_map('floatval', (array) ($em['saisonnalite'] ?? []));
+    $sommeSais = array_sum($sais);
+    $anEx = (int) ($em['anneeExploitation'] ?? 1);
+    $ramp = (array) ($em['monteeEnRegime'] ?? []);
+    if ($potentiel > 0 && $sommeSais > 0 && count($sais) === 12) {
+        for ($k = 1; $k <= 3; $k++) {
+            $an = min(4, $anEx + $k);
+            $coef = $an === 1 ? (float) ($ramp['a1'] ?? 70)
+                : ($an === 2 ? (float) ($ramp['a2'] ?? 80)
+                : ($an === 3 ? (float) ($ramp['a3'] ?? 90) : 100.0));
+            $caAn = $potentiel * $coef / 100;
+            $exo = $exercice + $k;
+            Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, ca_theorique_an, etude_date, etude_source,
+                        etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite)
+                      VALUES (?,?,?,?,?,?,?,?,?,?)
+                      ON DUPLICATE KEY UPDATE ca_theorique_an = VALUES(ca_theorique_an),
+                        etude_date = VALUES(etude_date), etude_source = VALUES(etude_source),
+                        etude_potentiel_menages = VALUES(etude_potentiel_menages),
+                        etude_potentiel_maturite = VALUES(etude_potentiel_maturite),
+                        annee_exploitation = VALUES(annee_exploitation), montee_regime = VALUES(montee_regime),
+                        saisonnalite = VALUES(saisonnalite)', [
+                $shopId, $exo, $caAn, $em['date'] ?? null, $em['source'] ?? null,
+                $em['potentielMenages'] ?? null, $potentiel, $an,
+                isset($em['monteeEnRegime']) ? json_encode($em['monteeEnRegime']) : null,
+                json_encode($sais),
+            ]);
+            for ($m = 1; $m <= 12; $m++) {
+                $montant = $caAn * $sais[$m - 1] / $sommeSais;
+                Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, ca_theorique) VALUES (?,?,?,?)
+                          ON DUPLICATE KEY UPDATE ca_theorique = VALUES(ca_theorique)',
+                    [$shopId, $exo, $m, round($montant, 2)]);
+            }
+            $projection[(string) $exo] = ['annee' => $an, 'coef' => $coef, 'ca' => round($caAn, 2)];
+        }
+    }
+
     // Les charges ne s'écrivent plus magasin par magasin : leurs taux valent
     // pour tout le réseau et vivent dans le réglage `budgetCharges`, enregistré
     // par PUT /parametres/budgetCharges. Deux copies du même taux finissaient
@@ -696,9 +745,10 @@ function wr_budget_put(string $shopId): array
     // et le journal ne raconterait plus rien. Le bouton « Enregistrer le
     // budget », lui, envoie son texte et laisse sa trace.
     if (($b['journal'] ?? null) !== '') {
-        journalAdd('CEO', 'Budget', $shop['name'], $b['journal'] ?? ("Budget $exercice encodé"));
+        journalAdd('CEO', 'Budget', $shop['name'], ($b['journal'] ?? ("Budget $exercice encodé"))
+            . ($projection !== [] ? ' — théorique projeté : ' . implode(', ', array_keys($projection)) : ''));
     }
-    return ['ok' => true];
+    return ['ok' => true, 'projection' => $projection];
 }
 
 /** PATCH /reporting/reports/{id} — fréquence, destinataires, postes, actif. */

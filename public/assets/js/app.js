@@ -550,7 +550,7 @@ class App {
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -884,7 +884,11 @@ class App {
       ['Finance', [
         { sub: 'Budget magasin', children: [
           ['budget', 'Suivi du budget', 0],
-          ['encodage', 'Encodage du budget', 0]] }]],
+          ['encodage', 'Encodage du budget', 0],
+          // L'étude de marché et les taux de charges se règlent une fois par
+          // an (ou à l'ouverture d'un magasin) : ils quittent l'écran de
+          // saisie mensuelle pour ne pas encombrer ce qu'on fait chaque mois.
+          ['budgetparam', 'Paramètres du budget', 0]] }]],
       // Le produit d'abord tel qu'il est (catalogue, comptoir), ensuite ce
       // qu'il vaut (scoring), enfin ce qu'on en produit.
       ['Produits', [
@@ -955,8 +959,8 @@ class App {
 
     this.valsRecherche(common, navDef, goTo, titles);
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
@@ -1163,7 +1167,10 @@ class App {
     // --- suivi budget magasin
     if (common.isBudget) this.valsBudget(common);
     // --- encodage du budget
-    if (common.isEncodage) this.valsEncodage(common);
+    // Les deux écrans du budget partagent leurs valeurs : l'encodage mensuel
+    // et les réglages annuels lisent le même magasin, le même exercice et le
+    // même modèle de charges. Une seule fonction, deux gabarits.
+    if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     // --- scoring produits
     if (common.isProduits) this.valsProduits(common);
     // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
@@ -1397,23 +1404,66 @@ class App {
   valsEncodage(common){
     const S = this.state, D = this.D, M = this.M;
     const st = this.open().find(x => x.id === S.encStore) || this.open()[0];
-    const bud = (D.budgets || []).find(b => b.storeId === st.id) || { charges: [] };
-    const P = st.perf[this.meta.exercice];
-    const d = S.encDraft[st.id] || {};
+    // L'EXERCICE encodé : celui du cockpit par défaut, mais on peut en ouvrir
+    // un autre — corriger l'année passée, préparer la suivante. Les données de
+    // l'exercice courant sont déjà chargées ; les autres se lisent à la
+    // demande et se gardent dans un cache par année, sans toucher au reste du
+    // cockpit (qui, lui, parle bien de l'exercice en cours).
+    const anEnc = parseInt(S.encExo || this.exo(), 10) || this.exo();
+    const enCours = anEnc === this.exo();
+    const cache = (D.encAn || {})[anEnc] || null;
+    if (!enCours && !cache && !this._encAnBusy) {
+      this._encAnBusy = true;
+      Promise.all([
+        readOne('/stores/perf?granularite=mois&annees=' + (anEnc - 1) + ',' + anEnc),
+        readOne('/stores/budgets?exercice=' + anEnc),
+      ]).then(([pf, bs]) => {
+        this.D.encAn = Object.assign({}, this.D.encAn, { [anEnc]: { perf: pf || [], budgets: bs || [] } });
+        this._encAnBusy = false;
+        this.setState({});
+      }).catch(() => { this._encAnBusy = false; });
+    }
+    const vide12 = () => Array.from({ length: 12 }, () => ({ ca: null, caT: null }));
+    // Une relecture range les budgets dans le bon casier : l'exercice en cours
+    // est celui du cockpit entier, les autres vivent dans leur cache.
+    const poseBudgets = bs => {
+      if (enCours) { this.D.budgets = bs; return; }
+      this.D.encAn = Object.assign({}, this.D.encAn,
+        { [anEnc]: Object.assign({}, (this.D.encAn || {})[anEnc] || { perf: [] }, { budgets: bs }) });
+    };
+    const bud = (enCours ? (D.budgets || []) : ((cache && cache.budgets) || []))
+      .find(b => b.storeId === st.id) || { charges: [] };
+    const P = enCours ? st.perf[this.exo()]
+      : (cache ? Array.from({ length: 12 }, (_, i) => {
+          const r = (cache.perf || []).find(x2 => String(x2.storeId) === String(st.id)
+            && parseInt(x2.annee, 10) === anEnc && parseInt(x2.mois, 10) === i + 1) || {};
+          return { ca: r.ca != null ? r.ca : null, caT: r.caBudget != null ? r.caBudget : null };
+        }) : vide12());
+    common.encChargement = !enCours && !cache;
+    const cleD = st.id + '@' + anEnc;
+    const d = S.encDraft[cleD] || {};
     const val = (k, def) => d[k] != null ? d[k] : def;
     // Chaque saisie part en base après une pause de frappe. Le bouton
     // « Enregistrer le budget » reste — il journalise et confirme —, mais plus
     // personne ne perd une grille remplie faute d'avoir cliqué : c'est arrivé
     // sur douze mois de budget, jamais écrits.
     const set = k => e => { const v = e.target.value;
-      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) }));
-      this.encAuto(st.id); };
+      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [cleD]: Object.assign({}, s2.encDraft[cleD], { [k]: v }) }) }));
+      this.encAuto(st.id, anEnc); };
     const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; };
 
     common.encStore = st.id; common.setEncStore = e => this.setState({ encStore: e.target.value });
     common.encStoreOpts = this.open().map(x => ({ id: x.id, nom: x.nom }));
     common.encMeta = st.code + ' · ' + st.zone + ' · franchisé ' + st.fr;
-    common.encExercice = String(this.meta.exercice);
+    common.encExercice = String(anEnc);
+    // Un an en arrière (corriger), trois en avant (préparer la montée en
+    // régime que l'étude de marché vient d'écrire).
+    common.encExoOpts = [-1, 0, 1, 2, 3].map(k => {
+      const y = this.exo() + k;
+      return { v: String(y), nom: String(y) + (k === 0 ? ' · en cours' : '') };
+    });
+    common.encExoSel = String(anEnc);
+    common.setEncExo = e => this.setState({ encExo: e.target.value });
 
     const budAnRef = P.reduce((a, r) => a + (r.caT || 0), 0) || 1;
     const theoAnRef = bud.caTheoriqueAn || 0;
@@ -1502,7 +1552,7 @@ class App {
     common.encSaisTotSt = 'font-size:13px;font-weight:500;color:' + (Math.abs(poidsTot - 100) < 0.6 ? '#2d7a3e' : '#8D1D2C');
     common.encLisser = () => { const upd = {};
       M.MOIS.forEach((_, i) => { const w = num(val('sais' + i, poidsDef[i])); upd['th' + i] = Math.round(theoExercice * w / (poidsTot || 100)); });
-      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: Object.assign({}, s2.encDraft[st.id], upd) }) }));
+      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [cleD]: Object.assign({}, s2.encDraft[cleD], upd) }) }));
       this.notify('CA théorique lissé sur les 12 mois — ' + st.nom); };
 
     const anxNom = val('anxNom', (em.annexe && em.annexe.nom) || '');
@@ -1513,10 +1563,10 @@ class App {
     common.encAnxUrl = val('anxUrl', (em.annexe && em.annexe.url) || ''); common.setEncAnxUrl = set('anxUrl');
     common.encAnxPick = e => { const f = e.target.files && e.target.files[0]; if (!f) return;
       const ko = f.size > 1048576 ? (f.size / 1048576).toFixed(1).replace('.', ',') + ' Mo' : Math.max(1, Math.round(f.size / 1024)) + ' Ko';
-      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: Object.assign({}, s2.encDraft[st.id], { anxNom: f.name, anxTaille: ko }) }) }));
+      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [cleD]: Object.assign({}, s2.encDraft[cleD], { anxNom: f.name, anxTaille: ko }) }) }));
       this.log('Budget', st.nom, 'Annexe étude de marché ajoutée : ' + f.name + ' (' + ko + ')');
       this.notify('Annexe jointe — ' + f.name); };
-    common.encAnxDel = () => { this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [st.id]: Object.assign({}, s2.encDraft[st.id], { anxNom: '', anxTaille: '' }) }) }));
+    common.encAnxDel = () => { this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft, { [cleD]: Object.assign({}, s2.encDraft[cleD], { anxNom: '', anxTaille: '' }) }) }));
       this.notify('Annexe retirée'); };
 
     common.encEtudeDate = val('etudeDate', em.date || ''); common.setEncEtudeDate = set('etudeDate');
@@ -1564,12 +1614,12 @@ class App {
       champReel: c2.champReel || null }));
     const lignes = d.lignes ? d.lignes : (modele.length ? depuisModele() : depuisBase());
     const poseLignes = l => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
-      { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: l }) }) }));
+      { [cleD]: Object.assign({}, s2.encDraft[cleD], { lignes: l }) }) }));
     // Un taux du MODÈLE réseau : même pause de frappe, mais il part dans le
     // réglage réseau, pas dans le budget du magasin affiché.
     const setR = k => e => { const v = e.target.value;
       this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
-        { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) }));
+        { [cleD]: Object.assign({}, s2.encDraft[cleD], { [k]: v }) }) }));
       this.autoEnreg('chargesReseau', () => (this._chrAuto ? this._chrAuto() : true)); };
     const setL = (i, k) => e => { const v = e.target.value; const l = lignes.slice();
       l[i] = Object.assign({}, l[i], { [k]: v }); poseLignes(l);
@@ -1618,12 +1668,12 @@ class App {
         if (!r || r.ok === false) { return; }
         this.notify('Modèle de charges du réseau enregistré — ' + (r.postes != null ? r.postes + ' poste(s)' : ''));
         this.log('Budget', null, 'Modèle de charges du réseau modifié depuis l’encodage');
-        return readOne('/stores/budgets?exercice=' + this.meta.exercice).then(bs => {
-          if (bs) { this.D.budgets = bs; }
+        return readOne('/stores/budgets?exercice=' + anEnc).then(bs => {
+          if (bs) { poseBudgets(bs); }
           // Le brouillon est relâché : l'écran repart de ce que le serveur a
           // gardé, sinon on continuerait à regarder sa propre saisie.
           this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
-            { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: null, paliers: null }) }) }));
+            { [cleD]: Object.assign({}, s2.encDraft[cleD], { lignes: null, paliers: null }) }) }));
         });
       });
     };
@@ -1730,7 +1780,7 @@ class App {
     const paliersSrc = d.paliers ? d.paliers
       : (((D.budgets || [])[0] || {}).paliers || []).map(z => Object.assign({}, z));
     const posePaliers = pl => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
-      { [st.id]: Object.assign({}, s2.encDraft[st.id], { paliers: pl }) }) }));
+      { [cleD]: Object.assign({}, s2.encDraft[cleD], { paliers: pl }) }) }));
 
     // Les valeurs auxquelles une étape peut se référer, dans l'ordre où elles
     // apparaissent : on ne propose pas une étape qui n'existe pas encore.
@@ -1848,7 +1898,7 @@ class App {
     // pause de frappe, autre destination.
     const setCh = k => e => { const v = e.target.value;
       this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
-        { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) }));
+        { [cleD]: Object.assign({}, s2.encDraft[cleD], { [k]: v }) }) }));
       this.autoEnreg('charges', () => (this._chAuto ? this._chAuto() : true)); };
 
     let totAttendu = 0, nSaisis = 0, nCases = 0;
@@ -1898,7 +1948,7 @@ class App {
         const postes = {};
         common.encChLignes.forEach(l => { const cell = l.cells.find(z => z.magasin === x2.id) || {};
           postes[l.id] = String(cell.valeur).trim() === '' ? null : num(cell.valeur); });
-        return this.api('PUT', '/stores/' + x2.id + '/charges?exercice=' + this.meta.exercice
+        return this.api('PUT', '/stores/' + x2.id + '/charges?exercice=' + anEnc
           + '&mois=' + moisIdx + '&journal=0', { postes });
       })).then(rs => !rs.some(r => !r || r.ok === false));
     };
@@ -1917,19 +1967,19 @@ class App {
         const postes = {};
         common.encChLignes.forEach(l => { const cell = l.cells.find(z => z.magasin === x2.id) || {};
           postes[l.id] = String(cell.valeur).trim() === '' ? null : num(cell.valeur); });
-        return this.api('PUT', '/stores/' + x2.id + '/charges?exercice=' + this.meta.exercice + '&mois=' + moisIdx, { postes });
+        return this.api('PUT', '/stores/' + x2.id + '/charges?exercice=' + anEnc + '&mois=' + moisIdx, { postes });
       });
       Promise.all(envois).then(rs => {
         const rates = rs.filter(r => !r || r.ok === false).length;
         if (rates) { this.notify(rates + ' magasin(s) refusé(s) — rien n’a été perdu à l’écran.'); }
         else { this.notify('Charges de ' + M.MOIS[moisIdx - 1] + ' enregistrées — ' + aEcrire.length + ' magasin(s)'); }
-        this.log('Budget', null, 'Charges encodées pour ' + M.MOIS[moisIdx - 1] + ' ' + this.meta.exercice
+        this.log('Budget', null, 'Charges encodées pour ' + M.MOIS[moisIdx - 1] + ' ' + anEnc
           + ' — ' + aEcrire.map(x2 => x2.nom).join(', '));
-        return readOne('/stores/budgets?exercice=' + this.meta.exercice).then(bs => {
-          if (bs) { this.D.budgets = bs; }
-          this.setState(s2 => { const dd = Object.assign({}, (s2.encDraft || {})[st.id] || {});
+        return readOne('/stores/budgets?exercice=' + anEnc).then(bs => {
+          if (bs) { poseBudgets(bs); }
+          this.setState(s2 => { const dd = Object.assign({}, (s2.encDraft || {})[cleD] || {});
             Object.keys(dd).forEach(k => { if (k.indexOf('chm' + moisIdx + ':') === 0) { delete dd[k]; } });
-            return { encDraft: Object.assign({}, s2.encDraft, { [st.id]: dd }) }; });
+            return { encDraft: Object.assign({}, s2.encDraft, { [cleD]: dd }) }; });
         });
       });
     };
@@ -1959,7 +2009,7 @@ class App {
       // Un enregistrement automatique encore en attente n'a plus lieu d'être :
       // celui-ci écrit la même chose, et journalise.
       clearTimeout(this._encT);
-      this.api('PUT', '/stores/' + st.id + '/budget?exercice=' + this.meta.exercice,
+      this.api('PUT', '/stores/' + st.id + '/budget?exercice=' + anEnc,
         this._encCorps(jr)).then(r => {
         // Ne jamais annoncer « enregistré » sans la réponse du serveur : un
         // 404/422 se résout normalement côté fetch, et l'écran mentait.
@@ -2033,12 +2083,12 @@ class App {
     return { 'en-cours': 'Enregistrement…', ok: 'Enregistré ✓', echec: 'Échec — réessayez' }[(this.state.autoEtat || {})[cle]] || '';
   }
 
-  encAuto(shopId){
+  encAuto(shopId, exercice){
     clearTimeout(this._encT);
     this._encT = setTimeout(() => {
       if (!this._encCorps || !this._encTotal) { return; }   // rien de saisi : rien à écrire
       this.setState({ encAuto: 'en-cours' });
-      this.api('PUT', '/stores/' + shopId + '/budget?exercice=' + this.meta.exercice, this._encCorps(''))
+      this.api('PUT', '/stores/' + shopId + '/budget?exercice=' + (exercice || this.meta.exercice), this._encCorps(''))
         .then(r => {
           this.setState({ encAuto: (r && r.ok === false) ? 'echec' : 'ok' });
           if (!r || r.ok !== false) { this.rafraichirBudget(); }
