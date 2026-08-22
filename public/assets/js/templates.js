@@ -1379,7 +1379,10 @@ function tplEncodage(c, x){
    marché d'un magasin) ou une fois pour tout le réseau (les taux de charges).
    Séparé de l'encodage, qui lui se fait chaque mois. */
 function tplBudgetParam(c, x){
-  const lbl = 'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  // `esc` vit dans les aides passées au gabarit : l'oublier ici faisait échouer
+  // le rendu, et l'écran précédent restait affiché — l'erreur était invisible.
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
   const opts = (arr, sel, v, t) => arr.map(o => `<option value="${v(o)}"${String(v(o)) === String(sel) ? ' selected' : ''}>${t(o)}</option>`).join('');
   return `
   <div data-screen="budgetparam" style="display:flex;flex-direction:column;gap:16px;max-width:1180px">
