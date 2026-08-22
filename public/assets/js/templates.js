@@ -1407,8 +1407,19 @@ function tplBxc(c, x){
       <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-top:4px">
         ${c.bxcMois.map(m => `<div style="font-size:9.5px;color:var(--color-text-muted);text-align:center">${esc(m.nom)}</div>`).join('')}
       </div>
-      <div style="position:relative;height:26px;margin-top:8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:8px">
-        ${c.bxcBandes.map(b2 => `<span ${x.A(b2.choisir)} title="${esc(b2.nom)}" style="position:absolute;top:3px;left:${b2.gauche}%;width:${b2.largeur}%;height:20px;border-radius:6px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 6px;font-size:10px;font-weight:600;line-height:20px;text-align:center;${b2.on ? 'background:var(--pkg-abricot);color:#fff' : 'background:rgba(193,122,42,.22);border:1px solid var(--pkg-abricot);color:#8a5a13'}">${esc(b2.nom)}</span>`).join('')}
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px">
+        ${c.bxcTypes.map(t2 => `
+          <div style="display:flex;align-items:flex-start;gap:9px">
+            <span style="width:118px;flex:none;padding-top:4px;font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--color-text-muted);display:flex;align-items:center;gap:6px">
+              <i style="display:inline-block;width:8px;height:8px;border-radius:2px;flex:none;background:${t2.couleur}"></i>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t2.nom)}</span>
+            </span>
+            <span style="flex:1;display:flex;flex-direction:column;gap:4px">
+              ${t2.lignes.map(li => `<span style="position:relative;display:block;height:22px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:7px">
+                ${li.bandes.map(b2 => `<span ${x.A(b2.choisir)} title="${esc(b2.titre)}" style="position:absolute;top:2px;left:${b2.gauche}%;width:${b2.largeur}%;height:16px;border-radius:5px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 5px;font-size:9.5px;font-weight:600;line-height:16px;text-align:center;${b2.on ? 'background:' + t2.couleur + ';color:#fff' : 'background:var(--color-surface);border:1px solid ' + t2.couleur + ';color:var(--color-text)'}">${esc(b2.nom)}</span>`).join('')}
+              </span>`).join('')}
+            </span>
+          </div>`).join('')}
       </div>
       ${c.bxcCouvNote ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">${esc(c.bxcCouvNote)}</div>` : ''}
     </div>

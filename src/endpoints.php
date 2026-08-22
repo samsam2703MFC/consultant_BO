@@ -6114,8 +6114,13 @@ function ep_budget_campagnes(): array
     ensureCampagneObjectifs();
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
     try {
-        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut
+        // Le TYPE voyage avec la campagne : les bandes se rangent par type,
+        // une ligne chacun — sinon deux campagnes qui se chevauchent se
+        // marchent dessus et aucune ne se lit.
+        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut,
+                                  t.label AS type_label, t.color_hex AS type_color
                              FROM mar_campaign c LEFT JOIN mar_campaign_status s ON s.code = c.status_code
+                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
                             WHERE (c.starts_on IS NOT NULL AND c.starts_on <= ? AND (c.ends_on IS NULL OR c.ends_on >= ?))
                             ORDER BY c.starts_on', [$exercice . '-12-31', $exercice . '-01-01']);
     } catch (PDOException $e) {
@@ -6152,7 +6157,9 @@ function ep_budget_campagnes(): array
     foreach ($camps as $c) {
         $du = (string) $c['starts_on']; $au = (string) ($c['ends_on'] ?: $c['starts_on']);
         $liste[] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'], 'debut' => $du, 'fin' => $au,
-            'statut' => (string) ($c['statut'] ?? $c['status_code'] ?? '')];
+            'statut' => (string) ($c['statut'] ?? $c['status_code'] ?? ''),
+            'type' => (string) ($c['type_label'] ?? 'Sans type'),
+            'typeCouleur' => (string) ($c['type_color'] ?? '')];
         $d = new DateTimeImmutable(max($du, $exercice . '-01-01'));
         $f = new DateTimeImmutable(min($au, $exercice . '-12-31'));
         for ($x = $d; $x <= $f; $x = $x->modify('first day of next month')) {

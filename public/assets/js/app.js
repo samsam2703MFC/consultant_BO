@@ -1442,15 +1442,31 @@ class App {
         + (nCouv < 12 ? ' — sans campagne : ' + M.MOIS.filter((_, i) => !(d.couvert || [])[i]).join(', ') : '')
       : '';
 
-    // Les campagnes de l'exercice, en bandes sous la courbe.
+    // Les campagnes de l'exercice, en bandes sous la courbe : UNE LIGNE PAR
+    // TYPE. Deux campagnes qui se chevauchent se marchaient dessus et aucune
+    // ne se lisait. Dans un type, deux campagnes qui se croisent encore
+    // ouvrent une ligne de plus — la place se prend, elle ne se dispute pas.
     const jourDe = iso => { const t = new Date(iso + 'T00:00:00'); return (t.getMonth() * 100 + (t.getDate() - 1) * 100 / 31) / 1200; };
-    common.bxcBandes = (d.campagnes || []).map(c2 => ({
-      id: c2.id, nom: c2.nom,
-      gauche: Math.max(0, Math.min(99, 100 * jourDe(c2.debut))),
-      largeur: Math.max(4, Math.min(100, 100 * (jourDe(c2.fin) - jourDe(c2.debut)) + 4)),
-      on: d.campagne && d.campagne.id === c2.id,
-      choisir: () => this.setState({ bxcCamp: c2.id }),
-    }));
+    const parType = [];
+    (d.campagnes || []).forEach(c2 => {
+      const nomT = c2.type || 'Sans type';
+      let g = parType.find(z => z.nom === nomT);
+      if (!g) { g = { nom: nomT, couleur: c2.typeCouleur || '', lignes: [] }; parType.push(g); }
+      const bande = {
+        id: c2.id, nom: c2.nom, debut: c2.debut, fin: c2.fin,
+        gauche: Math.max(0, Math.min(99, 100 * jourDe(c2.debut))),
+        largeur: Math.max(3, Math.min(100, 100 * (jourDe(c2.fin) - jourDe(c2.debut)) + 3)),
+        on: d.campagne && d.campagne.id === c2.id,
+        titre: c2.nom + ' · ' + (c2.debut || '').split('-').reverse().join('/') + ' → ' + (c2.fin || '').split('-').reverse().join('/'),
+        choisir: () => this.setState({ bxcCamp: c2.id }),
+      };
+      // La première ligne où la bande ne touche personne.
+      let l = g.lignes.find(li => li.every(x2 => c2.debut > x2.fin || c2.fin < x2.debut));
+      if (!l) { l = []; g.lignes.push(l); }
+      l.push(bande);
+    });
+    common.bxcTypes = parType.map(g => ({ nom: g.nom, couleur: g.couleur || 'var(--pkg-abricot)',
+      lignes: g.lignes.map(li => ({ bandes: li })) }));
     common.bxcCampOpts = (d.campagnes || []).map(c2 => ({ v: String(c2.id),
       nom: c2.nom + ' · ' + (c2.debut || '').slice(5) + ' → ' + (c2.fin || '').slice(5) }));
     common.bxcCampSel = String((d.campagne || {}).id || '');
