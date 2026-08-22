@@ -1103,9 +1103,14 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
                     . '<td style="' . $F . ';padding:6px 0 6px 16px;font-size:12px;color:#6E645A;border-bottom:1px solid #F5F0E8;line-height:1.5">'
                     . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</td></tr></table>';
             }
+            // Le nom du magasin en tête d'une grille ne sert qu'à DISTINGUER :
+            // s'il n'y en a qu'un, il est déjà dans l'en-tête du rapport et
+            // dans le pied de chaque page — l'écrire une troisième fois au-
+            // dessus des photos n'apprend rien.
+            $plusieursMags = count($htmls) > 1;
             foreach ($htmls as $l) {
                 // Construit par nos soins, jamais issu d'une saisie — pas d'échappement.
-                $h .= ($magasin === null && $l[0] !== '' ? '<div data-titre-magasin="1" style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>' : '')
+                $h .= ($magasin === null && $plusieursMags && $l[0] !== '' ? '<div data-titre-magasin="1" style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>' : '')
                     . $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
