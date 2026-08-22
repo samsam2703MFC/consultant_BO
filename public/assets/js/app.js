@@ -7304,7 +7304,8 @@ class App {
             this.setState({ rapComposeOn: true, rapEditId: r.id, rapCompo: {
               blocs: bl, modes: r.modes || {}, mags: mg2, nom: r.nom, poste: r.poste || '',
               heure: String(r.heure), dows: dw, doms: dm, dest: (r.destinataires || []).join(', '),
-              envoiMode: r.envoiMode || 'groupe', dpm: dpm0, comparaison: r.comparaison || 'A-1' } });
+              envoiMode: r.envoiMode || 'groupe', dpm: dpm0, comparaison: r.comparaison || 'A-1',
+              ordre: r.ordre || [], sauts: (r.sauts || []).reduce((o, sl) => { o[sl] = true; return o; }, {}) } });
           },
           suppr: () => {
             if (!window.confirm('Supprimer le rapport « ' + r.nom + ' » ? Ses générations passées restent lisibles dans l’historique.')) { return; }
@@ -7332,6 +7333,23 @@ class App {
     const rcModes = rc.modes || {};
     const rcMags = rc.mags || {};
     const slugsOn = Object.keys(rcBlocs).filter(sl => rcBlocs[sl]);
+    // Le rang PAR DÉFAUT d'un bloc : son levier, et les blocs de tâches en
+    // fin de levier. C'est l'ordre qu'applique le générateur quand personne
+    // n'a rien demandé — l'écran doit montrer le même.
+    const rangBloc = sl => {
+      const d5 = ((rd && rd.blocs) || {})[sl] || {};
+      const i4 = Object.keys((rd && rd.leviers) || {}).indexOf(d5.levier);
+      return (i4 < 0 ? 99 : i4) * 10 + (d5.famille === 'taches' ? 1 : 0);
+    };
+    // L'ordre VOULU d'abord (celui de la liste de mise en page), puis les
+    // blocs cochés depuis, rangés par levier. Un bloc décoché disparaît de
+    // l'ordre sans le trouer.
+    const planSlugs = () => {
+      const voulu = (rc.ordre || []).filter(sl => rcBlocs[sl]);
+      const reste = slugsOn.filter(sl => voulu.indexOf(sl) < 0)
+        .slice().sort((a3, b3) => rangBloc(a3) - rangBloc(b3));
+      return voulu.concat(reste);
+    };
     const magsOn = Object.keys(rcMags).filter(n2 => rcMags[n2]);
     // La fenêtre de données n'est plus choisie à l'écran : elle suit la
     // cadence (quotidien → la veille, hebdo → semaine passée, mensuel → mois
@@ -7342,7 +7360,8 @@ class App {
     // Le rapport auquel la composition se rattache : celui qu'on édite, sinon
     // celui qu'on a chargé comme modèle. L'historique range alors la
     // génération sous son nom plutôt que sous « Aperçu à la demande ».
-    const composition = () => ({ blocs: slugsOn, modes: rcModes, magasins: magsOn, comparaison: rcComp,
+    const composition = () => ({ blocs: planSlugs(), modes: rcModes, magasins: magsOn, comparaison: rcComp,
+      ordre: planSlugs(), sauts: planSlugs().filter(sl => (rc.sauts || {})[sl]),
       rapportId: S.rapEditId || rc.modeleId || 0 });
     const ordreLev = Object.keys((rd && rd.leviers) || {});
     const groupes = [];
@@ -7369,7 +7388,8 @@ class App {
         if (!r) { rcSet({ blocs: {}, modes: {}, modeleId: 0 }); return; }
         const bl = {}; (r.blocs || []).forEach(sl => { bl[sl] = true; });
         rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '', comparaison: r.comparaison || 'A-1',
-          modeleId: r.id });
+          modeleId: r.id, ordre: r.ordre || [],
+          sauts: (r.sauts || []).reduce((o, sl) => { o[sl] = true; return o; }, {}) });
         this.notify('Modèle « ' + r.nom + ' » chargé — ajustez puis générez');
       },
       magasins: this.open().map(st2 => ({ nom: st2.nom, on: !!rcMags[st2.nom],
@@ -7398,6 +7418,53 @@ class App {
         toggle: () => rcSet({ dows: Object.assign({}, dows, { [d5]: !dows[d5] }) }) })),
       doms: Array.from({ length: 31 }, (_, i2) => i2 + 1).map(d5 => ({ nom: String(d5), on: !!doms[d5],
         toggle: () => rcSet({ doms: Object.assign({}, doms, { [d5]: !doms[d5] }) }) })),
+      // ── La mise en page : l'ordre des blocs, et qui ouvre une page.
+      //    Deux sauts sont IMPOSÉS par le rapport (le bilan des tâches et les
+      //    photos) : ils s'affichent verrouillés plutôt que d'être proposés
+      //    puis ignorés à la génération.
+      plan: (() => {
+        const ordre = planSlugs();
+        const defs = (rd && rd.blocs) || {};
+        const forces = { 'xp-bilan': 1, 'xp-taches': 1 };
+        let page = 1;
+        return ordre.map((sl, i3) => {
+          const saut = i3 > 0 && (!!(rc.sauts || {})[sl] || !!forces[sl]);
+          if (saut) { page += 1; }
+          const lev = ((rd && rd.leviers) || {})[(defs[sl] || {}).levier] || {};
+          return {
+            slug: sl, nom: (defs[sl] || {}).nom || sl, couleur: lev.couleur || '#999',
+            levier: lev.nom || '', page,
+            mode: rcModes[sl] === 'complet' ? 'Complet' : 'Dépass.',
+            saut, force: !!forces[sl], premier: i3 === 0,
+            monter: i3 === 0 ? null : () => {
+              const o = ordre.slice(); o.splice(i3 - 1, 0, o.splice(i3, 1)[0]); rcSet({ ordre: o });
+            },
+            descendre: i3 === ordre.length - 1 ? null : () => {
+              const o = ordre.slice(); o.splice(i3 + 1, 0, o.splice(i3, 1)[0]); rcSet({ ordre: o });
+            },
+            basculerSaut: (i3 === 0 || forces[sl]) ? null
+              : () => rcSet({ sauts: Object.assign({}, rc.sauts, { [sl]: !(rc.sauts || {})[sl] }) }),
+          };
+        });
+      })(),
+      // Un bouton, une intention : chaque levier commence sa page. Les blocs
+      // gardent leur ordre, seuls les sauts changent.
+      pageParLevier: () => {
+        const defs = (rd && rd.blocs) || {};
+        const st4 = {}; let levPrec = null;
+        planSlugs().forEach((sl, i3) => {
+          const lev = (defs[sl] || {}).levier || '';
+          if (i3 > 0 && lev !== levPrec) { st4[sl] = true; }
+          levPrec = lev;
+        });
+        rcSet({ sauts: st4 });
+        this.notify('Un saut de page à chaque changement de levier');
+      },
+      sansSaut: () => { rcSet({ sauts: {} }); this.notify('Sauts retirés — le rapport s’enchaîne'); },
+      ordreParLevier: () => {
+        rcSet({ ordre: planSlugs().slice().sort((a3, b3) => rangBloc(a3) - rangBloc(b3)) });
+        this.notify('Ordre du cockpit rétabli — par levier');
+      },
       busy: !!rc.busy,
       apercu: () => {
         if (!slugsOn.length) { this.notify('Cochez au moins un KPI.'); return; }

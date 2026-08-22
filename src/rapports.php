@@ -73,7 +73,10 @@ function ensureRapports(): void
               'ADD COLUMN periode_au DATE NULL', 'ADD COLUMN modes TEXT NULL',
               "ADD COLUMN envoi_mode VARCHAR(12) NOT NULL DEFAULT 'groupe'",
               'ADD COLUMN dest_par_magasin TEXT NULL',
-              "ADD COLUMN comparaison VARCHAR(4) NOT NULL DEFAULT 'A-1'"] as $alter) {
+              "ADD COLUMN comparaison VARCHAR(4) NOT NULL DEFAULT 'A-1'",
+              // L'ordre des blocs et les sauts de page voulus : {ordre:[slug],
+              // sauts:[slug]}. Vide = l'ordre par levier, celui d'avant.
+              'ADD COLUMN mise_en_page TEXT NULL'] as $alter) {
         try { Db::exec('ALTER TABLE ceo_rapport ' . $alter); } catch (PDOException $e) { /* déjà là */ }
     }
     // Le contexte d'un run : magasin et nom du rapport, pour le pied de page
@@ -988,15 +991,47 @@ function rapportGenerer(array $rep): array
         }
         if ($b['lignes'] !== [] || $b['infos'] !== [] || $b['htmlPar'] !== [] || $b['motif'] !== null) { $sections[] = $b; }
     }
+    // L'ORDRE VOULU d'abord, s'il y en a un : les blocs qu'il nomme sortent
+    // dans cet ordre, les autres (cochés depuis, ou hérités) le suivent dans
+    // l'ordre par levier.
+    $mep = rapMiseEnPageDe($rep['mise_en_page'] ?? '');
     $ordre = array_keys(RAP_LEVIERS);
     // Par levier d'abord ; puis les blocs de TÂCHES en fin de levier, pour
     // qu'un KPI chiffré ne vienne pas s'intercaler entre le bilan des tâches
     // et la liste des écarts. À égalité, l'ordre des cases cochées décide
     // (le tri de PHP 8 est stable).
-    usort($sections, function ($a, $b2) use ($ordre) {
+    usort($sections, function ($a, $b2) use ($ordre, $mep) {
+        if ($mep['ordre'] !== []) {
+            $ia = array_search($a['slug'] ?? '', $mep['ordre'], true);
+            $ib = array_search($b2['slug'] ?? '', $mep['ordre'], true);
+            if ($ia !== false || $ib !== false) {
+                // Un bloc absent de l'ordre voulu passe après ceux qui y sont.
+                return ($ia === false ? PHP_INT_MAX : $ia) <=> ($ib === false ? PHP_INT_MAX : $ib);
+            }
+        }
         $l = array_search($a['levier'], $ordre, true) <=> array_search($b2['levier'], $ordre, true);
         return $l !== 0 ? $l : ((($a['famille'] ?? '') === 'taches' ? 1 : 0) <=> (($b2['famille'] ?? '') === 'taches' ? 1 : 0));
     });
+    // Le bilan des tâches et les photos ne se séparent pas : où que l'ordre
+    // place le bilan, les photos le suivent immédiatement.
+    $iB = null; $iT = null;
+    foreach ($sections as $i2 => $s2) {
+        if (($s2['slug'] ?? '') === 'xp-bilan') { $iB = $i2; }
+        if (($s2['slug'] ?? '') === 'xp-taches') { $iT = $i2; }
+    }
+    if ($iB !== null && $iT !== null && $iT !== $iB + 1) {
+        $t = $sections[$iT];
+        array_splice($sections, $iT, 1);
+        $iB = $iT < $iB ? $iB - 1 : $iB;
+        array_splice($sections, $iB + 1, 0, [$t]);
+    }
+    // Qui ouvre une page : ce que le compositeur a demandé, plus les sauts
+    // que le rapport impose de lui-même. Jamais le tout premier bloc — une
+    // page blanche avant le rapport n'apprend rien.
+    $sauts = array_unique(array_merge($mep['sauts'], rapSautsForces()));
+    foreach ($sections as $i2 => $s2) {
+        $sections[$i2]['saut'] = $i2 > 0 && in_array($s2['slug'] ?? '', $sauts, true);
+    }
 
     $nPoints = array_sum(array_map(fn ($s) => count($s['lignes']) + count($s['pointsCaches'] ?? []), $sections));
     $nMotifs = count(array_filter($sections, fn ($s) => $s['motif'] !== null));
@@ -1086,7 +1121,8 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // section faisait trois fois la même information sur une page.
             // Le slug voyage avec le titre : le PDF s'en sert pour décider
             // ce qui commence une page (le bilan des tâches, par exemple).
-            $h .= '<div data-titre-bloc="1" data-bloc="' . $e($s['slug'] ?? '') . '" style="' . $F
+            $h .= '<div data-titre-bloc="1" data-bloc="' . $e($s['slug'] ?? '') . '"'
+                . (!empty($s['saut']) ? ' data-saut="1"' : '') . ' style="' . $F
                 . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:24px 0 7px">'
                 . $e($s['nom']) . '</div>';
             if ($s['motif'] !== null) {
@@ -1437,7 +1473,9 @@ function ep_rapports(): array
         'rapports' => array_map(function ($r) use ($dernier, $parRun) {
             $mid = $dernier[(int) $r['id']] ?? null;
             $d = $mid !== null ? ($parRun[$mid] ?? Db::row('SELECT id, genere_le, statut, resume FROM ceo_rapport_run WHERE id = ?', [$mid])) : null;
+            $mep = rapMiseEnPageDe($r['mise_en_page'] ?? '');
             return ['id' => (int) $r['id'], 'code' => $r['code'], 'nom' => $r['nom'], 'poste' => $r['poste'],
+                'ordre' => $mep['ordre'], 'sauts' => $mep['sauts'],
                 'frequence' => $r['frequence'], 'heure' => (int) $r['heure'], 'jour' => (int) $r['jour'],
                 'blocs' => json_decode((string) $r['blocs'], true) ?: [],
                 'destinataires' => json_decode((string) ($r['destinataires'] ?? '[]'), true) ?: [],
@@ -1525,6 +1563,12 @@ function wr_rapport_patch(int $id): array
     }
     if (isset($b['comparaison']) && isset(RAP_COMPARAISONS[(string) $b['comparaison']])) {
         Db::exec('UPDATE ceo_rapport SET comparaison = ? WHERE id = ?', [(string) $b['comparaison'], $id]);
+    }
+    // L'ordre des blocs et les sauts de page : envoyés ensemble, enregistrés
+    // ensemble — un ordre sans ses sauts décalerait les pages.
+    if (isset($b['ordre']) || isset($b['sauts'])) {
+        Db::exec('UPDATE ceo_rapport SET mise_en_page = ? WHERE id = ?',
+            [json_encode(rapMiseEnPageDe(['ordre' => $b['ordre'] ?? [], 'sauts' => $b['sauts'] ?? []])), $id]);
     }
     if (isset($b['magasins']) && is_array($b['magasins'])) {
         Db::exec('UPDATE ceo_rapport SET magasins = ? WHERE id = ?',
@@ -1741,6 +1785,8 @@ function rapPdfHtml(string $html): string
         // magasin : le titre restait en bas d'une page et les photos
         // commençaient à la suivante.
         . 'div[data-bloc="xp-taches"]{page-break-before:always;margin-top:0 !important}'
+        // Et tout bloc dont le compositeur a demandé qu'il ouvre une page.
+        . 'div[data-titre-bloc][data-saut]{page-break-before:always;margin-top:0 !important}'
         // Un titre ne se sépare jamais de ce qu'il annonce.
         . 'div[data-titre-bloc],div[data-titre-magasin]{page-break-after:avoid}'
         // Un peu d'air entre le bandeau et le titre, et entre les blocs.
@@ -2612,6 +2658,28 @@ function rapGrilleDe(array $periode): array
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
 
 /** Le pseudo-rapport d'une composition envoyée par l'écran. */
+/**
+ * La mise en page voulue : l'ordre des blocs, et ceux qui ouvrent une page.
+ *
+ * Deux règles ne se négocient pas, quel que soit l'ordre demandé : les photos
+ * des tâches ouvrent toujours une page (quinze vignettes ne se coincent pas en
+ * bas d'un tableau), et le bilan des tâches reste collé devant elles — un KPI
+ * chiffré glissé entre les deux couperait la lecture en son milieu.
+ */
+function rapMiseEnPageDe($brut): array
+{
+    $m = is_array($brut) ? $brut : (json_decode((string) $brut, true) ?: []);
+    $defs = rapBlocDefs();
+    $filtre = fn ($v) => array_values(array_filter(array_map('strval', (array) $v), fn ($sl) => isset($defs[$sl])));
+    return ['ordre' => $filtre($m['ordre'] ?? []), 'sauts' => $filtre($m['sauts'] ?? [])];
+}
+
+/** Les blocs qui ouvrent une page quoi qu'il arrive. */
+function rapSautsForces(): array
+{
+    return ['xp-bilan', 'xp-taches'];
+}
+
 function rapCompositionRep(array $b): array
 {
     $blocs = array_values(array_filter((array) ($b['blocs'] ?? []), fn ($s) => isset(rapBlocDefs()[$s])));
@@ -2640,6 +2708,7 @@ function rapCompositionRep(array $b): array
         // Le repère de comparaison : A-1 par défaut, le seul qui neutralise la
         // saison. Une valeur inconnue retombe dessus plutôt que d'être crue.
         'comparaison' => isset(RAP_COMPARAISONS[(string) ($b['comparaison'] ?? '')]) ? (string) $b['comparaison'] : 'A-1',
+        'mise_en_page' => json_encode(rapMiseEnPageDe(['ordre' => $b['ordre'] ?? [], 'sauts' => $b['sauts'] ?? []])),
     ];
 }
 
@@ -2686,13 +2755,14 @@ function wr_rapport_creer(): array
         if (is_string($mag) && $ok2 !== []) { $carnet[$mag] = $ok2; }
     }
     Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif,
-                                       jours, magasins, periode, periode_du, periode_au, modes, envoi_mode, dest_par_magasin, comparaison)
-              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?,?,?,?)',
+                                       jours, magasins, periode, periode_du, periode_au, modes, envoi_mode, dest_par_magasin, comparaison,
+                                       mise_en_page)
+              VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?,?,?,?,?,?,?)',
         [$code, $rep['nom'], $rep['poste'], $freq, $heure,
          $jours['dows'][0] ?? ($jours['doms'][0] ?? 1),
          $rep['blocs'], $rep['destinataires'],
          json_encode($jours), $rep['magasins'], $rep['periode'], $rep['periode_du'], $rep['periode_au'], $rep['modes'],
-         $envoiMode, json_encode($carnet, JSON_UNESCAPED_UNICODE), $rep['comparaison']]);
+         $envoiMode, json_encode($carnet, JSON_UNESCAPED_UNICODE), $rep['comparaison'], $rep['mise_en_page']]);
     journalAdd('CEO', 'Rapport', $rep['nom'], 'Rapport composé enregistré (' . $code . ')');
     return ['ok' => true, 'code' => $code,
         'planifie' => $jours['dows'] !== [] || $jours['doms'] !== [],

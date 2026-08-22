@@ -3120,8 +3120,36 @@ function tplReporting(c, x){
             ${c.rapCompo.magasins.map(mg => `<span ${x.A(mg.toggle)} style="display:inline-block;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;${mg.on ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:0.5px solid var(--color-border-secondary)'}">${esc(mg.nom)}</span>`).join('')}
           </div>
         </div>
+        ${c.rapCompo.plan.length ? `
         <div>
-          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">3 · Quand l'envoyer</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:12.5px;font-weight:600">3 · L'ordre et les pages</span>
+            <span style="font-size:11px;color:var(--color-text-muted)">Les blocs sortent dans cet ordre ; sans saut, ils s'enchaînent et remplissent la feuille.</span>
+            <span style="margin-left:auto;display:flex;gap:6px">
+              <button ${x.A(c.rapCompo.pageParLevier)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 13px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer">Une page par levier</button>
+              <button ${x.A(c.rapCompo.sansSaut)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Aucun saut</button>
+              <button ${x.A(c.rapCompo.ordreParLevier)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Ordre du cockpit</button>
+            </span>
+          </div>
+          ${c.rapCompo.plan.map(pl => `
+            ${pl.saut ? `<div style="display:flex;align-items:center;gap:9px;margin:9px 2px"><span style="flex:1;border-top:1px dashed var(--color-border-secondary)"></span><span style="font-size:9.5px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--color-text-muted)">saut de page${pl.force ? ' — imposé' : ''}</span><span style="flex:1;border-top:1px dashed var(--color-border-secondary)"></span></div>` : ''}
+            <div style="display:flex;align-items:center;gap:10px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:7px 11px;margin-bottom:5px;background:var(--color-background-secondary)">
+              <span style="display:flex;flex-direction:column;gap:1px">
+                <span ${x.A(pl.monter)} style="font-size:9px;line-height:9px;cursor:${pl.monter ? 'pointer' : 'default'};color:${pl.monter ? 'var(--color-text-muted)' : 'var(--color-border-secondary)'}">▲</span>
+                <span ${x.A(pl.descendre)} style="font-size:9px;line-height:9px;cursor:${pl.descendre ? 'pointer' : 'default'};color:${pl.descendre ? 'var(--color-text-muted)' : 'var(--color-border-secondary)'}">▼</span>
+              </span>
+              <span style="font-size:10px;font-weight:600;color:var(--color-text-muted);background:var(--color-surface);border-radius:6px;padding:3px 7px;min-width:34px;text-align:center">P. ${pl.page}</span>
+              <i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${pl.couleur};flex:none"></i>
+              <span style="flex:1;font-size:12px;font-weight:500">${esc(pl.nom)}</span>
+              <span style="font-size:9.5px;font-weight:600;color:var(--color-text-muted);border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:2px 8px">${esc(pl.mode)}</span>
+              ${pl.premier ? '<span style="font-size:10px;color:var(--color-text-muted);padding:3px 10px">1ʳᵉ page</span>'
+                : pl.force ? '<span style="font-size:10px;font-weight:600;color:var(--color-text-muted);border:0.5px dashed var(--color-border-secondary);border-radius:999px;padding:3px 10px" title="Ce bloc ouvre toujours une page">saut imposé</span>'
+                : `<button ${x.A(pl.basculerSaut)} style="border:${pl.saut ? 'none' : '0.5px solid var(--color-border-secondary)'};border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:600;cursor:pointer;${pl.saut ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">saut de page${pl.saut ? ' ✓' : ''}</button>`}
+            </div>`).join('')}
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">« P. 2 » est l'intention : un bloc plus long que la feuille déborde sur la suivante. Le bilan des tâches et les photos ouvrent toujours leur page, et restent l'un derrière l'autre.</div>
+        </div>` : ''}
+        <div>
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">4 · Quand l'envoyer</div>
           <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:9px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Heure d'envoi</span>
             <select ${x.C(c.rapCompo.setHeure)} style="font-size:13px;font-weight:600;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 12px;background:var(--color-surface);color:var(--color-text)">${Array.from({ length: 24 }, (_, h4) => `<option value="${h4}"${String(c.rapCompo.heure) === String(h4) ? ' selected' : ''}>${String(h4).padStart(2, '0')} h 00</option>`).join('')}</select>
@@ -3139,7 +3167,7 @@ function tplReporting(c, x){
           <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">La fenêtre de données suit la cadence : envoi quotidien → la veille · hebdo → la semaine passée · mensuel → le mois passé. Aucun jour coché = rapport à la demande.</div>
         </div>
         <div style="background:var(--color-background-secondary);border-radius:10px;padding:13px 15px">
-          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">4 · Générer, envoyer, ou enregistrer${c.rapCompo.edit ? ` <span style="font-weight:500;color:var(--color-primary)">— modification de « ${esc(c.rapCompo.editNom)} »</span>` : ''}</div>
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">5 · Générer, envoyer, ou enregistrer${c.rapCompo.edit ? ` <span style="font-weight:500;color:var(--color-primary)">— modification de « ${esc(c.rapCompo.editNom)} »</span>` : ''}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
             <button ${x.A(c.rapCompo.apercu)} style="border:none;border-radius:999px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer;${c.rapCompo.busy ? 'opacity:.6' : ''}">${c.rapCompo.busy ? 'En cours…' : 'Générer l’aperçu →'}</button>
             <button ${x.A(c.rapCompo.envoyer)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Envoyer par email</button>
