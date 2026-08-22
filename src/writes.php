@@ -687,7 +687,15 @@ function wr_budget_put(string $shopId): array
         // avait été fixé à rien.
         $montant = ($ca === '' || $ca === null || (float) $ca == 0.0) ? null : (float) $ca;
         $theoM = isset($caTheo[$i]) && (float) $caTheo[$i] != 0.0 ? (float) $caTheo[$i] : null;
-        Db::exec('INSERT INTO ceo_shop_budget_month VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget)', [$shopId, $exercice, $m, $montant]);
+        // `ceo_shop_budget_month.revenue_budget` n'accepte pas NULL : un mois
+        // vide s'y EFFACE au lieu de s'y écrire. (Mesuré en ligne : écrire
+        // NULL renvoyait une erreur d'intégrité et l'enregistrement échouait.)
+        if ($montant === null) {
+            Db::exec('DELETE FROM ceo_shop_budget_month WHERE shop_id = ? AND fiscal_year = ? AND month = ?',
+                [$shopId, $exercice, $m]);
+        } else {
+            Db::exec('INSERT INTO ceo_shop_budget_month VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget)', [$shopId, $exercice, $m, $montant]);
+        }
         Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, revenue_budget, ca_theorique) VALUES (?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget), ca_theorique = VALUES(ca_theorique)',
             [$shopId, $exercice, $m, $montant, $theoM]);
