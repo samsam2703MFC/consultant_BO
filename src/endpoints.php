@@ -790,12 +790,19 @@ function ep_exploitation(): array
         }
     } catch (PDOException $e) { return $out + ['erreur' => 'agrégat de caisse indisponible']; }
 
-    $budget = [];
+    // Objectif du mois : le budget validé, et à défaut le CA théorique de
+    // l'étude de marché. Un magasin dont le budget n'est pas encore négocié a
+    // quand même une cible — la rendre invisible affichait « sans budget » sur
+    // une carte qui, ailleurs dans le cockpit, sait très bien ce qu'elle vise.
+    $budget = []; $budgetSrc = [];
     try {
-        foreach (Db::rows('SELECT shop_id, revenue_budget FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
             [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
+            $sid = (string) $b['shop_id'];
             if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
-                $budget[(string) $b['shop_id']] = (float) $b['revenue_budget'];
+                $budget[$sid] = (float) $b['revenue_budget']; $budgetSrc[$sid] = 'budget';
+            } elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) {
+                $budget[$sid] = (float) $b['ca_theorique']; $budgetSrc[$sid] = 'theorique';
             }
         }
     } catch (PDOException $e) { /* budget non encodé */ }
@@ -834,7 +841,7 @@ function ep_exploitation(): array
             'jour'    => $bloc($dJour, $b !== null ? $b / $joursMois : null),
             'semaine' => $bloc($dSem,  $b !== null ? $b * $joursSem / $joursMois : null),
             'mois'    => $bloc($dMois, $b !== null ? $b * $joursEcoule / $joursMois : null),
-            'moisPlein' => $b];
+            'moisPlein' => $b, 'budgetSource' => $b === null ? null : ($budgetSrc[(string) $sid] ?? 'budget')];
         $out['magasins'][] = $ligne;
         foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
     }
@@ -894,12 +901,19 @@ function ep_exploitation_api(array $out): ?array
     $out['mois'] = substr($plages['mois'][0], 0, 7);
     $out['source'] = 'API panel — ventes servies jusqu’au jour même';
 
-    $budget = [];
+    // Objectif du mois : le budget validé, et à défaut le CA théorique de
+    // l'étude de marché. Un magasin dont le budget n'est pas encore négocié a
+    // quand même une cible — la rendre invisible affichait « sans budget » sur
+    // une carte qui, ailleurs dans le cockpit, sait très bien ce qu'elle vise.
+    $budget = []; $budgetSrc = [];
     try {
-        foreach (Db::rows('SELECT shop_id, revenue_budget FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
             [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
+            $sid = (string) $b['shop_id'];
             if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
-                $budget[(string) $b['shop_id']] = (float) $b['revenue_budget'];
+                $budget[$sid] = (float) $b['revenue_budget']; $budgetSrc[$sid] = 'budget';
+            } elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) {
+                $budget[$sid] = (float) $b['ca_theorique']; $budgetSrc[$sid] = 'theorique';
             }
         }
     } catch (PDOException $e) { /* budget non encodé */ }
@@ -936,7 +950,7 @@ function ep_exploitation_api(array $out): ?array
             'jour'    => $bloc($parPer['jour'][$sid] ?? null,    $b !== null ? $b / $joursMois : null),
             'semaine' => $bloc($parPer['semaine'][$sid] ?? null, $b !== null ? $b * $joursSem / $joursMois : null),
             'mois'    => $bloc($dMois,                           $b !== null ? $b * $joursEcoule / $joursMois : null),
-            'moisPlein' => $b];
+            'moisPlein' => $b, 'budgetSource' => $b === null ? null : ($budgetSrc[(string) $sid] ?? 'budget')];
         $out['magasins'][] = $ligne;
         foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
     }

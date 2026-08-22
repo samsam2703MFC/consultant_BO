@@ -6161,7 +6161,9 @@ class App {
       const vals = reels.concat(buds).filter(v => v != null);
       return { shopId: m.shopId, magasin: m.magasin,
         ouvrir: () => this.exOpen(m.shopId, m.magasin),
-        objMois: this.fE(m.moisPlein),
+        // Dire d'où vient la cible : un objectif repris du théorique n'est pas
+        // un budget négocié, et la carte ne doit pas laisser croire l'inverse.
+        objMois: this.fE(m.moisPlein) + (m.budgetSource === 'theorique' ? ' (théorique)' : ''),
         jourCa: this.fE(m.jour.ca), jourClients: (m.jour.tickets || 0).toLocaleString('fr-BE'),
         jourPanier: m.jour.panier == null ? '—' : this.fEd(m.jour.panier),
         semCa: this.fE(m.semaine.ca), semJauge: jauge(m.semaine.atteinte),
