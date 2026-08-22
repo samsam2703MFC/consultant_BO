@@ -278,6 +278,31 @@ final class CampaignRepository
         $brandId = $this->resolveBrandId($auth, $data['brand_id'] ?? null);
 
         $connection = Database::connection();
+
+        // Un BROUILLON identique existe déjà ? On le reprend au lieu d'en
+        // créer un deuxième. L'assistant crée à sa première écriture et
+        // réécrit ensuite ; mais rouvrir l'assistant repart d'un écran vide,
+        // sans savoir qu'un brouillon du même nom et des mêmes dates dort
+        // déjà. Trois « Bleuet » identiques se sont ainsi empilés.
+        $nom = (string) $data['name'];
+        $du = $data['starts_on'] ?? null;
+        $au = $data['ends_on'] ?? null;
+        if ((string) ($data['status_code'] ?? 'draft') === 'draft' && $du !== null) {
+            $dej = $connection->prepare(
+                'SELECT id FROM mar_campaign
+                  WHERE brand_id = :brand_id AND name = :name AND status_code = \'draft\'
+                    AND starts_on <=> :starts_on AND ends_on <=> :ends_on
+                  ORDER BY id DESC LIMIT 1'
+            );
+            $dej->execute([':brand_id' => $brandId, ':name' => $nom, ':starts_on' => $du, ':ends_on' => $au]);
+            $idDej = $dej->fetchColumn();
+            if ($idDej !== false && $idDej !== null) {
+                // Le brouillon retrouvé est mis à jour par l'appel suivant de
+                // l'assistant (replaceCampaignDraft) : on rend son identifiant.
+                return (int) $idDej;
+            }
+        }
+
         $statement  = $connection->prepare(
             'INSERT INTO mar_campaign
                 (brand_id, type_id, parent_campaign_id, name, scope, client_target, tone,

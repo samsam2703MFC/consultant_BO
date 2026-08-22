@@ -320,7 +320,11 @@ function emptyDraft(refs: References, role: Role): Draft {
       position_id: step.position_id,
     })),
 
-    status_code: 'draft',
+    // L'état À LA VALIDATION, pas l'état pendant la saisie : tant qu'on
+    // avance dans l'assistant la campagne reste un brouillon en base. Le
+    // défaut était « Brouillon », si bien que finaliser ne changeait rien —
+    // deux campagnes finies restaient « Brouillon » côte à côte.
+    status_code: 'planned',
     create_crm_leads: false,
   }
 }
@@ -2715,7 +2719,12 @@ function ReviewStep({
         </table>
       </div>
 
-      <h3 className="section-label">État à la création</h3>
+      <h3 className="section-label">
+        État à la validation
+        <span className="muted">
+          {' '}— tant que vous éditez, la campagne reste un brouillon ; c’est en validant qu’elle prend cet état.
+        </span>
+      </h3>
       <div className="choice-row">
         {refs.campaignStatuses.map((status) => (
           <button
