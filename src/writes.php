@@ -2617,3 +2617,22 @@ function wr_campagne_objectifs(int $id): array
     }
     return ['ok' => true, 'ecrits' => $ecrits, 'effaces' => $effaces];
 }
+
+/**
+ * POST /ecrans/vue — une ouverture d'écran.
+ *
+ * Compté, jamais journalisé : ouvrir un écran n'est pas une action, et le
+ * journal deviendrait illisible. L'écriture est agrégée par jour et par
+ * personne — un compteur, pas un historique de navigation.
+ */
+function wr_ecran_vue(): array
+{
+    ensureEcranVues();
+    $b = body();
+    $ecran = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($b['ecran'] ?? ''));
+    if ($ecran === '') { http_response_code(422); return ['error' => 'écran attendu']; }
+    $acteur = mb_substr(trim((string) ($b['qui'] ?? '')), 0, 80);
+    Db::exec('INSERT INTO ceo_ecran_vue (ecran, jour, acteur, n) VALUES (?,?,?,1)
+              ON DUPLICATE KEY UPDATE n = n + 1', [$ecran, date('Y-m-d'), $acteur]);
+    return ['ok' => true];
+}

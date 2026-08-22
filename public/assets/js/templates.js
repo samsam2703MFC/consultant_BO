@@ -3527,6 +3527,35 @@ function tplJournal(c, x){
   const { esc } = x;
   return `
   <div data-screen="journal" style="display:flex;flex-direction:column;gap:14px">
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--font-display);font-size:16px;line-height:1.3">Écrans ouverts — 30 derniers jours</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Nombre d'ouvertures, écran par écran et jour par jour. De quoi voir ce qui sert vraiment, et alléger le rail de ce qui ne sert pas.</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.vuesTotal || '')}</div>
+      </div>
+      ${c.vuesChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture des ouvertures…</div>' : (c.vuesVide
+        ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Aucune ouverture enregistrée pour l’instant — la mesure commence à cette livraison.</div>'
+        : `
+      <div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="text-align:left;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 8px 6px 0">Écran</th>
+            <th style="text-align:right;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 10px 6px 0;width:70px">Ouvertures</th>
+            ${c.vuesJours.map((j, i) => `<th style="padding:0 1px 6px;font-size:8px;font-weight:500;color:var(--color-text-muted);text-align:center">${i % 5 === 0 ? esc(j.court) : ''}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${c.vuesLignes.map(l => `<tr>
+              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${l.total}</td>
+              ${l.cases.map(k2 => `<td style="padding:2px 1px" title="${esc(k2.jour)} — ${k2.n} ouverture(s)"><i style="${k2.st}"></i></td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${c.vuesJamais ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">Jamais ouverts sur la période : ${esc(c.vuesJamais)}</div>` : ''}`)}
+    </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <select ${x.C(c.setLogType)} style="${selCss}">${opts(c.logTypes, c.logType)}</select>
       <select ${x.C(c.setLogQui)} style="${selCss}">${opts(c.logQuis, c.logQui)}</select>

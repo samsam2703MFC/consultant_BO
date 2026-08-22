@@ -6228,3 +6228,55 @@ function ep_budget_campagnes(): array
         'magasins' => array_map(fn ($id) => ['id' => $id, 'nom' => $nomDe[$id]], array_keys($nomDe)),
     ];
 }
+
+/* --- Écrans ouverts ---------------------------------------------------------
+ *
+ * Le journal trace les ACTIONS ; il ne disait rien des écrans ouverts. Sans
+ * cette mesure, affiner le rail de navigation revient à deviner ce qui sert.
+ * On compte donc les ouvertures — pas le temps passé, qui demanderait de
+ * suivre la fenêtre et se lit mal : un écran laissé ouvert n'est pas un écran
+ * utilisé.
+ */
+
+/** Le compteur d'ouvertures : une ligne par écran, par jour et par personne. */
+function ensureEcranVues(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ecran_vue ('
+        . 'ecran VARCHAR(40) NOT NULL,'
+        . 'jour DATE NOT NULL,'
+        . 'acteur VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'n INT NOT NULL DEFAULT 0,'
+        . 'PRIMARY KEY (ecran, jour, acteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** GET /ecrans/vues?jours=30 — de quoi dessiner la heatmap du rail. */
+function ep_ecran_vues(): array
+{
+    ensureEcranVues();
+    $jours = max(7, min(90, (int) ($_GET['jours'] ?? 30)));
+    $depuis = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $lignes = Db::rows('SELECT ecran, jour, SUM(n) n FROM ceo_ecran_vue WHERE jour >= ? GROUP BY ecran, jour', [$depuis]);
+    $parEcran = []; $parJour = [];
+    foreach ($lignes as $l) {
+        $e = (string) $l['ecran']; $j = substr((string) $l['jour'], 0, 10); $n = (int) $l['n'];
+        $parEcran[$e] = ($parEcran[$e] ?? 0) + $n;
+        $parJour[$e][$j] = $n;
+    }
+    arsort($parEcran);
+    $joursListe = [];
+    for ($i = $jours - 1; $i >= 0; $i--) { $joursListe[] = date('Y-m-d', strtotime('-' . $i . ' days')); }
+    $out = [];
+    foreach ($parEcran as $e => $tot) {
+        $out[] = ['ecran' => $e, 'total' => $tot,
+            'jours' => array_map(fn ($j) => (int) ($parJour[$e][$j] ?? 0), $joursListe)];
+    }
+    // Qui ouvre quoi : utile pour distinguer l'écran d'un seul utilisateur de
+    // celui que tout le monde ouvre.
+    $acteurs = [];
+    foreach (Db::rows('SELECT ecran, acteur, SUM(n) n FROM ceo_ecran_vue WHERE jour >= ? GROUP BY ecran, acteur', [$depuis]) as $l) {
+        $acteurs[(string) $l['ecran']][(string) $l['acteur']] = (int) $l['n'];
+    }
+    return ['depuis' => $depuis, 'joursListe' => $joursListe, 'ecrans' => $out, 'acteurs' => $acteurs,
+        'total' => array_sum($parEcran)];
+}

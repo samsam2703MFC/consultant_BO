@@ -231,6 +231,32 @@ class App {
    * d'un seul geste. Un échec laisse l'écran précédent ENTIER — affichage et
    * gestes — et se raconte au lieu de se taire.
    */
+  /**
+   * Une ouverture d'écran, comptée.
+   *
+   * Posé au rendu plutôt que sur le clic du rail : on entre aussi dans un
+   * écran par un lien, une recherche ou un retour — et c'est l'usage réel
+   * qu'on veut mesurer, pas le rail seul. Un même écran ne compte qu'une fois
+   * tant qu'on n'en sort pas : un redessin n'est pas une ouverture.
+   */
+  vueEcran(id){
+    if (!id || this._ecranVu === id) { return; }
+    this._ecranVu = id;
+    const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
+    try { this.api('POST', '/ecrans/vue', { ecran: id, qui }); } catch (e) { /* la mesure ne casse rien */ }
+  }
+
+  /** Les ouvertures d'écran, lues à l'ouverture du Journal. */
+  vuesCharge(force){
+    if (this._vuesEnCours) { return; }
+    if (!force && this.state.vues) { return; }
+    this._vuesEnCours = true;
+    this.setState({ vues: { chargement: true, d: null } });
+    readOne('/ecrans/vues?jours=30').then(d => { this._vuesEnCours = false;
+      this.setState({ vues: { chargement: false, d: d || null } }); })
+      .catch(() => { this._vuesEnCours = false; this.setState({ vues: { chargement: false, d: null } }); });
+  }
+
   rendreMaintenant(){
     const h = [];
     const reg = fn => { h.push(fn); return h.length - 1; };
@@ -245,6 +271,7 @@ class App {
       PD: fn => fn ? `data-pd="${reg(fn)}"` : '',
       esc: escHtml
     };
+    this.vueEcran(this.state.screen);
     let common; let html;
     try {
       common = this.renderVals();
@@ -961,6 +988,9 @@ class App {
     }) }));
 
     this.valsRecherche(common, navDef, goTo, titles);
+    // Le rail sert aussi à NOMMER les écrans dans la heatmap du journal : sans
+    // lui, la mesure ne rendrait que des identifiants.
+    this._navDef = navDef;
 
     ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
@@ -8023,6 +8053,34 @@ class App {
   /* --- journal ------------------------------------------------------------------------ */
   valsJournal(common){
     const S = this.state, D = this.D;
+    this.vuesCharge(false);
+    // ── La heatmap des écrans : ce qui est ouvert, et à quelle fréquence.
+    const v = (S.vues || {}).d || {};
+    const noms = {};
+    (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
+      if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; }); }
+      else if (it) { noms[it[0]] = it[1]; }
+    }));
+    common.vuesChargement = !!(S.vues || {}).chargement;
+    const jours = v.joursListe || [];
+    const maxN = Math.max(1, ...(v.ecrans || []).flatMap(e => e.jours || []));
+    common.vuesJours = jours.map(j => ({ court: j.slice(8) + '/' + j.slice(5, 7) }));
+    common.vuesLignes = (v.ecrans || []).map(e => ({
+      ecran: e.ecran, nom: noms[e.ecran] || e.ecran, total: e.total,
+      // Les personnes qui l'ouvrent : un écran utilisé par une seule d'entre
+      // elles ne se juge pas comme un écran ouvert par tout le monde.
+      qui: Object.keys((v.acteurs || {})[e.ecran] || {}).filter(Boolean).join(', '),
+      cases: (e.jours || []).map((n, i) => ({
+        n, jour: (jours[i] || ''),
+        st: 'display:block;width:100%;height:15px;border-radius:3px;background:' + (n === 0
+          ? 'var(--color-background-secondary)'
+          : this.mix('#F1E7D6', '#8D1D2C', Math.min(1, n / maxN))),
+      })),
+    }));
+    common.vuesTotal = v.total ? v.total + ' ouverture(s) sur 30 jours · ' + (v.ecrans || []).length + ' écran(s) touché(s)' : '';
+    common.vuesJamais = Object.keys(noms).filter(k => !(v.ecrans || []).some(e => e.ecran === k))
+      .map(k => noms[k]).join(' · ');
+    common.vuesVide = !common.vuesChargement && !(v.ecrans || []).length;
     const all = S.logsExtra.concat(D.logs);
     common.logTypes = ['Tous les types'].concat([...new Set(all.map(l => l.type))]);
     common.logQuis = ['Tous les auteurs'].concat([...new Set(all.map(l => l.qui))]);
