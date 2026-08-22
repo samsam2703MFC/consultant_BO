@@ -1,1 +1,1 @@
-2026-08-22T11:05:00Z projection-quatre-exercices
+2026-08-22T11:20:00Z cases-variation
