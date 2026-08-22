@@ -1251,14 +1251,21 @@ class App {
     const sgp = v => (v >= 0 ? '+' : '−') + this.fP(Math.abs(v));
     const col = v => v >= 0 ? '#2d7a3e' : '#8D1D2C';
     const theoAn = bud.caTheoriqueAn || null;
+    // Le théorique ENCODÉ mois par mois d'abord. La répartition au prorata du
+    // budget validé ne vaut que pour les magasins d'avant l'étude : un magasin
+    // sans budget négocié y donnait douze zéros — c'est ce que montrait
+    // Sombreffe, dont l'étude porte pourtant 672 000 €.
+    const theoEncode = P.some(r => r.theo != null && r.theo > 0);
     const sais = P.map(r => (r.caT || 0) / (budgetAn || 1));
-    const theoM = theoAn ? sais.map(w => theoAn * w) : null;
+    const theoM = theoEncode ? P.map(r => r.theo || 0) : (theoAn ? sais.map(w => theoAn * w) : null);
 
     const openList = this.open();
     const theoOf = s => { const b = (D.budgets || []).find(x2 => x2.storeId === s.id);
       const Ps = s.perf[this.meta.exercice], ba = Ps.reduce((a, r) => a + (r.caT || 0), 0);
       const an = b && b.caTheoriqueAn ? b.caTheoriqueAn : null;
-      return { P: Ps, budgetAn: ba, theoAn: an, theoM: an ? Ps.map(r => an * (r.caT || 0) / (ba || 1)) : null }; };
+      const enc = Ps.some(r => r.theo != null && r.theo > 0);
+      return { P: Ps, budgetAn: ba, theoAn: an || (enc ? Ps.reduce((a2, r) => a2 + (r.theo || 0), 0) : null),
+        theoM: enc ? Ps.map(r => r.theo || 0) : (an ? Ps.map(r => an * (r.caT || 0) / (ba || 1)) : null) }; };
     const perStore = openList.map(s => Object.assign({ s }, theoOf(s)));
     const scope = S.bScope || 'shop';
     common.bScopeShopSt = this.tabBtn(scope === 'shop'); common.bScopeResSt = this.tabBtn(scope === 'reseau');
