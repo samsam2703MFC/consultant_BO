@@ -1252,7 +1252,7 @@ class App {
     // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
     if (common.isReput) { this.repCharge(); this.valsReputation(common); }
     // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
-    if (common.isRJour) { this.rjCharge(); this.valsResultatJour(common); }
+    if (common.isRJour) { this.rjCharge(false); this.valsResultatJour(common); }
     // --- suivi budget magasin
     if (common.isBudget) this.valsBudget(common);
     // --- encodage du budget
@@ -4131,11 +4131,20 @@ class App {
    * redemande rien au panel — chaque date coûte une volée d'appels.
    */
   rjCle(){ return this.state.rjDate || ''; }
-  rjCharge(){
+  /**
+   * Le résultat d'un jour, lu une fois puis gardé.
+   *
+   * `force` : la journée en cours BOUGE — les ventes de 16 h ne sont pas
+   * celles de 11 h. Le cache évite de rappeler le panel à chaque redessin ;
+   * le bouton de rafraîchissement le vide pour cette date-là, et lui seul.
+   */
+  rjCharge(force){
     const cle = this.rjCle();
     if (!this.D.rjour) { this.D.rjour = {}; }
+    if (force) { delete this.D.rjour[cle]; this._rjEnCours = null; }
     if (this.D.rjour[cle] || this._rjEnCours === cle) { return; }
     this._rjEnCours = cle;
+    if (force) { this.setState({ rjMaj: 'en-cours' }); }
     readOne('/exploitation/jour' + (cle ? '?date=' + encodeURIComponent(cle) : '')).then(d => {
       this._rjEnCours = null;
       const v = d || { erreur: true };
@@ -4143,7 +4152,7 @@ class App {
       // La réponse porte la date RETENUE : elle sert aussi de clé, sinon
       // revenir sur « aujourd'hui » par la flèche rechargerait tout.
       if (v.date) { this.D.rjour[v.date] = v; }
-      this.setState({});
+      this.setState({ rjMaj: new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
     });
   }
 
@@ -4255,6 +4264,11 @@ class App {
     common.rjDateTxt = dTxt.charAt(0).toUpperCase() + dTxt.slice(1);
     common.rjPrec = () => this.setState({ rjDate: decale(-1) });
     common.rjSuiv = jour < auj ? () => this.setState({ rjDate: decale(1) }) : null;
+    // Relire la journée : elle bouge pendant qu'on la regarde. Discret, à
+    // côté des flèches — et il dit l'heure de la dernière lecture, sinon on
+    // ne sait pas si l'on regarde 11 h ou 16 h.
+    common.rjRefresh = () => this.rjCharge(true);
+    common.rjMaj = S.rjMaj === 'en-cours' ? 'lecture…' : (S.rjMaj ? 'lu à ' + S.rjMaj : '');
     common.rjAuj = jour < auj ? () => this.setState({ rjDate: null }) : null;
     common.rjEstAuj = !!r.estAujourdhui;
     // La comparaison : la moyenne des six mêmes jours de semaine, pas N-1.

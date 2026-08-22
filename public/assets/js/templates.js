@@ -2367,6 +2367,8 @@ function tplResultatJour(c, x){
           <div style="display:flex;align-items:center;gap:7px">
             <button ${x.A(c.rjPrec)} title="Jour précédent" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text)">◂</button>
             <button ${x.A(c.rjSuiv)} title="Jour suivant" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rjSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rjSuiv ? '1' : '.35'}">▸</button>
+            <button ${x.A(c.rjRefresh)} title="Relire la journée" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted);margin-left:4px">⟳</button>
+            ${c.rjMaj ? `<span style="font-size:10.5px;color:var(--color-text-muted);margin-left:2px">${esc(c.rjMaj)}</span>` : ''}
             ${c.rjAuj ? `<button ${x.A(c.rjAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Aujourd’hui</button>` : ''}
           </div>
           <div style="text-align:right">
