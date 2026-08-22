@@ -67,6 +67,32 @@ if [[ ${#need[@]} -gt 0 ]]; then
 else
   log "Tous les prérequis sont déjà présents (aucune installation)."
 fi
+
+# wkhtmltopdf CORRIGÉ : celui des dépôts (Qt non corrigé) annonce lui-même
+# ignorer --print-media-type et tous les --footer-* — les PDF des rapports
+# sortaient sans pied de page ni pagination, et aucune astuce HTML n'y supplée
+# (un élément en position fixe n'est peint que sur la dernière page, un <thead>
+# que sur la première). La version corrigée s'installe à côté, dans
+# /usr/local/bin, et ne remplace pas le paquet du système.
+if /usr/local/bin/wkhtmltopdf --version 2>/dev/null | grep -q 'patched qt'; then
+  log "wkhtmltopdf corrigé déjà installé ($(/usr/local/bin/wkhtmltopdf --version 2>/dev/null | head -1))."
+else
+  CODE="$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-jammy}")"
+  WKDEB="/tmp/wkhtmltox-${CODE}.deb"
+  WKURL="https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.${CODE}_amd64.deb"
+  log "Installation de wkhtmltopdf corrigé (${CODE}) — pied de page des PDF…"
+  if curl -fsSL --max-time 120 -o "$WKDEB" "$WKURL"; then
+    if ! aptget install -y -qq "$WKDEB" >/dev/null 2>&1; then
+      warn "wkhtmltopdf corrigé : installation refusée — les PDF sortiront sans pied de page."
+    fi
+    rm -f "$WKDEB"
+  else
+    warn "wkhtmltopdf corrigé : téléchargement impossible (${CODE}) — les PDF sortiront sans pied de page."
+  fi
+  /usr/local/bin/wkhtmltopdf --version 2>/dev/null | grep -q 'patched qt' \
+    && log "wkhtmltopdf corrigé actif." \
+    || warn "wkhtmltopdf corrigé absent — repli sur le build du système."
+fi
 # mod_rewrite requis par le .htaccess (idempotent ; ne touche pas au SAPI PHP).
 a2enmod rewrite >/dev/null 2>&1 || true
 # mod_headers porte l'en-tete de revalidation des fichiers JS/CSS : sans lui le

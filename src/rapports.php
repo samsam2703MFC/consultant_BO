@@ -1691,21 +1691,18 @@ function ep_rapport_run_pdf(int $id): array
  * fabrication (data-fond, data-marge, data-carte, data-cta) sont neutralisées,
  * ce qui évite de deviner des styles en ligne au risque de casser la page.
  */
-function rapPdfHtml(string $html, array $meta = []): string
+function rapPdfHtml(string $html): string
 {
     $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
     // Repli pour les runs enregistrés avant la prise `data-pied` : le rappel
     // des seuils s'y reconnaît à son texte.
     $html = (string) preg_replace('#<div[^>]*>Seuils\s*:\s*food.*?</div>#s', '', $html);
-    $pied = $meta !== [] ? rapPdfPiedHtml($meta) : '';
     $css = '<style>'
         // Des marges de PAPIER, pas d'écran : 15 mm sur les côtés — la feuille
         // respire, et un rapport agrafé ou perforé ne mange pas son texte.
+        // Le bas garde 20 mm : le pied de page (logo, magasin, dates,
+        // pagination) s'y loge, posé par le moteur sur chaque feuille.
         . '@page{size:A4;margin:14mm 15mm 20mm}'
-        // La bande de pied, repeinte sur chaque page : le contenu ne doit pas
-        // passer dessous, d'où les hauteurs de grille calculées 11 mm plus bas.
-        . 'div[data-pied-page]{position:fixed;bottom:0;left:0;right:0;height:9mm;'
-        . 'border-top:0.5pt solid #DED6C9;padding-top:2mm;background:#ffffff}'
         . 'html,body{background:#ffffff !important;margin:0 !important;padding:0 !important;'
         . '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         . 'table[data-fond]{background:#ffffff !important}'
@@ -1783,28 +1780,23 @@ function rapPdfHtml(string $html, array $meta = []): string
     // Injectée EN DERNIER dans <head> : la dernière feuille gagne à égalité de
     // spécificité, et l'`!important` passe devant les styles en ligne.
     $pos = stripos($html, '</head>');
-    $html = $pos === false ? $css . $html : substr($html, 0, $pos) . $css . substr($html, $pos);
-    // Le pied juste avant </body> : en position fixe, sa place dans le flux
-    // n'a pas d'importance, mais il doit être DANS le corps pour être peint.
-    if ($pied !== '') {
-        $fin = strripos($html, '</body>');
-        $html = $fin === false ? $html . $pied : substr($html, 0, $fin) . $pied . substr($html, $fin);
-    }
-    return $html;
+    return $pos === false ? $css . $html : substr($html, 0, $pos) . $css . substr($html, $pos);
 }
 
 /**
- * Le pied de page du PDF : logo, magasin, rapport, dates.
+ * Le pied de page du PDF : logo, magasin, rapport, dates, pagination.
  *
- * POSÉ DANS le document, en position fixe — pas via `--footer-html`. Mesuré
- * sur le serveur : ce build de wkhtmltopdf (0.12.6 / Qt 5.15.3, sans le
- * correctif Qt) accepte les commutateurs `--footer-*` sans rien en faire ;
- * les PDF produits n'ont jamais porté la pagination qu'ils annonçaient. Un
- * élément en position fixe, lui, est repeint sur chaque page.
+ * C'est une PAGE de pied, donnée à wkhtmltopdf par `--footer-html` : lui seul
+ * sait la répéter sur chaque feuille. Mesuré, faute de quoi rien ne marche :
+ * un élément en position fixe n'est peint que sur la dernière page, un
+ * <thead> que sur la première, et le build des dépôts Ubuntu (Qt non corrigé)
+ * ignore purement et simplement les `--footer-*`. Le déploiement installe
+ * donc la version corrigée ; sans elle, le PDF sort sans pied plutôt que
+ * faux.
  *
- * D'où l'absence de numéro de page : sans pied natif, aucun compteur de page
- * n'est accessible depuis le document. Mieux vaut un pied qui identifie la
- * feuille qu'une pagination qui ne s'imprime pas.
+ * wkhtmltopdf passe les numéros de page en paramètres d'URL — d'où le petit
+ * script qui les recopie. Aucune ressource externe : le logo est incorporé,
+ * sinon le rendu partirait chercher un fichier et bloquerait.
  */
 function rapPdfPiedHtml(array $meta): string
 {
@@ -1813,18 +1805,23 @@ function rapPdfPiedHtml(array $meta): string
     $logo = rapLogoDataUri();
     $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
-    return '<div data-pied-page="1"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+    return '<!doctype html><html><head><meta charset="utf-8"><style>'
+        . 'html,body{margin:0;padding:0}'
+        . 'table{width:100%;border-collapse:collapse;border-top:0.5pt solid #DED6C9}'
+        . 'td{' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle;padding-top:2mm}'
+        . '</style><script>'
+        . 'function pied(){var v={},q=document.location.search.substring(1).split("&");'
+        . 'for(var i=0;i<q.length;i++){var kv=q[i].split("=");v[kv[0]]=decodeURIComponent(kv[1]||"");}'
+        . 'var el=document.getElementById("pg");if(el){el.textContent=(v.page||"")+"/"+(v.topage||"");}}'
+        . '</script></head><body onload="pied()"><table><tr>'
         // Le logo tient dans SA colonne : sans largeur, il passait sous le
         // texte du magasin.
-        . '<td style="width:26mm;' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle">'
-        . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
-        . '<td style="padding:0 6mm 0 4mm;' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle">'
-        . '<span style="color:#221E1A;font-weight:bold">' . $e($meta['magasin'] ?? '') . '</span>'
+        . '<td style="width:26mm">' . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
+        . '<td style="padding-left:4mm"><span style="color:#221E1A;font-weight:bold">' . $e($meta['magasin'] ?? '') . '</span>'
         . (($meta['rapport'] ?? '') !== '' ? ' · ' . $e($meta['rapport']) : '') . '</td>'
-        // Les dates ne se coupent jamais en deux lignes.
-        . '<td align="right" style="white-space:nowrap;' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle">'
-        . $dates . '</td>'
-        . '</tr></table></div>';
+        // Les dates et la pagination ne se coupent jamais en deux lignes.
+        . '<td align="right" style="white-space:nowrap">' . $dates . ' · <span id="pg"></span></td>'
+        . '</tr></table></body></html>';
 }
 
 function rapPdfRendu(string $html, array $meta = []): ?string
@@ -1832,52 +1829,56 @@ function rapPdfRendu(string $html, array $meta = []): ?string
     if (!function_exists('shell_exec')) { return null; }
     $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
+    $tmpF = null;
     $profil = sys_get_temp_dir() . '/rapchrome-' . getmypid() . '-' . substr(sha1($tmpH), 0, 8);
-    file_put_contents($tmpH, rapPdfHtml($html, $meta));
+    file_put_contents($tmpH, rapPdfHtml($html));
 
-    // CHROMIUM D'ABORD. Mesuré : le build wkhtmltopdf des dépôts (0.12.6 sur
-    // Qt non corrigé) ignore `--print-media-type` ET tous les `--footer-*`,
-    // et il ne répète ni les éléments en position fixe, ni un <thead> — le
-    // pied de page ne s'imprimait que sur la dernière feuille. Chromium
-    // respecte le média « print », les marges de @page, et repeint la bande
-    // de pied sur chaque page. Il rend aussi le même rapport en une fraction
-    // du temps.
-    //   --user-data-dir : sans profil inscriptible, Chromium refuse de
-    //     démarrer sous le compte du serveur web (HOME non inscriptible).
-    //   --no-pdf-header-footer : sinon Chromium ajoute SON pied (URL du
-    //     fichier temporaire et date au format américain).
+    // `--print-media-type` : le document porte ses règles @media print — la
+    // version corrigée de wkhtmltopdf les applique (celle des dépôts ignore
+    // le drapeau, en le disant).
+    $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
+        . ' --margin-top 14mm --margin-bottom 20mm --margin-left 15mm --margin-right 15mm'
+        . ' --footer-spacing 4';
+    if ($meta !== []) {
+        $tmpF = tempnam(sys_get_temp_dir(), 'rap') . '.html';
+        file_put_contents($tmpF, rapPdfPiedHtml($meta));
+        $wk .= ' --footer-html ' . escapeshellarg($tmpF);
+    }
+    // Chromium en dernier recours : il rend bien, mais ne sait poser aucun
+    // pied de page en ligne de commande — le document sortirait sans identité.
     $ch = '--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage'
         . ' --no-first-run --no-default-browser-check --no-pdf-header-footer'
         . ' --user-data-dir=' . escapeshellarg($profil);
-    // Repli wkhtmltopdf : le pied n'y sera que sur la dernière page, mais un
-    // rapport au pied incomplet vaut mieux qu'un rapport sans PDF.
-    $wk = '--quiet --page-size A4 --enable-local-file-access'
-        . ' --margin-top 14mm --margin-bottom 20mm --margin-left 15mm --margin-right 15mm';
     $essais = [
+        // La version CORRIGÉE d'abord, à son chemin d'installation : elle
+        // seule répète le pied de page, et elle est headless (pas de xvfb).
+        // Le PATH d'un serveur web ne contient pas toujours /usr/local/bin,
+        // d'où le chemin en clair.
+        'timeout 25 /usr/local/bin/wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
+        'timeout 25 wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
+        // Le build des dépôts n'est pas headless : xvfb-run pour lui.
+        'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
         'timeout 25 chromium ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
         'timeout 25 chromium-browser ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
         'timeout 25 google-chrome ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
-        'timeout 25 google-chrome-stable ' . $ch . ' --print-to-pdf=%2$s %1$s 2>&1',
-        // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
-        'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
-        'timeout 25 wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
     ];
     foreach ($essais as $cmd) {
         @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));
         if (is_file($tmpP) && filesize($tmpP) > 1000) {
             $octets = (string) file_get_contents($tmpP);
-            rapNettoyer($tmpH, $tmpP, $profil);
+            rapNettoyer($tmpH, $tmpP, $profil, $tmpF);
             return $octets;
         }
     }
-    rapNettoyer($tmpH, $tmpP, $profil);
+    rapNettoyer($tmpH, $tmpP, $profil, $tmpF);
     return null;
 }
 
 /** Les fichiers de travail d'un rendu — dont le profil jetable de Chromium. */
-function rapNettoyer(string $tmpH, string $tmpP, string $profil): void
+function rapNettoyer(string $tmpH, string $tmpP, string $profil, ?string $tmpF = null): void
 {
     @unlink($tmpH); @unlink($tmpP);
+    if ($tmpF !== null) { @unlink($tmpF); }
     if (!is_dir($profil)) { return; }
     $it = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($profil, FilesystemIterator::SKIP_DOTS),
@@ -2558,13 +2559,13 @@ function rapJoursDe(array $periode): array
 function rapHauteursVignettes(): string
 {
     $css = '';
-    // Le compte : 297 mm moins les marges (14 en haut, 20 en bas) = 263 mm,
-    // moins la bande de pied (11 mm) et le titre du bloc (~15 mm) = ~237 mm
-    // pour la grille. Chaque rangée porte en plus ~2,6 mm de gouttière (5 px
-    // de padding en haut et en bas), d'où des hauteurs de cellule un peu
-    // inférieures au quotient : sans cela, la dernière rangée basculait sur
-    // une page presque vide.
-    foreach ([5 => [44, 28], 4 => [56, 39], 3 => [74, 53], 2 => [74, 53], 1 => [74, 53]] as $rangs => [$h, $photo]) {
+    // Le compte : 297 mm moins les marges (14 en haut, 20 en bas — le pied de
+    // page se loge dans celle du bas) = 263 mm, moins le titre du bloc et le
+    // nom du magasin (~15 mm) = ~248 mm pour la grille. Chaque rangée porte en
+    // plus ~2,6 mm de gouttière (5 px de padding en haut et en bas), d'où des
+    // hauteurs de cellule un peu inférieures au quotient : sans cela, la
+    // dernière rangée basculait sur une page presque vide.
+    foreach ([5 => [47, 31], 4 => [59, 42], 3 => [78, 56], 2 => [78, 56], 1 => [78, 56]] as $rangs => [$h, $photo]) {
         $t = 'table[data-grille="3x5"][data-rangees="' . $rangs . '"] ';
         $css .= $t . 'tr[data-rangee-fiches]>td{height:' . $h . 'mm}'
             . $t . 'div[data-fiche]{height:' . ($h - 2) . 'mm}'
@@ -2572,9 +2573,9 @@ function rapHauteursVignettes(): string
     }
     // Une grille sans compte de rangées (rapport ancien, test) : la valeur qui
     // remplit une page pleine.
-    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:44mm}'
-        . 'table[data-grille="3x5"] div[data-fiche]{height:42mm}'
-        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:28mm}';
+    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:47mm}'
+        . 'table[data-grille="3x5"] div[data-fiche]{height:45mm}'
+        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:31mm}';
 }
 
 function rapGrilleDe(array $periode): array

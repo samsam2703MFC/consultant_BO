@@ -109,7 +109,22 @@ chmod 640 config/config.php && chown www-data:www-data config/config.php
 
 ---
 
-### Horloge des rapports (posée par `bin/deploy.sh`)
+### Moteur PDF des rapports
+
+Le déploiement installe `wkhtmltopdf` **corrigé** (paquet officiel
+`wkhtmltox`, dans `/usr/local/bin`) à côté de celui des dépôts. Le build
+Ubuntu tourne sur un Qt non corrigé : il annonce lui-même ignorer
+`--print-media-type` et tous les `--footer-*`, si bien que les PDF sortaient
+sans pied de page ni pagination. Aucune astuce HTML n'y supplée — un élément
+en position fixe n'est peint que sur la dernière page, un `<thead>` que sur la
+première (mesuré sur les deux builds).
+
+L'installation est idempotente et non bloquante : si le téléchargement ou
+l'installation échoue, le déploiement continue et les PDF sortent sans pied de
+page. `src/rapports.php` appelle `/usr/local/bin/wkhtmltopdf` en chemin
+complet — le PATH d'Apache ne contient pas toujours `/usr/local/bin`.
+
+## Horloge des rapports (posée par `bin/deploy.sh`)
 
 Un rapport porte sa planification en base — « tous les lundis à 10 h » est un
 réglage de l'écran Reporting. Quelqu'un doit néanmoins réveiller le cockpit :
