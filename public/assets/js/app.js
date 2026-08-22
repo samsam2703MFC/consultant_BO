@@ -1123,7 +1123,12 @@ class App {
             : (ecart >= -10 ? ['#C0182B', '#ffffff']
             : (ecart >= -15 ? ['#7E1220', '#ffffff'] : ['#151515', '#ffffff'])));
           st += 'background:' + c3[0] + ';color:' + c3[1]; txt = Math.round(pct) + ' %'; }
-        return { txt, st, enter: () => this.setState({ hmHover: { nomM, mi, ca, caT, theo: theorique } }) }; };
+        return { txt, st,
+          enter: () => this.setState({ hmHover: { nomM, mi, ca, caT, theo: theorique } }),
+          // Le survol donne la ligne du bas ; le CLIC ouvre le détail — budget,
+          // théorique, réel — parce qu'une case colorée ne dit pas d'où vient
+          // sa couleur, et que c'est la première question qu'on se pose.
+          clic: () => this.setState({ hmDet: { nomM, mi, ca, caT, theo: theorique, an: year } }) }; };
       common.hmRows = this.open().map(s => ({ nom: s.nom, cells: s.perf[year].map((r, mi) => mkCell(s.nom, mi, r.ca, r.caT, r.theo)) }));
       const resCells = [];
       for (let mi = 0; mi < 12; mi++){ const ca = this.open().every(s => s.perf[year][mi].ca == null) ? null : this.sum(year, mi, 'ca');
@@ -1135,6 +1140,34 @@ class App {
       common.hmReseau = resCells;
       const h = S.hmHover;
       const cibleH = h ? (h.caT || h.theo || null) : null;
+      // ── La modale d'une case : les trois séries, l'écart et l'atteinte.
+      const dt = S.hmDet;
+      common.hmDet = dt ? (() => {
+        const cible = dt.caT || dt.theo || null;
+        const src = dt.caT ? 'budget validé' : (dt.theo ? 'CA théorique de l’étude' : null);
+        const ecart = (dt.ca != null && cible) ? dt.ca - cible : null;
+        const att = (dt.ca != null && cible) ? dt.ca / cible : null;
+        return {
+          titre: M.MOIS[dt.mi] + ' ' + dt.an,
+          magasin: dt.nomM,
+          sous: src ? 'objectif : ' + src : 'aucun objectif encodé pour ce mois',
+          lignes: [
+            { l: 'Budget validé', v: dt.caT ? this.fE(dt.caT) : '—',
+              aide: dt.caT ? '' : 'non encodé pour ce mois' },
+            { l: 'CA théorique (étude de marché)', v: dt.theo ? this.fE(dt.theo) : '—',
+              aide: dt.theo ? '' : 'aucune étude projetée sur ce mois' },
+            { l: 'Réel encaissé', v: dt.ca != null ? this.fE(dt.ca) : '—',
+              aide: dt.ca == null ? 'mois sans remontée de caisse' : '' },
+          ],
+          ecart: ecart == null ? '—' : (ecart >= 0 ? '+' : '−') + this.fE(Math.abs(ecart)),
+          ecartSt: 'font-weight:600;color:' + (ecart == null ? 'var(--color-text-muted)' : (ecart >= 0 ? '#2d7a3e' : '#8D1D2C')),
+          att: att == null ? '—' : Math.round(att * 100) + ' %',
+          attSt: 'font-weight:600;color:' + (att == null ? 'var(--color-text-muted)'
+            : (att >= 1 ? '#8a6a10' : (att >= 0.95 ? '#8a5a13' : (att >= 0.9 ? '#C0182B' : (att >= 0.85 ? '#7E1220' : '#151515'))))),
+          cibleTxt: cible ? this.fE(cible) : '—',
+          close: () => this.setState({ hmDet: null }),
+        };
+      })() : null;
       common.hmDetail = h
         ? (h.nomM + ' — ' + M.MOIS[h.mi] + ' ' + year + ' : CA ' + (h.ca != null ? this.fE(h.ca) : '—')
           + (cibleH ? ' · objectif ' + this.fE(cibleH) + (h.caT ? '' : ' (théorique — budget non encodé)')

@@ -916,7 +916,7 @@ function tplMagasins(c, x){
 /* --- Heatmap mensuelle ------------------------------------------------------ */
 function tplHeatmap(c, x){
   const { esc } = x;
-  const cell = cc => `<div ${x.EN(cc.enter)} style="${cc.st}">${cc.txt}</div>`;
+  const cell = cc => `<div ${x.EN(cc.enter)} ${x.A(cc.clic)} style="${cc.st};cursor:pointer">${cc.txt}</div>`;
   return `
   <div data-screen="heatmap" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -940,7 +940,46 @@ function tplHeatmap(c, x){
         <div style="font-size:12px;font-weight:700;display:flex;align-items:center;border-top:2px solid var(--color-border-secondary);padding-top:6px;margin-top:3px">Réseau</div>
         ${c.hmReseau.map(cell).join('')}
       </div>
-      <div style="margin-top:14px;min-height:20px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.hmDetail)}</div>
+      <div style="margin-top:14px;min-height:20px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.hmDetail)} <span style="opacity:.7">— cliquez une case pour le détail.</span></div>
+    </div>
+    ${c.hmDet ? tplHeatDetail(c.hmDet, x) : ''}
+  </div>`;
+}
+
+/* Le détail d'une case de la heatmap : les trois séries côte à côte — budget
+   validé, CA théorique de l'étude, réel encaissé — puis l'écart et l'atteinte
+   contre celle des deux qui fait référence ce mois-là. */
+function tplHeatDetail(d, x){
+  const { esc } = x;
+  return `
+  <div ${x.A(d.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.45);z-index:80"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:16px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.3);padding:22px 24px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--color-primary)">${esc(d.titre)}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(d.magasin)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(d.sous)}</div>
+      </div>
+      <button ${x.A(d.close)} aria-label="Fermer" style="border:none;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text);width:28px;height:28px;border-radius:50%;font-size:14px;line-height:1">×</button>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+      ${d.lignes.map(l => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:7px">
+          <span style="font-size:12.5px">${esc(l.l)}${l.aide ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.aide)}</div>` : ''}</span>
+          <span style="font-size:14px;font-weight:500;white-space:nowrap">${esc(l.v)}</span>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px">
+      <div style="flex:1;background:var(--color-background-secondary);border-radius:10px;padding:10px 12px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">Écart à l'objectif</div>
+        <div style="${d.ecartSt};font-size:16px;margin-top:2px">${esc(d.ecart)}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted)">objectif retenu ${esc(d.cibleTxt)}</div>
+      </div>
+      <div style="flex:1;background:var(--color-background-secondary);border-radius:10px;padding:10px 12px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">Atteinte</div>
+        <div style="${d.attSt};font-size:16px;margin-top:2px">${esc(d.att)}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted)">couleur de la case</div>
+      </div>
     </div>
   </div>`;
 }
