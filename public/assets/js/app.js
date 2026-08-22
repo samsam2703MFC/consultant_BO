@@ -5762,10 +5762,12 @@ class App {
       + 'padding:5px 12px;border-radius:8px;'
       + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
             : 'background:transparent;color:var(--color-text-muted)');
+    common.exVueNom = cumule ? 'Cumulé' : 'Par mois';
     common.exStMois = ongl(!cumule);
     common.exStCumul = ongl(cumule);
-    common.exLegendeReel = cumule ? 'réel cumulé' : 'réel mensuel';
-    common.exLegendeCible = cumule ? 'cible cumulée' : 'budget encodé';
+    common.exLegendeReel = cumule ? 'réel cumulé' : 'réel du mois';
+    common.exLegendeCible = cumule ? 'cible cumulée' : 'budget du mois (le contenant)';
+    common.exLegendeOr = cumule ? '' : 'au-dessus du budget';
     // --- N vs N-1, toutes boutiques
     const rp = (this.state.exNvPer || 'mois');
     const rz = this.state.exReseau;
@@ -6000,19 +6002,30 @@ class App {
         const y = v => (H - PB) * (1 - v / hi);
         const barres = [], reperes = [], labels = [];
         for (let i = 0; i < 12; i++){
-          const cx = i * sw;
+          const cx = i * sw, bx = (cx + sw * 0.18).toFixed(2), bw = (sw * 0.64).toFixed(2);
           // Tout mois à partir du dernier mois de caisse est incomplet — pas
           // seulement celui-ci. Une barre pleine sur un mois tronqué se lit
           // comme un effondrement, et c'est le contraire de ce qu'elle dit.
           const partiel = (i + 1) >= mc;
-          if (rs[i] != null && rs[i] > 0 && hi > 0){
-            barres.push({ x: (cx + sw * 0.22).toFixed(2), y: y(rs[i]).toFixed(2),
-              w: (sw * 0.56).toFixed(2), h: Math.max((H - PB) - y(rs[i]), 1).toFixed(2),
-              fill: partiel ? 'url(#exhach)' : 'var(--color-primary)' });
+          const bud = bs[i], reel = rs[i];
+          // Le BUDGET est le contenant, le réel le remplit. Un trait noir
+          // au-dessus d'une barre demandait de comparer deux hauteurs ; un
+          // verre à moitié plein se lit sans y penser — et les mois à venir
+          // gardent leur contenant vide, qui attend son réel.
+          if (hi > 0 && bud != null && bud > 0){
+            barres.push({ x: bx, y: y(bud).toFixed(2), w: bw,
+              h: Math.max((H - PB) - y(bud), 1).toFixed(2), fill: 'rgba(34,34,34,0.07)' });
           }
-          if (bs[i] != null && hi > 0){
-            reperes.push({ x1: (cx + sw * 0.10).toFixed(2), x2: (cx + sw * 0.90).toFixed(2),
-              y: y(bs[i]).toFixed(2) });
+          if (hi > 0 && reel != null && reel > 0){
+            const dedans = (bud != null && bud > 0) ? Math.min(reel, bud) : reel;
+            barres.push({ x: bx, y: y(dedans).toFixed(2), w: bw,
+              h: Math.max((H - PB) - y(dedans), 1).toFixed(2),
+              fill: partiel ? 'url(#exhach)' : 'var(--color-primary)' });
+            // Ce qui dépasse le budget sort en or, au-dessus du contenant.
+            if (bud != null && bud > 0 && reel > bud){
+              barres.push({ x: bx, y: y(reel).toFixed(2), w: bw,
+                h: Math.max(y(bud) - y(reel), 1).toFixed(2), fill: '#C9A227' });
+            }
           }
           labels.push({ x: (cx + sw / 2).toFixed(2), y: H - 3,
             t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });

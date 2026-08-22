@@ -356,7 +356,8 @@ function tplExploitation(c, x){
       <span><i style="display:inline-block;width:9px;height:9px;background:var(--color-primary);border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeReel)}</span>
       <span>${c.exCumul
         ? `<i style="display:inline-block;width:14px;height:0;border-top:2px dashed #c9a06a;vertical-align:4px"></i>`
-        : `<i style="display:inline-block;width:14px;height:2px;background:#222;vertical-align:3px"></i>`} ${esc(c.exLegendeCible)}</span>
+        : `<i style="display:inline-block;width:9px;height:9px;background:rgba(34,34,34,0.07);border:0.5px solid var(--color-border-secondary);border-radius:2px;vertical-align:-1px"></i>`} ${esc(c.exLegendeCible)}</span>
+      ${c.exCumul ? '' : `<span><i style="display:inline-block;width:9px;height:9px;background:#C9A227;border-radius:2px;vertical-align:-1px"></i> ${esc(c.exLegendeOr)}</span>`}
       ${c.exCumul ? '' : `<span><i style="display:inline-block;width:9px;height:9px;background:#D9B3B8;border-radius:2px;vertical-align:-1px"></i> mois partiellement encodé</span>`}
       ${c.exBase ? `<span>objectif jour et semaine : ${esc(c.exBase)}</span>` : ''}
     </div>`}`;
