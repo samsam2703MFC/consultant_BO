@@ -1313,14 +1313,28 @@ function tplEncodage(c, x){
               <input type="number" step="1" value="${r.valeur}" ${x.C(r.set)} style="${c.encInputSt}" />
             </label>`).join('')}
         </div>
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px;margin-bottom:14px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px;margin-bottom:10px">
           <div>
-            <div style="${lbl.replace('0.06em', '0.08em')};color:var(--pkg-abricot)">CA théorique de l'exercice</div>
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+              <span style="${lbl.replace('0.06em', '0.08em')};color:var(--pkg-abricot)">CA théorique de l'exercice</span>
+              <select ${x.C(c.setEncProj)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 8px;background:var(--color-surface);color:var(--color-text)">
+                ${c.encProjOpts.map(o => `<option value="${o.v}"${o.v === c.encProjSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+              </select>
+            </div>
             <div style="font-size:22px;font-weight:500;margin-top:3px;color:var(--pkg-abricot)">${c.encTheoExercice}</div>
             <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.encCoef)}</div>
           </div>
           <button ${x.A(c.encLisser)} class="hv-apr" style="border:0.5px solid var(--pkg-abricot);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--pkg-abricot);padding:8px 15px;border-radius:999px">Lisser sur les 12 mois</button>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          ${c.encProjLignes.map(l => `
+            <div style="flex:1;min-width:132px;border:${l.choisi ? '1.5px solid var(--pkg-abricot)' : '0.5px solid var(--color-border-tertiary)'};border-radius:10px;padding:8px 11px;background:${l.choisi ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(l.exercice)}${l.courant ? ' · en cours' : ''}</div>
+              <div style="font-size:14px;font-weight:500;margin-top:2px">${esc(l.ca)}</div>
+              <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:1px">${esc(l.annee)} — ${esc(l.coef)}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.encProjNote)}</div>
         <div style="${lbl};margin-bottom:8px">Variation par mois (% du CA annuel)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:9px">
           ${c.encSais.map(s => `

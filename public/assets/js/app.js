@@ -1448,9 +1448,37 @@ class App {
     common.encAnneeOpts = [{ v: '1', nom: 'Année 1 — ouverture' }, { v: '2', nom: 'Année 2' }, { v: '3', nom: 'Année 3' }, { v: '4', nom: 'Régime établi (100 %)' }];
     const coef = anneeEx === '1' ? ramp.a1 : anneeEx === '2' ? ramp.a2 : anneeEx === '3' ? ramp.a3 : 100;
     const theoExercice = num(baseTheo) * coef / 100;
-    common.encCoef = String(coef).replace('.', ',') + ' % du potentiel à maturité';
-    common.encTheoExercice = this.fE(theoExercice);
-    common.encRampNote = 'Potentiel à maturité ' + this.fE(num(baseTheo)) + ' × ' + String(coef).replace('.', ',') + ' % = CA théorique de l’exercice.';
+
+    // ── La PROJECTION : le même potentiel vu sur quatre exercices.
+    //    L'année d'exploitation avance d'un cran par exercice jusqu'au régime
+    //    établi ; la variation par mois du magasin reste la même. C'est un
+    //    APERÇU : seul l'exercice courant est encodé en base, et changer
+    //    d'exercice dans la liste n'écrit rien.
+    const anNum = parseInt(anneeEx, 10) || 1;
+    const coefDe = an => an === 1 ? ramp.a1 : an === 2 ? ramp.a2 : an === 3 ? ramp.a3 : 100;
+    const projs = [0, 1, 2, 3].map(k => {
+      const an = Math.min(4, anNum + k);
+      const c2 = coefDe(an);
+      return { k, exercice: this.exo() + k, annee: an, coef: c2, ca: num(baseTheo) * c2 / 100 };
+    });
+    const iProj = Math.max(0, Math.min(3, parseInt(S.encProj || 0, 10) || 0));
+    const proj = projs[iProj];
+    const nomAn = p2 => p2.annee >= 4 ? 'régime établi' : 'année ' + p2.annee;
+    common.encProjOpts = projs.map(p2 => ({ v: String(p2.k),
+      nom: p2.exercice + ' · ' + nomAn(p2) + ' — ' + String(p2.coef).replace('.', ',') + ' %' }));
+    common.encProjSel = String(iProj);
+    common.setEncProj = e => this.setState({ encProj: e.target.value });
+    common.encProjLignes = projs.map(p2 => ({ exercice: String(p2.exercice), annee: nomAn(p2),
+      coef: String(p2.coef).replace('.', ',') + ' %', ca: this.fE(p2.ca),
+      courant: p2.k === 0, choisi: p2.k === iProj }));
+    common.encProjNote = iProj === 0
+      ? 'Exercice en cours : c’est celui qui est encodé et qui sert de référence au suivi.'
+      : 'Projection ' + proj.exercice + ' — rien n’est écrit : seul l’exercice ' + this.exo() + ' est encodé.';
+
+    common.encCoef = String(proj.coef).replace('.', ',') + ' % du potentiel à maturité';
+    common.encTheoExercice = this.fE(proj.ca);
+    common.encRampNote = 'Potentiel à maturité ' + this.fE(num(baseTheo)) + ' × ' + String(proj.coef).replace('.', ',')
+        + ' % = CA théorique ' + proj.exercice + '.';
 
     // La variation par mois est PROPRE AU MAGASIN et enregistrée telle quelle
     // (colonne saisonnalite de son budget). On la relit d'abord : sans cela,
@@ -1465,7 +1493,7 @@ class App {
     let poidsTot = 0;
     common.encSais = M.MOIS.map((nom, i) => { const v = val('sais' + i, poidsDef[i].toFixed(1).replace('.', ','));
       poidsTot += num(v);
-      return { nom, valeur: v, set: set('sais' + i), montant: this.fE(theoExercice * num(v) / 100) }; });
+      return { nom, valeur: v, set: set('sais' + i), montant: this.fE(proj.ca * num(v) / 100) }; });
     common.encSaisTot = String(poidsTot.toFixed(1)).replace('.', ',') + ' %';
     common.encSaisTotSt = 'font-size:13px;font-weight:500;color:' + (Math.abs(poidsTot - 100) < 0.6 ? '#2d7a3e' : '#8D1D2C');
     common.encLisser = () => { const upd = {};
