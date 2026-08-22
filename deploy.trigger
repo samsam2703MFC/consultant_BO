@@ -1,1 +1,1 @@
-2026-08-22T08:15:00Z pied-sans-doublon
+2026-08-22T08:30:00Z magasin-sans-doublon
