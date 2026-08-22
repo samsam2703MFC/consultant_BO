@@ -2012,6 +2012,41 @@ class App {
     this._encTotal = caTot;
     common.encAutoEtat = { 'en-cours': 'Enregistrement…', ok: 'Enregistré ✓', echec: 'Échec — réessayez' }[S.encAuto] || '';
     common.encAutoSt = 'font-size:11.5px;color:' + (S.encAuto === 'echec' ? '#8D1D2C' : 'var(--color-text-muted)');
+    // ── Valider l'ÉTUDE, sans exiger un CA.
+    //    Un magasin qui ouvre a son étude bien avant son premier budget
+    //    mensuel : refuser l'enregistrement faute de CA (ce que fait le bouton
+    //    du budget) bloquait précisément le cas qui compte. Ce bouton écrit
+    //    l'étude, journalise, et dit quels exercices ont reçu leur théorique.
+    common.encEtudeSave = () => {
+      if (!num(baseTheo)) { this.notify('Renseignez le potentiel à maturité avant d’enregistrer l’étude.'); return; }
+      if (Math.abs(num(common.encSaisTot) - 100) > 0.6 && num(common.encSaisTot) > 0) {
+        this.notify('La variation par mois doit totaliser 100 % — total actuel : ' + common.encSaisTot);
+        return;
+      }
+      clearTimeout(this._encT);
+      this.setState({ encAuto: 'en-cours' });
+      this.api('PUT', '/stores/' + st.id + '/budget?exercice=' + anEnc,
+        this._encCorps('Étude de marché ' + anEnc + ' enregistrée — potentiel ' + this.fE(num(baseTheo))
+          + ', ' + String(coef).replace('.', ',') + ' % la première année'))
+        .then(r => {
+          if (!r || r.ok === false) {
+            this.setState({ encAuto: 'echec' });
+            this.notify('Échec de l’enregistrement : ' + ((r && r.error) || 'refusé par le serveur'));
+            return;
+          }
+          const faits = Object.keys(r.projection || {});
+          this.setState({ encAuto: 'ok', encProjFait: r.projection || {} });
+          this.notify(faits.length
+            ? 'Étude enregistrée — théorique écrit pour ' + faits.join(', ')
+            : 'Étude enregistrée — aucune projection (potentiel ou variation par mois manquants)');
+          this.rafraichirBudget();
+        });
+    };
+    common.encEtudeEtat = common.encAutoEtat;
+    common.encProjFait = Object.entries(S.encProjFait || {})
+      .map(([an, v]) => an + ' · ' + this.fE(v.ca))
+      .join('  ·  ');
+
     common.encSave = () => {
       const jr = 'Budget ' + this.meta.exercice + ' encodé — CA validé ' + this.fE(caTot) + ', CA théorique ' + this.fE(theoTot) + ', charges validées ' + common.encPctTot + ' (théoriques ' + common.encPctTotT + '), marge ' + common.encMargePct;
       if (!caTot) { this.notify('Renseignez au moins un mois de CA avant d’enregistrer.'); return; }

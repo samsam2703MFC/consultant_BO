@@ -1397,7 +1397,7 @@ function tplBudgetParam(c, x){
     <div style="display:flex;flex-direction:column;gap:16px">
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-top:3px solid var(--pkg-abricot);border-radius:12px;padding:20px 22px">
         <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Étude de marché</div>
-        <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 16px">Potentiel à maturité, montée en régime et saisonnalité. Encodé au mois ci-dessus : ${c.encTheoTot}.</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 16px">Potentiel à maturité, montée en régime et saisonnalité. Enregistrer écrit le CA théorique de l'exercice <em>et</em> des trois suivants, mois par mois.</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px">
           <label style="display:flex;flex-direction:column;gap:5px">
             <span style="${lbl}">Potentiel à maturité (€)</span>
@@ -1482,6 +1482,14 @@ function tplBudgetParam(c, x){
             <span style="${lbl}">Ou lien vers le document (Drive, SharePoint…)</span>
             <input type="url" value="${esc(c.encAnxUrl)}" ${x.C(c.setEncAnxUrl)} placeholder="https://" style="${c.encInputSt};text-align:left" />
           </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);margin-top:16px;padding-top:14px">
+          <div style="flex:1;min-width:260px;font-size:11.5px;color:var(--color-text-muted)">
+            Chaque saisie part déjà en base ; ce bouton l'écrit avec sa ligne de journal et pose le théorique des trois exercices suivants.
+            ${c.encProjFait ? `<div style="margin-top:4px;color:var(--pkg-abricot);font-weight:500">Théorique écrit — ${esc(c.encProjFait)}</div>` : ''}
+          </div>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.encEtudeEtat || '')}</span>
+          <button ${x.A(c.encEtudeSave)} style="border:none;background:var(--pkg-abricot);color:#fff;border-radius:999px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer l'étude et projeter</button>
         </div>
       </div>
     </div>
