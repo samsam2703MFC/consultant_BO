@@ -1320,7 +1320,11 @@ class App {
     // Sombreffe, dont l'étude porte pourtant 672 000 €.
     const theoEncode = P.some(r => r.theo != null && r.theo > 0);
     const sais = P.map(r => (r.caT || 0) / (budgetAn || 1));
-    const theoM = theoEncode ? P.map(r => r.theo || 0) : (theoAn ? sais.map(w => theoAn * w) : null);
+    // Un mois sans théorique encodé vaut NULL, pas zéro : « 0 € de théorique »
+    // se lirait comme un objectif nul, alors que c'est une absence. Corbais
+    // n'a que mai et juin — les dix autres cases doivent rester vides.
+    const theoM = theoEncode ? P.map(r => (r.theo != null && r.theo > 0) ? r.theo : null)
+      : (theoAn ? sais.map(w => (w > 0 ? theoAn * w : null)) : null);
 
     const openList = this.open();
     const theoOf = s => { const b = (D.budgets || []).find(x2 => x2.storeId === s.id);
@@ -1328,7 +1332,8 @@ class App {
       const an = b && b.caTheoriqueAn ? b.caTheoriqueAn : null;
       const enc = Ps.some(r => r.theo != null && r.theo > 0);
       return { P: Ps, budgetAn: ba, theoAn: an || (enc ? Ps.reduce((a2, r) => a2 + (r.theo || 0), 0) : null),
-        theoM: enc ? Ps.map(r => r.theo || 0) : (an ? Ps.map(r => an * (r.caT || 0) / (ba || 1)) : null) }; };
+        theoM: enc ? Ps.map(r => (r.theo != null && r.theo > 0) ? r.theo : null)
+          : (an ? Ps.map(r => (r.caT ? an * r.caT / (ba || 1) : null)) : null) }; };
     const perStore = openList.map(s => Object.assign({ s }, theoOf(s)));
     const scope = S.bScope || 'shop';
     common.bScopeShopSt = this.tabBtn(scope === 'shop'); common.bScopeResSt = this.tabBtn(scope === 'reseau');
@@ -1339,21 +1344,28 @@ class App {
       Pc = M.MOIS.map((_, i) => ({
         caT: perStore.reduce((a, x2) => a + (x2.P[i].caT || 0), 0),
         ca: perStore.some(x2 => x2.P[i].ca != null) ? perStore.reduce((a, x2) => a + (x2.P[i].ca || 0), 0) : null }));
-      theoC2 = perStore.every(x2 => x2.theoM) ? M.MOIS.map((_, i) => perStore.reduce((a, x2) => a + x2.theoM[i], 0)) : null;
+      theoC2 = perStore.some(x2 => x2.theoM) ? M.MOIS.map((_, i) => {
+        const vs = perStore.map(x2 => (x2.theoM || [])[i]).filter(v => v != null);
+        return vs.length ? vs.reduce((a, v) => a + v, 0) : null;
+      }) : null;
       budgetAnC = Pc.reduce((a, r) => a + r.caT, 0);
       reelC = 0; proC = 0; for (let m = 0; m <= this.moisIdx(); m++){ reelC += Pc[m].ca; proC += Pc[m].caT; }
     }
-    const theoAnC = theoC2 ? theoC2.reduce((a, v) => a + v, 0) : null;
+    const theoAnC = theoC2 ? theoC2.reduce((a, v) => a + (v || 0), 0) : null;
 
     const mxB = Math.max(...Pc.map(r => r.caT || 0), ...(theoC2 || [0]));
     const h = v => Math.max(2, Math.round((v || 0) / mxB * 130));
     common.bBars = Pc.map((r, i) => ({
       hasTheo: !!theoC2,
-      theoSt: theoC2 ? 'width:16px;height:' + h(theoC2[i]) + 'px;background:var(--pkg-abricot);border-radius:3px 3px 0 0' : '',
-      budSt: 'width:16px;height:' + h(r.caT) + 'px;background:#D8CEC2;border-radius:3px 3px 0 0',
+      theoSt: theoC2 ? (theoC2[i] ? 'width:16px;height:' + h(theoC2[i]) + 'px;background:var(--pkg-abricot);border-radius:3px 3px 0 0'
+        : 'width:16px;height:2px;background:var(--color-border-secondary)') : '',
+      budSt: r.caT ? 'width:16px;height:' + h(r.caT) + 'px;background:#D8CEC2;border-radius:3px 3px 0 0'
+        : 'width:16px;height:2px;background:var(--color-border-secondary)',
       reelSt: r.ca == null ? 'width:16px;height:2px;background:var(--color-border-secondary)' : 'width:16px;height:' + h(r.ca) + 'px;background:var(--color-primary);border-radius:3px 3px 0 0' }));
     common.bMoisCols = M.MOIS.map((nom, i) => ({ nom, st: i <= 6 ? 'color:var(--color-text);font-weight:500' : 'color:var(--color-text-muted)' }));
-    const fn = v => v == null ? '—' : Math.round(v).toLocaleString('fr-BE');
+    // Zéro n'est pas une valeur ici : un mois budgété à 0 € n'existe pas en
+    // boutique, c'est un mois qu'on n'a pas encodé. On l'affiche comme tel.
+    const fn = v => (v == null || v === 0) ? '—' : Math.round(v).toLocaleString('fr-BE');
     common.bHasTheoChart = !!theoC2;
     common.bLigneTheo = theoC2 ? theoC2.map(v => fn(v)) : [];
     common.bTotTheo = theoC2 ? fn(theoAnC) : '—';
@@ -1361,8 +1373,11 @@ class App {
     common.bLigneReel = Pc.map(r => fn(r.ca));
     const ecSt = v => v == null ? 'padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)' : 'padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + col(v);
     const pctSt = v => 'font-size:11px;font-weight:400;color:' + (v == null ? 'var(--color-text-muted)' : col(v));
+    // Un écart contre un mois NON ENCODÉ n'est pas un écart : « +167 353 € »
+    // contre un budget absent laissait croire à une performance, alors qu'il
+    // n'y avait rien à battre. Zéro compte donc comme une absence, ici aussi.
     const ecPair = (a, b) => Pc.map((r, i) => { const av = a(r, i), bv = b(r, i);
-      const v = av == null || bv == null ? null : av - bv;
+      const v = (av == null || bv == null || bv === 0) ? null : av - bv;
       return { txt: v == null ? '—' : sg(v).replace(' €', ''), st: ecSt(v),
         pct: v == null ? '' : sgp(av / bv - 1), pctSt: pctSt(v) }; });
     common.bLigneEc = ecPair(r => r.ca, r => r.caT);
