@@ -1083,7 +1083,7 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             }
             foreach ($htmls as $l) {
                 // Construit par nos soins, jamais issu d'une saisie — pas d'échappement.
-                $h .= ($magasin === null && $l[0] !== '' ? '<div style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>' : '')
+                $h .= ($magasin === null && $l[0] !== '' ? '<div data-titre-magasin="1" style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>' : '')
                     . $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
@@ -1605,6 +1605,12 @@ function rapPdfHtml(string $html): string
         // dispersion et le détail tâche par tâche — coincé en bas d'une page
         // de KPI, il se lisait en deux morceaux.
         . 'div[data-bloc="xp-bilan"]{page-break-before:always;margin-top:0 !important}'
+        // Les non-conformités ouvrent leur page, avec leur titre et le nom du
+        // magasin : le titre restait en bas d'une page et les photos
+        // commençaient à la suivante.
+        . 'div[data-bloc="xp-taches"]{page-break-before:always;margin-top:0 !important}'
+        // Un titre ne se sépare jamais de ce qu'il annonce.
+        . 'div[data-titre-bloc],div[data-titre-magasin]{page-break-after:avoid}'
         // Un peu d'air entre le bandeau et le titre, et entre les blocs.
         . 'table[data-carte]>tbody>tr:first-child>td{padding-top:6px !important;padding-bottom:12px !important}'
         . 'table[data-cta]{display:none !important}'
@@ -1631,7 +1637,7 @@ function rapPdfHtml(string $html): string
         // L'encadré des 5/5 a SA page : ce qui a été bien fait ne se lit pas
         // en bas d'une page d'écarts. Douze vignettes remplissent exactement
         // une A4, et la page suivante reprend les non-conformités.
-        . 'table[data-encadre]{page-break-before:always;page-break-after:always}'
+        . 'table[data-encadre]{page-break-before:always}'
         . 'table[data-page-fiches]:last-child{page-break-after:auto}'
         . 'table[data-grille="2x3"] tr[data-rangee-fiches]>td{height:84mm}'
         . 'table[data-grille="2x3"] div[data-fiche]{height:80mm;overflow:hidden;box-sizing:border-box}'
