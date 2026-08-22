@@ -1,1 +1,1 @@
-2026-08-22T14:35:00Z carte-cliquable
+2026-08-22T14:55:00Z lecture-exercice
