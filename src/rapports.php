@@ -1691,16 +1691,21 @@ function ep_rapport_run_pdf(int $id): array
  * fabrication (data-fond, data-marge, data-carte, data-cta) sont neutralisées,
  * ce qui évite de deviner des styles en ligne au risque de casser la page.
  */
-function rapPdfHtml(string $html): string
+function rapPdfHtml(string $html, array $meta = []): string
 {
     $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
     // Repli pour les runs enregistrés avant la prise `data-pied` : le rappel
     // des seuils s'y reconnaît à son texte.
     $html = (string) preg_replace('#<div[^>]*>Seuils\s*:\s*food.*?</div>#s', '', $html);
+    $pied = $meta !== [] ? rapPdfPiedHtml($meta) : '';
     $css = '<style>'
         // Des marges de PAPIER, pas d'écran : 15 mm sur les côtés — la feuille
         // respire, et un rapport agrafé ou perforé ne mange pas son texte.
-        . '@page{size:A4;margin:14mm 15mm 16mm}'
+        . '@page{size:A4;margin:14mm 15mm 20mm}'
+        // La bande de pied, repeinte sur chaque page : le contenu ne doit pas
+        // passer dessous, d'où les hauteurs de grille calculées 11 mm plus bas.
+        . 'div[data-pied-page]{position:fixed;bottom:0;left:0;right:0;height:9mm;'
+        . 'border-top:0.5pt solid #DED6C9;padding-top:2mm;background:#ffffff}'
         . 'html,body{background:#ffffff !important;margin:0 !important;padding:0 !important;'
         . '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         . 'table[data-fond]{background:#ffffff !important}'
@@ -1778,17 +1783,28 @@ function rapPdfHtml(string $html): string
     // Injectée EN DERNIER dans <head> : la dernière feuille gagne à égalité de
     // spécificité, et l'`!important` passe devant les styles en ligne.
     $pos = stripos($html, '</head>');
-    return $pos === false ? $css . $html : substr($html, 0, $pos) . $css . substr($html, $pos);
+    $html = $pos === false ? $css . $html : substr($html, 0, $pos) . $css . substr($html, $pos);
+    // Le pied juste avant </body> : en position fixe, sa place dans le flux
+    // n'a pas d'importance, mais il doit être DANS le corps pour être peint.
+    if ($pied !== '') {
+        $fin = strripos($html, '</body>');
+        $html = $fin === false ? $html . $pied : substr($html, 0, $fin) . $pied . substr($html, $fin);
+    }
+    return $html;
 }
 
 /**
- * Le pied de page du PDF : logo, magasin, rapport, dates, pagination.
+ * Le pied de page du PDF : logo, magasin, rapport, dates.
  *
- * wkhtmltopdf ne sait poser que du texte dans `--footer-*` ; pour le logo il
- * faut lui donner une PAGE de pied. Elle reçoit les numéros de page en
- * paramètres d'URL — d'où le petit script qui les recopie. Aucune ressource
- * externe : le logo est incorporé, sinon le rendu part chercher un fichier et
- * bloque.
+ * POSÉ DANS le document, en position fixe — pas via `--footer-html`. Mesuré
+ * sur le serveur : ce build de wkhtmltopdf (0.12.6 / Qt 5.15.3, sans le
+ * correctif Qt) accepte les commutateurs `--footer-*` sans rien en faire ;
+ * les PDF produits n'ont jamais porté la pagination qu'ils annonçaient. Un
+ * élément en position fixe, lui, est repeint sur chaque page.
+ *
+ * D'où l'absence de numéro de page : sans pied natif, aucun compteur de page
+ * n'est accessible depuis le document. Mieux vaut un pied qui identifie la
+ * feuille qu'une pagination qui ne s'imprime pas.
  */
 function rapPdfPiedHtml(array $meta): string
 {
@@ -1797,24 +1813,18 @@ function rapPdfPiedHtml(array $meta): string
     $logo = rapLogoDataUri();
     $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
-    return '<!doctype html><html><head><meta charset="utf-8"><style>'
-        . 'html,body{margin:0;padding:0}'
-        . 'table{width:100%;border-collapse:collapse;border-top:0.5pt solid #DED6C9;padding-top:2mm}'
-        . 'td{' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle;padding:0}'
-        . '</style><script>'
-        // wkhtmltopdf passe page/topage en query : on les recopie dans le pied.
-        . 'function pied(){var v={},q=document.location.search.substring(1).split("&");'
-        . 'for(var i=0;i<q.length;i++){var kv=q[i].split("=");v[kv[0]]=decodeURIComponent(kv[1]||"");}'
-        . 'var el=document.getElementById("pg");if(el){el.textContent=(v.page||"")+"/"+(v.topage||"");}}'
-        . '</script></head><body onload="pied()"><table><tr>'
+    return '<div data-pied-page="1"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
         // Le logo tient dans SA colonne : sans largeur, il passait sous le
         // texte du magasin.
-        . '<td style="width:26mm">' . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
-        . '<td style="padding:0 6mm 0 4mm"><span style="color:#221E1A;font-weight:bold">' . $e($meta['magasin'] ?? '') . '</span>'
+        . '<td style="width:26mm;' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle">'
+        . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
+        . '<td style="padding:0 6mm 0 4mm;' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle">'
+        . '<span style="color:#221E1A;font-weight:bold">' . $e($meta['magasin'] ?? '') . '</span>'
         . (($meta['rapport'] ?? '') !== '' ? ' · ' . $e($meta['rapport']) : '') . '</td>'
-        // Les dates et la pagination ne se coupent jamais en deux lignes.
-        . '<td align="right" style="white-space:nowrap">' . $dates . ' · <span id="pg"></span></td>'
-        . '</tr></table></body></html>';
+        // Les dates ne se coupent jamais en deux lignes.
+        . '<td align="right" style="white-space:nowrap;' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle">'
+        . $dates . '</td>'
+        . '</tr></table></div>';
 }
 
 function rapPdfRendu(string $html, array $meta = []): ?string
@@ -1822,24 +1832,16 @@ function rapPdfRendu(string $html, array $meta = []): ?string
     if (!function_exists('shell_exec')) { return null; }
     $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
-    $tmpF = null;
-    file_put_contents($tmpH, rapPdfHtml($html));
+    file_put_contents($tmpH, rapPdfHtml($html, $meta));
     // `--print-media-type` : le document porte déjà ses règles @media print
     // (sauts de page des fiches) — sans ce drapeau wkhtmltopdf les ignore.
     // Le numéro de page en pied : un rapport de trois feuilles agrafées sans
     // pagination se relit mal.
     $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
-        . ' --margin-top 14mm --margin-bottom 18mm --margin-left 15mm --margin-right 15mm'
-        . ' --footer-spacing 5';
-    // Le pied illustré s'il y a de quoi le remplir ; sinon la pagination seule
-    // — un rapport sans contexte vaut mieux qu'un rendu qui échoue.
-    if ($meta !== []) {
-        $tmpF = tempnam(sys_get_temp_dir(), 'rap') . '.html';
-        file_put_contents($tmpF, rapPdfPiedHtml($meta));
-        $wk .= ' --footer-html ' . escapeshellarg($tmpF);
-    } else {
-        $wk .= ' --footer-font-size 7 --footer-right "[page]/[topage]"';
-    }
+        . ' --margin-top 14mm --margin-bottom 20mm --margin-left 15mm --margin-right 15mm';
+    // Aucun `--footer-*` : ce build les accepte sans les honorer (mesuré — les
+    // PDF n'ont jamais porté la pagination demandée). Le pied est dans le
+    // document, en position fixe.
     $essais = [
         // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
         'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
@@ -1852,11 +1854,11 @@ function rapPdfRendu(string $html, array $meta = []): ?string
         @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));
         if (is_file($tmpP) && filesize($tmpP) > 1000) {
             $octets = (string) file_get_contents($tmpP);
-            @unlink($tmpH); @unlink($tmpP); if ($tmpF !== null) { @unlink($tmpF); }
+            @unlink($tmpH); @unlink($tmpP);
             return $octets;
         }
     }
-    @unlink($tmpH); @unlink($tmpP); if ($tmpF !== null) { @unlink($tmpF); }
+    @unlink($tmpH); @unlink($tmpP);
     return null;
 }
 
@@ -2532,11 +2534,13 @@ function rapJoursDe(array $periode): array
 function rapHauteursVignettes(): string
 {
     $css = '';
-    // Chaque rangée porte en plus ~2,6 mm de gouttière (5 px de padding en
-    // haut et en bas) : les hauteurs ci-dessous en tiennent compte, sans quoi
-    // cinq rangées débordaient la feuille de quelques millimètres et la
-    // dernière basculait sur une page presque vide.
-    foreach ([5 => [45, 29], 4 => [57, 40], 3 => [75, 54], 2 => [75, 54], 1 => [75, 54]] as $rangs => [$h, $photo]) {
+    // Le compte : 297 mm moins les marges (14 en haut, 20 en bas) = 263 mm,
+    // moins la bande de pied (11 mm) et le titre du bloc (~15 mm) = ~237 mm
+    // pour la grille. Chaque rangée porte en plus ~2,6 mm de gouttière (5 px
+    // de padding en haut et en bas), d'où des hauteurs de cellule un peu
+    // inférieures au quotient : sans cela, la dernière rangée basculait sur
+    // une page presque vide.
+    foreach ([5 => [44, 28], 4 => [56, 39], 3 => [74, 53], 2 => [74, 53], 1 => [74, 53]] as $rangs => [$h, $photo]) {
         $t = 'table[data-grille="3x5"][data-rangees="' . $rangs . '"] ';
         $css .= $t . 'tr[data-rangee-fiches]>td{height:' . $h . 'mm}'
             . $t . 'div[data-fiche]{height:' . ($h - 2) . 'mm}'
@@ -2544,9 +2548,9 @@ function rapHauteursVignettes(): string
     }
     // Une grille sans compte de rangées (rapport ancien, test) : la valeur qui
     // remplit une page pleine.
-    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:45mm}'
-        . 'table[data-grille="3x5"] div[data-fiche]{height:43mm}'
-        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:29mm}';
+    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:44mm}'
+        . 'table[data-grille="3x5"] div[data-fiche]{height:42mm}'
+        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:28mm}';
 }
 
 function rapGrilleDe(array $periode): array
