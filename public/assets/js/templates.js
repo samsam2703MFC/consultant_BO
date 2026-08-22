@@ -131,6 +131,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
+      ${c.isMesure ? tplMesure(c, x) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
@@ -1421,6 +1422,278 @@ function tplEncodage(c, x){
 
 /* Budget × Campagnes : le calendrier des campagnes posé sur la courbe du
    budget, puis l'objectif de la campagne regardée, magasin par magasin. */
+
+/* Mesure d'impact d'une campagne — trois vues sur un bascule :
+   paramétrage (avant), résultats (après), produits promus. */
+function tplMesure(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)';
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px';
+  const boite = 'background:var(--color-background-secondary);border-radius:10px;padding:12px 14px';
+  const inp = 'font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);width:100%';
+  const th = 'font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);font-weight:600;text-align:right;padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary)';
+  const td = 'padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-size:12.5px';
+  const jf = s => String(s || '').split('-').reverse().join('/');
+
+  const entete = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--color-text-muted)">Campagne</span>
+      <select ${x.C(c.setMesCamp)} style="font-size:13px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:420px">
+        ${(c.mesCampOpts || []).map(o => `<option value="${o.v}"${o.v === c.mesCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+      </select>
+      ${c.mesChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des ventes jour par jour…</span>' : ''}
+    </div>`;
+
+  if (c.mesIndispo) {
+    return `<div data-screen="mesure" style="display:flex;flex-direction:column;gap:16px;max-width:1240px">${entete}
+      <div style="${carte};font-size:13px">${esc(c.mesIndispo)}</div></div>`;
+  }
+  if (c.mesChargement || c.mesVide) {
+    return `<div data-screen="mesure" style="display:flex;flex-direction:column;gap:16px;max-width:1240px">${entete}</div>`;
+  }
+
+  const bascule = `
+    <div style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
+      ${(c.mesVues || []).map(v => `<button ${x.A(v.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:${v.on ? '600' : '400'};padding:6px 14px;border-radius:7px;background:${v.on ? 'var(--color-surface)' : 'transparent'};color:${v.on ? 'var(--color-primary)' : 'var(--color-text-muted)'};box-shadow:${v.on ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'}">${esc(v.nom)}</button>`).join('')}
+    </div>`;
+
+  const titre = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--font-display);font-size:19px;line-height:1.25">${esc(c.mesNom)}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(c.mesType)} · ${esc(c.mesPeriode)} · ${esc(c.mesPerimNoms)}</div>
+      </div>
+      ${bascule}
+    </div>`;
+
+  /* ── A · paramétrage ─────────────────────────────────────────────── */
+  const vueParam = () => `
+    <div style="${carte};display:flex;flex-direction:column;gap:16px">
+      <div>
+        <div style="${lbl}">1 · Fenêtres de comparaison</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px">
+          <div style="${boite}">
+            <div style="${lbl}">Référence « avant »</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <input type="date" value="${esc(c.mesRef.duCh.val)}" ${x.I(c.mesRef.duCh.set)} style="${inp}">
+              <input type="date" value="${esc(c.mesRef.auCh.val)}" ${x.I(c.mesRef.auCh.set)} style="${inp}">
+            </div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px">${c.mesRef.jours} jours — semaines pleines : autant de samedis que de lundis.</div>
+          </div>
+          <div style="${boite}">
+            <div style="${lbl}">Campagne</div>
+            <div style="font-size:13px;margin-top:8px">${esc(jf(c.mesCamp2.du))} → ${esc(jf(c.mesCamp2.au))}</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px">${c.mesCamp2.jours} jours${c.mesCamp2.encours ? ' · ' + c.mesCamp2.ecoulee + ' écoulés' : ''}${c.mesCamp2.commencee ? '' : ' · pas encore commencée'}</div>
+          </div>
+          <div style="${boite}">
+            <div style="${lbl}">Rémanence « après »</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <input type="number" min="0" max="120" value="${esc(c.mesRem.ch.val)}" ${x.I(c.mesRem.ch.set)} style="${inp};width:80px">
+              <span style="font-size:12.5px;color:var(--color-text-muted)">jours</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px">${esc(jf(c.mesRem.du))} → ${esc(jf(c.mesRem.au))} — détecte les achats simplement avancés.</div>
+          </div>
+          <div style="${boite}">
+            <div style="${lbl}">Contrôle</div>
+            <div style="font-size:13px;margin-top:8px">Période témoin ${esc(jf(c.mesPre.du))} → ${esc(jf(c.mesPre.au))}</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px">La même mesure, un cran plus tôt : elle donne la variation habituelle du réseau — le bruit.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="${lbl}">2 · Témoin — c'est lui qui rend la mesure vraie</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin:6px 0 9px">Uplift net = variation des magasins en campagne − variation du témoin sur la même fenêtre. Sans témoin, on mesure la météo et la saison.${c.mesTemoinAuto ? ' <b>Choix automatique</b> : tous les magasins hors campagne.' : ''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${(c.mesMagasins || []).map(m => m.enCampagne
+            ? `<span style="font-size:12px;padding:6px 11px;border-radius:999px;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">${esc(m.nom)} · en campagne</span>`
+            : `<button ${x.A(m.bascule)} style="font-size:12px;padding:6px 11px;border-radius:999px;cursor:pointer;font-family:var(--font-ui);border:0.5px solid ${m.temoin ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${m.temoin ? 'var(--color-text)' : 'var(--color-surface)'};color:${m.temoin ? '#fff' : 'var(--color-text-muted)'}">${esc(m.nom)}${m.temoin ? ' · témoin' : ''}</button>`).join('')}
+        </div>
+      </div>
+
+      <div>
+        <div style="${lbl}">3 · Ce qu'on mesure, et la cible</div>
+        <table style="border-collapse:collapse;width:100%;margin-top:8px">
+          <tr><th style="${th};text-align:left">Indicateur</th><th style="${th};text-align:left">Source</th><th style="${th}">Base « avant »</th><th style="${th}">Cible</th><th style="${th};text-align:left">Granularité</th></tr>
+          ${(c.mesIndics || []).map(i => `<tr>
+            <td style="${td};text-align:left"><b>${esc(i.nom)}</b> <span style="color:var(--color-text-muted)">— ${esc(i.detail)}</span></td>
+            <td style="${td};text-align:left;color:var(--color-text-muted);font-size:12px">${esc(i.src)}</td>
+            <td style="${td}">${esc(i.base)}</td>
+            <td style="${td}"><span style="display:inline-flex;align-items:center;gap:5px;justify-content:flex-end"><input type="number" step="0.5" value="${esc(i.cible.val)}" ${x.I(i.cible.set)} style="${inp};width:78px;text-align:right"><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(i.unite)}</span></span></td>
+            <td style="${td};text-align:left;font-size:12px;${i.alerte ? 'color:#C17A2A' : 'color:var(--color-text-muted)'}">${esc(i.gran)}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:12px">
+        <div style="${boite}">
+          <div style="${lbl}">Références promues</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin:6px 0 8px">Reprises de l'offre de la campagne. Une par ligne pour en ajouter : identifiant, puis libellé (ex. <code>1610004 Bleuet 6 pièces</code>).</div>
+          <textarea rows="4" ${x.I(c.mesProduitsTxt.set)} style="${inp};font-family:var(--font-ui);resize:vertical">${esc(c.mesProduitsTxt.val)}</textarea>
+        </div>
+        <div style="${boite}">
+          <div style="${lbl}">Rentabilité</div>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <label style="flex:1;font-size:11.5px;color:var(--color-text-muted)">Coût de la campagne (€)
+              <input type="number" step="1" value="${esc(c.mesCout.val)}" ${x.I(c.mesCout.set)} style="${inp};margin-top:4px"></label>
+            <label style="flex:1;font-size:11.5px;color:var(--color-text-muted)">Marge brute (%)
+              <input type="number" step="0.5" value="${esc(c.mesMarge.val)}" ${x.I(c.mesMarge.set)} style="${inp};margin-top:4px"></label>
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Le retour se calcule sur la marge du CA gagné, pas sur le CA.</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="${lbl}">4 · Relevé Facebook — à la main, avant et après</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin:6px 0 9px">La page n'est pas connectée : deux nombres relevés valent mieux qu'un indicateur absent. À noter le jour du lancement et le jour de la clôture.</div>
+        <table style="border-collapse:collapse;width:100%">
+          <tr><th style="${th};text-align:left">Page</th><th style="${th}">Abonnés avant</th><th style="${th}">Abonnés après</th><th style="${th}">Écart</th></tr>
+          ${(c.mesFbLignes || []).map(l => `<tr>
+            <td style="${td};text-align:left">${esc(l.nom)}</td>
+            <td style="${td}"><input type="number" min="0" value="${esc(l.avant.val)}" ${x.I(l.avant.set)} style="${inp};width:110px;text-align:right"></td>
+            <td style="${td}"><input type="number" min="0" value="${esc(l.apres.val)}" ${x.I(l.apres.set)} style="${inp};width:110px;text-align:right"></td>
+            <td style="${td};color:${l.deltaCol};font-weight:600">${esc(l.delta)}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+
+      <div style="${boite};background:#FBF3DC;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:340px">
+          <div style="${lbl};color:#8a6d12">Gel de la référence</div>
+          <div style="font-size:12px;color:#6b4420;margin-top:5px">Les remontées de caisse arrivent avec du retard : sans photo prise au lancement, l'« avant » change tout seul et le résultat n'est plus reproductible.${c.mesGele ? ' Référence ' + esc(c.mesGele) + '.' : ''}</div>
+        </div>
+        ${c.mesGele
+          ? `<button ${x.A(c.mesDegeler)} style="border:0.5px solid #8a6d12;background:transparent;color:#8a6d12;border-radius:8px;padding:8px 14px;font-size:12.5px;cursor:pointer;font-family:var(--font-ui)">Dégeler</button>`
+          : `<button ${x.A(c.mesGeler)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:var(--font-ui)">Geler la référence</button>`}
+      </div>
+    </div>`;
+
+  /* ── B · résultats ───────────────────────────────────────────────── */
+  const vueResultats = () => `
+    <div style="${carte};display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div style="font-size:12px;color:var(--color-text-muted)">Référence ${esc(jf(c.mesRef.du))} → ${esc(jf(c.mesRef.au))} · témoin : ${esc(c.mesTemoinNoms)}</div>
+        <div style="text-align:right">
+          <div style="${lbl}">Verdict</div>
+          <div style="margin-top:4px"><span style="display:inline-block;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;${c.mesVerdict.st}">${esc(c.mesVerdict.libelle)}${c.mesVerdict.valeur ? ' · ' + esc(c.mesVerdict.valeur) : ''}</span></div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px;font-style:italic">${esc(c.mesVerdict.txt)}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+        ${(c.mesTuiles || []).map(t => `<div style="${boite}">
+          <div style="${lbl}">${esc(t.nom)}</div>
+          <div style="font-family:var(--font-display);font-size:23px;margin-top:6px;letter-spacing:-0.4px">${esc(t.val)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(t.avant)}${t.d !== '—' ? ' · <b style="color:' + t.dCol + '">' + esc(t.d) + '</b>' : ''}</div>
+          ${(t.temoin || t.net) ? `<div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
+            ${t.temoin ? `<span style="font-size:10.5px;padding:3px 8px;border-radius:999px;background:#EDEAE5;color:var(--color-text-muted)">${esc(t.temoin)}</span>` : ''}
+            ${t.net ? `<span style="font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--color-surface);color:${t.netCol}">${esc(t.net)}</span>` : ''}
+          </div>` : ''}
+          ${t.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;font-style:italic">${esc(t.note)}</div>` : ''}
+        </div>`).join('')}
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div style="${lbl}">Trafic quotidien — indice 100 = moyenne de la référence</div>
+          <div style="font-size:11px;color:var(--color-text-muted)"><span style="color:var(--color-primary)">━</span> magasins en campagne &nbsp; <span style="color:#999">╌</span> témoin</div>
+        </div>
+        ${c.mesCourbe.vide
+          ? `<div style="font-size:12.5px;color:var(--color-text-muted);padding:18px 0">Pas de ventes quotidiennes sur cette étendue.</div>`
+          : `<svg viewBox="0 0 ${c.mesCourbe.W} ${c.mesCourbe.H}" style="width:100%;height:${c.mesCourbe.H}px;margin-top:6px">
+              ${(c.mesCourbe.bandes || []).map(b => `<rect x="${b.x}" y="${c.mesCourbe.yBande}" width="${b.w}" height="${c.mesCourbe.hautBande}" fill="${b.fill}"></rect>
+                <text x="${b.milieu}" y="${c.mesCourbe.H - 7}" text-anchor="middle" font-size="9.5" letter-spacing="0.08em" fill="${b.col}">${esc(b.nom)}</text>`).join('')}
+              <line x1="0" x2="${c.mesCourbe.W}" y1="${c.mesCourbe.cent}" y2="${c.mesCourbe.cent}" stroke="rgba(34,34,34,0.18)" stroke-width="1" stroke-dasharray="4 4"></line>
+              <path d="${c.mesCourbe.temoin}" fill="none" stroke="#999" stroke-width="1.6" stroke-dasharray="4 3"></path>
+              <path d="${c.mesCourbe.camp}" fill="none" stroke="var(--color-primary)" stroke-width="2.1"></path>
+            </svg>`}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.55fr 0.75fr;gap:14px">
+        <div>
+          <div style="${lbl};margin-bottom:6px">Par magasin — en % de sa propre base</div>
+          <table style="border-collapse:collapse;width:100%">
+            <tr><th style="${th};text-align:left">Magasin</th><th style="${th}">Trafic avant</th><th style="${th}">Trafic pendant</th><th style="${th}">Δ trafic</th><th style="${th}">Δ panier</th><th style="${th}">Δ CA net</th><th style="${th}">€ gagnés</th></tr>
+            ${(c.mesLignes || []).map(l => `<tr>
+              <td style="${td};text-align:left">${esc(l.nom)}</td>
+              <td style="${td}">${esc(l.trafAv)}</td><td style="${td}">${esc(l.trafPd)}</td>
+              <td style="${td};color:${l.dTrafCol}">${esc(l.dTraf)}</td>
+              <td style="${td};color:${l.dPanCol}">${esc(l.dPan)}</td>
+              <td style="${td};color:${l.netCol};font-weight:600">${esc(l.net)}</td>
+              <td style="${td};color:${l.eurosCol}">${esc(l.euros)}</td></tr>`).join('')}
+            ${(c.mesTemLignes || []).map(l => `<tr style="background:var(--color-background-secondary)">
+              <td style="${td};text-align:left"><b>Témoin — ${esc(l.nom)}</b></td>
+              <td style="${td}">${esc(l.trafAv)}</td><td style="${td}">${esc(l.trafPd)}</td>
+              <td style="${td}">${esc(l.dTraf)}</td><td style="${td}">${esc(l.dPan)}</td>
+              <td style="${td};color:var(--color-text-muted);font-style:italic">bruit de fond</td><td style="${td}">—</td></tr>`).join('')}
+          </table>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:7px;font-style:italic">Δ CA net = variation du magasin − variation du témoin sur la même fenêtre. € gagnés = ce qu'il a fait en plus de ce qu'il aurait fait en suivant le témoin.</div>
+        </div>
+        <div style="${boite}">
+          <div style="${lbl}">Rentabilité</div>
+          <table style="border-collapse:collapse;width:100%;margin-top:6px;font-size:12.5px">
+            <tr><td style="padding:4px 0">CA net gagné</td><td style="padding:4px 0;text-align:right;font-weight:600">${esc(c.mesRenta.euros)}</td></tr>
+            <tr><td style="padding:4px 0">Marge brute (${esc(c.mesRenta.margePct)})</td><td style="padding:4px 0;text-align:right">${esc(c.mesRenta.marge)}</td></tr>
+            <tr><td style="padding:4px 0">Coût campagne</td><td style="padding:4px 0;text-align:right">${esc(c.mesRenta.cout)}</td></tr>
+            <tr><td style="padding:7px 0 0"><b>Gain net</b></td><td style="padding:7px 0 0;text-align:right;font-weight:700;color:${c.mesRenta.gainCol}">${esc(c.mesRenta.gain)}</td></tr>
+            <tr><td style="padding:4px 0">Retour</td><td style="padding:4px 0;text-align:right;font-weight:600">${esc(c.mesRenta.retour)}</td></tr>
+          </table>
+          ${c.mesRenta.manque ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;font-style:italic">${esc(c.mesRenta.manque)}</div>` : ''}
+          <div style="height:1px;background:var(--color-border-tertiary);margin:12px 0"></div>
+          <div style="${lbl}">Rémanence</div>
+          <div style="font-family:var(--font-display);font-size:19px;margin-top:5px;color:${c.mesRemanence.col}">${esc(c.mesRemanence.pct)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(c.mesRemanence.txt)}</div>
+          ${c.mesBruit ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:9px;font-style:italic">${esc(c.mesBruit)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  /* ── C · produits promus ─────────────────────────────────────────── */
+  const vueProduits = () => `
+    <div style="${carte};display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="${lbl}">Références promues — réponse à la promotion</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:5px">${esc(c.mesProduitsNote)}</div>
+      </div>
+      ${(c.mesProduits || []).length ? `
+      <table style="border-collapse:collapse;width:100%">
+        <tr><th style="${th};text-align:left">Référence</th><th style="${th};text-align:left">Catégorie</th><th style="${th}">Base / jour</th><th style="${th}">Campagne / jour</th><th style="${th}">Réponse</th><th style="${th}">vs N-1</th><th style="${th}">Rémanence</th><th style="${th};text-align:left">Score</th></tr>
+        ${c.mesProduits.map(p => `<tr>
+          <td style="${td};text-align:left"><b>${esc(p.nom)}</b><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(p.sku)}${p.source === 'saisie' ? ' · ajoutée à la main' : ''}</div></td>
+          <td style="${td};text-align:left;color:var(--color-text-muted);font-size:12px">${esc(p.categorie || '—')}</td>
+          <td style="${td}">${esc(p.refJour)} u</td>
+          <td style="${td}">${esc(p.campJour)} u</td>
+          <td style="${td};color:${p.reponseCol};font-weight:600">${esc(p.reponse)}</td>
+          <td style="${td}">${esc(p.n1Var)}</td>
+          <td style="${td};color:${p.remanenceCol}">${esc(p.remanence)}</td>
+          <td style="${td};text-align:left"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${p.score.st}">${esc(p.score.t)}</span></td>
+        </tr>`).join('')}
+      </table>
+      <div>
+        <div style="${lbl};margin-bottom:8px">Volume par jour — base contre campagne</div>
+        <div style="display:flex;gap:18px;align-items:flex-end;height:130px;padding:0 4px">
+          ${c.mesProduits.map(p => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%">
+            <div style="flex:1;display:flex;align-items:flex-end;gap:5px;width:100%;justify-content:center">
+              <div title="base ${esc(p.refJour)} u/j" style="width:26px;height:${p.hRef}%;background:rgba(34,34,34,0.16);border-radius:3px 3px 0 0"></div>
+              <div title="campagne ${esc(p.campJour)} u/j" style="width:26px;height:${p.hCamp}%;background:var(--color-primary);border-radius:3px 3px 0 0"></div>
+            </div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);text-align:center;line-height:1.2;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.nom)}</div>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}
+      <div style="font-size:11.5px;color:var(--color-text-muted);font-style:italic">Le score compare la campagne à la base, au jour, et pénalise une référence dont le volume retombe sous la base après la campagne : elle a vendu d'avance, elle n'a pas vendu en plus.</div>
+    </div>`;
+
+  return `
+  <div data-screen="mesure" style="display:flex;flex-direction:column;gap:16px;max-width:1240px">
+    ${entete}
+    ${titre}
+    ${c.mesVue === 'param' ? vueParam() : (c.mesVue === 'produits' ? vueProduits() : vueResultats())}
+    ${(c.mesMotifs || []).length ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${(c.mesMotifs || []).map(m => esc(m)).join(' · ')}</div>` : ''}
+    <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.mesSource)}</div>
+  </div>`;
+}
+
 function tplBxc(c, x){
   const { esc } = x;
   const lbl = 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)';

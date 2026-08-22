@@ -573,6 +573,7 @@ class App {
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       resultatJour: ['Résultat du jour', 'Le compte de résultat d\u2019une journée, magasin par magasin : ventes, coût matière, main-d\u2019œuvre, frais généraux et résultat. Ouvrez une ligne pour la cascade du magasin, sa ventilation par catégorie et la place du jour dans le mois.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
+      mesure: ['Mesure des campagnes', 'Ce qu’une campagne a vraiment donné : trafic, panier et volumes promus avant / pendant / après, nets de ce qu’ont fait les magasins hors campagne. Le paramétrage se fait avant le lancement, la lecture après.'],
       bxcampagnes: ['Budget × Campagnes', 'Le calendrier des campagnes posé sur la courbe du budget, puis l’objectif de chaque campagne magasin par magasin — et ce qu’il a donné.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
@@ -959,6 +960,8 @@ class App {
         // Le budget dit ce qu'un magasin doit faire, la campagne ce qu'on lui
         // demande en plus : les deux se lisent enfin sur le même écran.
         ['bxcampagnes', 'Budget × Campagnes', 0],
+        // Ce qu'une campagne a vraiment donné : avant / après, net du témoin.
+        ['mesure', 'Mesure des campagnes', 0],
         ['mktTypes', 'Types de campagne', 0]]],
       // Le reporting EST un contrôle : il rend compte de ce qui a été fait, au
       // même endroit que les checklists. Le journal, lui, est une trace
@@ -992,10 +995,10 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', reputation: 'isReput', resultatJour: 'isRJour',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1294,6 +1297,7 @@ class App {
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBxc) this.valsBxc(common);
+    if (common.isMesure) this.valsMesure(common);
     // --- scoring produits
     if (common.isProduits) this.valsProduits(common);
     // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
@@ -2509,6 +2513,263 @@ class App {
   /** Rapports réels (table ceo_rapport) : définitions + dernières générations. */
   /** Budget × Campagnes : lu à l'ouverture de l'écran, et à chaque changement
    *  de campagne ou d'exercice — le réalisé vient du panel, il ne se devine pas. */
+  /* --- mesure d'impact d'une campagne -----------------------------------------
+     Trois vues sur un même écran : le PARAMÉTRAGE (ce qu'on mesure et contre
+     quoi), les RÉSULTATS (avant / après, net du témoin) et les PRODUITS promus.
+     Tout ce qui se saisit s'écrit à la frappe, comme le reste du cockpit. */
+  mesCharge(force){
+    const cle = String(this.state.mesCamp || 0);
+    if (this._mesEnCours === cle) { return; }
+    if (!force && this.state.mes && this.state.mes.cle === cle) { return; }
+    this._mesEnCours = cle;
+    this.setState({ mes: { cle, chargement: true, d: (this.state.mes || {}).d || null } });
+    readOne('/marketing/mesure' + (this.state.mesCamp ? '?campagne=' + this.state.mesCamp : ''))
+      .then(d => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: d || null } }); })
+      .catch(() => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: null } }); });
+  }
+  /** Le paramétrage part champ par champ : ce qui n'est pas envoyé n'est pas touché. */
+  mesEcrire(id, champ, valeur){
+    return this.api('PUT', '/marketing/mesure/' + id + '?journal=0', { [champ]: valeur })
+      .then(r => !(!r || r.ok === false));
+  }
+  mesReleve(id, shopId, phase, valeur){
+    return this.api('PUT', '/marketing/mesure/' + id + '/releve?journal=0',
+      { shopId: String(shopId), phase, abonnes: valeur })
+      .then(r => !(!r || r.ok === false));
+  }
+
+  valsMesure(common){
+    const S = this.state;
+    this.mesCharge(false);
+    const b = S.mes || {};
+    const d = b.d || {};
+    common.mesChargement = !!b.chargement && !b.d;
+    common.mesIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
+    const camp = d.campagne || null;
+    common.mesCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
+      nom: c.nom + ' · ' + (c.debut || '').split('-').reverse().join('/') + ' → ' + (c.fin || '').split('-').reverse().join('/') }));
+    common.mesCampSel = String((camp || {}).id || '');
+    common.setMesCamp = e => this.setState({ mesCamp: parseInt(e.target.value, 10) || 0 });
+    if (!camp) { common.mesVide = true; return; }
+    common.mesVide = false;
+    common.mesNom = camp.nom;
+    common.mesType = camp.type;
+    common.mesStatut = camp.statut;
+    const jf = s => (s || '').split('-').reverse().join('/');
+    common.mesPeriode = 'du ' + jf(camp.debut) + ' au ' + jf(camp.fin);
+    common.mesSource = d.source || '';
+    common.mesMotifs = d.motifs || [];
+
+    // Une campagne pas encore commencée s'ouvre sur son paramétrage ; une
+    // campagne en cours ou finie, sur ses résultats.
+    common.mesVue = S.mesVue || (((d.fenetres || {}).camp || {}).commencee ? 'resultats' : 'param');
+    common.mesVues = [['param', 'Paramétrage'], ['resultats', 'Résultats'], ['produits', 'Produits promus']]
+      .map(([v, nom]) => ({ v, nom, on: common.mesVue === v, choisir: () => this.setState({ mesVue: v }) }));
+
+    const P = d.param || {}, F = d.fenetres || {}, R = d.reseau || {};
+    // ── vue A : paramétrage
+    // `relire` : les champs qui changent les FENÊTRES rechargent l'écran une
+    // fois écrits — les autres non, pour ne pas déplacer le curseur en cours
+    // de frappe.
+    const champ = (cle, val, relire) => ({ val: val == null ? '' : String(val),
+      set: e => { const v = e.target.value;
+        this.autoEnreg('mes' + cle + camp.id, () => this.mesEcrire(camp.id, cle, v)
+          .then(ok => { if (ok && relire) { this.mesCharge(true); } return ok; })); } });
+    common.mesRef = { du: F.ref.du, au: F.ref.au, jours: F.ref.jours,
+      duCh: champ('refDebut', F.ref.du, true), auCh: champ('refFin', F.ref.au, true) };
+    common.mesCamp2 = { du: F.camp.du, au: F.camp.au, jours: F.camp.jours,
+      ecoulee: F.camp.ecoulee, encours: !!F.camp.encours, commencee: !!F.camp.commencee };
+    common.mesRem = { jours: F.rem.jours, du: F.rem.du, au: F.rem.au, dispo: !!F.rem.dispo,
+      ch: champ('remanenceJours', F.rem.jours, true) };
+    common.mesPre = { du: F.pre.du, au: F.pre.au };
+    common.mesN1 = { on: !!P.n1, bascule: () => this.mesEcrire(camp.id, 'n1', !P.n1).then(() => this.mesCharge(true)) };
+
+    const enCamp = (d.magasins || []).filter(m => m.role === 'campagne');
+    const temSel = P.temoins || [];
+    common.mesTemoinAuto = !!P.temoinAuto;
+    common.mesMagasins = (d.magasins || []).map(m => ({ id: m.id, nom: m.nom, role: m.role,
+      enCampagne: m.role === 'campagne', temoin: temSel.indexOf(m.id) >= 0,
+      bascule: m.role === 'campagne' ? null : () => {
+        const cur = temSel.slice();
+        const i = cur.indexOf(m.id);
+        if (i >= 0) { cur.splice(i, 1); } else { cur.push(m.id); }
+        this.mesEcrire(camp.id, 'temoins', cur).then(() => this.mesCharge(true));
+      } }));
+    common.mesTemoinNoms = (d.temoinLignes || []).map(l => l.nom).join(', ') || 'aucun';
+    common.mesPerimNoms = enCamp.map(m => m.nom).join(', ');
+
+    const pct = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
+    const pt = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' pt';
+    const col = v => v == null ? 'var(--color-text-muted)' : (v > 0.05 ? '#2d7a3e' : (v < -0.05 ? 'var(--color-primary)' : 'var(--color-text)'));
+    const gC = (R.campagne || {}), gT = (R.temoin || {});
+    const base = (gC.ref || {});
+    common.mesIndics = [
+      { nom: 'Trafic', detail: 'tickets / jour', src: 'caisse — par magasin, par jour',
+        base: base.ticketsJour == null ? '—' : base.ticketsJour.toLocaleString('fr-BE'),
+        gran: 'par magasin', cible: champ('cibleTrafic', P.cibleTrafic), unite: '%' },
+      { nom: 'Panier moyen', detail: 'CA / ticket', src: 'caisse — par magasin, par jour',
+        base: base.panier == null ? '—' : this.fEd(base.panier),
+        gran: 'par magasin', cible: champ('ciblePanier', P.ciblePanier), unite: '%' },
+      { nom: 'CA / jour', detail: 'trafic × panier', src: 'caisse — par magasin, par jour',
+        base: this.fE(base.caJour), gran: 'par magasin', cible: champ('cibleCa', P.cibleCa), unite: '%' },
+      { nom: 'Produits promus', detail: 'volume vendu', src: 'panel — références',
+        base: (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '—',
+        gran: 'réseau seulement', alerte: true, cible: champ('ciblePromo', P.ciblePromo), unite: '%' },
+      { nom: 'Abonnés Facebook', detail: 'relevé manuel', src: 'saisie — 2 champs',
+        base: (d.fb || {}).avant == null ? '—' : d.fb.avant.toLocaleString('fr-BE'),
+        gran: 'par page', cible: champ('cibleFb', P.cibleFb), unite: 'abonnés' }
+    ];
+    common.mesCout = champ('cout', P.cout, true);
+    common.mesMarge = champ('margePct', P.margePct == null ? 63 : P.margePct, true);
+    common.mesProduitsTxt = champ('produits', P.produits, true);
+    common.mesGele = P.geleLe ? ('gelée le ' + String(P.geleLe).slice(0, 16).replace('T', ' ')) : '';
+    common.mesGeler = () => this.api('POST', '/marketing/mesure/' + camp.id + '/gel', {})
+      .then(() => this.mesCharge(true));
+    common.mesDegeler = () => this.api('POST', '/marketing/mesure/' + camp.id + '/gel', { annuler: 1 })
+      .then(() => this.mesCharge(true));
+
+    // Relevé Facebook — deux nombres par page, saisis à la main.
+    common.mesFbLignes = ((d.fb || {}).lignes || []).map(l => ({
+      nom: l.nom, shopId: l.shopId,
+      avant: { val: l.avant == null ? '' : String(l.avant),
+        set: e => { const v = e.target.value;
+          this.autoEnreg('fbA' + camp.id + l.shopId, () => this.mesReleve(camp.id, l.shopId, 'avant', v).then(ok => { if (ok) this.mesCharge(true); return ok; })); } },
+      apres: { val: l.apres == null ? '' : String(l.apres),
+        set: e => { const v = e.target.value;
+          this.autoEnreg('fbP' + camp.id + l.shopId, () => this.mesReleve(camp.id, l.shopId, 'apres', v).then(ok => { if (ok) this.mesCharge(true); return ok; })); } },
+      delta: l.delta == null ? '' : (l.delta >= 0 ? '+' : '−') + Math.abs(l.delta).toLocaleString('fr-BE'),
+      deltaCol: col(l.delta)
+    }));
+
+    // ── vue B : résultats
+    const V = R.verdict || {};
+    common.mesVerdict = { niveau: V.niveau || 'insuffisant', txt: V.txt || '',
+      libelle: { probant: 'Effet probant', indicatif: 'Indicatif', negatif: 'Effet négatif', insuffisant: 'Pas encore mesurable' }[V.niveau || 'insuffisant'],
+      valeur: R.netCa == null ? '' : pt(R.netCa),
+      st: V.niveau === 'probant' ? 'background:#E6F2E9;color:#2d7a3e'
+        : V.niveau === 'negatif' ? 'background:#F7E4E6;color:var(--color-primary)'
+        : V.niveau === 'indicatif' ? 'background:#FBEFE0;color:#C17A2A' : 'background:#EDEAE5;color:var(--color-text-muted)' };
+    const tuile = (nom, val, avant, dv, tv, nv, note) => ({ nom, val,
+      avant: avant, d: pct(dv), dCol: col(dv),
+      temoin: tv == null ? '' : 'témoin ' + pct(tv), net: nv == null ? '' : 'net ' + pt(nv),
+      netCol: col(nv), note: note || '' });
+    const camp2 = gC.camp || {}, ref2 = gC.ref || {};
+    common.mesTuiles = [
+      tuile('Trafic — tickets / jour', camp2.ticketsJour == null ? '—' : camp2.ticketsJour.toLocaleString('fr-BE'),
+        ref2.ticketsJour == null ? '—' : 'avant ' + ref2.ticketsJour.toLocaleString('fr-BE'),
+        R.dTrafic, R.tTrafic, R.netTrafic),
+      tuile('Panier moyen', this.fEd(camp2.panier), 'avant ' + this.fEd(ref2.panier), R.dPanier, R.tPanier, R.netPanier,
+        (R.netTrafic > 0 && R.netPanier < 0) ? 'la promo attire, mais dilue le ticket' : ''),
+      tuile('CA / jour', this.fE(camp2.caJour), 'avant ' + this.fE(ref2.caJour), R.dCa, R.tCa, R.netCa,
+        R.euros == null ? '' : 'soit ' + (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)) + ' sur la période'),
+      tuile('Produits promus — volume',
+        (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.camp || 0), 0)).toLocaleString('fr-BE') + ' u' : '—',
+        (d.produits || []).length ? 'avant ' + (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '—',
+        null, null, null, 'réseau — pas de détail magasin'),
+      tuile('Abonnés Facebook', (d.fb || {}).apres == null ? '—' : d.fb.apres.toLocaleString('fr-BE'),
+        (d.fb || {}).avant == null ? 'relevé « avant » manquant' : 'avant ' + d.fb.avant.toLocaleString('fr-BE'),
+        null, null, null,
+        (d.fb || {}).delta == null ? '' : ((d.fb.delta >= 0 ? '+' : '−') + Math.abs(d.fb.delta) + ' abonnés'))
+    ];
+
+    // La courbe : indice 100 = moyenne de la fenêtre de référence, pour que
+    // deux groupes de tailles différentes se lisent sur la même échelle.
+    const S2 = d.serie || [];
+    const W = 1120, H = 190, PB = 26, PT = 8;
+    const vals = S2.map(p => p.campIdx).concat(S2.map(p => p.temoinIdx)).filter(v => v != null);
+    const hi = vals.length ? Math.max.apply(null, vals) : 0;
+    const lo = vals.length ? Math.min.apply(null, vals) : 0;
+    const max = hi * 1.06, min = Math.max(0, lo * 0.94);
+    const px = i => (S2.length < 2 ? 0 : (i * (W - 12) / (S2.length - 1)) + 6).toFixed(1);
+    const py = v => (PT + (H - PB - PT) * (1 - (v - min) / ((max - min) || 1))).toFixed(1);
+    const trace = cle => {
+      let dd = '', ouvert = false;
+      S2.forEach((p, i) => {
+        if (p[cle] == null) { ouvert = false; return; }
+        dd += (ouvert ? ' L' : ' M') + px(i) + ' ' + py(p[cle]); ouvert = true;
+      });
+      return dd.trim();
+    };
+    const bande = phase => {
+      const idx = S2.map((p, i) => p.phase === phase ? i : -1).filter(i => i >= 0);
+      if (!idx.length) return null;
+      const a = +px(idx[0]), b2 = +px(idx[idx.length - 1]);
+      return { x: a.toFixed(1), w: Math.max(1, b2 - a).toFixed(1), milieu: ((a + b2) / 2).toFixed(0) };
+    };
+    common.mesCourbe = { W, H, base: (H - PB).toFixed(1),
+      vide: !vals.length,
+      camp: trace('campIdx'), temoin: trace('temoinIdx'),
+      hautBande: (H - PB - PT).toFixed(1), yBande: PT,
+      bandes: [
+        Object.assign({ nom: 'AVANT-RÉFÉRENCE', fill: 'rgba(34,34,34,0.03)', col: 'var(--color-text-muted)' }, bande('pre') || {}),
+        Object.assign({ nom: 'RÉFÉRENCE', fill: 'rgba(34,34,34,0.06)', col: 'var(--color-text-muted)' }, bande('ref') || {}),
+        Object.assign({ nom: 'CAMPAGNE', fill: 'rgba(141,29,44,0.07)', col: 'var(--color-primary)' }, bande('camp') || {}),
+        Object.assign({ nom: 'RÉMANENCE', fill: 'rgba(201,162,39,0.13)', col: '#8a6d12' }, bande('rem') || {})
+      ].filter(b3 => b3.x != null),
+      cent: py(100) };
+
+    common.mesLignes = (d.lignes || []).map(l => ({
+      nom: l.nom,
+      trafAv: l.ref.ticketsJour == null ? '—' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      trafPd: l.camp.ticketsJour == null ? '—' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      dTraf: pct(l.dTrafic), dTrafCol: col(l.dTrafic),
+      dPan: pct(l.dPanier), dPanCol: col(l.dPanier),
+      net: pct(l.netCa == null ? l.dCa : l.netCa), netCol: col(l.netCa == null ? l.dCa : l.netCa),
+      euros: l.euros == null ? '—' : (l.euros >= 0 ? '+' : '−') + this.fE(Math.abs(l.euros)),
+      eurosCol: col(l.euros)
+    }));
+    common.mesTemLignes = (d.temoinLignes || []).map(l => ({
+      nom: l.nom,
+      trafAv: l.ref.ticketsJour == null ? '—' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      trafPd: l.camp.ticketsJour == null ? '—' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      dTraf: pct(l.dTrafic), dPan: pct(l.dPanier), dCa: pct(l.dCa)
+    }));
+    common.mesRenta = {
+      euros: R.euros == null ? '—' : (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)),
+      marge: R.marge == null ? '—' : this.fE(R.marge),
+      margePct: (P.margePct == null ? 63 : P.margePct).toString().replace('.', ',') + ' %',
+      cout: R.cout == null ? '—' : this.fE(R.cout),
+      gain: R.gain == null ? '—' : (R.gain >= 0 ? '+' : '−') + this.fE(Math.abs(R.gain)),
+      gainCol: col(R.gain),
+      retour: R.retour == null ? '—' : R.retour.toFixed(2).replace('.', ',') + ' ×',
+      manque: R.cout == null ? 'coût de la campagne à saisir dans le paramétrage' : ''
+    };
+    common.mesRemanence = { pct: pct(R.remanence), col: col(R.remanence),
+      dispo: !!F.rem.dispo,
+      txt: !F.rem.dispo ? ('à lire à partir du ' + jf(F.rem.du))
+        : (R.remanence == null ? 'pas encore de données'
+          : (R.remanence < -0.5 ? 'le trafic est retombé sous la base : une partie des achats a été avancée, pas créée'
+            : 'le niveau tient après la campagne')) };
+    common.mesBruit = R.bruit == null ? '' : ('variation habituelle mesurée sur la période précédente : '
+      + Math.abs(R.bruit).toFixed(1).replace('.', ',') + ' pt');
+
+    // ── vue C : produits promus
+    common.mesProduitsNote = d.produitsNote || '';
+    const pj = v => v == null ? '—' : v.toLocaleString('fr-BE');
+    const maxQ = Math.max.apply(null, [1].concat((d.produits || []).map(p => Math.max(p.refJour || 0, p.campJour || 0))));
+    common.mesProduits = (d.produits || []).map(p => {
+      const rep = p.reponse;
+      const score = rep == null ? { t: '—', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
+        : rep >= 25 ? { t: 'A — répond fort', st: 'background:#E6F2E9;color:#2d7a3e' }
+        : rep >= 10 ? { t: 'B — répond', st: 'background:#E6F2E9;color:#2d7a3e' }
+        : rep >= 2 ? { t: 'C — peu sensible', st: 'background:#FBEFE0;color:#C17A2A' }
+        : { t: 'D — insensible', st: 'background:#F7E4E6;color:var(--color-primary)' };
+      if (rep != null && p.remanence != null && p.remanence < -8 && rep > 0) {
+        score.t = 'C — vend d’avance'; score.st = 'background:#FBEFE0;color:#C17A2A';
+      }
+      return { sku: p.sku, nom: p.nom, categorie: p.categorie, source: p.source,
+        ref: pj(p.ref), camp: pj(p.camp), rem: pj(p.rem), n1: pj(p.n1),
+        refJour: p.refJour == null ? '—' : p.refJour.toLocaleString('fr-BE'),
+        campJour: p.campJour == null ? '—' : p.campJour.toLocaleString('fr-BE'),
+        reponse: pct(rep), reponseCol: col(rep),
+        n1Var: pct(p.n1Var), remanence: pct(p.remanence), remanenceCol: col(p.remanence),
+        score,
+        hRef: Math.round(100 * (p.refJour || 0) / maxQ),
+        hCamp: Math.round(100 * (p.campJour || 0) / maxQ),
+        connu: !!p.connu };
+    });
+  }
+
   bxcCharge(force){
     const cle = (this.state.bxcExo || this.exo()) + ':' + (this.state.bxcCamp || 0);
     if (this._bxcEnCours === cle) { return; }

@@ -21,6 +21,7 @@ require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
+require __DIR__ . '/../../src/mesure.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -93,6 +94,7 @@ function route(string $method, string $path): mixed
             // Le calendrier des campagnes posé sur la courbe du budget, et le
             // détail magasin par magasin de la campagne regardée.
             $path === '/marketing/budget-campagnes'    => ep_budget_campagnes(),
+            $path === '/marketing/mesure'              => ep_mesure(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
@@ -170,6 +172,9 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/saisonnalite$#', $path, $m)) { return wr_shop_saisonnalite($m[1]); }
     // Budget × Campagnes : l'objectif de CA d'une campagne, magasin par magasin.
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
+    if ($method === 'PUT' && preg_match('#^/marketing/mesure/(\d+)$#', $path, $m)) { return wr_mesure_param((int) $m[1]); }
+    if ($method === 'PUT' && preg_match('#^/marketing/mesure/(\d+)/releve$#', $path, $m)) { return wr_mesure_releve((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/marketing/mesure/(\d+)/gel$#', $path, $m)) { return wr_mesure_gel((int) $m[1]); }
     if ($method === 'POST' && $path === '/ecrans/vue') { return wr_ecran_vue(); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
