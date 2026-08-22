@@ -1022,6 +1022,20 @@ function rapLogoDataUri(): string
     return $uri;
 }
 
+/**
+ * Le magasin dont parle un rapport — ou le réseau.
+ *
+ * Sert au pied de page du PDF et à l'email : une feuille qui traîne sur un
+ * comptoir doit dire de QUEL magasin elle parle, sans qu'on ait à la lire.
+ */
+function rapMagasinLabel(array $rep): string
+{
+    $mags = json_decode((string) ($rep['magasins'] ?? '[]'), true) ?: [];
+    if (count($mags) === 1) { return (string) $mags[0]; }
+    if (count($mags) > 1) { return 'Réseau · ' . count($mags) . ' magasins'; }
+    return 'Réseau';
+}
+
 /** L'adresse publique du cockpit — pour le lien « ouvrir » dans l'email. */
 function rapBaseUrl(): string
 {
@@ -1180,6 +1194,88 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '</td></tr></table></body></html>';
 }
 
+/** La période d'un run, en clair — « du 15/08 au 21/08 », « le 21/08 ». */
+function rapPeriodeLabelRun(array $run): string
+{
+    $du = substr((string) ($run['periode_du'] ?? ''), 0, 10);
+    $au = substr((string) ($run['periode_au'] ?? ''), 0, 10);
+    if ($du === '' && $au === '') { return 'période du rapport'; }
+    if ($du === $au || $au === '') { return 'le ' . date('d/m/Y', strtotime($du ?: $au)); }
+    if ($du === '') { return 'jusqu’au ' . date('d/m/Y', strtotime($au)); }
+    return 'du ' . date('d/m/Y', strtotime($du)) . ' au ' . date('d/m/Y', strtotime($au));
+}
+
+/**
+ * L'EMAIL quand le rapport part en pièce jointe : une page de garde, pas le
+ * rapport une deuxième fois.
+ *
+ * Le rapport complet vivait dans le corps du message ET dans le PDF : deux
+ * mises en page à tenir, un email de plusieurs mégaoctets, et un lecteur qui
+ * ne sait pas laquelle des deux fait foi. Le message dit désormais de quoi il
+ * s'agit et ce qu'il porte ; la matière est dans la pièce jointe. Sans PDF
+ * (aucun moteur de rendu), le corps redevient le rapport entier — jamais un
+ * email vide.
+ */
+function rapMailGarde(array $rep, array $run, string $labelPeriode, string $nomPdf, string $base): string
+{
+    $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif";
+    $marque = (string) setting('marque', "L'Atelier by");
+    $runId = (int) ($run['id'] ?? 0);
+    $resume = (string) ($run['resume'] ?? '');
+    $lien = $base !== '' && $runId > 0 ? $base . '/api/cockpit/rapports/run/' . $runId . '/pdf' : '';
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<title>' . $e($rep['nom']) . '</title></head>'
+        . '<body style="margin:0;padding:0;background:#EFE9DF">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
+        . '<tr><td align="center" style="padding:28px 12px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" width="600" style="width:600px;max-width:96%">'
+        // — bandeau de marque
+        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 28px">'
+        . (rapLogoDataUri() !== ''
+            ? '<img src="' . rapLogoDataUri() . '" height="28" style="display:block;height:28px" alt="' . $e($marque) . '">'
+            : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>')
+        . '</td></tr>'
+        // — de quoi parle ce message
+        . '<tr><td style="background:#ffffff;padding:24px 28px 6px">'
+        . '<div style="' . $F . ';font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#8b8177">'
+        . $e(rapMagasinLabel($rep)) . '</div>'
+        . '<div style="' . $F . ';font-size:20px;font-weight:700;color:#221E1A;margin-top:5px">' . $e($rep['nom']) . '</div>'
+        . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($labelPeriode))
+        . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
+        . ($resume !== ''
+            ? '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px"><tr>'
+              . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">'
+              . $e($resume) . '</td></tr></table>'
+            : '')
+        . '</td></tr>'
+        // — la pièce jointe, nommée : on sait quoi ouvrir
+        . '<tr><td style="background:#ffffff;padding:18px 28px 6px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #EDE7DE;border-radius:12px;background:#F9F6F0">'
+        . '<tr><td style="padding:14px 16px" valign="middle">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+        . '<td style="background:#8D1D2C;border-radius:8px;padding:9px 11px;' . $F . ';font-size:10px;font-weight:700;color:#ffffff;letter-spacing:0.6px">PDF</td>'
+        . '<td style="padding-left:12px;' . $F . '">'
+        . '<div style="font-size:13px;font-weight:700;color:#221E1A">' . $e($nomPdf) . '</div>'
+        . '<div style="font-size:11.5px;color:#8b8177;margin-top:2px">Le rapport complet est en pièce jointe de ce message.</div>'
+        . '</td></tr></table></td></tr></table></td></tr>'
+        . ($lien !== ''
+            ? '<tr><td style="background:#ffffff;padding:16px 28px 4px">'
+              . '<a href="' . $e($lien) . '" style="' . $F . ';display:inline-block;border-radius:999px;padding:11px 22px;'
+              . 'background:#8D1D2C;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none">Ouvrir le PDF</a>'
+              . '</td></tr>'
+            : '')
+        . '<tr><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:16px 28px;'
+        . $F . ';font-size:10.5px;color:#8b8177;line-height:1.6">'
+        . 'Périmètre : ' . $e(rapMagasinLabel($rep)) . '. '
+        . 'Les seuils et le périmètre se règlent dans le cockpit.'
+        . '</td></tr>'
+        . '</table>'
+        . '<div style="' . $F . ';font-size:10px;color:#a89f93;padding:14px">Généré automatiquement par le cockpit ' . $e($marque) . '</div>'
+        . '</td></tr></table></body></html>';
+}
+
 function rapportEnvoyer(array $rep, int $runId): array
 {
     $run = Db::row('SELECT * FROM ceo_rapport_run WHERE id = ? AND rapport_id = ?', [$runId, (int) $rep['id']]);
@@ -1198,11 +1294,20 @@ function rapportEnvoyer(array $rep, int $runId): array
     // moteur de rendu, l'email part quand même : le rapport est dans le corps
     // du message, et la réponse dit pourquoi le PDF manque plutôt que de
     // laisser chercher une pièce jointe qui n'existe pas.
-    $pieces = []; $notePdf = null;
+    $pieces = []; $notePdf = null; $corpsMail = (string) $run['html'];
     if ($viaSmtp) {
-        $pdf = rapPdfRendu((string) $run['html']);
+        $pdf = rapPdfRendu((string) $run['html'], [
+            'magasin' => rapMagasinLabel($rep),
+            'rapport' => (string) $rep['nom'],
+            'genere' => date('d/m/Y à H:i', strtotime((string) ($run['genere_le'] ?? 'now'))),
+            'envoye' => date('d/m/Y'),
+        ]);
         if ($pdf !== null) {
-            $pieces[] = ['nom' => rapPdfNom($rep, $run), 'type' => 'application/pdf', 'contenu' => $pdf];
+            $nomPdf = rapPdfNom($rep, $run);
+            $pieces[] = ['nom' => $nomPdf, 'type' => 'application/pdf', 'contenu' => $pdf];
+            // Le rapport EST la pièce jointe : le message n'en est que la page
+            // de garde. Le corps ne le répète plus.
+            $corpsMail = rapMailGarde($rep, $run + ['id' => $runId], rapPeriodeLabelRun($run), $nomPdf, rapBaseUrl());
         } else {
             $notePdf = 'PDF non joint — aucun moteur de rendu n’a répondu sur le serveur ; le rapport reste lisible dans le corps du message.';
         }
@@ -1213,7 +1318,7 @@ function rapportEnvoyer(array $rep, int $runId): array
     $ok = []; $derniereErreur = null;
     foreach ($dests as $d) {
         if ($viaSmtp) {
-            $ok[$d] = Smtp::envoyer($d, $sujet, (string) $run['html'], $pieces);
+            $ok[$d] = Smtp::envoyer($d, $sujet, $corpsMail, $pieces);
             if (!$ok[$d]) { $derniereErreur = Smtp::$lastError; }
         } else {
             $exp = (string) setting('rapportsExpediteur', 'cockpit@' . ($_SERVER['HTTP_HOST'] ?? 'atelierby.local'));
@@ -1538,13 +1643,21 @@ function ep_rapports_cron(): array
 function ep_rapport_run_pdf(int $id): array
 {
     ensureRapports();
-    $run = Db::row('SELECT html FROM ceo_rapport_run WHERE id = ?', [$id]);
+    $run = Db::row('SELECT * FROM ceo_rapport_run WHERE id = ?', [$id]);
     if ($run === null || $run['html'] === null) { http_response_code(404); return ['error' => 'run inconnu']; }
     if (!function_exists('shell_exec')) {
         http_response_code(501);
         return ['error' => 'exec désactivé sur ce serveur — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
     }
-    $pdf = rapPdfRendu((string) $run['html']);
+    // Le même pied de page que le PDF envoyé par email : magasin, rapport et
+    // dates — un téléchargement depuis le cockpit n'est pas un autre document.
+    $rep = Db::row('SELECT nom, magasins FROM ceo_rapport WHERE id = ?', [(int) ($run['rapport_id'] ?? 0)]) ?? [];
+    $pdf = rapPdfRendu((string) $run['html'], [
+        'magasin' => rapMagasinLabel($rep),
+        'rapport' => (string) ($rep['nom'] ?? ''),
+        'genere' => date('d/m/Y à H:i', strtotime((string) ($run['genere_le'] ?? 'now'))),
+        'envoye' => (($run['statut'] ?? '') === 'envoye') ? date('d/m/Y', strtotime((string) ($run['genere_le'] ?? 'now'))) : '',
+    ]);
     if ($pdf === null) {
         http_response_code(501);
         return ['error' => 'aucun moteur PDF sur le serveur (Chromium/wkhtmltopdf absents) — utilisez « Imprimer (A4) », le navigateur produit le même PDF'];
@@ -1668,19 +1781,65 @@ function rapPdfHtml(string $html): string
     return $pos === false ? $css . $html : substr($html, 0, $pos) . $css . substr($html, $pos);
 }
 
-function rapPdfRendu(string $html): ?string
+/**
+ * Le pied de page du PDF : logo, magasin, rapport, dates, pagination.
+ *
+ * wkhtmltopdf ne sait poser que du texte dans `--footer-*` ; pour le logo il
+ * faut lui donner une PAGE de pied. Elle reçoit les numéros de page en
+ * paramètres d'URL — d'où le petit script qui les recopie. Aucune ressource
+ * externe : le logo est incorporé, sinon le rendu part chercher un fichier et
+ * bloque.
+ */
+function rapPdfPiedHtml(array $meta): string
+{
+    $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:Helvetica,Arial,sans-serif";
+    $logo = rapLogoDataUri();
+    $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
+        . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
+    return '<!doctype html><html><head><meta charset="utf-8"><style>'
+        . 'html,body{margin:0;padding:0}'
+        . 'table{width:100%;border-collapse:collapse;border-top:0.5pt solid #DED6C9;padding-top:2mm}'
+        . 'td{' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle;padding:0}'
+        . '</style><script>'
+        // wkhtmltopdf passe page/topage en query : on les recopie dans le pied.
+        . 'function pied(){var v={},q=document.location.search.substring(1).split("&");'
+        . 'for(var i=0;i<q.length;i++){var kv=q[i].split("=");v[kv[0]]=decodeURIComponent(kv[1]||"");}'
+        . 'var el=document.getElementById("pg");if(el){el.textContent=(v.page||"")+"/"+(v.topage||"");}}'
+        . '</script></head><body onload="pied()"><table><tr>'
+        // Le logo tient dans SA colonne : sans largeur, il passait sous le
+        // texte du magasin.
+        . '<td style="width:26mm">' . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
+        . '<td style="padding:0 6mm 0 4mm"><span style="color:#221E1A;font-weight:bold">' . $e($meta['magasin'] ?? '') . '</span>'
+        . (($meta['rapport'] ?? '') !== '' ? ' · ' . $e($meta['rapport']) : '') . '</td>'
+        // Les dates et la pagination ne se coupent jamais en deux lignes.
+        . '<td align="right" style="white-space:nowrap">' . $dates . ' · <span id="pg"></span></td>'
+        . '</tr></table></body></html>';
+}
+
+function rapPdfRendu(string $html, array $meta = []): ?string
 {
     if (!function_exists('shell_exec')) { return null; }
     $tmpH = tempnam(sys_get_temp_dir(), 'rap') . '.html';
     $tmpP = tempnam(sys_get_temp_dir(), 'rap') . '.pdf';
+    $tmpF = null;
     file_put_contents($tmpH, rapPdfHtml($html));
     // `--print-media-type` : le document porte déjà ses règles @media print
     // (sauts de page des fiches) — sans ce drapeau wkhtmltopdf les ignore.
     // Le numéro de page en pied : un rapport de trois feuilles agrafées sans
     // pagination se relit mal.
     $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
-        . ' --margin-top 14mm --margin-bottom 16mm --margin-left 15mm --margin-right 15mm'
-        . ' --footer-font-size 7 --footer-spacing 6 --footer-right "[page]/[topage]"';
+        . ' --margin-top 14mm --margin-bottom 18mm --margin-left 15mm --margin-right 15mm'
+        . ' --footer-spacing 5';
+    // Le pied illustré s'il y a de quoi le remplir ; sinon la pagination seule
+    // — un rapport sans contexte vaut mieux qu'un rendu qui échoue.
+    if ($meta !== []) {
+        $tmpF = tempnam(sys_get_temp_dir(), 'rap') . '.html';
+        file_put_contents($tmpF, rapPdfPiedHtml($meta));
+        $wk .= ' --footer-html ' . escapeshellarg($tmpF);
+    } else {
+        $wk .= ' --footer-font-size 7 --footer-right "[page]/[topage]"';
+    }
     $essais = [
         // Le build Ubuntu de wkhtmltopdf n'est pas headless : xvfb-run d'abord.
         'timeout 25 xvfb-run -a wkhtmltopdf ' . $wk . ' %1$s %2$s 2>&1',
@@ -1693,11 +1852,11 @@ function rapPdfRendu(string $html): ?string
         @shell_exec(sprintf($cmd, escapeshellarg($tmpH), escapeshellarg($tmpP)));
         if (is_file($tmpP) && filesize($tmpP) > 1000) {
             $octets = (string) file_get_contents($tmpP);
-            @unlink($tmpH); @unlink($tmpP);
+            @unlink($tmpH); @unlink($tmpP); if ($tmpF !== null) { @unlink($tmpF); }
             return $octets;
         }
     }
-    @unlink($tmpH); @unlink($tmpP);
+    @unlink($tmpH); @unlink($tmpP); if ($tmpF !== null) { @unlink($tmpF); }
     return null;
 }
 
