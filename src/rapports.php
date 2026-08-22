@@ -1301,22 +1301,23 @@ function rapMailGarde(array $rep, array $run, string $labelPeriode, string $nomP
               . $e($resume) . '</td></tr></table>'
             : '')
         . '</td></tr>'
-        // — la pièce jointe, nommée : on sait quoi ouvrir
+        // — la pièce jointe, nommée : on sait quoi ouvrir. La CARTE ELLE-MÊME
+        //   est le lien : un bouton en dessous répétait l'action et allongeait
+        //   le message pour rien. Le lien enveloppe le contenu de la cellule
+        //   (et non la table) — c'est la forme que les messageries respectent.
         . '<tr><td style="background:#ffffff;padding:18px 28px 6px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #EDE7DE;border-radius:12px;background:#F9F6F0">'
         . '<tr><td style="padding:14px 16px" valign="middle">'
+        . ($lien !== '' ? '<a href="' . $e($lien) . '" style="display:block;text-decoration:none;color:inherit">' : '')
         . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
         . '<td style="background:#8D1D2C;border-radius:8px;padding:9px 11px;' . $F . ';font-size:10px;font-weight:700;color:#ffffff;letter-spacing:0.6px">PDF</td>'
         . '<td style="padding-left:12px;' . $F . '">'
         . '<div style="font-size:13px;font-weight:700;color:#221E1A">' . $e($nomPdf) . '</div>'
-        . '<div style="font-size:11.5px;color:#8b8177;margin-top:2px">Le rapport complet est en pièce jointe de ce message.</div>'
-        . '</td></tr></table></td></tr></table></td></tr>'
-        . ($lien !== ''
-            ? '<tr><td style="background:#ffffff;padding:16px 28px 4px">'
-              . '<a href="' . $e($lien) . '" style="' . $F . ';display:inline-block;border-radius:999px;padding:11px 22px;'
-              . 'background:#8D1D2C;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none">Ouvrir le PDF</a>'
-              . '</td></tr>'
-            : '')
+        . '<div style="font-size:11.5px;color:#8b8177;margin-top:2px">Le rapport complet est en pièce jointe de ce message'
+        . ($lien !== '' ? ' — cliquez pour l’ouvrir.' : '.') . '</div>'
+        . '</td></tr></table>'
+        . ($lien !== '' ? '</a>' : '')
+        . '</td></tr></table></td></tr>'
         . '<tr><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:16px 28px;'
         . $F . ';font-size:10.5px;color:#8b8177;line-height:1.6">'
         . 'Périmètre : ' . $e(rapMagasinLabel($rep)) . '. '
