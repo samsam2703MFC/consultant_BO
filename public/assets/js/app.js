@@ -8099,9 +8099,12 @@ class App {
     common.setLogPeriode = e => this.setState({ logPeriode: e.target.value });
     common.setLogQ = e => this.setState({ logQ: e.target.value });
     const q = S.logQ.toLowerCase();
-    const jours = { 'Aujourd’hui': 0, '7 derniers jours': 6, '30 derniers jours': 29 }[logPeriode];
-    const borne = jours === undefined ? null
-      : new Date(Date.now() - jours * 86400000).toISOString().slice(0, 10);
+    // `joursFiltre`, pas `jours` : la heatmap des écrans, au-dessus, tient déjà
+    // ses jours sous ce nom — deux `const` de même nom dans la même fonction,
+    // et le module entier cesse de se charger.
+    const joursFiltre = { 'Aujourd’hui': 0, '7 derniers jours': 6, '30 derniers jours': 29 }[logPeriode];
+    const borne = joursFiltre === undefined ? null
+      : new Date(Date.now() - joursFiltre * 86400000).toISOString().slice(0, 10);
     const rows = all.filter(l => (S.logType === 'Tous les types' || l.type === S.logType)
       && (S.logQui === 'Tous les auteurs' || l.qui === S.logQui)
       && (logProjet === 'Tous les projets' || l.projet === logProjet)
