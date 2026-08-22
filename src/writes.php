@@ -2577,3 +2577,43 @@ function wr_shop_saisonnalite(string $shopId): array
         . ($projection !== [] ? ' — théorique recalculé : ' . implode(', ', array_keys($projection)) : ''));
     return ['ok' => true, 'projection' => $projection, 'theoriqueExistait' => $theoDejaSaisi];
 }
+
+/**
+ * PUT /marketing/campagnes/{id}/objectifs — l'objectif de CA par magasin.
+ *
+ * Une case vidée EFFACE la ligne : « pas d'objectif » n'est pas « objectif à
+ * zéro », et le tableau doit pouvoir dire la différence.
+ */
+function wr_campagne_objectifs(int $id): array
+{
+    ensureCampagneObjectifs();
+    try {
+        $camp = Db::row('SELECT id, name FROM mar_campaign WHERE id = ?', [$id]);
+    } catch (PDOException $e) {
+        http_response_code(503);
+        return ['error' => 'les tables du module marketing sont absentes de cette base'];
+    }
+    if ($camp === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
+    $b = body();
+    $ecrits = 0; $effaces = 0;
+    foreach ((array) ($b['objectifs'] ?? []) as $shopId => $montant) {
+        $sid = (string) $shopId;
+        if ($sid === '' || magasinConnu($sid) === null) { continue; }
+        if ($montant === '' || $montant === null || (float) $montant <= 0) {
+            Db::exec('DELETE FROM ceo_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
+            $effaces++;
+            continue;
+        }
+        Db::exec('INSERT INTO ceo_campagne_objectif (campagne_id, shop_id, objectif, maj) VALUES (?,?,?,?)
+                  ON DUPLICATE KEY UPDATE objectif = VALUES(objectif), maj = VALUES(maj)',
+            [$id, $sid, (float) $montant, date('Y-m-d H:i:s')]);
+        $ecrits++;
+    }
+    // `journal=0` : l'écran écrit à chaque saisie, comme le budget. Le journal
+    // ne garde que les enregistrements explicites.
+    if (($_GET['journal'] ?? '') !== '0') {
+        journalAdd('CEO', 'Campagne', (string) $camp['name'], 'Objectifs par magasin — '
+            . $ecrits . ' posé(s)' . ($effaces ? ', ' . $effaces . ' effacé(s)' : ''));
+    }
+    return ['ok' => true, 'ecrits' => $ecrits, 'effaces' => $effaces];
+}

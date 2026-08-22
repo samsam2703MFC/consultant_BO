@@ -6052,3 +6052,172 @@ function reputationAvis5(?float $note, int $avis, float $cible): ?int
     if ($cible >= 5) { return null; }
     return (int) ceil($avis * ($cible - $note) / (5 - $cible));
 }
+
+/* --- Budget × Campagnes ------------------------------------------------------
+ *
+ * Le budget dit ce qu'un magasin doit faire ; la campagne dit ce qu'on lui
+ * demande EN PLUS, et sur quels jours. Les deux vivaient dans deux écrans qui
+ * ne se parlaient pas : impossible de dire si un objectif de campagne était
+ * ambitieux ou déjà acquis.
+ */
+
+/** La table des objectifs par campagne ET par magasin — créée à la demande. */
+function ensureCampagneObjectifs(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_objectif ('
+        . 'campagne_id INT NOT NULL,'
+        . 'shop_id VARCHAR(32) NOT NULL,'
+        . 'objectif DECIMAL(12,2) NULL,'
+        . 'maj DATETIME NULL,'
+        . 'PRIMARY KEY (campagne_id, shop_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * Le budget d'un magasin sur une FENÊTRE de dates, au prorata des jours.
+ *
+ * Une campagne du 4 au 17 août prend 14 jours sur 31 : elle vaut 14/31 du
+ * budget d'août. Sans budget validé pour un mois, le CA théorique de l'étude
+ * prend le relais — et la source est dite, pour qu'on ne prenne pas l'un pour
+ * l'autre.
+ */
+function budgetSurFenetre(array $mois, string $du, string $au): array
+{
+    $d = new DateTimeImmutable($du); $f = new DateTimeImmutable($au);
+    $total = 0.0; $source = null; $partiel = false;
+    for ($m = 1; $m <= 12; $m++) {
+        $an = (int) $d->format('Y');
+        $debutMois = new DateTimeImmutable(sprintf('%04d-%02d-01', $an, $m));
+        $finMois = new DateTimeImmutable($debutMois->format('Y-m-t'));
+        $deb = max($d, $debutMois); $fin = min($f, $finMois);
+        if ($deb > $fin) { continue; }
+        $joursPris = (int) $deb->diff($fin)->days + 1;
+        $joursMois = (int) $finMois->format('j');
+        $cell = $mois[$m - 1] ?? ['budget' => null, 'theorique' => null];
+        $val = $cell['budget'] !== null && $cell['budget'] > 0 ? $cell['budget'] : null;
+        $src = $val !== null ? 'budget' : null;
+        if ($val === null && ($cell['theorique'] ?? null) !== null && $cell['theorique'] > 0) {
+            $val = $cell['theorique']; $src = 'theorique';
+        }
+        if ($val === null) { $partiel = true; continue; }
+        $total += $val * $joursPris / $joursMois;
+        // Une fenêtre à cheval sur deux mois peut mélanger les sources : on
+        // garde la moins sûre, c'est elle qui doit se voir.
+        $source = $source === 'theorique' || $src === 'theorique' ? 'theorique' : 'budget';
+    }
+    return ['montant' => $total > 0 ? round($total, 2) : null, 'source' => $source, 'partiel' => $partiel];
+}
+
+/** GET /marketing/budget-campagnes — le calendrier sur la courbe, et le détail. */
+function ep_budget_campagnes(): array
+{
+    ensureCampagneObjectifs();
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    try {
+        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut
+                             FROM mar_campaign c LEFT JOIN mar_campaign_status s ON s.code = c.status_code
+                            WHERE (c.starts_on IS NOT NULL AND c.starts_on <= ? AND (c.ends_on IS NULL OR c.ends_on >= ?))
+                            ORDER BY c.starts_on', [$exercice . '-12-31', $exercice . '-01-01']);
+    } catch (PDOException $e) {
+        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    }
+    $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    $nomDe = [];
+    foreach ($shops as $sh) { $nomDe[(string) $sh['id']] = (string) $sh['name']; }
+
+    // Les douze mois, magasin par magasin : budget validé et théorique.
+    $parMag = [];
+    foreach ($shops as $sh) { $parMag[(string) $sh['id']] = array_fill(0, 12, ['budget' => null, 'theorique' => null]); }
+    foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ?', [$exercice]) as $r) {
+        $sid = (string) $r['shop_id']; $m = (int) $r['month'];
+        if (!isset($parMag[$sid]) || $m < 1 || $m > 12) { continue; }
+        $parMag[$sid][$m - 1] = [
+            'budget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
+            'theorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null,
+        ];
+    }
+    // La courbe réseau : la somme des magasins, mois par mois.
+    $reseau = [];
+    for ($i = 0; $i < 12; $i++) {
+        $b = null; $t = null;
+        foreach ($parMag as $mm) {
+            if ($mm[$i]['budget'] !== null) { $b = ($b ?? 0) + $mm[$i]['budget']; }
+            if ($mm[$i]['theorique'] !== null) { $t = ($t ?? 0) + $mm[$i]['theorique']; }
+        }
+        $reseau[] = ['budget' => $b, 'theorique' => $t];
+    }
+    // Quels mois sont couverts par au moins une campagne.
+    $couvert = array_fill(0, 12, false);
+    $liste = [];
+    foreach ($camps as $c) {
+        $du = (string) $c['starts_on']; $au = (string) ($c['ends_on'] ?: $c['starts_on']);
+        $liste[] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'], 'debut' => $du, 'fin' => $au,
+            'statut' => (string) ($c['statut'] ?? $c['status_code'] ?? '')];
+        $d = new DateTimeImmutable(max($du, $exercice . '-01-01'));
+        $f = new DateTimeImmutable(min($au, $exercice . '-12-31'));
+        for ($x = $d; $x <= $f; $x = $x->modify('first day of next month')) {
+            $couvert[(int) $x->format('n') - 1] = true;
+        }
+    }
+
+    // La campagne regardée : celle demandée, sinon la plus récente commencée.
+    $choisie = (int) ($_GET['campagne'] ?? 0);
+    if ($choisie <= 0) {
+        foreach ($liste as $c) { if ($c['debut'] <= date('Y-m-d')) { $choisie = $c['id']; } }
+        if ($choisie <= 0 && $liste !== []) { $choisie = $liste[0]['id']; }
+    }
+    $camp = null;
+    foreach ($liste as $c) { if ($c['id'] === $choisie) { $camp = $c; } }
+
+    $lignes = []; $realiseDispo = false;
+    if ($camp !== null) {
+        // Le périmètre de la campagne : ses magasins, ou tout le réseau.
+        $perim = [];
+        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
+            $sid = (string) $r['shop_id'];
+            if (isset($nomDe[$sid])) { $perim[] = $sid; }
+        }
+        if ($perim === []) { $perim = array_keys($nomDe); }
+
+        $obj = [];
+        foreach (Db::rows('SELECT shop_id, objectif FROM ceo_campagne_objectif WHERE campagne_id = ?', [$camp['id']]) as $r) {
+            $obj[(string) $r['shop_id']] = $r['objectif'] !== null ? (float) $r['objectif'] : null;
+        }
+        // Le réalisé : le panel, sur les jours ÉCOULÉS de la campagne. Une
+        // campagne à venir n'a pas de réalisé — et zéro n'en serait pas un.
+        $finLue = min($camp['fin'], date('Y-m-d'));
+        $ventes = [];
+        if ($camp['debut'] <= date('Y-m-d') && PanelApi::configured()) {
+            foreach (analyseListe(PanelApi::shopsSalesKpisEntre($camp['debut'], $finLue) ?? []) as $x) {
+                $id = 0;
+                foreach (['shop_id', 'id_shop', 'id'] as $k) {
+                    if (isset($x[$k]) && is_numeric($x[$k])) { $id = (int) $x[$k]; break; }
+                }
+                $ca = (float) (nombreOuNull($x, ['ca', 'turnover', 'revenue']) ?? 0);
+                if ($ca > 0) { $ventes[(string) $id] = $ca; $realiseDispo = true; }
+            }
+        }
+        foreach ($perim as $sid) {
+            $bud = budgetSurFenetre($parMag[$sid] ?? [], $camp['debut'], $camp['fin']);
+            $o = $obj[$sid] ?? null;
+            $r = $ventes[$sid] ?? null;
+            $lignes[] = [
+                'shopId' => $sid, 'nom' => $nomDe[$sid] ?? $sid,
+                'budgetPeriode' => $bud['montant'], 'source' => $bud['source'],
+                'objectif' => $o,
+                'objectifPct' => $o !== null && $bud['montant'] ? round(100 * ($o / $bud['montant'] - 1), 1) : null,
+                'realise' => $r,
+                'ecart' => $o !== null && $r !== null ? round($r - $o, 2) : null,
+                'atteinte' => $o !== null && $r !== null && $o > 0 ? round(100 * $r / $o) : null,
+            ];
+        }
+    }
+    return [
+        'exercice' => $exercice,
+        'mois' => $reseau, 'moisParMagasin' => $parMag, 'couvert' => $couvert,
+        'campagnes' => $liste, 'campagne' => $camp, 'lignes' => $lignes,
+        'realiseJusquau' => $camp !== null ? min($camp['fin'], date('Y-m-d')) : null,
+        'realiseDispo' => $realiseDispo,
+        'magasins' => array_map(fn ($id) => ['id' => $id, 'nom' => $nomDe[$id]], array_keys($nomDe)),
+    ];
+}

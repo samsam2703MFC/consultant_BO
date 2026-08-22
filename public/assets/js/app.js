@@ -546,7 +546,7 @@ class App {
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       resultatJour: ['Résultat du jour', 'Le compte de résultat d\u2019une journée, magasin par magasin : ventes, coût matière, main-d\u2019œuvre, frais généraux et résultat. Ouvrez une ligne pour la cascade du magasin, sa ventilation par catégorie et la place du jour dans le mois.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
-      mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
+      bxcampagnes: ['Budget × Campagnes', 'Le calendrier des campagnes posé sur la courbe du budget, puis l’objectif de chaque campagne magasin par magasin — et ce qu’il a donné.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
@@ -929,6 +929,9 @@ class App {
       ['Marketing', [
         ['mktCalendrier', 'Calendrier marketing', 0],
         ['mktCampagnes', 'Campagnes', 0],
+        // Le budget dit ce qu'un magasin doit faire, la campagne ce qu'on lui
+        // demande en plus : les deux se lisent enfin sur le même écran.
+        ['bxcampagnes', 'Budget × Campagnes', 0],
         ['mktTypes', 'Types de campagne', 0]]],
       // Le reporting EST un contrôle : il rend compte de ce qui a été fait, au
       // même endroit que les checklists. Le journal, lui, est une trace
@@ -959,10 +962,10 @@ class App {
 
     this.valsRecherche(common, navDef, goTo, titles);
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', reputation: 'isReput', resultatJour: 'isRJour',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1171,6 +1174,7 @@ class App {
     // et les réglages annuels lisent le même magasin, le même exercice et le
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
+    if (common.isBxc) this.valsBxc(common);
     // --- scoring produits
     if (common.isProduits) this.valsProduits(common);
     // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
@@ -1405,6 +1409,111 @@ class App {
     common.bMagTotMq = mgTotRes ? this.fK(mgTotRes) : '—';
     common.bMagTotMqPct = mgTotRes && resTheo ? this.fP(mgTotRes / resTheo, 1) + ' du théorique' : '';
     common.bMagNote = 'Manque à gagner = part du CA théorique de l’étude de marché non réalisée sur les 7 mois encodés, magasin par magasin. Total réseau : ' + this.fK(mgTotRes) + '.';
+  }
+
+  /* --- Budget × Campagnes ------------------------------------------------------
+     Le calendrier des campagnes posé sur la courbe du budget, puis le détail
+     magasin par magasin de la campagne regardée : ce qu'elle vise, ce qu'elle
+     a donné. Les objectifs s'écrivent à la saisie, comme le budget. */
+  valsBxc(common){
+    const S = this.state, M = this.M;
+    this.bxcCharge(false);
+    const b = S.bxc || {};
+    const d = b.d || {};
+    common.bxcChargement = !!b.chargement && !b.d;
+    common.bxcIndispo = d.indispo ? (d.raison || 'Module marketing absent') : '';
+    common.bxcExo = String(S.bxcExo || this.exo());
+    common.bxcExoOpts = [-1, 0, 1].map(k => ({ v: String(this.exo() + k), nom: String(this.exo() + k) + (k === 0 ? ' · en cours' : '') }));
+    common.setBxcExo = e => this.setState({ bxcExo: e.target.value, bxcCamp: 0 });
+
+    // La courbe : douze mois, à l'échelle du plus haut. Un mois sans budget
+    // encodé ne vaut pas zéro — sa barre reste vide et l'infobulle le dit.
+    const mois = (d.mois || []).map(m2 => (m2.budget != null ? m2.budget : (m2.theorique != null ? m2.theorique : null)));
+    const hautMax = Math.max(1, ...mois.map(v => v || 0));
+    common.bxcMois = M.MOIS.map((nom, i) => ({
+      nom, couvert: !!(d.couvert || [])[i],
+      h: mois[i] ? Math.round(100 * mois[i] / hautMax) : 0,
+      montant: mois[i] ? this.fE(mois[i]) : 'non encodé',
+      source: (d.mois || [])[i] && (d.mois || [])[i].budget != null ? 'budget validé' : 'CA théorique',
+    }));
+    const nCouv = (d.couvert || []).filter(Boolean).length;
+    common.bxcCouvNote = (d.couvert || []).length
+      ? nCouv + ' mois sur 12 couverts par au moins une campagne'
+        + (nCouv < 12 ? ' — sans campagne : ' + M.MOIS.filter((_, i) => !(d.couvert || [])[i]).join(', ') : '')
+      : '';
+
+    // Les campagnes de l'exercice, en bandes sous la courbe.
+    const jourDe = iso => { const t = new Date(iso + 'T00:00:00'); return (t.getMonth() * 100 + (t.getDate() - 1) * 100 / 31) / 1200; };
+    common.bxcBandes = (d.campagnes || []).map(c2 => ({
+      id: c2.id, nom: c2.nom,
+      gauche: Math.max(0, Math.min(99, 100 * jourDe(c2.debut))),
+      largeur: Math.max(4, Math.min(100, 100 * (jourDe(c2.fin) - jourDe(c2.debut)) + 4)),
+      on: d.campagne && d.campagne.id === c2.id,
+      choisir: () => this.setState({ bxcCamp: c2.id }),
+    }));
+    common.bxcCampOpts = (d.campagnes || []).map(c2 => ({ v: String(c2.id),
+      nom: c2.nom + ' · ' + (c2.debut || '').slice(5) + ' → ' + (c2.fin || '').slice(5) }));
+    common.bxcCampSel = String((d.campagne || {}).id || '');
+    common.setBxcCamp = e => this.setState({ bxcCamp: parseInt(e.target.value, 10) || 0 });
+    common.bxcCampNom = (d.campagne || {}).nom || '';
+    common.bxcCampPeriode = d.campagne ? 'du ' + d.campagne.debut.split('-').reverse().join('/') + ' au ' + d.campagne.fin.split('-').reverse().join('/') : '';
+    common.bxcRealiseNote = d.campagne
+      ? (d.realiseDispo
+        ? 'Réalisé lu jusqu’au ' + String(d.realiseJusquau || '').split('-').reverse().join('/') + ' (panel).'
+        : 'Aucun réalisé : la campagne n’a pas commencé, ou le compte du panel n’est pas configuré.')
+      : '';
+
+    // Le tableau : une ligne par magasin du périmètre.
+    const dr = S.bxcDraft || {};
+    const cle = sid => (d.campagne || {}).id + ':' + sid;
+    const num = v => { const n2 = parseFloat(String(v).replace(',', '.')); return isNaN(n2) ? 0 : n2; };
+    let tB = 0, tO = 0, tR = 0, aucunR = true;
+    common.bxcLignes = (d.lignes || []).map(l => {
+      const saisi = dr[cle(l.shopId)];
+      const o = saisi != null ? (String(saisi).trim() === '' ? null : num(saisi)) : l.objectif;
+      const pct = o != null && l.budgetPeriode ? Math.round(1000 * (o / l.budgetPeriode - 1)) / 10 : null;
+      const ec = o != null && l.realise != null ? l.realise - o : null;
+      const att = o != null && l.realise != null && o > 0 ? Math.round(100 * l.realise / o) : null;
+      tB += l.budgetPeriode || 0; tO += o || 0; tR += l.realise || 0;
+      if (l.realise != null) { aucunR = false; }
+      return {
+        nom: l.nom,
+        budget: l.budgetPeriode != null ? this.fE(l.budgetPeriode) : '—',
+        source: l.source === 'theorique' ? 'théorique' : (l.source === 'budget' ? '' : 'non encodé'),
+        objectif: saisi != null ? saisi : (l.objectif != null ? Math.round(l.objectif) : ''),
+        setObjectif: e => { const v = e.target.value;
+          this.setState(s2 => ({ bxcDraft: Object.assign({}, s2.bxcDraft, { [cle(l.shopId)]: v }) }));
+          this.autoEnreg('bxc' + (d.campagne || {}).id, () => this.bxcEcrire(d.campagne.id)); },
+        pct: pct == null ? '' : (pct >= 0 ? '+' : '−') + String(Math.abs(pct)).replace('.', ',') + ' %',
+        realise: l.realise != null ? this.fE(l.realise) : '—',
+        ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
+        ecartCol: ec == null ? 'var(--color-text-muted)' : (ec >= 0 ? '#2d7a3e' : '#8D1D2C'),
+        atteinte: att == null ? '' : att + ' %',
+        barre: att == null ? 0 : Math.max(2, Math.min(100, att)),
+        barreCol: att == null ? '#DED6C9' : (att >= 100 ? '#2d7a3e' : (att >= 95 ? '#C17A2A' : '#8D1D2C')),
+      };
+    });
+    common.bxcTotBudget = tB ? this.fE(tB) : '—';
+    common.bxcTotObjectif = tO ? this.fE(tO) : '—';
+    common.bxcTotRealise = aucunR ? '—' : this.fE(tR);
+    common.bxcTotEcart = (!aucunR && tO) ? ((tR - tO >= 0 ? '+' : '−') + this.fE(Math.abs(tR - tO))) : '';
+    common.bxcTotEcartCol = (tR - tO) >= 0 ? '#2d7a3e' : '#8D1D2C';
+    common.bxcTotPct = tO && tB ? ((tO / tB - 1) >= 0 ? '+' : '−') + this.fP(Math.abs(tO / tB - 1), 1) : '';
+    common.bxcEtat = this.autoTxt('bxc' + ((d.campagne || {}).id || 0));
+    common.bxcAucune = !d.campagne && !common.bxcChargement && !common.bxcIndispo;
+  }
+
+  /** Les objectifs saisis, écrits en base sans ligne de journal. */
+  bxcEcrire(campagneId){
+    const dr = this.state.bxcDraft || {};
+    const objectifs = {};
+    Object.keys(dr).forEach(k => {
+      const [cid, sid] = k.split(':');
+      if (String(cid) === String(campagneId)) { objectifs[sid] = dr[k]; }
+    });
+    if (!Object.keys(objectifs).length) { return true; }
+    return this.api('PUT', '/marketing/campagnes/' + campagneId + '/objectifs?journal=0', { objectifs })
+      .then(r => !(!r || r.ok === false));
   }
 
   /* --- encodage du budget ----------------------------------------------------- */
@@ -2248,6 +2357,20 @@ class App {
           ? { exReseau: { per, chargement: false, d: d || null } } : {}); });
   }
   /** Rapports réels (table ceo_rapport) : définitions + dernières générations. */
+  /** Budget × Campagnes : lu à l'ouverture de l'écran, et à chaque changement
+   *  de campagne ou d'exercice — le réalisé vient du panel, il ne se devine pas. */
+  bxcCharge(force){
+    const cle = (this.state.bxcExo || this.exo()) + ':' + (this.state.bxcCamp || 0);
+    if (this._bxcEnCours === cle) { return; }
+    if (!force && this.state.bxc && this.state.bxc.cle === cle) { return; }
+    this._bxcEnCours = cle;
+    this.setState({ bxc: { cle, chargement: true, d: (this.state.bxc || {}).d || null } });
+    readOne('/marketing/budget-campagnes?exercice=' + (this.state.bxcExo || this.exo())
+      + (this.state.bxcCamp ? '&campagne=' + this.state.bxcCamp : ''))
+      .then(d => { this._bxcEnCours = null; this.setState({ bxc: { cle, chargement: false, d: d || null } }); })
+      .catch(() => { this._bxcEnCours = null; this.setState({ bxc: { cle, chargement: false, d: null } }); });
+  }
+
   rapCharge(force){
     if (this._rapEnCours) return;
     if (!force && this.state.rapGen) return;

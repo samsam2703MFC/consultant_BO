@@ -130,6 +130,7 @@ export function render(c, x){
       ${c.isMarge ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
+      ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
@@ -1373,6 +1374,97 @@ function tplEncodage(c, x){
       ${c.encAlerte ? `<div style="margin-top:12px;padding:10px 13px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:12px;font-weight:500">${esc(c.encAlerte)}</div>` : ''}
       <div style="font-size:11.5px;line-height:1.5;color:var(--color-text-muted);margin-top:12px;text-wrap:pretty">${esc(c.encNote)}</div>
     </div>
+    `}
+  </div>`;
+}
+
+/* Budget × Campagnes : le calendrier des campagnes posé sur la courbe du
+   budget, puis l'objectif de la campagne regardée, magasin par magasin. */
+function tplBxc(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)';
+  if (c.bxcIndispo) {
+    return `<div data-screen="bxcampagnes"><div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px;font-size:13px">${esc(c.bxcIndispo)}</div></div>`;
+  }
+  return `
+  <div data-screen="bxcampagnes" style="display:flex;flex-direction:column;gap:16px;max-width:1240px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--color-text-muted)">Exercice</span>
+      <select ${x.C(c.setBxcExo)} style="font-size:13px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+        ${c.bxcExoOpts.map(o => `<option value="${o.v}"${o.v === c.bxcExo ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+      </select>
+      ${c.bxcChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture du budget et des campagnes…</span>' : ''}
+    </div>
+
+    ${c.bxcChargement ? '' : `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+      <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Budget et campagnes — ${esc(c.bxcExo)}</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 12px">Barres claires : CA budgété du mois (le théorique de l'étude à défaut). Barres ambrées : mois couvert par au moins une campagne.</div>
+      <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:132px">
+        ${c.bxcMois.map(m => `<div style="display:flex;flex-direction:column;justify-content:flex-end;height:100%" title="${esc(m.nom)} — ${esc(m.montant)} (${esc(m.source)})">
+          <div style="height:${m.h}%;border-radius:3px 3px 0 0;background:${m.couvert ? 'var(--pkg-abricot)' : '#DED6C9'}"></div></div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-top:4px">
+        ${c.bxcMois.map(m => `<div style="font-size:9.5px;color:var(--color-text-muted);text-align:center">${esc(m.nom)}</div>`).join('')}
+      </div>
+      <div style="position:relative;height:26px;margin-top:8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:8px">
+        ${c.bxcBandes.map(b2 => `<span ${x.A(b2.choisir)} title="${esc(b2.nom)}" style="position:absolute;top:3px;left:${b2.gauche}%;width:${b2.largeur}%;height:20px;border-radius:6px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 6px;font-size:10px;font-weight:600;line-height:20px;text-align:center;${b2.on ? 'background:var(--pkg-abricot);color:#fff' : 'background:rgba(193,122,42,.22);border:1px solid var(--pkg-abricot);color:#8a5a13'}">${esc(b2.nom)}</span>`).join('')}
+      </div>
+      ${c.bxcCouvNote ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">${esc(c.bxcCouvNote)}</div>` : ''}
+    </div>
+
+    ${c.bxcAucune ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px;font-size:13px;color:var(--color-text-muted)">Aucune campagne sur cet exercice.</div>` : `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Objectifs par magasin</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(c.bxcCampNom)} · ${esc(c.bxcCampPeriode)} — le budget de la période vient du budget mensuel du magasin, au prorata des jours.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.bxcEtat || '')}</span>
+          <select ${x.C(c.setBxcCamp)} style="font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+            ${c.bxcCampOpts.map(o => `<option value="${o.v}"${o.v === c.bxcCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;min-width:840px;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="text-align:left;${lbl};padding:0 8px 8px 0">Magasin</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px">Budget de la période</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px;width:130px">Objectif</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px">vs budget</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px">CA réalisé</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px">Écart</th>
+          <th style="text-align:left;${lbl};padding:0 0 8px 8px;width:150px">Atteinte</th>
+        </tr></thead>
+        <tbody>
+          ${c.bxcLignes.map(l => `<tr style="border-top:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:8px 8px 8px 0;font-weight:500">${esc(l.nom)}</td>
+            <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.budget)}${l.source ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.source)}</div>` : ''}</td>
+            <td style="padding:5px 8px;text-align:right"><input type="number" value="${esc(String(l.objectif))}" ${x.C(l.setObjectif)} placeholder="—" style="width:118px;box-sizing:border-box;text-align:right;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"></td>
+            <td style="padding:8px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(l.pct)}</td>
+            <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.realise)}</td>
+            <td style="padding:8px;text-align:right;font-weight:500;color:${l.ecartCol};font-variant-numeric:tabular-nums">${esc(l.ecart)}</td>
+            <td style="padding:8px 0 8px 8px"><span style="display:inline-block;width:96px;height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden;vertical-align:middle"><i style="display:block;height:100%;width:${l.barre}%;background:${l.barreCol}"></i></span> <span style="font-size:11px;color:var(--color-text-muted)">${esc(l.atteinte)}</span></td>
+          </tr>`).join('')}
+          <tr style="border-top:1.5px solid var(--color-border-secondary)">
+            <td style="padding:10px 8px 10px 0;font-weight:600">Total</td>
+            <td style="padding:10px 8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(c.bxcTotBudget)}</td>
+            <td style="padding:10px 8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(c.bxcTotObjectif)}</td>
+            <td style="padding:10px 8px;text-align:right;color:var(--color-text-muted)">${esc(c.bxcTotPct)}</td>
+            <td style="padding:10px 8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(c.bxcTotRealise)}</td>
+            <td style="padding:10px 8px;text-align:right;font-weight:600;color:${c.bxcTotEcartCol};font-variant-numeric:tabular-nums">${esc(c.bxcTotEcart)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.55">
+        L'objectif se saisit en euros ; « vs budget » dit ce qu'il demande en plus. Chaque saisie part en base après une pause de frappe.
+        ${c.bxcRealiseNote ? '<br>' + esc(c.bxcRealiseNote) : ''}
+      </div>
+    </div>`}
     `}
   </div>`;
 }

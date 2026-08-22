@@ -90,6 +90,9 @@ function route(string $method, string $path): mixed
             $path === '/reputation'                    => ep_reputation(),
             $path === '/reputation/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
+            // Le calendrier des campagnes posé sur la courbe du budget, et le
+            // détail magasin par magasin de la campagne regardée.
+            $path === '/marketing/budget-campagnes'    => ep_budget_campagnes(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
             $path === '/admin/erp-essai'               => ep_erp_essai(),
             $path === '/projects'                      => ep_projects(),
@@ -163,6 +166,8 @@ function route(string $method, string $path): mixed
     // La variation par mois seule : sert à pousser une courbe d'un magasin aux
     // autres sans toucher à leur budget ni au reste de leur étude.
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/saisonnalite$#', $path, $m)) { return wr_shop_saisonnalite($m[1]); }
+    // Budget × Campagnes : l'objectif de CA d'une campagne, magasin par magasin.
+    if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)
