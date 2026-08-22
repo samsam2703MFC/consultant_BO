@@ -376,7 +376,8 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
                 $c = (float) ($v['ca'] ?? 0);
                 $a = (float) ((($cumulA['magasins'][$mag] ?? [])['ca']) ?? 0);
-                $obj = $objectifs[$mag] ?? null;
+                $objSrc = $objectifs[$mag] ?? null;
+                $obj = $objSrc !== null ? (float) $objSrc['montant'] : null;
                 $reste = $obj !== null ? $obj - $c : null;
                 $ttCum += $c; $ttA += $a;
                 if ($obj !== null) { $ttObj += $obj; $objConnu = true; }
@@ -384,7 +385,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 $rows[] = [$mag, $euro($c), [$a > 0 ? $euro($a) : '—', 'color:#8b8177'],
                     [$ecart === null ? '—' : ($ecart > 0 ? '+' : '') . str_replace('.', ',', (string) round($ecart, 1)) . ' %',
                      $ecart === null ? 'color:#8b8177' : ($ecart >= 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')],
-                    [$obj === null ? '—' : $euro($obj), 'color:#8b8177'],
+                    [$obj === null ? '—' : $euro($obj) . (($objSrc['source'] ?? '') === 'theorique' ? ' (théorique)' : ''), 'color:#8b8177'],
                     [$obj === null ? 'objectif non encodé' : ($reste > 0 ? $euro($reste) : 'atteint'),
                      $obj === null ? 'color:#8b8177' : ($reste > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e;font-weight:700')]];
             }
@@ -415,17 +416,19 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 $jauges = '';
                 foreach ($cumul['magasins'] as $mag => $v) {
                     if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
-                    $obj = $objectifs[$mag] ?? null;
-                    if ($obj === null) { continue; }
+                    $o = $objectifs[$mag] ?? null;
+                    if ($o === null) { continue; }
                     $jauges .= (count($cumul['magasins']) > 1 && $perim === []
                         ? '<div style="font-family:sans-serif;font-size:11.5px;font-weight:700;color:#221E1A;margin-top:12px">' . $e2($mag) . '</div>' : '')
-                        . rapJaugeObjectif((float) ($v['ca'] ?? 0), (float) ((($proj['magasins'][$mag] ?? [])['ca']) ?? 0), (float) $obj, $semaines);
+                        . rapJaugeObjectif((float) ($v['ca'] ?? 0), (float) ((($proj['magasins'][$mag] ?? [])['ca']) ?? 0),
+                            (float) $o['montant'], $semaines);
                 }
                 $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:14px">'
                     . 'Cumul du mois — du ' . $e2(date('d/m', strtotime($mois1))) . ' au ' . $e2(date('d/m', strtotime((string) $periode['au']))) . '</div>'
                     . rapTableHtml(['Magasin', 'Cumul', 'A-1', 'Écart', 'Objectif du mois', 'Reste à faire'], $rows)
                     . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
-                    . 'Objectif : le budget de CA encodé pour le mois (écran Encodage du budget). « Reste à faire » = objectif − cumul, '
+                    . 'Objectif : le budget de CA encodé pour le mois (écran Encodage du budget) ; à défaut, le CA théorique de '
+                    . 'l’étude de marché, signalé « (théorique) ». « Reste à faire » = objectif − cumul, '
                     . 'sur le mois entier — pas au prorata des jours écoulés.</div>'
                     . $jauges];
             }
@@ -850,12 +853,20 @@ function rapObjectifsMois(string $date): array
         } catch (PDOException $e) { return []; }
         $out = [];
         try {
-            foreach (Db::rows('SELECT shop_id, revenue_budget FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+            // Le budget négocié fait objectif ; à défaut, le CA THÉORIQUE de
+            // l'étude de marché. Un magasin qui ouvre a son étude bien avant
+            // son premier budget : sans ce repli, son rapport disait
+            // « objectif non encodé » alors que l'étude, elle, dit un chiffre.
+            // La provenance voyage avec la valeur — le rapport doit pouvoir la
+            // nommer, on ne prend pas l'une pour l'autre.
+            foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
                 [(int) substr($date, 0, 4), (int) substr($date, 5, 2)]) as $b) {
-                $v = $b['revenue_budget'];
-                if ($v === null || (float) $v <= 0) { continue; }
                 $nom = $noms[(int) $b['shop_id']] ?? null;
-                if ($nom !== null) { $out[$nom] = (float) $v; }
+                if ($nom === null) { continue; }
+                $v = $b['revenue_budget'];
+                if ($v !== null && (float) $v > 0) { $out[$nom] = ['montant' => (float) $v, 'source' => 'budget']; continue; }
+                $t = $b['ca_theorique'];
+                if ($t !== null && (float) $t > 0) { $out[$nom] = ['montant' => (float) $t, 'source' => 'theorique']; }
             }
         } catch (PDOException $e) { /* budget non encodé */ }
         return $out;
