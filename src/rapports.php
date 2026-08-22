@@ -1646,9 +1646,9 @@ function rapPdfHtml(string $html): string
         // hauteur utile, l'écriture se resserre d'un point.
         // Douze vignettes : quatre rangées sur les 271 mm utiles d'une A4, et
         // dans chaque cadre la PHOTO prend tout ce que le texte ne prend pas.
-        . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:54mm}'
-        . 'table[data-grille="3x5"] div[data-fiche]{height:52mm;overflow:hidden;box-sizing:border-box;padding:4px 6px !important}'
-        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:34mm;max-width:100%;width:auto !important;height:auto}'
+        . rapHauteursVignettes()
+        . 'table[data-grille="3x5"] div[data-fiche]{overflow:hidden;box-sizing:border-box;padding:4px 6px !important}'
+        . 'table[data-grille="3x5"] div[data-fiche] img{max-width:100%;width:auto !important;height:auto}'
         . 'table[data-grille="3x5"] div[data-fiche] div{font-size:8.5px !important;line-height:1.2 !important}'
         . 'table[data-grille="3x4"] tr[data-rangee-fiches]>td{height:67mm}'
         . 'table[data-grille="3x4"] div[data-fiche]{height:65mm;overflow:hidden;box-sizing:border-box;padding:5px 6px !important}'
@@ -2307,9 +2307,14 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, boo
     // POSÉE DANS un encadré (les tâches exemplaires), où un saut couperait
     // l'encadré en deux.
     foreach (array_chunk($cartes, $paginer ? $colonnes * $rangees : max(1, count($cartes))) as $page) {
+        // Le nombre de rangées RÉELLES de cette page : une page qui n'en porte
+        // que trois étire ses cartes au lieu de laisser un tiers de blanc.
+        $rangsPage = (int) ceil(count($page) / $colonnes);
         $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1"'
-            . ($paginer ? ' data-page-fiches="1"' : '') . ' data-grille="' . $colonnes . 'x' . $rangees . '">';
-        foreach (array_chunk($page, $colonnes) as $rangee) {
+            . ($paginer ? ' data-page-fiches="1"' : '') . ' data-grille="' . $colonnes . 'x' . $rangees . '"'
+            . ' data-rangees="' . $rangsPage . '">';
+        $rangs = array_chunk($page, $colonnes);
+        foreach ($rangs as $rangee) {
             $h .= '<tr data-rangee-fiches="1">';
             for ($i = 0; $i < $colonnes; $i++) {
                 $pad = 'padding:5px ' . ($i === $colonnes - 1 ? '0' : '6px') . ' 5px ' . ($i === 0 ? '0' : '6px');
@@ -2353,6 +2358,32 @@ function rapJoursDe(array $periode): array
     $out = [];
     for ($i = 0; $i < $n; $i++) { $out[] = $du->modify('+' . $i . ' days')->format('Y-m-d'); }
     return $out;
+}
+
+/**
+ * La hauteur des vignettes, selon ce que la page porte VRAIMENT.
+ *
+ * Une A4 laisse ~240 mm au-dessous du titre du bloc. À cinq rangées, chacune
+ * en prend 48 : la page est pleine. Mais une page de onze photos n'a que
+ * quatre rangées — figées à 54 mm, elles s'arrêtaient aux deux tiers de la
+ * feuille. Chaque page étire donc ses cartes jusqu'à remplir les 240 mm,
+ * plafonnées à 78 mm : au-delà, la photo ne grandit plus (elle est bornée par
+ * la largeur de la colonne) et on n'étirerait que du vide.
+ */
+function rapHauteursVignettes(): string
+{
+    $css = '';
+    foreach ([5 => [48, 30], 4 => [60, 42], 3 => [78, 56], 2 => [78, 56], 1 => [78, 56]] as $rangs => [$h, $photo]) {
+        $t = 'table[data-grille="3x5"][data-rangees="' . $rangs . '"] ';
+        $css .= $t . 'tr[data-rangee-fiches]>td{height:' . $h . 'mm}'
+            . $t . 'div[data-fiche]{height:' . ($h - 2) . 'mm}'
+            . $t . 'div[data-fiche] img{max-height:' . $photo . 'mm}';
+    }
+    // Une grille sans compte de rangées (rapport ancien, test) : la valeur qui
+    // remplit une page pleine.
+    return $css . 'table[data-grille="3x5"] tr[data-rangee-fiches]>td{height:48mm}'
+        . 'table[data-grille="3x5"] div[data-fiche]{height:46mm}'
+        . 'table[data-grille="3x5"] div[data-fiche] img{max-height:30mm}';
 }
 
 function rapGrilleDe(array $periode): array
