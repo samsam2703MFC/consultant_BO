@@ -1777,6 +1777,13 @@ class App {
     // quatre colonnes avant d'enregistrer, sans que l'une écrase l'autre.
     const cleCh = (idMag, poste) => 'chm' + moisIdx + ':' + idMag + ':' + poste;
 
+    // Une case de charge écrit les charges du mois, pas le budget : même
+    // pause de frappe, autre destination.
+    const setCh = k => e => { const v = e.target.value;
+      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
+        { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) }));
+      this.autoEnreg('charges', () => (this._chAuto ? this._chAuto() : true)); };
+
     let totAttendu = 0, nSaisis = 0, nCases = 0;
     const totMag = {}, nMag = {};
     magasins.forEach(x2 => { totMag[x2.id] = 0; nMag[x2.id] = 0; });
@@ -1794,7 +1801,7 @@ class App {
         if (String(enc).trim() !== '') { nSaisis++; totMag[x2.id] += num(enc); nMag[x2.id]++; }
         totAttendu += attendu;
         const ec = String(enc).trim() === '' ? null : num(enc) - attendu;
-        return { magasin: x2.id, valeur: enc, set: set(cleCh(x2.id, id)),
+        return { magasin: x2.id, valeur: enc, set: setCh(cleCh(x2.id, id)),
           attendu: attendu ? this.fE(attendu) : '—',
           ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
           ecartCol: ec == null ? 'var(--color-text-muted)' : (ec > 0 ? '#8D1D2C' : '#2d7a3e') };
@@ -1813,6 +1820,22 @@ class App {
           ? nMag[x2.id] + ' / ' + common.encCharges.length + ' poste(s)' : '' }; });
     common.encChTotAttendu = this.fE(totAttendu);
     common.encChNSaisis = nSaisis + ' / ' + nCases + ' case(s) encodée(s)';
+    // L'écriture des charges SANS le clic : les mêmes PUT, mais ni journal ni
+    // rechargement — la frappe suivante n'a pas à attendre une relecture de la
+    // base. Le bouton garde les deux, et sa ligne de journal.
+    this._chAuto = () => {
+      if (common.encChSansId) { return false; }
+      const aEcrire = magasins.filter(x2 => common.encChLignes.some(l => d[cleCh(x2.id, l.id)] !== undefined));
+      if (!aEcrire.length) { return true; }
+      return Promise.all(aEcrire.map(x2 => {
+        const postes = {};
+        common.encChLignes.forEach(l => { const cell = l.cells.find(z => z.magasin === x2.id) || {};
+          postes[l.id] = String(cell.valeur).trim() === '' ? null : num(cell.valeur); });
+        return this.api('PUT', '/stores/' + x2.id + '/charges?exercice=' + this.meta.exercice
+          + '&mois=' + moisIdx + '&journal=0', { postes });
+      })).then(rs => !rs.some(r => !r || r.ok === false));
+    };
+    common.encChAuto = this.autoTxt('charges');
     common.encChSave = () => {
       if (common.encChSansId) {
         this.notify('Enregistrez d’abord le modèle réseau : les postes ont besoin de leur identifiant.');
@@ -1890,6 +1913,31 @@ class App {
    * écriraient douze lignes et le journal ne raconterait plus rien. Le bouton
    * garde sa ligne, avec son résumé.
    */
+  /**
+   * Enregistrement automatique, après une pause de frappe.
+   *
+   * Une clé par formulaire : deux écrans qui s'écrivent en parallèle ne se
+   * volent pas leur minuterie. `fn` rend une promesse (ou un booléen) ; l'état
+   * s'affiche à côté du formulaire, y compris l'échec — une saisie qui n'est
+   * pas partie doit se voir, sinon l'écran ment.
+   */
+  autoEnreg(cle, fn){
+    this._autoT = this._autoT || {};
+    clearTimeout(this._autoT[cle]);
+    this._autoT[cle] = setTimeout(() => {
+      this.setState(s2 => ({ autoEtat: Object.assign({}, s2.autoEtat, { [cle]: 'en-cours' }) }));
+      const fini = ok => this.setState(s2 => ({ autoEtat: Object.assign({}, s2.autoEtat,
+        { [cle]: ok === false ? 'echec' : 'ok' }) }));
+      try { Promise.resolve(fn()).then(fini).catch(() => fini(false)); }
+      catch (e2) { fini(false); }
+    }, 900);
+  }
+
+  /** L'état d'un enregistrement automatique, en clair. */
+  autoTxt(cle){
+    return { 'en-cours': 'Enregistrement…', ok: 'Enregistré ✓', echec: 'Échec — réessayez' }[(this.state.autoEtat || {})[cle]] || '';
+  }
+
   encAuto(shopId){
     clearTimeout(this._encT);
     this._encT = setTimeout(() => {
@@ -7312,7 +7360,17 @@ class App {
             this.api('DELETE', '/rapports/' + r.id, {}).then(() => { this.notify('Rapport supprimé'); this.rapCharge(true); });
           },
           destTxt,
-          setDest: e => this.setState(s2 => ({ rapDestTxt: Object.assign({}, s2.rapDestTxt, { [r.id]: e.target.value }) })),
+          setDest: e => { const v = e.target.value;
+            this.setState(s2 => ({ rapDestTxt: Object.assign({}, s2.rapDestTxt, { [r.id]: v }) }));
+            // Une adresse à demi tapée n'est pas une adresse : on n'écrit que
+            // ce qui est valide, et le reste attend la suite de la frappe.
+            this.autoEnreg('dest' + r.id, () => {
+              const em = v.split(/[,;]/).map(s4 => s4.trim()).filter(Boolean);
+              if (em.some(a4 => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a4))) { return false; }
+              return this.api('PUT', '/rapports/' + r.id, { destinataires: em })
+                .then(g => !(g && g.ok === false));
+            }); },
+          destAuto: this.autoTxt('dest' + r.id),
           saveDest: () => this.api('PUT', '/rapports/' + r.id,
             { destinataires: destTxt.split(/[,;]/).map(s4 => s4.trim()).filter(Boolean) })
             .then(() => { this.notify('Destinataires enregistrés'); this.rapCharge(true); }),
@@ -7626,7 +7684,11 @@ class App {
     const scd = S.scDraft || {};
     const SCc = this.scoringCfg();
     const scv = (k, def) => scd[k] != null ? scd[k] : String(def);
-    const scSet = k => e => { const v = e.target.value; this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { [k]: v }) })); };
+    const scSet = k => e => { const v = e.target.value;
+      this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { [k]: v }) }));
+      // Une pondération incohérente (somme nulle, seuils croisés) ne part pas :
+      // l'alerte à l'écran dit pourquoi, et la frappe suivante réessaie.
+      this.autoEnreg('scoring', () => (this._scAuto ? this._scAuto() : false)); };
     const scNum = (v, d) => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? n : d; };
     const pv = scNum(scv('volume', SCc.v), SCc.v), pm = scNum(scv('marge', SCc.m), SCc.m);
     const pp = scNum(scv('perte', SCc.perte), SCc.perte), pc = scNum(scv('comptoir', SCc.comptoir), SCc.comptoir);
@@ -7660,6 +7722,18 @@ class App {
     common.scMargeApercu = 'Marge ' + mb + ' % → ' + mbn + ' pts · ' + mh + ' % → ' + mhn + ' pts (linéaire entre les deux, plafonné au-delà).';
     common.scMsg = scd.msg || '';
     common.scMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (scd.ok ? '#2d7a3e' : '#8D1D2C');
+    this._scAuto = () => {
+      if (common.scAlerte) { return false; }
+      const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc },
+        seuils: { moteur: sMot, conforter: sCon },
+        marge: { bas: mb, basNote: mbn, haut: mh, hautNote: mhn } };
+      return this.api('PUT', '/parametres/scoring', { valeur: val }).then(r => {
+        if (r && r.ok === false) { return false; }
+        this.meta.scoring = val;
+        return true;
+      });
+    };
+    common.scAuto = this.autoTxt('scoring');
     common.scSave = () => {
       if (common.scAlerte) { this.notify(common.scAlerte); return; }
       const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc },

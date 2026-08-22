@@ -1468,6 +1468,7 @@ function tplEncodage(c, x){
             <select ${x.C(c.setEncChMois)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px">
               ${c.encChMoisOpts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
             </select>
+            <span style="font-size:11.5px;color:var(--color-text-muted);margin-right:8px">${esc(c.encChAuto || '')}</span>
             <button ${x.A(c.encChSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Enregistrer les charges du mois</button>
           </div>
         </div>
@@ -3237,6 +3238,7 @@ function tplReporting(c, x){
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">À</span>
               <input value="${esc(r.destTxt)}" ${x.I(r.setDest)} placeholder="emails séparés par des virgules" style="flex:1;min-width:240px;font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+              <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.destAuto || '')}</span>
               <button ${x.A(r.saveDest)} style="border:0.5px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Enregistrer</button>
             </div>
           </div>`).join('')}
@@ -5041,6 +5043,7 @@ function tplScoring(c, x){
     ${c.scMsg ? `<div style="${c.scMsgSt}">${esc(c.scMsg)}</div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button ${x.A(c.scReset)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Annuler</button>
+      <span style="font-size:11.5px;color:var(--color-text-muted);align-self:center">${esc(c.scAuto || '')}</span>
       <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
     </div>
   </div>`;

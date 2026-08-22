@@ -1779,16 +1779,17 @@ function rapPdfHtml(string $html): string
         // Entre deux sections, une respiration franche : sur écran on fait
         // défiler, sur papier l'œil a besoin de la coupure.
         . 'div[data-titre-bloc]{margin-top:30px !important}'
-        // Le bilan des tâches ouvre une page : il porte quatre compteurs, une
-        // dispersion et le détail tâche par tâche — coincé en bas d'une page
-        // de KPI, il se lisait en deux morceaux.
-        . 'div[data-bloc="xp-bilan"]{page-break-before:always;margin-top:0 !important}'
-        // Les non-conformités ouvrent leur page, avec leur titre et le nom du
-        // magasin : le titre restait en bas d'une page et les photos
-        // commençaient à la suivante.
-        . 'div[data-bloc="xp-taches"]{page-break-before:always;margin-top:0 !important}'
-        // Et tout bloc dont le compositeur a demandé qu'il ouvre une page.
+        // Les sauts de page décidés à la génération : le compositeur les a
+        // demandés, ou le rapport les impose (bilan des tâches, photos). Le
+        // premier bloc n'en porte jamais — une page blanche avant le rapport
+        // n'apprend rien.
         . 'div[data-titre-bloc][data-saut]{page-break-before:always;margin-top:0 !important}'
+        // Les runs enregistrés AVANT cette prise n'ont pas de `data-saut` :
+        // pour eux seulement, les deux sauts imposés se visent au slug, comme
+        // avant. Un rapport d'hier s'imprime ainsi comme hier.
+        . (!str_contains($html, 'data-saut')
+            ? 'div[data-bloc="xp-bilan"],div[data-bloc="xp-taches"]{page-break-before:always;margin-top:0 !important}'
+            : '')
         // Un titre ne se sépare jamais de ce qu'il annonce.
         . 'div[data-titre-bloc],div[data-titre-magasin]{page-break-after:avoid}'
         // Un peu d'air entre le bandeau et le titre, et entre les blocs.

@@ -1658,8 +1658,13 @@ function wr_shop_charges(string $shopId): array
             [$shopId, $exercice, $mois, $id, (float) $montant]);
         $ecrits++;
     }
-    journalAdd('CEO', 'Budget', $shop['name'], 'Charges encodées — ' . $exercice . '/' . str_pad((string) $mois, 2, '0', STR_PAD_LEFT)
-        . ' : ' . $ecrits . ' poste(s)' . ($effaces ? ', ' . $effaces . ' effacé(s)' : ''));
+    // `journal=0` : l'écran écrit à CHAQUE saisie. Douze cases remplies
+    // feraient douze lignes de journal, et le journal ne raconterait plus
+    // rien. Le bouton « Enregistrer les charges du mois », lui, journalise.
+    if (($_GET['journal'] ?? '') !== '0') {
+        journalAdd('CEO', 'Budget', $shop['name'], 'Charges encodées — ' . $exercice . '/' . str_pad((string) $mois, 2, '0', STR_PAD_LEFT)
+            . ' : ' . $ecrits . ' poste(s)' . ($effaces ? ', ' . $effaces . ' effacé(s)' : ''));
+    }
     return ['ok' => true, 'ecrits' => $ecrits, 'effaces' => $effaces];
 }
 
