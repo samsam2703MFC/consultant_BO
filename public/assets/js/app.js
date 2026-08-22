@@ -4141,8 +4141,12 @@ class App {
   rjCharge(force){
     const cle = this.rjCle();
     if (!this.D.rjour) { this.D.rjour = {}; }
-    if (force) { delete this.D.rjour[cle]; this._rjEnCours = null; }
-    if (this.D.rjour[cle] || this._rjEnCours === cle) { return; }
+    // On ne VIDE pas le cache avant d'avoir la réponse : l'écran se serait
+    // remplacé par « Lecture… » pendant les quinze secondes du panel, et on
+    // perdrait de vue les chiffres qu'on était en train de lire. L'ancienne
+    // journée reste affichée, la nouvelle prend sa place à l'arrivée.
+    if (this._rjEnCours === cle) { return; }
+    if (this.D.rjour[cle] && !force) { return; }
     this._rjEnCours = cle;
     if (force) { this.setState({ rjMaj: 'en-cours' }); }
     readOne('/exploitation/jour' + (cle ? '?date=' + encodeURIComponent(cle) : '')).then(d => {
