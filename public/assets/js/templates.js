@@ -1380,6 +1380,7 @@ function tplEncodage(c, x){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button ${x.A(c.encCatAdd)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Catégorie</button>
+          <span style="font-size:11.5px;color:var(--color-text-muted);margin-right:8px">${esc(c.encChargesAuto || '')}</span>
           <button ${x.A(c.encChargesSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Enregistrer pour le réseau</button>
         </div>
       </div>
@@ -4719,7 +4720,8 @@ function tplPlanoFiche(c, x){
 
           <div style="${lbl};margin-top:18px">Consigne de présentation</div>
           <textarea id="plf-note" ${x.I(f.noteSet('texte'))} rows="5" placeholder="Comment ce produit doit être présenté au comptoir" style="width:100%;box-sizing:border-box;margin-top:7px;border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:8px 10px;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(f.noteTxt)}</textarea>
-          <button ${x.A(f.enregistrerNote)} style="margin-top:11px;width:100%;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">Enregistrer la consigne</button>
+          <div style="margin-top:8px;font-size:11px;color:var(--color-text-muted);text-align:right">${esc(f.noteAuto || '')}</div>
+          <button ${x.A(f.enregistrerNote)} style="margin-top:4px;width:100%;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${f.busy ? 'wait' : 'pointer'}">Enregistrer la consigne</button>
           ${f.noteMaj ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">${esc(f.noteMaj)}</div>` : ''}
           ${(f.manque || []).filter(m => /diffusion/i.test(m.champ)).map(m => `
             <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5"><span style="font-weight:500;color:var(--color-on-abricot)">manque API</span> — ${esc(m.source)}</div>`).join('')}

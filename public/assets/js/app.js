@@ -1524,8 +1524,15 @@ class App {
     const lignes = d.lignes ? d.lignes : (modele.length ? depuisModele() : depuisBase());
     const poseLignes = l => this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
       { [st.id]: Object.assign({}, s2.encDraft[st.id], { lignes: l }) }) }));
+    // Un taux du MODÈLE réseau : même pause de frappe, mais il part dans le
+    // réglage réseau, pas dans le budget du magasin affiché.
+    const setR = k => e => { const v = e.target.value;
+      this.setState(s2 => ({ encDraft: Object.assign({}, s2.encDraft,
+        { [st.id]: Object.assign({}, s2.encDraft[st.id], { [k]: v }) }) }));
+      this.autoEnreg('chargesReseau', () => (this._chrAuto ? this._chrAuto() : true)); };
     const setL = (i, k) => e => { const v = e.target.value; const l = lignes.slice();
-      l[i] = Object.assign({}, l[i], { [k]: v }); poseLignes(l); };
+      l[i] = Object.assign({}, l[i], { [k]: v }); poseLignes(l);
+      this.autoEnreg('chargesReseau', () => (this._chrAuto ? this._chrAuto() : true)); };
 
     common.encModeleDispo = false;
     common.encReseauNote = 'Ces postes et ces taux valent pour TOUT le réseau : les modifier ici les change '
@@ -1534,6 +1541,25 @@ class App {
     common.encChargesModifie = !!d.lignes || !!d.paliers;
     // Enregistrement du MODÈLE, distinct du budget du magasin : on ne veut pas
     // qu'ajuster un taux réseau oblige à réenregistrer douze mois de CA.
+    // Le modèle vaut pour TOUT le réseau : il s'écrit à la frappe comme le
+    // reste, mais sans relâcher le brouillon — reprendre la réponse du serveur
+    // au milieu d'une saisie ferait sauter le curseur d'une ligne à l'autre.
+    // Le bouton, lui, relit la base et journalise.
+    this._chrAuto = () => {
+      const cats = [];
+      lignes.forEach((c3, i) => {
+        const nom = c3.categorie || 'Sans catégorie';
+        let cat = cats.find(z => z.nom === nom);
+        if (!cat) { cat = { nom, lignes: [] }; cats.push(cat); }
+        cat.lignes.push({ id: c3.id || '', poste: c3.poste || '', description: c3.description || '',
+          gestion: c3.gestion || '', pcmn: c3.pcmn || '',
+          pct: num(val('ch' + i, c3.pctBudget)),
+          pctTheo: num(val('cht' + i, c3.pctTheorique != null ? c3.pctTheorique : c3.pctBudget)) });
+      });
+      return this.api('PUT', '/parametres/budgetCharges', { valeur: { categories: cats, paliers: paliersSrc } })
+        .then(r => !(!r || r.ok === false));
+    };
+    common.encChargesAuto = this.autoTxt('chargesReseau');
     common.encChargesSave = () => {
       const cats = [];
       lignes.forEach((c3, i) => {
@@ -1584,7 +1610,7 @@ class App {
         description: c2.description || '', gestion: c2.gestion || '', pcmn: c2.pcmn || '',
         setNom: setL(i, 'poste'), setDesc: setL(i, 'description'),
         setGestion: setL(i, 'gestion'), setPcmn: setL(i, 'pcmn'),
-        valeur: v, set: set('ch' + i), valeurT: vt, setT: set('cht' + i),
+        valeur: v, set: setR('ch' + i), valeurT: vt, setT: setR('cht' + i),
         montant: this.fE(caTot * num(v) / 100), montantT: this.fE(theoTot * num(vt) / 100),
         // Le réel ne s'invente pas : sans mois encaissé, la case reste vide.
         montantR: caReel ? this.fE(caReel * num(v) / 100) : '—',
@@ -1921,13 +1947,41 @@ class App {
    * s'affiche à côté du formulaire, y compris l'échec — une saisie qui n'est
    * pas partie doit se voir, sinon l'écran ment.
    */
+  /**
+   * Après une écriture au fil de l'eau : relire ce que la base porte vraiment.
+   *
+   * Sans cela, l'écran de saisie est à jour et TOUS LES AUTRES restent sur les
+   * chiffres du chargement — un budget encodé n'apparaissait pas dans « Suivi
+   * budget » tant qu'on ne rechargeait pas la page. Mesuré sur Halle : douze
+   * mois écrits en base, zéro à l'écran. Groupé : une seule relecture après
+   * la rafale de frappe, pas une par touche.
+   */
+  rafraichirBudget(){
+    clearTimeout(this._majBudT);
+    this._majBudT = setTimeout(() => {
+      Promise.all([
+        readOne('/stores/perf?granularite=mois&annees=' + (this.exo() - 1) + ',' + this.exo()),
+        readOne('/stores/budgets?exercice=' + this.exo()),
+      ]).then(([p, bs]) => {
+        if (p) { this.D.perfRaw = p; }
+        if (bs) { this.D.budgets = bs; }
+        this.setState({});
+      }).catch(() => {});
+    }, 1500);
+  }
+
   autoEnreg(cle, fn){
     this._autoT = this._autoT || {};
     clearTimeout(this._autoT[cle]);
     this._autoT[cle] = setTimeout(() => {
       this.setState(s2 => ({ autoEtat: Object.assign({}, s2.autoEtat, { [cle]: 'en-cours' }) }));
-      const fini = ok => this.setState(s2 => ({ autoEtat: Object.assign({}, s2.autoEtat,
-        { [cle]: ok === false ? 'echec' : 'ok' }) }));
+      const fini = ok => {
+        this.setState(s2 => ({ autoEtat: Object.assign({}, s2.autoEtat,
+          { [cle]: ok === false ? 'echec' : 'ok' }) }));
+        // Les écritures du budget touchent des chiffres que d'autres écrans
+        // affichent : on relit, une fois la rafale finie.
+        if (ok !== false && (cle === 'charges' || cle === 'chargesReseau')) { this.rafraichirBudget(); }
+      };
       try { Promise.resolve(fn()).then(fini).catch(() => fini(false)); }
       catch (e2) { fini(false); }
     }, 900);
@@ -1944,7 +1998,10 @@ class App {
       if (!this._encCorps || !this._encTotal) { return; }   // rien de saisi : rien à écrire
       this.setState({ encAuto: 'en-cours' });
       this.api('PUT', '/stores/' + shopId + '/budget?exercice=' + this.meta.exercice, this._encCorps(''))
-        .then(r => this.setState({ encAuto: (r && r.ok === false) ? 'echec' : 'ok' }))
+        .then(r => {
+          this.setState({ encAuto: (r && r.ok === false) ? 'echec' : 'ok' });
+          if (!r || r.ok !== false) { this.rafraichirBudget(); }
+        })
         .catch(() => this.setState({ encAuto: 'echec' }));
     }, 900);
   }
@@ -4811,7 +4868,11 @@ class App {
       noteMaj: (d.note || {}).majLe ? ('modifiée par ' + ((d.note || {}).auteur || '—') + ', ' + (d.note || {}).majLe) : '',
       noteSet: k => e => { const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
-          { note: Object.assign({}, s2.plFiche.note, { [k]: v }) }) })); },
+          { note: Object.assign({}, s2.plFiche.note, { [k]: v }) }) }));
+        // La consigne part d'elle-même après la frappe ; le bouton reste, il
+        // confirme et relit la fiche.
+        this.autoEnreg('consigne', () => this.plNoteAuto()); },
+      noteAuto: this.autoTxt('consigne'),
       placer: cible ? () => this.plPlacer() : null,
       retirer: place && place.slotId ? () => this.plRetirer() : null,
       enregistrerNote: () => this.plNote(),
@@ -4913,6 +4974,16 @@ class App {
         if (typeof apres === 'function') { apres(null); }
         this.notify('Photo retirée'); });
   }
+  /** La consigne, écrite sans le clic : même PUT, sans relire la fiche. */
+  plNoteAuto(){
+    const f = this.state.plFiche;
+    if (!f) { return false; }
+    const v = this.valsPlFiche(f, this.D.plano || {});
+    return write(this.source, 'PUT', '/planogramme/note', { cible: 'ref', cibleId: f.ref,
+      texte: v.noteTxt, epinglee: v.notePin ? 1 : 0, gravite: v.noteGrav,
+      du: v.noteDu || '', au: v.noteAu || '' }).then(r => !(!r || r.ok === false));
+  }
+
   plNote(){
     const f = this.state.plFiche;
     if (!f || f.busy) { return; }
