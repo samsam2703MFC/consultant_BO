@@ -389,12 +389,36 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     [$objConnu ? $euro($ttObj) : '—', 'color:#8b8177;font-weight:700'],
                     [$resteR === null ? '—' : ($resteR > 0 ? $euro($resteR) : 'atteint'),
                      $resteR === null ? 'color:#8b8177' : ($resteR > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e;font-weight:700')]];
+                // Ce que les semaines RESTANTES ont rapporté l'an dernier, aux
+                // mêmes dates : la jauge s'en sert pour dire s'il manquera
+                // quelque chose à la fin du mois, sans attendre la fin du mois.
+                $finMois = date('Y-m-t', strtotime((string) $periode['au']));
+                $suite = date('Y-m-d', strtotime((string) $periode['au'] . ' +1 day'));
+                $joursRestants = $suite <= $finMois
+                    ? (int) (new DateTimeImmutable($suite))->diff(new DateTimeImmutable($finMois))->days + 1 : 0;
+                $semaines = (int) ceil($joursRestants / 7);
+                $proj = ['magasins' => []];
+                if ($joursRestants > 0) {
+                    $proj = rapVentesFenetre(
+                        (new DateTimeImmutable($suite))->modify('-1 year')->format('Y-m-d'),
+                        (new DateTimeImmutable($finMois))->modify('-1 year')->format('Y-m-d'));
+                }
+                $jauges = '';
+                foreach ($cumul['magasins'] as $mag => $v) {
+                    if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
+                    $obj = $objectifs[$mag] ?? null;
+                    if ($obj === null) { continue; }
+                    $jauges .= (count($cumul['magasins']) > 1 && $perim === []
+                        ? '<div style="font-family:sans-serif;font-size:11.5px;font-weight:700;color:#221E1A;margin-top:12px">' . $e2($mag) . '</div>' : '')
+                        . rapJaugeObjectif((float) ($v['ca'] ?? 0), (float) ((($proj['magasins'][$mag] ?? [])['ca']) ?? 0), (float) $obj, $semaines);
+                }
                 $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:14px">'
                     . 'Cumul du mois — du ' . $e2(date('d/m', strtotime($mois1))) . ' au ' . $e2(date('d/m', strtotime((string) $periode['au']))) . '</div>'
                     . rapTableHtml(['Magasin', 'Cumul', 'A-1', 'Écart', 'Objectif du mois', 'Reste à faire'], $rows)
                     . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
                     . 'Objectif : le budget de CA encodé pour le mois (écran Encodage du budget). « Reste à faire » = objectif − cumul, '
-                    . 'sur le mois entier — pas au prorata des jours écoulés.</div>'];
+                    . 'sur le mois entier — pas au prorata des jours écoulés.</div>'
+                    . $jauges];
             }
             break;
         }
@@ -827,6 +851,61 @@ function rapObjectifsMois(string $date): array
         } catch (PDOException $e) { /* budget non encodé */ }
         return $out;
     }) ?? [];
+}
+
+/**
+ * La jauge de l'objectif du mois : ce qui est fait, ce que les semaines
+ * restantes devraient rapporter, ce qui manquerait quand même.
+ *
+ *  · VERT   — le cumul réalisé ;
+ *  · JAUNE  — les semaines qui restent, mesurées sur les MÊMES semaines l'an
+ *             dernier. Ce n'est pas une prévision maison : c'est ce que le
+ *             magasin a fait l'an passé aux mêmes dates ;
+ *  · ROUGE  — l'écart qui resterait à la fin du mois. Hachuré : ce n'est pas
+ *             un chiffre mesuré, c'est un manque projeté.
+ *
+ * Le jaune ne dépasse jamais l'objectif : s'il suffit à combler, il est
+ * tronqué et la phrase dit que l'objectif est tenu.
+ */
+function rapJaugeObjectif(float $cumul, float $projection, float $objectif, int $semaines): string
+{
+    if ($objectif <= 0) { return ''; }
+    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $eur = fn ($v) => number_format($v, 0, ',', ' ') . ' €';
+    $pct = fn ($v) => (string) round($v / $objectif * 100) . ' %';
+    $vert = min($cumul, $objectif);
+    $jaune = max(0.0, min($projection, $objectif - $vert));
+    $rouge = max(0.0, $objectif - $vert - $jaune);
+    $depasse = $cumul > $objectif ? $cumul - $objectif : 0.0;
+    $lg = fn ($c, $txt) => '<span style="white-space:nowrap"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'
+        . $c . ';vertical-align:-1px"></i> ' . $txt . '</span>';
+    $cell = fn ($c, $v, $hachure = false) => $v <= 0 ? '' :
+        '<td width="' . round($v / $objectif * 100, 2) . '%" style="background:'
+        . ($hachure ? 'repeating-linear-gradient(45deg,#C0182B,#C0182B 5px,#a91325 5px,#a91325 10px)' : $c)
+        . ';height:26px;text-align:right;padding-right:5px;' . $F
+        . ';font-size:10px;color:#ffffff;font-weight:700;white-space:nowrap">'
+        . ($v / $objectif > 0.07 ? $pct($v) : '') . '</td>';
+
+    return '<div style="' . $F . ';font-size:12px;font-weight:700;color:#221E1A;margin:14px 0 7px">Objectif du mois — '
+        . $eur($objectif) . '</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:6px;overflow:hidden;background:#EDE7DE"><tr>'
+        . $cell('#2D7A3E', $vert) . $cell('#E1A32B', $jaune) . $cell('#C0182B', $rouge, true)
+        . '</tr></table>'
+        . '<div style="' . $F . ';margin-top:7px;font-size:11px;color:#4a443c">'
+        . $lg('#2D7A3E', 'réalisé <b>' . $eur($cumul) . '</b>') . ' &nbsp; '
+        . ($semaines > 0
+            ? $lg('#E1A32B', $semaines . ' semaine' . ($semaines > 1 ? 's' : '') . ' à venir, au rythme de l’an dernier <b>'
+                . $eur($projection) . '</b>') . ' &nbsp; '
+            : '')
+        . $lg('#C0182B', $rouge > 0 ? 'à trouver en plus <b>' . $eur($rouge) . '</b>' : '<b>objectif tenu</b>')
+        . '</div>'
+        . '<div style="' . $F . ';margin-top:8px;font-size:11.5px;color:#221E1A;background:#F7F3EC;border-radius:8px;padding:8px 11px">'
+        . ($depasse > 0
+            ? 'Objectif déjà dépassé de <b style="color:#2D7A3E">' . $eur($depasse) . '</b>.'
+            : ($rouge > 0
+                ? 'Au rythme de l’an dernier, il manquerait <b style="color:#C0182B">' . $eur($rouge) . '</b> à la fin du mois.'
+                : 'Au rythme de l’an dernier, l’objectif est tenu.'))
+        . '</div>';
 }
 
 /** Un tableau magasin / réseau / comparaison, pour une mesure donnée. */
