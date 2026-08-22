@@ -1331,7 +1331,7 @@ function tplEncodage(c, x){
           <tbody>
             ${c.encChLignes.map(l => `<tr style="border-top:0.5px solid var(--color-border-tertiary)">
               <td style="padding:8px 10px 8px 0"><span style="font-weight:500">${esc(l.nom)}</span>${l.categorie ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.categorie)}</div>` : ''}</td>
-              <td style="padding:8px 10px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(String(l.pct))} %</td>
+              <td style="padding:8px 10px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(String(l.pct))} %${l.pctSrc ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.pctSrc)}</div>` : ''}</td>
               ${l.cells.map(k2 => `<td style="padding:5px 6px;vertical-align:top">
                 <input value="${esc(String(k2.valeur))}" ${x.C(k2.set)} inputmode="decimal" placeholder="non encodé" style="${c.encInputSt}">
                 <div style="font-size:10px;color:var(--color-text-muted);text-align:right;margin-top:3px">attendu ${esc(k2.attendu)}${k2.ecart ? ` · <span style="color:${k2.ecartCol};font-weight:500">${esc(k2.ecart)}</span>` : ''}</div>

@@ -1907,10 +1907,17 @@ class App {
     common.encChLignes = common.encCharges.map(c3 => {
       const src = lignes[c3.i] || {};
       const id = src.id || '';
+      // Le taux vient de « Répartition des charges » : celui du budget quand il
+      // est renseigné, sinon celui de l'étude. Sans ce repli, un poste dont
+      // seul le taux théorique est posé (la matière première, à 38 %)
+      // affichait « 0 % » et « attendu — » : le modèle disait quelque chose,
+      // la saisie du mois n'en tenait pas compte. La provenance est dite.
+      const tauxV = num(c3.valeur), tauxT = num(c3.valeurT);
+      const taux = tauxV > 0 ? tauxV : tauxT;
       const cells = magasins.map(x2 => {
         const ca = caMoisDe(x2);
         const base = ca.reel != null ? ca.reel : (ca.budget || 0);
-        const attendu = base * num(c3.valeur) / 100;
+        const attendu = base * taux / 100;
         const brut = d[cleCh(x2.id, id)];
         const stock = encDe(x2.id, id);
         const enc = brut != null ? brut : (stock != null ? String(stock) : '');
@@ -1923,7 +1930,9 @@ class App {
           ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
           ecartCol: ec == null ? 'var(--color-text-muted)' : (ec > 0 ? '#8D1D2C' : '#2d7a3e') };
       });
-      return { id, nom: c3.nom, categorie: src.categorie || '', pct: c3.valeur, cells };
+      return { id, nom: c3.nom, categorie: src.categorie || '',
+        pct: String(taux).replace('.', ','),
+        pctSrc: tauxV > 0 ? '' : (tauxT > 0 ? 'théorique' : 'non défini'), cells };
     });
     common.encChSansId = common.encChLignes.some(l => !l.id);
     // Une colonne sans aucune saisie rend « — », pas « 0 € » : un zéro se
