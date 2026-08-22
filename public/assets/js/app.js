@@ -1452,7 +1452,16 @@ class App {
     common.encTheoExercice = this.fE(theoExercice);
     common.encRampNote = 'Potentiel à maturité ' + this.fE(num(baseTheo)) + ' × ' + String(coef).replace('.', ',') + ' % = CA théorique de l’exercice.';
 
-    const poidsDef = P.map(r => 100 * (r.caT || 0) / budAnRef);
+    // La variation par mois est PROPRE AU MAGASIN et enregistrée telle quelle
+    // (colonne saisonnalite de son budget). On la relit d'abord : sans cela,
+    // l'écran la recalculait depuis les CA théoriques mensuels — mêmes
+    // chiffres quand ils existent, mais des cases à zéro pour un magasin dont
+    // l'étude est encodée alors que les mois ne le sont pas encore.
+    const saisEnr = Array.isArray(em.saisonnalite) ? em.saisonnalite : [];
+    const aSaisEnr = saisEnr.some(w => num(w) > 0);
+    const poidsDef = M.MOIS.map((_, i) => aSaisEnr
+      ? num(saisEnr[i] || 0)
+      : 100 * ((P[i] || {}).caT || 0) / budAnRef);
     let poidsTot = 0;
     common.encSais = M.MOIS.map((nom, i) => { const v = val('sais' + i, poidsDef[i].toFixed(1).replace('.', ','));
       poidsTot += num(v);
