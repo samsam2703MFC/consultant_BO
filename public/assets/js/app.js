@@ -1491,7 +1491,11 @@ class App {
       ? num(saisEnr[i] || 0)
       : 100 * ((P[i] || {}).caT || 0) / budAnRef);
     let poidsTot = 0;
-    common.encSais = M.MOIS.map((nom, i) => { const v = val('sais' + i, poidsDef[i].toFixed(1).replace('.', ','));
+    // Le point, pas la virgule : ces cases sont des <input type="number">, et
+    // une valeur « 9,0 » y est invalide — le navigateur affiche alors une case
+    // VIDE alors que la valeur existe. C'est ce qui donnait douze cases vides
+    // à la relecture d'une étude encodée.
+    common.encSais = M.MOIS.map((nom, i) => { const v = val('sais' + i, poidsDef[i].toFixed(1));
       poidsTot += num(v);
       return { nom, valeur: v, set: set('sais' + i), montant: this.fE(proj.ca * num(v) / 100) }; });
     common.encSaisTot = String(poidsTot.toFixed(1)).replace('.', ',') + ' %';
