@@ -703,14 +703,26 @@ function wr_budget_put(string $shopId): array
     $sommeSais = array_sum($sais);
     $anEx = (int) ($em['anneeExploitation'] ?? 1);
     $ramp = (array) ($em['monteeEnRegime'] ?? []);
+    // L'exercice EN COURS aussi, quand sa grille théorique est vide : un
+    // magasin qui ouvre encode son étude bien avant ses douze mois, et l'écran
+    // de suivi restait à zéro alors que l'étude disait 672 000 €. Une grille
+    // déjà remplie à la main gagne, elle : on ne réécrit pas par-dessus.
+    $depart = $caTheoAn > 0 ? 1 : 0;
     if ($potentiel > 0 && $sommeSais > 0 && count($sais) === 12) {
-        for ($k = 1; $k <= 3; $k++) {
+        for ($k = $depart; $k <= 3; $k++) {
             $an = min(4, $anEx + $k);
             $coef = $an === 1 ? (float) ($ramp['a1'] ?? 70)
                 : ($an === 2 ? (float) ($ramp['a2'] ?? 80)
                 : ($an === 3 ? (float) ($ramp['a3'] ?? 90) : 100.0));
             $caAn = $potentiel * $coef / 100;
             $exo = $exercice + $k;
+            // L'exercice courant a déjà sa ligne (écrite plus haut) : on n'y
+            // touche que le total théorique, pour ne pas effacer la date de
+            // validation ni l'engagement panier.
+            if ($k === 0) {
+                Db::exec('UPDATE ceo_shop_budget SET ca_theorique_an = ? WHERE shop_id = ? AND fiscal_year = ?',
+                    [$caAn, $shopId, $exo]);
+            } else {
             Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, ca_theorique_an, etude_date, etude_source,
                         etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite)
                       VALUES (?,?,?,?,?,?,?,?,?,?)
@@ -725,6 +737,7 @@ function wr_budget_put(string $shopId): array
                 isset($em['monteeEnRegime']) ? json_encode($em['monteeEnRegime']) : null,
                 json_encode($sais),
             ]);
+            }
             for ($m = 1; $m <= 12; $m++) {
                 $montant = $caAn * $sais[$m - 1] / $sommeSais;
                 Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, ca_theorique) VALUES (?,?,?,?)
