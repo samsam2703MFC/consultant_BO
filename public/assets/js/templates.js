@@ -1446,9 +1446,14 @@ function tplBudgetParam(c, x){
               <span style="font-size:10px;color:var(--color-text-muted);text-align:right">${s.montant}</span>
             </label>`).join('')}
         </div>
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:11px 0 14px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:11px 0 8px">
           <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.encRampNote)}</span>
           <span style="${c.encSaisTotSt}">Total ${c.encSaisTot}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <span style="flex:1;min-width:240px;font-size:11px;color:${c.encSaisSource === 'magasin' ? 'var(--color-text-muted)' : '#8a5a13'}">${esc(c.encSaisSourceTxt)}</span>
+          <button ${x.A(c.encSaisReseauSave)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">En faire la courbe du réseau</button>
+          <button ${x.A(c.encSaisPousser)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer" title="${esc(c.encSaisAutres)}">Appliquer aux autres magasins</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
           <label style="display:flex;flex-direction:column;gap:5px">

@@ -4030,6 +4030,10 @@ function ep_budgets(): array
         // change. Les lignes par magasin ne sont plus lues — elles ne sont plus
         // écrites non plus.
         $modele = setting('budgetCharges');
+        // La courbe de référence du RÉSEAU : elle sert de repli à un magasin
+        // dont l'étude n'est pas encore encodée, et s'édite au même endroit.
+        $saisReseau = setting('saisonnaliteReseau', []);
+        $saisReseau = is_array($saisReseau) && count($saisReseau) === 12 ? array_map('floatval', $saisReseau) : [];
         $charges = [];
         foreach ((array) ($modele['categories'] ?? []) as $cat) {
             foreach ((array) ($cat['lignes'] ?? []) as $l) {
@@ -4079,6 +4083,9 @@ function ep_budgets(): array
                 'annexe' => $b['etude_annexe'] !== null ? json_decode($b['etude_annexe'], true) : null,
             ],
             'charges' => $charges,
+            // La courbe du réseau voyage avec chaque magasin : l'écran s'en
+            // sert comme repli et l'édite au même endroit.
+            'saisonnaliteReseau' => $saisReseau,
             // Ce qui a été RÉELLEMENT encodé, mois par mois et poste par poste.
             // Le modèle dit ce qui est attendu ; ceci dit ce qui est sorti.
             'chargesMois' => chargesEncodees($sid, $exercice),

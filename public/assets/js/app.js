@@ -1556,9 +1556,20 @@ class App {
     // l'étude est encodée alors que les mois ne le sont pas encore.
     const saisEnr = Array.isArray(em.saisonnalite) ? em.saisonnalite : [];
     const aSaisEnr = saisEnr.some(w => num(w) > 0);
+    // La courbe du RÉSEAU sert de repli avant la déduction : celle-ci répartit
+    // au prorata des mois déjà budgétés et donne n'importe quoi quand il n'y
+    // en a que deux (0 · 0 · 51,7 · 48,3 · 0 …).
+    const saisRes = (bud.saisonnaliteReseau || []).map(num);
+    const aSaisRes = saisRes.length === 12 && saisRes.some(w => w > 0);
     const poidsDef = M.MOIS.map((_, i) => aSaisEnr
       ? num(saisEnr[i] || 0)
-      : 100 * ((P[i] || {}).caT || 0) / budAnRef);
+      : (aSaisRes ? saisRes[i] : 100 * ((P[i] || {}).caT || 0) / budAnRef));
+    common.encSaisSource = aSaisEnr ? 'magasin' : (aSaisRes ? 'reseau' : 'deduit');
+    common.encSaisSourceTxt = aSaisEnr
+      ? 'Courbe propre à ce magasin.'
+      : (aSaisRes
+        ? 'Aucune courbe encodée pour ce magasin : celle du réseau est proposée. Modifier une case la rend propre au magasin.'
+        : 'Aucune courbe encodée, ni pour ce magasin ni pour le réseau : les parts sont déduites des mois déjà budgétés.');
     let poidsTot = 0;
     // Le point, pas la virgule : ces cases sont des <input type="number">, et
     // une valeur « 9,0 » y est invalide — le navigateur affiche alors une case
@@ -2064,6 +2075,48 @@ class App {
         });
     };
     common.encEtudeEtat = common.encAutoEtat;
+
+    // ── Pousser la courbe de ce magasin AILLEURS.
+    //    Deux gestes distincts : en faire la référence du réseau (elle servira
+    //    aux magasins sans courbe), ou l'écrire chez les autres magasins (leur
+    //    théorique est alors recalculé, sinon la courbe changerait à l'écran
+    //    sans rien changer aux chiffres).
+    const courbe = () => common.encSais.map(z => num(z.valeur));
+    const courbeOk = () => {
+      const c2 = courbe();
+      if (c2.length !== 12 || Math.abs(c2.reduce((a2, w) => a2 + w, 0) - 100) > 0.6) {
+        this.notify('La variation par mois doit totaliser 100 % — total actuel : ' + common.encSaisTot);
+        return null;
+      }
+      return c2;
+    };
+    common.encSaisReseauSave = () => {
+      const c2 = courbeOk(); if (!c2) { return; }
+      this.autoEnreg('saisReseau', () => this.api('PUT', '/parametres/saisonnaliteReseau', { valeur: c2 })
+        .then(r => {
+          if (!r || r.ok === false) { this.notify((r && r.error) || 'Refusé'); return false; }
+          this.notify('Courbe de référence du réseau enregistrée — elle servira aux magasins sans courbe propre');
+          this.rafraichirBudget();
+          return true;
+        }));
+    };
+    common.encSaisAutres = this.open().filter(x2 => x2.id !== st.id).map(x2 => x2.nom).join(', ');
+    common.encSaisPousser = () => {
+      const c2 = courbeOk(); if (!c2) { return; }
+      const cibles = this.open().filter(x2 => x2.id !== st.id);
+      if (!cibles.length) { this.notify('Aucun autre magasin ouvert.'); return; }
+      if (!window.confirm('Écrire cette variation par mois sur ' + cibles.length + ' magasin(s) — '
+        + cibles.map(x2 => x2.nom).join(', ') + ' ? Leur CA théorique sera recalculé ; leur budget validé n’est pas touché.')) { return; }
+      this.setState({ encAuto: 'en-cours' });
+      Promise.all(cibles.map(x2 => this.api('PUT', '/stores/' + x2.id + '/saisonnalite?exercice=' + anEnc,
+        { saisonnalite: c2 }))).then(rs => {
+        const ko = rs.filter(r => !r || r.ok === false).length;
+        this.setState({ encAuto: ko ? 'echec' : 'ok' });
+        this.notify(ko ? ko + ' magasin(s) refusé(s) — les autres sont écrits'
+          : 'Variation écrite sur ' + cibles.length + ' magasin(s), théorique recalculé');
+        this.rafraichirBudget();
+      });
+    };
     common.encProjFait = Object.entries(S.encProjFait || {})
       .map(([an, v]) => an + ' · ' + this.fE(v.ca))
       .join('  ·  ');

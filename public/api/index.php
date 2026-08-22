@@ -160,6 +160,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/reporting/reports/([\w-]+)/send$#', $path, $m)) { return wr_report_send($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/charges$#', $path, $m)) { return wr_shop_charges($m[1]); }
+    // La variation par mois seule : sert à pousser une courbe d'un magasin aux
+    // autres sans toucher à leur budget ni au reste de leur étude.
+    if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/saisonnalite$#', $path, $m)) { return wr_shop_saisonnalite($m[1]); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)

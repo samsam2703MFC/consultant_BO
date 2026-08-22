@@ -700,67 +700,10 @@ function wr_budget_put(string $shopId): array
                   ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget), ca_theorique = VALUES(ca_theorique)',
             [$shopId, $exercice, $m, $montant, $theoM]);
     }
-    // ── Le THÉORIQUE des trois exercices suivants.
-    //
-    // L'étude de marché ne parle pas d'une année : elle dit un potentiel à
-    // maturité et la vitesse à laquelle un magasin l'atteint. L'encoder une
-    // fois doit donc suffire à poser le théorique de la montée en régime —
-    // sinon il faudrait revenir le saisir chaque janvier, et le suivi n'aurait
-    // aucune référence pour comparer une année qui commence.
-    //
-    // Seul le THÉORIQUE est écrit : le budget validé se négocie avec le
-    // franchisé, année après année, et ne se projette pas. Les lignes déjà
-    // posées gardent donc leur revenue_budget.
-    $projection = [];
-    $potentiel = (float) ($em['potentielMaturite'] ?? 0);
-    $sais = array_map('floatval', (array) ($em['saisonnalite'] ?? []));
-    $sommeSais = array_sum($sais);
-    $anEx = (int) ($em['anneeExploitation'] ?? 1);
-    $ramp = (array) ($em['monteeEnRegime'] ?? []);
-    // L'exercice EN COURS aussi, quand sa grille théorique est vide : un
-    // magasin qui ouvre encode son étude bien avant ses douze mois, et l'écran
-    // de suivi restait à zéro alors que l'étude disait 672 000 €. Une grille
-    // déjà remplie à la main gagne, elle : on ne réécrit pas par-dessus.
-    $depart = $caTheoAn > 0 ? 1 : 0;
-    if ($potentiel > 0 && $sommeSais > 0 && count($sais) === 12) {
-        for ($k = $depart; $k <= 3; $k++) {
-            $an = min(4, $anEx + $k);
-            $coef = $an === 1 ? (float) ($ramp['a1'] ?? 70)
-                : ($an === 2 ? (float) ($ramp['a2'] ?? 80)
-                : ($an === 3 ? (float) ($ramp['a3'] ?? 90) : 100.0));
-            $caAn = $potentiel * $coef / 100;
-            $exo = $exercice + $k;
-            // L'exercice courant a déjà sa ligne (écrite plus haut) : on n'y
-            // touche que le total théorique, pour ne pas effacer la date de
-            // validation ni l'engagement panier.
-            if ($k === 0) {
-                Db::exec('UPDATE ceo_shop_budget SET ca_theorique_an = ? WHERE shop_id = ? AND fiscal_year = ?',
-                    [$caAn, $shopId, $exo]);
-            } else {
-            Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, ca_theorique_an, etude_date, etude_source,
-                        etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite)
-                      VALUES (?,?,?,?,?,?,?,?,?,?)
-                      ON DUPLICATE KEY UPDATE ca_theorique_an = VALUES(ca_theorique_an),
-                        etude_date = VALUES(etude_date), etude_source = VALUES(etude_source),
-                        etude_potentiel_menages = VALUES(etude_potentiel_menages),
-                        etude_potentiel_maturite = VALUES(etude_potentiel_maturite),
-                        annee_exploitation = VALUES(annee_exploitation), montee_regime = VALUES(montee_regime),
-                        saisonnalite = VALUES(saisonnalite)', [
-                $shopId, $exo, $caAn, $em['date'] ?? null, $em['source'] ?? null,
-                $em['potentielMenages'] ?? null, $potentiel, $an,
-                isset($em['monteeEnRegime']) ? json_encode($em['monteeEnRegime']) : null,
-                json_encode($sais),
-            ]);
-            }
-            for ($m = 1; $m <= 12; $m++) {
-                $montant = $caAn * $sais[$m - 1] / $sommeSais;
-                Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, ca_theorique) VALUES (?,?,?,?)
-                          ON DUPLICATE KEY UPDATE ca_theorique = VALUES(ca_theorique)',
-                    [$shopId, $exo, $m, round($montant, 2)]);
-            }
-            $projection[(string) $exo] = ['annee' => $an, 'coef' => $coef, 'ca' => round($caAn, 2)];
-        }
-    }
+    // Le théorique des exercices suivants (et du courant si sa grille est
+    // vide) : même règle pour l'enregistrement du budget et pour une
+    // saisonnalité poussée d'un magasin à l'autre.
+    $projection = budgetProjeter($shopId, $exercice, $em, $caTheoAn <= 0);
 
     // Les charges ne s'écrivent plus magasin par magasin : leurs taux valent
     // pour tout le réseau et vivent dans le réglage `budgetCharges`, enregistré
@@ -891,6 +834,17 @@ function wr_param_put(string $key): array
             json_encode($b['jalons'] ?? [], JSON_UNESCAPED_UNICODE),
             json_encode($b['couts'] ?? [], JSON_UNESCAPED_UNICODE),
         ]);
+        return ['ok' => true];
+    }
+    if ($key === 'saisonnaliteReseau') {                          // douze parts, somme non nulle
+        $v = array_map('floatval', (array) ($b['valeur'] ?? []));
+        if (count($v) !== 12 || array_sum($v) <= 0) {
+            http_response_code(422);
+            return ['error' => 'douze valeurs attendues, de somme non nulle'];
+        }
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            [$key, json_encode($v)]);
+        journalAdd('CEO', 'Budget', null, 'Variation par mois du réseau enregistrée');
         return ['ok' => true];
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$key, json_encode($b['valeur'] ?? null, JSON_UNESCAPED_UNICODE)]);
@@ -2515,4 +2469,111 @@ function reputationSynchroniser(?string $shopId): array
     journalAdd('CEO', 'Réputation', $shopId !== null ? ($cibles[0]['name'] ?? '—') : '—', 'Synchronisation Google : ' . $msg);
     return ['ok' => true, 'magasins' => $faits, 'nouveaux' => $nouveaux, 'erreurs' => $erreurs,
         'aucuneFiche' => $cibles === []];
+}
+
+/**
+ * Écrit le CA THÉORIQUE d'un magasin sur les exercices à venir.
+ *
+ * L'étude de marché ne parle pas d'une année : elle dit un potentiel à
+ * maturité et la vitesse à laquelle un magasin l'atteint. L'encoder une fois
+ * doit donc suffire à poser le théorique de la montée en régime — sinon il
+ * faudrait revenir le saisir chaque janvier, et le suivi n'aurait aucune
+ * référence pour comparer une année qui commence.
+ *
+ * Seul le THÉORIQUE est écrit : le budget validé se négocie avec le franchisé,
+ * année après année, et ne se projette pas. Les lignes déjà posées gardent
+ * donc leur revenue_budget.
+ *
+ * `$inclureCourant` : l'exercice en cours n'est repris que si sa grille
+ * théorique est vide — une série saisie à la main garde la main.
+ */
+function budgetProjeter(string $shopId, int $exercice, array $em, bool $inclureCourant): array
+{
+    $projection = [];
+    $potentiel = (float) ($em['potentielMaturite'] ?? 0);
+    $sais = array_map('floatval', (array) ($em['saisonnalite'] ?? []));
+    $sommeSais = array_sum($sais);
+    $anEx = (int) ($em['anneeExploitation'] ?? 1);
+    $ramp = (array) ($em['monteeEnRegime'] ?? []);
+    if ($potentiel <= 0 || $sommeSais <= 0 || count($sais) !== 12) { return []; }
+    for ($k = ($inclureCourant ? 0 : 1); $k <= 3; $k++) {
+        $an = min(4, $anEx + $k);
+        $coef = $an === 1 ? (float) ($ramp['a1'] ?? 70)
+            : ($an === 2 ? (float) ($ramp['a2'] ?? 80)
+            : ($an === 3 ? (float) ($ramp['a3'] ?? 90) : 100.0));
+        $caAn = $potentiel * $coef / 100;
+        $exo = $exercice + $k;
+        // L'exercice courant a déjà sa ligne : on n'y touche que le total
+        // théorique, pour ne pas effacer la date de validation ni l'engagement
+        // panier.
+        if ($k === 0) {
+            Db::exec('UPDATE ceo_shop_budget SET ca_theorique_an = ? WHERE shop_id = ? AND fiscal_year = ?',
+                [$caAn, $shopId, $exo]);
+        } else {
+            Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, ca_theorique_an, etude_date, etude_source,
+                        etude_potentiel_menages, etude_potentiel_maturite, annee_exploitation, montee_regime, saisonnalite)
+                      VALUES (?,?,?,?,?,?,?,?,?,?)
+                      ON DUPLICATE KEY UPDATE ca_theorique_an = VALUES(ca_theorique_an),
+                        etude_date = VALUES(etude_date), etude_source = VALUES(etude_source),
+                        etude_potentiel_menages = VALUES(etude_potentiel_menages),
+                        etude_potentiel_maturite = VALUES(etude_potentiel_maturite),
+                        annee_exploitation = VALUES(annee_exploitation), montee_regime = VALUES(montee_regime),
+                        saisonnalite = VALUES(saisonnalite)', [
+                $shopId, $exo, $caAn, $em['date'] ?? null, $em['source'] ?? null,
+                $em['potentielMenages'] ?? null, $potentiel, $an,
+                isset($em['monteeEnRegime']) ? json_encode($em['monteeEnRegime']) : null,
+                json_encode($sais),
+            ]);
+        }
+        for ($m = 1; $m <= 12; $m++) {
+            Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, ca_theorique) VALUES (?,?,?,?)
+                      ON DUPLICATE KEY UPDATE ca_theorique = VALUES(ca_theorique)',
+                [$shopId, $exo, $m, round($caAn * $sais[$m - 1] / $sommeSais, 2)]);
+        }
+        $projection[(string) $exo] = ['annee' => $an, 'coef' => $coef, 'ca' => round($caAn, 2)];
+    }
+    return $projection;
+}
+
+/**
+ * PUT /stores/{id}/saisonnalite — poser la variation par mois d'un magasin.
+ *
+ * Sert à propager une courbe d'un magasin aux autres : elle n'écrit QUE la
+ * saisonnalité, jamais le budget ni l'étude, puis recalcule le théorique du
+ * magasin s'il a un potentiel — sans quoi la courbe changerait à l'écran sans
+ * rien changer aux chiffres.
+ */
+function wr_shop_saisonnalite(string $shopId): array
+{
+    $nom = magasinConnu($shopId);
+    if ($nom === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    $b = body();
+    $sais = array_map('floatval', (array) ($b['saisonnalite'] ?? []));
+    if (count($sais) !== 12 || array_sum($sais) <= 0) {
+        http_response_code(422);
+        return ['error' => 'douze valeurs attendues, de somme non nulle'];
+    }
+    // L'étude du magasin, relue AVANT d'écrire : on ne pose que la courbe, tout
+    // le reste (potentiel, montée en régime, année) reste le sien.
+    $r = Db::row('SELECT etude_potentiel_maturite p, annee_exploitation a, montee_regime m, etude_date d, etude_source s,
+                         etude_potentiel_menages me
+                  FROM ceo_shop_budget WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]);
+    Db::exec('INSERT INTO ceo_shop_budget (shop_id, fiscal_year, saisonnalite) VALUES (?,?,?)
+              ON DUPLICATE KEY UPDATE saisonnalite = VALUES(saisonnalite)',
+        [$shopId, $exercice, json_encode($sais)]);
+    $em = [
+        'potentielMaturite' => (float) ($r['p'] ?? 0),
+        'anneeExploitation' => (int) ($r['a'] ?? 1),
+        'monteeEnRegime' => json_decode((string) ($r['m'] ?? ''), true) ?: [],
+        'saisonnalite' => $sais,
+        'date' => $r['d'] ?? null, 'source' => $r['s'] ?? null, 'potentielMenages' => $r['me'] ?? null,
+    ];
+    $theoDejaSaisi = (int) (Db::row('SELECT COUNT(*) n FROM ceo_shop_month_perf
+                                     WHERE shop_id = ? AND year = ? AND ca_theorique IS NOT NULL AND ca_theorique > 0',
+        [$shopId, $exercice])['n'] ?? 0) > 0;
+    $projection = budgetProjeter($shopId, $exercice, $em, true);
+    journalAdd('CEO', 'Budget', $nom, 'Variation par mois posée pour ' . $exercice
+        . ($projection !== [] ? ' — théorique recalculé : ' . implode(', ', array_keys($projection)) : ''));
+    return ['ok' => true, 'projection' => $projection, 'theoriqueExistait' => $theoDejaSaisi];
 }
