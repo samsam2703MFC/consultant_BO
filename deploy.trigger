@@ -1,1 +1,1 @@
-2026-08-22T09:45:00Z ecriture-a-la-saisie
+2026-08-22T10:10:00Z relire-apres-ecriture
