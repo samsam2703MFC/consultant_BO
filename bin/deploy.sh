@@ -82,9 +82,19 @@ else
   WKURL="https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.${CODE}_amd64.deb"
   log "Installation de wkhtmltopdf corrigé (${CODE}) — pied de page des PDF…"
   if curl -fsSL --max-time 120 -o "$WKDEB" "$WKURL"; then
-    if ! aptget install -y -qq "$WKDEB" >/dev/null 2>&1; then
-      warn "wkhtmltopdf corrigé : installation refusée — les PDF sortiront sans pied de page."
+    # apt d'abord (il résout les dépendances d'un .deb local : xfonts-75dpi,
+    # xfonts-base…), au besoin après un rafraîchissement des index, puis dpkg
+    # suivi de `apt -f install` en dernier ressort. La sortie est conservée :
+    # une installation refusée sans motif ne se diagnostique pas.
+    WKLOG=/tmp/wkhtmltox-install.log
+    if ! aptget install -y -qq "$WKDEB" >"$WKLOG" 2>&1; then
+      aptget update -qq >>"$WKLOG" 2>&1 || true
+      if ! aptget install -y -qq "$WKDEB" >>"$WKLOG" 2>&1; then
+        dpkg -i "$WKDEB" >>"$WKLOG" 2>&1 || aptget -f install -y -qq >>"$WKLOG" 2>&1 || true
+      fi
     fi
+    /usr/local/bin/wkhtmltopdf --version 2>/dev/null | grep -q 'patched qt' \
+      || warn "wkhtmltopdf corrigé : installation refusée — $(tail -n 3 "$WKLOG" 2>/dev/null | tr '\n' ' ')"
     rm -f "$WKDEB"
   else
     warn "wkhtmltopdf corrigé : téléchargement impossible (${CODE}) — les PDF sortiront sans pied de page."
