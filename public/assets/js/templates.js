@@ -960,6 +960,7 @@ function tplObjectifs(c, x){
         <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
           <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Cible réseau ${c.objExo}</div>
           <div style="font-size:32px;font-weight:500;margin-top:6px">${c.objCible}</div>
+          ${c.objCibleSrc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(c.objCibleSrc)}</div>` : ''}
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:13px">
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Réel à fin juillet</span><span style="font-weight:500">${c.objReel}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Cible au prorata</span><span>${c.objProrata}</span></div>
@@ -1010,7 +1011,7 @@ function tplObjectifs(c, x){
             ${c.objRows.map(r => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
                 <td style="padding:10px 14px;font-weight:500">${esc(r.nom)}</td>
-                <td style="padding:10px 12px;text-align:right">${r.cible}</td>
+                <td style="padding:10px 12px;text-align:right">${r.cible}${r.source ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(r.source)}</div>` : ''}</td>
                 <td style="padding:10px 12px;text-align:right">${r.reel}</td>
                 <td style="padding:10px 12px;text-align:right;color:var(--color-text-muted)">${r.prorata}</td>
                 <td style="padding:10px 12px;text-align:center"><span style="${r.ecartSt}">${r.ecart}</span></td>

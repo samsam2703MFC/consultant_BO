@@ -1156,20 +1156,45 @@ class App {
       common.hzLabel3 = '3 ans — ' + ((tgCa.h3 && tgCa.h3.an) || (E + 2));
       common.hzLabel5 = '5 ans — ' + ((tgCa.h5 && tgCa.h5.an) || (E + 4));
       if (hz === 'h1'){
+        // Une cible, c'est le budget validé du mois — et à défaut le CA
+        // théorique de l'étude. Sans ce repli, Corbais affichait 499 %
+        // d'atteinte : deux mois de budget encodés contre huit mois de réel,
+        // soit une performance contre presque rien.
+        const cibleDe = c => (c && c.caT) ? c.caT : ((c && c.theo) ? c.theo : 0);
         let reelT = 0, prorataT = 0, cibleT = 0;
-        const rows = this.open().map(s => { const cible = s.perf[E].reduce((a, r) => a + r.caT, 0);
-          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += s.perf[E][m].caT; }
-          reelT += reel; prorataT += pro; cibleT += cible; const att = reel / pro; const t = this.trend(att, 1);
-          return { nom: s.nom, cible: this.fK(cible), reel: this.fK(reel), prorata: this.fK(pro), ecart: t.txt, ecartSt: t.st, att: this.fP(att, 0), attSt: this.pill(att), _att: att,
+        const rows = this.open().map(s => { const cible = s.perf[E].reduce((a, r) => a + cibleDe(r), 0);
+          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += cibleDe(s.perf[E][m]); }
+          reelT += reel; prorataT += pro; cibleT += cible; const att = pro > 0 ? reel / pro : null;
+          const t = att == null ? { txt: '—', st: 'color:var(--color-text-muted)' } : this.trend(att, 1);
+          // D'où vient la cible : validée, ou reprise de l'étude. Les deux ne
+          // se valent pas, et la ligne doit pouvoir le dire.
+          const nBud = s.perf[E].filter(r => r.caT).length;
+          return { nom: s.nom, cible: cible > 0 ? this.fK(cible) : '—',
+            source: nBud === 12 ? '' : (nBud > 0 ? nBud + ' mois validés, le reste théorique' : 'théorique'),
+            reel: this.fK(reel), prorata: pro > 0 ? this.fK(pro) : '—', ecart: t.txt, ecartSt: t.st,
+            att: att == null ? '—' : this.fP(att, 0), attSt: att == null ? 'color:var(--color-text-muted)' : this.pill(att), _att: att || 0,
             goBudget: () => this.setState({ bStore: s.id, screen: 'budget' }) }; });
         rows.sort((a, b) => b._att - a._att);
         common.objRows = rows;
-        common.objCible = this.fM(((((D.targets || {}).ca) || {}).h1 || {}).cible || 0); common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
+        // La cible RÉSEAU vient des objectifs encodés (écran Objectifs) ; sans
+        // eux, elle valait « 0,0 M€ » à côté d'un tableau qui, lui, affichait
+        // 2,5 M€ de cibles magasins. On additionne alors les magasins, et on
+        // dit d'où vient le chiffre.
+        const cibleReseau = ((((D.targets || {}).ca) || {}).h1 || {}).cible || 0;
+        common.objCible = this.fM(cibleReseau > 0 ? cibleReseau : cibleT);
+        common.objCibleSrc = cibleReseau > 0 ? '' : 'somme des magasins — aucune cible réseau encodée';
+        common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
         const att = reelT / prorataT; common.objAtt = this.fP(att); common.objAttSt = 'font-weight:700;color:' + (att >= 1 ? '#2d7a3e' : att >= 0.92 ? '#8a5a13' : '#8D1D2C');
-        let resteCible = 0; for (let m = MI + 1; m < 12; m++) resteCible += this.sum(E, m, 'caT');
+        let resteCible = 0;
+        for (let m = MI + 1; m < 12; m++) {
+          resteCible += this.open().reduce((a, s2) => a + cibleDe(s2.perf[E][m]), 0);
+        }
         common.objProj = this.fM(reelT + resteCible * att + (this.meta.contribOuverture || 0));
         const cumR = [], cumC = []; let ar = 0, ac = 0;
-        for (let m = 0; m < 12; m++){ ac += this.sum(E, m, 'caT'); cumC.push(ac); if (m <= MI){ ar += this.sum(E, m, 'ca'); cumR.push(ar); } }
+        for (let m = 0; m < 12; m++){
+          ac += this.open().reduce((a, s2) => a + cibleDe(s2.perf[E][m]), 0); cumC.push(ac);
+          if (m <= MI){ ar += this.sum(E, m, 'ca'); cumR.push(ar); }
+        }
         // Échelle = max des deux cumuls (cible + réel), plancher 1 : sans objectif
         // encodé la cible cumulée vaut 0 → sans ce plancher, py divise par 0 et le
         // <polyline> reçoit des points NaN/Infinity. On trace quand même le réel.
@@ -1180,9 +1205,11 @@ class App {
         common.trajReel = pts(cumR);
         const budAn = this.open().reduce((a, s) => a + s.perf[E].reduce((b, r) => b + (r.caT || 0), 0), 0);
         common.cumBudget = this.fM(budAn); common.cumReel = this.fM(reelT);
-        const bMois = ((D.budgets || [])[0] || {}).moisEncodes;
+        // Le nombre de mois de RÉEL, pas les mois de budget du premier magasin
+        // venu : l'étiquette disait « 2 mois » sous un réel qui en couvrait huit.
+        const moisReel = M.MOIS.filter((_, m) => this.open().some(s2 => s2.perf[E][m].ca != null)).length;
         common.cumLabel = 'Budget validé ' + this.meta.exercice + ' — ' + this.open().length + ' magasins';
-        common.cumReelLabel = 'Réel encodé' + (bMois ? ' (' + bMois + ' mois)' : '');
+        common.cumReelLabel = 'Réel encodé' + (moisReel ? ' (' + moisReel + ' mois)' : '');
         common.objNote = (this.meta.notes || {}).objectifsOuverture || '';
         const ec = reelT - prorataT;
         common.cumEcart = (ec >= 0 ? '+' : '−') + this.fK(Math.abs(ec)) + ' (' + (ec >= 0 ? '+' : '−') + this.fP(Math.abs(reelT / prorataT - 1)) + ')';
