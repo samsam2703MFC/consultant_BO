@@ -1701,6 +1701,10 @@ function FramingStep({
 // ---------------------------------------------------------------------------
 
 function OfferStep({ draft, patch }: StepProps) {
+  // La recherche par produit : soixante-dix-sept tartes se parcourent mal à
+  // l'œil. Elle filtre l'affichage, jamais la sélection — ce qui est coché
+  // hors filtre le reste.
+  const [rechercheProduit, setRechercheProduit] = useState('')
   // Le catalogue repris de l'ERP (`mar_offer_item`) : gammes saisonnières et
   // produits avec leur famille. Vide tant que la reprise n'a pas tourné —
   // l'écran le dit plutôt que de laisser trois colonnes muettes.
@@ -1795,12 +1799,48 @@ function OfferStep({ draft, patch }: StepProps) {
     })
   }
 
+  // Ce que la recherche laisse voir. La sélection, elle, ne bouge pas : on
+  // filtre l'affichage, pas le panier.
+  const q = rechercheProduit.trim().toLowerCase()
+  const produitsAffiches =
+    q === ''
+      ? visibleProducts
+      : visibleProducts.filter(
+          (item) =>
+            item.name.toLowerCase().includes(q) || familyOf(item).toLowerCase().includes(q),
+        )
+
   const selectAllVisible = () => {
-    const additions = visibleProducts
+    const additions = produitsAffiches
       .filter((item) => !checkedIds.has(item.id))
       .map((item) => ({ offer_item_id: item.id, label: item.name, category: 'produit', ...blankPricing() }))
     if (additions.length > 0) patch({ offer_items: [...draft.offer_items, ...additions] })
   }
+
+  const deselectAllVisible = () => {
+    const ids = new Set(produitsAffiches.map((item) => item.id))
+    patch({
+      offer_items: draft.offer_items.filter(
+        (element) => element.offer_item_id === null || !ids.has(element.offer_item_id),
+      ),
+    })
+  }
+
+  // Toutes les catégories d'un coup — et le contraire. Sans elles, composer
+  // une offre « tout le catalogue » demandait trente clics.
+  const toutesCategories = () => {
+    const additions = seasonProducts
+      .filter((item) => !checkedIds.has(item.id))
+      .map((item) => ({ offer_item_id: item.id, label: item.name, category: 'produit', ...blankPricing() }))
+    if (additions.length > 0) patch({ offer_items: [...draft.offer_items, ...additions] })
+  }
+
+  const aucuneCategorie = () =>
+    patch({
+      offer_items: draft.offer_items.filter(
+        (element) => element.offer_item_id === null || seasonIds.has(element.offer_item_id),
+      ),
+    })
 
   const resetOffer = () =>
     patch({ offer_items: [], offer_title: '', offer_template_id: null, offer_mechanic: '' })
@@ -1862,6 +1902,18 @@ function OfferStep({ draft, patch }: StepProps) {
             {activeFamilies.size > 0 ? (
               <span className="muted"> ({activeFamilies.size} sélectionnées)</span>
             ) : null}
+            {families.length > 0 ? (
+              <span className="offer-selectall">
+                <button type="button" className="offer-selectall" onClick={toutesCategories}>
+                  Tout sélectionner
+                </button>
+                {activeFamilies.size > 0 ? (
+                  <button type="button" className="offer-selectall" onClick={aucuneCategorie}>
+                    Tout désélectionner
+                  </button>
+                ) : null}
+              </span>
+            ) : null}
           </h3>
           {families.length === 0 && !catalog.loading ? (
             <p className="muted">
@@ -1907,16 +1959,33 @@ function OfferStep({ draft, patch }: StepProps) {
               <span className="muted"> ({checkedIds.size} sélectionnés)</span>
             ) : null}
             {visibleProducts.length > 0 ? (
-              <button type="button" className="offer-selectall" onClick={selectAllVisible}>
-                Tout sélectionner
-              </button>
+              <span className="offer-selectall">
+                <button type="button" className="offer-selectall" onClick={selectAllVisible}>
+                  Tout sélectionner
+                </button>
+                <button type="button" className="offer-selectall" onClick={deselectAllVisible}>
+                  Tout désélectionner
+                </button>
+              </span>
             ) : null}
           </h3>
+          {visibleProducts.length > 0 ? (
+            <input
+              type="search"
+              className="prospects__search"
+              value={rechercheProduit}
+              placeholder="Chercher un produit…"
+              aria-label="Chercher un produit dans les catégories cochées"
+              onChange={(event) => setRechercheProduit(event.target.value)}
+            />
+          ) : null}
           {visibleProducts.length === 0 ? (
             <p className="muted">Cochez une catégorie pour lister ses produits.</p>
+          ) : produitsAffiches.length === 0 ? (
+            <p className="muted">Aucun produit ne répond à « {rechercheProduit.trim()} ».</p>
           ) : (
             <div className="product-rows">
-              {visibleProducts.map((item) => {
+              {produitsAffiches.map((item) => {
                 const checked = checkedIds.has(item.id)
                 return (
                   <button
