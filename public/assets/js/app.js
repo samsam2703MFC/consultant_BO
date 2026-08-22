@@ -6065,9 +6065,14 @@ class App {
         // Le budget mensuel est normalisé sous `caT` par joinPerf, pas sous
         // `caBudget` : lire la mauvaise clé ne lève aucune erreur, elle rend
         // simplement « budget non encodé » sur un magasin qui en a un.
-        buds.push(c.caT != null && c.caT > 0 ? c.caT : null);
+        // Et à défaut de budget négocié, le CA THÉORIQUE de l'étude fait
+        // contenant — sinon Corbais, qui n'a que deux mois validés mais douze
+        // mois de théorique, n'avait aucun repère à l'écran.
+        buds.push(c.caT != null && c.caT > 0 ? c.caT
+          : (c.theo != null && c.theo > 0 ? c.theo : null));
       }
       const nb = buds.filter(b => b != null).length;
+      const nbValide = ligne.filter(c => c && c.caT).length;
       // Vue cumulée. Cumuler huit mois de réel face à deux mois de budget
       // comparerait deux choses différentes : le cumul du budget ne court donc
       // que sur les mois budgétés, et le réel cumulé se restreint aux MÊMES
@@ -6168,7 +6173,9 @@ class App {
         gMax: g.max,
         gNote: !nb ? 'budget non encodé'
              : cumule ? ('cible partielle : ' + nb + ' mois encodés sur 12')
-             : ('budget encodé sur ' + nb + ' mois'),
+             : (nbValide === nb ? 'budget encodé sur ' + nb + ' mois'
+               : (nbValide ? nbValide + ' mois validés, ' + (nb - nbValide) + ' repris du théorique'
+                 : 'contenant : CA théorique de l’étude')),
         exercice: an };
     });
     return common;
