@@ -166,26 +166,41 @@ function mesSeriesJour(array $shops, string $du, string $au, array &$motifs): ar
     foreach ($shops as $sid) { $out[(string) $sid] = []; }
 
     if (PanelApi::configured()) {
+        // MESURÉ : `margin-heatmap` ne rend rien au-delà d'un mois environ —
+        // demandée sur soixante-trois jours, la route reste muette et on
+        // retombait en silence sur la caisse en base, qui n'a qu'une poignée de
+        // jours. On découpe donc l'étendue en MOIS CIVILS, un appel chacun.
         $req = [];
-        foreach ($shops as $sid) {
-            $req[(string) $sid] = '/consultant/shops/' . (int) $sid . '/margin-heatmap?'
-                . http_build_query(['from' => $du, 'to' => $au]);
+        $mois = [];
+        for ($m = date('Y-m-01', strtotime($du)); $m <= $au; $m = date('Y-m-01', strtotime($m . ' +1 month'))) {
+            $mois[] = [max($m, $du), min(date('Y-m-t', strtotime($m)), $au)];
         }
-        $vu = 0;
-        foreach (PanelApi::getParallele($req) as $sid => $r) {
-            $jours = is_array($r) ? ($r['days'] ?? null) : null;
-            if (!is_array($jours)) { continue; }
-            foreach ($jours as $d) {
-                $date = (string) ($d['date'] ?? '');
-                if ($date === '' || $date < $du || $date > $au) { continue; }
-                $ca = (float) ($d['ca'] ?? 0);
-                if (empty($d['has_data']) || $ca <= 0) { continue; }
-                $out[(string) $sid][$date] = ['ca' => $ca, 'tickets' => (int) ($d['tickets'] ?? 0)];
-                $vu++;
+        foreach ($shops as $sid) {
+            foreach ($mois as $i => [$d1, $d2]) {
+                $req[$sid . '|' . $i] = '/consultant/shops/' . (int) $sid . '/margin-heatmap?'
+                    . http_build_query(['from' => $d1, 'to' => $d2]);
             }
         }
+        $vu = 0;
+        if (count($req) <= 60) {
+            foreach (PanelApi::getParallele($req) as $cle => $r) {
+                $sid = (string) strtok((string) $cle, '|');
+                $jours = is_array($r) ? ($r['days'] ?? null) : null;
+                if (!is_array($jours) || !isset($out[$sid])) { continue; }
+                foreach ($jours as $d) {
+                    $date = (string) ($d['date'] ?? '');
+                    if ($date === '' || $date < $du || $date > $au) { continue; }
+                    $ca = (float) ($d['ca'] ?? 0);
+                    if (empty($d['has_data']) || $ca <= 0) { continue; }
+                    $out[$sid][$date] = ['ca' => $ca, 'tickets' => (int) ($d['tickets'] ?? 0)];
+                    $vu++;
+                }
+            }
+        } else {
+            $motifs[] = 'étendue trop large pour le détail quotidien';
+        }
         if ($vu > 0) { return $out; }
-        $motifs[] = 'le panel n’a pas rendu le détail quotidien sur cette étendue — lecture en base';
+        $motifs[] = 'le panel n’a pas rendu le détail quotidien';
     }
 
     try {
@@ -203,6 +218,31 @@ function mesSeriesJour(array $shops, string $du, string $au, array &$motifs): ar
         }
     } catch (PDOException $e) {
         $motifs[] = 'caisse indisponible : ' . $e->getMessage();
+    }
+    return $out;
+}
+
+/**
+ * Le total d'une fenêtre, magasin par magasin, en UN appel.
+ *
+ * Filet de sécurité du détail quotidien : quand celui-ci manque, les totaux
+ * restent justes — seule la courbe disparaît. Un chiffre approché tiré d'une
+ * caisse locale incomplète serait pire qu'une courbe absente.
+ */
+function mesFenetreParMagasin(string $du, string $au): array
+{
+    $out = [];
+    if (!PanelApi::configured() || $du > date('Y-m-d')) { return $out; }
+    foreach (analyseListe(PanelApi::shopsSalesKpisEntre($du, min($au, date('Y-m-d'))) ?? []) as $x) {
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+        }
+        if ($id <= 0) { continue; }
+        $ca = (float) (nombreOuNull($x, ['ca', 'turnover', 'revenue']) ?? 0);
+        $tk = (int) (nombreOuNull($x, ['tickets', 'receipts', 'transactions']) ?? 0);
+        if ($ca <= 0 && $tk <= 0) { continue; }
+        $out[(string) $id] = ['ca' => $ca, 'tickets' => $tk];
     }
     return $out;
 }
@@ -392,7 +432,52 @@ function ep_mesure(): array
     $tous = array_values(array_unique(array_merge($perim, $temoins)));
     $series = mesSeriesJour($tous, $f['span']['du'], $f['span']['au'], $motifs);
 
-    $bloc = static function (string $sid) use ($series, $f) {
+    // Le détail quotidien est-il exploitable ? Un magasin couvert sur la moitié
+    // au moins des jours écoulés de la référence suffit. En dessous, on ne
+    // BRICOLE PAS avec ce qu'on a : on relit les totaux fenêtre par fenêtre,
+    // justes par construction, et la courbe s'efface en le disant.
+    $bornes = [
+        'pre'  => [$f['pre']['du'], $f['pre']['au']],
+        'ref'  => [$f['ref']['du'], $f['ref']['au']],
+        'camp' => [$f['camp']['du'], $f['camp']['au']],
+        'rem'  => [$f['rem']['du'], $f['rem']['lu']],
+    ];
+    $auj = date('Y-m-d');
+    $ecoules = static function (array $b) use ($auj): int {
+        $au = min($b[1], $auj);
+        return $au < $b[0] ? 0 : mesJours($b[0], $au);
+    };
+    $attendu = $ecoules($bornes['ref']);
+    $couverture = 0;
+    foreach ($tous as $sid) { $couverture = max($couverture, count(array_filter(
+        array_keys($series[(string) $sid] ?? []),
+        fn ($d) => $d >= $f['ref']['du'] && $d <= $f['ref']['au']))); }
+    $detailOk = $attendu > 0 && $couverture >= $attendu * 0.5;
+
+    $parFen = [];
+    if (!$detailOk) {
+        foreach ($bornes as $cle => $b) {
+            if ($ecoules($b) <= 0) { $parFen[$cle] = []; continue; }
+            $parFen[$cle] = mesFenetreParMagasin($b[0], $b[1]);
+        }
+        $motifs[] = 'détail quotidien indisponible : totaux relus fenêtre par fenêtre, courbe masquée';
+    }
+    $fenBloc = static function (string $cle, array $ids) use ($parFen, $bornes, $ecoules): array {
+        $b = mesBloc();
+        foreach ($ids as $sid) {
+            $v = $parFen[$cle][(string) $sid] ?? null;
+            if ($v === null) { continue; }
+            $b['ca'] += $v['ca']; $b['tickets'] += $v['tickets'];
+        }
+        $b['jours'] = $b['ca'] > 0 ? $ecoules($bornes[$cle]) : 0;
+        return mesClore($b);
+    };
+
+    $bloc = static function (string $sid) use ($series, $f, $detailOk, $fenBloc) {
+        if (!$detailOk) {
+            return ['pre' => $fenBloc('pre', [$sid]), 'ref' => $fenBloc('ref', [$sid]),
+                'camp' => $fenBloc('camp', [$sid]), 'rem' => $fenBloc('rem', [$sid])];
+        }
         return [
             'pre'  => mesCumul($series[$sid] ?? [], $f['pre']['du'], $f['pre']['au']),
             'ref'  => mesCumul($series[$sid] ?? [], $f['ref']['du'], $f['ref']['au']),
@@ -400,12 +485,14 @@ function ep_mesure(): array
             'rem'  => mesCumul($series[$sid] ?? [], $f['rem']['du'], $f['rem']['lu']),
         ];
     };
+    $groupe = static function (array $ids, string $cle) use ($series, $f, $detailOk, $fenBloc, $bornes) {
+        if (!$detailOk) { return $fenBloc($cle, $ids); }
+        return mesCumulGroupe($series, $ids, $bornes[$cle][0], $bornes[$cle][1]);
+    };
 
     // Le témoin d'abord : c'est lui qui donne le bruit de fond à retrancher.
-    $gT = ['ref' => mesCumulGroupe($series, $temoins, $f['ref']['du'], $f['ref']['au']),
-           'camp' => mesCumulGroupe($series, $temoins, $f['camp']['du'], $f['camp']['au']),
-           'pre' => mesCumulGroupe($series, $temoins, $f['pre']['du'], $f['pre']['au']),
-           'rem' => mesCumulGroupe($series, $temoins, $f['rem']['du'], $f['rem']['lu'])];
+    $gT = ['ref' => $groupe($temoins, 'ref'), 'camp' => $groupe($temoins, 'camp'),
+           'pre' => $groupe($temoins, 'pre'), 'rem' => $groupe($temoins, 'rem')];
     $tTraf = mesVar($gT['camp']['ticketsJour'], $gT['ref']['ticketsJour']);
     $tPan  = mesVar($gT['camp']['panier'], $gT['ref']['panier']);
     $tCa   = mesVar($gT['camp']['caJour'], $gT['ref']['caJour']);
@@ -445,10 +532,8 @@ function ep_mesure(): array
     $out['temoinLignes'] = $lignesT;
 
     // ── Le réseau en campagne, et le verdict.
-    $gC = ['pre' => mesCumulGroupe($series, $perim, $f['pre']['du'], $f['pre']['au']),
-           'ref' => mesCumulGroupe($series, $perim, $f['ref']['du'], $f['ref']['au']),
-           'camp' => mesCumulGroupe($series, $perim, $f['camp']['du'], $f['camp']['au']),
-           'rem' => mesCumulGroupe($series, $perim, $f['rem']['du'], $f['rem']['lu'])];
+    $gC = ['pre' => $groupe($perim, 'pre'), 'ref' => $groupe($perim, 'ref'),
+           'camp' => $groupe($perim, 'camp'), 'rem' => $groupe($perim, 'rem')];
     $cTraf = mesVar($gC['camp']['ticketsJour'], $gC['ref']['ticketsJour']);
     $cPan  = mesVar($gC['camp']['panier'], $gC['ref']['panier']);
     $cCa   = mesVar($gC['camp']['caJour'], $gC['ref']['caJour']);
@@ -499,7 +584,7 @@ function ep_mesure(): array
     $baseC = $gC['ref']['ticketsJour'] ?: null;
     $baseT = $gT['ref']['ticketsJour'] ?: null;
     $serie = [];
-    for ($d = $f['span']['du']; $d <= $f['span']['au']; $d = mesDecale($d, 1)) {
+    for ($d = $detailOk ? $f['span']['du'] : $f['span']['au']; $detailOk && $d <= $f['span']['au']; $d = mesDecale($d, 1)) {
         $tc = 0; $okC = false; $tt = 0; $okT = false;
         foreach ($perim as $sid) { if (isset($series[$sid][$d])) { $tc += $series[$sid][$d]['tickets']; $okC = true; } }
         foreach ($temoins as $sid) { if (isset($series[$sid][$d])) { $tt += $series[$sid][$d]['tickets']; $okT = true; } }
