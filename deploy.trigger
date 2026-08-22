@@ -1,1 +1,1 @@
-2026-08-22T17:10:00Z bandes-par-type
+2026-08-22T17:35:00Z heatmap-echelle
