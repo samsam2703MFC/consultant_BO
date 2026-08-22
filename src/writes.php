@@ -681,10 +681,16 @@ function wr_budget_put(string $shopId): array
     ]);
     foreach (array_values($b['caMensuel'] ?? []) as $i => $ca) {
         $m = $i + 1;
-        Db::exec('INSERT INTO ceo_shop_budget_month VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget)', [$shopId, $exercice, $m, (float) $ca]);
+        // Une case vide n'est pas un zéro : un mois sans budget négocié reste
+        // NULL, sinon enregistrer l'étude d'un magasin qui ouvre stampait
+        // douze zéros et l'écran affichait « 0 » partout — comme si le budget
+        // avait été fixé à rien.
+        $montant = ($ca === '' || $ca === null || (float) $ca == 0.0) ? null : (float) $ca;
+        $theoM = isset($caTheo[$i]) && (float) $caTheo[$i] != 0.0 ? (float) $caTheo[$i] : null;
+        Db::exec('INSERT INTO ceo_shop_budget_month VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget)', [$shopId, $exercice, $m, $montant]);
         Db::exec('INSERT INTO ceo_shop_month_perf (shop_id, year, month, revenue_budget, ca_theorique) VALUES (?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE revenue_budget = VALUES(revenue_budget), ca_theorique = VALUES(ca_theorique)',
-            [$shopId, $exercice, $m, (float) $ca, isset($caTheo[$i]) ? (float) $caTheo[$i] : null]);
+            [$shopId, $exercice, $m, $montant, $theoM]);
     }
     // ── Le THÉORIQUE des trois exercices suivants.
     //

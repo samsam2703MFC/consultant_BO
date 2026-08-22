@@ -1423,7 +1423,7 @@ class App {
         this.setState({});
       }).catch(() => { this._encAnBusy = false; });
     }
-    const vide12 = () => Array.from({ length: 12 }, () => ({ ca: null, caT: null }));
+    const vide12 = () => Array.from({ length: 12 }, () => ({ ca: null, caT: null, theo: null }));
     // Une relecture range les budgets dans le bon casier : l'exercice en cours
     // est celui du cockpit entier, les autres vivent dans leur cache.
     const poseBudgets = bs => {
@@ -1437,7 +1437,8 @@ class App {
       : (cache ? Array.from({ length: 12 }, (_, i) => {
           const r = (cache.perf || []).find(x2 => String(x2.storeId) === String(st.id)
             && parseInt(x2.annee, 10) === anEnc && parseInt(x2.mois, 10) === i + 1) || {};
-          return { ca: r.ca != null ? r.ca : null, caT: r.caBudget != null ? r.caBudget : null };
+          return { ca: r.ca != null ? r.ca : null, caT: r.caBudget != null ? r.caBudget : null,
+            theo: r.caTheorique != null ? r.caTheorique : null };
         }) : vide12());
     common.encChargement = !enCours && !cache;
     const cleD = st.id + '@' + anEnc;
@@ -1472,7 +1473,10 @@ class App {
       // champs à zéro qu'un simple clic sur Enregistrer fige en base — le
       // budget paraît enregistré et vaut zéro partout. Champ VIDE à la place.
       valeur: val('ca' + i, P[i].caT != null ? Math.round(P[i].caT) : ''), set: set('ca' + i),
-      theo: val('th' + i, theoAnRef ? Math.round(theoAnRef * (P[i].caT || 0) / budAnRef) : ''), setTheo: set('th' + i) }));
+      // Le théorique ENCODÉ d'abord (l'étude l'a écrit mois par mois) ; la
+      // déduction depuis le total annuel ne sert que pour les magasins d'avant.
+      theo: val('th' + i, P[i].theo != null && P[i].theo > 0 ? Math.round(P[i].theo)
+        : (theoAnRef ? Math.round(theoAnRef * (P[i].caT || 0) / budAnRef) : '')), setTheo: set('th' + i) }));
     common.encMois = mois;
     const caTot = mois.reduce((a, m) => a + num(m.valeur), 0);
     const theoTot = mois.reduce((a, m) => a + num(m.theo), 0);

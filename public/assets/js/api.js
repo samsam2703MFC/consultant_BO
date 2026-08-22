@@ -270,13 +270,16 @@ function joinPerf(stores, perf, exercice, etp){
   const yEx = exercice || new Date().getFullYear();
   const years = new Set(perf.map(r => r.annee));
   years.add(yEx); years.add(yEx - 1);
-  const cell = () => ({ ca: null, caT: null, marge: null, mp: null, tickets: null,
+  const cell = () => ({ ca: null, caT: null, theo: null, marge: null, mp: null, tickets: null,
     panier: null, food: null, labour: null, overhead: null, val: null, etp: null, heures: null });
   const by = {};
   for (const r of perf){
     const s = (by[r.storeId] = by[r.storeId] || {});
     const y = (s[r.annee] = s[r.annee] || Array.from({ length: 12 }, cell));
-    y[r.mois - 1] = { ca: r.ca, caT: r.caBudget, marge: r.margeNette, mp: r.margePct, tickets: r.tickets,
+    // `theo` = le CA THÉORIQUE encodé (étude de marché), distinct du budget
+    // négocié : sans lui, l'écran d'encodage devait le redéduire et affichait
+    // zéro pour un magasin dont seul le théorique est posé.
+    y[r.mois - 1] = { ca: r.ca, caT: r.caBudget, theo: r.caTheorique, marge: r.margeNette, mp: r.margePct, tickets: r.tickets,
       panier: r.panierMoyen, food: r.foodCostPct, labour: r.labourCostPct, overhead: r.overheadPct, val: r.valorisation };
   }
   // ETP réel (planning du panel) : posé sur la cellule du mois. Absent = null,
