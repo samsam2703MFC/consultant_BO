@@ -1705,6 +1705,11 @@ function OfferStep({ draft, patch }: StepProps) {
   // l'œil. Elle filtre l'affichage, jamais la sélection — ce qui est coché
   // hors filtre le reste.
   const [rechercheProduit, setRechercheProduit] = useState('')
+  // Les catégories OUVERTES. Sans cette mémoire, une catégorie n'existait que
+  // par ses produits cochés : tout décocher la refermait, et il devenait
+  // impossible de n'en sélectionner qu'un seul — il fallait tout recocher pour
+  // revoir la liste.
+  const [famillesOuvertes, setFamillesOuvertes] = useState<string[]>([])
   // Le catalogue repris de l'ERP (`mar_offer_item`) : gammes saisonnières et
   // produits avec leur famille. Vide tant que la reprise n'a pas tourné —
   // l'écran le dit plutôt que de laisser trois colonnes muettes.
@@ -1748,9 +1753,10 @@ function OfferStep({ draft, patch }: StepProps) {
   // Une famille est active dès qu'un de ses produits est coché : la cocher
   // présélectionne tout, la décocher retire tout — et la reprise d'un
   // brouillon retrouve cet état sans rien stocker de plus.
-  const activeFamilies = new Set(
-    [...checkedIds].map((id) => familyOf(productById.get(id) as OfferItem)),
-  )
+  const activeFamilies = new Set([
+    ...[...checkedIds].map((id) => familyOf(productById.get(id) as OfferItem)),
+    ...famillesOuvertes,
+  ])
   const visibleProducts = seasonProducts.filter((item) => activeFamilies.has(familyOf(item)))
 
   const pickSeason = (item: OfferItem) => {
@@ -1781,8 +1787,12 @@ function OfferStep({ draft, patch }: StepProps) {
     const others = draft.offer_items.filter(
       (element) => element.offer_item_id === null || !ids.has(element.offer_item_id),
     )
+    const ouverte = activeFamilies.has(name)
+    setFamillesOuvertes((liste) =>
+      ouverte ? liste.filter((x) => x !== name) : [...liste.filter((x) => x !== name), name],
+    )
     patch({
-      offer_items: activeFamilies.has(name)
+      offer_items: ouverte
         ? others
         : [
             ...others,
@@ -1819,6 +1829,9 @@ function OfferStep({ draft, patch }: StepProps) {
 
   const deselectAllVisible = () => {
     const ids = new Set(produitsAffiches.map((item) => item.id))
+    // Les catégories restent OUVERTES : on vide la sélection pour en choisir
+    // un ou deux, pas pour perdre la liste de vue.
+    setFamillesOuvertes([...activeFamilies])
     patch({
       offer_items: draft.offer_items.filter(
         (element) => element.offer_item_id === null || !ids.has(element.offer_item_id),
@@ -1829,18 +1842,23 @@ function OfferStep({ draft, patch }: StepProps) {
   // Toutes les catégories d'un coup — et le contraire. Sans elles, composer
   // une offre « tout le catalogue » demandait trente clics.
   const toutesCategories = () => {
+    setFamillesOuvertes(families.map((f) => f.name))
     const additions = seasonProducts
       .filter((item) => !checkedIds.has(item.id))
       .map((item) => ({ offer_item_id: item.id, label: item.name, category: 'produit', ...blankPricing() }))
     if (additions.length > 0) patch({ offer_items: [...draft.offer_items, ...additions] })
   }
 
-  const aucuneCategorie = () =>
+  // Celui-ci REFERME tout : c'est le geste « je repars de zéro », distinct du
+  // « Tout désélectionner » des produits, qui garde les catégories ouvertes.
+  const aucuneCategorie = () => {
+    setFamillesOuvertes([])
     patch({
       offer_items: draft.offer_items.filter(
         (element) => element.offer_item_id === null || seasonIds.has(element.offer_item_id),
       ),
     })
+  }
 
   const resetOffer = () =>
     patch({ offer_items: [], offer_title: '', offer_template_id: null, offer_mechanic: '' })
@@ -1903,7 +1921,7 @@ function OfferStep({ draft, patch }: StepProps) {
               <span className="muted"> ({activeFamilies.size} sélectionnées)</span>
             ) : null}
             {families.length > 0 ? (
-              <span className="offer-selectall">
+              <span className="offer-selectall" style={{ display: 'inline-flex', gap: '12px', marginLeft: '12px' }}>
                 <button type="button" className="offer-selectall" onClick={toutesCategories}>
                   Tout sélectionner
                 </button>
@@ -1959,7 +1977,7 @@ function OfferStep({ draft, patch }: StepProps) {
               <span className="muted"> ({checkedIds.size} sélectionnés)</span>
             ) : null}
             {visibleProducts.length > 0 ? (
-              <span className="offer-selectall">
+              <span className="offer-selectall" style={{ display: 'inline-flex', gap: '12px', marginLeft: '12px' }}>
                 <button type="button" className="offer-selectall" onClick={selectAllVisible}>
                   Tout sélectionner
                 </button>
