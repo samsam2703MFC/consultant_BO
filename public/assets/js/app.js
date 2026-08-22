@@ -1485,15 +1485,23 @@ class App {
     common.encInputSt = inputSt;
 
     const em = bud.etudeMarche || {};
-    const baseTheo = val('theoBase', theoAnRef ? Math.round(theoAnRef / 0.7) : '');
+    // L'étude ENREGISTRÉE d'abord, la déduction ensuite : le potentiel, la
+    // montée en régime et l'année d'exploitation sont écrits en base, mais
+    // l'écran les recalculait ou les inventait (70/80/90, « année 1 »). Un
+    // rechargement effaçait donc à l'œil une étude bien présente — et le
+    // bouton refusait d'enregistrer, faute de potentiel.
+    const baseTheo = val('theoBase', em.potentielMaturite != null && em.potentielMaturite > 0
+      ? Math.round(em.potentielMaturite)
+      : (theoAnRef ? Math.round(theoAnRef / 0.7) : ''));
     common.encTheoBase = baseTheo; common.setEncTheoBase = set('theoBase');
-    const rampDef = { a1: 70, a2: 80, a3: 90 };
+    const mr = em.monteeEnRegime || {};
+    const rampDef = { a1: num(mr.a1) || 70, a2: num(mr.a2) || 80, a3: num(mr.a3) || 90 };
     const ramp = { a1: num(val('ramp1', rampDef.a1)), a2: num(val('ramp2', rampDef.a2)), a3: num(val('ramp3', rampDef.a3)) };
     common.encRamp = [
       { k: 'Année 1', valeur: val('ramp1', rampDef.a1), set: set('ramp1') },
       { k: 'Année 2', valeur: val('ramp2', rampDef.a2), set: set('ramp2') },
       { k: 'Année 3', valeur: val('ramp3', rampDef.a3), set: set('ramp3') }];
-    const anneeEx = String(val('annee', '1'));
+    const anneeEx = String(val('annee', em.anneeExploitation ? String(em.anneeExploitation) : '1'));
     common.encAnnee = anneeEx; common.setEncAnnee = set('annee');
     common.encAnneeOpts = [{ v: '1', nom: 'Année 1 — ouverture' }, { v: '2', nom: 'Année 2' }, { v: '3', nom: 'Année 3' }, { v: '4', nom: 'Régime établi (100 %)' }];
     const coef = anneeEx === '1' ? ramp.a1 : anneeEx === '2' ? ramp.a2 : anneeEx === '3' ? ramp.a3 : 100;
