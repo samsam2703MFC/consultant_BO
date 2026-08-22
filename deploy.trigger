@@ -1,1 +1,1 @@
-2026-08-23T00:58:00Z mesure-fenetres
+2026-08-23T01:20:00Z mesure-detail-mensuel
