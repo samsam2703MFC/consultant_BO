@@ -1008,3 +1008,48 @@ function classementFenetre(string $du, string $au): ?array
     return ['du' => $jours[0], 'au' => end($jours), 'jours' => count($jours),
         'reseau' => $tot, 'magasins' => $mags];
 }
+
+/**
+ * Sonde des RÉCLAMATIONS matière — lecture seule.
+ *
+ * On lit ce que la route consultant rend vraiment, puis on interroge le
+ * `pull` des webhooks fournisseurs avec un corps vide : c'est une LECTURE
+ * (malgré le verbe POST), et son message d'erreur documente le contrat. Les
+ * routes qui écrivent — `ack`, `update` — ne sont pas touchées.
+ */
+function ep_sonde_reclamations(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $out = [];
+
+    $r = PanelApi::get('/consultant/shops/material-complaints');
+    $out['materialComplaints'] = ['brut' => is_array($r) ? array_slice($r, 0, 3, true) : $r];
+    // Le détail du premier magasin qui en a.
+    foreach ((array) ($r['shops'] ?? []) as $s) {
+        $c = $s['complaints'] ?? null;
+        if (is_array($c) && $c !== []) {
+            $out['premierMagasinAvecReclamations'] = [
+                'shop_id' => $s['shop_id'] ?? null,
+                'nombre' => count($c),
+                'clesLigne' => is_array($c[0] ?? null) ? array_keys($c[0]) : gettype($c[0] ?? null),
+                'premiere' => is_array($c[0] ?? null) ? array_map(
+                    fn ($v) => is_array($v) ? ('[' . count($v) . ' éléments]') : mb_substr((string) $v, 0, 80), $c[0]) : $c[0],
+            ];
+            break;
+        }
+        if (is_numeric($c)) { $out['complaintsEstUnNombre'] = true; }
+    }
+
+    // Le « pull » des webhooks fournisseurs : quel contrat annonce-t-il ?
+    foreach ([
+        'pull vide'        => [],
+        'pull avec depuis' => ['since' => date('Y-m-d', strtotime('-30 days'))],
+        'pull avec limite' => ['limit' => 5],
+    ] as $nom => $corps) {
+        [$ok, $res] = PanelApi::post('/webhooks/material-suppliers/complaints/pull', $corps);
+        $out['pull'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
+            'reponse' => is_array($res) ? array_slice($res, 0, 8, true) : $res];
+        if ($ok) { break; }
+    }
+    return $out;
+}
