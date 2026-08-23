@@ -4473,6 +4473,21 @@ class App {
     return null;
   }
 
+  /* Le lien de la photo est SIGNÉ et expire. Le navigateur ne l'apprend qu'à la
+     fin de la requête : on écoute son échec plutôt que d'afficher une icône
+     cassée surmontée de cadres flottants. */
+  srcSurveille(cle){
+    setTimeout(() => {
+      const img = document.querySelector('[data-tphoto="' + cle + '"]');
+      if (!img) { return; }
+      if (!this.D.srcPhotoErr) { this.D.srcPhotoErr = {}; }
+      const rate = () => { if (!this.D.srcPhotoErr[cle]) {
+        this.D.srcPhotoErr[cle] = true; this.setState({ srcErr: cle }); } };
+      if (img.complete) { if (!img.naturalWidth) { rate(); } return; }
+      img.addEventListener('error', rate, { once: true });
+    }, 0);
+  }
+
   /* Le classement des tâches du jour — lu chez le panel, pas recalculé.
      Chargé à part du résultat du jour : il vit sur la même date mais sur une
      autre route, et une route lente ne doit pas retenir l'autre. */
@@ -8069,9 +8084,14 @@ class App {
             numSt: 'position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:17px;height:17px;border-radius:50%;'
               + 'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:'
               + (NIV[r.niveau] || '#8D1D2C') }));
+          const cle = src.shopId + '/' + src.taskId + '/' + src.date;
+          const perdue = !!(this.D.srcPhotoErr || {})[cle];
+          if (!perdue) { this.srcSurveille(cle); }
           return { titre: 'Photo de contrôle du ' + jf(src.date),
-            url: d2.photo, tache: d2.tache || ('Tâche #' + src.taskId),
-            reperes: rep,
+            url: d2.photo, cle, imgErr: perdue,
+            imgErrTxt: 'Le lien signé de la photo a expiré ou le stockage du panel est injoignable. Rouvrez la tâche dans Contrôle des tâches pour en obtenir un neuf.',
+            tache: d2.tache || ('Tâche #' + src.taskId),
+            reperes: perdue ? [] : rep,
             nRep: rep.length,
             legende: rep.length
               ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'

@@ -3571,9 +3571,11 @@ function tplTaches(c, x){
                         : (t.photo.vide
                           ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(t.photo.motif)}</div>`
                           : `<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
-                              <div style="position:relative;display:inline-block;line-height:0;flex:0 1 380px;max-width:100%">
-                                <img src="${t.photo.url}" alt="Photo de contrôle" style="display:block;width:100%;border-radius:8px">
-                                ${t.photo.reperes.map(r => `<div style="${r.boxSt}"><span style="${r.numSt}">${r.n}</span></div>`).join('')}
+                              <div style="position:relative;display:inline-block;line-height:0;flex:0 1 380px;max-width:100%${t.photo.imgErr ? ';min-height:150px;background:var(--color-background-secondary);border-radius:8px' : ''}">
+                                <img data-tphoto="${esc(t.photo.cle)}" src="${t.photo.url}" alt="Photo de contrôle" style="display:${t.photo.imgErr ? 'none' : 'block'};width:100%;border-radius:8px">
+                                ${t.photo.imgErr
+                                  ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center;font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(t.photo.imgErrTxt)}</div>`
+                                  : t.photo.reperes.map(r => `<div style="${r.boxSt}"><span style="${r.numSt}">${r.n}</span></div>`).join('')}
                               </div>
                               <div style="flex:1;min-width:180px">
                                 <div style="font-size:11.5px;font-weight:500">${esc(t.photo.tache)}</div>
