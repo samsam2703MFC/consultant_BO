@@ -97,6 +97,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/mesure'              => ep_mesure(),
             $path === '/taches/classement'             => ep_taches_classement(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
+            $path === '/diagnostic/panel-note-essai'   => ep_panel_note_essai(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),

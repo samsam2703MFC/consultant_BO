@@ -1008,3 +1008,67 @@ function classementFenetre(string $du, string $au): ?array
     return ['du' => $jours[0], 'au' => end($jours), 'jours' => count($jours),
         'reseau' => $tot, 'magasins' => $mags];
 }
+
+/**
+ * Sonde ciblée — l'identité manquait-elle au corps ?
+ *
+ * Les notes déjà en base portent `consultant_id` (104) ET `membership_id` (6),
+ * deux nombres distincts. Le compte qui interroge est le même : si la route
+ * attend l'un des deux dans le corps, c'est LUI le « champ requis » qui
+ * manquait. Ce qui est créé est supprimé dans la foulée.
+ */
+function ep_panel_note_essai(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $sid = (int) ($_GET['shop'] ?? 3);
+    $out = ['magasin' => $sid];
+
+    // Qui suis-je, vu du panel.
+    $moi = PanelApi::get('/consultant/tasks');
+    $pos = is_array($moi) ? ($moi['position'] ?? []) : [];
+    $mid = (int) ($pos['membership_id'] ?? 0);
+    $out['position'] = $pos;
+
+    // Le consultant_id des notes déjà posées sur ce magasin.
+    $cid = 0;
+    foreach (PanelApi::notesMagasin($sid) as $n) {
+        if (!empty($n['consultant_id'])) { $cid = (int) $n['consultant_id']; }
+    }
+    $out['consultantIdVuDansLesNotes'] = $cid;
+
+    $txt = 'Sonde technique du cockpit — supprimée aussitôt.';
+    $t = 1;   // VISIT
+    $formes = [
+        'consultant_id'                => ['note_type_id' => $t, 'content' => $txt, 'consultant_id' => $cid],
+        'membership_id'                => ['note_type_id' => $t, 'content' => $txt, 'membership_id' => $mid],
+        'les deux'                     => ['note_type_id' => $t, 'content' => $txt, 'consultant_id' => $cid, 'membership_id' => $mid],
+        'les deux + shop_id'           => ['note_type_id' => $t, 'content' => $txt, 'consultant_id' => $cid, 'membership_id' => $mid, 'shop_id' => $sid],
+        'les deux + employee_id null'  => ['note_type_id' => $t, 'content' => $txt, 'consultant_id' => $cid, 'membership_id' => $mid, 'employee_id' => null],
+        'noteType + consultantId'      => ['noteTypeId' => $t, 'content' => $txt, 'consultantId' => $cid],
+        'type + note'                  => ['type' => 'VISIT', 'note' => $txt, 'consultant_id' => $cid],
+    ];
+    $cree = false;
+    foreach ($formes as $nom => $corps) {
+        if ($cree) { $out['essais'][$nom] = 'non essayée (une forme est déjà passée)'; continue; }
+        [$ok, $res] = PanelApi::post('/consultant/shops/' . $sid . '/notes', $corps);
+        $out['essais'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
+            'reponse' => is_array($res) ? array_slice($res, 0, 8, true) : $res];
+        if (!$ok) { continue; }
+        $cree = true;
+        $out['formeAcceptee'] = $nom;
+        $nid = 0;
+        foreach ([$res, $res['note'] ?? null, $res['data'] ?? null] as $c) {
+            if (is_array($c) && isset($c['id']) && is_numeric($c['id'])) { $nid = (int) $c['id']; break; }
+        }
+        if ($nid === 0) {
+            foreach (PanelApi::notesMagasin($sid) as $n) {
+                if (str_contains((string) ($n['content'] ?? ''), 'Sonde technique du cockpit')) { $nid = (int) $n['id']; }
+            }
+        }
+        if ($nid > 0) {
+            [$okD] = PanelApi::envoi('DELETE', '/consultant/notes/' . $nid, []);
+            $out['nettoyage'] = $okD ? ('note ' . $nid . ' supprimée') : ('note ' . $nid . ' NON supprimée — ' . PanelApi::$lastError);
+        }
+    }
+    return $out;
+}
