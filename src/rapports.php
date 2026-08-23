@@ -503,7 +503,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 foreach (array_slice($exemplaires, 0, 12) as $t) {
                     if ((string) ($t['shopId'] ?? '') === '') { continue; }
                     $f = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
-                        (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[0] >= 3);
+                        (string) ($t['tache'] ?? ''), $mag, 5, (string) ($t['comment'] ?? ''), rapGrilleDe($periode)[2]);
                     if ($f !== '') { $fiches[] = rapFondNote(5) + ['html' => $f]; }
                 }
                 [$col, $rang] = rapGrilleDe($periode);
@@ -544,7 +544,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     if (($t['shopId'] ?? '') !== '' && $poidsFiches < RAP_POIDS_FICHES) {
                         $fiche = rapFicheTache((string) $t['shopId'], (string) ($t['taskId'] ?? ''), (string) ($t['date'] ?? ''),
                             (string) ($t['tache'] ?? ''), (string) $t['magasin'], (int) $note, (string) ($t['comment'] ?? ''),
-                            rapGrilleDe($periode)[0] >= 3);
+                            rapGrilleDe($periode)[2]);
                         if ($fiche !== '') {
                             $cartesParMag[(string) $t['magasin']][] = rapFondNote((int) $note) + ['html' => $fiche];
                             $fiches++; $poidsFiches += strlen($fiche);
@@ -564,9 +564,9 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     . round(RAP_POIDS_FICHES / 1000000) . ' Mo d’images ; elles se consultent dans le cockpit.'];
             }
             // La grille A4 qui convient à la période, magasin par magasin.
-            [$col, $rang] = rapGrilleDe($periode);
+            [$col, $rang, $cpt] = rapGrilleDe($periode);
             foreach ($cartesParMag ?? [] as $mag => $cartes) {
-                $b['htmlPar'][] = [$mag, rapFichesGrille($cartes, $col, $rang)];
+                $b['htmlPar'][] = [$mag, rapFichesGrille($cartes, $col, $rang, true, !$cpt)];
             }
             break;
         }
@@ -1949,6 +1949,12 @@ function rapPdfHtml(string $html): string
         . 'table[data-grille="3x5"] div[data-fiche]{overflow:hidden;box-sizing:border-box;padding:4px 6px !important}'
         . 'table[data-grille="3x5"] div[data-fiche] img{max-width:100%;width:auto !important;height:auto}'
         . 'table[data-grille="3x5"] div[data-fiche] div{font-size:8.5px !important;line-height:1.2 !important}'
+        // Fiches RICHES du quotidien (3 × 4, gabarit du 23/08) : douze par
+        // page, hauteur verrouillée — la grille reste identique page après
+        // page, et chaque vignette occupe sa demi-largeur, jamais plus.
+        . 'table[data-grille="3x4r"] tr[data-rangee-fiches]>td{height:63mm}'
+        . 'table[data-grille="3x4r"] div[data-fiche]{height:61mm;overflow:hidden;box-sizing:border-box;padding:7px 9px !important}'
+        . 'table[data-grille="3x4r"] div[data-fiche] img{width:100% !important;height:auto !important;max-height:none !important}'
         . 'table[data-grille="3x4"] tr[data-rangee-fiches]>td{height:67mm}'
         . 'table[data-grille="3x4"] div[data-fiche]{height:65mm;overflow:hidden;box-sizing:border-box;padding:5px 6px !important}'
         // « Aussi grande que possible » ne veut pas dire déformée : largeur et
@@ -2233,7 +2239,7 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
             . '<div style="font-size:14.5px;font-weight:700;color:#221E1A;margin:0 0 6px">Cette semaine, vous vous êtes distingué avec celles-ci'
             . '<span style="font-weight:400;font-size:12px;color:#8b8177"> — ' . count($exemplaires) . ' tâche(s) à 5/5</span></div>'
             . ($fichesExemplaires !== []
-                ? rapFichesGrille($fichesExemplaires, $colonnes, $rangees, false)
+                ? rapFichesGrille($fichesExemplaires, $colonnes, $rangees, false, $colonnes === 3 && $rangees === 4)
                 : '')
             . ($reste !== []
                 ? '<div style="font-size:11px;color:#4a443c;padding-top:' . ($fichesExemplaires !== [] ? '4' : '6') . 'px;line-height:1.45">'
@@ -2614,55 +2620,63 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     $reperes = (array) ((($det['reperes'] ?? [])['liste']) ?? []);
 
     $imgs = '';
-    $legende = fn (string $t) => '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">' . $t . '</div>';
+    $legende = fn (string $t) => '<div style="' . $F . ';font-size:8.5px;color:#8b8177;margin:3px 0 0;text-align:center;'
+        . 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $t . '</div>';
     $photo = rapImageGd((string) ($det['photo'] ?? ''), 420);
     if ($photo !== null && $reperes !== []) { rapDessineReperes($photo, $reperes); }
     // La photo de RÉFÉRENCE ne suit qu'en grande carte : en vignette, deux
     // images dans un cadre de six centimètres n'en montrent aucune.
     $ref = $compact ? null : rapImageGd((string) ($det['photoRef'] ?? ''), 420);
-    // En paire, les DEUX vignettes prennent le même carré : le modèle est en
-    // 1:1, la boutique se centre sur fond blanc — jamais recadrée.
-    if ($photo !== null && $ref !== null) {
-        $photo = rapCarre($photo);
-        $ref   = rapCarre($ref);
-    }
+    // TOUTES les vignettes d'une fiche riche font le MÊME carré (gabarit du
+    // 23/08) : le modèle est en 1:1, la boutique se centre sur fond blanc —
+    // jamais recadrée, un recadrage pourrait couper un repère.
+    if (!$compact && $photo !== null) { $photo = rapCarre($photo); }
+    if ($ref !== null) { $ref = rapCarre($ref); }
     $imgPhoto = $photo !== null
-        ? '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">'
+        ? '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:6px" alt="Photo en boutique">'
         : null;
     $imgRef = $ref !== null
-        ? '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Référence attendue">'
+        ? '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:6px" alt="Référence attendue">'
         : null;
     $legPhoto = 'Photo en boutique' . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '');
-    $legRef   = 'Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '');
-    if ($imgPhoto !== null && $imgRef !== null) {
-        // CÔTE À CÔTE — un contrôle se juge par comparaison et la mise en
-        // page le dit : boutique à gauche, référence à droite, mêmes coins,
-        // légendes alignées sous chaque image, hauts alignés. Un TABLEAU,
-        // pas de flex : ce HTML finit en e-mail et en PDF, où seules les
-        // tables tiennent partout.
+    $legRef   = 'Référence attendue';
+
+    if ($compact) {
+        if ($imgPhoto !== null) { $imgs = $imgPhoto; }
+    } elseif ($imgPhoto !== null && $imgRef !== null) {
+        // La paire : boutique à gauche, référence à droite — deux carrés
+        // identiques, légende sous chacun. Un TABLEAU, pas de flex : ce HTML
+        // finit en e-mail et en PDF, où seules les tables tiennent partout.
         $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'
             . '<td width="50%" valign="top" style="padding:0 4px 0 0">' . $imgPhoto . $legende($legPhoto) . '</td>'
             . '<td width="50%" valign="top" style="padding:0 0 0 4px">' . $imgRef . $legende($legRef) . '</td>'
             . '</tr></table>';
-    } else {
-        // Une seule image : pleine largeur, comme avant. En vignette, la
-        // légende de la photo mange la place de la photo : douze par page,
-        // chaque millimètre compte.
-        if ($imgPhoto !== null) { $imgs .= $imgPhoto . ($compact ? '' : $legende($legPhoto)); }
-        if ($imgRef !== null) { $imgs .= $imgRef . $legende($legRef); }
+    } elseif ($imgPhoto !== null || $imgRef !== null) {
+        // Une seule image : le MÊME carré que dans une paire, centré — toutes
+        // les fiches d'une page gardent des vignettes de taille égale.
+        $seule = $imgPhoto !== null ? $imgPhoto . $legende($legPhoto) : $imgRef . $legende($legRef);
+        $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'
+            . '<td width="25%"></td><td width="50%" valign="top">' . $seule . '</td><td width="25%"></td>'
+            . '</tr></table>';
     }
     if ($imgs === '' && $reperes === []) { return ''; }
 
-    $exp = '';
+    // « le 22/08 · ● Note 3/5 » — la date puis la cote, CENTRÉES sous les
+    // vignettes ; sans avis, la fiche le dit au lieu d'afficher zéro étoile.
+    // La couleur de la note suit les niveaux de validation : doré pour
+    // l'exemplaire, vert pour le conforme.
+    $quand = $e(date('d/m', strtotime($date ?: 'today')));
     if ($note !== null) {
-        // La couleur de la note suit les niveaux de validation : doré pour
-        // l'exemplaire, vert pour le conforme — une fiche 5/5 ne doit pas
-        // porter la couleur d'un écart.
         $coulN = rapCouleurNote($note);
-        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0">'
-            . '<span style="color:' . $coulN . ';font-size:9px;line-height:1">&#9679;</span> '
-            . '<b style="color:' . $coulN . '">Note ' . $note . '/5</b> · le ' . $e(date('d/m', strtotime($date ?: 'today'))) . '</div>';
+        $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#221E1A">le ' . $quand
+            . ' &nbsp;&middot;&nbsp; <span style="color:' . $coulN . ';font-size:8px">&#9679;</span> '
+            . '<b style="color:' . $coulN . '">Note ' . $note . '/5</b></div>';
+    } else {
+        $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#8b8177">le '
+            . $quand . ' &middot; non notée</div>';
     }
+
+    $exp = '';
     // Le commentaire du panel EST la concaténation des repères : « 1. [mineur]
     // Il serait pas mieux au mur ? » puis, juste dessous, le repère numéroté
     // qui dit la même chose. On ne garde que les repères — ceux qui portent le
@@ -2670,7 +2684,7 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     // commentaire ne s'affiche donc que s'il est SEUL à parler.
     $reperesParlants = array_filter($reperes, fn ($r) => trim((string) ($r['txt'] ?? '')) !== '');
     if (trim($commentaire) !== '' && $reperesParlants === []) {
-        $exp .= '<div style="' . $F . ';font-size:11px;color:#4a443c;padding:2px 0;line-height:1.45">' . $e(mb_substr($commentaire, 0, 260)) . '</div>';
+        $exp .= '<div style="' . $F . ';font-size:10px;color:#4a443c;padding:1px 0;line-height:1.4">' . $e(mb_substr($commentaire, 0, 200)) . '</div>';
     }
     $n = 0;
     foreach ($reperes as $r) {
@@ -2678,13 +2692,24 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         if (trim((string) ($r['txt'] ?? '')) === '') { continue; }
         $niv = (int) ($r['niveau'] ?? 3);
         $coulR = $niv <= 2 ? '#E0261A' : ($niv === 3 ? '#C17A2A' : '#2d7a3e');
-        $exp .= '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0"><span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
+        $exp .= '<div style="' . $F . ';font-size:10px;color:#3d382f;padding:1px 0;line-height:1.4"><span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
     }
-    // En vignette : la PHOTO d'abord, aussi grande que le cadre le permet, le
-    // titre et la note dessous. En grande carte, le titre reste en tête.
-    $titre = '<div style="' . $F . ';font-size:' . ($compact ? '10px' : '12px')
-        . ';font-weight:700;color:#221E1A;margin:' . ($compact ? '5px 0 1px' : '0 0 5px') . '">' . $e($nomTache) . '</div>';
-    return $compact ? $imgs . $titre . $exp : $titre . $imgs . $exp;
+    // En vignette : la PHOTO d'abord, le titre et la note dessous — inchangé.
+    // En fiche riche : le titre court sur toute la largeur, CENTRÉ (ellipse
+    // au-delà d'une ligne), puis les vignettes, la ligne date · note, et les
+    // repères sur toute la largeur — le gabarit validé le 23/08.
+    if ($compact) {
+        $titre = '<div style="' . $F . ';font-size:10px;font-weight:700;color:#221E1A;margin:5px 0 1px">' . $e($nomTache) . '</div>';
+        $noteL = $note !== null
+            ? '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0">'
+                . '<span style="color:' . rapCouleurNote($note) . ';font-size:9px;line-height:1">&#9679;</span> '
+                . '<b style="color:' . rapCouleurNote($note) . '">Note ' . $note . '/5</b> · le ' . $quand . '</div>'
+            : '';
+        return $imgs . $titre . $noteL . $exp;
+    }
+    $titre = '<div style="' . $F . ';font-size:10.5px;font-weight:700;color:#221E1A;text-align:center;margin:0 0 7px;'
+        . 'line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $e($nomTache) . '</div>';
+    return $titre . $imgs . $ligne . $exp;
 }
 
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
@@ -2708,7 +2733,7 @@ function rapFondNote(?int $note, bool $surFondTeinte = false): array
         2 => '#FBEBED', 1 => '#F7E4E7'][$note] ?? '#FBF9F5'];
 }
 
-function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, bool $paginer = true): string
+function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, bool $paginer = true, bool $riches = false): string
 {
     // Une PAGE A4 = colonnes × rangées fiches, toutes de la même taille. Un
     // rapport du JOUR porte deux ou trois écarts : de grandes cartes (2 × 3).
@@ -2726,14 +2751,18 @@ function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, boo
         // Le nombre de rangées RÉELLES de cette page : une page qui n'en porte
         // que trois étire ses cartes au lieu de laisser un tiers de blanc.
         $rangsPage = (int) ceil(count($page) / $colonnes);
+        // Le label des fiches RICHES porte un « r » : les règles PDF des
+        // vignettes compactes (3x4) ne doivent pas s'appliquer à elles.
         $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-fiches="1"'
-            . ($paginer ? ' data-page-fiches="1"' : '') . ' data-grille="' . $colonnes . 'x' . $rangees . '"'
+            . ($paginer ? ' data-page-fiches="1"' : '') . ' data-grille="' . $colonnes . 'x' . $rangees . ($riches ? 'r' : '') . '"'
             . ' data-rangees="' . $rangsPage . '">';
         $rangs = array_chunk($page, $colonnes);
         foreach ($rangs as $rangee) {
             $h .= '<tr data-rangee-fiches="1">';
             for ($i = 0; $i < $colonnes; $i++) {
-                $pad = 'padding:5px ' . ($i === $colonnes - 1 ? '0' : '6px') . ' 5px ' . ($i === 0 ? '0' : '6px');
+                // Gouttières ÉGALES partout : le paquet est centré sur la
+                // page au lieu de coller aux marges (gabarit du 23/08).
+                $pad = 'padding:5px 6px';
                 // Une carte est soit du HTML nu, soit du HTML AVEC sa couleur :
                 // le fond dit le niveau (doré pour l'exemplaire, du orange au
                 // bordeaux pour les écarts) sans qu'on ait à lire la note.
@@ -2811,7 +2840,10 @@ function rapHauteursVignettes(): string
 function rapGrilleDe(array $periode): array
 {
     $jours = 1 + (int) round((strtotime((string) $periode['au']) - strtotime((string) $periode['du'])) / 86400);
-    return $jours >= 2 ? [3, 5] : [2, 3];
+    // Une JOURNÉE : douze fiches RICHES par page (3 × 4, gabarit validé sur
+    // maquette le 23/08), paquet centré. Plusieurs jours : les vignettes
+    // compactes (3 × 5) — le volume prime. Le troisième terme dit « compact ».
+    return $jours >= 2 ? [3, 5, true] : [3, 4, false];
 }
 
 /* --- Compositeur : aperçu à la demande et enregistrement d'un modèle --------- */
