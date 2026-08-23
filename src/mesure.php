@@ -1339,24 +1339,3 @@ function ep_profil_jour(): array
         'lecture' => 'Moyenne du CA par jour de semaine, mesurée sur la fenêtre lue par « Résultat du jour » '
             . 'et réécrite à chaque passage. La part est celle du jour dans une semaine type.'];
 }
-
-/** Sonde — les photos du catalogue fournisseur sont-elles remplies ? */
-function ep_sonde_photos(): array
-{
-    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
-    $out = [];
-    foreach ((array) PanelApi::get('/material-suppliers') as $f) {
-        if (!is_array($f) || !isset($f['id'])) { continue; }
-        $fid = (int) $f['id'];
-        $cat = PanelApi::get('/material-suppliers/' . $fid . '/catalog/products');
-        $n = 0; $avec = 0; $ex = null;
-        foreach ((array) $cat as $p) {
-            if (!is_array($p)) { continue; }
-            $n++;
-            $u = trim((string) ($p['photo_url'] ?? ''));
-            if ($u !== '') { $avec++; if ($ex === null) { $ex = ['nom' => $p['name'] ?? '', 'sku' => $p['sku'] ?? '', 'url' => mb_substr($u, 0, 110)]; } }
-        }
-        if ($n > 0) { $out[(string) ($f['name'] ?? $fid)] = ['produits' => $n, 'avecPhoto' => $avec, 'exemple' => $ex]; }
-    }
-    return $out;
-}
