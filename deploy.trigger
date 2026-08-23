@@ -1,1 +1,1 @@
-2026-08-24T03:30:00Z projection-jour
+2026-08-24T03:55:00Z projection-additive
