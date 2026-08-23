@@ -88,11 +88,14 @@ final class PanelApi
     }
 
     /** Requête HTTP brute. Renvoie [code, corps décodé]. */
+    /** Corps envoyé en formulaire plutôt qu'en JSON, le temps d'une sonde. */
+    public static bool $formulaire = false;
+
     private static function http(string $method, string $url, ?array $body = null, ?string $token = null): array
     {
         $ch = curl_init($url);
         $headers = ['Accept: application/json'];
-        if ($body !== null)  { $headers[] = 'Content-Type: application/json'; }
+        if ($body !== null)  { $headers[] = 'Content-Type: ' . (self::$formulaire ? 'application/x-www-form-urlencoded' : 'application/json'); }
         if ($token !== null) { $headers[] = 'Authorization: Bearer ' . $token; }
         curl_setopt_array($ch, [
             CURLOPT_CUSTOMREQUEST  => $method,
@@ -102,7 +105,9 @@ final class PanelApi
             CURLOPT_CONNECTTIMEOUT => 6,
         ]);
         if ($body !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, self::$formulaire
+                ? http_build_query($body)
+                : json_encode($body, JSON_UNESCAPED_UNICODE));
         }
         $raw  = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);

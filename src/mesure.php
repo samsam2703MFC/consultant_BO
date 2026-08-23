@@ -962,6 +962,24 @@ function ep_panel_sonde_ecriture(): array
         }
     }
 
+    // Et si le corps était attendu en FORMULAIRE plutôt qu'en JSON ? Un
+    // « champ manquant » sur un corps parfaitement formé sent le corps non lu.
+    PanelApi::$formulaire = true;
+    [$okF, $resF] = PanelApi::post('/consultant/shops/' . $sid . '/notes',
+        ['note_type_id' => $tid, 'content' => $txt]);
+    $out['notes']['formulaire'] = ['ok' => $okF, 'erreur' => $okF ? null : PanelApi::$lastError,
+        'reponse' => is_array($resF) ? array_slice($resF, 0, 8, true) : $resF];
+    if ($okF) {
+        $nid = 0;
+        foreach (PanelApi::notesMagasin($sid) as $n) {
+            if (str_contains((string) ($n['content'] ?? ''), 'Sonde technique du cockpit')) { $nid = (int) $n['id']; }
+        }
+        if ($nid > 0) { PanelApi::envoi('DELETE', '/consultant/notes/' . $nid, []); $out['noteSupprimee'] = 'oui (' . $nid . ')'; }
+    }
+    [$okT] = PanelApi::ecrireCibles($sid, ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1]]);
+    $out['cibles']['formulaire'] = ['ok' => $okT, 'erreur' => $okT ? null : PanelApi::$lastError];
+    PanelApi::$formulaire = false;
+
     // CIBLES : une métrique VOLONTAIREMENT inconnue. Si la forme est bonne, le
     // message change (métrique inconnue) sans que rien ne soit écrit ; s'il
     // reste « INVALID_REQUEST_DATA », c'est la structure qui ne va pas.
