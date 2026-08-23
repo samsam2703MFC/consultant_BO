@@ -8091,7 +8091,9 @@ class App {
             url: d2.photo, cle, imgErr: perdue,
             imgErrTxt: 'Le lien signé de la photo a expiré ou le stockage du panel est injoignable. Rouvrez la tâche dans Contrôle des tâches pour en obtenir un neuf.',
             tache: d2.tache || ('Tâche #' + src.taskId),
-            reperes: perdue ? [] : rep,
+            // Les cadres disparaissent avec la photo, PAS les remarques : ce que
+            // le consultant doit reprendre se lit même sans le cliché.
+            reperes: rep,
             nRep: rep.length,
             legende: rep.length
               ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'
