@@ -4458,6 +4458,20 @@ class App {
    * celles de 11 h. Le cache évite de rappeler le panel à chaque redessin ;
    * le bouton de rafraîchissement le vide pour cette date-là, et lui seul.
    */
+  /* Les réclamations matière : lues chez le panel, jamais recalculées. Une
+     seule lecture, gardée — l'écran des fournisseurs y revient souvent. */
+  reclCharge(force){
+    if (this._reclEnCours) { return; }
+    if (this.D.recl && !force) { return; }
+    this._reclEnCours = true;
+    if (!this.D.recl) { this.setState({ reclChargement: true }); }
+    readOne('/fournisseurs/reclamations').then(d => {
+      this._reclEnCours = false; this.D.recl = d || { indispo: true };
+      this.setState({ reclChargement: false });
+    }).catch(() => { this._reclEnCours = false; this.D.recl = { indispo: true };
+      this.setState({ reclChargement: false }); });
+  }
+
   /* La photo de contrôle d'une tâche née d'une note : cliché et repères, lus
      une fois puis gardés. Une tâche sans origine ne déclenche aucun appel. */
   srcCharge(src){
@@ -6077,6 +6091,76 @@ class App {
           { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
       } : null;
     } else if (ecr === 'caAchats') {
+      // ── Les réclamations matière, en tête d'écran : c'est ce qui traîne qui
+      //    fait agir, pas le décompte des commandes.
+      this.reclCharge(false);
+      const R = this.D.recl || null;
+      common.reclChargement = !!S.reclChargement && !R;
+      common.reclIndispo = R && R.indispo ? (R.motif || 'réclamations indisponibles') : '';
+      if (R && !R.indispo) {
+        const jf = z => String(z || '').split('-').reverse().join('/');
+        const age = a => a == null ? '—' : (a + ' j');
+        common.reclTotaux = { total: R.total, ouvertes: R.ouvertes, reglees: R.reglees, refusees: R.refusees };
+        common.reclFourn = (R.fournisseurs || []).map(f => ({
+          nom: f.nom, total: f.total, ouvertes: f.ouvertes, reglees: f.reglees, refusees: f.refusees,
+          ancienne: f.plusAncienne == null ? '—' : age(f.plusAncienne),
+          ancienneCol: (f.plusAncienne || 0) >= 60 ? 'var(--color-primary)'
+            : ((f.plusAncienne || 0) >= 21 ? '#C17A2A' : 'var(--color-text)'),
+          delai: f.delaiMoyen == null ? 'jamais répondu' : ('répond en ' + String(f.delaiMoyen).replace('.', ',') + ' j'),
+          refs: Object.entries(f.refs || {}).map(([nom, n]) => ({ nom, n,
+            w: Math.round(100 * n / Math.max(1, Math.max.apply(null, Object.values(f.refs || { x: 1 })))) })),
+          motifs: Object.entries(f.motifs || {}).map(([nom, n]) => ({ nom, n })),
+        }));
+        // Le tri par défaut : le plus ancien non réglé d'abord.
+        const lignes = (R.lignes || []).slice().sort((a, b) => {
+          if (a.ouverte !== b.ouverte) { return a.ouverte ? -1 : 1; }
+          return (b.age || 0) - (a.age || 0);
+        });
+        const filtre = S.reclFiltre || 'ouvertes';
+        common.reclFiltres = [['ouvertes', 'Ouvertes'], ['toutes', 'Toutes'], ['reglees', 'Réglées'], ['refusees', 'Refusées']]
+          .map(([v, nom]) => ({ v, nom, on: filtre === v, choisir: () => this.setState({ reclFiltre: v }) }));
+        const gardees = lignes.filter(l => filtre === 'toutes' ? true
+          : (filtre === 'ouvertes' ? l.ouverte
+            : (filtre === 'refusees' ? l.statut === 'REJECTED' : (!l.ouverte && l.statut !== 'REJECTED'))));
+        common.reclLignes = gardees.map(l => ({
+          id: l.id,
+          age: age(l.age),
+          ageCol: !l.ouverte ? 'var(--color-text-muted)'
+            : ((l.age || 0) >= 60 ? 'var(--color-primary)' : ((l.age || 0) >= 21 ? '#C17A2A' : 'var(--color-text)')),
+          le: jf(l.le), reference: l.reference || '—', sku: l.sku,
+          qte: l.qte == null ? '—' : (String(l.qte % 1 === 0 ? l.qte : l.qte).replace('.', ',') + (l.unite ? ' ' + l.unite : '')),
+          motif: l.motif || '—', texte: l.texte || '', magasin: l.magasin,
+          pj: l.pj ? l.pj + ' pièce' + (l.pj > 1 ? 's' : '') + ' jointe' + (l.pj > 1 ? 's' : '') : '',
+          statut: l.statut === 'REJECTED' ? 'refusée' : (l.ouverte ? 'sans réponse' : 'réglée'),
+          statutSt: l.statut === 'REJECTED' ? 'background:#F7E4E6;color:var(--color-primary)'
+            : (l.ouverte ? 'background:#FBEFE0;color:#C17A2A' : 'background:#E6F2E9;color:#2d7a3e'),
+          ouvrir: () => this.setState({ reclDet: l.id }),
+        }));
+        common.reclCompte = gardees.length + ' sur ' + (R.lignes || []).length;
+        common.reclSource = R.source + ' — ' + R.lecture;
+        // Le détail d'une réclamation.
+        const det = (R.lignes || []).find(l => l.id === S.reclDet);
+        common.reclDet = !det ? null : {
+          titre: (det.reference || 'Référence inconnue') + ' — ' + (det.motif || ''),
+          sous: (det.cle || '') + ' · ' + det.magasin + ' · signalée le ' + jf(det.le)
+            + (det.commande ? ' · commande ' + det.commande : '')
+            + (det.qte != null ? ' · ' + String(det.qte).replace('.', ',') + ' ' + det.unite : '')
+            + (det.action ? ' · action demandée : ' + (det.action === 'REPLACEMENT' ? 'remplacement' : det.action.toLowerCase()) : ''),
+          statut: det.statut === 'REJECTED' ? 'refusée' : (det.ouverte ? 'sans réponse depuis ' + age(det.age) : 'réglée'),
+          statutSt: det.statut === 'REJECTED' ? 'background:#F7E4E6;color:var(--color-primary)'
+            : (det.ouverte ? 'background:#FBEFE0;color:#C17A2A' : 'background:#E6F2E9;color:#2d7a3e'),
+          texte: det.texte || 'La boutique n’a rien écrit.',
+          reponse: det.reponse || '',
+          reponseLe: det.reponseLe ? jf(det.reponseLe) : '',
+          pj: det.pj,
+          // Les pièces jointes ne s'affichent pas : leur URL signée demande un
+          // identifiant que les listes ne rendent pas. On le dit, on ne fait
+          // pas semblant.
+          pjNote: det.pj ? (det.pj + ' photo' + (det.pj > 1 ? 's' : '') + ' jointe' + (det.pj > 1 ? 's' : '')
+            + ' par la boutique — non affichable : l’URL signée demande un identifiant que l’API ne rend pas.') : '',
+          fermer: () => this.setState({ reclDet: null }),
+        };
+      } else { common.reclFourn = []; common.reclLignes = []; common.reclDet = null; }
       const fCat = S.caFournCat || null;   // {id, nom} : catalogue ouvert
       if (fCat) {
         // --- mode catalogue : le tableau devient celui du fournisseur cliqué.

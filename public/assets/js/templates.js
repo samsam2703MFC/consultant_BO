@@ -5732,9 +5732,110 @@ function tplCentrale(c, x){
       ${c.caPerBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
     </div>` : '';
 
+  // ── Les réclamations matière, en tête de « Suivi fournisseurs ». Ce qui
+  //    traîne d'abord : c'est l'ancienneté qui fait agir, pas le décompte.
+  const reclamations = () => {
+    if (c.reclChargement) { return `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:14px">Lecture des réclamations…</div>`; }
+    if (c.reclIndispo) { return `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.reclIndispo)}</div>`; }
+    if (!c.reclFourn || !c.reclFourn.length) { return ''; }
+    const T = c.reclTotaux || {};
+    const chiffre = (n, lib, coul) => `<div style="flex:1;min-width:120px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(lib)}</div>
+      <div style="font-family:var(--font-display);font-size:24px;line-height:1.1;margin-top:3px${coul ? ';color:' + coul : ''}">${n}</div></div>`;
+    return `
+    <div style="${CARD};margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--font-display);font-size:17px;line-height:1.25">Réclamations matière</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Ce que les boutiques ont signalé sur les produits — et ce que le fournisseur en a fait.</div>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap">
+          ${chiffre(T.ouvertes, 'Sans réponse', 'var(--color-primary)')}
+          ${chiffre(T.reglees, 'Réglées', '#2d7a3e')}
+          ${chiffre(T.refusees, 'Refusées', '')}
+          ${chiffre(T.total, 'Total', '')}
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        ${c.reclFourn.map(f => `
+          <div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+              <div style="font-size:14px;font-weight:600">${esc(f.nom)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">${f.total} réclamation${f.total > 1 ? 's' : ''} · ${f.ouvertes} sans réponse · la plus ancienne : <b style="color:${f.ancienneCol}">${esc(f.ancienne)}</b> · ${esc(f.delai)}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:18px;margin-top:10px">
+              <div>
+                <div style="font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px">Références qui reviennent</div>
+                ${f.refs.map(r2 => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                  <span style="flex:0 0 190px;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r2.nom)}</span>
+                  <span style="flex:1;height:7px;border-radius:999px;background:var(--color-surface);overflow:hidden"><i style="display:block;height:100%;width:${r2.w}%;background:var(--color-primary);border-radius:999px"></i></span>
+                  <span style="flex:0 0 20px;text-align:right;font-size:11.5px;font-weight:600">${r2.n}</span>
+                </div>`).join('')}
+              </div>
+              <div>
+                <div style="font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px">Motifs</div>
+                ${f.motifs.map(m2 => `<div style="font-size:11.5px;margin-bottom:3px">${esc(m2.nom)} <b>${m2.n}</b></div>`).join('')}
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div style="display:flex;align-items:center;gap:9px;margin:14px 0 8px;flex-wrap:wrap">
+        <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
+          ${(c.reclFiltres || []).map(f2 => `<button ${x.A(f2.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:${f2.on ? '600' : '400'};padding:5px 12px;border-radius:7px;background:${f2.on ? 'var(--color-surface)' : 'transparent'};color:${f2.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(f2.nom)}</button>`).join('')}
+        </span>
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(c.reclCompte || '')}</span>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:900px">
+          <thead><tr>
+            <th style="${TH};width:70px">Âge</th><th style="${TH}">Référence</th><th style="${TH};width:80px">Qté</th>
+            <th style="${TH}">Motif</th><th style="${TH}">Ce que dit la boutique</th>
+            <th style="${TH};width:130px">Magasin</th><th style="${TH};width:110px">Statut</th>
+          </tr></thead>
+          <tbody>
+            ${(c.reclLignes || []).map(l => `<tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+              <td style="${TD};color:${l.ageCol};font-weight:600">${esc(l.age)}</td>
+              <td style="${TD}">${esc(l.reference)}${l.pj ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.pj)}</div>` : ''}</td>
+              <td style="${TD}">${esc(l.qte)}</td>
+              <td style="${TD}">${esc(l.motif)}</td>
+              <td style="${TD};color:var(--color-text-muted);max-width:320px">${esc(l.texte)}</td>
+              <td style="${TD}">${esc(l.magasin)}</td>
+              <td style="${TD}"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;${l.statutSt}">${esc(l.statut)}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">${esc(c.reclSource || '')}</div>
+    </div>
+    ${c.reclDet ? `
+    <div ${x.A(c.reclDet.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.45);z-index:80"></div>
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(620px,92vw);max-height:86vh;overflow-y:auto;background:var(--color-surface);border-radius:16px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.3);padding:20px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div>
+          <div style="font-size:15px;font-weight:600">${esc(c.reclDet.titre)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.reclDet.sous)}</div>
+        </div>
+        <button ${x.A(c.reclDet.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;cursor:pointer;flex:none">✕</button>
+      </div>
+      <div style="margin-top:10px"><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;${c.reclDet.statutSt}">${esc(c.reclDet.statut)}</span></div>
+      <div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:12.5px;line-height:1.55">
+        <b>La boutique :</b> ${esc(c.reclDet.texte)}
+      </div>
+      ${c.reclDet.reponse ? `<div style="background:#E6F2E9;border-radius:10px;padding:11px 13px;margin-top:8px;font-size:12.5px;line-height:1.55">
+        <b>Le fournisseur${c.reclDet.reponseLe ? ' — ' + esc(c.reclDet.reponseLe) : ''} :</b> ${esc(c.reclDet.reponse)}</div>`
+        : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:8px">Aucune réponse du fournisseur à ce jour.</div>`}
+      ${c.reclDet.pjNote ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5">${esc(c.reclDet.pjNote)}</div>` : ''}
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:12px;line-height:1.5">Lecture seule : répondre, relancer et clore passent par les webhooks du fournisseur, qui refusent le compte consultant.</div>
+    </div>` : ''}`;
+  };
+
   if (c.caChargement) {
     return `${periodes}<div style="${CARD};color:var(--color-text-muted);font-size:13px;padding:40px 16px">Chargement…</div>`;
   }
+  const recl = c.isCentrale && c.reclFourn !== undefined ? reclamations() : '';
 
   // --- source absente : la table attendue, champ par champ
   if (c.caAttendu) {
@@ -5839,7 +5940,7 @@ function tplCentrale(c, x){
     </table></div>
   </div>` : '';
 
-  return periodes + kpis + manquants + params + recherche + table + table2;
+  return periodes + recl + kpis + manquants + params + recherche + table + table2;
 }
 
 
