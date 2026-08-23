@@ -1571,6 +1571,56 @@ function jourNomSemaine(string $date, bool $pluriel = false): string
  * Le résultat du jour = CA − coût matière − main-d'œuvre − frais généraux.
  * Il n'est jamais deviné : sans l'un des quatre, il vaut null et le motif suit.
  */
+/**
+ * Le PROFIL de semaine d'un magasin : ce que pèse chaque jour, en moyenne.
+ *
+ * Il servait déjà à répartir le budget du jour, mais il vivait le temps d'une
+ * requête. Il est désormais écrit : un mois où le panel rend une fenêtre trop
+ * courte garde ainsi le rythme mesuré la veille, et le profil devient une
+ * donnée du cockpit — lisible, datée, réutilisable ailleurs (budget, rapports).
+ */
+function ensureProfilJour(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_profil_jour ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'jour TINYINT NOT NULL,'            // 1 = lundi … 7 = dimanche
+        . 'ca_moyen DECIMAL(12,2) NULL,'
+        . 'jours INT NOT NULL DEFAULT 0,'     // occurrences observées
+        . 'du DATE NULL, au DATE NULL,'
+        . 'maj DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, jour)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Écrire le profil d'un magasin — un jour de semaine par ligne. */
+function profilJourEcrire(string $shopId, array $parWd, ?string $du, ?string $au): void
+{
+    ensureProfilJour();
+    $now = date('Y-m-d H:i:s');
+    foreach ($parWd as $wd => $v) {
+        if ((int) ($v['n'] ?? 0) < 1) { continue; }
+        Db::exec('INSERT INTO ceo_shop_profil_jour (shop_id, jour, ca_moyen, jours, du, au, maj)
+                  VALUES (?,?,?,?,?,?,?)
+                  ON DUPLICATE KEY UPDATE ca_moyen = VALUES(ca_moyen), jours = VALUES(jours),
+                    du = VALUES(du), au = VALUES(au), maj = VALUES(maj)',
+            [$shopId, (int) $wd, round($v['s'] / $v['n'], 2), (int) $v['n'], $du, $au, $now]);
+    }
+}
+
+/** Relire le profil mémorisé : [jour => ['moyenne'=>…, 'jours'=>…, 'maj'=>…]]. */
+function profilJourLire(string $shopId): array
+{
+    ensureProfilJour();
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT jour, ca_moyen, jours, maj FROM ceo_shop_profil_jour WHERE shop_id = ?', [$shopId]) as $r) {
+            $out[(int) $r['jour']] = ['moyenne' => $r['ca_moyen'] !== null ? (float) $r['ca_moyen'] : null,
+                'jours' => (int) $r['jours'], 'maj' => $r['maj']];
+        }
+    } catch (PDOException $e) { /* table absente : pas de mémoire */ }
+    return $out;
+}
+
 function ep_exploitation_jour(): array
 {
     $auj  = date('Y-m-d');
@@ -1840,10 +1890,33 @@ function ep_exploitation_jour(): array
         for ($i2 = 0; $i2 < $joursMois; $i2++) {
             $attMois += $moyWd[(int) $premier->modify('+' . $i2 . ' days')->format('N')] ?? 0.0;
         }
+        // Le profil mesuré est ÉCRIT : il devient une donnée du cockpit, pas un
+        // calcul jetable.
+        $dates = array_keys($parJour);
+        profilJourEcrire((string) $id, $parWd, $dates ? (string) min($dates) : null, $dates ? (string) max($dates) : null);
+
         $wdJour = (int) date('N', strtotime($date));
         $vus = (int) ($parWd[$wdJour]['n'] ?? 0);
         // Deux occurrences au moins : un seul dimanche observé n'est pas un
-        // profil, c'est une anecdote.
+        // profil, c'est une anecdote. Si la fenêtre vive n'en montre pas assez,
+        // le profil MÉMORISÉ prend le relais — un rythme ne change pas d'un
+        // jour à l'autre.
+        $profilSrc = 'vif';
+        if ($vus < 2 || $attMois <= 0) {
+            $mem = profilJourLire((string) $id);
+            $moyMem = []; $vusMem = 0;
+            foreach ($mem as $wdM => $vM) {
+                if ($vM['moyenne'] !== null && $vM['jours'] >= 1) { $moyMem[(int) $wdM] = (float) $vM['moyenne']; }
+            }
+            $vusMem = (int) ($mem[$wdJour]['jours'] ?? 0);
+            if ($vusMem >= 2 && isset($moyMem[$wdJour])) {
+                $attMem = 0.0;
+                for ($i3 = 0; $i3 < $joursMois; $i3++) {
+                    $attMem += $moyMem[(int) $premier->modify('+' . $i3 . ' days')->format('N')] ?? 0.0;
+                }
+                if ($attMem > 0) { $moyWd = $moyMem; $attMois = $attMem; $vus = $vusMem; $profilSrc = 'memoire'; }
+            }
+        }
         $part = ($attMois > 0 && $vus >= 2 && isset($moyWd[$wdJour])) ? $moyWd[$wdJour] / $attMois : null;
 
         $bm = $budMois[(string) $id] ?? null;
@@ -1880,6 +1953,7 @@ function ep_exploitation_jour(): array
             'objectifMois' => $objMois, 'objectifBase' => $objBase,
             'objectifPart' => $part === null ? null : round($part * 100, 2),
             'objectifJoursVus' => $vus,
+            'objectifProfil' => $part === null ? null : $profilSrc,
             'objectifJourNom' => jourNomSemaine($date),
             'objectifAtteinte' => ($objJour !== null && $objJour > 0) ? round($ca / $objJour, 4) : null,
             'net' => $net !== null ? round($net, 2) : null,

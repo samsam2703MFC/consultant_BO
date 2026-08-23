@@ -97,6 +97,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/mesure'              => ep_mesure(),
             $path === '/taches/classement'             => ep_taches_classement(),
             $path === '/fournisseurs/reclamations'     => ep_fournisseurs_reclamations(),
+            $path === '/magasins/profil-jour'          => ep_profil_jour(),
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
