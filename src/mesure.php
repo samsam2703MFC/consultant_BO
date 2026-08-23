@@ -1154,6 +1154,17 @@ function ep_sonde_recl2(): array
         }
     }
     $out['pieceJointe'] = $att;
+    // La même pièce jointe, vue par les autres listings : portent-ils un uuid ?
+    foreach (['/shops/3/material-complaints' => 'parMagasin',
+              '/material-suppliers/1/complaints' => 'parFournisseur'] as $ch => $nom) {
+        $l = PanelApi::get($ch);
+        $liste = is_array($l) ? (array_is_list($l) ? $l : ($l['complaints'] ?? $l['data'] ?? [])) : [];
+        foreach ((array) $liste as $c) {
+            foreach ((array) ($c['attachments'] ?? []) as $a) {
+                $out['pjSelon'][$nom] = $a; break 2;
+            }
+        }
+    }
     if (is_array($att)) {
         $ulid = '';
         if (preg_match('#complaints/([0-9A-HJKMNP-TV-Z]{26})/#', (string) ($att['object_key'] ?? ''), $m)) { $ulid = $m[1]; }
