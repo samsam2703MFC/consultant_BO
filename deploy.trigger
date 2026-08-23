@@ -1,1 +1,1 @@
-2026-08-23T09:35:00Z mesure-recalcul
+2026-08-23T10:15:00Z periode-observee
