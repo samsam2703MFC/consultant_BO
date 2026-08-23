@@ -1918,7 +1918,11 @@ function rapPdfHtml(string $html): string
         // Six fiches par page A4 : deux par rangée, trois rangées, toutes de
         // la MÊME hauteur. Sans hauteur fixe, une fiche à deux photos écrase
         // sa voisine et la grille se déforme d'une page à l'autre.
-        . 'table[data-page-fiches]{page-break-after:always;page-break-inside:avoid}'
+        // Un paquet peut se COUPER entre deux rangées (chaque rangée reste
+        // insécable) : insécable en bloc, le premier paquet sautait entier
+        // en page 2 et laissait la première page blanche sous l'en-tête.
+        . 'table[data-page-fiches]{page-break-after:always}'
+        . 'table[data-fiches]{margin-bottom:4mm}'
         // L'encadré des 5/5 a SA page : ce qui a été bien fait ne se lit pas
         // en bas d'une page d'écarts. Douze vignettes remplissent exactement
         // une A4, et la page suivante reprend les non-conformités.

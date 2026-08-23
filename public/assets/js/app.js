@@ -4723,6 +4723,7 @@ class App {
     const res = r.reseau || {};
     common.rjReseau = {
       ca: fE(res.ca), tickets: fInt(res.tickets), panier: fU(res.panier),
+      ppc: res.produitsParClient != null ? res.produitsParClient.toFixed(2).replace('.', ',') : '—',
       delta: fDelta(res.caDelta), deltaCoul: coulDelta(res.caDelta),
       deltaTitre: res.refCa == null ? 'aucune référence complète'
         : fE(res.refCa) + ' en moyenne sur les mêmes jours',
@@ -4755,9 +4756,10 @@ class App {
         id: m.shopId, nom: m.magasin, ouvert: !!m.ouvert, actif,
         // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
         ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
-        sousTitre: m.ouvert
-          ? (m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') + ' produits par client' : '—')
-          : (m.motif || 'sans réponse'),
+        // Le « produits par client » a désormais SA colonne : le sous-titre
+        // ne sert plus qu'à dire pourquoi une ligne fermée l'est.
+        sousTitre: m.ouvert ? '' : (m.motif || 'sans réponse'),
+        ppc: m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') : '—',
         ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
         // L'infobulle donne la référence en clair : un écart sans son point de
         // comparaison ne se vérifie pas.

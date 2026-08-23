@@ -2647,8 +2647,12 @@ function tplResultatJour(c, x){
   if (c.rjErreur) {
     return `<div data-screen="resultatJour" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjErreurTxt)}</div>`;
   }
-  const ent = ['Magasin', 'CA du jour', c.rjRefEntete, 'Tickets', 'Panier', 'Objectif du jour', 'Marge brute',
-    'Main-d’œuvre', 'Frais gén.', 'Résultat'];
+  // L'ordre se lit comme on pilote : le chiffre, sa référence, sa cible,
+  // puis l'activité qui l'explique (tickets → panier → produits par client),
+  // et la ligne finale. Marge, main-d'œuvre et frais vivent dans le détail
+  // qu'on ouvre — comme le coût matière avant eux.
+  const ent = ['Magasin', 'CA du jour', c.rjRefEntete, 'Objectif du jour', 'Tickets', 'Panier',
+    'Produits / client', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
   const cel = (v, coul, sous, fort, titre, sousCoul) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:${sousCoul || 'var(--color-text-muted)'};font-weight:400">${esc(sous)}</div>` : ''}</td>`;
@@ -2702,33 +2706,29 @@ function tplResultatJour(c, x){
       </div>
 
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:940px">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
         <tr>${ent.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}${i === 2 ? aide(c.rjRefAide) : ''}</th>`).join('')}</tr>
         ${c.rjLignes.map(l => `
           <tr ${x.A(l.ouvrir)} class="hv-bg" style="${l.st}">
             <td style="padding:9px 10px;${bord}">
               <div style="font-weight:500"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nom)}</div>
-              <div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>
+              ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>` : ''}
             </td>
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
-                + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
                 + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
-                + cel(l.mb, '', l.mbPct, false)
-                + cel(l.labour, l.labourCoul, l.labourPct + (l.labourReparti ? ' ·  réparti' : ''), false, l.labourTitre)
-                + cel(l.oh, l.ohCoul, l.ohPct + ' · réparti', false)
+                + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
+                + cel(l.ppc, '', '', false)
                 + cel(l.net, l.netCoul, l.netPct, true)
-              : `<td colspan="9" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
+              : `<td colspan="7" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
           </tr>`).join('')}
         <tr style="background:var(--color-background-secondary)">
           <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:500">Réseau
             <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
           ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
-          ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
           ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
-          ${cel(c.rjReseau.mb, '', c.rjReseau.mbPct, false)}
-          ${cel(c.rjReseau.labour, c.rjReseau.labourCoul, c.rjReseau.labourPct, false)}
-          ${cel(c.rjReseau.oh, c.rjReseau.ohCoul, c.rjReseau.ohPct, false)}
+          ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
+          ${cel(c.rjReseau.ppc, '', '', false)}
           ${cel(c.rjReseau.net, c.rjReseau.netCoul, c.rjReseau.netPct, true)}
         </tr>
       </table>
