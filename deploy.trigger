@@ -1,1 +1,1 @@
-2026-08-23T17:40:00Z sonde-cibles-vraies
+2026-08-23T18:05:00Z note-panel
