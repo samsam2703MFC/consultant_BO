@@ -1167,3 +1167,42 @@ function ep_fournisseurs_reclamations(): array
         'lecture' => 'Le cockpit lit ; répondre, relancer et clore passent par les webhooks fournisseurs '
             . '(material-suppliers/complaints/*), qui refusent le compte consultant.'];
 }
+
+/** Sonde — les commandes, dernières portes d'entrée. */
+function ep_sonde_cmd2(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $du = date('Y-m-d', strtotime('-90 days')); $au = date('Y-m-d');
+    $q = http_build_query(['date_from' => $du, 'date_to' => $au, 'from' => $du, 'to' => $au]);
+    $out = [];
+    $court = static function ($v) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 80) : gettype($v); }
+        if (array_is_list($v)) {
+            return ['liste' => count($v), 'clés' => is_array($v[0] ?? null) ? array_keys($v[0]) : null,
+                'premier' => is_array($v[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 30), $v[0]) : null];
+        }
+        $o = [];
+        foreach ($v as $k => $x) {
+            $o[$k] = is_array($x) ? (array_is_list($x) ? ['liste' => count($x), 'clés' => is_array($x[0] ?? null) ? array_keys($x[0]) : null] : array_keys($x))
+                : mb_substr((string) $x, 0, 50);
+        }
+        return $o;
+    };
+    foreach ([
+        'commandes + dates'        => '/shops/3/orders?' . $q,
+        'lignes + dates'           => '/shops/3/orders/materials?' . $q,
+        'commandes fournisseur + dates' => '/material-suppliers/1/orders?' . $q,
+        'livraison 1'              => '/deliveries/1',
+        'livraisons à venir'       => '/material-suppliers/1/upcoming-deliveries',
+        'ventes matière'           => '/material-suppliers/1/analytics/raw-material-sales?' . $q,
+        'ventes matière tous magasins' => '/material-suppliers/1/analytics/raw-material-sales-all-shops?' . $q,
+        'résumé analytique'        => '/material-suppliers/1/analytics/summary?' . $q,
+        'commande 33 read-model'   => '/material-suppliers/1/orders/33/read-model',
+        'fulfillment'              => '/shops/3/orders/33/supplier-fulfillment',
+        'tarif en cours'           => '/material-suppliers/1/shops/3/price-lists/current',
+    ] as $nom => $ch) {
+        $r = PanelApi::get($ch);
+        $out[$nom] = $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $court($r);
+    }
+    return $out;
+}
