@@ -530,8 +530,10 @@ function ensureValidation(): void
     // demande reste dans l'écran de contrôle, et celui qui lit la tâche ne
     // voit qu'une phrase — « reprendre l'affichage des prix » — sans le
     // cliché ni les repères qui disent OÙ.
+    // `panel_note` : l'identifiant de la note déposée côté panel, quand elle
+    // est partie. Sans lui, impossible de dire si le consultant l'a reçue.
     foreach (['src_shop' => 'VARCHAR(8) NULL', 'src_task' => 'VARCHAR(16) NULL',
-              'src_date' => 'DATE NULL'] as $col => $type) {
+              'src_date' => 'DATE NULL', 'panel_note' => 'INT NULL'] as $col => $type) {
         if ($manque('ceo_project_task', $col)) {
             Db::exec('ALTER TABLE ceo_project_task ADD COLUMN ' . $col . ' ' . $type);
         }

@@ -7455,9 +7455,15 @@ class App {
                 if (!r || r.ok === false) { patch({ busy: false }); this.notify('Note non envoyée — ' + ((r && r.error) || 'refusé')); return; }
                 const nomC = (consultants.find(x2 => x2.id === qui) || {}).nom || '';
                 patch({ busy: false, ouvert: false, texte: '' });
-                this.notify(r.comme === 'tache'
+                // Dire si la note est VRAIMENT partie dans le panel : une note
+                // qui n'y arrive pas ne sera jamais lue par le consultant, et
+                // le silence laisserait croire le contraire.
+                const pn = r.panel || {};
+                const dep = pn.id ? ' · déposée dans le panel (note #' + pn.id + ')'
+                  : (pn.motif ? ' · pas déposée dans le panel : ' + pn.motif : '');
+                this.notify((r.comme === 'tache'
                   ? 'Tâche envoyée à ' + nomC + ' — échéance ' + this.fD(r.due)
-                  : 'Note consignée au journal pour ' + nomC);
+                  : 'Note consignée au journal pour ' + nomC) + dep);
                 if (r.comme === 'tache') { readOne('/projects').then(pj => { if (pj) { this.D.projects = pj; this.setState({}); } }); }
               });
             },
@@ -8066,7 +8072,8 @@ class App {
           { k: 'Remise', v: done ? (x.t.renduePar ? 'Annoncée par ' + x.t.renduePar + ' le ' + this.fD(x.t.done) : 'Cochée par la direction le ' + this.fD(x.t.done)) : 'Pas encore annoncée' },
           { k: 'Mot du consultant', v: x.t.noteRemise || '—' },
           { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
-          { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }],
+          { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }]
+          .concat(x.t.panelNote ? [{ k: 'Panel', v: 'Note #' + x.t.panelNote + ' déposée sur le magasin — visible par le consultant' }] : []),
         // La photo qui a motivé la demande, avec ses repères. Chargée seulement
         // quand la ligne est dépliée : une liste de trente tâches ne doit pas
         // déclencher trente lectures d'API.

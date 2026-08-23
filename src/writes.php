@@ -1735,6 +1735,58 @@ function wr_prod_fin(string $ref): array
  * porte, l'écran Tâches consultants la montre, l'échéance la rappelle.
  */
 /**
+ * Déposer la note dans le panel — le seul canal qui la fasse apparaître côté
+ * consultant.
+ *
+ * Trois choses ont demandé une mesure, et sont écrites ici pour qu'on n'ait pas
+ * à les redécouvrir :
+ *  · la note s'attache à un MAGASIN, pas à une personne — le panel ne sait pas
+ *    adresser une note à quelqu'un ;
+ *  · `consultant_id` est obligatoire dans le corps, et ce n'est PAS le
+ *    `membership_id` (6) mais l'`auth_user_id` du compte (104) ;
+ *  · les types du panel sont un référentiel fermé (VISIT, AUDIT, COACHING,
+ *    ISSUE, OTHER) : les nôtres s'y rangent, et le libellé exact reste écrit en
+ *    tête du contenu pour que rien ne se perde à la traduction.
+ *
+ * Un échec ne fait PAS échouer la note : elle vit d'abord dans le cockpit. Le
+ * motif remonte à l'écran plutôt que de disparaître.
+ */
+function notePanelDeposer($shopId, string $type, string $texte, string $contexte): array
+{
+    $out = ['id' => null, 'motif' => null];
+    $sid = (int) ($shopId ?? 0);
+    if ($sid <= 0) { $out['motif'] = 'note réseau : le panel n’attache une note qu’à un magasin'; return $out; }
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
+    $cid = consultantAuthId();
+    if ($cid === null) { $out['motif'] = 'identifiant consultant du compte inconnu'; return $out; }
+
+    $vers = ['À corriger sur place' => 'ISSUE', 'Rappel de procédure' => 'AUDIT',
+             'Point de formation' => 'COACHING', 'Félicitations' => 'OTHER'];
+    $code = $vers[$type] ?? 'OTHER';
+    $tid = 0; $premier = 0;
+    foreach (PanelApi::noteTypes() as $t) {
+        $id = (int) ($t['id'] ?? 0);
+        if ($premier === 0) { $premier = $id; }
+        if ((string) ($t['code'] ?? '') === $code) { $tid = $id; }
+    }
+    if ($tid === 0) { $tid = $premier; }
+    if ($tid === 0) { $out['motif'] = 'aucun type de note dans le panel'; return $out; }
+
+    $u = setting('utilisateur', []);
+    $qui = is_array($u) && !empty($u['nom']) ? (string) $u['nom'] : 'la direction';
+    $contenu = '[' . $type . '] ' . $texte
+        . ($contexte !== '' ? "\n\nContexte : " . $contexte : '')
+        . "\n\n— déposé depuis le Cockpit CEO par " . $qui;
+
+    [$ok, $res] = PanelApi::noterMagasin($sid, $tid, $contenu, $cid);
+    if (!$ok) { $out['motif'] = PanelApi::$lastError ?? 'le panel a refusé la note'; return $out; }
+    foreach ([$res['inserted_id'] ?? null, $res['id'] ?? null] as $v) {
+        if (is_numeric($v)) { $out['id'] = (int) $v; break; }
+    }
+    return $out;
+}
+
+/**
  * Le nom d'un consultant, cherché LÀ OÙ L'ÉCRAN L'A PRIS.
  *
  * `/consultants` rend « u<id de user_membership> » quand les tables du panel
@@ -1783,9 +1835,15 @@ function wr_consultant_note(): array
     $journal = 'Note au consultant ' . $cons['name'] . ' — [' . $type . '] ' . mb_substr($texte, 0, 160)
         . ($contexte !== '' ? ' (' . $contexte . ')' : '');
 
+    // ── Le dépôt dans le PANEL, pour que la note existe là où le consultant
+    // travaille. Elle s'attache au MAGASIN (le panel ne sait pas adresser une
+    // note à quelqu'un) : sans magasin, il n'y a rien à déposer.
+    $panel = notePanelDeposer($b['shopId'] ?? null, $type, $texte, $contexte);
+
     if (($b['comme'] ?? 'tache') !== 'tache') {
-        journalAdd('CEO', 'Note consultant', $cons['name'], $journal);
-        return ['ok' => true, 'comme' => 'note'];
+        journalAdd('CEO', 'Note consultant', $cons['name'], $journal
+            . ($panel['id'] ? ' → panel #' . $panel['id'] : ''));
+        return ['ok' => true, 'comme' => 'note', 'panel' => $panel];
     }
 
     // VARCHAR(16) sur ceo_project.id : l'identifiant reste court.
@@ -1809,16 +1867,17 @@ function wr_consultant_note(): array
     $srcTask = trim((string) ($b['srcTaskId'] ?? ''));
     $srcDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['srcDate'] ?? '')) ? (string) $b['srcDate'] : null;
     $shopId = ($b['shopId'] ?? null) ?: null;
-    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description, src_shop, src_task, src_date) VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?)', [
+    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description, src_shop, src_task, src_date, panel_note) VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?,?)', [
         // owner_kind est un ENUM('c','s') : « c » = consultant.
         $tid, $pid, '[' . $type . '] ' . mb_substr($texte, 0, 160), 'c', $qui,
         $shopId, $due,
         $texte . ($contexte !== '' ? "\n\nContexte : " . $contexte : ''),
         $srcTask !== '' ? $shopId : null, $srcTask !== '' ? $srcTask : null,
-        $srcTask !== '' ? $srcDate : null,
+        $srcTask !== '' ? $srcDate : null, $panel['id'],
     ]);
-    journalAdd('CEO', 'Note consultant', $cons['name'], $journal . ' → tâche ' . $tid . ', échéance ' . $due);
-    return ['ok' => true, 'comme' => 'tache', 'tacheId' => $tid, 'due' => $due];
+    journalAdd('CEO', 'Note consultant', $cons['name'], $journal . ' → tâche ' . $tid . ', échéance ' . $due
+        . ($panel['id'] ? ', panel #' . $panel['id'] : ''));
+    return ['ok' => true, 'comme' => 'tache', 'tacheId' => $tid, 'due' => $due, 'panel' => $panel];
 }
 
 /* --- campagnes marketing : le cockpit écrit dans les tables mar_* ------------

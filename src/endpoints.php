@@ -59,6 +59,29 @@ function consultantIdCompte(): ?string
     return $id;
 }
 
+/**
+ * L'identifiant que le PANEL attend pour écrire une note : l'`auth_user_id` du
+ * compte, pas son `membership_id`. Mesuré : les deux existent et diffèrent
+ * (6 et 104), et la route n'accepte que le second.
+ */
+function consultantAuthId(): ?int
+{
+    $memo = setting('consultantAuthId', null);
+    if (is_numeric($memo)) { return (int) $memo; }
+    $uid = consultantIdCompte();                       // « u6 »
+    if ($uid === null || !preg_match('/^u(\d+)$/', $uid, $m)) { return null; }
+    try {
+        $r = Db::row('SELECT auth_user_id FROM user_membership WHERE id = ?', [(int) $m[1]]);
+    } catch (PDOException $e) { return null; }
+    if ($r === null || !is_numeric($r['auth_user_id'])) { return null; }
+    $id = (int) $r['auth_user_id'];
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['consultantAuthId', json_encode($id)]);
+    } catch (PDOException $e) { /* mémorisation best-effort */ }
+    return $id;
+}
+
 function ep_meta(): array
 {
     // Horodatage du JS RÉELLEMENT déployé. « Je ne le vois pas en ligne » est
@@ -4341,6 +4364,7 @@ function ep_projects(): array
             'signalement' => tacheSignalement($t['id']),
             // La tâche de contrôle d'origine, quand la tâche est née d'une note
             // posée sur une photo : de quoi retrouver le cliché et ses repères.
+            'panelNote' => isset($t['panel_note']) && $t['panel_note'] !== null ? (int) $t['panel_note'] : null,
             'source' => (($t['src_task'] ?? null) && ($t['src_date'] ?? null))
                 ? ['shopId' => (string) ($t['src_shop'] ?? ''), 'taskId' => (string) $t['src_task'],
                    'date' => (string) $t['src_date']]

@@ -312,11 +312,17 @@ final class PanelApi
         return is_array($r) ? self::liste($r) : [];
     }
 
-    /** Déposer une note sur un magasin. Rend [succès, réponse]. */
-    public static function noterMagasin(int $shopId, int $typeId, string $contenu): array
+    /**
+     * Déposer une note sur un magasin. Rend [succès, réponse].
+     *
+     * MESURÉ : `consultant_id` est OBLIGATOIRE — sans lui, la route répond
+     * « champs requis manquants » sans dire lequel. Ce n'est pas le
+     * `membership_id` (6) mais l'`auth_user_id` du compte (104).
+     */
+    public static function noterMagasin(int $shopId, int $typeId, string $contenu, int $consultantId): array
     {
         return self::post('/consultant/shops/' . $shopId . '/notes',
-            ['note_type_id' => $typeId, 'content' => $contenu]);
+            ['note_type_id' => $typeId, 'content' => $contenu, 'consultant_id' => $consultantId]);
     }
 
     /** Créer un type de note (route d'administration — peut être refusée). */
