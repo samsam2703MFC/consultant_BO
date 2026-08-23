@@ -843,3 +843,63 @@ function wr_mesure_gel(int $id): array
         'Référence de mesure gelée (' . ($d['fenetres']['ref']['du'] ?? '') . ' → ' . ($d['fenetres']['ref']['au'] ?? '') . ')');
     return ['ok' => true, 'gele' => true, 'le' => $now];
 }
+
+/* ─────────────── Sonde : ce que les routes « consultant » rendent ───────────
+ *
+ * Une liste FIXE de chemins, lus tels quels, et rendus par leur FORME (clés,
+ * nombre d'éléments, premier élément tronqué). Aucun chemin ne vient de la
+ * requête : une sonde qui accepterait un chemin libre serait un proxy vers
+ * toute l'API amont, et ce n'est pas ce qu'on veut ouvrir ici.
+ */
+function ep_panel_sonde_consultant(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $sid = (int) ($_GET['shop'] ?? 3);
+    $du = date('Y-m-01', strtotime('-1 month'));
+    $au = date('Y-m-t', strtotime('-1 month'));
+    $an = date('Y');
+
+    $chemins = [
+        'note-types'        => '/consultant/note-types',
+        'shop-notes'        => '/consultant/shops/' . $sid . '/notes',
+        'tasks'             => '/consultant/tasks',
+        'shop-tasks'        => '/consultant/shops/' . $sid . '/tasks',
+        'network-tasks'     => '/consultant/network/tasks',
+        'network-ranking'   => '/consultant/network/tasks/ranking',
+        'targets'           => '/consultant/targets',
+        'shop-targets'      => '/consultant/shops/' . $sid . '/targets',
+        'shop-targets-range' => '/consultant/shops/' . $sid . '/targets/range?' . http_build_query(['date_from' => $an . '-01-01', 'date_to' => $an . '-12-31']),
+        'pnl-daily'         => '/consultant/shops/' . $sid . '/pnl/daily?' . http_build_query(['date_from' => $du, 'date_to' => $au, 'from' => $du, 'to' => $au]),
+        'pnl-monthly-shop'  => '/consultant/shops/' . $sid . '/pnl/monthly?' . http_build_query(['date_from' => $an . '-01-01', 'date_to' => $au]),
+        'pnl-monthly-res'   => '/consultant/shops/pnl/monthly?' . http_build_query(['date_from' => $an . '-01-01', 'date_to' => $au]),
+        'metric-definitions' => '/consultant/metric-definitions',
+        'product-sectors'   => '/consultant/product-sectors',
+        'responsibility-areas' => '/consultant/responsibility-areas',
+        'material-complaints' => '/consultant/shops/material-complaints',
+    ];
+
+    $apercu = static function ($v, int $prof = 0) use (&$apercu) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 60) : gettype($v); }
+        if (array_is_list($v)) {
+            $out = ['liste' => count($v)];
+            if ($v && is_array($v[0])) {
+                $out['clés'] = array_keys($v[0]);
+                if ($prof < 1) { $out['premier'] = $apercu($v[0], $prof + 1); }
+            } elseif ($v) { $out['premier'] = $apercu($v[0], $prof + 1); }
+            return $out;
+        }
+        $out = [];
+        foreach ($v as $k => $x) {
+            if (is_array($x)) { $out[$k] = $prof < 2 ? $apercu($x, $prof + 1) : (array_is_list($x) ? count($x) . ' éléments' : array_keys($x)); }
+            else { $out[$k] = is_scalar($x) ? mb_substr((string) $x, 0, 60) : gettype($x); }
+        }
+        return $out;
+    };
+
+    $out = ['magasin' => $sid, 'fenetre' => $du . ' → ' . $au, 'routes' => []];
+    foreach (PanelApi::getParallele($chemins) as $nom => $r) {
+        $out['routes'][$nom] = ['chemin' => $chemins[$nom],
+            'reponse' => $r === null ? 'aucune réponse' : $apercu($r)];
+    }
+    return $out;
+}
