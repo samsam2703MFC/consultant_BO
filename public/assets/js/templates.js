@@ -3955,14 +3955,20 @@ function tplJournal(c, x){
             ${c.vuesJours.map((j, i) => `<th style="padding:0 1px 6px;font-size:8px;font-weight:500;color:var(--color-text-muted);text-align:center">${i % 5 === 0 ? esc(j.court) : ''}</th>`).join('')}
           </tr></thead>
           <tbody>
-            ${c.vuesLignes.map(l => `<tr>
-              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+            ${c.vuesLignes.map(l => `<tr${l.horsTop ? ' style="background:var(--color-background-secondary)"' : ''}>
+              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.horsTop ? ' <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:999px;background:var(--color-surface);color:var(--color-text-muted)">hors top 5</span>' : ''}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
               <td style="padding:3px 10px 3px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${l.total}</td>
               ${l.cases.map(k2 => `<td style="padding:2px 1px" title="${esc(k2.jour)} — ${k2.n} ouverture(s)"><i style="${k2.st}"></i></td>`).join('')}
             </tr>`).join('')}
           </tbody>
         </table>
       </div>
+      ${c.vuesReste ? `<div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">Top 5 affiché · ${c.vuesReste} autre${c.vuesReste > 1 ? 's' : ''} écran${c.vuesReste > 1 ? 's' : ''} ouvert${c.vuesReste > 1 ? 's' : ''} sur la période</span>
+        <select ${x.C(c.setVuesAutre)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
+          ${c.vuesAutres.map(o => `<option value="${esc(o.v)}"${o.v === c.vuesAutreSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>
+      </div>` : ''}
       ${c.vuesJamais ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">Jamais ouverts sur la période : ${esc(c.vuesJamais)}</div>` : ''}`)}
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">

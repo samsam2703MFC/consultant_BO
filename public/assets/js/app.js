@@ -8676,7 +8676,22 @@ class App {
     const jours = v.joursListe || [];
     const maxN = Math.max(1, ...(v.ecrans || []).flatMap(e => e.jours || []));
     common.vuesJours = jours.map(j => ({ court: j.slice(8) + '/' + j.slice(5, 7) }));
-    common.vuesLignes = (v.ecrans || []).map(e => ({
+    // Le tableau ne montre que les CINQ premiers : au-delà, trente colonnes de
+    // cases sur vingt lignes ne se lisent plus, et ce qui compte — ce qui sert
+    // le plus — se noie. Le reste s'ouvre à la demande, un écran à la fois.
+    const tousEcrans = (v.ecrans || []);
+    const TOP = 5;
+    const choisi = S.vuesSel || '';
+    const retenus = tousEcrans.slice(0, TOP)
+      .concat(tousEcrans.filter(e => e.ecran === choisi && tousEcrans.indexOf(e) >= TOP));
+    common.vuesAutres = [{ v: '', nom: 'Voir un autre écran…' }].concat(
+      tousEcrans.slice(TOP).map(e => ({ v: e.ecran,
+        nom: (noms[e.ecran] || e.ecran) + ' · ' + e.total + ' ouverture' + (e.total > 1 ? 's' : '') })));
+    common.vuesAutreSel = choisi;
+    common.setVuesAutre = e2 => this.setState({ vuesSel: e2.target.value });
+    common.vuesReste = Math.max(0, tousEcrans.length - TOP);
+    common.vuesLignes = retenus.map(e => ({
+      horsTop: tousEcrans.indexOf(e) >= TOP,
       ecran: e.ecran, nom: noms[e.ecran] || e.ecran, total: e.total,
       // Les personnes qui l'ouvrent : un écran utilisé par une seule d'entre
       // elles ne se juge pas comme un écran ouvert par tout le monde.
