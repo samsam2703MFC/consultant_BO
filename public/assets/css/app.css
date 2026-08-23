@@ -17,3 +17,8 @@ button { font-family: inherit; }
 .hv-bg:hover    { background: var(--color-background-secondary) !important; }
 .hv-apr:hover   { background: var(--pkg-abricot) !important; color: #fff !important; }
 .hv-apr-line:hover { border-color: var(--pkg-abricot) !important; color: var(--pkg-abricot) !important; }
+
+/* Glisser-déposer au comptoir. La case survolée s'allume PAR LA CLASSE, posée
+   au vol par l'écouteur : redessiner l'écran pendant le geste ferait lâcher au
+   navigateur ce qu'on tient. */
+.pl-slot.depot   { outline: 2px solid var(--color-primary); outline-offset: 1px; background: rgba(141,29,44,0.10) !important; }

@@ -1349,7 +1349,32 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
                    WHERE s.id = ?', [$sid]);
     if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
 
+    // L'état d'avant : d'où la référence vient, et ce qu'elle portait. Il est
+    // lu ICI parce que l'échange en a besoin avant de toucher à quoi que ce soit.
+    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs FROM pla_placement WHERE ref = ?', [$ref]);
+    $venaitDe = ($ancien['slot_id'] ?? null) !== null ? (int) $ancien['slot_id'] : null;
+
     $occ = Db::rows('SELECT ref FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    // L'ÉCHANGE : glisser une référence sur un emplacement occupé, quand elle
+    // vient elle-même d'un emplacement, se lit comme « ces deux-là permutent ».
+    // C'est le geste qu'on fait au comptoir ; le refuser obligerait à vider un
+    // emplacement d'abord, en laissant une référence nulle part entre-temps.
+    $echange = null;
+    if ($occ && !empty($b['echange']) && $venaitDe !== null && $venaitDe !== $sid) {
+        if (count($occ) > 1) {
+            http_response_code(409);
+            return ['error' => 'emplacement partagé — l’échange ne saurait pas qui déplacer',
+                'occupants' => array_map(fn ($o) => (string) $o['ref'], $occ)];
+        }
+        $autre = (string) $occ[0]['ref'];
+        // L'autre part d'abord vers l'emplacement libéré ; `partager` lève le
+        // contrôle d'occupation le temps de la permutation, puisque la
+        // référence déplacée n'a pas encore quitté sa place.
+        $r = wr_plano_placer($autre, ['slotId' => $venaitDe, 'partager' => true]);
+        if (($r['ok'] ?? false) !== true) { return $r; }
+        $echange = $autre;
+        $occ = [];
+    }
     if ($occ && empty($b['partager'])) {
         http_response_code(409);
         return ['error' => 'emplacement déjà occupé',
@@ -1376,13 +1401,32 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
 
     // Sans nouvelle grille, celle qui était enregistrée est RELUE et remise :
     // enregistrer un ordre ne doit pas effacer un nombre par emplacement.
-    $ancien = Db::row('SELECT par_slot, grille_cols, grille_rangs FROM pla_placement WHERE ref = ?', [$ref]);
     $gParSlot = $grille !== null ? $grille['parSlot']
         : (($ancien['par_slot'] ?? null) !== null ? (int) $ancien['par_slot'] : null);
     $gCols = $grille !== null ? $grille['cols']
         : (($ancien['grille_cols'] ?? null) !== null ? (int) $ancien['grille_cols'] : null);
     $gRangs = $grille !== null ? $grille['rangs']
         : (($ancien['grille_rangs'] ?? null) !== null ? (int) $ancien['grille_rangs'] : null);
+
+    // Un déménagement change la forme de la case : six éclairs tiennent en
+    // 6 × 2 dans un 60 × 40, pas dans un 60 × 15. Quand l'emplacement d'arrivée
+    // n'a pas les mêmes dimensions que celui de départ, la ligne juste est
+    // REFAITE pour le nouveau format — le nombre par emplacement, lui, est ce
+    // qu'on a décidé et ne bouge pas.
+    $regrille = null;
+    if ($grille === null && $gParSlot !== null && $venaitDe !== null && $venaitDe !== $sid) {
+        $av = Db::row('SELECT largeur_mm, hauteur_mm FROM pla_slot WHERE id = ?', [$venaitDe]);
+        $memeForme = $av !== null
+            && (int) ($av['largeur_mm'] ?? 0) === (int) ($s['largeur_mm'] ?? 0)
+            && (int) ($av['hauteur_mm'] ?? 0) === (int) ($s['hauteur_mm'] ?? 0);
+        if (!$memeForme) {
+            $regrille = planoGrille($gParSlot,
+                $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
+                ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null);
+            $gCols = $regrille['cols']; $gRangs = $regrille['rangs'];
+            $fronts = max(1, min(40, $regrille['cols']));
+        }
+    }
 
     Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre,'
         . ' par_slot, grille_cols, grille_rangs)'
@@ -1423,6 +1467,13 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
     $out = ['ok' => true, 'ref' => $ref, 'slotId' => $sid,
         'ou' => $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau'] . ' · ' . $s['position']];
     if ($grille !== null) { $out['grille'] = $grille; }
+    if ($echange !== null) { $out['echange'] = $echange; }
+    if ($regrille !== null) {
+        $out['regrille'] = $regrille;
+        journalAdd('CEO', 'Planogramme', $ref,
+            'Grille refaite pour le nouvel emplacement : ' . $regrille['cols'] . ' × ' . $regrille['rangs']
+            . ' (' . $regrille['parSlot'] . ' par emplacement)');
+    }
     return $out;
 }
 

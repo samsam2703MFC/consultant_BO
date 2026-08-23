@@ -515,7 +515,7 @@ function tplReferentiel(c, x){
         <th style="${TH};text-align:right">Fiche</th>
       </tr></thead>
       <tbody>
-        ${c.refLignes.map(l => `<tr>
+        ${c.refLignes.map(l => `<tr ${l.prendre ? 'draggable="true" ' + x.DS(l.prendre) : ''}${l.prendre ? ' title="Glissez cette référence sur un emplacement du comptoir" style="cursor:grab"' : ''}>
           <td style="${TD}">
             <button ${x.A(l.ouvrir)} style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(l.nom)}</button>
             ${l.finLe ? `<span style="display:inline-block;margin-left:7px;font-size:10px;font-weight:600;padding:1px 8px;border-radius:999px;background:rgba(141,29,44,0.09);color:var(--color-primary)">fin le ${esc(l.finLe)}</span>` : ''}
@@ -5119,11 +5119,11 @@ function tplPlanoComptoir(c, x){
               <th style="${TH}"><button ${x.A(c.plCols[2].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[2].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">État</button></th>
             </tr></thead>
             <tbody>
-              ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement' : 'Ouvrir la fiche de ' + esc(r.nom)}">
+              ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} ${x.DP(r.deposer)} class="pl-slot" style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement, ou y glisser une référence' : esc(r.nom) + ' — cliquez pour la fiche'}">
                 <td style="${TD}"><span style="font-weight:500">${esc(r.meuble)} · ${esc(r.niveau)} · ${r.position}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.zone)}</div></td>
                 <td style="${TD}">${plCbx(r.format, x)}${r.dims ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.dims)}</div>` : ''}</td>
                 <td style="${TD}">${plCbx(r.contenant, x)}</td>
-                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
+                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
                 <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>'
                   : `<input ${x.A(e => e.stopPropagation())} type="number" min="0" max="400" value="${esc(r.parSlot)}" ${x.I(r.parSlotSet)} ${x.C(r.parSlotEcrire)} placeholder="—" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:27px;width:58px;padding:0 6px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-align:right">`}</td>
                 <td style="${TD}">${r.grille ? `
@@ -5153,7 +5153,7 @@ function tplPlanoComptoir(c, x){
               ${l.cases.map(k => k.absent
                 ? `<div style="min-height:50px"></div>`
                 : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, k.slots.length)},1fr);gap:5px">
-                    ${k.slots.map(s => `<div ${x.A(s.clic)} title="${s.libre ? 'Emplacement libre — cliquez pour le viser' : 'Ouvrir la fiche de ' + esc(s.nom)}" style="${s.st}">
+                    ${k.slots.map(s => `<div ${x.A(s.clic)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} ${x.DP(s.deposer)} class="pl-slot" title="${s.libre ? 'Emplacement libre — cliquez pour le viser, ou glissez-y une référence' : esc(s.nom) + ' — cliquez pour la fiche, glissez pour la déplacer'}" style="${s.st}">
                       <span style="overflow:hidden;text-overflow:ellipsis">${s.vise ? 'visé' : (s.libre ? 'libre' : esc(s.nom))}</span>
                       <span style="opacity:0.8">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}</span>
                     </div>`).join('')}
@@ -5165,6 +5165,7 @@ function tplPlanoComptoir(c, x){
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;border:1.5px dashed var(--color-primary);border-radius:3px"></span>libre</span>
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:3px"></span>occupé — cliquez pour la fiche</span>
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-primary);border-radius:3px"></span>visé</span>
+          <span>Glissez une référence du catalogue sur une case ; d’une case à l’autre, elle déménage — sur une case occupée, les deux références échangent.</span>
           ${c.plCibleTxt ? `<span style="margin-left:auto;font-size:11.5px;color:var(--color-text)">Emplacement visé : <b style="font-weight:500">${esc(c.plCibleTxt)}</b> — ouvrez une référence pour l’y placer.</span>` : ''}
         </div>`}
 

@@ -363,8 +363,20 @@ class App {
     // sur tablette en boutique.
     this.root.addEventListener('pointerdown', e => run('data-pd', e));
     this.root.addEventListener('dragstart', e => run('data-ds', e));
-    this.root.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('[data-dp]')) e.preventDefault(); });
-    this.root.addEventListener('drop', e => run('data-dp', e));
+    // La case qui recevrait s'allume, et s'éteint quand on la quitte. La classe
+    // est posée DIRECTEMENT sur le nœud : passer par l'état redessinerait
+    // l'écran au milieu du geste, et le navigateur lâcherait ce qu'on tient.
+    let survol = null;
+    const eteint = () => { if (survol) { survol.classList.remove('depot'); survol = null; } };
+    this.root.addEventListener('dragover', e => {
+      const el = e.target.closest && e.target.closest('[data-dp]');
+      if (!el) { eteint(); return; }
+      e.preventDefault();
+      if (survol !== el) { eteint(); survol = el; el.classList.add('depot'); }
+    });
+    this.root.addEventListener('dragleave', e => { if (e.target === survol) { eteint(); } });
+    this.root.addEventListener('dragend', eteint);
+    this.root.addEventListener('drop', e => { eteint(); run('data-dp', e); });
     // Échap ferme la recherche du rail. Le panneau de résultats recouvre le
     // rail : sans sortie au clavier, il fallait viser la croix pour retrouver
     // la navigation.
@@ -2998,7 +3010,10 @@ class App {
       // fallait retaper « Vitrine 1 » sans savoir ce qui était libre.
       ouvrir: common.isPlano
         ? () => this.plFicheOuvrir(String(p.ref))
-        : () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche')
+        : () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche'),
+      // Au planogramme, la ligne se PREND : on la glisse sur un emplacement du
+      // plan plutôt que d'ouvrir une fiche pour y choisir une case.
+      prendre: common.isPlano ? this.plPrendre(String(p.ref)) : null
     }));
     common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
     common.refEchelle = this.paliersMarge();
@@ -5213,6 +5228,11 @@ class App {
               const vise = cible === s.id;
               return { id: s.id, position: s.position, libre: !occ, vise,
                 nom: occ ? occ.nom : '', ref: occ ? occ.ref : '',
+                // Une case occupée se prend ; toute case se reçoit. Déposer sur
+                // une case occupée depuis le plan ÉCHANGE les deux références —
+                // c'est le geste du comptoir, et il ne laisse personne nulle part.
+                prendre: occ ? this.plPrendre(occ.ref) : null,
+                deposer: this.plDeposerSur(s.id),
                 // La grille quand elle est connue — elle dit ce que les fronts
                 // seuls ne disent pas : 6 × 1 et 3 × 2 font six produits, pas
                 // la même vitrine. Sinon, les fronts, comme avant.
@@ -5339,6 +5359,8 @@ class App {
           opts: [1, 2, 3, 4, 5, 6].map(c => ({ c, on: c === g.cols,
             go: () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, c) })) } : null,
         ref: occ ? occ.ref : '', nom: occ ? occ.nom : '',
+        prendre: occ ? this.plPrendre(occ.ref) : null,
+        deposer: this.plDeposerSur(s.id),
         fronts: occ ? String(occ.fronts) : '—', libre: !occ,
         etat: occ ? 'occupé' : 'libre',
         vise: cible === s.id,
@@ -5953,6 +5975,74 @@ class App {
         if (!r || r.ok === false) { this.plFPatch({ busy: false, err: (r && r.error) || 'échec' }); return; }
         this.plFPatch({ busy: false, ok: 'Retirée du comptoir.', cible: null });
         this.plCharge(true); this.D.prodCatalogue = null; this.plRechargeCatalogue();
+      });
+  }
+  /**
+   * Prendre une référence — depuis le catalogue, le plan ou le tableau.
+   *
+   * Rien n'est mis en état : un `setState` au départ du glisser redessine le
+   * nœud qu'on tient, et le navigateur abandonne le geste. Ce qui voyage est
+   * la référence, dans le presse-papier du glisser.
+   */
+  plPrendre(ref){
+    return e => {
+      try {
+        e.dataTransfer.setData('text/plain', 'ref:' + ref);
+        e.dataTransfer.effectAllowed = 'move';
+      } catch (e2) { /* navigateur sans glisser-déposer : le clic reste */ }
+    };
+  }
+  plDeposerSur(slotId){
+    return e => {
+      e.preventDefault();
+      const t = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
+      if (!t || t.indexOf('ref:') !== 0) { return; }
+      this.plDeposer(t.slice(4), slotId);
+    };
+  }
+  /**
+   * Déposer une référence sur un emplacement.
+   *
+   * Trois cas, et un seul est refusé : l'emplacement libre reçoit ; deux
+   * références déjà placées permutent ; une référence qui n'est nulle part et
+   * qu'on lâche sur une case occupée ne délogerait personne sans le dire — on
+   * nomme l'occupant et on ne touche à rien.
+   */
+  plDeposer(ref, slotId){
+    const pl = this.D.plano || {};
+    const place = (pl.placements || []).find(p => p.ref === ref) || null;
+    if (place && place.slotId === slotId) { return; }
+    const cible = (pl.slots || []).find(s2 => s2.id === slotId) || null;
+    if (!cible) { return; }
+    const occ = (cible.occupants || []).filter(o => o.ref !== ref);
+    const venaitDe = place ? place.slotId : null;
+    if (occ.length && !venaitDe) {
+      this.notify('Emplacement occupé par ' + occ[0].nom + ' — déposez sur un emplacement libre, ou échangez depuis le plan.');
+      return;
+    }
+    if (occ.length > 1) {
+      this.notify('Emplacement partagé — l’échange ne saurait pas laquelle déplacer.');
+      return;
+    }
+    // Le nom, pour le dire à l'écran : celui du comptoir s'il y est déjà, sinon
+    // celui du catalogue. La référence nue ne reste qu'en dernier recours.
+    const nom = ((pl.slots || []).flatMap(s2 => s2.occupants || []).find(o => o.ref === ref)
+      || (this.D.prodCatalogue || []).find(c2 => String(c2.ref) === String(ref)) || {}).nom || ref;
+    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(ref),
+      { slotId, echange: occ.length > 0, nom })
+      .then(r => {
+        if (!r || r.ok === false) {
+          this.notify('Déplacement refusé — ' + ((r && r.error) || 'écriture impossible'));
+          return;
+        }
+        const ou = cible.meuble + ' · ' + cible.niveau + ' · ' + cible.position;
+        // Ce qui a changé est DIT : un échange déplace deux références, et une
+        // grille refaite n'est pas celle qu'on avait posée.
+        this.notify((r.echange ? 'Échangées : ' + nom + ' ↔ ' + occ[0].nom + ' — ' + nom + ' en ' + ou
+          : nom + ' placée en ' + ou)
+          + (r.regrille ? ' · grille refaite : ' + r.regrille.cols + ' × ' + r.regrille.rangs : ''));
+        this.plCharge(true);
+        this.D.prodCatalogue = null; this.plRechargeCatalogue();
       });
   }
   /** Une longueur en millimètres, dite en centimètres, sans décimale inutile. */
