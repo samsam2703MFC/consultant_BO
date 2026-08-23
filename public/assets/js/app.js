@@ -6115,6 +6115,16 @@ class App {
       if (R && !R.indispo) {
         const jf = z => String(z || '').split('-').reverse().join('/');
         const age = a => a == null ? '—' : (a + ' j');
+        // Replié par défaut : une ligne, et rien d'autre. Le consultant vient
+        // ici pour ses commandes ; les réclamations ne s'ouvrent que s'il les
+        // demande.
+        common.reclOuvert = !!S.reclOuvert;
+        common.reclBasculer = () => this.setState({ reclOuvert: !S.reclOuvert });
+        const nOuv = R.ouvertes || 0;
+        common.reclResume = nOuv
+          ? (nOuv + ' sans réponse' + (R.montantOuvert ? ' · ' + this.fE(R.montantOuvert) : ''))
+          : (R.total ? 'tout est traité' : 'aucune réclamation');
+        common.reclResumeCol = nOuv ? 'var(--color-primary)' : '#2d7a3e';
         // La fenêtre de lecture : trois mois par défaut.
         const moisCour = S.reclMois == null ? 3 : S.reclMois;
         common.reclPeriodes = [[3, '3 mois'], [6, '6 mois'], [12, '12 mois'], [0, 'Tout']].map(([v, nom]) => ({

@@ -5777,18 +5777,31 @@ function tplCentrale(c, x){
   // ── Les réclamations matière, en tête de « Suivi fournisseurs ». Ce qui
   //    traîne d'abord : c'est l'ancienneté qui fait agir, pas le décompte.
   const reclamations = () => {
-    if (c.reclChargement) { return `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:14px">Lecture des réclamations…</div>`; }
+    if (c.reclChargement) { return `<div style="${CARD};margin-bottom:14px;padding:12px 16px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:13.5px;font-weight:600">Réclamations matière</span>
+      <span style="font-size:12px;color:var(--color-text-muted)">lecture…</span></div>`; }
     if (c.reclIndispo) { return `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.reclIndispo)}</div>`; }
     if (!c.reclFourn || !c.reclFourn.length) { return ''; }
     const T = c.reclTotaux || {};
     const chiffre = (n, lib, coul) => `<div style="flex:1;min-width:120px">
       <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(lib)}</div>
       <div style="font-family:var(--font-display);font-size:24px;line-height:1.1;margin-top:3px${coul ? ';color:' + coul : ''}">${n}</div></div>`;
+    // REPLIÉ : une ligne. Le reste ne s'affiche que si on le demande.
+    if (!c.reclOuvert) {
+      return `
+      <div ${x.A(c.reclBasculer)} class="hv-bg" style="${CARD};margin-bottom:14px;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 16px">
+        <span style="font-size:13.5px;font-weight:600">Réclamations matière</span>
+        <span style="font-size:12.5px;font-weight:600;color:${c.reclResumeCol}">${esc(c.reclResume)}</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.reclFenetre || '')}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">déplier ▾</span>
+      </div>`;
+    }
+
     return `
     <div style="${CARD};margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
         <div>
-          <div style="font-family:var(--font-display);font-size:17px;line-height:1.25">Réclamations matière</div>
+          <div ${x.A(c.reclBasculer)} style="font-family:var(--font-display);font-size:17px;line-height:1.25;cursor:pointer">Réclamations matière <span style="font-size:11px;color:var(--color-text-muted);font-family:var(--font-ui)">replier ▴</span></div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Ce que les boutiques ont signalé sur les produits — et ce que le fournisseur en a fait.</div>
           <div style="display:flex;align-items:center;gap:9px;margin-top:8px;flex-wrap:wrap">
             <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
