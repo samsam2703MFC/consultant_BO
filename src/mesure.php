@@ -1008,3 +1008,162 @@ function classementFenetre(string $du, string $au): ?array
     return ['du' => $jours[0], 'au' => end($jours), 'jours' => count($jours),
         'reseau' => $tot, 'magasins' => $mags];
 }
+
+/* ─────────────────── Réclamations matière — lecture ───────────────────
+ *
+ * `/consultant/shops/material-complaints` tient tout : la référence, la
+ * commande liée, la quantité, le motif codé, ce que la boutique a écrit, le
+ * statut, la réponse de production et les pièces jointes.
+ *
+ * Le cockpit ne fait que LIRE. Les routes qui répondent, relancent ou closent
+ * sont les webhooks `material-suppliers/complaints/*`, destinés au système du
+ * fournisseur : mesuré, elles répondent 401 avec le compte consultant. L'écran
+ * le dit plutôt que d'afficher des boutons qui ne feraient rien.
+ */
+function ep_fournisseurs_reclamations(): array
+{
+    if (!PanelApi::configured()) {
+        return ['indispo' => true, 'motif' => 'compte consultant non configuré'];
+    }
+    $r = PanelApi::get('/consultant/shops/material-complaints');
+    if (!is_array($r)) {
+        return ['indispo' => true, 'motif' => 'le panel n’a pas rendu les réclamations'];
+    }
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
+    } catch (PDOException $e) { /* noms indisponibles : l'identifiant fera foi */ }
+
+    $auj = new DateTimeImmutable('today');
+    $lignes = [];
+    foreach ((array) ($r['shops'] ?? []) as $s) {
+        $sid = (int) ($s['shop_id'] ?? 0);
+        foreach ((array) ($s['complaints'] ?? []) as $c) {
+            if (!is_array($c)) { continue; }
+            $rep = trim((string) ($c['production_response'] ?? ''));
+            $statut = strtoupper((string) ($c['status'] ?? ''));
+            $le = substr((string) ($c['reported_at'] ?? $c['created_at'] ?? ''), 0, 10);
+            $age = null;
+            if ($le !== '') {
+                try { $age = (int) (new DateTimeImmutable($le))->diff($auj)->days; } catch (Exception $e) { $age = null; }
+            }
+            // « Ouverte » n'est pas un statut du panel : c'est une réclamation
+            // acceptée que personne n'a suivie d'effet. C'est celle-là qui coûte.
+            $ouverte = $statut !== 'REJECTED' && $rep === '';
+            $lignes[] = [
+                'id' => (int) ($c['id'] ?? 0),
+                'cle' => (string) ($c['complaint_key'] ?? ''),
+                'shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+                'le' => $le, 'age' => $age,
+                'fournisseur' => (string) ($c['supplier_name'] ?? ''),
+                'reference' => (string) ($c['material_name'] ?? ''),
+                'sku' => (string) ($c['supplier_sku'] ?? ''),
+                'commande' => (string) ($c['order_key'] ?? ''),
+                'qte' => isset($c['qty']) ? (float) $c['qty'] : null,
+                'unite' => (string) ($c['unit_name'] ?? ''),
+                'motif' => (string) ($c['reason_name'] ?? $c['reason_code'] ?? ''),
+                'motifCode' => (string) ($c['reason_code'] ?? ''),
+                'texte' => trim((string) ($c['description'] ?? '')),
+                'action' => (string) ($c['requested_action'] ?? ''),
+                'statut' => $statut,
+                'reponse' => $rep,
+                'reponseLe' => $rep !== '' ? substr((string) ($c['updated_at'] ?? ''), 0, 10) : null,
+                'qteAcceptee' => isset($c['accepted_qty']) && $c['accepted_qty'] !== null ? (float) $c['accepted_qty'] : null,
+                'compensation' => (string) ($c['compensation_method'] ?? ''),
+                'pj' => count((array) ($c['attachments'] ?? [])),
+                'ouverte' => $ouverte,
+            ];
+        }
+    }
+    usort($lignes, fn ($a, $b) => strcmp((string) $b['le'], (string) $a['le']));
+
+    // Par fournisseur : ce qui traîne, ce qui revient.
+    $parF = [];
+    foreach ($lignes as $l) {
+        $f = $l['fournisseur'] !== '' ? $l['fournisseur'] : 'Fournisseur inconnu';
+        if (!isset($parF[$f])) {
+            $parF[$f] = ['nom' => $f, 'total' => 0, 'ouvertes' => 0, 'reglees' => 0, 'refusees' => 0,
+                'plusAncienne' => null, 'refs' => [], 'motifs' => [], 'delais' => []];
+        }
+        $parF[$f]['total']++;
+        if ($l['statut'] === 'REJECTED') { $parF[$f]['refusees']++; }
+        elseif ($l['ouverte']) { $parF[$f]['ouvertes']++; }
+        else { $parF[$f]['reglees']++; }
+        if ($l['ouverte'] && $l['age'] !== null) {
+            $parF[$f]['plusAncienne'] = max((int) $parF[$f]['plusAncienne'], $l['age']);
+        }
+        if ($l['reference'] !== '') { $parF[$f]['refs'][$l['reference']] = ($parF[$f]['refs'][$l['reference']] ?? 0) + 1; }
+        if ($l['motif'] !== '') { $parF[$f]['motifs'][$l['motif']] = ($parF[$f]['motifs'][$l['motif']] ?? 0) + 1; }
+        if ($l['reponse'] !== '' && $l['le'] !== '' && $l['reponseLe']) {
+            try {
+                $d1 = new DateTimeImmutable($l['le']); $d2 = new DateTimeImmutable($l['reponseLe']);
+                if ($d2 >= $d1) { $parF[$f]['delais'][] = (int) $d1->diff($d2)->days; }
+            } catch (Exception $e) { /* dates illisibles */ }
+        }
+    }
+    foreach ($parF as $f => $v) {
+        arsort($parF[$f]['refs']); arsort($parF[$f]['motifs']);
+        $parF[$f]['refs'] = array_slice($parF[$f]['refs'], 0, 5, true);
+        $parF[$f]['motifs'] = array_slice($parF[$f]['motifs'], 0, 6, true);
+        $parF[$f]['delaiMoyen'] = $v['delais'] !== [] ? round(array_sum($v['delais']) / count($v['delais']), 1) : null;
+        unset($parF[$f]['delais']);
+    }
+    usort($parF, fn ($a, $b) => [$b['ouvertes'], $b['total']] <=> [$a['ouvertes'], $a['total']]);
+
+    $parMag = [];
+    foreach ($lignes as $l) { $parMag[$l['magasin']] = ($parMag[$l['magasin']] ?? 0) + 1; }
+    arsort($parMag);
+
+    return ['lignes' => $lignes, 'fournisseurs' => array_values($parF), 'parMagasin' => $parMag,
+        'total' => count($lignes),
+        'ouvertes' => count(array_filter($lignes, fn ($l) => $l['ouverte'])),
+        'reglees' => count(array_filter($lignes, fn ($l) => !$l['ouverte'] && $l['statut'] !== 'REJECTED')),
+        'refusees' => count(array_filter($lignes, fn ($l) => $l['statut'] === 'REJECTED')),
+        'source' => 'API panel — /consultant/shops/material-complaints',
+        'lecture' => 'Le cockpit lit ; répondre, relancer et clore passent par les webhooks fournisseurs '
+            . '(material-suppliers/complaints/*), qui refusent le compte consultant.'];
+}
+
+/** Sonde — le second lot de routes réclamations (lecture seule). */
+function ep_sonde_recl2(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $out = [];
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 120) : gettype($v); }
+        if (array_is_list($v)) {
+            return ['liste' => count($v), 'clés' => ($v && is_array($v[0])) ? array_keys($v[0]) : null,
+                'premier' => $v[0] ?? null];
+        }
+        $o = [];
+        foreach ($v as $k => $x) { $o[$k] = is_array($x) ? (array_is_list($x) ? count($x) . ' éléments' : array_keys($x))
+            : mb_substr((string) $x, 0, 120); }
+        return $o;
+    };
+
+    $out['motifs'] = $apercu(PanelApi::get('/material-complaint-reasons'));
+    $out['parMagasin'] = $apercu(PanelApi::get('/shops/3/material-complaints'));
+    $out['parFournisseur'] = $apercu(PanelApi::get('/material-suppliers/1/complaints'));
+
+    // L'URL signée d'une pièce jointe : quel identifiant attend-elle ?
+    $att = null;
+    $r = PanelApi::get('/consultant/shops/material-complaints');
+    foreach ((array) ($r['shops'] ?? []) as $s) {
+        foreach ((array) ($s['complaints'] ?? []) as $c) {
+            foreach ((array) ($c['attachments'] ?? []) as $a) { $att = $a; break 3; }
+        }
+    }
+    $out['pieceJointe'] = $att;
+    if (is_array($att)) {
+        $ulid = '';
+        if (preg_match('#complaints/([0-9A-HJKMNP-TV-Z]{26})/#', (string) ($att['object_key'] ?? ''), $m)) { $ulid = $m[1]; }
+        foreach (['par id' => (string) ($att['id'] ?? ''), 'par ulid du chemin' => $ulid] as $nom => $cle) {
+            if ($cle === '') { $out['presigned'][$nom] = 'pas d’identifiant à essayer'; continue; }
+            $u = PanelApi::get('/material-complaints/attachments/' . rawurlencode($cle) . '/presigned-url');
+            $out['presigned'][$nom] = ['cle' => $cle,
+                'reponse' => is_string($u) ? mb_substr($u, 0, 90) : $apercu($u),
+                'erreur' => $u === null ? PanelApi::$lastError : null];
+        }
+    }
+    return $out;
+}
