@@ -1734,6 +1734,37 @@ function wr_prod_fin(string $ref): array
  * et une note qui ne vit nulle part ne serait jamais suivie. Le projet la
  * porte, l'écran Tâches consultants la montre, l'échéance la rappelle.
  */
+/**
+ * Le nom d'un consultant, cherché LÀ OÙ L'ÉCRAN L'A PRIS.
+ *
+ * `/consultants` rend « u<id de user_membership> » quand les tables du panel
+ * sont là, et l'identifiant de `ceo_consultant` sinon (installation autonome).
+ * L'écriture, elle, ne consultait que `ceo_consultant` : « u8 » n'y étant pas,
+ * chaque note au consultant repartait en « consultant inconnu » — l'écran
+ * disait « Note non envoyée », et RIEN n'était écrit. Deux référentiels pour
+ * une même question, c'est toujours l'écriture qui perd. On interroge donc les
+ * deux, dans l'ordre où la lecture les sert.
+ */
+function consultantNom(string $id): ?string
+{
+    if (preg_match('/^u(\d+)$/', $id, $m)) {
+        try {
+            $r = Db::row("SELECT COALESCE(NULLIF(TRIM(p.display_name), ''),
+                                 NULLIF(TRIM(CONCAT(COALESCE(p.first_name,''),' ',COALESCE(p.last_name,''))), ''),
+                                 CONCAT('Consultant #', m.id)) AS nom
+                            FROM user_membership m
+                            LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
+                           WHERE m.app = 'CONSULTANT' AND m.is_active = 1 AND m.id = ?", [(int) $m[1]]);
+            if ($r !== null) { return (string) $r['nom']; }
+        } catch (PDOException $e) { /* tables du panel absentes : repli local */ }
+    }
+    try {
+        $r = Db::row('SELECT name FROM ceo_consultant WHERE id = ?', [$id]);
+        if ($r !== null) { return (string) $r['name']; }
+    } catch (PDOException $e) { /* pas de référentiel local non plus */ }
+    return null;
+}
+
 function wr_consultant_note(): array
 {
     $b = body();
@@ -1744,8 +1775,9 @@ function wr_consultant_note(): array
         return ['error' => 'le consultant et la note sont requis'];
     }
     $type = mb_substr(trim((string) ($b['type'] ?? 'Note')), 0, 40);
-    $cons = Db::row('SELECT name FROM ceo_consultant WHERE id = ?', [$qui]);
-    if ($cons === null) { http_response_code(404); return ['error' => 'consultant inconnu']; }
+    $nomC = consultantNom($qui);
+    if ($nomC === null) { http_response_code(404); return ['error' => 'consultant inconnu']; }
+    $cons = ['name' => $nomC];
 
     $contexte = trim((string) ($b['contexte'] ?? ''));
     $journal = 'Note au consultant ' . $cons['name'] . ' — [' . $type . '] ' . mb_substr($texte, 0, 160)
@@ -1766,7 +1798,11 @@ function wr_consultant_note(): array
             date('Y-m-d'), null,
         ]);
     }
-    $tid = 'cn' . substr((string) round(microtime(true) * 1000), -8);
+    // L'identifiant tient sur VARCHAR(16). L'horodatage seul suffisait tant que
+    // deux notes ne partaient pas dans la même milliseconde : à la deuxième,
+    // la clé primaire refusait l'écriture et l'écran recevait une erreur 500
+    // sans rien comprendre. Deux chiffres tirés au sort ferment la porte.
+    $tid = 'cn' . substr((string) round(microtime(true) * 1000), -8) . random_int(10, 99);
     $due = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['due'] ?? '')) ? $b['due'] : date('Y-m-d', time() + 7 * 86400);
     Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description) VALUES (?,?,?,?,?,?,?,NULL,?)', [
         // owner_kind est un ENUM('c','s') : « c » = consultant.
