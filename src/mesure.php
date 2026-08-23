@@ -1359,11 +1359,44 @@ function ep_sonde_heures(): array
         $cles = is_array($h[0] ?? null) ? array_keys($h[0]) : [];
         $out['heures']['porteUneDate'] = (bool) array_intersect(['date', 'day', 'jour'], $cles);
     }
+    // ── L'essai grandeur nature : le profil horaire des six derniers MÊMES
+    //    jours de semaine, puis la projection de la journée en cours.
+    $refs = [];
+    for ($i = 1; $i <= 6; $i++) { $refs[] = date('Y-m-d', strtotime('-' . (7 * $i) . ' days')); }
+    $req = [];
+    foreach ($refs as $d) { $req[$d] = '/consultant/shops/' . $sid . '/margin-heatmap?' . http_build_query(['from' => $d, 'to' => $d]); }
+    $prof = []; $totRef = 0.0; $nRef = 0;
+    foreach (PanelApi::getParallele($req, 4) as $d => $rr) {
+        $hh = is_array($rr) ? ($rr['hours'] ?? null) : null;
+        if (!is_array($hh)) { continue; }
+        $tot = 0.0;
+        foreach ($hh as $x) { $tot += (float) ($x['ca'] ?? 0); }
+        if ($tot <= 0) { continue; }
+        $nRef++; $totRef += $tot;
+        foreach ($hh as $x) { $prof[(int) $x['hour']] = ($prof[(int) $x['hour']] ?? 0) + (float) ($x['ca'] ?? 0); }
+    }
+    ksort($prof);
+    $sommeProf = array_sum($prof);
+    $out['profilHoraire'] = ['joursRetenus' => $nRef, 'moyenneJour' => $nRef ? round($totRef / $nRef, 2) : null,
+        'parts' => $sommeProf > 0 ? array_map(fn ($v) => round(100 * $v / $sommeProf, 1), array_filter($prof, fn ($v) => $v > 0)) : []];
+
     // Et la journée d'aujourd'hui, heure par heure ?
     $r2 = PanelApi::marginHeatmapEntre($sid, date('Y-m-d'), date('Y-m-d'));
     $h2 = is_array($r2) ? ($r2['hours'] ?? null) : null;
-    $out['aujourdhui'] = ['nombre' => is_array($h2) ? count($h2) : 0,
-        'trois' => is_array($h2) ? array_slice($h2, 0, 3) : null,
-        'total' => is_array($r2) ? ($r2['totals'] ?? null) : null];
+    $caJour = 0.0; $parHeure = [];
+    foreach ((array) $h2 as $x) {
+        $v = (float) ($x['ca'] ?? 0);
+        if ($v > 0) { $parHeure[(int) $x['hour']] = round($v, 2); $caJour += $v; }
+    }
+    $hMax = $parHeure === [] ? -1 : max(array_keys($parHeure));
+    $partEcoulee = 0.0;
+    foreach ($prof as $h3 => $v3) {
+        if ($sommeProf > 0 && $h3 <= $hMax) { $partEcoulee += $v3 / $sommeProf; }
+    }
+    $out['aujourdhui'] = ['caJusquIci' => round($caJour, 2), 'parHeure' => $parHeure,
+        'derniereHeure' => $hMax, 'heureServeur' => date('H:i'),
+        'partEcoulee' => round(100 * $partEcoulee, 1),
+        'projection' => ($partEcoulee > 0.02 && $caJour > 0) ? round($caJour / $partEcoulee, 2) : null,
+        'moyenneMemeJour' => $nRef ? round($totRef / $nRef, 2) : null];
     return $out;
 }
