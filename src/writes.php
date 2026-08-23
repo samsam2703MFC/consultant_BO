@@ -2749,10 +2749,20 @@ function wr_ecran_vue(): array
  */
 function wr_task_delete(string $projectId, string $taskId): array
 {
-    $t = Db::row('SELECT t.name, t.done_on, t.note, p.name AS pname
+    $t = Db::row('SELECT t.name, t.done_on, t.note, t.panel_note, p.name AS pname
                     FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id
                    WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
     if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
+
+    // La note déposée dans le panel part avec la tâche : la laisser derrière
+    // laisserait au consultant une consigne que plus personne ne suit ici.
+    $panel = null;
+    $nid = isset($t['panel_note']) && $t['panel_note'] !== null ? (int) $t['panel_note'] : 0;
+    if ($nid > 0 && PanelApi::configured()) {
+        [$ok] = PanelApi::envoi('DELETE', '/consultant/notes/' . $nid, []);
+        $panel = $ok ? ('note #' . $nid . ' retirée du panel')
+                     : ('note #' . $nid . ' non retirée du panel — ' . (PanelApi::$lastError ?? 'refus'));
+    }
 
     $pdo = Db::pdo();
     $pdo->beginTransaction();
@@ -2766,10 +2776,11 @@ function wr_task_delete(string $projectId, string $taskId): array
         $pdo->commit();
         journalAdd('CEO', 'Tâche', (string) $t['pname'], 'Tâche « ' . $t['name'] . ' » supprimée'
             . ($t['note'] !== null ? ' (elle était validée ' . (int) $t['note'] . '/5)' : '')
-            . ($sig > 0 ? ' — ' . $sig . ' signalement(s) fermé(s) avec elle' : ''));
+            . ($sig > 0 ? ' — ' . $sig . ' signalement(s) fermé(s) avec elle' : '')
+            . ($panel !== null ? ' — ' . $panel : ''));
     } catch (Throwable $e) {
         $pdo->rollBack();
         throw $e;
     }
-    return ['ok' => true, 'signalements' => $sig];
+    return ['ok' => true, 'signalements' => $sig, 'panel' => $panel];
 }
