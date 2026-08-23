@@ -4474,14 +4474,16 @@ class App {
   /* Les réclamations matière : lues chez le panel, jamais recalculées. Une
      seule lecture, gardée — l'écran des fournisseurs y revient souvent. */
   reclCharge(force){
-    if (this._reclEnCours) { return; }
-    if (this.D.recl && !force) { return; }
-    this._reclEnCours = true;
+    const mois = this.state.reclMois == null ? 3 : this.state.reclMois;
+    const cle = String(mois);
+    if (this._reclEnCours === cle) { return; }
+    if (this.D.recl && this.D.recl.cle === cle && !force) { return; }
+    this._reclEnCours = cle;
     if (!this.D.recl) { this.setState({ reclChargement: true }); }
-    readOne('/fournisseurs/reclamations').then(d => {
-      this._reclEnCours = false; this.D.recl = d || { indispo: true };
+    readOne('/fournisseurs/reclamations?mois=' + mois).then(d => {
+      this._reclEnCours = null; this.D.recl = Object.assign({ cle }, d || { indispo: true });
       this.setState({ reclChargement: false });
-    }).catch(() => { this._reclEnCours = false; this.D.recl = { indispo: true };
+    }).catch(() => { this._reclEnCours = null; this.D.recl = { cle, indispo: true };
       this.setState({ reclChargement: false }); });
   }
 
@@ -6113,6 +6115,13 @@ class App {
       if (R && !R.indispo) {
         const jf = z => String(z || '').split('-').reverse().join('/');
         const age = a => a == null ? '—' : (a + ' j');
+        // La fenêtre de lecture : trois mois par défaut.
+        const moisCour = S.reclMois == null ? 3 : S.reclMois;
+        common.reclPeriodes = [[3, '3 mois'], [6, '6 mois'], [12, '12 mois'], [0, 'Tout']].map(([v, nom]) => ({
+          v, nom, on: moisCour === v,
+          choisir: () => { this.D.recl = null; this.setState({ reclMois: v, reclDet: null }); } }));
+        common.reclFenetre = R.fenetre || '';
+        common.reclEcartees = R.ecartees ? (R.ecartees + ' plus ancienne' + (R.ecartees > 1 ? 's' : '') + ' hors fenêtre') : '';
         common.reclTotaux = { total: R.total, ouvertes: R.ouvertes, reglees: R.reglees, refusees: R.refusees,
           // COMBIEN : ce que pèsent les réclamations sans réponse, au prix
           // d'achat de la matière. Un « à peu près » se dit, il ne se cache pas.

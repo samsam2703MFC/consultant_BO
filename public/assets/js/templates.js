@@ -5790,6 +5790,12 @@ function tplCentrale(c, x){
         <div>
           <div style="font-family:var(--font-display);font-size:17px;line-height:1.25">Réclamations matière</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Ce que les boutiques ont signalé sur les produits — et ce que le fournisseur en a fait.</div>
+          <div style="display:flex;align-items:center;gap:9px;margin-top:8px;flex-wrap:wrap">
+            <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
+              ${(c.reclPeriodes || []).map(p2 => `<button ${x.A(p2.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:${p2.on ? '600' : '400'};padding:5px 12px;border-radius:7px;background:${p2.on ? 'var(--color-surface)' : 'transparent'};color:${p2.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(p2.nom)}</button>`).join('')}
+            </span>
+            ${c.reclEcartees ? `<span style="font-size:11px;color:var(--color-text-muted)">${esc(c.reclEcartees)}</span>` : ''}
+          </div>
         </div>
         <div style="display:flex;gap:18px;flex-wrap:wrap">
           ${chiffre(T.ouvertes, 'Sans réponse', 'var(--color-primary)')}
