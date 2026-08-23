@@ -1442,6 +1442,7 @@ function tplMesure(c, x){
         ${(c.mesCampOpts || []).map(o => `<option value="${o.v}"${o.v === c.mesCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
       </select>
       ${c.mesChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des ventes jour par jour…</span>' : ''}
+      ${c.mesRecalcul ? '<span style="font-size:12px;color:var(--color-primary)">Recalcul en cours…</span>' : ''}
     </div>`;
 
   if (c.mesIndispo) {

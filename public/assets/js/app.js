@@ -2544,6 +2544,10 @@ class App {
     const b = S.mes || {};
     const d = b.d || {};
     common.mesChargement = !!b.chargement && !b.d;
+    // Un recalcul prend plusieurs secondes (une lecture du panel par magasin et
+    // par mois). Sans ce mot, changer de témoin donne l'impression que le clic
+    // n'a rien fait — et on reclique.
+    common.mesRecalcul = !!b.chargement && !!b.d;
     common.mesIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
     const camp = d.campagne || null;
     common.mesCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
