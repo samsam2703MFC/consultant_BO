@@ -4845,10 +4845,15 @@ class App {
           pct: m.projectionAtteinte == null ? '' : this.fP(m.projectionAtteinte, 0),
           // Le doré va jusqu'à la projection, borné comme la barre du réalisé.
           w: Math.max(0, Math.min(100, (m.projectionAtteinte || 0) * 100)).toFixed(1),
-          detail: String(m.projectionPart).replace('.', ',') + ' % de la journée écoulée à '
-            + (m.projectionHeure == null ? '?' : m.projectionHeure + ' h')
-            + (m.projectionJours ? ' · profil de ' + m.projectionJours + ' ' + (m.objectifJourNom || 'jour')
-               + (m.projectionJours > 1 ? 's' : '') : ''),
+          // Dire de quoi la projection est faite : le réalisé, PLUS les euros
+          // que rapportent d'habitude les heures qui restent.
+          detail: (m.projectionReste ? fE(m.ca) + ' + ' + fE(m.projectionReste) + ' attendus après '
+              + (m.projectionHeure == null ? '?' : m.projectionHeure + ' h') : '')
+            + (m.projectionJours ? ' · moyenne de ' + m.projectionJours + ' ' + (m.objectifJourNom || 'jour')
+               + (m.projectionJours > 1 ? 's' : '') + ', heure par heure' : ''),
+          // Le second regard : la journée prolongée au rythme de la matinée.
+          rythme: (m.projectionRythme == null || Math.abs(m.projectionRythme - m.projection) < Math.max(20, m.projection * 0.03))
+            ? '' : ('au rythme du jour : ' + fE(m.projectionRythme)),
         },
         projMotif: m.projection == null ? (m.projectionMotif || '') : '',
       },

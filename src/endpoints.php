@@ -1643,19 +1643,26 @@ function ensureProfilHeure(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
-/** Le profil horaire mémorisé : ['parts' => [heure => %], 'jours' => n, 'maj' => …]. */
+/**
+ * Le profil horaire mémorisé : la part de chaque heure ET le montant moyen
+ * qu'elle rapporte. Les deux servent : la part dit où l'on en est dans la
+ * journée, les montants disent ce que les heures restantes rapportent
+ * d'habitude.
+ */
 function profilHeureLire(string $shopId, int $jour): array
 {
     ensureProfilHeure();
-    $parts = []; $n = 0; $maj = null;
+    $parts = []; $montants = []; $n = 0; $maj = null;
     try {
-        foreach (Db::rows('SELECT heure, part, jours, maj FROM ceo_shop_profil_heure
+        foreach (Db::rows('SELECT heure, part, ca_moyen, jours, maj FROM ceo_shop_profil_heure
                             WHERE shop_id = ? AND jour = ? ORDER BY heure', [$shopId, $jour]) as $r) {
-            if ($r['part'] !== null) { $parts[(int) $r['heure']] = (float) $r['part']; }
+            $h = (int) $r['heure'];
+            if ($r['part'] !== null) { $parts[$h] = (float) $r['part']; }
+            if ($r['ca_moyen'] !== null) { $montants[$h] = (float) $r['ca_moyen']; }
             $n = max($n, (int) $r['jours']); $maj = $r['maj'];
         }
     } catch (PDOException $e) { /* table absente */ }
-    return ['parts' => $parts, 'jours' => $n, 'maj' => $maj];
+    return ['parts' => $parts, 'montants' => $montants, 'jours' => $n, 'maj' => $maj];
 }
 
 /**
@@ -2011,6 +2018,7 @@ function ep_exploitation_jour(): array
         // magasin, pas à chaque affichage. Et au plus deux magasins rafraîchis
         // par requête — un écran ne doit pas payer le rattrapage de tous.
         $proj = null; $projPart = null; $projHeure = null; $projJours = 0; $projMotif = null;
+        $projReste = null; $projRythme = null;
         if ($estAuj) {
             $ph = profilHeureLire((string) $id, $wdJour);
             $vieux = $ph['maj'] === null || strtotime((string) $ph['maj']) < strtotime('-7 days');
@@ -2027,16 +2035,28 @@ function ep_exploitation_jour(): array
             if ($ph['parts'] === []) { $projMotif = 'profil horaire indisponible'; }
             elseif ($derniere < 0) { $projMotif = 'aucune vente encore aujourd’hui'; }
             else {
-                $cum = 0.0;
+                $cum = 0.0; $reste = 0.0;
                 foreach ($ph['parts'] as $h4 => $p4) { if ((int) $h4 <= $derniere) { $cum += (float) $p4; } }
+                foreach ($ph['montants'] as $h5 => $m5) { if ((int) $h5 > $derniere) { $reste += (float) $m5; } }
                 $projPart = round($cum, 1);
                 $projHeure = $derniere;
                 $projJours = (int) $ph['jours'];
+                $projReste = round($reste, 2);
                 // Sous 30 % de journée écoulée, une projection est du vent :
                 // trois quarts du chiffre restent à faire et la moindre heure
                 // creuse la ferait mentir.
-                if ($cum >= 30 && $ca > 0) { $proj = round($ca / ($cum / 100), 2); }
-                else { $projMotif = 'moins de 30 % de la journée écoulée'; }
+                if ($cum >= 30 && $ca > 0) {
+                    // CE QUI EST AFFICHÉ : le réalisé PLUS ce que les heures
+                    // restantes rapportent d'habitude — la moyenne des six
+                    // mêmes jours, heure par heure. On additionne des euros
+                    // observés, on n'extrapole pas une tendance.
+                    $proj = round($ca + $reste, 2);
+                    // Second regard : la même journée prolongée AU RYTHME DU
+                    // JOUR (règle de trois sur la part écoulée). Elle dit ce
+                    // que donnerait la journée si l'après-midi ressemblait à la
+                    // matinée. Les deux ensemble encadrent la vérité.
+                    $projRythme = round($ca / ($cum / 100), 2);
+                } else { $projMotif = 'moins de 30 % de la journée écoulée'; }
             }
         }
 
@@ -2078,6 +2098,7 @@ function ep_exploitation_jour(): array
             'projection' => $proj,
             'projectionPart' => $projPart, 'projectionHeure' => $projHeure,
             'projectionJours' => $projJours, 'projectionMotif' => $projMotif,
+            'projectionReste' => $projReste, 'projectionRythme' => $projRythme,
             'projectionAtteinte' => ($proj !== null && $objJour !== null && $objJour > 0)
                 ? round($proj / $objJour, 4) : null,
             'objectifJourNom' => jourNomSemaine($date),

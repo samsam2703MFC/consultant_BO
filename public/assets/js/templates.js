@@ -2800,6 +2800,7 @@ function tplResultatJour(c, x){
         ${c.rjDetail.objectif.proj ? `<span style="width:100%;font-size:11.5px;font-weight:600;color:#8a6d12">
           Projection fin de journée : ${esc(c.rjDetail.objectif.proj.montant)}${c.rjDetail.objectif.proj.pct ? ' — ' + esc(c.rjDetail.objectif.proj.pct) + ' de l’objectif' : ''}
           <span style="font-weight:400;color:var(--color-text-muted)">· ${esc(c.rjDetail.objectif.proj.detail)}</span>
+          ${c.rjDetail.objectif.proj.rythme ? `<span style="font-weight:400;color:var(--color-text-muted)"> · ${esc(c.rjDetail.objectif.proj.rythme)}</span>` : ''}
         </span>` : (c.rjDetail.projMotif ? `<span style="width:100%;font-size:11px;color:var(--color-text-muted)">Pas de projection : ${esc(c.rjDetail.projMotif)}.</span>` : '')}
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
       </div>` : ''}
