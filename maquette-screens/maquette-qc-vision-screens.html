@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquettes écrans — Contrôle qualité visuel L'Atelier By</title>
+<style>
+  :root{
+    --ruby:#8D1D2C;
+    --ruby-dark:#6E1622;
+    --abricot:#F2C9A0;
+    --abricot-l:#FBF3E7;
+    --abricot-m:#FDF8F0;
+    --ok:#1B7F3B;
+    --ok-bg:#E4F3E8;
+    --nok:#C62828;
+    --nok-bg:#FBE7E7;
+    --warn:#E07C00;
+    --warn-bg:#FDEBD2;
+    --off:#757575;
+    --off-bg:#EEEEEE;
+    --ink:#1A1A1A;
+    --mut:#666;
+    --line:#E6E0D6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#4a4a4a;padding:40px;display:flex;flex-direction:column;gap:60px;align-items:center}
+  .board{width:1280px;height:800px;background:#fff;overflow:hidden;position:relative;
+         display:flex;flex-direction:column;color:var(--ink);flex:none}
+
+  /* ---------- En-tête permanent ---------- */
+  .hdr{background:var(--ruby);color:#fff;padding:12px 22px;display:flex;align-items:center;gap:22px;flex:none;height:96px}
+  .brand small{display:block;font-size:10px;letter-spacing:3px;opacity:.75;font-weight:600;margin-bottom:4px}
+  .ctl-name{display:flex;align-items:center;gap:10px}
+  .ctl-name h1{font-size:21px;font-weight:800;letter-spacing:.2px;white-space:nowrap}
+  .edit-chip{width:40px;height:40px;border:1.5px solid rgba(255,255,255,.45);border-radius:10px;
+             display:flex;align-items:center;justify-content:center;font-size:16px}
+  .counts{display:flex;flex-direction:column;gap:5px}
+  .count-chip{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);border-radius:8px;
+              padding:2px 10px;font-size:12px;white-space:nowrap}
+  .count-chip b{font-weight:800}
+  .count-chip .low{color:#FFCF8A;font-weight:700}
+  .hdr .spacer{flex:1}
+  .health{display:flex;gap:10px}
+  .hstat{background:#fff;border-radius:12px;padding:8px 18px;text-align:center;min-width:104px}
+  .hstat .v{font-size:26px;font-weight:800;line-height:1.05}
+  .hstat .l{font-size:11px;color:#555;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+  .v.green{color:var(--ok)} .v.red{color:var(--nok)} .v.orange{color:var(--warn)} .v.dark{color:#222}
+
+  /* ---------- Onglets ---------- */
+  .tabs{display:flex;background:#fff;border-bottom:1px solid #E3E3E3;flex:none;height:58px}
+  .tab{flex:1;max-width:280px;display:flex;align-items:center;justify-content:center;gap:8px;
+       font-size:17px;font-weight:700;color:#777;border-bottom:4px solid transparent}
+  .tab.active{color:var(--ruby);border-bottom-color:var(--ruby);background:#FDF8F5}
+
+  .bodyz{flex:1;display:flex;min-height:0}
+
+  /* ---------- Badges classe ---------- */
+  .pill{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11.5px;font-weight:700}
+  .pill.ok{background:var(--ok-bg);color:var(--ok)}
+  .pill.nok{background:var(--nok-bg);color:var(--nok)}
+  .pill.maj{border:1.5px solid var(--nok);color:var(--nok);background:#fff}
+  .pill.min{border:1.5px solid var(--warn);color:var(--warn);background:#fff}
+
+  /* ---------- Écran Entraînement ---------- */
+  .cls-panel{width:344px;background:var(--abricot-l);border-right:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px}
+  .panel-title{font-size:12px;font-weight:800;letter-spacing:1.5px;color:var(--ruby);text-transform:uppercase}
+  .cls-card{background:#fff;border-radius:12px;border:2px solid transparent;padding:12px 12px 10px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .cls-card.sel{border-color:var(--ruby);box-shadow:0 2px 8px rgba(141,29,44,.18)}
+  .cls-top{display:flex;align-items:center;gap:8px}
+  .cls-top .nm{font-size:15.5px;font-weight:800;flex:1}
+  .icon-btn{width:38px;height:38px;border:1px solid #DDD;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#555;background:#fff}
+  .cls-pills{margin:7px 0 5px;display:flex;gap:6px;flex-wrap:wrap}
+  .cls-n{font-size:12.5px;color:var(--mut)}
+  .cls-n b{color:var(--ink)}
+  .cls-n .lowtxt{color:var(--warn);font-weight:700}
+  .btn-newcls{margin-top:auto;height:50px;border:2px dashed var(--ruby);border-radius:12px;color:var(--ruby);
+              font-size:15.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;background:#fff}
+
+  .train-right{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:11px;min-width:0}
+  .target-line{font-size:13.5px;color:var(--mut)}
+  .target-line b{color:var(--ruby);font-weight:800}
+  .dropzone{border:2.5px dashed #CBA26E;background:var(--abricot-m);border-radius:14px;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:none}
+  .dz-train{height:106px}
+  .dropzone .big{font-size:17px;font-weight:800}
+  .dropzone .sub{font-size:13px;color:var(--mut)}
+  .dropzone .ico{font-size:22px}
+  .progress-row{display:flex;align-items:center;gap:14px}
+  .progress-row .lbl{font-size:13.5px;font-weight:700;white-space:nowrap}
+  .bar{flex:1;height:14px;border-radius:7px;background:#EDEDED;overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--ruby);border-radius:7px}
+  .warnband{background:var(--warn-bg);border-left:5px solid var(--warn);border-radius:0 10px 10px 0;
+            padding:9px 14px;font-size:13.5px;font-weight:600}
+  .gal-head{display:flex;align-items:baseline;gap:12px}
+  .gal-head h3{font-size:15px;font-weight:800}
+  .gal-head span{font-size:12px;color:var(--mut)}
+  .gal{display:grid;grid-template-columns:repeat(auto-fill,116px);gap:10px;overflow:hidden;align-content:start;flex:1}
+  .thumb{width:116px;height:84px;border-radius:9px;overflow:hidden;position:relative;background:#eee;border:1px solid #E0D8CA}
+  .thumb svg{width:100%;height:100%;display:block}
+  .thumb .del{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.92);
+              color:#333;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+
+  /* ---------- Écran Contrôle ---------- */
+  .ctl-body{flex-direction:column;padding:10px 20px 8px;gap:10px;display:flex;min-height:0;flex:1}
+  .ctl-top{display:flex;gap:14px;flex:none}
+  .dz-ctl{flex:1;height:58px;flex-direction:row;gap:14px}
+  .session{width:388px;background:var(--abricot-l);border:1px solid var(--line);border-radius:12px;
+           display:flex;align-items:center;justify-content:space-around;padding:6px 10px}
+  .sess-it{text-align:center}
+  .sess-it .v{font-size:19px;font-weight:800}
+  .sess-it .l{font-size:10.5px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+  .results{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0}
+  .rcard{border:1px solid #E4E4E4;border-radius:12px;padding:8px 11px;display:flex;flex-direction:column;gap:5px;min-height:0;position:relative;overflow:hidden}
+  .rtop{display:flex;gap:12px}
+  .rphoto{width:130px;height:92px;border-radius:9px;overflow:hidden;flex:none;border:1px solid #E0D8CA;background:#eee}
+  .rphoto svg{width:100%;height:100%;display:block}
+  .rinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .verdict{display:inline-block;align-self:flex-start;color:#fff;font-size:16px;font-weight:800;
+           padding:5px 12px;border-radius:9px;letter-spacing:.4px}
+  .verdict.ok{background:var(--ok)} .verdict.nok{background:var(--nok)}
+  .verdict.doubt{background:var(--warn)} .verdict.off{background:var(--off)}
+  .vline{font-size:13px}
+  .vline b{font-weight:800}
+  .metrics{font-size:12px;color:var(--mut)}
+  .just{border-top:1px dashed #DDD;padding-top:5px}
+  .just .jt{font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--ruby);text-transform:uppercase;margin-bottom:4px}
+  .jrow{display:flex;gap:10px}
+  .jitem{width:92px;position:relative}
+  .jitem .jph{width:92px;height:56px;border-radius:7px;overflow:hidden;border:1px solid #E0D8CA;background:#eee}
+  .jitem .jph svg{width:100%;height:100%;display:block}
+  .jitem .jcap{font-size:10.5px;margin-top:2px;line-height:1.2}
+  .jitem .jcap b{font-size:11.5px}
+  .jcap.c-ok{color:var(--ok)} .jcap.c-nok{color:var(--nok)} .jcap.c-min{color:var(--warn)}
+  .tooltip{position:absolute;bottom:64px;left:-8px;background:#222;color:#fff;font-size:11.5px;font-weight:600;
+           padding:6px 10px;border-radius:8px;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.35);z-index:5}
+  .tooltip:after{content:"";position:absolute;top:100%;left:26px;border:6px solid transparent;border-top-color:#222}
+  .arb{display:flex;align-items:center;gap:7px;border-top:1px dashed #DDD;padding-top:6px}
+  .abtn{height:44px;padding:0 10px;border-radius:10px;font-size:12.5px;font-weight:800;background:#fff;display:flex;align-items:center;white-space:nowrap}
+  .abtn.g{border:2px solid var(--ok);color:var(--ok)}
+  .abtn.r{border:2px solid var(--nok);color:var(--nok)}
+  .abtn.o{border:2px solid var(--warn);color:var(--warn)}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#333;white-space:nowrap}
+  .chk .box{width:22px;height:22px;border-radius:6px;background:var(--ruby);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+  .arb-mini{position:absolute;top:10px;right:12px;height:40px;padding:0 14px;border:1.5px solid #CCC;border-radius:10px;
+            font-size:13px;font-weight:700;color:#555;display:flex;align-items:center;background:#fff}
+  .offnote{font-size:12.5px;color:var(--mut);font-style:italic}
+
+  /* ---------- Écran Réglages ---------- */
+  .set-body{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;padding:16px 20px}
+  .card{border:1px solid #E4E4E4;border-radius:14px;padding:16px 18px}
+  .card h2{font-size:16px;font-weight:800;margin-bottom:4px}
+  .card .sub{font-size:12.5px;color:var(--mut);margin-bottom:12px}
+  .slider-row{margin-bottom:18px}
+  .sl-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .sl-head .n{font-size:14.5px;font-weight:800;flex:1}
+  .sl-head .hint{font-size:11.5px;color:var(--mut)}
+  .sl-val{background:var(--abricot);color:var(--ruby-dark);font-weight:800;font-size:14px;border-radius:8px;padding:2px 10px}
+  .track{height:10px;border-radius:5px;background:#ECECEC;position:relative}
+  .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--ruby);border-radius:5px}
+  .track .knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;
+               background:var(--ruby);border:3.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)}
+  .live-note{font-size:12.5px;font-style:italic;color:var(--ruby);background:var(--abricot-m);border-radius:9px;padding:8px 12px}
+  .set-col{display:flex;flex-direction:column;gap:14px}
+  .btn{height:50px;border-radius:11px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:9px;padding:0 18px}
+  .btn.solid{background:var(--ruby);color:#fff}
+  .btn.line{border:2px solid var(--ruby);color:var(--ruby);background:#fff}
+  .btn.danger{background:var(--nok);color:#fff}
+  .btnrow{display:flex;gap:10px;margin-top:4px}
+  .filemeta{font-size:12px;color:var(--mut);margin-top:9px}
+  .danger-card{background:#FDF1F1;border-color:#F2CBCB}
+
+  /* ---------- Écran Chargement ---------- */
+  .loadwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#fff}
+  .loadwrap .lb{font-size:12px;letter-spacing:4px;font-weight:700;color:var(--ruby)}
+  .loadwrap h1{font-size:26px;font-weight:800}
+  .loadwrap .lsub{font-size:14px;color:var(--mut)}
+  .ring{width:58px;height:58px;border-radius:50%;border:6px solid #EFE3D2;border-top-color:var(--ruby);transform:rotate(48deg);margin:10px 0 2px}
+  .loadbar{width:340px;height:12px;border-radius:6px;background:#EDEDED;overflow:hidden}
+  .loadbar>i{display:block;height:100%;width:62%;background:var(--ruby)}
+  .loadpct{font-size:13px;font-weight:700}
+  .loadhint{margin-top:18px;background:var(--abricot-m);border:1px solid var(--line);border-radius:10px;
+            padding:9px 16px;font-size:12.5px;color:#555}
+  .loadhint code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ruby);font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- ================= ÉCRAN 1 — CHARGEMENT ================= -->
+<div class="board" id="screen-chargement">
+  <div class="loadwrap">
+    <div class="lb">L'ATELIER BY</div>
+    <h1>Contrôle qualité visuel — maquette</h1>
+    <div class="lsub">Reconnaissance de vitrine par photo · extracteur figé + k plus proches voisins</div>
+    <div class="ring"></div>
+    <div class="loadbar"><i></i></div>
+    <div class="loadpct">Chargement du modèle de reconnaissance (MobileNet, ~16&nbsp;Mo)… 62&nbsp;%</div>
+    <div class="loadhint">Servir la page via <code>python3 -m http.server 8080</code> → <code>http://localhost:8080/maquette-qc-vision.html</code> — ne pas ouvrir en <code>file://</code></div>
+  </div>
+</div>
+
+<!-- ================= ÉCRAN 2 — ENTRAÎNEMENT ================= -->
+<div class="board" id="screen-entrainement">
+  <div class="hdr">
+    <div class="brand">
+      <small>L'ATELIER BY</small>
+      <div class="ctl-name"><h1>Vitrine pâtisserie — Boutique Lyon&nbsp;2</h1><div class="edit-chip">✎</div></div>
+    </div>
+    <div class="counts">
+      <div class="count-chip">Conforme — <b>52</b> réf.</div>
+      <div class="count-chip">Trou dans le planogramme — <b>47</b> réf.</div>
+      <div class="count-chip">Étiquette manquante — <b class="low">23 réf. ⚠</b></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="health">
+      <div class="hstat"><div class="v green">92&nbsp;%</div><div class="l">Accord</div></div>
+      <div class="hstat"><div class="v dark">3&nbsp;%</div><div class="l">Erreur</div></div>
+      <div class="hstat"><div class="v dark">12&nbsp;%</div><div class="l">Doute</div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active">Entraînement</div>
+    <div class="tab">Contrôle</div>
+    <div class="tab">Réglages</div>
+  </div>
+  <div class="bodyz">
+    <div class="cls-panel">
+      <div class="panel-title">Classes</div>
+      <div class="cls-card">
+        <div class="cls-top"><div class="nm">Conforme</div><div class="icon-btn">✎</div><div class="icon-btn">🗑</div></div>
+        <div class="cls-pills"><span class="pill ok">Conforme</span></div>
+        <div class="cls-n"><b>52</b> photos de référence</div>
+      </div>
+      <div class="cls-card">
+        <div class="cls-top"><div class="nm">Trou dans le planogramme</div><div class="icon-btn">✎</div><div class="icon-btn">🗑</div></div>
+        <div class="cls-pills"><span class="pill nok">Non conforme</span><span class="pill maj">Majeure</span></div>
+        <div class="cls-n"><b>47</b> photos de référence</div>
+      </div>
+      <div class="cls-card sel">
+        <div class="cls-top"><div class="nm">Étiquette manquante</div><div class="icon-btn">✎</div><div class="icon-btn">🗑</div></div>
+        <div class="cls-pills"><span class="pill nok">Non conforme</span><span class="pill min">Mineure</span></div>
+        <div class="cls-n"><b>23</b> photos de référence · <span class="lowtxt">insuffisant (min. 40)</span></div>
+      </div>
+      <div class="btn-newcls">＋ Nouvelle classe</div>
+    </div>
+    <div class="train-right">
+      <div class="target-line">Ajout de références dans la classe : <b>Étiquette manquante</b></div>
+      <div class="dropzone dz-train">
+        <div class="ico">📷</div>
+        <div class="big">Déposez vos photos ici</div>
+        <div class="sub">ou touchez pour photographier à la tablette / choisir plusieurs fichiers</div>
+      </div>
+      <div class="progress-row">
+        <div class="lbl">Traitement du lot… 38 / 60 photos</div>
+        <div class="bar"><i style="width:63%"></i></div>
+      </div>
+      <div class="warnband">⚠️ Échantillon insuffisant : « Étiquette manquante » n'a que 23 photos (minimum conseillé : 40). Résultats non exploitables pour cette classe.</div>
+      <div class="gal-head"><h3>Références — Étiquette manquante (23)</h3><span>toucher une vignette pour la supprimer</span></div>
+      <div class="gal" id="gal-train"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ÉCRAN 3 — CONTRÔLE ================= -->
+<div class="board" id="screen-controle">
+  <div class="hdr">
+    <div class="brand">
+      <small>L'ATELIER BY</small>
+      <div class="ctl-name"><h1>Vitrine pâtisserie — Boutique Lyon&nbsp;2</h1><div class="edit-chip">✎</div></div>
+    </div>
+    <div class="counts">
+      <div class="count-chip">Conforme — <b>52</b> réf.</div>
+      <div class="count-chip">Trou dans le planogramme — <b>47</b> réf.</div>
+      <div class="count-chip">Étiquette manquante — <b class="low">23 réf. ⚠</b></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="health">
+      <div class="hstat"><div class="v green">92&nbsp;%</div><div class="l">Accord</div></div>
+      <div class="hstat"><div class="v dark">3&nbsp;%</div><div class="l">Erreur</div></div>
+      <div class="hstat"><div class="v dark">12&nbsp;%</div><div class="l">Doute</div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab">Entraînement</div>
+    <div class="tab active">Contrôle</div>
+    <div class="tab">Réglages</div>
+  </div>
+  <div class="ctl-body">
+    <div class="ctl-top">
+      <div class="dropzone dz-ctl">
+        <div class="ico">📷</div>
+        <div class="big">Déposez les photos à contrôler</div>
+        <div class="sub">multi-fichiers · glisser-déposer ou toucher</div>
+      </div>
+      <div class="session">
+        <div class="sess-it"><div class="v">12</div><div class="l">Contrôlées</div></div>
+        <div class="sess-it"><div class="v" style="color:var(--ok)">75&nbsp;%</div><div class="l">Conformes</div></div>
+        <div class="sess-it"><div class="v" style="color:var(--warn)">17&nbsp;%</div><div class="l">À arbitrer</div></div>
+      </div>
+    </div>
+    <div class="results">
+
+      <div class="rcard">
+        <div class="rtop">
+          <div class="rphoto ph" data-kind="ok" data-seed="101"></div>
+          <div class="rinfo">
+            <div class="verdict ok">CONFORME</div>
+            <div class="vline">Classe reconnue : <b>Conforme</b></div>
+            <div class="metrics">score 94&nbsp;% · marge 89&nbsp;% · proximité 87&nbsp;%</div>
+          </div>
+        </div>
+        <div class="arb-mini">Arbitrer ▾</div>
+        <div class="just">
+          <div class="jt">Pourquoi — les 3 références les plus proches</div>
+          <div class="jrow">
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="11"></div><div class="jcap c-ok"><b>93&nbsp;%</b> · Conforme</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="12"></div><div class="jcap c-ok"><b>91&nbsp;%</b> · Conforme</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="13"></div><div class="jcap c-ok"><b>88&nbsp;%</b> · Conforme</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rcard">
+        <div class="rtop">
+          <div class="rphoto ph" data-kind="hole" data-seed="202"></div>
+          <div class="rinfo">
+            <div class="verdict nok">NON CONFORME</div>
+            <div class="vline">Classe reconnue : <b>Trou dans le planogramme</b> <span class="pill maj">Majeure</span></div>
+            <div class="metrics">score 88&nbsp;% · marge 79&nbsp;% · proximité 84&nbsp;%</div>
+          </div>
+        </div>
+        <div class="arb-mini">Arbitrer ▾</div>
+        <div class="just">
+          <div class="jt">Pourquoi — les 3 références les plus proches</div>
+          <div class="jrow">
+            <div class="jitem">
+              <div class="tooltip">Trou dans le planogramme — 91&nbsp;%</div>
+              <div class="jph ph" data-kind="hole" data-seed="21"></div><div class="jcap c-nok"><b>91&nbsp;%</b> · Trou planogr.</div>
+            </div>
+            <div class="jitem"><div class="jph ph" data-kind="hole" data-seed="22"></div><div class="jcap c-nok"><b>87&nbsp;%</b> · Trou planogr.</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="23"></div><div class="jcap c-ok"><b>74&nbsp;%</b> · Conforme</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rcard">
+        <div class="rtop">
+          <div class="rphoto ph" data-kind="nolabel" data-seed="303"></div>
+          <div class="rinfo">
+            <div class="verdict doubt">À ARBITRER</div>
+            <div class="vline">Classe pressentie : <b>Étiquette manquante</b> — score 58&nbsp;% &lt; seuil 65&nbsp;%</div>
+            <div class="metrics">score 58&nbsp;% · marge 9&nbsp;% · proximité 71&nbsp;%</div>
+          </div>
+        </div>
+        <div class="just">
+          <div class="jt">Pourquoi — les 3 références les plus proches</div>
+          <div class="jrow" style="align-items:flex-start">
+            <div class="jitem"><div class="jph ph" data-kind="nolabel" data-seed="31"></div><div class="jcap c-min"><b>72&nbsp;%</b> · Étiq. manquante</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="32"></div><div class="jcap c-ok"><b>70&nbsp;%</b> · Conforme</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="nolabel" data-seed="33"></div><div class="jcap c-min"><b>66&nbsp;%</b> · Étiq. manquante</div></div>
+          </div>
+        </div>
+        <div class="arb">
+          <div class="abtn g">Conforme</div>
+          <div class="abtn r">Trou dans le planogramme</div>
+          <div class="abtn o">Étiquette manquante</div>
+          <div class="chk"><span class="box">✓</span> Ajouter aux références</div>
+        </div>
+      </div>
+
+      <div class="rcard">
+        <div class="rtop">
+          <div class="rphoto ph" data-kind="car" data-seed="404"></div>
+          <div class="rinfo">
+            <div class="verdict off">PHOTO INEXPLOITABLE</div>
+            <div class="vline">Trop éloignée des références — proximité max <b>41&nbsp;%</b> &lt; seuil 55&nbsp;%</div>
+            <div class="offnote">Photo hors sujet ou vitrine non reconnue : reprendre la photo (cadrage, distance, éclairage).</div>
+          </div>
+        </div>
+        <div class="arb-mini">Arbitrer ▾</div>
+        <div class="just">
+          <div class="jt">Références les plus proches (toutes rejetées)</div>
+          <div class="jrow">
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="41"></div><div class="jcap"><b>41&nbsp;%</b> · Conforme</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="hole" data-seed="42"></div><div class="jcap"><b>38&nbsp;%</b> · Trou planogr.</div></div>
+            <div class="jitem"><div class="jph ph" data-kind="ok" data-seed="43"></div><div class="jcap"><b>36&nbsp;%</b> · Conforme</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= ÉCRAN 4 — RÉGLAGES ================= -->
+<div class="board" id="screen-reglages">
+  <div class="hdr">
+    <div class="brand">
+      <small>L'ATELIER BY</small>
+      <div class="ctl-name"><h1>Vitrine pâtisserie — Boutique Lyon&nbsp;2</h1><div class="edit-chip">✎</div></div>
+    </div>
+    <div class="counts">
+      <div class="count-chip">Conforme — <b>52</b> réf.</div>
+      <div class="count-chip">Trou dans le planogramme — <b>47</b> réf.</div>
+      <div class="count-chip">Étiquette manquante — <b class="low">23 réf. ⚠</b></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="health">
+      <div class="hstat"><div class="v green">92&nbsp;%</div><div class="l">Accord</div></div>
+      <div class="hstat"><div class="v dark">3&nbsp;%</div><div class="l">Erreur</div></div>
+      <div class="hstat"><div class="v orange">17&nbsp;%</div><div class="l">Doute</div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab">Entraînement</div>
+    <div class="tab">Contrôle</div>
+    <div class="tab active">Réglages</div>
+  </div>
+  <div class="set-body">
+    <div class="card">
+      <h2>Seuils de décision</h2>
+      <div class="sub">Réglage en direct — les verdicts affichés et les indicateurs de santé se recalculent instantanément.</div>
+
+      <div class="slider-row">
+        <div class="sl-head"><div class="n">Seuil de similarité</div><div class="hint">en dessous → PHOTO INEXPLOITABLE</div><div class="sl-val">0,55</div></div>
+        <div class="track"><div class="fill" style="width:55%"></div><div class="knob" style="left:55%"></div></div>
+      </div>
+      <div class="slider-row">
+        <div class="sl-head"><div class="n">Seuil de score</div><div class="hint">en dessous → À ARBITRER</div><div class="sl-val">0,65</div></div>
+        <div class="track"><div class="fill" style="width:65%"></div><div class="knob" style="left:65%"></div></div>
+      </div>
+      <div class="slider-row">
+        <div class="sl-head"><div class="n">Seuil de marge</div><div class="hint">écart entre 1ʳᵉ et 2ᵉ classe, en dessous → À ARBITRER</div><div class="sl-val">0,15</div></div>
+        <div class="track"><div class="fill" style="width:15%"></div><div class="knob" style="left:15%"></div></div>
+      </div>
+      <div class="slider-row" style="margin-bottom:10px">
+        <div class="sl-head"><div class="n">k — voisins consultés</div><div class="hint">vote pondéré sur les k plus proches</div><div class="sl-val">5</div></div>
+        <div class="track"><div class="fill" style="width:33%"></div><div class="knob" style="left:33%"></div></div>
+      </div>
+      <div class="live-note">Baissez le seuil de score : le taux de doute chute en direct dans l'en-tête — et le risque d'erreur remonte. L'arbitrage sensibilité / doute se voit immédiatement.</div>
+    </div>
+
+    <div class="set-col">
+      <div class="card">
+        <h2>Modèle portable</h2>
+        <div class="sub">Classes, seuils, vecteurs (base64) et photos (dataURL) dans un seul fichier JSON — à transmettre au développeur ERP.</div>
+        <div class="btnrow">
+          <div class="btn solid" style="flex:1">⬇ Exporter le modèle (JSON)</div>
+          <div class="btn line" style="flex:1">⬆ Importer un JSON</div>
+        </div>
+        <div class="filemeta">Dernier export : qc-vision-atelierby-2026-08-23.json · 4,2 Mo · 122 photos · 3 classes</div>
+      </div>
+      <div class="card">
+        <h2>Persistance</h2>
+        <div class="sub" style="margin-bottom:0">Sauvegarde automatique dans le navigateur (localStorage). Fermez l'onglet, rouvrez : tout est là.<br><br><b>122 / 300</b> photos stockées — au-delà de 300, un avertissement de quota s'affiche ici.</div>
+      </div>
+      <div class="card danger-card">
+        <h2>Zone dangereuse</h2>
+        <div class="sub">Supprime les 3 classes, les 122 photos et les réglages. Une confirmation est demandée avant toute suppression.</div>
+        <div class="btn danger" style="width:220px">🗑 Tout effacer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Vignettes factices de vitrine (SVG générés, déterministes) — uniquement pour la maquette visuelle. */
+function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const PASTRY=['#C98A3B','#A9652C','#E2B15C','#8C5A2B','#D9A441','#B77433','#E8C078'];
+
+function vitrineSVG(kind,seed){
+  const r=rng(seed);
+  const W=160,H=120;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">`;
+
+  if(kind==='car'){
+    s+=`<rect width="${W}" height="${H}" fill="#BFD8E8"/>`;
+    s+=`<rect y="78" width="${W}" height="42" fill="#9A9A9A"/>`;
+    s+=`<rect x="34" y="52" width="86" height="24" rx="7" fill="#B03A2E"/>`;
+    s+=`<rect x="52" y="38" width="46" height="20" rx="6" fill="#C0564A"/>`;
+    s+=`<rect x="56" y="41" width="16" height="13" rx="2" fill="#D9EAF5"/>`;
+    s+=`<rect x="78" y="41" width="16" height="13" rx="2" fill="#D9EAF5"/>`;
+    s+=`<circle cx="54" cy="79" r="9" fill="#222"/><circle cx="102" cy="79" r="9" fill="#222"/>`;
+    s+=`<circle cx="54" cy="79" r="4" fill="#888"/><circle cx="102" cy="79" r="4" fill="#888"/>`;
+    return s+'</svg>';
+  }
+  if(kind==='wall'){
+    s+=`<rect width="${W}" height="${H}" fill="#D8D2C8"/>`;
+    for(let y=0;y<H;y+=16){
+      const off=(y/16)%2?14:0;
+      for(let x=-14;x<W;x+=28){
+        s+=`<rect x="${x+off}" y="${y}" width="26" height="14" fill="#CFC7BA" stroke="#B8B0A2" stroke-width="1"/>`;
+      }
+    }
+    return s+'</svg>';
+  }
+
+  /* vitrine : 2 étagères, 4 produits par étagère, étiquettes sur le chant */
+  const bg=`hsl(${38+Math.floor(r()*8)},52%,${90+Math.floor(r()*4)}%)`;
+  s+=`<rect width="${W}" height="${H}" fill="${bg}"/>`;
+  const rows=[56,112];
+  const holeIdx = kind==='hole' ? Math.floor(r()*8) : -1;
+  const nolabelIdx = kind==='nolabel' ? Math.floor(r()*8) : -1;
+  let idx=0;
+  for(const by of rows){
+    /* planche */
+    s+=`<rect x="0" y="${by}" width="${W}" height="8" fill="#D8C29A"/><rect x="0" y="${by+8}" width="${W}" height="3" fill="#BFA277"/>`;
+    for(let c=0;c<4;c++){
+      const cx=22+c*39+ (r()*6-3);
+      const col=PASTRY[Math.floor(r()*PASTRY.length)];
+      const w=26+r()*6, h=16+r()*5;
+      if(idx!==holeIdx){
+        s+=`<rect x="${cx-w/2}" y="${by-h}" width="${w}" height="${h}" rx="7" fill="${col}"/>`;
+        s+=`<ellipse cx="${cx}" cy="${by-h+3}" rx="${w/2-4}" ry="3" fill="#fff" opacity="0.28"/>`;
+      }
+      if(idx!==nolabelIdx){
+        s+=`<rect x="${cx-10}" y="${by+1.5}" width="20" height="6" rx="1" fill="#fff" stroke="#C8BCA6" stroke-width="0.7"/>`;
+        s+=`<rect x="${cx-7}" y="${by+3.6}" width="14" height="1.2" fill="#999"/>`;
+      }
+      idx++;
+    }
+  }
+  /* léger reflet de vitrine */
+  s+=`<polygon points="0,0 60,0 0,70" fill="#fff" opacity="0.10"/>`;
+  return s+'</svg>';
+}
+
+/* remplit les emplacements marqués */
+document.querySelectorAll('.ph').forEach(el=>{
+  el.innerHTML=vitrineSVG(el.dataset.kind,parseInt(el.dataset.seed,10));
+});
+
+/* galerie de l'onglet Entraînement : 21 vignettes « étiquette manquante » */
+const gal=document.getElementById('gal-train');
+for(let i=0;i<21;i++){
+  const d=document.createElement('div');
+  d.className='thumb';
+  d.innerHTML=vitrineSVG('nolabel',500+i)+'<div class="del">✕</div>';
+  gal.appendChild(d);
+}
+</script>
+</body>
+</html>
