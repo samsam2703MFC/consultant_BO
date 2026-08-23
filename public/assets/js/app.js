@@ -7621,7 +7621,7 @@ class App {
           + (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
         commentRequis: (dt.note || this.ctrlNoteDeduite(dt.rep) || 99) < ((M.SIGNAL || {}).seuil || 4),
         produit: d.produit || '', photoRef: d.photoRef || null,
-        photoRefTxt: d.produitId ? (d.photoRef ? '' : 'Fiche technique sans visuel pour ce produit.')
+        photoRefTxt: d.produitId ? (d.photoRef ? '' : 'Pas de photo.')
           : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
         setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
         send: () => this.ctrlSendNote(),
@@ -7848,18 +7848,19 @@ class App {
       // Le report n'est plus un geste : il se fait à l'enregistrement. Le
       // panneau annonce ce qui partira, plutôt que d'offrir un bouton de plus.
       reporte: rep.filter(r => String(r.txt || '').trim()).length,
-      // Option « comparer » : la photo de référence en face. Elle n'existe pas
-      // encore côté panel — l'écran le dit au lieu de laisser un cadre noir.
+      // Option « comparer » : la photo de référence en face — recipes/{id},
+      // clé shop_photo_path (le même API que le webshop) ; sans chemin,
+      // l'écran le dit.
       compare: !!dt.zCompare,
       compareGo: () => this.zPatch({ zCompare: !dt.zCompare }),
       photoRef: d.photoRef || null,
       produit: d.produit || '',
       refManque: !d.photoRef,
       refTxt: d.produitId
-        ? 'La fiche technique de ce produit ne porte pas de visuel dans le panel.'
-        : 'Cette tâche ne porte pas sur un produit précis, et aucune route du panel n’expose de photo de référence par emplacement de comptoir.',
-      refBesoin: 'Donnée à obtenir : une image de référence par produit ou par emplacement de comptoir '
-        + '(champ photoRef du détail de tâche — rend null aujourd’hui).',
+        ? 'Pas de photo.'
+        : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
+      refBesoin: 'La référence vient de recipes/{id} du panel, clé shop_photo_path — le même API que celui '
+        + 'des photos du webshop. Pas de chemin pour ce produit : pas de photo, rien d’autre n’est tenté.',
       envoiBesoin: 'Les repères restent dans le cockpit : /consultant/shops/{id}/task-reviews n’accepte que '
         + 'note, conformité et commentaire, sans pièce jointe. Reportez-les dans le commentaire pour que '
         + 'le franchisé les reçoive.'

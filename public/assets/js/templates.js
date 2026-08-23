@@ -4840,7 +4840,7 @@ function tplCtrlDetail(c, x){
             : `<div style="background:var(--color-background-secondary);border-radius:10px;padding:22px 12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoRefTxt)}</div>`}
         </div>
       </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Un contrôle qualité se juge par comparaison : la fiche technique du produit s\u2019affiche en face de la photo prise en boutique.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Un contrôle qualité se juge par comparaison : la photo produit (recipes/{id}, clé shop_photo_path — le même API que le webshop) s\u2019affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »</div>
 
       <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>
       <div style="font-size:13px;font-weight:500">${esc(d.avisTxt)}</div>

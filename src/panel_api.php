@@ -47,6 +47,9 @@ final class PanelApi
             };
             self::$cfg = [
                 'base'     => rtrim($val('base', $s, $c, 'PANEL_API_BASE', 'https://atelierby.tfbuddy.com/api/v1'), '/'),
+                // L'hôte qui SERT les fichiers de shop_photo_path (un chemin,
+                // pas une URL). Vide : l'hôte du panel, sans son /api/vN.
+                'photoBase' => rtrim($val('photoBase', $s, $c, 'PANEL_API_PHOTO_BASE'), '/'),
                 'phone'    => $val('phone', $s, $c, 'PANEL_API_PHONE'),
                 'password' => $val('password', $s, $c, 'PANEL_API_PASSWORD'),
             ];
@@ -792,34 +795,54 @@ final class PanelApi
      *
      * @return array{nom:string, url:?string}|null
      */
+    /**
+     * Le visuel de RÉFÉRENCE d'un produit contrôlé.
+     *
+     * LA source (spec du 19/08) : GET /recipes/{id} — le même API dont le
+     * webshop tire ses photos — clé `shop_photo_path`. C'est un CHEMIN, pas
+     * une URL : résolu contre `photoBase` du réglage panelApi, sinon l'hôte
+     * du panel (base sans /api/vN). AUCUN repli : pas de chemin → url null,
+     * et l'écran écrit « Pas de photo. ». Le nom ne sert qu'à la légende.
+     */
     public static function productPhoto(int $productId): ?array
     {
         if ($productId <= 0) { return null; }
-        if (self::$catalogue === null) {
-            $r = self::get('/products');
-            self::$catalogue = is_array($r) ? self::liste($r) : [];
+        $r = self::get('/recipes/' . $productId);
+        if (!is_array($r)) { return ['nom' => 'Produit #' . $productId, 'url' => null]; }
+        $d = $r;
+        foreach (['data', 'recipe', 'product'] as $k) {
+            if (isset($d[$k]) && is_array($d[$k])) { $d = $d[$k]; }
         }
-        foreach (self::$catalogue as $p) {
-            $pid = null;
-            foreach (['id', 'product_id', 'id_product'] as $k) {
-                if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+        $nom = '';
+        foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
+            if (!empty($d[$k]) && is_string($d[$k])) { $nom = trim($d[$k]); break; }
+        }
+        $path = self::texteProfond($d, 'shop_photo_path');
+        $url = null;
+        if ($path !== null) {
+            $url = preg_match('#^https?://#i', $path) ? $path
+                 : self::photosBase() . '/' . ltrim($path, '/');
+        }
+        return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
+    }
+
+    /** L'hôte des photos : réglage photoBase, sinon l'hôte du panel nu. */
+    private static function photosBase(): string
+    {
+        $c = self::config();
+        if (($c['photoBase'] ?? '') !== '') { return $c['photoBase']; }
+        return rtrim(preg_replace('#/api/v\d+$#', '', $c['base']), '/');
+    }
+
+    /** Première valeur TEXTE d'une clé, à n'importe quelle profondeur. */
+    private static function texteProfond(array $d, string $cle): ?string
+    {
+        if (isset($d[$cle]) && is_string($d[$cle]) && trim($d[$cle]) !== '') { return trim($d[$cle]); }
+        foreach ($d as $v) {
+            if (is_array($v)) {
+                $t = self::texteProfond($v, $cle);
+                if ($t !== null) { return $t; }
             }
-            if ($pid !== $productId) { continue; }
-            $nom = '';
-            foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
-                if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
-            }
-            // L'image est soit une URL directe, soit une pièce jointe à signer.
-            $url = null;
-            foreach (['url', 'image_url', 'photo_url', 'picture', 'image', 'thumbnail'] as $k) {
-                if (!empty($p[$k]) && is_string($p[$k])) { $url = $p[$k]; break; }
-            }
-            if ($url === null) {
-                foreach (['attachment_id', 'att', 'id_attachment', 'photo_id'] as $k) {
-                    if (!empty($p[$k]) && is_numeric($p[$k])) { $url = self::attachmentUrl((int) $p[$k]); break; }
-                }
-            }
-            return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
         }
         return null;
     }
