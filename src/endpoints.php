@@ -1611,6 +1611,24 @@ function ep_exploitation_jour(): array
 
     $mois1  = date('Y-m-01', strtotime($date));
     $depuis = min($mois1, $refDates[count($refDates) - 1]);
+
+    // L'OBJECTIF du jour : le budget validé du mois, à défaut le CA théorique
+    // de l'étude — la règle du cockpit — ramené au jour d'ouverture. Un mois
+    // sans budget n'a pas d'objectif : on ne fabrique pas de zéro.
+    $budMois = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf
+                            WHERE year = ? AND month = ?',
+            [(int) date('Y', strtotime($date)), (int) date('n', strtotime($date))]) as $b2) {
+            $v = null; $src = null;
+            if ($b2['revenue_budget'] !== null && (float) $b2['revenue_budget'] > 0) {
+                $v = (float) $b2['revenue_budget']; $src = 'budget';
+            } elseif ($b2['ca_theorique'] !== null && (float) $b2['ca_theorique'] > 0) {
+                $v = (float) $b2['ca_theorique']; $src = 'theorique';
+            }
+            if ($v !== null) { $budMois[(string) $b2['shop_id']] = ['montant' => $v, 'source' => $src]; }
+        }
+    } catch (PDOException $e) { /* budget non encodé : pas d'objectif */ }
     // « The heatmap window cannot exceed 31 days » (mesuré sur la route) : la
     // fenêtre qui va du plus ancien jour de référence à aujourd'hui fait 43
     // jours, elle part donc en tranches de 31 jours au plus. Les jours des
@@ -1794,6 +1812,12 @@ function ep_exploitation_jour(): array
         unset($c);
         usort($cats, fn ($a, $b) => $b['ca'] <=> $a['ca']);
 
+        // L'objectif du jour, ramené au jour d'ouverture — le même diviseur que
+        // les frais généraux, pour que les deux se comparent.
+        $bm = $budMois[(string) $id] ?? null;
+        $objMois = $bm !== null ? round($bm['montant'], 2) : null;
+        $objSrc  = $bm !== null ? $bm['source'] : null;
+        $objJour = ($bm !== null && $joursOuverts > 0) ? round($bm['montant'] / $joursOuverts, 2) : null;
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
             'ca' => round($ca, 2),
             'refCa' => $refCa !== null ? round($refCa, 2) : null,
@@ -1815,6 +1839,9 @@ function ep_exploitation_jour(): array
             'overheadMois' => $ohMois !== null ? round($ohMois, 2) : null,
             'labourMois' => $labourMois !== null ? round($labourMois, 2) : null,
             'joursOuverts' => $joursOuverts,
+            'objectifJour' => $objJour, 'objectifSource' => $objSrc,
+            'objectifMois' => $objMois,
+            'objectifAtteinte' => ($objJour !== null && $objJour > 0) ? round($ca / $objJour, 4) : null,
             'net' => $net !== null ? round($net, 2) : null,
             'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null,
             'motifNet' => $net === null ? 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles' : null,

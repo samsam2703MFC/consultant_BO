@@ -4814,6 +4814,23 @@ class App {
         : 'vs ' + fE(m.refCa) + ' — ' + common.rjRefLibelle
           + (m.refJours < 6 ? ' (' + m.refJours + ' jours retenus)' : ''),
       refAide: common.rjRefAide,
+      // ── La jauge de l'objectif : le budget VALIDÉ du mois ramené au jour
+      //    d'ouverture, le CA théorique de l'étude à défaut. Un mois sans
+      //    budget n'a pas d'objectif — la jauge disparaît, elle ne montre pas
+      //    zéro.
+      objectif: m.objectifJour == null ? null : {
+        montant: fE(m.objectifJour),
+        source: m.objectifSource === 'budget' ? 'budget validé' : 'CA théorique de l’étude',
+        base: fE(m.objectifMois) + ' / mois ÷ ' + fInt(m.joursOuverts) + ' j d’ouverture',
+        pct: m.objectifAtteinte == null ? '—' : this.fP(m.objectifAtteinte, 0),
+        // La barre peut dépasser : on la borne à 100 % de largeur et l'excédent
+        // se lit sur le chiffre, pas sur une barre qui sortirait de la carte.
+        w: Math.max(0, Math.min(100, (m.objectifAtteinte || 0) * 100)).toFixed(1),
+        coul: m.objectifAtteinte == null ? 'var(--color-text-muted)'
+          : (m.objectifAtteinte >= 1 ? '#2d7a3e' : (m.objectifAtteinte >= 0.9 ? '#C17A2A' : 'var(--color-primary)')),
+        ecart: m.objectifAtteinte == null ? ''
+          : ((m.ca - m.objectifJour >= 0 ? '+' : '−') + fE(Math.abs(m.ca - m.objectifJour))),
+      },
       cascade: casc,
       note: (m.overheadMois != null
         ? 'Frais généraux : ' + fE(m.overheadMois) + ' par mois ramenés au jour d’ouverture (' + fInt(m.joursOuverts) + ' j).'

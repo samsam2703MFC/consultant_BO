@@ -2788,6 +2788,17 @@ function tplResultatJour(c, x){
         </div>
       </div>
 
+      ${c.rjDetail.objectif ? `
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 13px;border-radius:10px;background:var(--color-background-secondary);flex-wrap:wrap">
+        <span style="${cap}">Objectif du jour</span>
+        <span style="font-size:14px;font-weight:600;${num}">${esc(c.rjDetail.objectif.montant)}</span>
+        <span style="flex:1;min-width:120px;height:9px;border-radius:999px;background:var(--color-surface);overflow:hidden">
+          <i style="display:block;height:100%;width:${c.rjDetail.objectif.w}%;border-radius:999px;background:${c.rjDetail.objectif.coul}"></i></span>
+        <span style="font-size:14px;font-weight:700;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.pct)}</span>
+        <span style="font-size:11.5px;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.ecart)}</span>
+        <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
+      </div>` : ''}
+
       <div style="display:grid;grid-template-columns:1.02fr 1fr;gap:22px;margin-top:13px">
         <div>
           <table style="width:100%;border-collapse:collapse;font-size:12.5px">
