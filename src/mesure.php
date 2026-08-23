@@ -1167,3 +1167,43 @@ function ep_fournisseurs_reclamations(): array
         'lecture' => 'Le cockpit lit ; répondre, relancer et clore passent par les webhooks fournisseurs '
             . '(material-suppliers/complaints/*), qui refusent le compte consultant.'];
 }
+
+/** Sonde — les commandes et leurs lignes, dernier verrou de la création. */
+function ep_sonde_cmd(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $out = [];
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 100) : gettype($v); }
+        if (array_is_list($v)) {
+            return ['liste' => count($v), 'clés' => is_array($v[0] ?? null) ? array_keys($v[0]) : null,
+                'premier' => is_array($v[0] ?? null)
+                    ? array_map(fn ($z) => is_array($z) ? ('[' . count($z) . ']') : mb_substr((string) $z, 0, 40), $v[0])
+                    : ($v[0] ?? null)];
+        }
+        $o = [];
+        foreach ($v as $k => $x) {
+            $o[$k] = is_array($x)
+                ? (array_is_list($x) ? ['liste' => count($x), 'clés' => is_array($x[0] ?? null) ? array_keys($x[0]) : null,
+                    'premier' => is_array($x[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 40), $x[0]) : null]
+                   : array_keys($x))
+                : mb_substr((string) $x, 0, 60);
+        }
+        return $o;
+    };
+    foreach ([
+        'lignes de commande du magasin' => '/shops/3/orders/materials',
+        'commandes du magasin'          => '/shops/3/orders',
+        'commandes du magasin (page)'   => '/shops/3/orders?page=1&limit=5',
+        'une commande'                  => '/orders/33',
+        'commandes complementaires'     => '/shops/3/supplement-orders',
+        'matieres des fournisseurs'     => '/material-suppliers/materials',
+        'matieres connectees'           => '/material-suppliers/1/connected-materials',
+        'catalogue du fournisseur'      => '/material-suppliers/1/catalog/products',
+    ] as $nom => $ch) {
+        $r = PanelApi::get($ch);
+        $out[$nom] = ['chemin' => $ch,
+            'reponse' => $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $apercu($r)];
+    }
+    return $out;
+}
