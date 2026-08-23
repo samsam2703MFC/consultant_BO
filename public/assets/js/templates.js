@@ -2647,7 +2647,7 @@ function tplResultatJour(c, x){
   if (c.rjErreur) {
     return `<div data-screen="resultatJour" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjErreurTxt)}</div>`;
   }
-  const ent = ['Magasin', 'CA du jour', c.rjRefEntete, 'Tickets', 'Panier', 'Coût matière', 'Marge brute',
+  const ent = ['Magasin', 'CA du jour', c.rjRefEntete, 'Tickets', 'Panier', 'Objectif du jour', 'Marge brute',
     'Main-d’œuvre', 'Frais gén.', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
@@ -2713,7 +2713,7 @@ function tplResultatJour(c, x){
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
                 + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
-                + cel(l.fc, l.fcCoul, l.fcPct, false)
+                + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
                 + cel(l.mb, '', l.mbPct, false)
                 + cel(l.labour, l.labourCoul, l.labourPct + (l.labourReparti ? ' ·  réparti' : ''), false, l.labourTitre)
                 + cel(l.oh, l.ohCoul, l.ohPct + ' · réparti', false)
@@ -2725,7 +2725,7 @@ function tplResultatJour(c, x){
             <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
           ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
           ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
-          ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false)}
+          ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
           ${cel(c.rjReseau.mb, '', c.rjReseau.mbPct, false)}
           ${cel(c.rjReseau.labour, c.rjReseau.labourCoul, c.rjReseau.labourPct, false)}
           ${cel(c.rjReseau.oh, c.rjReseau.ohCoul, c.rjReseau.ohPct, false)}

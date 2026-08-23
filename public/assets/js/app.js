@@ -4727,7 +4727,21 @@ class App {
       deltaTitre: res.refCa == null ? 'aucune référence complète'
         : fE(res.refCa) + ' en moyenne sur les mêmes jours',
       net: fE(res.net), netPct: fPct(res.netPct), netCoul: feuRes(res.netPct),
-      fc: fE(res.coutMatiere), fcPct: fPct(res.coutMatierePct), fcCoul: feu(res.coutMatierePct, seuils.food),
+      // Réseau : la somme des objectifs CONNUS. Un magasin sans budget ne
+      // compte pas pour zéro — la case le dit plutôt que de fausser le total.
+      fc: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null);
+        return l.length ? fE(l.reduce((a, m2) => a + m2.objectifJour, 0)) : '—'; })(),
+      fcPct: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null);
+        if (!l.length) { return ''; }
+        const o = l.reduce((a, m2) => a + m2.objectifJour, 0), c = l.reduce((a, m2) => a + (m2.ca || 0), 0);
+        return o > 0 ? this.fP(c / o, 0) : ''; })(),
+      fcCoul: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null);
+        if (!l.length) { return 'var(--color-text-muted)'; }
+        const o = l.reduce((a, m2) => a + m2.objectifJour, 0), c = l.reduce((a, m2) => a + (m2.ca || 0), 0);
+        const t = o > 0 ? c / o : null;
+        return t == null ? 'var(--color-text-muted)' : (t >= 1 ? '#2d7a3e' : (t >= 0.9 ? '#C17A2A' : 'var(--color-primary)')); })(),
+      fcTitre: (() => { const n = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour == null).length;
+        return n ? n + ' magasin(s) sans objectif encodé, exclu(s) du total' : 'somme des objectifs du jour'; })(),
       mb: fE(res.margeBrute), mbPct: fPct(res.margeBrutePct),
       labour: fE(res.labour), labourPct: fPct(res.labourPct), labourCoul: feu(res.labourPct, seuils.labour),
       oh: fE(res.overhead), ohPct: fPct(res.overheadPct), ohCoul: feu(res.overheadPct, seuils.overhead),
@@ -4752,7 +4766,16 @@ class App {
         tickets: fInt(m.tickets),
         ticketsDelta: fDelta(m.ticketsDelta), ticketsCoul: coulDelta(m.ticketsDelta),
         panier: fU(m.panier),
-        fc: fE(m.coutMatiere), fcPct: fPct(m.coutMatierePct), fcCoul: feu(m.coutMatierePct, seuils.food),
+        // La colonne dit désormais l'OBJECTIF du jour et son atteinte : le coût
+        // matière se lit dans le détail, l'objectif est ce qui se pilote.
+        fc: m.objectifJour == null ? '—' : fE(m.objectifJour),
+        fcPct: m.objectifAtteinte == null ? '' : this.fP(m.objectifAtteinte, 0),
+        fcCoul: m.objectifAtteinte == null ? 'var(--color-text-muted)'
+          : (m.objectifAtteinte >= 1 ? '#2d7a3e' : (m.objectifAtteinte >= 0.9 ? '#C17A2A' : 'var(--color-primary)')),
+        fcTitre: m.objectifJour == null ? 'aucun budget ni théorique pour ce mois'
+          : ((m.objectifSource === 'budget' ? 'budget validé' : 'CA théorique de l’étude')
+             + (m.objectifBase === 'profil' ? ' · réparti au poids du ' + (m.objectifJourNom || 'jour') : ' · réparti à parts égales')
+             + (m.projection != null ? ' · projection ' + fE(m.projection) : '')),
         mb: fE(m.margeBrute), mbPct: fPct(m.margeBrutePct),
         labour: fE(m.labour), labourPct: fPct(m.labourPct), labourCoul: feu(m.labourPct, seuils.labour),
         labourTitre: m.labourSource === 'reparti' ? 'masse salariale du mois répartie sur les jours d’ouverture' : 'mesurée sur la journée',
