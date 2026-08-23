@@ -1,1 +1,1 @@
-2026-08-23T10:15:00Z periode-observee
+2026-08-23T10:30:00Z periode-libre-paire
