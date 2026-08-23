@@ -2583,21 +2583,37 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     $reperes = (array) ((($det['reperes'] ?? [])['liste']) ?? []);
 
     $imgs = '';
+    $legende = fn (string $t) => '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">' . $t . '</div>';
     $photo = rapImageGd((string) ($det['photo'] ?? ''), 420);
+    $imgPhoto = null;
     if ($photo !== null) {
         if ($reperes !== []) { rapDessineReperes($photo, $reperes); }
-        $imgs .= '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">'
-            // En vignette, la légende de la photo mange la place de la photo :
-            // douze par page, chaque millimètre compte.
-            . ($compact ? '' : '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Photo en boutique'
-                . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '') . '</div>');
+        $imgPhoto = '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">';
     }
     // La photo de RÉFÉRENCE ne suit qu'en grande carte : en vignette, deux
     // images dans un cadre de six centimètres n'en montrent aucune.
     $ref = $compact ? null : rapImageGd((string) ($det['photoRef'] ?? ''), 420);
-    if ($ref !== null) {
-        $imgs .= '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Référence attendue">'
-            . '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '') . '</div>';
+    $imgRef = $ref !== null
+        ? '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Référence attendue">'
+        : null;
+    $legPhoto = 'Photo en boutique' . ($reperes !== [] ? ' — ' . count($reperes) . ' repère(s)' : '');
+    $legRef   = 'Référence attendue' . (!empty($det['produit']) ? ' — ' . $e($det['produit']) : '');
+    if ($imgPhoto !== null && $imgRef !== null) {
+        // CÔTE À CÔTE — un contrôle se juge par comparaison et la mise en
+        // page le dit : boutique à gauche, référence à droite, mêmes coins,
+        // légendes alignées sous chaque image, hauts alignés. Un TABLEAU,
+        // pas de flex : ce HTML finit en e-mail et en PDF, où seules les
+        // tables tiennent partout.
+        $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'
+            . '<td width="50%" valign="top" style="padding:0 4px 0 0">' . $imgPhoto . $legende($legPhoto) . '</td>'
+            . '<td width="50%" valign="top" style="padding:0 0 0 4px">' . $imgRef . $legende($legRef) . '</td>'
+            . '</tr></table>';
+    } else {
+        // Une seule image : pleine largeur, comme avant. En vignette, la
+        // légende de la photo mange la place de la photo : douze par page,
+        // chaque millimètre compte.
+        if ($imgPhoto !== null) { $imgs .= $imgPhoto . ($compact ? '' : $legende($legPhoto)); }
+        if ($imgRef !== null) { $imgs .= $imgRef . $legende($legRef); }
     }
     if ($imgs === '' && $reperes === []) { return ''; }
 
