@@ -1188,6 +1188,15 @@ function ep_sonde_cmd2(): array
         }
         return $o;
     };
+    $l33 = PanelApi::get('/deliveries/33');
+    $out['livraison33_cles'] = is_array($l33) ? array_keys($l33) : 'aucune réponse';
+    foreach ((array) $l33 as $k => $v) {
+        if (is_array($v)) {
+            $out['livraison33_' . $k] = ['liste' => count($v),
+                'clés' => is_array($v[0] ?? null) ? array_keys($v[0]) : null,
+                'premier' => is_array($v[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 40), $v[0]) : ($v[0] ?? null)];
+        }
+    }
     foreach ([
         'commandes + dates'        => '/shops/3/orders?' . $q,
         'lignes + dates'           => '/shops/3/orders/materials?' . $q,
@@ -1203,6 +1212,7 @@ function ep_sonde_cmd2(): array
         // La question qui tranche : la livraison 33 porte-t-elle la commande
         // ORD-3-B6BD0C67901C0D4D, celle d'une réclamation dont id_order = 33 ?
         'livraison 33'             => '/deliveries/33',
+        'livraison 33 (complet)'   => '/deliveries/33?with=items',
         'livraison 68'             => '/deliveries/68',
         'livraisons du magasin'    => '/deliveries?id_shop=3',
         'livraisons (shop_id)'     => '/deliveries?shop_id=3&limit=5',
