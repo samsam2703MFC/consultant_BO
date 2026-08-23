@@ -2559,6 +2559,23 @@ function rapDessineReperes($im, array $reperes): void
     }
 }
 
+/**
+ * L'image posée au CENTRE d'un carré blanc : les deux vignettes d'une fiche
+ * font la même taille — le modèle est déjà en 1:1, la photo boutique se
+ * letterboxe sans rien perdre (un recadrage pourrait couper un repère).
+ */
+function rapCarre($im)
+{
+    $w = imagesx($im); $h = imagesy($im);
+    if ($w === $h) { return $im; }
+    $c = max($w, $h);
+    $sq = imagecreatetruecolor($c, $c);
+    imagefill($sq, 0, 0, imagecolorallocate($sq, 255, 255, 255));
+    imagecopy($sq, $im, (int) (($c - $w) / 2), (int) (($c - $h) / 2), 0, 0, $w, $h);
+    imagedestroy($im);
+    return $sq;
+}
+
 /** L'image en data URI JPEG — le HTML du run l'affiche, le mailer l'attache. */
 function rapImageDataUri($im): string
 {
@@ -2585,14 +2602,19 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     $imgs = '';
     $legende = fn (string $t) => '<div style="' . $F . ';font-size:9.5px;color:#8b8177;margin:2px 0 6px">' . $t . '</div>';
     $photo = rapImageGd((string) ($det['photo'] ?? ''), 420);
-    $imgPhoto = null;
-    if ($photo !== null) {
-        if ($reperes !== []) { rapDessineReperes($photo, $reperes); }
-        $imgPhoto = '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">';
-    }
+    if ($photo !== null && $reperes !== []) { rapDessineReperes($photo, $reperes); }
     // La photo de RÉFÉRENCE ne suit qu'en grande carte : en vignette, deux
     // images dans un cadre de six centimètres n'en montrent aucune.
     $ref = $compact ? null : rapImageGd((string) ($det['photoRef'] ?? ''), 420);
+    // En paire, les DEUX vignettes prennent le même carré : le modèle est en
+    // 1:1, la boutique se centre sur fond blanc — jamais recadrée.
+    if ($photo !== null && $ref !== null) {
+        $photo = rapCarre($photo);
+        $ref   = rapCarre($ref);
+    }
+    $imgPhoto = $photo !== null
+        ? '<img src="' . rapImageDataUri($photo) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Photo en boutique">'
+        : null;
     $imgRef = $ref !== null
         ? '<img src="' . rapImageDataUri($ref) . '" width="100%" style="display:block;width:100%;border-radius:7px" alt="Référence attendue">'
         : null;
