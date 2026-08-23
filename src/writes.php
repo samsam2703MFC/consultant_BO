@@ -2679,3 +2679,38 @@ function wr_ecran_vue(): array
               ON DUPLICATE KEY UPDATE n = n + 1', [$ecran, date('Y-m-d'), $acteur]);
     return ['ok' => true];
 }
+
+/**
+ * DELETE /projects/{projet}/tasks/{tache} — supprimer une tâche.
+ *
+ * Supprimer efface aussi ses SIGNALEMENTS : un signalement orphelin resterait
+ * dans le suivi, rattaché à une tâche qui n'existe plus, et rien ne permettrait
+ * de le clore. Le journal garde la trace — c'est lui la mémoire, pas la ligne
+ * effacée.
+ */
+function wr_task_delete(string $projectId, string $taskId): array
+{
+    $t = Db::row('SELECT t.name, t.done_on, t.note, p.name AS pname
+                    FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id
+                   WHERE t.id = ? AND t.project_id = ?', [$taskId, $projectId]);
+    if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
+
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        $sig = 0;
+        try {
+            $sig = count(Db::rows('SELECT id FROM ceo_task_issue WHERE task_id = ?', [$taskId]));
+            Db::exec('DELETE FROM ceo_task_issue WHERE task_id = ?', [$taskId]);
+        } catch (PDOException $e) { /* table absente : rien à détacher */ }
+        Db::exec('DELETE FROM ceo_project_task WHERE id = ? AND project_id = ?', [$taskId, $projectId]);
+        $pdo->commit();
+        journalAdd('CEO', 'Tâche', (string) $t['pname'], 'Tâche « ' . $t['name'] . ' » supprimée'
+            . ($t['note'] !== null ? ' (elle était validée ' . (int) $t['note'] . '/5)' : '')
+            . ($sig > 0 ? ' — ' . $sig . ' signalement(s) fermé(s) avec elle' : ''));
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+    return ['ok' => true, 'signalements' => $sig];
+}

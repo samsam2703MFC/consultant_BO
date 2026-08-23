@@ -30,6 +30,35 @@ function setting(string $key, mixed $default = null): mixed
     return $r === null ? $default : json_decode($r['value'], true);
 }
 
+/**
+ * L'identifiant CONSULTANT du compte connecté.
+ *
+ * Le cockpit connaît son utilisateur par son nom (« Sam Verheyden ») ; les
+ * tâches, elles, sont portées par un identifiant (« u6 »). Rapprocher les deux
+ * par le nom serait fragile — « Sam V. » côté panel, « Sam Verheyden » côté
+ * réglage. La route `/consultant/tasks` rend la POSITION du compte qui
+ * interroge : son `membership_id` EST cet identifiant, sans configuration.
+ *
+ * Mémorisé pour la journée : c'est une identité, elle ne change pas d'une
+ * heure à l'autre, et l'écran d'accueil ne doit pas attendre le panel.
+ */
+function consultantIdCompte(): ?string
+{
+    $memo = setting('consultantCompte', null);
+    $connu = is_array($memo) ? ($memo['id'] ?? null) : null;
+    if ($connu !== null && (string) ($memo['le'] ?? '') === date('Y-m-d')) { return (string) $connu; }
+    if (!PanelApi::configured()) { return $connu !== null ? (string) $connu : null; }
+    $r = PanelApi::get('/consultant/tasks');
+    $mid = is_array($r) ? (($r['position']['membership_id'] ?? null)) : null;
+    if ($mid === null || !is_numeric($mid)) { return $connu !== null ? (string) $connu : null; }
+    $id = 'u' . (int) $mid;
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['consultantCompte', json_encode(['id' => $id, 'le' => date('Y-m-d')])]);
+    } catch (PDOException $e) { /* mémorisation best-effort */ }
+    return $id;
+}
+
 function ep_meta(): array
 {
     // Horodatage du JS RÉELLEMENT déployé. « Je ne le vois pas en ligne » est
@@ -46,7 +75,10 @@ function ep_meta(): array
     return [
         'build'            => $build,
         'reseau'           => setting('reseau', ['nom' => '', 'sousTitre' => '']),
-        'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => '']),
+        // L'utilisateur, et — quand le compte API en est un — l'identifiant
+        // consultant qui lui correspond : c'est lui qui dit « mes tâches ».
+        'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => ''])
+                              + ['consultantId' => consultantIdCompte()],
         // « Aujourd'hui » pilote la logique de dates (défaut du planning d'un
         // nouveau projet, jalons/tâches en retard). Sans réglage explicite, on
         // prend la date réelle du serveur — jamais null (sinon les comparaisons

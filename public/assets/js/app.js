@@ -7982,10 +7982,22 @@ class App {
         'au moins un jalon dépassé', 'projets', true)
     ];
 
+    // Le compte connecté EST un consultant : ses tâches sont les siennes, et
+    // c'est ce qu'il vient voir. L'identifiant vient du panel (la position du
+    // compte qui interroge), pas d'un rapprochement de noms — « Sam V. » et
+    // « Sam Verheyden » ne se ressemblent que pour un humain.
+    const moiId = ((this.meta || {}).utilisateur || {}).consultantId || null;
+    const moi = moiId ? (D.consultants || []).find(c => String(c.id) === String(moiId)) : null;
+    common.tkMoi = moi ? moi.nom : '';
+    common.tkMoiVal = moi ? 'c:' + moi.id : '';
+    common.tkMoiOn = !!moi && S.tkWho === 'c:' + moi.id;
+    common.tkMoiGo = moi ? () => this.setState({ tkWho: common.tkMoiOn ? 'all' : 'c:' + moi.id }) : null;
+    common.tkMoiN = moi ? flat.filter(x => (x.t.owner.t + ':' + x.t.owner.id) === 'c:' + moi.id && !x.t.done).length : 0;
     common.tkWho = S.tkWho;
     common.setTkWho = e => this.setState({ tkWho: e.target.value });
     common.tkPeople = [{ val: 'all', nom: 'Tous les intervenants' }]
-      .concat(D.consultants.map(c => ({ val: 'c:' + c.id, nom: c.nom + ' — ' + c.role })))
+      .concat(D.consultants.map(c => ({ val: 'c:' + c.id,
+        nom: c.nom + ' — ' + c.role + (String(c.id) === String(moiId) ? ' (moi)' : '') })))
       .concat(D.suppliers.map(s => ({ val: 's:' + s.id, nom: s.nom + ' — Fournisseur' })));
     common.tkStore = S.tkStore;
     common.setTkStore = e => this.setState({ tkStore: e.target.value });
@@ -8103,6 +8115,16 @@ class App {
               ? ('notée ' + d2.avis.note + '/5' + (d2.avis.comment ? ' — ' + d2.avis.comment : ''))
               : '' };
         })(),
+        // Supprimer une tâche : une note envoyée par erreur, un essai, un
+        // doublon. Le journal en garde la trace — c'est lui la mémoire.
+        supprimer: () => {
+          if (!window.confirm('Supprimer la tâche « ' + x.t.nom + ' » ?\n\nSes signalements éventuels partent avec elle. Le journal en garde la trace.')) { return; }
+          this.api('DELETE', '/projects/' + x.p.id + '/tasks/' + x.t.id, {}).then(r => {
+            if (!r || r.ok === false) { this.notify((r && r.error) || 'Suppression refusée'); return; }
+            readOne('/projects').then(pj => { if (pj) { this.D.projects = pj; } this.setState({ tkSuppr: x.t.id }); });
+            this.notify('Tâche supprimée' + (r.signalements ? ' — ' + r.signalements + ' signalement(s) fermé(s)' : ''));
+          });
+        },
         histo: [{ k: 'Ce mois', v: sesNotes.length ? sesNotes.length + ' tâche' + (sesNotes.length > 1 ? 's' : '') + ' validée' + (sesNotes.length > 1 ? 's' : '') + ' · note moyenne ' + (sesNotes.reduce((a, b) => a + b, 0) / sesNotes.length).toFixed(1).replace('.', ',') : 'Aucune tâche validée' },
           { k: 'Signalements', v: sesSig ? sesSig + ' ouvert' + (sesSig > 1 ? 's' : '') : 'Aucun ouvert' }],
         // --- le panneau de validation

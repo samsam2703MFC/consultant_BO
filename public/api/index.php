@@ -161,6 +161,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_patch($m[1]); }
     if ($method === 'POST' && preg_match('#^/projects/([\w-]+)/tasks$#', $path, $m)) { return wr_task_create($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)/tasks/([\w-]+)$#', $path, $m)) { return wr_task_patch($m[1], $m[2]); }
+    if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)/tasks/([\w-]+)$#', $path, $m)) { return wr_task_delete($m[1], $m[2]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)/milestones/(\d+)$#', $path, $m)) { return wr_milestone_patch($m[1], (int) $m[2]); }
     if ($method === 'POST' && preg_match('#^/tasks/([\w-]+)/reminder$#', $path, $m)) { return wr_task_reminder($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/task-issues/(\d+)$#', $path, $m)) { return wr_task_issue_patch($m[1]); }

@@ -3518,6 +3518,7 @@ function tplTaches(c, x){
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      ${c.tkMoi ? `<button ${x.A(c.tkMoiGo)} title="Les tâches dont je suis l'intervenant" style="border:0.5px solid ${c.tkMoiOn ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${c.tkMoiOn ? 'var(--color-primary)' : 'transparent'};color:${c.tkMoiOn ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap">Mes tâches${c.tkMoiN ? ' · ' + c.tkMoiN : ''}</button>` : ''}
       <select ${x.C(c.setTkWho)} style="${selCss}">${opts(c.tkPeople, c.tkWho, o => o.val, o => esc(o.nom))}</select>
       <select ${x.C(c.setTkStore)} style="${selCss}">${opts(c.tkStores, c.tkStore, o => o.val, o => esc(o.nom))}</select>
       <span style="flex:1;min-width:0;font-size:12px;color:var(--color-text-muted)">${esc(c.tkResume)}</span>
@@ -3589,6 +3590,9 @@ function tplTaches(c, x){
                                 </div>
                               </div>
                             </div>`)}` : ''}
+                    <div style="margin-top:12px;display:flex;justify-content:flex-end">
+                      <button ${x.A(t.supprimer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:999px;padding:5px 12px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Supprimer la tâche</button>
+                    </div>
                   </div>
                   ${t.vOuvert ? `
                   <div style="padding:12px 14px;border-radius:9px;background:var(--color-surface);border:0.5px solid var(--color-border-secondary)">
