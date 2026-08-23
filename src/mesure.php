@@ -1339,3 +1339,31 @@ function ep_profil_jour(): array
         'lecture' => 'Moyenne du CA par jour de semaine, mesurée sur la fenêtre lue par « Résultat du jour » '
             . 'et réécrite à chaque passage. La part est celle du jour dans une semaine type.'];
 }
+
+/** Sonde — le détail HORAIRE de la heatmap : de quoi projeter la journée ? */
+function ep_sonde_heures(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $sid = (int) ($_GET['shop'] ?? 2);
+    $du = date('Y-m-d', strtotime('-13 days')); $au = date('Y-m-d');
+    $r = PanelApi::marginHeatmapEntre($sid, $du, $au);
+    $out = ['magasin' => $sid, 'fenetre' => $du . ' → ' . $au,
+        'cles' => is_array($r) ? array_keys($r) : 'aucune réponse'];
+    $h = is_array($r) ? ($r['hours'] ?? null) : null;
+    $out['heures'] = ['type' => gettype($h), 'nombre' => is_array($h) ? count($h) : 0];
+    if (is_array($h)) {
+        $out['heures']['clesPremier'] = is_array($h[0] ?? null) ? array_keys($h[0]) : null;
+        $out['heures']['trois'] = array_slice($h, 0, 3);
+        // Y a-t-il une DATE dans chaque ligne ? sans elle, impossible de
+        // distinguer le profil d'un dimanche de celui d'un lundi.
+        $cles = is_array($h[0] ?? null) ? array_keys($h[0]) : [];
+        $out['heures']['porteUneDate'] = (bool) array_intersect(['date', 'day', 'jour'], $cles);
+    }
+    // Et la journée d'aujourd'hui, heure par heure ?
+    $r2 = PanelApi::marginHeatmapEntre($sid, date('Y-m-d'), date('Y-m-d'));
+    $h2 = is_array($r2) ? ($r2['hours'] ?? null) : null;
+    $out['aujourdhui'] = ['nombre' => is_array($h2) ? count($h2) : 0,
+        'trois' => is_array($h2) ? array_slice($h2, 0, 3) : null,
+        'total' => is_array($r2) ? ($r2['totals'] ?? null) : null];
+    return $out;
+}
