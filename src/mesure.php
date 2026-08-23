@@ -1157,6 +1157,21 @@ function ep_sonde_recl3(): array
             'reponse' => $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $apercu($r)];
     }
 
+    // Où lire les COMMANDES (id_order est exigé) et les SKU fournisseur ?
+    foreach ([
+        'commandes'              => '/material-orders',
+        'commandes du magasin 2' => '/shops/3/material-orders?limit=5',
+        'une commande connue'    => '/material-orders/33',
+        'commandes du fournisseur' => '/material-suppliers/1/orders',
+        'tarif du fournisseur'   => '/material-suppliers/1/price-list',
+        'matières du fournisseur' => '/material-suppliers/1/materials',
+        'matière connue'         => '/materials/564',
+    ] as $nom => $ch) {
+        $r = PanelApi::get($ch);
+        $out['pistes'][$nom] = ['chemin' => $ch,
+            'reponse' => $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $apercu($r)];
+    }
+
     // Le contrat de création : un corps vide, puis un corps complet mais avec
     // une matière impossible — le message change et nomme ce qui manque.
     foreach ([
