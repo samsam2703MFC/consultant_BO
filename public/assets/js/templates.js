@@ -3674,9 +3674,11 @@ function tplReporting(c, x){
               ${c.rapCompo.periodes.map(pe => `<button ${x.A(pe.choisir)} title="${esc(pe.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${pe.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(pe.nom)}</button>`).join('')}
             </span>
             ${c.rapCompo.perLibre ? `
-              <input type="date" value="${esc(c.rapCompo.perDu.val)}" ${x.I(c.rapCompo.perDu.set)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">
-              <span style="font-size:11.5px;color:var(--color-text-muted)">→</span>
-              <input type="date" value="${esc(c.rapCompo.perAu.val)}" ${x.I(c.rapCompo.perAu.set)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">`
+              <span style="display:inline-flex;gap:6px;align-items:center;white-space:nowrap">
+                <input type="date" value="${esc(c.rapCompo.perDu.val)}" ${x.I(c.rapCompo.perDu.set)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">
+                <span style="font-size:11.5px;color:var(--color-text-muted)">→</span>
+                <input type="date" value="${esc(c.rapCompo.perAu.val)}" ${x.I(c.rapCompo.perAu.set)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">
+              </span>`
               : `<span style="font-size:10.5px;color:var(--color-text-muted)">c'est cette fenêtre qui décide si un seuil est franchi</span>`}
           </div>
           <!-- Le repère de comparaison des KPI chiffrés : A-1 neutralise la
