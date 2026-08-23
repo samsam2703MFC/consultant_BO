@@ -8233,6 +8233,7 @@ class App {
               blocs: bl, modes: r.modes || {}, mags: mg2, nom: r.nom, poste: r.poste || '',
               heure: String(r.heure), dows: dw, doms: dm, dest: (r.destinataires || []).join(', '),
               envoiMode: r.envoiMode || 'groupe', dpm: dpm0, comparaison: r.comparaison || 'A-1',
+              periode: r.periode || '', perDu: r.periodeDu || '', perAu: r.periodeAu || '',
               ordre: r.ordre || [], sauts: (r.sauts || []).reduce((o, sl) => { o[sl] = true; return o; }, {}) } });
           },
           suppr: () => {
@@ -8298,7 +8299,14 @@ class App {
     // Le rapport auquel la composition se rattache : celui qu'on édite, sinon
     // celui qu'on a chargé comme modèle. L'historique range alors la
     // génération sous son nom plutôt que sous « Aperçu à la demande ».
+    // La fenêtre OBSERVÉE : celle sur laquelle les seuils se calculent. Vide =
+    // « selon la cadence », le comportement d'avant — un rapport déjà réglé ne
+    // change pas de fenêtre parce qu'on a ajouté un bouton.
+    const rcPer = rc.periode == null ? '' : String(rc.periode);
+    const rcPerDu = rc.perDu || '';
+    const rcPerAu = rc.perAu || '';
     const composition = () => ({ blocs: planSlugs(), modes: rcModes, magasins: magsOn, comparaison: rcComp,
+      periode: rcPer, du: rcPerDu, au: rcPerAu,
       ordre: planSlugs(), sauts: planSlugs().filter(sl => (rc.sauts || {})[sl]),
       rapportId: S.rapEditId || rc.modeleId || 0 });
     const ordreLev = Object.keys((rd && rd.leviers) || {});
@@ -8315,8 +8323,49 @@ class App {
     const JSEM2 = ['', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
     const dows = rc.dows || {};
     const doms = rc.doms || {};
+    // La cadence déduite des jours cochés — la même règle qu'à l'enregistrement.
+    const nbDows = Object.keys(dows).filter(d5 => dows[d5]).length;
+    const nbDoms = Object.keys(doms).filter(d5 => doms[d5]).length;
+    const freqCompo = (nbDoms && !nbDows) ? 'mensuel' : (nbDows >= 7 ? 'quotidien' : 'hebdo');
+    // Les fenêtres résolues viennent du SERVEUR : les recalculer ici ferait
+    // deux vérités pour une même question, et c'est l'écran qui aurait tort.
+    const fenS = (rd && rd.fenetres) || {};
+    const fenCle = rcPer === '' ? 'cadence:' + freqCompo : rcPer;
+    const fenSel = fenS[fenCle] || null;
+    const jjmm = d5 => String(d5 || '').split('-').reverse().join('/');
+    const nJours = (a3, b3) => (!a3 || !b3) ? null
+      : Math.round((new Date(b3) - new Date(a3)) / 86400000) + 1;
+    let fenTxt;
+    if (rcPer === 'libre') {
+      const n5 = nJours(rcPerDu, rcPerAu);
+      fenTxt = (rcPerDu && rcPerAu && n5 > 0)
+        ? 'du ' + jjmm(rcPerDu) + ' au ' + jjmm(rcPerAu) + ' (' + n5 + ' jour' + (n5 > 1 ? 's' : '') + ')'
+          + ' · comparée à la même durée, ' + rcComp
+        : 'choisissez les deux dates';
+    } else if (fenSel) {
+      const c5 = (fenSel.cmp || {})[rcComp];
+      fenTxt = 'du ' + jjmm(fenSel.du) + ' au ' + jjmm(fenSel.au)
+        + ' (' + fenSel.jours + ' jour' + (fenSel.jours > 1 ? 's' : '') + ')'
+        + (c5 ? ' · comparée au ' + jjmm(c5.du) + ' → ' + jjmm(c5.au) + ' (' + rcComp + ')' : '')
+        + (rcPer === '' ? ' · cadence ' + freqCompo : '');
+    } else { fenTxt = 'fenêtre indisponible'; }
     common.rapCompo = {
       groupes,
+      periode: rcPer,
+      periodes: Object.entries((rd && rd.periodes) || { '': 'selon la cadence d’envoi' })
+        .map(([code, aide]) => ({ code, aide,
+          nom: { '': 'Cadence', 'hier': 'Hier', 'semaine-passee': 'Semaine passée',
+                 'mois-en-cours': 'Mois en cours', 'mois-passe': 'Mois passé', 'libre': 'Libre' }[code] || code,
+          on: code === rcPer, choisir: () => rcSet({ periode: code }) })),
+      perLibre: rcPer === 'libre',
+      perDu: { val: rcPerDu, set: e => rcSet({ perDu: e.target.value }) },
+      perAu: { val: rcPerAu, set: e => rcSet({ perAu: e.target.value }) },
+      fenetre: fenTxt,
+      fenetreAide: (((rd && rd.periodes) || {})[rcPer]) || '',
+      recapMags: (magsOn.length === 0 ? 'tout le réseau' : magsOn.length + ' magasin' + (magsOn.length > 1 ? 's' : ''))
+        + ' · ' + slugsOn.length + ' bloc' + (slugsOn.length > 1 ? 's' : '')
+        + (Object.values(rcModes).filter(m5 => m5 === 'complet').length
+          ? ', dont ' + Object.values(rcModes).filter(m5 => m5 === 'complet').length + ' en « complet »' : ''),
       comparaison: rcComp,
       comparaisons: Object.entries((rd && rd.comparaisons) || { 'A-1': 'même période l’an dernier' })
         .map(([code, aide]) => ({ code, aide, on: code === rcComp, choisir: () => rcSet({ comparaison: code }) })),
@@ -8326,6 +8375,7 @@ class App {
         if (!r) { rcSet({ blocs: {}, modes: {}, modeleId: 0 }); return; }
         const bl = {}; (r.blocs || []).forEach(sl => { bl[sl] = true; });
         rcSet({ blocs: bl, modes: r.modes || {}, nom: '', poste: r.poste || '', comparaison: r.comparaison || 'A-1',
+          periode: r.periode || '', perDu: r.periodeDu || '', perAu: r.periodeAu || '',
           modeleId: r.id, ordre: r.ordre || [],
           sauts: (r.sauts || []).reduce((o, sl) => { o[sl] = true; return o; }, {}) });
         this.notify('Modèle « ' + r.nom + ' » chargé — ajustez puis générez');

@@ -3653,7 +3653,7 @@ function tplReporting(c, x){
               ${c.rapCompo.doms.map(d6 => `<span ${x.A(d6.toggle)} style="display:inline-block;text-align:center;border-radius:6px;padding:4px 0;font-size:10px;font-weight:600;cursor:pointer;${d6.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text-muted)'}">${esc(d6.nom)}</span>`).join('')}
             </span>
           </div>
-          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">La fenêtre de données suit la cadence : envoi quotidien → la veille · hebdo → la semaine passée · mensuel → le mois passé. Aucun jour coché = rapport à la demande.</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">Aucun jour coché = rapport à la demande. La fenêtre de données se choisit en 5 · Générer (« Période observée ») ; par défaut elle suit la cadence : quotidien → la veille · hebdo → la semaine passée · mensuel → le mois passé.</div>
         </div>
         <div style="background:var(--color-background-secondary);border-radius:10px;padding:13px 15px">
           <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">5 · Générer, envoyer, ou enregistrer${c.rapCompo.edit ? ` <span style="font-weight:500;color:var(--color-primary)">— modification de « ${esc(c.rapCompo.editNom)} »</span>` : ''}</div>
@@ -3666,6 +3666,19 @@ function tplReporting(c, x){
             <input value="${esc(c.rapCompo.poste)}" ${x.C(c.rapCompo.setPoste)} list="rap-postes" placeholder="Poste destinataire (profils du panel + réseau)" style="flex:2;min-width:220px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
             <datalist id="rap-postes">${c.rapCompo.postes.map(po => `<option value="${esc(po)}"></option>`).join('')}</datalist>
           </div>
+          <!-- La fenêtre OBSERVÉE : c'est elle qui décide si un seuil est
+               franchi. « Cadence » garde le comportement d'avant. -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);width:110px">Période observée</span>
+            <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600">
+              ${c.rapCompo.periodes.map(pe => `<button ${x.A(pe.choisir)} title="${esc(pe.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${pe.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(pe.nom)}</button>`).join('')}
+            </span>
+            ${c.rapCompo.perLibre ? `
+              <input type="date" value="${esc(c.rapCompo.perDu.val)}" ${x.I(c.rapCompo.perDu.set)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">
+              <span style="font-size:11.5px;color:var(--color-text-muted)">→</span>
+              <input type="date" value="${esc(c.rapCompo.perAu.val)}" ${x.I(c.rapCompo.perAu.set)} style="font-size:11.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">`
+              : `<span style="font-size:10.5px;color:var(--color-text-muted)">c'est cette fenêtre qui décide si un seuil est franchi</span>`}
+          </div>
           <!-- Le repère de comparaison des KPI chiffrés : A-1 neutralise la
                saison, M-1 et S-1 servent à suivre une action récente. -->
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
@@ -3674,6 +3687,11 @@ function tplReporting(c, x){
               ${c.rapCompo.comparaisons.map(cp => `<button ${x.A(cp.choisir)} title="${esc(cp.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${cp.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(cp.code)}</button>`).join('')}
             </span>
             <span style="font-size:10.5px;color:var(--color-text-muted)">${esc((c.rapCompo.comparaisons.find(cp => cp.on) || {}).aide || '')} — pour le passage clients et le ticket moyen</span>
+          </div>
+          <!-- Les deux fenêtres résolues, juste avant de générer : lire un
+               rapport sans savoir sur quoi il porte n'apprend rien. -->
+          <div style="font-size:11.5px;background:var(--color-background-secondary);border-radius:8px;padding:9px 12px;margin-bottom:10px">
+            <b>${esc(c.rapCompo.fenetre)}</b> · ${esc(c.rapCompo.recapMags)}
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
             <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Mode d'envoi</span>

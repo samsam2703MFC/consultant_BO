@@ -774,6 +774,51 @@ function rapPeriode(string $freq, ?string $periode = null, ?string $du = null, ?
 const RAP_COMPARAISONS = ['A-1' => 'même période l’an dernier', 'M-1' => 'même période le mois dernier',
     'S-1' => 'même période la semaine passée'];
 
+/**
+ * Les fenêtres OBSERVÉES proposées au compositeur.
+ *
+ * La clé vide veut dire « selon la cadence » : c'est le comportement d'avant —
+ * quotidien → la veille, hebdo → la semaine passée, mensuel → le mois passé —
+ * et il reste le défaut, pour que les rapports déjà réglés ne changent pas de
+ * fenêtre parce qu'on a ajouté un bouton.
+ */
+const RAP_PERIODES = [
+    '' => 'selon la cadence d’envoi',
+    'hier' => 'la journée d’hier',
+    'semaine-passee' => 'la semaine passée (lundi → dimanche)',
+    'mois-en-cours' => 'le mois en cours, jusqu’à aujourd’hui',
+    'mois-passe' => 'le mois passé, entier',
+    'libre' => 'deux dates au choix',
+];
+
+/**
+ * Chaque fenêtre proposée, résolue en dates — et sa fenêtre de comparaison.
+ *
+ * C'est le SERVEUR qui tranche : refaire ce calcul en JavaScript ferait deux
+ * vérités pour une même question, et c'est toujours l'écran qui aurait tort.
+ */
+function rapFenetresProposees(): array
+{
+    $out = [];
+    foreach (['hier', 'semaine-passee', 'mois-en-cours', 'mois-passe'] as $cle) {
+        $out[$cle] = rapPeriode('hebdo', $cle);
+    }
+    foreach (['quotidien', 'hebdo', 'mensuel'] as $freq) {
+        $out['cadence:' . $freq] = rapPeriode($freq, null);
+    }
+    foreach ($out as $cle => $p) {
+        $cmp = [];
+        foreach (array_keys(RAP_COMPARAISONS) as $code) {
+            $f = rapFenetreComparaison($p, $code);
+            $cmp[$code] = ['du' => $f['du'], 'au' => $f['au']];
+        }
+        $out[$cle] = ['du' => $p['du'], 'au' => $p['au'], 'label' => $p['label'],
+            'jours' => (int) (new DateTimeImmutable($p['du']))->diff(new DateTimeImmutable($p['au']))->days + 1,
+            'cmp' => $cmp];
+    }
+    return $out;
+}
+
 function rapFenetreComparaison(array $periode, string $code): array
 {
     $decal = ['A-1' => '-1 year', 'M-1' => '-1 month', 'S-1' => '-7 days'][$code] ?? '-1 year';
@@ -1499,6 +1544,7 @@ function ep_rapports(): array
                 'destParMagasin' => json_decode((string) ($r['dest_par_magasin'] ?? ''), true) ?: [],
                 'magasins' => json_decode((string) ($r['magasins'] ?? ''), true) ?: [],
                 'periode' => $r['periode'] ?? null,
+                'periodeDu' => $r['periode_du'] ?? null, 'periodeAu' => $r['periode_au'] ?? null,
                 'modes' => json_decode((string) ($r['modes'] ?? ''), true) ?: [],
                 'comparaison' => (string) ($r['comparaison'] ?? 'A-1'),
                 'dernier' => $d ? ['runId' => (int) $d['id'], 'le' => substr((string) $d['genere_le'], 0, 16),
@@ -1512,6 +1558,8 @@ function ep_rapports(): array
             : null,
         'leviers' => RAP_LEVIERS,
         'comparaisons' => RAP_COMPARAISONS,
+        'periodes' => RAP_PERIODES,
+        'fenetres' => rapFenetresProposees(),
         // Les postes proposés au compositeur : ceux du réseau, puis les VRAIS
         // profils RH du panel (/positions) — saisie libre conservée à l'écran.
         // Les postes proposés : la liste /positions du panel telle quelle
@@ -1577,6 +1625,17 @@ function wr_rapport_patch(int $id): array
     }
     if (isset($b['comparaison']) && isset(RAP_COMPARAISONS[(string) $b['comparaison']])) {
         Db::exec('UPDATE ceo_rapport SET comparaison = ? WHERE id = ?', [(string) $b['comparaison'], $id]);
+    }
+    // La fenêtre OBSERVÉE. Chaîne vide = « selon la cadence » : on écrit NULL,
+    // qui est exactement ce que rapPeriode() attend pour retomber sur la
+    // fréquence — et non la chaîne vide, qu'elle prendrait pour un choix.
+    if (array_key_exists('periode', $b)) {
+        $pe = (string) $b['periode'];
+        $pe = in_array($pe, ['hier', 'semaine-passee', 'mois-en-cours', 'mois-passe', 'libre'], true) ? $pe : null;
+        $dd = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['du'] ?? '')) ? (string) $b['du'] : null;
+        $aa = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['au'] ?? '')) ? (string) $b['au'] : null;
+        Db::exec('UPDATE ceo_rapport SET periode = ?, periode_du = ?, periode_au = ? WHERE id = ?',
+            [$pe, $dd, $aa, $id]);
     }
     // L'ordre des blocs et les sauts de page : envoyés ensemble, enregistrés
     // ensemble — un ordre sans ses sauts décalerait les pages.
