@@ -4966,6 +4966,35 @@ function tplCtrlDetail(c, x){
    libres, les pleines portent leur produit. La structure se déclare ici même —
    l'API du panel n'expose ni zone, ni meuble, ni emplacement (mesuré), donc
    attendre une API aurait laissé l'écran vide indéfiniment. */
+/**
+ * Une liste de choix qui s'édite : on tape pour filtrer, on ajoute ce qui
+ * manque, la croix retire une position.
+ *
+ * Le panneau s'ouvre DANS la ligne et non par-dessus : le tableau défile
+ * horizontalement, et un panneau flottant y serait coupé net.
+ */
+function plCbx(cb, x){
+  const { esc } = x;
+  if (!cb) { return ''; }
+  const champ = 'display:flex;align-items:center;gap:5px;border:0.5px solid ' + (cb.ouvert ? 'var(--color-primary)' : 'var(--color-border-secondary)')
+    + ';background:var(--color-surface);border-radius:6px;padding:4px 7px;font-size:11.5px;cursor:pointer;min-width:112px';
+  return `<div ${x.A(e => e.stopPropagation())}>
+    <div ${x.A(cb.ouvrir)} style="${champ}">
+      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${cb.vide ? 'color:var(--color-text-muted)' : 'font-weight:500'}">${esc(cb.val)}</span>
+      <span style="font-size:8px;color:var(--color-text-muted)">▾</span>
+    </div>
+    ${cb.ouvert ? `<div style="margin-top:5px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;background:var(--color-surface);min-width:172px">
+      <input id="pl-cbx" value="${esc(cb.q)}" ${x.I(cb.setQ)} placeholder="Filtrer ou écrire…" style="width:100%;box-sizing:border-box;border:none;border-bottom:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;outline:none">
+      ${cb.items.length ? cb.items.map(i => `<div style="display:flex;align-items:center;gap:4px;padding:0 4px 0 0">
+        <button ${x.A(i.choisir)} style="flex:1;text-align:left;border:none;background:none;padding:5px 8px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;color:var(--color-text);${i.on ? 'font-weight:600' : ''}">${esc(i.nom)}</button>
+        <button ${x.A(i.supprimer)} title="Retirer de la liste" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 3px">✕</button>
+      </div>`).join('') : `<div style="padding:6px 8px;font-size:10.5px;color:var(--color-text-muted)">Aucune position ne correspond.</div>`}
+      ${cb.ajouter ? `<button ${x.A(cb.ajouter)} style="width:100%;text-align:left;border:none;border-top:0.5px solid var(--color-border-tertiary);background:rgba(141,29,44,0.05);color:var(--color-primary);padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">＋ Ajouter « ${esc(cb.ajoutTxt)} » à la liste</button>` : ''}
+      ${cb.vider ? `<button ${x.A(cb.vider)} style="width:100%;text-align:left;border:none;border-top:0.5px solid var(--color-border-tertiary);background:none;color:var(--color-text-muted);padding:5px 8px;font-family:var(--font-ui);font-size:10.5px;cursor:pointer">Aucun ${esc(cb.quoi === 'format' ? 'format' : 'contenant')}</button>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+
 function tplPlanoComptoir(c, x){
   const { esc } = x;
   // Style de cellule local : `TD` n'existe qu'à l'intérieur d'autres gabarits.
@@ -5079,20 +5108,31 @@ function tplPlanoComptoir(c, x){
           <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plRangsN} ligne(s)</span>
         </div>
         <div style="margin-top:11px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px">
             <thead><tr>
               <th style="${TH}"><button ${x.A(c.plCols[0].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[0].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Emplacement</button></th>
-              <th style="${TH}">Dimensions</th>
+              <th style="${TH}">Format</th>
+              <th style="${TH}">Contenant</th>
               <th style="${TH}"><button ${x.A(c.plCols[1].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[1].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Référence</button></th>
-              <th style="${TH};text-align:right">Fronts</th>
+              <th style="${TH};text-align:right">Par slot</th>
+              <th style="${TH}">Ligne × rangées</th>
               <th style="${TH}"><button ${x.A(c.plCols[2].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[2].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">État</button></th>
             </tr></thead>
             <tbody>
               ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement' : 'Ouvrir la fiche de ' + esc(r.nom)}">
                 <td style="${TD}"><span style="font-weight:500">${esc(r.meuble)} · ${esc(r.niveau)} · ${r.position}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.zone)}</div></td>
-                <td style="${TD};color:var(--color-text-muted)">${esc(r.taille)}</td>
+                <td style="${TD}">${plCbx(r.format, x)}${r.dims ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.dims)}</div>` : ''}</td>
+                <td style="${TD}">${plCbx(r.contenant, x)}</td>
                 <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
-                <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(r.fronts)}</td>
+                <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>'
+                  : `<input ${x.A(e => e.stopPropagation())} type="number" min="0" max="400" value="${esc(r.parSlot)}" ${x.I(r.parSlotSet)} ${x.C(r.parSlotEcrire)} placeholder="—" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:27px;width:58px;padding:0 6px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-align:right">`}</td>
+                <td style="${TD}">${r.grille ? `
+                  <div style="display:inline-flex;border:0.5px solid var(--color-border-tertiary);border-radius:999px;overflow:hidden">
+                    ${r.grille.opts.map(o => `<button ${x.A(o.go)} title="${o.c} par ligne" style="border:none;padding:3px 7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.c}</button>`).join('')}
+                  </div>
+                  <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${r.grille.txt} = <b style="font-weight:600;color:var(--color-text)">${r.grille.poses}</b> posés${r.grille.taille ? ' · ' + esc(r.grille.taille) : ''}</div>
+                  ${r.grille.reste ? `<div style="margin-top:4px;font-size:10px;background:rgba(199,158,44,0.14);color:var(--color-on-abricot);border-radius:5px;padding:2px 6px;display:inline-block">${r.grille.reste} hors grille${r.grille.justeTxt ? ` — <button ${x.A(r.grille.justeGo)} style="border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer">${esc(r.grille.justeTxt)}</button>` : ''}</div>` : ''}`
+                  : `<span style="color:var(--color-text-muted);font-size:11px">${r.libre ? '—' : 'nombre à saisir'}</span>`}</td>
                 <td style="${TD}"><span style="${r.etatSt}">${r.vise ? 'visé' : esc(r.etat)}</span></td>
               </tr>`).join('')}
             </tbody>

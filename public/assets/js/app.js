@@ -5213,8 +5213,15 @@ class App {
               const vise = cible === s.id;
               return { id: s.id, position: s.position, libre: !occ, vise,
                 nom: occ ? occ.nom : '', ref: occ ? occ.ref : '',
-                detail: occ ? (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : ''))
-                  : ((s.largeurMm ? s.largeurMm + ' mm' : '') + (s.capacite ? ' · ' + s.capacite : '')),
+                // La grille quand elle est connue — elle dit ce que les fronts
+                // seuls ne disent pas : 6 × 1 et 3 × 2 font six produits, pas
+                // la même vitrine. Sinon, les fronts, comme avant.
+                detail: occ
+                  ? (occ.cols && occ.rangs
+                      ? (occ.cols + ' × ' + occ.rangs + (occ.parSlot ? ' · ' + occ.parSlot : ''))
+                      : (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : '')))
+                  : ([s.format || (s.largeurMm ? s.largeurMm + ' mm' : ''), s.contenant,
+                      s.capacite ? String(s.capacite) : ''].filter(Boolean).join(' · ')),
                 st: 'border-radius:7px;padding:6px 7px;min-height:50px;display:flex;flex-direction:column;'
                   + 'justify-content:space-between;gap:3px;font-size:10.5px;line-height:1.3;cursor:pointer;'
                   + (vise ? 'border:1.5px solid var(--color-primary);background:var(--color-primary);color:#fff;font-weight:600'
@@ -5260,10 +5267,77 @@ class App {
     common.plCols = cols.map(([k, nom]) => ({ nom, k, on: tri === k,
       go: () => this.setState({ plTri: k }) }));
 
+    // --- Les deux listes de choix du comptoir : format d'emplacement, contenant.
+    // Elles viennent des tables et s'éditent d'ici : on tape pour filtrer, on
+    // ajoute ce qui manque, la croix retire une position de la LISTE — les
+    // emplacements qui la portaient gardent leur valeur.
+    const refFmt = ((pl.referentiels || {}).formats || []);
+    const refCont = ((pl.referentiels || {}).contenants || []);
+    const cbx = S.plCbx || null;
+    const cbxQ = e => { const v = e.target.value;
+      this.setState(s2 => ({ plCbx: Object.assign({}, s2.plCbx, { q: v }) })); };
+    const combo = (sl, quoi) => {
+      const liste = quoi === 'format' ? refFmt : refCont;
+      const type = quoi === 'format' ? 'formats' : 'contenants';
+      const val = String((quoi === 'format' ? sl.format : sl.contenant) || '');
+      const ouvert = !!(cbx && cbx.slot === sl.id && cbx.quoi === quoi);
+      const saisie = ouvert ? String(cbx.q || '') : '';
+      const q = saisie.trim().toLowerCase();
+      const items = q ? liste.filter(o => o.nom.toLowerCase().indexOf(q) >= 0) : liste;
+      const exact = liste.some(o => o.nom.toLowerCase() === q);
+      return {
+        val: val || '—', vide: !val, ouvert, q: saisie, quoi,
+        ouvrir: () => this.setState({ plCbx: ouvert ? null : { slot: sl.id, quoi, q: '' } }),
+        setQ: cbxQ,
+        items: items.map(o => ({ id: o.id, nom: o.nom, on: o.nom === val,
+          choisir: () => this.plSlotMaj(sl.id, quoi, o.nom),
+          supprimer: () => this.plRefSupprimer(type, o.id, o.nom, quoi) })),
+        vider: val ? () => this.plSlotMaj(sl.id, quoi, '') : null,
+        // Ce qui n'est pas dans la liste s'y ajoute : on finit d'écrire, on
+        // clique, et la position sert aussitôt pour cet emplacement.
+        ajouter: (q && !exact) ? () => this.plRefAjouter(type, saisie.trim(), sl.id, quoi) : null,
+        ajoutTxt: saisie.trim(),
+      };
+    };
+
+    // La grille en cours de saisie vit dans l'état tant qu'elle n'est pas
+    // écrite : sans cela, le nombre tapé repartirait à chaque rendu.
+    const brouillons = S.plGr || {};
+
     let rangs = (pl.slots || []).map(s => {
       const occ = (s.occupants || [])[0] || null;
+      const br = occ ? (brouillons[occ.ref] || {}) : {};
+      const nSaisi = br.n != null ? br.n : (occ && occ.parSlot != null ? String(occ.parSlot) : '');
+      const colsSaisi = br.cols != null ? br.cols : (occ && occ.cols != null ? occ.cols : null);
+      const g = occ && String(nSaisi).trim() !== ''
+        ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, colsSaisi) : null;
+      // La ligne juste : celle qui divise exactement. Elle est proposée
+      // d'office ; quand une ligne imposée laisse un reste, il est écrit.
+      const juste = g && g.reste > 0
+        ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, null) : null;
       return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
         taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '—',
+        format: combo(s, 'format'), contenant: combo(s, 'contenant'),
+        formatTxt: s.format || '',
+        // Les dimensions ne sont dites que si le format ne les dit pas déjà :
+        // « 60 × 15 cm » écrit deux fois de suite n'apprend rien.
+        dims: (!s.format && s.largeurMm && s.hauteurMm)
+          ? (s.largeurMm / 10) + ' × ' + (s.hauteurMm / 10) + ' cm' : '',
+        parSlot: nSaisi,
+        parSlotSet: occ ? e => { const v = e.target.value;
+          this.setState(s2 => ({ plGr: Object.assign({}, s2.plGr,
+            { [occ.ref]: Object.assign({}, (s2.plGr || {})[occ.ref], { n: v, cols: null }) }) })); } : null,
+        parSlotEcrire: occ ? e => this.plGrilleEcrire(occ.ref, s.id, e.target.value, null) : null,
+        grille: g ? { cols: g.cols, rangs: g.rangs, poses: g.poses, reste: g.reste,
+          txt: g.cols + ' × ' + g.rangs,
+          // Taille d'un produit : le garde-fou. Quand elle devient absurde,
+          // c'est la grille qui est fausse, pas la vitrine.
+          taille: (s.largeurMm && s.hauteurMm)
+            ? this.plCm(s.largeurMm / g.cols) + ' × ' + this.plCm(s.hauteurMm / g.rangs) + ' cm' : '',
+          justeTxt: juste ? ('ligne de ' + juste.cols + ' : ' + juste.cols + ' × ' + juste.rangs + ' les prend tous') : '',
+          justeGo: juste ? () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, juste.cols) : null,
+          opts: [1, 2, 3, 4, 5, 6].map(c => ({ c, on: c === g.cols,
+            go: () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, c) })) } : null,
         ref: occ ? occ.ref : '', nom: occ ? occ.nom : '',
         fronts: occ ? String(occ.fronts) : '—', libre: !occ,
         etat: occ ? 'occupé' : 'libre',
@@ -5272,7 +5346,8 @@ class App {
     });
     if (libresSeules) { rangs = rangs.filter(r => r.libre); }
     if (q) {
-      rangs = rangs.filter(r => (r.nom + ' ' + r.ref + ' ' + r.zone + ' ' + r.meuble + ' ' + r.niveau)
+      rangs = rangs.filter(r => (r.nom + ' ' + r.ref + ' ' + r.zone + ' ' + r.meuble + ' ' + r.niveau
+        + ' ' + (r.formatTxt || '') + ' ' + ((r.contenant || {}).vide ? '' : (r.contenant || {}).val || ''))
         .toLowerCase().indexOf(q) >= 0);
     }
     const cmp = { lieu: (a, b) => (a.zone + a.meuble + a.niveau).localeCompare(b.zone + b.meuble + b.niveau) || a.position - b.position,
@@ -5879,6 +5954,78 @@ class App {
         this.plFPatch({ busy: false, ok: 'Retirée du comptoir.', cible: null });
         this.plCharge(true); this.D.prodCatalogue = null; this.plRechargeCatalogue();
       });
+  }
+  /** Une longueur en millimètres, dite en centimètres, sans décimale inutile. */
+  plCm(mm){ const v = Math.round(mm / 10 * 10) / 10; return String(v).replace('.', ','); }
+
+  /**
+   * La grille d'un produit dans son emplacement — la même règle qu'au serveur.
+   *
+   * Une ligne va jusqu'à SIX ; les rangées se déduisent par division arrondie
+   * vers le bas. Sans ligne imposée, on propose la LIGNE JUSTE : celle qui
+   * divise exactement, et parmi celles-là celle qui donne la case la plus
+   * proche du carré dans les dimensions réelles de l'emplacement.
+   */
+  plGrilleCalc(n, largeurMm, hauteurMm, colsVoulues){
+    n = Math.max(0, Math.min(400, Math.round(+n || 0)));
+    if (!n) { return { n: 0, cols: 0, rangs: 0, poses: 0, reste: 0 }; }
+    const lar = largeurMm > 0 ? largeurMm : 1, hau = hauteurMm > 0 ? hauteurMm : 1;
+    if (colsVoulues > 0) {
+      const c = Math.min(6, n, Math.round(colsVoulues));
+      const r = Math.max(1, Math.floor(n / c));
+      return { n, cols: c, rangs: r, poses: c * r, reste: Math.max(0, n - c * r) };
+    }
+    let best = [1, n], bs = null;
+    for (let c = 1; c <= 6 && c <= n; c++) {
+      if (n % c) { continue; }
+      const r = n / c, l = lar / c, h = hau / r;
+      const sc = Math.max(l / h, h / l);
+      if (bs === null || sc < bs - 1e-9 || (Math.abs(sc - bs) <= 1e-9 && c > best[0])) { best = [c, r]; bs = sc; }
+    }
+    return { n, cols: best[0], rangs: best[1], poses: n, reste: 0 };
+  }
+  /** Format ou contenant d'un emplacement. Une valeur vide EFFACE le choix. */
+  plSlotMaj(id, quoi, nom){
+    write(this.source, 'PATCH', '/planogramme/emplacement/' + id, { [quoi]: nom })
+      .then(r => { this.setState({ plCbx: null });
+        if (r && r.ok !== false) { this.plCharge(true); } });
+  }
+  /** Ajouter une position à la liste, et l'utiliser aussitôt. */
+  plRefAjouter(type, nom, slotId, quoi){
+    if (!nom) { return; }
+    write(this.source, 'POST', '/planogramme/referentiel/' + type, { nom })
+      .then(r => { if (!r || r.ok === false) { this.setState({ plCbx: null }); return; }
+        this.plSlotMaj(slotId, quoi, nom); });
+  }
+  /**
+   * Retirer une position de la liste. Ce qui disparaît est la PROPOSITION :
+   * les emplacements qui la portent gardent leur valeur — on le dit avant.
+   */
+  plRefSupprimer(type, id, nom, quoi){
+    const pl = this.D.plano || {};
+    const cle = quoi === 'format' ? 'format' : 'contenant';
+    const n = (pl.slots || []).filter(s => (s[cle] || '') === nom).length;
+    if (n > 0 && !window.confirm(nom + ' est utilisé par ' + n + ' emplacement(s).\n'
+      + 'Les retirer de la liste ne les change pas : ils gardent cette valeur. Continuer ?')) { return; }
+    write(this.source, 'DELETE', '/planogramme/referentiel/' + type + '/' + id)
+      .then(r => { this.setState({ plCbx: null }); if (r && r.ok !== false) { this.plCharge(true); } });
+  }
+  /**
+   * Le nombre par emplacement, et la ligne. Un nombre vide n'écrit rien : il
+   * n'y a pas de grille par défaut, et zéro ne veut pas dire « un ».
+   */
+  plGrilleEcrire(ref, slotId, n, cols){
+    const v = String(n == null ? '' : n).trim();
+    if (v === '') { return; }
+    this.setState(s2 => ({ plGr: Object.assign({}, s2.plGr,
+      { [ref]: { n: v, cols: cols || null } }) }));
+    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(ref),
+      { slotId, parSlot: Math.max(0, Math.round(+v || 0)), cols: cols || 0 })
+      .then(r => { if (r && r.ok !== false) {
+        // Le brouillon a fait son temps : la vérité revient du serveur.
+        this.setState(s2 => { const g = Object.assign({}, s2.plGr); delete g[ref]; return { plGr: g }; });
+        this.plCharge(true);
+      } });
   }
   /** Le référentiel lit le placement : il doit être relu après une écriture. */
   plRechargeCatalogue(){
