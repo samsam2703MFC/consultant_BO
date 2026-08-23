@@ -1200,6 +1200,13 @@ function ep_sonde_cmd2(): array
         'commande 33 read-model'   => '/material-suppliers/1/orders/33/read-model',
         'fulfillment'              => '/shops/3/orders/33/supplier-fulfillment',
         'tarif en cours'           => '/material-suppliers/1/shops/3/price-lists/current',
+        // La question qui tranche : la livraison 33 porte-t-elle la commande
+        // ORD-3-B6BD0C67901C0D4D, celle d'une réclamation dont id_order = 33 ?
+        'livraison 33'             => '/deliveries/33',
+        'livraison 68'             => '/deliveries/68',
+        'livraisons du magasin'    => '/deliveries?id_shop=3',
+        'livraisons (shop_id)'     => '/deliveries?shop_id=3&limit=5',
+        'livraisons du fournisseur' => '/material-suppliers/1/deliveries',
     ] as $nom => $ch) {
         $r = PanelApi::get($ch);
         $out[$nom] = $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $court($r);
