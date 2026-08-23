@@ -919,44 +919,66 @@ function ep_panel_sonde_ecriture(): array
     $out = ['magasin' => $sid];
 
     $types = PanelApi::noteTypes();
-    $out['types'] = array_map(fn ($t) => ['id' => $t['id'] ?? null, 'code' => $t['code'] ?? null,
-        'nom' => $t['name'] ?? null], $types);
-
     $tid = 0;
-    foreach ($types as $t) { if (($t['code'] ?? '') === 'VISIT') { $tid = (int) $t['id']; } }
+    foreach ($types as $t) { if (((string) ($t['code'] ?? '')) === 'VISIT') { $tid = (int) $t['id']; } }
     if ($tid === 0 && $types !== []) { $tid = (int) ($types[0]['id'] ?? 0); }
+    $out['typeEssai'] = $tid;
 
-    if ($tid > 0) {
-        [$ok, $res] = PanelApi::noterMagasin($sid, $tid, 'Sonde technique du cockpit — supprimée aussitôt.');
-        $out['post'] = ['ok' => $ok, 'reponse' => $res, 'erreur' => $ok ? null : PanelApi::$lastError];
-        $nid = 0;
-        foreach ([$res, $res['note'] ?? null, $res['data'] ?? null] as $c) {
-            if (is_array($c) && isset($c['id']) && is_numeric($c['id'])) { $nid = (int) $c['id']; break; }
-        }
-        if ($nid === 0) {
-            foreach (PanelApi::notesMagasin($sid) as $n) {
-                if (str_contains((string) ($n['content'] ?? ''), 'Sonde technique du cockpit')) { $nid = (int) $n['id']; }
+    // NOTES : plusieurs formes, jusqu'à ce que l'une passe. Ce qui est créé est
+    // supprimé dans la foulée — la route DELETE existe.
+    $txt = 'Sonde technique du cockpit — supprimée aussitôt.';
+    $formes = [
+        'note_type_id+content'   => ['note_type_id' => $tid, 'content' => $txt],
+        'type_id+content'        => ['type_id' => $tid, 'content' => $txt],
+        'code+content'           => ['note_type_code' => 'VISIT', 'content' => $txt],
+        'note_type_id+note'      => ['note_type_id' => $tid, 'note' => $txt],
+        'note_type_id+body'      => ['note_type_id' => $tid, 'body' => $txt],
+        'complet'                => ['note_type_id' => $tid, 'content' => $txt, 'employee_id' => null,
+                                     'shop_id' => $sid, 'visited_at' => date('Y-m-d')],
+        'avec_titre'             => ['note_type_id' => $tid, 'content' => $txt, 'title' => 'Sonde'],
+    ];
+    $cree = 0;
+    foreach ($formes as $nom => $corps) {
+        if ($cree > 0) { $out['notes'][$nom] = 'non essayée (déjà passée)'; continue; }
+        [$ok, $res] = PanelApi::post('/consultant/shops/' . $sid . '/notes', $corps);
+        $out['notes'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
+            'reponse' => is_array($res) ? array_slice($res, 0, 8, true) : $res];
+        if ($ok) {
+            $cree = 1;
+            $nid = 0;
+            foreach ([$res, $res['note'] ?? null, $res['data'] ?? null] as $c) {
+                if (is_array($c) && isset($c['id']) && is_numeric($c['id'])) { $nid = (int) $c['id']; break; }
             }
-        }
-        $out['noteId'] = $nid;
-        if ($nid > 0) {
-            [$okD, $resD] = PanelApi::envoi('DELETE', '/consultant/notes/' . $nid, []);
-            $out['delete'] = ['ok' => $okD, 'erreur' => $okD ? null : PanelApi::$lastError];
+            if ($nid === 0) {
+                foreach (PanelApi::notesMagasin($sid) as $n) {
+                    if (str_contains((string) ($n['content'] ?? ''), 'Sonde technique du cockpit')) { $nid = (int) $n['id']; }
+                }
+            }
+            $out['noteId'] = $nid;
+            if ($nid > 0) {
+                [$okD] = PanelApi::envoi('DELETE', '/consultant/notes/' . $nid, []);
+                $out['noteSupprimee'] = $okD ? 'oui' : ('non — ' . PanelApi::$lastError);
+            }
         }
     }
 
-    // Cibles : on ne fait qu'INTERROGER la forme attendue, avec des corps
-    // incomplets. Aucune valeur n'est posée.
+    // CIBLES : une métrique VOLONTAIREMENT inconnue. Si la forme est bonne, le
+    // message change (métrique inconnue) sans que rien ne soit écrit ; s'il
+    // reste « INVALID_REQUEST_DATA », c'est la structure qui ne va pas.
     $essais = [
-        'vide' => [],
-        'plat' => ['transactions_count' => ['t1' => 0]],
-        'metrics' => ['metrics' => ['transactions_count' => ['t1' => 0]]],
-        'liste' => ['targets' => [['metric' => 'transactions_count', 't1' => 0]]],
+        'plat'            => ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1]],
+        'metrics'         => ['metrics' => ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1]]],
+        'targets_objet'   => ['targets' => ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1]]],
+        'targets_liste'   => ['targets' => [['metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1]]],
+        'metrique_seule'  => ['metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1],
+        'thresholds'      => ['metric' => 'zzz_probe', 'thresholds' => ['t1' => 3, 't2' => 2, 't3' => 1]],
+        'chaines'         => ['zzz_probe' => ['t1' => '3', 't2' => '2', 't3' => '1']],
+        'avec_scope'      => ['scope' => 'consultant', 'zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1]],
+        'values'          => ['values' => ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1]]],
     ];
     foreach ($essais as $nom => $corps) {
         [$ok, $res] = PanelApi::ecrireCibles($sid, $corps);
-        $out['cibles'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
-            'reponse' => is_array($res) ? array_slice($res, 0, 6, true) : $res];
+        $out['cibles'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError];
     }
     return $out;
 }
