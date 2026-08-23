@@ -784,7 +784,7 @@ final class PanelApi
     }
 
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
-    private static ?array $catalogue = null;
+    private static ?array $dispo = null;
 
     /**
      * Photo de la fiche technique d'un produit — à mettre en face de la photo
@@ -798,62 +798,81 @@ final class PanelApi
     /**
      * Le visuel de RÉFÉRENCE d'un produit contrôlé.
      *
-     * LA source (constat à l'écran du 23/08) : la LISTE GET /recipes — le
-     * même API dont le webshop tire ses photos — dont chaque entrée `data`
-     * porte `shop_photo_path`. Le détail /recipes/{id} ne rend PAS ce champ
-     * sur cette installation : c'est la liste qui fait foi, rapprochée par
-     * IDENTIFIANT (jamais le nom). Le chemin est résolu contre `photoBase`
-     * (réglage panelApi), sinon l'hôte du panel sans /api/vN. AUCUN repli :
-     * pas de chemin → url null, et l'écran écrit « Pas de photo. ».
+     * LA chaîne (spec du 23/08) : l'id PRODUIT d'une tâche n'est PAS un id de
+     * recette. GET /shops/{ref}/products/available porte les deux sur la même
+     * ligne ({ id: 2130006, name: …, id_recipe: 573 }) ; c'est id_recipe qui
+     * s'adresse à GET /recipes/{id_recipe}, dont le visuel se lit dans
+     * shop_photo_path — sinon main_photo_path, sinon photo_1..3 (l'ordre du
+     * webshop). Le chemin est résolu contre photoBase (réglage panelApi),
+     * sinon l'hôte du panel sans /api/vN. La recette rend aussi un
+     * id_product : pas une source, une CORROBORATION — s'il contredit le
+     * produit contrôlé, aucune photo plutôt qu'une référence trompeuse (un
+     * mauvais visuel fait refuser un produit correct). Un maillon absent →
+     * url null, et l'écran écrit « Pas de photo. ».
      */
-    public static function productPhoto(int $productId): ?array
+    public static function productPhoto(int $productId, int $shopId = 0): ?array
     {
         if ($productId <= 0) { return null; }
-        foreach (self::catalogue() as $p) {
-            $pid = null;
-            foreach (['id', 'product_id', 'id_product'] as $k) {
-                if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+
+        $nom = ''; $recette = 0;
+        if ($shopId > 0) {
+            foreach (self::produitsDisponibles($shopId) as $p) {
+                $pid = null;
+                foreach (['id', 'product_id', 'id_product'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+                }
+                if ($pid !== $productId) { continue; }
+                foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
+                    if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+                }
+                foreach (['id_recipe', 'recipe_id', 'idRecipe'] as $k) {
+                    if (!empty($p[$k]) && is_numeric($p[$k])) { $recette = (int) $p[$k]; break; }
+                }
+                break;
             }
-            if ($pid !== $productId) { continue; }
-            $nom = '';
-            foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
-                if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
-            }
-            $path = self::texteProfond($p, 'shop_photo_path');
-            $url = null;
-            if ($path !== null) {
-                $url = preg_match('#^https?://#i', $path) ? $path
-                     : self::photosBase() . '/' . ltrim($path, '/');
-            }
-            return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
         }
-        // Identifiant absent de la liste : produit retiré ou pagination plus
-        // longue que la garde — l'écran écrira « Pas de photo. », sans inventer.
-        return ['nom' => 'Produit #' . $productId, 'url' => null];
+
+        $path = null;
+        if ($recette > 0) {
+            $r = self::get('/recipes/' . $recette);
+            if (is_array($r)) {
+                $d = $r;
+                foreach (['data', 'recipe'] as $k) {
+                    if (isset($d[$k]) && is_array($d[$k])) { $d = $d[$k]; }
+                }
+                $rp = null;
+                foreach (['id_product', 'product_id', 'productId'] as $k) {
+                    if (isset($d[$k]) && is_numeric($d[$k])) { $rp = (int) $d[$k]; break; }
+                }
+                if ($rp === null || $rp === $productId) {
+                    foreach (['shop_photo_path', 'main_photo_path', 'photo_1', 'photo_2', 'photo_3'] as $k) {
+                        $path = self::texteProfond($d, $k);
+                        if ($path !== null) { break; }
+                    }
+                }
+            }
+        }
+
+        $url = null;
+        if ($path !== null) {
+            $url = preg_match('#^https?://#i', $path) ? $path
+                 : self::photosBase() . '/' . ltrim($path, '/');
+        }
+        return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
     }
 
     /**
-     * La liste /recipes, TOUTES pages suivies (le panel pagine), en cache
-     * pour la requête : le détail d'une tâche ne la lit qu'une fois.
+     * GET /shops/{ref}/products/available — chaque ligne produit porte id ET
+     * id_recipe. En cache par boutique le temps de la requête.
      */
-    private static function catalogue(): array
+    private static function produitsDisponibles(int $shopId): array
     {
-        if (self::$catalogue !== null) { return self::$catalogue; }
-        self::$catalogue = [];
-        $page = 1;
-        while ($page <= 30) {   // garde-fou : jamais de boucle infinie
-            $r = self::get('/recipes' . ($page > 1 ? ('?page=' . $page) : ''));
-            if (!is_array($r)) { break; }
-            $lot = self::liste($r);
-            if ($lot === []) { break; }
-            self::$catalogue = array_merge(self::$catalogue, $lot);
-            $meta = is_array($r['meta'] ?? null) ? $r['meta'] : $r;
-            $next = $meta['next_page_url'] ?? null;
-            $last = isset($meta['last_page']) ? (int) $meta['last_page'] : null;
-            if ($last !== null ? $page >= $last : !$next) { break; }
-            $page++;
+        if (self::$dispo === null) { self::$dispo = []; }
+        if (!isset(self::$dispo[$shopId])) {
+            $r = self::get('/shops/' . $shopId . '/products/available');
+            self::$dispo[$shopId] = is_array($r) ? self::liste($r) : [];
         }
-        return self::$catalogue;
+        return self::$dispo[$shopId];
     }
 
     /** L'hôte des photos : réglage photoBase, sinon l'hôte du panel nu. */

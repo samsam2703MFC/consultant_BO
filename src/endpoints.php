@@ -3574,7 +3574,7 @@ function ep_pwa_task_detail(): array
     }
     if ($attId > 0) { $out['photo'] = PanelApi::attachmentUrl($attId); }
     if ($out['produitId'] !== null) {
-        $ref = PanelApi::productPhoto($out['produitId']);
+        $ref = PanelApi::productPhoto($out['produitId'], $shopId);
         if ($ref !== null) { $out['produit'] = $ref['nom']; $out['photoRef'] = $ref['url']; }
     }
     $out['api']['erreur'] = PanelApi::$lastError;
