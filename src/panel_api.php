@@ -798,32 +798,62 @@ final class PanelApi
     /**
      * Le visuel de RÉFÉRENCE d'un produit contrôlé.
      *
-     * LA source (spec du 19/08) : GET /recipes/{id} — le même API dont le
-     * webshop tire ses photos — clé `shop_photo_path`. C'est un CHEMIN, pas
-     * une URL : résolu contre `photoBase` du réglage panelApi, sinon l'hôte
-     * du panel (base sans /api/vN). AUCUN repli : pas de chemin → url null,
-     * et l'écran écrit « Pas de photo. ». Le nom ne sert qu'à la légende.
+     * LA source (constat à l'écran du 23/08) : la LISTE GET /recipes — le
+     * même API dont le webshop tire ses photos — dont chaque entrée `data`
+     * porte `shop_photo_path`. Le détail /recipes/{id} ne rend PAS ce champ
+     * sur cette installation : c'est la liste qui fait foi, rapprochée par
+     * IDENTIFIANT (jamais le nom). Le chemin est résolu contre `photoBase`
+     * (réglage panelApi), sinon l'hôte du panel sans /api/vN. AUCUN repli :
+     * pas de chemin → url null, et l'écran écrit « Pas de photo. ».
      */
     public static function productPhoto(int $productId): ?array
     {
         if ($productId <= 0) { return null; }
-        $r = self::get('/recipes/' . $productId);
-        if (!is_array($r)) { return ['nom' => 'Produit #' . $productId, 'url' => null]; }
-        $d = $r;
-        foreach (['data', 'recipe', 'product'] as $k) {
-            if (isset($d[$k]) && is_array($d[$k])) { $d = $d[$k]; }
+        foreach (self::catalogue() as $p) {
+            $pid = null;
+            foreach (['id', 'product_id', 'id_product'] as $k) {
+                if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+            }
+            if ($pid !== $productId) { continue; }
+            $nom = '';
+            foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
+                if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+            }
+            $path = self::texteProfond($p, 'shop_photo_path');
+            $url = null;
+            if ($path !== null) {
+                $url = preg_match('#^https?://#i', $path) ? $path
+                     : self::photosBase() . '/' . ltrim($path, '/');
+            }
+            return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
         }
-        $nom = '';
-        foreach (['name', 'product_name', 'label', 'title', 'nom', 'designation'] as $k) {
-            if (!empty($d[$k]) && is_string($d[$k])) { $nom = trim($d[$k]); break; }
+        // Identifiant absent de la liste : produit retiré ou pagination plus
+        // longue que la garde — l'écran écrira « Pas de photo. », sans inventer.
+        return ['nom' => 'Produit #' . $productId, 'url' => null];
+    }
+
+    /**
+     * La liste /recipes, TOUTES pages suivies (le panel pagine), en cache
+     * pour la requête : le détail d'une tâche ne la lit qu'une fois.
+     */
+    private static function catalogue(): array
+    {
+        if (self::$catalogue !== null) { return self::$catalogue; }
+        self::$catalogue = [];
+        $page = 1;
+        while ($page <= 30) {   // garde-fou : jamais de boucle infinie
+            $r = self::get('/recipes' . ($page > 1 ? ('?page=' . $page) : ''));
+            if (!is_array($r)) { break; }
+            $lot = self::liste($r);
+            if ($lot === []) { break; }
+            self::$catalogue = array_merge(self::$catalogue, $lot);
+            $meta = is_array($r['meta'] ?? null) ? $r['meta'] : $r;
+            $next = $meta['next_page_url'] ?? null;
+            $last = isset($meta['last_page']) ? (int) $meta['last_page'] : null;
+            if ($last !== null ? $page >= $last : !$next) { break; }
+            $page++;
         }
-        $path = self::texteProfond($d, 'shop_photo_path');
-        $url = null;
-        if ($path !== null) {
-            $url = preg_match('#^https?://#i', $path) ? $path
-                 : self::photosBase() . '/' . ltrim($path, '/');
-        }
-        return ['nom' => $nom !== '' ? $nom : ('Produit #' . $productId), 'url' => $url];
+        return self::$catalogue;
     }
 
     /** L'hôte des photos : réglage photoBase, sinon l'hôte du panel nu. */

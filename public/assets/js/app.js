@@ -7848,9 +7848,9 @@ class App {
       // Le report n'est plus un geste : il se fait à l'enregistrement. Le
       // panneau annonce ce qui partira, plutôt que d'offrir un bouton de plus.
       reporte: rep.filter(r => String(r.txt || '').trim()).length,
-      // Option « comparer » : la photo de référence en face — recipes/{id},
-      // clé shop_photo_path (le même API que le webshop) ; sans chemin,
-      // l'écran le dit.
+      // Option « comparer » : la photo de référence en face — la liste
+      // recipes, clé shop_photo_path (le même API que le webshop) ; sans
+      // chemin, l'écran le dit.
       compare: !!dt.zCompare,
       compareGo: () => this.zPatch({ zCompare: !dt.zCompare }),
       photoRef: d.photoRef || null,
@@ -7859,8 +7859,8 @@ class App {
       refTxt: d.produitId
         ? 'Pas de photo.'
         : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
-      refBesoin: 'La référence vient de recipes/{id} du panel, clé shop_photo_path — le même API que celui '
-        + 'des photos du webshop. Pas de chemin pour ce produit : pas de photo, rien d’autre n’est tenté.',
+      refBesoin: 'La référence vient de la liste recipes du panel (data[].shop_photo_path) — le même API '
+        + 'que celui des photos du webshop. Pas de chemin pour ce produit : pas de photo, rien d’autre n’est tenté.',
       envoiBesoin: 'Les repères restent dans le cockpit : /consultant/shops/{id}/task-reviews n’accepte que '
         + 'note, conformité et commentaire, sans pièce jointe. Reportez-les dans le commentaire pour que '
         + 'le franchisé les reçoive.'
