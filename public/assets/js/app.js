@@ -6100,7 +6100,21 @@ class App {
       if (R && !R.indispo) {
         const jf = z => String(z || '').split('-').reverse().join('/');
         const age = a => a == null ? '—' : (a + ' j');
-        common.reclTotaux = { total: R.total, ouvertes: R.ouvertes, reglees: R.reglees, refusees: R.refusees };
+        common.reclTotaux = { total: R.total, ouvertes: R.ouvertes, reglees: R.reglees, refusees: R.refusees,
+          // COMBIEN : ce que pèsent les réclamations sans réponse, au prix
+          // d'achat de la matière. Un « à peu près » se dit, il ne se cache pas.
+          montant: R.montantOuvert == null ? '' : this.fE(R.montantOuvert),
+          montantNote: R.montantOuvert == null ? ''
+            : (R.montantComplet ? 'au prix d’achat' : 'au prix d’achat — quelques références sans tarif') };
+        // Qui réclame, et sur quoi.
+        const cum = (l, tot) => ({ nom: l.nom, n: l.n, ouvertes: l.ouvertes,
+          qte: l.qte == null ? '—' : String(l.qte % 1 === 0 ? l.qte : l.qte.toFixed(1)).replace('.', ','),
+          montant: l.montant ? this.fE(l.montant) + (l.chiffre ? '' : ' +') : '—',
+          w: Math.round(100 * l.n / Math.max(1, tot)) });
+        const maxMag = Math.max.apply(null, [1].concat((R.parMagasin || []).map(z => z.n)));
+        const maxRef = Math.max.apply(null, [1].concat((R.parReference || []).map(z => z.n)));
+        common.reclParMagasin = (R.parMagasin || []).map(l => cum(l, maxMag));
+        common.reclParRef = (R.parReference || []).map(l => cum(l, maxRef));
         common.reclFourn = (R.fournisseurs || []).map(f => ({
           nom: f.nom, total: f.total, ouvertes: f.ouvertes, reglees: f.reglees, refusees: f.refusees,
           ancienne: f.plusAncienne == null ? '—' : age(f.plusAncienne),
@@ -6129,6 +6143,7 @@ class App {
             : ((l.age || 0) >= 60 ? 'var(--color-primary)' : ((l.age || 0) >= 21 ? '#C17A2A' : 'var(--color-text)')),
           le: jf(l.le), reference: l.reference || '—', sku: l.sku,
           qte: l.qte == null ? '—' : (String(l.qte % 1 === 0 ? l.qte : l.qte).replace('.', ',') + (l.unite ? ' ' + l.unite : '')),
+          montant: l.montant == null ? '' : this.fE(l.montant),
           motif: l.motif || '—', texte: l.texte || '', magasin: l.magasin,
           pj: l.pj ? l.pj + ' pièce' + (l.pj > 1 ? 's' : '') + ' jointe' + (l.pj > 1 ? 's' : '') : '',
           statut: l.statut === 'REJECTED' ? 'refusée' : (l.ouverte ? 'sans réponse' : 'réglée'),
@@ -6146,6 +6161,8 @@ class App {
             + (det.commande ? ' · commande ' + det.commande : '')
             + (det.qte != null ? ' · ' + String(det.qte).replace('.', ',') + ' ' + det.unite : '')
             + (det.action ? ' · action demandée : ' + (det.action === 'REPLACEMENT' ? 'remplacement' : det.action.toLowerCase()) : ''),
+          montant: det.montant == null ? '' : (this.fE(det.montant)
+            + (det.prixUnitaire != null ? ' (' + this.fEd(det.prixUnitaire) + ' l’unité, prix d’achat)' : '')),
           statut: det.statut === 'REJECTED' ? 'refusée' : (det.ouverte ? 'sans réponse depuis ' + age(det.age) : 'réglée'),
           statutSt: det.statut === 'REJECTED' ? 'background:#F7E4E6;color:var(--color-primary)'
             : (det.ouverte ? 'background:#FBEFE0;color:#C17A2A' : 'background:#E6F2E9;color:#2d7a3e'),

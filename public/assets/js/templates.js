@@ -5751,6 +5751,10 @@ function tplCentrale(c, x){
         </div>
         <div style="display:flex;gap:18px;flex-wrap:wrap">
           ${chiffre(T.ouvertes, 'Sans réponse', 'var(--color-primary)')}
+          ${T.montant ? `<div style="flex:1;min-width:150px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">Ce que ça pèse</div>
+            <div style="font-family:var(--font-display);font-size:24px;line-height:1.1;margin-top:3px;color:var(--color-primary)">${esc(T.montant)}</div>
+            <div style="font-size:10px;color:var(--color-text-muted);margin-top:2px">${esc(T.montantNote)}</div></div>` : ''}
           ${chiffre(T.reglees, 'Réglées', '#2d7a3e')}
           ${chiffre(T.refusees, 'Refusées', '')}
           ${chiffre(T.total, 'Total', '')}
@@ -5781,6 +5785,19 @@ function tplCentrale(c, x){
           </div>`).join('')}
       </div>
 
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px">
+        ${[['Qui réclame — par magasin', c.reclParMagasin], ['Sur quoi — par référence', c.reclParRef]].map(([titre, liste]) => `
+          <div>
+            <div style="font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:7px">${esc(titre)}</div>
+            ${(liste || []).map(l => `<div style="display:flex;align-items:center;gap:9px;margin-bottom:5px">
+              <span style="flex:0 0 200px;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nom)}</span>
+              <span style="flex:1;height:7px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.ouvertes ? 'var(--color-primary)' : '#bdb3a6'};border-radius:999px"></i></span>
+              <span style="flex:0 0 92px;text-align:right;font-size:11px;color:var(--color-text-muted)">${l.n} · ${esc(l.qte)} u</span>
+              <span style="flex:0 0 78px;text-align:right;font-size:11.5px;font-weight:600">${esc(l.montant)}</span>
+            </div>`).join('')}
+          </div>`).join('')}
+      </div>
+
       <div style="display:flex;align-items:center;gap:9px;margin:14px 0 8px;flex-wrap:wrap">
         <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
           ${(c.reclFiltres || []).map(f2 => `<button ${x.A(f2.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:${f2.on ? '600' : '400'};padding:5px 12px;border-radius:7px;background:${f2.on ? 'var(--color-surface)' : 'transparent'};color:${f2.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(f2.nom)}</button>`).join('')}
@@ -5791,7 +5808,7 @@ function tplCentrale(c, x){
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;min-width:900px">
           <thead><tr>
-            <th style="${TH};width:70px">Âge</th><th style="${TH}">Référence</th><th style="${TH};width:80px">Qté</th>
+            <th style="${TH};width:70px">Âge</th><th style="${TH}">Référence</th><th style="${TH};width:80px">Qté</th><th style="${TH};width:90px">Valeur</th>
             <th style="${TH}">Motif</th><th style="${TH}">Ce que dit la boutique</th>
             <th style="${TH};width:130px">Magasin</th><th style="${TH};width:110px">Statut</th>
           </tr></thead>
@@ -5800,6 +5817,7 @@ function tplCentrale(c, x){
               <td style="${TD};color:${l.ageCol};font-weight:600">${esc(l.age)}</td>
               <td style="${TD}">${esc(l.reference)}${l.pj ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.pj)}</div>` : ''}</td>
               <td style="${TD}">${esc(l.qte)}</td>
+              <td style="${TD};font-weight:600">${esc(l.montant)}</td>
               <td style="${TD}">${esc(l.motif)}</td>
               <td style="${TD};color:var(--color-text-muted);max-width:320px">${esc(l.texte)}</td>
               <td style="${TD}">${esc(l.magasin)}</td>
@@ -5820,7 +5838,10 @@ function tplCentrale(c, x){
         </div>
         <button ${x.A(c.reclDet.fermer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:999px;width:26px;height:26px;cursor:pointer;flex:none">✕</button>
       </div>
-      <div style="margin-top:10px"><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;${c.reclDet.statutSt}">${esc(c.reclDet.statut)}</span></div>
+      <div style="margin-top:10px;display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;${c.reclDet.statutSt}">${esc(c.reclDet.statut)}</span>
+        ${c.reclDet.montant ? `<span style="font-size:11.5px;color:var(--color-text-muted)">valeur réclamée : <b style="color:var(--color-text)">${esc(c.reclDet.montant)}</b></span>` : ''}
+      </div>
       <div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:12.5px;line-height:1.55">
         <b>La boutique :</b> ${esc(c.reclDet.texte)}
       </div>

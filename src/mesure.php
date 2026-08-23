@@ -1034,6 +1034,17 @@ function ep_fournisseurs_reclamations(): array
         foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
     } catch (PDOException $e) { /* noms indisponibles : l'identifiant fera foi */ }
 
+    // COMBIEN : le prix d'achat de la matière, pour chiffrer ce qui est réclamé.
+    // `/shops/{id}/materials` porte `base_unit_price_net` — la même matière a le
+    // même prix d'achat d'un magasin à l'autre, une lecture suffit donc.
+    $prix = [];
+    $mats = PanelApi::get('/shops/' . (int) (array_key_first($noms) ?: 3) . '/materials');
+    foreach ((array) (is_array($mats) ? (array_is_list($mats) ? $mats : ($mats['materials'] ?? [])) : []) as $m) {
+        $id = (int) ($m['id'] ?? 0);
+        $p = $m['base_unit_price_net'] ?? null;
+        if ($id > 0 && is_numeric($p)) { $prix[$id] = (float) $p; }
+    }
+
     $auj = new DateTimeImmutable('today');
     $lignes = [];
     foreach ((array) ($r['shops'] ?? []) as $s) {
@@ -1050,8 +1061,12 @@ function ep_fournisseurs_reclamations(): array
             // « Ouverte » n'est pas un statut du panel : c'est une réclamation
             // acceptée que personne n'a suivie d'effet. C'est celle-là qui coûte.
             $ouverte = $statut !== 'REJECTED' && $rep === '';
+            $qte = isset($c['qty']) ? (float) $c['qty'] : null;
+            $pu = $prix[(int) ($c['id_material'] ?? 0)] ?? null;
             $lignes[] = [
                 'id' => (int) ($c['id'] ?? 0),
+                'prixUnitaire' => $pu,
+                'montant' => ($pu !== null && $qte !== null) ? round($pu * $qte, 2) : null,
                 'cle' => (string) ($c['complaint_key'] ?? ''),
                 'shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
                 'le' => $le, 'age' => $age,
@@ -1110,11 +1125,40 @@ function ep_fournisseurs_reclamations(): array
     }
     usort($parF, fn ($a, $b) => [$b['ouvertes'], $b['total']] <=> [$a['ouvertes'], $a['total']]);
 
-    $parMag = [];
-    foreach ($lignes as $l) { $parMag[$l['magasin']] = ($parMag[$l['magasin']] ?? 0) + 1; }
-    arsort($parMag);
+    // QUI — le magasin qui réclame. QUOI — la référence. COMBIEN — la quantité
+    // et ce qu'elle vaut au prix d'achat. Trois lectures d'un même jeu.
+    $cumul = static function (array $lignes, string $champ): array {
+        $t = [];
+        foreach ($lignes as $l) {
+            $cle = ($l[$champ] ?? '') !== '' ? (string) $l[$champ] : '—';
+            if (!isset($t[$cle])) {
+                $t[$cle] = ['nom' => $cle, 'n' => 0, 'ouvertes' => 0, 'qte' => 0.0, 'montant' => 0.0, 'chiffre' => true];
+            }
+            $t[$cle]['n']++;
+            if ($l['ouverte']) { $t[$cle]['ouvertes']++; }
+            $t[$cle]['qte'] += (float) ($l['qte'] ?? 0);
+            if ($l['montant'] === null) { $t[$cle]['chiffre'] = false; }
+            else { $t[$cle]['montant'] += (float) $l['montant']; }
+        }
+        uasort($t, fn ($a, $b) => [$b['ouvertes'], $b['n']] <=> [$a['ouvertes'], $a['n']]);
+        foreach ($t as $k => $v) { $t[$k]['montant'] = round($v['montant'], 2); $t[$k]['qte'] = round($v['qte'], 2); }
+        return array_values($t);
+    };
+    $parMag = $cumul($lignes, 'magasin');
+    $parRef = $cumul($lignes, 'reference');
 
-    return ['lignes' => $lignes, 'fournisseurs' => array_values($parF), 'parMagasin' => $parMag,
+    $mtOuvert = 0.0; $mtOk = true;
+    foreach ($lignes as $l) {
+        if (!$l['ouverte']) { continue; }
+        if ($l['montant'] === null) { $mtOk = false; continue; }
+        $mtOuvert += $l['montant'];
+    }
+
+    return ['lignes' => $lignes, 'fournisseurs' => array_values($parF),
+        'parMagasin' => $parMag, 'parReference' => array_slice($parRef, 0, 8),
+        'montantOuvert' => $mtOk || $mtOuvert > 0 ? round($mtOuvert, 2) : null,
+        'montantComplet' => $mtOk,
+        'prixConnus' => count($prix),
         'total' => count($lignes),
         'ouvertes' => count(array_filter($lignes, fn ($l) => $l['ouverte'])),
         'reglees' => count(array_filter($lignes, fn ($l) => !$l['ouverte'] && $l['statut'] !== 'REJECTED')),
@@ -1122,74 +1166,4 @@ function ep_fournisseurs_reclamations(): array
         'source' => 'API panel — /consultant/shops/material-complaints',
         'lecture' => 'Le cockpit lit ; répondre, relancer et clore passent par les webhooks fournisseurs '
             . '(material-suppliers/complaints/*), qui refusent le compte consultant.'];
-}
-
-/** Sonde — contrat de création d'une réclamation, et référentiels associés. */
-function ep_sonde_recl3(): array
-{
-    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
-    $out = [];
-    $apercu = static function ($v) {
-        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 100) : gettype($v); }
-        if (array_is_list($v)) {
-            return ['liste' => count($v), 'clés' => ($v && is_array($v[0])) ? array_keys($v[0]) : null,
-                'premier' => is_array($v[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 40), $v[0]) : ($v[0] ?? null)];
-        }
-        $o = [];
-        foreach ($v as $k => $x) {
-            $o[$k] = is_array($x) ? (array_is_list($x) ? ['liste' => count($x), 'clés' => is_array($x[0] ?? null) ? array_keys($x[0]) : null] : array_keys($x))
-                : mb_substr((string) $x, 0, 60);
-        }
-        return $o;
-    };
-
-    // Où trouver la matière, la commande, l'unité ?
-    foreach ([
-        'commandes du magasin'   => '/shops/3/material-orders',
-        'commandes (autre nom)'  => '/shops/3/orders',
-        'matières'               => '/materials',
-        'matières du magasin'    => '/shops/3/materials',
-        'fournisseurs matière'   => '/material-suppliers',
-        'unités'                 => '/material-units',
-    ] as $nom => $ch) {
-        $r = PanelApi::get($ch);
-        $out['referentiels'][$nom] = ['chemin' => $ch,
-            'reponse' => $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $apercu($r)];
-    }
-
-    // Où lire les COMMANDES (id_order est exigé) et les SKU fournisseur ?
-    foreach ([
-        'commandes'              => '/material-orders',
-        'commandes du magasin 2' => '/shops/3/material-orders?limit=5',
-        'une commande connue'    => '/material-orders/33',
-        'commandes du fournisseur' => '/material-suppliers/1/orders',
-        'tarif du fournisseur'   => '/material-suppliers/1/price-list',
-        'matières du fournisseur' => '/material-suppliers/1/materials',
-        'matière connue'         => '/materials/564',
-        'commande par identifiant' => '/shops/3/orders/33',
-        'commandes avec limite'  => '/shops/3/orders?limit=5',
-        'livraisons'             => '/shops/3/deliveries',
-        'commandes matière'      => '/shops/3/material-order',
-    ] as $nom => $ch) {
-        $r = PanelApi::get($ch);
-        $out['pistes'][$nom] = ['chemin' => $ch,
-            'reponse' => $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $apercu($r)];
-    }
-
-    // Le contrat de création : un corps vide, puis un corps complet mais avec
-    // une matière impossible — le message change et nomme ce qui manque.
-    foreach ([
-        'corps vide' => [],
-        'corps complet, matière impossible' => [
-            'id_shop' => 3, 'id_material' => 999999999, 'id_supplier' => 1, 'id_order' => 999999999,
-            'qty' => 1, 'id_unit' => 5, 'reason_code' => 'product_quality',
-            'description' => 'sonde technique — ne pas traiter', 'requested_action' => 'REPLACEMENT',
-            'complaint_type' => 'PRODUCT',
-        ],
-    ] as $nom => $corps) {
-        [$ok, $res] = PanelApi::post('/material-complaints', $corps);
-        $out['creation'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
-            'reponse' => is_array($res) ? array_slice($res, 0, 8, true) : $res];
-    }
-    return $out;
 }
