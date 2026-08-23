@@ -4837,6 +4837,20 @@ class App {
           : (m.objectifAtteinte >= 1 ? '#2d7a3e' : (m.objectifAtteinte >= 0.9 ? '#C17A2A' : 'var(--color-primary)')),
         ecart: m.objectifAtteinte == null ? ''
           : ((m.ca - m.objectifJour >= 0 ? '+' : '−') + fE(Math.abs(m.ca - m.objectifJour))),
+        // ── La projection de fin de journée, en doré : où l'on VA, à côté de
+        //    où l'on EN EST. Elle ne s'affiche qu'à partir de 30 % de journée
+        //    écoulée — en dessous, ce serait une devinette.
+        proj: m.projection == null ? null : {
+          montant: fE(m.projection),
+          pct: m.projectionAtteinte == null ? '' : this.fP(m.projectionAtteinte, 0),
+          // Le doré va jusqu'à la projection, borné comme la barre du réalisé.
+          w: Math.max(0, Math.min(100, (m.projectionAtteinte || 0) * 100)).toFixed(1),
+          detail: String(m.projectionPart).replace('.', ',') + ' % de la journée écoulée à '
+            + (m.projectionHeure == null ? '?' : m.projectionHeure + ' h')
+            + (m.projectionJours ? ' · profil de ' + m.projectionJours + ' ' + (m.objectifJourNom || 'jour')
+               + (m.projectionJours > 1 ? 's' : '') : ''),
+        },
+        projMotif: m.projection == null ? (m.projectionMotif || '') : '',
       },
       cascade: casc,
       note: (m.overheadMois != null

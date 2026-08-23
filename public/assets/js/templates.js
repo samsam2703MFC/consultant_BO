@@ -2792,10 +2792,15 @@ function tplResultatJour(c, x){
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 13px;border-radius:10px;background:var(--color-background-secondary);flex-wrap:wrap">
         <span style="${cap}">Objectif du jour</span>
         <span style="font-size:14px;font-weight:600;${num}">${esc(c.rjDetail.objectif.montant)}</span>
-        <span style="flex:1;min-width:120px;height:9px;border-radius:999px;background:var(--color-surface);overflow:hidden">
-          <i style="display:block;height:100%;width:${c.rjDetail.objectif.w}%;border-radius:999px;background:${c.rjDetail.objectif.coul}"></i></span>
+        <span style="position:relative;flex:1;min-width:120px;height:10px;border-radius:999px;background:var(--color-surface);overflow:hidden">
+          ${c.rjDetail.objectif.proj ? `<i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.proj.w}%;border-radius:999px;background:#C9A227;opacity:.45"></i>` : ''}
+          <i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.w}%;border-radius:999px;background:${c.rjDetail.objectif.coul}"></i></span>
         <span style="font-size:14px;font-weight:700;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.pct)}</span>
         <span style="font-size:11.5px;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.ecart)}</span>
+        ${c.rjDetail.objectif.proj ? `<span style="width:100%;font-size:11.5px;font-weight:600;color:#8a6d12">
+          Projection fin de journée : ${esc(c.rjDetail.objectif.proj.montant)}${c.rjDetail.objectif.proj.pct ? ' — ' + esc(c.rjDetail.objectif.proj.pct) + ' de l’objectif' : ''}
+          <span style="font-weight:400;color:var(--color-text-muted)">· ${esc(c.rjDetail.objectif.proj.detail)}</span>
+        </span>` : (c.rjDetail.projMotif ? `<span style="width:100%;font-size:11px;color:var(--color-text-muted)">Pas de projection : ${esc(c.rjDetail.projMotif)}.</span>` : '')}
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
       </div>` : ''}
 

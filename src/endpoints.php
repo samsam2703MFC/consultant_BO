@@ -1621,6 +1621,84 @@ function profilJourLire(string $shopId): array
     return $out;
 }
 
+/**
+ * Le PROFIL HORAIRE d'un magasin, jour de semaine par jour de semaine.
+ *
+ * C'est lui qui permet de dire, à 15 h, ce que la journée fera au total : on
+ * connaît la part du chiffre déjà passée. Il coûte six lectures (les six
+ * derniers mêmes jours), on ne les refait donc qu'UNE FOIS PAR SEMAINE et on
+ * garde le résultat.
+ */
+function ensureProfilHeure(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_profil_heure ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'jour TINYINT NOT NULL,'           // 1 = lundi … 7 = dimanche
+        . 'heure TINYINT NOT NULL,'          // 0 … 23
+        . 'ca_moyen DECIMAL(12,2) NULL,'
+        . 'part DECIMAL(6,3) NULL,'          // % du CA de la journée
+        . 'jours INT NOT NULL DEFAULT 0,'
+        . 'maj DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, jour, heure)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Le profil horaire mémorisé : ['parts' => [heure => %], 'jours' => n, 'maj' => …]. */
+function profilHeureLire(string $shopId, int $jour): array
+{
+    ensureProfilHeure();
+    $parts = []; $n = 0; $maj = null;
+    try {
+        foreach (Db::rows('SELECT heure, part, jours, maj FROM ceo_shop_profil_heure
+                            WHERE shop_id = ? AND jour = ? ORDER BY heure', [$shopId, $jour]) as $r) {
+            if ($r['part'] !== null) { $parts[(int) $r['heure']] = (float) $r['part']; }
+            $n = max($n, (int) $r['jours']); $maj = $r['maj'];
+        }
+    } catch (PDOException $e) { /* table absente */ }
+    return ['parts' => $parts, 'jours' => $n, 'maj' => $maj];
+}
+
+/**
+ * Reconstruire le profil horaire d'un jour de semaine : les six dernières
+ * occurrences, heure par heure. Rend le nombre de journées retenues.
+ */
+function profilHeureBatir(int $shopId, string $date): int
+{
+    ensureProfilHeure();
+    $req = [];
+    for ($i = 1; $i <= 6; $i++) {
+        $d = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days'));
+        $req[$d] = '/consultant/shops/' . $shopId . '/margin-heatmap?' . http_build_query(['from' => $d, 'to' => $d]);
+    }
+    $somme = []; $retenus = 0;
+    foreach (PanelApi::getParallele($req, 4) as $d => $r) {
+        $h = is_array($r) ? ($r['hours'] ?? null) : null;
+        if (!is_array($h)) { continue; }
+        $tot = 0.0;
+        foreach ($h as $x) { $tot += (float) ($x['ca'] ?? 0); }
+        if ($tot <= 0) { continue; }          // magasin fermé ce jour-là
+        $retenus++;
+        foreach ($h as $x) {
+            $hh = (int) ($x['hour'] ?? -1);
+            if ($hh < 0 || $hh > 23) { continue; }
+            $somme[$hh] = ($somme[$hh] ?? 0) + (float) ($x['ca'] ?? 0);
+        }
+    }
+    if ($retenus === 0) { return 0; }
+    $total = array_sum($somme);
+    if ($total <= 0) { return 0; }
+    $jour = (int) date('N', strtotime($date));
+    $now = date('Y-m-d H:i:s');
+    Db::exec('DELETE FROM ceo_shop_profil_heure WHERE shop_id = ? AND jour = ?', [(string) $shopId, $jour]);
+    foreach ($somme as $hh => $v) {
+        if ($v <= 0) { continue; }
+        Db::exec('INSERT INTO ceo_shop_profil_heure (shop_id, jour, heure, ca_moyen, part, jours, maj)
+                  VALUES (?,?,?,?,?,?,?)',
+            [(string) $shopId, $jour, (int) $hh, round($v / $retenus, 2), round(100 * $v / $total, 3), $retenus, $now]);
+    }
+    return $retenus;
+}
+
 function ep_exploitation_jour(): array
 {
     $auj  = date('Y-m-d');
@@ -1712,6 +1790,11 @@ function ep_exploitation_jour(): array
         // Le /pnl du jour ne sert QUE pour aujourd'hui : sur une date passée il
         // rendrait la main-d'œuvre du jour courant.
         if ($estAuj) { $paths['pnlJ' . $id] = '/consultant/shops/' . $id . '/pnl'; }
+        // Les HEURES de la journée regardée : c'est la part déjà écoulée qui
+        // permet de projeter la fin de journée. Une seule date, sinon la
+        // route agrège les heures de toute la fenêtre.
+        $paths['hj' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?'
+            . http_build_query(['from' => $date, 'to' => $date]);
     }
     $res = PanelApi::getParallele($paths, 6);
 
@@ -1739,6 +1822,7 @@ function ep_exploitation_jour(): array
     $catsRef = [];
     foreach ($refDates as $i => $rd) { $catsRef[$rd] = $lireCats($res['catsR' . $i] ?? null); }
 
+    $GLOBALS['_profilHRefaits'] = 0;
     $joursMois = (int) date('t', strtotime($date));
     $premier   = new DateTimeImmutable($mois1);
     $moisAff   = substr($date, 0, 7);
@@ -1919,6 +2003,43 @@ function ep_exploitation_jour(): array
         }
         $part = ($attMois > 0 && $vus >= 2 && isset($moyWd[$wdJour])) ? $moyWd[$wdJour] / $attMois : null;
 
+        // ── PROJECTION DE FIN DE JOURNÉE.
+        //
+        // Le profil horaire du même jour de semaine dit quelle part du chiffre
+        // est déjà passée à cette heure-ci. Le reste est une règle de trois.
+        // Il est MÉMORISÉ et rebâti une fois par semaine : six lectures par
+        // magasin, pas à chaque affichage. Et au plus deux magasins rafraîchis
+        // par requête — un écran ne doit pas payer le rattrapage de tous.
+        $proj = null; $projPart = null; $projHeure = null; $projJours = 0; $projMotif = null;
+        if ($estAuj) {
+            $ph = profilHeureLire((string) $id, $wdJour);
+            $vieux = $ph['maj'] === null || strtotime((string) $ph['maj']) < strtotime('-7 days');
+            if (($ph['parts'] === [] || $vieux) && $GLOBALS['_profilHRefaits'] < 2) {
+                $GLOBALS['_profilHRefaits']++;
+                if (profilHeureBatir($id, $date) > 0) { $ph = profilHeureLire((string) $id, $wdJour); }
+            }
+            $hj = $res['hj' . $id] ?? null;
+            $heuresJour = is_array($hj) ? ($hj['hours'] ?? null) : null;
+            $derniere = -1;
+            foreach ((array) $heuresJour as $x) {
+                if ((float) ($x['ca'] ?? 0) > 0) { $derniere = max($derniere, (int) ($x['hour'] ?? -1)); }
+            }
+            if ($ph['parts'] === []) { $projMotif = 'profil horaire indisponible'; }
+            elseif ($derniere < 0) { $projMotif = 'aucune vente encore aujourd’hui'; }
+            else {
+                $cum = 0.0;
+                foreach ($ph['parts'] as $h4 => $p4) { if ((int) $h4 <= $derniere) { $cum += (float) $p4; } }
+                $projPart = round($cum, 1);
+                $projHeure = $derniere;
+                $projJours = (int) $ph['jours'];
+                // Sous 30 % de journée écoulée, une projection est du vent :
+                // trois quarts du chiffre restent à faire et la moindre heure
+                // creuse la ferait mentir.
+                if ($cum >= 30 && $ca > 0) { $proj = round($ca / ($cum / 100), 2); }
+                else { $projMotif = 'moins de 30 % de la journée écoulée'; }
+            }
+        }
+
         $bm = $budMois[(string) $id] ?? null;
         $objMois = $bm !== null ? round($bm['montant'], 2) : null;
         $objSrc  = $bm !== null ? $bm['source'] : null;
@@ -1954,6 +2075,11 @@ function ep_exploitation_jour(): array
             'objectifPart' => $part === null ? null : round($part * 100, 2),
             'objectifJoursVus' => $vus,
             'objectifProfil' => $part === null ? null : $profilSrc,
+            'projection' => $proj,
+            'projectionPart' => $projPart, 'projectionHeure' => $projHeure,
+            'projectionJours' => $projJours, 'projectionMotif' => $projMotif,
+            'projectionAtteinte' => ($proj !== null && $objJour !== null && $objJour > 0)
+                ? round($proj / $objJour, 4) : null,
             'objectifJourNom' => jourNomSemaine($date),
             'objectifAtteinte' => ($objJour !== null && $objJour > 0) ? round($ca / $objJour, 4) : null,
             'net' => $net !== null ? round($net, 2) : null,
