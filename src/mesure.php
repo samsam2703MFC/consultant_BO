@@ -1168,7 +1168,13 @@ function ep_sonde_recl2(): array
     if (is_array($att)) {
         $ulid = '';
         if (preg_match('#complaints/([0-9A-HJKMNP-TV-Z]{26})/#', (string) ($att['object_key'] ?? ''), $m)) { $ulid = $m[1]; }
-        foreach (['par id' => (string) ($att['id'] ?? ''), 'par ulid du chemin' => $ulid] as $nom => $cle) {
+        $hash = '';
+        if (preg_match('#/([0-9a-f]{32})_#', (string) ($att['object_key'] ?? ''), $m2)) { $hash = $m2[1]; }
+        $tirets = $hash !== '' ? substr($hash, 0, 8) . '-' . substr($hash, 8, 4) . '-' . substr($hash, 12, 4)
+            . '-' . substr($hash, 16, 4) . '-' . substr($hash, 20) : '';
+        foreach (['par id' => (string) ($att['id'] ?? ''), 'par ulid du chemin' => $ulid,
+                  'par empreinte du fichier' => $hash, 'empreinte en uuid' => $tirets,
+                  'par object_key' => (string) ($att['object_key'] ?? '')] as $nom => $cle) {
             if ($cle === '') { $out['presigned'][$nom] = 'pas d’identifiant à essayer'; continue; }
             $u = PanelApi::get('/material-complaints/attachments/' . rawurlencode($cle) . '/presigned-url');
             $out['presigned'][$nom] = ['cle' => $cle,
