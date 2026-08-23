@@ -1078,18 +1078,40 @@ function ep_panel_note_essai(): array
         $out['correspond'] = ($r !== null && (int) $r['auth_user_id'] === $cid);
     } catch (PDOException $e) { $out['authUserIdDuMembership'] = 'table user_membership absente'; }
 
-    // Et les cibles : les mêmes formes, avec l'identité cette fois.
+    // Et les cibles. La métrique bidon faussait l'essai : « données invalides »
+    // pouvait n'être QUE le nom inconnu. On reprend avec une VRAIE métrique et
+    // ses valeurs actuelles — les mêmes nombres, donc rien ne change de valeur ;
+    // seule la portée peut passer de « défaut » à « consultant », ce qui est la
+    // direction voulue de toute façon.
+    $cibles = PanelApi::ciblesMagasin($sid) ?? [];
+    $m = 'transactions_count';
+    $av = $cibles[$m] ?? null;
+    $t1 = (float) ($av['default']['t1'] ?? 1500);
+    $t2 = (float) ($av['default']['t2'] ?? 1000);
+    $t3 = (float) ($av['default']['t3'] ?? 600);
+    $out['cibleAvant'] = ['metrique' => $m, 'active' => $av['active'] ?? null, 'source' => $av['source'] ?? null,
+        'consultant' => $av['consultant'] ?? null, 'defaut' => $av['default'] ?? null];
     $ess = [
-        'metrique + consultant_id' => ['metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1, 'consultant_id' => $cid],
-        'plat + consultant_id'     => ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1], 'consultant_id' => $cid],
-        'targets liste + id'       => ['consultant_id' => $cid, 'targets' => [['metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1]]],
-        'metric_code'              => ['metric_code' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1, 'consultant_id' => $cid],
-        'thresholds liste'         => ['consultant_id' => $cid, 'metric' => 'zzz_probe', 'thresholds' => [3, 2, 1]],
-        'scope consultant'         => ['consultant_id' => $cid, 'scope' => 'consultant', 'metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1],
+        'plat'            => [$m => ['t1' => $t1, 't2' => $t2, 't3' => $t3]],
+        'metrique seule'  => ['metric' => $m, 't1' => $t1, 't2' => $t2, 't3' => $t3],
+        'avec identite'   => ['consultant_id' => $cid, 'metric' => $m, 't1' => $t1, 't2' => $t2, 't3' => $t3],
+        'targets objet'   => ['targets' => [$m => ['t1' => $t1, 't2' => $t2, 't3' => $t3]]],
+        'targets liste'   => ['targets' => [['metric' => $m, 't1' => $t1, 't2' => $t2, 't3' => $t3]]],
+        'metrics objet'   => ['metrics' => [$m => ['t1' => $t1, 't2' => $t2, 't3' => $t3]]],
     ];
+    $passe = false;
     foreach ($ess as $nom => $corps) {
-        [$ok] = PanelApi::ecrireCibles($sid, $corps);
-        $out['cibles'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError];
+        if ($passe) { $out['cibles'][$nom] = 'non essayée (une forme est déjà passée)'; continue; }
+        [$ok, $res] = PanelApi::ecrireCibles($sid, $corps);
+        $out['cibles'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
+            'reponse' => is_array($res) ? array_slice($res, 0, 6, true) : $res];
+        if ($ok) { $passe = true; $out['cibleFormeAcceptee'] = $nom; }
+    }
+    if ($passe) {
+        $apres = PanelApi::ciblesMagasin($sid) ?? [];
+        $ap = $apres[$m] ?? null;
+        $out['cibleApres'] = ['active' => $ap['active'] ?? null, 'source' => $ap['source'] ?? null,
+            'consultant' => $ap['consultant'] ?? null, 'defaut' => $ap['default'] ?? null];
     }
     return $out;
 }
