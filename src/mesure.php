@@ -1070,5 +1070,26 @@ function ep_panel_note_essai(): array
             $out['nettoyage'] = $okD ? ('note ' . $nid . ' supprimée') : ('note ' . $nid . ' NON supprimée — ' . PanelApi::$lastError);
         }
     }
+    // D'où vient ce 104 ? Si c'est l'`auth_user_id` du membership du compte, on
+    // sait le retrouver sans dépendre d'une note déjà posée.
+    try {
+        $r = Db::row('SELECT auth_user_id FROM user_membership WHERE id = ?', [$mid]);
+        $out['authUserIdDuMembership'] = $r === null ? null : (int) $r['auth_user_id'];
+        $out['correspond'] = ($r !== null && (int) $r['auth_user_id'] === $cid);
+    } catch (PDOException $e) { $out['authUserIdDuMembership'] = 'table user_membership absente'; }
+
+    // Et les cibles : les mêmes formes, avec l'identité cette fois.
+    $ess = [
+        'metrique + consultant_id' => ['metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1, 'consultant_id' => $cid],
+        'plat + consultant_id'     => ['zzz_probe' => ['t1' => 3, 't2' => 2, 't3' => 1], 'consultant_id' => $cid],
+        'targets liste + id'       => ['consultant_id' => $cid, 'targets' => [['metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1]]],
+        'metric_code'              => ['metric_code' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1, 'consultant_id' => $cid],
+        'thresholds liste'         => ['consultant_id' => $cid, 'metric' => 'zzz_probe', 'thresholds' => [3, 2, 1]],
+        'scope consultant'         => ['consultant_id' => $cid, 'scope' => 'consultant', 'metric' => 'zzz_probe', 't1' => 3, 't2' => 2, 't3' => 1],
+    ];
+    foreach ($ess as $nom => $corps) {
+        [$ok] = PanelApi::ecrireCibles($sid, $corps);
+        $out['cibles'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError];
+    }
     return $out;
 }
