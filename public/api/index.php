@@ -95,6 +95,7 @@ function route(string $method, string $path): mixed
             // détail magasin par magasin de la campagne regardée.
             $path === '/marketing/budget-campagnes'    => ep_budget_campagnes(),
             $path === '/marketing/mesure'              => ep_mesure(),
+            $path === '/taches/classement'             => ep_taches_classement(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
             $path === '/diagnostic/panel-ecriture'     => ep_panel_sonde_ecriture(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.

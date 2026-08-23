@@ -151,6 +151,9 @@ function rapportSeuils(): array
         'ecartPanier' => kpiSeuil('panier-ecart', -5.0),
         'ecartNvn1' => kpiSeuil('nvn1', -5.0),
         'joursRouges' => (int) kpiSeuil('jours-rouges', 3),
+        // Sous ce taux d'exécution, un magasin apparaît dans le classement des
+        // tâches. Réglable comme les autres, jamais en dur.
+        'tauxTaches' => kpiSeuil('taux-taches', 80.0),
     ];
 }
 
@@ -241,6 +244,7 @@ function rapBlocDefs(): array
         // leur levier, quel que soit l'ordre des cases cochées.
         'xp-bilan' => ['levier' => 'xp', 'nom' => 'Bilan des tâches de la période', 'famille' => 'taches'],
         'xp-taches' => ['levier' => 'xp', 'nom' => 'Tâches sous le seuil', 'famille' => 'taches'],
+        'xp-classement' => ['levier' => 'xp', 'nom' => 'Classement des tâches — réseau', 'famille' => 'taches'],
         'food-cost' => ['levier' => 'food-cost', 'nom' => 'Food cost du mois'],
         'food-stock' => ['levier' => 'food-cost', 'nom' => 'Stocks négatifs'],
         'labour-caetp' => ['levier' => 'labour-cost', 'nom' => 'CA par ETP'],
@@ -581,6 +585,35 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $b['lignes'][] = [$s['name'], 'Food cost ' . $fmtP($fc) . ' sur le mois en cours (seuil ' . $fmtP($seuils['food']) . ')', $fc > $seuils['food'] + 4];
                 }
             }
+            break;
+        }
+        case 'xp-classement': {
+            // Ce que le panel CALCULE DÉJÀ : demandées, faites, sautées,
+            // ratées, obligatoires manquées, journée close. Le cockpit le
+            // reconstituait magasin par magasin ; ici on le lit.
+            $b['action'] = 'Reprendre avec les magasins dont l’exécution décroche, et les obligatoires manquées d’abord.';
+            $cl = rapCtx('classement-' . $periode['du'] . '-' . $periode['au'],
+                fn () => classementFenetre((string) $periode['du'], (string) $periode['au']));
+            if (!is_array($cl)) { $b['motif'] = 'classement des tâches indisponible (API panel)'; break; }
+            $perim = (array) ($periode['magasins'] ?? []);
+            $seuil = (float) $seuils['tauxTaches'];
+            foreach ($cl['magasins'] as $m) {
+                if ($perim !== [] && !in_array($m['nom'], $perim, true)) { continue; }
+                if ($m['total'] <= 0) { continue; }
+                $sous = $m['taux'] !== null && $m['taux'] < $seuil;
+                $manque = (int) $m['obligatoiresManquees'] > 0;
+                $txt = $fmtP($m['taux']) . ' d’exécution — ' . $m['faites'] . ' faites sur ' . $m['total']
+                    . ((int) $m['sautees'] > 0 ? ', ' . $m['sautees'] . ' sautée(s)' : '')
+                    . ((int) $m['ratees'] > 0 ? ', ' . $m['ratees'] . ' en échec' : '')
+                    . ($manque ? ', ' . $m['obligatoiresManquees'] . ' obligatoire(s) manquée(s)' : '')
+                    . ' (' . $m['joursClos'] . ' journée(s) close(s) sur ' . $m['jours'] . ')';
+                $b['lignes'][] = [$m['nom'], $txt, $sous || $manque];
+            }
+            if ($b['lignes'] === []) { $b['motif'] = 'aucune tâche demandée sur la période'; break; }
+            $r = $cl['reseau'];
+            $b['infos'][] = 'Réseau : ' . $fmtP($r['taux']) . ' d’exécution — ' . $r['faites'] . ' faites sur '
+                . $r['total'] . ($r['obligatoiresManquees'] > 0 ? ', ' . $r['obligatoiresManquees'] . ' obligatoire(s) manquée(s)' : '')
+                . '. Seuil d’alerte : ' . $fmtP($seuil) . '.';
             break;
         }
         case 'food-stock': {

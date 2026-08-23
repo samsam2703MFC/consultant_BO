@@ -4458,6 +4458,20 @@ class App {
    * celles de 11 h. Le cache évite de rappeler le panel à chaque redessin ;
    * le bouton de rafraîchissement le vide pour cette date-là, et lui seul.
    */
+  /* Le classement des tâches du jour — lu chez le panel, pas recalculé.
+     Chargé à part du résultat du jour : il vit sur la même date mais sur une
+     autre route, et une route lente ne doit pas retenir l'autre. */
+  clCharge(force){
+    const cle = this.rjCle() || 'auj';
+    if (!this.D.classement) { this.D.classement = {}; }
+    if (this._clEnCours === cle) { return; }
+    if (this.D.classement[cle] && !force) { return; }
+    this._clEnCours = cle;
+    readOne('/taches/classement' + (this.rjCle() ? '?date=' + encodeURIComponent(this.rjCle()) : ''))
+      .then(d => { this._clEnCours = null; this.D.classement[cle] = d || { indispo: true }; this.setState({}); })
+      .catch(() => { this._clEnCours = null; this.D.classement[cle] = { indispo: true }; this.setState({}); });
+  }
+
   rjCharge(force){
     const cle = this.rjCle();
     if (!this.D.rjour) { this.D.rjour = {}; }
@@ -4595,6 +4609,34 @@ class App {
     common.rjMaj = S.rjMaj === 'en-cours' ? 'lecture…' : (S.rjMaj ? 'lu à ' + S.rjMaj : '');
     common.rjAuj = jour < auj ? () => this.setState({ rjDate: null }) : null;
     common.rjEstAuj = !!r.estAujourdhui;
+    // ── Le classement des tâches : demandées, faites, sautées, en échec,
+    //    obligatoires manquées, journée close. Tout vient du panel.
+    this.clCharge(false);
+    const cl = (this.D.classement || {})[this.rjCle() || 'auj'] || null;
+    common.rjClChargement = !cl;
+    common.rjClIndispo = cl && cl.indispo ? (cl.motif || 'classement indisponible') : '';
+    if (cl && !cl.indispo) {
+      const R = cl.reseau || {};
+      const pct = v => v == null ? '—' : String(v).replace('.', ',') + ' %';
+      common.rjClReseau = {
+        taux: pct(R.taux),
+        detail: (R.faites == null ? '—' : R.faites) + ' faites sur ' + (R.total == null ? '—' : R.total)
+          + (R.sautees ? ' · ' + R.sautees + ' sautée(s)' : '')
+          + (R.ratees ? ' · ' + R.ratees + ' en échec' : ''),
+        clos: (R.magasinsClos == null ? 0 : R.magasinsClos) + ' / ' + (R.magasins == null ? 0 : R.magasins) + ' journées closes',
+        col: R.taux == null ? 'var(--color-text-muted)' : (R.taux >= 80 ? '#2d7a3e' : (R.taux >= 50 ? '#C17A2A' : 'var(--color-primary)')) };
+      common.rjClLignes = (cl.magasins || []).map((m, i) => ({
+        rang: i + 1, nom: m.nom, ville: m.ville,
+        taux: pct(m.taux),
+        tauxCol: m.taux == null ? 'var(--color-text-muted)' : (m.taux >= 80 ? '#2d7a3e' : (m.taux >= 50 ? '#C17A2A' : 'var(--color-primary)')),
+        barre: Math.max(0, Math.min(100, m.taux == null ? 0 : m.taux)),
+        detail: (m.faites == null ? '—' : m.faites) + ' / ' + (m.total == null ? '—' : m.total)
+          + (m.sautees ? ' · ' + m.sautees + ' sautée(s)' : '')
+          + (m.ratees ? ' · ' + m.ratees + ' en échec' : ''),
+        // Une obligatoire manquée n'est pas un retard : elle se voit.
+        manque: m.obligatoiresManquees ? m.obligatoiresManquees + ' obligatoire(s) manquée(s)' : '',
+        clos: m.jourClos ? 'journée close' : '' }));
+    } else { common.rjClReseau = null; common.rjClLignes = []; }
     // La comparaison : la moyenne des six mêmes jours de semaine, pas N-1.
     const ref = r.reference || {};
     common.rjRefEntete = 'vs 6 ' + (ref.nom || 'jours');
@@ -6225,6 +6267,7 @@ class App {
       const j = mg && (mg.jours || []).find(x => x.date === rd.date);
       if (mg && j) {
         const pc = v => (v != null && j.ca > 0) ? (v / j.ca * 100).toFixed(1).replace('.', ',') + ' %' : null;
+        const jourExact = /quotidien/.test(mg.sourceJour || '');
         common.exRentDet = {
           titre: (JRL[j.wd - 1] || '') + ' ' + this.fDA(j.date),
           magasin: mg.nom,
@@ -6234,15 +6277,21 @@ class App {
             { op: '', lib: 'Chiffre d’affaires', pct: null, v: this.fU(j.ca), fort: false },
             { op: '−', lib: 'Coût matière', pct: null, v: this.fU(j.coutMatiere), fort: false },
             { op: '=', lib: 'Marge brute', pct: fp1(j.margePct), v: this.fU(j.margeBrute), fort: true },
-            { op: '−', lib: 'Labour (mois ÷ jours ouverts)', pct: pc(j.labourJour), v: j.labourJour != null ? this.fU(j.labourJour) : 'manque API', fort: false },
-            { op: '−', lib: 'Overhead (mois ÷ jours ouverts)', pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fU(j.overheadJour) : 'manque API', fort: false },
+            // Le libellé dit d'où vient le montant : le jour même quand le
+            // panel sert son P&L quotidien, une moyenne du mois sinon. Lire
+            // « mois ÷ jours ouverts » sur un chiffre réellement journalier
+            // ferait douter du bon chiffre.
+            { op: '−', lib: 'Labour' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.labourJour), v: j.labourJour != null ? this.fU(j.labourJour) : 'manque API', fort: false },
+            { op: '−', lib: 'Overhead' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fU(j.overheadJour) : 'manque API', fort: false },
             { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fU(j.net) : '—', fort: true,
               col: j.net == null ? 'var(--color-text-muted)' : (j.net >= 0 ? '#2d7a3e' : '#8D1D2C') },
           ],
           sous: j.tickets != null ? (j.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + this.fU(j.panier)) : '',
           motif: j.motifNet || '',
-          note: 'Labour et overhead du mois répartis par jour d’ouverture'
-            + (mg.joursOuverts ? ' (' + mg.joursOuverts + ' jours ce mois-ci)' : ''),
+          note: jourExact
+            ? 'Chiffres du jour, servis par le P&L quotidien du panel — rien n’est réparti.'
+            : 'Labour et overhead du mois répartis par jour d’ouverture'
+              + (mg.joursOuverts ? ' (' + mg.joursOuverts + ' jours ce mois-ci)' : ''),
         };
       }
     }

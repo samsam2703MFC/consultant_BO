@@ -1366,6 +1366,10 @@ function ep_exploitation_rentabilite(): array
             $paths['hmM' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from=' . $mDebut . '&to=' . $auj->format('Y-m-d');
         }
         $paths['pnl' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj->format('Y-m-d');
+        // Le P&L JOUR par jour : matière, main-d'œuvre, charges et résultat déjà
+        // répartis par la source. Quand il répond, on ne répartit plus rien.
+        $paths['pnlj' . $id] = '/consultant/shops/' . $id . '/pnl/daily?'
+            . http_build_query(['date_from' => $duS, 'date_to' => $auS, 'from' => $duS, 'to' => $auS]);
     }
     $res = PanelApi::getParallele($paths, 6);
 
@@ -1398,6 +1402,17 @@ function ep_exploitation_rentabilite(): array
         $labJ = ($labourM !== null && $joursOuverts > 0) ? $labourM / $joursOuverts : null;
         $ovJ  = ($overM !== null && $joursOuverts > 0) ? $overM / $joursOuverts : null;
 
+        // Le P&L quotidien, s'il a répondu : une ligne par date, avec le
+        // résultat DÉJÀ calculé. Le reste du bloc s'en sert quand la date y
+        // figure, et retombe sinon sur la répartition au prorata.
+        $pj = [];
+        $pjr = $res['pnlj' . $id] ?? null;
+        foreach ((array) (is_array($pjr) ? ($pjr['days'] ?? []) : []) as $x) {
+            $dt = (string) ($x['date'] ?? '');
+            if ($dt !== '') { $pj[$dt] = $x; }
+        }
+        $srcJour = $pj !== [] ? 'P&L quotidien du panel' : 'labour et overhead du mois répartis sur les jours ouverts';
+
         $jours = []; $caTot = 0.0; $netTot = 0.0; $netOk = true;
         foreach ((array) $hm['days'] as $d) {
             $ca = (float) ($d['ca'] ?? 0); $mb = (float) ($d['margin_value'] ?? 0);
@@ -1405,6 +1420,18 @@ function ep_exploitation_rentabilite(): array
             $dansMois = str_starts_with((string) ($d['date'] ?? ''), $moisCourant);
             $lj = $dansMois ? $labJ : null; $oj = $dansMois ? $ovJ : null;
             $net = ($ouvert && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null;
+            // La source du jour l'emporte sur la reconstruction : elle connaît
+            // les heures réellement prestées ce jour-là, pas une moyenne.
+            $q = $pj[(string) ($d['date'] ?? '')] ?? null;
+            if ($ouvert && is_array($q)) {
+                $rev = isset($q['revenue']) ? (float) $q['revenue'] : null;
+                $mat = isset($q['material']) ? (float) $q['material'] : null;
+                if ($rev !== null && $mat !== null) { $mb = $rev - $mat; }
+                if (isset($q['labour'])) { $lj = (float) $q['labour']; }
+                if (isset($q['overhead'])) { $oj = (float) $q['overhead']; }
+                $net = isset($q['result']) ? (float) $q['result']
+                    : (($lj !== null && $oj !== null) ? $mb - $lj - $oj : null);
+            }
             if ($ouvert) { $caTot += $ca; if ($net === null) { $netOk = false; } else { $netTot += $net; } }
             $jours[] = [
                 'date' => $d['date'], 'wd' => (int) ($d['weekday'] ?? 0),
@@ -1426,6 +1453,7 @@ function ep_exploitation_rentabilite(): array
             ];
         }
         $magasins[] = ['id' => (string) $id, 'nom' => $s['name'],
+            'sourceJour' => $srcJour,
             'joursOuverts' => $joursOuverts,
             'labourMois' => $labourM !== null ? round((float) $labourM, 2) : null,
             'overheadMois' => $overM !== null ? round((float) $overM, 2) : null,
@@ -1437,7 +1465,7 @@ function ep_exploitation_rentabilite(): array
 
     return ['periode' => $per, 'du' => $duS, 'au' => $auS, 'mois' => $moisCourant,
         'magasins' => $magasins,
-        'source' => 'API panel — margin-heatmap par jour ; labour et overhead du P&L mensuel répartis par jour d\'ouverture'];
+        'source' => 'API panel — P&L quotidien quand la route le sert, sinon margin-heatmap avec labour et overhead du mois répartis par jour d\'ouverture'];
 }
 
 /** Les six mêmes jours de semaine précédant une date : six vendredis avant un

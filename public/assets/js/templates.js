@@ -2736,6 +2736,42 @@ function tplResultatJour(c, x){
       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rjNote)}</div>
     </div>
 
+    <!-- Le classement des tâches du jour : lu chez le panel, qui compte aussi
+         les sautées, les échecs, les obligatoires manquées et la clôture de
+         journée — quatre choses que le cockpit ne savait pas dire. -->
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="${cap}">Tâches du jour — classement réseau</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Demandées, faites, sautées, en échec — et les journées closes.</div>
+        </div>
+        ${c.rjClReseau ? `<div style="text-align:right">
+          <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:${c.rjClReseau.col};${num}">${esc(c.rjClReseau.taux)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.rjClReseau.detail)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.rjClReseau.clos)}</div>
+        </div>` : ''}
+      </div>
+      ${c.rjClIndispo
+        ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${esc(c.rjClIndispo)}</div>`
+        : (c.rjClChargement
+          ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture du classement…</div>`
+          : `<div style="display:flex;flex-direction:column;gap:8px;margin-top:13px">
+              ${c.rjClLignes.map(l => `
+                <div style="display:flex;align-items:center;gap:11px">
+                  <span style="width:15px;flex:none;font-size:11px;color:var(--color-text-muted);text-align:right">${l.rang}</span>
+                  <span style="width:230px;flex:none;font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nom)}</span>
+                  <span style="flex:1;min-width:90px;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
+                    <i style="display:block;height:100%;width:${l.barre}%;border-radius:999px;background:${l.tauxCol}"></i></span>
+                  <span style="width:58px;flex:none;text-align:right;font-size:12.5px;font-weight:600;color:${l.tauxCol};${num}">${esc(l.taux)}</span>
+                  <span style="width:190px;flex:none;font-size:11px;color:var(--color-text-muted);${num}">${esc(l.detail)}</span>
+                  <span style="flex:none;display:flex;gap:6px">
+                    ${l.manque ? `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:#F7E4E6;color:var(--color-primary)">${esc(l.manque)}</span>` : ''}
+                    ${l.clos ? `<span style="font-size:10px;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">${esc(l.clos)}</span>` : ''}
+                  </span>
+                </div>`).join('')}
+            </div>`)}
+    </div>
+
     ${c.rjDetail ? `
     <div style="${carte};padding:17px 19px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
