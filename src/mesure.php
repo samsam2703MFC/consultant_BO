@@ -1166,6 +1166,10 @@ function ep_sonde_recl3(): array
         'tarif du fournisseur'   => '/material-suppliers/1/price-list',
         'matières du fournisseur' => '/material-suppliers/1/materials',
         'matière connue'         => '/materials/564',
+        'commande par identifiant' => '/shops/3/orders/33',
+        'commandes avec limite'  => '/shops/3/orders?limit=5',
+        'livraisons'             => '/shops/3/deliveries',
+        'commandes matière'      => '/shops/3/material-order',
     ] as $nom => $ch) {
         $r = PanelApi::get($ch);
         $out['pistes'][$nom] = ['chemin' => $ch,
