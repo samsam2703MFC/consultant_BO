@@ -1046,6 +1046,13 @@ function ep_fournisseurs_reclamations(): array
     }
 
     $auj = new DateTimeImmutable('today');
+    // La fenêtre : trois mois par défaut. Une réclamation d'il y a un an ne dit
+    // plus rien de la livraison de la semaine — mais on ne la jette pas : on
+    // compte ce qui est écarté, et l'écran permet d'élargir.
+    $mois = (int) ($_GET['mois'] ?? 3);
+    $mois = $mois > 0 ? min(60, $mois) : 0;
+    $depuis = $mois > 0 ? $auj->modify('-' . $mois . ' months')->format('Y-m-d') : null;
+    $ecartees = 0;
     $lignes = [];
     foreach ((array) ($r['shops'] ?? []) as $s) {
         $sid = (int) ($s['shop_id'] ?? 0);
@@ -1061,6 +1068,7 @@ function ep_fournisseurs_reclamations(): array
             // « Ouverte » n'est pas un statut du panel : c'est une réclamation
             // acceptée que personne n'a suivie d'effet. C'est celle-là qui coûte.
             $ouverte = $statut !== 'REJECTED' && $rep === '';
+            if ($depuis !== null && $le !== '' && $le < $depuis) { $ecartees++; continue; }
             $qte = isset($c['qty']) ? (float) $c['qty'] : null;
             $pu = $prix[(int) ($c['id_material'] ?? 0)] ?? null;
             $lignes[] = [
@@ -1155,6 +1163,8 @@ function ep_fournisseurs_reclamations(): array
     }
 
     return ['lignes' => $lignes, 'fournisseurs' => array_values($parF),
+        'mois' => $mois, 'depuis' => $depuis, 'ecartees' => $ecartees,
+        'fenetre' => $mois > 0 ? ('les ' . $mois . ' derniers mois') : 'tout l’historique',
         'parMagasin' => $parMag, 'parReference' => array_slice($parRef, 0, 8),
         'montantOuvert' => $mtOk || $mtOuvert > 0 ? round($mtOuvert, 2) : null,
         'montantComplet' => $mtOk,
