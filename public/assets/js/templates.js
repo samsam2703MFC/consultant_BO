@@ -4892,6 +4892,48 @@ function tplCtrlDetail(c, x){
         ` : ''}
       </div>
 
+      <!-- Réclamation fournisseur : le défaut vient du produit, pas du geste. -->
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:11px">
+        <button ${x.A(d.rc.basculer)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--color-primary)">
+          ${d.rc.ouvert ? '− Réclamation fournisseur' : '+ Ouvrir une réclamation fournisseur'}</button>
+        ${d.rc.fait ? `<span style="margin-left:9px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">déposée${typeof d.rc.fait === 'number' ? ' #' + d.rc.fait : ''}</span>` : ''}
+        ${d.rc.ouvert ? `
+          ${d.rc.chargement ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px">Lecture du catalogue fournisseur…</div>`
+            : (d.rc.indispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px">${esc(d.rc.indispo)}</div>` : `
+          <div style="margin-top:10px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Référence en cause</div>
+            <input value="${esc(d.rc.q)}" ${x.I(d.rc.setQ)} placeholder="Chercher une référence ou un SKU…" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+            ${d.rc.trouvees.length ? `<div style="display:flex;flex-direction:column;gap:2px;margin-top:5px;max-height:140px;overflow-y:auto">
+              ${d.rc.trouvees.map(m => `<button ${x.A(m.choisir)} style="text-align:left;border:none;background:var(--color-background-secondary);border-radius:7px;padding:6px 9px;cursor:pointer;font-family:var(--font-ui);font-size:11.5px">${esc(m.nom)} <span style="color:var(--color-text-muted)">· ${esc(m.sku)}</span></button>`).join('')}
+            </div>` : ''}
+            ${d.rc.matiere ? `<div style="font-size:11.5px;margin-top:6px;color:#2d7a3e;font-weight:500">✓ ${esc(d.rc.matiere)}</div>` : ''}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+            <div><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Livraison</div>
+              <select ${x.C(d.rc.setLivraison)} style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">
+                ${d.rc.livraisons.map(o => `<option value="${esc(o.v)}"${o.v === d.rc.livraison ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>
+            <div><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Motif</div>
+              <select ${x.C(d.rc.setMotif)} style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">
+                ${d.rc.motifs.map(o => `<option value="${esc(o.v)}"${o.v === d.rc.motif ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>
+          </div>
+          <div style="display:flex;gap:9px;align-items:flex-end;margin-top:9px;flex-wrap:wrap">
+            <div style="width:120px"><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Quantité</div>
+              <input type="number" min="0" step="1" value="${esc(d.rc.quantite)}" ${x.I(d.rc.setQuantite)} style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)"></div>
+            <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
+              ${d.rc.actions.map(a2 => `<button ${x.A(a2.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:${a2.on ? '600' : '400'};padding:5px 11px;border-radius:7px;background:${a2.on ? 'var(--color-surface)' : 'transparent'};color:${a2.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(a2.nom)}</button>`).join('')}
+            </span>
+            ${d.rc.valeur ? `<span style="font-size:11.5px;color:var(--color-text-muted)">valeur réclamée : <b style="color:var(--color-text)">${esc(d.rc.valeur)}</b></span>` : ''}
+          </div>
+          <textarea ${x.I(d.rc.setTexte)} rows="3" placeholder="Ce que la boutique constate" style="width:100%;box-sizing:border-box;margin-top:9px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-family:var(--font-ui);font-size:12px;line-height:1.5;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(d.rc.texte)}</textarea>
+          ${d.rc.err ? `<div style="margin-top:8px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:#8D1D2C;font-size:11.5px">${esc(d.rc.err)}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+            <span style="font-size:10.5px;color:var(--color-text-muted);flex:1;min-width:220px;line-height:1.45">${esc(d.rc.note)}</span>
+            <button ${x.A(d.rc.envoyer)} style="border:none;background:${d.rc.peut ? 'var(--color-primary)' : '#c9beb4'};color:#fff;border-radius:999px;height:31px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:${d.rc.busy ? 'wait' : 'pointer'}">${d.rc.busy ? 'Envoi…' : 'Déposer la réclamation'}</button>
+          </div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">La réclamation part chez le fournisseur et apparaît dans Suivi fournisseurs. Les repères posés sur la photo sont recopiés dans le texte — la pièce jointe, elle, attend l'identifiant que l'API ne rend pas encore.</div>
+          `)}` : ''}
+      </div>
+
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
         <button ${x.A(d.close)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Fermer</button>
         ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}

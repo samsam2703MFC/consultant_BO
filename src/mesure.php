@@ -1168,58 +1168,128 @@ function ep_fournisseurs_reclamations(): array
             . '(material-suppliers/complaints/*), qui refusent le compte consultant.'];
 }
 
-/** Sonde — les commandes, dernières portes d'entrée. */
-function ep_sonde_cmd2(): array
+/**
+ * Ce qu'il faut pour ÉCRIRE une réclamation : motifs, matières du fournisseur
+ * (avec leur SKU), unités, et les livraisons du magasin.
+ *
+ * `id_order` a demandé une enquête : les routes `orders` refusent le compte
+ * consultant (404 ORDER_NOT_FOUND), mais `/deliveries/{id}` répond — et la
+ * livraison 33 porte `ORD-3-B6BD0C67901C0D4D`, exactement la commande d'une
+ * réclamation dont `id_order` vaut 33. L'identifiant attendu est donc celui
+ * d'une LIVRAISON. Faute de route qui les liste toutes, on assemble ce qu'on
+ * peut voir : les livraisons en cours du fournisseur, et celles déjà citées par
+ * les réclamations du magasin.
+ */
+function ep_reclamation_refs(): array
 {
-    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
-    $du = date('Y-m-d', strtotime('-90 days')); $au = date('Y-m-d');
-    $q = http_build_query(['date_from' => $du, 'date_to' => $au, 'from' => $du, 'to' => $au]);
-    $out = [];
-    $court = static function ($v) {
-        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 80) : gettype($v); }
-        if (array_is_list($v)) {
-            return ['liste' => count($v), 'clés' => is_array($v[0] ?? null) ? array_keys($v[0]) : null,
-                'premier' => is_array($v[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 30), $v[0]) : null];
-        }
-        $o = [];
-        foreach ($v as $k => $x) {
-            $o[$k] = is_array($x) ? (array_is_list($x) ? ['liste' => count($x), 'clés' => is_array($x[0] ?? null) ? array_keys($x[0]) : null] : array_keys($x))
-                : mb_substr((string) $x, 0, 50);
-        }
-        return $o;
-    };
-    $l33 = PanelApi::get('/deliveries/33');
-    $out['livraison33_cles'] = is_array($l33) ? array_keys($l33) : 'aucune réponse';
-    foreach ((array) $l33 as $k => $v) {
-        if (is_array($v)) {
-            $out['livraison33_' . $k] = ['liste' => count($v),
-                'clés' => is_array($v[0] ?? null) ? array_keys($v[0]) : null,
-                'premier' => is_array($v[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 40), $v[0]) : ($v[0] ?? null)];
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte consultant non configuré']; }
+    $shop = (int) ($_GET['shop'] ?? 0);
+    $out = ['shopId' => (string) $shop, 'motifs' => [], 'matieres' => [], 'livraisons' => [], 'fournisseurs' => []];
+
+    foreach ((array) PanelApi::get('/material-complaint-reasons') as $m) {
+        if (is_array($m) && isset($m['code'])) { $out['motifs'][] = ['code' => (string) $m['code'], 'nom' => (string) ($m['name'] ?? $m['code'])]; }
+    }
+
+    // Les fournisseurs matière, et pour chacun ses références avec leur SKU.
+    $unites = [];
+    foreach ((array) PanelApi::get('/shops/' . ($shop ?: 3) . '/materials') as $m) {
+        if (is_array($m) && isset($m['id'])) {
+            $unites[(int) $m['id']] = ['idUnite' => (int) ($m['id_unit'] ?? 0), 'unite' => (string) ($m['unit_name'] ?? ''),
+                'prix' => isset($m['base_unit_price_net']) && is_numeric($m['base_unit_price_net']) ? (float) $m['base_unit_price_net'] : null];
         }
     }
-    foreach ([
-        'commandes + dates'        => '/shops/3/orders?' . $q,
-        'lignes + dates'           => '/shops/3/orders/materials?' . $q,
-        'commandes fournisseur + dates' => '/material-suppliers/1/orders?' . $q,
-        'livraison 1'              => '/deliveries/1',
-        'livraisons à venir'       => '/material-suppliers/1/upcoming-deliveries',
-        'ventes matière'           => '/material-suppliers/1/analytics/raw-material-sales?' . $q,
-        'ventes matière tous magasins' => '/material-suppliers/1/analytics/raw-material-sales-all-shops?' . $q,
-        'résumé analytique'        => '/material-suppliers/1/analytics/summary?' . $q,
-        'commande 33 read-model'   => '/material-suppliers/1/orders/33/read-model',
-        'fulfillment'              => '/shops/3/orders/33/supplier-fulfillment',
-        'tarif en cours'           => '/material-suppliers/1/shops/3/price-lists/current',
-        // La question qui tranche : la livraison 33 porte-t-elle la commande
-        // ORD-3-B6BD0C67901C0D4D, celle d'une réclamation dont id_order = 33 ?
-        'livraison 33'             => '/deliveries/33',
-        'livraison 33 (complet)'   => '/deliveries/33?with=items',
-        'livraison 68'             => '/deliveries/68',
-        'livraisons du magasin'    => '/deliveries?id_shop=3',
-        'livraisons (shop_id)'     => '/deliveries?shop_id=3&limit=5',
-        'livraisons du fournisseur' => '/material-suppliers/1/deliveries',
-    ] as $nom => $ch) {
-        $r = PanelApi::get($ch);
-        $out[$nom] = $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $court($r);
+    foreach ((array) PanelApi::get('/material-suppliers') as $f) {
+        if (!is_array($f) || !isset($f['id'])) { continue; }
+        $fid = (int) $f['id'];
+        $out['fournisseurs'][] = ['id' => (string) $fid, 'nom' => (string) ($f['name'] ?? ('Fournisseur ' . $fid))];
+        foreach ((array) PanelApi::get('/material-suppliers/' . $fid . '/connected-materials') as $m) {
+            if (!is_array($m) || !isset($m['id'])) { continue; }
+            $mid = (int) $m['id'];
+            $u = $unites[$mid] ?? ['idUnite' => 0, 'unite' => '', 'prix' => null];
+            $out['matieres'][] = ['id' => (string) $mid, 'nom' => (string) ($m['name'] ?? ''),
+                'sku' => (string) ($m['supplier_sku'] ?? ''), 'fournisseur' => (string) $fid,
+                'idUnite' => $u['idUnite'], 'unite' => $u['unite'], 'prix' => $u['prix']];
+        }
+        // Les livraisons en cours de ce fournisseur, pour ce magasin.
+        foreach ((array) PanelApi::get('/material-suppliers/' . $fid . '/upcoming-deliveries') as $d) {
+            if (!is_array($d) || ($shop > 0 && (int) ($d['id_shop'] ?? 0) !== $shop)) { continue; }
+            $out['livraisons'][(string) ($d['id'] ?? '')] = [
+                'id' => (string) ($d['id'] ?? ''), 'cle' => (string) ($d['order_key'] ?? ''),
+                'fournisseur' => (string) $fid, 'le' => substr((string) ($d['order_date'] ?? ''), 0, 10),
+                'attendue' => substr((string) ($d['expected_date'] ?? ''), 0, 10),
+                'statut' => (string) ($d['status'] ?? ''), 'source' => 'en cours'];
+        }
     }
+    // Celles que les réclamations du magasin citent déjà : ce sont des
+    // livraisons reçues, donc les plus probables pour une réclamation.
+    $r = PanelApi::get('/consultant/shops/material-complaints');
+    foreach ((array) ($r['shops'] ?? []) as $s) {
+        if ($shop > 0 && (int) ($s['shop_id'] ?? 0) !== $shop) { continue; }
+        foreach ((array) ($s['complaints'] ?? []) as $c) {
+            $id = (string) ($c['id_order'] ?? '');
+            if ($id === '' || isset($out['livraisons'][$id])) { continue; }
+            $out['livraisons'][$id] = ['id' => $id, 'cle' => (string) ($c['order_key'] ?? ''),
+                'fournisseur' => (string) ($c['id_supplier'] ?? ''), 'le' => substr((string) ($c['reported_at'] ?? ''), 0, 10),
+                'attendue' => '', 'statut' => 'livrée', 'source' => 'déjà réclamée'];
+        }
+    }
+    $out['livraisons'] = array_values($out['livraisons']);
+    usort($out['livraisons'], fn ($a, $b) => strcmp((string) $b['le'], (string) $a['le']));
+    $out['note'] = 'Les livraisons listées sont celles en cours chez le fournisseur et celles déjà citées par une '
+        . 'réclamation : aucune route ne rend l’historique complet des commandes d’un magasin.';
     return $out;
+}
+
+/**
+ * POST /fournisseurs/reclamation — déposer une réclamation dans le panel.
+ *
+ * Les six champs exigés viennent de l'API elle-même, qui les nomme quand ils
+ * manquent : id_material, supplier_sku, product_quantity, id_order, id_unit,
+ * complaint_reason_code. Rien n'est deviné.
+ */
+function wr_reclamation_creer(): array
+{
+    $b = body();
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte consultant non configuré']; }
+    $manque = [];
+    foreach (['idMatiere' => 'la référence', 'sku' => 'le SKU fournisseur', 'quantite' => 'la quantité',
+              'idLivraison' => 'la livraison', 'idUnite' => 'l’unité', 'motif' => 'le motif'] as $k => $lib) {
+        if (($b[$k] ?? '') === '' || $b[$k] === null) { $manque[] = $lib; }
+    }
+    if ($manque !== []) { http_response_code(422); return ['error' => 'il manque : ' . implode(', ', $manque)]; }
+
+    $corps = [
+        'id_shop' => (int) ($b['shopId'] ?? 0),
+        'id_material' => (int) $b['idMatiere'],
+        'supplier_sku' => (string) $b['sku'],
+        'product_quantity' => (float) $b['quantite'],
+        'id_order' => (int) $b['idLivraison'],
+        'id_unit' => (int) $b['idUnite'],
+        'complaint_reason_code' => (string) $b['motif'],
+        'description' => trim((string) ($b['texte'] ?? '')),
+        'requested_action' => in_array($b['action'] ?? '', ['REPLACEMENT', 'REFUND', 'CREDIT_NOTE'], true) ? $b['action'] : 'REPLACEMENT',
+        'complaint_type' => 'PRODUCT',
+    ];
+    if ((int) ($b['idFournisseur'] ?? 0) > 0) { $corps['id_supplier'] = (int) $b['idFournisseur']; }
+
+    [$ok, $res] = PanelApi::post('/material-complaints', $corps);
+    if (!$ok) {
+        http_response_code(502);
+        return ['error' => 'le panel a refusé la réclamation : ' . (PanelApi::$lastError ?? 'motif inconnu'),
+            'detail' => is_array($res) ? ($res['errors'] ?? null) : null];
+    }
+    $id = null;
+    foreach ([$res['inserted_id'] ?? null, $res['id'] ?? null] as $v) { if (is_numeric($v)) { $id = (int) $v; break; } }
+    journalAdd('CEO', 'Réclamation', magasinNom((string) ($b['shopId'] ?? '')) ?? null,
+        'Réclamation déposée' . ($id ? ' (#' . $id . ')' : '') . ' — ' . (string) ($b['nomMatiere'] ?? $b['sku'])
+        . ' · ' . $corps['product_quantity'] . ' · ' . $corps['complaint_reason_code']);
+    return ['ok' => true, 'id' => $id];
+}
+
+/** Le nom d'un magasin, pour le journal. */
+function magasinNom(string $id): ?string
+{
+    if ($id === '') { return null; }
+    try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$id]); } catch (PDOException $e) { return null; }
+    return $r === null ? null : (string) $r['name'];
 }

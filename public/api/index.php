@@ -97,7 +97,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/mesure'              => ep_mesure(),
             $path === '/taches/classement'             => ep_taches_classement(),
             $path === '/fournisseurs/reclamations'     => ep_fournisseurs_reclamations(),
-            $path === '/diagnostic/cmd2'              => ep_sonde_cmd2(),
+            $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
@@ -183,6 +183,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ecrans/vue') { return wr_ecran_vue(); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
+    if ($method === 'POST' && $path === '/fournisseurs/reclamation') { return wr_reclamation_creer(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)
     if ($method === 'POST' && $path === '/marketing/campagne') { return wr_mkt_campagne(null); }
     if ($method === 'PATCH' && preg_match('#^/marketing/campagne/(\d+)$#', $path, $m)) { return wr_mkt_campagne((int) $m[1]); }

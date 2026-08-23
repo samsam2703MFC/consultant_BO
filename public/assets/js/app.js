@@ -4458,6 +4458,19 @@ class App {
    * celles de 11 h. Le cache évite de rappeler le panel à chaque redessin ;
    * le bouton de rafraîchissement le vide pour cette date-là, et lui seul.
    */
+  /* Les référentiels d'une réclamation : motifs, matières avec leur SKU,
+     livraisons du magasin. Chargés seulement quand on ouvre le formulaire. */
+  reclRefsCharge(shopId){
+    const cle = String(shopId || '');
+    if (!this.D.reclRefs) { this.D.reclRefs = {}; }
+    if (this.D.reclRefs[cle] !== undefined) { return this.D.reclRefs[cle]; }
+    this.D.reclRefs[cle] = null;
+    readOne('/fournisseurs/reclamation-refs?shop=' + encodeURIComponent(cle))
+      .then(d => { this.D.reclRefs[cle] = d || { indispo: true }; this.setState({ reclRefsMaj: cle }); })
+      .catch(() => { this.D.reclRefs[cle] = { indispo: true }; this.setState({ reclRefsMaj: cle }); });
+    return null;
+  }
+
   /* Les réclamations matière : lues chez le panel, jamais recalculées. Une
      seule lecture, gardée — l'écran des fournisseurs y revient souvent. */
   reclCharge(force){
@@ -7566,6 +7579,69 @@ class App {
                   ? 'Tâche envoyée à ' + nomC + ' — échéance ' + this.fD(r.due)
                   : 'Note consignée au journal pour ' + nomC) + dep);
                 if (r.comme === 'tache') { readOne('/projects').then(pj => { if (pj) { this.D.projects = pj; this.setState({}); } }); }
+              });
+            },
+          };
+        })(),
+        // ── Réclamation fournisseur : quand le défaut vient du PRODUIT, ce
+        //    n'est pas le consultant qu'il faut reprendre.
+        rc: (() => {
+          const st = dt.rc || {};
+          const patch = pl => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet,
+            { rc: Object.assign({}, (s2.ctrlDet || {}).rc, pl) }) }));
+          const refs = st.ouvert ? this.reclRefsCharge(dt.shopId) : null;
+          const matieres = (refs && refs.matieres) || [];
+          const q = String(st.q || '').trim().toLowerCase();
+          const trouvees = q.length < 2 ? [] : matieres.filter(m =>
+            (m.nom || '').toLowerCase().indexOf(q) >= 0 || (m.sku || '').indexOf(q) >= 0).slice(0, 8);
+          const choisie = st.matiere || null;
+          const livraisons = ((refs && refs.livraisons) || [])
+            .filter(l => !choisie || !l.fournisseur || l.fournisseur === choisie.fournisseur);
+          return {
+            ouvert: !!st.ouvert,
+            basculer: () => patch({ ouvert: !st.ouvert, q: '', matiere: null, err: '' }),
+            chargement: !!st.ouvert && !refs,
+            indispo: refs && refs.indispo ? (refs.motif || 'référentiels indisponibles') : '',
+            note: (refs && refs.note) || '',
+            q: st.q || '', setQ: e => patch({ q: e.target.value }),
+            trouvees: trouvees.map(m => ({ nom: m.nom, sku: m.sku,
+              choisir: () => patch({ matiere: m, q: m.nom }) })),
+            matiere: choisie ? (choisie.nom + ' · SKU ' + choisie.sku + (choisie.unite ? ' · ' + choisie.unite : '')) : '',
+            livraisons: [{ v: '', nom: 'Choisir la livraison…' }].concat(livraisons.map(l => ({ v: l.id,
+              nom: (l.cle || ('Livraison ' + l.id)) + (l.le ? ' · ' + l.le.split('-').reverse().join('/') : '')
+                + ' · ' + l.source }))),
+            livraison: st.livraison || '', setLivraison: e => patch({ livraison: e.target.value }),
+            motifs: [{ v: '', nom: 'Choisir le motif…' }].concat(((refs && refs.motifs) || []).map(m => ({ v: m.code, nom: m.nom }))),
+            motif: st.motif || '', setMotif: e => patch({ motif: e.target.value }),
+            quantite: st.quantite || '', setQuantite: e => patch({ quantite: e.target.value }),
+            texte: st.texte !== undefined ? st.texte : (dt.comment || ''),
+            setTexte: e => patch({ texte: e.target.value }),
+            actions: [['REPLACEMENT', 'Remplacement'], ['REFUND', 'Remboursement'], ['CREDIT_NOTE', 'Avoir']]
+              .map(([v, nom]) => ({ v, nom, on: (st.action || 'REPLACEMENT') === v, choisir: () => patch({ action: v }) })),
+            valeur: (choisie && choisie.prix && st.quantite) ? this.fE(choisie.prix * (+st.quantite || 0)) : '',
+            err: st.err || '', busy: !!st.busy, fait: st.fait || null,
+            peut: !!(choisie && st.livraison && st.motif && +st.quantite > 0),
+            envoyer: () => {
+              const c2 = (this.state.ctrlDet || {}).rc || {};
+              const m = c2.matiere;
+              if (!m || !c2.livraison || !c2.motif || !(+c2.quantite > 0)) { this.notify('Référence, livraison, motif et quantité sont requis.'); return; }
+              patch({ busy: true, err: '' });
+              this.api('POST', '/fournisseurs/reclamation', {
+                shopId: dt.shopId, idMatiere: m.id, sku: m.sku, nomMatiere: m.nom,
+                idFournisseur: m.fournisseur, idUnite: m.idUnite,
+                quantite: +c2.quantite, idLivraison: c2.livraison, motif: c2.motif,
+                action: c2.action || 'REPLACEMENT',
+                texte: (c2.texte !== undefined ? c2.texte : (dt.comment || '')) +
+                  ((dt.rep || []).length ? '\n\nRepères posés au contrôle : '
+                    + (dt.rep || []).map(r2 => (r2.n + '. ' + (r2.txt || ''))).join(' · ') : ''),
+              }).then(r => {
+                if (!r || r.ok === false) {
+                  patch({ busy: false, err: (r && r.error) || 'refus du panel' });
+                  this.notify((r && r.error) || 'Réclamation refusée'); return;
+                }
+                patch({ busy: false, fait: r.id || true, ouvert: false });
+                this.D.recl = null;   // l'écran fournisseurs se relira
+                this.notify('Réclamation déposée' + (r.id ? ' (#' + r.id + ')' : ''));
               });
             },
           };
