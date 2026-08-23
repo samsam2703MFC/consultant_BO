@@ -393,15 +393,35 @@ function ep_mesure(): array
     // échoue en silence et le périmètre paraît vide.
     if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
 
-    // Témoin : le choix explicite, sinon TOUS les magasins hors campagne.
-    $temoinsChoisis = array_values(array_filter(array_map('trim',
-        explode(',', (string) ($p['temoins'] ?? '')))));
+    // Témoin : trois régimes.
+    //  · « auto »   — tous les magasins hors campagne (le défaut, le plus net) ;
+    //  · « réseau » — le RÉSEAU COMPLET, magasins en campagne compris : la
+    //    référence devient « le réseau a fait ceci, la campagne cela ». Le
+    //    témoin est alors DILUÉ par les magasins en campagne, donc l'écart net
+    //    est minoré — l'écran le dit plutôt que de laisser croire à une mesure
+    //    plus fine qu'elle ne l'est ;
+    //  · liste explicite — les magasins cochés.
+    $brut = trim((string) ($p['temoins'] ?? ''));
+    $temoinMode = $brut === 'reseau' ? 'reseau' : ($brut === '' ? 'auto' : 'choix');
     $temoins = [];
-    foreach ($temoinsChoisis as $sid) { if (isset($nomDe[$sid]) && !in_array($sid, $perim, true)) { $temoins[] = $sid; } }
-    $temoinAuto = false;
-    if ($temoins === []) {
-        $temoinAuto = true;
+    if ($temoinMode === 'reseau') {
+        foreach ($nomDe as $sid => $nom) { $temoins[] = (string) $sid; }
+    } elseif ($temoinMode === 'choix') {
+        foreach (array_values(array_filter(array_map('trim', explode(',', $brut)))) as $sid) {
+            if (isset($nomDe[$sid]) && !in_array($sid, $perim, true)) { $temoins[] = $sid; }
+        }
+        if ($temoins === []) { $temoinMode = 'auto'; }
+    }
+    if ($temoinMode === 'auto') {
         foreach ($nomDe as $sid => $nom) { if (!in_array((string) $sid, $perim, true)) { $temoins[] = (string) $sid; } }
+    }
+    // Un témoin qui ne contient QUE les magasins en campagne ne témoigne de
+    // rien : il se comparerait à lui-même et rendrait un écart nul, présenté
+    // comme un résultat. On préfère dire qu'il n'y a pas de témoin.
+    $dilue = count(array_intersect($temoins, $perim));
+    if ($temoins !== [] && $dilue === count($temoins)) {
+        $temoins = [];
+        $motifs[] = 'campagne réseau : aucun magasin ne peut servir de témoin — le verdict reste indicatif';
     }
 
     $f = mesFenetres($camp, $p);
@@ -409,7 +429,8 @@ function ep_mesure(): array
     $out['param'] = [
         'refDebut' => $f['ref']['du'], 'refFin' => $f['ref']['au'],
         'remanenceJours' => (int) ($p['remanence_jours'] ?? 14),
-        'temoins' => $temoins, 'temoinAuto' => $temoinAuto,
+        'temoins' => $temoins, 'temoinAuto' => $temoinMode === 'auto', 'temoinMode' => $temoinMode,
+        'temoinDilue' => $temoins === [] ? 0 : $dilue,
         'n1' => (int) ($p['n1'] ?? 1) === 1,
         'cibleTrafic' => isset($p['cible_trafic']) && $p['cible_trafic'] !== null ? (float) $p['cible_trafic'] : null,
         'ciblePanier' => isset($p['cible_panier']) && $p['cible_panier'] !== null ? (float) $p['cible_panier'] : null,
@@ -425,7 +446,8 @@ function ep_mesure(): array
     foreach ($nomDe as $sid => $nom) {
         $sid = (string) $sid;
         $out['magasins'][] = ['id' => $sid, 'nom' => $nom,
-            'role' => in_array($sid, $perim, true) ? 'campagne' : (in_array($sid, $temoins, true) ? 'temoin' : 'hors')];
+            'role' => in_array($sid, $perim, true) ? 'campagne' : (in_array($sid, $temoins, true) ? 'temoin' : 'hors'),
+            'dansTemoin' => in_array($sid, $temoins, true)];
     }
 
     // ── Les séries quotidiennes, une lecture pour toute l'étendue.
@@ -703,7 +725,8 @@ function wr_mesure_param(int $id): array
     // automatique », pas « aucun témoin » — l'écran le dit ainsi.
     $tem = $b['temoins'] ?? null;
     $temStr = null;
-    if (is_array($tem)) {
+    if ($tem === 'reseau') { $temStr = 'reseau'; }
+    elseif (is_array($tem)) {
         $ok = [];
         foreach ($tem as $sid) { if (magasinConnu((string) $sid) !== null) { $ok[] = (string) $sid; } }
         $temStr = $ok === [] ? null : implode(',', $ok);

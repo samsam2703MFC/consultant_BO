@@ -1503,11 +1503,15 @@ function tplMesure(c, x){
 
       <div>
         <div style="${lbl}">2 · Témoin — c'est lui qui rend la mesure vraie</div>
-        <div style="font-size:12px;color:var(--color-text-muted);margin:6px 0 9px">Uplift net = variation des magasins en campagne − variation du témoin sur la même fenêtre. Sans témoin, on mesure la météo et la saison.${c.mesTemoinAuto ? ' <b>Choix automatique</b> : tous les magasins hors campagne.' : ''}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin:6px 0 9px">Uplift net = variation des magasins en campagne − variation du témoin sur la même fenêtre. Sans témoin, on mesure la météo et la saison.</div>
+        <div style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px;margin-bottom:9px">
+          ${(c.mesTemoinModes || []).map(m => `<button ${x.A(m.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:${m.on ? '600' : '400'};padding:6px 13px;border-radius:7px;background:${m.on ? 'var(--color-surface)' : 'transparent'};color:${m.on ? 'var(--color-primary)' : 'var(--color-text-muted)'};box-shadow:${m.on ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'}">${esc(m.nom)}</button>`).join('')}
+        </div>
+        <div style="font-size:12px;color:${c.mesTemoinDilue ? '#C17A2A' : 'var(--color-text-muted)'};margin-bottom:9px">${esc(c.mesTemoinNote)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${(c.mesMagasins || []).map(m => m.enCampagne
-            ? `<span style="font-size:12px;padding:6px 11px;border-radius:999px;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">${esc(m.nom)} · en campagne</span>`
-            : `<button ${x.A(m.bascule)} style="font-size:12px;padding:6px 11px;border-radius:999px;cursor:pointer;font-family:var(--font-ui);border:0.5px solid ${m.temoin ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${m.temoin ? 'var(--color-text)' : 'var(--color-surface)'};color:${m.temoin ? '#fff' : 'var(--color-text-muted)'}">${esc(m.nom)}${m.temoin ? ' · témoin' : ''}</button>`).join('')}
+            ? `<span style="font-size:12px;padding:6px 11px;border-radius:999px;background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500">${esc(m.nom)} · en campagne${m.temoin ? ' + témoin' : ''}</span>`
+            : `<button ${x.A(m.bascule)} style="font-size:12px;padding:6px 11px;border-radius:999px;cursor:${m.fige ? 'default' : 'pointer'};font-family:var(--font-ui);border:0.5px solid ${m.temoin ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${m.temoin ? 'var(--color-text)' : 'var(--color-surface)'};color:${m.temoin ? '#fff' : 'var(--color-text-muted)'}">${esc(m.nom)}${m.temoin ? ' · témoin' : ''}</button>`).join('')}
         </div>
       </div>
 

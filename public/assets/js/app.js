@@ -2586,16 +2586,38 @@ class App {
 
     const enCamp = (d.magasins || []).filter(m => m.role === 'campagne');
     const temSel = P.temoins || [];
-    common.mesTemoinAuto = !!P.temoinAuto;
+    const mode = P.temoinMode || 'auto';
+    common.mesTemoinAuto = mode === 'auto';
+    common.mesTemoinMode = mode;
+    // Trois régimes de témoin, dont le réseau complet — utile quand presque
+    // tout le réseau est en campagne : la référence devient « ce qu'a fait le
+    // réseau », au prix d'une dilution qu'on annonce.
+    const poser = v => this.mesEcrire(camp.id, 'temoins', v).then(() => this.mesCharge(true));
+    common.mesTemoinModes = [
+      { v: 'auto', nom: 'Magasins hors campagne', on: mode === 'auto', choisir: () => poser([]) },
+      { v: 'reseau', nom: 'Réseau complet', on: mode === 'reseau', choisir: () => poser('reseau') },
+      { v: 'choix', nom: 'Sélection', on: mode === 'choix', choisir: () => poser(
+          (d.magasins || []).filter(m => m.role !== 'campagne').map(m => m.id)) }
+    ];
+    common.mesTemoinDilue = P.temoinDilue || 0;
+    common.mesTemoinNote = mode === 'reseau'
+      ? (P.temoinDilue
+        ? 'Témoin dilué : il contient ' + P.temoinDilue + ' magasin' + (P.temoinDilue > 1 ? 's' : '') + ' en campagne. L’écart net est MINORÉ — l’effet réel est au moins celui affiché.'
+        : 'Le réseau complet sert de référence.')
+      : (mode === 'auto' ? 'Choix automatique : tous les magasins hors campagne.' : 'Sélection manuelle.');
     common.mesMagasins = (d.magasins || []).map(m => ({ id: m.id, nom: m.nom, role: m.role,
-      enCampagne: m.role === 'campagne', temoin: temSel.indexOf(m.id) >= 0,
-      bascule: m.role === 'campagne' ? null : () => {
-        const cur = temSel.slice();
-        const i = cur.indexOf(m.id);
-        if (i >= 0) { cur.splice(i, 1); } else { cur.push(m.id); }
-        this.mesEcrire(camp.id, 'temoins', cur).then(() => this.mesCharge(true));
+      enCampagne: m.role === 'campagne', temoin: !!m.dansTemoin,
+      fige: mode === 'reseau',
+      bascule: (mode === 'reseau' || m.role === 'campagne') ? null : () => {
+        const cur = temSel.filter(i => i !== m.id);
+        if (cur.length === temSel.length) { cur.push(m.id); }
+        poser(cur);
       } }));
-    common.mesTemoinNoms = (d.temoinLignes || []).map(l => l.nom).join(', ') || 'aucun';
+    // Le bandeau des résultats dit lequel des trois témoins a servi : lire un
+    // écart net sans savoir contre quoi il est mesuré n'apprend rien.
+    common.mesTemoinNoms = mode === 'reseau'
+      ? ('réseau complet' + (P.temoinDilue ? ' (dilué par ' + P.temoinDilue + ' magasin' + (P.temoinDilue > 1 ? 's' : '') + ' en campagne — écart minoré)' : ''))
+      : ((d.temoinLignes || []).map(l => l.nom).join(', ') || 'aucun');
     common.mesPerimNoms = enCamp.map(m => m.nom).join(', ');
 
     const pct = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
