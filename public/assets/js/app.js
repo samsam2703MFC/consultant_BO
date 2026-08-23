@@ -6158,7 +6158,23 @@ class App {
         const gardees = lignes.filter(l => filtre === 'toutes' ? true
           : (filtre === 'ouvertes' ? l.ouverte
             : (filtre === 'refusees' ? l.statut === 'REJECTED' : (!l.ouverte && l.statut !== 'REJECTED'))));
-        common.reclLignes = gardees.map(l => ({
+        // Dix lignes, pas plus : au-delà, la table s'étire et le haut de l'écran
+        // — ce qui traîne, ce que ça pèse — sort du champ. Le reste s'ouvre à
+        // la demande, une réclamation à la fois.
+        const DIX = 10;
+        const choisieId = S.reclPlus || 0;
+        const dixPremieres = gardees.slice(0, DIX)
+          .concat(gardees.filter(l => l.id === choisieId && gardees.indexOf(l) >= DIX));
+        const jj = z => String(z || '').split('-').reverse().join('/');
+        common.reclAutres = [{ v: '0', nom: 'Voir une réclamation plus ancienne…' }].concat(
+          gardees.slice(DIX).map(l => ({ v: String(l.id),
+            nom: (l.age == null ? '' : l.age + ' j · ') + (l.reference || '—')
+              + ' · ' + (l.magasin || '') + ' · ' + jj(l.le) })));
+        common.reclAutreSel = String(choisieId || '0');
+        common.setReclAutre = e => this.setState({ reclPlus: parseInt(e.target.value, 10) || 0 });
+        common.reclReste = Math.max(0, gardees.length - DIX);
+        common.reclLignes = dixPremieres.map(l => ({
+          horsDix: gardees.indexOf(l) >= DIX,
           id: l.id,
           age: age(l.age),
           ageCol: !l.ouverte ? 'var(--color-text-muted)'
@@ -6173,7 +6189,8 @@ class App {
             : (l.ouverte ? 'background:#FBEFE0;color:#C17A2A' : 'background:#E6F2E9;color:#2d7a3e'),
           ouvrir: () => this.setState({ reclDet: l.id }),
         }));
-        common.reclCompte = gardees.length + ' sur ' + (R.lignes || []).length;
+        common.reclCompte = gardees.length + ' sur ' + (R.lignes || []).length
+          + (gardees.length > DIX ? ' · 10 affichées' : '');
         common.reclSource = R.source + ' — ' + R.lecture;
         // Le détail d'une réclamation.
         const det = (R.lignes || []).find(l => l.id === S.reclDet);

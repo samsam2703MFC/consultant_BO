@@ -5861,7 +5861,7 @@ function tplCentrale(c, x){
             <th style="${TH};width:130px">Magasin</th><th style="${TH};width:110px">Statut</th>
           </tr></thead>
           <tbody>
-            ${(c.reclLignes || []).map(l => `<tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+            ${(c.reclLignes || []).map(l => `<tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer${l.horsDix ? ';background:var(--color-background-secondary)' : ''}">
               <td style="${TD};color:${l.ageCol};font-weight:600">${esc(l.age)}</td>
               <td style="${TD}">${esc(l.reference)}${l.pj ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.pj)}</div>` : ''}</td>
               <td style="${TD}">${esc(l.qte)}</td>
@@ -5874,6 +5874,12 @@ function tplCentrale(c, x){
           </tbody>
         </table>
       </div>
+      ${c.reclReste ? `<div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.reclReste} autre${c.reclReste > 1 ? 's' : ''} réclamation${c.reclReste > 1 ? 's' : ''} dans cette fenêtre</span>
+        <select ${x.C(c.setReclAutre)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:420px">
+          ${(c.reclAutres || []).map(o => `<option value="${esc(o.v)}"${o.v === c.reclAutreSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>
+      </div>` : ''}
       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">${esc(c.reclSource || '')}</div>
     </div>
     ${c.reclDet ? `
