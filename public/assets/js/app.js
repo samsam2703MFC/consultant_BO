@@ -4468,8 +4468,8 @@ class App {
     this.D.srcPhoto[cle] = null;
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(src.shopId)
       + '&task=' + encodeURIComponent(src.taskId) + '&date=' + encodeURIComponent(src.date))
-      .then(d => { this.D.srcPhoto[cle] = d || { erreur: true }; this.setState({}); })
-      .catch(() => { this.D.srcPhoto[cle] = { erreur: true }; this.setState({}); });
+      .then(d => { this.D.srcPhoto[cle] = d || { erreur: true }; this.setState({ srcMaj: cle }); })
+      .catch(() => { this.D.srcPhoto[cle] = { erreur: true }; this.setState({ srcMaj: cle }); });
     return null;
   }
 
@@ -4483,8 +4483,8 @@ class App {
     if (this.D.classement[cle] && !force) { return; }
     this._clEnCours = cle;
     readOne('/taches/classement' + (this.rjCle() ? '?date=' + encodeURIComponent(this.rjCle()) : ''))
-      .then(d => { this._clEnCours = null; this.D.classement[cle] = d || { indispo: true }; this.setState({}); })
-      .catch(() => { this._clEnCours = null; this.D.classement[cle] = { indispo: true }; this.setState({}); });
+      .then(d => { this._clEnCours = null; this.D.classement[cle] = d || { indispo: true }; this.setState({ clMaj: cle }); })
+      .catch(() => { this._clEnCours = null; this.D.classement[cle] = { indispo: true }; this.setState({ clMaj: cle }); });
   }
 
   rjCharge(force){
@@ -8055,7 +8055,12 @@ class App {
               motif: d2.erreur ? 'lecture impossible' : 'aucune photo sur cette tâche de contrôle' };
           }
           const NIV = { 1: '#8D1D2C', 2: '#C17A2A', 3: '#C9A227', 4: '#6b8f4e', 5: '#2d7a3e' };
-          const rep = (d2.reperes || []).map(r => ({
+          // `reperes` est un OBJET {liste, maj, auteur}, pas un tableau : appeler
+          // `.map` dessus jetait dans le calcul des valeurs, et l'écran restait
+          // figé sur « lecture de la photo… » sans rien dire.
+          const brut = (d2.reperes && Array.isArray(d2.reperes.liste)) ? d2.reperes.liste
+            : (Array.isArray(d2.reperes) ? d2.reperes : []);
+          const rep = brut.map(r => ({
             n: r.n, txt: r.txt || '',
             coul: NIV[r.niveau] || '#8D1D2C',
             boxSt: 'position:absolute;left:' + (r.x * 100).toFixed(2) + '%;top:' + (r.y * 100).toFixed(2)
@@ -8068,7 +8073,9 @@ class App {
             url: d2.photo, tache: d2.tache || ('Tâche #' + src.taskId),
             reperes: rep,
             nRep: rep.length,
-            legende: rep.length ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'
+            legende: rep.length
+              ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'
+                + ((d2.reperes || {}).auteur ? ' par ' + d2.reperes.auteur : '')
               : 'aucun repère posé sur cette photo',
             avis: d2.avis && d2.avis.note != null
               ? ('notée ' + d2.avis.note + '/5' + (d2.avis.comment ? ' — ' + d2.avis.comment : ''))
