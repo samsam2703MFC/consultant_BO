@@ -4458,6 +4458,21 @@ class App {
    * celles de 11 h. Le cache évite de rappeler le panel à chaque redessin ;
    * le bouton de rafraîchissement le vide pour cette date-là, et lui seul.
    */
+  /* La photo de contrôle d'une tâche née d'une note : cliché et repères, lus
+     une fois puis gardés. Une tâche sans origine ne déclenche aucun appel. */
+  srcCharge(src){
+    if (!src || !src.taskId || !src.date) { return null; }
+    const cle = src.shopId + '/' + src.taskId + '/' + src.date;
+    if (!this.D.srcPhoto) { this.D.srcPhoto = {}; }
+    if (this.D.srcPhoto[cle] !== undefined) { return this.D.srcPhoto[cle]; }
+    this.D.srcPhoto[cle] = null;
+    readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(src.shopId)
+      + '&task=' + encodeURIComponent(src.taskId) + '&date=' + encodeURIComponent(src.date))
+      .then(d => { this.D.srcPhoto[cle] = d || { erreur: true }; this.setState({}); })
+      .catch(() => { this.D.srcPhoto[cle] = { erreur: true }; this.setState({}); });
+    return null;
+  }
+
   /* Le classement des tâches du jour — lu chez le panel, pas recalculé.
      Chargé à part du résultat du jour : il vit sur la même date mais sur une
      autre route, et une route lente ne doit pas retenir l'autre. */
@@ -7417,6 +7432,9 @@ class App {
                 consultantId: qui, type: cc.type || 'À corriger sur place', note: texte,
                 comme: cc.comme || 'tache', due: cc.due || this.dansNJours(7),
                 shopId: dt.shopId || null,
+                // L'origine voyage avec la note : la tâche pourra ensuite
+                // rouvrir la photo et ses repères, au lieu d'une phrase seule.
+                srcTaskId: dt.taskId || null, srcDate: dt.date || null,
                 contexte: (d.tache || dt.nom || '') + ' — ' + (this.fDA ? this.fDA(dt.date) : dt.date),
               }).then(r => {
                 if (!r || r.ok === false) { patch({ busy: false }); this.notify('Note non envoyée — ' + ((r && r.error) || 'refusé')); return; }
@@ -8022,6 +8040,40 @@ class App {
           { k: 'Mot du consultant', v: x.t.noteRemise || '—' },
           { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
           { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }],
+        // La photo qui a motivé la demande, avec ses repères. Chargée seulement
+        // quand la ligne est dépliée : une liste de trente tâches ne doit pas
+        // déclencher trente lectures d'API.
+        photo: (() => {
+          const src = x.t.source;
+          if (!src) { return null; }
+          const d2 = ouvert ? this.srcCharge(src) : null;
+          const jf = s2 => String(s2 || '').split('-').reverse().join('/');
+          if (!ouvert) { return { attente: true, titre: 'Photo de contrôle du ' + jf(src.date) }; }
+          if (!d2) { return { chargement: true, titre: 'Photo de contrôle du ' + jf(src.date) }; }
+          if (d2.erreur || !d2.photo) {
+            return { vide: true, titre: 'Photo de contrôle du ' + jf(src.date),
+              motif: d2.erreur ? 'lecture impossible' : 'aucune photo sur cette tâche de contrôle' };
+          }
+          const NIV = { 1: '#8D1D2C', 2: '#C17A2A', 3: '#C9A227', 4: '#6b8f4e', 5: '#2d7a3e' };
+          const rep = (d2.reperes || []).map(r => ({
+            n: r.n, txt: r.txt || '',
+            coul: NIV[r.niveau] || '#8D1D2C',
+            boxSt: 'position:absolute;left:' + (r.x * 100).toFixed(2) + '%;top:' + (r.y * 100).toFixed(2)
+              + '%;width:' + (r.l * 100).toFixed(2) + '%;height:' + (r.h * 100).toFixed(2)
+              + '%;border:2px solid ' + (NIV[r.niveau] || '#8D1D2C') + ';border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.25)',
+            numSt: 'position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:17px;height:17px;border-radius:50%;'
+              + 'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:'
+              + (NIV[r.niveau] || '#8D1D2C') }));
+          return { titre: 'Photo de contrôle du ' + jf(src.date),
+            url: d2.photo, tache: d2.tache || ('Tâche #' + src.taskId),
+            reperes: rep,
+            nRep: rep.length,
+            legende: rep.length ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'
+              : 'aucun repère posé sur cette photo',
+            avis: d2.avis && d2.avis.note != null
+              ? ('notée ' + d2.avis.note + '/5' + (d2.avis.comment ? ' — ' + d2.avis.comment : ''))
+              : '' };
+        })(),
         histo: [{ k: 'Ce mois', v: sesNotes.length ? sesNotes.length + ' tâche' + (sesNotes.length > 1 ? 's' : '') + ' validée' + (sesNotes.length > 1 ? 's' : '') + ' · note moyenne ' + (sesNotes.reduce((a, b) => a + b, 0) / sesNotes.length).toFixed(1).replace('.', ',') : 'Aucune tâche validée' },
           { k: 'Signalements', v: sesSig ? sesSig + ' ouvert' + (sesSig > 1 ? 's' : '') : 'Aucun ouvert' }],
         // --- le panneau de validation

@@ -1804,11 +1804,18 @@ function wr_consultant_note(): array
     // sans rien comprendre. Deux chiffres tirés au sort ferment la porte.
     $tid = 'cn' . substr((string) round(microtime(true) * 1000), -8) . random_int(10, 99);
     $due = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['due'] ?? '')) ? $b['due'] : date('Y-m-d', time() + 7 * 86400);
-    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description) VALUES (?,?,?,?,?,?,?,NULL,?)', [
+    // La tâche de contrôle d'origine voyage avec la note : c'est elle qui
+    // porte la photo et ses repères.
+    $srcTask = trim((string) ($b['srcTaskId'] ?? ''));
+    $srcDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['srcDate'] ?? '')) ? (string) $b['srcDate'] : null;
+    $shopId = ($b['shopId'] ?? null) ?: null;
+    Db::exec('INSERT INTO ceo_project_task (id, project_id, name, owner_kind, owner_id, shop_id, due_on, done_on, description, src_shop, src_task, src_date) VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?)', [
         // owner_kind est un ENUM('c','s') : « c » = consultant.
         $tid, $pid, '[' . $type . '] ' . mb_substr($texte, 0, 160), 'c', $qui,
-        ($b['shopId'] ?? null) ?: null, $due,
+        $shopId, $due,
         $texte . ($contexte !== '' ? "\n\nContexte : " . $contexte : ''),
+        $srcTask !== '' ? $shopId : null, $srcTask !== '' ? $srcTask : null,
+        $srcTask !== '' ? $srcDate : null,
     ]);
     journalAdd('CEO', 'Note consultant', $cons['name'], $journal . ' → tâche ' . $tid . ', échéance ' . $due);
     return ['ok' => true, 'comme' => 'tache', 'tacheId' => $tid, 'due' => $due];

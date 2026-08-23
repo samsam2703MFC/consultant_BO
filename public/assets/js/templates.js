@@ -3561,6 +3561,32 @@ function tplTaches(c, x){
                         <span style="${dk}">${r.k}</span>
                         <span style="${dv}">${esc(r.v)}</span>`).join('')}
                     </div>
+                    <!-- La photo de contrôle qui a motivé la demande, avec ses
+                         repères : une consigne se comprend mieux devant le
+                         cliché qu'à côté d'une phrase. -->
+                    ${t.photo ? `
+                      <div style="${dcap};margin:13px 0 6px">${esc(t.photo.titre)}</div>
+                      ${t.photo.chargement || t.photo.attente
+                        ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${t.photo.attente ? 'dépliez pour la charger' : 'lecture de la photo…'}</div>`
+                        : (t.photo.vide
+                          ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(t.photo.motif)}</div>`
+                          : `<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+                              <div style="position:relative;display:inline-block;line-height:0;flex:0 1 380px;max-width:100%">
+                                <img src="${t.photo.url}" alt="Photo de contrôle" style="display:block;width:100%;border-radius:8px">
+                                ${t.photo.reperes.map(r => `<div style="${r.boxSt}"><span style="${r.numSt}">${r.n}</span></div>`).join('')}
+                              </div>
+                              <div style="flex:1;min-width:180px">
+                                <div style="font-size:11.5px;font-weight:500">${esc(t.photo.tache)}</div>
+                                <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(t.photo.legende)}${t.photo.avis ? ' · ' + esc(t.photo.avis) : ''}</div>
+                                <div style="display:flex;flex-direction:column;gap:6px;margin-top:9px">
+                                  ${t.photo.reperes.filter(r => r.txt).map(r => `
+                                    <div style="display:flex;gap:7px;align-items:flex-start;font-size:11.5px;line-height:1.45">
+                                      <span style="flex:0 0 auto;width:16px;height:16px;border-radius:50%;color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;background:${r.coul}">${r.n}</span>
+                                      <span>${esc(r.txt)}</span>
+                                    </div>`).join('')}
+                                </div>
+                              </div>
+                            </div>`)}` : ''}
                   </div>
                   ${t.vOuvert ? `
                   <div style="padding:12px 14px;border-radius:9px;background:var(--color-surface);border:0.5px solid var(--color-border-secondary)">

@@ -525,6 +525,17 @@ function ensureValidation(): void
     if ($manque('ceo_project_task', 'delivery_note')) {
         Db::exec('ALTER TABLE ceo_project_task ADD COLUMN delivery_note TEXT NULL');
     }
+    // D'OÙ VIENT la tâche : la tâche de contrôle sur laquelle la note a été
+    // écrite. Sans ces trois colonnes, la photo annotée qui a motivé la
+    // demande reste dans l'écran de contrôle, et celui qui lit la tâche ne
+    // voit qu'une phrase — « reprendre l'affichage des prix » — sans le
+    // cliché ni les repères qui disent OÙ.
+    foreach (['src_shop' => 'VARCHAR(8) NULL', 'src_task' => 'VARCHAR(16) NULL',
+              'src_date' => 'DATE NULL'] as $col => $type) {
+        if ($manque('ceo_project_task', $col)) {
+            Db::exec('ALTER TABLE ceo_project_task ADD COLUMN ' . $col . ' ' . $type);
+        }
+    }
 
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_issue ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'

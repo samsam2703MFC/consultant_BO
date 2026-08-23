@@ -4307,6 +4307,12 @@ function ep_projects(): array
             'note' => $t['note'] !== null ? (int) $t['note'] : null,
             'valideePar' => $t['validated_by'],
             'signalement' => tacheSignalement($t['id']),
+            // La tâche de contrôle d'origine, quand la tâche est née d'une note
+            // posée sur une photo : de quoi retrouver le cliché et ses repères.
+            'source' => (($t['src_task'] ?? null) && ($t['src_date'] ?? null))
+                ? ['shopId' => (string) ($t['src_shop'] ?? ''), 'taskId' => (string) $t['src_task'],
+                   'date' => (string) $t['src_date']]
+                : null,
         ], Db::rows('SELECT * FROM ceo_project_task WHERE project_id = ? ORDER BY id', [$id]));
         $out[] = [
             'id' => $id, 'nom' => $p['name'], 'famille' => $p['famille'], 'statut' => $p['status'], 'prio' => $p['priority'],
