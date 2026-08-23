@@ -1120,8 +1120,18 @@ function rapportGenerer(array $rep): array
     // que le rapport impose de lui-même. Jamais le tout premier bloc — une
     // page blanche avant le rapport n'apprend rien.
     $sauts = array_unique(array_merge($mep['sauts'], rapSautsForces()));
+    // Le premier bloc qui MONTRE quelque chose ne saute jamais de page —
+    // forcer « les photos ont leur page » quand rien ne les précède laissait
+    // la première feuille blanche sous l'en-tête.
+    $premier = null;
     foreach ($sections as $i2 => $s2) {
-        $sections[$i2]['saut'] = $i2 > 0 && in_array($s2['slug'] ?? '', $sauts, true);
+        if (($s2['lignes'] ?? []) !== [] || ($s2['infos'] ?? []) !== [] || ($s2['htmlPar'] ?? []) !== []) {
+            $premier = $i2;
+            break;
+        }
+    }
+    foreach ($sections as $i2 => $s2) {
+        $sections[$i2]['saut'] = $i2 > 0 && $i2 !== $premier && in_array($s2['slug'] ?? '', $sauts, true);
     }
 
     $nPoints = array_sum(array_map(fn ($s) => count($s['lignes']) + count($s['pointsCaches'] ?? []), $sections));
@@ -1317,7 +1327,7 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '<div style="' . $F . ';font-size:21px;font-weight:700;color:#221E1A">' . $e($rep['nom']) . '</div>'
         . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($periode['label'])) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr>'
-        . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td>'
+        . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;white-space:nowrap;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td>'
         . '</tr></table>'
         . '</td></tr>'
         // — corps
@@ -1386,7 +1396,7 @@ function rapMailGarde(array $rep, array $run, string $labelPeriode, string $nomP
         . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
         . ($resume !== ''
             ? '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px"><tr>'
-              . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">'
+              . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C;white-space:nowrap">'
               . $e($resume) . '</td></tr></table>'
             : '')
         . '</td></tr>'
