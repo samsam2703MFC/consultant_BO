@@ -270,6 +270,95 @@ final class PanelApi
         return [true, $res];
     }
 
+    /** Même chose qu'un POST, avec le verbe demandé (PUT, PATCH). */
+    public static function envoi(string $methode, string $path, array $body): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return [false, null]; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, $tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok === null) { return [false, null]; }
+            [$code, $res] = self::http($methode, $url, $body, $tok);
+        }
+        if ($code < 200 || $code >= 300) {
+            self::$lastError = $methode . ' ' . $path . ' → HTTP ' . $code
+                . (isset($res['description']) ? ' : ' . $res['description'] : '')
+                . (isset($res['message']) ? ' : ' . $res['message'] : '');
+            return [false, $res];
+        }
+        return [true, $res];
+    }
+
+    /* ── Notes de consultant ────────────────────────────────────────────────
+     *
+     * Le panel tient des notes ATTACHÉES À UN MAGASIN (ou à un employé), avec
+     * un type et un fil de commentaires. C'est le seul canal par lequel un
+     * message écrit dans le cockpit peut apparaître côté consultant : la route
+     * des tâches, elle, ne sait que clôturer, pas créer. */
+
+    /** Les types de note du panel — le référentiel, tel quel. */
+    public static function noteTypes(): array
+    {
+        $r = self::get('/consultant/note-types');
+        return is_array($r) ? self::liste($r) : [];
+    }
+
+    /** Les notes déjà posées sur un magasin. */
+    public static function notesMagasin(int $shopId): array
+    {
+        $r = self::get('/consultant/shops/' . $shopId . '/notes');
+        return is_array($r) ? self::liste($r) : [];
+    }
+
+    /** Déposer une note sur un magasin. Rend [succès, réponse]. */
+    public static function noterMagasin(int $shopId, int $typeId, string $contenu): array
+    {
+        return self::post('/consultant/shops/' . $shopId . '/notes',
+            ['note_type_id' => $typeId, 'content' => $contenu]);
+    }
+
+    /** Créer un type de note (route d'administration — peut être refusée). */
+    public static function creerTypeNote(string $code, string $nom, string $desc): array
+    {
+        return self::post('/admin/consultant-note-types',
+            ['code' => $code, 'name' => $nom, 'description' => $desc, 'sort_order' => 90]);
+    }
+
+    /** Classement des tâches du jour, réseau et magasin par magasin. */
+    public static function classementTaches(?string $date = null): ?array
+    {
+        $q = $date !== null ? '?date=' . urlencode($date) : '';
+        $r = self::get('/consultant/network/tasks/ranking' . $q);
+        return is_array($r) ? $r : null;
+    }
+
+    /**
+     * Le P&L JOUR par jour d'un magasin : chiffre, matière, main-d'œuvre,
+     * charges et résultat — déjà répartis par la source. Le cockpit les
+     * reconstruisait au prorata des jours ouverts ; ici c'est donné.
+     */
+    public static function pnlQuotidien(int $shopId, string $du, string $au): ?array
+    {
+        $q = http_build_query(['date_from' => $du, 'date_to' => $au, 'from' => $du, 'to' => $au]);
+        $r = self::get('/consultant/shops/' . $shopId . '/pnl/daily?' . $q);
+        return is_array($r) ? $r : null;
+    }
+
+    /** Les cibles d'un magasin, métrique par métrique (t1/t2/t3). */
+    public static function ciblesMagasin(int $shopId): ?array
+    {
+        $r = self::get('/consultant/shops/' . $shopId . '/targets');
+        return is_array($r) ? $r : null;
+    }
+
+    /** Écrire les cibles d'un magasin. Rend [succès, réponse]. */
+    public static function ecrireCibles(int $shopId, array $body): array
+    {
+        return self::envoi('PUT', '/consultant/shops/' . $shopId . '/targets', $body);
+    }
+
     /**
      * URL signée d'une pièce jointe (photo de réalisation d'une tâche).
      * L'API ne renvoie qu'un identifiant numérique ; l'image elle-même vit

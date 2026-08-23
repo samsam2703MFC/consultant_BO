@@ -903,3 +903,60 @@ function ep_panel_sonde_consultant(): array
     }
     return $out;
 }
+
+/**
+ * Sonde d'écriture — TEMPORAIRE, le temps de connaître la forme attendue.
+ *
+ * Elle dépose une note d'essai sur un magasin, la relit, la supprime, puis
+ * interroge la route des cibles avec des corps volontairement incomplets pour
+ * lire ses messages d'erreur. Rien n'est laissé derrière : la note est
+ * supprimée dans la foulée, et aucune cible n'est écrite.
+ */
+function ep_panel_sonde_ecriture(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $sid = (int) ($_GET['shop'] ?? 3);
+    $out = ['magasin' => $sid];
+
+    $types = PanelApi::noteTypes();
+    $out['types'] = array_map(fn ($t) => ['id' => $t['id'] ?? null, 'code' => $t['code'] ?? null,
+        'nom' => $t['name'] ?? null], $types);
+
+    $tid = 0;
+    foreach ($types as $t) { if (($t['code'] ?? '') === 'VISIT') { $tid = (int) $t['id']; } }
+    if ($tid === 0 && $types !== []) { $tid = (int) ($types[0]['id'] ?? 0); }
+
+    if ($tid > 0) {
+        [$ok, $res] = PanelApi::noterMagasin($sid, $tid, 'Sonde technique du cockpit — supprimée aussitôt.');
+        $out['post'] = ['ok' => $ok, 'reponse' => $res, 'erreur' => $ok ? null : PanelApi::$lastError];
+        $nid = 0;
+        foreach ([$res, $res['note'] ?? null, $res['data'] ?? null] as $c) {
+            if (is_array($c) && isset($c['id']) && is_numeric($c['id'])) { $nid = (int) $c['id']; break; }
+        }
+        if ($nid === 0) {
+            foreach (PanelApi::notesMagasin($sid) as $n) {
+                if (str_contains((string) ($n['content'] ?? ''), 'Sonde technique du cockpit')) { $nid = (int) $n['id']; }
+            }
+        }
+        $out['noteId'] = $nid;
+        if ($nid > 0) {
+            [$okD, $resD] = PanelApi::envoi('DELETE', '/consultant/notes/' . $nid, []);
+            $out['delete'] = ['ok' => $okD, 'erreur' => $okD ? null : PanelApi::$lastError];
+        }
+    }
+
+    // Cibles : on ne fait qu'INTERROGER la forme attendue, avec des corps
+    // incomplets. Aucune valeur n'est posée.
+    $essais = [
+        'vide' => [],
+        'plat' => ['transactions_count' => ['t1' => 0]],
+        'metrics' => ['metrics' => ['transactions_count' => ['t1' => 0]]],
+        'liste' => ['targets' => [['metric' => 'transactions_count', 't1' => 0]]],
+    ];
+    foreach ($essais as $nom => $corps) {
+        [$ok, $res] = PanelApi::ecrireCibles($sid, $corps);
+        $out['cibles'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
+            'reponse' => is_array($res) ? array_slice($res, 0, 6, true) : $res];
+    }
+    return $out;
+}
