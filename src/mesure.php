@@ -1123,3 +1123,54 @@ function ep_fournisseurs_reclamations(): array
         'lecture' => 'Le cockpit lit ; répondre, relancer et clore passent par les webhooks fournisseurs '
             . '(material-suppliers/complaints/*), qui refusent le compte consultant.'];
 }
+
+/** Sonde — contrat de création d'une réclamation, et référentiels associés. */
+function ep_sonde_recl3(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $out = [];
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 100) : gettype($v); }
+        if (array_is_list($v)) {
+            return ['liste' => count($v), 'clés' => ($v && is_array($v[0])) ? array_keys($v[0]) : null,
+                'premier' => is_array($v[0] ?? null) ? array_map(fn ($z) => is_array($z) ? '[…]' : mb_substr((string) $z, 0, 40), $v[0]) : ($v[0] ?? null)];
+        }
+        $o = [];
+        foreach ($v as $k => $x) {
+            $o[$k] = is_array($x) ? (array_is_list($x) ? ['liste' => count($x), 'clés' => is_array($x[0] ?? null) ? array_keys($x[0]) : null] : array_keys($x))
+                : mb_substr((string) $x, 0, 60);
+        }
+        return $o;
+    };
+
+    // Où trouver la matière, la commande, l'unité ?
+    foreach ([
+        'commandes du magasin'   => '/shops/3/material-orders',
+        'commandes (autre nom)'  => '/shops/3/orders',
+        'matières'               => '/materials',
+        'matières du magasin'    => '/shops/3/materials',
+        'fournisseurs matière'   => '/material-suppliers',
+        'unités'                 => '/material-units',
+    ] as $nom => $ch) {
+        $r = PanelApi::get($ch);
+        $out['referentiels'][$nom] = ['chemin' => $ch,
+            'reponse' => $r === null ? ('aucune réponse — ' . (PanelApi::$lastError ?? '')) : $apercu($r)];
+    }
+
+    // Le contrat de création : un corps vide, puis un corps complet mais avec
+    // une matière impossible — le message change et nomme ce qui manque.
+    foreach ([
+        'corps vide' => [],
+        'corps complet, matière impossible' => [
+            'id_shop' => 3, 'id_material' => 999999999, 'id_supplier' => 1, 'id_order' => 999999999,
+            'qty' => 1, 'id_unit' => 5, 'reason_code' => 'product_quality',
+            'description' => 'sonde technique — ne pas traiter', 'requested_action' => 'REPLACEMENT',
+            'complaint_type' => 'PRODUCT',
+        ],
+    ] as $nom => $corps) {
+        [$ok, $res] = PanelApi::post('/material-complaints', $corps);
+        $out['creation'][$nom] = ['ok' => $ok, 'erreur' => $ok ? null : PanelApi::$lastError,
+            'reponse' => is_array($res) ? array_slice($res, 0, 8, true) : $res];
+    }
+    return $out;
+}
