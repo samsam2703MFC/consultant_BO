@@ -4821,7 +4821,13 @@ class App {
       objectif: m.objectifJour == null ? null : {
         montant: fE(m.objectifJour),
         source: m.objectifSource === 'budget' ? 'budget validé' : 'CA théorique de l’étude',
-        base: fE(m.objectifMois) + ' / mois ÷ ' + fInt(m.joursOuverts) + ' j d’ouverture',
+        // Dire COMMENT la cible du jour est tirée du mois : c'est là que se
+        // joue l'honnêteté du chiffre.
+        base: m.objectifBase === 'profil'
+          ? (fE(m.objectifMois) + ' / mois × ' + String(m.objectifPart).replace('.', ',') + ' % — poids du '
+             + (m.objectifJourNom || 'jour') + ' mesuré sur ' + fInt(m.objectifJoursVus) + ' '
+             + (m.objectifJourNom || 'jour') + (m.objectifJoursVus > 1 ? 's' : '') + ' de ce magasin')
+          : (fE(m.objectifMois) + ' / mois ÷ ' + fInt(m.joursOuverts) + ' j d’ouverture — historique trop court pour peser les jours'),
         pct: m.objectifAtteinte == null ? '—' : this.fP(m.objectifAtteinte, 0),
         // La barre peut dépasser : on la borne à 100 % de largeur et l'excédent
         // se lit sur le chiffre, pas sur une barre qui sortirait de la carte.

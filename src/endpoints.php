@@ -1812,12 +1812,49 @@ function ep_exploitation_jour(): array
         unset($c);
         usort($cats, fn ($a, $b) => $b['ca'] <=> $a['ca']);
 
-        // L'objectif du jour, ramené au jour d'ouverture — le même diviseur que
-        // les frais généraux, pour que les deux se comparent.
+        // ── L'OBJECTIF DU JOUR.
+        //
+        // Diviser le budget du mois par le nombre de jours serait malhonnête :
+        // un dimanche ne ressemble pas à un lundi, et deux mois n'ont pas le
+        // même nombre de dimanches. On répartit donc le budget selon le POIDS
+        // RÉEL de chaque jour de semaine, mesuré sur CE magasin, sur les six
+        // dernières semaines déjà lues ici — rien à demander de plus.
+        //
+        //   poids(jour) = CA moyen de ce jour de semaine
+        //   attendu(mois) = somme des poids de tous les jours du mois
+        //   objectif(jour) = budget du mois × poids(jour) / attendu(mois)
+        //
+        // Un jour de semaine jamais ouvert pèse zéro et ne prend rien aux
+        // autres. Sans historique suffisant, on retombe sur la répartition
+        // plate — et l'écran dit laquelle des deux a servi.
+        $parWd = [];
+        foreach ($parJour as $j2 => $d2) {
+            if (empty($d2['ouvert'])) { continue; }
+            $wd2 = (int) date('N', strtotime($j2));
+            $parWd[$wd2]['s'] = ($parWd[$wd2]['s'] ?? 0) + (float) $d2['ca'];
+            $parWd[$wd2]['n'] = ($parWd[$wd2]['n'] ?? 0) + 1;
+        }
+        $moyWd = [];
+        foreach ($parWd as $wd2 => $v2) { if ($v2['n'] > 0) { $moyWd[$wd2] = $v2['s'] / $v2['n']; } }
+        $attMois = 0.0;
+        for ($i2 = 0; $i2 < $joursMois; $i2++) {
+            $attMois += $moyWd[(int) $premier->modify('+' . $i2 . ' days')->format('N')] ?? 0.0;
+        }
+        $wdJour = (int) date('N', strtotime($date));
+        $vus = (int) ($parWd[$wdJour]['n'] ?? 0);
+        // Deux occurrences au moins : un seul dimanche observé n'est pas un
+        // profil, c'est une anecdote.
+        $part = ($attMois > 0 && $vus >= 2 && isset($moyWd[$wdJour])) ? $moyWd[$wdJour] / $attMois : null;
+
         $bm = $budMois[(string) $id] ?? null;
         $objMois = $bm !== null ? round($bm['montant'], 2) : null;
         $objSrc  = $bm !== null ? $bm['source'] : null;
-        $objJour = ($bm !== null && $joursOuverts > 0) ? round($bm['montant'] / $joursOuverts, 2) : null;
+        $objBase = $part !== null ? 'profil' : 'plat';
+        $objJour = null;
+        if ($bm !== null) {
+            $objJour = $part !== null ? round($bm['montant'] * $part, 2)
+                : ($joursOuverts > 0 ? round($bm['montant'] / $joursOuverts, 2) : null);
+        }
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
             'ca' => round($ca, 2),
             'refCa' => $refCa !== null ? round($refCa, 2) : null,
@@ -1840,7 +1877,10 @@ function ep_exploitation_jour(): array
             'labourMois' => $labourMois !== null ? round($labourMois, 2) : null,
             'joursOuverts' => $joursOuverts,
             'objectifJour' => $objJour, 'objectifSource' => $objSrc,
-            'objectifMois' => $objMois,
+            'objectifMois' => $objMois, 'objectifBase' => $objBase,
+            'objectifPart' => $part === null ? null : round($part * 100, 2),
+            'objectifJoursVus' => $vus,
+            'objectifJourNom' => jourNomSemaine($date),
             'objectifAtteinte' => ($objJour !== null && $objJour > 0) ? round($ca / $objJour, 4) : null,
             'net' => $net !== null ? round($net, 2) : null,
             'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null,
