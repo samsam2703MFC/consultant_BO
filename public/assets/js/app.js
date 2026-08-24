@@ -9963,6 +9963,57 @@ class App {
       },
     };
 
+    // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
+    // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
+    // Paramètres. L'envoi automatique tourne avec le cron des rapports.
+    if (!this._caMailLu) { this._caMailLu = true; readOne('/centrale/commandes/mail').then(st => { this.D.caMailEtat = st || null; this.setState({}); }); }
+    const cmEt = this.D.caMailEtat || {};
+    const cmCf = cmEt.config || {};
+    const cmD = S.cmDraft || {};
+    const cmVal = (k, def) => cmD[k] != null ? cmD[k] : (cmCf[k] != null ? String(cmCf[k]) : def);
+    const cmSet = k => e => { const v = e.target.value; this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { [k]: v }) })); };
+    const cmActif = cmD.actif != null ? cmD.actif : !!cmCf.actif;
+    common.cm = {
+      actif: cmActif,
+      destinataire: cmVal('destinataire', 'achat@atelierby.be'),
+      copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
+      variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
+      smtpPret: !!cmEt.smtpPret,
+      dernier: cmEt.dernier ? ('Dernier passage : ' + (cmEt.dernier.quand || '—').replace('T', ' ').slice(0, 16)
+        + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
+        + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
+      journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '—',
+        type: j.type === 'recu' ? 'Commande reçue' : j.type === 'envoye' ? 'E-mail envoyé' : j.type === 'essai' ? 'Essai' : 'Échec',
+        col: j.type === 'echec' ? '#8D1D2C' : j.type === 'envoye' ? '#2d7a3e' : 'var(--color-text)',
+        detail: j.detail || '', destinataire: j.destinataire || '' })),
+      busy: !!cmD.busy, msg: cmD.msg || '',
+      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (cmD.ok ? '#2d7a3e' : '#8D1D2C'),
+      etatTxt: cmActif ? (cmEt.smtpPret ? 'Actif' : 'Actif — SMTP à configurer') : 'Inactif',
+      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        + (cmActif && cmEt.smtpPret ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
+      toggle: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { actif: !cmActif }) })),
+      setDestinataire: cmSet('destinataire'), setCopie: cmSet('copie'), setSujet: cmSet('sujet'), setCorps: cmSet('corps'),
+      save: () => {
+        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
+        this.api('PUT', '/parametres/caMailCommande', { valeur: {
+          actif: cmActif, destinataire: cmVal('destinataire', ''), copie: cmVal('copie', ''),
+          sujet: cmVal('sujet', ''), corps: cmVal('corps', '') } }).then(r => {
+          const ok = !(r && r.ok === false);
+          this._caMailLu = false;
+          this.setState(s2 => ({ cmDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.cmDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
+          if (ok) { this.log('Paramètre', '—', 'Template e-mail commande fournisseur mis à jour'); }
+        });
+      },
+      test: () => {
+        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
+        this.api('POST', '/centrale/commandes/mail/test').then(r => {
+          this._caMailLu = false;
+          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: false, ok: !!(r && r.ok),
+            msg: r && r.ok ? 'Essai envoyé à ' + (r.destinataire || '') + '.' : (r && (r.erreur || r.error)) || 'Essai impossible.' }) }));
+        });
+      },
+    };
+
     // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les
     // seuils des écrans et des rapports, et où se créent les KPI dérivés.
     if (!this._kpisLus) { this._kpisLus = true; readOne('/kpi-defs').then(d2 => { this.D.kpiDefs = d2 || null; this.setState({}); }); }
