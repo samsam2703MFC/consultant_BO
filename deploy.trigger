@@ -4,3 +4,4 @@
 2026-08-24T08:19:09Z fonds-grand-livre-mensuel-redevances-clients
 2026-08-24T08:41:15Z fonds-generale-retiree
 2026-08-24T08:41:40Z scoring-cout-matiere-panel
+2026-08-24T08:58:59Z fonds-investissement-badges-mois
