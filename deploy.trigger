@@ -8,3 +8,4 @@
 2026-08-24T09:21:19Z fonds-total-par-fournisseur
 2026-08-24T10:48:42Z scoring-barre-recherche
 2026-08-24T11:04:05Z scoring-jauge-marge-mini-colonnes
+2026-08-24T11:27:29Z scoring-tableau-plat-positions-fiche
