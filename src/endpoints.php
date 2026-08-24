@@ -2895,6 +2895,20 @@ function catalogueCouts(): array
         $out[(int) $r['pid']] = ['mat' => round($v, 3), 'rendement' => $rend,
             'source' => $res !== null ? 'recette réseau' : 'moyenne magasins'];
     }
+
+    // Les références que recipe_cost ne couvre pas (~289 sur 711) ne restent
+    // plus sans coût : le panel les chiffre aussi — chaque ligne de
+    // GET /shops/{id}/products/available porte recipe_cost_net, la même
+    // nature que calculated_cost_net. Il ne fait que COMBLER les trous : la
+    // recette locale garde la main quand elle existe, et la saisie du cockpit
+    // prime toujours en aval. Servi ici et non chez chaque appelant : trois
+    // écrans lisent ce coût, deux réponses différentes sur la même référence
+    // seraient pires que pas de coût du tout.
+    foreach (PanelApi::coutsMatiere() as $pid => $c) {
+        if (!isset($out[$pid])) {
+            $out[$pid] = ['mat' => $c, 'rendement' => 1.0, 'source' => 'panel (products/available)'];
+        }
+    }
     return $out;
 }
 
@@ -5194,8 +5208,10 @@ function ep_products(): array
 
         // COÛT MATIÈRE — sans lui, « marge nette » (30 % du score) reste nulle
         // pour tout le monde et le classement se joue sur le seul volume.
-        // Deux sources, dans cet ordre : les recettes du réseau
-        // (product_recipe ⨝ recipe_cost, ~422 références sur 711), puis la
+        // Trois sources, dans cet ordre : les recettes du réseau
+        // (product_recipe ⨝ recipe_cost, ~422 références sur 711), le panel
+        // pour les références sans recette (recipe_cost_net de
+        // /shops/{id}/products/available, dans catalogueCouts), puis la
         // saisie du cockpit qui prime — elle corrige au cas par cas.
         // Le rapprochement se fait par identifiant de caisse UNIQUEMENT,
         // jamais par l'intitulé : deux références peuvent porter des noms

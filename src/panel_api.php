@@ -786,6 +786,64 @@ final class PanelApi
     /** Catalogue produits, lu une fois par requête (sert aux photos de référence). */
     private static ?array $dispo = null;
 
+    /** Coût matière par produit, mémoïsé : plusieurs écrans le demandent. */
+    private static ?array $couts = null;
+
+    /**
+     * Coût matière (food cost) par produit, lu chez le panel.
+     *
+     * GET /shops/{ref}/products/available porte sur chaque ligne
+     * recipe_cost_net (« 4.44 ») et recipe_cost_gross (« 4.80 »). Le NET
+     * d'abord : c'est la nature de calculated_cost_net, la référence des
+     * recettes locales — mélanger les deux fausserait la marge ; le brut ne
+     * sert que si le net manque. Moyenne des boutiques du compte, zéros
+     * écartés — un coût à 0 signifie « pas encore calculé », pas « gratuit ».
+     * Le cache $dispo est partagé avec les photos de référence : une boutique
+     * déjà lue ne se relit pas.
+     *
+     * @return array<int, float>
+     */
+    public static function coutsMatiere(): array
+    {
+        if (self::$couts !== null) { return self::$couts; }
+        self::$couts = [];
+        if (!self::configured()) { return self::$couts; }
+
+        $ids = [];
+        foreach (self::consultantShops() ?? [] as $sh) {
+            $id = (int) ($sh['id'] ?? 0);
+            if ($id > 0) { $ids[] = $id; }
+        }
+        if (self::$dispo === null) { self::$dispo = []; }
+        $chemins = [];
+        foreach ($ids as $sid) {
+            if (!isset(self::$dispo[$sid])) { $chemins[$sid] = '/shops/' . $sid . '/products/available'; }
+        }
+        foreach (self::getParallele($chemins) as $sid => $r) {
+            self::$dispo[$sid] = is_array($r) ? self::liste($r) : [];
+        }
+
+        $somme = []; $n = [];
+        foreach ($ids as $sid) {
+            foreach (self::$dispo[$sid] ?? [] as $p) {
+                $pid = 0;
+                foreach (['id', 'product_id', 'id_product'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+                }
+                if ($pid <= 0) { continue; }
+                $c = 0.0;
+                foreach (['recipe_cost_net', 'recipe_cost_gross'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k]) && (float) $p[$k] > 0) { $c = (float) $p[$k]; break; }
+                }
+                if ($c <= 0) { continue; }
+                $somme[$pid] = ($somme[$pid] ?? 0.0) + $c;
+                $n[$pid]     = ($n[$pid] ?? 0) + 1;
+            }
+        }
+        foreach ($somme as $pid => $s) { self::$couts[$pid] = round($s / $n[$pid], 3); }
+        return self::$couts;
+    }
+
     /**
      * Photo de la fiche technique d'un produit — à mettre en face de la photo
      * prise en boutique : un contrôle qualité se juge par comparaison.
