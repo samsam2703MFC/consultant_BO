@@ -5238,9 +5238,37 @@ function ep_panel_sonde_transactions(): array
     $shop = (int) ($_GET['shop'] ?? 2);
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d'); }
+    [$a, $m2, $j] = explode('-', $date);
 
-    $chemin = '/franchisee-shop/' . $shop . '/transactions/' . $date;
-    $r = PanelApi::brut($chemin);
+    // Le chemin exact se passe en paramètre quand on le connaît ; sinon on
+    // essaie les écritures plausibles et on rend le verdict de chacune. Une
+    // route qui refuse DIT souvent ce qu'elle attend : on lit son corps
+    // d'erreur au lieu de deviner un nom de paramètre à chaque déploiement.
+    $libre = trim((string) ($_GET['chemin'] ?? ''));
+    $variantes = $libre !== '' && $libre[0] === '/' ? [$libre] : [
+        '/franchisee-shop/' . $shop . '/transactions/' . $date,
+        '/franchisee-shop/' . $shop . '/transactions/' . $j . '-' . $m2 . '-' . $a,
+        '/franchisee-shop/' . $shop . '/transactions/' . $a . $m2 . $j,
+        '/franchisee-shop/' . $shop . '/transactions/' . $date . '?page=1&per_page=20',
+        '/franchisee-shop/' . $shop . '/transactions?date=' . $date,
+        '/franchisee-shop/' . $shop . '/transactions?date_from=' . $date . '&date_to=' . $date,
+        '/franchisee-shops/' . $shop . '/transactions/' . $date,
+        '/franchisee-shop/' . $shop . '/transactions',
+    ];
+
+    $essais = []; $chemin = $variantes[0]; $r = null;
+    foreach ($variantes as $v) {
+        $s = PanelApi::sondeGet($v);
+        $corps = $s['corps'];
+        $essais[] = ['chemin' => $v, 'code' => $s['code'],
+            // Le corps d'erreur en clair : c'est LUI qui nomme le champ fautif.
+            'reponse' => is_array($corps) ? mb_substr(json_encode($corps, JSON_UNESCAPED_UNICODE), 0, 400)
+                : ($corps === null ? 'null' : mb_substr((string) $corps, 0, 200))];
+        if ($s['code'] >= 200 && $s['code'] < 300 && $r === null) {
+            $chemin = $v;
+            $r = is_array($corps) && array_key_exists('data', $corps) ? $corps['data'] : $corps;
+        }
+    }
 
     // L'inventaire des clés, à tous les niveaux utiles, avec un échantillon —
     // un nom de champ sans sa valeur ne dit pas ce qu'il porte.
@@ -5262,7 +5290,7 @@ function ep_panel_sonde_transactions(): array
     };
 
     $out = ['chemin' => $chemin, 'shop' => $shop, 'date' => $date,
-        'erreur' => PanelApi::$lastError, 'type' => $typeDe($r)];
+        'essais' => $essais, 'type' => $typeDe($r)];
     if (!is_array($r)) { return $out; }
 
     $out['clesRacine'] = array_is_list($r) ? ['(liste nue)'] : array_keys($r);
