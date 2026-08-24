@@ -3234,9 +3234,14 @@ function tplFonds(c, x){
     </div>
 
     <div style="${carte};overflow:hidden">
-      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <span style="font-size:13px;font-weight:500">Redevances par magasin${c.foMois ? ' — ' + esc(c.foMois) : ''}</span>
-        ${c.foRoyEcrire ? `<button ${x.A(c.foRoyEcrire)} title="Une écriture par magasin — seule la redevance marketing part au fonds ; aperçu avant écriture" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Écrire au fonds</button>` : ''}
+      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:11px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:500">Redevances par client</span>
+        <!-- La période se choisit ici : l'API recalcule CA, taux et dû pour
+             le mois demandé — borné au mois courant, un CA qui n'existe pas
+             encore ne se facture pas. -->
+        ${c.foMoisChoisi ? `<input id="fo-roy-mois" type="month" value="${esc(c.foMoisChoisi)}" max="${esc(c.foMoisMax)}" ${x.C(c.foMoisSet)} title="Période des redevances" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:29px;padding:0 9px;font-family:var(--font-ui);font-size:12px">` : ''}
+        <div style="flex:1"></div>
+        ${c.foRoyEcrire ? `<button ${x.A(c.foRoyEcrire)} title="Une écriture par client — seule la redevance marketing part au fonds ; aperçu avant écriture" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Tout insérer au grand livre</button>` : ''}
       </div>
       ${!c.foRoyPlan ? '' : `<div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
         <div style="font-size:12.5px;font-weight:500">Redevances marketing ${esc(c.foRoyPlan.mois)} — ce qui partirait au fonds</div>
@@ -3259,21 +3264,27 @@ function tplFonds(c, x){
           </span>
         </div>`}`}
       </div>`}
-      ${c.foRoyaltiesVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun magasin.</div>` : `
-      <table style="width:100%;border-collapse:collapse">
+      ${c.foRoyaltiesVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun client.</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:${640 + (c.foRoyTypes || []).length * 110}px">
         <thead><tr>
-          <th style="${th};padding-left:17px">Magasin</th>
-          <th style="${th};${num}">CA du mois</th>
-          <th style="${th}">Taux</th>
-          <th style="${th};${num};padding-right:17px">Dû</th>
+          <th style="${th};padding-left:17px">Client</th>
+          <th style="${th};${num}">CA ${esc(c.foMois)}</th>
+          ${(c.foRoyTypes || []).map(t => `<th style="${th};${num}">${esc(t.nom)}${t.auFonds ? `<div style="font-size:9px;letter-spacing:.04em;color:#2d7a3e">→ fonds</div>` : ''}</th>`).join('')}
+          <th style="${th};${num}">Dû total</th>
+          <th style="${th};padding-right:17px;text-align:right">Grand livre</th>
         </tr></thead>
         <tbody>${c.foRoyalties.map(r => `<tr>
           <td style="${td};padding-left:17px"><span style="font-weight:500">${esc(r.nom)}</span>${r.ville ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ville)}</div>` : ''}</td>
           <td style="${td};${num}">${esc(r.ca)}${r.manque ? `<div style="font-size:10px;color:var(--color-on-abricot);font-weight:400">${esc(r.manque)}</div>` : ''}</td>
-          <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc(r.taux)}</td>
-          <td style="${td};${num};padding-right:17px">${esc(r.du)}${(r.detail || []).map(d => `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(d)}</div>`).join('')}${r.ecrit ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(r.ecrit)}</div>` : ''}</td>
+          ${(r.cellules || []).map(cell => `<td style="${td};${num}"><span style="font-size:11px;color:var(--color-text-muted)">${esc(cell.taux)}</span>${cell.montant ? `<div style="font-weight:500">${esc(cell.montant)}</div>` : ''}</td>`).join('')}
+          <td style="${td};${num};font-weight:500">${esc(r.du)}</td>
+          <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
+            ${r.inserer ? `<button ${x.A(r.inserer)} title="Insérer la redevance marketing de ce client au grand livre — le libellé porte la sorte et le montant" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:7px;padding:4px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Insérer au grand livre</button>` : ''}
+            ${r.ecrit ? `<span style="font-size:10.5px;color:#2d7a3e;font-weight:500">✓ ${esc(r.ecrit)}</span>` : ''}
+            ${!r.inserer && !r.ecrit ? `<span style="font-size:10.5px;color:var(--color-text-muted)">—</span>` : ''}
+          </td>
         </tr>`).join('')}</tbody>
-      </table>`}
+      </table></div>`}
       ${c.foRoySource ? `<div style="padding:9px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoySource)}</div>` : ''}
       ${c.foRoyNote ? `<div style="padding:9px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoyNote)}</div>` : ''}
       ${c.foErp ? `<div style="padding:10px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Reprise ERP : ${esc(c.foErp)}</div>` : ''}

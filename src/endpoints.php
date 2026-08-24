@@ -3807,12 +3807,16 @@ function ep_fonds(): array
 
     // Les redevances : le calcul partagé fondsRoyaltiesCalcul() — grille des
     // taux depuis la FICHE BOUTIQUE du panel (royalty_*_percentage), chiffre
-    // d'affaires du MOIS COURANT depuis l'API de ventes (jour même). Les
-    // écritures ROYALTY déjà passées au fonds ce mois-ci sont rappelées en
-    // face du dû théorique. Factures et règlements émis relèvent du realm
-    // ADMIN (compte « admin ERP » des Paramètres).
+    // d'affaires du mois choisi depuis l'API de ventes (borné au jour même
+    // quand ce mois est en cours). Les écritures ROYALTY déjà passées au
+    // fonds pour ce mois sont rappelées en face du dû théorique. Factures et
+    // règlements émis relèvent du realm ADMIN (compte « admin ERP »).
     $royFait = false;
-    $moisCle = date('Y-m');
+    // ?mois=AAAA-MM : la période s'arrête à l'écran, l'API recalcule CA, taux
+    // et dû pour ce mois-là. Un mois invalide ou futur retombe sur le courant
+    // — un CA qui n'existe pas encore ne se facture pas.
+    $moisCle = (string) ($_GET['mois'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}$/', $moisCle) || $moisCle > date('Y-m')) { $moisCle = date('Y-m'); }
     $calc = fondsRoyaltiesCalcul($moisCle);
     if ($calc !== null) {
         // Écritures ROYALTY du mois déjà au fonds, par magasin.

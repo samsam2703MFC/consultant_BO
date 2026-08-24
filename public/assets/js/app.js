@@ -3756,7 +3756,10 @@ class App {
     const S = this.state, D = this.D;
     if (!D.fonds && !this._foEnCours) {
       this._foEnCours = true;
-      readOne('/fonds').then(f => { this._foEnCours = false;
+      // Le mois choisi voyage avec la lecture : l'API recalcule CA, taux et
+      // dû des redevances pour cette période-là.
+      const q = S.foRoyMois ? '?mois=' + encodeURIComponent(S.foRoyMois) : '';
+      readOne('/fonds' + q).then(f => { this._foEnCours = false;
         this.D.fonds = f || { erreurs: ['module injoignable'] }; this.setState({}); });
     }
     const f = D.fonds;
@@ -3847,32 +3850,65 @@ class App {
       ? sansLev + ' sortie(s) ne portent aucun levier : elles pèsent sur le solde sans dire ce qu’elles développent.'
       : '';
 
-    // --- redevances par magasin. Le CA du mois vient de l'API de ventes
-    //     (jour même), les taux de la fiche boutique ; le dû théorique en
-    //     découle, et « écrit au fonds » rappelle ce qui y est déjà passé.
-    //     Au fonds ne part que la sorte MARKETING : les autres sortes sont
-    //     des revenus de la marque, l'écran le dit ligne à ligne.
+    // --- redevances : un tableau CLIENTS × SORTES, sur le mois choisi.
+    //
+    //     Une ligne par client (magasin), une colonne par sorte de redevance
+    //     avec son taux et le montant du mois, et le bouton « Insérer au
+    //     grand livre » au bout de la ligne. Le CA vient de l'API de ventes
+    //     (borné au jour même si le mois est en cours), les taux de la fiche
+    //     boutique. Au fonds ne part que la sorte MARKETING : les autres
+    //     sortes sont des revenus de la marque, les colonnes le disent.
     const R = f.royalties || {};
     common.foMois = R.month || '';
+    // La période se choisit : changer de mois vide le cache et relit /fonds
+    // avec ?mois=… — l'API recalcule CA, taux et dû pour cette période-là.
+    common.foMoisChoisi = S.foRoyMois || common.foMois;
+    common.foMoisMax = String((this.M && this.M.TODAY) || new Date().toISOString()).slice(0, 7);
+    common.foMoisSet = e => { const v = e.target.value;
+      if (!v || v === (this.state.foRoyMois || common.foMois)) { return; }
+      this.D.fonds = null;
+      this.setState({ foRoyMois: v, foRoyPlan: null });
+    };
+    // Les colonnes : les sortes qu'au moins un client porte, dans l'ordre
+    // canonique de la fiche boutique. La sorte Marketing est marquée — c'est
+    // la seule qui entre au grand livre du fonds.
+    const ORDRE_SORTES = ['Marketing', 'Marque', 'Assistance', 'Générale'];
+    const presentes = {};
+    (R.shops || []).forEach(s => {
+      (s.rates || []).forEach(t => { if (t.label) { presentes[t.label] = true; } });
+      (s.dues || []).forEach(d2 => { if (d2.label) { presentes[d2.label] = true; } });
+    });
+    common.foRoyTypes = ORDRE_SORTES.filter(nom => presentes[nom])
+      .map(nom => ({ nom, auFonds: nom === 'Marketing' }));
+    const pct = v => v == null ? '' : String(v).replace('.', ',') + ' %';
     common.foRoyalties = (R.shops || []).map(s => {
       const ca = s.revenue_amount == null ? null : +s.revenue_amount;
       const ecrit = (s.movements || []).reduce((a, m) => a + (+m.amount || 0), 0);
       const du = s.due_theorique != null ? +s.due_theorique : (ecrit > 0 ? ecrit : null);
       const duMkt = s.due_marketing == null ? null : +s.due_marketing;
-      return { nom: s.shop_name || ('Magasin ' + s.shop_id), ville: s.city || '',
+      const nom = s.shop_name || ('Magasin ' + s.shop_id);
+      // Une cellule par sorte : le taux, et le montant du mois s'il se
+      // calcule. Taux sans montant = CA manquant ou redevances désactivées.
+      const parSorte = {};
+      (s.rates || []).forEach(t => { if (t.label) { parSorte[t.label] = { taux: pct(t.rate_pct), montant: '' }; } });
+      (s.dues || []).forEach(d2 => { if (d2.label) {
+        const cell = parSorte[d2.label] || (parSorte[d2.label] = { taux: pct(d2.rate_pct), montant: '' });
+        cell.montant = this.fU(+d2.amount || 0);
+      } });
+      return { nom, ville: s.city || '',
         ca: ca == null ? '—' : this.fE(ca),
-        taux: (s.rates || []).map(t => (t.label || t.code || '') + ' ' + (t.rate_pct != null ? t.rate_pct + ' %' : '—')).join(' · ') || '—',
+        cellules: common.foRoyTypes.map(t => parSorte[t.nom] || { taux: '—', montant: '' }),
         du: du != null ? this.fU(du) : '—',
-        // Le dû, SORTE par sorte, avec la seule qui entre au grand livre
-        // marquée « au fonds » : le total laisse sinon croire que tout
-        // alimente la caisse commune des campagnes.
-        detail: (s.dues || []).length > 1
-          ? (s.dues || []).map(d2 => (d2.label || '') + ' ' + (d2.rate_pct != null ? d2.rate_pct + ' %' : '') + ' → ' + this.fU(+d2.amount || 0) + (d2.au_fonds ? ' · au fonds' : ''))
-          : [],
-        ecrit: ecrit > 0 ? 'écrit au fonds : ' + this.fU(ecrit) : '',
+        // Le bouton de la ligne : la redevance MARKETING de ce client, pour
+        // le mois affiché — le libellé de l'écriture porte la sorte et le
+        // montant. Déjà écrite = un rappel, pas un second bouton : le
+        // serveur est idempotent, mais un bouton qui ne fera rien ment.
+        inserer: s.royalties_enabled !== false && duMkt != null && duMkt > 0 && !ecrit
+          ? () => this.foRoyInserer(R.month, s.shop_id, nom, duMkt) : null,
+        ecrit: ecrit > 0 ? 'au grand livre : ' + this.fU(ecrit) : '',
         // Sans chiffre d'affaires, la redevance ne peut pas être calculée :
         // le dire vaut mieux qu'un tiret qu'on lirait comme un zéro. Et un
-        // magasin sans taux marketing ne versera RIEN au fonds — autant le
+        // client sans taux marketing ne versera RIEN au fonds — autant le
         // dire avant qu'on cherche sa ligne dans les entrées du mois.
         manque: ca == null
           ? 'chiffre d’affaires du mois non repris'
@@ -4253,7 +4289,9 @@ class App {
   foRecPatch(patch){ this.setState(s => ({ foRec: Object.assign({}, s.foRec, patch) })); }
   /** Recharge le fonds après écriture : c'est le module qui fait foi. */
   foRecharge(){
-    return readOne('/fonds').then(f => { if (f) { this.D.fonds = f; } this.setState({}); return f; });
+    const mois = this.state.foRoyMois;
+    return readOne('/fonds' + (mois ? '?mois=' + encodeURIComponent(mois) : ''))
+      .then(f => { if (f) { this.D.fonds = f; } this.setState({}); return f; });
   }
   /**
    * Enregistre une écriture — création ou correction.
@@ -4294,6 +4332,22 @@ class App {
         return;
       }
       this.setState({ foRoyPlan: Object.assign({ busy: false }, r) });
+    });
+  }
+  /**
+   * Insère au grand livre la redevance MARKETING d'UN client, pour le mois
+   * affiché. Le libellé de l'écriture porte la sorte et le montant
+   * (« Redevance Marketing AAAA-MM — Client ») ; la pièce canonique du
+   * serveur rend l'insertion idempotente — jamais deux fois la même.
+   */
+  foRoyInserer(mois, shopId, nom, montant){
+    if (!window.confirm('Insérer au grand livre : redevance Marketing ' + mois + ' — ' + nom
+      + ', ' + this.fU(montant) + ' ?')) { return; }
+    write(this.source, 'POST', '/fonds/royalties/generer', { month: mois, shop_id: shopId, apercu: false }).then(r => {
+      if (!r || r.ok === false) { this.notify('Non insérée — ' + ((r && r.error) || 'refusé')); return; }
+      this.notify(r.ecrites ? 'Redevance marketing de ' + nom + ' insérée au grand livre'
+        : 'Déjà au grand livre — rien à réécrire');
+      this.foRecharge();
     });
   }
   /** Écrit les redevances prévisualisées — la marketing de chaque magasin. */

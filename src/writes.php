@@ -1852,7 +1852,10 @@ function wr_fonds_royalties(): array
 function wr_fonds_royalties_generer(): array
 {
     $b = body();
-    return fondsRoyaltiesEcrire((string) ($b['month'] ?? date('Y-m')), !empty($b['apercu']));
+    // `shop_id` restreint l'écriture à UN client : c'est le bouton « Insérer
+    // au grand livre » de sa ligne. Absent, tout le réseau part d'un coup.
+    return fondsRoyaltiesEcrire((string) ($b['month'] ?? date('Y-m')), !empty($b['apercu']),
+        !empty($b['shop_id']) ? (int) $b['shop_id'] : null);
 }
 
 /**
@@ -1862,7 +1865,7 @@ function wr_fonds_royalties_generer(): array
  * jamais deux fois la même redevance. `apercu` rend les lignes sans rien
  * écrire : on voit ce qui partirait, on confirme ensuite.
  */
-function fondsRoyaltiesEcrire(string $mois, bool $apercu): array
+function fondsRoyaltiesEcrire(string $mois, bool $apercu, ?int $seulShop = null): array
 {
     if (!preg_match('/^\d{4}-\d{2}$/', $mois)) {
         http_response_code(422);
@@ -1888,6 +1891,7 @@ function fondsRoyaltiesEcrire(string $mois, bool $apercu): array
 
     $lignes = []; $ecrites = 0; $dejaN = 0; $aEcrire = 0.0;
     foreach ($don['shops'] as $s) {
+        if ($seulShop !== null && (int) $s['shop_id'] !== $seulShop) { continue; }
         if (!$s['enabled'] || $s['ca'] === null) { continue; }
         foreach ($s['sortes'] as $k) {
             // Seule la redevance MARKETING entre au fonds : les autres sortes
