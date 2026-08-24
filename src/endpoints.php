@@ -6251,7 +6251,7 @@ function ep_ca_achats(): array
  * ?refresh=1. La borne haute connue vit dans `caSuiviMaxId` et monte toute
  * seule quand de nouvelles commandes apparaissent.
  */
-const SUIVI_TTL = 900;          // 15 min — le suivi n'est pas du temps réel
+const SUIVI_TTL = 300;          // 5 min — assez court pour voir un statut changer
 const SUIVI_PROFONDEUR = 260;   // identifiants balayés vers le bas
 const SUIVI_AVANCE = 40;        // identifiants sondés au-delà du max connu
 

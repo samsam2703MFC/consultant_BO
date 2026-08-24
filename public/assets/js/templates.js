@@ -6287,6 +6287,9 @@ function tplCentrale(c, x){
     </div>` : ''}
     ${c.caSvChips ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       ${c.caSvChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? 'rgba(141,29,44,0.08)' : 'transparent'};color:${ch.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(ch.nom)}</button>`).join('')}
+      <span style="flex:1"></span>
+      ${c.caSvMaj ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">lu à ${esc(c.caSvMaj)}</span>` : ''}
+      <button ${x.A(c.caSvRafraichir)} title="Relire les commandes maintenant" style="border:0.5px solid var(--color-border-secondary);cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;background:transparent;color:var(--color-text)${c.caSvBusy ? ';opacity:.5' : ''}">${c.caSvBusy ? 'Lecture…' : '↻ Actualiser'}</button>
     </div>` : ''}
     ${!c.caSvGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:16px">${esc(c.caSvRien || '')}</div>` : `
     <div style="${CARD};margin-bottom:16px">

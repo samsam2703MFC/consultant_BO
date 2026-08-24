@@ -6882,6 +6882,22 @@ class App {
           relanceEnCours: S.svRelance === o.cle,
         })),
       })).filter(g => g.commandes.length);
+      // Le suivi est mémorisé 5 min ; ce bouton relit l'API sans attendre —
+      // un statut qui vient de changer se voit tout de suite.
+      common.caSvBusy = !!S.caSvBusy;
+      common.caSvMaj = maj ? maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
+      common.caSvRafraichir = () => {
+        if (this.state.caSvBusy) { return; }
+        this.setState({ caSvBusy: true });
+        readOne('/centrale/achats?refresh=1').then(d2 => {
+          this.setState(s2 => {
+            const cle = 'caAchats|' + (s2.caPeriode || '30j');
+            return { caSvBusy: false,
+              caData: d2 ? Object.assign({}, s2.caData, { [cle]: d2 }) : s2.caData };
+          });
+          this.notify(d2 ? 'Suivi actualisé' : 'Actualisation impossible — API injoignable');
+        });
+      };
       common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
         : 'Aucune commande lisible sur l’API.');
     } else if (ecr === 'caCommandes') {
