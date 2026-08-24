@@ -137,6 +137,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/facturation'          => ep_ca_facturation(),
             $path === '/products/scoring'              => ep_products(),
             $path === '/products/waste'                => ep_product_waste(),
+            $path === '/products/periodes'             => ep_product_periodes(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),
             $path === '/pwa/tasks'                     => ep_pwa_tasks(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),

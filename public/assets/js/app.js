@@ -2501,6 +2501,22 @@ class App {
         ? { pdWaste: Object.assign({}, s.pdWaste, { chargement: false, d: d || null }) } : {}));
   }
   /**
+   * Ouvre la fiche d'une référence et charge son CA et sa marge par période
+   * (mois affiché, trimestre, année dernière). Chargés À L'OUVERTURE, pas
+   * avant : trois sommes SQL par référence n'ont rien à faire dans le
+   * tableau. Mis en cache par référence — rouvrir la même fiche ne relit pas.
+   */
+  pdOpenDetail(id){
+    this.setState({ pdDet: { id } });
+    if (!this._pdPer) { this._pdPer = {}; }
+    if (this._pdPer[id]) { return; }
+    this._pdPer[id] = { chargement: true, d: null };
+    readOne('/products/periodes?produit=' + encodeURIComponent(id)).then(d => {
+      this._pdPer[id] = { chargement: false, d: d && !d.error && Array.isArray(d.fenetres) ? d : null };
+      this.setState({});
+    });
+  }
+  /**
    * Écran Exploitation — le P&L court des magasins.
    *
    * Le serveur a déjà tranché les questions délicates (quel jour montrer,
@@ -7470,6 +7486,11 @@ class App {
     const cats = {}; base.forEach(p => { (cats[p.cat] = cats[p.cat] || []).push(p); });
     Object.keys(cats).forEach(c2 => { const g = cats[c2].slice().sort((a, b) => b.ca - a.ca); const tot = g.reduce((a, x2) => a + x2.ca, 0) || 1;
       g.forEach((p, i) => { p.rang = i + 1; p.nbCat = g.length; p.partCat = p.ca / tot; }); });
+    // Position GÉNÉRALE : le rang par chiffre d'affaires sur TOUTES les
+    // références — le même critère que le rang de catégorie, à l'échelle de
+    // la gamme entière. Deux critères différents pour deux rangs voisins
+    // rendraient le tableau illisible.
+    base.slice().sort((a, b) => b.ca - a.ca).forEach((p, i) => { p.rangGlobal = i + 1; });
     base.forEach(p => {
       p.sVol = 100 * Math.sqrt((p.vol || 0) / maxVol);
       // Marge NETTE sur une échelle absolue (réglage), et non plus relative
@@ -7587,7 +7608,10 @@ class App {
     const verdict = _c.verdict;
     common.pdCat = S.pdCat; common.setPdCat = e => this.setState({ pdCat: e.target.value });
     common.pdCatOptions = ['Toutes les catégories'].concat(Object.keys(cats));
-    const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['pen', 'Trier par pénétration réseau'], ['ca', 'Trier par CA réseau'], ['marge', 'Trier par taux de marge'], ['mg', 'Trier par marge brute'], ['rang', 'Trier par rang catégorie']];
+    // La pénétration et la marge brute ont quitté la ligne (fiche au clic) :
+    // trier sur une colonne invisible désorienterait. « Position générale »
+    // trie par CA — c'est le critère du rang.
+    const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['ca', 'Trier par position générale'], ['marge', 'Trier par taux de marge'], ['rang', 'Trier par position catégorie']];
     common.pdSortOptions = sorts.map(s => ({ val: s[0], nom: s[1] }));
     common.pdSort = S.pdSort; common.setPdSort = e => this.setState({ pdSort: e.target.value });
     // Recherche : retrouver UNE référence dans 200 lignes sans dérouler.
@@ -7606,36 +7630,32 @@ class App {
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
     const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
     const eur = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €';
-    common.pdRows = rows.map(p => { const vd = verdict(p.score); const t = this.trend(p.tend, 1);
+    // La ligne, à plat : une seule ligne par référence, aucun graphique — la
+    // couleur ne reste que sur trois signaux (taux de marge, perte, score).
+    // Ce qui a quitté la ligne (tendance, pénétration, CA, marge brute,
+    // profil V·M·P·C, verdict en toutes lettres) vit dans la fiche au clic.
+    common.pdRows = rows.map(p => { const vd = verdict(p.score);
       return { nom: p.nom, cat: p.cat,
-        ouvrirDetail: () => this.setState({ pdDet: { id: p.id } }), vol: Math.round(p.vol).toLocaleString('fr-BE'), tend: t.txt, tendSt: t.st + ';font-weight:400',
-        prix: eur(p.prix), mu: eur(p.mu), mg: this.fK(p.mg),
+        ouvrirDetail: () => this.pdOpenDetail(p.id),
+        vol: Math.round(p.vol).toLocaleString('fr-BE'),
+        prix: eur(p.prix), mu: eur(p.mu),
         // Le prix d'achat (coût matière) se déduit : la marge unitaire est
         // prix − coût, donc coût = prix − marge. Sans coût, un tiret.
         achat: p.mu == null ? '—' : eur(p.prix - p.mu),
-        // La jauge de marge : la barre et son pourcentage, colorés au palier
-        // de l'échelle de marge du réseau (echelleMarge) — la même couleur
-        // que partout ailleurs pour la même marge.
+        // Taux de marge : une puce et un pourcentage colorés au palier de
+        // l'échelle de marge du réseau — la même couleur que partout.
         margeTxt: p.mp == null ? '—' : (p.mp < 0 ? 'Perte' : Math.round(p.mp * 100) + ' %'),
         margeCol: this.echelleMarge(p.mp == null ? null : p.mp * 100),
-        margeBar: p.mp == null ? null : bar(p.mp * 100, this.echelleMarge(p.mp * 100)),
         perteTxt: p.perte == null ? '—' : this.fP(p.perte, 1),
         perteSt: p.perte == null ? 'color:var(--color-text-muted)'
           : (p.perte >= 0.10 ? 'color:#8D1D2C;font-weight:600' : p.perte >= 0.05 ? 'color:#8a5a13;font-weight:500' : 'color:#2d7a3e'),
         perteDetail: p.jete != null ? (Math.round(p.jete).toLocaleString('fr-BE') + ' jeté(s)' + (p.motifPerte ? ' · ' + p.motifPerte : '')) : '',
         openWaste: () => this.pdOpenWaste(p.id, p.nom),
-        pen: this.fP(p.pen, 0), mags: p.mags + ' / ' + nbOuv, partCaRes: this.fP(p.ca / caProd, 1), ca: this.fK(p.ca),
-        // La couleur de la pénétration sert deux fois : la barre ET le
-        // pourcentage à sa droite — même langage que la jauge de marge.
-        penCol: p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C',
-        barPen: bar(100 * p.pen, p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C'),
+        // Les deux positions, même critère (le CA) : sur la gamme entière,
+        // et dans la catégorie de la référence.
+        rangGlobal: p.rangGlobal + ' / ' + base.length,
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),
-        rangSt: this.pill(p.rang <= Math.ceil(p.nbCat / 3) ? 1 : p.rang <= Math.ceil(2 * p.nbCat / 3) ? 0.95 : 0.8),
-        barVol: bar(p.sVol, '#8D1D2C'), barMg: bar(p.sMg == null ? 0 : p.sMg, '#2d7a3e'),
-        barPerte: bar(p.sPerte == null ? 0 : p.sPerte, '#C17A2A'), barComptoir: bar(p.sComptoir == null ? 0 : p.sComptoir, '#6b7fa8'),
-        mgDispo: p.sMg != null, perteDispo: p.sPerte != null, comptoirDispo: p.sComptoir != null,
-        score: String(Math.round(p.score)), scoreSt: 'font-size:17px;font-weight:500;line-height:1;color:' + vd[1], scoreBar: bar(p.score, vd[1]),
-        verdict: vd[0], verdictSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + vd[2] + ';color:' + vd[1] }; });
+        score: String(Math.round(p.score)), scoreCol: vd[1], verdict: vd[0] }; });
     // --- détail d'une référence : le score décomposé, et les deux suites
     // possibles — l'envoyer aux projets, ou programmer son arrêt.
     const det = S.pdDet ? base.find(p2 => String(p2.id) === String(S.pdDet.id)) : null;
@@ -7645,10 +7665,21 @@ class App {
       const patchDet = pl => this.setState(s2 => ({ pdDet: Object.assign({}, s2.pdDet, pl) }));
       const wt = k => Math.round(100 * (W[k] || 0) / ((W.v + W.m + W.perte + W.comptoir) || 1));
       const cat2 = (D.prodCatalogue || []).find(p2 => String(p2.ref) === String(det.id)) || {};
+      const per2 = (this._pdPer || {})[det.id] || null;
       common.pdDet = {
         nom: det.nom, ref: String(det.id), cat: det.cat,
         score: String(Math.round(det.score)), verdict: vd2[0], col: vd2[1], fond: vd2[2],
         periode: _c.periode,
+        // CA réseau et marge brute par fenêtre — mois affiché, trimestre,
+        // année dernière. Sortis de la ligne du tableau, ils vivent ici.
+        perChargement: !per2 || !!per2.chargement,
+        perIndispo: !!(per2 && !per2.chargement && !per2.d),
+        periodes: (per2 && per2.d ? per2.d.fenetres : []).map(f => ({
+          label: f.label || f.cle || '—',
+          volume: f.volume == null ? '—' : Math.round(+f.volume).toLocaleString('fr-BE'),
+          ca: this.fE(f.ca),
+          marge: f.marge == null ? '—' : this.fE(f.marge),
+        })),
         criteres: [
           { nom: 'Volume vendu', poids: wt('v') + ' %', note: det.sVol, brut: Math.round(det.vol).toLocaleString('fr-BE') + ' pièces', col: '#8D1D2C' },
           { nom: 'Marge nette', poids: wt('m') + ' %', note: det.sMg, brut: det.mp == null ? 'marge indisponible' : this.fP(det.mp, 0) + ' de marge', col: '#2d7a3e' },
@@ -7756,7 +7787,8 @@ class App {
         close: () => this.setState({ pdWaste: null }),
       };
     } else { common.pdWaste = false; }
-    common.pdNote = 'Score sur 100 = moyenne pondérée de quatre notes : volume vendu, marge nette, taux de perte et présence au comptoir. Pondération réglée dans Paramètres — ' + common.pdPond + '.'
+    common.pdNote = 'Score sur 100 = moyenne pondérée de quatre notes : volume vendu, marge nette, taux de perte et présence au comptoir (pondération dans Paramètres — ' + common.pdPond + '). '
+      + 'Positions par CA — sur la gamme entière et dans la catégorie. Le reste (score décomposé, CA et marge du mois, du trimestre et de l’année dernière, profil, tendance) : cliquez la référence.'
       + (manque.length ? ' Critère(s) sans donnée aujourd’hui, donc EXCLUS du calcul (le score est repondéré sur les critères disponibles, il n’est pas pénalisé) : ' + manque.join(' ; ') + '.' : '');
   }
 
