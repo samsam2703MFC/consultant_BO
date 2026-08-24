@@ -7664,7 +7664,16 @@ class App {
     const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['pen', 'Trier par pénétration réseau'], ['ca', 'Trier par CA réseau'], ['marge', 'Trier par taux de marge'], ['mg', 'Trier par marge brute'], ['rang', 'Trier par rang catégorie']];
     common.pdSortOptions = sorts.map(s => ({ val: s[0], nom: s[1] }));
     common.pdSort = S.pdSort; common.setPdSort = e => this.setState({ pdSort: e.target.value });
-    const rows = base.filter(p => S.pdCat === 'Toutes les catégories' || p.cat === S.pdCat);
+    // Recherche : retrouver UNE référence dans 200 lignes sans dérouler.
+    // Insensible à la casse et aux accents — « eclair » trouve « Éclair » —
+    // et l'identifiant de caisse marche aussi. Elle se cumule au filtre de
+    // catégorie, elle ne le remplace pas.
+    const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    common.pdQ = S.pdQ || '';
+    common.setPdQ = e => this.setState({ pdQ: e.target.value });
+    const q = norm(S.pdQ).trim();
+    const rows = base.filter(p => (S.pdCat === 'Toutes les catégories' || p.cat === S.pdCat)
+      && (!q || norm(p.nom).includes(q) || norm(p.cat).includes(q) || String(p.id).includes(q)));
     rows.sort((a, b) => S.pdSort === 'volume' ? b.vol - a.vol : S.pdSort === 'pen' ? (b.pen - a.pen || b.score - a.score) : S.pdSort === 'ca' ? b.ca - a.ca
       : S.pdSort === 'marge' ? b.mp - a.mp : S.pdSort === 'mg' ? b.mg - a.mg
       : S.pdSort === 'rang' ? (a.rang - b.rang || b.score - a.score) : b.score - a.score);

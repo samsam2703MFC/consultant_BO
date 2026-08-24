@@ -2028,6 +2028,7 @@ function tplProduits(c, x){
         </div>`).join('')}
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <input id="pd-q" type="search" value="${esc(c.pdQ)}" ${x.I(c.setPdQ)} placeholder="Rechercher une référence…" style="${selCss};font-family:var(--font-ui);width:230px">
       <select ${x.C(c.setPdCat)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdCatOptions, c.pdCat)}</select>
       <select ${x.C(c.setPdSort)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdSortOptions, c.pdSort, o => o.val, o => o.nom)}</select>
       <span style="font-size:12px;color:var(--color-text-muted)">Pondération du score — ${c.pdPond}</span>
@@ -2095,6 +2096,7 @@ function tplProduits(c, x){
               </td>
               <td style="padding:10px 14px"><span style="${r.verdictSt}">${r.verdict}</span></td>
             </tr>`).join('')}
+          ${c.pdRows.length ? '' : `<tr><td colspan="10" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
         </tbody>
       </table>
       </div>
