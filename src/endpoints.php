@@ -5224,6 +5224,60 @@ function ep_journal(): array
     ], Db::rows('SELECT * FROM ceo_journal_entry ORDER BY happened_at DESC, id DESC LIMIT 500'));
 }
 
+/**
+ * GET /journal/mails — les e-mails partis du cockpit, les deux sources réunies.
+ *
+ * Deux machines envoient : les RAPPORTS (ceo_rapport_run, statut « envoye » ou
+ * « erreur », avec la liste des destinataires) et les commandes de la CENTRALE
+ * D'ACHAT (ceo_app_setting.caMailJournal, tenu par caMailJournal()). Les lire
+ * séparément obligeait à ouvrir deux écrans pour répondre à « ce mail est-il
+ * parti ? » ; ils sont donc fusionnés ici, du plus récent au plus ancien.
+ *
+ * Une source absente n'est pas une panne : une installation sans centrale
+ * d'achat n'a pas de journal d'achats, et le tableau montre l'autre.
+ */
+function ep_journal_mails(): array
+{
+    $out = [];
+
+    try {
+        foreach (Db::rows("SELECT r.genere_le, r.statut, r.envoye_a, r.resume, p.nom
+                             FROM ceo_rapport_run r
+                             LEFT JOIN ceo_rapport p ON p.id = r.rapport_id
+                            WHERE r.statut IN ('envoye', 'erreur')
+                         ORDER BY r.genere_le DESC, r.id DESC LIMIT 120") as $r) {
+            $dests = json_decode((string) ($r['envoye_a'] ?? '[]'), true);
+            $out[] = [
+                'ts' => substr((string) $r['genere_le'], 0, 16),
+                'source' => 'Rapport',
+                'objet' => (string) ($r['nom'] ?? 'Rapport supprimé'),
+                'dest' => is_array($dests) ? implode(', ', $dests) : '',
+                'ok' => $r['statut'] === 'envoye',
+                'detail' => (string) ($r['resume'] ?? ''),
+            ];
+        }
+    } catch (PDOException $e) { /* rapports jamais installés : l'autre source suffit */ }
+
+    $achats = setting('caMailJournal');
+    foreach (is_array($achats) ? $achats : [] as $a) {
+        if (!is_array($a)) { continue; }
+        // « recu » n'est pas un envoi : c'est la commande repérée, la trace qui
+        // explique l'e-mail de la ligne suivante. Elle reste, en le disant.
+        $type = (string) ($a['type'] ?? '');
+        $out[] = [
+            'ts' => substr((string) ($a['quand'] ?? ''), 0, 16),
+            'source' => 'Achat',
+            'objet' => $type === 'recu' ? 'Commande reçue' : 'Commande fournisseur',
+            'dest' => (string) ($a['destinataire'] ?? ''),
+            'ok' => $type !== 'echec',
+            'detail' => (string) ($a['detail'] ?? ''),
+        ];
+    }
+
+    usort($out, fn ($a, $b) => strcmp((string) $b['ts'], (string) $a['ts']));
+    return array_slice($out, 0, 200);
+}
+
 function ep_products(): array
 {
     $periode = $_GET['periode'] ?? '2026-07';
@@ -5857,9 +5911,33 @@ function ep_ca_commandes(): array
         'API panel — l’ERP n’enregistre le fournisseur sur aucune réquisition (mesuré, réalm admin compris). '
         . 'Pour les EN ATTENTE, il est dérivé des besoins actuels croisés au mapping matière → fournisseur ; '
         . 'l’historique, lui, est perdu côté ERP');
+    // Regroupement par fournisseur : l'écran montre chaque fournisseur avec ses
+    // 5 dernières commandes ($lignes est déjà trié par début décroissant).
+    // Plusieurs fournisseurs → « À répartir » ; aucun → « Sans fournisseur ».
+    $groupes = [];
+    foreach ($lignes as $l) {
+        $fours = (array) $l['fournisseurs'];
+        $cle = count($fours) === 1 ? (string) $fours[0] : (count($fours) > 1 ? 'À répartir' : 'Sans fournisseur');
+        if (!isset($groupes[$cle])) {
+            $groupes[$cle] = ['fournisseur' => $cle, 'enAttente' => 0, 'valeurAttente' => 0.0,
+                'total' => 0, 'commandes' => []];
+        }
+        $groupes[$cle]['total']++;
+        if ((string) $l['statut'] === 'PENDING') {
+            $groupes[$cle]['enAttente']++;
+            $groupes[$cle]['valeurAttente'] += (float) $l['valeur'];
+        }
+        if (count($groupes[$cle]['commandes']) < 5) { $groupes[$cle]['commandes'][] = $l; }
+    }
+    uksort($groupes, function ($a, $b) {
+        $rang = fn ($k) => $k === 'À répartir' ? 1 : ($k === 'Sans fournisseur' ? 2 : 0);
+        return [$rang($a), $a] <=> [$rang($b), $b];
+    });
+
     return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
         'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions) et besoins courants (/list × catalog-mappings)',
-        'lignes' => $lignes, 'aCommander' => $aCommander, 'manquants' => $manquants];
+        'lignes' => $lignes, 'parFournisseur' => array_values($groupes),
+        'aCommander' => $aCommander, 'manquants' => $manquants];
 }
 
 /**

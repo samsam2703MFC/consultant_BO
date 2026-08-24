@@ -4107,6 +4107,49 @@ function tplJournal(c, x){
             </tr>`).join('')}
         </tbody>
       </table>
+      <!-- Les cinq derniers d'abord ; le reste s'ouvre d'un clic. -->
+      ${c.logPlier ? `<div style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <button ${x.A(c.logPlier)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 13px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${c.logTout ? 'Ne montrer que les 5 derniers' : 'Afficher les ' + c.logReste + ' plus anciens'}</button>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.logTout ? 'Journal complet affiché' : '5 derniers événements'}</span>
+      </div>` : ''}
+    </div>
+
+    <!-- Les e-mails partis du cockpit : rapports et commandes fournisseur,
+         dans un seul tableau — « ce mail est-il parti ? » se répondait
+         jusqu'ici dans deux écrans différents. -->
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:13px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:500">E-mails envoyés — rapports et commandes fournisseur</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.mailsCompte || '')}</span>
+      </div>
+      ${c.mailsChargement ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-text-muted)">Lecture des envois…</div>`
+        : c.mailsIndispo ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-on-abricot)">Les envois n’ont pas pu être lus — l’API n’a pas répondu.</div>`
+        : c.mailsVide ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucun envoi tracé pour l’instant.</div>` : `
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="${TH};white-space:nowrap">Horodatage</th>
+          <th style="${TH2};text-align:left">Source</th>
+          <th style="${TH2};text-align:left">Objet</th>
+          <th style="${TH2};text-align:left">Destinataire</th>
+          <th style="${TH2};text-align:left">État</th>
+          <th style="${TH};text-align:left">Détail</th>
+        </tr></thead>
+        <tbody>
+          ${c.mailsRows.map(m => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:9px 14px;white-space:nowrap;color:var(--color-text-muted)">${esc(m.ts)}</td>
+              <td style="padding:9px 12px"><span style="${m.srcSt}">${esc(m.source)}</span></td>
+              <td style="padding:9px 12px;font-weight:500">${esc(m.objet)}</td>
+              <td style="padding:9px 12px;color:var(--color-text-muted)">${esc(m.dest)}</td>
+              <td style="padding:9px 12px"><span style="${m.etatSt}">${esc(m.etat)}</span></td>
+              <td style="padding:9px 14px;line-height:1.45;color:var(--color-text-muted)">${esc(m.detail)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      ${c.mailsPlier ? `<div style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <button ${x.A(c.mailsPlier)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 13px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${c.mailsTout ? 'Ne montrer que les 5 derniers' : 'Afficher les ' + c.mailsReste + ' plus anciens'}</button>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.mailsTout ? 'Tous les envois affichés' : '5 derniers envois'}</span>
+      </div>` : ''}`}
     </div>
   </div>`;
 }
@@ -6217,6 +6260,40 @@ function tplCentrale(c, x){
     <span style="font-size:11.5px;color:var(--color-text-muted)">${c.caRows ? c.caRows.length : 0} sur ${c.caTotal || 0} référence${(c.caTotal || 0) > 1 ? 's' : ''}${(c.caRows && c.caRows.length >= 300) ? ' · 300 affichées' : ''}</span>
   </div>` : '';
 
+  // Commandes franchisés : une carte par fournisseur, ses 5 dernières
+  // commandes. Les chips de statut vivent au-dessus de la grille.
+  const groupes = c.caFournGroupes ? `
+    ${c.caChips && c.caChips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${c.caChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? ch.texte : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? ch.fond : 'transparent'};color:${ch.texte}">${esc(ch.nom)}</button>`).join('')}
+      ${c.caChips.some(ch => ch.on) ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">re-cliquer pour tout afficher</span>` : ''}
+    </div>` : ''}
+    ${!c.caFournGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted)">${esc(c.caRien || 'aucune ligne')}</div>` : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:14px">
+      ${c.caFournGroupes.map(g => `<div style="${CARD};display:flex;flex-direction:column">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+          <div>
+            <div style="font-size:13.5px;font-weight:600${g.special ? ';color:var(--color-text-muted)' : ''}">${esc(g.nom)}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(g.note)}</div>
+          </div>
+          <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:${g.resumeFond};color:${g.resumeCol}">${esc(g.resume)}</span>
+        </div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="${TH}">Réquisition</th><th style="${TH}">Magasin</th><th style="${TH}">Début</th>
+            <th style="${TH}">Statut</th><th style="${TH};text-align:right">Valeur</th><th style="${TH}">Par</th>
+          </tr></thead>
+          <tbody>${g.commandes.map(o => `<tr>
+            <td style="${TD};font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(o.id)}</td>
+            <td style="${TD}">${esc(o.magasin)}</td>
+            <td style="${TD};color:var(--color-text-muted);white-space:nowrap">${esc(o.debut)}</td>
+            <td style="${TD};white-space:nowrap"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${o.col};margin-right:6px;vertical-align:1px"></span><span style="color:${o.col};font-weight:500;font-size:12px">${esc(o.statut)}</span></td>
+            <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(o.valeur)}</td>
+            <td style="${TD};color:var(--color-text-muted)">${esc(o.par)}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`).join('')}
+    </div>`}` : '';
+
   const table = c.caCols ? `<div style="${CARD}">
     ${c.caAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-bottom:12px">${esc(c.caAvert)}</div>` : ''}
     ${c.caChips && c.caChips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -6254,7 +6331,7 @@ function tplCentrale(c, x){
     </table></div>
   </div>` : '';
 
-  return periodes + recl + kpis + manquants + params + recherche + table + table2;
+  return periodes + recl + kpis + manquants + params + recherche + groupes + table + table2;
 }
 
 
