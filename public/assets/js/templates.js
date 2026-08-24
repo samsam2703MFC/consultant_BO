@@ -6290,6 +6290,7 @@ function tplCentrale(c, x){
           <th style="${TH};width:78px">Passée</th><th style="${TH};width:86px">Livraison</th>
           <th style="${TH};width:240px">Avancement</th><th style="${TH};width:170px">Dernier geste</th>
           <th style="${TH};width:80px">Source</th>
+          <th style="${TH};width:52px;text-align:center">Relance</th>
         </tr></thead>
         <tbody>
           ${c.caSvGroupes.map(g => `
