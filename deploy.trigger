@@ -7,3 +7,4 @@
 2026-08-24T08:58:59Z fonds-investissement-badges-mois
 2026-08-24T09:21:19Z fonds-total-par-fournisseur
 2026-08-24T10:48:42Z scoring-barre-recherche
+2026-08-24T11:04:05Z scoring-jauge-marge-mini-colonnes
