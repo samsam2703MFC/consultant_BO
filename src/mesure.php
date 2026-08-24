@@ -1339,3 +1339,43 @@ function ep_profil_jour(): array
         'lecture' => 'Moyenne du CA par jour de semaine, mesurée sur la fenêtre lue par « Résultat du jour » '
             . 'et réécrite à chaque passage. La part est celle du jour dans une semaine type.'];
 }
+
+/**
+ * GET /diagnostic/requisition?id=N — sonde temporaire : ce que le panel rend
+ * sur le détail d'une réquisition, et si les commandes qui en naissent y sont
+ * lisibles (réalm consultant). Objectif : tenir TOUS les fournisseurs sans
+ * compte fournisseur.
+ */
+function ep_sonde_requisition(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $rid = (int) ($_GET['id'] ?? 159);
+    $sid = (int) ($_GET['shop'] ?? 3);
+    $apercu = static function ($v, int $prof = 0) use (&$apercu) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 60) : gettype($v); }
+        if (array_is_list($v)) {
+            return ['liste' => count($v), 'premier' => ($v && $prof < 2) ? $apercu($v[0], $prof + 1) : null];
+        }
+        $out = [];
+        foreach ($v as $k => $x) {
+            $out[$k] = is_array($x) ? ($prof < 2 ? $apercu($x, $prof + 1) : (array_is_list($x) ? count($x) . ' él.' : array_keys($x)))
+                : (is_scalar($x) ? mb_substr((string) $x, 0, 60) : gettype($x));
+        }
+        return $out;
+    };
+
+    $out = ['requisition' => $rid, 'routes' => []];
+    foreach ([
+        'req-detail'   => '/material-requisitions/' . $rid,
+        'req-suppliers' => '/material-requisitions/' . $rid . '/suppliers/1',
+        'req-document' => '/material-requisitions/' . $rid . '/document',
+        'deliveries'   => '/deliveries/' . $rid,
+        'order-direct' => '/orders/' . $rid,
+        'fulfillment'  => '/shops/' . $sid . '/orders/' . $rid . '/supplier-fulfillment',
+    ] as $nom => $p) {
+        PanelApi::$lastError = null;
+        $r = PanelApi::get($p);
+        $out['routes'][$nom] = $r === null ? ['erreur' => PanelApi::$lastError ?? 'null'] : $apercu($r);
+    }
+    return $out;
+}
