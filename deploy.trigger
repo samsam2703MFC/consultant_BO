@@ -13,3 +13,4 @@
 2026-08-24T12:00:27Z scoring-tri-colonnes-categorie
 2026-08-24T12:12:04Z journal-5-derniers-et-mails
 2026-08-24T12:22:02Z sonde-transactions
+2026-08-24T12:27:07Z sonde-transactions-variantes
