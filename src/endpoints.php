@@ -363,11 +363,20 @@ function maitriseEtats(array $paires): array
     try {
         $in = implode(',', array_fill(0, count($shops), '?'));
         $depuis = date('Y-m-d', strtotime('-180 days'));
+        // Borne PROPORTIONNÉE au besoin : il faut `fenetre` notes par couple,
+        // et le tri du plus récent au plus ancien les sert en premier. Quatre
+        // fois la quantité utile laisse de la marge pour les couples inégalement
+        // contrôlés, sans lire six mois d'historique à chaque ouverture d'écran
+        // (l'écran est déjà lent, et c'est cette lenteur qui vide les tableaux).
+        // Un couple peu contrôlé récemment ressort donc avec moins d'avis que
+        // son historique complet : il reste VISIBLE, c'est-à-dire du côté du
+        // contrôle — jamais du côté du masquage.
+        $borne = max(500, count($voulu) * $R['fenetre'] * 4);
         $rows = Db::rows("SELECT id_shop, id_task, rating, review_date
                             FROM mac_task_review
                            WHERE rating IS NOT NULL AND id_shop IN ($in) AND review_date >= ?
                         ORDER BY review_date DESC, id DESC
-                           LIMIT 20000", array_merge($shops, [$depuis]));
+                           LIMIT $borne", array_merge($shops, [$depuis]));
         foreach ($rows as $r) {
             $cle = (int) $r['id_shop'] . '|' . (int) $r['id_task'];
             if (!isset($voulu[$cle])) { continue; }
