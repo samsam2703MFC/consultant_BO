@@ -1351,12 +1351,16 @@ function ep_sonde_commandes_fournisseurs(): array
     $sid = (int) ($_GET['shop'] ?? 3);
     $du = date('Y-m-d', strtotime('-120 days'));
     $au = date('Y-m-d');
+    $fid = (int) ($_GET['fournisseur'] ?? 700);
     $chemins = [
-        'orders-materials'      => '/shops/' . $sid . '/orders/materials',
-        'orders-materials-dates' => '/shops/' . $sid . '/orders/materials?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
-        'orders'                => '/shops/' . $sid . '/orders',
-        'orders-dates'          => '/shops/' . $sid . '/orders?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
-        'supplement-orders'     => '/shops/' . $sid . '/supplement-orders',
+        'shop-orders-materials'  => '/shops/' . $sid . '/orders/materials',
+        'shop-orders-page'       => '/shops/' . $sid . '/orders/materials?' . http_build_query(['page' => 1, 'per_page' => 20]),
+        'shop-orders'            => '/shops/' . $sid . '/orders',
+        'fourn-orders'           => '/material-suppliers/' . $fid . '/orders',
+        'fourn-orders-page'      => '/material-suppliers/' . $fid . '/orders?' . http_build_query(['page' => 1, 'per_page' => 20]),
+        'fourn-orders-dates'     => '/material-suppliers/' . $fid . '/orders?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'fourn-upcoming'         => '/material-suppliers/' . $fid . '/upcoming-deliveries',
+        'shop-fulfillment'       => '/shops/' . $sid . '/orders/1/supplier-fulfillment',
     ];
     $apercu = static function ($v) {
         if (!is_array($v)) { return ['type' => gettype($v), 'valeur' => is_scalar($v) ? mb_substr((string) $v, 0, 120) : null]; }
@@ -1377,7 +1381,7 @@ function ep_sonde_commandes_fournisseurs(): array
         return $out;
     };
     // Séquentiel : on veut l'ERREUR de chaque route, pas seulement son corps.
-    $out = ['magasin' => $sid, 'consultant' => [], 'admin' => []];
+    $out = ['magasin' => $sid, 'fournisseur' => $fid, 'consultant' => [], 'admin' => []];
     foreach ($chemins as $nom => $p) {
         PanelApi::$lastError = null;
         $r = PanelApi::get($p);
