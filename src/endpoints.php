@@ -3700,10 +3700,13 @@ function fondsRoyaltiesCalcul(string $mois): ?array
             if (!empty($sh[$c]) && is_string($sh[$c])) { $nom = trim((string) $sh[$c]); break; }
         }
         $sortes = [];
+        // Trois sortes, pas quatre : `royalties_percentage` est le champ
+        // global/hérité de la fiche boutique, PAS un type de redevance. Le
+        // compter comme une sorte « Générale » inventait une redevance qui
+        // n'existe pas — et l'aurait ajoutée par-dessus les trois vraies.
         foreach ([['royalty_marketing_percentage', 'MARKETING', 'Marketing'],
                   ['royalty_brand_percentage', 'MARQUE', 'Marque'],
-                  ['royalty_assistance_percentage', 'ASSISTANCE', 'Assistance'],
-                  ['royalties_percentage', 'GENERALE', 'Générale']] as [$cle, $code, $label]) {
+                  ['royalty_assistance_percentage', 'ASSISTANCE', 'Assistance']] as [$cle, $code, $label]) {
             $t = isset($sh[$cle]) ? (float) $sh[$cle] : 0.0;
             if ($t <= 0) { continue; }
             $sortes[] = ['cle' => $cle, 'code' => $code, 'label' => $label, 'taux' => $t,

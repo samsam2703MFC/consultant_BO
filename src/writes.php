@@ -1843,8 +1843,8 @@ function wr_fonds_royalties(): array
 /**
  * POST /fonds/royalties/generer — les redevances du mois écrites au fonds,
  * UNE écriture par magasin, pour la SEULE sorte Marketing : c'est le fonds
- * MARKETING qu'on alimente ici. Les autres sortes (Marque, Assistance,
- * Générale) restent des revenus de la marque — les verser au fonds gonflerait
+ * MARKETING qu'on alimente ici. Les autres sortes (Marque, Assistance)
+ * restent des revenus de la marque — les verser au fonds gonflerait
  * un solde que le réseau croirait disponible pour ses campagnes. Le module
  * marketing autonome a disparu : on écrit ses tables en direct, comme le
  * reste du grand livre.

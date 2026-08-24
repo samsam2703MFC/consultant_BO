@@ -3245,7 +3245,7 @@ function tplFonds(c, x){
       </div>
       ${!c.foRoyPlan ? '' : `<div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
         <div style="font-size:12.5px;font-weight:500">Redevances marketing ${esc(c.foRoyPlan.mois)} — ce qui partirait au fonds</div>
-        <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px;line-height:1.45">Seule la sorte Marketing alimente le fonds : les redevances Marque, Assistance et Générale restent des revenus de la marque, hors grand livre.</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px;line-height:1.45">Seule la sorte Marketing alimente le fonds : les redevances Marque et Assistance restent des revenus de la marque, hors grand livre.</div>
         ${c.foRoyPlan.busy ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:7px">Calcul en cours…</div>` : `
         ${c.foRoyPlan.err ? `<div style="font-size:11.5px;color:var(--color-primary);margin-top:7px">${esc(c.foRoyPlan.err)}</div>` : `
         <table style="width:100%;border-collapse:collapse;margin-top:9px">

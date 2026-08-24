@@ -3871,8 +3871,9 @@ class App {
     };
     // Les colonnes : les sortes qu'au moins un client porte, dans l'ordre
     // canonique de la fiche boutique. La sorte Marketing est marquée — c'est
-    // la seule qui entre au grand livre du fonds.
-    const ORDRE_SORTES = ['Marketing', 'Marque', 'Assistance', 'Générale'];
+    // la seule qui entre au grand livre du fonds. « Générale » n'existe pas :
+    // le champ global de la fiche n'est pas un type de redevance.
+    const ORDRE_SORTES = ['Marketing', 'Marque', 'Assistance'];
     const presentes = {};
     (R.shops || []).forEach(s => {
       (s.rates || []).forEach(t => { if (t.label) { presentes[t.label] = true; } });
