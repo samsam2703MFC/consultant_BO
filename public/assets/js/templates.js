@@ -4194,6 +4194,7 @@ function tplParams(c, x){
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Seuils &amp; cibles</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Ce qui déclenche les alertes des écrans et des rapports.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Seuils d'alerte de coûts</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -4222,6 +4223,7 @@ function tplParams(c, x){
         </div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
       </div>
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Courriers &amp; notifications</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Tout ce qui part du cockpit : la machine d’envoi, les modèles de messages, et le journal de ce qui est parti.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
           <div style="font-size:13px;font-weight:500">Envoi des rapports — machine SMTP</div>
@@ -4292,8 +4294,42 @@ function tplParams(c, x){
         ${c.cm.msg ? `<div style="${c.cm.msgSt}">${esc(c.cm.msg)}</div>` : ''}
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Journal des e-mails achats</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque commande reçue et chaque envoi (réussi ou non) laisse une trace — les 50 dernières entrées.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:500">Relance « commande à valider » — notification</div>
+          <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:var(--color-background-secondary);color:var(--color-text-muted)">${c.rl.envoyees} envoyée${c.rl.envoyees > 1 ? 's' : ''}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le texte de la notification créée dans l’ERP par la cloche du Suivi fournisseurs. Elle est rattachée au magasin de la commande et porte un lien vers celle-ci — ce n’est pas un e-mail.</div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted)">Titre
+          <input value="${esc(c.rl.titre)}" ${x.C(c.rl.setTitre)} style="${inputCss}">
+        </label>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Message
+          <textarea rows="4" ${x.C(c.rl.setMessage)} style="${inputCss};resize:vertical;font-family:var(--font-ui)">${esc(c.rl.message)}</textarea>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 110px;gap:12px;margin-top:10px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Priorité
+            <select ${x.C(c.rl.setPriorite)} style="${inputCss}">
+              ${['info', 'warning', 'urgent'].map(v => `<option value="${v}"${c.rl.priorite === v ? ' selected' : ''}>${v}</option>`).join('')}
+            </select>
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Libellé du lien
+            <input value="${esc(c.rl.actionLabel)}" ${x.C(c.rl.setActionLabel)} style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Visible (jours)
+            <input type="number" min="1" max="60" value="${esc(c.rl.jours)}" ${x.C(c.rl.setJours)} style="${inputCss}">
+          </label>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Lien ouvert par la notification
+          <input value="${esc(c.rl.actionUrl)}" ${x.C(c.rl.setActionUrl)} placeholder="https://atelierby.tfbuddy.com/panel/material-orders/pending" style="${inputCss}">
+        </label>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.rl.variables)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+          <button ${x.A(c.rl.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.rl.busy ? 'opacity:.6' : ''}">${c.rl.busy ? 'En cours…' : 'Enregistrer'}</button>
+        </div>
+        ${c.rl.msg ? `<div style="${c.rl.msgSt}">${esc(c.rl.msg)}</div>` : ''}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Journal des envois — e-mails &amp; notifications</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque commande reçue, chaque e-mail et chaque relance (réussis ou non) laissent une trace — les 50 dernières entrées.</div>
         ${!c.cm.journal.length ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Rien encore — le journal se remplit dès la première commande détectée ou le premier essai.</div>` : `
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
           <thead><tr>
@@ -4310,6 +4346,7 @@ function tplParams(c, x){
           </tr>`).join('')}</tbody>
         </table></div>`}
       </div>
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Référentiels</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Les tables qui pilotent les écrans : KPI, modèles, gabarits.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:4px">Catalogue des KPI</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le référentiel qui pilote les écrans et les rapports : un seuil changé ici s’applique partout au prochain calcul. « Alerte » déclenche la ligne dans les rapports, « Critique » la marque en rouge vif.</div>
@@ -6292,19 +6329,23 @@ function tplCentrale(c, x){
     </div>` : ''}
     ${c.caSvChips ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       ${c.caSvChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? 'rgba(141,29,44,0.08)' : 'transparent'};color:${ch.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(ch.nom)}</button>`).join('')}
+      <span style="flex:1"></span>
+      ${c.caSvMaj ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">lu à ${esc(c.caSvMaj)}</span>` : ''}
+      <button ${x.A(c.caSvRafraichir)} title="Relire les commandes maintenant" style="border:0.5px solid var(--color-border-secondary);cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;background:transparent;color:var(--color-text)${c.caSvBusy ? ';opacity:.5' : ''}">${c.caSvBusy ? 'Lecture…' : '↻ Actualiser'}</button>
     </div>` : ''}
     ${!c.caSvGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:16px">${esc(c.caSvRien || '')}</div>` : `
     <div style="${CARD};margin-bottom:16px">
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:940px">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1010px">
         <thead><tr>
           <th style="${TH};width:170px">Magasin</th><th style="${TH};width:130px">Commande</th>
           <th style="${TH};width:78px">Passée</th><th style="${TH};width:86px">Livraison</th>
-          <th style="${TH};width:240px">Avancement</th><th style="${TH};width:150px">Documents</th>
-          <th style="${TH};text-align:right;width:100px">Valeur</th>
+          <th style="${TH};width:240px">Avancement</th><th style="${TH};width:170px">Dernier geste</th>
+          <th style="${TH};width:80px">Source</th>
+          <th style="${TH};width:52px;text-align:center">Relance</th>
         </tr></thead>
         <tbody>
           ${c.caSvGroupes.map(g => `
-            <tr><td colspan="7" style="border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);padding:9px 12px;font-size:12.5px;font-weight:600">
+            <tr><td colspan="8" style="border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);padding:9px 12px;font-size:12.5px;font-weight:600">
               ${esc(g.nom)}
               <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)"> · ${esc(g.meta)} · </span>
               <span style="font-weight:600;font-size:11px;color:${g.alerteCol}">${esc(g.alerte)}</span>
@@ -6319,8 +6360,13 @@ function tplCentrale(c, x){
                 <span style="font-size:11.5px;font-weight:500;margin-left:6px;white-space:nowrap;color:${o.libelleCol}">${esc(o.libelle)}</span>
                 ${o.badge ? `<span style="font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:rgba(141,29,44,0.10);color:var(--color-primary);margin-left:6px;white-space:nowrap">${esc(o.badge)}</span>` : ''}
               </span></td>
-              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.docs)}</td>
-              <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(o.valeur)}</td>
+              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.geste)}</td>
+              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.source)}</td>
+              <td style="${TD};text-align:center">
+                ${o.relancable ? `<button ${x.A(o.relancer)} title="${esc(o.relanceTitre)}" style="border:0.5px solid ${o.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${o.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${o.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${o.relanceEnCours ? ';opacity:.5' : ''}">${o.relanceEnCours ? '…' : '🔔'}</button>
+                  ${o.relanceLe ? `<div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px;white-space:nowrap">${esc(o.relanceLe.slice(5, 10))}</div>` : ''}`
+                  : `<span title="${esc(o.relanceTitre)}" style="color:var(--color-border-secondary)">—</span>`}
+              </td>
             </tr>`).join('')}`).join('')}
         </tbody>
       </table></div>

@@ -101,7 +101,6 @@ function route(string $method, string $path): mixed
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
-            $path === '/diagnostic/commandes-fournisseurs' => ep_sonde_commandes_fournisseurs(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
@@ -137,6 +136,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/achats/catalogue'     => ep_ca_achats_catalogue(),
             $path === '/centrale/commandes'            => ep_ca_commandes(),
             $path === '/centrale/commandes/mail'       => caMailEtat(),
+            $path === '/centrale/achats/relance'       => caRelanceEtat(),
             $path === '/centrale/commandes/mail/cron'  => ep_ca_mail_cron(),
             $path === '/centrale/stock'                => ep_ca_stock(),
             $path === '/centrale/facturation'          => ep_ca_facturation(),
@@ -209,6 +209,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }
     if ($method === 'POST' && $path === '/centrale/commandes/mail/test') { return wr_ca_mail_test(); }
+    if ($method === 'POST' && $path === '/centrale/achats/relance') { return wr_ca_relance(); }
     // --- générateur de rapports (par levier, à seuils) + compositeur
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }
     if ($method === 'POST' && $path === '/rapports/apercu') { return wr_rapport_apercu(); }

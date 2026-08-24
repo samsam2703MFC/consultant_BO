@@ -6904,6 +6904,129 @@ class App {
         || (fSv === 'cours' && o.etape < 4 && !o.bloque)
         || (fSv === 'retard' && o.retardJours != null)
         || (fSv === 'livre' && o.etape === 4);
+      const maj = sv.quand ? new Date(sv.quand * 1000) : null;
+      common.caSvKpis = svK ? [
+        ['Commandes en cours', String(svK.enCours), svK.fournisseurs + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
+        ['En retard', String(svK.retard), 'livraison prévue dépassée', svK.retard ? '#8D1D2C' : ''],
+        ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
+        ['Lecture', sv.lues ? String(sv.lues) : '—', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
+      ] : null;
+      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
+          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
+        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
+          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
+      common.caSvGroupes = (sv.groupes || []).map(g => ({
+        nom: g.fournisseur,
+        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
+        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
+        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
+        commandes: (g.commandes || []).filter(garde).map(o => ({
+          magasin: o.magasin, cle: o.cle, date: jf(o.date),
+          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
+          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
+            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
+          libelle: o.libelle,
+          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
+          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
+          geste: o.geste || '—', source: o.source || '—',
+          // Relance : la cloche n'apparaît que si la commande attend encore
+          // le fournisseur. Elle crée une NOTIFICATION dans l'ERP, pas un mail.
+          relancable: o.etape < 4 && !o.bloque,
+          relanceLe: o.relanceLe || '',
+          relanceTitre: o.relanceLe ? 'Relancé le ' + o.relanceLe + ' — relancer à nouveau'
+            : 'Relancer : créer une notification « commande à valider »',
+          relancer: () => {
+            if (this.state.svRelance === o.cle) { return; }
+            this.setState({ svRelance: o.cle });
+            this.api('POST', '/centrale/achats/relance', { id: o.id }).then(r => {
+              this.setState({ svRelance: null });
+              if (r && r.ok) {
+                this.notify('Notification envoyée — ' + (r.fournisseur || '') + (r.notification ? ' (#' + r.notification + ')' : ''));
+                this.log('Centrale', o.cle, 'Relance fournisseur envoyée');
+                // Le cache d'écran est vidé pour cette clé : la ligne
+                // réaffiche « relancé le … » sans recharger la page.
+                this.setState(s2 => {
+                  const cd = Object.assign({}, s2.caData);
+                  Object.keys(cd).filter(k => k.startsWith('caAchats|')).forEach(k => { delete cd[k]; });
+                  return { caData: cd };
+                });
+              } else { this.notify((r && (r.erreur || r.error)) || 'Relance impossible.'); }
+            });
+          },
+          relanceEnCours: S.svRelance === o.cle,
+        })),
+      })).filter(g => g.commandes.length);
+      // Le suivi est mémorisé 5 min ; ce bouton relit l'API sans attendre —
+      // un statut qui vient de changer se voit tout de suite.
+      common.caSvBusy = !!S.caSvBusy;
+      common.caSvMaj = maj ? maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
+      common.caSvRafraichir = () => {
+        if (this.state.caSvBusy) { return; }
+        this.setState({ caSvBusy: true });
+        readOne('/centrale/achats?refresh=1').then(d2 => {
+          this.setState(s2 => {
+            const cle = 'caAchats|' + (s2.caPeriode || '30j');
+            return { caSvBusy: false,
+              caData: d2 ? Object.assign({}, s2.caData, { [cle]: d2 }) : s2.caData };
+          });
+          this.notify(d2 ? 'Suivi actualisé' : 'Actualisation impossible — API injoignable');
+        });
+      };
+      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
+        : 'Aucune commande lisible sur l’API.');
+    } else if (ecr === 'caCommandes') {
+      // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
+      // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
+      // jeu complet, pas sur le filtre — sinon ils mentent dès qu'on filtre.
+      const lgs = d.lignes || [];
+      const fSt = S.caCmdStatut || '';
+      const nSt = code => lgs.filter(x => x.statut === code).length;
+      common.caChips = [['PENDING', 'En attente', '#8a5a13', 'rgba(193,122,42,0.16)'],
+                        ['REALISED', 'Réalisée', '#2d7a3e', 'rgba(45,122,62,0.12)']]
+        .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
+          on: fSt === code,
+          pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
+      // L'écran se lit PAR FOURNISSEUR : une carte par fournisseur, ses 5
+      // dernières commandes, l'attente en évidence. Le filtre de statut
+      // s'applique aux lignes de chaque carte.
+      common.caFournGroupes = (d.parFournisseur || []).map(g => ({
+        nom: g.fournisseur,
+        special: g.fournisseur === 'À répartir' || g.fournisseur === 'Sans fournisseur',
+        resume: g.enAttente
+          ? g.enAttente + ' en attente · ' + this.fE(g.valeurAttente)
+          : 'rien en attente',
+        resumeCol: g.enAttente ? '#8a5a13' : '#2d7a3e',
+        resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
+        note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
+        commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
+          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '—',
+          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
+          col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
+          valeur: this.fE(x.valeur), par: x.par || '—' })),
+      })).filter(g => g.commandes.length);
+      common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
+        : 'Aucune réquisition matière remontée par le panel.';
+      // La ventilation actionnable : une ligne = UNE commande à passer chez UN
+      // fournisseur, avec ses références et son montant estimé.
+      common.caTable2 = (d.aCommander && d.aCommander.length) ? {
+        titre: 'À commander maintenant — une commande par fournisseur',
+        cols: ['Magasin', 'Fournisseur', 'Références à commander', 'Montant estimé (HT)'],
+        rows: d.aCommander.map(a => ({ cells: [
+          { t: a.magasin, mut: true }, { t: a.fournisseur },
+          { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
+      } : null;
+    } else if (ecr === 'caAchats') {
+      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
+      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
+      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
+      const sv = d.suivi || {};
+      const svK = sv.kpis || null;
+      const fSv = S.caSvFiltre || '';
+      const jf = z => !z ? '—' : String(z).slice(5).split('-').reverse().join('.');
+      const garde = o => !fSv
+        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
+        || (fSv === 'retard' && o.retardJours != null)
+        || (fSv === 'livre' && o.etape === 4);
       common.caSvKpis = svK ? [
         ['Commandes en cours', String(svK.enCours), (sv.groupes || []).length + ' fournisseur(s)', ''],
         ['En retard', String(svK.retard), 'livraison dépassée', svK.retard ? '#8D1D2C' : ''],
@@ -10197,6 +10320,37 @@ class App {
       },
     };
 
+    // --- relance « commande à valider » : le texte de la notification créée
+    // par la cloche du Suivi fournisseurs (POST /notifications côté ERP).
+    if (!this._rlLu) { this._rlLu = true; readOne('/centrale/achats/relance').then(st => { this.D.rlEtat = st || null; this.setState({}); }); }
+    const rlEt = this.D.rlEtat || {};
+    const rlCf = rlEt.config || {};
+    const rlD = S.rlDraft || {};
+    const rlVal = (k, def) => rlD[k] != null ? rlD[k] : (rlCf[k] != null ? String(rlCf[k]) : def);
+    const rlSet = k => e => { const v = e.target.value; this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { [k]: v }) })); };
+    common.rl = {
+      titre: rlVal('titre', ''), message: rlVal('message', ''),
+      priorite: rlVal('priorite', 'warning'), actionLabel: rlVal('actionLabel', ''),
+      actionUrl: rlVal('actionUrl', ''), jours: rlVal('jours', '7'),
+      variables: (rlEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
+      envoyees: rlEt.envoyees || 0,
+      busy: !!rlD.busy, msg: rlD.msg || '',
+      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (rlD.ok ? '#2d7a3e' : '#8D1D2C'),
+      setTitre: rlSet('titre'), setMessage: rlSet('message'), setPriorite: rlSet('priorite'),
+      setActionLabel: rlSet('actionLabel'), setActionUrl: rlSet('actionUrl'), setJours: rlSet('jours'),
+      save: () => {
+        this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { busy: true, msg: '' }) }));
+        this.api('PUT', '/parametres/caRelanceCommande', { valeur: {
+          titre: rlVal('titre', ''), message: rlVal('message', ''), priorite: rlVal('priorite', 'warning'),
+          actionLabel: rlVal('actionLabel', ''), actionUrl: rlVal('actionUrl', ''),
+          jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
+          const ok = !(r && r.ok === false); this._rlLu = false;
+          this.setState(s2 => ({ rlDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.rlDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
+          if (ok) { this.log('Paramètre', '—', 'Template de relance commande mis à jour'); }
+        });
+      },
+    };
+
     // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
     // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
     // Paramètres. L'envoi automatique tourne avec le cron des rapports.
@@ -10217,8 +10371,10 @@ class App {
         + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
         + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
       journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '—',
-        type: j.type === 'recu' ? 'Commande reçue' : j.type === 'envoye' ? 'E-mail envoyé' : j.type === 'essai' ? 'Essai' : 'Échec',
-        col: j.type === 'echec' ? '#8D1D2C' : j.type === 'envoye' ? '#2d7a3e' : 'var(--color-text)',
+        type: { recu: 'Commande reçue', envoye: 'E-mail envoyé', relance: 'Relance envoyée',
+          essai: 'Essai', echec: 'Échec' }[j.type] || (j.type || '—'),
+        col: j.type === 'echec' ? '#8D1D2C'
+          : (j.type === 'envoye' || j.type === 'relance') ? '#2d7a3e' : 'var(--color-text)',
         detail: j.detail || '', destinataire: j.destinataire || '' })),
       busy: !!cmD.busy, msg: cmD.msg || '',
       msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (cmD.ok ? '#2d7a3e' : '#8D1D2C'),

@@ -176,3 +176,135 @@ function ep_ca_mail_cron(): array
 
     return ['etat' => 'ok', 'envoyes' => $envoyes, 'echecs' => $echecs];
 }
+
+/* ==========================================================================
+   Relance d'une commande — l'enveloppe posée sur chaque ligne du suivi.
+   Le template vit dans `ceo_app_setting.caRelanceCommande` et s'édite dans
+   Paramètres, avec les autres courriers. L'envoi passe par la machine SMTP ;
+   la date de relance est gardée par commande (`caRelances`) pour que la ligne
+   dise « relancée le … » plutôt que de laisser relancer dix fois.
+   ========================================================================== */
+
+function caRelanceDefauts(): array
+{
+    return [
+        'titre' => 'Commande {{cle}} — à valider',
+        'message' => "La commande {{cle}} du magasin {{magasin}}, passée le {{date}}, n'a pas encore été validée{{retard}}. Merci de la traiter dans le portail fournisseur.",
+        'priorite' => 'warning',
+        'actionLabel' => 'Voir les commandes à valider',
+        // La page du panel qui liste les commandes en attente de validation.
+        'actionUrl' => 'https://atelierby.tfbuddy.com/panel/material-orders/pending',
+        'jours' => 7,     // durée de visibilité de la notification
+    ];
+}
+
+function caRelanceConfig(): array
+{
+    $v = setting('caRelanceCommande');
+    return is_array($v) ? array_merge(caRelanceDefauts(), $v) : caRelanceDefauts();
+}
+
+/** État du template pour l'écran Paramètres. */
+function caRelanceEtat(): array
+{
+    $r = setting('caRelances');
+    return ['config' => caRelanceConfig(),
+        'envoyees' => is_array($r) ? count($r) : 0,
+        'variables' => ['cle', 'magasin', 'fournisseur', 'date', 'livraison', 'statut', 'retard', 'id']];
+}
+
+/**
+ * POST /centrale/achats/relance {id} — relance UNE commande par NOTIFICATION
+ * (POST /notifications), pas par e-mail : la relance vit dans l'ERP, à côté de
+ * la commande, et non dans une boîte mail. La commande est relue à la source
+ * (/deliveries/{id}) — on ne relance jamais sur la foi de ce que l'écran
+ * affichait il y a dix minutes. La date de relance est gardée par commande
+ * (`caRelances`) pour que la ligne dise « relancée le … ».
+ */
+function wr_ca_relance(): array
+{
+    $b = body();
+    $id = (int) ($b['id'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['ok' => false, 'erreur' => 'commande requise']; }
+
+    $o = PanelApi::get('/deliveries/' . $id);
+    if (!is_array($o) || empty($o['id'])) {
+        return ['ok' => false, 'erreur' => PanelApi::$lastError ?? 'commande introuvable'];
+    }
+
+    $fid = (int) ($o['id_supplier'] ?? 0);
+    $sid = (int) ($o['id_shop'] ?? 0);
+    $nom = 'Fournisseur ' . $fid;
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+        if ((int) ($f['id'] ?? 0) === $fid) { $nom = (string) ($f['name'] ?? $nom); break; }
+    }
+    $magasin = 'Magasin ' . $sid;
+    try {
+        $r = Db::rows('SELECT name FROM shops WHERE id = ?', [$sid]);
+        if ($r && !empty($r[0]['name'])) { $magasin = (string) $r[0]['name']; }
+    } catch (PDOException $e) { /* le nom technique fera l'affaire */ }
+
+    $vide = static fn ($v): bool => $v === null || $v === '' || $v === 'NULL';
+    $ff = strtoupper((string) ($o['supplier_fulfillment_status'] ?? ''));
+    $statut = !$vide($o['supplier_rejected_at'] ?? null) ? 'refusée'
+        : (!$vide($o['delivered_on'] ?? null) ? 'livrée'
+        : (!$vide($o['in_transit_sent_at'] ?? null) ? 'en transit'
+        : ($ff === 'FINALIZED' ? 'finalisée'
+        : (!$vide($o['supplier_accepted_at'] ?? null) ? 'acceptée' : 'envoyée, pas encore acceptée'))));
+    $prevue = !$vide($o['supplier_planned_delivery_date'] ?? null) ? (string) $o['supplier_planned_delivery_date']
+        : (!$vide($o['expected_date'] ?? null) ? (string) $o['expected_date'] : '');
+    $retard = '';
+    if ($prevue !== '' && $prevue < date('Y-m-d') && $vide($o['delivered_on'] ?? null)) {
+        $retard = ' (livraison prévue le ' . $prevue . ', ' . (int) floor((time() - strtotime($prevue)) / 86400) . ' jour(s) de retard)';
+    }
+
+    $vars = ['cle' => (string) ($o['order_key'] ?? ('#' . $id)), 'magasin' => $magasin,
+        'fournisseur' => $nom, 'date' => substr((string) ($o['order_date'] ?? ''), 0, 10),
+        'livraison' => $prevue !== '' ? $prevue : '—', 'statut' => $statut, 'retard' => $retard];
+
+    $c = caRelanceConfig();
+    $jours = max(1, (int) ($c['jours'] ?? 7));
+    $corps = [
+        'title' => caMailRemplir((string) $c['titre'], $vars),
+        'message' => caMailRemplir((string) $c['message'], $vars),
+        'priority' => (string) ($c['priorite'] ?? 'warning'),
+        'status' => 'published',
+        'visible_from' => date('Y-m-d H:i:s'),
+        'visible_to' => date('Y-m-d H:i:s', time() + $jours * 86400),
+        'type' => 'once',
+        'is_global' => 0,
+        // Ciblage : l'API refuse une notification non globale sans magasins,
+        // et la clé qu'elle attend est `shops` (mesuré).
+        'shops' => [$sid],
+        // Rattachement à la commande : la notification pointe l'objet qu'elle
+        // réclame, plutôt que d'être un message flottant.
+        'source_type' => 'material_order',
+        'source_id' => $id,
+        'action_label' => (string) ($c['actionLabel'] ?? 'Voir les commandes à valider'),
+        // Les variables sont acceptées dans le lien : {{cle}} ou l'identifiant
+        // servent à pointer une commande précise si la page le permet un jour.
+        'action_url' => caMailRemplir((string) ($c['actionUrl'] ?? ''), $vars + ['id' => (string) $id]),
+    ];
+
+    [$ok, $rep] = PanelApi::post('/notifications', $corps);
+    $nid = 0;
+    foreach ([$rep['inserted_id'] ?? null, $rep['id'] ?? null, $rep['data']['id'] ?? null] as $cand) {
+        if (is_numeric($cand)) { $nid = (int) $cand; break; }
+    }
+    caMailJournal($ok ? 'relance' : 'echec',
+        ($ok ? 'Relance (notification) — ' : 'Relance en échec — ') . $vars['cle'] . ' · ' . $nom
+            . ($ok && $nid ? ' · notification #' . $nid : '')
+            . (!$ok ? ' · ' . (string) (PanelApi::$lastError ?? '') : ''), $nom);
+    if (!$ok) {
+        return ['ok' => false, 'erreur' => PanelApi::$lastError ?? 'la notification a été refusée par l’API'];
+    }
+
+    $r = setting('caRelances');
+    if (!is_array($r)) { $r = []; }
+    $r[(string) $id] = ['quand' => date('Y-m-d H:i'), 'notification' => $nid, 'fournisseur' => $nom];
+    if (count($r) > 300) { $r = array_slice($r, -300, null, true); }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caRelances', json_encode($r, JSON_UNESCAPED_UNICODE)]);
+
+    return ['ok' => true, 'notification' => $nid, 'fournisseur' => $nom, 'quand' => $r[(string) $id]['quand']];
+}
