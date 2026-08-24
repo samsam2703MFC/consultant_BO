@@ -2963,12 +2963,47 @@ function catalogueCouts(): array
     // prime toujours en aval. Servi ici et non chez chaque appelant : trois
     // écrans lisent ce coût, deux réponses différentes sur la même référence
     // seraient pires que pas de coût du tout.
-    foreach (PanelApi::coutsMatiere() as $pid => $c) {
-        if (!isset($out[$pid])) {
-            $out[$pid] = ['mat' => $c, 'rendement' => 1.0, 'source' => 'panel (products/available)'];
+    //
+    // Et le panel se lit EN CACHE (6 h), pas à chaque requête : mesuré en
+    // production, l'appel en direct portait /products/scoring à 13 s quand
+    // les trente lectures du chargement partent ensemble — au-delà du délai
+    // client de 20 s pour certains navigateurs, et l'écran s'affichait vide.
+    // Des coûts de recette vieux de quelques heures ne changent aucun
+    // arbitrage ; un écran vide, si.
+    foreach (coutsPanelEnCache() as $pid => $c) {
+        if (!isset($out[(int) $pid])) {
+            $out[(int) $pid] = ['mat' => (float) $c, 'rendement' => 1.0, 'source' => 'panel (products/available)'];
         }
     }
     return $out;
+}
+
+/**
+ * Les coûts matière du panel, servis depuis ceo_app_setting (6 heures).
+ *
+ * Cache PÉRIMÉ plutôt que vide : si le panel ne répond pas au moment du
+ * rafraîchissement, on ressert la dernière lecture réussie — un coût d'hier
+ * vaut mieux qu'une marge qui disparaît de l'écran. Un cache vide n'est
+ * jamais écrit : il fixerait une panne passagère pour six heures.
+ *
+ * @return array<int|string, float>
+ */
+function coutsPanelEnCache(): array
+{
+    $cache = setting('coutsPanel');
+    $frais = is_array($cache) && isset($cache['ts'], $cache['couts'])
+        && (time() - (int) $cache['ts']) < 6 * 3600;
+    if ($frais) { return (array) $cache['couts']; }
+
+    $panel = PanelApi::coutsMatiere();
+    if ($panel !== []) {
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['coutsPanel', json_encode(['ts' => time(), 'couts' => $panel])]);
+        } catch (PDOException $e) { /* pas de cache : on servira quand même */ }
+        return $panel;
+    }
+    return is_array($cache) && isset($cache['couts']) ? (array) $cache['couts'] : [];
 }
 
 /**
