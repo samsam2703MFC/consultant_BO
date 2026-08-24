@@ -363,8 +363,20 @@ class App {
     // sur tablette en boutique.
     this.root.addEventListener('pointerdown', e => run('data-pd', e));
     this.root.addEventListener('dragstart', e => run('data-ds', e));
-    this.root.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('[data-dp]')) e.preventDefault(); });
-    this.root.addEventListener('drop', e => run('data-dp', e));
+    // La case qui recevrait s'allume, et s'éteint quand on la quitte. La classe
+    // est posée DIRECTEMENT sur le nœud : passer par l'état redessinerait
+    // l'écran au milieu du geste, et le navigateur lâcherait ce qu'on tient.
+    let survol = null;
+    const eteint = () => { if (survol) { survol.classList.remove('depot'); survol = null; } };
+    this.root.addEventListener('dragover', e => {
+      const el = e.target.closest && e.target.closest('[data-dp]');
+      if (!el) { eteint(); return; }
+      e.preventDefault();
+      if (survol !== el) { eteint(); survol = el; el.classList.add('depot'); }
+    });
+    this.root.addEventListener('dragleave', e => { if (e.target === survol) { eteint(); } });
+    this.root.addEventListener('dragend', eteint);
+    this.root.addEventListener('drop', e => { eteint(); run('data-dp', e); });
     // Échap ferme la recherche du rail. Le panneau de résultats recouvre le
     // rail : sans sortie au clavier, il fallait viser la croix pour retrouver
     // la navigation.
@@ -2998,7 +3010,10 @@ class App {
       // fallait retaper « Vitrine 1 » sans savoir ce qui était libre.
       ouvrir: common.isPlano
         ? () => this.plFicheOuvrir(String(p.ref))
-        : () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche')
+        : () => this.refOpen(p, common.isAsso ? 'asso' : 'fiche'),
+      // Au planogramme, la ligne se PREND : on la glisse sur un emplacement du
+      // plan plutôt que d'ouvrir une fiche pour y choisir une case.
+      prendre: common.isPlano ? this.plPrendre(String(p.ref)) : null
     }));
     common.refTronque = lignes.length > 400 ? (lignes.length - 400) : 0;
     common.refEchelle = this.paliersMarge();
@@ -5155,6 +5170,9 @@ class App {
     common.plChargement = !pl;
     if (!pl) { common.plZones = []; return; }
     common.plManque = (pl.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source, type: m.type }));
+    // La photo d'une cible — référence, meuble, niveau, zone. Elle est lue ici,
+    // avant le plan : c'est le plan qui en a le plus besoin.
+    const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
     const T = pl.totaux || {};
     common.plTot = { slots: T.slots || 0, libres: T.libres || 0, places: T.places || 0 };
     common.plVide = (T.slots || 0) === 0;
@@ -5213,8 +5231,42 @@ class App {
               const vise = cible === s.id;
               return { id: s.id, position: s.position, libre: !occ, vise,
                 nom: occ ? occ.nom : '', ref: occ ? occ.ref : '',
-                detail: occ ? (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : ''))
-                  : ((s.largeurMm ? s.largeurMm + ' mm' : '') + (s.capacite ? ' · ' + s.capacite : '')),
+                // Une case occupée se prend ; toute case se reçoit. Déposer sur
+                // une case occupée depuis le plan ÉCHANGE les deux références —
+                // c'est le geste du comptoir, et il ne laisse personne nulle part.
+                prendre: occ ? this.plPrendre(occ.ref) : null,
+                deposer: this.plDeposerSur(s.id),
+                // La photo, répétée autant de fois que la grille le dit : c'est
+                // ce qui fait la différence entre une case étiquetée et un
+                // planogramme. Sans photo, la case reste en texte et le dit.
+                photo: occ ? photoDe('ref', occ.ref) : null,
+                photoN: occ ? Math.min(36, Math.max(1, (occ.cols || 1) * (occ.rangs || 1))) : 0,
+                photoCols: occ ? Math.max(1, occ.cols || 1) : 1,
+                photoRangs: occ ? Math.max(1, occ.rangs || 1) : 1,
+                photoTxt: occ && occ.cols && occ.rangs ? (occ.cols + ' × ' + occ.rangs) : '',
+                // Le plan dit la FORME de la case quand elle est connue : un
+                // 60 × 15 n'est pas un carré, et le montrer carré ferait juger
+                // une vitrine qui n'existe pas. La taille est CALCULÉE ici —
+                // « aspect-ratio » seul, borné par une hauteur, aurait rendu la
+                // proportion fausse sans le dire.
+                photoBoite: (() => {
+                  const r = (s.largeurMm && s.hauteurMm) ? (s.largeurMm / s.hauteurMm) : 1;
+                  const maxL = 176, maxH = 116;
+                  const l = Math.round(Math.min(maxL, maxH * r));
+                  return { l, h: Math.max(28, Math.round(l / r)) };
+                })(),
+                stPhoto: 'position:relative;overflow:hidden;border-radius:7px;cursor:pointer;'
+                  + (vise ? 'border:1.5px solid var(--color-primary)'
+                    : 'border:0.5px solid var(--color-border-tertiary)'),
+                // La grille quand elle est connue — elle dit ce que les fronts
+                // seuls ne disent pas : 6 × 1 et 3 × 2 font six produits, pas
+                // la même vitrine. Sinon, les fronts, comme avant.
+                detail: occ
+                  ? (occ.cols && occ.rangs
+                      ? (occ.cols + ' × ' + occ.rangs + (occ.parSlot ? ' · ' + occ.parSlot : ''))
+                      : (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : '')))
+                  : ([s.format || (s.largeurMm ? s.largeurMm + ' mm' : ''), s.contenant,
+                      s.capacite ? String(s.capacite) : ''].filter(Boolean).join(' · ')),
                 st: 'border-radius:7px;padding:6px 7px;min-height:50px;display:flex;flex-direction:column;'
                   + 'justify-content:space-between;gap:3px;font-size:10.5px;line-height:1.3;cursor:pointer;'
                   + (vise ? 'border:1.5px solid var(--color-primary);background:var(--color-primary);color:#fff;font-weight:600'
@@ -5246,6 +5298,16 @@ class App {
     common.plVue = vue;
     common.plVueBtns = [['plan', 'Plan'], ['tableau', 'Tableau']].map(([v, nom]) => ({
       nom, on: vue === v, go: () => this.setState({ plVue: v }) }));
+    // Le plan avec les photos : c'est le planogramme tel qu'il se monte. Il
+    // reste débrayable — une case sans photo se lit mieux en texte, et on veut
+    // parfois voir la structure sans le décor.
+    const photosOn = S.plPhotos !== false;
+    common.plPhotosOn = photosOn;
+    common.plPhotosGo = () => this.setState({ plPhotos: !photosOn });
+    const placees = (pl.placements || []).filter(p2 => p2.slotId !== null);
+    const avecPhoto = placees.filter(p2 => photoDe('ref', p2.ref)).length;
+    common.plPhotosN = avecPhoto;
+    common.plPhotosManque = placees.length - avecPhoto;
 
     const libresSeules = !!S.plLibres;
     common.plLibresSeules = libresSeules;
@@ -5260,11 +5322,83 @@ class App {
     common.plCols = cols.map(([k, nom]) => ({ nom, k, on: tri === k,
       go: () => this.setState({ plTri: k }) }));
 
+    // --- Les deux listes de choix du comptoir : format d'emplacement, contenant.
+    // Elles viennent des tables et s'éditent d'ici : on tape pour filtrer, on
+    // ajoute ce qui manque, la croix retire une position de la LISTE — les
+    // emplacements qui la portaient gardent leur valeur.
+    const refFmt = ((pl.referentiels || {}).formats || []);
+    const refCont = ((pl.referentiels || {}).contenants || []);
+    const cbx = S.plCbx || null;
+    const cbxQ = e => { const v = e.target.value;
+      this.setState(s2 => ({ plCbx: Object.assign({}, s2.plCbx, { q: v }) })); };
+    const combo = (sl, quoi) => {
+      const liste = quoi === 'format' ? refFmt : refCont;
+      const type = quoi === 'format' ? 'formats' : 'contenants';
+      const val = String((quoi === 'format' ? sl.format : sl.contenant) || '');
+      const ouvert = !!(cbx && cbx.slot === sl.id && cbx.quoi === quoi);
+      const saisie = ouvert ? String(cbx.q || '') : '';
+      const q = saisie.trim().toLowerCase();
+      const items = q ? liste.filter(o => o.nom.toLowerCase().indexOf(q) >= 0) : liste;
+      const exact = liste.some(o => o.nom.toLowerCase() === q);
+      return {
+        val: val || '—', vide: !val, ouvert, q: saisie, quoi,
+        ouvrir: () => this.setState({ plCbx: ouvert ? null : { slot: sl.id, quoi, q: '' } }),
+        setQ: cbxQ,
+        items: items.map(o => ({ id: o.id, nom: o.nom, on: o.nom === val,
+          choisir: () => this.plSlotMaj(sl.id, quoi, o.nom),
+          supprimer: () => this.plRefSupprimer(type, o.id, o.nom, quoi) })),
+        vider: val ? () => this.plSlotMaj(sl.id, quoi, '') : null,
+        // Ce qui n'est pas dans la liste s'y ajoute : on finit d'écrire, on
+        // clique, et la position sert aussitôt pour cet emplacement.
+        ajouter: (q && !exact) ? () => this.plRefAjouter(type, saisie.trim(), sl.id, quoi) : null,
+        ajoutTxt: saisie.trim(),
+      };
+    };
+
+    // La grille en cours de saisie vit dans l'état tant qu'elle n'est pas
+    // écrite : sans cela, le nombre tapé repartirait à chaque rendu.
+    const brouillons = S.plGr || {};
+
     let rangs = (pl.slots || []).map(s => {
       const occ = (s.occupants || [])[0] || null;
+      const br = occ ? (brouillons[occ.ref] || {}) : {};
+      const nSaisi = br.n != null ? br.n : (occ && occ.parSlot != null ? String(occ.parSlot) : '');
+      const colsSaisi = br.cols != null ? br.cols : (occ && occ.cols != null ? occ.cols : null);
+      const g = occ && String(nSaisi).trim() !== ''
+        ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, colsSaisi) : null;
+      // La ligne juste : celle qui divise exactement. Elle est proposée
+      // d'office ; quand une ligne imposée laisse un reste, il est écrit.
+      const juste = g && g.reste > 0
+        ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, null) : null;
       return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
         taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '—',
+        format: combo(s, 'format'), contenant: combo(s, 'contenant'),
+        photo: occ ? photoDe('ref', occ.ref) : null,
+        photoSet: occ ? e => this.plPhoto('ref', occ.ref, (e.target.files || [])[0]) : null,
+        photoDel: occ && photoDe('ref', occ.ref) ? () => this.plPhotoRetirer('ref', occ.ref) : null,
+        formatTxt: s.format || '',
+        // Les dimensions ne sont dites que si le format ne les dit pas déjà :
+        // « 60 × 15 cm » écrit deux fois de suite n'apprend rien.
+        dims: (!s.format && s.largeurMm && s.hauteurMm)
+          ? (s.largeurMm / 10) + ' × ' + (s.hauteurMm / 10) + ' cm' : '',
+        parSlot: nSaisi,
+        parSlotSet: occ ? e => { const v = e.target.value;
+          this.setState(s2 => ({ plGr: Object.assign({}, s2.plGr,
+            { [occ.ref]: Object.assign({}, (s2.plGr || {})[occ.ref], { n: v, cols: null }) }) })); } : null,
+        parSlotEcrire: occ ? e => this.plGrilleEcrire(occ.ref, s.id, e.target.value, null) : null,
+        grille: g ? { cols: g.cols, rangs: g.rangs, poses: g.poses, reste: g.reste,
+          txt: g.cols + ' × ' + g.rangs,
+          // Taille d'un produit : le garde-fou. Quand elle devient absurde,
+          // c'est la grille qui est fausse, pas la vitrine.
+          taille: (s.largeurMm && s.hauteurMm)
+            ? this.plCm(s.largeurMm / g.cols) + ' × ' + this.plCm(s.hauteurMm / g.rangs) + ' cm' : '',
+          justeTxt: juste ? ('ligne de ' + juste.cols + ' : ' + juste.cols + ' × ' + juste.rangs + ' les prend tous') : '',
+          justeGo: juste ? () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, juste.cols) : null,
+          opts: [1, 2, 3, 4, 5, 6].map(c => ({ c, on: c === g.cols,
+            go: () => this.plGrilleEcrire(occ.ref, s.id, nSaisi, c) })) } : null,
         ref: occ ? occ.ref : '', nom: occ ? occ.nom : '',
+        prendre: occ ? this.plPrendre(occ.ref) : null,
+        deposer: this.plDeposerSur(s.id),
         fronts: occ ? String(occ.fronts) : '—', libre: !occ,
         etat: occ ? 'occupé' : 'libre',
         vise: cible === s.id,
@@ -5272,7 +5406,8 @@ class App {
     });
     if (libresSeules) { rangs = rangs.filter(r => r.libre); }
     if (q) {
-      rangs = rangs.filter(r => (r.nom + ' ' + r.ref + ' ' + r.zone + ' ' + r.meuble + ' ' + r.niveau)
+      rangs = rangs.filter(r => (r.nom + ' ' + r.ref + ' ' + r.zone + ' ' + r.meuble + ' ' + r.niveau
+        + ' ' + (r.formatTxt || '') + ' ' + ((r.contenant || {}).vide ? '' : (r.contenant || {}).val || ''))
         .toLowerCase().indexOf(q) >= 0);
     }
     const cmp = { lieu: (a, b) => (a.zone + a.meuble + a.niveau).localeCompare(b.zone + b.meuble + b.niveau) || a.position - b.position,
@@ -5321,7 +5456,6 @@ class App {
     // Une photo peut être posée, remplacée ou retirée à tout moment, sur un
     // meuble comme sur un niveau : l'assistant n'est pas le seul moment où
     // l'on en dispose d'une.
-    const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
     const photoCtrl = (cible, id) => ({
       photo: photoDe(cible, id),
       photoSet: e => this.plPhoto(cible, id, (e.target.files || [])[0]),
@@ -5426,9 +5560,22 @@ class App {
                 // comptoir compare ce qu'il a en main à ce qui est attendu.
                 // Sans visuel, « Cookie Chocolat Noir » ne dit pas comment il
                 // doit être présenté.
-                return (nr && nr.photo ? '<img class="pr" src="' + esc(nr.photo) + '" alt="">' : '')
+                // La photo est RÉPÉTÉE selon la grille : la feuille doit montrer
+                // neuf croissants en 3 × 3, pas un croissant et un chiffre.
+                const cols = Math.max(1, o.cols || 1), rangs = Math.max(1, o.rangs || 1);
+                const nTuiles = Math.min(36, cols * rangs);
+                const pave = nr && nr.photo
+                  ? (nTuiles > 1
+                      ? '<span class="grille" style="grid-template-columns:repeat(' + cols + ',1fr)">'
+                        + new Array(nTuiles).fill('<img class="pr t" src="' + esc(nr.photo) + '" alt="">').join('')
+                        + '</span>'
+                      : '<img class="pr" src="' + esc(nr.photo) + '" alt="">')
+                  : '';
+                return pave
                   + '<span class="nom">' + esc(o.nom) + '</span>'
-                  + '<span class="f">' + o.fronts + ' front(s)</span>'
+                  + '<span class="f">' + (o.parSlot
+                      ? o.parSlot + ' par emplacement · ' + cols + ' × ' + rangs
+                      : o.fronts + ' front(s)') + '</span>'
                   + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : ''); }).join('')
               : '<span class="libre">libre</span>';
             return '<td>' + '<b>' + s.position + '</b> ' + corps
@@ -5491,6 +5638,8 @@ class App {
       + 'border-radius:3px;margin:2px 0 4px;display:block}'
       // Photo du PRODUIT, dans sa case : assez grande pour reconnaître le
       // produit, assez petite pour qu'une rangée de six tienne en largeur.
+      + '.grille{display:grid;gap:0.4mm;margin-bottom:2px}'
+      + '.pr.t{width:100%;height:auto;max-height:9mm;margin:0}'
       + '.pr{width:100%;max-height:18mm;object-fit:cover;border:0.5px solid var(--color-border-secondary);'
       + 'border-radius:2px;margin:2px 0 3px;display:block}'
       + '.nom{display:block;font-weight:500}'
@@ -5879,6 +6028,146 @@ class App {
         this.plFPatch({ busy: false, ok: 'Retirée du comptoir.', cible: null });
         this.plCharge(true); this.D.prodCatalogue = null; this.plRechargeCatalogue();
       });
+  }
+  /**
+   * Prendre une référence — depuis le catalogue, le plan ou le tableau.
+   *
+   * Rien n'est mis en état : un `setState` au départ du glisser redessine le
+   * nœud qu'on tient, et le navigateur abandonne le geste. Ce qui voyage est
+   * la référence, dans le presse-papier du glisser.
+   */
+  plPrendre(ref){
+    return e => {
+      try {
+        e.dataTransfer.setData('text/plain', 'ref:' + ref);
+        e.dataTransfer.effectAllowed = 'move';
+      } catch (e2) { /* navigateur sans glisser-déposer : le clic reste */ }
+    };
+  }
+  plDeposerSur(slotId){
+    return e => {
+      e.preventDefault();
+      const t = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
+      if (!t || t.indexOf('ref:') !== 0) { return; }
+      this.plDeposer(t.slice(4), slotId);
+    };
+  }
+  /**
+   * Déposer une référence sur un emplacement.
+   *
+   * Trois cas, et un seul est refusé : l'emplacement libre reçoit ; deux
+   * références déjà placées permutent ; une référence qui n'est nulle part et
+   * qu'on lâche sur une case occupée ne délogerait personne sans le dire — on
+   * nomme l'occupant et on ne touche à rien.
+   */
+  plDeposer(ref, slotId){
+    const pl = this.D.plano || {};
+    const place = (pl.placements || []).find(p => p.ref === ref) || null;
+    if (place && place.slotId === slotId) { return; }
+    const cible = (pl.slots || []).find(s2 => s2.id === slotId) || null;
+    if (!cible) { return; }
+    const occ = (cible.occupants || []).filter(o => o.ref !== ref);
+    const venaitDe = place ? place.slotId : null;
+    if (occ.length && !venaitDe) {
+      this.notify('Emplacement occupé par ' + occ[0].nom + ' — déposez sur un emplacement libre, ou échangez depuis le plan.');
+      return;
+    }
+    if (occ.length > 1) {
+      this.notify('Emplacement partagé — l’échange ne saurait pas laquelle déplacer.');
+      return;
+    }
+    // Le nom, pour le dire à l'écran : celui du comptoir s'il y est déjà, sinon
+    // celui du catalogue. La référence nue ne reste qu'en dernier recours.
+    const nom = ((pl.slots || []).flatMap(s2 => s2.occupants || []).find(o => o.ref === ref)
+      || (this.D.prodCatalogue || []).find(c2 => String(c2.ref) === String(ref)) || {}).nom || ref;
+    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(ref),
+      { slotId, echange: occ.length > 0, nom })
+      .then(r => {
+        if (!r || r.ok === false) {
+          this.notify('Déplacement refusé — ' + ((r && r.error) || 'écriture impossible'));
+          return;
+        }
+        const ou = cible.meuble + ' · ' + cible.niveau + ' · ' + cible.position;
+        // Ce qui a changé est DIT : un échange déplace deux références, et une
+        // grille refaite n'est pas celle qu'on avait posée.
+        this.notify((r.echange ? 'Échangées : ' + nom + ' ↔ ' + occ[0].nom + ' — ' + nom + ' en ' + ou
+          : nom + ' placée en ' + ou)
+          + (r.regrille ? ' · grille refaite : ' + r.regrille.cols + ' × ' + r.regrille.rangs : ''));
+        this.plCharge(true);
+        this.D.prodCatalogue = null; this.plRechargeCatalogue();
+      });
+  }
+  /** Une longueur en millimètres, dite en centimètres, sans décimale inutile. */
+  plCm(mm){ const v = Math.round(mm / 10 * 10) / 10; return String(v).replace('.', ','); }
+
+  /**
+   * La grille d'un produit dans son emplacement — la même règle qu'au serveur.
+   *
+   * Une ligne va jusqu'à SIX ; les rangées se déduisent par division arrondie
+   * vers le bas. Sans ligne imposée, on propose la LIGNE JUSTE : celle qui
+   * divise exactement, et parmi celles-là celle qui donne la case la plus
+   * proche du carré dans les dimensions réelles de l'emplacement.
+   */
+  plGrilleCalc(n, largeurMm, hauteurMm, colsVoulues){
+    n = Math.max(0, Math.min(400, Math.round(+n || 0)));
+    if (!n) { return { n: 0, cols: 0, rangs: 0, poses: 0, reste: 0 }; }
+    const lar = largeurMm > 0 ? largeurMm : 1, hau = hauteurMm > 0 ? hauteurMm : 1;
+    if (colsVoulues > 0) {
+      const c = Math.min(6, n, Math.round(colsVoulues));
+      const r = Math.max(1, Math.floor(n / c));
+      return { n, cols: c, rangs: r, poses: c * r, reste: Math.max(0, n - c * r) };
+    }
+    let best = [1, n], bs = null;
+    for (let c = 1; c <= 6 && c <= n; c++) {
+      if (n % c) { continue; }
+      const r = n / c, l = lar / c, h = hau / r;
+      const sc = Math.max(l / h, h / l);
+      if (bs === null || sc < bs - 1e-9 || (Math.abs(sc - bs) <= 1e-9 && c > best[0])) { best = [c, r]; bs = sc; }
+    }
+    return { n, cols: best[0], rangs: best[1], poses: n, reste: 0 };
+  }
+  /** Format ou contenant d'un emplacement. Une valeur vide EFFACE le choix. */
+  plSlotMaj(id, quoi, nom){
+    write(this.source, 'PATCH', '/planogramme/emplacement/' + id, { [quoi]: nom })
+      .then(r => { this.setState({ plCbx: null });
+        if (r && r.ok !== false) { this.plCharge(true); } });
+  }
+  /** Ajouter une position à la liste, et l'utiliser aussitôt. */
+  plRefAjouter(type, nom, slotId, quoi){
+    if (!nom) { return; }
+    write(this.source, 'POST', '/planogramme/referentiel/' + type, { nom })
+      .then(r => { if (!r || r.ok === false) { this.setState({ plCbx: null }); return; }
+        this.plSlotMaj(slotId, quoi, nom); });
+  }
+  /**
+   * Retirer une position de la liste. Ce qui disparaît est la PROPOSITION :
+   * les emplacements qui la portent gardent leur valeur — on le dit avant.
+   */
+  plRefSupprimer(type, id, nom, quoi){
+    const pl = this.D.plano || {};
+    const cle = quoi === 'format' ? 'format' : 'contenant';
+    const n = (pl.slots || []).filter(s => (s[cle] || '') === nom).length;
+    if (n > 0 && !window.confirm(nom + ' est utilisé par ' + n + ' emplacement(s).\n'
+      + 'Les retirer de la liste ne les change pas : ils gardent cette valeur. Continuer ?')) { return; }
+    write(this.source, 'DELETE', '/planogramme/referentiel/' + type + '/' + id)
+      .then(r => { this.setState({ plCbx: null }); if (r && r.ok !== false) { this.plCharge(true); } });
+  }
+  /**
+   * Le nombre par emplacement, et la ligne. Un nombre vide n'écrit rien : il
+   * n'y a pas de grille par défaut, et zéro ne veut pas dire « un ».
+   */
+  plGrilleEcrire(ref, slotId, n, cols){
+    const v = String(n == null ? '' : n).trim();
+    if (v === '') { return; }
+    this.setState(s2 => ({ plGr: Object.assign({}, s2.plGr,
+      { [ref]: { n: v, cols: cols || null } }) }));
+    write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(ref),
+      { slotId, parSlot: Math.max(0, Math.round(+v || 0)), cols: cols || 0 })
+      .then(r => { if (r && r.ok !== false) {
+        // Le brouillon a fait son temps : la vérité revient du serveur.
+        this.setState(s2 => { const g = Object.assign({}, s2.plGr); delete g[ref]; return { plGr: g }; });
+        this.plCharge(true);
+      } });
   }
   /** Le référentiel lit le placement : il doit être relu après une écriture. */
   plRechargeCatalogue(){

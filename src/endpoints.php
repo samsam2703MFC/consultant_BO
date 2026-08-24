@@ -3837,6 +3837,71 @@ function ep_fonds(): array
 }
 
 /**
+ * La grille d'un produit dans un emplacement : combien de colonnes, combien de
+ * rangées, pour un nombre par slot donné.
+ *
+ * La règle du comptoir : une ligne va jusqu'à SIX produits, et les rangées se
+ * déduisent par division arrondie vers le bas. Prise telle quelle, elle laisse
+ * des restes — neuf croissants sur une ligne de six n'en posent que six. On
+ * propose donc d'office la LIGNE JUSTE : celle qui divise exactement, et parmi
+ * celles-là celle qui donne la case la plus proche du carré dans les dimensions
+ * réelles de l'emplacement — quatre produits dans un 30 × 30 se posent 2 × 2,
+ * les mêmes quatre dans un 60 × 15 se posent 4 × 1.
+ *
+ * Une ligne imposée à la main est RESPECTÉE, reste compris : c'est l'écran qui
+ * l'écrit, pas le calcul qui le cache.
+ */
+function planoGrille(int $n, ?int $largeurMm = null, ?int $hauteurMm = null, ?int $colsVoulues = null): array
+{
+    $n = max(0, min(400, $n));
+    if ($n === 0) { return ['parSlot' => 0, 'cols' => 0, 'rangs' => 0, 'poses' => 0, 'reste' => 0, 'juste' => true]; }
+    $lar = ($largeurMm !== null && $largeurMm > 0) ? (float) $largeurMm : 1.0;
+    $hau = ($hauteurMm !== null && $hauteurMm > 0) ? (float) $hauteurMm : 1.0;
+
+    if ($colsVoulues !== null && $colsVoulues > 0) {
+        $c = min(6, min($n, $colsVoulues));
+        $r = max(1, intdiv($n, $c));
+        return ['parSlot' => $n, 'cols' => $c, 'rangs' => $r, 'poses' => $c * $r,
+            'reste' => max(0, $n - $c * $r), 'juste' => $c * $r === $n];
+    }
+    // La ligne juste : elle existe toujours (une colonne divise tout).
+    $best = null; $bestScore = null;
+    for ($c = 1; $c <= 6 && $c <= $n; $c++) {
+        if ($n % $c !== 0) { continue; }
+        $r = intdiv($n, $c);
+        $l = $lar / $c; $h = $hau / $r;
+        $score = $l > 0 && $h > 0 ? max($l / $h, $h / $l) : 1e9;
+        // À égalité, la ligne la plus large : on remplit la vitrine de face
+        // avant de la remplir en profondeur.
+        $mieux = $bestScore === null || $score < $bestScore - 1e-9
+            || (abs($score - $bestScore) <= 1e-9 && $c > (int) $best[0]);
+        if ($mieux) { $best = [$c, $r]; $bestScore = $score; }
+    }
+    [$c, $r] = $best ?? [1, $n];
+    return ['parSlot' => $n, 'cols' => $c, 'rangs' => $r, 'poses' => $c * $r, 'reste' => 0, 'juste' => true];
+}
+
+/** Les deux listes de choix du comptoir : formats d'emplacement, contenants. */
+function planoReferentielsTables(): array
+{
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $formats = []; $contenants = [];
+    try {
+        foreach (Db::rows('SELECT * FROM pla_format ORDER BY rang, id') as $f) {
+            $formats[] = ['id' => (int) $f['id'], 'nom' => (string) $f['nom'],
+                'largeurMm' => $f['largeur_mm'] !== null ? (int) $f['largeur_mm'] : null,
+                'hauteurMm' => $f['hauteur_mm'] !== null ? (int) $f['hauteur_mm'] : null];
+        }
+        foreach (Db::rows('SELECT * FROM pla_contenant ORDER BY rang, id') as $c) {
+            $contenants[] = ['id' => (int) $c['id'], 'nom' => (string) $c['nom']];
+        }
+    } catch (PDOException $e) { /* tables absentes : listes vides, jamais inventées */ }
+    $cache = ['formats' => $formats, 'contenants' => $contenants];
+    return $cache;
+}
+
+/**
  * GET /planogramme — la structure du comptoir, avec son occupation.
  *
  * Un seul appel rend l'arbre complet : zones → meubles → niveaux →
@@ -3866,6 +3931,10 @@ function ep_planogramme(): array
             'periodes' => is_array($ref['periodes'] ?? null) ? $ref['periodes'] : [],
             'slotDefaut' => is_array($ref['slotDefaut'] ?? null) ? $ref['slotDefaut']
                 : ['longueur' => 300, 'largeur' => 300, 'hauteur' => 250],
+            // Formats d'emplacement et contenants : deux listes éditables
+            // depuis l'écran, d'où la table plutôt que le réglage figé.
+            'formats' => planoReferentielsTables()['formats'],
+            'contenants' => planoReferentielsTables()['contenants'],
         ],
         'manque' => planoManque()];
 
@@ -3875,6 +3944,11 @@ function ep_planogramme(): array
         $sid = $p['slot_id'] !== null ? (int) $p['slot_id'] : null;
         $l = ['ref' => (string) $p['ref'], 'slotId' => $sid,
             'fronts' => (int) ($p['fronts'] ?? 1), 'ordre' => (int) ($p['ordre'] ?? 1),
+            // Une grille absente reste absente : un placement d'avant la
+            // notion ne vaut pas « un produit par emplacement ».
+            'parSlot' => ($p['par_slot'] ?? null) !== null ? (int) $p['par_slot'] : null,
+            'cols' => ($p['grille_cols'] ?? null) !== null ? (int) $p['grille_cols'] : null,
+            'rangs' => ($p['grille_rangs'] ?? null) !== null ? (int) $p['grille_rangs'] : null,
             'zone' => $p['zone'], 'meuble' => $p['meuble'], 'niveau' => $p['niveau'],
             'position' => $p['slot'] !== null ? (int) $p['slot'] : null];
         $placements[] = $l;
@@ -3931,6 +4005,8 @@ function ep_planogramme(): array
                         'longueurMm' => ($s['longueur_mm'] ?? null) !== null ? (int) $s['longueur_mm'] : null,
                         'hauteurMm' => ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null,
                         'capacite' => $s['capacite'] !== null ? (int) $s['capacite'] : null,
+                        'format' => (string) ($s['format'] ?? ''),
+                        'contenant' => (string) ($s['contenant'] ?? ''),
                         'zoneId' => $zid, 'zone' => (string) $z['nom'],
                         'meubleId' => $mid, 'meuble' => (string) $m['nom'],
                         'meubleType' => (string) ($m['type'] ?? ''),
@@ -3940,7 +4016,8 @@ function ep_planogramme(): array
                         'niveauId' => $nid, 'niveau' => (string) $n['nom'],
                         'occupants' => array_map(fn ($o) => [
                             'ref' => $o['ref'], 'nom' => $noms[$o['ref']] ?? $o['ref'],
-                            'fronts' => $o['fronts'], 'ordre' => $o['ordre']], $occ),
+                            'fronts' => $o['fronts'], 'ordre' => $o['ordre'],
+                            'parSlot' => $o['parSlot'], 'cols' => $o['cols'], 'rangs' => $o['rangs']], $occ),
                     ];
                     $nl['slots'][] = $ligne;
                     $out['slots'][] = $ligne;

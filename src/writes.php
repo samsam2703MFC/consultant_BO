@@ -1222,6 +1222,110 @@ function wr_plano_slot_supprimer(int $id): array
  * Un emplacement plein est REFUSÉ avec son occupant : l'écran propose alors
  * l'échange, au lieu d'empiler deux produits au même endroit sans le dire.
  */
+/**
+ * POST /planogramme/referentiel/{formats|contenants} — ajouter une position.
+ *
+ * La liste s'édite là où elle se lit : quand le format n'y est pas, on finit
+ * d'écrire et on l'ajoute. Un doublon n'est PAS une erreur — on renvoie la
+ * position existante, sinon deux magasins créeraient deux « 60 × 40 cm ».
+ *
+ * Un nom de la forme « 60 × 40 » suffit à déduire les dimensions : les écrire
+ * une seconde fois dans deux champs serait une occasion de se contredire.
+ */
+function wr_plano_referentiel_creer(string $type): array
+{
+    $b = body();
+    $nom = trim((string) ($b['nom'] ?? ''));
+    if ($nom === '') { http_response_code(400); return ['error' => 'nom requis']; }
+    $nom = mb_substr($nom, 0, 60);
+
+    if ($type === 'contenants') {
+        $ex = Db::row('SELECT id FROM pla_contenant WHERE nom = ?', [$nom]);
+        if ($ex !== null) { return ['ok' => true, 'id' => (int) $ex['id'], 'nom' => $nom, 'existait' => true]; }
+        $r = Db::row('SELECT COALESCE(MAX(rang), 0) AS n FROM pla_contenant');
+        Db::exec('INSERT INTO pla_contenant (nom, rang) VALUES (?,?)', [$nom, (int) $r['n'] + 1]);
+        journalAdd('CEO', 'Planogramme', $nom, 'Contenant ajouté à la liste');
+        return ['ok' => true, 'nom' => $nom];
+    }
+
+    // Dimensions : celles qui sont transmises, sinon celles que le nom porte.
+    $lar = isset($b['largeurMm']) ? (int) $b['largeurMm'] : null;
+    $hau = isset($b['hauteurMm']) ? (int) $b['hauteurMm'] : null;
+    if (($lar === null || $hau === null)
+        && preg_match('/(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)/ui', $nom, $m)) {
+        $a = (float) str_replace(',', '.', $m[1]);
+        $c = (float) str_replace(',', '.', $m[2]);
+        // Écrit en centimètres neuf fois sur dix ; au-delà de 200, c'est
+        // déjà des millimètres — un emplacement de 2 mètres de large n'existe
+        // pas dans un comptoir, un de 300 mm si.
+        $mm = fn ($v) => (int) round($v > 200 ? $v : $v * 10);
+        $lar = $lar ?? $mm($a);
+        $hau = $hau ?? $mm($c);
+    }
+    $lar = $lar !== null ? max(0, min(5000, $lar)) : null;
+    $hau = $hau !== null ? max(0, min(5000, $hau)) : null;
+
+    $ex = Db::row('SELECT id FROM pla_format WHERE nom = ?', [$nom]);
+    if ($ex !== null) { return ['ok' => true, 'id' => (int) $ex['id'], 'nom' => $nom, 'existait' => true]; }
+    $r = Db::row('SELECT COALESCE(MAX(rang), 0) AS n FROM pla_format');
+    Db::exec('INSERT INTO pla_format (nom, largeur_mm, hauteur_mm, rang) VALUES (?,?,?,?)',
+        [$nom, $lar, $hau, (int) $r['n'] + 1]);
+    journalAdd('CEO', 'Planogramme', $nom, 'Format d’emplacement ajouté à la liste');
+    return ['ok' => true, 'nom' => $nom, 'largeurMm' => $lar, 'hauteurMm' => $hau];
+}
+
+/**
+ * DELETE /planogramme/referentiel/{formats|contenants}/{id} — la croix.
+ *
+ * Ce qui disparaît est la PROPOSITION, pas ce qui a été posé : les
+ * emplacements gardent le format et le contenant qu'ils portent. On dit
+ * combien en sont concernés, pour qu'on sache ce qu'on retire.
+ */
+function wr_plano_referentiel_supprimer(string $type, int $id): array
+{
+    $table = $type === 'contenants' ? 'pla_contenant' : 'pla_format';
+    $col = $type === 'contenants' ? 'contenant' : 'format';
+    $r = Db::row('SELECT * FROM ' . $table . ' WHERE id = ?', [$id]);
+    if ($r === null) { http_response_code(404); return ['error' => 'position inconnue']; }
+    $nom = (string) $r['nom'];
+    $u = Db::row('SELECT COUNT(*) AS n FROM pla_slot WHERE ' . $col . ' = ?', [$nom]);
+    Db::exec('DELETE FROM ' . $table . ' WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Planogramme', $nom, 'Position retirée de la liste');
+    return ['ok' => true, 'id' => $id, 'nom' => $nom, 'utilise' => (int) ($u['n'] ?? 0)];
+}
+
+/**
+ * PATCH /planogramme/emplacement/{id} — le format et le contenant d'un slot.
+ *
+ * Choisir un format REPORTE ses dimensions sur l'emplacement : c'est ce qui
+ * fait qu'un 60 × 15 ne se remplit pas comme un 30 × 30. Un format inconnu de
+ * la liste est accepté tel quel — le référentiel propose, il n'interdit pas.
+ */
+function wr_plano_slot_maj(int $id): array
+{
+    $b = body();
+    $s = Db::row('SELECT * FROM pla_slot WHERE id = ?', [$id]);
+    if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
+
+    $sets = []; $args = []; $dit = [];
+    if (array_key_exists('format', $b)) {
+        $nom = mb_substr(trim((string) $b['format']), 0, 60);
+        $sets[] = 'format = ?'; $args[] = $nom; $dit[] = 'format « ' . ($nom !== '' ? $nom : '—') . ' »';
+        $f = $nom !== '' ? Db::row('SELECT * FROM pla_format WHERE nom = ?', [$nom]) : null;
+        if ($f !== null && $f['largeur_mm'] !== null) { $sets[] = 'largeur_mm = ?'; $args[] = (int) $f['largeur_mm']; }
+        if ($f !== null && $f['hauteur_mm'] !== null) { $sets[] = 'hauteur_mm = ?'; $args[] = (int) $f['hauteur_mm']; }
+    }
+    if (array_key_exists('contenant', $b)) {
+        $nom = mb_substr(trim((string) $b['contenant']), 0, 60);
+        $sets[] = 'contenant = ?'; $args[] = $nom; $dit[] = 'contenant « ' . ($nom !== '' ? $nom : '—') . ' »';
+    }
+    if (!$sets) { http_response_code(400); return ['error' => 'rien à modifier']; }
+    $args[] = $id;
+    Db::exec('UPDATE pla_slot SET ' . implode(', ', $sets) . ' WHERE id = ?', $args);
+    journalAdd('CEO', 'Planogramme', 'emplacement ' . $id, implode(', ', $dit));
+    return ['ok' => true, 'id' => $id];
+}
+
 function wr_plano_placer(string $ref, ?array $payload = null): array
 {
     $ref = trim($ref);
@@ -1236,7 +1340,8 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
         return ['ok' => true, 'ref' => $ref, 'retire' => true];
     }
     $sid = (int) $b['slotId'];
-    $s = Db::row('SELECT s.id, s.position, s.capacite, n.nom AS niveau, m.nom AS meuble, z.nom AS zone
+    $s = Db::row('SELECT s.id, s.position, s.capacite, s.largeur_mm, s.hauteur_mm,
+                         n.nom AS niveau, m.nom AS meuble, z.nom AS zone
                     FROM pla_slot s
                     JOIN pla_niveau n ON n.id = s.niveau_id
                     JOIN pla_meuble m ON m.id = n.meuble_id
@@ -1244,21 +1349,93 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
                    WHERE s.id = ?', [$sid]);
     if ($s === null) { http_response_code(404); return ['error' => 'emplacement inconnu']; }
 
+    // L'état d'avant : d'où la référence vient, et ce qu'elle portait. Il est
+    // lu ICI parce que l'échange en a besoin avant de toucher à quoi que ce soit.
+    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs FROM pla_placement WHERE ref = ?', [$ref]);
+    $venaitDe = ($ancien['slot_id'] ?? null) !== null ? (int) $ancien['slot_id'] : null;
+
     $occ = Db::rows('SELECT ref FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    // L'ÉCHANGE : glisser une référence sur un emplacement occupé, quand elle
+    // vient elle-même d'un emplacement, se lit comme « ces deux-là permutent ».
+    // C'est le geste qu'on fait au comptoir ; le refuser obligerait à vider un
+    // emplacement d'abord, en laissant une référence nulle part entre-temps.
+    $echange = null;
+    if ($occ && !empty($b['echange']) && $venaitDe !== null && $venaitDe !== $sid) {
+        if (count($occ) > 1) {
+            http_response_code(409);
+            return ['error' => 'emplacement partagé — l’échange ne saurait pas qui déplacer',
+                'occupants' => array_map(fn ($o) => (string) $o['ref'], $occ)];
+        }
+        $autre = (string) $occ[0]['ref'];
+        // L'autre part d'abord vers l'emplacement libéré ; `partager` lève le
+        // contrôle d'occupation le temps de la permutation, puisque la
+        // référence déplacée n'a pas encore quitté sa place.
+        $r = wr_plano_placer($autre, ['slotId' => $venaitDe, 'partager' => true]);
+        if (($r['ok'] ?? false) !== true) { return $r; }
+        $echange = $autre;
+        $occ = [];
+    }
     if ($occ && empty($b['partager'])) {
         http_response_code(409);
         return ['error' => 'emplacement déjà occupé',
             'occupants' => array_map(fn ($o) => (string) $o['ref'], $occ)];
     }
 
-    $fronts = max(1, min(40, (int) ($b['fronts'] ?? 1)));
     $ordre  = max(1, min(40, (int) ($b['ordre'] ?? 1)));
-    Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre)'
-        . ' VALUES (?,?,?,?,?,?,?,?)'
+
+    // La grille. `parSlot` est ce qu'on décide ; les colonnes et les rangées
+    // s'en déduisent — la ligne juste d'office, une ligne imposée si on l'a
+    // choisie. Sans `parSlot`, rien n'est inventé : la grille reste ce qu'elle
+    // était et `fronts` garde son ancien sens.
+    $grille = null;
+    if (isset($b['parSlot']) && $b['parSlot'] !== '' && $b['parSlot'] !== null) {
+        $grille = planoGrille((int) $b['parSlot'],
+            $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
+            ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null,
+            isset($b['cols']) && (int) $b['cols'] > 0 ? (int) $b['cols'] : null);
+    }
+    // Vu de face, on voit les colonnes : c'est cela, un front.
+    $fronts = $grille !== null && $grille['cols'] > 0
+        ? max(1, min(40, $grille['cols']))
+        : max(1, min(40, (int) ($b['fronts'] ?? 1)));
+
+    // Sans nouvelle grille, celle qui était enregistrée est RELUE et remise :
+    // enregistrer un ordre ne doit pas effacer un nombre par emplacement.
+    $gParSlot = $grille !== null ? $grille['parSlot']
+        : (($ancien['par_slot'] ?? null) !== null ? (int) $ancien['par_slot'] : null);
+    $gCols = $grille !== null ? $grille['cols']
+        : (($ancien['grille_cols'] ?? null) !== null ? (int) $ancien['grille_cols'] : null);
+    $gRangs = $grille !== null ? $grille['rangs']
+        : (($ancien['grille_rangs'] ?? null) !== null ? (int) $ancien['grille_rangs'] : null);
+
+    // Un déménagement change la forme de la case : six éclairs tiennent en
+    // 6 × 2 dans un 60 × 40, pas dans un 60 × 15. Quand l'emplacement d'arrivée
+    // n'a pas les mêmes dimensions que celui de départ, la ligne juste est
+    // REFAITE pour le nouveau format — le nombre par emplacement, lui, est ce
+    // qu'on a décidé et ne bouge pas.
+    $regrille = null;
+    if ($grille === null && $gParSlot !== null && $venaitDe !== null && $venaitDe !== $sid) {
+        $av = Db::row('SELECT largeur_mm, hauteur_mm FROM pla_slot WHERE id = ?', [$venaitDe]);
+        $memeForme = $av !== null
+            && (int) ($av['largeur_mm'] ?? 0) === (int) ($s['largeur_mm'] ?? 0)
+            && (int) ($av['hauteur_mm'] ?? 0) === (int) ($s['hauteur_mm'] ?? 0);
+        if (!$memeForme) {
+            $regrille = planoGrille($gParSlot,
+                $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
+                ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null);
+            $gCols = $regrille['cols']; $gRangs = $regrille['rangs'];
+            $fronts = max(1, min(40, $regrille['cols']));
+        }
+    }
+
+    Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre,'
+        . ' par_slot, grille_cols, grille_rangs)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble), niveau = VALUES(niveau),'
-        . ' slot = VALUES(slot), slot_id = VALUES(slot_id), fronts = VALUES(fronts), ordre = VALUES(ordre)',
+        . ' slot = VALUES(slot), slot_id = VALUES(slot_id), fronts = VALUES(fronts), ordre = VALUES(ordre),'
+        . ' par_slot = VALUES(par_slot), grille_cols = VALUES(grille_cols), grille_rangs = VALUES(grille_rangs)',
         [$ref, (string) $s['zone'], (string) $s['meuble'], (string) $s['niveau'],
-         (int) $s['position'], $sid, $fronts, $ordre]);
+         (int) $s['position'], $sid, $fronts, $ordre, $gParSlot, $gCols, $gRangs]);
 
     // Le minimum d'assortiment est le même chiffre que celui du comptoir : le
     // saisir ici évite d'ouvrir un second écran pour la même idée.
@@ -1282,9 +1459,22 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
     }
     journalAdd('CEO', 'Planogramme', $ref,
         'Placée en « ' . $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau']
-        . ' · position ' . $s['position'] . ' » (' . $fronts . ' front(s))');
-    return ['ok' => true, 'ref' => $ref, 'slotId' => $sid,
+        . ' · position ' . $s['position'] . ' » ('
+        . ($grille !== null
+            ? $grille['parSlot'] . ' par emplacement, ' . $grille['cols'] . ' × ' . $grille['rangs']
+              . ($grille['reste'] > 0 ? ', ' . $grille['reste'] . ' hors grille' : '')
+            : $fronts . ' front(s)') . ')');
+    $out = ['ok' => true, 'ref' => $ref, 'slotId' => $sid,
         'ou' => $s['zone'] . ' · ' . $s['meuble'] . ' · ' . $s['niveau'] . ' · ' . $s['position']];
+    if ($grille !== null) { $out['grille'] = $grille; }
+    if ($echange !== null) { $out['echange'] = $echange; }
+    if ($regrille !== null) {
+        $out['regrille'] = $regrille;
+        journalAdd('CEO', 'Planogramme', $ref,
+            'Grille refaite pour le nouvel emplacement : ' . $regrille['cols'] . ' × ' . $regrille['rangs']
+            . ' (' . $regrille['parSlot'] . ' par emplacement)');
+    }
+    return $out;
 }
 
 /**

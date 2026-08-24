@@ -224,6 +224,9 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/planogramme/(zone|meuble|niveau)/(\d+)$#', $path, $m)) { return wr_plano_supprimer($m[1], (int) $m[2]); }
     if ($method === 'POST' && $path === '/planogramme/emplacement') { return wr_plano_slots(); }
     if ($method === 'DELETE' && preg_match('#^/planogramme/emplacement/(\d+)$#', $path, $m)) { return wr_plano_slot_supprimer((int) $m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/planogramme/emplacement/(\d+)$#', $path, $m)) { return wr_plano_slot_maj((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/planogramme/referentiel/(formats|contenants)$#', $path, $m)) { return wr_plano_referentiel_creer($m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/planogramme/referentiel/(formats|contenants)/(\d+)$#', $path, $m)) { return wr_plano_referentiel_supprimer($m[1], (int) $m[2]); }
     if ($method === 'PUT' && preg_match('#^/planogramme/placement/([\w-]+)$#', $path, $m)) { return wr_plano_placer($m[1]); }
     if ($method === 'PUT' && $path === '/planogramme/note') { return wr_plano_note(); }
     if ($method === 'POST' && $path === '/planogramme/photo') { return wr_plano_photo(); }

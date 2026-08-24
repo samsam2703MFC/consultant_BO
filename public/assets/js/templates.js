@@ -515,7 +515,7 @@ function tplReferentiel(c, x){
         <th style="${TH};text-align:right">Fiche</th>
       </tr></thead>
       <tbody>
-        ${c.refLignes.map(l => `<tr>
+        ${c.refLignes.map(l => `<tr ${l.prendre ? 'draggable="true" ' + x.DS(l.prendre) : ''}${l.prendre ? ' title="Glissez cette référence sur un emplacement du comptoir" style="cursor:grab"' : ''}>
           <td style="${TD}">
             <button ${x.A(l.ouvrir)} style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(l.nom)}</button>
             ${l.finLe ? `<span style="display:inline-block;margin-left:7px;font-size:10px;font-weight:600;padding:1px 8px;border-radius:999px;background:rgba(141,29,44,0.09);color:var(--color-primary)">fin le ${esc(l.finLe)}</span>` : ''}
@@ -4966,6 +4966,35 @@ function tplCtrlDetail(c, x){
    libres, les pleines portent leur produit. La structure se déclare ici même —
    l'API du panel n'expose ni zone, ni meuble, ni emplacement (mesuré), donc
    attendre une API aurait laissé l'écran vide indéfiniment. */
+/**
+ * Une liste de choix qui s'édite : on tape pour filtrer, on ajoute ce qui
+ * manque, la croix retire une position.
+ *
+ * Le panneau s'ouvre DANS la ligne et non par-dessus : le tableau défile
+ * horizontalement, et un panneau flottant y serait coupé net.
+ */
+function plCbx(cb, x){
+  const { esc } = x;
+  if (!cb) { return ''; }
+  const champ = 'display:flex;align-items:center;gap:5px;border:0.5px solid ' + (cb.ouvert ? 'var(--color-primary)' : 'var(--color-border-secondary)')
+    + ';background:var(--color-surface);border-radius:6px;padding:4px 7px;font-size:11.5px;cursor:pointer;min-width:112px';
+  return `<div ${x.A(e => e.stopPropagation())}>
+    <div ${x.A(cb.ouvrir)} style="${champ}">
+      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${cb.vide ? 'color:var(--color-text-muted)' : 'font-weight:500'}">${esc(cb.val)}</span>
+      <span style="font-size:8px;color:var(--color-text-muted)">▾</span>
+    </div>
+    ${cb.ouvert ? `<div style="margin-top:5px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;background:var(--color-surface);min-width:172px">
+      <input id="pl-cbx" value="${esc(cb.q)}" ${x.I(cb.setQ)} placeholder="Filtrer ou écrire…" style="width:100%;box-sizing:border-box;border:none;border-bottom:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;outline:none">
+      ${cb.items.length ? cb.items.map(i => `<div style="display:flex;align-items:center;gap:4px;padding:0 4px 0 0">
+        <button ${x.A(i.choisir)} style="flex:1;text-align:left;border:none;background:none;padding:5px 8px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;color:var(--color-text);${i.on ? 'font-weight:600' : ''}">${esc(i.nom)}</button>
+        <button ${x.A(i.supprimer)} title="Retirer de la liste" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 3px">✕</button>
+      </div>`).join('') : `<div style="padding:6px 8px;font-size:10.5px;color:var(--color-text-muted)">Aucune position ne correspond.</div>`}
+      ${cb.ajouter ? `<button ${x.A(cb.ajouter)} style="width:100%;text-align:left;border:none;border-top:0.5px solid var(--color-border-tertiary);background:rgba(141,29,44,0.05);color:var(--color-primary);padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">＋ Ajouter « ${esc(cb.ajoutTxt)} » à la liste</button>` : ''}
+      ${cb.vider ? `<button ${x.A(cb.vider)} style="width:100%;text-align:left;border:none;border-top:0.5px solid var(--color-border-tertiary);background:none;color:var(--color-text-muted);padding:5px 8px;font-family:var(--font-ui);font-size:10.5px;cursor:pointer">Aucun ${esc(cb.quoi === 'format' ? 'format' : 'contenant')}</button>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+
 function tplPlanoComptoir(c, x){
   const { esc } = x;
   // Style de cellule local : `TD` n'existe qu'à l'intérieur d'autres gabarits.
@@ -4986,6 +5015,7 @@ function tplPlanoComptoir(c, x){
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="${lbl}">Le comptoir</div>
       ${c.plVueBtns.map(v => `<button ${x.A(v.go)} style="${btn(v.on)}">${esc(v.nom)}</button>`).join('')}
+      ${c.plVue === 'plan' ? `<button ${x.A(c.plPhotosGo)} title="${c.plPhotosOn ? 'Revenir au plan en texte' : 'Montrer les photos, pavées selon la grille'}" style="${btn(c.plPhotosOn)}">Photos</button>` : ''}
       ${c.plVue === 'plan' ? `<span style="width:1px;height:20px;background:var(--color-border-tertiary)"></span>
         ${c.plZonesOpts.map(z => `<button ${x.A(z.go)} style="${btn(z.on)}">${esc(z.nom)}</button>`).join('')}
         <!-- Le comptoir se regarde à une heure donnée : à midi, la vitrine à
@@ -5079,20 +5109,37 @@ function tplPlanoComptoir(c, x){
           <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plRangsN} ligne(s)</span>
         </div>
         <div style="margin-top:11px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px">
             <thead><tr>
               <th style="${TH}"><button ${x.A(c.plCols[0].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[0].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Emplacement</button></th>
-              <th style="${TH}">Dimensions</th>
+              <th style="${TH}">Photo</th>
+              <th style="${TH}">Format</th>
+              <th style="${TH}">Contenant</th>
               <th style="${TH}"><button ${x.A(c.plCols[1].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[1].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">Référence</button></th>
-              <th style="${TH};text-align:right">Fronts</th>
+              <th style="${TH};text-align:right">Par slot</th>
+              <th style="${TH}">Ligne × rangées</th>
               <th style="${TH}"><button ${x.A(c.plCols[2].go)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:uppercase;letter-spacing:inherit;${c.plCols[2].on ? 'text-decoration:underline;text-underline-offset:3px' : ''}">État</button></th>
             </tr></thead>
             <tbody>
-              ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement' : 'Ouvrir la fiche de ' + esc(r.nom)}">
+              ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} ${x.DP(r.deposer)} class="pl-slot" style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement, ou y glisser une référence' : esc(r.nom) + ' — cliquez pour la fiche'}">
                 <td style="${TD}"><span style="font-weight:500">${esc(r.meuble)} · ${esc(r.niveau)} · ${r.position}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.zone)}</div></td>
-                <td style="${TD};color:var(--color-text-muted)">${esc(r.taille)}</td>
-                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
-                <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(r.fronts)}</td>
+                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : `
+                  <div ${x.A(e => e.stopPropagation())} style="display:flex;align-items:center;gap:4px">
+                    <label title="${r.photo ? 'Remplacer la photo' : 'Annexer la photo du produit'}" style="flex:0 0 auto;width:34px;height:34px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${r.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:14px;line-height:1'}">${r.photo ? `<img src="${esc(r.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.photoSet)} style="display:none"></label>
+                    ${r.photoDel ? `<button ${x.A(r.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
+                  </div>`}</td>
+                <td style="${TD}">${plCbx(r.format, x)}${r.dims ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.dims)}</div>` : ''}</td>
+                <td style="${TD}">${plCbx(r.contenant, x)}</td>
+                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
+                <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>'
+                  : `<input ${x.A(e => e.stopPropagation())} type="number" min="0" max="400" value="${esc(r.parSlot)}" ${x.I(r.parSlotSet)} ${x.C(r.parSlotEcrire)} placeholder="—" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:27px;width:58px;padding:0 6px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-align:right">`}</td>
+                <td style="${TD}">${r.grille ? `
+                  <div style="display:inline-flex;border:0.5px solid var(--color-border-tertiary);border-radius:999px;overflow:hidden">
+                    ${r.grille.opts.map(o => `<button ${x.A(o.go)} title="${o.c} par ligne" style="border:none;padding:3px 7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.c}</button>`).join('')}
+                  </div>
+                  <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${r.grille.txt} = <b style="font-weight:600;color:var(--color-text)">${r.grille.poses}</b> posés${r.grille.taille ? ' · ' + esc(r.grille.taille) : ''}</div>
+                  ${r.grille.reste ? `<div style="margin-top:4px;font-size:10px;background:rgba(199,158,44,0.14);color:var(--color-on-abricot);border-radius:5px;padding:2px 6px;display:inline-block">${r.grille.reste} hors grille${r.grille.justeTxt ? ` — <button ${x.A(r.grille.justeGo)} style="border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer">${esc(r.grille.justeTxt)}</button>` : ''}</div>` : ''}`
+                  : `<span style="color:var(--color-text-muted);font-size:11px">${r.libre ? '—' : 'nombre à saisir'}</span>`}</td>
                 <td style="${TD}"><span style="${r.etatSt}">${r.vise ? 'visé' : esc(r.etat)}</span></td>
               </tr>`).join('')}
             </tbody>
@@ -5113,9 +5160,19 @@ function tplPlanoComptoir(c, x){
               ${l.cases.map(k => k.absent
                 ? `<div style="min-height:50px"></div>`
                 : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, k.slots.length)},1fr);gap:5px">
-                    ${k.slots.map(s => `<div ${x.A(s.clic)} title="${s.libre ? 'Emplacement libre — cliquez pour le viser' : 'Ouvrir la fiche de ' + esc(s.nom)}" style="${s.st}">
+                    ${k.slots.map(s => (c.plPhotosOn && s.photo && !s.vise)
+                      ? `<div ${x.A(s.clic)} draggable="true" ${x.DS(s.prendre)} ${x.DP(s.deposer)} class="pl-slot" title="${esc(s.nom)} — ${s.photoTxt ? s.photoTxt + ' par emplacement · ' : ''}cliquez pour la fiche, glissez pour la déplacer" style="${s.stPhoto};width:${s.photoBoite.l}px;height:${s.photoBoite.h}px;margin:0 auto">
+                        <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(${s.photoCols},1fr);grid-template-rows:repeat(${s.photoRangs},1fr)">
+                          ${Array.from({ length: s.photoN }).map(() => `<img src="${esc(s.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`).join('')}
+                        </div>
+                        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,0.88);color:#221;font-size:9px;line-height:1.3;padding:1px 4px;display:flex;gap:4px;justify-content:space-between">
+                          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(s.nom)}</span>
+                          <span style="flex:0 0 auto;opacity:0.75">${s.photoTxt ? esc(s.photoTxt) : s.position}</span>
+                        </div>
+                      </div>`
+                      : `<div ${x.A(s.clic)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} ${x.DP(s.deposer)} class="pl-slot" title="${s.libre ? 'Emplacement libre — cliquez pour le viser, ou glissez-y une référence' : esc(s.nom) + ' — cliquez pour la fiche, glissez pour la déplacer'}" style="${s.st}${c.plPhotosOn ? `;width:${s.photoBoite.l}px;height:${s.photoBoite.h}px;margin:0 auto` : ''}">
                       <span style="overflow:hidden;text-overflow:ellipsis">${s.vise ? 'visé' : (s.libre ? 'libre' : esc(s.nom))}</span>
-                      <span style="opacity:0.8">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}</span>
+                      <span style="opacity:0.8">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}${(c.plPhotosOn && !s.libre && !s.photo && !s.vise) ? ' · sans photo' : ''}</span>
                     </div>`).join('')}
                     ${c.plOrg ? `<button ${x.A(k.ajouter)} title="Ajouter des emplacements" style="border:1px dashed var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:7px;min-height:50px;cursor:pointer;font-family:var(--font-ui);font-size:14px">+</button>` : ''}
                   </div>`).join('')}`).join('')}
@@ -5125,6 +5182,8 @@ function tplPlanoComptoir(c, x){
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;border:1.5px dashed var(--color-primary);border-radius:3px"></span>libre</span>
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:3px"></span>occupé — cliquez pour la fiche</span>
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:var(--color-primary);border-radius:3px"></span>visé</span>
+          <span>Glissez une référence du catalogue sur une case ; d’une case à l’autre, elle déménage — sur une case occupée, les deux références échangent.</span>
+          ${c.plPhotosOn && c.plPhotosManque ? `<span style="color:var(--color-on-abricot)">${c.plPhotosManque} référence(s) placée(s) sans photo — la case reste en texte ; la photo s’ajoute au tableau ou dans la fiche.</span>` : ''}
           ${c.plCibleTxt ? `<span style="margin-left:auto;font-size:11.5px;color:var(--color-text)">Emplacement visé : <b style="font-weight:500">${esc(c.plCibleTxt)}</b> — ouvrez une référence pour l’y placer.</span>` : ''}
         </div>`}
 

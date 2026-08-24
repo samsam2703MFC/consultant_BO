@@ -108,6 +108,47 @@ function ensurePlanogramme(): void
         . 'KEY idx_slot (slot_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
+    // Deux listes de choix, et non deux réglages JSON : elles s'éditent depuis
+    // l'écran d'import, une position à la fois, et le format porte des
+    // dimensions qu'un simple libellé ne saurait pas dire. Un format retiré de
+    // la liste ne DÉFAIT rien : les emplacements gardent la valeur qu'ils
+    // portent, c'est la proposition qui disparaît.
+    $neufFormats = false;
+    try { Db::row('SELECT 1 FROM pla_format LIMIT 1'); }
+    catch (PDOException $e) { $neufFormats = true; }
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_format ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'nom VARCHAR(60) NOT NULL,'
+        . 'largeur_mm SMALLINT UNSIGNED NULL,'
+        . 'hauteur_mm SMALLINT UNSIGNED NULL,'
+        . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'UNIQUE KEY uniq_nom (nom)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    if ($neufFormats) {
+        // Les trois formats du comptoir tels qu'ils ont été relevés. Ce sont
+        // des propositions de départ : la croix les retire, la saisie en ajoute.
+        foreach ([['30 × 30 cm', 300, 300], ['60 × 40 cm', 600, 400], ['60 × 15 cm', 600, 150]] as $i => $f) {
+            Db::exec('INSERT INTO pla_format (nom, largeur_mm, hauteur_mm, rang) VALUES (?,?,?,?)'
+                . ' ON DUPLICATE KEY UPDATE nom = nom', [$f[0], $f[1], $f[2], $i + 1]);
+        }
+    }
+    $neufCont = false;
+    try { Db::row('SELECT 1 FROM pla_contenant LIMIT 1'); }
+    catch (PDOException $e) { $neufCont = true; }
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_contenant ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'nom VARCHAR(60) NOT NULL,'
+        . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
+        . 'UNIQUE KEY uniq_nom (nom)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    if ($neufCont) {
+        foreach (['Plateau bois 1/1', 'Corbeille osier', 'Panier grillagé', 'Présentoir gradin',
+                  'Bac inox GN 1/2', 'À même la tablette'] as $i => $n) {
+            Db::exec('INSERT INTO pla_contenant (nom, rang) VALUES (?,?)'
+                . ' ON DUPLICATE KEY UPDATE nom = nom', [$n, $i + 1]);
+        }
+    }
+
     // Notes de présentation. `cible` distingue ce à quoi la note s'applique —
     // une consigne de meuble vaut pour tout ce qu'il contient, une consigne de
     // référence ne vaut que pour elle. Deux tables auraient dupliqué la même
@@ -240,6 +281,19 @@ function ensurePlanogramme(): void
         'pla_slot' => [
             'longueur_mm' => 'SMALLINT UNSIGNED NULL',
             'hauteur_mm'  => 'SMALLINT UNSIGNED NULL',
+            // Le format et le contenant sont retenus par leur NOM, pas par une
+            // clé : retirer une position de la liste ne doit pas vider les
+            // emplacements qui la portaient.
+            'format'      => "VARCHAR(60) NOT NULL DEFAULT ''",
+            'contenant'   => "VARCHAR(60) NOT NULL DEFAULT ''",
+        ],
+        // La grille d'un produit dans son emplacement : combien on en met, sur
+        // combien de colonnes, donc sur combien de rangées. `fronts` reste ce
+        // qu'il était — le nombre vu de face, c'est-à-dire les colonnes.
+        'pla_placement' => [
+            'par_slot'     => 'SMALLINT UNSIGNED NULL',
+            'grille_cols'  => 'TINYINT UNSIGNED NULL',
+            'grille_rangs' => 'SMALLINT UNSIGNED NULL',
         ],
         // La photo est rangée sur le disque et sa SEULE référence vit ici : un
         // fichier de 2 Mo en base serait relu à chaque lecture du planogramme.
