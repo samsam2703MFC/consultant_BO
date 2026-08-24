@@ -616,6 +616,65 @@ function ep_pwa_waste_debug(): array
  * décision (retirer ? reformer une équipe ?) n'est pas la même. On rend donc
  * le détail par boutique, trié du plus mauvais au meilleur.
  */
+/**
+ * GET /products/periodes?produit=… — le CA réseau et la marge brute d'UNE
+ * référence, sur trois fenêtres : le mois affiché par le scoring, le
+ * trimestre qui s'y termine, et l'année civile précédente.
+ *
+ * Servi à la FICHE de la référence, à l'ouverture : la ligne du tableau ne
+ * porte plus ces chiffres — trois sommes SQL par référence n'ont rien à
+ * faire dans un tableau de deux cents lignes. La marge brute = CA − volume ×
+ * coût matière, le coût venant des mêmes sources que le score (recettes,
+ * panel, saisie du cockpit) ; sans coût, la marge reste absente — pas un
+ * zéro qui se lirait comme « aucune marge ».
+ */
+function ep_product_periodes(): array
+{
+    $pid = (int) ($_GET['produit'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'produit requis']; }
+    // La même fenêtre que le tableau : la fiche doit répondre sur le mois
+    // qu'on vient de regarder, pas sur un mois courant sans caisse.
+    $ref = setting('periodeProduits');
+    $per = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m');
+    $moisDeb   = $per . '-01 00:00:00';
+    $moisFin   = date('Y-m-01 00:00:00', strtotime($moisDeb . ' +1 month'));
+    $triDeb    = date('Y-m-01 00:00:00', strtotime($moisDeb . ' -2 months'));
+    $anPrec    = ((int) substr($per, 0, 4)) - 1;
+
+    // Le coût matière : les mêmes sources que le score, dans le même ordre —
+    // recettes (et panel, via catalogueCouts), puis la saisie du cockpit.
+    $cout = catalogueCouts()[$pid]['mat'] ?? null;
+    try {
+        $ov = Db::row('SELECT mat FROM ceo_prod_product WHERE pwa_id = ? AND mat IS NOT NULL AND actif = 1', [$pid]);
+        if ($ov !== null) { $cout = (float) $ov['mat']; }
+    } catch (PDOException $e) { /* référentiel absent : recettes seules */ }
+
+    $fenetre = static function (string $du, string $au) use ($pid, $cout): array {
+        $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(6000) */
+                             COALESCE(SUM(tp.quantity), 0) vol,
+                             COALESCE(SUM(tp.total_gross_value_after_discount), 0) ca
+                        FROM transaction t
+                        JOIN transaction_product tp ON tp.id_transaction = t.id
+                       WHERE tp.id_product = ? AND t.insert_timestamp >= ? AND t.insert_timestamp < ?',
+            [$pid, $du, $au]);
+        $vol = (float) ($r['vol'] ?? 0); $ca = (float) ($r['ca'] ?? 0);
+        return ['volume' => (int) round($vol), 'ca' => round($ca, 2),
+            'marge' => $cout !== null ? round($ca - $vol * $cout, 2) : null];
+    };
+
+    try {
+        return ['produit' => $pid, 'periode' => $per, 'cout' => $cout,
+            'fenetres' => [
+                ['cle' => 'mois', 'label' => 'Mois ' . $per] + $fenetre($moisDeb, $moisFin),
+                ['cle' => 'trimestre', 'label' => 'Trimestre ' . substr($triDeb, 0, 7) . ' → ' . $per] + $fenetre($triDeb, $moisFin),
+                ['cle' => 'annee', 'label' => 'Année ' . $anPrec] + $fenetre($anPrec . '-01-01 00:00:00', ($anPrec + 1) . '-01-01 00:00:00'),
+            ]];
+    } catch (PDOException $e) {
+        http_response_code(503);
+        return ['error' => 'tables de caisse indisponibles'];
+    }
+}
+
 function ep_product_waste(): array
 {
     $pid = (int) ($_GET['produit'] ?? 0);
