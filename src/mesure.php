@@ -321,6 +321,186 @@ function mesProduitsCampagne(int $campagneId, ?string $libre): array
     return array_values($out);
 }
 
+/**
+ * GET /marketing/mesure/comparaison — la lecture SIMPLE d'une campagne.
+ *
+ * Une question, une réponse : pour CHAQUE magasin, ce que la campagne a
+ * changé. Deux fenêtres de même longueur — celle d'avant, celle de la
+ * campagne — et chacune comparée à SON N-1, c'est-à-dire aux mêmes semaines
+ * l'an dernier. Le N-1 se prend à 364 jours (52 semaines) et non à « un an » :
+ * un lundi doit tomber en face d'un lundi, sinon on compare un week-end à un
+ * jour creux et l'écart ne veut rien dire.
+ *
+ * L'EFFET NET est la seule mesure qui parle de la campagne : écart pendant
+ * moins écart avant. Un magasin déjà en croissance de 5 % avant la campagne ne
+ * lui doit pas ces 5 %. La ligne « réseau hors campagne » donne le bruit de
+ * fond — ce qui reste dans cette marge n'est pas un effet.
+ *
+ * L'indicateur suit la campagne : trafic (clients), panier moyen, chiffre
+ * d'affaires. Les VOLUMES PROMUS, eux, ne sont pas mesurables par magasin —
+ * le panel rend la même quantité pour tous (mesuré) : l'écran le dit au lieu
+ * d'inventer un détail.
+ */
+function ep_mesure_comparaison(): array
+{
+    $motifs = [];
+    try {
+        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on,
+                                  t.label AS type_label
+                             FROM mar_campaign c
+                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
+                            WHERE c.starts_on IS NOT NULL
+                            ORDER BY c.starts_on DESC');
+    } catch (PDOException $e) {
+        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    }
+    $liste = [];
+    foreach ($camps as $c) {
+        $liste[] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'],
+            'debut' => (string) $c['starts_on'], 'fin' => (string) ($c['ends_on'] ?: $c['starts_on']),
+            'type' => (string) ($c['type_label'] ?? 'Sans type')];
+    }
+    $out = ['campagnes' => $liste, 'campagne' => null];
+    if ($liste === []) { return ['campagnes' => [], 'campagne' => null, 'motifs' => [],
+        'vide' => 'Aucune campagne datée dans le module marketing.']; }
+
+    $auj = date('Y-m-d');
+    $choisie = (int) ($_GET['campagne'] ?? 0);
+    $camp = null;
+    foreach ($liste as $c) { if ($c['id'] === $choisie) { $camp = $c; } }
+    if ($camp === null) {
+        foreach ($liste as $c) { if ($c['debut'] <= $auj && $c['fin'] >= $auj) { $camp = $c; break; } }
+        if ($camp === null) {
+            foreach ($liste as $c) { if ($c['fin'] < $auj && ($camp === null || $c['fin'] > $camp['fin'])) { $camp = $c; } }
+        }
+        $camp = $camp ?? $liste[0];
+    }
+    $out['campagne'] = $camp;
+
+    // L'indicateur. « produits » est demandé mais non mesurable par magasin :
+    // on le dit, et on retombe sur le trafic plutôt que de rendre un chiffre
+    // réseau en le faisant passer pour un chiffre de magasin.
+    $mesure = (string) ($_GET['mesure'] ?? '');
+    if ($mesure === 'produits') {
+        $motifs[] = 'volumes promus : le panel rend la même quantité pour tous les magasins (mesuré) — pas de détail par magasin';
+        $mesure = 'trafic';
+    }
+    if (!in_array($mesure, ['trafic', 'panier', 'ca'], true)) { $mesure = 'trafic'; }
+    $out['mesure'] = $mesure;
+
+    // --- les quatre fenêtres. La campagne s'arrête à aujourd'hui : compter des
+    // jours à venir ferait chuter la moyenne sans que rien ne se soit passé.
+    $campDu = $camp['debut'];
+    $campAu = min($camp['fin'], $auj);
+    if ($campAu < $campDu) { $campAu = $campDu; }
+    $duree = mesJours($campDu, $campAu);
+    $avantAu = mesDecale($campDu, -1);
+    $avantDu = mesDecale($avantAu, -($duree - 1));
+    $n1 = static fn (string $d): string => mesDecale($d, -364);
+    $f = ['avantDu' => $avantDu, 'avantAu' => $avantAu, 'pendantDu' => $campDu, 'pendantAu' => $campAu,
+        'avantN1Du' => $n1($avantDu), 'avantN1Au' => $n1($avantAu),
+        'pendantN1Du' => $n1($campDu), 'pendantN1Au' => $n1($campAu),
+        'jours' => $duree, 'aVenir' => mesJours($campAu, $camp['fin']) - 1];
+    $out['fenetres'] = $f;
+
+    // --- magasins et périmètre.
+    $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    $nomDe = [];
+    foreach ($shops as $s2) { $nomDe[(string) $s2['id']] = (string) $s2['name']; }
+    $perim = [];
+    try {
+        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
+            $sid = (string) $r['shop_id'];
+            if (isset($nomDe[$sid])) { $perim[] = $sid; }
+        }
+    } catch (PDOException $e) { /* périmètre absent : réseau entier */ }
+    if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
+    $hors = array_values(array_diff(array_map('strval', array_keys($nomDe)), $perim));
+
+    // --- les séries. DEUX étendues seulement — cette année et l'an dernier —
+    // plutôt qu'une seule qui couvrirait quatorze mois : la route quotidienne
+    // se découpe en mois et le nombre d'appels exploserait.
+    $tous = array_map('strval', array_keys($nomDe));
+    $serN = mesSeriesJour($tous, $f['avantDu'], $f['pendantAu'], $motifs);
+    $serN1 = mesSeriesJour($tous, $f['avantN1Du'], $f['pendantN1Au'], $motifs);
+
+    // Valeur d'une fenêtre selon l'indicateur choisi, ramenée au JOUR OUVERT
+    // pour le trafic et le CA — deux fenêtres n'ont pas toujours le même
+    // nombre de jours ouverts, et comparer des totaux mentirait.
+    $valeur = static function (array $cumul) use ($mesure) {
+        if ($mesure === 'panier') { return $cumul['panier']; }
+        if ($mesure === 'ca') { return $cumul['caJour']; }
+        return $cumul['ticketsJour'];
+    };
+    $total = static function (array $cumul) use ($mesure) {
+        if ($mesure === 'panier') { return $cumul['panier']; }
+        if ($mesure === 'ca') { return $cumul['ca'] > 0 ? $cumul['ca'] : null; }
+        return $cumul['tickets'] > 0 ? (float) $cumul['tickets'] : null;
+    };
+
+    // La courbe : une valeur par SEMAINE, alignée sur le début de la fenêtre
+    // « avant » — c'est elle qui donne le rythme, jour par jour la courbe
+    // devient illisible et le bruit du week-end masque la campagne.
+    $semaines = static function (array $serie, string $du, string $au) use ($valeur): array {
+        $out2 = [];
+        $i = 0;
+        for ($d = $du; $d <= $au; $d = mesDecale($d, 7), $i++) {
+            $fin = min(mesDecale($d, 6), $au);
+            $out2[] = ['s' => $i + 1, 'du' => $d, 'au' => $fin, 'v' => $valeur(mesCumul($serie, $d, $fin))];
+        }
+        return $out2;
+    };
+
+    $ligne = static function (array $sids, string $nom, ?string $id) use (
+        $serN, $serN1, $f, $valeur, $total, $semaines, $mesure
+    ): array {
+        $cum = static function (array $series, string $du, string $au) use ($sids) {
+            return mesCumulGroupe($series, $sids, $du, $au);
+        };
+        $aN = $valeur($cum($serN, $f['avantDu'], $f['avantAu']));
+        $aN1 = $valeur($cum($serN1, $f['avantN1Du'], $f['avantN1Au']));
+        $pN = $valeur($cum($serN, $f['pendantDu'], $f['pendantAu']));
+        $pN1 = $valeur($cum($serN1, $f['pendantN1Du'], $f['pendantN1Au']));
+        $eA = mesVar($aN, $aN1);
+        $eP = mesVar($pN, $pN1);
+        // Une seule série par ligne : la somme des magasins de la ligne.
+        $unN = []; $unN1 = [];
+        foreach ($sids as $sid) {
+            foreach ($serN[(string) $sid] ?? [] as $d => $v) {
+                $unN[$d] = ['ca' => ($unN[$d]['ca'] ?? 0) + $v['ca'], 'tickets' => ($unN[$d]['tickets'] ?? 0) + $v['tickets']];
+            }
+            foreach ($serN1[(string) $sid] ?? [] as $d => $v) {
+                $unN1[$d] = ['ca' => ($unN1[$d]['ca'] ?? 0) + $v['ca'], 'tickets' => ($unN1[$d]['tickets'] ?? 0) + $v['tickets']];
+            }
+        }
+        return [
+            'id' => $id, 'nom' => $nom, 'magasins' => count($sids),
+            'avant' => ['n' => $aN, 'n1' => $aN1, 'ecart' => $eA,
+                'totalN' => $total($cum($serN, $f['avantDu'], $f['avantAu'])),
+                'totalN1' => $total($cum($serN1, $f['avantN1Du'], $f['avantN1Au']))],
+            'pendant' => ['n' => $pN, 'n1' => $pN1, 'ecart' => $eP,
+                'totalN' => $total($cum($serN, $f['pendantDu'], $f['pendantAu'])),
+                'totalN1' => $total($cum($serN1, $f['pendantN1Du'], $f['pendantN1Au']))],
+            // L'effet net n'existe que si les DEUX écarts existent : un seul
+            // des deux rendrait un chiffre qui ressemble à une mesure.
+            'net' => ($eA === null || $eP === null) ? null : round($eP - $eA, 2),
+            'courbe' => $semaines($unN, $f['avantDu'], $f['pendantAu']),
+            'courbeN1' => $semaines($unN1, $f['avantN1Du'], $f['pendantN1Au']),
+        ];
+    };
+
+    $out['magasins'] = [];
+    foreach ($perim as $sid) { $out['magasins'][] = $ligne([$sid], $nomDe[$sid] ?? ('Magasin ' . $sid), $sid); }
+    // Le témoin : les magasins qui n'ont RIEN lancé. Sans eux, on mesure la
+    // saison et la météo.
+    $out['temoin'] = $hors ? $ligne($hors, 'Réseau hors campagne', null) : null;
+    if (!$hors) { $motifs[] = 'toute la campagne couvre le réseau : aucun magasin témoin'; }
+    $out['perimetre'] = array_map(fn ($sid) => $nomDe[$sid] ?? $sid, $perim);
+    $out['source'] = 'ventes du panel, jour par jour ; N-1 aligné à 52 semaines (mêmes jours de semaine)';
+    $out['motifs'] = array_values(array_unique($motifs));
+    return $out;
+}
+
 /** GET /marketing/mesure — tout l'écran, les trois vues comprises. */
 function ep_mesure(): array
 {

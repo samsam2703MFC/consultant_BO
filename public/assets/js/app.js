@@ -329,6 +329,9 @@ class App {
    * plutôt que « ça a fait un écran blanc ».
    */
   panneRendu(e){
+    // La pile est GARDÉE : sans elle, « lecture de 'du' impossible » n'indique
+    // pas quel écran a échoué, et on cherche à l'aveugle.
+    try { window.__pileRendu = (e && e.stack) ? String(e.stack) : String(e); } catch (e2) { /* sans fenêtre */ }
     const msg = (e && e.message) ? String(e.message) : String(e);
     console.error('[cockpit] rendu impossible :', e);
     let el = document.getElementById('panne-rendu');
@@ -585,7 +588,7 @@ class App {
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       resultatJour: ['Résultat du jour', 'Le compte de résultat d\u2019une journée, magasin par magasin : ventes, coût matière, main-d\u2019œuvre, frais généraux et résultat. Ouvrez une ligne pour la cascade du magasin, sa ventilation par catégorie et la place du jour dans le mois.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
-      mesure: ['Mesure des campagnes', 'Ce qu’une campagne a vraiment donné : trafic, panier et volumes promus avant / pendant / après, nets de ce qu’ont fait les magasins hors campagne. Le paramétrage se fait avant le lancement, la lecture après.'],
+      mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       bxcampagnes: ['Budget × Campagnes', 'Le calendrier des campagnes posé sur la courbe du budget, puis l’objectif de chaque campagne magasin par magasin — et ce qu’il a donné.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
@@ -1309,7 +1312,12 @@ class App {
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBxc) this.valsBxc(common);
-    if (common.isMesure) this.valsMesure(common);
+    if (common.isMesure) {
+      // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
+      common.mesSimple = this.state.mesSimple !== false;
+      if (common.mesSimple) { this.valsMesureComp(common); }
+      else { this.valsMesure(common); common.mesRetour = () => this.setState({ mesSimple: true }); }
+    }
     // --- scoring produits
     if (common.isProduits) this.valsProduits(common);
     // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
@@ -2555,6 +2563,49 @@ class App {
       .then(d => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: d || null } }); })
       .catch(() => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: null } }); });
   }
+  /**
+   * La LECTURE SIMPLE d'une campagne : une requête, un indicateur.
+   *
+   * Elle vit à côté de l'ancienne : le paramétrage (témoin, placebo, relevés
+   * Facebook) reste joignable, mais l'écran s'ouvre sur la question qu'on se
+   * pose vraiment — ce que la campagne a changé, magasin par magasin.
+   */
+  mesCompCharge(force){
+    const cle = String(this.state.mesCamp || 0) + '|' + (this.state.mesMesure || 'trafic');
+    if (this._mesCompEnCours === cle) { return; }
+    if (!force && this.state.mesComp && this.state.mesComp.cle === cle) { return; }
+    this._mesCompEnCours = cle;
+    this.setState({ mesComp: { cle, chargement: true, d: (this.state.mesComp || {}).d || null } });
+    const q = [];
+    if (this.state.mesCamp) { q.push('campagne=' + this.state.mesCamp); }
+    if (this.state.mesMesure) { q.push('mesure=' + this.state.mesMesure); }
+    readOne('/marketing/mesure/comparaison' + (q.length ? '?' + q.join('&') : ''))
+      .then(d => { this._mesCompEnCours = null;
+        this.setState({ mesComp: { cle, chargement: false, d: d || null } }); })
+      .catch(() => { this._mesCompEnCours = null;
+        this.setState({ mesComp: { cle, chargement: false, d: null } }); });
+  }
+  /**
+   * Une courbe hebdomadaire en SVG : cette année pleine, le N-1 en pointillé,
+   * la campagne en bande. Les deux séries partagent la MÊME échelle — deux
+   * échelles feraient croire à un écart qui n'existe pas.
+   */
+  mesCourbe(courbe, courbeN1, iDeb, iFin){
+    const L = 236, H = 46;
+    const vals = courbe.concat(courbeN1).map(p => p.v).filter(v => v != null);
+    if (vals.length < 2) { return ''; }
+    const max = Math.max(...vals) * 1.06, min = Math.min(...vals) * 0.94;
+    const n = Math.max(courbe.length, courbeN1.length, 2);
+    const X = i => 2 + i * (L - 4) / (n - 1);
+    const Y = v => 3 + (H - 6) * (1 - (v - min) / (max - min || 1));
+    const trace = serie => serie.map((p, i) => (p.v == null ? '' : (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.v).toFixed(1)))
+      .filter(Boolean).join(' ').replace(/^L/, 'M');
+    const bande = (iDeb >= 0 && iFin >= iDeb)
+      ? `<rect x="${X(iDeb).toFixed(1)}" y="1" width="${(X(iFin) - X(iDeb)).toFixed(1)}" height="${H - 2}" fill="rgba(141,29,44,0.10)" stroke="rgba(141,29,44,0.30)"/>` : '';
+    return `<svg viewBox="0 0 ${L} ${H}" style="width:${L}px;height:${H}px;display:block">${bande}
+      <path d="${trace(courbeN1)}" fill="none" stroke="#c9b8a8" stroke-width="1.6" stroke-dasharray="3 2"/>
+      <path d="${trace(courbe)}" fill="none" stroke="var(--color-primary)" stroke-width="2"/></svg>`;
+  }
   /** Le paramétrage part champ par champ : ce qui n'est pas envoyé n'est pas touché. */
   mesEcrire(id, champ, valeur){
     return this.api('PUT', '/marketing/mesure/' + id + '?journal=0', { [champ]: valeur })
@@ -2566,6 +2617,113 @@ class App {
       .then(r => !(!r || r.ok === false));
   }
 
+  /**
+   * L'écran simple : une rangée par magasin, deux périodes contre leur N-1.
+   *
+   * Rien n'est recalculé ici — les écarts et l'effet net viennent du serveur,
+   * qui les tient sur les jours OUVERTS. Refaire le calcul à l'écran finirait
+   * par donner deux chiffres pour la même campagne.
+   */
+  valsMesureComp(common){
+    const S = this.state;
+    this.mesCompCharge(false);
+    const b = S.mesComp || {};
+    const d = b.d || {};
+    common.mcChargement = !!b.chargement && !b.d;
+    common.mcRecalcul = !!b.chargement && !!b.d;
+    common.mcIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
+    const camp = d.campagne || null;
+    common.mcCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
+      nom: c.nom + ' · ' + this.fD(c.debut) + ' → ' + this.fD(c.fin) }));
+    common.mcCampSel = String((camp || {}).id || '');
+    common.mcCampSet = e => this.setState({ mesCamp: parseInt(e.target.value, 10) || 0 });
+    common.mcAvance = () => this.setState({ mesSimple: false });
+    if (!camp) { common.mcVide = true; return; }
+    common.mcVide = false;
+    common.mcNom = camp.nom;
+    common.mcType = camp.type || '';
+
+    // L'indicateur. Les volumes promus sont proposés — et l'écran dit
+    // pourquoi ils retombent sur le trafic plutôt que de les cacher.
+    const mesure = d.mesure || S.mesMesure || 'trafic';
+    common.mcMesures = [['trafic', 'Trafic — clients'], ['panier', 'Panier moyen'],
+      ['ca', 'Chiffre d’affaires'], ['produits', 'Produits promus']]
+      .map(([v, nom]) => ({ v, nom, on: v === (S.mesMesure || 'trafic'),
+        go: () => this.setState({ mesMesure: v }) }));
+    const unite = S.mesUnite === 'periode' ? 'periode' : 'jour';
+    common.mcUnites = [['jour', 'Par jour'], ['periode', 'Sur la période']]
+      .map(([v, nom]) => ({ v, nom, on: v === unite, go: () => this.setState({ mesUnite: v }) }));
+    common.mcParJour = unite === 'jour';
+
+    const f = d.fenetres || {};
+    common.mcFen = {
+      avant: this.fD(f.avantDu) + ' → ' + this.fD(f.avantAu),
+      pendant: this.fD(f.pendantDu) + ' → ' + this.fD(f.pendantAu),
+      avantN1: this.fD(f.avantN1Du) + ' → ' + this.fD(f.avantN1Au),
+      pendantN1: this.fD(f.pendantN1Du) + ' → ' + this.fD(f.pendantN1Au),
+      jours: f.jours || 0,
+      aVenir: (f.aVenir || 0) > 0 ? (f.aVenir + ' jour(s) de campagne encore à venir — non comptés') : '',
+    };
+    common.mcSource = d.source || '';
+    common.mcMotifs = d.motifs || [];
+    common.mcPerimetre = (d.perimetre || []).join(' · ');
+
+    // Le format d'une valeur : un panier et un chiffre d'affaires sont des
+    // euros, le trafic des clients — et « par jour » ne veut pas dire la même
+    // chose qu'« au total ».
+    const fmt = (v, total) => {
+      if (v == null) { return '—'; }
+      if (mesure === 'panier') { return this.fU(v); }
+      if (mesure === 'ca') { return total ? this.fE(v) : this.fU(v); }
+      return total ? Math.round(v).toLocaleString('fr-BE') : (Math.round(v * 10) / 10).toString().replace('.', ',');
+    };
+    common.mcUniteTxt = mesure === 'panier' ? '' : (mesure === 'ca' ? '' : (unite === 'jour' ? 'cl./j' : 'clients'));
+    // Le panier ne se cumule pas : c'est déjà une moyenne. La bascule
+    // « sur la période » n'a donc pas de sens pour lui, et on le dit.
+    common.mcUniteInutile = mesure === 'panier';
+
+    // Où commence la campagne sur la courbe : par la DATE de chaque semaine.
+    // À défaut (dates absentes), par le compte des semaines de la fenêtre
+    // « avant » — la bande doit tomber juste, sinon elle désigne la mauvaise
+    // période et se lit comme un effet qui n'a pas eu lieu.
+    const prem = (d.magasins || [])[0] || d.temoin || null;
+    let iDeb = prem ? (prem.courbe || []).findIndex(p2 => p2.du && p2.du >= f.pendantDu) : -1;
+    if (iDeb < 0 && f.avantDu && f.pendantDu) {
+      const j = Math.round((new Date(f.pendantDu) - new Date(f.avantDu)) / 86400000);
+      iDeb = j > 0 ? Math.round(j / 7) : -1;
+    }
+    const iFin = prem ? (prem.courbe || []).length - 1 : -1;
+    const pc = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
+    const col = v => v == null ? 'var(--color-text-muted)' : (v >= 0 ? '#2d7a3e' : 'var(--color-primary)');
+    const tem = d.temoin || null;
+    const bruit = tem && tem.net != null ? Math.abs(tem.net) : null;
+
+    const ligne = m => {
+      const val = (bloc) => common.mcParJour && !common.mcUniteInutile ? bloc.n : (bloc.totalN != null ? bloc.totalN : bloc.n);
+      const valN1 = (bloc) => common.mcParJour && !common.mcUniteInutile ? bloc.n1 : (bloc.totalN1 != null ? bloc.totalN1 : bloc.n1);
+      const total = !common.mcParJour && !common.mcUniteInutile;
+      return {
+        id: m.id, nom: m.nom, netN: m.net,
+        courbe: this.mesCourbe(m.courbe || [], m.courbeN1 || [], iDeb, iFin),
+        avant: { v: fmt(val(m.avant), total), n1: fmt(valN1(m.avant), total),
+          ecart: pc(m.avant.ecart), col: col(m.avant.ecart) },
+        pendant: { v: fmt(val(m.pendant), total), n1: fmt(valN1(m.pendant), total),
+          ecart: pc(m.pendant.ecart), col: col(m.pendant.ecart) },
+        periode: { v: fmt(m.pendant.totalN, true), n1: fmt(m.pendant.totalN1, true) },
+        net: pc(m.net), netCol: col(m.net),
+        // Un effet plus petit que le bruit du réseau n'est pas une preuve :
+        // l'écran le marque au lieu de laisser lire une victoire.
+        faible: m.net != null && bruit != null && Math.abs(m.net) < bruit * 3,
+        manque: m.pendant.n == null ? 'pas encore de ventes sur la période'
+          : (m.avant.ecart == null || m.pendant.ecart == null ? 'N-1 absent : l’écart ne peut pas se calculer' : ''),
+      };
+    };
+    common.mcMagasins = (d.magasins || []).map(ligne);
+    common.mcTemoin = tem ? Object.assign(ligne(tem), { magasins: tem.magasins }) : null;
+    common.mcBruitTxt = tem && tem.net != null
+      ? 'Effet net du témoin : ' + pc(tem.net) + ' — tout ce qui reste dans cette marge n’est pas un effet de campagne.'
+      : 'Aucun magasin hors campagne : sans témoin, la saison et la météo restent dans la mesure.';
+  }
   valsMesure(common){
     const S = this.state;
     this.mesCharge(false);
@@ -2598,7 +2756,14 @@ class App {
     common.mesVues = [['param', 'Paramétrage'], ['resultats', 'Résultats'], ['produits', 'Produits promus']]
       .map(([v, nom]) => ({ v, nom, on: common.mesVue === v, choisir: () => this.setState({ mesVue: v }) }));
 
-    const P = d.param || {}, F = d.fenetres || {}, R = d.reseau || {};
+    const P = d.param || {}, R = d.reseau || {};
+    // Les fenêtres manquent quand la lecture n'a pas abouti : l'écran de
+    // paramétrage doit rester ouvrable, sinon un panel muet emporte tout
+    // l'écran au lieu de dire ce qu'il ne sait pas.
+    const vide = { du: '', au: '', jours: 0 };
+    const F = Object.assign({ ref: vide, camp: vide, rem: vide, temoin: vide, pre: vide }, d.fenetres || {});
+    ['ref', 'camp', 'rem', 'temoin', 'pre'].forEach(k => { F[k] = Object.assign({}, vide, F[k] || {}); });
+    if (!d.fenetres) { common.mesFenetresVides = true; }
     // ── vue A : paramétrage
     // `relire` : les champs qui changent les FENÊTRES rechargent l'écran une
     // fois écrits — les autres non, pour ne pas déplacer le curseur en cours

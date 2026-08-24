@@ -131,7 +131,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
-      ${c.isMesure ? tplMesure(c, x) : ''}
+      ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
@@ -1425,6 +1425,101 @@ function tplEncodage(c, x){
 
 /* Mesure d'impact d'une campagne — trois vues sur un bascule :
    paramétrage (avant), résultats (après), produits promus. */
+/**
+ * Mesure d'une campagne — la LECTURE : une rangée par magasin, sa courbe, ses
+ * deux périodes chacune contre son N-1, et l'effet net. Rien d'autre : le
+ * paramétrage vit derrière un bouton, il ne s'impose plus avant de lire.
+ */
+function tplMesureComp(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px';
+  const lbl = 'font-size:9.5px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const seg = o => `<button ${x.A(o.go)} style="border:none;padding:6px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
+  const grp = l => `<span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">${l.map(seg).join('')}</span>`;
+
+  const barre = `
+    <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:13px">
+      <select ${x.C(c.mcCampSet)} style="font-size:12.5px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:400px">
+        ${(c.mcCampOpts || []).map(o => `<option value="${o.v}"${o.v === c.mcCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+      </select>
+      ${grp(c.mcMesures || [])}
+      ${(c.mcUnites || []).length && !c.mcUniteInutile ? grp(c.mcUnites) : ''}
+      <span style="flex:1"></span>
+      ${c.mcRecalcul ? '<span style="font-size:11.5px;color:var(--color-primary)">Lecture en cours…</span>' : ''}
+      <button ${x.A(c.mcAvance)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Paramétrage avancé</button>
+    </div>`;
+
+  if (c.mcIndispo) {
+    return `<div style="${carte}">${barre}<div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55">${esc(c.mcIndispo)}</div></div>`;
+  }
+  if (c.mcChargement) {
+    return `<div style="${carte}">${barre}<div style="font-size:12.5px;color:var(--color-text-muted)">Lecture des ventes, jour par jour, sur les deux années…</div></div>`;
+  }
+  if (c.mcVide) { return `<div style="${carte}">${barre}</div>`; }
+
+  const rangee = (m, temoin) => `
+    <div style="${carte};padding:12px 14px;margin-bottom:8px;${temoin ? 'background:var(--color-background-secondary);border-style:dashed' : ''}">
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div style="min-width:206px;flex:0 0 auto">
+          <div style="font-size:13px;font-weight:600;${temoin ? 'color:var(--color-text-muted)' : ''}">${esc(m.nom)}${m.faible && !temoin ? ` <span style="font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0;vertical-align:1px">à confirmer</span>` : ''}</div>
+          ${temoin ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${m.magasins} magasin(s) qui n’ont rien lancé</div>` : ''}
+          <div style="margin-top:7px">${m.courbe}</div>
+        </div>
+        ${m.manque
+          ? `<div style="flex:1;font-size:12px;color:var(--color-text-muted);padding-top:6px">${esc(m.manque)}</div>`
+          : `<div style="flex:1;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+          <div style="min-width:96px">
+            <div style="${lbl}">Avant</div>
+            <div style="font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2">${esc(m.avant.v)}${c.mcUniteTxt ? `<span style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)"> ${esc(c.mcUniteTxt)}</span>` : ''}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">N-1 : ${esc(m.avant.n1)} · <b style="color:${m.avant.col};font-weight:600">${esc(m.avant.ecart)}</b></div>
+          </div>
+          <div style="min-width:96px">
+            <div style="${lbl}">Pendant</div>
+            <div style="font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2">${esc(m.pendant.v)}${c.mcUniteTxt ? `<span style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)"> ${esc(c.mcUniteTxt)}</span>` : ''}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">N-1 : ${esc(m.pendant.n1)} · <b style="color:${m.pendant.col};font-weight:600">${esc(m.pendant.ecart)}</b></div>
+          </div>
+          ${c.mcParJour && !c.mcUniteInutile ? `<div style="min-width:96px">
+            <div style="${lbl}">Sur la période</div>
+            <div style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2">${esc(m.periode.v)}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">N-1 : ${esc(m.periode.n1)}</div>
+          </div>` : ''}
+          <div style="margin-left:auto;text-align:right;background:var(--color-background-secondary);border-radius:9px;padding:7px 13px;min-width:120px">
+            <div style="${lbl};color:var(--color-on-abricot)">Effet net</div>
+            <div style="font-size:19px;font-weight:700;color:${m.netCol};font-variant-numeric:tabular-nums;line-height:1.2">${esc(m.net)}</div>
+            <div style="font-size:9.5px;color:var(--color-text-muted)">écart pendant − écart avant</div>
+          </div>
+        </div>`}
+      </div>
+    </div>`;
+
+  return `
+    <div style="${carte};margin-bottom:12px">
+      ${barre}
+      <div style="display:flex;gap:22px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
+        <span><b style="color:var(--color-text);font-weight:600">${esc(c.mcNom)}</b>${c.mcType ? ' · ' + esc(c.mcType) : ''}</span>
+        <span>Avant : <b style="color:var(--color-text);font-weight:500">${esc(c.mcFen.avant)}</b> <span style="opacity:.7">(N-1 ${esc(c.mcFen.avantN1)})</span></span>
+        <span>Pendant : <b style="color:var(--color-text);font-weight:500">${esc(c.mcFen.pendant)}</b> <span style="opacity:.7">(N-1 ${esc(c.mcFen.pendantN1)})</span></span>
+        <span>${c.mcFen.jours} jour(s)</span>
+        ${c.mcFen.aVenir ? `<span style="color:var(--color-on-abricot)">${esc(c.mcFen.aVenir)}</span>` : ''}
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:8px;align-items:center">
+        <span><span style="display:inline-block;width:20px;border-top:2px solid var(--color-primary);vertical-align:4px;margin-right:5px"></span>Cette année</span>
+        <span><span style="display:inline-block;width:20px;border-top:2px dashed #c9b8a8;vertical-align:4px;margin-right:5px"></span>N-1, mêmes semaines</span>
+        <span><span style="display:inline-block;width:20px;height:10px;background:rgba(141,29,44,0.10);border:1px solid rgba(141,29,44,0.30);vertical-align:-1px;margin-right:5px"></span>Campagne</span>
+        <span style="margin-left:auto">${esc(c.mcPerimetre)}</span>
+      </div>
+    </div>
+    ${(c.mcMagasins || []).map(m => rangee(m, false)).join('')}
+    ${c.mcTemoin ? rangee(c.mcTemoin, true) : ''}
+    <div style="${carte}">
+      <div style="font-size:11.5px;line-height:1.55">${esc(c.mcBruitTxt)}
+        <div style="color:var(--color-text-muted);margin-top:5px">L’<b style="font-weight:500">effet net</b> est la seule mesure qui parle de la campagne : écart pendant − écart avant. Un magasin déjà en croissance avant la campagne ne lui doit pas cette croissance.</div>
+        <div style="color:var(--color-text-muted);margin-top:5px">${esc(c.mcSource)}</div>
+        ${(c.mcMotifs || []).map(m => `<div style="color:var(--color-on-abricot);margin-top:4px">${esc(m)}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
 function tplMesure(c, x){
   const { esc } = x;
   const lbl = 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)';
@@ -1441,6 +1536,7 @@ function tplMesure(c, x){
       <select ${x.C(c.setMesCamp)} style="font-size:13px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:420px">
         ${(c.mesCampOpts || []).map(o => `<option value="${o.v}"${o.v === c.mesCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
       </select>
+      ${c.mesRetour ? `<button ${x.A(c.mesRetour)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">← Revenir à la lecture</button>` : ''}
       ${c.mesChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des ventes jour par jour…</span>' : ''}
       ${c.mesRecalcul ? '<span style="font-size:12px;color:var(--color-primary)">Recalcul en cours…</span>' : ''}
     </div>`;
