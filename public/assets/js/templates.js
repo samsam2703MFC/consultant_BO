@@ -1501,7 +1501,16 @@ function tplMesureComp(c, x){
         <span>Pendant : <b style="color:var(--color-text);font-weight:500">${esc(c.mcFen.pendant)}</b> <span style="opacity:.7">(N-1 ${esc(c.mcFen.pendantN1)})</span></span>
         <span>${c.mcFen.jours} jour(s)</span>
         ${c.mcFen.aVenir ? `<span style="color:var(--color-on-abricot)">${esc(c.mcFen.aVenir)}</span>` : ''}
+        ${c.mcLibre ? `<span style="color:var(--color-primary);font-weight:500">période choisie à la main</span>` : ''}
       </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px">
+        <span style="font-size:10.5px;color:var(--color-text-muted)">Mesurer du</span>
+        <input type="date" value="${esc(c.mcDu)}" ${x.C(c.mcDuSet)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:7px;height:28px;padding:0 8px;font-family:var(--font-ui);font-size:11.5px">
+        <span style="font-size:10.5px;color:var(--color-text-muted)">au</span>
+        <input type="date" value="${esc(c.mcAu)}" ${x.C(c.mcAuSet)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:7px;height:28px;padding:0 8px;font-family:var(--font-ui);font-size:11.5px">
+        ${c.mcLibreRaz ? `<button ${x.A(c.mcLibreRaz)} style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:2px">revenir à la campagne</button>` : `<span style="font-size:10.5px;color:var(--color-text-muted)">par défaut, la période de la campagne — la période d’avant suit automatiquement</span>`}
+      </div>
+      ${c.mcPasCommencee ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:#FBF3DC;border:1px solid #E8C9A0;font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Cette campagne <b style="font-weight:600">n’a pas encore commencé</b> : il n’y a rien à mesurer. Les fenêtres ci-dessus sont celles qui seront comparées le moment venu — ou choisissez une période passée pour lire un autre épisode.</div>` : ''}
       <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:8px;align-items:center">
         <span><span style="display:inline-block;width:20px;border-top:2px solid var(--color-primary);vertical-align:4px;margin-right:5px"></span>Cette année</span>
         <span><span style="display:inline-block;width:20px;border-top:2px dashed #c9b8a8;vertical-align:4px;margin-right:5px"></span>N-1, mêmes semaines</span>

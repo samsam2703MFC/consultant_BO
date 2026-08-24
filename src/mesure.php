@@ -388,10 +388,27 @@ function ep_mesure_comparaison(): array
     if (!in_array($mesure, ['trafic', 'panier', 'ca'], true)) { $mesure = 'trafic'; }
     $out['mesure'] = $mesure;
 
-    // --- les quatre fenêtres. La campagne s'arrête à aujourd'hui : compter des
-    // jours à venir ferait chuter la moyenne sans que rien ne se soit passé.
-    $campDu = $camp['debut'];
-    $campAu = min($camp['fin'], $auj);
+    // --- les quatre fenêtres. La période mesurée est celle de la campagne, ou
+    // celle qu'on demande explicitement : comparer deux périodes de son choix
+    // reste utile hors campagne, et la bande de campagne dit alors où elle
+    // tombe dans la courbe.
+    $duLibre = (string) ($_GET['du'] ?? '');
+    $auLibre = (string) ($_GET['au'] ?? '');
+    $dateOk = static fn (string $d): bool => (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+    $libre = $dateOk($duLibre) && $dateOk($auLibre) && $duLibre <= $auLibre;
+    $out['libre'] = $libre;
+
+    // La campagne s'arrête à aujourd'hui : compter des jours à venir ferait
+    // chuter la moyenne sans que rien ne se soit passé.
+    $campDu = $libre ? $duLibre : $camp['debut'];
+    $campAu = $libre ? min($auLibre, $auj) : min($camp['fin'], $auj);
+
+    // Une campagne PAS ENCORE COMMENCÉE n'a rien à mesurer. On le dit, on
+    // montre les fenêtres qui SERONT comparées, et on n'appelle pas le panel
+    // pour des jours qui n'existent pas.
+    $pasCommencee = !$libre && $camp['debut'] > $auj;
+    $out['pasCommencee'] = $pasCommencee;
+    if ($pasCommencee) { $campAu = $camp['fin']; }
     if ($campAu < $campDu) { $campAu = $campDu; }
     $duree = mesJours($campDu, $campAu);
     $avantAu = mesDecale($campDu, -1);
@@ -419,10 +436,18 @@ function ep_mesure_comparaison(): array
 
     // --- les séries. DEUX étendues seulement — cette année et l'an dernier —
     // plutôt qu'une seule qui couvrirait quatorze mois : la route quotidienne
-    // se découpe en mois et le nombre d'appels exploserait.
+    // se découpe en mois et le nombre d'appels exploserait. Une campagne à
+    // venir n'en demande AUCUNE : lire des jours qui n'existent pas coûte
+    // quarante appels au panel pour rien.
     $tous = array_map('strval', array_keys($nomDe));
-    $serN = mesSeriesJour($tous, $f['avantDu'], $f['pendantAu'], $motifs);
-    $serN1 = mesSeriesJour($tous, $f['avantN1Du'], $f['pendantN1Au'], $motifs);
+    $serN = []; $serN1 = [];
+    if (!$pasCommencee) {
+        $serN = mesSeriesJour($tous, $f['avantDu'], min($f['pendantAu'], $auj), $motifs);
+        $serN1 = mesSeriesJour($tous, $f['avantN1Du'], $f['pendantN1Au'], $motifs);
+    } else {
+        $motifs[] = 'campagne pas encore commencée : rien à mesurer, seules les fenêtres sont montrées';
+    }
+    foreach ($tous as $sid) { $serN[(string) $sid] = $serN[(string) $sid] ?? []; $serN1[(string) $sid] = $serN1[(string) $sid] ?? []; }
 
     // Valeur d'une fenêtre selon l'indicateur choisi, ramenée au JOUR OUVERT
     // pour le trafic et le CA — deux fenêtres n'ont pas toujours le même

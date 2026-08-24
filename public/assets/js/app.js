@@ -2571,7 +2571,8 @@ class App {
    * pose vraiment — ce que la campagne a changé, magasin par magasin.
    */
   mesCompCharge(force){
-    const cle = String(this.state.mesCamp || 0) + '|' + (this.state.mesMesure || 'trafic');
+    const cle = String(this.state.mesCamp || 0) + '|' + (this.state.mesMesure || 'trafic')
+      + '|' + (this.state.mesDu || '') + '|' + (this.state.mesAu || '');
     if (this._mesCompEnCours === cle) { return; }
     if (!force && this.state.mesComp && this.state.mesComp.cle === cle) { return; }
     this._mesCompEnCours = cle;
@@ -2579,6 +2580,9 @@ class App {
     const q = [];
     if (this.state.mesCamp) { q.push('campagne=' + this.state.mesCamp); }
     if (this.state.mesMesure) { q.push('mesure=' + this.state.mesMesure); }
+    if (this.state.mesDu && this.state.mesAu) {
+      q.push('du=' + this.state.mesDu); q.push('au=' + this.state.mesAu);
+    }
     readOne('/marketing/mesure/comparaison' + (q.length ? '?' + q.join('&') : ''))
       .then(d => { this._mesCompEnCours = null;
         this.setState({ mesComp: { cle, chargement: false, d: d || null } }); })
@@ -2664,6 +2668,17 @@ class App {
       jours: f.jours || 0,
       aVenir: (f.aVenir || 0) > 0 ? (f.aVenir + ' jour(s) de campagne encore à venir — non comptés') : '',
     };
+    // La période mesurée se choisit : celle de la campagne, ou la sienne. Une
+    // date incomplète n'est pas envoyée — la moitié d'une borne ne veut rien
+    // dire, et relancer la lecture à chaque frappe coûterait une lecture du
+    // panel par caractère.
+    common.mcPasCommencee = !!d.pasCommencee;
+    common.mcLibre = !!d.libre;
+    common.mcDu = S.mesDu || (f.pendantDu || '');
+    common.mcAu = S.mesAu || (f.pendantAu || '');
+    common.mcDuSet = e => this.setState({ mesDu: e.target.value });
+    common.mcAuSet = e => this.setState({ mesAu: e.target.value });
+    common.mcLibreRaz = (S.mesDu || S.mesAu) ? () => this.setState({ mesDu: '', mesAu: '' }) : null;
     common.mcSource = d.source || '';
     common.mcMotifs = d.motifs || [];
     common.mcPerimetre = (d.perimetre || []).join(' · ');
