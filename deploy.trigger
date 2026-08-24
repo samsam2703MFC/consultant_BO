@@ -19,3 +19,4 @@
 2026-08-24T16:07:56Z maitrise-borne-lecture
 2026-08-24T19:04:56Z refusion-fonds-planogramme-suivi
 2026-08-24T19:46:41Z mesure-lecture-simple
+2026-08-24T19:50:55Z mesure-periode-libre
