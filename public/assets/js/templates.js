@@ -2181,6 +2181,25 @@ function tplControle(c, x){
               </tbody>
             </table>
             </div>
+            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
+                 jour sans disparaître. Le motif reste lisible et un bouton
+                 ramène la tâche tout de suite — un contrôle qui s'efface sans
+                 dire pourquoi ressemble à un oubli. -->
+            ${s.nMasquees ? `<div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+              <button ${x.A(c.ctrlMasqPlier)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
+                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">${s.nMasquees} contrôle(s) maîtrisé(s)</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${c.ctrlMasqTout ? '— masquer le détail' : '— afficher'}</span>
+              </button>
+              ${c.ctrlMasqTout ? `<div style="padding:0 18px 12px">
+                ${s.masquees.map(t => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+                  <span style="flex:1;min-width:0">
+                    <span style="font-size:12.5px;font-weight:500">${esc(t.tache)}</span>
+                    <span style="display:block;font-size:11px;color:var(--color-text-muted)">${esc(t.maitriseMoy || t.maitriseMotif)}${t.recontrole ? ' · ' + esc(t.recontrole) : ''}</span>
+                  </span>
+                  <button ${x.A(t.rouvrir)} title="Remettre ce contrôle dans la liste du jour" style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>
+                </div>`).join('')}
+              </div>` : ''}
+            </div>` : ''}
           </div>`).join('')}
       </div>`)}
     ${c.ctrlConsultants && c.ctrlConsultants.length ? `

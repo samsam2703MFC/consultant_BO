@@ -1958,6 +1958,53 @@ function fournisseurAssure(?string $nom): void
 }
 
 /**
+ * PUT /taches/maitrise — la main sur le contrôle par exception.
+ *
+ * Trois gestes, et un seul principe : le calcul propose, l'humain dispose.
+ *  - « rouvrir » : un nouveau gérant, des travaux, une réclamation — le
+ *    contrôle revient quelle que soit la moyenne, et tient une cadence
+ *    complète (sinon le calcul l'effacerait au rendu suivant).
+ *  - « permanent » / « auto » : hygiène et sécurité ne se gagnent pas au
+ *    mérite ; on les sort du dispositif, ou on les y remet.
+ */
+function wr_taches_maitrise(): array
+{
+    $b = body();
+    $sid = (int) ($b['shopId'] ?? 0);
+    $tid = (int) ($b['taskId'] ?? 0);
+    $action = (string) ($b['action'] ?? '');
+    if ($sid <= 0 || $tid <= 0 || !in_array($action, ['rouvrir', 'permanent', 'auto'], true)) {
+        http_response_code(422);
+        return ['error' => 'shopId, taskId et action (rouvrir | permanent | auto) sont requis'];
+    }
+    $u = setting('utilisateur', []);
+    $qui = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 80) : 'CEO';
+    $now = date('Y-m-d H:i:s');
+
+    if ($action === 'rouvrir') {
+        Db::exec('INSERT INTO ceo_task_maitrise (id_shop, id_task, etat, depuis, motif, force_par, force_le)
+                  VALUES (?,?,?,?,?,?,?)
+                  ON DUPLICATE KEY UPDATE etat = VALUES(etat), depuis = VALUES(depuis),
+                    recontrole_le = NULL, motif = VALUES(motif),
+                    force_par = VALUES(force_par), force_le = VALUES(force_le)',
+            [$sid, $tid, 'visible', $now, 'Rouvert manuellement par ' . $qui, $qui, $now]);
+        journalAdd('CEO', 'Contrôle', 'Boutique ' . $sid, 'Contrôle rouvert — tâche ' . $tid);
+        return ['ok' => true, 'etat' => 'visible'];
+    }
+
+    $perm = $action === 'permanent' ? 1 : 0;
+    Db::exec('INSERT INTO ceo_task_maitrise (id_shop, id_task, etat, depuis, jamais_masquer, motif)
+              VALUES (?,?,?,?,?,?)
+              ON DUPLICATE KEY UPDATE jamais_masquer = VALUES(jamais_masquer),
+                etat = VALUES(etat), depuis = VALUES(depuis), motif = VALUES(motif)',
+        [$sid, $tid, $perm ? 'visible' : 'visible', $now, $perm,
+         $perm ? 'Contrôle permanent — jamais masqué' : 'Remis en contrôle automatique']);
+    journalAdd('CEO', 'Contrôle', 'Boutique ' . $sid,
+        ($perm ? 'Contrôle rendu permanent' : 'Contrôle remis en automatique') . ' — tâche ' . $tid);
+    return ['ok' => true, 'permanent' => (bool) $perm];
+}
+
+/**
  * PUT /stores/{id}/charges?exercice=…&mois=… — les charges du mois.
  *
  * Les charges s'encodent chaque mois : un montant par poste, pour ce
