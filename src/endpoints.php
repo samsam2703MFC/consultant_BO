@@ -5225,6 +5225,71 @@ function ep_journal(): array
 }
 
 /**
+ * SONDE TEMPORAIRE — GET /diagnostic/panel-transactions?shop=&date=
+ *
+ * Lit /franchisee-shop/{id}/transactions/{date} sur l'API du panel et rend
+ * l'inventaire des champs : les clés de l'enveloppe, celles d'une ligne, et un
+ * échantillon de valeurs. Le cockpit n'exploite pas encore cette route ; avant
+ * de bâtir dessus, on regarde ce qu'elle rend RÉELLEMENT plutôt que de
+ * supposer. À retirer une fois le relevé fait.
+ */
+function ep_panel_sonde_transactions(): array
+{
+    if (!PanelApi::configured()) {
+        http_response_code(503);
+        return ['error' => 'compte consultant du panel non configuré (Mon compte)'];
+    }
+    $shop = (int) ($_GET['shop'] ?? 2);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d'); }
+
+    $chemin = '/franchisee-shop/' . $shop . '/transactions/' . $date;
+    $r = PanelApi::brut($chemin);
+
+    // L'inventaire des clés, à tous les niveaux utiles, avec un échantillon —
+    // un nom de champ sans sa valeur ne dit pas ce qu'il porte.
+    $typeDe = static function ($v): string {
+        if (is_array($v)) { return array_is_list($v) ? 'liste[' . count($v) . ']' : 'objet'; }
+        if (is_bool($v)) { return 'booléen'; }
+        if (is_int($v)) { return 'entier'; }
+        if (is_float($v)) { return 'décimal'; }
+        return $v === null ? 'null' : 'texte';
+    };
+    $champs = static function (array $ligne) use ($typeDe): array {
+        $out = [];
+        foreach ($ligne as $k => $v) {
+            $out[] = ['champ' => (string) $k, 'type' => $typeDe($v),
+                'exemple' => is_array($v) ? json_encode(array_slice($v, 0, 2), JSON_UNESCAPED_UNICODE)
+                    : (is_bool($v) ? ($v ? 'true' : 'false') : (string) ($v ?? 'null'))];
+        }
+        return $out;
+    };
+
+    $out = ['chemin' => $chemin, 'shop' => $shop, 'date' => $date,
+        'erreur' => PanelApi::$lastError, 'type' => $typeDe($r)];
+    if (!is_array($r)) { return $out; }
+
+    $out['clesRacine'] = array_is_list($r) ? ['(liste nue)'] : array_keys($r);
+    $liste = PanelApi::liste($r);
+    $out['nbLignes'] = count($liste);
+    $premiere = $liste[0] ?? null;
+    if (is_array($premiere)) {
+        $out['champsLigne'] = $champs($premiere);
+        // Les sous-objets d'une ligne (produits, paiements…) portent leurs
+        // propres champs : on les inventorie aussi, un niveau plus bas.
+        foreach ($premiere as $k => $v) {
+            if (is_array($v) && $v !== [] && is_array($v[0] ?? null)) {
+                $out['sousObjets'][(string) $k] = $champs($v[0]);
+            }
+        }
+        $out['premiereLigne'] = $premiere;
+    } elseif (!array_is_list($r)) {
+        $out['champsRacine'] = $champs($r);
+    }
+    return $out;
+}
+
+/**
  * GET /journal/mails — les e-mails partis du cockpit, les deux sources réunies.
  *
  * Deux machines envoient : les RAPPORTS (ceo_rapport_run, statut « envoye » ou
