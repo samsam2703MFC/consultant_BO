@@ -6789,20 +6789,24 @@ class App {
         .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
           on: fSt === code,
           pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
-      common.caCols = ['Réquisition', 'Magasin', 'Fournisseur', 'Début', 'Jours', 'Type', 'Statut', 'Valeur estimée', 'Par'];
-      // Une commande = UN fournisseur : quand les besoins du magasin couvrent
-      // plusieurs fournisseurs, la réquisition est « à répartir » — le tableau
-      // du dessous donne la ventilation, une commande par fournisseur.
-      common.caRows = lgs.filter(x => !fSt || x.statut === fSt).map(x => ({ cells: [
-        { t: '#' + x.id }, { t: x.magasin, mut: true },
-        { t: !(x.fournisseurs && x.fournisseurs.length) ? '—'
-          : (x.fournisseurs.length === 1 ? x.fournisseurs[0] : 'à répartir : ' + x.fournisseurs.join(' + ')),
-          mut: !(x.fournisseurs && x.fournisseurs.length === 1) },
-        { t: x.debut || '—', mut: true },
-        { t: String(x.jours || '—'), num: true, mut: true }, { t: x.type || '—', mut: true },
-        { t: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
-          col: x.statut === 'PENDING' ? '#8a5a13' : (x.statut === 'REALISED' ? '#2d7a3e' : '') },
-        { t: this.fE(x.valeur), num: true }, { t: x.par || '—', mut: true } ] }));
+      // L'écran se lit PAR FOURNISSEUR : une carte par fournisseur, ses 5
+      // dernières commandes, l'attente en évidence. Le filtre de statut
+      // s'applique aux lignes de chaque carte.
+      common.caFournGroupes = (d.parFournisseur || []).map(g => ({
+        nom: g.fournisseur,
+        special: g.fournisseur === 'À répartir' || g.fournisseur === 'Sans fournisseur',
+        resume: g.enAttente
+          ? g.enAttente + ' en attente · ' + this.fE(g.valeurAttente)
+          : 'rien en attente',
+        resumeCol: g.enAttente ? '#8a5a13' : '#2d7a3e',
+        resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
+        note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
+        commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
+          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '—',
+          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
+          col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
+          valeur: this.fE(x.valeur), par: x.par || '—' })),
+      })).filter(g => g.commandes.length);
       common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
         : 'Aucune réquisition matière remontée par le panel.';
       // La ventilation actionnable : une ligne = UNE commande à passer chez UN

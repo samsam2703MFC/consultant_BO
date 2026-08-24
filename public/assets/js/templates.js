@@ -6183,6 +6183,40 @@ function tplCentrale(c, x){
     <span style="font-size:11.5px;color:var(--color-text-muted)">${c.caRows ? c.caRows.length : 0} sur ${c.caTotal || 0} référence${(c.caTotal || 0) > 1 ? 's' : ''}${(c.caRows && c.caRows.length >= 300) ? ' · 300 affichées' : ''}</span>
   </div>` : '';
 
+  // Commandes franchisés : une carte par fournisseur, ses 5 dernières
+  // commandes. Les chips de statut vivent au-dessus de la grille.
+  const groupes = c.caFournGroupes ? `
+    ${c.caChips && c.caChips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${c.caChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? ch.texte : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? ch.fond : 'transparent'};color:${ch.texte}">${esc(ch.nom)}</button>`).join('')}
+      ${c.caChips.some(ch => ch.on) ? `<span style="align-self:center;font-size:11px;color:var(--color-text-muted)">re-cliquer pour tout afficher</span>` : ''}
+    </div>` : ''}
+    ${!c.caFournGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted)">${esc(c.caRien || 'aucune ligne')}</div>` : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:14px">
+      ${c.caFournGroupes.map(g => `<div style="${CARD};display:flex;flex-direction:column">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+          <div>
+            <div style="font-size:13.5px;font-weight:600${g.special ? ';color:var(--color-text-muted)' : ''}">${esc(g.nom)}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(g.note)}</div>
+          </div>
+          <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:${g.resumeFond};color:${g.resumeCol}">${esc(g.resume)}</span>
+        </div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="${TH}">Réquisition</th><th style="${TH}">Magasin</th><th style="${TH}">Début</th>
+            <th style="${TH}">Statut</th><th style="${TH};text-align:right">Valeur</th><th style="${TH}">Par</th>
+          </tr></thead>
+          <tbody>${g.commandes.map(o => `<tr>
+            <td style="${TD};font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(o.id)}</td>
+            <td style="${TD}">${esc(o.magasin)}</td>
+            <td style="${TD};color:var(--color-text-muted);white-space:nowrap">${esc(o.debut)}</td>
+            <td style="${TD};white-space:nowrap"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${o.col};margin-right:6px;vertical-align:1px"></span><span style="color:${o.col};font-weight:500;font-size:12px">${esc(o.statut)}</span></td>
+            <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(o.valeur)}</td>
+            <td style="${TD};color:var(--color-text-muted)">${esc(o.par)}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`).join('')}
+    </div>`}` : '';
+
   const table = c.caCols ? `<div style="${CARD}">
     ${c.caAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 10px;border-radius:8px;margin-bottom:12px">${esc(c.caAvert)}</div>` : ''}
     ${c.caChips && c.caChips.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -6220,7 +6254,7 @@ function tplCentrale(c, x){
     </table></div>
   </div>` : '';
 
-  return periodes + recl + kpis + manquants + params + recherche + table + table2;
+  return periodes + recl + kpis + manquants + params + recherche + groupes + table + table2;
 }
 
 

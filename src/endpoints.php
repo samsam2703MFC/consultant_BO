@@ -5853,9 +5853,33 @@ function ep_ca_commandes(): array
         'API panel — l’ERP n’enregistre le fournisseur sur aucune réquisition (mesuré, réalm admin compris). '
         . 'Pour les EN ATTENTE, il est dérivé des besoins actuels croisés au mapping matière → fournisseur ; '
         . 'l’historique, lui, est perdu côté ERP');
+    // Regroupement par fournisseur : l'écran montre chaque fournisseur avec ses
+    // 5 dernières commandes ($lignes est déjà trié par début décroissant).
+    // Plusieurs fournisseurs → « À répartir » ; aucun → « Sans fournisseur ».
+    $groupes = [];
+    foreach ($lignes as $l) {
+        $fours = (array) $l['fournisseurs'];
+        $cle = count($fours) === 1 ? (string) $fours[0] : (count($fours) > 1 ? 'À répartir' : 'Sans fournisseur');
+        if (!isset($groupes[$cle])) {
+            $groupes[$cle] = ['fournisseur' => $cle, 'enAttente' => 0, 'valeurAttente' => 0.0,
+                'total' => 0, 'commandes' => []];
+        }
+        $groupes[$cle]['total']++;
+        if ((string) $l['statut'] === 'PENDING') {
+            $groupes[$cle]['enAttente']++;
+            $groupes[$cle]['valeurAttente'] += (float) $l['valeur'];
+        }
+        if (count($groupes[$cle]['commandes']) < 5) { $groupes[$cle]['commandes'][] = $l; }
+    }
+    uksort($groupes, function ($a, $b) {
+        $rang = fn ($k) => $k === 'À répartir' ? 1 : ($k === 'Sans fournisseur' ? 2 : 0);
+        return [$rang($a), $a] <=> [$rang($b), $b];
+    });
+
     return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
         'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions) et besoins courants (/list × catalog-mappings)',
-        'lignes' => $lignes, 'aCommander' => $aCommander, 'manquants' => $manquants];
+        'lignes' => $lignes, 'parFournisseur' => array_values($groupes),
+        'aCommander' => $aCommander, 'manquants' => $manquants];
 }
 
 /**
