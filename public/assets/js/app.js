@@ -6819,6 +6819,49 @@ class App {
           { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
       } : null;
     } else if (ecr === 'caAchats') {
+      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
+      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
+      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
+      const sv = d.suivi || {};
+      const svK = sv.kpis || null;
+      const fSv = S.caSvFiltre || '';
+      const jf = z => !z ? '—' : String(z).slice(5).split('-').reverse().join('.');
+      const garde = o => !fSv
+        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
+        || (fSv === 'retard' && o.retardJours != null)
+        || (fSv === 'livre' && o.etape === 4);
+      common.caSvKpis = svK ? [
+        ['Commandes en cours', String(svK.enCours), (sv.groupes || []).length + ' fournisseur(s)', ''],
+        ['En retard', String(svK.retard), 'livraison dépassée', svK.retard ? '#8D1D2C' : ''],
+        ['Sans réponse fournisseur', String(svK.aAccepter), 'commande envoyée, pas acceptée', svK.aAccepter ? '#8a5a13' : ''],
+        ['Valeur en cours', this.fE(svK.valeurEnCours), 'HT, commandes non livrées', ''],
+      ] : null;
+      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
+          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
+        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
+          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
+      common.caSvGroupes = (sv.groupes || []).map(g => ({
+        nom: g.fournisseur,
+        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' dernière' + (g.nbCommandes > 1 ? 's' : '') + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
+        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
+        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
+        commandes: (g.commandes || []).filter(garde).map(o => ({
+          magasin: o.magasin, cle: o.cle, date: jf(o.date),
+          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
+          // Quatre segments : franchi (vert), en cours (ambre), bloqué (ruby), à venir (gris).
+          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
+            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
+          libelle: o.libelle,
+          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C'
+            : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
+          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
+          docs: (o.documents && o.documents.length) ? o.documents.join(' · ') : '—',
+          valeur: o.valeur == null ? '—' : this.fE(o.valeur),
+        })),
+      })).filter(g => g.commandes.length);
+      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
+        : 'Aucune commande matière remontée par le panel.');
+
       // ── Les réclamations matière, en tête d'écran : c'est ce qui traîne qui
       //    fait agir, pas le décompte des commandes.
       this.reclCharge(false);

@@ -5955,12 +5955,145 @@ function ep_ca_achats(): array
             'cumul' => round($cumul, 2), 'enCours' => $mm === $moisN];
     }
 
+    // Le suivi des commandes : 2 dernières par magasin chez chaque fournisseur.
+    try { $noms = []; foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id') as $s2) {
+        $noms[(int) $s2['id']] = (string) $s2['name']; } } catch (PDOException $e) { $noms = []; }
+    $suivi = caSuiviCommandes($noms);
+
+    $manquants = [];
+    if (!$suivi['groupes']) {
+        $manquants[] = lacune('Commandes fournisseurs',
+            'les 2 dernières commandes de chaque magasin et leur état',
+            'API panel — GET /shops/{id}/orders/materials n’a rien rendu pour les magasins actifs');
+    }
+    $manquants[] = lacune('Réception et litiges',
+        'quantités reçues face aux quantités commandées, et l’état des factures',
+        'API panel — la réception vit sur POST /orders/{id}/delivery ; aucune route de lecture ne la restitue');
+
     return ['etat' => 'ok', 'titre' => 'Suivi fournisseurs',
-        'source' => 'API panel — référentiel fournisseurs et catalogues (/material-suppliers), ventes du réseau (sales-kpis)',
+        'source' => 'API panel — commandes matière des magasins (/shops/{id}/orders/materials), référentiel fournisseurs (/material-suppliers), ventes du réseau (sales-kpis)',
         'lignes' => $lignes, 'caMensuel' => $caMensuel, 'exercice' => $annee,
-        'manquants' => [lacune('Commandes, réception, litiges',
-            'les commandes fournisseurs avec quantités commandées/reçues et l’état des factures',
-            'API panel — seuls des webhooks entrants existent pour les commandes fournisseurs, aucune route de lecture. À réclamer : GET /material-orders')]];
+        'suivi' => $suivi, 'manquants' => $manquants];
+}
+
+/**
+ * Les 2 dernières commandes de CHAQUE magasin, chez CHAQUE fournisseur — le
+ * cœur du suivi : ce qui est parti, où ça en est, ce qui traîne.
+ *
+ * Source : GET /shops/{id}/orders/materials (une par magasin, en parallèle).
+ * Le suivi fournisseur d'une commande (statut, dates, documents) est lu sur la
+ * ligne quand l'API le porte ; aucun champ n'est inventé — absent, la colonne
+ * affiche « — ». L'avancement se résume en quatre étapes :
+ *   1 envoyée → 2 acceptée → 3 en transit → 4 livrée
+ * et un refus/annulation casse le parcours à l'étape atteinte.
+ */
+function caSuiviCommandes(array $nomsMagasins): array
+{
+    $chemins = [];
+    foreach (array_keys($nomsMagasins) as $sid) { $chemins[$sid] = '/shops/' . $sid . '/orders/materials'; }
+    if ($chemins === []) { return ['groupes' => [], 'kpis' => null, 'indispo' => 'aucun magasin actif']; }
+
+    $reponses = PanelApi::getParallele($chemins);
+    $texte = static function (array $d, array $cles): string {
+        foreach ($cles as $c) {
+            if (isset($d[$c]) && is_scalar($d[$c]) && trim((string) $d[$c]) !== '') { return trim((string) $d[$c]); }
+            if (isset($d[$c]) && is_array($d[$c])) {
+                foreach (['name', 'display_name', 'label', 'number', 'key'] as $c2) {
+                    if (!empty($d[$c][$c2]) && is_scalar($d[$c][$c2])) { return trim((string) $d[$c][$c2]); }
+                }
+            }
+        }
+        return '';
+    };
+
+    $aujourdHui = date('Y-m-d');
+    $parFourn = []; $vues = 0;
+    foreach ($reponses as $sid => $rep) {
+        $magasin = $nomsMagasins[(int) $sid] ?? ('Magasin ' . $sid);
+        $cmds = analyseListe(is_array($rep) ? $rep : []);
+        $vues += count($cmds);
+        // Les plus récentes d'abord : la date de commande, à défaut l'identifiant.
+        usort($cmds, static function ($a, $b) use ($texte) {
+            $da = $texte((array) $a, ['order_date', 'created_at', 'date']);
+            $db = $texte((array) $b, ['order_date', 'created_at', 'date']);
+            return [$db, (int) ($b['id'] ?? 0)] <=> [$da, (int) ($a['id'] ?? 0)];
+        });
+
+        $prisParFourn = [];
+        foreach ($cmds as $o) {
+            if (!is_array($o)) { continue; }
+            $fourn = $texte($o, ['supplier_name', 'material_supplier_name', 'material_supplier', 'supplier']);
+            if ($fourn === '') { $fourn = 'Sans fournisseur'; }
+            // Deux par magasin ET par fournisseur : c'est la demande.
+            if (($prisParFourn[$fourn] ?? 0) >= 2) { continue; }
+            $prisParFourn[$fourn] = ($prisParFourn[$fourn] ?? 0) + 1;
+
+            $statut = strtoupper($texte($o, ['supplier_fulfillment_status', 'fulfillment_status', 'logistics_status', 'status']));
+            $livrPrevue = $texte($o, ['planned_delivery_date', 'expected_delivery_date', 'expected_date', 'delivery_date']);
+            $livreLe = $texte($o, ['delivered_on', 'delivered_at', 'received_at']);
+
+            // Étape atteinte + blocage éventuel, à partir du vocabulaire de l'ERP.
+            $etape = 1; $bloque = false; $libelle = 'Envoyée';
+            if (in_array($statut, ['REJECTED', 'REFUSED'], true)) { $etape = 1; $bloque = true; $libelle = 'Refusée'; }
+            elseif (in_array($statut, ['CANCELLED', 'CANCELED'], true)) { $etape = 1; $bloque = true; $libelle = 'Annulée'; }
+            elseif ($livreLe !== '' || in_array($statut, ['DELIVERED', 'FINALIZED', 'ARCHIVED', 'COMPLETED', 'RECEIVED'], true)) { $etape = 4; $libelle = 'Livrée'; }
+            elseif (in_array($statut, ['IN_TRANSIT', 'SENT', 'SHIPPED', 'IN_DELIVERY'], true)) { $etape = 3; $libelle = 'En transit'; }
+            elseif (in_array($statut, ['ACCEPTED', 'CONFIRMED', 'IN_PREPARATION', 'IN_PROGRESS'], true)) { $etape = 2; $libelle = 'Acceptée'; }
+            elseif ($statut !== '') { $libelle = ucfirst(strtolower(str_replace('_', ' ', $statut))); }
+
+            // Retard : une livraison prévue dépassée, commande non livrée.
+            $retardJours = null;
+            if ($etape < 4 && !$bloque && $livrPrevue !== '' && $livrPrevue < $aujourdHui) {
+                $retardJours = (int) floor((strtotime($aujourdHui) - strtotime($livrPrevue)) / 86400);
+            }
+
+            $docs = [];
+            foreach ((array) ($o['documents'] ?? []) as $doc) {
+                $t = strtoupper($texte(is_array($doc) ? $doc : [], ['type', 'document_type']));
+                if ($t !== '') { $docs[] = $t; }
+            }
+
+            $parFourn[$fourn]['magasins'][$magasin][] = [
+                'id' => (int) ($o['id'] ?? 0),
+                'cle' => $texte($o, ['order_key', 'number', 'document_number']) ?: ('#' . (int) ($o['id'] ?? 0)),
+                'date' => $texte($o, ['order_date', 'created_at', 'date']),
+                'livraisonPrevue' => $livrPrevue,
+                'livreLe' => $livreLe,
+                'etape' => $etape, 'bloque' => $bloque, 'libelle' => $libelle,
+                'retardJours' => $retardJours,
+                'valeur' => nombreOuNull($o, ['value_net', 'approximate_value_net', 'total_net', 'total', 'estimated_value']),
+                'documents' => array_values(array_unique($docs)),
+            ];
+        }
+    }
+
+    // Mise en forme + compteurs par fournisseur.
+    $groupes = []; $kEnCours = 0; $kRetard = 0; $kAAccepter = 0; $kValeur = 0.0; $kTotal = 0;
+    foreach ($parFourn as $nom => $g) {
+        $cmds = []; $enCours = 0; $retard = 0; $sansReponse = 0;
+        foreach ($g['magasins'] as $magasin => $liste) {
+            foreach ($liste as $i => $o) {
+                $o['magasin'] = $i === 0 ? $magasin : '';   // le nom ne se répète pas sur la 2ᵉ ligne
+                $cmds[] = $o;
+                $kTotal++;
+                if ($o['etape'] < 4 && !$o['bloque']) {
+                    $enCours++; $kEnCours++;
+                    if ($o['valeur'] !== null) { $kValeur += $o['valeur']; }
+                    if ($o['etape'] === 1) { $sansReponse++; $kAAccepter++; }
+                }
+                if ($o['retardJours'] !== null) { $retard++; $kRetard++; }
+            }
+        }
+        $groupes[] = ['fournisseur' => $nom, 'nbMagasins' => count($g['magasins']),
+            'nbCommandes' => count($cmds), 'enCours' => $enCours, 'retard' => $retard,
+            'sansReponse' => $sansReponse, 'commandes' => $cmds];
+    }
+    usort($groupes, static fn ($a, $b) => [-$a['retard'], -$a['enCours'], $a['fournisseur']]
+        <=> [-$b['retard'], -$b['enCours'], $b['fournisseur']]);
+
+    return ['groupes' => $groupes, 'lues' => $vues,
+        'kpis' => ['enCours' => $kEnCours, 'retard' => $kRetard, 'aAccepter' => $kAAccepter,
+            'valeurEnCours' => round($kValeur, 2), 'total' => $kTotal]];
 }
 
 /**
