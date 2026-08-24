@@ -3987,6 +3987,8 @@ function ep_planogramme(): array
             'parSlot' => ($p['par_slot'] ?? null) !== null ? (int) $p['par_slot'] : null,
             'cols' => ($p['grille_cols'] ?? null) !== null ? (int) $p['grille_cols'] : null,
             'rangs' => ($p['grille_rangs'] ?? null) !== null ? (int) $p['grille_rangs'] : null,
+            // Vide = toute la journée — même lecture que pour un meuble.
+            'periodes' => array_values(array_filter(explode(',', (string) ($p['periodes'] ?? '')))),
             'zone' => $p['zone'], 'meuble' => $p['meuble'], 'niveau' => $p['niveau'],
             'position' => $p['slot'] !== null ? (int) $p['slot'] : null];
         $placements[] = $l;
@@ -4055,7 +4057,8 @@ function ep_planogramme(): array
                         'occupants' => array_map(fn ($o) => [
                             'ref' => $o['ref'], 'nom' => $noms[$o['ref']] ?? $o['ref'],
                             'fronts' => $o['fronts'], 'ordre' => $o['ordre'],
-                            'parSlot' => $o['parSlot'], 'cols' => $o['cols'], 'rangs' => $o['rangs']], $occ),
+                            'parSlot' => $o['parSlot'], 'cols' => $o['cols'], 'rangs' => $o['rangs'],
+                            'periodes' => $o['periodes']], $occ),
                     ];
                     $nl['slots'][] = $ligne;
                     $out['slots'][] = $ligne;
@@ -4084,6 +4087,101 @@ function ep_planogramme(): array
 }
 
 /**
+ * GET /planogramme/photos — le visuel que le PANEL a pour chaque référence
+ * placée, par la MÊME chaîne que le contrôle qualité : produits disponibles
+ * d'une boutique → id_recipe → /recipes/{id} → shop_photo_path (sinon
+ * main_photo_path, sinon photo_1..3), résolu contre photoBase.
+ *
+ * Le résultat est MÉMORISÉ sept jours (table ceo_plano_photo), absence
+ * comprise : deux appels panel par référence, à chaque ouverture d'écran,
+ * feraient payer le comptoir entier pour rien. `?rafraichir=1` force la
+ * relecture quand une photo vient d'être posée côté panel.
+ *
+ * La photo annexée dans le cockpit reste prioritaire à l'écran : celle-ci
+ * COMPLÈTE, elle ne remplace pas.
+ */
+/**
+ * Une URL de photo signée est-elle périmée ? Le panel sert ses visuels par
+ * des liens S3 signés UNE HEURE (mesuré : X-Amz-Expires=3600). Les mémoriser
+ * sept jours servirait des cadres morts — un lien signé se re-demande donc dès
+ * qu'il expire, avec une minute de marge ; seule l'ABSENCE de visuel garde la
+ * mémoire longue, c'est elle qui coûte deux appels pour rien.
+ */
+function planoPhotoPerimee(?string $url): bool
+{
+    if ($url === null || $url === '') { return false; }
+    if (!preg_match('/[?&]X-Amz-Date=(\d{8}T\d{6}Z)/', $url, $md)) { return false; }
+    $duree = preg_match('/[?&]X-Amz-Expires=(\d+)/', $url, $me) ? (int) $me[1] : 3600;
+    $depuis = strtotime(substr($md[1], 0, 8) . 'T' . substr($md[1], 9, 6) . 'Z');
+    return $depuis !== false && time() > $depuis + $duree - 60;
+}
+
+function ep_plano_photos(): array
+{
+    $rafraichir = !empty($_GET['rafraichir']);
+    $refs = [];
+    try {
+        foreach (Db::rows('SELECT ref FROM pla_placement WHERE slot_id IS NOT NULL') as $r) {
+            $refs[] = (string) $r['ref'];
+        }
+    } catch (PDOException $e) { return ['photos' => [], 'source' => 'aucun placement']; }
+    $refs = array_slice(array_values(array_unique($refs)), 0, 120);
+    if (!$refs) { return ['photos' => [], 'source' => 'aucun placement']; }
+
+    // La mémoire d'abord : ce qui a moins de sept jours ne se redemande pas.
+    $enMemoire = [];
+    try {
+        $in = implode(',', array_fill(0, count($refs), '?'));
+        foreach (Db::rows('SELECT * FROM ceo_plano_photo WHERE ref IN (' . $in . ')', $refs) as $c) {
+            $age = time() - (strtotime((string) $c['maj_le']) ?: 0);
+            if (!$rafraichir && $age < 7 * 86400 && !planoPhotoPerimee($c['url'] ?? null)) {
+                $enMemoire[(string) $c['ref']] = $c;
+            }
+        }
+    } catch (PDOException $e) { /* table absente : tout se relit */ }
+
+    // Les boutiques qui peuvent porter la correspondance produit → recette.
+    // N'importe laquelle fait l'affaire quand la référence y est vendue ; on
+    // en essaie trois avant de conclure à l'absence.
+    $boutiques = [];
+    try {
+        foreach (Db::rows('SELECT id FROM ceo_shop') as $b2) {
+            if (is_numeric($b2['id'])) { $boutiques[] = (int) $b2['id']; }
+        }
+    } catch (PDOException $e) { /* pas de boutiques locales */ }
+    $boutiques = array_slice($boutiques, 0, 3);
+
+    $photos = []; $lus = 0;
+    foreach ($refs as $ref) {
+        if (isset($enMemoire[$ref])) {
+            $photos[$ref] = ['nom' => (string) $enMemoire[$ref]['nom'],
+                'url' => $enMemoire[$ref]['url'] !== null ? (string) $enMemoire[$ref]['url'] : null];
+            continue;
+        }
+        $trouve = null;
+        if (PanelApi::configured() && is_numeric($ref)) {
+            foreach ($boutiques ?: [0] as $bid) {
+                $r = PanelApi::productPhoto((int) $ref, $bid);
+                if ($r !== null && $r['url'] !== null) { $trouve = $r; break; }
+                if ($r !== null && $trouve === null) { $trouve = $r; }
+            }
+            $lus++;
+        }
+        $photos[$ref] = ['nom' => (string) ($trouve['nom'] ?? ''), 'url' => $trouve['url'] ?? null];
+        try {
+            Db::exec('INSERT INTO ceo_plano_photo (ref, nom, url, maj_le) VALUES (?,?,?,?)'
+                . ' ON DUPLICATE KEY UPDATE nom = VALUES(nom), url = VALUES(url), maj_le = VALUES(maj_le)',
+                [$ref, mb_substr((string) ($trouve['nom'] ?? ''), 0, 190), $trouve['url'] ?? null,
+                 date('Y-m-d H:i:s')]);
+        } catch (PDOException $e) { /* sans mémoire : la réponse part quand même */ }
+    }
+    return ['photos' => $photos,
+        'source' => 'panel — recette de chaque référence ; lien signé relu à l’expiration, absence mémorisée 7 jours'
+            . ($lus ? ' (' . $lus . ' relue(s) à l’instant)' : ''),
+        'api' => ['erreur' => PanelApi::$lastError]];
+}
+
+/**
  * Ce qui manque au planogramme, et qui ne peut PAS venir du cockpit.
  *
  * La structure, les placements et les consignes se saisissent ici. Restent deux
@@ -4094,9 +4192,13 @@ function ep_planogramme(): array
 function planoManque(): array
 {
     return [
-        lacune('Photo de présentation',
-            'le visuel du produit tel qu\'il doit être présenté',
-            'API panel — GET /products rend 579 produits et AUCUNE clé d\'image (mesuré). '
+        // La photo n'est plus une lacune : elle se lit sur la RECETTE de la
+        // référence (la même chaîne que le contrôle qualité), et le cockpit
+        // peut toujours en annexer une qui prime. Ce qui manque encore, c'est
+        // le sens inverse : déposer un visuel côté panel depuis le cockpit.
+        lacune('Dépôt du visuel côté panel',
+            'remplacer la photo de recette depuis le cockpit — aujourd\'hui elle se lit, elle ne s\'écrit pas',
+            'API panel — aucune route de dépôt de visuel produit. '
             . 'À obtenir : POST /consultant/products/{id}/photos avec kind: presentation'),
         lacune('Diffusion de la consigne en boutique',
             'afficher les notes épinglées sur la tâche de comptoir, côté application terrain',
