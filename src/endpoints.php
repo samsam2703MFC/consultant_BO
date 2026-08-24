@@ -5220,6 +5220,60 @@ function ep_journal(): array
     ], Db::rows('SELECT * FROM ceo_journal_entry ORDER BY happened_at DESC, id DESC LIMIT 500'));
 }
 
+/**
+ * GET /journal/mails — les e-mails partis du cockpit, les deux sources réunies.
+ *
+ * Deux machines envoient : les RAPPORTS (ceo_rapport_run, statut « envoye » ou
+ * « erreur », avec la liste des destinataires) et les commandes de la CENTRALE
+ * D'ACHAT (ceo_app_setting.caMailJournal, tenu par caMailJournal()). Les lire
+ * séparément obligeait à ouvrir deux écrans pour répondre à « ce mail est-il
+ * parti ? » ; ils sont donc fusionnés ici, du plus récent au plus ancien.
+ *
+ * Une source absente n'est pas une panne : une installation sans centrale
+ * d'achat n'a pas de journal d'achats, et le tableau montre l'autre.
+ */
+function ep_journal_mails(): array
+{
+    $out = [];
+
+    try {
+        foreach (Db::rows("SELECT r.genere_le, r.statut, r.envoye_a, r.resume, p.nom
+                             FROM ceo_rapport_run r
+                             LEFT JOIN ceo_rapport p ON p.id = r.rapport_id
+                            WHERE r.statut IN ('envoye', 'erreur')
+                         ORDER BY r.genere_le DESC, r.id DESC LIMIT 120") as $r) {
+            $dests = json_decode((string) ($r['envoye_a'] ?? '[]'), true);
+            $out[] = [
+                'ts' => substr((string) $r['genere_le'], 0, 16),
+                'source' => 'Rapport',
+                'objet' => (string) ($r['nom'] ?? 'Rapport supprimé'),
+                'dest' => is_array($dests) ? implode(', ', $dests) : '',
+                'ok' => $r['statut'] === 'envoye',
+                'detail' => (string) ($r['resume'] ?? ''),
+            ];
+        }
+    } catch (PDOException $e) { /* rapports jamais installés : l'autre source suffit */ }
+
+    $achats = setting('caMailJournal');
+    foreach (is_array($achats) ? $achats : [] as $a) {
+        if (!is_array($a)) { continue; }
+        // « recu » n'est pas un envoi : c'est la commande repérée, la trace qui
+        // explique l'e-mail de la ligne suivante. Elle reste, en le disant.
+        $type = (string) ($a['type'] ?? '');
+        $out[] = [
+            'ts' => substr((string) ($a['quand'] ?? ''), 0, 16),
+            'source' => 'Achat',
+            'objet' => $type === 'recu' ? 'Commande reçue' : 'Commande fournisseur',
+            'dest' => (string) ($a['destinataire'] ?? ''),
+            'ok' => $type !== 'echec',
+            'detail' => (string) ($a['detail'] ?? ''),
+        ];
+    }
+
+    usort($out, fn ($a, $b) => strcmp((string) $b['ts'], (string) $a['ts']));
+    return array_slice($out, 0, 200);
+}
+
 function ep_products(): array
 {
     $periode = $_GET['periode'] ?? '2026-07';
