@@ -1724,7 +1724,10 @@ function fondsMouvementLit(array $b): array
         'campaign_id' => ($b['campaign_id'] ?? null) ? (int) $b['campaign_id'] : null,
         'lever_id' => ($b['lever_id'] ?? null) ? (int) $b['lever_id'] : null,
         'supplier_name' => mb_substr(trim((string) ($b['supplier_name'] ?? '')), 0, 160) ?: null,
-        'document_ref' => mb_substr(trim((string) ($b['document_ref'] ?? '')), 0, 120) ?: null];
+        'document_ref' => mb_substr(trim((string) ($b['document_ref'] ?? '')), 0, 120) ?: null,
+        // Un investissement est une DÉPENSE qualifiée : sur une entrée, le
+        // drapeau n'a pas de sens et n'est pas retenu.
+        'is_investment' => ($dir === 'OUT' && !empty($b['is_investment'])) ? 1 : 0];
 }
 
 /** POST /fonds/mouvement — ou PATCH quand un identifiant est donné. */
@@ -1736,10 +1739,11 @@ function wr_fonds_mouvement(?int $id): array
     catch (RuntimeException $e) { http_response_code(422); return ['error' => $e->getMessage()]; }
 
     if ($id === null) {
-        Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, campaign_id, lever_id, movement_date, label, amount, source, supplier_name, document_ref)
-                  VALUES (?,?,?,?,?,?,?,?,?,?)', [
+        Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, campaign_id, lever_id, movement_date, label, amount, source, supplier_name, document_ref, is_investment)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?)', [
             $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['movement_date'],
             $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'],
+            $v['is_investment'],
         ]);
         $nid = (int) Db::pdo()->lastInsertId();
         journalAdd('CEO', 'Fonds', $v['label'], ($v['direction'] === 'IN' ? 'Alimentation' : 'Dépense')
@@ -1755,10 +1759,12 @@ function wr_fonds_mouvement(?int $id): array
         return ['error' => 'cette écriture vient d’un frais récurrent — corrigez le frais, pas l’échéance'];
     }
     Db::exec('UPDATE mar_fund_movement SET direction = ?, shop_id = ?, campaign_id = ?, lever_id = ?,
-              movement_date = ?, label = ?, amount = ?, source = ?, supplier_name = ?, document_ref = ?
+              movement_date = ?, label = ?, amount = ?, source = ?, supplier_name = ?, document_ref = ?,
+              is_investment = ?
               WHERE id = ?', [
         $v['direction'], $v['shop_id'], $v['campaign_id'], $v['lever_id'], $v['movement_date'],
-        $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'], $id,
+        $v['label'], $v['amount'], $v['source'], $v['supplier_name'], $v['document_ref'],
+        $v['is_investment'], $id,
     ]);
     journalAdd('CEO', 'Fonds', $v['label'], 'Écriture ' . $id . ' corrigée');
     return ['ok' => true, 'id' => $id];

@@ -3030,6 +3030,10 @@ function tplFondsForm(c, x){
         <input id="fo-mnt" value="${esc(f.champs.montant)}" ${x.I(f.set('montant'))} inputmode="decimal" placeholder="0,00" style="${inp};text-align:right;font-variant-numeric:tabular-nums"></div>
       <div><span style="${k}">Nature</span>
         <select ${x.C(f.set('source'))} style="${inp}">${(c.foSources || []).map(o => `<option value="${esc(o)}"${f.champs.source === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
+      ${f.investBascule ? `<div style="grid-column:span 2"><button ${x.A(f.investBascule)} style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${f.invest ? 'border:1px solid #E8C9A0;background:#FBF3DC;color:var(--color-on-abricot)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
+        <span style="width:13px;height:13px;border-radius:4px;border:1.5px solid ${f.invest ? 'var(--color-on-abricot)' : 'var(--color-border-secondary)'};display:inline-flex;align-items:center;justify-content:center;font-size:9px;line-height:1">${f.invest ? '✓' : ''}</span>
+        Investissement — équipe plutôt qu’il ne consomme</button>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Le grand livre le badge et le sous-totalise par mois et par an.</div></div>` : ''}
       <div><span style="${k}">Levier développé</span>${sel('levier', f.champs.levier, c.foLeviersOpts || [], 'aucun')}</div>
       <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
       <div><span style="${k}">Campagne</span>${sel('campagne', f.champs.campagne, c.foCampagnesOpts || [], 'aucune')}</div>
@@ -3188,10 +3192,23 @@ function tplFonds(c, x){
 
     <div style="display:grid;grid-template-columns:1fr;gap:12px;align-items:start">
       <div style="${carte};overflow:hidden">
-        <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:13px;font-weight:500">Grand livre du fonds</span>
+          ${(c.foOrdreBtns || []).length && !c.foVide ? `<span style="display:inline-flex;border:0.5px solid rgba(34,34,34,0.14);border-radius:999px;overflow:hidden">
+            ${c.foOrdreBtns.map(o => `<button ${x.A(o.go)} title="Ordre des mois" style="border:none;padding:5px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}
+          </span>` : ''}
+          <span style="flex:1"></span>
           <span style="font-size:11px;color:var(--color-text-muted)">Un bloc par mois — entrées, sorties, solde · cliquez une ligne pour la corriger</span>
         </div>
+        ${(c.foMoisBadges || []).length > 1 ? `<div style="padding:9px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${c.foMoisBadges.map(m => `<button ${x.A(m.go)} title="${m.on ? 'Revoir tous les mois' : 'Ne montrer que ' + esc(m.nom)}" style="border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;${m.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(m.nom)}</button>`).join('')}
+        </div>` : ''}
+        ${(c.foAnnees || []).length ? `<div style="padding:8px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:18px;flex-wrap:wrap;background:var(--color-background-secondary)">
+          ${c.foAnnees.map(a => `<span style="font-size:11px;font-variant-numeric:tabular-nums"><b style="font-weight:600">${esc(a.an)}</b>
+            <span style="color:#2d7a3e;font-weight:500">${esc(a.entrees)}</span>
+            <span style="color:var(--color-primary);font-weight:500">${esc(a.sorties)}</span>
+            ${a.invest ? `<span style="color:var(--color-on-abricot);font-weight:500">· ${esc(a.invest)}</span>` : ''}</span>`).join('')}
+        </div>` : ''}
         ${c.foVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun mouvement enregistré.</div>` : `
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
           <thead><tr>
@@ -3208,13 +3225,14 @@ function tplFonds(c, x){
                 <span style="font-size:12.5px;font-weight:600">${esc(g.nom)}</span>
                 <span style="font-size:11px;font-weight:500;color:#2d7a3e;font-variant-numeric:tabular-nums">Entrées ${esc(g.totEntrees)}</span>
                 <span style="font-size:11px;font-weight:500;color:var(--color-primary);font-variant-numeric:tabular-nums">Sorties ${esc(g.totSorties)}</span>
+                ${g.totInvest ? `<span style="font-size:11px;font-weight:500;color:var(--color-on-abricot);font-variant-numeric:tabular-nums">${esc(g.totInvest)}</span>` : ''}
                 <span style="flex:1"></span>
                 <span style="font-size:11px;color:var(--color-text-muted)">Solde en fin de mois&nbsp;: <b style="color:${g.soldeCol};font-variant-numeric:tabular-nums">${esc(g.solde)}</b></span>
               </div>
             </td></tr>
             ${g.entrees.concat(g.sorties).map(l => `<tr>
             <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
-            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span><div style="font-size:10.5px;color:${l.col}">${esc(l.sens)}${l.source ? ` <span style="color:var(--color-text-muted)">· ${esc(l.source)}</span>` : ''}</div></td>
+            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span>${l.invest ? ` <span style="display:inline-block;font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0;vertical-align:1px">investissement</span>` : ''}<div style="font-size:10.5px;color:${l.col}">${esc(l.sens)}${l.source ? ` <span style="color:var(--color-text-muted)">· ${esc(l.source)}</span>` : ''}</div></td>
             <td style="${td}">${l.levier
               ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</span>`
               : (l.sens === 'sortie' ? `<span style="font-size:11px;color:var(--color-on-abricot)">aucun levier</span>` : '')}</td>

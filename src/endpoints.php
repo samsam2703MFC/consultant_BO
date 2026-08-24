@@ -3778,6 +3778,7 @@ function ep_fonds(): array
             'lever_id' => $m['lever_id'] !== null ? (int) $m['lever_id'] : null,
             'lever_label' => $m['lever_label'], 'lever_color_hex' => $m['lever_color_hex'],
             'supplier_name' => $m['supplier_name'], 'document_ref' => $m['document_ref'],
+            'is_investment' => (int) ($m['is_investment'] ?? 0) === 1,
             'recurrence_id' => ($m['recurrence_id'] ?? null) !== null ? (int) $m['recurrence_id'] : null,
         ];
         if ($m['direction'] === 'OUT') {

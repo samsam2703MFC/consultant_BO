@@ -3722,6 +3722,7 @@ class App {
           // toutes lettres vaut mieux qu'une case vide qu'on lirait comme un
           // oubli de saisie.
           reseau: !m.shop_name,
+          invest: !!m.is_investment, brut2: mt,
           fournisseur: m.supplier_name || '',
           // Une écriture née d'un frais récurrent se corrige sur son modèle,
           // pas ligne à ligne : la corriger ici la ferait réapparaître au
@@ -3784,33 +3785,64 @@ class App {
     lignes.forEach(l => { (parMois[l.periode] = parMois[l.periode] || []).push(l); });
     const totaux = {};
     mv.parPeriode.forEach(p => { totaux[p.cle] = p; });
-    // Le mois le plus récent d'abord — c'est lui qu'on vient lire — et, dans
-    // le mois, les lignes de la plus récente à la plus ancienne.
-    const cles = Object.keys(parMois).sort().reverse();
+    // L'ordre des mois SE CHOISIT : récent d'abord pour lire la caisse,
+    // ancien d'abord pour suivre l'histoire. Et chaque mois est un BADGE :
+    // cliqué, le grand livre ne montre plus que lui — recliqué, tout revient.
+    const ordreMois = this.state.foOrdreMois === 'ancien' ? 'ancien' : 'recent';
+    common.foOrdreBtns = [['recent', 'Récent ↓'], ['ancien', 'Ancien ↑']].map(([k, nom]) => ({
+      k, nom, on: ordreMois === k, go: () => this.setState({ foOrdreMois: k }) }));
+    let cles = Object.keys(parMois).sort();
+    if (ordreMois === 'recent') { cles = cles.reverse(); }
+    const moisSel = this.state.foMoisSel && cles.indexOf(this.state.foMoisSel) >= 0 ? this.state.foMoisSel : '';
+    common.foMoisBadges = cles.map(cle => ({ cle, nom: this.fPeriode(cle), on: cle === moisSel,
+      go: () => this.setState({ foMoisSel: cle === moisSel ? '' : cle }) }));
+    const clesVisibles = moisSel ? [moisSel] : cles;
     const recentes = (a, b) => (a.jour < b.jour ? 1 : a.jour > b.jour ? -1 : 0);
     let visibles = 0;
     common.foMoisGroupes = [];
-    for (const cle of cles) {
+    for (const cle of clesVisibles) {
       const duMois = parMois[cle];
       // La borne d'affichage coupe ENTRE deux mois, jamais au milieu d'un :
       // un mois amputé de la moitié de ses lignes montrerait un solde qu'on
-      // ne peut pas recompter depuis ce qui est affiché.
-      if (common.foMoisGroupes.length && visibles + duMois.length > 60) { break; }
+      // ne peut pas recompter depuis ce qui est affiché. Un mois choisi au
+      // badge s'affiche entier, quelle que soit sa taille.
+      if (!moisSel && common.foMoisGroupes.length && visibles + duMois.length > 60) { break; }
       visibles += duMois.length;
       const t = totaux[cle] || { entrees: 0, sorties: 0, cloture: null };
+      // Le sous-total d'investissement du mois : la part des sorties qui
+      // équipe plutôt qu'elle ne consomme. Tu n'apparais que si tu existes.
+      const invest = duMois.filter(l => l.sens === 'sortie' && l.invest)
+        .reduce((a, l) => a + (l.brut2 || 0), 0);
       common.foMoisGroupes.push({
         cle, nom: this.fPeriode(cle),
         entrees: duMois.filter(l => l.sens === 'entrée').sort(recentes),
         sorties: duMois.filter(l => l.sens === 'sortie').sort(recentes),
         totEntrees: '+ ' + this.fU(t.entrees), totSorties: '− ' + this.fU(t.sorties),
+        totInvest: invest > 0 ? 'dont investissements ' + this.fU(invest) : '',
         // Le solde de clôture vient du calcul séquentiel de fondsMouvements :
         // c'est le même cumul que la tuile « Solde », arrêté à ce mois-là.
         solde: t.cloture == null ? '—' : this.fU(t.cloture),
         soldeCol: (t.cloture == null ? 0 : t.cloture) >= 0 ? '#2d7a3e' : 'var(--color-primary)',
       });
     }
-    common.foTronque = lignes.length - visibles;
+    common.foTronque = moisSel ? 0 : lignes.length - visibles;
     common.foVide = !lignes.length;
+
+    // --- le sous-total PAR AN : entrées, sorties, dont investissements.
+    // Toutes lignes confondues, pas seulement celles affichées — un sous-total
+    // qui dépendrait de la borne d'affichage mentirait.
+    const parAn = {};
+    lignes.forEach(l => { const an = (l.periode || '').slice(0, 4);
+      if (!an) { return; }
+      const b2 = parAn[an] = parAn[an] || { entrees: 0, sorties: 0, invest: 0 };
+      if (l.sens === 'sortie') { b2.sorties += l.brut2 || 0; if (l.invest) { b2.invest += l.brut2 || 0; } }
+      else { b2.entrees += l.brut2 || 0; } });
+    let ans = Object.keys(parAn).sort();
+    if (ordreMois === 'recent') { ans = ans.reverse(); }
+    common.foAnnees = ans.map(an => ({ an,
+      entrees: '+ ' + this.fU(parAn[an].entrees), sorties: '− ' + this.fU(parAn[an].sorties),
+      invest: parAn[an].invest > 0 ? 'dont investissements ' + this.fU(parAn[an].invest) : '' }));
+    common.foAnneesN = ans.length;
     // Le solde vient du module quand il le donne : c'est LUI qui arrête le
     // fonds. Le recalculer d'un côté et l'afficher de l'autre finirait par
     // donner deux chiffres pour la même caisse.
@@ -3957,7 +3989,7 @@ class App {
 
     const vide = (sens) => ({ sens, id: null, date: (this.M && this.M.TODAY) || '',
       libelle: '', montant: '', source: 'AUTRE', magasin: '', campagne: '', levier: '',
-      fournisseur: '', piece: '', busy: false, err: '' });
+      fournisseur: '', piece: '', invest: false, busy: false, err: '' });
     const fm = S2.foForm || null;
     common.foNouveau = sens => this.setState({ foForm: vide(sens) });
     common.foForm = !fm ? null : {
@@ -3968,6 +4000,10 @@ class App {
         fournisseur: fm.fournisseur, piece: fm.piece },
       sensBtns: [['IN', 'Entrée — le réseau alimente'], ['OUT', 'Sortie — le fonds finance']]
         .map(([v, nom]) => ({ v, nom, on: fm.sens === v, pick: () => this.foPatch({ sens: v }) })),
+      // Un four n'est pas une campagne : la dépense se qualifie au moment où
+      // on l'écrit, et le grand livre la sous-totalise à part.
+      invest: !!fm.invest,
+      investBascule: fm.sens === 'OUT' ? () => this.foPatch({ invest: !fm.invest }) : null,
       set: k => e => this.foPatch({ [k]: e.target.value }),
       envoyer: () => this.foEnvoyer(),
       fermer: () => this.setState({ foForm: null }),
@@ -3988,6 +4024,7 @@ class App {
         campagne: l.brut.campaign_id != null ? String(l.brut.campaign_id) : '',
         levier: l.brut.lever_id != null ? String(l.brut.lever_id) : '',
         fournisseur: l.brut.supplier_name || '', piece: l.brut.document_ref || '',
+        invest: !!l.brut.is_investment,
         busy: false, err: '' } }) : null;
       l.supprimer = l.id && !l.recurrente ? () => this.foSupprimer(l.id, l.libelle) : null;
     });
@@ -4315,6 +4352,7 @@ class App {
       source: f.source || 'AUTRE',
       shop_id: f.magasin || null, campaign_id: f.campagne || null, lever_id: f.levier || null,
       supplier_name: f.fournisseur || null, document_ref: f.piece || null,
+      is_investment: f.sens === 'OUT' && !!f.invest,
     };
     const chemin = f.id ? '/fonds/mouvement/' + f.id : '/fonds/mouvement';
     write(this.source, f.id ? 'PATCH' : 'POST', chemin, corps).then(r => {
