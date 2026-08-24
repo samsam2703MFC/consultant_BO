@@ -3826,13 +3826,18 @@ function ep_fonds(): array
         }
         $shops = [];
         foreach ($calc['shops'] as $s) {
-            $rates = []; $dues = []; $duTotal = 0.0; $aDu = false;
+            $rates = []; $dues = []; $duTotal = 0.0; $aDu = false; $duMkt = null;
             foreach ($s['sortes'] as $k) {
                 $rates[] = ['code' => $k['cle'], 'label' => $k['label'], 'rate_pct' => round($k['taux'] * 100, 2)];
                 if ($k['du'] !== null) {
                     $dues[] = ['code' => $k['code'], 'label' => $k['label'],
-                        'rate_pct' => round($k['taux'] * 100, 2), 'amount' => $k['du']];
+                        'rate_pct' => round($k['taux'] * 100, 2), 'amount' => $k['du'],
+                        // Seule la sorte Marketing part au fonds : l'écran le
+                        // dit ligne à ligne, sinon le « Dû » total laisse
+                        // croire que tout alimente la caisse commune.
+                        'au_fonds' => $k['code'] === 'MARKETING'];
                     $duTotal += $k['du']; $aDu = true;
+                    if ($k['code'] === 'MARKETING') { $duMkt = $k['du']; }
                 }
             }
             $shops[] = [
@@ -3841,8 +3846,10 @@ function ep_fonds(): array
                 'royalties_enabled' => $s['enabled'],
                 'billing_frequency' => $s['billing_frequency'],
                 // Le dû du mois TOUTES sortes confondues ; le détail sorte par
-                // sorte suit dans `dues` — une écriture par sorte au fonds.
+                // sorte suit dans `dues`. Au fonds ne part que la sorte
+                // Marketing — `due_marketing` la donne seule.
                 'due_theorique' => $aDu ? round($duTotal, 2) : null,
+                'due_marketing' => $duMkt !== null ? round($duMkt, 2) : null,
                 'dues' => $dues,
                 'movements' => $ecrit[$s['shop_id']] ?? [],
             ];

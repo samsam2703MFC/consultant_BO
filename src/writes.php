@@ -1842,9 +1842,12 @@ function wr_fonds_royalties(): array
 
 /**
  * POST /fonds/royalties/generer — les redevances du mois écrites au fonds,
- * UNE écriture par magasin et par SORTE (Marketing, Marque, Assistance,
- * Générale). Le module marketing autonome a disparu : on écrit ses tables en
- * direct, comme le reste du grand livre.
+ * UNE écriture par magasin, pour la SEULE sorte Marketing : c'est le fonds
+ * MARKETING qu'on alimente ici. Les autres sortes (Marque, Assistance,
+ * Générale) restent des revenus de la marque — les verser au fonds gonflerait
+ * un solde que le réseau croirait disponible pour ses campagnes. Le module
+ * marketing autonome a disparu : on écrit ses tables en direct, comme le
+ * reste du grand livre.
  */
 function wr_fonds_royalties_generer(): array
 {
@@ -1887,6 +1890,9 @@ function fondsRoyaltiesEcrire(string $mois, bool $apercu): array
     foreach ($don['shops'] as $s) {
         if (!$s['enabled'] || $s['ca'] === null) { continue; }
         foreach ($s['sortes'] as $k) {
+            // Seule la redevance MARKETING entre au fonds : les autres sortes
+            // reviennent à la marque, pas à la caisse commune des campagnes.
+            if (($k['code'] ?? '') !== 'MARKETING') { continue; }
             if ($k['du'] === null || $k['du'] <= 0) { continue; }
             $piece = 'ROY ' . $mois . ' ' . $k['code'] . ' #' . $s['shop_id'];
             $estLa = isset($deja[$piece]);
@@ -1908,7 +1914,7 @@ function fondsRoyaltiesEcrire(string $mois, bool $apercu): array
     }
     if (!$apercu && $ecrites > 0) {
         journalAdd('CEO', 'Fonds', 'Redevances ' . $mois,
-            $ecrites . ' écriture(s) au fonds — une par magasin et par sorte');
+            $ecrites . ' écriture(s) au fonds — la redevance marketing de chaque magasin');
     }
     return ['ok' => true, 'apercu' => $apercu, 'month' => $mois, 'lignes' => $lignes,
         'aEcrire' => round($aEcrire, 2), 'ecrites' => $ecrites, 'dejaPassees' => $dejaN];

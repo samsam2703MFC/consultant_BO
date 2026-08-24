@@ -3766,15 +3766,47 @@ class App {
     common.foSource = f.source || '';
     common.foBase = f.base || '';
 
-    // --- grand livre : entrées et sorties, période par période.
+    // --- grand livre : entrées et sorties, MOIS par mois.
+    //
+    // Soixante lignes à plat ne disaient ni ce qu'un mois a encaissé, ni ce
+    // qu'il a dépensé, ni où en était la caisse à sa clôture. Chaque mois
+    // devient une section — entrées d'abord, sorties ensuite — coiffée de ses
+    // trois chiffres : entrées, sorties, solde en fin de mois.
     const L = f.ledger || {};
     const periodes = Array.isArray(L.periods) ? L.periods : [];
     const mv = this.fondsMouvements(f);
     const entrees = mv.entrees, sorties = mv.sorties;
     const lignes = mv.lignes;
-    lignes.sort((a, b) => (a.jour < b.jour ? 1 : -1));
-    common.foLignes = lignes.slice(0, 60);
-    common.foTronque = lignes.length > 60 ? lignes.length - 60 : 0;
+    const parMois = {};
+    lignes.forEach(l => { (parMois[l.periode] = parMois[l.periode] || []).push(l); });
+    const totaux = {};
+    mv.parPeriode.forEach(p => { totaux[p.cle] = p; });
+    // Le mois le plus récent d'abord — c'est lui qu'on vient lire — et, dans
+    // le mois, les lignes de la plus récente à la plus ancienne.
+    const cles = Object.keys(parMois).sort().reverse();
+    const recentes = (a, b) => (a.jour < b.jour ? 1 : a.jour > b.jour ? -1 : 0);
+    let visibles = 0;
+    common.foMoisGroupes = [];
+    for (const cle of cles) {
+      const duMois = parMois[cle];
+      // La borne d'affichage coupe ENTRE deux mois, jamais au milieu d'un :
+      // un mois amputé de la moitié de ses lignes montrerait un solde qu'on
+      // ne peut pas recompter depuis ce qui est affiché.
+      if (common.foMoisGroupes.length && visibles + duMois.length > 60) { break; }
+      visibles += duMois.length;
+      const t = totaux[cle] || { entrees: 0, sorties: 0, cloture: null };
+      common.foMoisGroupes.push({
+        cle, nom: this.fPeriode(cle),
+        entrees: duMois.filter(l => l.sens === 'entrée').sort(recentes),
+        sorties: duMois.filter(l => l.sens === 'sortie').sort(recentes),
+        totEntrees: '+ ' + this.fU(t.entrees), totSorties: '− ' + this.fU(t.sorties),
+        // Le solde de clôture vient du calcul séquentiel de fondsMouvements :
+        // c'est le même cumul que la tuile « Solde », arrêté à ce mois-là.
+        solde: t.cloture == null ? '—' : this.fU(t.cloture),
+        soldeCol: (t.cloture == null ? 0 : t.cloture) >= 0 ? '#2d7a3e' : 'var(--color-primary)',
+      });
+    }
+    common.foTronque = lignes.length - visibles;
     common.foVide = !lignes.length;
     // Le solde vient du module quand il le donne : c'est LUI qui arrête le
     // fonds. Le recalculer d'un côté et l'afficher de l'autre finirait par
@@ -3818,32 +3850,40 @@ class App {
     // --- redevances par magasin. Le CA du mois vient de l'API de ventes
     //     (jour même), les taux de la fiche boutique ; le dû théorique en
     //     découle, et « écrit au fonds » rappelle ce qui y est déjà passé.
+    //     Au fonds ne part que la sorte MARKETING : les autres sortes sont
+    //     des revenus de la marque, l'écran le dit ligne à ligne.
     const R = f.royalties || {};
     common.foMois = R.month || '';
     common.foRoyalties = (R.shops || []).map(s => {
       const ca = s.revenue_amount == null ? null : +s.revenue_amount;
       const ecrit = (s.movements || []).reduce((a, m) => a + (+m.amount || 0), 0);
       const du = s.due_theorique != null ? +s.due_theorique : (ecrit > 0 ? ecrit : null);
+      const duMkt = s.due_marketing == null ? null : +s.due_marketing;
       return { nom: s.shop_name || ('Magasin ' + s.shop_id), ville: s.city || '',
         ca: ca == null ? '—' : this.fE(ca),
         taux: (s.rates || []).map(t => (t.label || t.code || '') + ' ' + (t.rate_pct != null ? t.rate_pct + ' %' : '—')).join(' · ') || '—',
         du: du != null ? this.fU(du) : '—',
-        // Le dû, SORTE par sorte : c'est à ce grain que les écritures partent
-        // au fonds — une par mois, par sorte et par magasin.
+        // Le dû, SORTE par sorte, avec la seule qui entre au grand livre
+        // marquée « au fonds » : le total laisse sinon croire que tout
+        // alimente la caisse commune des campagnes.
         detail: (s.dues || []).length > 1
-          ? (s.dues || []).map(d2 => (d2.label || '') + ' ' + (d2.rate_pct != null ? d2.rate_pct + ' %' : '') + ' → ' + this.fU(+d2.amount || 0))
+          ? (s.dues || []).map(d2 => (d2.label || '') + ' ' + (d2.rate_pct != null ? d2.rate_pct + ' %' : '') + ' → ' + this.fU(+d2.amount || 0) + (d2.au_fonds ? ' · au fonds' : ''))
           : [],
         ecrit: ecrit > 0 ? 'écrit au fonds : ' + this.fU(ecrit) : '',
         // Sans chiffre d'affaires, la redevance ne peut pas être calculée :
-        // le dire vaut mieux qu'un tiret qu'on lirait comme un zéro.
+        // le dire vaut mieux qu'un tiret qu'on lirait comme un zéro. Et un
+        // magasin sans taux marketing ne versera RIEN au fonds — autant le
+        // dire avant qu'on cherche sa ligne dans les entrées du mois.
         manque: ca == null
           ? 'chiffre d’affaires du mois non repris'
-          : (s.royalties_enabled === false ? 'redevances désactivées pour ce magasin' : '') };
+          : (s.royalties_enabled === false ? 'redevances désactivées pour ce magasin'
+            : (du != null && duMkt == null ? 'pas de taux marketing — rien ne part au fonds' : '')) };
     });
     common.foRoyaltiesVide = !common.foRoyalties.length;
     // « Écrire au fonds » : l'APERÇU d'abord — les lignes exactes, une par
-    // magasin et par sorte —, l'écriture après confirmation. Le serveur est
-    // idempotent : les lignes déjà passées restent en place, jamais doublées.
+    // magasin, redevance MARKETING seule —, l'écriture après confirmation. Le
+    // serveur est idempotent : les lignes déjà passées restent en place,
+    // jamais doublées.
     const rp = S.foRoyPlan || null;
     common.foRoyEcrire = R.month && !rp && !common.foRoyaltiesVide ? () => this.foRoyPlanifier(R.month) : null;
     common.foRoyPlan = !rp ? null : {
@@ -3899,7 +3939,9 @@ class App {
       avert: fm.sens === 'OUT' && !fm.levier
         ? 'Sans levier, cette sortie pèsera sur le solde sans dire ce qu’elle développe.' : '',
     };
-    common.foLignes.forEach(l => {
+    // Corriger / supprimer : posés sur TOUTES les lignes — les groupes par
+    // mois référencent ces mêmes objets, les boutons suivent.
+    lignes.forEach(l => {
       l.editer = l.id && !l.recurrente ? () => this.setState({ foForm: {
         sens: (l.brut.direction || 'OUT') === 'IN' ? 'IN' : 'OUT', id: l.id,
         date: l.brut.movement_date || '', libelle: l.brut.label || '',
@@ -4254,7 +4296,7 @@ class App {
       this.setState({ foRoyPlan: Object.assign({ busy: false }, r) });
     });
   }
-  /** Écrit les redevances prévisualisées — une par magasin et par sorte. */
+  /** Écrit les redevances prévisualisées — la marketing de chaque magasin. */
   foRoyConfirmer(){
     const p = this.state.foRoyPlan;
     if (!p || p.busy) { return; }

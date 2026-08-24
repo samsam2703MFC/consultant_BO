@@ -3190,7 +3190,7 @@ function tplFonds(c, x){
       <div style="${carte};overflow:hidden">
         <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
           <span style="font-size:13px;font-weight:500">Grand livre du fonds</span>
-          <span style="font-size:11px;color:var(--color-text-muted)">Cliquez une ligne pour la corriger</span>
+          <span style="font-size:11px;color:var(--color-text-muted)">Un bloc par mois — entrées, sorties, solde · cliquez une ligne pour la corriger</span>
         </div>
         ${c.foVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun mouvement enregistré.</div>` : `
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
@@ -3202,12 +3202,22 @@ function tplFonds(c, x){
             <th style="${th};${num}">Montant</th>
             <th style="${th};padding-right:17px"></th>
           </tr></thead>
-          <tbody>${c.foLignes.map(l => `<tr>
+          <tbody>${(c.foMoisGroupes || []).map(g => `
+            <tr><td colspan="6" style="padding:11px 17px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary)">
+              <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+                <span style="font-size:12.5px;font-weight:600">${esc(g.nom)}</span>
+                <span style="font-size:11px;font-weight:500;color:#2d7a3e;font-variant-numeric:tabular-nums">Entrées ${esc(g.totEntrees)}</span>
+                <span style="font-size:11px;font-weight:500;color:var(--color-primary);font-variant-numeric:tabular-nums">Sorties ${esc(g.totSorties)}</span>
+                <span style="flex:1"></span>
+                <span style="font-size:11px;color:var(--color-text-muted)">Solde en fin de mois&nbsp;: <b style="color:${g.soldeCol};font-variant-numeric:tabular-nums">${esc(g.solde)}</b></span>
+              </div>
+            </td></tr>
+            ${g.entrees.concat(g.sorties).map(l => `<tr>
             <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
-            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.sens)}${l.source ? ' · ' + esc(l.source) : ''}</div></td>
+            <td style="${td}"><span style="font-weight:500">${esc(l.libelle)}</span><div style="font-size:10.5px;color:${l.col}">${esc(l.sens)}${l.source ? ` <span style="color:var(--color-text-muted)">· ${esc(l.source)}</span>` : ''}</div></td>
             <td style="${td}">${l.levier
               ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:500;padding:1px 8px;border-radius:999px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</span>`
-              : `<span style="font-size:11px;color:var(--color-on-abricot)">aucun levier</span>`}</td>
+              : (l.sens === 'sortie' ? `<span style="font-size:11px;color:var(--color-on-abricot)">aucun levier</span>` : '')}</td>
             <td style="${td};font-size:11.5px">${l.reseau
               ? `<span style="font-weight:500">Tout le réseau</span>`
               : `<span style="font-weight:500">${esc(l.magasin)}</span>`}${l.campagne ? `<div style="color:var(--color-text-muted)">${esc(l.campagne)}</div>` : ''}${l.fournisseur ? `<div style="color:var(--color-text-muted)">${esc(l.fournisseur)}</div>` : ''}</td>
@@ -3217,19 +3227,20 @@ function tplFonds(c, x){
               ${l.supprimer ? `<button ${x.A(l.supprimer)} title="Supprimer cette écriture" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>` : ''}
               ${!l.editer && !l.supprimer ? `<span style="font-size:10.5px;color:var(--color-text-muted)">frais récurrent</span>` : ''}
             </td>
-          </tr>`).join('')}</tbody>
+          </tr>`).join('')}`).join('')}</tbody>
         </table></div>
-        ${c.foTronque ? `<div style="padding:9px 17px;font-size:11px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.foTronque} mouvement(s) plus anciens — le détail complet est dans le module marketing.</div>` : ''}`}
+        ${c.foTronque ? `<div style="padding:9px 17px;font-size:11px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.foTronque} mouvement(s) sur des mois plus anciens — le détail complet est dans le module marketing.</div>` : ''}`}
       </div>
     </div>
 
     <div style="${carte};overflow:hidden">
       <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:12px">
         <span style="font-size:13px;font-weight:500">Redevances par magasin${c.foMois ? ' — ' + esc(c.foMois) : ''}</span>
-        ${c.foRoyEcrire ? `<button ${x.A(c.foRoyEcrire)} title="Une écriture par magasin et par sorte, aperçu avant écriture" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Écrire au fonds</button>` : ''}
+        ${c.foRoyEcrire ? `<button ${x.A(c.foRoyEcrire)} title="Une écriture par magasin — seule la redevance marketing part au fonds ; aperçu avant écriture" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Écrire au fonds</button>` : ''}
       </div>
       ${!c.foRoyPlan ? '' : `<div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
-        <div style="font-size:12.5px;font-weight:500">Redevances ${esc(c.foRoyPlan.mois)} — ce qui partirait au fonds</div>
+        <div style="font-size:12.5px;font-weight:500">Redevances marketing ${esc(c.foRoyPlan.mois)} — ce qui partirait au fonds</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px;line-height:1.45">Seule la sorte Marketing alimente le fonds : les redevances Marque, Assistance et Générale restent des revenus de la marque, hors grand livre.</div>
         ${c.foRoyPlan.busy ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:7px">Calcul en cours…</div>` : `
         ${c.foRoyPlan.err ? `<div style="font-size:11.5px;color:var(--color-primary);margin-top:7px">${esc(c.foRoyPlan.err)}</div>` : `
         <table style="width:100%;border-collapse:collapse;margin-top:9px">
