@@ -5170,6 +5170,9 @@ class App {
     common.plChargement = !pl;
     if (!pl) { common.plZones = []; return; }
     common.plManque = (pl.manque || []).map(m => ({ champ: m.champ, quoi: m.quoi, source: m.source, type: m.type }));
+    // La photo d'une cible — référence, meuble, niveau, zone. Elle est lue ici,
+    // avant le plan : c'est le plan qui en a le plus besoin.
+    const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
     const T = pl.totaux || {};
     common.plTot = { slots: T.slots || 0, libres: T.libres || 0, places: T.places || 0 };
     common.plVide = (T.slots || 0) === 0;
@@ -5233,6 +5236,28 @@ class App {
                 // c'est le geste du comptoir, et il ne laisse personne nulle part.
                 prendre: occ ? this.plPrendre(occ.ref) : null,
                 deposer: this.plDeposerSur(s.id),
+                // La photo, répétée autant de fois que la grille le dit : c'est
+                // ce qui fait la différence entre une case étiquetée et un
+                // planogramme. Sans photo, la case reste en texte et le dit.
+                photo: occ ? photoDe('ref', occ.ref) : null,
+                photoN: occ ? Math.min(36, Math.max(1, (occ.cols || 1) * (occ.rangs || 1))) : 0,
+                photoCols: occ ? Math.max(1, occ.cols || 1) : 1,
+                photoRangs: occ ? Math.max(1, occ.rangs || 1) : 1,
+                photoTxt: occ && occ.cols && occ.rangs ? (occ.cols + ' × ' + occ.rangs) : '',
+                // Le plan dit la FORME de la case quand elle est connue : un
+                // 60 × 15 n'est pas un carré, et le montrer carré ferait juger
+                // une vitrine qui n'existe pas. La taille est CALCULÉE ici —
+                // « aspect-ratio » seul, borné par une hauteur, aurait rendu la
+                // proportion fausse sans le dire.
+                photoBoite: (() => {
+                  const r = (s.largeurMm && s.hauteurMm) ? (s.largeurMm / s.hauteurMm) : 1;
+                  const maxL = 176, maxH = 116;
+                  const l = Math.round(Math.min(maxL, maxH * r));
+                  return { l, h: Math.max(28, Math.round(l / r)) };
+                })(),
+                stPhoto: 'position:relative;overflow:hidden;border-radius:7px;cursor:pointer;'
+                  + (vise ? 'border:1.5px solid var(--color-primary)'
+                    : 'border:0.5px solid var(--color-border-tertiary)'),
                 // La grille quand elle est connue — elle dit ce que les fronts
                 // seuls ne disent pas : 6 × 1 et 3 × 2 font six produits, pas
                 // la même vitrine. Sinon, les fronts, comme avant.
@@ -5273,6 +5298,16 @@ class App {
     common.plVue = vue;
     common.plVueBtns = [['plan', 'Plan'], ['tableau', 'Tableau']].map(([v, nom]) => ({
       nom, on: vue === v, go: () => this.setState({ plVue: v }) }));
+    // Le plan avec les photos : c'est le planogramme tel qu'il se monte. Il
+    // reste débrayable — une case sans photo se lit mieux en texte, et on veut
+    // parfois voir la structure sans le décor.
+    const photosOn = S.plPhotos !== false;
+    common.plPhotosOn = photosOn;
+    common.plPhotosGo = () => this.setState({ plPhotos: !photosOn });
+    const placees = (pl.placements || []).filter(p2 => p2.slotId !== null);
+    const avecPhoto = placees.filter(p2 => photoDe('ref', p2.ref)).length;
+    common.plPhotosN = avecPhoto;
+    common.plPhotosManque = placees.length - avecPhoto;
 
     const libresSeules = !!S.plLibres;
     common.plLibresSeules = libresSeules;
@@ -5338,6 +5373,9 @@ class App {
       return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
         taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '—',
         format: combo(s, 'format'), contenant: combo(s, 'contenant'),
+        photo: occ ? photoDe('ref', occ.ref) : null,
+        photoSet: occ ? e => this.plPhoto('ref', occ.ref, (e.target.files || [])[0]) : null,
+        photoDel: occ && photoDe('ref', occ.ref) ? () => this.plPhotoRetirer('ref', occ.ref) : null,
         formatTxt: s.format || '',
         // Les dimensions ne sont dites que si le format ne les dit pas déjà :
         // « 60 × 15 cm » écrit deux fois de suite n'apprend rien.
@@ -5418,7 +5456,6 @@ class App {
     // Une photo peut être posée, remplacée ou retirée à tout moment, sur un
     // meuble comme sur un niveau : l'assistant n'est pas le seul moment où
     // l'on en dispose d'une.
-    const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
     const photoCtrl = (cible, id) => ({
       photo: photoDe(cible, id),
       photoSet: e => this.plPhoto(cible, id, (e.target.files || [])[0]),
@@ -5523,9 +5560,22 @@ class App {
                 // comptoir compare ce qu'il a en main à ce qui est attendu.
                 // Sans visuel, « Cookie Chocolat Noir » ne dit pas comment il
                 // doit être présenté.
-                return (nr && nr.photo ? '<img class="pr" src="' + esc(nr.photo) + '" alt="">' : '')
+                // La photo est RÉPÉTÉE selon la grille : la feuille doit montrer
+                // neuf croissants en 3 × 3, pas un croissant et un chiffre.
+                const cols = Math.max(1, o.cols || 1), rangs = Math.max(1, o.rangs || 1);
+                const nTuiles = Math.min(36, cols * rangs);
+                const pave = nr && nr.photo
+                  ? (nTuiles > 1
+                      ? '<span class="grille" style="grid-template-columns:repeat(' + cols + ',1fr)">'
+                        + new Array(nTuiles).fill('<img class="pr t" src="' + esc(nr.photo) + '" alt="">').join('')
+                        + '</span>'
+                      : '<img class="pr" src="' + esc(nr.photo) + '" alt="">')
+                  : '';
+                return pave
                   + '<span class="nom">' + esc(o.nom) + '</span>'
-                  + '<span class="f">' + o.fronts + ' front(s)</span>'
+                  + '<span class="f">' + (o.parSlot
+                      ? o.parSlot + ' par emplacement · ' + cols + ' × ' + rangs
+                      : o.fronts + ' front(s)') + '</span>'
                   + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : ''); }).join('')
               : '<span class="libre">libre</span>';
             return '<td>' + '<b>' + s.position + '</b> ' + corps
@@ -5588,6 +5638,8 @@ class App {
       + 'border-radius:3px;margin:2px 0 4px;display:block}'
       // Photo du PRODUIT, dans sa case : assez grande pour reconnaître le
       // produit, assez petite pour qu'une rangée de six tienne en largeur.
+      + '.grille{display:grid;gap:0.4mm;margin-bottom:2px}'
+      + '.pr.t{width:100%;height:auto;max-height:9mm;margin:0}'
       + '.pr{width:100%;max-height:18mm;object-fit:cover;border:0.5px solid var(--color-border-secondary);'
       + 'border-radius:2px;margin:2px 0 3px;display:block}'
       + '.nom{display:block;font-weight:500}'
