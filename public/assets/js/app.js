@@ -6855,19 +6855,19 @@ class App {
           libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
           badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
           geste: o.geste || '—', source: o.source || '—',
-          // Relance : l'enveloppe n'apparaît que si la commande attend encore
-          // le fournisseur ET qu'on sait à qui écrire.
-          relancable: o.etape < 4 && !o.bloque && !!o.email,
+          // Relance : la cloche n'apparaît que si la commande attend encore
+          // le fournisseur. Elle crée une NOTIFICATION dans l'ERP, pas un mail.
+          relancable: o.etape < 4 && !o.bloque,
           relanceLe: o.relanceLe || '',
-          relanceTitre: !o.email ? 'Aucune adresse pour ce fournisseur'
-            : (o.relanceLe ? 'Relancé le ' + o.relanceLe + ' — relancer à nouveau' : 'Relancer le fournisseur par e-mail'),
+          relanceTitre: o.relanceLe ? 'Relancé le ' + o.relanceLe + ' — relancer à nouveau'
+            : 'Relancer : créer une notification « commande à valider »',
           relancer: () => {
             if (this.state.svRelance === o.cle) { return; }
             this.setState({ svRelance: o.cle });
-            this.api('POST', '/centrale/achats/relance', { id: o.id, email: o.email }).then(r => {
+            this.api('POST', '/centrale/achats/relance', { id: o.id }).then(r => {
               this.setState({ svRelance: null });
               if (r && r.ok) {
-                this.notify('Relance envoyée à ' + (r.destinataire || ''));
+                this.notify('Notification envoyée — ' + (r.fournisseur || '') + (r.notification ? ' (#' + r.notification + ')' : ''));
                 this.log('Centrale', o.cle, 'Relance fournisseur envoyée');
                 // Le cache d'écran est vidé pour cette clé : la ligne
                 // réaffiche « relancé le … » sans recharger la page.

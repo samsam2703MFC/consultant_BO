@@ -6280,7 +6280,7 @@ function tplCentrale(c, x){
               <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.geste)}</td>
               <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.source)}</td>
               <td style="${TD};text-align:center">
-                ${o.relancable ? `<button ${x.A(o.relancer)} title="${esc(o.relanceTitre)}" style="border:0.5px solid ${o.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${o.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${o.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${o.relanceEnCours ? ';opacity:.5' : ''}">${o.relanceEnCours ? '…' : '✉'}</button>
+                ${o.relancable ? `<button ${x.A(o.relancer)} title="${esc(o.relanceTitre)}" style="border:0.5px solid ${o.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${o.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${o.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${o.relanceEnCours ? ';opacity:.5' : ''}">${o.relanceEnCours ? '…' : '🔔'}</button>
                   ${o.relanceLe ? `<div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px;white-space:nowrap">${esc(o.relanceLe.slice(5, 10))}</div>` : ''}`
                   : `<span title="${esc(o.relanceTitre)}" style="color:var(--color-border-secondary)">—</span>`}
               </td>

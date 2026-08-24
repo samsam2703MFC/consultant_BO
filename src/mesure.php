@@ -1360,3 +1360,50 @@ function ep_sonde_panel_route(): array
     $r = PanelApi::get($p);
     return ['route' => $p, 'reponse' => $r === null ? ['erreur' => PanelApi::$lastError ?? 'null'] : $apercu($r)];
 }
+
+/**
+ * GET /diagnostic/notif-valeurs — valeurs distinctes des champs d'une
+ * notification (pour écrire un POST valide), et POST d'essai si ?essai=1
+ * (créée hors fenêtre de visibilité, puis supprimée aussitôt).
+ */
+function ep_sonde_notif(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $liste = analyseListe(PanelApi::get('/notifications') ?? []);
+    $vals = [];
+    foreach (['type', 'priority', 'status', 'source_type', 'is_global', 'action_label'] as $k) {
+        $v = [];
+        foreach ($liste as $n) {
+            $x = (string) ($n[$k] ?? '');
+            if ($x !== '' && $x !== 'NULL') { $v[$x] = ($v[$x] ?? 0) + 1; }
+        }
+        arsort($v);
+        $vals[$k] = array_slice($v, 0, 8, true);
+    }
+    $out = ['total' => count($liste), 'valeurs' => $vals];
+
+    if (!empty($_GET['essai'])) {
+        // Fenêtre déjà close : personne ne la voit, et elle est supprimée juste après.
+        $corps = [
+            'title' => 'ESSAI COCKPIT — à ignorer',
+            'message' => 'Essai technique de création de notification (supprimé aussitôt).',
+            'priority' => (string) (array_key_first($vals['priority']) ?: 'info'),
+            'type' => (string) (array_key_first($vals['type']) ?: 'daily'),
+            'status' => 'draft',
+            'visible_from' => date('Y-m-d H:i:s', time() - 7200),
+            'visible_to' => date('Y-m-d H:i:s', time() - 3600),
+            'is_global' => 0,
+        ];
+        [$ok, $rep] = PanelApi::post('/notifications', $corps);
+        $out['essai'] = ['ok' => $ok, 'reponse' => is_array($rep) ? array_slice($rep, 0, 12, true) : $rep,
+            'erreur' => $ok ? null : (PanelApi::$lastError ?? null)];
+        $id = 0;
+        foreach ([$rep['id'] ?? null, $rep['data']['id'] ?? null] as $c) { if (is_numeric($c)) { $id = (int) $c; break; } }
+        if ($id > 0) {
+            $out['essai']['creee'] = $id;
+            $out['essai']['relue'] = PanelApi::get('/notifications/' . $id);
+            $out['essai']['supprimee'] = PanelApi::envoi('DELETE', '/notifications/' . $id, []);
+        }
+    }
+    return $out;
+}
