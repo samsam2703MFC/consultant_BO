@@ -481,6 +481,29 @@ final class PanelApi
         return self::get($path);
     }
 
+    /**
+     * Lecture BRUTE pour les sondes : le code HTTP et le corps, tels quels.
+     *
+     * `get()` avale le corps d'une erreur et ne garde qu'un message tronqué —
+     * suffisant pour un écran, insuffisant pour comprendre ce qu'une route
+     * refuse. Ici rien n'est masqué : c'est ce qui permet de lire « champ X
+     * manquant » au lieu de deviner. Lecture seule, GET uniquement.
+     *
+     * @return array{code:int, corps:mixed, erreur:?string}
+     */
+    public static function sondeGet(string $path): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'corps' => null, 'erreur' => 'jeton indisponible']; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http('GET', $url, null, $tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok !== null) { [$code, $res] = self::http('GET', $url, null, $tok); }
+        }
+        return ['code' => $code, 'corps' => $res, 'erreur' => $code >= 200 && $code < 300 ? null : self::$lastError];
+    }
+
     /** Catégories produit du réseau (/product-categories). */
     /** Chemin qui a effectivement répondu au dernier appel multi-variantes. */
     public static ?string $lastPath = null;
