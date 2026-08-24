@@ -5188,18 +5188,18 @@ function tplPlanoComptoir(c, x){
               <div style="padding-top:14px;text-align:right;font-size:10.5px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:500">${esc(l.nom)}</div>
               ${l.cases.map(k => k.absent
                 ? `<div style="min-height:50px"></div>`
-                : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, k.slots.length)},1fr);gap:5px">
+                : `<div style="display:grid;grid-template-columns:repeat(${Math.max(1, k.slots.length)},1fr);gap:5px${c.plPhotosOn ? ';align-items:start' : ''}">
                     ${k.slots.map(s => (c.plPhotosOn && s.photo && !s.vise)
-                      ? `<div ${x.A(s.clic)} draggable="true" ${x.DS(s.prendre)} ${x.DP(s.deposer)} class="pl-slot" title="${esc(s.nom)} — ${s.photoTxt ? s.photoTxt + ' par emplacement · ' : ''}cliquez pour la fiche, glissez pour la déplacer" style="${s.stPhoto};width:${s.photoBoite.l}px;height:${s.photoBoite.h}px;margin:0 auto">
-                        <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(${s.photoCols},1fr);grid-template-rows:repeat(${s.photoRangs},1fr)">
-                          ${Array.from({ length: s.photoN }).map(() => `<img src="${esc(s.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`).join('')}
+                      ? `<div ${x.A(s.clic)} draggable="true" ${x.DS(s.prendre)} ${x.DP(s.deposer)} class="pl-slot" title="${esc(s.nom)} — ${s.photoTxt ? s.photoTxt + ' par emplacement · ' : ''}cliquez pour la fiche, glissez pour la déplacer" style="${s.stPhoto}">
+                        <div style="aspect-ratio:1;display:grid;grid-template-columns:repeat(${s.photoCols},1fr);grid-template-rows:repeat(${s.photoRangs},1fr);gap:1px;background:var(--color-border-tertiary)">
+                          ${Array.from({ length: s.photoN }).map(() => `<img src="${esc(s.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;background:var(--color-surface)">`).join('')}
                         </div>
-                        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,0.88);color:#221;font-size:9px;line-height:1.3;padding:1px 4px;display:flex;gap:4px;justify-content:space-between">
-                          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(s.nom)}</span>
-                          <span style="flex:0 0 auto;opacity:0.75">${s.photoTxt ? esc(s.photoTxt) : s.position}</span>
+                        <div style="padding:5px 7px 6px;font-size:10px;line-height:1.35">
+                          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.nom)}</div>
+                          <div style="color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}</div>
                         </div>
                       </div>`
-                      : `<div ${x.A(s.clic)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} ${x.DP(s.deposer)} class="pl-slot" title="${s.libre ? 'Emplacement libre — cliquez pour le viser, ou glissez-y une référence' : esc(s.nom) + ' — cliquez pour la fiche, glissez pour la déplacer'}" style="${s.st}${c.plPhotosOn ? `;width:${s.photoBoite.l}px;height:${s.photoBoite.h}px;margin:0 auto` : ''}">
+                      : `<div ${x.A(s.clic)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} ${x.DP(s.deposer)} class="pl-slot" title="${s.libre ? 'Emplacement libre — cliquez pour le viser, ou glissez-y une référence' : esc(s.nom) + ' — cliquez pour la fiche, glissez pour la déplacer'}" style="${s.st}">
                       <span style="overflow:hidden;text-overflow:ellipsis">${s.vise ? 'visé' : (s.libre ? 'libre' : esc(s.nom))}</span>
                       <span style="opacity:0.8">${s.position}${s.detail ? ' · ' + esc(s.detail) : ''}${(c.plPhotosOn && !s.libre && !s.photo && !s.vise) ? ' · sans photo' : ''}</span>
                     </div>`).join('')}

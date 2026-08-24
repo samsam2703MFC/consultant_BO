@@ -5311,18 +5311,12 @@ class App {
                 photoCols: occ ? Math.max(1, occ.cols || 1) : 1,
                 photoRangs: occ ? Math.max(1, occ.rangs || 1) : 1,
                 photoTxt: occ && occ.cols && occ.rangs ? (occ.cols + ' × ' + occ.rangs) : '',
-                // Le plan dit la FORME de la case quand elle est connue : un
-                // 60 × 15 n'est pas un carré, et le montrer carré ferait juger
-                // une vitrine qui n'existe pas. La taille est CALCULÉE ici —
-                // « aspect-ratio » seul, borné par une hauteur, aurait rendu la
-                // proportion fausse sans le dire.
-                photoBoite: (() => {
-                  const r = (s.largeurMm && s.hauteurMm) ? (s.largeurMm / s.hauteurMm) : 1;
-                  const maxL = 176, maxH = 116;
-                  const l = Math.round(Math.min(maxL, maxH * r));
-                  return { l, h: Math.max(28, Math.round(l / r)) };
-                })(),
-                stPhoto: 'position:relative;overflow:hidden;border-radius:7px;cursor:pointer;'
+                // Vignette 1:1, texte DESSOUS : la photo n'est plus recadrée à
+                // la forme du meuble et le nom ne recouvre plus l'image. La
+                // forme réelle du slot reste lisible dans la ligne de texte
+                // (grille, format) — c'est elle qui dit la vitrine, pas le
+                // cadre de la vignette.
+                stPhoto: 'overflow:hidden;border-radius:7px;cursor:pointer;background:var(--color-surface);'
                   + (vise ? 'border:1.5px solid var(--color-primary)'
                     : 'border:0.5px solid var(--color-border-tertiary)'),
                 // La grille quand elle est connue — elle dit ce que les fronts
