@@ -5,3 +5,4 @@
 2026-08-24T08:41:15Z fonds-generale-retiree
 2026-08-24T08:41:40Z scoring-cout-matiere-panel
 2026-08-24T08:58:59Z fonds-investissement-badges-mois
+2026-08-24T09:21:19Z fonds-total-par-fournisseur
