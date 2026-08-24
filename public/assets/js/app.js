@@ -9735,8 +9735,48 @@ class App {
       && (!q || (l.msg + ' ' + l.projet).toLowerCase().includes(q)));
     common.logCompte = rows.length + ' événement(s)' + (all.length > rows.length ? ' sur ' + all.length : '');
     const tCl = { 'Alerte': ['rgba(141,29,44,0.12)', '#8D1D2C'], 'Relance': ['rgba(99,102,241,0.12)', '#4649c4'], 'Statut': ['rgba(193,122,42,0.16)', '#8a5a13'], 'Rapport': ['rgba(45,122,62,0.10)', '#2d7a3e'] };
-    common.logRows = rows.map(l => { const c = tCl[l.type] || ['var(--color-background-secondary)', '#666666'];
+    // Les CINQ derniers événements, le reste dépliable : un journal complet
+    // pousse tout le reste de l'écran hors de vue, alors qu'on vient d'abord
+    // vérifier « ce qui vient de se passer ». Un filtre ou une recherche ne
+    // change pas la règle — c'est le bouton qui ouvre.
+    const LOG_N = 5;
+    const logTout = !!S.logTout;
+    const visibles = logTout ? rows : rows.slice(0, LOG_N);
+    common.logReste = Math.max(0, rows.length - visibles.length);
+    common.logTout = logTout;
+    common.logPlier = rows.length > LOG_N ? () => this.setState({ logTout: !logTout }) : null;
+    common.logRows = visibles.map(l => { const c = tCl[l.type] || ['var(--color-background-secondary)', '#666666'];
       return { ts: l.ts, qui: l.qui, type: l.type, projet: l.projet, msg: l.msg, typeSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;background:' + c[0] + ';color:' + c[1] }; });
+
+    // --- e-mails partis du cockpit : rapports et commandes fournisseur,
+    //     réunis par /journal/mails. Chargé à l'ouverture de l'écran.
+    if (!D.mails && !this._mailsEnCours) {
+      this._mailsEnCours = true;
+      // Lecture impossible ≠ aucun envoi : on garde la différence, sinon une
+      // panne se lit comme « rien n'est jamais parti ».
+      readOne('/journal/mails').then(m2 => { this._mailsEnCours = false;
+        this.D.mails = Array.isArray(m2) ? m2 : { indispo: true }; this.setState({}); });
+    }
+    const mails = Array.isArray(D.mails) ? D.mails : [];
+    common.mailsIndispo = !!(D.mails && !Array.isArray(D.mails));
+    const mailsTout = !!S.mailsTout;
+    const mVisibles = mailsTout ? mails : mails.slice(0, LOG_N);
+    common.mailsChargement = !D.mails;
+    common.mailsVide = Array.isArray(D.mails) && !mails.length;
+    common.mailsCompte = mails.length ? mails.length + ' envoi(s) tracé(s)' : '';
+    common.mailsReste = Math.max(0, mails.length - mVisibles.length);
+    common.mailsTout = mailsTout;
+    common.mailsPlier = mails.length > LOG_N ? () => this.setState({ mailsTout: !mailsTout }) : null;
+    common.mailsRows = mVisibles.map(m2 => ({
+      ts: m2.ts || '—', source: m2.source || '', objet: m2.objet || '—',
+      dest: m2.dest || '—', detail: m2.detail || '',
+      // Le sort de l'envoi d'abord : un e-mail en échec se voit sans lire.
+      etat: m2.ok ? 'Envoyé' : 'Échec',
+      etatSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
+        + (m2.ok ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
+      srcSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
+        + (m2.source === 'Achat' ? 'background:rgba(193,122,42,0.16);color:#8a5a13' : 'background:rgba(99,102,241,0.12);color:#4649c4'),
+    }));
     common.exportCsv = () => { const csv = 'horodatage;auteur;type;projet;evenement\n' + rows.map(l => [l.ts, l.qui, l.type, l.projet, '"' + l.msg.replace(/"/g, '""') + '"'].join(';')).join('\n');
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'journal-atelier-by.csv'; a.click();
       this.notify('Journal exporté — ' + rows.length + ' événements (CSV)'); };

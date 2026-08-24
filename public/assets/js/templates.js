@@ -4065,6 +4065,49 @@ function tplJournal(c, x){
             </tr>`).join('')}
         </tbody>
       </table>
+      <!-- Les cinq derniers d'abord ; le reste s'ouvre d'un clic. -->
+      ${c.logPlier ? `<div style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <button ${x.A(c.logPlier)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 13px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${c.logTout ? 'Ne montrer que les 5 derniers' : 'Afficher les ' + c.logReste + ' plus anciens'}</button>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.logTout ? 'Journal complet affiché' : '5 derniers événements'}</span>
+      </div>` : ''}
+    </div>
+
+    <!-- Les e-mails partis du cockpit : rapports et commandes fournisseur,
+         dans un seul tableau — « ce mail est-il parti ? » se répondait
+         jusqu'ici dans deux écrans différents. -->
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:13px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:500">E-mails envoyés — rapports et commandes fournisseur</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.mailsCompte || '')}</span>
+      </div>
+      ${c.mailsChargement ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-text-muted)">Lecture des envois…</div>`
+        : c.mailsIndispo ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-on-abricot)">Les envois n’ont pas pu être lus — l’API n’a pas répondu.</div>`
+        : c.mailsVide ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucun envoi tracé pour l’instant.</div>` : `
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="${TH};white-space:nowrap">Horodatage</th>
+          <th style="${TH2};text-align:left">Source</th>
+          <th style="${TH2};text-align:left">Objet</th>
+          <th style="${TH2};text-align:left">Destinataire</th>
+          <th style="${TH2};text-align:left">État</th>
+          <th style="${TH};text-align:left">Détail</th>
+        </tr></thead>
+        <tbody>
+          ${c.mailsRows.map(m => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:9px 14px;white-space:nowrap;color:var(--color-text-muted)">${esc(m.ts)}</td>
+              <td style="padding:9px 12px"><span style="${m.srcSt}">${esc(m.source)}</span></td>
+              <td style="padding:9px 12px;font-weight:500">${esc(m.objet)}</td>
+              <td style="padding:9px 12px;color:var(--color-text-muted)">${esc(m.dest)}</td>
+              <td style="padding:9px 12px"><span style="${m.etatSt}">${esc(m.etat)}</span></td>
+              <td style="padding:9px 14px;line-height:1.45;color:var(--color-text-muted)">${esc(m.detail)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      ${c.mailsPlier ? `<div style="padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <button ${x.A(c.mailsPlier)} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 13px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${c.mailsTout ? 'Ne montrer que les 5 derniers' : 'Afficher les ' + c.mailsReste + ' plus anciens'}</button>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.mailsTout ? 'Tous les envois affichés' : '5 derniers envois'}</span>
+      </div>` : ''}`}
     </div>
   </div>`;
 }
