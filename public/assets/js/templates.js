@@ -5379,12 +5379,11 @@ function tplPlanoMeubleWizard(c, x){
         ` : ''}
 
         ${w.etape === 3 && w.edition ? `
-          <div style="font-size:12.5px;line-height:1.6;color:var(--color-text)">
-            La structure de ce meuble — ${esc(w.nNiveaux)} niveau(x), ${esc(w.nSlots)} emplacement(s) par niveau — <b style="font-weight:500">ne se refait pas d’ici</b> : la refaire à l’aveugle déplacerait ce qui est posé.
-            <div style="color:var(--color-text-muted);margin-top:8px">Les niveaux et emplacements se retouchent dans « Organiser le comptoir » ; les dimensions d’un emplacement se changent par son <b style="font-weight:500">format</b>, colonne Format du tableau.</div>
+          <div style="font-size:11.5px;line-height:1.55;color:var(--color-text);background:var(--color-background-secondary);border-radius:8px;padding:9px 12px;margin-bottom:14px">
+            Aujourd’hui : <b style="font-weight:500">${esc(w.structTxt || '')}</b>. D’ici on <b style="font-weight:500">ajoute</b> — des niveaux, des emplacements — jamais on ne retire : retirer déplacerait ce qui est posé, et se fait dans « Organiser le comptoir ». Les dimensions saisies ne valent que pour les emplacements <b style="font-weight:500">créés</b> ; celles d’un emplacement existant se changent par son format, au tableau.
           </div>
         ` : ''}
-        ${w.etape === 3 && !w.edition ? `
+        ${w.etape === 3 ? `
           <div style="${lbl};margin-bottom:7px">Dimensions d’un emplacement, en millimètres</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
             <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Longueur</div><input id="plmw-lon" type="number" min="0" max="5000" value="${esc(w.longueur)}" ${x.I(w.set('longueur'))} style="${inp};width:96px;text-align:right"></div>

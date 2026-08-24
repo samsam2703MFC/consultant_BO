@@ -5611,6 +5611,16 @@ class App {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
       c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const notes = pl.notes || {};
+    // La feuille porte la MÊME photo que l'écran : celle du cockpit si on en a
+    // annexé une, sinon celle de la recette du panel. Celui qui monte le
+    // comptoir compare ce qu'il a en main à ce qui est attendu.
+    const phPanel = (this.D.planoPhotos || {}).photos || {};
+    const photoRef = ref => ((notes['ref:' + ref] || {}).photo)
+      || ((phPanel[String(ref)] || {}).url || null);
+    const refPerI = ((pl.referentiels || {}).periodes || []);
+    const perTxt = l => (l || []).length
+      ? refPerI.filter(p2 => l.indexOf(p2.slug) >= 0).map(p2 => p2.nom || p2.slug).join(', ')
+      : '';
     const jour = new Date().toLocaleDateString('fr-BE');
     const bloc = [];
     (pl.zones || []).forEach(z => {
@@ -5631,6 +5641,9 @@ class App {
         if (nm && nm.photo) { bloc.push('<img class="ph" src="' + esc(nm.photo) + '" alt="">'); }
         (m.niveaux || []).forEach(n => {
           const nn = notes['niveau:' + n.id];
+          // Une CARTE par emplacement, photo d'abord — la feuille se lit comme
+          // le comptoir se monte : on regarde la vitrine, pas un tableau.
+          const nCol = Math.max(1, Math.min(6, (n.slots || []).length));
           const cases = (n.slots || []).map(s => {
             // TOUS les occupants, pas seulement le premier : un emplacement
             // qui en porte deux n'en montrait qu'un, sans le dire.
@@ -5639,37 +5652,43 @@ class App {
             const corps = occ.length
               ? occ.map(o => { const nr = notes['ref:' + o.ref];
                 // La photo du produit sur la feuille : celui qui monte le
-                // comptoir compare ce qu'il a en main à ce qui est attendu.
-                // Sans visuel, « Cookie Chocolat Noir » ne dit pas comment il
-                // doit être présenté.
-                // La photo est RÉPÉTÉE selon la grille : la feuille doit montrer
-                // neuf croissants en 3 × 3, pas un croissant et un chiffre.
+                // comptoir compare ce qu'il a en main à ce qui est attendu —
+                // celle du cockpit si elle existe, sinon celle de la recette du
+                // panel, comme à l'écran. Répétée selon la grille : la feuille
+                // montre neuf croissants en 3 × 3, pas un croissant et un chiffre.
+                const photo = photoRef(o.ref);
                 const cols = Math.max(1, o.cols || 1), rangs = Math.max(1, o.rangs || 1);
                 const nTuiles = Math.min(36, cols * rangs);
-                const pave = nr && nr.photo
-                  ? (nTuiles > 1
-                      ? '<span class="grille" style="grid-template-columns:repeat(' + cols + ',1fr)">'
-                        + new Array(nTuiles).fill('<img class="pr t" src="' + esc(nr.photo) + '" alt="">').join('')
-                        + '</span>'
-                      : '<img class="pr" src="' + esc(nr.photo) + '" alt="">')
-                  : '';
+                const pave = photo
+                  ? '<span class="mosaique" style="grid-template-columns:repeat(' + cols + ',1fr);'
+                    + 'grid-template-rows:repeat(' + rangs + ',1fr)">'
+                    + new Array(nTuiles).fill('<img class="pr" src="' + esc(photo) + '" alt="">').join('')
+                    + '</span>'
+                  : '<span class="sansphoto">sans photo</span>';
+                const per = perTxt(o.periodes);
                 return pave
                   + '<span class="nom">' + esc(o.nom) + '</span>'
                   + '<span class="f">' + (o.parSlot
                       ? o.parSlot + ' par emplacement · ' + cols + ' × ' + rangs
                       : o.fronts + ' front(s)') + '</span>'
-                  + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : ''); }).join('')
+                  + (per ? '<span class="f per">' + esc(per) + '</span>' : '')
+                  + (nr && nr.texte ? '<span class="f n">' + esc(nr.texte) + '</span>' : ''); }).join('<span class="et"></span>')
               : '<span class="libre">libre</span>';
-            return '<td>' + '<b>' + s.position + '</b> ' + corps
-              + (dim ? '<span class="f">' + dim + ' mm</span>' : '')
-              + '</td>';
+            const pied = [s.format || (dim ? dim + ' mm' : ''), s.contenant].filter(Boolean).join(' · ');
+            return '<div class="case' + (occ.length ? '' : ' vide') + '">'
+              + '<span class="pos">' + s.position + '</span>' + corps
+              + (pied ? '<span class="f pied">' + esc(pied) + '</span>' : '')
+              + '</div>';
           }).join('');
           // Le niveau est la SECTION du meuble : sa photo de présentation et
           // sa consigne se lisent avec sa rangée, pas trois pages plus loin.
           bloc.push('<div class="niveau">'
-            + (nn && nn.texte ? '<p class="note">' + esc(n.nom) + ' — ' + esc(nn.texte) + '</p>' : '')
+            + '<div class="nivnom">' + esc(n.nom) + '</div>'
+            + (nn && nn.texte ? '<p class="note">' + esc(nn.texte) + '</p>' : '')
             + (nn && nn.photo ? '<img class="phn" src="' + esc(nn.photo) + '" alt="">' : '')
-            + '<table><tr><th>' + esc(n.nom) + '</th>' + (cases || '<td class="libre">aucun emplacement</td>') + '</tr></table>'
+            + (cases
+              ? '<div class="rangee" style="grid-template-columns:repeat(' + nCol + ',1fr)">' + cases + '</div>'
+              : '<p class="libre">aucun emplacement</p>')
             + '</div>');
         });
       });
@@ -5720,12 +5739,24 @@ class App {
       + 'border-radius:3px;margin:2px 0 4px;display:block}'
       // Photo du PRODUIT, dans sa case : assez grande pour reconnaître le
       // produit, assez petite pour qu'une rangée de six tienne en largeur.
-      + '.grille{display:grid;gap:0.4mm;margin-bottom:2px}'
-      + '.pr.t{width:100%;height:auto;max-height:9mm;margin:0}'
-      + '.pr{width:100%;max-height:18mm;object-fit:cover;border:0.5px solid var(--color-border-secondary);'
-      + 'border-radius:2px;margin:2px 0 3px;display:block}'
+      + '.nivnom{font-size:8.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;'
+      + 'color:var(--color-text-muted);margin:5px 0 2px}'
+      + '.rangee{display:grid;gap:2.5mm;align-items:start}'
+      + '.case{border:0.5px solid var(--color-border-secondary);border-radius:3px;padding:2mm;position:relative}'
+      + '.case.vide{border-style:dashed;color:#9a938c;min-height:14mm}'
+      + '.pos{position:absolute;top:1mm;right:1.6mm;font-weight:600;font-size:9px;color:var(--color-primary)}'
+      + '.mosaique{display:grid;gap:0.4mm;aspect-ratio:1;margin-bottom:1.6mm;background:var(--color-border-secondary)}'
+      + '.pr{width:100%;height:100%;object-fit:cover;display:block;background:#fff}'
+      // « Sans photo » n'occupe pas la place d'une photo : un bandeau suffit —
+      // un grand carré vide ferait chercher une image qui n'existe pas.
+      + '.sansphoto{height:9mm;border:0.5px dashed var(--color-border-secondary);'
+      + 'border-radius:2px;margin-bottom:1.6mm;color:#9a938c;font-size:8.5px;'
+      + 'display:flex;align-items:center;justify-content:center}'
+      + '.et{display:block;height:1.4mm;border-top:0.5px dashed var(--color-border-secondary);margin:1.4mm 0 0}'
+      + '.per{color:var(--color-primary);font-weight:500}'
+      + '.pied{margin-top:1mm;border-top:0.5px solid var(--color-border-tertiary,#e5e0da);padding-top:0.8mm}'
       + '.nom{display:block;font-weight:500}'
-      + 'section{break-inside:auto}h3,table,.niveau{break-inside:avoid}'
+      + 'section{break-inside:auto}h3,.niveau{break-inside:avoid}'
       + '@page{size:A4;margin:14mm}</style></head><body>'
       + '<div class="tete"><div>'
       + '<h1>Planogramme comptoir</h1>'
@@ -5866,6 +5897,11 @@ class App {
       // En édition, l'assistant corrige l'identité du meuble ; la structure se
       // retouche ailleurs, et l'écran le dit plutôt que de la refaire en douce.
       edition: !!w.meubleId,
+      structTxt: (() => { if (!w.meubleId) { return ''; }
+        const m = ((pl.zones || []).flatMap(z => z.meubles || [])).find(m2 => m2.id === w.meubleId);
+        if (!m) { return ''; }
+        return (m.niveaux || []).length + ' niveau(x), '
+          + (m.niveaux || []).reduce((a, n) => a + (n.slots || []).length, 0) + ' emplacement(s)'; })(),
       zone: zone ? zone.nom : '',
       nom: w.nom, type: w.type, temperature: w.temperature, presentation: w.presentation,
       longueur: w.longueur, largeur: w.largeur, hauteur: w.hauteur, capacite: w.capacite,
@@ -5982,17 +6018,48 @@ class App {
         }
         const meuble = ((this.D.plano || {}).zones || [])
           .flatMap(z => z.meubles || []).find(m => m.id === w.meubleId) || {};
+
+        // La structure s'ÉTEND depuis l'assistant : les niveaux existants sont
+        // complétés jusqu'au nombre demandé, les niveaux manquants créés avec
+        // leurs emplacements. Jamais l'inverse — demander moins ne retire
+        // rien, et la notification le dit plutôt que de laisser croire.
+        const dims = { largeurMm: ent(lu('plmw-lar', w.largeur)),
+          longueurMm: ent(lu('plmw-lon', w.longueur)), hauteurMm: ent(lu('plmw-hau', w.hauteur)),
+          capacite: ent(lu('plmw-cap', w.capacite)) };
+        const niveaux = meuble.niveaux || [];
+        const chaine = [];
+        let plusSlots = 0, plusNiveaux = 0, enMoins = 0;
+        niveaux.forEach(n => { const dej = (n.slots || []).length;
+          if (nSlots > dej) { plusSlots += nSlots - dej;
+            chaine.push(() => write(this.source, 'POST', '/planogramme/emplacement',
+              Object.assign({ niveauId: n.id, nombre: nSlots - dej }, dims))); }
+          if (nSlots < dej) { enMoins++; } });
+        for (let r2 = niveaux.length + 1; r2 <= nNiveaux; r2++) {
+          plusNiveaux++; plusSlots += nSlots;
+          const nomNiv = this.plMwNiveaux(nNiveaux)[r2 - 1] || ('Niveau ' + r2);
+          chaine.push(() => write(this.source, 'POST', '/planogramme/niveau',
+            Object.assign({ parentId: w.meubleId, nom: nomNiv, rang: r2, slots: nSlots }, dims)));
+        }
+        if (nNiveaux < niveaux.length) { enMoins++; }
+
         const envois = [];
         if (w.photoMeuble) { envois.push(this.plPhotoEnvoyer('meuble', w.meubleId, w.photoMeuble)); }
-        (meuble.niveaux || []).forEach((n, i) => {
+        niveaux.forEach((n, i) => {
           const d2 = (w.photosNiveau || {})[i + 1];
           if (d2) { envois.push(this.plPhotoEnvoyer('niveau', n.id, d2)); }
         });
-        Promise.all(envois).then(rs => {
-          const rates = rs.filter(r2 => !r2 || r2.ok === false).length;
+        // Les créations partent l'une APRÈS l'autre : les positions d'un même
+        // niveau se numérotent au fil de l'eau, deux envois croisés se
+        // marcheraient dessus.
+        const suite = i2 => i2 < chaine.length ? chaine[i2]().then(() => suite(i2 + 1)) : Promise.resolve();
+        suite(0).then(() => Promise.all(envois)).then(rs => {
+          const rates = (rs || []).filter(r2 => !r2 || r2.ok === false).length;
           this.setState({ plMw: null });
           this.plCharge(true);
           this.notify('« ' + nom + ' » modifié'
+            + (plusNiveaux ? ' · +' + plusNiveaux + ' niveau(x)' : '')
+            + (plusSlots ? ' · +' + plusSlots + ' emplacement(s)' : '')
+            + (enMoins ? ' — rien n’est retiré d’ici : la suppression se fait dans « Organiser le comptoir »' : '')
             + (envois.length ? ' · ' + (envois.length - rates) + '/' + envois.length + ' photo(s)' : '')
             + (rates ? ' — ' + rates + ' photo(s) non enregistrée(s)' : ''));
         });
