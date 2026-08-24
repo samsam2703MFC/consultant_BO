@@ -1339,3 +1339,44 @@ function ep_profil_jour(): array
         'lecture' => 'Moyenne du CA par jour de semaine, mesurée sur la fenêtre lue par « Résultat du jour » '
             . 'et réécrite à chaque passage. La part est celle du jour dans une semaine type.'];
 }
+
+/**
+ * GET /diagnostic/commandes-fournisseurs — sonde temporaire : ce que le panel
+ * rend vraiment sur les routes de commandes matière d'un magasin, pour caler
+ * le suivi fournisseurs sur les VRAIS noms de champs.
+ */
+function ep_sonde_commandes_fournisseurs(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $sid = (int) ($_GET['shop'] ?? 3);
+    $du = date('Y-m-d', strtotime('-120 days'));
+    $au = date('Y-m-d');
+    $chemins = [
+        'orders-materials'      => '/shops/' . $sid . '/orders/materials',
+        'orders-materials-dates' => '/shops/' . $sid . '/orders/materials?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'orders'                => '/shops/' . $sid . '/orders',
+        'orders-dates'          => '/shops/' . $sid . '/orders?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'supplement-orders'     => '/shops/' . $sid . '/supplement-orders',
+    ];
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return ['type' => gettype($v), 'valeur' => is_scalar($v) ? mb_substr((string) $v, 0, 120) : null]; }
+        if (array_is_list($v)) {
+            return ['liste' => count($v), 'clés' => ($v && is_array($v[0])) ? array_keys($v[0]) : null,
+                'premier' => ($v && is_array($v[0])) ? array_map(static fn ($z) => is_array($z) ? '[' . count($z) . ']' : mb_substr((string) $z, 0, 40), $v[0]) : null];
+        }
+        $out = ['clés' => array_keys($v)];
+        foreach (['data', 'items', 'results', 'orders'] as $k) {
+            if (isset($v[$k]) && is_array($v[$k]) && array_is_list($v[$k])) {
+                $out['sous-liste'] = $k; $out['nb'] = count($v[$k]);
+                if ($v[$k] && is_array($v[$k][0])) {
+                    $out['clés-ligne'] = array_keys($v[$k][0]);
+                    $out['première-ligne'] = array_map(static fn ($z) => is_array($z) ? '[' . count($z) . ']' : mb_substr((string) $z, 0, 40), $v[$k][0]);
+                }
+            }
+        }
+        return $out;
+    };
+    $out = ['magasin' => $sid, 'routes' => []];
+    foreach (PanelApi::getParallele($chemins) as $nom => $r) { $out['routes'][$nom] = $apercu($r); }
+    return $out;
+}
