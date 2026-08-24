@@ -14,6 +14,7 @@ require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
+require __DIR__ . '/../../src/fournisseur_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
@@ -101,7 +102,6 @@ function route(string $method, string $path): mixed
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
-            $path === '/diagnostic/commandes-fournisseurs' => ep_sonde_commandes_fournisseurs(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
@@ -152,6 +152,7 @@ function route(string $method, string $path): mixed
             $path === '/ia/statut'                     => ep_ia_statut(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),
+            $path === '/fournisseur/compte'            => FournisseurApi::statut(),
             default                                    => notFound(),
         };
     }
@@ -208,6 +209,8 @@ function route(string $method, string $path): mixed
     // --- machine d'envoi SMTP (identifiants côté serveur uniquement)
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }
+    if ($method === 'PUT' && $path === '/parametres/fournisseur-api') { return wr_fournisseur_api(); }
+    if ($method === 'POST' && $path === '/parametres/fournisseur-api/test') { return wr_fournisseur_api_test(); }
     if ($method === 'POST' && $path === '/centrale/commandes/mail/test') { return wr_ca_mail_test(); }
     // --- générateur de rapports (par levier, à seuils) + compositeur
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }

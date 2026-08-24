@@ -10123,6 +10123,39 @@ class App {
       },
     };
 
+    // --- compte fournisseur (API) : le seul réalm qui laisse LIRE les commandes
+    // matière (mesuré : consultant et admin reçoivent 404 ORDER_NOT_FOUND).
+    if (!this._fouLu) { this._fouLu = true; readOne('/fournisseur/compte').then(st => { this.D.fouStatut = st || null; this.setState({}); }); }
+    const foSt = this.D.fouStatut || {};
+    const foD = S.foDraft || {};
+    const foVal = (k, def) => foD[k] != null ? foD[k] : (foSt[k] != null ? String(foSt[k]) : def);
+    const foSet = k => e => { const v = e.target.value; this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { [k]: v }) })); };
+    common.fo = {
+      base: foVal('base', 'https://atelierby.tfbuddy.com/api/v1'),
+      login: foVal('login', ''), mdpDefini: !!foSt.motDePasseDefini,
+      busy: !!foD.busy, msg: foD.msg || '',
+      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (foD.ok ? '#2d7a3e' : '#8D1D2C'),
+      etatTxt: foSt.configure
+        ? (foSt.jetonValide ? 'Connecté' : 'Configuré') + (foSt.fournisseurId ? ' · fournisseur #' + foSt.fournisseurId : '')
+        : 'Non configuré',
+      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        + (foSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
+      setBase: foSet('base'), setLogin: foSet('login'), setMdp: foSet('password'),
+      save: () => {
+        const d2 = this.state.foDraft || {};
+        this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: true, msg: '' }) }));
+        this.api('PUT', '/parametres/fournisseur-api', { base: foVal('base', ''), login: foVal('login', ''), password: d2.password || '' })
+          .then(r => { this._fouLu = false;
+            this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: false, password: '', ok: !(r && r.ok === false), msg: (r && r.ok === false) ? 'Échec de l’enregistrement.' : 'Enregistré.' }) }));
+            this.log('Paramètre', '—', 'Compte fournisseur (API) mis à jour'); });
+      },
+      test: () => {
+        this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: true, msg: '' }) }));
+        this.api('POST', '/parametres/fournisseur-api/test').then(r => { this._fouLu = false;
+          this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: false, ok: !!(r && r.ok), msg: (r && (r.message || r.error)) || 'Test impossible.' }) })); });
+      },
+    };
+
     // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
     // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
     // Paramètres. L'envoi automatique tourne avec le cron des rapports.
