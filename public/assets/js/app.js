@@ -7608,12 +7608,30 @@ class App {
     const verdict = _c.verdict;
     common.pdCat = S.pdCat; common.setPdCat = e => this.setState({ pdCat: e.target.value });
     common.pdCatOptions = ['Toutes les catégories'].concat(Object.keys(cats));
-    // La pénétration et la marge brute ont quitté la ligne (fiche au clic) :
-    // trier sur une colonne invisible désorienterait. « Position générale »
-    // trie par CA — c'est le critère du rang.
-    const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['ca', 'Trier par position générale'], ['marge', 'Trier par taux de marge'], ['rang', 'Trier par position catégorie']];
-    common.pdSortOptions = sorts.map(s => ({ val: s[0], nom: s[1] }));
-    common.pdSort = S.pdSort; common.setPdSort = e => this.setState({ pdSort: e.target.value });
+    // Le tri vit sur les EN-TÊTES : cliquer une colonne trie, recliquer
+    // inverse — comme au Tableau des magasins. Le menu déroulant de tri
+    // disparaît : dix colonnes triables n'ont pas besoin d'un second organe.
+    const sk = S.pdSortKey || 'score', sdir = S.pdSortDir || -1;
+    const colDefs = [
+      ['cat',   'Catégorie',      'left',  1],
+      ['nom',   'Produit',        'left',  1],
+      ['vol',   'Volume',         'right', -1],
+      ['pv',    'PV',             'right', -1],
+      ['achat', 'Achat',          'right', -1],
+      ['marge', 'Marge',          'right', -1],
+      ['taux',  'Taux',           'right', -1],
+      ['perte', 'Perte',          'right', -1],
+      // Une position se lit du meilleur au moins bon : premier clic
+      // ASCENDANT, contrairement aux montants.
+      ['posG',  'Pos. générale',  'right', 1, 'Rang par CA sur toutes les références'],
+      ['posC',  'Pos. catégorie', 'right', 1, 'Rang par CA dans la catégorie'],
+      ['score', 'Score',          'right', -1],
+    ];
+    common.pdCols = colDefs.map(c2 => ({
+      label: c2[1], align: c2[2], titre: c2[4] || 'Trier par ' + c2[1].toLowerCase(),
+      arrow: sk === c2[0] ? (sdir > 0 ? ' ↑' : ' ↓') : '',
+      sort: () => this.setState({ pdSortKey: c2[0], pdSortDir: sk === c2[0] ? -sdir : c2[3] }),
+    }));
     // Recherche : retrouver UNE référence dans 200 lignes sans dérouler.
     // Insensible à la casse et aux accents — « eclair » trouve « Éclair » —
     // et l'identifiant de caisse marche aussi. Elle se cumule au filtre de
@@ -7624,9 +7642,24 @@ class App {
     const q = norm(S.pdQ).trim();
     const rows = base.filter(p => (S.pdCat === 'Toutes les catégories' || p.cat === S.pdCat)
       && (!q || norm(p.nom).includes(q) || norm(p.cat).includes(q) || String(p.id).includes(q)));
-    rows.sort((a, b) => S.pdSort === 'volume' ? b.vol - a.vol : S.pdSort === 'pen' ? (b.pen - a.pen || b.score - a.score) : S.pdSort === 'ca' ? b.ca - a.ca
-      : S.pdSort === 'marge' ? b.mp - a.mp : S.pdSort === 'mg' ? b.mg - a.mg
-      : S.pdSort === 'rang' ? (a.rang - b.rang || b.score - a.score) : b.score - a.score);
+    // La valeur de tri de chaque colonne, prise sur la donnée BRUTE — jamais
+    // sur le texte affiché, qui trierait « 12 » avant « 3 ». Une valeur
+    // absente va toujours en FIN de liste, quel que soit le sens : une
+    // donnée manquante n'est ni la meilleure ni la pire, elle est absente.
+    const valTri = {
+      cat: p => p.cat, nom: p => p.nom, vol: p => p.vol, pv: p => p.prix,
+      achat: p => (p.mu == null ? null : p.prix - p.mu),
+      marge: p => p.mu, taux: p => p.mp, perte: p => p.perte,
+      posG: p => p.rangGlobal, posC: p => p.rang, score: p => p.score,
+    }[sk] || (p => p.score);
+    rows.sort((a, b) => {
+      const va = valTri(a), vb = valTri(b);
+      if (va == null && vb == null) { return b.score - a.score; }
+      if (va == null) { return 1; }
+      if (vb == null) { return -1; }
+      const c2 = typeof va === 'string' ? va.localeCompare(vb, 'fr') : va - vb;
+      return c2 !== 0 ? c2 * sdir : b.score - a.score;
+    });
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
     const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
     const eur = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €';
