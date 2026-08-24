@@ -4219,29 +4219,6 @@ function tplParams(c, x){
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:500">Compte fournisseur (API) — lecture des commandes</div>
-          <span style="${c.fo.etatSt}">${esc(c.fo.etatTxt)}</span>
-        </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Les commandes matière ne se lisent ni avec le compte consultant ni avec le compte admin (mesuré : 404 ORDER_NOT_FOUND sur les deux) — seul le compte externe d’un fournisseur y donne accès. C’est ce compte qui alimente le Suivi fournisseurs ; un jeton ne voit que SON fournisseur.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label style="font-size:12px;color:var(--color-text-muted)">Identifiant
-            <input value="${esc(c.fo.login)}" ${x.C(c.fo.setLogin)} autocomplete="off" placeholder="login du compte fournisseur" style="${inputCss}">
-          </label>
-          <label style="font-size:12px;color:var(--color-text-muted)">Mot de passe
-            <input type="password" ${x.C(c.fo.setMdp)} autocomplete="new-password" placeholder="${c.fo.mdpDefini ? 'En place — saisir pour remplacer' : 'mot de passe'}" style="${inputCss}">
-          </label>
-        </div>
-        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Base de l’API
-          <input value="${esc(c.fo.base)}" ${x.C(c.fo.setBase)} style="${inputCss}">
-        </label>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
-          <button ${x.A(c.fo.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.fo.busy ? 'opacity:.6' : ''}">${c.fo.busy ? 'En cours…' : 'Enregistrer'}</button>
-          <button ${x.A(c.fo.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Tester la connexion</button>
-        </div>
-        ${c.fo.msg ? `<div style="${c.fo.msgSt}">${esc(c.fo.msg)}</div>` : ''}
-      </div>
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
           <div style="font-size:13px;font-weight:500">Centrale d’achat — e-mail « commande fournisseur »</div>
           <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
         </div>
@@ -6280,8 +6257,8 @@ function tplCentrale(c, x){
         <thead><tr>
           <th style="${TH};width:170px">Magasin</th><th style="${TH};width:130px">Commande</th>
           <th style="${TH};width:78px">Passée</th><th style="${TH};width:86px">Livraison</th>
-          <th style="${TH};width:240px">Avancement</th><th style="${TH};width:150px">Documents</th>
-          <th style="${TH};text-align:right;width:100px">Valeur</th>
+          <th style="${TH};width:240px">Avancement</th><th style="${TH};width:170px">Dernier geste</th>
+          <th style="${TH};width:80px">Source</th>
         </tr></thead>
         <tbody>
           ${c.caSvGroupes.map(g => `
@@ -6300,8 +6277,8 @@ function tplCentrale(c, x){
                 <span style="font-size:11.5px;font-weight:500;margin-left:6px;white-space:nowrap;color:${o.libelleCol}">${esc(o.libelle)}</span>
                 ${o.badge ? `<span style="font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:rgba(141,29,44,0.10);color:var(--color-primary);margin-left:6px;white-space:nowrap">${esc(o.badge)}</span>` : ''}
               </span></td>
-              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.docs)}</td>
-              <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(o.valeur)}</td>
+              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.geste)}</td>
+              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.source)}</td>
             </tr>`).join('')}`).join('')}
         </tbody>
       </table></div>

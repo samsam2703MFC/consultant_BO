@@ -6830,6 +6830,88 @@ class App {
         || (fSv === 'cours' && o.etape < 4 && !o.bloque)
         || (fSv === 'retard' && o.retardJours != null)
         || (fSv === 'livre' && o.etape === 4);
+      const maj = sv.quand ? new Date(sv.quand * 1000) : null;
+      common.caSvKpis = svK ? [
+        ['Commandes en cours', String(svK.enCours), svK.fournisseurs + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
+        ['En retard', String(svK.retard), 'livraison prévue dépassée', svK.retard ? '#8D1D2C' : ''],
+        ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
+        ['Lecture', sv.lues ? String(sv.lues) : '—', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
+      ] : null;
+      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
+          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
+        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
+          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
+      common.caSvGroupes = (sv.groupes || []).map(g => ({
+        nom: g.fournisseur,
+        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
+        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
+        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
+        commandes: (g.commandes || []).filter(garde).map(o => ({
+          magasin: o.magasin, cle: o.cle, date: jf(o.date),
+          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
+          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
+            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
+          libelle: o.libelle,
+          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
+          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
+          geste: o.geste || '—', source: o.source || '—',
+        })),
+      })).filter(g => g.commandes.length);
+      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
+        : 'Aucune commande lisible sur l’API.');
+    } else if (ecr === 'caCommandes') {
+      // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
+      // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
+      // jeu complet, pas sur le filtre — sinon ils mentent dès qu'on filtre.
+      const lgs = d.lignes || [];
+      const fSt = S.caCmdStatut || '';
+      const nSt = code => lgs.filter(x => x.statut === code).length;
+      common.caChips = [['PENDING', 'En attente', '#8a5a13', 'rgba(193,122,42,0.16)'],
+                        ['REALISED', 'Réalisée', '#2d7a3e', 'rgba(45,122,62,0.12)']]
+        .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
+          on: fSt === code,
+          pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
+      // L'écran se lit PAR FOURNISSEUR : une carte par fournisseur, ses 5
+      // dernières commandes, l'attente en évidence. Le filtre de statut
+      // s'applique aux lignes de chaque carte.
+      common.caFournGroupes = (d.parFournisseur || []).map(g => ({
+        nom: g.fournisseur,
+        special: g.fournisseur === 'À répartir' || g.fournisseur === 'Sans fournisseur',
+        resume: g.enAttente
+          ? g.enAttente + ' en attente · ' + this.fE(g.valeurAttente)
+          : 'rien en attente',
+        resumeCol: g.enAttente ? '#8a5a13' : '#2d7a3e',
+        resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
+        note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
+        commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
+          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '—',
+          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
+          col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
+          valeur: this.fE(x.valeur), par: x.par || '—' })),
+      })).filter(g => g.commandes.length);
+      common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
+        : 'Aucune réquisition matière remontée par le panel.';
+      // La ventilation actionnable : une ligne = UNE commande à passer chez UN
+      // fournisseur, avec ses références et son montant estimé.
+      common.caTable2 = (d.aCommander && d.aCommander.length) ? {
+        titre: 'À commander maintenant — une commande par fournisseur',
+        cols: ['Magasin', 'Fournisseur', 'Références à commander', 'Montant estimé (HT)'],
+        rows: d.aCommander.map(a => ({ cells: [
+          { t: a.magasin, mut: true }, { t: a.fournisseur },
+          { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
+      } : null;
+    } else if (ecr === 'caAchats') {
+      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
+      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
+      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
+      const sv = d.suivi || {};
+      const svK = sv.kpis || null;
+      const fSv = S.caSvFiltre || '';
+      const jf = z => !z ? '—' : String(z).slice(5).split('-').reverse().join('.');
+      const garde = o => !fSv
+        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
+        || (fSv === 'retard' && o.retardJours != null)
+        || (fSv === 'livre' && o.etape === 4);
       common.caSvKpis = svK ? [
         ['Commandes en cours', String(svK.enCours), (sv.groupes || []).length + ' fournisseur(s)', ''],
         ['En retard', String(svK.retard), 'livraison dépassée', svK.retard ? '#8D1D2C' : ''],
@@ -10120,39 +10202,6 @@ class App {
         this.api('POST', '/parametres/smtp/test', { a: smVal('testA', '') }).then(r =>
           this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: !!(r && r.ok),
             msg: (r && (r.message || r.error)) || 'Test impossible.' }) })));
-      },
-    };
-
-    // --- compte fournisseur (API) : le seul réalm qui laisse LIRE les commandes
-    // matière (mesuré : consultant et admin reçoivent 404 ORDER_NOT_FOUND).
-    if (!this._fouLu) { this._fouLu = true; readOne('/fournisseur/compte').then(st => { this.D.fouStatut = st || null; this.setState({}); }); }
-    const foSt = this.D.fouStatut || {};
-    const foD = S.foDraft || {};
-    const foVal = (k, def) => foD[k] != null ? foD[k] : (foSt[k] != null ? String(foSt[k]) : def);
-    const foSet = k => e => { const v = e.target.value; this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { [k]: v }) })); };
-    common.fo = {
-      base: foVal('base', 'https://atelierby.tfbuddy.com/api/v1'),
-      login: foVal('login', ''), mdpDefini: !!foSt.motDePasseDefini,
-      busy: !!foD.busy, msg: foD.msg || '',
-      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (foD.ok ? '#2d7a3e' : '#8D1D2C'),
-      etatTxt: foSt.configure
-        ? (foSt.jetonValide ? 'Connecté' : 'Configuré') + (foSt.fournisseurId ? ' · fournisseur #' + foSt.fournisseurId : '')
-        : 'Non configuré',
-      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
-        + (foSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
-      setBase: foSet('base'), setLogin: foSet('login'), setMdp: foSet('password'),
-      save: () => {
-        const d2 = this.state.foDraft || {};
-        this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: true, msg: '' }) }));
-        this.api('PUT', '/parametres/fournisseur-api', { base: foVal('base', ''), login: foVal('login', ''), password: d2.password || '' })
-          .then(r => { this._fouLu = false;
-            this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: false, password: '', ok: !(r && r.ok === false), msg: (r && r.ok === false) ? 'Échec de l’enregistrement.' : 'Enregistré.' }) }));
-            this.log('Paramètre', '—', 'Compte fournisseur (API) mis à jour'); });
-      },
-      test: () => {
-        this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: true, msg: '' }) }));
-        this.api('POST', '/parametres/fournisseur-api/test').then(r => { this._fouLu = false;
-          this.setState(s2 => ({ foDraft: Object.assign({}, s2.foDraft, { busy: false, ok: !!(r && r.ok), msg: (r && (r.message || r.error)) || 'Test impossible.' }) })); });
       },
     };
 

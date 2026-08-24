@@ -3132,27 +3132,3 @@ function wr_task_delete(string $projectId, string $taskId): array
     }
     return ['ok' => true, 'signalements' => $sig, 'panel' => $panel];
 }
-
-/** PUT /parametres/fournisseur-api — identifiants du compte fournisseur. */
-function wr_fournisseur_api(): array
-{
-    $b = body();
-    $c = setting('fournisseurApi', []);
-    if (!is_array($c)) { $c = []; }
-    foreach (['base', 'login'] as $k) {
-        if (isset($b[$k]) && is_string($b[$k])) { $c[$k] = trim($b[$k]); }
-    }
-    // Le mot de passe ne repart JAMAIS vers l'écran : vide = on garde l'ancien.
-    if (!empty($b['password']) && is_string($b['password'])) { $c['password'] = $b['password']; }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['fournisseurApi', json_encode($c, JSON_UNESCAPED_UNICODE)]);
-    FournisseurApi::oublierJeton();
-    return FournisseurApi::statut();
-}
-
-/** POST /parametres/fournisseur-api/test — vérifie la connexion. */
-function wr_fournisseur_api_test(): array
-{
-    [$ok, $msg] = FournisseurApi::tester();
-    return ['ok' => $ok, 'message' => $msg];
-}

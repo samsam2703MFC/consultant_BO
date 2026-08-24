@@ -6214,143 +6214,168 @@ function ep_ca_achats(): array
     if (!$suivi['groupes']) {
         $manquants[] = lacune('Commandes fournisseurs',
             'les 2 dernières commandes de chaque magasin et leur état',
-            'API panel — GET /shops/{id}/orders/materials n’a rien rendu pour les magasins actifs');
+            'API panel — aucune route de LISTE n’est lisible (404 ORDER_NOT_FOUND en consultant et en admin) ; le suivi balaie GET /deliveries/{id}, qui n’a rien rendu sur la plage récente');
     }
+    $manquants[] = lacune('Valeur des commandes',
+        'le montant de chaque commande fournisseur',
+        'API panel — GET /deliveries/{id} ne porte aucun montant ; à réclamer, ou une route de liste des commandes');
     $manquants[] = lacune('Réception et litiges',
         'quantités reçues face aux quantités commandées, et l’état des factures',
         'API panel — la réception vit sur POST /orders/{id}/delivery ; aucune route de lecture ne la restitue');
 
     return ['etat' => 'ok', 'titre' => 'Suivi fournisseurs',
-        'source' => 'API panel — commandes matière des magasins (/shops/{id}/orders/materials), référentiel fournisseurs (/material-suppliers), ventes du réseau (sales-kpis)',
+        'source' => 'API panel — commandes lues une par une (/deliveries/{id}, seule route accessible), référentiel fournisseurs (/material-suppliers), ventes du réseau (sales-kpis)',
         'lignes' => $lignes, 'caMensuel' => $caMensuel, 'exercice' => $annee,
         'suivi' => $suivi, 'manquants' => $manquants];
 }
 
 /**
- * Les 2 dernières commandes de CHAQUE magasin, chez le fournisseur dont le
- * compte est renseigné (Paramètres → Compte fournisseur).
+ * Les 2 dernières commandes de CHAQUE magasin, chez CHAQUE fournisseur.
  *
- * MESURÉ : ces commandes ne se lisent ni en réalm consultant ni en réalm admin
- * (/shops/{id}/orders/materials et /material-suppliers/{id}/orders répondent
- * 404 ORDER_NOT_FOUND aux deux, sur le même environnement où le portail
- * fournisseur les affiche). Elles vivent derrière le compte externe du
- * fournisseur — d'où FournisseurApi. Un jeton ne voit QUE son fournisseur :
- * sans compte, l'écran le dit au lieu d'afficher un vide muet.
+ * MESURÉ sur le serveur : aucune route de LISTE de commandes n'est lisible en
+ * réalm consultant ni admin — /shops/{id}/orders(/materials), /orders et
+ * /material-orders répondent 404 ORDER_NOT_FOUND. En revanche
+ * GET /deliveries/{idCommande} rend la commande ENTIÈRE, quel que soit son
+ * magasin et son fournisseur : identifiant, clé, dates, statut logistique,
+ * statut de traitement fournisseur et horodatages des gestes.
  *
- * L'avancement se résume en quatre étapes :
- *   1 envoyée → 2 acceptée → 3 en transit → 4 livrée
- * et un refus/annulation casse le parcours à l'étape atteinte.
+ * Le suivi balaie donc la plage des identifiants récents (en parallèle) et
+ * garde ce qui répond. Le balayage coûte cher : son résultat est mémorisé
+ * dans `ceo_app_setting.caSuiviCache` et rejoué pendant SUIVI_TTL, sauf
+ * ?refresh=1. La borne haute connue vit dans `caSuiviMaxId` et monte toute
+ * seule quand de nouvelles commandes apparaissent.
  */
+const SUIVI_TTL = 900;          // 15 min — le suivi n'est pas du temps réel
+const SUIVI_PROFONDEUR = 260;   // identifiants balayés vers le bas
+const SUIVI_AVANCE = 40;        // identifiants sondés au-delà du max connu
+
 function caSuiviCommandes(array $nomsMagasins): array
 {
-    if (!FournisseurApi::configured()) {
-        return ['groupes' => [], 'kpis' => null,
-            'indispo' => 'compte fournisseur non configuré — Paramètres → Compte fournisseur (API)'];
-    }
-    $fid = FournisseurApi::fournisseurId();
-    if ($fid === null) {
-        return ['groupes' => [], 'kpis' => null,
-            'indispo' => FournisseurApi::$lastError ?? 'connexion au compte fournisseur refusée'];
-    }
-
-    $rep = FournisseurApi::get('/material-suppliers/' . $fid . '/orders');
-    if ($rep === null) {
-        return ['groupes' => [], 'kpis' => null,
-            'indispo' => FournisseurApi::$lastError ?? 'commandes illisibles'];
-    }
-    $cmds = analyseListe($rep);
-
-    $texte = static function (array $d, array $cles): string {
-        foreach ($cles as $c) {
-            if (isset($d[$c]) && is_scalar($d[$c]) && trim((string) $d[$c]) !== '') { return trim((string) $d[$c]); }
-            if (isset($d[$c]) && is_array($d[$c])) {
-                foreach (['name', 'display_name', 'label', 'number', 'key'] as $c2) {
-                    if (!empty($d[$c][$c2]) && is_scalar($d[$c][$c2])) { return trim((string) $d[$c][$c2]); }
-                }
-            }
+    $frais = empty($_GET['refresh']);
+    if ($frais) {
+        $cache = setting('caSuiviCache');
+        if (is_array($cache) && (int) ($cache['quand'] ?? 0) > time() - SUIVI_TTL) {
+            $cache['cache'] = true;
+            return $cache;
         }
-        return '';
-    };
-    // Le nom du fournisseur : celui du référentiel si on le connaît.
-    $nomFourn = 'Fournisseur #' . $fid;
+    }
+
+    // 1. La borne haute : on sonde au-delà du dernier identifiant connu.
+    $max = (int) (setting('caSuiviMaxId') ?? 0);
+    if ($max <= 0) { $max = 300; }
+    $sonde = [];
+    for ($i = $max + 1; $i <= $max + SUIVI_AVANCE; $i++) { $sonde[$i] = '/deliveries/' . $i; }
+    foreach (PanelApi::getParallele($sonde, 8) as $id => $r) {
+        if (is_array($r) && !empty($r['id'])) { $max = max($max, (int) $id); }
+    }
+
+    // 2. Le balayage descendant.
+    $chemins = [];
+    for ($i = $max; $i > max(0, $max - SUIVI_PROFONDEUR); $i--) { $chemins[$i] = '/deliveries/' . $i; }
+    $brutes = PanelApi::getParallele($chemins, 8);
+    $cmds = [];
+    foreach ($brutes as $id => $r) {
+        if (is_array($r) && !empty($r['id'])) { $cmds[] = $r; }
+    }
+    if (!$cmds) {
+        return ['groupes' => [], 'kpis' => null, 'quand' => time(),
+            'indispo' => 'aucune commande lisible — GET /deliveries/{id} n’a rien rendu sur la plage balayée'];
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caSuiviMaxId', json_encode($max)]);
+
+    // 3. Les noms : fournisseurs du référentiel, magasins de la base.
+    $nomsFourn = [];
     foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
-        if ((int) ($f['id'] ?? 0) === $fid && !empty($f['name'])) { $nomFourn = (string) $f['name']; break; }
+        $fid = (int) ($f['id'] ?? 0);
+        if ($fid > 0) { $nomsFourn[$fid] = (string) ($f['name'] ?? ('Fournisseur ' . $fid)); }
     }
 
-    // Les plus récentes d'abord, puis 2 par magasin.
-    usort($cmds, static function ($a, $b) use ($texte) {
-        $da = $texte((array) $a, ['order_date', 'created_at', 'date']);
-        $db = $texte((array) $b, ['order_date', 'created_at', 'date']);
-        return [$db, (int) ($b['id'] ?? 0)] <=> [$da, (int) ($a['id'] ?? 0)];
-    });
-
+    $vide = static fn ($v): bool => $v === null || $v === '' || $v === 'NULL';
     $aujourdHui = date('Y-m-d');
-    $parMagasin = []; $pris = [];
+
+    // Les plus récentes d'abord.
+    usort($cmds, static fn ($a, $b) => [(string) ($b['order_date'] ?? ''), (int) ($b['id'] ?? 0)]
+        <=> [(string) ($a['order_date'] ?? ''), (int) ($a['id'] ?? 0)]);
+
+    $parFourn = []; $pris = [];
     foreach ($cmds as $o) {
-        if (!is_array($o)) { continue; }
-        $magasin = $texte($o, ['shop_name', 'shop', 'client_name', 'client']);
-        if ($magasin === '') { $magasin = 'Magasin inconnu'; }
-        if (($pris[$magasin] ?? 0) >= 2) { continue; }
-        $pris[$magasin] = ($pris[$magasin] ?? 0) + 1;
+        $fid = (int) ($o['id_supplier'] ?? 0);
+        $sid = (int) ($o['id_shop'] ?? 0);
+        $fourn = $nomsFourn[$fid] ?? ($fid > 0 ? 'Fournisseur ' . $fid : 'Sans fournisseur');
+        $magasin = $nomsMagasins[$sid] ?? ('Magasin ' . $sid);
+        $cle = $fourn . '|' . $magasin;
+        if (($pris[$cle] ?? 0) >= 2) { continue; }   // 2 par magasin ET par fournisseur
+        $pris[$cle] = ($pris[$cle] ?? 0) + 1;
 
-        $statut = strtoupper($texte($o, ['supplier_fulfillment_status', 'fulfillment_status', 'logistics_status', 'status']));
-        $livrPrevue = $texte($o, ['supplier_planned_date', 'planned_delivery_date', 'expected_date', 'shop_expected_date', 'delivery_date']);
-        $livreLe = $texte($o, ['delivered_on', 'delivered_at', 'received_at']);
+        $ff = strtoupper((string) ($o['supplier_fulfillment_status'] ?? ''));
+        $st = strtoupper((string) ($o['status'] ?? ''));
+        $prevue = !$vide($o['supplier_planned_delivery_date'] ?? null) ? (string) $o['supplier_planned_delivery_date']
+            : (!$vide($o['expected_date'] ?? null) ? (string) $o['expected_date'] : '');
+        $livre = !$vide($o['delivered_on'] ?? null) ? substr((string) $o['delivered_on'], 0, 10) : '';
 
-        $etape = 1; $bloque = false; $libelle = 'Envoyée';
-        if (in_array($statut, ['REJECTED', 'REFUSED'], true)) { $bloque = true; $libelle = 'Refusée'; }
-        elseif (in_array($statut, ['CANCELLED', 'CANCELED'], true)) { $bloque = true; $libelle = 'Annulée'; }
-        elseif ($livreLe !== '' || in_array($statut, ['DELIVERED', 'FINALIZED', 'ARCHIVED', 'COMPLETED', 'RECEIVED'], true)) { $etape = 4; $libelle = 'Livrée'; }
-        elseif (in_array($statut, ['IN_TRANSIT', 'SENT', 'SHIPPED', 'IN_DELIVERY'], true)) { $etape = 3; $libelle = 'En transit'; }
-        elseif (in_array($statut, ['ACCEPTED', 'CONFIRMED', 'IN_PREPARATION', 'IN_PROGRESS'], true)) { $etape = 2; $libelle = 'Acceptée'; }
-        elseif ($statut !== '') { $libelle = ucfirst(strtolower(str_replace('_', ' ', $statut))); }
-
-        $retardJours = null;
-        if ($etape < 4 && !$bloque && $livrPrevue !== '' && $livrPrevue < $aujourdHui) {
-            $retardJours = (int) floor((strtotime($aujourdHui) - strtotime($livrPrevue)) / 86400);
+        $etape = 1; $bloque = false; $libelle = 'Envoyée'; $geste = '';
+        if (!$vide($o['supplier_rejected_at'] ?? null) || $ff === 'REJECTED') {
+            $bloque = true; $libelle = 'Refusée'; $geste = 'refusée le ' . substr((string) ($o['supplier_rejected_at'] ?? ''), 0, 10);
+        } elseif (!$vide($o['supplier_cancelled_at'] ?? null) || $ff === 'CANCELLED') {
+            $bloque = true; $libelle = 'Annulée'; $geste = 'annulée le ' . substr((string) ($o['supplier_cancelled_at'] ?? ''), 0, 10);
+        } elseif ($livre !== '' || $st === 'DELIVERED') {
+            $etape = 4; $libelle = 'Livrée'; $geste = $livre !== '' ? 'livrée le ' . $livre : '';
+        } elseif (!$vide($o['in_transit_sent_at'] ?? null) || $st === 'IN_TRANSIT') {
+            $etape = 3; $libelle = 'En transit'; $geste = 'expédiée le ' . substr((string) ($o['in_transit_sent_at'] ?? ''), 0, 10);
+        } elseif ($ff === 'FINALIZED' || !$vide($o['supplier_finalized_at'] ?? null)) {
+            $etape = 3; $libelle = 'Finalisée'; $geste = 'finalisée le ' . substr((string) ($o['supplier_finalized_at'] ?? ''), 0, 10);
+        } elseif ($ff === 'ACCEPTED' || !$vide($o['supplier_accepted_at'] ?? null)) {
+            $etape = 2; $libelle = 'Acceptée'; $geste = 'acceptée le ' . substr((string) ($o['supplier_accepted_at'] ?? ''), 0, 10);
+        } elseif ($ff !== '' && $ff !== 'NEW') {
+            $libelle = ucfirst(strtolower(str_replace('_', ' ', $ff)));
         }
 
-        $docs = [];
-        foreach ((array) ($o['documents'] ?? []) as $doc) {
-            $t = strtoupper($texte(is_array($doc) ? $doc : [], ['type', 'document_type']));
-            if ($t !== '') { $docs[] = $t; }
+        $retard = null;
+        if ($etape < 4 && !$bloque && $prevue !== '' && $prevue < $aujourdHui) {
+            $retard = (int) floor((strtotime($aujourdHui) - strtotime($prevue)) / 86400);
         }
 
-        $parMagasin[$magasin][] = [
-            'id' => (int) ($o['id'] ?? 0),
-            'cle' => $texte($o, ['order_key', 'number', 'document_number']) ?: ('#' . (int) ($o['id'] ?? 0)),
-            'date' => $texte($o, ['order_date', 'created_at', 'date']),
-            'livraisonPrevue' => $livrPrevue, 'livreLe' => $livreLe,
+        $parFourn[$fourn]['magasins'][$magasin][] = [
+            'id' => (int) $o['id'],
+            'cle' => (string) ($o['order_key'] ?? ('#' . $o['id'])),
+            'date' => substr((string) ($o['order_date'] ?? ''), 0, 10),
+            'livraisonPrevue' => $prevue,
             'etape' => $etape, 'bloque' => $bloque, 'libelle' => $libelle,
-            'retardJours' => $retardJours,
-            'valeur' => nombreOuNull($o, ['approximate_value_net', 'value_net', 'total_net', 'total']),
-            'documents' => array_values(array_unique($docs)),
+            'geste' => $geste, 'retardJours' => $retard,
+            'source' => strtoupper((string) ($o['source_type'] ?? '')) === 'INTEGRATED' ? 'intégrée' : 'manuelle',
         ];
     }
-    ksort($parMagasin);
 
-    $lignes = []; $enCours = 0; $retard = 0; $sansReponse = 0; $valeur = 0.0;
-    foreach ($parMagasin as $magasin => $liste) {
-        foreach ($liste as $i => $o) {
-            $o['magasin'] = $i === 0 ? $magasin : '';
-            $lignes[] = $o;
-            if ($o['etape'] < 4 && !$o['bloque']) {
-                $enCours++;
-                if ($o['valeur'] !== null) { $valeur += $o['valeur']; }
-                if ($o['etape'] === 1) { $sansReponse++; }
+    // 4. Mise en forme + compteurs.
+    $groupes = []; $kEnCours = 0; $kRetard = 0; $kNouv = 0; $kTotal = 0;
+    foreach ($parFourn as $nom => $g) {
+        ksort($g['magasins']);
+        $lignes = []; $enCours = 0; $retard = 0; $nouv = 0;
+        foreach ($g['magasins'] as $magasin => $liste) {
+            foreach ($liste as $i => $o) {
+                $o['magasin'] = $i === 0 ? $magasin : '';
+                $lignes[] = $o; $kTotal++;
+                if ($o['etape'] < 4 && !$o['bloque']) {
+                    $enCours++; $kEnCours++;
+                    if ($o['etape'] === 1) { $nouv++; $kNouv++; }
+                }
+                if ($o['retardJours'] !== null) { $retard++; $kRetard++; }
             }
-            if ($o['retardJours'] !== null) { $retard++; }
         }
+        $groupes[] = ['fournisseur' => $nom, 'nbMagasins' => count($g['magasins']),
+            'nbCommandes' => count($lignes), 'enCours' => $enCours, 'retard' => $retard,
+            'sansReponse' => $nouv, 'commandes' => $lignes];
     }
+    usort($groupes, static fn ($a, $b) => [-$a['retard'], -$a['enCours'], $a['fournisseur']]
+        <=> [-$b['retard'], -$b['enCours'], $b['fournisseur']]);
 
-    $groupes = $lignes ? [['fournisseur' => $nomFourn, 'nbMagasins' => count($parMagasin),
-        'nbCommandes' => count($lignes), 'enCours' => $enCours, 'retard' => $retard,
-        'sansReponse' => $sansReponse, 'commandes' => $lignes]] : [];
-
-    return ['groupes' => $groupes, 'lues' => count($cmds), 'fournisseurId' => $fid,
-        'indispo' => $groupes ? null : 'aucune commande rendue par l’API pour ce fournisseur',
-        'kpis' => ['enCours' => $enCours, 'retard' => $retard, 'aAccepter' => $sansReponse,
-            'valeurEnCours' => round($valeur, 2), 'total' => count($lignes)]];
+    $out = ['groupes' => $groupes, 'lues' => count($cmds), 'maxId' => $max, 'quand' => time(),
+        'kpis' => ['enCours' => $kEnCours, 'retard' => $kRetard, 'aAccepter' => $kNouv,
+            'fournisseurs' => count($groupes), 'total' => $kTotal]];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caSuiviCache', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    return $out;
 }
 
 /**
