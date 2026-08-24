@@ -269,14 +269,17 @@ function wr_ca_relance(): array
         'status' => 'published',
         'visible_from' => date('Y-m-d H:i:s'),
         'visible_to' => date('Y-m-d H:i:s', time() + $jours * 86400),
+        'type' => 'once',
         'is_global' => 0,
+        // Ciblage : l'API refuse une notification non globale sans magasins,
+        // et la clé qu'elle attend est `shops` (mesuré).
+        'shops' => [$sid],
         // Rattachement à la commande : la notification pointe l'objet qu'elle
         // réclame, plutôt que d'être un message flottant.
-        'source_type' => 'MATERIAL_ORDER',
+        'source_type' => 'material_order',
         'source_id' => $id,
         'action_label' => (string) ($c['actionLabel'] ?? 'Ouvrir la commande'),
-        'shop_id' => $sid,
-        'supplier_id' => $fid,
+        'action_url' => '/supplier/orders/' . $id,
     ];
 
     [$ok, $rep] = PanelApi::post('/notifications', $corps);

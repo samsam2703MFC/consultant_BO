@@ -1393,42 +1393,42 @@ function ep_sonde_notif(): array
         }
     }
 
+    // Ménage complet : toutes les notifications d'essai laissées par les sondes.
+    if (!empty($_GET['menage'])) {
+        $out['menage'] = [];
+        foreach ($liste as $n) {
+            if (str_starts_with((string) ($n['title'] ?? ''), 'ESSAI COCKPIT')) {
+                $nid = (int) ($n['id'] ?? 0);
+                if ($nid > 0) { [$ok] = PanelApi::envoi('DELETE', '/notifications/' . $nid, []); $out['menage'][$nid] = $ok; }
+            }
+        }
+    }
+
+    // La charge utile EXACTE de la relance, testée puis supprimée.
     if (!empty($_GET['essai'])) {
-        // La clé de ciblage par magasin : l'API refuse le non-global sans
-        // magasins, mais ne dit pas comment ils s'appellent. On essaie, et on
-        // supprime TOUT ce qui a été créé (l'identifiant revient en
-        // `inserted_id`, pas `id` — la première série l'avait manqué).
-        $base = [
-            'title' => 'ESSAI COCKPIT — à ignorer',
-            'message' => 'Essai technique (supprimé aussitôt).',
-            'type' => 'once', 'priority' => 'info', 'status' => 'published',
+        $corps = [
+            'title' => 'ESSAI COCKPIT — Commande ORD-X — à valider',
+            'message' => 'Essai technique de relance (supprimé aussitôt).',
+            'type' => 'once', 'priority' => 'warning', 'status' => 'published',
             'visible_from' => date('Y-m-d H:i:s'),
             'visible_to' => date('Y-m-d H:i:s', time() + 300),
             'is_global' => 0,
+            'shops' => [(int) ($_GET['shop'] ?? 3)],
+            'source_type' => 'material_order',
+            'source_id' => (int) ($_GET['order'] ?? 243),
+            'action_label' => 'Ouvrir la commande',
+            'action_url' => '/supplier/orders/' . (int) ($_GET['order'] ?? 243),
         ];
-        $formes = [
-            'shops-liste'    => $base + ['shops' => [3]],
-            'shops-objets'   => $base + ['shops' => [['id' => 3]]],
-            'shop_ids'       => $base + ['shop_ids' => [3]],
-            'shopIds'        => $base + ['shopIds' => [3]],
-            'id_shops'       => $base + ['id_shops' => [3]],
-            'shops_ids'      => $base + ['shops_ids' => [3]],
-            'selected_shops' => $base + ['selected_shops' => [3]],
-        ];
-        $out['essais'] = [];
-        foreach ($formes as $nom => $corps) {
-            PanelApi::$lastError = null;
-            [$ok, $rep] = PanelApi::post('/notifications', $corps);
-            $id = 0;
-            foreach ([$rep['inserted_id'] ?? null, $rep['id'] ?? null, $rep['data']['id'] ?? null] as $c) {
-                if (is_numeric($c)) { $id = (int) $c; break; }
-            }
-            $out['essais'][$nom] = ['ok' => $ok, 'id' => $id ?: null,
-                'erreur' => $ok ? null : (PanelApi::$lastError ?? null)];
-            if ($id > 0) {
-                [$okd] = PanelApi::envoi('DELETE', '/notifications/' . $id, []);
-                $out['essais'][$nom]['supprimee'] = $okd;
-            }
+        PanelApi::$lastError = null;
+        [$ok, $rep] = PanelApi::post('/notifications', $corps);
+        $id = 0;
+        foreach ([$rep['inserted_id'] ?? null, $rep['id'] ?? null] as $c) { if (is_numeric($c)) { $id = (int) $c; break; } }
+        $out['essai'] = ['ok' => $ok, 'id' => $id ?: null, 'erreur' => $ok ? null : (PanelApi::$lastError ?? null),
+            'reponse' => is_array($rep) ? array_slice($rep, 0, 5, true) : $rep];
+        if ($id > 0) {
+            $out['essai']['relue'] = PanelApi::get('/notifications/' . $id);
+            [$okd] = PanelApi::envoi('DELETE', '/notifications/' . $id, []);
+            $out['essai']['supprimee'] = $okd;
         }
     }
     return $out;
