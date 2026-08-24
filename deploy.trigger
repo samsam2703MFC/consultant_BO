@@ -10,3 +10,4 @@
 2026-08-24T11:04:05Z scoring-jauge-marge-mini-colonnes
 2026-08-24T11:27:29Z scoring-tableau-plat-positions-fiche
 2026-08-24T11:45:41Z scoring-cache-couts-panel
+2026-08-24T12:00:27Z scoring-tri-colonnes-categorie
