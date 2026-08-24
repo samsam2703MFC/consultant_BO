@@ -3190,6 +3190,30 @@ function tplFonds(c, x){
       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un levier sans dépense n’a pas de retour à montrer — c’est une absence, pas un zéro.${c.foLevOrphelines ? ' ' + esc(c.foLevOrphelines) : ''}</div>
     </div>
 
+    ${(c.foFournTotaux || []).length ? `<div style="${carte}">
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px">
+        <span style="font-size:13px;font-weight:500">Par fournisseur — ce que le fonds leur a payé</span>
+        <span style="font-size:11px;color:var(--color-text-muted)">cliquez un fournisseur pour ses écritures</span>
+      </div>
+      ${c.foFournTotaux.map(fo => `
+        <div ${x.A(fo.ouvrir)} style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;cursor:pointer;${fo.ouvert ? 'background:var(--color-background-secondary)' : ''}">
+          <span style="font-size:9px;color:var(--color-text-muted);width:9px">${fo.ouvert ? '▾' : '▸'}</span>
+          <span style="font-size:12.5px;font-weight:500">${esc(fo.nom)}</span>
+          <span style="font-size:10.5px;color:var(--color-text-muted)">${fo.n} écriture(s)</span>
+          <span style="flex:1"></span>
+          ${fo.invest ? `<span style="font-size:11px;font-weight:500;color:var(--color-on-abricot);font-variant-numeric:tabular-nums">${esc(fo.invest)}</span>` : ''}
+          ${fo.revenu ? `<span style="font-size:11px;font-weight:500;color:#2d7a3e;font-variant-numeric:tabular-nums">${esc(fo.revenu)}</span>` : ''}
+          <span style="font-size:12.5px;font-weight:600;color:var(--color-primary);font-variant-numeric:tabular-nums">− ${esc(fo.paye)}</span>
+        </div>
+        ${fo.ouvert ? fo.mvts.map(m => `
+          <div style="display:flex;align-items:baseline;gap:10px;padding:4px 10px 4px 31px;font-size:11.5px">
+            <span style="color:var(--color-text-muted);white-space:nowrap">${esc(m.date)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.libelle)}${m.invest ? ` <span style="display:inline-block;font-size:9px;font-weight:600;padding:0 6px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0">investissement</span>` : ''}</span>
+            <span style="color:${m.col};font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(m.montant)}</span>
+          </div>`).join('') : ''}`).join('')}
+      ${c.foFournSans ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.45">${esc(c.foFournSans)}</div>` : ''}
+    </div>` : ''}
+
     <div style="display:grid;grid-template-columns:1fr;gap:12px;align-items:start">
       <div style="${carte};overflow:hidden">
         <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap">

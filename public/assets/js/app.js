@@ -3882,6 +3882,41 @@ class App {
       ? sansLev + ' sortie(s) ne portent aucun levier : elles pèsent sur le solde sans dire ce qu’elles développent.'
       : '';
 
+    // --- le total PAR FOURNISSEUR : ce que le fonds a payé à chacun —
+    // Collectif MKTG, Dream Big SRL… — toutes lignes confondues, avec la part
+    // investissement et, s'il y en a, ce qui est revenu (avoirs). Une ligne se
+    // DÉPLIE : les écritures du fournisseur, dates et montants, sans quitter
+    // l'écran. Les sorties sans fournisseur sont comptées à part — les taire
+    // ferait croire que le tableau couvre toute la dépense.
+    const parFourn = {};
+    lignes.forEach(l => {
+      if (!l.fournisseur) { return; }
+      const b2 = parFourn[l.fournisseur] = parFourn[l.fournisseur]
+        || { paye: 0, revenu: 0, invest: 0, n: 0, mvts: [] };
+      b2.n++;
+      if (l.sens === 'sortie') { b2.paye += l.brut2 || 0; if (l.invest) { b2.invest += l.brut2 || 0; } }
+      else { b2.revenu += l.brut2 || 0; }
+      b2.mvts.push(l);
+    });
+    const fournSel = this.state.foFournSel || '';
+    common.foFournTotaux = Object.keys(parFourn)
+      .sort((a, b) => parFourn[b].paye - parFourn[a].paye)
+      .map(nom => { const b2 = parFourn[nom];
+        return { nom, n: b2.n,
+          paye: this.fU(b2.paye),
+          invest: b2.invest > 0 ? 'dont investissements ' + this.fU(b2.invest) : '',
+          revenu: b2.revenu > 0 ? 'reçu en retour ' + this.fU(b2.revenu) : '',
+          ouvert: fournSel === nom,
+          ouvrir: () => this.setState({ foFournSel: fournSel === nom ? '' : nom }),
+          mvts: fournSel === nom ? b2.mvts.slice().sort((a2, c2) => (a2.jour < c2.jour ? 1 : -1))
+            .map(m2 => ({ date: m2.date, libelle: m2.libelle, montant: m2.montant, col: m2.col,
+              invest: m2.invest })) : [] }; });
+    const sortiesSansFourn = lignes.filter(l => l.sens === 'sortie' && !l.fournisseur)
+      .reduce((a, l) => a + (l.brut2 || 0), 0);
+    common.foFournSans = (common.foFournTotaux.length && sortiesSansFourn > 0)
+      ? this.fU(sortiesSansFourn) + ' de sorties ne nomment aucun fournisseur — elles n’apparaissent dans aucun total ci-dessus.'
+      : '';
+
     // --- redevances : un tableau CLIENTS × SORTES, sur le mois choisi.
     //
     //     Une ligne par client (magasin), une colonne par sorte de redevance
