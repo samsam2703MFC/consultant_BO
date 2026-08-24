@@ -18,6 +18,7 @@ require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
+require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
@@ -133,6 +134,8 @@ function route(string $method, string $path): mixed
             $path === '/centrale/achats'               => ep_ca_achats(),
             $path === '/centrale/achats/catalogue'     => ep_ca_achats_catalogue(),
             $path === '/centrale/commandes'            => ep_ca_commandes(),
+            $path === '/centrale/commandes/mail'       => caMailEtat(),
+            $path === '/centrale/commandes/mail/cron'  => ep_ca_mail_cron(),
             $path === '/centrale/stock'                => ep_ca_stock(),
             $path === '/centrale/facturation'          => ep_ca_facturation(),
             $path === '/products/scoring'              => ep_products(),
@@ -202,6 +205,7 @@ function route(string $method, string $path): mixed
     // --- machine d'envoi SMTP (identifiants côté serveur uniquement)
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }
+    if ($method === 'POST' && $path === '/centrale/commandes/mail/test') { return wr_ca_mail_test(); }
     // --- générateur de rapports (par levier, à seuils) + compositeur
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }
     if ($method === 'POST' && $path === '/rapports/apercu') { return wr_rapport_apercu(); }

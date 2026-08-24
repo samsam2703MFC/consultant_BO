@@ -7682,12 +7682,30 @@ class App {
     const verdict = _c.verdict;
     common.pdCat = S.pdCat; common.setPdCat = e => this.setState({ pdCat: e.target.value });
     common.pdCatOptions = ['Toutes les catégories'].concat(Object.keys(cats));
-    // La pénétration et la marge brute ont quitté la ligne (fiche au clic) :
-    // trier sur une colonne invisible désorienterait. « Position générale »
-    // trie par CA — c'est le critère du rang.
-    const sorts = [['score', 'Trier par score'], ['volume', 'Trier par volume'], ['ca', 'Trier par position générale'], ['marge', 'Trier par taux de marge'], ['rang', 'Trier par position catégorie']];
-    common.pdSortOptions = sorts.map(s => ({ val: s[0], nom: s[1] }));
-    common.pdSort = S.pdSort; common.setPdSort = e => this.setState({ pdSort: e.target.value });
+    // Le tri vit sur les EN-TÊTES : cliquer une colonne trie, recliquer
+    // inverse — comme au Tableau des magasins. Le menu déroulant de tri
+    // disparaît : dix colonnes triables n'ont pas besoin d'un second organe.
+    const sk = S.pdSortKey || 'score', sdir = S.pdSortDir || -1;
+    const colDefs = [
+      ['cat',   'Catégorie',      'left',  1],
+      ['nom',   'Produit',        'left',  1],
+      ['vol',   'Volume',         'right', -1],
+      ['pv',    'PV',             'right', -1],
+      ['achat', 'Achat',          'right', -1],
+      ['marge', 'Marge',          'right', -1],
+      ['taux',  'Taux',           'right', -1],
+      ['perte', 'Perte',          'right', -1],
+      // Une position se lit du meilleur au moins bon : premier clic
+      // ASCENDANT, contrairement aux montants.
+      ['posG',  'Pos. générale',  'right', 1, 'Rang par CA sur toutes les références'],
+      ['posC',  'Pos. catégorie', 'right', 1, 'Rang par CA dans la catégorie'],
+      ['score', 'Score',          'right', -1],
+    ];
+    common.pdCols = colDefs.map(c2 => ({
+      label: c2[1], align: c2[2], titre: c2[4] || 'Trier par ' + c2[1].toLowerCase(),
+      arrow: sk === c2[0] ? (sdir > 0 ? ' ↑' : ' ↓') : '',
+      sort: () => this.setState({ pdSortKey: c2[0], pdSortDir: sk === c2[0] ? -sdir : c2[3] }),
+    }));
     // Recherche : retrouver UNE référence dans 200 lignes sans dérouler.
     // Insensible à la casse et aux accents — « eclair » trouve « Éclair » —
     // et l'identifiant de caisse marche aussi. Elle se cumule au filtre de
@@ -7698,9 +7716,24 @@ class App {
     const q = norm(S.pdQ).trim();
     const rows = base.filter(p => (S.pdCat === 'Toutes les catégories' || p.cat === S.pdCat)
       && (!q || norm(p.nom).includes(q) || norm(p.cat).includes(q) || String(p.id).includes(q)));
-    rows.sort((a, b) => S.pdSort === 'volume' ? b.vol - a.vol : S.pdSort === 'pen' ? (b.pen - a.pen || b.score - a.score) : S.pdSort === 'ca' ? b.ca - a.ca
-      : S.pdSort === 'marge' ? b.mp - a.mp : S.pdSort === 'mg' ? b.mg - a.mg
-      : S.pdSort === 'rang' ? (a.rang - b.rang || b.score - a.score) : b.score - a.score);
+    // La valeur de tri de chaque colonne, prise sur la donnée BRUTE — jamais
+    // sur le texte affiché, qui trierait « 12 » avant « 3 ». Une valeur
+    // absente va toujours en FIN de liste, quel que soit le sens : une
+    // donnée manquante n'est ni la meilleure ni la pire, elle est absente.
+    const valTri = {
+      cat: p => p.cat, nom: p => p.nom, vol: p => p.vol, pv: p => p.prix,
+      achat: p => (p.mu == null ? null : p.prix - p.mu),
+      marge: p => p.mu, taux: p => p.mp, perte: p => p.perte,
+      posG: p => p.rangGlobal, posC: p => p.rang, score: p => p.score,
+    }[sk] || (p => p.score);
+    rows.sort((a, b) => {
+      const va = valTri(a), vb = valTri(b);
+      if (va == null && vb == null) { return b.score - a.score; }
+      if (va == null) { return 1; }
+      if (vb == null) { return -1; }
+      const c2 = typeof va === 'string' ? va.localeCompare(vb, 'fr') : va - vb;
+      return c2 !== 0 ? c2 * sdir : b.score - a.score;
+    });
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
     const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
     const eur = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €';
@@ -10034,6 +10067,57 @@ class App {
         this.api('POST', '/parametres/smtp/test', { a: smVal('testA', '') }).then(r =>
           this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: !!(r && r.ok),
             msg: (r && (r.message || r.error)) || 'Test impossible.' }) })));
+      },
+    };
+
+    // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
+    // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
+    // Paramètres. L'envoi automatique tourne avec le cron des rapports.
+    if (!this._caMailLu) { this._caMailLu = true; readOne('/centrale/commandes/mail').then(st => { this.D.caMailEtat = st || null; this.setState({}); }); }
+    const cmEt = this.D.caMailEtat || {};
+    const cmCf = cmEt.config || {};
+    const cmD = S.cmDraft || {};
+    const cmVal = (k, def) => cmD[k] != null ? cmD[k] : (cmCf[k] != null ? String(cmCf[k]) : def);
+    const cmSet = k => e => { const v = e.target.value; this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { [k]: v }) })); };
+    const cmActif = cmD.actif != null ? cmD.actif : !!cmCf.actif;
+    common.cm = {
+      actif: cmActif,
+      destinataire: cmVal('destinataire', 'achat@atelierby.be'),
+      copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
+      variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
+      smtpPret: !!cmEt.smtpPret,
+      dernier: cmEt.dernier ? ('Dernier passage : ' + (cmEt.dernier.quand || '—').replace('T', ' ').slice(0, 16)
+        + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
+        + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
+      journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '—',
+        type: j.type === 'recu' ? 'Commande reçue' : j.type === 'envoye' ? 'E-mail envoyé' : j.type === 'essai' ? 'Essai' : 'Échec',
+        col: j.type === 'echec' ? '#8D1D2C' : j.type === 'envoye' ? '#2d7a3e' : 'var(--color-text)',
+        detail: j.detail || '', destinataire: j.destinataire || '' })),
+      busy: !!cmD.busy, msg: cmD.msg || '',
+      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (cmD.ok ? '#2d7a3e' : '#8D1D2C'),
+      etatTxt: cmActif ? (cmEt.smtpPret ? 'Actif' : 'Actif — SMTP à configurer') : 'Inactif',
+      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        + (cmActif && cmEt.smtpPret ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
+      toggle: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { actif: !cmActif }) })),
+      setDestinataire: cmSet('destinataire'), setCopie: cmSet('copie'), setSujet: cmSet('sujet'), setCorps: cmSet('corps'),
+      save: () => {
+        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
+        this.api('PUT', '/parametres/caMailCommande', { valeur: {
+          actif: cmActif, destinataire: cmVal('destinataire', ''), copie: cmVal('copie', ''),
+          sujet: cmVal('sujet', ''), corps: cmVal('corps', '') } }).then(r => {
+          const ok = !(r && r.ok === false);
+          this._caMailLu = false;
+          this.setState(s2 => ({ cmDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.cmDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
+          if (ok) { this.log('Paramètre', '—', 'Template e-mail commande fournisseur mis à jour'); }
+        });
+      },
+      test: () => {
+        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
+        this.api('POST', '/centrale/commandes/mail/test').then(r => {
+          this._caMailLu = false;
+          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: false, ok: !!(r && r.ok),
+            msg: r && r.ok ? 'Essai envoyé à ' + (r.destinataire || '') + '.' : (r && (r.erreur || r.error)) || 'Essai impossible.' }) }));
+        });
       },
     };
 

@@ -2032,7 +2032,6 @@ function tplProduits(c, x){
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <input id="pd-q" type="search" value="${esc(c.pdQ)}" ${x.I(c.setPdQ)} placeholder="Rechercher une référence…" style="${selCss};font-family:var(--font-ui);width:230px">
       <select ${x.C(c.setPdCat)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdCatOptions, c.pdCat)}</select>
-      <select ${x.C(c.setPdSort)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdSortOptions, c.pdSort, o => o.val, o => o.nom)}</select>
       <span style="font-size:12px;color:var(--color-text-muted)">Pondération du score — ${c.pdPond}</span>
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
@@ -2044,24 +2043,17 @@ function tplProduits(c, x){
            clic sur le nom. -->
       <div style="overflow-x:auto">
       <table style="width:100%;min-width:1020px;border-collapse:collapse;font-size:12.5px">
+        <!-- Chaque en-tête TRIE : un clic trie la colonne, un second inverse.
+             La flèche dit la colonne et le sens en cours. -->
         <thead><tr>
-          <th style="${TH}">Référence</th>
-          <th style="text-align:right;${TH2}">Volume</th>
-          <th style="text-align:right;${TH2}">PV</th>
-          <th style="text-align:right;${TH2}">Achat</th>
-          <th style="text-align:right;${TH2}">Marge</th>
-          <th style="text-align:right;${TH2}">Taux</th>
-          <th style="text-align:right;${TH2}">Perte</th>
-          <th style="text-align:right;${TH2}" title="Rang par CA sur toutes les références">Pos. générale</th>
-          <th style="text-align:right;${TH2}" title="Rang par CA dans la catégorie">Pos. catégorie</th>
-          <th style="text-align:right;${TH}">Score</th>
+          ${c.pdCols.map((col, i2) => `<th ${x.A(col.sort)} title="${esc(col.titre)}" style="${i2 === 0 ? TH : TH2 + ';text-align:' + col.align};cursor:pointer;user-select:none;white-space:nowrap">${esc(col.label)}${col.arrow}</th>`).join('')}
         </tr></thead>
         <tbody>
           ${c.pdRows.map(r => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:11px 14px;white-space:nowrap">
+              <td style="padding:11px 6px 11px 14px;white-space:nowrap;font-size:11.5px;color:var(--color-text-muted)">${esc(r.cat)}</td>
+              <td style="padding:11px 12px;white-space:nowrap">
                 <button ${x.A(r.ouvrirDetail)} title="La fiche : score décomposé, CA et marge par période, suites possibles" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(r.nom)}</button>
-                <span style="font-size:12px;color:var(--color-text-muted)"> · ${esc(r.cat)}</span>
               </td>
               <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500">${r.vol}</td>
               <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${r.prix}</td>
@@ -2079,7 +2071,7 @@ function tplProduits(c, x){
                 <span style="font-size:14px;font-weight:600;color:${r.scoreCol}">${r.score}</span>
               </td>
             </tr>`).join('')}
-          ${c.pdRows.length ? '' : `<tr><td colspan="10" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
+          ${c.pdRows.length ? '' : `<tr><td colspan="11" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
         </tbody>
       </table>
       </div>
@@ -4204,6 +4196,57 @@ function tplParams(c, x){
         </div>
         ${c.sm.msg ? `<div style="${c.sm.msgSt}">${esc(c.sm.msg)}</div>` : ''}
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Le mot de passe ne quitte pas le serveur (ceo_app_setting.smtp) — l’écran ne le relit jamais. Sans SMTP configuré, l’envoi des rapports retombe sur mail() du serveur. Gmail : créez un « mot de passe d’application », hôte smtp.gmail.com, port 587, STARTTLS.</div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:500">Centrale d’achat — e-mail « commande fournisseur »</div>
+          <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Quand un franchisé passe une commande (réquisition matière), cet e-mail part automatiquement — détection au rythme du cron horaire des rapports, envoi par la machine SMTP ci-dessus.</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin-bottom:12px">
+          <input type="checkbox" ${c.cm.actif ? 'checked' : ''} ${x.C(c.cm.toggle)} style="width:15px;height:15px;accent-color:var(--color-primary)">
+          Envoi automatique activé
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Destinataire
+            <input value="${esc(c.cm.destinataire)}" ${x.C(c.cm.setDestinataire)} placeholder="achat@atelierby.be" style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Copie (optionnel)
+            <input value="${esc(c.cm.copie)}" ${x.C(c.cm.setCopie)} placeholder="—" style="${inputCss}">
+          </label>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Sujet
+          <input value="${esc(c.cm.sujet)}" ${x.C(c.cm.setSujet)} style="${inputCss}">
+        </label>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Corps du message
+          <textarea rows="7" ${x.C(c.cm.setCorps)} style="${inputCss};resize:vertical;font-family:var(--font-ui)">${esc(c.cm.corps)}</textarea>
+        </label>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.cm.variables)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button ${x.A(c.cm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.cm.busy ? 'opacity:.6' : ''}">${c.cm.busy ? 'En cours…' : 'Enregistrer'}</button>
+          <button ${x.A(c.cm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un essai</button>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.cm.dernier)}</span>
+        </div>
+        ${c.cm.msg ? `<div style="${c.cm.msgSt}">${esc(c.cm.msg)}</div>` : ''}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Journal des e-mails achats</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque commande reçue et chaque envoi (réussi ou non) laisse une trace — les 50 dernières entrées.</div>
+        ${!c.cm.journal.length ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Rien encore — le journal se remplit dès la première commande détectée ou le premier essai.</div>` : `
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+          <thead><tr>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap">Quand</th>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap">Événement</th>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0">Détail</th>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 8px 0;white-space:nowrap">Destinataire</th>
+          </tr></thead>
+          <tbody>${c.cm.journal.map(j => `<tr>
+            <td style="padding:7px 12px 7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;white-space:nowrap;color:var(--color-text-muted)">${esc(j.quand)}</td>
+            <td style="padding:7px 12px 7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;font-weight:500;white-space:nowrap;color:${j.col}">${esc(j.type)}</td>
+            <td style="padding:7px 12px 7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px">${esc(j.detail)}</td>
+            <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;white-space:nowrap;color:var(--color-text-muted)">${esc(j.destinataire)}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>`}
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:4px">Catalogue des KPI</div>
