@@ -3828,6 +3828,11 @@ class App {
         ca: ca == null ? '—' : this.fE(ca),
         taux: (s.rates || []).map(t => (t.label || t.code || '') + ' ' + (t.rate_pct != null ? t.rate_pct + ' %' : '—')).join(' · ') || '—',
         du: du != null ? this.fU(du) : '—',
+        // Le dû, SORTE par sorte : c'est à ce grain que les écritures partent
+        // au fonds — une par mois, par sorte et par magasin.
+        detail: (s.dues || []).length > 1
+          ? (s.dues || []).map(d2 => (d2.label || '') + ' ' + (d2.rate_pct != null ? d2.rate_pct + ' %' : '') + ' → ' + this.fU(+d2.amount || 0))
+          : [],
         ecrit: ecrit > 0 ? 'écrit au fonds : ' + this.fU(ecrit) : '',
         // Sans chiffre d'affaires, la redevance ne peut pas être calculée :
         // le dire vaut mieux qu'un tiret qu'on lirait comme un zéro.
@@ -3836,6 +3841,23 @@ class App {
           : (s.royalties_enabled === false ? 'redevances désactivées pour ce magasin' : '') };
     });
     common.foRoyaltiesVide = !common.foRoyalties.length;
+    // « Écrire au fonds » : l'APERÇU d'abord — les lignes exactes, une par
+    // magasin et par sorte —, l'écriture après confirmation. Le serveur est
+    // idempotent : les lignes déjà passées restent en place, jamais doublées.
+    const rp = S.foRoyPlan || null;
+    common.foRoyEcrire = R.month && !rp && !common.foRoyaltiesVide ? () => this.foRoyPlanifier(R.month) : null;
+    common.foRoyPlan = !rp ? null : {
+      busy: !!rp.busy, err: rp.err || '', mois: rp.month || '',
+      lignes: (rp.lignes || []).map(l => ({
+        magasin: l.magasin || '', sorte: l.sorte || '',
+        taux: l.taux_pct != null ? l.taux_pct + ' %' : '',
+        montant: this.fU(+l.montant || 0), deja: !!l.deja,
+      })),
+      total: this.fU(+rp.aEcrire || 0), nDeja: +rp.dejaPassees || 0,
+      vide: !(rp.lignes || []).some(l => !l.deja),
+      confirmer: () => this.foRoyConfirmer(),
+      fermer: () => this.setState({ foRoyPlan: null }),
+    };
     common.foRoySource = R.source || '';
     common.foRoyNote = R.facturesNote || '';
     common.foErp = (R.erp && R.erp.available === false) ? (R.erp.reason || 'reprise ERP indisponible') : '';
@@ -4218,6 +4240,32 @@ class App {
       if (!r || r.ok === false) { this.foPatch({ busy: false, err: (r && r.error) || 'refusé par le module' }); return; }
       this.setState({ foForm: null });
       this.notify(f.id ? 'Écriture corrigée' : (f.sens === 'IN' ? 'Alimentation enregistrée' : 'Dépense enregistrée'));
+      this.foRecharge();
+    });
+  }
+  /** L'aperçu des redevances du mois : les lignes exactes, rien d'écrit. */
+  foRoyPlanifier(mois){
+    this.setState({ foRoyPlan: { busy: true, month: mois, lignes: [] } });
+    write(this.source, 'POST', '/fonds/royalties/generer', { month: mois, apercu: true }).then(r => {
+      if (!r || r.ok === false) {
+        this.setState({ foRoyPlan: { busy: false, month: mois, lignes: [], err: (r && r.error) || 'aperçu impossible' } });
+        return;
+      }
+      this.setState({ foRoyPlan: Object.assign({ busy: false }, r) });
+    });
+  }
+  /** Écrit les redevances prévisualisées — une par magasin et par sorte. */
+  foRoyConfirmer(){
+    const p = this.state.foRoyPlan;
+    if (!p || p.busy) { return; }
+    this.setState({ foRoyPlan: Object.assign({}, p, { busy: true, err: '' }) });
+    write(this.source, 'POST', '/fonds/royalties/generer', { month: p.month, apercu: false }).then(r => {
+      if (!r || r.ok === false) {
+        this.setState({ foRoyPlan: Object.assign({}, p, { busy: false, err: (r && r.error) || 'refusé' }) });
+        return;
+      }
+      this.setState({ foRoyPlan: null });
+      this.notify((r.ecrites || 0) + ' redevance(s) écrite(s) au fonds');
       this.foRecharge();
     });
   }

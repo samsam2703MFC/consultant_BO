@@ -1813,14 +1813,78 @@ function wr_fonds_royalties(): array
     ]), 'redevances');
 }
 
-/** POST /fonds/royalties/generer — écrit les redevances du mois au fonds. */
+/**
+ * POST /fonds/royalties/generer — les redevances du mois écrites au fonds,
+ * UNE écriture par magasin et par SORTE (Marketing, Marque, Assistance,
+ * Générale). Le module marketing autonome a disparu : on écrit ses tables en
+ * direct, comme le reste du grand livre.
+ */
 function wr_fonds_royalties_generer(): array
 {
     $b = body();
-    return fondsRendu(marketingAppel('POST', '/funds/royalties/generate', [
-        'month' => (string) ($b['month'] ?? ''),
-        'kinds' => is_array($b['kinds'] ?? null) ? $b['kinds'] : [],
-    ]), 'redevances');
+    return fondsRoyaltiesEcrire((string) ($b['month'] ?? date('Y-m')), !empty($b['apercu']));
+}
+
+/**
+ * Chaque écriture porte la période couverte (period_from/period_to) et une
+ * pièce canonique « ROY AAAA-MM SORTE #magasin » : c'est elle qui rend la
+ * génération IDEMPOTENTE — regénérer un mois n'écrit que ce qui manque,
+ * jamais deux fois la même redevance. `apercu` rend les lignes sans rien
+ * écrire : on voit ce qui partirait, on confirme ensuite.
+ */
+function fondsRoyaltiesEcrire(string $mois, bool $apercu): array
+{
+    if (!preg_match('/^\d{4}-\d{2}$/', $mois)) {
+        http_response_code(422);
+        return ['error' => 'mois attendu au format AAAA-MM'];
+    }
+    $don = fondsRoyaltiesCalcul($mois);
+    if ($don === null) {
+        http_response_code(502);
+        return ['error' => 'grille des taux ou chiffres d’affaires illisibles — configurez le compte consultant (Mon compte)'];
+    }
+    // Ce que le mois porte déjà, rapproché par la pièce canonique —
+    // l'index (source, period_from, shop_id) est taillé pour cette lecture.
+    $deja = [];
+    foreach (Db::rows("SELECT document_ref FROM mar_fund_movement
+                       WHERE source = 'ROYALTY' AND period_from = ?", [$don['du']]) as $m) {
+        if (($m['document_ref'] ?? '') !== '') { $deja[(string) $m['document_ref']] = true; }
+    }
+    // Le FK n'accepte que les magasins présents dans mar_shop : un magasin du
+    // panel qui n'y serait pas s'écrit sans rattachement — le libellé et la
+    // pièce le nomment, la ligne le signale.
+    $refShops = [];
+    foreach (Db::rows('SELECT id FROM mar_shop') as $r) { $refShops[(int) $r['id']] = true; }
+
+    $lignes = []; $ecrites = 0; $dejaN = 0; $aEcrire = 0.0;
+    foreach ($don['shops'] as $s) {
+        if (!$s['enabled'] || $s['ca'] === null) { continue; }
+        foreach ($s['sortes'] as $k) {
+            if ($k['du'] === null || $k['du'] <= 0) { continue; }
+            $piece = 'ROY ' . $mois . ' ' . $k['code'] . ' #' . $s['shop_id'];
+            $estLa = isset($deja[$piece]);
+            $horsRef = !isset($refShops[$s['shop_id']]);
+            $lignes[] = ['shop_id' => $s['shop_id'], 'magasin' => $s['shop_name'],
+                'sorte' => $k['label'], 'taux_pct' => round($k['taux'] * 100, 2),
+                'montant' => $k['du'], 'piece' => $piece, 'deja' => $estLa, 'horsRef' => $horsRef];
+            if ($estLa) { $dejaN++; continue; }
+            $aEcrire += $k['du'];
+            if ($apercu) { continue; }
+            Db::exec('INSERT INTO mar_fund_movement (direction, shop_id, movement_date, period_from, period_to, label, amount, source, document_ref)
+                      VALUES (?,?,?,?,?,?,?,?,?)', [
+                'IN', $horsRef ? null : $s['shop_id'], $don['au'], $don['du'], $don['fin'],
+                'Redevance ' . $k['label'] . ' ' . $mois . ' — ' . $s['shop_name'],
+                $k['du'], 'ROYALTY', $piece,
+            ]);
+            $ecrites++;
+        }
+    }
+    if (!$apercu && $ecrites > 0) {
+        journalAdd('CEO', 'Fonds', 'Redevances ' . $mois,
+            $ecrites . ' écriture(s) au fonds — une par magasin et par sorte');
+    }
+    return ['ok' => true, 'apercu' => $apercu, 'month' => $mois, 'lignes' => $lignes,
+        'aEcrire' => round($aEcrire, 2), 'ecrites' => $ecrites, 'dejaPassees' => $dejaN];
 }
 
 /**
@@ -1838,12 +1902,22 @@ function fournisseurAssure(?string $nom): void
 {
     $nom = trim((string) $nom);
     if ($nom === '') { return; }
-    $nom = mb_substr($nom, 0, 160);
-    $dej = Db::row('SELECT id FROM ceo_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
-    if ($dej !== null) { return; }
-    Db::exec('INSERT INTO ceo_supplier (id, name, perimeter, email) VALUES (?,?,?,?)',
-        ['f' . bin2hex(random_bytes(4)), $nom, 'Fonds marketing', null]);
-    journalAdd('CEO', 'Fournisseur', $nom, 'Fournisseur ajouté depuis le grand livre du fonds');
+    // 120 : la borne de ceo_supplier.name — au-delà, l'insert claque en mode
+    // strict et emporte l'écriture comptable avec lui.
+    $nom = mb_substr($nom, 0, 120);
+    try {
+        $dej = Db::row('SELECT id FROM ceo_supplier WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [$nom]);
+        if ($dej !== null) { return; }
+        // email '' et non null : la colonne est NOT NULL (centrale d'achat).
+        // Avec null, TOUTE écriture portant un fournisseur nouveau mourait ici
+        // en « base de données indisponible » — avant même le mouvement.
+        Db::exec('INSERT INTO ceo_supplier (id, name, perimeter, email) VALUES (?,?,?,?)',
+            ['f' . bin2hex(random_bytes(4)), $nom, 'Fonds marketing', '']);
+        journalAdd('CEO', 'Fournisseur', $nom, 'Fournisseur ajouté depuis le grand livre du fonds');
+    } catch (Throwable $e) {
+        // Enrichir le référentiel est un confort : son échec ne bloque jamais
+        // l'écriture du grand livre qui suit.
+    }
 }
 
 /**

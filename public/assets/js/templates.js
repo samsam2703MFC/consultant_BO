@@ -3224,7 +3224,30 @@ function tplFonds(c, x){
     </div>
 
     <div style="${carte};overflow:hidden">
-      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Redevances par magasin${c.foMois ? ' — ' + esc(c.foMois) : ''}</div>
+      <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span style="font-size:13px;font-weight:500">Redevances par magasin${c.foMois ? ' — ' + esc(c.foMois) : ''}</span>
+        ${c.foRoyEcrire ? `<button ${x.A(c.foRoyEcrire)} title="Une écriture par magasin et par sorte, aperçu avant écriture" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Écrire au fonds</button>` : ''}
+      </div>
+      ${!c.foRoyPlan ? '' : `<div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        <div style="font-size:12.5px;font-weight:500">Redevances ${esc(c.foRoyPlan.mois)} — ce qui partirait au fonds</div>
+        ${c.foRoyPlan.busy ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:7px">Calcul en cours…</div>` : `
+        ${c.foRoyPlan.err ? `<div style="font-size:11.5px;color:var(--color-primary);margin-top:7px">${esc(c.foRoyPlan.err)}</div>` : `
+        <table style="width:100%;border-collapse:collapse;margin-top:9px">
+          <tbody>${c.foRoyPlan.lignes.map(l => `<tr>
+            <td style="padding:4px 0;font-size:12px">${esc(l.magasin)}</td>
+            <td style="padding:4px 0;font-size:12px;color:var(--color-text-muted)">${esc(l.sorte)}${l.taux ? ' · ' + esc(l.taux) : ''}</td>
+            <td style="padding:4px 0;font-size:12px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.montant)}</td>
+            <td style="padding:4px 0 4px 9px;font-size:10.5px;color:var(--color-text-muted);text-align:right;white-space:nowrap">${l.deja ? 'déjà écrite' : 'à écrire'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px">
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${c.foRoyPlan.vide ? 'Tout est déjà écrit pour ce mois.' : `À écrire : <b style="color:var(--color-text)">${esc(c.foRoyPlan.total)}</b>${c.foRoyPlan.nDeja ? ' · ' + c.foRoyPlan.nDeja + ' ligne(s) déjà en place' : ''}`}</span>
+          <span style="display:flex;gap:8px">
+            <button ${x.A(c.foRoyPlan.fermer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:999px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Annuler</button>
+            ${c.foRoyPlan.vide ? '' : `<button ${x.A(c.foRoyPlan.confirmer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;height:30px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Confirmer l’écriture</button>`}
+          </span>
+        </div>`}`}
+      </div>`}
       ${c.foRoyaltiesVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun magasin.</div>` : `
       <table style="width:100%;border-collapse:collapse">
         <thead><tr>
@@ -3237,7 +3260,7 @@ function tplFonds(c, x){
           <td style="${td};padding-left:17px"><span style="font-weight:500">${esc(r.nom)}</span>${r.ville ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ville)}</div>` : ''}</td>
           <td style="${td};${num}">${esc(r.ca)}${r.manque ? `<div style="font-size:10px;color:var(--color-on-abricot);font-weight:400">${esc(r.manque)}</div>` : ''}</td>
           <td style="${td};color:var(--color-text-muted);font-size:11.5px">${esc(r.taux)}</td>
-          <td style="${td};${num};padding-right:17px">${esc(r.du)}${r.ecrit ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(r.ecrit)}</div>` : ''}</td>
+          <td style="${td};${num};padding-right:17px">${esc(r.du)}${(r.detail || []).map(d => `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(d)}</div>`).join('')}${r.ecrit ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(r.ecrit)}</div>` : ''}</td>
         </tr>`).join('')}</tbody>
       </table>`}
       ${c.foRoySource ? `<div style="padding:9px 17px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoySource)}</div>` : ''}

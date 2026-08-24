@@ -3645,6 +3645,77 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
     return ['code' => $code, 'corps' => $donnees, 'erreur' => $msg, 'brut' => $j];
 }
 
+/**
+ * Les redevances d'un mois : magasin par magasin, SORTE par sorte.
+ *
+ * La grille des taux vit sur la FICHE boutique du panel (royalty_*_percentage,
+ * en FRACTION : 0.0100 = 1 %), le chiffre d'affaires sur l'API de ventes —
+ * borné au jour même quand le mois demandé est en cours. Rend null quand le
+ * compte consultant n'est pas configuré ou que les fiches ne se lisent pas :
+ * absent, pas inventé. Servi à l'écran (ep_fonds) ET à l'écriture au fonds
+ * (fondsRoyaltiesEcrire) : un seul calcul, pas deux jeux de règles.
+ */
+function fondsRoyaltiesCalcul(string $mois): ?array
+{
+    if (!preg_match('/^\d{4}-\d{2}$/', $mois) || !PanelApi::configured()) { return null; }
+    $du = $mois . '-01';
+    $fin = date('Y-m-t', strtotime($du));
+    $au = min($fin, date('Y-m-d'));
+    if ($du > $au) { return null; }
+    $caPar = [];
+    foreach (analyseListe(PanelApi::shopsSalesKpisEntre($du, $au) ?? []) as $x) {
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+        }
+        if ($id > 0) { $caPar[$id] = nombreOuNull($x, ['ca', 'turnover', 'revenue']); }
+    }
+    $fiches = PanelApi::consultantShops() ?? [];
+    if ($fiches === []) { return null; }
+    // La liste ne porte pas les taux : ils vivent sur la FICHE complète
+    // (/shops/{id} — royalties_enabled, royalty_*_percentage). Une lecture
+    // parallèle par boutique, fusionnée dans la ligne.
+    $chemins = [];
+    foreach ($fiches as $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        if ($id > 0) { $chemins[$id] = '/shops/' . $id; }
+    }
+    $details = PanelApi::getParallele($chemins);
+    foreach ($fiches as $i => $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        $d = $details[$id] ?? null;
+        if (is_array($d)) {
+            if (isset($d['shop']) && is_array($d['shop'])) { $d = $d['shop']; }
+            $fiches[$i] = $d + $sh;
+        }
+    }
+    $shops = [];
+    foreach ($fiches as $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $ca = $caPar[$id] ?? null;
+        $actif = (int) ($sh['royalties_enabled'] ?? 0) === 1;
+        $nom = '';
+        foreach (['representative_name', 'name'] as $c) {
+            if (!empty($sh[$c]) && is_string($sh[$c])) { $nom = trim((string) $sh[$c]); break; }
+        }
+        $sortes = [];
+        foreach ([['royalty_marketing_percentage', 'MARKETING', 'Marketing'],
+                  ['royalty_brand_percentage', 'MARQUE', 'Marque'],
+                  ['royalty_assistance_percentage', 'ASSISTANCE', 'Assistance'],
+                  ['royalties_percentage', 'GENERALE', 'Générale']] as [$cle, $code, $label]) {
+            $t = isset($sh[$cle]) ? (float) $sh[$cle] : 0.0;
+            if ($t <= 0) { continue; }
+            $sortes[] = ['cle' => $cle, 'code' => $code, 'label' => $label, 'taux' => $t,
+                'du' => ($actif && $ca !== null) ? round((float) $ca * $t, 2) : null];
+        }
+        $shops[] = ['shop_id' => $id, 'shop_name' => $nom !== '' ? $nom : ('Magasin ' . $id),
+            'city' => (string) ($sh['city'] ?? ''), 'ca' => $ca, 'enabled' => $actif,
+            'billing_frequency' => $sh['royalty_billing_frequency'] ?? null, 'sortes' => $sortes];
+    }
+    return ['month' => $mois, 'du' => $du, 'au' => $au, 'fin' => $fin, 'shops' => $shops];
+}
+
 function ep_fonds(): array
 {
     // Lecture DIRECTE des tables mar_* : le module marketing autonome
@@ -3734,95 +3805,62 @@ function ep_fonds(): array
     $out['campagnes'] = array_map(fn ($c2) => ['id' => (int) $c2['id'], 'name' => (string) $c2['name']],
         Db::rows('SELECT id, name FROM mar_campaign ORDER BY starts_on DESC, id DESC'));
 
-    // Les redevances : grille des taux depuis la FICHE BOUTIQUE du panel
-    // (royalty_*_percentage), chiffre d'affaires du MOIS COURANT depuis l'API
-    // de ventes (jour même) — deux lectures du compte consultant déjà en
-    // place. Les écritures ROYALTY déjà passées au fonds ce mois-ci sont
-    // rappelées en face du dû théorique. Factures et règlements émis relèvent
-    // du réalm ADMIN (compte « admin ERP » des Paramètres).
+    // Les redevances : le calcul partagé fondsRoyaltiesCalcul() — grille des
+    // taux depuis la FICHE BOUTIQUE du panel (royalty_*_percentage), chiffre
+    // d'affaires du MOIS COURANT depuis l'API de ventes (jour même). Les
+    // écritures ROYALTY déjà passées au fonds ce mois-ci sont rappelées en
+    // face du dû théorique. Factures et règlements émis relèvent du realm
+    // ADMIN (compte « admin ERP » des Paramètres).
     $royFait = false;
-    if (PanelApi::configured()) {
-        $moisCle = date('Y-m');
-        $caPar = [];
-        foreach (analyseListe(PanelApi::shopsSalesKpisEntre(date('Y-m-01'), date('Y-m-d')) ?? []) as $x) {
-            $id = 0;
-            foreach (['shop_id', 'id_shop', 'id'] as $c2) {
-                if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+    $moisCle = date('Y-m');
+    $calc = fondsRoyaltiesCalcul($moisCle);
+    if ($calc !== null) {
+        // Écritures ROYALTY du mois déjà au fonds, par magasin.
+        $ecrit = [];
+        foreach ($mvts as $m) {
+            if (($m['source'] ?? '') === 'ROYALTY' && $m['direction'] === 'IN' && $m['shop_id'] !== null
+                && (str_starts_with((string) $m['movement_date'], $moisCle)
+                    || str_starts_with((string) ($m['period_from'] ?? ''), $moisCle))) {
+                $ecrit[(int) $m['shop_id']][] = ['amount' => (float) $m['amount'], 'label' => $m['label']];
             }
-            if ($id > 0) { $caPar[$id] = nombreOuNull($x, ['ca', 'turnover', 'revenue']); }
         }
-        $fiches = PanelApi::consultantShops() ?? [];
-        if ($fiches !== []) {
-            // La liste ne porte pas les taux : ils vivent sur la FICHE complète
-            // (/shops/{id} — royalties_enabled, royalty_*_percentage). Une
-            // lecture parallèle par boutique, fusionnée dans la ligne.
-            $chemins = [];
-            foreach ($fiches as $sh) {
-                $id = (int) ($sh['id'] ?? 0);
-                if ($id > 0) { $chemins[$id] = '/shops/' . $id; }
-            }
-            $details = PanelApi::getParallele($chemins);
-            foreach ($fiches as $i => $sh) {
-                $id = (int) ($sh['id'] ?? 0);
-                $d2 = $details[$id] ?? null;
-                if (is_array($d2)) {
-                    if (isset($d2['shop']) && is_array($d2['shop'])) { $d2 = $d2['shop']; }
-                    $fiches[$i] = $d2 + $sh;
+        $shops = [];
+        foreach ($calc['shops'] as $s) {
+            $rates = []; $dues = []; $duTotal = 0.0; $aDu = false;
+            foreach ($s['sortes'] as $k) {
+                $rates[] = ['code' => $k['cle'], 'label' => $k['label'], 'rate_pct' => round($k['taux'] * 100, 2)];
+                if ($k['du'] !== null) {
+                    $dues[] = ['code' => $k['code'], 'label' => $k['label'],
+                        'rate_pct' => round($k['taux'] * 100, 2), 'amount' => $k['du']];
+                    $duTotal += $k['du']; $aDu = true;
                 }
             }
-            // Écritures ROYALTY du mois déjà au fonds, par magasin.
-            $ecrit = [];
-            foreach ($mvts as $m) {
-                if (($m['source'] ?? '') === 'ROYALTY' && $m['direction'] === 'IN'
-                    && str_starts_with((string) $m['movement_date'], $moisCle) && $m['shop_id'] !== null) {
-                    $ecrit[(int) $m['shop_id']][] = ['amount' => (float) $m['amount'], 'label' => $m['label']];
-                }
-            }
-            $shops = [];
-            foreach ($fiches as $sh) {
-                $id = (int) ($sh['id'] ?? 0);
-                if ($id <= 0) { continue; }
-                // Les taux sont stockés en FRACTION (0.0100 = 1 %).
-                $rates = [];
-                foreach ([['royalty_marketing_percentage', 'Marketing'],
-                          ['royalty_brand_percentage', 'Marque'],
-                          ['royalty_assistance_percentage', 'Assistance'],
-                          ['royalties_percentage', 'Générale']] as [$k, $lab]) {
-                    $v = isset($sh[$k]) ? (float) $sh[$k] : 0.0;
-                    if ($v > 0) { $rates[] = ['code' => $k, 'label' => $lab, 'rate_pct' => round($v * 100, 2)]; }
-                }
-                $ca    = $caPar[$id] ?? null;
-                $mkt   = isset($sh['royalty_marketing_percentage']) ? (float) $sh['royalty_marketing_percentage'] : 0.0;
-                $actif = (int) ($sh['royalties_enabled'] ?? 0) === 1;
-                $nom = '';
-                foreach (['representative_name', 'name'] as $c2) {
-                    if (!empty($sh[$c2]) && is_string($sh[$c2])) { $nom = trim((string) $sh[$c2]); break; }
-                }
-                $shops[] = [
-                    'shop_id' => $id, 'shop_name' => $nom, 'city' => (string) ($sh['city'] ?? ''),
-                    'revenue_amount' => $ca, 'rates' => $rates,
-                    'royalties_enabled' => $actif,
-                    'billing_frequency' => $sh['royalty_billing_frequency'] ?? null,
-                    // Dû MARKETING du mois : c'est lui qui alimente le fonds.
-                    'due_theorique' => ($actif && $mkt > 0 && $ca !== null) ? round($ca * $mkt, 2) : null,
-                    'movements' => $ecrit[$id] ?? [],
-                ];
-            }
-            $roy = ['month' => $moisCle, 'shops' => $shops,
-                'source' => 'API panel — fiche boutique (taux) et ventes du mois (CA, jour même)',
-                'erp' => ['available' => true]];
-            if (ErpApi::disponible()) {
-                // Réponses enveloppées ({invoices: […]}, {settlements: […]}).
-                $fac = ErpApi::get('/admin/royalties/invoices');
-                $reg = ErpApi::get('/admin/royalties/settlements');
-                if (is_array($fac)) { $roy['factures'] = array_slice((array) ($fac['invoices'] ?? (analyseListe($fac) ?: [])), 0, 24); }
-                if (is_array($reg)) { $roy['reglements'] = array_slice((array) ($reg['settlements'] ?? (analyseListe($reg) ?: [])), 0, 24); }
-            } else {
-                $roy['facturesNote'] = 'Factures et règlements émis : renseignez le compte admin ERP (Mon compte) pour les lire.';
-            }
-            $out['royalties'] = $roy;
-            $royFait = true;
+            $shops[] = [
+                'shop_id' => $s['shop_id'], 'shop_name' => $s['shop_name'], 'city' => $s['city'],
+                'revenue_amount' => $s['ca'], 'rates' => $rates,
+                'royalties_enabled' => $s['enabled'],
+                'billing_frequency' => $s['billing_frequency'],
+                // Le dû du mois TOUTES sortes confondues ; le détail sorte par
+                // sorte suit dans `dues` — une écriture par sorte au fonds.
+                'due_theorique' => $aDu ? round($duTotal, 2) : null,
+                'dues' => $dues,
+                'movements' => $ecrit[$s['shop_id']] ?? [],
+            ];
         }
+        $roy = ['month' => $moisCle, 'shops' => $shops,
+            'source' => 'API panel — fiche boutique (taux) et ventes du mois (CA, jour même)',
+            'erp' => ['available' => true]];
+        if (ErpApi::disponible()) {
+            // Réponses enveloppées ({invoices: […]}, {settlements: […]}).
+            $fac = ErpApi::get('/admin/royalties/invoices');
+            $reg = ErpApi::get('/admin/royalties/settlements');
+            if (is_array($fac)) { $roy['factures'] = array_slice((array) ($fac['invoices'] ?? (analyseListe($fac) ?: [])), 0, 24); }
+            if (is_array($reg)) { $roy['reglements'] = array_slice((array) ($reg['settlements'] ?? (analyseListe($reg) ?: [])), 0, 24); }
+        } else {
+            $roy['facturesNote'] = 'Factures et règlements émis : renseignez le compte admin ERP (Mon compte) pour les lire.';
+        }
+        $out['royalties'] = $roy;
+        $royFait = true;
     }
     if (!$royFait) {
         $out['manque'][] = [
