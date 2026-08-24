@@ -10280,8 +10280,10 @@ class App {
         + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
         + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
       journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '—',
-        type: j.type === 'recu' ? 'Commande reçue' : j.type === 'envoye' ? 'E-mail envoyé' : j.type === 'essai' ? 'Essai' : 'Échec',
-        col: j.type === 'echec' ? '#8D1D2C' : j.type === 'envoye' ? '#2d7a3e' : 'var(--color-text)',
+        type: { recu: 'Commande reçue', envoye: 'E-mail envoyé', relance: 'Relance envoyée',
+          essai: 'Essai', echec: 'Échec' }[j.type] || (j.type || '—'),
+        col: j.type === 'echec' ? '#8D1D2C'
+          : (j.type === 'envoye' || j.type === 'relance') ? '#2d7a3e' : 'var(--color-text)',
         detail: j.detail || '', destinataire: j.destinataire || '' })),
       busy: !!cmD.busy, msg: cmD.msg || '',
       msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (cmD.ok ? '#2d7a3e' : '#8D1D2C'),

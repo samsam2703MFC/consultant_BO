@@ -4152,6 +4152,7 @@ function tplParams(c, x){
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Seuils &amp; cibles</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Ce qui déclenche les alertes des écrans et des rapports.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Seuils d'alerte de coûts</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -4180,6 +4181,7 @@ function tplParams(c, x){
         </div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
       </div>
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Courriers &amp; notifications</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Tout ce qui part du cockpit : la machine d’envoi, les modèles de messages, et le journal de ce qui est parti.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
           <div style="font-size:13px;font-weight:500">Envoi des rapports — machine SMTP</div>
@@ -4219,37 +4221,6 @@ function tplParams(c, x){
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:500">Relance « commande à valider » — notification</div>
-          <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:var(--color-background-secondary);color:var(--color-text-muted)">${c.rl.envoyees} envoyée${c.rl.envoyees > 1 ? 's' : ''}</span>
-        </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le texte de la notification créée dans l’ERP par la cloche du Suivi fournisseurs. Elle est rattachée au magasin de la commande et porte un lien vers celle-ci — ce n’est pas un e-mail.</div>
-        <label style="display:block;font-size:12px;color:var(--color-text-muted)">Titre
-          <input value="${esc(c.rl.titre)}" ${x.C(c.rl.setTitre)} style="${inputCss}">
-        </label>
-        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Message
-          <textarea rows="4" ${x.C(c.rl.setMessage)} style="${inputCss};resize:vertical;font-family:var(--font-ui)">${esc(c.rl.message)}</textarea>
-        </label>
-        <div style="display:grid;grid-template-columns:1fr 1fr 110px;gap:12px;margin-top:10px">
-          <label style="font-size:12px;color:var(--color-text-muted)">Priorité
-            <select ${x.C(c.rl.setPriorite)} style="${inputCss}">
-              ${['info', 'warning', 'urgent'].map(v => `<option value="${v}"${c.rl.priorite === v ? ' selected' : ''}>${v}</option>`).join('')}
-            </select>
-          </label>
-          <label style="font-size:12px;color:var(--color-text-muted)">Libellé du lien
-            <input value="${esc(c.rl.actionLabel)}" ${x.C(c.rl.setActionLabel)} style="${inputCss}">
-          </label>
-          <label style="font-size:12px;color:var(--color-text-muted)">Visible (jours)
-            <input type="number" min="1" max="60" value="${esc(c.rl.jours)}" ${x.C(c.rl.setJours)} style="${inputCss}">
-          </label>
-        </div>
-        <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.rl.variables)}</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-          <button ${x.A(c.rl.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.rl.busy ? 'opacity:.6' : ''}">${c.rl.busy ? 'En cours…' : 'Enregistrer'}</button>
-        </div>
-        ${c.rl.msg ? `<div style="${c.rl.msgSt}">${esc(c.rl.msg)}</div>` : ''}
-      </div>
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
           <div style="font-size:13px;font-weight:500">Centrale d’achat — e-mail « commande fournisseur »</div>
           <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
         </div>
@@ -4281,8 +4252,39 @@ function tplParams(c, x){
         ${c.cm.msg ? `<div style="${c.cm.msgSt}">${esc(c.cm.msg)}</div>` : ''}
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Journal des e-mails achats</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque commande reçue et chaque envoi (réussi ou non) laisse une trace — les 50 dernières entrées.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:500">Relance « commande à valider » — notification</div>
+          <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:var(--color-background-secondary);color:var(--color-text-muted)">${c.rl.envoyees} envoyée${c.rl.envoyees > 1 ? 's' : ''}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le texte de la notification créée dans l’ERP par la cloche du Suivi fournisseurs. Elle est rattachée au magasin de la commande et porte un lien vers celle-ci — ce n’est pas un e-mail.</div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted)">Titre
+          <input value="${esc(c.rl.titre)}" ${x.C(c.rl.setTitre)} style="${inputCss}">
+        </label>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Message
+          <textarea rows="4" ${x.C(c.rl.setMessage)} style="${inputCss};resize:vertical;font-family:var(--font-ui)">${esc(c.rl.message)}</textarea>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 110px;gap:12px;margin-top:10px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Priorité
+            <select ${x.C(c.rl.setPriorite)} style="${inputCss}">
+              ${['info', 'warning', 'urgent'].map(v => `<option value="${v}"${c.rl.priorite === v ? ' selected' : ''}>${v}</option>`).join('')}
+            </select>
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Libellé du lien
+            <input value="${esc(c.rl.actionLabel)}" ${x.C(c.rl.setActionLabel)} style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Visible (jours)
+            <input type="number" min="1" max="60" value="${esc(c.rl.jours)}" ${x.C(c.rl.setJours)} style="${inputCss}">
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.rl.variables)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+          <button ${x.A(c.rl.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.rl.busy ? 'opacity:.6' : ''}">${c.rl.busy ? 'En cours…' : 'Enregistrer'}</button>
+        </div>
+        ${c.rl.msg ? `<div style="${c.rl.msgSt}">${esc(c.rl.msg)}</div>` : ''}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Journal des envois — e-mails &amp; notifications</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque commande reçue, chaque e-mail et chaque relance (réussis ou non) laissent une trace — les 50 dernières entrées.</div>
         ${!c.cm.journal.length ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Rien encore — le journal se remplit dès la première commande détectée ou le premier essai.</div>` : `
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
           <thead><tr>
@@ -4299,6 +4301,7 @@ function tplParams(c, x){
           </tr>`).join('')}</tbody>
         </table></div>`}
       </div>
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Référentiels</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Les tables qui pilotent les écrans : KPI, modèles, gabarits.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:4px">Catalogue des KPI</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le référentiel qui pilote les écrans et les rapports : un seuil changé ici s’applique partout au prochain calcul. « Alerte » déclenche la ligne dans les rapports, « Critique » la marque en rouge vif.</div>
