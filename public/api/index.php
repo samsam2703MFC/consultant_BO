@@ -101,6 +101,7 @@ function route(string $method, string $path): mixed
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
+            $path === '/diagnostic/commandes-fournisseurs' => ep_sonde_commandes_fournisseurs(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
@@ -157,6 +158,7 @@ function route(string $method, string $path): mixed
 
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
+    if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }

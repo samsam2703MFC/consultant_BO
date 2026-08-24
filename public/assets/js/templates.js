@@ -2181,6 +2181,25 @@ function tplControle(c, x){
               </tbody>
             </table>
             </div>
+            <!-- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du
+                 jour sans disparaître. Le motif reste lisible et un bouton
+                 ramène la tâche tout de suite — un contrôle qui s'efface sans
+                 dire pourquoi ressemble à un oubli. -->
+            ${s.nMasquees ? `<div style="border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+              <button ${x.A(c.ctrlMasqPlier)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:10px 18px;display:flex;align-items:center;gap:9px">
+                <span style="font-size:11.5px;font-weight:500;color:var(--color-text)">${s.nMasquees} contrôle(s) maîtrisé(s)</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${c.ctrlMasqTout ? '— masquer le détail' : '— afficher'}</span>
+              </button>
+              ${c.ctrlMasqTout ? `<div style="padding:0 18px 12px">
+                ${s.masquees.map(t => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)">
+                  <span style="flex:1;min-width:0">
+                    <span style="font-size:12.5px;font-weight:500">${esc(t.tache)}</span>
+                    <span style="display:block;font-size:11px;color:var(--color-text-muted)">${esc(t.maitriseMoy || t.maitriseMotif)}${t.recontrole ? ' · ' + esc(t.recontrole) : ''}</span>
+                  </span>
+                  <button ${x.A(t.rouvrir)} title="Remettre ce contrôle dans la liste du jour" style="flex:0 0 auto;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Rouvrir</button>
+                </div>`).join('')}
+              </div>` : ''}
+            </div>` : ''}
           </div>`).join('')}
       </div>`)}
     ${c.ctrlConsultants && c.ctrlConsultants.length ? `
@@ -6260,6 +6279,59 @@ function tplCentrale(c, x){
     <span style="font-size:11.5px;color:var(--color-text-muted)">${c.caRows ? c.caRows.length : 0} sur ${c.caTotal || 0} référence${(c.caTotal || 0) > 1 ? 's' : ''}${(c.caRows && c.caRows.length >= 300) ? ' · 300 affichées' : ''}</span>
   </div>` : '';
 
+  // Suivi fournisseurs — le grand tableau : fournisseur ▸ magasin ▸ ses 2
+  // dernières commandes, avec l'avancement en quatre segments.
+  const SEG = { on: '#2d7a3e', cur: '#c17a2a', ko: '#8D1D2C', '': 'var(--color-border-tertiary)' };
+  const suivi = c.caSvGroupes ? `
+    ${c.caSvKpis ? `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      ${c.caSvKpis.map(k => `<div style="${CARD};flex:1;min-width:170px;padding:12px 14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k[0])}</div>
+        <div style="font-size:22px;font-weight:500;line-height:1.1;margin-top:3px${k[3] ? ';color:' + k[3] : ''}">${esc(k[1])}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(k[2])}</div>
+      </div>`).join('')}
+    </div>` : ''}
+    ${c.caSvChips ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${c.caSvChips.map(ch => `<button ${x.A(ch.pick)} style="border:1px solid ${ch.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};cursor:pointer;border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;background:${ch.on ? 'rgba(141,29,44,0.08)' : 'transparent'};color:${ch.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(ch.nom)}</button>`).join('')}
+    </div>` : ''}
+    ${!c.caSvGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:16px">${esc(c.caSvRien || '')}</div>` : `
+    <div style="${CARD};margin-bottom:16px">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:940px">
+        <thead><tr>
+          <th style="${TH};width:170px">Magasin</th><th style="${TH};width:130px">Commande</th>
+          <th style="${TH};width:78px">Passée</th><th style="${TH};width:86px">Livraison</th>
+          <th style="${TH};width:240px">Avancement</th><th style="${TH};width:150px">Documents</th>
+          <th style="${TH};text-align:right;width:100px">Valeur</th>
+        </tr></thead>
+        <tbody>
+          ${c.caSvGroupes.map(g => `
+            <tr><td colspan="7" style="border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);padding:9px 12px;font-size:12.5px;font-weight:600">
+              ${esc(g.nom)}
+              <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)"> · ${esc(g.meta)} · </span>
+              <span style="font-weight:600;font-size:11px;color:${g.alerteCol}">${esc(g.alerte)}</span>
+            </td></tr>
+            ${g.commandes.map(o => `<tr>
+              <td style="${TD};font-weight:${o.magasin ? '500' : '400'}">${esc(o.magasin)}</td>
+              <td style="${TD};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text-muted)">${esc(o.cle)}</td>
+              <td style="${TD};color:var(--color-text-muted);white-space:nowrap">${esc(o.date)}</td>
+              <td style="${TD};white-space:nowrap${o.livraisonCol ? ';color:' + o.livraisonCol + ';font-weight:500' : ';color:var(--color-text-muted)'}">${esc(o.livraison)}</td>
+              <td style="${TD}"><span style="display:inline-flex;align-items:center">
+                ${o.segs.map(sg => `<i style="display:block;width:22px;height:5px;border-radius:3px;margin-right:3px;background:${SEG[sg]}"></i>`).join('')}
+                <span style="font-size:11.5px;font-weight:500;margin-left:6px;white-space:nowrap;color:${o.libelleCol}">${esc(o.libelle)}</span>
+                ${o.badge ? `<span style="font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:rgba(141,29,44,0.10);color:var(--color-primary);margin-left:6px;white-space:nowrap">${esc(o.badge)}</span>` : ''}
+              </span></td>
+              <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.docs)}</td>
+              <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(o.valeur)}</td>
+            </tr>`).join('')}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:12px">
+        <span>étapes : envoyée → acceptée → en transit → livrée</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="display:block;width:22px;height:5px;border-radius:3px;background:#2d7a3e"></i> franchi</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="display:block;width:22px;height:5px;border-radius:3px;background:#c17a2a"></i> en cours</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="display:block;width:22px;height:5px;border-radius:3px;background:#8D1D2C"></i> bloqué / en retard</span>
+      </div>
+    </div>`}` : '';
+
   // Commandes franchisés : une carte par fournisseur, ses 5 dernières
   // commandes. Les chips de statut vivent au-dessus de la grille.
   const groupes = c.caFournGroupes ? `
@@ -6331,7 +6403,7 @@ function tplCentrale(c, x){
     </table></div>
   </div>` : '';
 
-  return periodes + recl + kpis + manquants + params + recherche + groupes + table + table2;
+  return periodes + recl + suivi + kpis + manquants + params + recherche + groupes + table + table2;
 }
 
 

@@ -15,3 +15,4 @@
 2026-08-24T12:22:02Z sonde-transactions
 2026-08-24T12:27:07Z sonde-transactions-variantes
 2026-08-24T12:31:32Z retrait-sonde-transactions
+2026-08-24T16:01:04Z controle-par-exception

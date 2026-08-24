@@ -301,6 +301,158 @@ function todoTaskNames(): array
 }
 
 /**
+ * Réglages du contrôle par exception (seuils, fenêtre, cadence).
+ *
+ * @return array{masquer:float, rouvrir:float, minAvis:int, fenetre:int, recontroleJours:int, noteGrave:int}
+ */
+function maitriseReglages(): array
+{
+    $d = setting('maitrise', []);
+    $d = is_array($d) ? $d : [];
+    return [
+        'masquer' => isset($d['masquer']) ? (float) $d['masquer'] : 4.2,
+        'rouvrir' => isset($d['rouvrir']) ? (float) $d['rouvrir'] : 3.75,
+        'minAvis' => isset($d['minAvis']) ? (int) $d['minAvis'] : 5,
+        'fenetre' => isset($d['fenetre']) ? max(1, (int) $d['fenetre']) : 5,
+        'recontroleJours' => isset($d['recontroleJours']) ? max(1, (int) $d['recontroleJours']) : 42,
+        'noteGrave' => isset($d['noteGrave']) ? (int) $d['noteGrave'] : 2,
+    ];
+}
+
+/**
+ * L'état de maîtrise de chaque couple (boutique, tâche) — masqué ou à contrôler.
+ *
+ * La moyenne se calcule sur les N DERNIERS avis notés (fenêtre glissante), pas
+ * sur tout l'historique : une dérive récente serait sinon noyée dans un bon
+ * passé, et c'est justement la dérive qu'on cherche. Les avis non notés ne
+ * comptent ni en bien ni en mal — ils n'ont pas eu lieu.
+ *
+ * L'ordre des règles est l'ordre de leur autorité : ce qui protège passe avant
+ * ce qui optimise.
+ *   1. `jamais_masquer` — un contrôle d'hygiène ne se gagne pas au mérite.
+ *   2. une note GRAVE dans la fenêtre — rouvre le jour même, sans attendre que
+ *      la moyenne bouge : une moyenne noie un accident isolé, or c'est
+ *      justement l'accident qu'il faut revoir.
+ *   3. la réouverture MANUELLE — nouveau gérant, travaux, réclamation : elle
+ *      tient le temps d'une cadence complète, sinon le calcul l'effacerait au
+ *      rendu suivant.
+ *   4. le re-contrôle périodique échu.
+ *   5. trop peu d'avis pour juger.
+ *   6. seulement alors, l'hystérésis des deux seuils.
+ *
+ * Rend, par clé « shop|task », l'état et de quoi l'expliquer à l'écran. Les
+ * bascules sont persistées : l'hystérésis a besoin de se souvenir.
+ *
+ * @param  list<array{0:int,1:int}> $paires
+ * @return array<string, array<string,mixed>>
+ */
+function maitriseEtats(array $paires): array
+{
+    if ($paires === []) { return []; }
+    $R = maitriseReglages();
+    $aujourdhui = date('Y-m-d');
+
+    $shops = array_values(array_unique(array_map(fn ($p) => (int) $p[0], $paires)));
+    $voulu = [];
+    foreach ($paires as $p) { $voulu[(int) $p[0] . '|' . (int) $p[1]] = true; }
+
+    // Les avis notés des six derniers mois pour ces boutiques, du plus récent
+    // au plus ancien : la fenêtre se découpe ensuite en PHP (MySQL 5.7 n'a pas
+    // de fonction de fenêtrage, et un LIMIT par couple ferait N requêtes).
+    $notes = [];
+    try {
+        $in = implode(',', array_fill(0, count($shops), '?'));
+        $depuis = date('Y-m-d', strtotime('-180 days'));
+        $rows = Db::rows("SELECT id_shop, id_task, rating, review_date
+                            FROM mac_task_review
+                           WHERE rating IS NOT NULL AND id_shop IN ($in) AND review_date >= ?
+                        ORDER BY review_date DESC, id DESC
+                           LIMIT 20000", array_merge($shops, [$depuis]));
+        foreach ($rows as $r) {
+            $cle = (int) $r['id_shop'] . '|' . (int) $r['id_task'];
+            if (!isset($voulu[$cle])) { continue; }
+            $notes[$cle][] = ['note' => (int) $r['rating'], 'date' => (string) $r['review_date']];
+        }
+    } catch (PDOException $e) { /* table absente : tout reste à contrôler */ }
+
+    $etats = [];
+    try {
+        foreach (Db::rows('SELECT * FROM ceo_task_maitrise') as $r) {
+            $etats[(int) $r['id_shop'] . '|' . (int) $r['id_task']] = $r;
+        }
+    } catch (PDOException $e) { /* table absente : premier passage */ }
+
+    $out = [];
+    foreach ($paires as $p) {
+        $sid = (int) $p[0]; $tid = (int) $p[1];
+        $cle = $sid . '|' . $tid;
+        $fen = array_slice($notes[$cle] ?? [], 0, $R['fenetre']);
+        $n = count($fen);
+        $moy = $n > 0 ? round(array_sum(array_column($fen, 'note')) / $n, 2) : null;
+        $grave = false;
+        foreach ($fen as $f) { if ($f['note'] <= $R['noteGrave']) { $grave = true; break; } }
+
+        $e = $etats[$cle] ?? null;
+        $avant = $e !== null ? (string) $e['etat'] : 'visible';
+        $permanent = $e !== null && (int) $e['jamais_masquer'] === 1;
+        $recontrole = $e !== null && $e['recontrole_le'] !== null ? (string) $e['recontrole_le'] : null;
+        // Une réouverture manuelle tient une cadence complète : sans cela le
+        // calcul la balaierait au rendu suivant, et le bouton ne servirait à rien.
+        $forceJusqu = $e !== null && $e['force_le'] !== null
+            ? date('Y-m-d', strtotime((string) $e['force_le'] . ' +' . $R['recontroleJours'] . ' days')) : null;
+
+        if ($permanent) {
+            $etat = 'visible'; $motif = 'Contrôle permanent — jamais masqué';
+        } elseif ($grave) {
+            $etat = 'visible'; $motif = 'Note grave dans les ' . $n . ' derniers contrôles';
+        } elseif ($forceJusqu !== null && $forceJusqu >= $aujourdhui) {
+            $etat = 'visible'; $motif = 'Rouvert manuellement' . ($e['force_par'] ? ' par ' . $e['force_par'] : '');
+        } elseif ($recontrole !== null && $recontrole <= $aujourdhui) {
+            $etat = 'visible'; $motif = 'Re-contrôle périodique';
+        } elseif ($n < $R['minAvis']) {
+            $etat = 'visible'; $motif = $n . ' contrôle(s) sur ' . $R['minAvis'] . ' — pas encore de quoi juger';
+        } elseif ($avant === 'masquee') {
+            // Masquée : elle ne rouvre QUE sous le seuil bas.
+            $etat = $moy < $R['rouvrir'] ? 'visible' : 'masquee';
+            $motif = $etat === 'visible'
+                ? 'Moyenne retombée à ' . number_format((float) $moy, 2, ',', '') . ' (< ' . $R['rouvrir'] . ')'
+                : 'Maîtrisée — ' . number_format((float) $moy, 2, ',', '') . ' sur ' . $n . ' contrôles';
+        } else {
+            // Visible : elle ne se masque QU'AU-DESSUS du seuil haut.
+            $etat = $moy >= $R['masquer'] ? 'masquee' : 'visible';
+            $motif = $etat === 'masquee'
+                ? 'Maîtrisée — ' . number_format((float) $moy, 2, ',', '') . ' sur ' . $n . ' contrôles'
+                : 'Moyenne ' . number_format((float) $moy, 2, ',', '') . ' (masquage à ' . $R['masquer'] . ')';
+        }
+
+        // Persistance : seulement quand l'état CHANGE, ou au premier passage.
+        // Un rendu d'écran ne doit pas écrire une ligne par tâche à chaque
+        // ouverture — l'état est une décision, pas une trace de lecture.
+        $nouveauRecontrole = $recontrole;
+        if ($etat === 'masquee' && $avant !== 'masquee') {
+            $nouveauRecontrole = date('Y-m-d', strtotime('+' . $R['recontroleJours'] . ' days'));
+        } elseif ($etat === 'visible' && $avant === 'masquee') {
+            $nouveauRecontrole = null;
+        }
+        if ($e === null || $avant !== $etat) {
+            try {
+                Db::exec('INSERT INTO ceo_task_maitrise (id_shop, id_task, etat, depuis, moyenne, nb_avis, recontrole_le, motif)
+                          VALUES (?,?,?,?,?,?,?,?)
+                          ON DUPLICATE KEY UPDATE etat = VALUES(etat), depuis = VALUES(depuis),
+                            moyenne = VALUES(moyenne), nb_avis = VALUES(nb_avis),
+                            recontrole_le = VALUES(recontrole_le), motif = VALUES(motif)',
+                    [$sid, $tid, $etat, date('Y-m-d H:i:s'), $moy, $n, $nouveauRecontrole, mb_substr($motif, 0, 200)]);
+            } catch (PDOException $eW) { /* écriture impossible : l'écran reste juste */ }
+        }
+
+        $out[$cle] = ['etat' => $etat, 'moyenne' => $moy, 'nb' => $n, 'motif' => $motif,
+            'recontrole' => $etat === 'masquee' ? $nouveauRecontrole : null,
+            'permanent' => $permanent, 'grave' => $grave];
+    }
+    return $out;
+}
+
+/**
  * GET /pwa/tasks?date=YYYY-MM-DD — contrôle des tâches consultants du panel.
  *
  * Arbre Boutique › Tâche › avis consultant, lu dans la table partagée
@@ -516,6 +668,41 @@ function ep_pwa_tasks(): array
         $tot['aControler'] = $tot['aControler'] ?? 0;
         $tot['nonRendues'] = $tot['nonRendues'] ?? 0;
         $tot['sansPhoto']  = $tot['sansPhoto'] ?? 0;
+
+        // --- CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé sort de la liste.
+        // La décision est attachée à chaque tâche plutôt que de la retirer ici :
+        // l'écran replie les masquées au lieu de les faire disparaître, et le
+        // motif reste lisible — un contrôle qui s'efface sans dire pourquoi
+        // ressemble à un oubli.
+        $paires = [];
+        foreach ($byShop as $sid2 => $b2) {
+            foreach ($b2['taches'] as $t2) { $paires[] = [(int) $sid2, (int) $t2['taskId']]; }
+        }
+        $maitrise = maitriseEtats($paires);
+        $tot['masquees'] = 0;
+        foreach ($byShop as $sid2 => $b2) {
+            foreach ($byShop[$sid2]['taches'] as $i2 => $t2) {
+                $m2 = $maitrise[(int) $sid2 . '|' . (int) $t2['taskId']] ?? null;
+                if ($m2 === null) { continue; }
+                // Une tâche DÉJÀ notée aujourd'hui reste montrée : elle est
+                // faite, la masquer effacerait le travail du jour.
+                $masquee = $m2['etat'] === 'masquee' && $t2['note'] === null;
+                $byShop[$sid2]['taches'][$i2]['maitrise'] = [
+                    'masquee' => $masquee, 'moyenne' => $m2['moyenne'], 'nb' => $m2['nb'],
+                    'motif' => $m2['motif'], 'recontrole' => $m2['recontrole'],
+                    'permanent' => $m2['permanent'],
+                ];
+                if ($masquee) {
+                    $tot['masquees']++;
+                    // Une tâche masquée ne compte plus dans le reste à faire :
+                    // sinon l'écran réclamerait un contrôle qu'il n'affiche pas.
+                    if (($t2['statut'] ?? '') === 'aControler') {
+                        $tot['aControler'] = max(0, $tot['aControler'] - 1);
+                        $tot['aValider'] = max(0, $tot['aValider'] - 1);
+                    }
+                }
+            }
+        }
 
         $consultants = array_map(fn ($c) => [
             'id' => $c['id'], 'nom' => $c['nom'], 'avis' => $c['avis'], 'refuses' => $c['refuses'], 'valides' => $c['valides'],
@@ -6013,12 +6200,145 @@ function ep_ca_achats(): array
             'cumul' => round($cumul, 2), 'enCours' => $mm === $moisN];
     }
 
+    // Le suivi des commandes : 2 dernières par magasin chez chaque fournisseur.
+    try { $noms = []; foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id') as $s2) {
+        $noms[(int) $s2['id']] = (string) $s2['name']; } } catch (PDOException $e) { $noms = []; }
+    $suivi = caSuiviCommandes($noms);
+
+    $manquants = [];
+    if (!$suivi['groupes']) {
+        $manquants[] = lacune('Commandes fournisseurs',
+            'les 2 dernières commandes de chaque magasin et leur état',
+            'API panel — GET /shops/{id}/orders/materials n’a rien rendu pour les magasins actifs');
+    }
+    $manquants[] = lacune('Réception et litiges',
+        'quantités reçues face aux quantités commandées, et l’état des factures',
+        'API panel — la réception vit sur POST /orders/{id}/delivery ; aucune route de lecture ne la restitue');
+
     return ['etat' => 'ok', 'titre' => 'Suivi fournisseurs',
-        'source' => 'API panel — référentiel fournisseurs et catalogues (/material-suppliers), ventes du réseau (sales-kpis)',
+        'source' => 'API panel — commandes matière des magasins (/shops/{id}/orders/materials), référentiel fournisseurs (/material-suppliers), ventes du réseau (sales-kpis)',
         'lignes' => $lignes, 'caMensuel' => $caMensuel, 'exercice' => $annee,
-        'manquants' => [lacune('Commandes, réception, litiges',
-            'les commandes fournisseurs avec quantités commandées/reçues et l’état des factures',
-            'API panel — seuls des webhooks entrants existent pour les commandes fournisseurs, aucune route de lecture. À réclamer : GET /material-orders')]];
+        'suivi' => $suivi, 'manquants' => $manquants];
+}
+
+/**
+ * Les 2 dernières commandes de CHAQUE magasin, chez CHAQUE fournisseur — le
+ * cœur du suivi : ce qui est parti, où ça en est, ce qui traîne.
+ *
+ * Source : GET /shops/{id}/orders/materials (une par magasin, en parallèle).
+ * Le suivi fournisseur d'une commande (statut, dates, documents) est lu sur la
+ * ligne quand l'API le porte ; aucun champ n'est inventé — absent, la colonne
+ * affiche « — ». L'avancement se résume en quatre étapes :
+ *   1 envoyée → 2 acceptée → 3 en transit → 4 livrée
+ * et un refus/annulation casse le parcours à l'étape atteinte.
+ */
+function caSuiviCommandes(array $nomsMagasins): array
+{
+    $chemins = [];
+    foreach (array_keys($nomsMagasins) as $sid) { $chemins[$sid] = '/shops/' . $sid . '/orders/materials'; }
+    if ($chemins === []) { return ['groupes' => [], 'kpis' => null, 'indispo' => 'aucun magasin actif']; }
+
+    $reponses = PanelApi::getParallele($chemins);
+    $texte = static function (array $d, array $cles): string {
+        foreach ($cles as $c) {
+            if (isset($d[$c]) && is_scalar($d[$c]) && trim((string) $d[$c]) !== '') { return trim((string) $d[$c]); }
+            if (isset($d[$c]) && is_array($d[$c])) {
+                foreach (['name', 'display_name', 'label', 'number', 'key'] as $c2) {
+                    if (!empty($d[$c][$c2]) && is_scalar($d[$c][$c2])) { return trim((string) $d[$c][$c2]); }
+                }
+            }
+        }
+        return '';
+    };
+
+    $aujourdHui = date('Y-m-d');
+    $parFourn = []; $vues = 0;
+    foreach ($reponses as $sid => $rep) {
+        $magasin = $nomsMagasins[(int) $sid] ?? ('Magasin ' . $sid);
+        $cmds = analyseListe(is_array($rep) ? $rep : []);
+        $vues += count($cmds);
+        // Les plus récentes d'abord : la date de commande, à défaut l'identifiant.
+        usort($cmds, static function ($a, $b) use ($texte) {
+            $da = $texte((array) $a, ['order_date', 'created_at', 'date']);
+            $db = $texte((array) $b, ['order_date', 'created_at', 'date']);
+            return [$db, (int) ($b['id'] ?? 0)] <=> [$da, (int) ($a['id'] ?? 0)];
+        });
+
+        $prisParFourn = [];
+        foreach ($cmds as $o) {
+            if (!is_array($o)) { continue; }
+            $fourn = $texte($o, ['supplier_name', 'material_supplier_name', 'material_supplier', 'supplier']);
+            if ($fourn === '') { $fourn = 'Sans fournisseur'; }
+            // Deux par magasin ET par fournisseur : c'est la demande.
+            if (($prisParFourn[$fourn] ?? 0) >= 2) { continue; }
+            $prisParFourn[$fourn] = ($prisParFourn[$fourn] ?? 0) + 1;
+
+            $statut = strtoupper($texte($o, ['supplier_fulfillment_status', 'fulfillment_status', 'logistics_status', 'status']));
+            $livrPrevue = $texte($o, ['planned_delivery_date', 'expected_delivery_date', 'expected_date', 'delivery_date']);
+            $livreLe = $texte($o, ['delivered_on', 'delivered_at', 'received_at']);
+
+            // Étape atteinte + blocage éventuel, à partir du vocabulaire de l'ERP.
+            $etape = 1; $bloque = false; $libelle = 'Envoyée';
+            if (in_array($statut, ['REJECTED', 'REFUSED'], true)) { $etape = 1; $bloque = true; $libelle = 'Refusée'; }
+            elseif (in_array($statut, ['CANCELLED', 'CANCELED'], true)) { $etape = 1; $bloque = true; $libelle = 'Annulée'; }
+            elseif ($livreLe !== '' || in_array($statut, ['DELIVERED', 'FINALIZED', 'ARCHIVED', 'COMPLETED', 'RECEIVED'], true)) { $etape = 4; $libelle = 'Livrée'; }
+            elseif (in_array($statut, ['IN_TRANSIT', 'SENT', 'SHIPPED', 'IN_DELIVERY'], true)) { $etape = 3; $libelle = 'En transit'; }
+            elseif (in_array($statut, ['ACCEPTED', 'CONFIRMED', 'IN_PREPARATION', 'IN_PROGRESS'], true)) { $etape = 2; $libelle = 'Acceptée'; }
+            elseif ($statut !== '') { $libelle = ucfirst(strtolower(str_replace('_', ' ', $statut))); }
+
+            // Retard : une livraison prévue dépassée, commande non livrée.
+            $retardJours = null;
+            if ($etape < 4 && !$bloque && $livrPrevue !== '' && $livrPrevue < $aujourdHui) {
+                $retardJours = (int) floor((strtotime($aujourdHui) - strtotime($livrPrevue)) / 86400);
+            }
+
+            $docs = [];
+            foreach ((array) ($o['documents'] ?? []) as $doc) {
+                $t = strtoupper($texte(is_array($doc) ? $doc : [], ['type', 'document_type']));
+                if ($t !== '') { $docs[] = $t; }
+            }
+
+            $parFourn[$fourn]['magasins'][$magasin][] = [
+                'id' => (int) ($o['id'] ?? 0),
+                'cle' => $texte($o, ['order_key', 'number', 'document_number']) ?: ('#' . (int) ($o['id'] ?? 0)),
+                'date' => $texte($o, ['order_date', 'created_at', 'date']),
+                'livraisonPrevue' => $livrPrevue,
+                'livreLe' => $livreLe,
+                'etape' => $etape, 'bloque' => $bloque, 'libelle' => $libelle,
+                'retardJours' => $retardJours,
+                'valeur' => nombreOuNull($o, ['value_net', 'approximate_value_net', 'total_net', 'total', 'estimated_value']),
+                'documents' => array_values(array_unique($docs)),
+            ];
+        }
+    }
+
+    // Mise en forme + compteurs par fournisseur.
+    $groupes = []; $kEnCours = 0; $kRetard = 0; $kAAccepter = 0; $kValeur = 0.0; $kTotal = 0;
+    foreach ($parFourn as $nom => $g) {
+        $cmds = []; $enCours = 0; $retard = 0; $sansReponse = 0;
+        foreach ($g['magasins'] as $magasin => $liste) {
+            foreach ($liste as $i => $o) {
+                $o['magasin'] = $i === 0 ? $magasin : '';   // le nom ne se répète pas sur la 2ᵉ ligne
+                $cmds[] = $o;
+                $kTotal++;
+                if ($o['etape'] < 4 && !$o['bloque']) {
+                    $enCours++; $kEnCours++;
+                    if ($o['valeur'] !== null) { $kValeur += $o['valeur']; }
+                    if ($o['etape'] === 1) { $sansReponse++; $kAAccepter++; }
+                }
+                if ($o['retardJours'] !== null) { $retard++; $kRetard++; }
+            }
+        }
+        $groupes[] = ['fournisseur' => $nom, 'nbMagasins' => count($g['magasins']),
+            'nbCommandes' => count($cmds), 'enCours' => $enCours, 'retard' => $retard,
+            'sansReponse' => $sansReponse, 'commandes' => $cmds];
+    }
+    usort($groupes, static fn ($a, $b) => [-$a['retard'], -$a['enCours'], $a['fournisseur']]
+        <=> [-$b['retard'], -$b['enCours'], $b['fournisseur']]);
+
+    return ['groupes' => $groupes, 'lues' => $vues,
+        'kpis' => ['enCours' => $kEnCours, 'retard' => $kRetard, 'aAccepter' => $kAAccepter,
+            'valeurEnCours' => round($kValeur, 2), 'total' => $kTotal]];
 }
 
 /**

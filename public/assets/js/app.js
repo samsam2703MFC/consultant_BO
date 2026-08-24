@@ -6893,6 +6893,49 @@ class App {
           { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
       } : null;
     } else if (ecr === 'caAchats') {
+      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
+      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
+      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
+      const sv = d.suivi || {};
+      const svK = sv.kpis || null;
+      const fSv = S.caSvFiltre || '';
+      const jf = z => !z ? '—' : String(z).slice(5).split('-').reverse().join('.');
+      const garde = o => !fSv
+        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
+        || (fSv === 'retard' && o.retardJours != null)
+        || (fSv === 'livre' && o.etape === 4);
+      common.caSvKpis = svK ? [
+        ['Commandes en cours', String(svK.enCours), (sv.groupes || []).length + ' fournisseur(s)', ''],
+        ['En retard', String(svK.retard), 'livraison dépassée', svK.retard ? '#8D1D2C' : ''],
+        ['Sans réponse fournisseur', String(svK.aAccepter), 'commande envoyée, pas acceptée', svK.aAccepter ? '#8a5a13' : ''],
+        ['Valeur en cours', this.fE(svK.valeurEnCours), 'HT, commandes non livrées', ''],
+      ] : null;
+      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
+          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
+        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
+          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
+      common.caSvGroupes = (sv.groupes || []).map(g => ({
+        nom: g.fournisseur,
+        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' dernière' + (g.nbCommandes > 1 ? 's' : '') + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
+        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
+        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
+        commandes: (g.commandes || []).filter(garde).map(o => ({
+          magasin: o.magasin, cle: o.cle, date: jf(o.date),
+          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
+          // Quatre segments : franchi (vert), en cours (ambre), bloqué (ruby), à venir (gris).
+          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
+            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
+          libelle: o.libelle,
+          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C'
+            : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
+          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
+          docs: (o.documents && o.documents.length) ? o.documents.join(' · ') : '—',
+          valeur: o.valeur == null ? '—' : this.fE(o.valeur),
+        })),
+      })).filter(g => g.commandes.length);
+      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
+        : 'Aucune commande matière remontée par le panel.');
+
       // ── Les réclamations matière, en tête d'écran : c'est ce qui traîne qui
       //    fait agir, pas le décompte des commandes.
       this.reclCharge(false);
@@ -7972,6 +8015,28 @@ class App {
   }
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
+  /**
+   * Ramène un contrôle masqué dans la liste du jour.
+   *
+   * Le calcul propose, l'humain dispose : un nouveau gérant, des travaux, une
+   * réclamation — aucune moyenne ne les voit venir. La réouverture tient une
+   * cadence complète, sinon le prochain rendu l'effacerait.
+   */
+  ctrlRouvrir(shopId, taskId, nom){
+    if (!window.confirm('Remettre « ' + nom + ' » dans les contrôles du jour ?')) { return; }
+    write(this.source, 'PUT', '/taches/maitrise', { shopId: +shopId, taskId: +taskId, action: 'rouvrir' })
+      .then(r => {
+        if (!r || r.ok === false) { this.notify('Non rouvert — ' + ((r && r.error) || 'refusé')); return; }
+        this.notify('Contrôle rouvert — « ' + nom + ' »');
+        // Relecture de la MÊME journée : la liste doit montrer la tâche
+        // revenue, pas attendre un changement de date.
+        const d = (this.D.pwaTasks || {}).date || '';
+        readOne('/pwa/tasks' + (d ? '?date=' + encodeURIComponent(d) : '')).then(pt => {
+          if (pt) { this.D.pwaTasks = pt; }
+          this.setState({});
+        });
+      });
+  }
   ctrlOpenTask(shopId, taskId, date, tacheNom){
     this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
@@ -8335,12 +8400,30 @@ class App {
             btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
             toggle: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
             open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
+            // Contrôle par exception : maîtrisée, la tâche sort de la liste du
+            // jour — sans disparaître. Le motif et la date de re-contrôle
+            // restent lisibles, et un bouton la ramène tout de suite.
+            maitrisee: !!(t.maitrise && t.maitrise.masquee),
+            maitriseMotif: (t.maitrise && t.maitrise.motif) || '',
+            maitriseMoy: (t.maitrise && t.maitrise.moyenne != null)
+              ? String(t.maitrise.moyenne).replace('.', ',') + ' / 5 sur ' + t.maitrise.nb + ' contrôles' : '',
+            recontrole: (t.maitrise && t.maitrise.recontrole) ? 'Re-contrôle le ' + this.fD(t.maitrise.recontrole) : '',
+            rouvrir: () => this.ctrlRouvrir(s.shopId, t.taskId, t.tache),
           }));
+        const aFaire = taches.filter(t => !t.maitrisee);
+        const masquees = taches.filter(t => t.maitrisee);
         return { shop: s.shop, shopId: s.shopId, nTaches: (s.taches || []).length,
-          nValid: (s.taches || []).filter(x => x.valide).length, taches, vide: taches.length === 0 };
+          nValid: (s.taches || []).filter(x => x.valide).length,
+          taches: aFaire, masquees, nMasquees: masquees.length,
+          // Une boutique dont TOUT est maîtrisé n'est pas vide : elle est au
+          // vert. Le dire vaut mieux que de la faire disparaître de l'écran.
+          vide: aFaire.length === 0 && masquees.length === 0 };
       }).filter(s => !(common.ctrlOnly !== 'tous' && s.vide));
     common.ctrlShops = shops;
     common.ctrlEmpty = shops.length === 0;
+    common.ctrlMasqTout = !!S.ctrlMasqTout;
+    common.ctrlMasqPlier = () => this.setState({ ctrlMasqTout: !S.ctrlMasqTout });
+    common.ctrlMasqTotal = shops.reduce((a, s2) => a + s2.nMasquees, 0);
 
     common.ctrlConsultants = (pt.consultants || []).map(c => ({
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
