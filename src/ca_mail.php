@@ -281,7 +281,7 @@ function wr_ca_relance(): array
 
     [$ok, $rep] = PanelApi::post('/notifications', $corps);
     $nid = 0;
-    foreach ([$rep['id'] ?? null, $rep['data']['id'] ?? null] as $cand) {
+    foreach ([$rep['inserted_id'] ?? null, $rep['id'] ?? null, $rep['data']['id'] ?? null] as $cand) {
         if (is_numeric($cand)) { $nid = (int) $cand; break; }
     }
     caMailJournal($ok ? 'relance' : 'echec',
