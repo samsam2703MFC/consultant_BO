@@ -176,3 +176,114 @@ function ep_ca_mail_cron(): array
 
     return ['etat' => 'ok', 'envoyes' => $envoyes, 'echecs' => $echecs];
 }
+
+/* ==========================================================================
+   Relance d'une commande — l'enveloppe posée sur chaque ligne du suivi.
+   Le template vit dans `ceo_app_setting.caRelanceCommande` et s'édite dans
+   Paramètres, avec les autres courriers. L'envoi passe par la machine SMTP ;
+   la date de relance est gardée par commande (`caRelances`) pour que la ligne
+   dise « relancée le … » plutôt que de laisser relancer dix fois.
+   ========================================================================== */
+
+function caRelanceDefauts(): array
+{
+    return [
+        'destinataireDefaut' => '',
+        'sujet' => 'Commande {{cle}} — en attente de votre validation',
+        'corps' => "Bonjour,\n\n"
+            . "La commande {{cle}} du magasin {{magasin}}, passée le {{date}}, n'a pas encore été validée.\n"
+            . "État actuel : {{statut}}{{retard}}.\n\n"
+            . "Merci de la traiter dans le portail fournisseur.\n\n"
+            . "— Centrale d'achat, L'Atelier by",
+    ];
+}
+
+function caRelanceConfig(): array
+{
+    $v = setting('caRelanceCommande');
+    return is_array($v) ? array_merge(caRelanceDefauts(), $v) : caRelanceDefauts();
+}
+
+/** État du template pour l'écran Paramètres. */
+function caRelanceEtat(): array
+{
+    $r = setting('caRelances');
+    return ['config' => caRelanceConfig(), 'smtpPret' => Smtp::configured(),
+        'envoyees' => is_array($r) ? count($r) : 0,
+        'variables' => ['cle', 'magasin', 'fournisseur', 'date', 'livraison', 'statut', 'retard']];
+}
+
+/**
+ * POST /centrale/achats/relance {id} — relance le fournisseur d'UNE commande.
+ * La commande est relue à la source (/deliveries/{id}) : on ne relance jamais
+ * sur la foi de ce que l'écran affichait il y a dix minutes.
+ */
+function wr_ca_relance(): array
+{
+    $b = body();
+    $id = (int) ($b['id'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['ok' => false, 'erreur' => 'commande requise']; }
+    if (!Smtp::configured()) { return ['ok' => false, 'erreur' => 'SMTP non configuré (Paramètres → SMTP)']; }
+
+    $o = PanelApi::get('/deliveries/' . $id);
+    if (!is_array($o) || empty($o['id'])) {
+        return ['ok' => false, 'erreur' => PanelApi::$lastError ?? 'commande introuvable'];
+    }
+
+    $fid = (int) ($o['id_supplier'] ?? 0);
+    $nom = 'Fournisseur ' . $fid; $email = trim((string) ($b['email'] ?? ''));
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+        if ((int) ($f['id'] ?? 0) === $fid) {
+            $nom = (string) ($f['name'] ?? $nom);
+            if ($email === '') { $email = trim((string) ($f['email'] ?? '')); }
+            break;
+        }
+    }
+    $c = caRelanceConfig();
+    if ($email === '') { $email = trim((string) $c['destinataireDefaut']); }
+    if ($email === '') {
+        return ['ok' => false, 'erreur' => 'aucune adresse pour ' . $nom . ' — le référentiel fournisseurs n’en porte pas'];
+    }
+
+    $magasin = 'Magasin ' . (int) ($o['id_shop'] ?? 0);
+    try {
+        $r = Db::rows('SELECT name FROM shops WHERE id = ?', [(int) ($o['id_shop'] ?? 0)]);
+        if ($r && !empty($r[0]['name'])) { $magasin = (string) $r[0]['name']; }
+    } catch (PDOException $e) { /* le nom technique fera l'affaire */ }
+
+    $vide = static fn ($v): bool => $v === null || $v === '' || $v === 'NULL';
+    $ff = strtoupper((string) ($o['supplier_fulfillment_status'] ?? ''));
+    $statut = !$vide($o['supplier_rejected_at'] ?? null) ? 'refusée'
+        : (!$vide($o['delivered_on'] ?? null) ? 'livrée'
+        : (!$vide($o['in_transit_sent_at'] ?? null) ? 'en transit'
+        : ($ff === 'FINALIZED' ? 'finalisée'
+        : (!$vide($o['supplier_accepted_at'] ?? null) ? 'acceptée' : 'envoyée, pas encore acceptée'))));
+    $prevue = !$vide($o['supplier_planned_delivery_date'] ?? null) ? (string) $o['supplier_planned_delivery_date']
+        : (!$vide($o['expected_date'] ?? null) ? (string) $o['expected_date'] : '');
+    $retard = '';
+    if ($prevue !== '' && $prevue < date('Y-m-d') && $vide($o['delivered_on'] ?? null)) {
+        $retard = ' — livraison prévue le ' . $prevue . ', soit '
+            . (int) floor((time() - strtotime($prevue)) / 86400) . ' jour(s) de retard';
+    }
+
+    $vars = ['cle' => (string) ($o['order_key'] ?? ('#' . $id)), 'magasin' => $magasin,
+        'fournisseur' => $nom, 'date' => substr((string) ($o['order_date'] ?? ''), 0, 10),
+        'livraison' => $prevue !== '' ? $prevue : '—', 'statut' => $statut, 'retard' => $retard];
+
+    $sujet = caMailRemplir((string) $c['sujet'], $vars);
+    $html = caMailHtml(caMailRemplir((string) $c['corps'], $vars));
+    $ok = Smtp::envoyer($email, $sujet, $html);
+    caMailJournal($ok ? 'relance' : 'echec',
+        ($ok ? 'Relance envoyée — ' : 'Relance en échec — ') . $vars['cle'] . ' · ' . $nom
+            . (!$ok ? ' · ' . (string) (Smtp::$lastError ?? '') : ''), $email);
+    if (!$ok) { return ['ok' => false, 'erreur' => (string) (Smtp::$lastError ?? 'échec d’envoi')]; }
+
+    $r = setting('caRelances');
+    if (!is_array($r)) { $r = []; }
+    $r[(string) $id] = ['quand' => date('Y-m-d H:i'), 'a' => $email];
+    if (count($r) > 300) { $r = array_slice($r, -300, null, true); }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caRelances', json_encode($r, JSON_UNESCAPED_UNICODE)]);
+
+    return ['ok' => true, 'destinataire' => $email, 'quand' => $r[(string) $id]['quand']];
+}

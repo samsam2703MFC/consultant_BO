@@ -6025,11 +6025,17 @@ function ep_ca_commandes(): array
     // (catalog-mappings). Une réquisition réalisée garde « — » : son contenu
     // n'a pas été retenu par l'ERP, inventer un nom serait pire.
     $fournParMatiere = [];
-    $nomsFourn = [];
+    $nomsFourn = []; $mailsFourn = [];
     foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
         $fid = (int) ($f['id'] ?? 0);
-        if ($fid > 0) { $nomsFourn[$fid] = (string) ($f['name'] ?? ('Fournisseur ' . $fid)); }
+        if ($fid > 0) {
+            $nomsFourn[$fid] = (string) ($f['name'] ?? ('Fournisseur ' . $fid));
+            $mailsFourn[$fid] = trim((string) ($f['email'] ?? ''));
+        }
     }
+    // Les relances déjà envoyées : la ligne le dit, pour ne pas relancer deux fois.
+    $relances = setting('caRelances');
+    if (!is_array($relances)) { $relances = []; }
     $chMap = [];
     foreach ($nomsFourn as $fid => $n2) { $chMap[$fid] = '/material-suppliers/' . $fid . '/catalog-mappings'; }
     foreach (PanelApi::getParallele($chMap) as $fid => $maps) {
@@ -6344,6 +6350,8 @@ function caSuiviCommandes(array $nomsMagasins): array
             'etape' => $etape, 'bloque' => $bloque, 'libelle' => $libelle,
             'geste' => $geste, 'retardJours' => $retard,
             'source' => strtoupper((string) ($o['source_type'] ?? '')) === 'INTEGRATED' ? 'intégrée' : 'manuelle',
+            'email' => $mailsFourn[$fid] ?? '',
+            'relanceLe' => (string) ($relances[(string) $o['id']]['quand'] ?? ''),
         ];
     }
 

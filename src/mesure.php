@@ -1339,3 +1339,24 @@ function ep_profil_jour(): array
         'lecture' => 'Moyenne du CA par jour de semaine, mesurée sur la fenêtre lue par « Résultat du jour » '
             . 'et réécrite à chaque passage. La part est celle du jour dans une semaine type.'];
 }
+
+/** GET /diagnostic/panel-route?p=/chemin — sonde temporaire (réalm consultant). */
+function ep_sonde_panel_route(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $p = (string) ($_GET['p'] ?? '');
+    if ($p === '' || $p[0] !== '/') { http_response_code(400); return ['error' => 'p=/chemin requis']; }
+    $apercu = static function ($v, int $prof = 0) use (&$apercu) {
+        if (!is_array($v)) { return is_scalar($v) ? mb_substr((string) $v, 0, 80) : gettype($v); }
+        if (array_is_list($v)) { return ['liste' => count($v), 'premier' => ($v && $prof < 2) ? $apercu($v[0], $prof + 1) : null]; }
+        $out = [];
+        foreach ($v as $k => $x) {
+            $out[$k] = is_array($x) ? ($prof < 2 ? $apercu($x, $prof + 1) : (array_is_list($x) ? count($x) . ' él.' : array_keys($x)))
+                : (is_scalar($x) ? mb_substr((string) $x, 0, 80) : gettype($x));
+        }
+        return $out;
+    };
+    PanelApi::$lastError = null;
+    $r = PanelApi::get($p);
+    return ['route' => $p, 'reponse' => $r === null ? ['erreur' => PanelApi::$lastError ?? 'null'] : $apercu($r)];
+}

@@ -6253,7 +6253,7 @@ function tplCentrale(c, x){
     </div>` : ''}
     ${!c.caSvGroupes.length ? `<div style="${CARD};font-size:12.5px;color:var(--color-text-muted);margin-bottom:16px">${esc(c.caSvRien || '')}</div>` : `
     <div style="${CARD};margin-bottom:16px">
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:940px">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1010px">
         <thead><tr>
           <th style="${TH};width:170px">Magasin</th><th style="${TH};width:130px">Commande</th>
           <th style="${TH};width:78px">Passée</th><th style="${TH};width:86px">Livraison</th>
@@ -6262,7 +6262,7 @@ function tplCentrale(c, x){
         </tr></thead>
         <tbody>
           ${c.caSvGroupes.map(g => `
-            <tr><td colspan="7" style="border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);padding:9px 12px;font-size:12.5px;font-weight:600">
+            <tr><td colspan="8" style="border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);padding:9px 12px;font-size:12.5px;font-weight:600">
               ${esc(g.nom)}
               <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)"> · ${esc(g.meta)} · </span>
               <span style="font-weight:600;font-size:11px;color:${g.alerteCol}">${esc(g.alerte)}</span>
@@ -6279,6 +6279,11 @@ function tplCentrale(c, x){
               </span></td>
               <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.geste)}</td>
               <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.source)}</td>
+              <td style="${TD};text-align:center">
+                ${o.relancable ? `<button ${x.A(o.relancer)} title="${esc(o.relanceTitre)}" style="border:0.5px solid ${o.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${o.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${o.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${o.relanceEnCours ? ';opacity:.5' : ''}">${o.relanceEnCours ? '…' : '✉'}</button>
+                  ${o.relanceLe ? `<div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px;white-space:nowrap">${esc(o.relanceLe.slice(5, 10))}</div>` : ''}`
+                  : `<span title="${esc(o.relanceTitre)}" style="color:var(--color-border-secondary)">—</span>`}
+              </td>
             </tr>`).join('')}`).join('')}
         </tbody>
       </table></div>
