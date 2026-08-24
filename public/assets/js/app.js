@@ -5173,6 +5173,17 @@ class App {
     // La photo d'une cible — référence, meuble, niveau, zone. Elle est lue ici,
     // avant le plan : c'est le plan qui en a le plus besoin.
     const photoDe = (cible, id) => ((pl.notes || {})[cible + ':' + id] || {}).photo || null;
+    // Pour une RÉFÉRENCE, le visuel du panel complète : la même chaîne que le
+    // contrôle qualité (recette de la référence), mémorisée côté serveur. La
+    // photo annexée dans le cockpit prime — c'est celle qu'on a choisie.
+    if (!this.D.planoPhotos && !this._plPhEnCours) {
+      this._plPhEnCours = true;
+      readOne('/planogramme/photos').then(d => { this._plPhEnCours = false;
+        this.D.planoPhotos = d || { photos: {} }; this.setState({ plPhMaj: Date.now() }); });
+    }
+    const phPanel = (this.D.planoPhotos || {}).photos || {};
+    const photoProduit = ref => photoDe('ref', ref)
+      || ((phPanel[String(ref)] || {}).url || null);
     const T = pl.totaux || {};
     common.plTot = { slots: T.slots || 0, libres: T.libres || 0, places: T.places || 0 };
     common.plVide = (T.slots || 0) === 0;
@@ -5215,6 +5226,7 @@ class App {
       // sur chaque meuble noierait ceux qui ont vraiment une contrainte.
       periodes: (m.periodes || []).length ? perNoms(m.periodes) : '',
       renommer: () => this.plRenommer('meuble', m.id, m.nom),
+      assistant: () => this.plMwOuvrir(zid, m),
       supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }));
     common.plLignes = [];
     for (let i = 0; i < nMax; i++) {
@@ -5227,7 +5239,14 @@ class App {
           return { absent: false, niveauId: niv.id,
             ajouter: () => this.plAjouterSlots(niv.id, niv.nom),
             slots: (niv.slots || []).map(s => {
-              const occ = (s.occupants || [])[0] || null;
+              // Au moment regardé, l'occupant est celui qui y EST : les
+              // croissants du matin ne se dessinent pas sur le comptoir de
+              // midi. Sans moment choisi, le premier — et les autres comptés.
+              const auMoment = o => !perSel || !(o.periodes || []).length
+                || (o.periodes || []).indexOf(perSel) >= 0;
+              const occs = (s.occupants || []).filter(auMoment);
+              const occ = occs[0] || null;
+              const autres = Math.max(0, (s.occupants || []).length - (occ ? 1 : 0));
               const vise = cible === s.id;
               return { id: s.id, position: s.position, libre: !occ, vise,
                 nom: occ ? occ.nom : '', ref: occ ? occ.ref : '',
@@ -5239,7 +5258,7 @@ class App {
                 // La photo, répétée autant de fois que la grille le dit : c'est
                 // ce qui fait la différence entre une case étiquetée et un
                 // planogramme. Sans photo, la case reste en texte et le dit.
-                photo: occ ? photoDe('ref', occ.ref) : null,
+                photo: occ ? photoProduit(occ.ref) : null,
                 photoN: occ ? Math.min(36, Math.max(1, (occ.cols || 1) * (occ.rangs || 1))) : 0,
                 photoCols: occ ? Math.max(1, occ.cols || 1) : 1,
                 photoRangs: occ ? Math.max(1, occ.rangs || 1) : 1,
@@ -5262,9 +5281,11 @@ class App {
                 // seuls ne disent pas : 6 × 1 et 3 × 2 font six produits, pas
                 // la même vitrine. Sinon, les fronts, comme avant.
                 detail: occ
-                  ? (occ.cols && occ.rangs
+                  ? ((occ.cols && occ.rangs
                       ? (occ.cols + ' × ' + occ.rangs + (occ.parSlot ? ' · ' + occ.parSlot : ''))
                       : (occ.fronts + ' front' + (occ.fronts > 1 ? 's' : '')))
+                      + ((occ.periodes || []).length ? ' · ' + perNoms(occ.periodes) : '')
+                      + (autres ? ' · +' + autres + ' autre(s) moment(s)' : ''))
                   : ([s.format || (s.largeurMm ? s.largeurMm + ' mm' : ''), s.contenant,
                       s.capacite ? String(s.capacite) : ''].filter(Boolean).join(' · ')),
                 st: 'border-radius:7px;padding:6px 7px;min-height:50px;display:flex;flex-direction:column;'
@@ -5282,6 +5303,7 @@ class App {
     // imprimer la vitrine qu'on a sous les yeux. La feuille est construite ici,
     // en HTML simple, et le navigateur s'occupe de la pagination.
     common.plImprimer = (pl.zones || []).length ? () => this.plImprimer() : null;
+    common.plExporter = (pl.slots || []).length ? () => this.plExporter() : null;
 
     common.plCible = cible;
     const sC = (pl.slots || []).find(s => s.id === cible) || null;
@@ -5305,7 +5327,7 @@ class App {
     common.plPhotosOn = photosOn;
     common.plPhotosGo = () => this.setState({ plPhotos: !photosOn });
     const placees = (pl.placements || []).filter(p2 => p2.slotId !== null);
-    const avecPhoto = placees.filter(p2 => photoDe('ref', p2.ref)).length;
+    const avecPhoto = placees.filter(p2 => photoProduit(p2.ref)).length;
     common.plPhotosN = avecPhoto;
     common.plPhotosManque = placees.length - avecPhoto;
 
@@ -5359,8 +5381,11 @@ class App {
     // écrite : sans cela, le nombre tapé repartirait à chaque rendu.
     const brouillons = S.plGr || {};
 
+    // Les moments du référentiel, pour les pastilles du tableau.
+    const refPerT = ((pl.referentiels || {}).periodes || []);
     let rangs = (pl.slots || []).map(s => {
       const occ = (s.occupants || [])[0] || null;
+      const autresOcc = Math.max(0, (s.occupants || []).length - 1);
       const br = occ ? (brouillons[occ.ref] || {}) : {};
       const nSaisi = br.n != null ? br.n : (occ && occ.parSlot != null ? String(occ.parSlot) : '');
       const colsSaisi = br.cols != null ? br.cols : (occ && occ.cols != null ? occ.cols : null);
@@ -5373,7 +5398,7 @@ class App {
       return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
         taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '—',
         format: combo(s, 'format'), contenant: combo(s, 'contenant'),
-        photo: occ ? photoDe('ref', occ.ref) : null,
+        photo: occ ? photoProduit(occ.ref) : null,
         photoSet: occ ? e => this.plPhoto('ref', occ.ref, (e.target.files || [])[0]) : null,
         photoDel: occ && photoDe('ref', occ.ref) ? () => this.plPhotoRetirer('ref', occ.ref) : null,
         formatTxt: s.format || '',
@@ -5399,6 +5424,20 @@ class App {
         ref: occ ? occ.ref : '', nom: occ ? occ.nom : '',
         prendre: occ ? this.plPrendre(occ.ref) : null,
         deposer: this.plDeposerSur(s.id),
+        autresOcc,
+        // Les moments où CETTE référence est présentée ici. Tout coché =
+        // toute la journée ; décocher le dernier y revient aussi — une
+        // référence présentée à aucun moment ne serait nulle part.
+        periodesRef: occ ? refPerT.map(p2 => ({ slug: p2.slug, nom: p2.nom || p2.slug,
+          on: !(occ.periodes || []).length || (occ.periodes || []).indexOf(p2.slug) >= 0,
+          bascule: () => { const dej = (occ.periodes || []).length ? occ.periodes.slice()
+              : refPerT.map(p3 => p3.slug);
+            const i = dej.indexOf(p2.slug);
+            if (i >= 0) { dej.splice(i, 1); } else { dej.push(p2.slug); }
+            write(this.source, 'PUT', '/planogramme/placement/' + encodeURIComponent(occ.ref),
+              { slotId: s.id, periodes: dej.length ? dej : refPerT.map(p3 => p3.slug) })
+              .then(r => { if (r && r.ok !== false) { this.plCharge(true); }
+                else { this.notify('Moment refusé — ' + ((r && r.error) || 'écriture impossible')); } }); } })) : [],
         fronts: occ ? String(occ.fronts) : '—', libre: !occ,
         etat: occ ? 'occupé' : 'libre',
         vise: cible === s.id,
@@ -5477,6 +5516,7 @@ class App {
           if (i >= 0) { dej.splice(i, 1); } else { dej.push(p2.slug); }
           this.plMeublePeriodes(m.id, dej); } })),
       renommer: e => this.plRenommer('meuble', m.id, e.target.value),
+      assistant: () => this.plMwOuvrir(zid, m),
       supprimer: () => this.plSupprimer('meuble', m.id, m.nom) }, photoCtrl('meuble', m.id)));
 
     const msel = S.plMeubleSel && meubles.some(m => m.id === S.plMeubleSel)
@@ -5714,18 +5754,33 @@ class App {
   plPhotoEnvoyer(cible, cibleId, data){
     return write(this.source, 'POST', '/planogramme/photo', { cible, cibleId: String(cibleId), data });
   }
-  plMwOuvrir(zoneId){
+  /**
+   * L'assistant : neuf sans `meuble`, ÉDITION préremplie avec. En édition, la
+   * structure (niveaux, emplacements) ne bouge pas d'ici — la refaire à
+   * l'aveugle déplacerait ce qui est posé ; elle se retouche dans le panneau
+   * d'organisation, et les dimensions passent par le format, au tableau.
+   */
+  plMwOuvrir(zoneId, meuble){
     const r = ((this.D.plano || {}).referentiels) || {};
     const d = r.slotDefaut || {};
+    const m = meuble || null;
+    const s1 = m ? (((m.niveaux || [])[0] || {}).slots || [])[0] || {} : {};
     this.setState({ plMw: { zoneId, etape: 1, busy: false, err: '',
-      nom: '', type: (r.types || [])[0] || '', temperature: (r.temperatures || [])[0] || '',
-      presentation: (r.presentations || [])[0] || '',
-      longueur: String(d.longueur || 300), largeur: String(d.largeur || 300),
-      hauteur: String(d.hauteur || 250), capacite: '',
-      nNiveaux: '3', nSlots: '4',
+      meubleId: m ? m.id : null,
+      nom: m ? m.nom : '',
+      type: m ? (m.type || '') : ((r.types || [])[0] || ''),
+      temperature: m ? (m.temperature || '') : ((r.temperatures || [])[0] || ''),
+      presentation: m ? (m.presentation || '') : ((r.presentations || [])[0] || ''),
+      longueur: String((m ? s1.longueurMm : 0) || d.longueur || 300),
+      largeur: String((m ? s1.largeurMm : 0) || d.largeur || 300),
+      hauteur: String((m ? s1.hauteurMm : 0) || d.hauteur || 250), capacite: '',
+      nNiveaux: m ? String((m.niveaux || []).length || 1) : '3',
+      nSlots: m ? String((((m.niveaux || [])[0] || {}).slots || []).length || 0) : '4',
       // Toute la journée par défaut : c'est le cas courant, et un meuble
       // décoché partout ne serait monté à aucun moment — un plan vide.
-      periodes: ((r.periodes || []).map(p => p.slug)),
+      periodes: m
+        ? ((m.periodes || []).length ? m.periodes.slice() : (r.periodes || []).map(p => p.slug))
+        : ((r.periodes || []).map(p => p.slug)),
       // Photos collectées avant la création : une pour le meuble, une par
       // niveau, indexées par le rang du niveau. Elles partent une fois les
       // identifiants connus.
@@ -5766,6 +5821,9 @@ class App {
       pick: () => this.plMwPatch({ [k]: v }) }));
     return {
       etape: w.etape, busy: !!w.busy, err: w.err || '',
+      // En édition, l'assistant corrige l'identité du meuble ; la structure se
+      // retouche ailleurs, et l'écran le dit plutôt que de la refaire en douce.
+      edition: !!w.meubleId,
       zone: zone ? zone.nom : '',
       nom: w.nom, type: w.type, temperature: w.temperature, presentation: w.presentation,
       longueur: w.longueur, largeur: w.largeur, hauteur: w.hauteur, capacite: w.capacite,
@@ -5868,6 +5926,37 @@ class App {
     const nom = String(lu('plmw-nom', w.nom) || '').trim();
     if (!nom) { this.plMwPatch({ etape: 1, err: 'Donnez un nom à ce meuble.' }); return; }
     this.plMwPatch({ busy: true, err: '' });
+
+    // ÉDITION : l'identité change, la structure reste. Les photos collectées
+    // partent sur les identifiants déjà connus — meuble et niveaux existants.
+    if (w.meubleId) {
+      write(this.source, 'PATCH', '/planogramme/meuble/' + w.meubleId, {
+        nom, type: w.type, temperature: w.temperature, presentation: w.presentation,
+        periodes: w.periodes || [],
+      }).then(res => {
+        if (!res || res.ok === false) {
+          this.plMwPatch({ busy: false, err: (res && res.error) || 'modification refusée' });
+          return;
+        }
+        const meuble = ((this.D.plano || {}).zones || [])
+          .flatMap(z => z.meubles || []).find(m => m.id === w.meubleId) || {};
+        const envois = [];
+        if (w.photoMeuble) { envois.push(this.plPhotoEnvoyer('meuble', w.meubleId, w.photoMeuble)); }
+        (meuble.niveaux || []).forEach((n, i) => {
+          const d2 = (w.photosNiveau || {})[i + 1];
+          if (d2) { envois.push(this.plPhotoEnvoyer('niveau', n.id, d2)); }
+        });
+        Promise.all(envois).then(rs => {
+          const rates = rs.filter(r2 => !r2 || r2.ok === false).length;
+          this.setState({ plMw: null });
+          this.plCharge(true);
+          this.notify('« ' + nom + ' » modifié'
+            + (envois.length ? ' · ' + (envois.length - rates) + '/' + envois.length + ' photo(s)' : '')
+            + (rates ? ' — ' + rates + ' photo(s) non enregistrée(s)' : ''));
+        });
+      });
+      return;
+    }
     write(this.source, 'POST', '/planogramme/meuble', {
       nom, parentId: w.zoneId, type: w.type, temperature: w.temperature, presentation: w.presentation,
       periodes: w.periodes || [],
@@ -6066,7 +6155,13 @@ class App {
     if (place && place.slotId === slotId) { return; }
     const cible = (pl.slots || []).find(s2 => s2.id === slotId) || null;
     if (!cible) { return; }
-    const occ = (cible.occupants || []).filter(o => o.ref !== ref);
+    // Le conflit se juge par chevauchement de moments : les croissants du
+    // matin et le traiteur de midi partagent la même case sans s'y croiser.
+    // Une liste vide vaut « toute la journée » et croise tout.
+    const mesPer = (place ? place.periodes : []) || [];
+    const croise = o => { const lo = o.periodes || [];
+      return !mesPer.length || !lo.length || lo.some(x => mesPer.indexOf(x) >= 0); };
+    const occ = (cible.occupants || []).filter(o => o.ref !== ref && croise(o));
     const venaitDe = place ? place.slotId : null;
     if (occ.length && !venaitDe) {
       this.notify('Emplacement occupé par ' + occ[0].nom + ' — déposez sur un emplacement libre, ou échangez depuis le plan.');
@@ -6096,6 +6191,42 @@ class App {
         this.plCharge(true);
         this.D.prodCatalogue = null; this.plRechargeCatalogue();
       });
+  }
+  /**
+   * Export CSV du comptoir : une ligne par occupant, une par emplacement
+   * libre. Point-virgule et BOM — c'est ce qu'Excel en Belgique ouvre sans
+   * assistant d'import. Ce fichier sert à la centrale et aux boutiques : il
+   * dit QUOI, OÙ, COMBIEN et À QUEL MOMENT, pas comment l'écran le dessine.
+   */
+  plExporter(){
+    const pl = this.D.plano || {};
+    const refPer = ((pl.referentiels || {}).periodes || []);
+    const nomsPer = l => (l || []).length
+      ? refPer.filter(p => l.indexOf(p.slug) >= 0).map(p => p.nom || p.slug).join(', ')
+      : 'toute la journée';
+    const c = v => { const t = String(v == null ? '' : v);
+      return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const lignes = [['Zone', 'Meuble', 'Niveau', 'Position', 'Format', 'Contenant',
+      'Dimensions (mm)', 'Référence', 'Nom', 'Par emplacement', 'Grille', 'Moments', 'État'].join(';')];
+    (pl.slots || []).forEach(s2 => {
+      const dims = (s2.largeurMm && s2.hauteurMm) ? s2.largeurMm + ' × ' + s2.hauteurMm : '';
+      const socle = [s2.zone, s2.meuble, s2.niveau, s2.position,
+        s2.format || '', s2.contenant || '', dims];
+      const occs = s2.occupants || [];
+      if (!occs.length) { lignes.push(socle.concat(['', '', '', '', '', 'libre']).map(c).join(';')); return; }
+      occs.forEach(o => lignes.push(socle.concat([o.ref, o.nom,
+        o.parSlot != null ? o.parSlot : '',
+        (o.cols && o.rangs) ? o.cols + ' × ' + o.rangs : '',
+        nomsPer(o.periodes), 'occupé']).map(c).join(';')));
+    });
+    // BOM : sans lui, Excel lit l'UTF-8 comme du latin et casse les accents.
+    const blob = new Blob(['\ufeff' + lignes.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'planogramme-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+    this.notify(((pl.slots || []).length) + ' emplacement(s) exportés — ' + a.download);
   }
   /** Une longueur en millimètres, dite en centimètres, sans décimale inutile. */
   plCm(mm){ const v = Math.round(mm / 10 * 10) / 10; return String(v).replace('.', ','); }

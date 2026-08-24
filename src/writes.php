@@ -1058,6 +1058,17 @@ function wr_plano_patch(string $type, int $id): array
     if ($type === 'meuble' && array_key_exists('periodes', $b)) {
         Db::exec('UPDATE pla_meuble SET periodes = ? WHERE id = ?', [planoPeriodes($b['periodes']), $id]);
     }
+    // Le type, la température et la présentation se corrigent aussi après
+    // coup : l'assistant rouvre un meuble existant, il ne doit pas obliger à
+    // le détruire pour changer « ambiante » en « réfrigérée ».
+    if ($type === 'meuble') {
+        $court = static fn ($v) => mb_substr(trim((string) $v), 0, 40);
+        foreach (['type', 'temperature', 'presentation'] as $ch) {
+            if (array_key_exists($ch, $b)) {
+                Db::exec('UPDATE pla_meuble SET ' . $ch . ' = ? WHERE id = ?', [$court($b[$ch]), $id]);
+            }
+        }
+    }
     return ['ok' => true, 'id' => $id];
 }
 
@@ -1351,10 +1362,25 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
 
     // L'état d'avant : d'où la référence vient, et ce qu'elle portait. Il est
     // lu ICI parce que l'échange en a besoin avant de toucher à quoi que ce soit.
-    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs FROM pla_placement WHERE ref = ?', [$ref]);
+    $ancien = Db::row('SELECT slot_id, par_slot, grille_cols, grille_rangs, periodes FROM pla_placement WHERE ref = ?', [$ref]);
     $venaitDe = ($ancien['slot_id'] ?? null) !== null ? (int) $ancien['slot_id'] : null;
 
-    $occ = Db::rows('SELECT ref FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    // Les moments demandés pour CE placement — transmis, sinon ceux déjà
+    // enregistrés : poser un ordre ne doit pas effacer un « matin seulement ».
+    $perDemande = array_key_exists('periodes', $b) ? planoPeriodes($b['periodes'])
+        : (string) ($ancien['periodes'] ?? '');
+
+    // Deux références peuvent partager un emplacement si elles n'y sont PAS au
+    // même moment : les croissants du matin et le traiteur de midi occupent la
+    // même case sans jamais s'y croiser. Le conflit se juge donc par
+    // chevauchement — une liste vide vaut « toute la journée » et croise tout.
+    $chevauche = static function (string $a, string $c): bool {
+        if ($a === '' || $c === '') { return true; }
+        return (bool) array_intersect(explode(',', $a), explode(',', $c));
+    };
+    $tous = Db::rows('SELECT ref, periodes FROM pla_placement WHERE slot_id = ? AND ref <> ?', [$sid, $ref]);
+    $occ = array_values(array_filter($tous,
+        fn ($o) => $chevauche($perDemande, (string) ($o['periodes'] ?? ''))));
     // L'ÉCHANGE : glisser une référence sur un emplacement occupé, quand elle
     // vient elle-même d'un emplacement, se lit comme « ces deux-là permutent ».
     // C'est le geste qu'on fait au comptoir ; le refuser obligerait à vider un
@@ -1429,13 +1455,14 @@ function wr_plano_placer(string $ref, ?array $payload = null): array
     }
 
     Db::exec('INSERT INTO pla_placement (ref, zone, meuble, niveau, slot, slot_id, fronts, ordre,'
-        . ' par_slot, grille_cols, grille_rangs)'
-        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+        . ' par_slot, grille_cols, grille_rangs, periodes)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
         . ' ON DUPLICATE KEY UPDATE zone = VALUES(zone), meuble = VALUES(meuble), niveau = VALUES(niveau),'
         . ' slot = VALUES(slot), slot_id = VALUES(slot_id), fronts = VALUES(fronts), ordre = VALUES(ordre),'
-        . ' par_slot = VALUES(par_slot), grille_cols = VALUES(grille_cols), grille_rangs = VALUES(grille_rangs)',
+        . ' par_slot = VALUES(par_slot), grille_cols = VALUES(grille_cols), grille_rangs = VALUES(grille_rangs),'
+        . ' periodes = VALUES(periodes)',
         [$ref, (string) $s['zone'], (string) $s['meuble'], (string) $s['niveau'],
-         (int) $s['position'], $sid, $fronts, $ordre, $gParSlot, $gCols, $gRangs]);
+         (int) $s['position'], $sid, $fronts, $ordre, $gParSlot, $gCols, $gRangs, $perDemande]);
 
     // Le minimum d'assortiment est le même chiffre que celui du comptoir : le
     // saisir ici évite d'ouvrir un second écran pour la même idée.

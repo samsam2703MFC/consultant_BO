@@ -5025,7 +5025,8 @@ function tplPlanoComptoir(c, x){
           ${c.plPeriodesOpts.map(pr => `<button ${x.A(pr.go)} title="${esc(pr.aide)}" style="${btn(pr.on)}">${esc(pr.nom)}</button>`).join('')}` : ''}` : ''}
       <div style="flex:1"></div>
       <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plTot.slots} emplacement(s) · ${c.plTot.libres} libre(s) · ${c.plTot.places} placée(s)</span>
-      <button ${x.A(c.plImprimer)} title="Imprimer tout le comptoir, zones comprises" style="${btn(false, !!c.plImprimer)}">⎙ Imprimer</button>
+      <button ${x.A(c.plImprimer)} title="Imprimer tout le comptoir, zones comprises — la feuille sort aussi en PDF par le navigateur" style="${btn(false, !!c.plImprimer)}">⎙ Imprimer</button>
+      <button ${x.A(c.plExporter)} title="Le comptoir en CSV : quoi, où, combien, à quel moment — pour la centrale et les boutiques" style="${btn(false, !!c.plExporter)}">⇩ Exporter</button>
       <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
     </div>
 
@@ -5051,6 +5052,7 @@ function tplPlanoComptoir(c, x){
           <div style="${lbl};margin-bottom:7px">Meubles${c.plZonesListe.find(z => z.on) ? ' de « ' + esc((c.plZonesListe.find(z => z.on) || {}).nom) + ' »' : ''}</div>
           ${c.plMeublesListe.length ? c.plMeublesListe.map(m => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
             <input value="${esc(m.nom)}" ${x.C(m.renommer)} style="${inp};flex:1;min-width:0">
+            <button ${x.A(m.assistant)} title="Modifier — type, température, présentation, moments" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✎</button>
             <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap" title="${esc(m.detail || '')}">${m.nNiveaux} niv. · ${m.nSlots} empl.</span>
             <label title="${m.photo ? 'Remplacer la photo' : 'Annexer une photo'}" style="flex:0 0 auto;width:26px;height:26px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${m.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:13px;line-height:1'}">${m.photo ? `<img src="${esc(m.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(m.photoSet)} style="display:none"></label>${m.photoDel ? `<button ${x.A(m.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
             <button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button>
@@ -5130,7 +5132,10 @@ function tplPlanoComptoir(c, x){
                   </div>`}</td>
                 <td style="${TD}">${plCbx(r.format, x)}${r.dims ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.dims)}</div>` : ''}</td>
                 <td style="${TD}">${plCbx(r.contenant, x)}</td>
-                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}</div>`}</td>
+                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}${r.autresOcc ? ' · +' + r.autresOcc + ' autre(s) moment(s)' : ''}</div>`
+                  + ((r.periodesRef || []).length ? `<div ${x.A(e => e.stopPropagation())} style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
+                    ${r.periodesRef.map(pr => `<button ${x.A(pr.bascule)} title="Présentée ${esc(pr.nom.toLowerCase())} ?" style="border-radius:999px;padding:1px 8px;font-family:var(--font-ui);font-size:9.5px;font-weight:500;cursor:pointer;${pr.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">${esc(pr.nom)}</button>`).join('')}
+                  </div>` : '')}</td>
                 <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>'
                   : `<input ${x.A(e => e.stopPropagation())} type="number" min="0" max="400" value="${esc(r.parSlot)}" ${x.I(r.parSlotSet)} ${x.C(r.parSlotEcrire)} placeholder="—" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:27px;width:58px;padding:0 6px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-align:right">`}</td>
                 <td style="${TD}">${r.grille ? `
@@ -5152,6 +5157,7 @@ function tplPlanoComptoir(c, x){
             <div></div>
             ${c.plMeubles.map(m => `<div style="text-align:center;padding-bottom:5px;border-bottom:2px solid var(--color-text)">
               <button ${x.A(m.renommer)} title="Renommer" style="border:none;background:none;padding:0;cursor:pointer;${lbl};color:var(--color-text)">${esc(m.nom)}</button>
+              <button ${x.A(m.assistant)} title="Modifier ce meuble — type, température, moments — dans l’assistant" style="border:none;background:none;padding:0 0 0 6px;cursor:pointer;font-size:11px;color:var(--color-text-muted)">✎</button>
               ${c.plOrg ? `<button ${x.A(m.supprimer)} title="Supprimer ce meuble" style="border:none;background:none;padding:0 0 0 6px;cursor:pointer;font-size:10.5px;color:var(--color-text-muted)">✕</button>` : ''}
               ${m.periodes ? `<div style="font-size:10px;font-weight:400;color:var(--color-text-muted);text-transform:none;letter-spacing:0;margin-top:2px">${esc(m.periodes)}</div>` : ''}
             </div>`).join('')}
@@ -5312,7 +5318,7 @@ function tplPlanoMeubleWizard(c, x){
     <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:660px;max-width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:0.5px solid var(--color-border-tertiary)">
         <div>
-          <div style="${lbl}">Nouveau meuble${w.zone ? ' — ' + esc(w.zone) : ''}</div>
+          <div style="${lbl}">${w.edition ? 'Modifier le meuble' : 'Nouveau meuble'}${w.zone ? ' — ' + esc(w.zone) : ''}</div>
           <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(etapes[w.etape - 1])}</div>
         </div>
         <button ${x.A(w.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
@@ -5349,7 +5355,13 @@ function tplPlanoMeubleWizard(c, x){
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:14px;line-height:1.5">La température décide de ce qu’on peut y poser ; le mode de présentation, de la façon dont on compte les fronts — une grille et un panier ne se remplissent pas pareil.</div>
         ` : ''}
 
-        ${w.etape === 3 ? `
+        ${w.etape === 3 && w.edition ? `
+          <div style="font-size:12.5px;line-height:1.6;color:var(--color-text)">
+            La structure de ce meuble — ${esc(w.nNiveaux)} niveau(x), ${esc(w.nSlots)} emplacement(s) par niveau — <b style="font-weight:500">ne se refait pas d’ici</b> : la refaire à l’aveugle déplacerait ce qui est posé.
+            <div style="color:var(--color-text-muted);margin-top:8px">Les niveaux et emplacements se retouchent dans « Organiser le comptoir » ; les dimensions d’un emplacement se changent par son <b style="font-weight:500">format</b>, colonne Format du tableau.</div>
+          </div>
+        ` : ''}
+        ${w.etape === 3 && !w.edition ? `
           <div style="${lbl};margin-bottom:7px">Dimensions d’un emplacement, en millimètres</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
             <div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px">Longueur</div><input id="plmw-lon" type="number" min="0" max="5000" value="${esc(w.longueur)}" ${x.I(w.set('longueur'))} style="${inp};width:96px;text-align:right"></div>
@@ -5400,7 +5412,7 @@ function tplPlanoMeubleWizard(c, x){
         <div style="flex:1"></div>
         <button ${x.A(w.fermer)} style="border:none;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;cursor:pointer;padding:0 8px">Annuler</button>
         ${w.suivant ? `<button ${x.A(w.suivant)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Continuer</button>` : ''}
-        ${w.creer ? `<button ${x.A(w.creer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${w.busy ? 'wait' : 'pointer'};opacity:${w.busy ? '0.6' : '1'}">${w.busy ? 'Création…' : 'Créer le meuble'}</button>` : ''}
+        ${w.creer ? `<button ${x.A(w.creer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:33px;padding:0 17px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${w.busy ? 'wait' : 'pointer'};opacity:${w.busy ? '0.6' : '1'}">${w.busy ? (w.edition ? 'Enregistrement…' : 'Création…') : (w.edition ? 'Enregistrer les modifications' : 'Créer le meuble')}</button>` : ''}
       </div>
     </div>
   </div>`;

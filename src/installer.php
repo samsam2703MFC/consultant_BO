@@ -149,6 +149,17 @@ function ensurePlanogramme(): void
         }
     }
 
+    // Le visuel qu'a le PANEL pour une référence, mémorisé : la chaîne
+    // produits/available → id_recipe → /recipes/{id} coûte deux appels par
+    // référence, et le planogramme en affiche des dizaines. L'absence est
+    // mémorisée aussi (url NULL) — c'est une réponse, pas un raté.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plano_photo ('
+        . 'ref VARCHAR(24) PRIMARY KEY,'
+        . 'nom VARCHAR(190) NOT NULL DEFAULT \'\','
+        . 'url VARCHAR(500) NULL,'
+        . 'maj_le DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
     // Notes de présentation. `cible` distingue ce à quoi la note s'applique —
     // une consigne de meuble vaut pour tout ce qu'il contient, une consigne de
     // référence ne vaut que pour elle. Deux tables auraient dupliqué la même
@@ -294,6 +305,10 @@ function ensurePlanogramme(): void
             'par_slot'     => 'SMALLINT UNSIGNED NULL',
             'grille_cols'  => 'TINYINT UNSIGNED NULL',
             'grille_rangs' => 'SMALLINT UNSIGNED NULL',
+            // Le moment de la journée où la référence est présentée : les
+            // croissants du matin cèdent la place au traiteur de midi, sur le
+            // MÊME emplacement. Vide = toute la journée, comme pour un meuble.
+            'periodes'     => "VARCHAR(60) NOT NULL DEFAULT ''",
         ],
         // La photo est rangée sur le disque et sa SEULE référence vit ici : un
         // fichier de 2 Mo en base serait relu à chaque lecture du planogramme.
