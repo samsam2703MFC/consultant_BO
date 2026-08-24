@@ -111,7 +111,6 @@ function route(string $method, string $path): mixed
             $path === '/reporting'                     => ep_reporting(),
             $path === '/journal'                       => ep_journal(),
             $path === '/journal/mails'                 => ep_journal_mails(),
-            $path === '/diagnostic/panel-transactions' => ep_panel_sonde_transactions(),
             $path === '/production/catalogue'          => ep_prod_catalogue(),
             $path === '/production/params'             => ep_prod_params(),
             $path === '/production/categories'         => ep_prod_categories(),
