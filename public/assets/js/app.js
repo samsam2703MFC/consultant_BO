@@ -10230,6 +10230,36 @@ class App {
       },
     };
 
+    // --- relance « commande à valider » : le texte de la notification créée
+    // par la cloche du Suivi fournisseurs (POST /notifications côté ERP).
+    if (!this._rlLu) { this._rlLu = true; readOne('/centrale/achats/relance').then(st => { this.D.rlEtat = st || null; this.setState({}); }); }
+    const rlEt = this.D.rlEtat || {};
+    const rlCf = rlEt.config || {};
+    const rlD = S.rlDraft || {};
+    const rlVal = (k, def) => rlD[k] != null ? rlD[k] : (rlCf[k] != null ? String(rlCf[k]) : def);
+    const rlSet = k => e => { const v = e.target.value; this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { [k]: v }) })); };
+    common.rl = {
+      titre: rlVal('titre', ''), message: rlVal('message', ''),
+      priorite: rlVal('priorite', 'warning'), actionLabel: rlVal('actionLabel', ''),
+      jours: rlVal('jours', '7'),
+      variables: (rlEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
+      envoyees: rlEt.envoyees || 0,
+      busy: !!rlD.busy, msg: rlD.msg || '',
+      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (rlD.ok ? '#2d7a3e' : '#8D1D2C'),
+      setTitre: rlSet('titre'), setMessage: rlSet('message'), setPriorite: rlSet('priorite'),
+      setActionLabel: rlSet('actionLabel'), setJours: rlSet('jours'),
+      save: () => {
+        this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { busy: true, msg: '' }) }));
+        this.api('PUT', '/parametres/caRelanceCommande', { valeur: {
+          titre: rlVal('titre', ''), message: rlVal('message', ''), priorite: rlVal('priorite', 'warning'),
+          actionLabel: rlVal('actionLabel', ''), jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
+          const ok = !(r && r.ok === false); this._rlLu = false;
+          this.setState(s2 => ({ rlDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.rlDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
+          if (ok) { this.log('Paramètre', '—', 'Template de relance commande mis à jour'); }
+        });
+      },
+    };
+
     // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
     // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
     // Paramètres. L'envoi automatique tourne avec le cron des rapports.

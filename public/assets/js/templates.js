@@ -4219,6 +4219,37 @@ function tplParams(c, x){
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:500">Relance « commande à valider » — notification</div>
+          <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:var(--color-background-secondary);color:var(--color-text-muted)">${c.rl.envoyees} envoyée${c.rl.envoyees > 1 ? 's' : ''}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le texte de la notification créée dans l’ERP par la cloche du Suivi fournisseurs. Elle est rattachée au magasin de la commande et porte un lien vers celle-ci — ce n’est pas un e-mail.</div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted)">Titre
+          <input value="${esc(c.rl.titre)}" ${x.C(c.rl.setTitre)} style="${inputCss}">
+        </label>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Message
+          <textarea rows="4" ${x.C(c.rl.setMessage)} style="${inputCss};resize:vertical;font-family:var(--font-ui)">${esc(c.rl.message)}</textarea>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 110px;gap:12px;margin-top:10px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Priorité
+            <select ${x.C(c.rl.setPriorite)} style="${inputCss}">
+              ${['info', 'warning', 'urgent'].map(v => `<option value="${v}"${c.rl.priorite === v ? ' selected' : ''}>${v}</option>`).join('')}
+            </select>
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Libellé du lien
+            <input value="${esc(c.rl.actionLabel)}" ${x.C(c.rl.setActionLabel)} style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Visible (jours)
+            <input type="number" min="1" max="60" value="${esc(c.rl.jours)}" ${x.C(c.rl.setJours)} style="${inputCss}">
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.rl.variables)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+          <button ${x.A(c.rl.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.rl.busy ? 'opacity:.6' : ''}">${c.rl.busy ? 'En cours…' : 'Enregistrer'}</button>
+        </div>
+        ${c.rl.msg ? `<div style="${c.rl.msgSt}">${esc(c.rl.msg)}</div>` : ''}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
           <div style="font-size:13px;font-weight:500">Centrale d’achat — e-mail « commande fournisseur »</div>
           <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
         </div>
