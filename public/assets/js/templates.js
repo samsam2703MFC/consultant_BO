@@ -2017,6 +2017,8 @@ function tplBudgetParam(c, x){
 /* --- Scoring produits -------------------------------------------------------- */
 function tplProduits(c, x){
   const { esc } = x;
+  // Étiquettes des mini-colonnes PV / Achat / Marge de la cellule de marge.
+  const MLAB = 'font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);font-weight:500';
   return `
   <div data-screen="produits" style="display:flex;flex-direction:column;gap:16px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
@@ -2036,13 +2038,13 @@ function tplProduits(c, x){
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge nette, taux de perte et présence au comptoir · ${c.pdPeriode || ''}</div>
       <div style="overflow-x:auto">
-      <table style="width:100%;min-width:1080px;border-collapse:collapse;font-size:12.5px">
+      <table style="width:100%;min-width:1200px;border-collapse:collapse;font-size:12.5px">
         <thead><tr>
           <th style="${TH}">Référence</th>
           <th style="text-align:right;${TH2}">Volume / mois</th>
           <th style="text-align:left;${TH2};width:118px">Pénétration réseau</th>
           <th style="text-align:right;${TH2}">Taux de perte</th>
-          <th style="text-align:right;${TH2}">Marge unit.</th>
+          <th style="text-align:right;${TH2}">Prix &amp; marge</th>
           <th style="text-align:right;${TH2}">CA réseau · marge brute</th>
           <th style="text-align:center;${TH2}">Rang catégorie</th>
           <th style="text-align:left;${TH2};width:140px">Profil V · M · P · C</th>
@@ -2057,26 +2059,41 @@ function tplProduits(c, x){
                 <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:1px">${esc(r.cat)}</div>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
-                <div style="font-weight:500">${r.vol}</div>
+                <div style="font-size:13px;font-weight:600">${r.vol}</div>
                 <div style="${r.tendSt}">${r.tend}</div>
               </td>
               <td style="padding:10px 12px">
-                <div style="display:flex;align-items:baseline;gap:6px"><span style="font-weight:500">${r.pen}</span><span style="font-size:11.5px;color:var(--color-text-muted)">${r.mags}</span></div>
-                <span style="display:block;height:5px;border-radius:999px;background:var(--color-background-secondary);margin-top:4px"><span style="${r.barPen}"></span></span>
+                <div><div style="${MLAB}">Magasins</div><div style="font-size:12.5px;margin-top:1px">${r.mags}</div></div>
+                <div style="display:flex;align-items:center;gap:7px;margin-top:5px">
+                  <span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><span style="${r.barPen}"></span></span>
+                  <span style="font-size:11px;font-weight:600;color:${r.penCol};flex:0 0 auto;min-width:30px;text-align:right">${r.pen}</span>
+                </div>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
                 <button ${x.A(r.openWaste)} title="Voir la perte magasin par magasin" style="border:none;background:none;padding:0;cursor:pointer;text-align:right;font-family:var(--font-ui)">
-                  <div style="${r.perteSt};text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${r.perteTxt}</div>
+                  <div style="${r.perteSt};font-size:13px;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${r.perteTxt}</div>
                   ${r.perteDetail ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(r.perteDetail)}</div>` : ''}
                 </button>
               </td>
-              <td style="padding:10px 12px;text-align:right;white-space:nowrap">
-                <div style="font-weight:500">${r.mu}</div>
-                <div style="font-size:11.5px;color:var(--color-text-muted)">${r.mp} · PV ${r.prix}</div>
+              <td style="padding:10px 12px;text-align:right;white-space:nowrap;min-width:196px">
+                <!-- PV, Achat, Marge en mini-colonnes alignées, la jauge de
+                     marge dessous — colorée au palier de l'échelle réseau. -->
+                <div style="display:flex;justify-content:flex-end;gap:14px">
+                  <div style="text-align:right"><div style="${MLAB}">PV</div><div style="font-size:12.5px;margin-top:1px">${r.prix}</div></div>
+                  <div style="text-align:right"><div style="${MLAB}">Achat</div><div style="font-size:12.5px;margin-top:1px">${r.achat}</div></div>
+                  <div style="text-align:right"><div style="${MLAB}">Marge</div><div style="font-size:13px;font-weight:600;margin-top:1px">${r.mu}</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:7px;margin-top:5px">
+                  <span style="flex:1;height:5px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">${r.margeBar ? `<span style="${r.margeBar}"></span>` : ''}</span>
+                  <span style="font-size:11px;font-weight:600;color:${r.margeCol};flex:0 0 auto;min-width:30px;text-align:right">${r.margeTxt}</span>
+                </div>
               </td>
               <td style="padding:10px 12px;text-align:right;white-space:nowrap">
-                <div style="font-weight:500">${r.ca}<span style="color:var(--color-text-muted);font-weight:400"> · ${r.mg}</span></div>
-                <div style="font-size:11.5px;color:var(--color-text-muted)">${r.partCaRes} du CA produit</div>
+                <div style="display:flex;justify-content:flex-end;gap:14px">
+                  <div style="text-align:right"><div style="${MLAB}">CA réseau</div><div style="font-size:13px;font-weight:600;margin-top:1px">${r.ca}</div></div>
+                  <div style="text-align:right"><div style="${MLAB}">Marge brute</div><div style="font-size:12.5px;margin-top:1px">${r.mg}</div></div>
+                </div>
+                <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${r.partCaRes} du CA produit</div>
               </td>
               <td style="padding:10px 12px;text-align:center;white-space:nowrap">
                 <span style="${r.rangSt}">${r.rang}</span>
