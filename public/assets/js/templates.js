@@ -4156,6 +4156,57 @@ function tplParams(c, x){
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Le mot de passe ne quitte pas le serveur (ceo_app_setting.smtp) — l’écran ne le relit jamais. Sans SMTP configuré, l’envoi des rapports retombe sur mail() du serveur. Gmail : créez un « mot de passe d’application », hôte smtp.gmail.com, port 587, STARTTLS.</div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:500">Centrale d’achat — e-mail « commande fournisseur »</div>
+          <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Quand un franchisé passe une commande (réquisition matière), cet e-mail part automatiquement — détection au rythme du cron horaire des rapports, envoi par la machine SMTP ci-dessus.</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin-bottom:12px">
+          <input type="checkbox" ${c.cm.actif ? 'checked' : ''} ${x.C(c.cm.toggle)} style="width:15px;height:15px;accent-color:var(--color-primary)">
+          Envoi automatique activé
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Destinataire
+            <input value="${esc(c.cm.destinataire)}" ${x.C(c.cm.setDestinataire)} placeholder="achat@atelierby.be" style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Copie (optionnel)
+            <input value="${esc(c.cm.copie)}" ${x.C(c.cm.setCopie)} placeholder="—" style="${inputCss}">
+          </label>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Sujet
+          <input value="${esc(c.cm.sujet)}" ${x.C(c.cm.setSujet)} style="${inputCss}">
+        </label>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Corps du message
+          <textarea rows="7" ${x.C(c.cm.setCorps)} style="${inputCss};resize:vertical;font-family:var(--font-ui)">${esc(c.cm.corps)}</textarea>
+        </label>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.cm.variables)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button ${x.A(c.cm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.cm.busy ? 'opacity:.6' : ''}">${c.cm.busy ? 'En cours…' : 'Enregistrer'}</button>
+          <button ${x.A(c.cm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un essai</button>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.cm.dernier)}</span>
+        </div>
+        ${c.cm.msg ? `<div style="${c.cm.msgSt}">${esc(c.cm.msg)}</div>` : ''}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Journal des e-mails achats</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque commande reçue et chaque envoi (réussi ou non) laisse une trace — les 50 dernières entrées.</div>
+        ${!c.cm.journal.length ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Rien encore — le journal se remplit dès la première commande détectée ou le premier essai.</div>` : `
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+          <thead><tr>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap">Quand</th>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap">Événement</th>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0">Détail</th>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 8px 0;white-space:nowrap">Destinataire</th>
+          </tr></thead>
+          <tbody>${c.cm.journal.map(j => `<tr>
+            <td style="padding:7px 12px 7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;white-space:nowrap;color:var(--color-text-muted)">${esc(j.quand)}</td>
+            <td style="padding:7px 12px 7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;font-weight:500;white-space:nowrap;color:${j.col}">${esc(j.type)}</td>
+            <td style="padding:7px 12px 7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px">${esc(j.detail)}</td>
+            <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;white-space:nowrap;color:var(--color-text-muted)">${esc(j.destinataire)}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>`}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:4px">Catalogue des KPI</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le référentiel qui pilote les écrans et les rapports : un seuil changé ici s’applique partout au prochain calcul. « Alerte » déclenche la ligne dans les rapports, « Critique » la marque en rouge vif.</div>
         ${c.kpiCat.chargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Lecture du référentiel…</div>` : `

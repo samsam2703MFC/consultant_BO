@@ -16,3 +16,5 @@ JETON="$(php -r '
 # Jeton pas encore semé (il naît au premier chargement de l'écran Reporting).
 [[ -n "$JETON" ]] || exit 0
 curl -fsS -m 600 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/rapports/cron?jeton=${JETON}" >/dev/null
+# E-mail « commande fournisseur » (centrale d'achat) : même jeton, même heure.
+curl -fsS -m 300 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/centrale/commandes/mail/cron?jeton=${JETON}" >/dev/null || true
