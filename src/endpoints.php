@@ -4062,6 +4062,22 @@ function ep_planogramme(): array
  * La photo annexée dans le cockpit reste prioritaire à l'écran : celle-ci
  * COMPLÈTE, elle ne remplace pas.
  */
+/**
+ * Une URL de photo signée est-elle périmée ? Le panel sert ses visuels par
+ * des liens S3 signés UNE HEURE (mesuré : X-Amz-Expires=3600). Les mémoriser
+ * sept jours servirait des cadres morts — un lien signé se re-demande donc dès
+ * qu'il expire, avec une minute de marge ; seule l'ABSENCE de visuel garde la
+ * mémoire longue, c'est elle qui coûte deux appels pour rien.
+ */
+function planoPhotoPerimee(?string $url): bool
+{
+    if ($url === null || $url === '') { return false; }
+    if (!preg_match('/[?&]X-Amz-Date=(\d{8}T\d{6}Z)/', $url, $md)) { return false; }
+    $duree = preg_match('/[?&]X-Amz-Expires=(\d+)/', $url, $me) ? (int) $me[1] : 3600;
+    $depuis = strtotime(substr($md[1], 0, 8) . 'T' . substr($md[1], 9, 6) . 'Z');
+    return $depuis !== false && time() > $depuis + $duree - 60;
+}
+
 function ep_plano_photos(): array
 {
     $rafraichir = !empty($_GET['rafraichir']);
@@ -4080,7 +4096,9 @@ function ep_plano_photos(): array
         $in = implode(',', array_fill(0, count($refs), '?'));
         foreach (Db::rows('SELECT * FROM ceo_plano_photo WHERE ref IN (' . $in . ')', $refs) as $c) {
             $age = time() - (strtotime((string) $c['maj_le']) ?: 0);
-            if (!$rafraichir && $age < 7 * 86400) { $enMemoire[(string) $c['ref']] = $c; }
+            if (!$rafraichir && $age < 7 * 86400 && !planoPhotoPerimee($c['url'] ?? null)) {
+                $enMemoire[(string) $c['ref']] = $c;
+            }
         }
     } catch (PDOException $e) { /* table absente : tout se relit */ }
 
@@ -4120,7 +4138,7 @@ function ep_plano_photos(): array
         } catch (PDOException $e) { /* sans mémoire : la réponse part quand même */ }
     }
     return ['photos' => $photos,
-        'source' => 'panel — recette de chaque référence, mémorisé 7 jours'
+        'source' => 'panel — recette de chaque référence ; lien signé relu à l’expiration, absence mémorisée 7 jours'
             . ($lus ? ' (' . $lus . ' relue(s) à l’instant)' : ''),
         'api' => ['erreur' => PanelApi::$lastError]];
 }
