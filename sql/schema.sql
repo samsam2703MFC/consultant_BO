@@ -383,3 +383,67 @@ CREATE TABLE IF NOT EXISTS ceo_task_issue (
   KEY idx_status (status, created_at),
   CONSTRAINT fk_issue_task FOREIGN KEY (task_id) REFERENCES ceo_project_task(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Contrôle des posts Facebook des magasins
+--
+-- Un franchisé soumet un post ; l'agent de contrôle (src/fbcontrole.php) le
+-- relit et note de 1 à 5 sur la MÊME échelle que les tâches consultants
+-- (réglage `signalement`) ; le CEO valide ou refuse. Rien n'est publié par le
+-- cockpit : `published_at` et `fb_post_id` sont remplis à la main aujourd'hui,
+-- et resteront les mêmes colonnes le jour où l'API Meta Graph sera branchée.
+--
+-- `status` porte tout le cycle — un post refusé qui revient corrigé repasse en
+-- `a_controler`, et `agent_runs` compte les passages de l'agent.
+-- Le pack de règles vit dans `ceo_app_setting` sous la clé `fbControle` : la
+-- charte du réseau bouge plus souvent que le code.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_fb_post (
+  id               VARCHAR(16) PRIMARY KEY,
+  shop_id          VARCHAR(8)   NULL,           -- NULL = post réseau (pas d'ancrage local exigé)
+  author           VARCHAR(120) NOT NULL,       -- le franchisé ou le community manager qui soumet
+  format           VARCHAR(20)  NOT NULL,       -- Photo | Carrousel | Vidéo | Texte | Lien | Événement
+  message          TEXT         NOT NULL,
+  link             VARCHAR(400) NULL,
+  medias_json      JSON         NULL,           -- [{"nom","type","alt","largeur","hauteur"}]
+  planned_at       DATETIME     NULL,           -- publication souhaitée
+  submitted_at     DATETIME     NOT NULL,
+  status           ENUM('brouillon','a_controler','a_valider','valide','refuse','publie') NOT NULL DEFAULT 'a_controler',
+  agent_note       TINYINT      NULL,           -- 1..5, proposition de l'agent
+  agent_summary    VARCHAR(400) NULL,
+  agent_ran_at     DATETIME     NULL,
+  agent_runs       SMALLINT     NOT NULL DEFAULT 0,
+  note             TINYINT      NULL,           -- 1..5, décision humaine (peut diverger de l'agent)
+  decision_famille VARCHAR(60)  NULL,           -- obligatoire sous le seuil / en cas de refus
+  decision_type    VARCHAR(80)  NULL,
+  decision_comment TEXT         NULL,
+  decided_at       DATETIME     NULL,
+  decided_by       VARCHAR(80)  NULL,
+  published_at     DATETIME     NULL,
+  fb_post_id       VARCHAR(64)  NULL,           -- id Facebook, quand la publication sera branchée
+  KEY idx_status (status, planned_at),
+  KEY idx_shop (shop_id, planned_at),
+  CONSTRAINT fk_fbpost_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Un écart relevé par l'agent sur un post.
+--
+-- Les écarts sont réécrits à chaque contrôle : ils décrivent le texte tel qu'il
+-- est, pas l'historique. Seul `status = 'ignore'` survit d'un contrôle au
+-- suivant (voir wr_fb_controle) — une dérogation accordée par le CEO ne doit
+-- pas se rejouer à chaque passage de l'agent.
+CREATE TABLE IF NOT EXISTS ceo_fb_finding (
+  id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  post_id    VARCHAR(16)  NOT NULL,
+  rule_code  VARCHAR(40)  NOT NULL,
+  rule_name  VARCHAR(120) NOT NULL,
+  famille    VARCHAR(60)  NOT NULL,
+  type       VARCHAR(80)  NOT NULL,
+  gravite    TINYINT      NOT NULL,             -- 1 mineur | 2 majeur | 3 critique
+  message    VARCHAR(400) NOT NULL,
+  extrait    VARCHAR(200) NULL,                 -- le passage en cause, pour la relecture
+  status     ENUM('ouvert','ignore','corrige') NOT NULL DEFAULT 'ouvert',
+  created_at DATETIME     NOT NULL,
+  KEY idx_post (post_id, gravite),
+  CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES ceo_fb_post(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -24,6 +24,9 @@ class App {
       // Il ne part qu'au clic sur « Valider » — une étoile touchée par erreur
       // ne doit pas clôturer une tâche.
       tkVal: {},
+      // Contrôle des posts Facebook : filtres de l'écran, brouillon de décision
+      // par post (`fbVal`, envoyé au clic seulement) et modale de soumission.
+      fbStore: 'tous', fbEtat: 'À traiter', fbVal: {}, fbNew: null,
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       pdCat: 'Toutes les catégories', pdSort: 'score' };
@@ -172,6 +175,35 @@ class App {
       if (ce < sEtp) out.push({ store: st.nom, lev: 'labour-cost', levNom: 'Labour Cost', msg: 'CA/ETP ' + this.fE(ce) + ' sous le minimum de ' + this.fE(sEtp), action: 'Revoir le dimensionnement d’équipe et la productivité horaire.' });
       if (r.overhead > s.o) out.push({ store: st.nom, lev: 'overhead-cost', levNom: 'Overhead Cost', msg: 'overhead ' + String(r.overhead).replace('.', ',') + ' % (seuil ' + String(s.o).replace('.', ',') + ' %)', action: 'Auditer loyer, énergies et abonnements ; renégocier les contrats.' }); }
     return out; }
+  /* --- contrôle des posts Facebook ------------------------------------------
+   * Les libellés, gravités et familles viennent du pack de règles (M.FB) et
+   * les cinq niveaux de notes de M.SIGNAL : rien n'est redéclaré ici.
+   */
+  fbPosts(){ return (this.D && this.D.fbPosts) || []; }
+  /** Les posts qui attendent une action : le badge de la navigation. */
+  fbAttente(){ return this.fbPosts().filter(p => p.statut === 'a_controler' || p.statut === 'a_valider'); }
+  fbSeuil(){ const f = (this.M && this.M.FB) || {}; return f.seuil || 4; }
+  fbNiv(n){ const S = ((this.M && this.M.SIGNAL) || {}).niveaux || [];
+    return S.find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666666', aide: '' }; }
+  fbEtats(){ return { a_controler: ['À contrôler', '#8a5a13'], a_valider: ['À valider', '#8D1D2C'],
+    refuse: ['Refusé', '#8D1D2C'], valide: ['Validé', '#2d7a3e'], publie: ['Publié', '#2d7a3e'], brouillon: ['Brouillon', '#666666'] }; }
+  fbGrav(g){ return { 1: ['mineur', '#D97706'], 2: ['majeur', '#C0182B'], 3: ['critique', '#8D1D2C'] }[g] || ['mineur', '#666666']; }
+  /**
+   * La note d'un post depuis ses écarts — miroir de fbNote() (src/fbcontrole.php).
+   *
+   * L'autorité reste le serveur : en mode API, la note affichée est celle qu'il
+   * renvoie. Cette copie ne sert qu'à garder l'écran cohérent quand on écarte
+   * un écart en mode démonstration, où aucune requête ne partira jamais. Si la
+   * règle de calcul change, elle change dans les deux — d'où le rappel ici.
+   */
+  fbNoteLocale(ecarts){
+    const r = (ecarts || []).filter(e => e.statut !== 'ignore');
+    if (!r.length) return 5;
+    const pire = Math.max(...r.map(e => e.gravite));
+    if (pire >= 3) return 1;
+    if (pire === 2) return 2;
+    return r.length >= 3 ? 3 : 4;
+  }
   openRelTask(x){ const tpl = this.state.tpl; const late = x.st === 'En retard'; const base = this.D.emailTemplates[late ? 1 : 0]; const corps = (tpl[base.id] || base.corps);
     const sub = s => s.replace('{tache}', x.t.nom).replace('{projet}', x.p.nom).replace('{echeance}', this.fD(x.t.due) + '/2026').replace('{destinataire}', x.o.nom).replace('{zone}', '');
     this.setState({ rel: { kind: 'task', id: x.t.id, projet: x.p.nom, to: x.o.nom, email: x.o.email, sujet: sub(base.sujet), corps: sub(corps) } }); }
@@ -214,7 +246,8 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
+      taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -356,13 +389,13 @@ class App {
 
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
-      ['Projets & contrôle', [['projets', 'Projets', nLate]]],
+      ['Projets & contrôle', [['projets', 'Projets', nLate], ['posts', 'Contrôle posts Facebook', this.fbAttente().length]]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0], ['parametres', 'Paramètres', 0]]]];
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => ({ id: it[0], label: it[1], badge: it[2] || false, go: goTo(it[0]),
       st: 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;' + (S.screen === it[0] ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text)') })) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isPosts'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', posts: 'isPosts', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -476,6 +509,8 @@ class App {
     if (common.isProjets) this.valsProjets(common, projEff);
     // --- tâches consultants
     if (common.isTaches) this.valsTaches(common, flat);
+    // --- contrôle des posts Facebook
+    if (common.isPosts) this.valsPosts(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- journal
@@ -1036,6 +1071,249 @@ class App {
     common.tkGroups = grp.map(([nom, couleur, f]) => { const items = ordre.filter(f);
       return { nom, couleur, n: items.length, items: items.map((x, i) => mk(x, i)),
         dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
+  }
+
+  /* --- contrôle des posts Facebook -------------------------------------------------- */
+  valsPosts(common){
+    const S = this.state, D = this.D, M = this.M;
+    const FB = M.FB || { seuil: 4, familles: [], regles: [] };
+    const seuil = this.fbSeuil(), etats = this.fbEtats();
+    const posts = this.fbPosts();
+
+    common.fbStore = S.fbStore;
+    common.setFbStore = e => this.setState({ fbStore: e.target.value });
+    common.fbStores = [{ val: 'tous', nom: 'Tous les magasins' }, { val: 'reseau', nom: 'Posts réseau (sans magasin)' }]
+      .concat(D.stores.map(s => ({ val: s.id, nom: s.nom })));
+    const aTraiter = p => p.statut === 'a_controler' || p.statut === 'a_valider';
+    const filtres = { 'À traiter': aTraiter, 'Traités': p => !aTraiter(p), 'Tous': () => true };
+    common.fbEtatBtns = Object.keys(filtres).map(nom => ({ nom, go: () => this.setState({ fbEtat: nom }), st: this.tabBtn(S.fbEtat === nom) }));
+
+    const mine = posts.filter(p => (S.fbStore === 'tous' || (S.fbStore === 'reseau' ? !p.magasinId : p.magasinId === S.fbStore))
+      && filtres[S.fbEtat](p));
+    const nAttente = mine.filter(aTraiter).length;
+    const notes = mine.filter(p => p.decision.note !== null && p.decision.note !== undefined).map(p => p.decision.note);
+    const moy = notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null;
+    const nRefus = mine.filter(p => p.statut === 'refuse').length;
+    // Les désaccords entre l'agent et le CEO : c'est le chiffre qui dit si le
+    // pack de règles est bien calibré. Trop d'écarts, et ce sont les règles
+    // qu'il faut reprendre, pas les franchisés.
+    const nDiverge = mine.filter(p => p.decision.note != null && p.agent.note != null && p.decision.note !== p.agent.note).length;
+    common.fbResume = mine.length + ' post' + (mine.length > 1 ? 's' : '') + ' · ' + nAttente + ' en attente'
+      + (moy !== null ? ' · note moyenne ' + moy.toFixed(1).replace('.', ',') : '')
+      + (nRefus ? ' · ' + nRefus + ' refusé' + (nRefus > 1 ? 's' : '') : '')
+      + (nDiverge ? ' · ' + nDiverge + ' décision' + (nDiverge > 1 ? 's' : '') + ' hors avis de l’agent' : '');
+    common.fbVide = mine.length === 0;
+    common.fbNewOpen = () => this.setState({ fbNew: { magasinId: (D.stores[0] || {}).id || '', auteur: '', format: 'Photo',
+      message: '', lien: '', visuel: '', alt: '', largeur: '1440', publierLe: M.TODAY, heure: '09:00' } });
+
+    const mk = (p, i) => {
+      const ouvert = !!S.openInfo['fb:' + p.id];
+      const [etatNom, etatCoul] = etats[p.statut] || ['—', '#666666'];
+      const an = p.agent.note, al = an != null ? this.fbNiv(an) : null;
+      const dn0 = p.decision.note, dl = dn0 != null ? this.fbNiv(dn0) : null;
+      const ecartsOuverts = (p.ecarts || []).filter(e => e.statut !== 'ignore');
+      const pire = ecartsOuverts.length ? ecartsOuverts.reduce((a, b) => a.gravite >= b.gravite ? a : b) : null;
+      // Le brouillon : la note de l'agent est reprise par défaut — le CEO
+      // contresigne ou corrige, il ne resaisit pas.
+      const d = S.fbVal['fb:' + p.id] || { note: dn0 != null ? dn0 : an,
+        famille: (p.decision.famille || (pire && pire.famille) || ''), type: (p.decision.type || (pire && pire.type) || ''),
+        commentaire: p.decision.commentaire || '' };
+      const dn = d.note, dnl = dn ? this.fbNiv(dn) : null;
+      const fams = FB.familles || [];
+      const famCour = d.famille || (fams[0] || {}).nom || '';
+      const typs = ((fams.find(f => f.nom === famCour) || {}).types) || [];
+      const typCour = d.type || typs[0] || '';
+      const maj = f => this.setState(s2 => ({ fbVal: Object.assign({}, s2.fbVal, { ['fb:' + p.id]: Object.assign({}, d, f) }) }));
+      const pill = (txt, coul) => ({ txt, st: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:' + coul + '1f;color:' + coul });
+      const notePill = (n, l) => 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur;
+      const noteNum = l => 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-style:normal;background:' + l.couleur;
+
+      // Une décision ne se prend que sur un post contrôlé. Sur un post déjà
+      // décidé, elle se reprend : un refus se lève, une validation se retire —
+      // tant que le post n'est pas publié.
+      const decidable = p.statut === 'a_valider' || p.statut === 'valide' || p.statut === 'refuse';
+      const envoyer = (decision) => {
+        if (!dn) { this.notify('Choisissez une note avant de décider'); return; }
+        const motif = decision === 'refuse' || dn < seuil;
+        if (motif && (!famCour || !typCour)) { this.notify('Famille et type obligatoires pour ' + (decision === 'refuse' ? 'refuser' : 'valider sous ' + seuil + '/5')); return; }
+        p.statut = decision === 'valide' ? 'valide' : 'refuse';
+        p.decision = { note: dn, famille: motif ? famCour : null, type: motif ? typCour : null,
+          commentaire: d.commentaire || null, le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), par: 'CEO' };
+        this.api('PATCH', '/facebook/posts/' + p.id, { decision, note: dn,
+          famille: motif ? famCour : null, type: motif ? typCour : null, commentaire: d.commentaire || null, par: 'CEO' });
+        this.log(decision === 'valide' ? 'Validation' : 'Refus', p.magasin || '—',
+          'Post « ' + this.fbTitre(p.message) + ' » ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5'
+          + (motif ? ' — ' + famCour + ' · ' + typCour : '')
+          + (an != null && an !== dn ? ' (agent : ' + an + '/5)' : ''));
+        this.setState(s2 => ({ fbVal: Object.assign({}, s2.fbVal, { ['fb:' + p.id]: undefined }) }));
+        this.notify('Post ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5 — ' + dnl.nom);
+      };
+
+      return {
+        id: p.id, ouvert,
+        toggleOpen: () => this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { ['fb:' + p.id]: !s2.openInfo['fb:' + p.id] }) })),
+        rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
+        format: p.format, auteur: p.auteur, magasin: p.magasin || 'Réseau',
+        extrait: this.fbTitre(p.message, 150), message: p.message,
+        etat: etatNom, etatSt: pill(etatNom, etatCoul).st,
+        quand: p.publierLe ? 'Publication ' + this.fD(p.publierLe.slice(0, 10)) + ' à ' + p.publierLe.slice(11, 16) : 'Sans date',
+        quandSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;color:var(--color-text-muted)',
+        chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
+        // Deux notes, jamais confondues : ce que l'agent propose, ce que le CEO signe.
+        hasAgent: an != null, agentTxt: an != null ? 'Agent · ' + al.nom : '', agentNum: an != null ? String(an) : '',
+        agentSt: an != null ? notePill(an, al) : '', agentNumSt: an != null ? noteNum(al) : '',
+        agentResume: p.agent.resume || 'Post non encore contrôlé.',
+        hasDecision: dn0 != null, decisionTxt: dn0 != null ? 'CEO · ' + dl.nom : '', decisionNum: dn0 != null ? String(dn0) : '',
+        decisionSt: dn0 != null ? notePill(dn0, dl) : '', decisionNumSt: dn0 != null ? noteNum(dl) : '',
+        nEcarts: ecartsOuverts.length,
+        ecartsSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
+        // --- le détail
+        rows: [{ k: 'Magasin', v: p.magasin || 'Réseau — aucun magasin' }, { k: 'Auteur', v: p.auteur },
+          { k: 'Format', v: p.format }, { k: 'Soumis le', v: p.soumisLe ? this.fD(p.soumisLe.slice(0, 10)) + ' à ' + p.soumisLe.slice(11, 16) : '—' },
+          { k: 'Publication prévue', v: p.publierLe ? this.fD(p.publierLe.slice(0, 10)) + ' à ' + p.publierLe.slice(11, 16) : 'Sans date' },
+          { k: 'Lien', v: p.lien || 'Aucun' },
+          { k: 'Contrôles', v: p.agent.passages ? p.agent.passages + ' passage' + (p.agent.passages > 1 ? 's' : '') + (p.agent.le ? ', dernier le ' + this.fD(p.agent.le.slice(0, 10)) : '') : 'Jamais contrôlé' },
+          { k: 'Décision', v: dn0 != null ? dl.nom + ' (' + dn0 + '/5) — ' + p.decision.par + ' le ' + this.fD((p.decision.le || '').slice(0, 10)) : 'En attente' },
+          { k: 'Publication', v: p.publie.le ? 'Publié le ' + this.fD(p.publie.le.slice(0, 10)) + (p.publie.fbId ? ' · id ' + p.publie.fbId : '') : 'Non publié' }],
+        medias: (p.medias || []).map(m2 => ({ nom: m2.nom, dim: (m2.largeur || '?') + '×' + (m2.hauteur || '?') + ' px',
+          alt: m2.alt || 'Texte alternatif absent',
+          altSt: 'font-size:11px;' + (m2.alt ? 'color:var(--color-text-muted)' : 'color:#8D1D2C;font-weight:500') })),
+        sansMedia: !(p.medias || []).length,
+        commentaireDecision: p.decision.commentaire || '',
+        ecarts: (p.ecarts || []).map(e => { const [gn, gc] = this.fbGrav(e.gravite); const off = e.statut === 'ignore';
+          return { type: e.type, famille: e.famille, regle: e.regle, message: e.message, extrait: e.extrait || '',
+            hasExtrait: !!e.extrait, ignore: off,
+            gravTxt: gn, gravSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-radius:999px;padding:2px 7px;white-space:nowrap;background:' + gc + (off ? '14' : '1f') + ';color:' + gc,
+            ligneSt: 'display:flex;flex-direction:column;gap:3px;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);' + (off ? 'opacity:0.55' : ''),
+            toggleTxt: off ? 'Rétablir' : 'Écarter',
+            // Écarter, c'est accorder une dérogation tracée — l'écart reste
+            // visible, il sort seulement du calcul de la note.
+            toggle: () => { const nv = off ? 'ouvert' : 'ignore';
+              e.statut = nv;
+              p.agent.note = this.fbNoteLocale(p.ecarts);
+              this.api('PATCH', '/facebook/posts/' + p.id + '/ecarts/' + e.id, { statut: nv, par: 'CEO' });
+              this.log('Contrôle', p.magasin || '—', 'Écart « ' + e.type + ' » ' + (off ? 'rouvert' : 'écarté')
+                + ' sur « ' + this.fbTitre(p.message) + ' » — note de l’agent ' + p.agent.note + '/5');
+              this.notify('Écart ' + (off ? 'rouvert' : 'écarté') + ' — note de l’agent ' + p.agent.note + '/5');
+              this.forceUpdate(); } }; }),
+        // --- panneau de décision
+        vOuvert: decidable,
+        vNote: dn || 0,
+        starSt: n => 'border:0;background:none;padding:0 1px;font-size:25px;line-height:1;cursor:pointer;color:' + (dn && n <= dn ? dnl.couleur : '#d9d2c8'),
+        setNote: n => maj({ note: n === dn ? null : n }),
+        hasLvb: !!dn, lvbTxt: dnl ? dnl.nom : '', lvbNum: dn ? String(dn) : '', lvbAide: dnl ? dnl.aide : '',
+        lvbSt: dnl ? 'margin-top:7px;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:' + dnl.couleur + '1f;color:' + dnl.couleur : '',
+        lvbNumSt: dnl ? 'width:19px;height:19px;border-radius:50%;color:#fff;font-style:normal;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + dnl.couleur : '',
+        motifTxt: 'Motif — obligatoire sous ' + seuil + '/5 et pour tout refus',
+        sousSeuil: !!dn && dn < seuil,
+        fams: fams.map(f => f.nom), famCour,
+        // Changer de famille remet le type à zéro : « Créneau interdit » sous
+        // « Visuel » n'existe pas, et un couple impossible passerait sans bruit.
+        setFam: e => maj({ famille: e.target.value, type: '' }),
+        typs, typCour, setTyp: e => maj({ type: e.target.value }),
+        commentaire: d.commentaire || '', setCom: e => maj({ commentaire: e.target.value }),
+        peutValider: !!dn && (dn >= seuil || (famCour && typCour)),
+        peutRefuser: !!dn && !!famCour && !!typCour,
+        valider: e => { e.stopPropagation(); envoyer('valide'); },
+        refuser: e => { e.stopPropagation(); envoyer('refuse'); },
+        validerTxt: dn && dn < seuil ? 'Valider par dérogation' : 'Valider',
+        // Le contrôle tourne côté serveur : une seule implémentation des règles,
+        // donc rien à faire en mode démonstration — et l'écran le dit.
+        peutControler: p.statut !== 'publie',
+        controler: async e => { e.stopPropagation();
+          if (this.source !== 'api'){ this.notify('L’agent de contrôle tourne côté serveur — indisponible en mode démonstration.'); return; }
+          const r = await this.api('POST', '/facebook/posts/' + p.id + '/controle', {});
+          if (!r || !r.ok){ this.notify('Contrôle impossible — API injoignable.'); return; }
+          const j = await r.json();
+          await this.loadData();
+          const c = j.controle || {};
+          this.notify('Post contrôlé — ' + c.note + '/5 · ' + (c.resume || '')); },
+        estValide: p.statut === 'valide',
+        publier: e => { e.stopPropagation();
+          p.statut = 'publie'; p.publie = { le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), fbId: null };
+          this.api('PATCH', '/facebook/posts/' + p.id, { statut: 'publie', par: 'CEO' });
+          this.log('Publication', p.magasin || '—', 'Post « ' + this.fbTitre(p.message) + ' » marqué publié');
+          this.notify('Post marqué publié'); this.forceUpdate(); }
+      };
+    };
+
+    const grp = [['À contrôler', '#8a5a13', p => p.statut === 'a_controler'],
+      ['À valider', '#8D1D2C', p => p.statut === 'a_valider'],
+      ['Refusés', '#8D1D2C', p => p.statut === 'refuse'],
+      ['Validés — à publier', '#2d7a3e', p => p.statut === 'valide'],
+      ['Publiés', '#666666', p => p.statut === 'publie'],
+      ['Brouillons', '#666666', p => p.statut === 'brouillon']];
+    common.fbGroups = grp.map(([nom, couleur, f]) => { const items = mine.filter(f);
+      return { nom, couleur, n: items.length, items: items.map((p, i) => mk(p, i)),
+        dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
+
+    // --- le pack de règles, tel qu'il est en service
+    const parFam = {};
+    for (const r of FB.regles || []){ (parFam[r.famille] = parFam[r.famille] || []).push(r); }
+    common.fbSeuilTxt = 'Publiable à partir de ' + seuil + '/5 — en dessous, la validation est une dérogation motivée.';
+    common.fbRegleFams = Object.keys(parFam).map(fam => ({
+      nom: fam, n: parFam[fam].filter(r => r.actif).length + '/' + parFam[fam].length,
+      regles: parFam[fam].map(r => { const [gn, gc] = this.fbGrav(r.gravite);
+        return { nom: r.nom, aide: r.aide || '', gravTxt: gn,
+          gravSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-radius:999px;padding:2px 7px;white-space:nowrap;background:' + gc + '1f;color:' + gc,
+          nomSt: 'font-size:12px;font-weight:500;' + (r.actif ? '' : 'color:var(--color-text-muted);text-decoration:line-through'),
+          actifTxt: r.actif ? 'Active' : 'Inactive',
+          actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
+            + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+          // Le pack entier repart : le serveur stocke un réglage, pas un delta.
+          toggle: () => { r.actif = !r.actif;
+            this.api('PUT', '/parametres/fbControle', { valeur: FB });
+            this.log('Paramètre', '—', 'Règle de contrôle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée'));
+            this.notify('Règle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée')); this.forceUpdate(); } }; })
+    }));
+    common.fbEchelle = (((M.SIGNAL || {}).niveaux) || []).map(l => ({ n: l.n, nom: l.nom, aide: l.aide,
+      numSt: 'width:17px;height:17px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:' + l.couleur,
+      nomSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }));
+
+    // --- modale de soumission (un post arrive normalement du magasin ;
+    //     ici, de quoi en soumettre un et voir l'agent travailler)
+    const nw = S.fbNew;
+    common.fbNew = nw && {
+      magasinId: nw.magasinId, format: nw.format, auteur: nw.auteur, message: nw.message, lien: nw.lien,
+      visuel: nw.visuel, alt: nw.alt, largeur: nw.largeur, publierLe: nw.publierLe, heure: nw.heure,
+      stores: D.stores.map(s => ({ val: s.id, nom: s.nom })),
+      formats: ['Photo', 'Carrousel', 'Vidéo', 'Texte', 'Lien', 'Événement'],
+      nbCar: nw.message.trim().length + ' caractères',
+      set: (k, e) => this.setState(s2 => ({ fbNew: Object.assign({}, s2.fbNew, { [k]: e.target.value }) })),
+      close: () => this.setState({ fbNew: null }),
+      peut: nw.message.trim().length > 0,
+      submit: async () => {
+        if (!nw.message.trim()){ this.notify('Le message est vide'); return; }
+        const medias = nw.visuel.trim() ? [{ nom: nw.visuel.trim(), type: 'image', alt: nw.alt.trim() || null, largeur: +nw.largeur || null, hauteur: null }] : [];
+        const mag = D.stores.find(s => s.id === nw.magasinId);
+        const payload = { magasinId: nw.magasinId, auteur: nw.auteur.trim() || (mag ? mag.fr : 'Franchisé'), format: nw.format,
+          message: nw.message.trim(), lien: nw.lien.trim() || null, medias, publierLe: nw.publierLe + ' ' + nw.heure + ':00', statut: 'a_controler' };
+        this.setState({ fbNew: null });
+        this.log('Post Facebook', mag ? mag.nom : '—', 'Post « ' + this.fbTitre(payload.message) + ' » soumis au contrôle');
+        const r = await this.api('POST', '/facebook/posts', payload);
+        if (!r || !r.ok){
+          // Mode démonstration : le post entre « à contrôler », sans écart —
+          // l'agent, lui, vit côté serveur.
+          this.fbPosts().unshift({ id: 'fbx' + Date.now(), magasinId: payload.magasinId, magasin: mag ? mag.nom : null,
+            auteur: payload.auteur, format: payload.format, message: payload.message, lien: payload.lien, medias,
+            publierLe: payload.publierLe.slice(0, 16), soumisLe: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5),
+            statut: 'a_controler', agent: { note: null, resume: null, le: null, passages: 0 }, ecarts: [],
+            decision: { note: null, famille: null, type: null, commentaire: null, le: null, par: null }, publie: { le: null, fbId: null } });
+          this.notify('Post soumis — l’agent le contrôlera côté serveur.'); this.forceUpdate(); return;
+        }
+        const j = await r.json();
+        await this.loadData();
+        const c = j.controle || {};
+        this.notify('Post soumis et contrôlé — ' + c.note + '/5 · ' + (c.resume || ''));
+      }
+    };
+  }
+
+  /** Les premiers mots d'un post — pour les lignes repliées et le journal. */
+  fbTitre(message, max){
+    const m = String(message || '').replace(/\s+/g, ' ').trim();
+    const n = max || 60;
+    return m.length > n ? m.slice(0, n) + '…' : m;
   }
 
   /* --- reporting -------------------------------------------------------------------- */

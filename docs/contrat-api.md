@@ -8,7 +8,7 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 - Format : JSON, `Content-Type: application/json`, montants en euros (nombres, pas de chaînes)
 - Dates : `YYYY-MM-DD`. Pourcentages : nombres en points (`32` = 32 %), sauf `margePct` (ratio 0–1)
 - Granularité des réels : **mensuelle**
-- Timeout client : 4 s, les 14 endpoints sont appelés en parallèle
+- Timeout client : 4 s, les 19 endpoints sont appelés en parallèle
 
 ---
 
@@ -31,6 +31,9 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 | `reporting` | `GET /reporting` | Reporting automatisé |
 | `journal` | `GET /journal` | Journal |
 | `products` | `GET /products/scoring?periode=AAAA-MM` | Scoring produits |
+| `pwaReports` | `GET /pwa/reports` | Reporting — volet panel consultant |
+| `fbRegles` | `GET /referentiels/facebook-regles` | Contrôle posts Facebook — pack de règles |
+| `fbPosts` | `GET /facebook/posts` | Contrôle posts Facebook — posts, écarts, décisions |
 
 ### `/meta`
 
@@ -237,6 +240,74 @@ ALTER TABLE ceo_project_task ADD CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) R
 
 `owner.t` : `c` = consultant, `s` = fournisseur ; `owner.id` référence `/consultants` ou `/fournisseurs`.
 
+### `/referentiels/facebook-regles` — le pack de règles de l'agent
+
+```json
+{
+  "seuil": 4,
+  "familles": [
+    { "nom": "Charte de marque", "types": ["Marque absente", "Casse de marque", "Hashtag de marque absent", "Magasin non identifié", "Ton non conforme"] },
+    { "nom": "Mentions légales", "types": ["Conditions de promotion absentes", "Règlement de concours absent", "Allégation santé", "Superlatif non justifié"] }
+  ],
+  "regles": [
+    { "code": "marque-absente", "nom": "Marque citée", "famille": "Charte de marque",
+      "type": "Marque absente", "gravite": 3, "actif": true, "aide": "Le post doit nommer la marque du réseau." }
+  ]
+}
+```
+
+`gravite` ∈ 1 (mineur) | 2 (majeur) | 3 (critique). Les `params` de chaque règle
+(mots déclencheurs, seuils de longueur, domaines autorisés, lexique…) restent
+côté serveur : le client n'a pas à connaître le détail du moteur, seulement ce
+qu'il affiche. Les **cinq niveaux de notes ne sont pas ici** — ce sont ceux de
+`meta.signalement`, une seule échelle de conformité pour les tâches consultants
+et pour les posts.
+
+Le client renvoie le pack **entier** par `PUT /parametres/fbControle`
+(`{ "valeur": { … } }`) quand le CEO active ou désactive une règle : le serveur
+stocke un réglage, pas un delta.
+
+### `/facebook/posts` — les posts soumis, leur contrôle et leur décision
+
+```json
+[{
+  "id": "fb03", "magasinId": "gnd", "magasin": "Gand — Korenmarkt",
+  "auteur": "J. De Smet", "format": "Carrousel",
+  "message": "Grand concours de rentrée à L'Atelier by Korenmarkt !…",
+  "lien": null,
+  "medias": [{ "nom": "panier-1.jpg", "type": "image", "alt": "Panier gourmand", "largeur": 1440, "hauteur": 1440 }],
+  "publierLe": "2026-08-03 11:30", "soumisLe": "2026-07-30 16:05",
+  "statut": "a_valider",
+  "agent": { "note": 1, "resume": "1 écart — plus grave : critique · Mentions légales",
+             "le": "2026-07-30 16:05", "passages": 1 },
+  "ecarts": [{ "id": 7, "code": "concours-reglement", "regle": "Règlement de concours",
+               "famille": "Mentions légales", "type": "Règlement de concours absent",
+               "gravite": 3, "message": "Jeu-concours sans règlement cité ni lien vers celui-ci.",
+               "extrait": "concours", "statut": "ouvert" }],
+  "decision": { "note": null, "famille": null, "type": null, "commentaire": null, "le": null, "par": null },
+  "publie": { "le": null, "fbId": null }
+}]
+```
+
+`statut` ∈ `brouillon` | `a_controler` | `a_valider` | `valide` | `refuse` | `publie`.
+`magasinId` à `null` = post réseau (l'ancrage local n'est alors pas exigé).
+
+`agent.note` est la **proposition** du moteur, `decision.note` la décision
+**signée** par un humain ; les deux sont distinctes et affichées comme telles —
+l'écart entre elles mesure le calibrage du pack de règles. `statut` d'un écart
+∈ `ouvert` | `ignore` | `corrige` ; un écart `ignore` reste renvoyé mais sort du
+calcul de la note.
+
+**Calcul de la note** (sur les écarts non ignorés) :
+
+| Écarts retenus | Note | Niveau |
+|---|---|---|
+| aucun | 5 | Exemplaire |
+| 1 ou 2 mineurs | 4 | Conforme — détails signalés |
+| 3 mineurs et plus | 3 | Non conforme — mineur |
+| au moins un majeur | 2 | Non conforme — majeur |
+| au moins un critique | 1 | Non conforme — critique |
+
 ---
 
 ## 2. Mapping base de données → écran → champ
@@ -387,6 +458,57 @@ CREATE TABLE ceo_product_month_sales (
 );
 ```
 
+
+```sql
+-- Contrôle des posts Facebook des magasins
+CREATE TABLE ceo_fb_post (
+  id               VARCHAR(16) PRIMARY KEY,
+  shop_id          VARCHAR(8)   NULL,          -- NULL = post réseau
+  author           VARCHAR(120) NOT NULL,
+  format           VARCHAR(20)  NOT NULL,      -- Photo | Carrousel | Vidéo | Texte | Lien | Événement
+  message          TEXT         NOT NULL,
+  link             VARCHAR(400) NULL,
+  medias_json      JSON         NULL,          -- [{"nom","type","alt","largeur","hauteur"}]
+  planned_at       DATETIME     NULL,
+  submitted_at     DATETIME     NOT NULL,
+  status           ENUM('brouillon','a_controler','a_valider','valide','refuse','publie') NOT NULL DEFAULT 'a_controler',
+  agent_note       TINYINT      NULL,          -- proposition de l'agent
+  agent_summary    VARCHAR(400) NULL,
+  agent_ran_at     DATETIME     NULL,
+  agent_runs       SMALLINT     NOT NULL DEFAULT 0,
+  note             TINYINT      NULL,          -- décision humaine
+  decision_famille VARCHAR(60)  NULL,          -- obligatoire sous le seuil / en cas de refus
+  decision_type    VARCHAR(80)  NULL,
+  decision_comment TEXT         NULL,
+  decided_at       DATETIME     NULL,
+  decided_by       VARCHAR(80)  NULL,
+  published_at     DATETIME     NULL,
+  fb_post_id       VARCHAR(64)  NULL,          -- id Facebook, quand la publication sera branchée
+  CONSTRAINT fk_fbpost_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
+);
+
+CREATE TABLE ceo_fb_finding (
+  id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  post_id    VARCHAR(16)  NOT NULL,
+  rule_code  VARCHAR(40)  NOT NULL,
+  rule_name  VARCHAR(120) NOT NULL,
+  famille    VARCHAR(60)  NOT NULL,
+  type       VARCHAR(80)  NOT NULL,
+  gravite    TINYINT      NOT NULL,            -- 1 mineur | 2 majeur | 3 critique
+  message    VARCHAR(400) NOT NULL,
+  extrait    VARCHAR(200) NULL,
+  status     ENUM('ouvert','ignore','corrige') NOT NULL DEFAULT 'ouvert',
+  created_at DATETIME     NOT NULL,
+  CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES ceo_fb_post(id) ON DELETE CASCADE
+);
+```
+
+Les écarts sont **réécrits à chaque contrôle** : ils décrivent le texte tel
+qu'il est, pas son historique (le journal, lui, garde la trace). Seul
+`status = 'ignore'` est reporté d'un contrôle au suivant, par `rule_code` — une
+dérogation accordée ne se rejoue pas à chaque passage de l'agent. L'id d'un
+écart change donc au recontrôle.
+
 `tendVol` est calculé côté API : `volume(annee, mois) / volume(annee-1, mois)`.
 
 ### Écran → tables
@@ -402,6 +524,7 @@ CREATE TABLE ceo_product_month_sales (
 | Projets | `ceo_project`, `ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_project_levid` |
 | Reporting | `ceo_report_schedule`, `ceo_shop`, `position` |
 | Scoring produits | `ceo_product`, `ceo_product_month_sales` |
+| Contrôle posts Facebook | `ceo_fb_post`, `ceo_fb_finding`, `ceo_shop`, `ceo_app_setting` (clé `fbControle`) |
 | Journal | `ceo_journal_entry` |
 | Paramètres | `of_tag`, `kpi`, `ceo_app_setting`, `ceo_shop` |
 
@@ -418,5 +541,10 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Changement de statut projet | `PATCH /projects/{id}` |
 | Relance d'une tâche | `POST /tasks/{id}/reminder` |
 | Modification d'un seuil ou d'un modèle d'email | `PUT /parametres/{key}` |
+| Soumission d'un post Facebook au contrôle | `POST /facebook/posts` |
+| (Re)passer l'agent de contrôle sur un post | `POST /facebook/posts/{id}/controle` |
+| Décision du CEO (valider / refuser) ou publication déclarée | `PATCH /facebook/posts/{id}` |
+| Écarter, rouvrir ou clore un écart | `PATCH /facebook/posts/{id}/ecarts/{ecartId}` |
+| Activation/désactivation d'une règle de contrôle | `PUT /parametres/fbControle` |
 
 Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Journal en dépend).

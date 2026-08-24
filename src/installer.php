@@ -33,6 +33,7 @@ function ensureInstalled(): void
     }
 
     ensureValidation();
+    ensureFacebook();
 }
 
 /**
@@ -117,6 +118,64 @@ function signalementDefaut(): array
             ['nom' => 'Autre',              'types' => ['À préciser']],
         ],
     ];
+}
+
+/**
+ * Les ajouts du contrôle des posts Facebook, à chaque démarrage.
+ *
+ * Même raison que `ensureValidation()` : sur une base déjà en service, ni
+ * `schema.sql` ni `seed.sql` ne repassent. Sans ce bloc, l'écran « Contrôle
+ * posts Facebook » tomberait sur deux tables absentes — et l'API répondrait 503
+ * « base de données indisponible », ce qui n'aide personne à comprendre.
+ *
+ * Le pack de règles n'est PAS posé ici : `fbRegles()` retombe sur
+ * `fbReglesDefaut()` tant que le réglage n'existe pas. Une installation qui n'a
+ * jamais touché à sa charte suit donc automatiquement la charte livrée, au lieu
+ * de figer une copie du jour de la mise à jour.
+ */
+function ensureFacebook(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fb_post ('
+        . 'id VARCHAR(16) PRIMARY KEY,'
+        . 'shop_id VARCHAR(8) NULL,'
+        . 'author VARCHAR(120) NOT NULL,'
+        . 'format VARCHAR(20) NOT NULL,'
+        . 'message TEXT NOT NULL,'
+        . 'link VARCHAR(400) NULL,'
+        . 'medias_json JSON NULL,'
+        . 'planned_at DATETIME NULL,'
+        . 'submitted_at DATETIME NOT NULL,'
+        . "status ENUM('brouillon','a_controler','a_valider','valide','refuse','publie') NOT NULL DEFAULT 'a_controler',"
+        . 'agent_note TINYINT NULL,'
+        . 'agent_summary VARCHAR(400) NULL,'
+        . 'agent_ran_at DATETIME NULL,'
+        . 'agent_runs SMALLINT NOT NULL DEFAULT 0,'
+        . 'note TINYINT NULL,'
+        . 'decision_famille VARCHAR(60) NULL,'
+        . 'decision_type VARCHAR(80) NULL,'
+        . 'decision_comment TEXT NULL,'
+        . 'decided_at DATETIME NULL,'
+        . 'decided_by VARCHAR(80) NULL,'
+        . 'published_at DATETIME NULL,'
+        . 'fb_post_id VARCHAR(64) NULL,'
+        . 'KEY idx_status (status, planned_at),'
+        . 'KEY idx_shop (shop_id, planned_at)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fb_finding ('
+        . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
+        . 'post_id VARCHAR(16) NOT NULL,'
+        . 'rule_code VARCHAR(40) NOT NULL,'
+        . 'rule_name VARCHAR(120) NOT NULL,'
+        . 'famille VARCHAR(60) NOT NULL,'
+        . 'type VARCHAR(80) NOT NULL,'
+        . 'gravite TINYINT NOT NULL,'
+        . 'message VARCHAR(400) NOT NULL,'
+        . 'extrait VARCHAR(200) NULL,'
+        . "status ENUM('ouvert','ignore','corrige') NOT NULL DEFAULT 'ouvert',"
+        . 'created_at DATETIME NOT NULL,'
+        . 'KEY idx_post (post_id, gravite)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
 function isMissingTable(PDOException $e): bool

@@ -306,6 +306,78 @@ function tacheSignalement(string $taskId): ?array
     ];
 }
 
+/**
+ * GET /referentiels/facebook-regles — le pack de règles de l'agent de contrôle.
+ *
+ * Le front n'a aucune règle en dur : il affiche ce que renvoie cet endpoint
+ * (libellés, gravités, aide, actif/inactif) et repasse le pack entier par
+ * `PUT /parametres/fbControle` quand le CEO désactive une règle. Les cinq
+ * niveaux de notes ne sont PAS recopiés ici : ils viennent de
+ * `meta.signalement`, une seule échelle pour tout le réseau.
+ */
+function ep_fb_regles(): array
+{
+    $r = fbRegles();
+    return [
+        'seuil'    => fbSeuil(),
+        'familles' => $r['familles'] ?? [],
+        'regles'   => array_map(fn ($x) => [
+            'code' => $x['code'], 'nom' => $x['nom'], 'famille' => $x['famille'], 'type' => $x['type'],
+            'gravite' => (int) $x['gravite'], 'actif' => !empty($x['actif']), 'aide' => $x['aide'] ?? '',
+        ], $r['regles'] ?? []),
+    ];
+}
+
+/** GET /facebook/posts — les posts soumis, leur contrôle et leur décision. */
+function ep_fb_posts(): array
+{
+    $out = [];
+    $rows = Db::rows(
+        'SELECT p.*, s.name AS shop_name FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
+          ORDER BY COALESCE(p.planned_at, p.submitted_at) DESC, p.id DESC LIMIT 300');
+    foreach ($rows as $p) {
+        $out[] = [
+            'id' => $p['id'], 'magasinId' => $p['shop_id'], 'magasin' => $p['shop_name'],
+            'auteur' => $p['author'], 'format' => $p['format'],
+            'message' => $p['message'], 'lien' => $p['link'],
+            'medias' => $p['medias_json'] !== null ? json_decode($p['medias_json'], true) : [],
+            'publierLe' => $p['planned_at'] !== null ? substr($p['planned_at'], 0, 16) : null,
+            'soumisLe' => substr($p['submitted_at'], 0, 16),
+            'statut' => $p['status'],
+            // Ce que l'agent propose — jamais confondu avec ce que le CEO décide.
+            'agent' => [
+                'note' => $p['agent_note'] !== null ? (int) $p['agent_note'] : null,
+                'resume' => $p['agent_summary'],
+                'le' => $p['agent_ran_at'] !== null ? substr($p['agent_ran_at'], 0, 16) : null,
+                'passages' => (int) $p['agent_runs'],
+            ],
+            'ecarts' => fbEcartsDuPost($p['id']),
+            'decision' => [
+                'note' => $p['note'] !== null ? (int) $p['note'] : null,
+                'famille' => $p['decision_famille'], 'type' => $p['decision_type'],
+                'commentaire' => $p['decision_comment'],
+                'le' => $p['decided_at'] !== null ? substr($p['decided_at'], 0, 16) : null,
+                'par' => $p['decided_by'],
+            ],
+            'publie' => [
+                'le' => $p['published_at'] !== null ? substr($p['published_at'], 0, 16) : null,
+                'fbId' => $p['fb_post_id'],
+            ],
+        ];
+    }
+    return $out;
+}
+
+/** Les écarts d'un post, du plus grave au plus léger. */
+function fbEcartsDuPost(string $postId): array
+{
+    return array_map(fn ($e) => [
+        'id' => (int) $e['id'], 'code' => $e['rule_code'], 'regle' => $e['rule_name'],
+        'famille' => $e['famille'], 'type' => $e['type'], 'gravite' => (int) $e['gravite'],
+        'message' => $e['message'], 'extrait' => $e['extrait'], 'statut' => $e['status'],
+    ], Db::rows('SELECT * FROM ceo_fb_finding WHERE post_id = ? ORDER BY gravite DESC, id', [$postId]));
+}
+
 function ep_crm(): array
 {
     $out = [];

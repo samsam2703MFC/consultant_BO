@@ -9,6 +9,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/Db.php';
 require __DIR__ . '/../../src/endpoints.php';
 require __DIR__ . '/../../src/writes.php';
+require __DIR__ . '/../../src/fbcontrole.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/auth.php';
 
@@ -65,6 +66,8 @@ function route(string $method, string $path): mixed
             $path === '/journal'                       => ep_journal(),
             $path === '/products/scoring'              => ep_products(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),
+            $path === '/referentiels/facebook-regles'   => ep_fb_regles(),
+            $path === '/facebook/posts'                => ep_fb_posts(),
             default                                    => notFound(),
         };
     }
@@ -82,6 +85,10 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/reporting/reports/([\w-]+)/send$#', $path, $m)) { return wr_report_send($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/reporting/alerts/([\w-]+)$#', $path, $m)) { return wr_alert_patch($m[1]); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
+    if ($method === 'POST' && $path === '/facebook/posts') { return wr_fb_post_create(); }
+    if ($method === 'POST' && preg_match('#^/facebook/posts/([\w-]+)/controle$#', $path, $m)) { return wr_fb_controle($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)$#', $path, $m)) { return wr_fb_decision($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)/ecarts/(\d+)$#', $path, $m)) { return wr_fb_ecart_patch($m[1], (int) $m[2]); }
 
     return notFound();
 }
