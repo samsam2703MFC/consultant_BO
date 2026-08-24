@@ -1222,8 +1222,13 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // section faisait trois fois la même information sur une page.
             // Le slug voyage avec le titre : le PDF s'en sert pour décider
             // ce qui commence une page (le bilan des tâches, par exemple).
+            // `data-saut` est TOUJOURS émis, valué 0 ou 1 : le PDF distingue
+            // un run neuf sans saut d'un run d'avant la prise — sinon un
+            // rapport dont l'unique bloc est exempté de saut (il est premier)
+            // n'écrivait `data-saut` nulle part et se faisait imprimer comme
+            // un vieux run, saut forcé au slug et première page blanche.
             $h .= '<div data-titre-bloc="1" data-bloc="' . $e($s['slug'] ?? '') . '"'
-                . (!empty($s['saut']) ? ' data-saut="1"' : '') . ' style="' . $F
+                . ' data-saut="' . (!empty($s['saut']) ? '1' : '0') . '" style="' . $F
                 . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:24px 0 7px">'
                 . $e($s['nom']) . '</div>';
             if ($s['motif'] !== null) {
@@ -1897,10 +1902,12 @@ function rapPdfHtml(string $html): string
         // demandés, ou le rapport les impose (bilan des tâches, photos). Le
         // premier bloc n'en porte jamais — une page blanche avant le rapport
         // n'apprend rien.
-        . 'div[data-titre-bloc][data-saut]{page-break-before:always;margin-top:0 !important}'
+        . 'div[data-titre-bloc][data-saut="1"]{page-break-before:always;margin-top:0 !important}'
         // Les runs enregistrés AVANT cette prise n'ont pas de `data-saut` :
         // pour eux seulement, les deux sauts imposés se visent au slug, comme
-        // avant. Un rapport d'hier s'imprime ainsi comme hier.
+        // avant. Un rapport d'hier s'imprime ainsi comme hier. Les runs neufs
+        // portent l'attribut sur CHAQUE bloc (0 ou 1) : un rapport sans aucun
+        // saut ne passe plus pour un vieux run.
         . (!str_contains($html, 'data-saut')
             ? 'div[data-bloc="xp-bilan"],div[data-bloc="xp-taches"]{page-break-before:always;margin-top:0 !important}'
             : '')
@@ -2547,10 +2554,16 @@ function rapImageGd(string $url, int $maxW = 520)
     $im = @imagecreatefromstring($brut);
     if ($im === false) { return null; }
     $w = imagesx($im); $h = imagesy($im);
-    if ($w > $maxW) {
-        $nh = (int) round($h * $maxW / $w);
-        $petit = imagecreatetruecolor($maxW, $nh);
-        imagecopyresampled($petit, $im, 0, 0, 0, 0, $maxW, $nh, $w, $h);
+    // Le plafond vaut pour le GRAND côté. Borné à la largeur seule, un
+    // portrait restait plus haut que large (420 × 560) et sa mise au carré
+    // rendait un carré PLUS GRAND que celui de la référence (420) : dans la
+    // paire, les colonnes suivaient et les deux vignettes divergeaient.
+    $grand = max($w, $h);
+    if ($grand > $maxW) {
+        $nw = max(1, (int) round($w * $maxW / $grand));
+        $nh = max(1, (int) round($h * $maxW / $grand));
+        $petit = imagecreatetruecolor($nw, $nh);
+        imagecopyresampled($petit, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
         imagedestroy($im);
         $im = $petit;
     }
@@ -2647,7 +2660,10 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         // La paire : boutique à gauche, référence à droite — deux carrés
         // identiques, légende sous chacun. Un TABLEAU, pas de flex : ce HTML
         // finit en e-mail et en PDF, où seules les tables tiennent partout.
-        $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'
+        // table-layout:fixed : en layout auto, les colonnes suivent la
+        // taille INTRINSÈQUE des images — deux carrés inégaux cassaient le
+        // 50/50 et désalignaient les légendes.
+        $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse"><tr>'
             . '<td width="50%" valign="top" style="padding:0 4px 0 0">' . $imgPhoto . $legende($legPhoto) . '</td>'
             . '<td width="50%" valign="top" style="padding:0 0 0 4px">' . $imgRef . $legende($legRef) . '</td>'
             . '</tr></table>';
@@ -2655,7 +2671,7 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         // Une seule image : le MÊME carré que dans une paire, centré — toutes
         // les fiches d'une page gardent des vignettes de taille égale.
         $seule = $imgPhoto !== null ? $imgPhoto . $legende($legPhoto) : $imgRef . $legende($legRef);
-        $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'
+        $imgs = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse"><tr>'
             . '<td width="25%"></td><td width="50%" valign="top">' . $seule . '</td><td width="25%"></td>'
             . '</tr></table>';
     }
