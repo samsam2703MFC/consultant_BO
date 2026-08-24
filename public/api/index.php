@@ -103,6 +103,7 @@ function route(string $method, string $path): mixed
             $path === '/fournisseurs/reclamation-refs' => ep_reclamation_refs(),
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
             $path === '/diagnostic/requisition'        => ep_sonde_requisition(),
+            $path === '/diagnostic/panel-route'        => ep_sonde_panel_route(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
