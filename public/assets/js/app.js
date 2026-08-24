@@ -10241,18 +10241,19 @@ class App {
     common.rl = {
       titre: rlVal('titre', ''), message: rlVal('message', ''),
       priorite: rlVal('priorite', 'warning'), actionLabel: rlVal('actionLabel', ''),
-      jours: rlVal('jours', '7'),
+      actionUrl: rlVal('actionUrl', ''), jours: rlVal('jours', '7'),
       variables: (rlEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
       envoyees: rlEt.envoyees || 0,
       busy: !!rlD.busy, msg: rlD.msg || '',
       msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (rlD.ok ? '#2d7a3e' : '#8D1D2C'),
       setTitre: rlSet('titre'), setMessage: rlSet('message'), setPriorite: rlSet('priorite'),
-      setActionLabel: rlSet('actionLabel'), setJours: rlSet('jours'),
+      setActionLabel: rlSet('actionLabel'), setActionUrl: rlSet('actionUrl'), setJours: rlSet('jours'),
       save: () => {
         this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { busy: true, msg: '' }) }));
         this.api('PUT', '/parametres/caRelanceCommande', { valeur: {
           titre: rlVal('titre', ''), message: rlVal('message', ''), priorite: rlVal('priorite', 'warning'),
-          actionLabel: rlVal('actionLabel', ''), jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
+          actionLabel: rlVal('actionLabel', ''), actionUrl: rlVal('actionUrl', ''),
+          jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
           const ok = !(r && r.ok === false); this._rlLu = false;
           this.setState(s2 => ({ rlDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.rlDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
           if (ok) { this.log('Paramètre', '—', 'Template de relance commande mis à jour'); }

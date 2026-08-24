@@ -4276,6 +4276,9 @@ function tplParams(c, x){
             <input type="number" min="1" max="60" value="${esc(c.rl.jours)}" ${x.C(c.rl.setJours)} style="${inputCss}">
           </label>
         </div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Lien ouvert par la notification
+          <input value="${esc(c.rl.actionUrl)}" ${x.C(c.rl.setActionUrl)} placeholder="https://atelierby.tfbuddy.com/panel/material-orders/pending" style="${inputCss}">
+        </label>
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.rl.variables)}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
           <button ${x.A(c.rl.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.rl.busy ? 'opacity:.6' : ''}">${c.rl.busy ? 'En cours…' : 'Enregistrer'}</button>

@@ -191,7 +191,9 @@ function caRelanceDefauts(): array
         'titre' => 'Commande {{cle}} — à valider',
         'message' => "La commande {{cle}} du magasin {{magasin}}, passée le {{date}}, n'a pas encore été validée{{retard}}. Merci de la traiter dans le portail fournisseur.",
         'priorite' => 'warning',
-        'actionLabel' => 'Ouvrir la commande',
+        'actionLabel' => 'Voir les commandes à valider',
+        // La page du panel qui liste les commandes en attente de validation.
+        'actionUrl' => 'https://atelierby.tfbuddy.com/panel/material-orders/pending',
         'jours' => 7,     // durée de visibilité de la notification
     ];
 }
@@ -208,7 +210,7 @@ function caRelanceEtat(): array
     $r = setting('caRelances');
     return ['config' => caRelanceConfig(),
         'envoyees' => is_array($r) ? count($r) : 0,
-        'variables' => ['cle', 'magasin', 'fournisseur', 'date', 'livraison', 'statut', 'retard']];
+        'variables' => ['cle', 'magasin', 'fournisseur', 'date', 'livraison', 'statut', 'retard', 'id']];
 }
 
 /**
@@ -278,8 +280,10 @@ function wr_ca_relance(): array
         // réclame, plutôt que d'être un message flottant.
         'source_type' => 'material_order',
         'source_id' => $id,
-        'action_label' => (string) ($c['actionLabel'] ?? 'Ouvrir la commande'),
-        'action_url' => '/supplier/orders/' . $id,
+        'action_label' => (string) ($c['actionLabel'] ?? 'Voir les commandes à valider'),
+        // Les variables sont acceptées dans le lien : {{cle}} ou l'identifiant
+        // servent à pointer une commande précise si la page le permet un jour.
+        'action_url' => caMailRemplir((string) ($c['actionUrl'] ?? ''), $vars + ['id' => (string) $id]),
     ];
 
     [$ok, $rep] = PanelApi::post('/notifications', $corps);
