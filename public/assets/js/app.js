@@ -7609,13 +7609,25 @@ class App {
     common.pdRows = rows.map(p => { const vd = verdict(p.score); const t = this.trend(p.tend, 1);
       return { nom: p.nom, cat: p.cat,
         ouvrirDetail: () => this.setState({ pdDet: { id: p.id } }), vol: Math.round(p.vol).toLocaleString('fr-BE'), tend: t.txt, tendSt: t.st + ';font-weight:400',
-        prix: eur(p.prix), mu: eur(p.mu), mp: p.mp == null ? '—' : this.fP(p.mp, 0) + ' de marge', mg: this.fK(p.mg),
+        prix: eur(p.prix), mu: eur(p.mu), mg: this.fK(p.mg),
+        // Le prix d'achat (coût matière) se déduit : la marge unitaire est
+        // prix − coût, donc coût = prix − marge. Sans coût, un tiret.
+        achat: p.mu == null ? '—' : eur(p.prix - p.mu),
+        // La jauge de marge : la barre et son pourcentage, colorés au palier
+        // de l'échelle de marge du réseau (echelleMarge) — la même couleur
+        // que partout ailleurs pour la même marge.
+        margeTxt: p.mp == null ? '—' : (p.mp < 0 ? 'Perte' : Math.round(p.mp * 100) + ' %'),
+        margeCol: this.echelleMarge(p.mp == null ? null : p.mp * 100),
+        margeBar: p.mp == null ? null : bar(p.mp * 100, this.echelleMarge(p.mp * 100)),
         perteTxt: p.perte == null ? '—' : this.fP(p.perte, 1),
         perteSt: p.perte == null ? 'color:var(--color-text-muted)'
           : (p.perte >= 0.10 ? 'color:#8D1D2C;font-weight:600' : p.perte >= 0.05 ? 'color:#8a5a13;font-weight:500' : 'color:#2d7a3e'),
         perteDetail: p.jete != null ? (Math.round(p.jete).toLocaleString('fr-BE') + ' jeté(s)' + (p.motifPerte ? ' · ' + p.motifPerte : '')) : '',
         openWaste: () => this.pdOpenWaste(p.id, p.nom),
-        pen: this.fP(p.pen, 0), mags: p.mags + ' / ' + nbOuv + ' magasins', partCaRes: this.fP(p.ca / caProd, 1), ca: this.fK(p.ca),
+        pen: this.fP(p.pen, 0), mags: p.mags + ' / ' + nbOuv, partCaRes: this.fP(p.ca / caProd, 1), ca: this.fK(p.ca),
+        // La couleur de la pénétration sert deux fois : la barre ET le
+        // pourcentage à sa droite — même langage que la jauge de marge.
+        penCol: p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C',
         barPen: bar(100 * p.pen, p.pen >= 0.8 ? '#2d7a3e' : p.pen >= 0.5 ? '#C17A2A' : '#8D1D2C'),
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),
         rangSt: this.pill(p.rang <= Math.ceil(p.nbCat / 3) ? 1 : p.rang <= Math.ceil(2 * p.nbCat / 3) ? 0.95 : 0.8),
