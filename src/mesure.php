@@ -1376,7 +1376,22 @@ function ep_sonde_commandes_fournisseurs(): array
         }
         return $out;
     };
-    $out = ['magasin' => $sid, 'routes' => []];
-    foreach (PanelApi::getParallele($chemins) as $nom => $r) { $out['routes'][$nom] = $apercu($r); }
+    // Séquentiel : on veut l'ERREUR de chaque route, pas seulement son corps.
+    $out = ['magasin' => $sid, 'consultant' => [], 'admin' => []];
+    foreach ($chemins as $nom => $p) {
+        PanelApi::$lastError = null;
+        $r = PanelApi::get($p);
+        $out['consultant'][$nom] = $r === null ? ['erreur' => PanelApi::$lastError ?? 'null'] : $apercu($r);
+    }
+    // Le même essai en réalm ADMIN : ces routes y vivent peut-être.
+    if (ErpApi::configured()) {
+        foreach ($chemins as $nom => $p) {
+            ErpApi::$lastError = null;
+            $r = ErpApi::get($p);
+            $out['admin'][$nom] = $r === null ? ['erreur' => ErpApi::$lastError ?? 'null'] : $apercu($r);
+        }
+    } else {
+        $out['admin'] = ['etat' => 'compte admin ERP non configuré'];
+    }
     return $out;
 }
