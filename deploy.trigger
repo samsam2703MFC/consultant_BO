@@ -40,3 +40,4 @@
 2026-08-25T15:07:33Z retrait-ecran-stock
 2026-08-25T15:27:52Z fix-types-campagne-colonnes
 2026-08-25T16:07:33Z kpi-par-levier-assistant
+2026-08-25T16:09:46Z kpi-levier-magasins-nommes

@@ -1662,11 +1662,12 @@ function ep_mkt_kpi_periode(): array
 
     $lignes = [];
     $avecN1 = 0;
+    $sansN1 = [];
     foreach ($perim as $sid) {
         $a = mesCumul($ser[(string) $sid] ?? [], $f['avantN1Du'], $f['avantN1Au']);
         $p = mesCumul($ser[(string) $sid] ?? [], $f['pendantN1Du'], $f['pendantN1Au']);
         $va = $valeur($a); $vp = $valeur($p);
-        if ($va !== null && $vp !== null) { $avecN1++; }
+        if ($va !== null && $vp !== null) { $avecN1++; } else { $sansN1[] = $nomDe[(string) $sid]; }
         $lignes[] = ['id' => (string) $sid, 'nom' => $nomDe[(string) $sid],
             'avant' => $a, 'pendant' => $p,
             'valeurAvant' => $va, 'valeurPendant' => $vp,
@@ -1679,10 +1680,14 @@ function ep_mkt_kpi_periode(): array
     $rp = mesCumulGroupe($ser, $perim, $f['pendantN1Du'], $f['pendantN1Au']);
     $rva = $valeur($ra); $rvp = $valeur($rp);
 
+    // Nommer les magasins plutôt que les compter : « 1 magasin sans relevé »
+    // oblige à parcourir le tableau pour savoir lequel, et l'objectif qui reste
+    // à poser à la main est le sien.
     if ($avecN1 === 0) {
         $motifs[] = 'aucun magasin n’a de relevé sur les mêmes dates l’an dernier';
-    } elseif ($avecN1 < count($perim)) {
-        $motifs[] = (count($perim) - $avecN1) . ' magasin(s) sans relevé N-1 : leur objectif se pose à la main';
+    } elseif ($sansN1 !== []) {
+        $motifs[] = (count($sansN1) === 1 ? $sansN1[0] . ' n’a pas de relevé N-1 : son objectif se pose à la main'
+            : implode(', ', $sansN1) . ' n’ont pas de relevé N-1 : leur objectif se pose à la main');
     }
 
     return [
