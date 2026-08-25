@@ -36,3 +36,4 @@
 2026-08-25T12:50:38Z achats-par-magasin
 2026-08-25T13:27:19Z rappel-sur-commandes-non-acceptees
 2026-08-25T13:40:33Z mail-telephone-theme-sombre
+2026-08-25T14:35:50Z retrait-tableau-achats-annuel
