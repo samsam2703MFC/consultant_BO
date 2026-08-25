@@ -38,3 +38,4 @@
 2026-08-25T13:40:33Z mail-telephone-theme-sombre
 2026-08-25T14:35:50Z retrait-tableau-achats-annuel
 2026-08-25T15:07:33Z retrait-ecran-stock
+2026-08-25T15:27:52Z fix-types-campagne-colonnes

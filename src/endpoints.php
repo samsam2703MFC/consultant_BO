@@ -7128,6 +7128,16 @@ function ep_mkt(): array
              FROM mar_campaign_type t LEFT JOIN mar_lever l ON l.id = t.lever_id
             ORDER BY t.sort_order, t.id'
         : 'SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id';
+    $compte = static fn (string $sql): string => str_replace('SELECT t.*',
+        'SELECT t.*, (SELECT COUNT(*) FROM mar_campaign c WHERE c.type_id = t.id) AS campagnes', $sql);
+    // La liste des colonnes n'est qu'une lecture d'`information_schema` : si
+    // elle se trompe, l'écran des campagnes entier tombait en 500 sur une
+    // jointure. Le repli sans levier reste lisible — badge du type d'un côté,
+    // couleur du levier en moins — et se voit tout de suite.
+    try { $lignesTypes = Db::rows($compte($sqlTypes)); }
+    catch (PDOException $e) {
+        $lignesTypes = Db::rows($compte('SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id'));
+    }
     $types = array_map(fn ($t) => [
         'id' => (int) $t['id'], 'code' => $t['code'], 'nom' => $t['label'],
         'description' => $t['description'] ?? null,
@@ -7143,8 +7153,7 @@ function ep_mkt(): array
         // Compté en base, pas sur les campagnes chargées : c'est lui qui décide
         // si « Supprimer » a un sens, et une liste tronquée le rendrait faux.
         'nCampagnes' => (int) ($t['campagnes'] ?? 0)],
-        Db::rows(str_replace('SELECT t.*',
-            'SELECT t.*, (SELECT COUNT(*) FROM mar_campaign c WHERE c.type_id = t.id) AS campagnes', $sqlTypes)));
+        $lignesTypes);
     $nShops = [];
     foreach (Db::rows('SELECT campaign_id, COUNT(*) n FROM mar_campaign_shop GROUP BY campaign_id') as $r) {
         $nShops[(int) $r['campaign_id']] = (int) $r['n'];

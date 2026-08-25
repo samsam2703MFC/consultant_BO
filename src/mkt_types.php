@@ -71,16 +71,41 @@ const MKT_ICONES = [
  * l'UPDATE entier échouerait, et l'écran répondrait 500 sur un simple
  * renommage.
  */
+const MKT_TYPE_COLONNES_MODULE = [
+    'id', 'code', 'label', 'description', 'color_hex', 'icon_key', 'icon_path',
+    'lever_id', 'lever_badge_label', 'default_kpi_label', 'default_lever_code',
+    'sort_order', 'is_active',
+];
+
 function mktTypeColonnes(): array
 {
     static $cols = null;
     if ($cols === null) {
-        $cols = array_column(
-            Db::rows('SELECT column_name FROM information_schema.columns
-                       WHERE table_schema = DATABASE() AND table_name = ?', ['mar_campaign_type']),
-            'column_name');
-        // MySQL renvoie COLUMN_NAME en majuscules selon la configuration.
-        $cols = array_map('strtolower', $cols);
+        try {
+            $lignes = Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mar_campaign_type'");
+        } catch (Throwable $e) { $lignes = []; }
+
+        // La clé du résultat est lue SANS la nommer : selon la version et la
+        // configuration, MySQL rend la colonne `COLUMN_NAME` ou `column_name`.
+        // Ce serveur rend `COLUMN_NAME`, et la lecture nommait `column_name` :
+        // la liste revenait vide, c'est-à-dire « la table ne porte aucune
+        // colonne ». Le filtre en aval retirait alors TOUTES les colonnes de
+        // l'INSERT (« Field 'label' doesn't have a default value ») et
+        // l'UPDATE lisait « SELECT  FROM mar_campaign_type » : créer ou
+        // modifier un type répondait « base de données indisponible ».
+        $cols = [];
+        foreach ($lignes as $l) {
+            $v = is_array($l) ? (string) reset($l) : (string) $l;
+            if ($v !== '') { $cols[] = strtolower($v); }
+        }
+
+        // Introspection muette (droits refusés sur information_schema, table
+        // vue à travers une autre base…) : on retombe sur le schéma que le
+        // module publie plutôt que de conclure « aucune colonne ». Une colonne
+        // vraiment absente fera parler MySQL, avec son nom — c'est réparable,
+        // là où le filtrage silencieux écrivait une ligne vide.
+        if ($cols === []) { $cols = MKT_TYPE_COLONNES_MODULE; }
     }
     return $cols;
 }
