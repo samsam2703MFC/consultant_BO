@@ -21,3 +21,4 @@
 2026-08-24T19:46:41Z mesure-lecture-simple
 2026-08-24T19:50:55Z mesure-periode-libre
 2026-08-25T06:44:07Z mesure-tous-les-magasins
+2026-08-25T08:33:53Z mesure-perimetre-scope
