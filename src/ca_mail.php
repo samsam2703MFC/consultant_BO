@@ -307,8 +307,71 @@ function caMailEtat(): array
         'sansAdresse' => count(array_filter($fournisseurs, fn ($f) => $f['email'] === '')),
         'gabaritVieux' => caMailGabaritVieux($c),
         'fenetreJours' => (int) ($c['fenetreJours'] ?? 30),
+        'classees' => (function () { $v = setting('caMailClassees');
+            return is_array($v)
+                ? ['n' => count((array) ($v['ids'] ?? [])), 'quand' => (string) ($v['quand'] ?? ''),
+                   'par' => (string) ($v['par'] ?? '')]
+                : ['n' => 0, 'quand' => '', 'par' => '']; })(),
         'defauts' => caMailDefauts(),
     ];
+}
+
+/**
+ * Les réquisitions CLASSÉES — traitées de notre côté, quoi qu'en dise l'ERP.
+ *
+ * L'ERP garde des réquisitions au statut « en attente » qu'il ne referme
+ * jamais (mesuré : 115, de septembre 2025 à avril 2026). Aucune route ne
+ * permet de les accepter chez lui : on ne peut donc que dire ICI qu'on les
+ * considère traitées, pour que le rappel quotidien cesse de les compter.
+ *
+ * Ce classement ne touche RIEN dans l'ERP — l'écran doit le dire, sans quoi
+ * on croirait la commande acceptée côté fournisseur. Il se défait.
+ */
+function caMailClassees(): array
+{
+    $v = setting('caMailClassees');
+    return is_array($v) ? array_map('strval', (array) ($v['ids'] ?? [])) : [];
+}
+
+/**
+ * POST /centrale/commandes/mail/classer — classer ce qui attend aujourd'hui,
+ * ou tout rouvrir. Le geste est BORNÉ à ce que l'écran montre au moment du
+ * clic : classer « tout ce qui attendra un jour » n'aurait pas de sens.
+ */
+function wr_ca_mail_classer(): array
+{
+    $b = body();
+    if (!empty($b['rouvrir'])) {
+        Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', ['caMailClassees']);
+        caMailJournal('classement', 'Classement annulé — les réquisitions redeviennent relançables');
+        journalAdd('CEO', 'Centrale', 'Réquisitions', 'Classement des réquisitions annulé');
+        return ['ok' => true, 'rouvertes' => true];
+    }
+
+    $d = ep_ca_commandes();
+    if (($d['etat'] ?? '') !== 'ok') {
+        http_response_code(503);
+        return ['error' => 'commandes indisponibles — rien n’a été classé'];
+    }
+    $ids = [];
+    foreach ((array) ($d['lignes'] ?? []) as $l) {
+        if (strtoupper((string) ($l['statut'] ?? '')) !== 'PENDING') { continue; }
+        $id = (string) ($l['id'] ?? '');
+        if ($id !== '') { $ids[] = $id; }
+    }
+    $ids = array_values(array_unique(array_merge(caMailClassees(), $ids)));
+    $u = setting('utilisateur', []);
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caMailClassees', json_encode(['ids' => $ids, 'quand' => date('c'),
+            'par' => (string) (is_array($u) ? ($u['nom'] ?? '') : '')], JSON_UNESCAPED_UNICODE)]);
+    // Le suivi quotidien repart de zéro : ce qui vient d'être classé ne doit
+    // pas garder un « relancé le … » qui laisserait croire à un envoi en cours.
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caMailQuotidien', json_encode([])]);
+    caMailJournal('classement', count($ids) . ' réquisition(s) classées — plus de rappel automatique '
+        . '(l’ERP n’est pas modifié)');
+    journalAdd('CEO', 'Centrale', 'Réquisitions', count($ids) . ' réquisition(s) classées côté cockpit');
+    return ['ok' => true, 'classees' => count($ids)];
 }
 
 /**
@@ -528,9 +591,12 @@ function caMailRappels(array $lignes, array $c): array
 function caMailGroupes(array $lignes, int $fenetreJours = 0): array
 {
     $borne = $fenetreJours > 0 ? date('Y-m-d', strtotime('-' . $fenetreJours . ' day')) : '';
+    $classees = array_flip(caMailClassees());
     $out = [];
     foreach ($lignes as $l) {
         if (strtoupper((string) ($l['statut'] ?? '')) !== 'PENDING') { continue; }
+        // Classée ici : traitée pour nous, quoi qu'en dise l'ERP.
+        if (isset($classees[(string) ($l['id'] ?? '')])) { continue; }
         // Hors fenêtre : compté, jamais relancé. Le taire ferait croire que le
         // fournisseur n'a rien en souffrance.
         $vieille = $borne !== '' && (string) ($l['debut'] ?? '') !== '' && (string) $l['debut'] < $borne;

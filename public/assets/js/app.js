@@ -10627,6 +10627,38 @@ class App {
       // attente, et à qui l'on doit donc écrire. Ni le panel ni le référentiel
       // local ne portent leur adresse — elle se saisit ici.
       fenetre: (cmEt.fenetreJours || 30) + ' jours',
+      // Classer : dire ICI que ces réquisitions sont traitées, pour que le
+      // rappel automatique cesse de les compter. L'ERP n'est pas touché — le
+      // dire, sinon on croirait la commande acceptée côté fournisseur.
+      classeesN: (cmEt.classees || {}).n || 0,
+      classeesTxt: ((cmEt.classees || {}).n || 0)
+        ? ((cmEt.classees || {}).n + ' réquisition(s) classées'
+           + ((cmEt.classees || {}).quand ? ' le ' + this.fD(String((cmEt.classees || {}).quand).slice(0, 10)) : '')
+           + ((cmEt.classees || {}).par ? ' par ' + (cmEt.classees || {}).par : ''))
+        : '',
+      enAttenteN: (cmEt.fournisseurs || []).reduce((a, f) => a + (f.commandes || 0) + (f.anciennes || 0), 0),
+      classer: () => {
+        const n = (cmEt.fournisseurs || []).reduce((a, f) => a + (f.commandes || 0) + (f.anciennes || 0), 0);
+        if (!window.confirm('Classer toutes les réquisitions en attente ?\n\n'
+          + 'Elles ne seront plus relancées automatiquement. Rien n’est modifié dans l’ERP : '
+          + 'le fournisseur n’est pas averti, et la cloche du Suivi fournisseurs reste disponible '
+          + 'pour relancer à la main. Ce classement se défait.')) { return; }
+        this.api('POST', '/centrale/commandes/mail/classer', {}).then(r => {
+          this._caMailLu = false;
+          this.notify(!r || r.ok === false
+            ? ('Classement refusé — ' + ((r && (r.error || r.erreur)) || 'écriture impossible'))
+            : ((r.classees || 0) + ' réquisition(s) classées — plus de rappel automatique'));
+          this.setState({});
+        });
+      },
+      rouvrir: ((cmEt.classees || {}).n || 0) ? () => {
+        if (!window.confirm('Rouvrir les réquisitions classées ? Elles redeviendront relançables.')) { return; }
+        this.api('POST', '/centrale/commandes/mail/classer', { rouvrir: true }).then(r => {
+          this._caMailLu = false;
+          this.notify(r && r.ok !== false ? 'Classement annulé' : 'Annulation refusée');
+          this.setState({});
+        });
+      } : null,
       fournisseurs: (cmEt.fournisseurs || []).map(f => ({
         nom: f.nom, commandes: f.commandes, total: this.fU(f.total || 0),
         // Ce qui dort dans l'ERP : compté, jamais relancé. Le taire ferait

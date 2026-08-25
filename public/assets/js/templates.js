@@ -4408,6 +4408,12 @@ function tplParams(c, x){
             <span style="font-size:12.5px;font-weight:500">Adresses des fournisseurs</span>
             ${c.cm.sansAdresse ? `<span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0">${c.cm.sansAdresse} sans adresse</span>` : ''}
           </div>
+          <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+            <button ${x.A(c.cm.classer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Classer les ${c.cm.enAttenteN} réquisition(s) en attente</button>
+            ${c.cm.rouvrir ? `<button ${x.A(c.cm.rouvrir)} style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:2px">rouvrir</button>` : ''}
+            ${c.cm.classeesTxt ? `<span style="font-size:11px;color:var(--color-text-muted)">${esc(c.cm.classeesTxt)}</span>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:10px;line-height:1.5;text-wrap:pretty">Classer arrête le rappel <b style="font-weight:500">automatique</b> : rien n’est modifié dans l’ERP, le fournisseur n’est pas averti, et la cloche du Suivi fournisseurs reste là pour relancer à la main. Le classement se défait.</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;text-wrap:pretty">Ceux qui ont une commande en attente. Ni le panel ni le référentiel local ne portent leur adresse : sans elle, le rappel part à la centrale — la commande n’est jamais perdue, mais le fournisseur ne sait rien.</div>
           ${!(c.cm.fournisseurs || []).length ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucune commande en attente pour l’instant.</div>` : c.cm.fournisseurs.map(f => `
             <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
