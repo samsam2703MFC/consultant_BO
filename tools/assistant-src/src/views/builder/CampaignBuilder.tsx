@@ -2300,8 +2300,7 @@ function CommunicationStep({
             <p className="muted wizard__hint">
               {fr(engage)} € validés
               {envisage > 0 ? ` · ${fr(envisage)} € encore à valider` : ''} sur{' '}
-              {retenus.length} canal{retenus.length > 1 ? 'ux' : ''} retenu
-              {retenus.length > 1 ? 's' : ''}.
+              {retenus.length} {retenus.length > 1 ? 'canaux retenus' : 'canal retenu'}.
             </p>
           )}
         </div>
