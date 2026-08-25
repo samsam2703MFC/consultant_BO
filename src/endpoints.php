@@ -5934,6 +5934,10 @@ function ep_ca_fournisseurs_annee(): array
 
     $vide = array_fill(1, 12, 0.0);
     $par = []; $aVentiler = $vide; $aVentilerN = 0;
+    // Par MAGASIN, le chiffre est exact : la réquisition dit de quel magasin
+    // elle vient, et ce qu'elle vaut. C'est la lecture qui tient debout quand
+    // celle par fournisseur ne le peut pas.
+    $parMag = [];
     $annees = [];
     $nReq = 0; $nSeul = 0;
     foreach ((array) ($d['lignes'] ?? []) as $l) {
@@ -5947,6 +5951,10 @@ function ep_ca_fournisseurs_annee(): array
         $v = (float) ($l['valeur'] ?? 0);
         $fours = array_values(array_filter(array_map('trim', (array) ($l['fournisseurs'] ?? []))));
         $nReq++;
+        $mag = (string) ($l['magasin'] ?? '—');
+        if (!isset($parMag[$mag])) { $parMag[$mag] = ['mois' => $vide, 'n' => 0]; }
+        $parMag[$mag]['mois'][$m] += $v;
+        $parMag[$mag]['n']++;
         if (count($fours) === 1) {
             $nom = $fours[0];
             if (!isset($par[$nom])) { $par[$nom] = ['mois' => $vide, 'n' => 0]; }
@@ -5977,6 +5985,14 @@ function ep_ca_fournisseurs_annee(): array
     }
     foreach ($aVentiler as $m => $v) { $totMois[$m] += $v; }
 
+    $lignesMag = [];
+    foreach ($parMag as $nom => $x) {
+        $lignesMag[] = ['magasin' => $nom, 'n' => $x['n'],
+            'mois' => array_map(fn ($v) => round($v, 2), array_values($x['mois'])),
+            'total' => round(array_sum($x['mois']), 2)];
+    }
+    usort($lignesMag, fn ($a, $b) => $b['total'] <=> $a['total']);
+
     krsort($annees);
     return [
         'etat' => 'ok', 'annee' => $an,
@@ -5986,11 +6002,21 @@ function ep_ca_fournisseurs_annee(): array
             'total' => round(array_sum($aVentiler), 2)],
         'totaux' => ['mois' => array_map(fn ($v) => round($v, 2), array_values($totMois)),
             'total' => round(array_sum($totMois), 2)],
+        'parMagasin' => $lignesMag,
         'nRequisitions' => $nReq, 'nAttribuees' => $nSeul,
         'source' => 'valeur ESTIMÉE des réquisitions matière (le panel ne porte aucun montant sur les commandes livrées)',
-        'manque' => $aVentilerN > 0
-            ? $aVentilerN . ' réquisition(s) nomment plusieurs fournisseurs : leur montant n’est pas ventilable, il figure à part'
-            : '',
+        // MESURÉ : l'ERP ne retient PAS le fournisseur d'une réquisition — le
+        // champ `suppliers` est vide sur toutes, réalisées comprises. Les noms
+        // affichés ailleurs viennent des fournisseurs du magasin, pas de la
+        // commande. Il n'y a donc rien à ventiler par fournisseur, et il faut
+        // le dire au lieu d'afficher un tableau vide qu'on croirait en panne.
+        'ventilable' => $nSeul > 0,
+        'manque' => $nSeul === 0 && $nReq > 0
+            ? 'L’ERP n’enregistre pas le fournisseur d’une réquisition (champ `suppliers` vide sur toutes) : '
+              . 'aucun montant ne peut lui être attribué. Le tableau par magasin, lui, est exact.'
+            : ($aVentilerN > 0
+                ? $aVentilerN . ' réquisition(s) nomment plusieurs fournisseurs : leur montant n’est pas ventilable, il figure à part'
+                : ''),
     ];
 }
 

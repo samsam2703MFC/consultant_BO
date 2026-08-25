@@ -7210,11 +7210,24 @@ class App {
         go: () => this.setState({ caFournAn: a2 }) }));
       common.caFaMois = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
       const eur0 = v => !v ? '—' : this.fE(v);
-      common.caFaLignes = ((fa || {}).lignes || []).map(l => ({
-        nom: l.fournisseur, n: l.n,
+      // Deux lectures du même argent : par fournisseur quand l'ERP le permet,
+      // par magasin toujours — celle-là est exacte. On ouvre sur la lecture
+      // qui a quelque chose à dire.
+      const ventilable = !!(fa && fa.ventilable);
+      const vueF = S.caFaVue || (ventilable ? 'fournisseur' : 'magasin');
+      common.caFaVues = [['fournisseur', 'Par fournisseur'], ['magasin', 'Par magasin']]
+        .map(([v, nom]) => ({ v, nom, on: vueF === v, dispo: v === 'magasin' || ventilable,
+          go: () => this.setState({ caFaVue: v }) }));
+      common.caFaVue = vueF;
+      const source = vueF === 'magasin'
+        ? ((fa || {}).parMagasin || []).map(l => ({ nom: l.magasin, n: l.n, mois: l.mois, total: l.total }))
+        : ((fa || {}).lignes || []).map(l => ({ nom: l.fournisseur, n: l.n, mois: l.mois, total: l.total }));
+      common.caFaLignes = source.map(l => ({
+        nom: l.nom, n: l.n,
         mois: (l.mois || []).map(v => ({ t: eur0(v), vide: !v })),
         total: this.fE(l.total || 0) }));
-      common.caFaVentiler = (fa && fa.aVentiler && fa.aVentiler.n) ? {
+      // La ligne « à ventiler » n'a de sens que dans la lecture par fournisseur.
+      common.caFaVentiler = (vueF === 'fournisseur' && fa && fa.aVentiler && fa.aVentiler.n) ? {
         n: fa.aVentiler.n, mois: fa.aVentiler.mois.map(v => ({ t: eur0(v), vide: !v })),
         total: this.fE(fa.aVentiler.total || 0) } : null;
       common.caFaTotaux = fa && fa.totaux ? {
@@ -7222,7 +7235,8 @@ class App {
         total: this.fE(fa.totaux.total || 0) } : null;
       common.caFaSource = (fa || {}).source || '';
       common.caFaManque = (fa || {}).manque || '';
-      common.caFaVide = fa && fa.etat === 'ok' && !((fa.lignes || []).length) && !(fa.aVentiler || {}).n;
+      common.caFaVide = fa && fa.etat === 'ok' && !source.length && !(fa.aVentiler || {}).n;
+      common.caFaColonne = vueF === 'magasin' ? 'Magasin' : 'Fournisseur';
       common.caFaMotif = (fa && fa.etat !== 'ok') ? (fa.motif || 'lecture impossible') : '';
 
       // ── Le suivi des commandes : 2 dernières par magasin chez chaque

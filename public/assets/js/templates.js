@@ -6487,7 +6487,10 @@ function tplCentrale(c, x){
   const fournAn = c.caFaLignes ? `
     <div style="${CARD};margin-bottom:16px;overflow:hidden;padding:0">
       <div style="padding:13px 16px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:500">Fournisseurs — ${c.caFaAnnee}</span>
+        <span style="font-size:13px;font-weight:500">Achats ${c.caFaAnnee}</span>
+        <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+          ${(c.caFaVues || []).map(v => `<button ${x.A(v.dispo ? v.go : null)} title="${v.dispo ? '' : 'l’ERP n’enregistre pas le fournisseur d’une réquisition'}" style="border:none;padding:4px 11px;font-family:var(--font-ui);font-size:11px;font-weight:500;${v.dispo ? 'cursor:pointer' : 'cursor:not-allowed;opacity:.45'};${v.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(v.nom)}</button>`).join('')}
+        </span>
         <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
           ${(c.caFaAnnees || []).map(a => `<button ${x.A(a.go)} style="border:none;padding:4px 11px;font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer;${a.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${a.a}</button>`).join('')}
         </span>
@@ -6499,7 +6502,7 @@ function tplCentrale(c, x){
         : (c.caFaVide ? `<div style="padding:18px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune réquisition sur ${c.caFaAnnee}.</div>` : `
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:900px">
         <thead><tr>
-          <th style="${TH};padding-left:16px">Fournisseur</th>
+          <th style="${TH};padding-left:16px">${esc(c.caFaColonne || 'Fournisseur')}</th>
           ${(c.caFaMois || []).map(m => `<th style="${TH};text-align:right">${m}</th>`).join('')}
           <th style="${TH};text-align:right;padding-right:16px">Total</th>
         </tr></thead>
