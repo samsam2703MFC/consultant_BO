@@ -59,3 +59,4 @@
 2026-08-25T18:16:50Z annexe-formats-et-fichiers
 2026-08-25T18:18:47Z annexe-grille-serree
 2026-08-25T18:27:59Z effet-attendu-campagne
+2026-08-25T18:31:56Z bxc-effet-attendu-ecran

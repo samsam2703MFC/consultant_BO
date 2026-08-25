@@ -1668,47 +1668,11 @@ class App {
     common.bxcExoOpts = [-1, 0, 1].map(k => ({ v: String(this.exo() + k), nom: String(this.exo() + k) + (k === 0 ? ' · en cours' : '') }));
     common.setBxcExo = e => this.setState({ bxcExo: e.target.value, bxcCamp: 0 });
 
-    // La courbe : douze mois, à l'échelle du plus haut. Un mois sans budget
-    // encodé ne vaut pas zéro — sa barre reste vide et l'infobulle le dit.
-    const mois = (d.mois || []).map(m2 => (m2.budget != null ? m2.budget : (m2.theorique != null ? m2.theorique : null)));
-    const hautMax = Math.max(1, ...mois.map(v => v || 0));
-    common.bxcMois = M.MOIS.map((nom, i) => ({
-      nom, couvert: !!(d.couvert || [])[i],
-      h: mois[i] ? Math.round(100 * mois[i] / hautMax) : 0,
-      montant: mois[i] ? this.fE(mois[i]) : 'non encodé',
-      source: (d.mois || [])[i] && (d.mois || [])[i].budget != null ? 'budget validé' : 'CA théorique',
-    }));
-    const nCouv = (d.couvert || []).filter(Boolean).length;
-    common.bxcCouvNote = (d.couvert || []).length
-      ? nCouv + ' mois sur 12 couverts par au moins une campagne'
-        + (nCouv < 12 ? ' — sans campagne : ' + M.MOIS.filter((_, i) => !(d.couvert || [])[i]).join(', ') : '')
-      : '';
-
-    // Les campagnes de l'exercice, en bandes sous la courbe : UNE LIGNE PAR
-    // TYPE. Deux campagnes qui se chevauchent se marchaient dessus et aucune
-    // ne se lisait. Dans un type, deux campagnes qui se croisent encore
-    // ouvrent une ligne de plus — la place se prend, elle ne se dispute pas.
-    const jourDe = iso => { const t = new Date(iso + 'T00:00:00'); return (t.getMonth() * 100 + (t.getDate() - 1) * 100 / 31) / 1200; };
-    const parType = [];
-    (d.campagnes || []).forEach(c2 => {
-      const nomT = c2.type || 'Sans type';
-      let g = parType.find(z => z.nom === nomT);
-      if (!g) { g = { nom: nomT, couleur: c2.typeCouleur || '', lignes: [] }; parType.push(g); }
-      const bande = {
-        id: c2.id, nom: c2.nom, debut: c2.debut, fin: c2.fin,
-        gauche: Math.max(0, Math.min(99, 100 * jourDe(c2.debut))),
-        largeur: Math.max(3, Math.min(100, 100 * (jourDe(c2.fin) - jourDe(c2.debut)) + 3)),
-        on: d.campagne && d.campagne.id === c2.id,
-        titre: c2.nom + ' · ' + (c2.debut || '').split('-').reverse().join('/') + ' → ' + (c2.fin || '').split('-').reverse().join('/'),
-        choisir: () => this.setState({ bxcCamp: c2.id }),
-      };
-      // La première ligne où la bande ne touche personne.
-      let l = g.lignes.find(li => li.every(x2 => c2.debut > x2.fin || c2.fin < x2.debut));
-      if (!l) { l = []; g.lignes.push(l); }
-      l.push(bande);
-    });
-    common.bxcTypes = parType.map(g => ({ nom: g.nom, couleur: g.couleur || 'var(--pkg-abricot)',
-      lignes: g.lignes.map(li => ({ bandes: li })) }));
+    // La courbe des douze mois et les bandes de campagne ont été RETIRÉES :
+    // douze barres de budget ne disaient rien de la campagne qu'on regarde, et
+    // la bande servait de sélecteur là où la liste déroulante suffit. L'écran
+    // répond maintenant à une seule question — cette campagne suffit-elle à
+    // tenir le budget de chaque magasin.
     common.bxcCampOpts = (d.campagnes || []).map(c2 => ({ v: String(c2.id),
       nom: c2.nom + ' · ' + (c2.debut || '').slice(5) + ' → ' + (c2.fin || '').slice(5) }));
     common.bxcCampSel = String((d.campagne || {}).id || '');
@@ -1734,9 +1698,29 @@ class App {
       const att = o != null && l.realise != null && o > 0 ? Math.round(100 * l.realise / o) : null;
       tB += l.budgetPeriode || 0; tO += o || 0; tR += l.realise || 0;
       if (l.realise != null) { aucunR = false; }
+      // La cible de la jauge : l'objectif saisi s'il existe, le budget de la
+      // période sinon. Le trait doit répondre à « la campagne suffit-elle à
+      // tenir ce qu'on attend du magasin », et c'est cela qu'on attend.
+      const cible = o != null ? o : (l.budgetPeriode || null);
+      const attendu = l.attendu != null ? l.attendu : null;
+      const attAtt = (attendu != null && cible) ? Math.round(100 * attendu / cible) : null;
       return {
         nom: l.nom,
         budget: l.budgetPeriode != null ? this.fE(l.budgetPeriode) : '—',
+        // L'effet attendu, terme par terme — un total sans ses termes ne se
+        // discute pas.
+        panier: l.panier != null ? this.fEd(l.panier) : '—',
+        panierRepli: l.baseSource === 'repli',
+        plus: l.clientsJourPlus != null
+          ? (l.clientsJourPlus >= 0 ? '+' : '−') + Math.abs(l.clientsJourPlus).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—',
+        base: l.base != null ? this.fE(l.base) : '—',
+        baseNote: l.baseSource === 'repli' ? '3 derniers mois' : '',
+        gain: l.gain != null ? '+' + this.fE(l.gain) : '—',
+        attendu: attendu != null ? this.fE(attendu) : '—',
+        attAtt: attAtt == null ? '' : attAtt + ' %',
+        attAttSt: attAtt == null ? 'color:var(--color-text-muted)'
+          : (attAtt >= 100 ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C')
+            + ';font-weight:600;padding:2px 9px;border-radius:999px;font-size:10.5px',
         source: l.source === 'theorique' ? 'théorique' : (l.source === 'budget' ? '' : 'non encodé'),
         objectif: saisi != null ? saisi : (l.objectif != null ? Math.round(l.objectif) : ''),
         setObjectif: e => { const v = e.target.value;
@@ -1751,6 +1735,41 @@ class App {
         barreCol: att == null ? '#DED6C9' : (att >= 100 ? '#2d7a3e' : (att >= 95 ? '#C17A2A' : '#8D1D2C')),
       };
     });
+    // Les jauges : une échelle COMMUNE à tous les magasins. Cadrer chacun sur
+    // son propre objectif comparerait des atteintes, pas des volumes — et le
+    // réseau ne saurait plus lequel pèse.
+    const ef = d.effet || {};
+    const maxi = Math.max.apply(null, (d.lignes || []).map(l =>
+      Math.max(l.attendu || 0, l.budgetPeriode || 0, dr[cle(l.shopId)] != null ? num(dr[cle(l.shopId)]) : (l.objectif || 0))).concat([1])) * 1.04;
+    common.bxcJauges = (d.lignes || []).map(l => {
+      const saisi = dr[cle(l.shopId)];
+      const o = saisi != null ? (String(saisi).trim() === '' ? null : num(saisi)) : l.objectif;
+      const cible = o != null ? o : (l.budgetPeriode || null);
+      const pc = v => Math.max(0, Math.min(100, 100 * (v || 0) / maxi));
+      return {
+        nom: l.nom,
+        vide: l.attendu == null,
+        base: pc(l.base), gain: pc(l.gain), gaugeGauche: pc(l.base),
+        obj: cible ? pc(cible) : null,
+        objTxt: cible ? 'objectif ' + this.fE(cible) : '',
+        detail: l.base != null && l.gain != null
+          ? this.fE(l.base) + ' + ' + this.fE(l.gain) + ' = ' + this.fE(l.attendu)
+          : 'effet non calculable — relevé manquant',
+      };
+    });
+    common.bxcEffet = {
+      base: ef.base != null ? this.fE(ef.base) : '—',
+      gain: ef.gain != null ? '+' + this.fE(ef.gain) : '—',
+      attendu: ef.attendu != null ? this.fE(ef.attendu) : '—',
+      objectif: tB ? this.fE(tB) : '—',
+      pct: ef.pct != null ? (ef.pct >= 0 ? '+' : '−') + Math.abs(ef.pct) + ' %' : '—',
+      jours: ef.jours || 0,
+      note: 'Panier moyen des 3 derniers mois clos'
+        + (ef.panierDu ? ' (' + this.fD(ef.panierDu) + ' → ' + this.fD(ef.panierAu) + ')' : '')
+        + ', lu sur la caisse au jour le jour. Le gain attendu est ce panier multiplié par les clients par jour visés en plus, sur les '
+        + (ef.jours || 0) + ' jours de la campagne — pas une prévision de saison.',
+      sansBase: ef.sansBase || 0,
+    };
     common.bxcTotBudget = tB ? this.fE(tB) : '—';
     common.bxcTotObjectif = tO ? this.fE(tO) : '—';
     common.bxcTotRealise = aucunR ? '—' : this.fE(tR);
