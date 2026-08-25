@@ -63,3 +63,4 @@
 2026-08-25T18:33:43Z bxc-sous-titre
 2026-08-25T18:44:55Z bxc-clients-periode
 2026-08-25T18:51:02Z mail-note-responsive
+2026-08-25T18:53:52Z banniere-fond-blanc

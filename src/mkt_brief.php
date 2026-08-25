@@ -207,11 +207,14 @@ function mktBriefDonnees(int $id): ?array
 
     // Le point de visée du visuel : c'est lui qui décide de ce qui reste dans
     // un cadre plus étroit. Il vit sur le visuel maître, pas sur la campagne.
-    $cadrage = 50.0;
+    $cadrage = 50.0; $ajuste = 'cover';
     try {
-        $m = Db::row('SELECT focal_point_y FROM mar_campaign_asset
+        $m = Db::row('SELECT focal_point_y, fit FROM mar_campaign_asset
                        WHERE campaign_id = ? ORDER BY is_master DESC, id LIMIT 1', [$id]);
         if ($m !== null && $m['focal_point_y'] !== null) { $cadrage = (float) $m['focal_point_y']; }
+        // « contain » est un choix de l'assistant : un logo ou une affiche
+        // entière ne se recadre pas — le recadrer coupait la tête du dessin.
+        if ($m !== null && (string) ($m['fit'] ?? '') === 'contain') { $ajuste = 'contain'; }
     } catch (PDOException $e) { /* pas de visuel : le centre fera l'affaire */ }
 
     // Les formats de publication retenus : « Post Facebook », « Story »… Le
@@ -292,6 +295,7 @@ function mktBriefDonnees(int $id): ?array
         'visuel' => mktBriefVisuel((string) ($c['image_url'] ?? '')),
         'formats' => $formats,
         'cadrage' => $cadrage,
+        'ajuste' => $ajuste,
     ];
 }
 
@@ -645,7 +649,8 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
           . '<td valign="middle">' . $bloc . '</td>'
           . '<td width="112" align="right" valign="middle">'
           . mktBriefVignette($visuel, (int) ($d['visuel']['largeur'] ?? 0), (int) ($d['visuel']['hauteur'] ?? 0),
-              104, 104, (float) ($d['cadrage'] ?? 50), 'border-radius:8px;border:1px solid #e6e0d8')
+              104, 104, (float) ($d['cadrage'] ?? 50), 'border-radius:8px;border:1px solid #e6e0d8',
+              (string) ($d['ajuste'] ?? 'cover'))
           . '</td>'
           . '</tr></table>';
 
@@ -709,19 +714,26 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
  *
  * `$focal` : le point de visée vertical du visuel, en pourcentage.
  */
-function mktBriefVignette(string $uri, int $iw, int $ih, int $l, int $h, float $focal, string $bord = ''): string
+function mktBriefVignette(string $uri, int $iw, int $ih, int $l, int $h, float $focal,
+    string $bord = '', string $ajuste = 'cover'): string
 {
     if ($uri === '') { return ''; }
-    $boite = 'width:' . $l . 'px;height:' . $h . 'px;overflow:hidden;position:relative;' . $bord;
+    // Fond blanc : un PNG à fond transparent posé sur une boîte sans couleur
+    // sort NOIR à l'impression comme au rendu PDF.
+    $boite = 'width:' . $l . 'px;height:' . $h . 'px;overflow:hidden;position:relative;background:#fff;' . $bord;
     if ($iw <= 0 || $ih <= 0) {
         // Dimensions inconnues : mieux vaut une image entière un peu petite
         // qu'une image déformée dont on ne saurait pas qu'elle l'est.
         return '<div style="' . $boite . '"><img src="' . $uri . '" alt="" style="width:' . $l . 'px"></div>';
     }
-    $k = max($l / $iw, $h / $ih);
+    // « contain » : l'image ENTIÈRE tient dans la boîte, centrée. « cover » :
+    // elle la remplit et déborde, au point de visée.
+    $k = $ajuste === 'contain' ? min($l / $iw, $h / $ih) : max($l / $iw, $h / $ih);
     $pw = (int) ceil($iw * $k); $ph = (int) ceil($ih * $k);
     $x = (int) round(($l - $pw) / 2);
-    $y = (int) round(-($ph - $h) * max(0.0, min(100.0, $focal)) / 100);
+    $y = $ajuste === 'contain'
+        ? (int) round(($h - $ph) / 2)
+        : (int) round(-($ph - $h) * max(0.0, min(100.0, $focal)) / 100);
 
     return '<div style="' . $boite . '">'
         . '<img src="' . $uri . '" alt="" style="position:absolute;left:' . $x . 'px;top:' . $y . 'px;width:' . $pw . 'px;height:' . $ph . 'px">'
@@ -753,6 +765,7 @@ function mktBriefAnnexe(array $d, string $visuel, string $accent): string
     $iw = (int) ($d['visuel']['largeur'] ?? 0);
     $ih = (int) ($d['visuel']['hauteur'] ?? 0);
     $focal = max(0.0, min(100.0, (float) ($d['cadrage'] ?? 50)));
+    $ajuste = (string) ($d['ajuste'] ?? 'cover');
 
     $vignettes = '';
     if ($visuel !== '' && $formats !== [] && $iw > 0 && $ih > 0) {
@@ -768,7 +781,7 @@ function mktBriefAnnexe(array $d, string $visuel, string $accent): string
             $l = (int) round($h * $fw / $fh);
             // Couverture : l'image déborde la case, jamais l'inverse.
             $cases[] = '<td width="' . ($boite + $gouttiere) . '" valign="bottom" style="padding:0 ' . $gouttiere . 'px 12px 0">'
-                . mktBriefVignette($visuel, $iw, $ih, $l, $h, $focal, 'border:1px solid #e6e0d8;border-radius:5px')
+                . mktBriefVignette($visuel, $iw, $ih, $l, $h, $focal, 'border:1px solid #e6e0d8;border-radius:5px', $ajuste)
                 . '<div style="font-size:10px;font-weight:600;margin-top:4px">' . $e($f['nom']) . '</div>'
                 . '<div style="font-size:9px;color:#7a736a">' . $fw . ' × ' . $fh . ' px'
                 . ($f['note'] !== '' ? ' · ' . $e($f['note']) : '') . '</div></td>';
@@ -831,11 +844,17 @@ function mktBriefBanniere(array $d): string
 
     $iw = imagesx($src); $ih = imagesy($src);
     $lw = 1200; $lh = 480;
-    $k = max($lw / $iw, $lh / $ih);
+    $contain = (string) ($d['ajuste'] ?? 'cover') === 'contain';
+    $k = $contain ? min($lw / $iw, $lh / $ih) : max($lw / $iw, $lh / $ih);
     $pw = (int) ceil($iw * $k); $ph = (int) ceil($ih * $k);
     $focal = max(0.0, min(100.0, (float) ($d['cadrage'] ?? 50)));
     $dst = imagecreatetruecolor($lw, $lh);
-    imagecopyresampled($dst, $src, (int) round(($lw - $pw) / 2), (int) round(-($ph - $lh) * $focal / 100),
+    // Fond BLANC avant tout : un PNG transparent sur une toile neuve donne un
+    // bandeau NOIR — c'est ce qui partait aux franchisés.
+    imagefilledrectangle($dst, 0, 0, $lw, $lh, imagecolorallocate($dst, 255, 255, 255));
+    imagecopyresampled($dst, $src,
+        (int) round(($lw - $pw) / 2),
+        $contain ? (int) round(($lh - $ph) / 2) : (int) round(-($ph - $lh) * $focal / 100),
         0, 0, $pw, $ph, $iw, $ih);
     ob_start(); imagejpeg($dst, null, 80); $bandeau = (string) ob_get_clean();
     imagedestroy($src); imagedestroy($dst);
