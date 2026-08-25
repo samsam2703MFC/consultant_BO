@@ -2748,6 +2748,16 @@ function tplMktNote(c, x){
             <label><span style="${k}">Introduction</span><textarea ${x.C(n.setIntro)} style="${zone}">${esc(n.intro)}</textarea></label>
             <label><span style="${k}">Pied du courrier</span><textarea ${x.C(n.setPied)} style="${zone}">${esc(n.pied)}</textarea></label>
             <label><span style="${k}">Gabarit HTML — vide = celui de la maison</span><textarea ${x.C(n.setHtml)} placeholder="{{logo}} {{marque}} {{entete}} {{contenu}}" style="${zone};font-family:ui-monospace,monospace;font-size:11.5px">${esc(n.html)}</textarea></label>
+            <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:11px">
+              <span style="${k}">L’agence — elle signe la création, sur la note comme dans le courriel</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+                <label style="flex:1;min-width:160px"><span style="${k}">Nom</span><input value="${esc(n.agenceNom)}" ${x.C(n.setAgenceNom)} style="${inp}" /></label>
+                <label style="flex:1;min-width:160px"><span style="${k}">Site ou contact</span><input value="${esc(n.agenceSite)}" ${x.C(n.setAgenceSite)} style="${inp}" /></label>
+                <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;${bt}">Choisir un logo<input type="file" accept="image/*" ${x.C(n.setAgenceLogo)} style="display:none" /></label>
+                ${n.agenceLogo ? `<span style="display:inline-flex;align-items:center;gap:7px"><img src="${esc(n.agenceLogo)}" alt="" style="height:26px;border-radius:4px" /><button ${x.A(n.retirerLogo)} title="Retirer le logo" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></span>` : ''}
+              </div>
+              ${n.agenceLogoErr ? `<div style="font-size:11px;color:#8D1D2C;margin-top:5px">${esc(n.agenceLogoErr)}</div>` : ''}
+            </div>
             <div style="font-size:11px;color:var(--color-text-muted)">Variables disponibles : ${esc(n.variables)}</div>
             <div><button ${x.A(n.enregistrerGabarit)} style="${bt}">Enregistrer le gabarit</button></div>
           </div>`}
@@ -2766,6 +2776,7 @@ function tplMktNote(c, x){
           </div>
         </div>
         <iframe id="note-apercu" srcdoc="${esc(n.apercu)}" title="Aperçu de la note" style="width:100%;height:520px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:#fff"></iframe>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:7px">${esc(n.visuelNote || '')}</div>
       </div>`}
 
       <div style="padding:14px 18px 18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);margin-top:16px">
@@ -4415,6 +4426,25 @@ function tplParams(c, x){
           <div style="padding:10px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;color:var(--color-text-muted);line-height:1.45;text-wrap:pretty">${esc(l.desc)}</div>`).join('')}
       </div>
     </div>
+    ${!c.prmNote ? '' : `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Agence de création</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">Reprise au pied de la note de campagne et dans le courriel qui la porte. Le logo voyage avec la lettre : un lien vers le cockpit ne s’affiche pas chez le franchisé et ne s’imprime pas.</div>
+      ${c.prmNote.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des réglages…</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end">
+        <label style="font-size:12px;color:var(--color-text-muted)">Nom de l’agence<input value="${esc(c.prmNote.nom)}" ${x.C(c.prmNote.setNom)} style="${inputCss}" /></label>
+        <label style="font-size:12px;color:var(--color-text-muted)">Site ou contact<input value="${esc(c.prmNote.site)}" ${x.C(c.prmNote.setSite)} style="${inputCss}" /></label>
+        <label style="font-size:12px;color:var(--color-text-muted)">Expéditeur des notes<input value="${esc(c.prmNote.expediteur)}" ${x.C(c.prmNote.setExpediteur)} style="${inputCss}" /></label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 13px">Choisir un logo<input type="file" accept="image/*" ${x.C(c.prmNote.setLogo)} style="display:none" /></label>
+        ${c.prmNote.logo ? `<img src="${esc(c.prmNote.logo)}" alt="Logo de l’agence" style="height:30px;border-radius:4px" /><button ${x.A(c.prmNote.retirerLogo)} title="Retirer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button>` : `<span style="font-size:11.5px;color:var(--color-text-muted)">Aucun logo : la note ne portera que le nom.</span>`}
+        <span style="flex:1"></span>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.prmNote.nCarnet} adresse${c.prmNote.nCarnet > 1 ? 's' : ''} de franchisé au carnet</span>
+        <button ${x.A(c.prmNote.enregistrer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:8px 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
+      </div>
+      ${c.prmNote.err ? `<div style="font-size:11.5px;color:#8D1D2C;margin-top:8px">${esc(c.prmNote.err)}</div>` : ''}`}
+    </div>`}
     <div style="display:flex;flex-direction:column;gap:16px">
       <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Seuils &amp; cibles</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Ce qui déclenche les alertes des écrans et des rapports.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">

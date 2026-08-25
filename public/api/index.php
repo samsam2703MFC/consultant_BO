@@ -107,6 +107,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/mesure'              => ep_mesure(),
             $path === '/marketing/mesure/comparaison'  => ep_mesure_comparaison(),
             $path === '/marketing/kpi-periode'         => ep_mkt_kpi_periode(),
+            $path === '/marketing/note-config'         => ep_mkt_brief_config(),
             (bool) preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $mn) => ep_mkt_brief((int) $mn[1]),
             (bool) preg_match('#^/marketing/campagne/(\d+)/note\.pdf$#', $path, $mp) => ep_mkt_brief_pdf((int) $mp[1]),
             $path === '/taches/classement'             => ep_taches_classement(),

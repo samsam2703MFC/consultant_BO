@@ -4597,6 +4597,32 @@ class App {
         })),
         nPrets: prets.length,
         sansAdresse: dest.filter(x2 => !x2.adresse).map(x2 => x2.magasin),
+        // L'agence : nom, site et logo. Le logo est LU dans le navigateur et
+        // envoyé en data-URI — le serveur ne reçoit pas de fichier à ranger,
+        // et l'image part avec la lettre au lieu d'être un lien vers un
+        // cockpit auquel le destinataire n'a pas accès.
+        agenceNom: (cfg.agence || {}).nom || '',
+        setAgenceNom: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { nom: e.target.value }) }) }),
+        agenceSite: (cfg.agence || {}).site || '',
+        setAgenceSite: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { site: e.target.value }) }) }),
+        agenceLogo: (cfg.agence || {}).logo || '',
+        agenceLogoErr: nt.logoErr || '',
+        setAgenceLogo: e => {
+          const f = e.target.files && e.target.files[0];
+          if (!f) { return; }
+          if (f.size > 500000) { ntPatch({ logoErr: 'Logo trop lourd (' + Math.round(f.size / 1024) + ' Ko) : 500 Ko au plus.' }); return; }
+          const r = new FileReader();
+          r.onload = () => ntPatch({ logoErr: '', cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { logo: String(r.result) }) }) });
+          r.onerror = () => ntPatch({ logoErr: 'Fichier illisible.' });
+          r.readAsDataURL(f);
+        },
+        retirerLogo: !((cfg.agence || {}).logo) ? null
+          : () => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { logo: '' }) }) }),
+        visuelNote: (D2.visuel && D2.visuel.present)
+          ? 'Le visuel de la campagne est repris en tête de note et en annexe, page 2 du PDF.'
+          : ((D2.visuel && D2.visuel.motif)
+            ? 'Pas d’annexe : ' + D2.visuel.motif + '.'
+            : 'Cette campagne n’a pas de visuel : la note sort sans annexe. Ajoutez-en un dans l’assistant, étape « Photos produits ».'),
         expediteur: cfg.expediteur || '', setExpediteur: setCfg('expediteur'),
         sujet: cfg.sujet || '', setSujet: setCfg('sujet'),
         intro: cfg.intro || '', setIntro: setCfg('intro'),
@@ -4608,7 +4634,7 @@ class App {
         enregistrerGabarit: () => {
           this.api('PUT', '/marketing/note-config', {
             expediteur: cfg.expediteur, sujet: cfg.sujet, intro: cfg.intro,
-            pied: cfg.pied, html: cfg.html,
+            pied: cfg.pied, html: cfg.html, agence: cfg.agence || {},
           }).then(r => {
             if (r && r.error) { ntPatch({ err: r.error }); return; }
             this.notify('Gabarit du courrier enregistré');
@@ -10414,6 +10440,54 @@ class App {
   valsParams(common){
     const S = this.state, D = this.D, M = this.M;
     common.paramExo = String(this.meta.exercice);
+
+    // --- L'agence de création, reprise sur la note de campagne et dans le
+    //     courriel qui la porte. Lue à l'ouverture de l'écran, pas au
+    //     chargement du cockpit : c'est un réglage, pas une donnée de pilotage.
+    if (!this._noteCfg && !this._noteCfgEnCours) {
+      this._noteCfgEnCours = true;
+      readOne('/marketing/note-config').then(d => {
+        this._noteCfgEnCours = false;
+        this._noteCfg = (d && !d.error) ? d : { agence: {} };
+        this.setState({});
+      }).catch(() => { this._noteCfgEnCours = false; this._noteCfg = { agence: {} }; });
+    }
+    const nc = this._noteCfg || null;
+    const ag = Object.assign({}, (nc && nc.agence) || {}, S.prmAgence || {});
+    const setAg = k => e => this.setState(s2 => ({ prmAgence: Object.assign({}, s2.prmAgence, { [k]: e.target.value }) }));
+    common.prmNote = {
+      chargement: !nc,
+      nom: ag.nom || '', setNom: setAg('nom'),
+      site: ag.site || '', setSite: setAg('site'),
+      logo: ag.logo || '',
+      err: S.prmAgenceErr || '',
+      expediteur: (S.prmAgence && S.prmAgence.expediteur != null) ? S.prmAgence.expediteur : ((nc && nc.expediteur) || ''),
+      setExpediteur: setAg('expediteur'),
+      nCarnet: (nc && nc.nCarnet) || 0,
+      setLogo: e => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) { return; }
+        // Un demi-mégaoctet : le logo s'affiche à 26 px de haut, et il voyage
+        // dans CHAQUE courriel envoyé au réseau.
+        if (f.size > 500000) { this.setState({ prmAgenceErr: 'Logo trop lourd (' + Math.round(f.size / 1024) + ' Ko) : 500 Ko au plus.' }); return; }
+        const r = new FileReader();
+        r.onload = () => this.setState(s2 => ({ prmAgenceErr: '', prmAgence: Object.assign({}, s2.prmAgence, { logo: String(r.result) }) }));
+        r.onerror = () => this.setState({ prmAgenceErr: 'Fichier illisible.' });
+        r.readAsDataURL(f);
+      },
+      retirerLogo: !ag.logo ? null : () => this.setState(s2 => ({ prmAgence: Object.assign({}, s2.prmAgence, { logo: '' }) })),
+      enregistrer: () => {
+        this.api('PUT', '/marketing/note-config', {
+          expediteur: ag.expediteur != null ? ag.expediteur : ((nc && nc.expediteur) || ''),
+          agence: { nom: ag.nom || '', site: ag.site || '', logo: ag.logo || '' },
+        }).then(r => {
+          if (!r || r.error) { this.setState({ prmAgenceErr: (r && r.error) || 'Enregistrement refusé.' }); return; }
+          this._noteCfg = null;
+          this.setState({ prmAgence: null, prmAgenceErr: '' });
+          this.notify('Agence enregistrée');
+        });
+      },
+    };
     // --- Scoring produits : pondération des 4 critères, seuils de verdict et
     //     échelle absolue de la marge nette. Écran dédié (sous-menu Paramètres).
     const scd = S.scDraft || {};

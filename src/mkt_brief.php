@@ -38,6 +38,10 @@ Voici la campagne du mois pour {{magasin}}. La note complète est en pièce join
         // d'un franchisé, et l'inventer serait pire que de la demander.
         'carnet'     => [],
         'copie'      => '',
+        // L'agence qui signe la création. Son logo voyage en data-URI, comme
+        // celui de la maison : un lien vers le cockpit ne s'affiche pas chez un
+        // destinataire externe, et ne s'imprime pas du tout.
+        'agence'     => ['nom' => '', 'site' => '', 'logo' => ''],
     ];
 }
 
@@ -47,6 +51,10 @@ function mktBriefConfig(): array
     $c = is_array($c) ? $c : [];
     $out = array_merge(mktBriefDefauts(), $c);
     $out['carnet'] = is_array($out['carnet'] ?? null) ? $out['carnet'] : [];
+    $ag = is_array($out['agence'] ?? null) ? $out['agence'] : [];
+    $out['agence'] = ['nom' => trim((string) ($ag['nom'] ?? '')),
+        'site' => trim((string) ($ag['site'] ?? '')),
+        'logo' => (string) ($ag['logo'] ?? '')];
     return $out;
 }
 
@@ -136,6 +144,34 @@ function mktBriefDonnees(int $id): ?array
         ];
     }
 
+    // Où va le budget, levier par levier — et ce qu'on ira relire pour chacun.
+    // Le montant seul ne dit pas ce qu'on attend en retour ; le KPI seul ne dit
+    // pas ce qu'on y met. La note doit porter les deux, sinon le franchisé lit
+    // « 4 150 € » sans savoir sur quoi il sera jugé.
+    $kpiParLevier = [];
+    foreach (mktKpiParLevier() as $l) { $kpiParLevier[(int) $l['id']] = $l; }
+    $investis = [];
+    try {
+        foreach (Db::rows('SELECT t.lever_id, t.target_value, t.target_unit, l.label, l.code, l.color_hex
+                             FROM mar_campaign_lever_target t
+                             LEFT JOIN mar_lever l ON l.id = t.lever_id
+                            WHERE t.campaign_id = ?
+                            ORDER BY t.target_value DESC', [$id]) as $t) {
+            $lid = (int) $t['lever_id'];
+            $k = $kpiParLevier[$lid] ?? null;
+            $investis[] = [
+                'nom' => (string) ($t['label'] ?? 'Levier ' . $lid),
+                'couleur' => (string) ($t['color_hex'] ?? ''),
+                'montant' => $t['target_value'] !== null ? (float) $t['target_value'] : null,
+                'unite' => (string) ($t['target_unit'] ?? 'EUR'),
+                'kpi' => $k !== null && $k['kpi'] !== null ? (string) $k['kpi']['nom'] : null,
+                'calcul' => $k !== null && $k['kpi'] !== null ? (string) $k['kpi']['calcul'] : null,
+                'raison' => $k !== null ? ($k['raison'] ?? null) : null,
+                'suivi' => $k !== null && (string) $k['code'] === strtoupper((string) ($c['lever_code'] ?? '')),
+            ];
+        }
+    } catch (PDOException $e) { /* pas de ventilation par levier dans cette base */ }
+
     $etapes = [];
     try {
         // `mar_retroplanning_step` : le nom que porte la table du module. Un nom
@@ -179,9 +215,56 @@ function mktBriefDonnees(int $id): ?array
             ? $kpi['reseau']['valeurPendant'] * (1 + $pct / 100) : null,
         'lignes' => $lignes,
         'etapes' => $etapes,
+        'investis' => $investis,
         'mot' => mktBriefMot($id),
         'image' => (string) ($c['image_url'] ?? ''),
+        'visuel' => mktBriefVisuel((string) ($c['image_url'] ?? '')),
     ];
+}
+
+/**
+ * Le visuel de la campagne, prêt à imprimer.
+ *
+ * Embarqué EN DATA-URI et non en lien : le moteur PDF tourne sans réseau, et
+ * un destinataire externe n'a pas accès au cockpit — il verrait un cadre vide.
+ * Au-delà d'un mégaoctet on réduit, et si le serveur n'a pas GD on renonce
+ * plutôt que d'envoyer une lettre de quinze mégaoctets.
+ *
+ * @return array{uri:string,motif:string}
+ */
+function mktBriefVisuel(string $url): array
+{
+    $url = trim($url);
+    if ($url === '') { return ['uri' => '', 'motif' => '']; }
+
+    // « ./uploads/xxx.jpg » vit sous la page de l'assistant.
+    $rel = ltrim(preg_replace('#^\./#', '', $url) ?? $url, '/');
+    $chemin = __DIR__ . '/../public/assistant/' . $rel;
+    if (!is_file($chemin)) { $chemin = __DIR__ . '/../public/' . $rel; }
+    if (!is_file($chemin)) {
+        return ['uri' => '', 'motif' => 'le visuel de la campagne est introuvable sur le serveur'];
+    }
+
+    $octets = (string) file_get_contents($chemin);
+    $info = @getimagesizefromstring($octets);
+    $type = is_array($info) ? (string) $info['mime'] : 'image/jpeg';
+
+    if (strlen($octets) > 1000000) {
+        if (!function_exists('imagecreatefromstring')) {
+            return ['uri' => '', 'motif' => 'le visuel dépasse 1 Mo et le serveur ne sait pas le réduire'];
+        }
+        $src = @imagecreatefromstring($octets);
+        if ($src === false) { return ['uri' => '', 'motif' => 'le visuel n’a pas pu être lu']; }
+        $l = imagesx($src); $h = imagesy($src);
+        $k = min(1.0, 1600 / max($l, $h));
+        $dst = imagecreatetruecolor((int) round($l * $k), (int) round($h * $k));
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, imagesx($dst), imagesy($dst), $l, $h);
+        ob_start(); imagejpeg($dst, null, 78); $octets = (string) ob_get_clean();
+        imagedestroy($src); imagedestroy($dst);
+        $type = 'image/jpeg';
+    }
+
+    return ['uri' => 'data:' . $type . ';base64,' . base64_encode($octets), 'motif' => ''];
 }
 
 /**
@@ -268,11 +351,14 @@ function mktBriefValeur(?float $v, array $d): string
  * serveur sait rendre, et c'est aussi ce que le navigateur imprime à
  * l'identique quand aucun moteur n'est installé.
  */
-function mktBriefPdfHtml(array $d, string $magasin = ''): string
+function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $logo = rapLogoDataUri();
     $accent = '#8D1D2C';
+    if ($c === []) { $c = mktBriefConfig(); }
+    $agence = $c['agence'] ?? ['nom' => '', 'site' => '', 'logo' => ''];
+    $visuel = (string) (($d['visuel']['uri'] ?? '') ?: '');
 
     $entete = '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid ' . $accent . ';padding-bottom:10px;margin-bottom:18px"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:15px">L’Atelier by</strong>')
@@ -316,6 +402,32 @@ function mktBriefPdfHtml(array $d, string $magasin = ''): string
     }
     $obj .= '</div>';
 
+    // Où va le budget : un levier, un montant, un KPI. C'est la réponse à
+    // « on met 4 150 € sur quoi, et je serai jugé sur quoi ».
+    $lev = '';
+    if ($d['investis'] !== []) {
+        $lev = '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:5px">Où va le budget — et ce qu’on ira relire</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:11px;margin-bottom:16px">';
+        foreach ($d['investis'] as $i) {
+            $lev .= '<tr><td width="150" valign="top" style="padding:7px 8px 7px 0;border-bottom:1px solid rgba(34,34,34,.06)">'
+                . ($i['couleur'] !== '' ? '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' . $e($i['couleur']) . ';margin-right:6px"></span>' : '')
+                . '<strong>' . $e($i['nom']) . '</strong>'
+                . ($i['suivi'] ? '<div style="font-size:9px;color:' . $accent . ';margin-top:2px">levier suivi de la campagne</div>' : '')
+                . '</td>'
+                . '<td valign="top" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#7a736a">'
+                . ($i['kpi'] !== null
+                    ? 'KPI : <strong style="color:#1c1a17">' . $e($i['kpi']) . '</strong>'
+                      . ($i['calcul'] !== null ? ' <span style="font-size:9.5px">(' . $e($i['calcul']) . ')</span>' : '')
+                    : 'Pas de KPI en caisse — ' . $e((string) ($i['raison'] ?? 'relevé au bilan')))
+                . '</td>'
+                . '<td width="86" align="right" valign="top" style="padding:7px 0 7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600;white-space:nowrap">'
+                . ($i['montant'] === null ? '—'
+                    : ($i['unite'] === 'EUR' ? mktBriefEuros($i['montant']) : number_format($i['montant'], 0, ',', ' ')))
+                . '</td></tr>';
+        }
+        $lev .= '</table>';
+    }
+
     // Le tableau par magasin : ce que chacun doit faire, pas une moyenne.
     $tab = '';
     if ($d['lignes'] !== []) {
@@ -346,9 +458,17 @@ function mktBriefPdfHtml(array $d, string $magasin = ''): string
         $plan .= '</table>';
     }
 
-    $titre = '<div style="font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:' . $accent . '">'
+    // Le visuel accompagne le titre : une vignette, pas une affiche — la page
+    // sert à lire des chiffres. L'affiche entière est en annexe.
+    $bloc = '<div style="font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:' . $accent . '">'
         . $e($d['type']) . ($d['levier'] !== '' ? ' · levier ' . $e($d['levier']) : '') . '</div>'
-        . '<h1 style="font-size:21px;margin:3px 0 14px;font-weight:600">' . $e($d['nom']) . '</h1>';
+        . '<h1 style="font-size:21px;margin:3px 0 0;font-weight:600">' . $e($d['nom']) . '</h1>';
+    $titre = $visuel === ''
+        ? $bloc . '<div style="height:14px"></div>'
+        : '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px"><tr>'
+          . '<td valign="middle">' . $bloc . '</td>'
+          . '<td width="112" align="right" valign="middle"><img src="' . $visuel . '" alt="" style="width:104px;height:104px;object-fit:cover;border-radius:8px;border:1px solid #e6e0d8"></td>'
+          . '</tr></table>';
 
     // Le mot, s'il y en a un. Pas de bloc vide : une signature sans texte
     // ferait une page qui a l'air inachevée.
@@ -363,15 +483,41 @@ function mktBriefPdfHtml(array $d, string $magasin = ''): string
             . '</div></div>';
     }
 
-    $pied = '<div style="margin-top:20px;padding-top:9px;border-top:1px solid #e6e0d8;font-size:9px;color:#7a736a;line-height:1.6">'
+    $signature = '';
+    if (($agence['nom'] ?? '') !== '' || ($agence['logo'] ?? '') !== '') {
+        $signature = '<table cellpadding="0" cellspacing="0" style="margin-top:16px"><tr>'
+            . (($agence['logo'] ?? '') !== ''
+                ? '<td valign="middle" style="padding-right:9px"><img src="' . $e($agence['logo']) . '" alt="" style="height:26px"></td>' : '')
+            . '<td valign="middle" style="font-size:9.5px;color:#7a736a;line-height:1.5">Création : <strong>'
+            . $e($agence['nom'] !== '' ? $agence['nom'] : 'agence partenaire') . '</strong>'
+            . (($agence['site'] ?? '') !== '' ? '<br>' . $e($agence['site']) : '')
+            . '</td></tr></table>';
+    }
+
+    $pied = $signature
+        . '<div style="margin-top:14px;padding-top:9px;border-top:1px solid #e6e0d8;font-size:9px;color:#7a736a;line-height:1.6">'
         . 'Note éditée le ' . date('d/m/Y') . ' par la centrale L’Atelier by.'
         . ($d['kpiMesure'] ? ' Les valeurs de l’an dernier sont lues sur la caisse, sur les mêmes dates décalées de 364 jours.' : '')
+        . ($visuel !== '' ? ' Le visuel de la campagne est en annexe, page 2.' : '')
+        . (($d['visuel']['motif'] ?? '') !== '' ? ' Annexe absente : ' . $e($d['visuel']['motif']) . '.' : '')
         . '</div>';
+
+    // Annexe : le visuel seul, en pleine page. C'est ce que le magasin
+    // affichera — le voir petit à côté d'un tableau ne dit pas de quoi il a
+    // l'air en vitrine. Pas de visuel, pas de page : une annexe vide se
+    // remarque plus qu'une annexe absente.
+    $annexe = $visuel === '' ? ''
+        : '<div style="page-break-before:always;padding-top:8px">'
+          . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">Annexe — le visuel de la campagne</div>'
+          . '<div style="font-size:13px;font-weight:600;margin:3px 0 10px">' . $e($d['nom'])
+          . ' · ' . mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']) . '</div>'
+          . '<img src="' . $visuel . '" alt="Visuel de la campagne" style="width:100%;max-height:232mm;object-fit:contain;border:1px solid #e6e0d8;border-radius:6px">'
+          . '</div>';
 
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
         . $e($d['nom']) . '</title></head>'
         . '<body style="margin:0;padding:26px 30px;font-family:Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
-        . $entete . $titre . $blocCartes . $obj . $mot . $tab . $plan . $pied . '</body></html>';
+        . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $plan . $pied . $annexe . '</body></html>';
 }
 
 /** Le corps du courrier — le gabarit d'achats, réutilisé tel quel. */
@@ -410,9 +556,28 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
           . (($d['mot']['fonction'] ?? '') !== '' ? ' — ' . $e($d['mot']['fonction']) : '')
           . '</div></div>';
 
-    $contenu = $intro . $mot . $cartes
-        . '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note complète est en pièce jointe, en PDF : une page, à imprimer et à afficher en réserve.</p>'
-        . '<p style="margin:14px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>';
+    // Le visuel en tête du courrier : le franchisé voit la campagne avant de
+    // lire ses chiffres. Il est déjà réduit — c'est le même que la note.
+    $banniere = ($d['visuel']['uri'] ?? '') === '' ? ''
+        : '<img src="' . $d['visuel']['uri'] . '" alt="' . $e($d['nom'])
+          . '" style="width:100%;max-width:100%;border-radius:8px;display:block;margin:0 0 14px">';
+
+    $agence = $c['agence'] ?? [];
+    $signature = (($agence['nom'] ?? '') === '' && ($agence['logo'] ?? '') === '') ? ''
+        : '<table cellpadding="0" cellspacing="0" style="margin-top:16px"><tr>'
+          . (($agence['logo'] ?? '') !== ''
+              ? '<td valign="middle" style="padding-right:9px"><img src="' . $e($agence['logo']) . '" alt="" style="height:24px"></td>' : '')
+          . '<td valign="middle" style="font-size:11px;color:#7a736a;line-height:1.5">Création : <strong>'
+          . $e(($agence['nom'] ?? '') !== '' ? $agence['nom'] : 'agence partenaire') . '</strong>'
+          . (($agence['site'] ?? '') !== '' ? '<br>' . $e($agence['site']) : '') . '</td></tr></table>';
+
+    $contenu = $banniere . $intro . $mot . $cartes
+        . '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note complète est en pièce jointe, en PDF'
+        . (($d['visuel']['uri'] ?? '') === '' ? ' : une page, à imprimer et à afficher en réserve.'
+            : ' : la note en page 1, le visuel de la campagne en annexe page 2, à imprimer et à afficher.')
+        . '</p>'
+        . '<p style="margin:14px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>'
+        . $signature;
 
     $squelette = trim((string) ($c['html'] ?? ''));
     if ($squelette === '') {
@@ -432,9 +597,9 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
 }
 
 /** Le PDF, ou null si aucun moteur ne rend sur ce serveur. */
-function mktBriefPdf(array $d, string $magasin = ''): ?string
+function mktBriefPdf(array $d, string $magasin = '', array $c = []): ?string
 {
-    return rapPdfRendu(mktBriefPdfHtml($d, $magasin), [
+    return rapPdfRendu(mktBriefPdfHtml($d, $magasin, $c), [
         'magasin' => $magasin !== '' ? $magasin : $d['portee'],
         'rapport' => 'Note de campagne — ' . $d['nom'],
         'genere' => date('d/m/Y à H:i'),
@@ -477,8 +642,10 @@ function ep_mkt_brief(int $id): array
     return ['campagne' => $d, 'destinataires' => $dest, 'mot' => $d['mot'],
         'config' => ['expediteur' => $c['expediteur'], 'repondreA' => $c['repondreA'],
             'sujet' => $c['sujet'], 'intro' => $c['intro'], 'pied' => $c['pied'],
-            'html' => (string) ($c['html'] ?? ''), 'copie' => (string) ($c['copie'] ?? '')],
-        'apercuPdf' => mktBriefPdfHtml($d),
+            'html' => (string) ($c['html'] ?? ''), 'copie' => (string) ($c['copie'] ?? ''),
+            'agence' => $c['agence']],
+        'visuel' => ['present' => ($d['visuel']['uri'] ?? '') !== '', 'motif' => $d['visuel']['motif'] ?? ''],
+        'apercuPdf' => mktBriefPdfHtml($d, '', $c),
         'apercuMail' => mktBriefMailHtml($d, $c, $dest[0]['magasin'] ?? '', $dest[0]['franchise'] ?? ''),
         'fichier' => mktBriefNomFichier($d),
         'journal' => array_slice($journal, 0, 30),
@@ -566,7 +733,7 @@ function wr_mkt_brief_envoyer(int $id): array
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['mktBrief', json_encode($c, JSON_UNESCAPED_UNICODE)]);
 
-    $pdf = mktBriefPdf($d);
+    $pdf = mktBriefPdf($d, '', $c);
     $nomFichier = mktBriefNomFichier($d);
     $envoyes = 0; $echecs = [];
 
@@ -580,8 +747,10 @@ function wr_mkt_brief_envoyer(int $id): array
         $pieces = $pdf === null ? []
             : [['nom' => $nomFichier, 'type' => 'application/pdf', 'contenu' => $pdf]];
         if ($pdf === null) {
-            $html = str_replace('La note complète est en pièce jointe, en PDF : une page, à imprimer et à afficher en réserve.',
-                'La note détaillée suit par un autre envoi : le serveur n’a pas pu produire le PDF cette fois.', $html);
+            // La phrase promet une pièce jointe : sans PDF, elle mentirait.
+            $html = (string) preg_replace('#<p[^>]*>La note complète est en pièce jointe.*?</p>#s',
+                '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note détaillée suit par un autre envoi : le serveur n’a pas pu produire le PDF cette fois.</p>',
+                $html);
         }
 
         $ok = Smtp::envoyer($t['adresse'], $sujet, $html, $pieces, (string) $c['expediteur']);
@@ -608,6 +777,18 @@ function wr_mkt_brief_envoyer(int $id): array
             . ($echecs === [] ? '' : ' — refusé pour : ' . implode(', ', $echecs))];
 }
 
+/** GET /marketing/note-config — les réglages, pour l'écran Paramètres. */
+function ep_mkt_brief_config(): array
+{
+    $c = mktBriefConfig();
+    return ['expediteur' => $c['expediteur'], 'repondreA' => $c['repondreA'],
+        'sujet' => $c['sujet'], 'intro' => $c['intro'], 'pied' => $c['pied'],
+        'html' => (string) ($c['html'] ?? ''), 'agence' => $c['agence'],
+        // Le carnet n'est pas un secret, mais il n'a rien à faire ici : il se
+        // remplit devant la campagne qu'on envoie.
+        'nCarnet' => count($c['carnet'])];
+}
+
 /** PUT /marketing/note-config — l'expéditeur, le sujet, le gabarit, le carnet. */
 function wr_mkt_brief_config(): array
 {
@@ -615,6 +796,20 @@ function wr_mkt_brief_config(): array
     $c = mktBriefConfig();
     foreach (['expediteur', 'repondreA', 'sujet', 'intro', 'pied', 'html', 'copie'] as $k) {
         if (array_key_exists($k, $b)) { $c[$k] = (string) $b[$k]; }
+    }
+    if (isset($b['agence']) && is_array($b['agence'])) {
+        $a = $b['agence'];
+        $logo = trim((string) ($a['logo'] ?? $c['agence']['logo']));
+        // Un logo est une IMAGE embarquée, pas une adresse : accepter une URL
+        // ferait un cadre vide chez le destinataire et rien du tout à
+        // l'impression. Un demi-mégaoctet suffit largement pour 26 px de haut.
+        if ($logo !== '' && !preg_match('#^data:image/(png|jpeg|gif|webp|svg\+xml);base64,#', $logo)) { $logo = ''; }
+        if (strlen($logo) > 700000) { $logo = ''; }
+        $c['agence'] = [
+            'nom' => mb_substr(trim((string) ($a['nom'] ?? $c['agence']['nom'])), 0, 120),
+            'site' => mb_substr(trim((string) ($a['site'] ?? $c['agence']['site'])), 0, 160),
+            'logo' => $logo,
+        ];
     }
     if (isset($b['carnet']) && is_array($b['carnet'])) {
         $carnet = [];
