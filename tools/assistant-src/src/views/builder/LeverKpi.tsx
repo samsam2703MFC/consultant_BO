@@ -51,6 +51,13 @@ function ecart(pct: number | null): { texte: string; ton: 'up' | 'down' | 'flat'
   }
 }
 
+/** `03/08`, pour un en-tête : l'année est dite une fois, au-dessus du tableau. */
+function jourCourt(iso: string): string {
+  const [, m, j] = iso.split('-')
+
+  return m === undefined || j === undefined ? iso : `${j}/${m}`
+}
+
 /** `01/09/2025`, l'ordre français — celui du reste de l'assistant. */
 function jour(iso: string): string {
   const [a, m, j] = iso.split('-')
@@ -197,11 +204,12 @@ function Reference({
         </div>
       </div>
 
+      {/* Les dates vivent dans les en-têtes ; il ne reste ici que ce qu'une date
+          ne dit pas : de quelle année il s'agit, et pourquoi 364 et non 365. */}
       <p className="muted kpi__fenetres">
-        Mêmes dates l'an dernier, à 364 jours — 52 semaines exactes, pour que les mêmes jours de
-        semaine tombent en face : <strong>avant</strong> du {jour(fenetres.avantN1Du)} au{' '}
-        {jour(fenetres.avantN1Au)}, <strong>pendant</strong> du {jour(fenetres.pendantN1Du)} au{' '}
-        {jour(fenetres.pendantN1Au)}. La fenêtre « avant » a la longueur de la campagne.
+        Deux fenêtres de {fenetres.jours} jours en {jour(fenetres.pendantN1Au).slice(-4)}, à 364
+        jours en arrière — 52 semaines exactes, pour que les mêmes jours de semaine tombent en
+        face. « Pendant » est la fenêtre de la campagne ; « avant » est celle qui la précède.
       </p>
 
       <div className="table-scroll">
@@ -209,8 +217,12 @@ function Reference({
           <thead>
             <tr>
               <th>Magasin</th>
-              <th className="num">Avant</th>
-              <th className="num">Pendant</th>
+              <th className="num">
+                Avant<small>{jourCourt(fenetres.avantN1Du)} → {jourCourt(fenetres.avantN1Au)}</small>
+              </th>
+              <th className="num">
+                Pendant<small>{jourCourt(fenetres.pendantN1Du)} → {jourCourt(fenetres.pendantN1Au)}</small>
+              </th>
               <th className="num">Variation naturelle</th>
               <th className="num">Objectif</th>
             </tr>

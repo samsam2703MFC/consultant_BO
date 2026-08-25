@@ -3860,3 +3860,8 @@ table.kpi-ref .objectif { font-weight: 500; }
 .kpi-levier__t { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
 .kpi-levier__k { font-size: 12.5px; margin: 6px 0 2px; }
 .kpi-levier__s { font-size: 11px; color: var(--muted); }
+
+/* Les bornes sous l'intitulé : « Avant » et « Pendant » ne disent pas de
+   quand ils parlent, et la phrase qui portait les quatre dates obligeait à
+   faire l'aller-retour entre elle et la colonne. */
+table.kpi-ref th small { display: block; margin-top: 2px; font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--faint); }
