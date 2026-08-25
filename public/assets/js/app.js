@@ -7192,53 +7192,6 @@ class App {
       }));
       common.caFrTronque = lgsF.length > 40 ? lgsF.length - 40 : 0;
 
-      // ── Le tableau des fournisseurs, année par année : ce que le réseau
-      //    leur a demandé, mois par mois. Chargé à part : il balaie une année
-      //    entière, l'écran ne doit pas l'attendre pour s'afficher.
-      const anF = S.caFournAn || new Date().getFullYear();
-      const cleF = 'caFournAnnee|' + anF;
-      this._caEnCours = this._caEnCours || {};
-      if (!(S.caData || {})[cleF] && !this._caEnCours[cleF]) {
-        this._caEnCours[cleF] = true;
-        readOne('/centrale/fournisseurs/annee?annee=' + anF).then(x2 => { this._caEnCours[cleF] = false;
-          this.setState(s2 => ({ caData: Object.assign({}, s2.caData, { [cleF]: x2 || { etat: 'erreur' } }) })); });
-      }
-      const fa = (S.caData || {})[cleF] || null;
-      common.caFaChargement = !fa;
-      common.caFaAnnee = anF;
-      common.caFaAnnees = ((fa || {}).annees || [anF]).map(a2 => ({ a: a2, on: a2 === anF,
-        go: () => this.setState({ caFournAn: a2 }) }));
-      common.caFaMois = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-      const eur0 = v => !v ? '—' : this.fE(v);
-      // Deux lectures du même argent : par fournisseur quand l'ERP le permet,
-      // par magasin toujours — celle-là est exacte. On ouvre sur la lecture
-      // qui a quelque chose à dire.
-      const ventilable = !!(fa && fa.ventilable);
-      const vueF = S.caFaVue || (ventilable ? 'fournisseur' : 'magasin');
-      common.caFaVues = [['fournisseur', 'Par fournisseur'], ['magasin', 'Par magasin']]
-        .map(([v, nom]) => ({ v, nom, on: vueF === v, dispo: v === 'magasin' || ventilable,
-          go: () => this.setState({ caFaVue: v }) }));
-      common.caFaVue = vueF;
-      const source = vueF === 'magasin'
-        ? ((fa || {}).parMagasin || []).map(l => ({ nom: l.magasin, n: l.n, mois: l.mois, total: l.total }))
-        : ((fa || {}).lignes || []).map(l => ({ nom: l.fournisseur, n: l.n, mois: l.mois, total: l.total }));
-      common.caFaLignes = source.map(l => ({
-        nom: l.nom, n: l.n,
-        mois: (l.mois || []).map(v => ({ t: eur0(v), vide: !v })),
-        total: this.fE(l.total || 0) }));
-      // La ligne « à ventiler » n'a de sens que dans la lecture par fournisseur.
-      common.caFaVentiler = (vueF === 'fournisseur' && fa && fa.aVentiler && fa.aVentiler.n) ? {
-        n: fa.aVentiler.n, mois: fa.aVentiler.mois.map(v => ({ t: eur0(v), vide: !v })),
-        total: this.fE(fa.aVentiler.total || 0) } : null;
-      common.caFaTotaux = fa && fa.totaux ? {
-        mois: fa.totaux.mois.map(v => ({ t: eur0(v), vide: !v })),
-        total: this.fE(fa.totaux.total || 0) } : null;
-      common.caFaSource = (fa || {}).source || '';
-      common.caFaManque = (fa || {}).manque || '';
-      common.caFaVide = fa && fa.etat === 'ok' && !source.length && !(fa.aVentiler || {}).n;
-      common.caFaColonne = vueF === 'magasin' ? 'Magasin' : 'Fournisseur';
-      common.caFaMotif = (fa && fa.etat !== 'ok') ? (fa.motif || 'lecture impossible') : '';
-
       // ── Le suivi des commandes : 2 dernières par magasin chez chaque
       //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
       //    donc les fournisseurs en retard remontent (tri fait côté serveur).

@@ -6480,54 +6480,12 @@ function tplCentrale(c, x){
   // franchisé reste disponible (POST /centrale/commandes/relance-franchise,
   // gabarit dans Paramètres) : il n'attend qu'un endroit où être posé.
 
-  // Le tableau des fournisseurs, une année à la fois : douze colonnes et un
-  // total. C'est le tableau le plus simple qui réponde à la question « qui
-  // nous coûte quoi, et quand ».
-  const CF = 'padding:6px 8px;font-size:11.5px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap';
-  const fournAn = c.caFaLignes ? `
-    <div style="${CARD};margin-bottom:16px;overflow:hidden;padding:0">
-      <div style="padding:13px 16px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:500">Achats ${c.caFaAnnee}</span>
-        <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
-          ${(c.caFaVues || []).map(v => `<button ${x.A(v.dispo ? v.go : null)} title="${v.dispo ? '' : 'l’ERP n’enregistre pas le fournisseur d’une réquisition'}" style="border:none;padding:4px 11px;font-family:var(--font-ui);font-size:11px;font-weight:500;${v.dispo ? 'cursor:pointer' : 'cursor:not-allowed;opacity:.45'};${v.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(v.nom)}</button>`).join('')}
-        </span>
-        <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
-          ${(c.caFaAnnees || []).map(a => `<button ${x.A(a.go)} style="border:none;padding:4px 11px;font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer;${a.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${a.a}</button>`).join('')}
-        </span>
-        <span style="flex:1"></span>
-        <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.caFaSource)}</span>
-      </div>
-      ${c.caFaChargement ? `<div style="padding:20px 16px"><div class="jauge"><i></i></div></div>`
-        : (c.caFaMotif ? `<div style="padding:18px 16px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.caFaMotif)}</div>`
-        : (c.caFaVide ? `<div style="padding:18px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune réquisition sur ${c.caFaAnnee}.</div>` : `
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:900px">
-        <thead><tr>
-          <th style="${TH};padding-left:16px">${esc(c.caFaColonne || 'Fournisseur')}</th>
-          ${(c.caFaMois || []).map(m => `<th style="${TH};text-align:right">${m}</th>`).join('')}
-          <th style="${TH};text-align:right;padding-right:16px">Total</th>
-        </tr></thead>
-        <tbody>
-          ${c.caFaLignes.map(l => `<tr>
-            <td style="${TD};padding-left:16px;font-weight:500">${esc(l.nom)}<span style="font-weight:400;color:var(--color-text-muted);font-size:10.5px"> · ${l.n}</span></td>
-            ${l.mois.map(v => `<td style="${TD};${CF};${v.vide ? 'color:var(--color-border-secondary)' : ''}">${esc(v.t)}</td>`).join('')}
-            <td style="${TD};${CF};font-weight:600;padding-right:16px">${esc(l.total)}</td>
-          </tr>`).join('')}
-          ${c.caFaVentiler ? `<tr>
-            <td style="${TD};padding-left:16px;color:var(--color-on-abricot)">À ventiler<span style="color:var(--color-text-muted);font-size:10.5px"> · ${c.caFaVentiler.n} réquisition(s) à plusieurs fournisseurs</span></td>
-            ${c.caFaVentiler.mois.map(v => `<td style="${TD};${CF};color:var(--color-on-abricot);${v.vide ? 'opacity:.4' : ''}">${esc(v.t)}</td>`).join('')}
-            <td style="${TD};${CF};font-weight:600;color:var(--color-on-abricot);padding-right:16px">${esc(c.caFaVentiler.total)}</td>
-          </tr>` : ''}
-          ${c.caFaTotaux ? `<tr style="background:var(--color-background-secondary)">
-            <td style="${TD};padding-left:16px;font-weight:600">Total</td>
-            ${c.caFaTotaux.mois.map(v => `<td style="${TD};${CF};font-weight:600;${v.vide ? 'color:var(--color-border-secondary)' : ''}">${esc(v.t)}</td>`).join('')}
-            <td style="${TD};${CF};font-weight:700;padding-right:16px">${esc(c.caFaTotaux.total)}</td>
-          </tr>` : ''}
-        </tbody>
-      </table></div>
-      ${c.caFaManque ? `<div style="padding:9px 16px;font-size:11px;color:var(--color-on-abricot);border-top:0.5px solid var(--color-border-tertiary)">${esc(c.caFaManque)}</div>` : ''}`))}
-    </div>` : '';
+  // Le tableau annuel des achats a été RETIRÉ : il ne pouvait s'établir que
+  // par magasin — l'ERP n'enregistre pas le fournisseur d'une réquisition —
+  // et ce n'était pas ce qu'on venait chercher sur un écran de commandes.
+  // La route (/centrale/fournisseurs/annee) reste, si le besoin revient.
 
-  const suivi = c.caSvGroupes ? fournAn + `
+  const suivi = c.caSvGroupes ? `
     ${c.caSvKpis ? `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
       ${c.caSvKpis.map(k => `<div style="${CARD};flex:1;min-width:170px;padding:12px 14px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k[0])}</div>
