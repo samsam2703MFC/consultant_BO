@@ -4379,12 +4379,12 @@ function tplParams(c, x){
           Envoi automatique activé
         </label>
         <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-bottom:12px">Expéditeur affiché — et adresse de réponse
-          <input value="${esc(c.cm.expediteur)}" ${x.C(c.cm.setExpediteur)} placeholder="Centrale d’achat &lt;achat@atelierby.be&gt;" style="${inputCss}">
+          <input value="${esc(c.cm.expediteur)}" ${x.C(c.cm.setExpediteur)} placeholder="Centrale d’achat &lt;achats@atelierby.be&gt;" style="${inputCss}">
           <span style="display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Le fournisseur lit ce nom et répond à cette adresse. L’envoi passe toujours par le compte SMTP configuré plus haut — seul l’en-tête change.</span>
         </label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label style="font-size:12px;color:var(--color-text-muted)">La centrale — copie, et repli si le fournisseur n’a pas d’adresse
-            <input value="${esc(c.cm.destinataire)}" ${x.C(c.cm.setDestinataire)} placeholder="achat@atelierby.be" style="${inputCss}">
+            <input value="${esc(c.cm.destinataire)}" ${x.C(c.cm.setDestinataire)} placeholder="achats@atelierby.be" style="${inputCss}">
           </label>
           <label style="font-size:12px;color:var(--color-text-muted)">Copie supplémentaire (optionnel)
             <input value="${esc(c.cm.copie)}" ${x.C(c.cm.setCopie)} placeholder="—" style="${inputCss}">

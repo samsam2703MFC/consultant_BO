@@ -32,8 +32,8 @@ function caMailDefauts(): array
         // Le courrier vient de la CENTRALE D'ACHAT, pas de la boîte des
         // rapports : c'est elle que le fournisseur doit lire dans son client
         // de messagerie, et à laquelle sa réponse doit revenir.
-        'expediteur' => 'Centrale d’achat <achat@atelierby.be>',
-        'destinataire' => 'achat@atelierby.be',
+        'expediteur' => 'Centrale d’achat <achats@atelierby.be>',
+        'destinataire' => 'achats@atelierby.be',
         'copie' => '',
         // MESURÉ : l'ERP garde 115 réquisitions au statut « en attente »,
         // toutes de septembre 2025 à avril 2026 — ce statut ne se referme

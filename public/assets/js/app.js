@@ -10580,7 +10580,7 @@ class App {
     const cmActif = cmD.actif != null ? cmD.actif : !!cmCf.actif;
     common.cm = {
       actif: cmActif,
-      expediteur: cmVal('expediteur', 'Centrale d’achat <achat@atelierby.be>'),
+      expediteur: cmVal('expediteur', 'Centrale d’achat <achats@atelierby.be>'),
       setExpediteur: cmSet('expediteur'),
       // Le SQUELETTE HTML, éditable comme le reste. Vide = celui d'origine.
       html: cmVal('html', ''),
@@ -10598,7 +10598,7 @@ class App {
         + '&html=' + encodeURIComponent(cmVal('html', '')),
       apercuOuvert: !!cmD.apercuOuvert,
       apercuBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { apercuOuvert: !(s2.cmDraft || {}).apercuOuvert }) })),
-      destinataire: cmVal('destinataire', 'achat@atelierby.be'),
+      destinataire: cmVal('destinataire', 'achats@atelierby.be'),
       copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
       variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
       smtpPret: !!cmEt.smtpPret,
