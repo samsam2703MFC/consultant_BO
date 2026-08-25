@@ -179,8 +179,57 @@ function mktBriefDonnees(int $id): ?array
             ? $kpi['reseau']['valeurPendant'] * (1 + $pct / 100) : null,
         'lignes' => $lignes,
         'etapes' => $etapes,
+        'mot' => mktBriefMot($id),
         'image' => (string) ($c['image_url'] ?? ''),
     ];
+}
+
+/**
+ * Le mot du responsable pour une campagne — texte, nom et fonction.
+ *
+ * Une note chiffrée dit ce qu'on attend ; elle ne dit pas pourquoi, ni qui le
+ * demande. Le mot est la seule partie de la page écrite par quelqu'un, et il
+ * est signé : le franchisé sait à qui répondre.
+ *
+ * La signature est préremplie avec le consultant connecté — son nom et sa
+ * FONCTION, pas un titre inventé. Elle reste modifiable : le mot peut être
+ * celui du franchiseur alors que la note est préparée par le consultant.
+ *
+ * @return array{texte:string,nom:string,fonction:string}
+ */
+function mktBriefMot(int $id): array
+{
+    $tous = setting('mktBriefMots');
+    $m = (is_array($tous) && isset($tous[(string) $id]) && is_array($tous[(string) $id]))
+        ? $tous[(string) $id] : [];
+    $u = setting('utilisateur', []);
+    $u = is_array($u) ? $u : [];
+
+    return [
+        'texte' => trim((string) ($m['texte'] ?? '')),
+        'nom' => trim((string) ($m['nom'] ?? ($u['nom'] ?? ''))),
+        'fonction' => trim((string) ($m['fonction'] ?? ($u['role'] ?? ''))),
+    ];
+}
+
+/** PUT /marketing/campagne/{id}/note-mot. */
+function wr_mkt_brief_mot(int $id): array
+{
+    if (Db::row('SELECT 1 FROM mar_campaign WHERE id = ?', [$id]) === null) {
+        http_response_code(404); return ['error' => 'campagne inconnue'];
+    }
+    $b = body();
+    $tous = setting('mktBriefMots');
+    if (!is_array($tous)) { $tous = []; }
+    $avant = mktBriefMot($id);
+    $tous[(string) $id] = [
+        'texte' => mb_substr(trim((string) ($b['texte'] ?? $avant['texte'])), 0, 1200),
+        'nom' => mb_substr(trim((string) ($b['nom'] ?? $avant['nom'])), 0, 120),
+        'fonction' => mb_substr(trim((string) ($b['fonction'] ?? $avant['fonction'])), 0, 120),
+    ];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['mktBriefMots', json_encode($tous, JSON_UNESCAPED_UNICODE)]);
+    return ['ok' => true, 'mot' => $tous[(string) $id]];
 }
 
 /**
@@ -301,6 +350,19 @@ function mktBriefPdfHtml(array $d, string $magasin = ''): string
         . $e($d['type']) . ($d['levier'] !== '' ? ' · levier ' . $e($d['levier']) : '') . '</div>'
         . '<h1 style="font-size:21px;margin:3px 0 14px;font-weight:600">' . $e($d['nom']) . '</h1>';
 
+    // Le mot, s'il y en a un. Pas de bloc vide : une signature sans texte
+    // ferait une page qui a l'air inachevée.
+    $mot = '';
+    if (($d['mot']['texte'] ?? '') !== '') {
+        $mot = '<div style="border-left:3px solid ' . $accent . ';padding:2px 0 2px 12px;margin:2px 0 16px">'
+            . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:4px">Le mot du responsable</div>'
+            . '<div style="font-size:11.5px;line-height:1.65">' . nl2br($e($d['mot']['texte'])) . '</div>'
+            . '<div style="font-size:10.5px;color:#7a736a;margin-top:7px">'
+            . $e($d['mot']['nom'])
+            . (($d['mot']['fonction'] ?? '') !== '' ? ' — ' . $e($d['mot']['fonction']) : '')
+            . '</div></div>';
+    }
+
     $pied = '<div style="margin-top:20px;padding-top:9px;border-top:1px solid #e6e0d8;font-size:9px;color:#7a736a;line-height:1.6">'
         . 'Note éditée le ' . date('d/m/Y') . ' par la centrale L’Atelier by.'
         . ($d['kpiMesure'] ? ' Les valeurs de l’an dernier sont lues sur la caisse, sur les mêmes dates décalées de 364 jours.' : '')
@@ -309,7 +371,7 @@ function mktBriefPdfHtml(array $d, string $magasin = ''): string
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
         . $e($d['nom']) . '</title></head>'
         . '<body style="margin:0;padding:26px 30px;font-family:Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
-        . $entete . $titre . $blocCartes . $obj . $tab . $plan . $pied . '</body></html>';
+        . $entete . $titre . $blocCartes . $obj . $mot . $tab . $plan . $pied . '</body></html>';
 }
 
 /** Le corps du courrier — le gabarit d'achats, réutilisé tel quel. */
@@ -341,7 +403,14 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
     }
     $cartes .= '</table>';
 
-    $contenu = $intro . $cartes
+    $mot = ($d['mot']['texte'] ?? '') === '' ? ''
+        : '<div style="border-left:3px solid #8D1D2C;padding:2px 0 2px 12px;margin:16px 0 0">'
+          . '<div style="font-size:12.5px;line-height:1.65">' . nl2br($e($d['mot']['texte'])) . '</div>'
+          . '<div style="font-size:11.5px;color:#7a736a;margin-top:6px">' . $e($d['mot']['nom'])
+          . (($d['mot']['fonction'] ?? '') !== '' ? ' — ' . $e($d['mot']['fonction']) : '')
+          . '</div></div>';
+
+    $contenu = $intro . $mot . $cartes
         . '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note complète est en pièce jointe, en PDF : une page, à imprimer et à afficher en réserve.</p>'
         . '<p style="margin:14px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>';
 
@@ -405,7 +474,7 @@ function ep_mkt_brief(int $id): array
         is_array(setting('mktBriefJournal')) ? setting('mktBriefJournal') : [],
         static fn ($e) => (int) ($e['campagne'] ?? 0) === $id));
 
-    return ['campagne' => $d, 'destinataires' => $dest,
+    return ['campagne' => $d, 'destinataires' => $dest, 'mot' => $d['mot'],
         'config' => ['expediteur' => $c['expediteur'], 'repondreA' => $c['repondreA'],
             'sujet' => $c['sujet'], 'intro' => $c['intro'], 'pied' => $c['pied'],
             'html' => (string) ($c['html'] ?? ''), 'copie' => (string) ($c['copie'] ?? '')],

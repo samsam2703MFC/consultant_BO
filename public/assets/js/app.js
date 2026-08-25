@@ -4549,6 +4549,29 @@ class App {
         // même HTML, produit par le serveur. Deux rendus auraient fini par
         // montrer deux choses.
         apercu: D2.apercuPdf || '',
+        // Le mot du responsable : la seule partie de la page écrite par
+        // quelqu'un. Signé du consultant connecté — nom et fonction —, et la
+        // signature reste modifiable : le mot peut être celui du franchiseur.
+        mot: (nt.mot != null ? nt.mot : ((D2.mot || {}).texte || '')),
+        setMot: e => ntPatch({ mot: e.target.value }),
+        motNom: (nt.motNom != null ? nt.motNom : ((D2.mot || {}).nom || '')),
+        setMotNom: e => ntPatch({ motNom: e.target.value }),
+        motFonction: (nt.motFonction != null ? nt.motFonction : ((D2.mot || {}).fonction || '')),
+        setMotFonction: e => ntPatch({ motFonction: e.target.value }),
+        motEtat: nt.motEtat || '',
+        enregistrerMot: () => {
+          ntPatch({ motEtat: 'en-cours' });
+          this.api('PUT', '/marketing/campagne/' + camp.id + '/note-mot', {
+            texte: (nt.mot != null ? nt.mot : ((D2.mot || {}).texte || '')),
+            nom: (nt.motNom != null ? nt.motNom : ((D2.mot || {}).nom || '')),
+            fonction: (nt.motFonction != null ? nt.motFonction : ((D2.mot || {}).fonction || '')),
+          }).then(r => {
+            if (!r || r.error) { ntPatch({ motEtat: '', err: (r && r.error) || 'Mot non enregistré.' }); return; }
+            // La page se recharge : l'aperçu EST le fichier, il doit porter le
+            // mot qu'on vient d'écrire.
+            this.mkNoteOuvrir(camp.id, 'note');
+          });
+        },
         apercuMail: D2.apercuMail || '',
         sousTitre: (camp.type || '') + ' · ' + (camp.portee || '') + ' · '
           + (camp.du ? this.fD(camp.du) : '—') + ' → ' + (camp.fin || camp.au ? this.fD(camp.au) : '—'),

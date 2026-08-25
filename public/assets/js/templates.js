@@ -2756,6 +2756,15 @@ function tplMktNote(c, x){
       : `
       <div style="padding:16px 18px 0">
         ${n.moteurNote ? `<div style="font-size:11.5px;color:var(--color-text-muted);border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:9px 11px;margin-bottom:12px">${esc(n.moteurNote)}</div>` : ''}
+        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px 13px;margin-bottom:12px">
+          <span style="${k}">Le mot du responsable — il s’imprime sur la note et ouvre le courriel</span>
+          <textarea ${x.C(n.setMot)} placeholder="Pourquoi cette campagne, ce qu’on attend du magasin, ce qui est fourni…" style="${zone}">${esc(n.mot)}</textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <label style="flex:1;min-width:170px"><span style="${k}">Signé</span><input value="${esc(n.motNom)}" ${x.C(n.setMotNom)} style="${inp}" /></label>
+            <label style="flex:1;min-width:170px"><span style="${k}">Fonction</span><input value="${esc(n.motFonction)}" ${x.C(n.setMotFonction)} style="${inp}" /></label>
+            <div style="display:flex;align-items:flex-end"><button ${x.A(n.enregistrerMot)} style="${bt}">${n.motEtat === 'en-cours' ? 'Enregistrement…' : 'Enregistrer le mot'}</button></div>
+          </div>
+        </div>
         <iframe id="note-apercu" srcdoc="${esc(n.apercu)}" title="Aperçu de la note" style="width:100%;height:520px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:#fff"></iframe>
       </div>`}
 

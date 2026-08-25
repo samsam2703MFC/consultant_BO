@@ -241,6 +241,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
     if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $m)) { return wr_mkt_brief_envoyer((int) $m[1]); }
     if ($method === 'PUT' && $path === '/marketing/note-config') { return wr_mkt_brief_config(); }
+    if ($method === 'PUT' && preg_match('#^/marketing/campagne/(\d+)/note-mot$#', $path, $m)) { return wr_mkt_brief_mot((int) $m[1]); }
     if ($method === 'POST' && $path === '/marketing/type') { return wr_mkt_type(null); }
     if ($method === 'PATCH' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type_suppr((int) $m[1]); }
