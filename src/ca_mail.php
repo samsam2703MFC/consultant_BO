@@ -64,8 +64,13 @@ function caMailDefauts(): array
  * Le squelette d'origine : tables imbriquées et styles en ligne — la seule
  * mise en page que Gmail et Outlook respectent.
  */
-function caMailSquelette(): string
+function caMailSquelette(string $service = 'Centrale d’achat',
+    string $signature = 'ce message est envoyé automatiquement par la centrale d’achat.'): string
 {
+    // Le service et la signature sont des ARGUMENTS : la note de campagne
+    // emprunte la même lettre, et elle sortait signée « centrale d'achat » —
+    // le franchisé croyait à une commande.
+    $e = static fn (string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     // Téléphone d'abord : la lettre se lit sur un écran de 360 points, souvent
     // en THÈME SOMBRE. Trois choses s'y jouent, et elles ont été vues de
     // travers avant d'être corrigées :
@@ -98,13 +103,13 @@ function caMailSquelette(): string
         // colonnes se chevauchaient sur un téléphone.
         . '<tr><td class="pad" style="background:#ffffff;border-radius:12px 12px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 26px 12px">'
         . '{{logo}}'
-        . '<div style="font-family:\'Segoe UI\',Arial,sans-serif;color:#8b8177;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;margin-top:8px">Centrale d’achat</div>'
+        . '<div style="font-family:\'Segoe UI\',Arial,sans-serif;color:#8b8177;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;margin-top:8px">' . $e($service) . '</div>'
         . '</td></tr>'
         . '<tr><td style="background:#ffffff;border-radius:0 0 12px 12px;padding:0 0 20px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{{contenu}}</table>'
         . '</td></tr>'
         . '<tr><td class="pad" style="font-family:\'Segoe UI\',Arial,sans-serif;padding:12px 26px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
-        . '{{marque}} — ce message est envoyé automatiquement par la centrale d’achat.'
+        . '{{marque}} — ' . $e($signature)
         . '</td></tr>'
         . '</table></td></tr></table></body></html>';
 }

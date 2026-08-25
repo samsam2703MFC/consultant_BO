@@ -346,7 +346,10 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
         . '<p style="margin:14px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>';
 
     $squelette = trim((string) ($c['html'] ?? ''));
-    if ($squelette === '') { $squelette = caMailSquelette(); }
+    if ($squelette === '') {
+        $squelette = caMailSquelette('Marketing',
+            'cette note accompagne la campagne du mois. Répondez à ce courriel pour joindre le marketing.');
+    }
 
     return caMailRemplir($squelette, [
         // Le logo voyage en data-URI : un lien vers le cockpit ne s'affiche
