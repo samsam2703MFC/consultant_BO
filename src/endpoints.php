@@ -6093,6 +6093,9 @@ function ep_ca_commandes(): array
             if ($fours !== []) { $avecFournisseur++; }
             $lignes[] = [
                 'id' => (int) ($r['id'] ?? 0),
+                // L'identifiant du magasin voyage avec la ligne : sans lui, on
+                // ne peut pas notifier le franchisé qui doit valider.
+                'magasinId' => (int) $sid,
                 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
                 'fournisseurs' => $fours,
                 'debut' => (string) ($r['beginning_of_period'] ?? ''),
@@ -6138,6 +6141,10 @@ function ep_ca_commandes(): array
 
     return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
         'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions) et besoins courants (/list × catalog-mappings)',
+        // Ce qui a déjà été rappelé au franchisé : la ligne dit « relancé le … »
+        // au lieu de laisser notifier le même magasin dix fois.
+        'relancesFranchise' => (function () { $v = setting('caRelancesFranchise');
+            return is_array($v) ? $v : []; })(),
         'lignes' => $lignes, 'parFournisseur' => array_values($groupes),
         'aCommander' => $aCommander, 'manquants' => $manquants];
 }

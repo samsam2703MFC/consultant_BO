@@ -576,8 +576,8 @@ class App {
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
-      caAchats: ['Suivi fournisseurs', 'Commandes fournisseurs, réception et litiges.'],
-      caCommandes: ['Commandes franchisés', 'Commandes des magasins, de la préparation à la livraison.'],
+      caAchats: ['Commandes & fournisseurs', 'Une commande d’un bout à l’autre : ce que le magasin demande, ce que le fournisseur doit servir. Le franchisé se rappelle par notification, le fournisseur par courrier.'],
+      caCommandes: ['Commandes & fournisseurs', 'Une commande d’un bout à l’autre.'],
       caStock: ['Stock', 'Stock, seuils et ruptures.'],
       caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
       caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
@@ -953,8 +953,7 @@ class App {
       // la demande — les écrans restent dans le code, comme le suivi de
       // production, ils ne s'atteignent plus depuis la navigation.
       ['Centrale d’achat', [
-        ['caAchats', 'Suivi fournisseurs', 0],
-        ['caCommandes', 'Commandes franchisés', 0],
+        ['caAchats', 'Commandes & fournisseurs', 0],
         ['caStock', 'Stock', 0],
         ['caFacturation', 'Facturation magasins', 0]]],
       // Ce que la marque investit et ce qu'elle en retire, au même endroit : le
@@ -6961,16 +6960,27 @@ class App {
     const S = this.state, ecr = S.screen, r = this.caRoute();
     if (!r) { return; }
     const per = S.caPeriode || '30j';
-    const cle = ecr + '|' + per;
     this._caEnCours = this._caEnCours || {};
-    if ((S.caData || {})[cle] || this._caEnCours[cle]) { return; }
-    this._caEnCours[cle] = true;
-    const q = '';
-    readOne(r + q).then(d => { this._caEnCours[cle] = false;
-      this.setState(s2 => ({ caData: Object.assign({}, s2.caData, { [cle]: d || { etat: 'erreur', motif: 'API injoignable' } }) })); });
+    const lire = (cle, chemin) => {
+      if ((this.state.caData || {})[cle] || this._caEnCours[cle]) { return; }
+      this._caEnCours[cle] = true;
+      readOne(chemin).then(d => { this._caEnCours[cle] = false;
+        this.setState(s2 => ({ caData: Object.assign({}, s2.caData,
+          { [cle]: d || { etat: 'erreur', motif: 'API injoignable' } }) })); });
+    };
+    lire(ecr + '|' + per, r);
+    // L'écran des commandes tient les DEUX bouts : ce que le franchisé demande
+    // (réquisitions) et ce que le fournisseur doit servir (commandes). Deux
+    // routes, un seul écran — les séparer obligeait à naviguer pour suivre une
+    // même commande.
+    if (ecr === 'caAchats') { lire('caCommandes|' + per, '/centrale/commandes'); }
   }
   valsCentrale(common){
-    const S = this.state, ecr = S.screen;
+    const S = this.state;
+    // « Commandes franchisés » a rejoint « Commandes & fournisseurs » : un
+    // ancien lien ou un signet doit continuer à mener quelque part.
+    if (S.screen === 'caCommandes') { this.setState({ screen: 'caAchats' }); return; }
+    const ecr = S.screen;
     const per = S.caPeriode || '30j';
     this.caCharge();
     const d = (S.caData || {})[ecr + '|' + per];
@@ -7082,6 +7092,43 @@ class App {
           { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
       } : null;
     } else if (ecr === 'caAchats') {
+      // ── Ce que les franchisés ont demandé, et qui attend leur validation.
+      //    Même écran que le suivi fournisseur : une commande se suit d'un
+      //    bout à l'autre, de la demande du magasin à la livraison.
+      const dc = (S.caData || {})['caCommandes|' + per] || null;
+      const relF = (dc || {}).relancesFranchise || {};
+      const lgsF = ((dc || {}).lignes || []).filter(l => l.statut === 'PENDING');
+      common.caFrChargement = !dc;
+      common.caFrN = lgsF.length;
+      common.caFrValeur = this.fE(lgsF.reduce((a, l) => a + (+l.valeur || 0), 0));
+      common.caFrLignes = lgsF.slice(0, 40).map(l => ({
+        id: l.id, magasin: l.magasin || '—',
+        fournisseur: (l.fournisseurs || []).join(' + ') || '—',
+        debut: l.debut ? this.fD(l.debut) : '—',
+        // Depuis quand ça attend : c'est ce chiffre qui fait agir, pas la date.
+        attente: l.debut ? Math.max(0, Math.round((Date.now() - new Date(l.debut)) / 86400000)) : null,
+        valeur: this.fE(l.valeur || 0), par: l.par || '—',
+        relanceLe: (relF[String(l.id)] || {}).quand || '',
+        relancer: () => {
+          if (this.state.caFrRel === l.id) { return; }
+          this.setState({ caFrRel: l.id });
+          this.api('POST', '/centrale/commandes/relance-franchise', { id: l.id }).then(r2 => {
+            this.setState({ caFrRel: null });
+            this.notify(!r2 || r2.ok === false
+              ? ('Rappel refusé — ' + ((r2 && (r2.erreur || r2.error)) || 'notification impossible'))
+              : ('Notification envoyée à ' + (r2.magasin || 'ce magasin')
+                 + (r2.notification ? ' (#' + r2.notification + ')' : '')));
+            if (r2 && r2.ok) {
+              this.setState(s2 => { const cd = Object.assign({}, s2.caData);
+                Object.keys(cd).filter(k => k.startsWith('caCommandes|')).forEach(k => { delete cd[k]; });
+                return { caData: cd }; });
+            }
+          });
+        },
+        enCours: this.state.caFrRel === l.id,
+      }));
+      common.caFrTronque = lgsF.length > 40 ? lgsF.length - 40 : 0;
+
       // ── Le suivi des commandes : 2 dernières par magasin chez chaque
       //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
       //    donc les fournisseurs en retard remontent (tri fait côté serveur).
@@ -7093,9 +7140,15 @@ class App {
         || (fSv === 'cours' && o.etape < 4 && !o.bloque)
         || (fSv === 'retard' && o.retardJours != null)
         || (fSv === 'livre' && o.etape === 4);
-      const maj = sv.quand ? new Date(sv.quand * 1000) : null;
+      // L'horodatage vient en SECONDES ; une valeur illisible ne doit pas
+      // s'afficher « Invalid Date » — mieux vaut ne rien dire.
+      const majD = sv.quand ? new Date((+sv.quand || 0) * 1000) : null;
+      const maj = (majD && isFinite(majD.getTime()) && majD.getTime() > 0) ? majD : null;
+      // Le nombre de fournisseurs peut manquer : on le compte alors sur les
+      // groupes affichés plutôt que d'écrire « undefined fournisseur(s) ».
+      const nFourn = svK && svK.fournisseurs != null ? svK.fournisseurs : (sv.groupes || []).length;
       common.caSvKpis = svK ? [
-        ['Commandes en cours', String(svK.enCours), svK.fournisseurs + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
+        ['Commandes en cours', String(svK.enCours), nFourn + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
         ['En retard', String(svK.retard), 'livraison prévue dépassée', svK.retard ? '#8D1D2C' : ''],
         ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
         ['Lecture', sv.lues ? String(sv.lues) : '—', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
@@ -7133,6 +7186,19 @@ class App {
       };
       common.caSvGroupes = (sv.groupes || []).map(g => ({
         nom: g.fournisseur,
+        // Le rappel au fournisseur part tout seul chaque jour ; ce bouton sert
+        // à le faire partir MAINTENANT, pour ce fournisseur-là.
+        mailer: () => {
+          if (this.state.caSvMail === g.fournisseur) { return; }
+          this.setState({ caSvMail: g.fournisseur });
+          this.api('POST', '/centrale/commandes/mail/envoyer', { fournisseur: g.fournisseur }).then(r2 => {
+            this.setState({ caSvMail: null });
+            this.notify(!r2 || r2.ok === false
+              ? ('Courrier non envoyé — ' + ((r2 && (r2.erreur || r2.error)) || 'échec'))
+              : ('Rappel envoyé à ' + g.fournisseur));
+          });
+        },
+        mailEnCours: this.state.caSvMail === g.fournisseur,
         meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
         alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
         alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
@@ -7191,275 +7257,6 @@ class App {
       };
       common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
         : 'Aucune commande lisible sur l’API.');
-    } else if (ecr === 'caCommandes') {
-      // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
-      // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
-      // jeu complet, pas sur le filtre — sinon ils mentent dès qu'on filtre.
-      const lgs = d.lignes || [];
-      const fSt = S.caCmdStatut || '';
-      const nSt = code => lgs.filter(x => x.statut === code).length;
-      common.caChips = [['PENDING', 'En attente', '#8a5a13', 'rgba(193,122,42,0.16)'],
-                        ['REALISED', 'Réalisée', '#2d7a3e', 'rgba(45,122,62,0.12)']]
-        .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
-          on: fSt === code,
-          pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
-      // L'écran se lit PAR FOURNISSEUR : une carte par fournisseur, ses 5
-      // dernières commandes, l'attente en évidence. Le filtre de statut
-      // s'applique aux lignes de chaque carte.
-      common.caFournGroupes = (d.parFournisseur || []).map(g => ({
-        nom: g.fournisseur,
-        special: g.fournisseur === 'À répartir' || g.fournisseur === 'Sans fournisseur',
-        resume: g.enAttente
-          ? g.enAttente + ' en attente · ' + this.fE(g.valeurAttente)
-          : 'rien en attente',
-        resumeCol: g.enAttente ? '#8a5a13' : '#2d7a3e',
-        resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
-        note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
-        commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
-          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '—',
-          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
-          col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
-          valeur: this.fE(x.valeur), par: x.par || '—' })),
-      })).filter(g => g.commandes.length);
-      common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
-        : 'Aucune réquisition matière remontée par le panel.';
-      // La ventilation actionnable : une ligne = UNE commande à passer chez UN
-      // fournisseur, avec ses références et son montant estimé.
-      common.caTable2 = (d.aCommander && d.aCommander.length) ? {
-        titre: 'À commander maintenant — une commande par fournisseur',
-        cols: ['Magasin', 'Fournisseur', 'Références à commander', 'Montant estimé (HT)'],
-        rows: d.aCommander.map(a => ({ cells: [
-          { t: a.magasin, mut: true }, { t: a.fournisseur },
-          { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
-      } : null;
-    } else if (ecr === 'caAchats') {
-      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
-      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
-      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
-      const sv = d.suivi || {};
-      const svK = sv.kpis || null;
-      const fSv = S.caSvFiltre || '';
-      const jf = z => !z ? '—' : String(z).slice(5).split('-').reverse().join('.');
-      const garde = o => !fSv
-        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
-        || (fSv === 'retard' && o.retardJours != null)
-        || (fSv === 'livre' && o.etape === 4);
-      common.caSvKpis = svK ? [
-        ['Commandes en cours', String(svK.enCours), (sv.groupes || []).length + ' fournisseur(s)', ''],
-        ['En retard', String(svK.retard), 'livraison dépassée', svK.retard ? '#8D1D2C' : ''],
-        ['Sans réponse fournisseur', String(svK.aAccepter), 'commande envoyée, pas acceptée', svK.aAccepter ? '#8a5a13' : ''],
-        ['Valeur en cours', this.fE(svK.valeurEnCours), 'HT, commandes non livrées', ''],
-      ] : null;
-      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
-          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
-        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
-          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
-      common.caSvGroupes = (sv.groupes || []).map(g => ({
-        nom: g.fournisseur,
-        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' dernière' + (g.nbCommandes > 1 ? 's' : '') + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
-        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
-        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
-        commandes: (g.commandes || []).filter(garde).map(o => ({
-          magasin: o.magasin, cle: o.cle, date: jf(o.date),
-          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
-          // Quatre segments : franchi (vert), en cours (ambre), bloqué (ruby), à venir (gris).
-          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
-            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
-          libelle: o.libelle,
-          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C'
-            : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
-          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
-          docs: (o.documents && o.documents.length) ? o.documents.join(' · ') : '—',
-          valeur: o.valeur == null ? '—' : this.fE(o.valeur),
-        })),
-      })).filter(g => g.commandes.length);
-      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
-        : 'Aucune commande matière remontée par le panel.');
-
-      // ── Les réclamations matière, en tête d'écran : c'est ce qui traîne qui
-      //    fait agir, pas le décompte des commandes.
-      this.reclCharge(false);
-      const R = this.D.recl || null;
-      common.reclChargement = !!S.reclChargement && !R;
-      common.reclIndispo = R && R.indispo ? (R.motif || 'réclamations indisponibles') : '';
-      if (R && !R.indispo) {
-        const jf = z => String(z || '').split('-').reverse().join('/');
-        const age = a => a == null ? '—' : (a + ' j');
-        // Replié par défaut : une ligne, et rien d'autre. Le consultant vient
-        // ici pour ses commandes ; les réclamations ne s'ouvrent que s'il les
-        // demande.
-        common.reclOuvert = !!S.reclOuvert;
-        common.reclBasculer = () => this.setState({ reclOuvert: !S.reclOuvert });
-        const nOuv = R.ouvertes || 0;
-        common.reclResume = nOuv
-          ? (nOuv + ' sans réponse' + (R.montantOuvert ? ' · ' + this.fE(R.montantOuvert) : ''))
-          : (R.total ? 'tout est traité' : 'aucune réclamation');
-        common.reclResumeCol = nOuv ? 'var(--color-primary)' : '#2d7a3e';
-        // La fenêtre de lecture : trois mois par défaut.
-        const moisCour = S.reclMois == null ? 3 : S.reclMois;
-        common.reclPeriodes = [[3, '3 mois'], [6, '6 mois'], [12, '12 mois'], [0, 'Tout']].map(([v, nom]) => ({
-          v, nom, on: moisCour === v,
-          choisir: () => { this.D.recl = null; this.setState({ reclMois: v, reclDet: null }); } }));
-        common.reclFenetre = R.fenetre || '';
-        common.reclEcartees = R.ecartees ? (R.ecartees + ' plus ancienne' + (R.ecartees > 1 ? 's' : '') + ' hors fenêtre') : '';
-        common.reclTotaux = { total: R.total, ouvertes: R.ouvertes, reglees: R.reglees, refusees: R.refusees,
-          // COMBIEN : ce que pèsent les réclamations sans réponse, au prix
-          // d'achat de la matière. Un « à peu près » se dit, il ne se cache pas.
-          montant: R.montantOuvert == null ? '' : this.fE(R.montantOuvert),
-          montantNote: R.montantOuvert == null ? ''
-            : (R.montantComplet ? 'au prix d’achat' : 'au prix d’achat — quelques références sans tarif') };
-        // Qui réclame, et sur quoi.
-        const cum = (l, tot) => ({ nom: l.nom, n: l.n, ouvertes: l.ouvertes,
-          qte: l.qte == null ? '—' : String(l.qte % 1 === 0 ? l.qte : l.qte.toFixed(1)).replace('.', ','),
-          montant: l.montant ? this.fE(l.montant) + (l.chiffre ? '' : ' +') : '—',
-          w: Math.round(100 * l.n / Math.max(1, tot)) });
-        const maxMag = Math.max.apply(null, [1].concat((R.parMagasin || []).map(z => z.n)));
-        const maxRef = Math.max.apply(null, [1].concat((R.parReference || []).map(z => z.n)));
-        common.reclParMagasin = (R.parMagasin || []).map(l => cum(l, maxMag));
-        common.reclParRef = (R.parReference || []).map(l => cum(l, maxRef));
-        common.reclFourn = (R.fournisseurs || []).map(f => ({
-          nom: f.nom, total: f.total, ouvertes: f.ouvertes, reglees: f.reglees, refusees: f.refusees,
-          ancienne: f.plusAncienne == null ? '—' : age(f.plusAncienne),
-          ancienneCol: (f.plusAncienne || 0) >= 60 ? 'var(--color-primary)'
-            : ((f.plusAncienne || 0) >= 21 ? '#C17A2A' : 'var(--color-text)'),
-          delai: f.delaiMoyen == null ? 'jamais répondu' : ('répond en ' + String(f.delaiMoyen).replace('.', ',') + ' j'),
-          refs: Object.entries(f.refs || {}).map(([nom, n]) => ({ nom, n,
-            w: Math.round(100 * n / Math.max(1, Math.max.apply(null, Object.values(f.refs || { x: 1 })))) })),
-          motifs: Object.entries(f.motifs || {}).map(([nom, n]) => ({ nom, n })),
-        }));
-        // Le tri par défaut : le plus ancien non réglé d'abord.
-        const lignes = (R.lignes || []).slice().sort((a, b) => {
-          if (a.ouverte !== b.ouverte) { return a.ouverte ? -1 : 1; }
-          return (b.age || 0) - (a.age || 0);
-        });
-        const filtre = S.reclFiltre || 'ouvertes';
-        common.reclFiltres = [['ouvertes', 'Ouvertes'], ['toutes', 'Toutes'], ['reglees', 'Réglées'], ['refusees', 'Refusées']]
-          .map(([v, nom]) => ({ v, nom, on: filtre === v, choisir: () => this.setState({ reclFiltre: v }) }));
-        const gardees = lignes.filter(l => filtre === 'toutes' ? true
-          : (filtre === 'ouvertes' ? l.ouverte
-            : (filtre === 'refusees' ? l.statut === 'REJECTED' : (!l.ouverte && l.statut !== 'REJECTED'))));
-        // Dix lignes, pas plus : au-delà, la table s'étire et le haut de l'écran
-        // — ce qui traîne, ce que ça pèse — sort du champ. Le reste s'ouvre à
-        // la demande, une réclamation à la fois.
-        const DIX = 10;
-        const choisieId = S.reclPlus || 0;
-        const dixPremieres = gardees.slice(0, DIX)
-          .concat(gardees.filter(l => l.id === choisieId && gardees.indexOf(l) >= DIX));
-        const jj = z => String(z || '').split('-').reverse().join('/');
-        common.reclAutres = [{ v: '0', nom: 'Voir une réclamation plus ancienne…' }].concat(
-          gardees.slice(DIX).map(l => ({ v: String(l.id),
-            nom: (l.age == null ? '' : l.age + ' j · ') + (l.reference || '—')
-              + ' · ' + (l.magasin || '') + ' · ' + jj(l.le) })));
-        common.reclAutreSel = String(choisieId || '0');
-        common.setReclAutre = e => this.setState({ reclPlus: parseInt(e.target.value, 10) || 0 });
-        common.reclReste = Math.max(0, gardees.length - DIX);
-        common.reclLignes = dixPremieres.map(l => ({
-          horsDix: gardees.indexOf(l) >= DIX,
-          id: l.id,
-          age: age(l.age),
-          ageCol: !l.ouverte ? 'var(--color-text-muted)'
-            : ((l.age || 0) >= 60 ? 'var(--color-primary)' : ((l.age || 0) >= 21 ? '#C17A2A' : 'var(--color-text)')),
-          le: jf(l.le), reference: l.reference || '—', sku: l.sku,
-          qte: l.qte == null ? '—' : (String(l.qte % 1 === 0 ? l.qte : l.qte).replace('.', ',') + (l.unite ? ' ' + l.unite : '')),
-          montant: l.montant == null ? '' : this.fE(l.montant),
-          motif: l.motif || '—', texte: l.texte || '', magasin: l.magasin,
-          pj: l.pj ? l.pj + ' pièce' + (l.pj > 1 ? 's' : '') + ' jointe' + (l.pj > 1 ? 's' : '') : '',
-          statut: l.statut === 'REJECTED' ? 'refusée' : (l.ouverte ? 'sans réponse' : 'réglée'),
-          statutSt: l.statut === 'REJECTED' ? 'background:#F7E4E6;color:var(--color-primary)'
-            : (l.ouverte ? 'background:#FBEFE0;color:#C17A2A' : 'background:#E6F2E9;color:#2d7a3e'),
-          ouvrir: () => this.setState({ reclDet: l.id }),
-        }));
-        common.reclCompte = gardees.length + ' sur ' + (R.lignes || []).length
-          + (gardees.length > DIX ? ' · 10 affichées' : '');
-        common.reclSource = R.source + ' — ' + R.lecture;
-        // Le détail d'une réclamation.
-        const det = (R.lignes || []).find(l => l.id === S.reclDet);
-        common.reclDet = !det ? null : {
-          titre: (det.reference || 'Référence inconnue') + ' — ' + (det.motif || ''),
-          sous: (det.cle || '') + ' · ' + det.magasin + ' · signalée le ' + jf(det.le)
-            + (det.commande ? ' · commande ' + det.commande : '')
-            + (det.qte != null ? ' · ' + String(det.qte).replace('.', ',') + ' ' + det.unite : '')
-            + (det.action ? ' · action demandée : ' + (det.action === 'REPLACEMENT' ? 'remplacement' : det.action.toLowerCase()) : ''),
-          montant: det.montant == null ? '' : (this.fE(det.montant)
-            + (det.prixUnitaire != null ? ' (' + this.fEd(det.prixUnitaire) + ' l’unité, prix d’achat)' : '')),
-          statut: det.statut === 'REJECTED' ? 'refusée' : (det.ouverte ? 'sans réponse depuis ' + age(det.age) : 'réglée'),
-          statutSt: det.statut === 'REJECTED' ? 'background:#F7E4E6;color:var(--color-primary)'
-            : (det.ouverte ? 'background:#FBEFE0;color:#C17A2A' : 'background:#E6F2E9;color:#2d7a3e'),
-          texte: det.texte || 'La boutique n’a rien écrit.',
-          reponse: det.reponse || '',
-          reponseLe: det.reponseLe ? jf(det.reponseLe) : '',
-          pj: det.pj,
-          // Les pièces jointes ne s'affichent pas : leur URL signée demande un
-          // identifiant que les listes ne rendent pas. On le dit, on ne fait
-          // pas semblant.
-          pjNote: det.pj ? (det.pj + ' photo' + (det.pj > 1 ? 's' : '') + ' jointe' + (det.pj > 1 ? 's' : '')
-            + ' par la boutique — non affichable : l’URL signée demande un identifiant que l’API ne rend pas.') : '',
-          fermer: () => this.setState({ reclDet: null }),
-        };
-      } else { common.reclFourn = []; common.reclLignes = []; common.reclDet = null; }
-      const fCat = S.caFournCat || null;   // {id, nom} : catalogue ouvert
-      if (fCat) {
-        // --- mode catalogue : le tableau devient celui du fournisseur cliqué.
-        this._caCat = this._caCat || {};
-        const cle2 = String(fCat.id);
-        if (!this._caCat[cle2] && !this._caCatEnCours) {
-          this._caCatEnCours = true;
-          readOne('/centrale/achats/catalogue?fournisseur=' + fCat.id).then(r => {
-            this._caCatEnCours = false; this._caCat[cle2] = r || { lignes: [] }; this.setState({});
-          });
-        }
-        const cat = this._caCat[cle2];
-        common.caChips = [{ nom: '← ' + fCat.nom + ' — catalogue', texte: 'var(--color-primary)',
-          fond: 'rgba(141,29,44,0.08)', on: true, pick: () => this.setState({ caFournCat: null }) }];
-        // Fiche d'identité du fournisseur, au-dessus de son catalogue.
-        const fi = cat && cat.fiche;
-        common.caFiche = fi ? [
-          ['Type', fi.type === 'CENTRAL' ? 'Centrale d’achat' : (fi.type || '—')],
-          ['Commande électronique', fi.integre ? 'intégrée' : 'non intégrée'],
-          ['Adresse', (fi.adresse || '—') + (fi.pays ? ' (' + fi.pays + ')' : '')],
-          ['Téléphone', fi.telephone || '—'], ['Courriel', fi.email || '—'],
-          ['TVA', fi.tva || '—'], ['Site', fi.web || '—'],
-        ].concat(fi.notes ? [['Notes', fi.notes]] : []) : null;
-        common.caCols = ['Référence', 'Produit', 'Colis', 'Portion', 'Poids', 'DLC', 'TVA', 'Actif'];
-        common.caRows = ((cat && cat.lignes) || []).map(p => ({ cells: [
-          { t: p.sku || '—', mut: true }, { t: p.nom },
-          { t: p.colis || '—', mut: true }, { t: p.portion || '—', mut: true },
-          { t: p.poidsG != null ? p.poidsG + ' g' : '—', num: true, mut: true },
-          { t: p.dlcJours != null ? p.dlcJours + ' j' : '—', num: true, mut: true },
-          { t: p.tvaPct != null ? String(p.tvaPct).replace('.', ',') + ' %' : '—', num: true, mut: true },
-          { t: p.actif ? 'active' : 'inactive', col: p.actif ? '#2d7a3e' : '#8a5a13' } ] }));
-        common.caRien = cat ? 'Catalogue vide chez ce fournisseur.' : 'Chargement du catalogue…';
-        return common;
-      }
-      // --- pourcentages : réglage du cockpit, saisi d'un clic sur la cellule.
-      const majPct = (x, champ, libelle) => () => {
-        const cur = champ === 'marge' ? x.margePct : x.redevancePct;
-        const v = window.prompt(libelle + ' pour « ' + x.nom + ' » (%, vide pour effacer) :',
-          cur != null ? String(cur).replace('.', ',') : '');
-        if (v === null) { return; }
-        fetch(this.apiBase() + '/centrale/fournisseur-pct', { method: 'PUT', credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ id: x.id, [champ]: v.trim() }) })
-          .then(r => r.json())
-          .then(r => { if (r && r.error) { this.notify(r.error); return; }
-            this.notify('Pourcentage enregistré');
-            this.setState(s2 => { const cd = Object.assign({}, s2.caData); delete cd[ecr + '|' + per]; return { caData: cd }; });
-          })
-          .catch(() => this.notify('Enregistrement impossible'));
-      };
-      const fPct = v => v != null ? String(v).replace('.', ',') + ' %' : 'à saisir';
-      common.caCols = ['Fournisseur', 'Type', 'Ville', 'Références', 'Actives',
-        'Marge centrale → franchisé', 'Redevance fournisseur → centrale'];
-      common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: x.nom, act: () => this.setState({ caFournCat: { id: x.id, nom: x.nom } }) },
-        { t: (x.type === 'CENTRAL' ? 'Centrale' : 'Externe') + (x.integre ? ' · intégré' : ''),
-          col: x.type === 'CENTRAL' ? 'var(--color-primary)' : '', mut: x.type !== 'CENTRAL' },
-        { t: x.ville || '—', mut: true },
-        { t: String(x.nbRefs), num: true }, { t: String(x.nbActives), num: true },
-        { t: fPct(x.margePct), num: true, mut: x.margePct == null, act: majPct(x, 'marge', 'Marge centrale → franchisé') },
-        { t: fPct(x.redevancePct), num: true, mut: x.redevancePct == null, act: majPct(x, 'redevance', 'Redevance fournisseur → centrale') } ] }));
-      common.caRien = 'Aucun fournisseur au référentiel du panel.';
-      common.caNote = 'Cliquez un fournisseur pour ouvrir son catalogue ; cliquez un pourcentage pour le saisir (réglage du cockpit — le panel ne les porte pas).';
     } else if (ecr === 'caFacturation') {
       // Factures de redevances émises aux magasins, l'impayé en tête et en
       // couleur ; les abonnements TFBuddy en second tableau.

@@ -360,6 +360,150 @@ function caMailClassees(): array
 }
 
 /**
+ * Le rappel au FRANCHISÉ : sa réquisition attend d'être validée.
+ *
+ * Deux rappels, deux destinataires, deux canaux — et il ne faut pas les
+ * confondre : le fournisseur reçoit un E-MAIL (il doit accepter la commande),
+ * le franchisé une NOTIFICATION dans l'ERP, là où il travaille (il doit
+ * valider la sienne). Écrire au franchisé par mail le noierait dans une boîte
+ * qu'il n'ouvre pas de la journée.
+ */
+function caFranchiseDefauts(): array
+{
+    return [
+        'titre' => 'Commande #{{id}} — à valider',
+        'message' => "Votre commande #{{id}} du {{debut}} ({{valeur}}) n'est pas encore validée{{retard}}. "
+            . "Merci de la finaliser pour qu'elle parte chez {{fournisseur}}.",
+        'priorite' => 'warning',
+        'actionLabel' => 'Voir mes commandes',
+        'actionUrl' => 'https://atelierby.tfbuddy.com/panel/material-requisitions',
+        'jours' => 7,
+    ];
+}
+
+function caFranchiseConfig(): array
+{
+    $v = setting('caRelanceFranchise');
+    return is_array($v) ? array_merge(caFranchiseDefauts(), $v) : caFranchiseDefauts();
+}
+
+/**
+ * POST /centrale/commandes/relance-franchise — une notification au magasin.
+ *
+ * La réquisition est cherchée dans le MÊME flux que l'écran : ce qui est
+ * relancé est exactement ce qui est affiché, jamais un objet retrouvé
+ * autrement qui dirait autre chose.
+ */
+function wr_ca_relance_franchise(): array
+{
+    $b = body();
+    $id = (int) ($b['id'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['ok' => false, 'erreur' => 'réquisition requise']; }
+
+    $d = ep_ca_commandes();
+    $ligne = null;
+    foreach ((array) ($d['lignes'] ?? []) as $l) {
+        if ((int) ($l['id'] ?? 0) === $id) { $ligne = $l; break; }
+    }
+    if ($ligne === null) { return ['ok' => false, 'erreur' => 'réquisition introuvable dans le flux du panel']; }
+    $sid = (int) ($ligne['magasinId'] ?? 0);
+    if ($sid <= 0) { return ['ok' => false, 'erreur' => 'magasin inconnu — la notification ne saurait où aller']; }
+
+    $debut = (string) ($ligne['debut'] ?? '');
+    $retard = '';
+    if ($debut !== '' && $debut < date('Y-m-d')) {
+        $j = (int) floor((time() - strtotime($debut)) / 86400);
+        if ($j > 0) { $retard = ' (en attente depuis ' . $j . ' jour(s))'; }
+    }
+    $vars = [
+        'id' => (string) $id,
+        'magasin' => (string) ($ligne['magasin'] ?? ''),
+        'fournisseur' => implode(' + ', (array) ($ligne['fournisseurs'] ?? [])) ?: 'votre fournisseur',
+        'debut' => $debut !== '' ? $debut : '—',
+        'valeur' => number_format((float) ($ligne['valeur'] ?? 0), 2, ',', ' ') . ' €',
+        'retard' => $retard,
+    ];
+
+    $c = caFranchiseConfig();
+    $jours = max(1, (int) ($c['jours'] ?? 7));
+    [$ok, $rep] = PanelApi::post('/notifications', [
+        'title' => caMailRemplir((string) $c['titre'], $vars),
+        'message' => caMailRemplir((string) $c['message'], $vars),
+        'priority' => (string) ($c['priorite'] ?? 'warning'),
+        'status' => 'published',
+        'visible_from' => date('Y-m-d H:i:s'),
+        'visible_to' => date('Y-m-d H:i:s', time() + $jours * 86400),
+        'type' => 'once',
+        'is_global' => 0,
+        'shops' => [$sid],
+        'source_type' => 'material_requisition',
+        'source_id' => $id,
+        'action_label' => (string) ($c['actionLabel'] ?? 'Voir mes commandes'),
+        'action_url' => caMailRemplir((string) ($c['actionUrl'] ?? ''), $vars),
+    ]);
+    $nid = 0;
+    foreach ([$rep['inserted_id'] ?? null, $rep['id'] ?? null, $rep['data']['id'] ?? null] as $cand) {
+        if (is_numeric($cand)) { $nid = (int) $cand; break; }
+    }
+    // La date est gardée par réquisition : la ligne dira « relancé le … »
+    // plutôt que de laisser relancer dix fois le même magasin.
+    if ($ok) {
+        $v = setting('caRelancesFranchise');
+        $v = is_array($v) ? $v : [];
+        $v[(string) $id] = ['quand' => date('Y-m-d'), 'notification' => $nid];
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['caRelancesFranchise', json_encode(array_slice($v, -500, null, true), JSON_UNESCAPED_UNICODE)]);
+    }
+    caMailJournal($ok ? 'franchise' : 'echec',
+        ($ok ? 'Rappel au franchisé — ' : 'Rappel au franchisé en échec — ')
+        . 'réquisition #' . $id . ' · ' . $vars['magasin']
+        . ($ok && $nid ? ' · notification #' . $nid : '')
+        . (!$ok ? ' · ' . (string) (PanelApi::$lastError ?? '') : ''), $vars['magasin']);
+    if (!$ok) { return ['ok' => false, 'erreur' => PanelApi::$lastError ?? 'notification refusée']; }
+    return ['ok' => true, 'notification' => $nid, 'magasin' => $vars['magasin']];
+}
+
+/**
+ * POST /centrale/commandes/mail/envoyer — le rappel au fournisseur, MAINTENANT.
+ *
+ * Le rappel part de lui-même une fois par jour ; ce bouton sert quand on veut
+ * qu'il parte tout de suite. La borne d'un envoi par jour saute pour ce
+ * fournisseur-là, et seulement pour lui.
+ */
+function wr_ca_mail_envoyer(): array
+{
+    $b = body();
+    $nom = trim((string) ($b['fournisseur'] ?? ''));
+    if ($nom === '') { http_response_code(400); return ['ok' => false, 'erreur' => 'fournisseur requis']; }
+    $c = caMailConfig();
+    if (!Smtp::configured()) { return ['ok' => false, 'erreur' => 'SMTP non configuré (Paramètres → SMTP)']; }
+
+    $suivi = setting('caMailQuotidien');
+    $suivi = is_array($suivi) ? $suivi : [];
+    unset($suivi[caMailNom($nom)]);
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caMailQuotidien', json_encode($suivi, JSON_UNESCAPED_UNICODE)]);
+
+    $d = ep_ca_commandes();
+    if (($d['etat'] ?? '') !== 'ok') { return ['ok' => false, 'erreur' => 'commandes indisponibles']; }
+    // On ne relance QUE le fournisseur demandé : les autres gardent leur
+    // rythme quotidien.
+    $cible = caMailNom($nom);
+    $lignes = array_values(array_filter((array) ($d['lignes'] ?? []), function ($l) use ($cible) {
+        foreach ((array) ($l['fournisseurs'] ?? []) as $f) { if (caMailNom((string) $f) === $cible) { return true; } }
+        return false;
+    }));
+    $r = caMailRappels($lignes, $c);
+    if (($r['envoyes'] ?? 0) < 1) {
+        return ['ok' => false, 'erreur' => ($r['echecs'] ?? 0) > 0
+            ? 'envoi refusé par le serveur de courrier'
+            : 'rien à envoyer — aucune commande récente en attente pour ce fournisseur'];
+    }
+    return ['ok' => true, 'envoyes' => (int) $r['envoyes'],
+        'sansAdresse' => (array) ($r['sansAdresse'] ?? [])];
+}
+
+/**
  * GET /centrale/commandes/mail/apercu — le courrier tel qu'il partira.
  *
  * Rendu avec un exemple, à partir du gabarit ENREGISTRÉ (ou de celui qu'on
