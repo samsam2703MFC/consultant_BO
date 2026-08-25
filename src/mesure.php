@@ -1117,6 +1117,7 @@ function ep_panel_sonde_consultant(): array
         // Sonde temporaire : ce que le panel porte VRAIMENT sur les
         // fournisseurs matière — c'est de là que doit venir leur adresse.
         'material-suppliers' => '/material-suppliers',
+        'material-suppliers-BE' => '/material-suppliers?country_code=BE',
     ];
 
     $apercu = static function ($v, int $prof = 0) use (&$apercu) {
