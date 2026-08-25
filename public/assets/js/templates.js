@@ -2742,6 +2742,18 @@ function tplMktNote(c, x){
         </div>
 
         <div>
+          <span style="${k}">En copie — l’agence et les consultants</span>
+          ${n.copiesVide ? `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucune adresse disponible : renseignez celle de l’agence ci-dessous, et les consultants depuis Paramètres.</div>` : `
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${n.copies.map(cc => `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:999px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
+              <input type="checkbox" ${cc.on ? 'checked' : ''} ${x.C(cc.basculer)} />
+              <span>${esc(cc.nom)}<span style="color:var(--color-text-muted)"> · ${esc(cc.role)}</span></span>
+            </label>`).join('')}
+          </div>`}
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Les personnes cochées reçoivent la note en copie visible — le franchisé voit qui d’autre l’a reçue. Le choix est retenu pour les campagnes suivantes.</div>
+        </div>
+
+        <div>
           <span style="${k}">Pièces jointes</span>
           <div style="font-size:12.5px;display:flex;flex-direction:column;gap:4px">
             <div>La note de campagne (PDF)${n.fichier ? ` — <span style="color:var(--color-text-muted)">${esc(n.fichier)}</span>` : ''}</div>
@@ -2770,6 +2782,7 @@ function tplMktNote(c, x){
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
                 <label style="flex:1;min-width:160px"><span style="${k}">Nom</span><input value="${esc(n.agenceNom)}" ${x.C(n.setAgenceNom)} style="${inp}" /></label>
                 <label style="flex:1;min-width:160px"><span style="${k}">Site ou contact</span><input value="${esc(n.agenceSite)}" ${x.C(n.setAgenceSite)} style="${inp}" /></label>
+                <label style="flex:1;min-width:160px"><span style="${k}">Adresse e-mail</span><input value="${esc(n.agenceEmail)}" ${x.C(n.setAgenceEmail)} placeholder="contact@agence.be" style="${inp}" /></label>
                 <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;${bt}">Choisir un logo<input type="file" accept="image/*" ${x.C(n.setAgenceLogo)} style="display:none" /></label>
                 ${n.agenceLogo ? `<span style="display:inline-flex;align-items:center;gap:7px"><img src="${esc(n.agenceLogo)}" alt="" style="height:26px;border-radius:4px" /><button ${x.A(n.retirerLogo)} title="Retirer le logo" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></span>` : ''}
               </div>

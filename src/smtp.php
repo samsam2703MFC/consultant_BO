@@ -81,7 +81,7 @@ final class Smtp
      * Sorti de la conversation SMTP pour être VÉRIFIABLE sans serveur : un
      * multipart mal fermé ne se voit pas à l'œil, il se voit dans un test.
      */
-    public static function message(string $expediteur, string $a, string $sujet, string $html, array $pieces = []): array
+    public static function message(string $expediteur, string $a, string $sujet, string $html, array $pieces = [], array $copies = []): array
     {
         // Les images incorporées en data URI (photos annotées des rapports)
         // deviennent des pièces jointes intégrées (multipart/related, CID) :
@@ -129,6 +129,7 @@ final class Smtp
             // tomberait dans la boîte des rapports.
             . 'Reply-To: ' . $adresse . "\r\n"
             . 'To: ' . $a . "\r\n"
+            . ($copies === [] ? '' : 'Cc: ' . implode(', ', $copies) . "\r\n")
             . 'Subject: =?UTF-8?B?' . base64_encode($sujet) . "?=\r\n"
             . 'MIME-Version: 1.0' . "\r\n"
             . 'Date: ' . date('r') . "\r\n";
@@ -174,7 +175,14 @@ final class Smtp
      *   du compte authentifié : la changer ferait refuser le message par la
      *   plupart des serveurs. Seul l'en-tête From change, avec Reply-To.
      */
-    public static function envoyer(string $a, string $sujet, string $html, array $pieces = [], string $expediteur = ''): bool
+    /**
+     * @param list<string> $copies destinataires en copie (Cc) — l'agence, les
+     *                             consultants. Chacun reçoit le message tel
+     *                             quel, et se voit dans l'en-tête : une copie
+     *                             cachée laisserait le franchisé croire qu'il
+     *                             est seul destinataire.
+     */
+    public static function envoyer(string $a, string $sujet, string $html, array $pieces = [], string $expediteur = '', array $copies = []): bool
     {
         self::$lastError = null;
         $c = self::config();
@@ -223,9 +231,19 @@ final class Smtp
             $exp = preg_match('/<([^>]+)>/', $c['expediteur'], $m) ? $m[1] : $c['expediteur'];
             if (!$dire('MAIL FROM:<' . $exp . '>', [250])) { return false; }
             if (!$dire('RCPT TO:<' . $a . '>', [250, 251])) { return false; }
+            // Les copies sont des destinataires d'enveloppe comme les autres :
+            // sans RCPT TO, l'en-tête Cc les nomme et personne ne les reçoit.
+            // Une copie refusée ne fait pas échouer l'envoi principal — le
+            // franchisé, lui, doit recevoir sa note.
+            $copiesOk = [];
+            foreach ($copies as $cc) {
+                $cc = trim((string) $cc);
+                if ($cc === '' || strcasecmp($cc, $a) === 0) { continue; }
+                if ($dire('RCPT TO:<' . $cc . '>', [250, 251])) { $copiesOk[] = $cc; }
+            }
             if (!$dire('DATA', [354])) { return false; }
             $de = trim($expediteur) !== '' ? trim($expediteur) : $c['expediteur'];
-            [$entetes, $corps] = self::message($de, $a, $sujet, $html, $pieces);
+            [$entetes, $corps] = self::message($de, $a, $sujet, $html, $pieces, $copiesOk);
             if (!$dire($entetes . "\r\n" . $corps . "\r\n.", [250])) { return false; }
             $dire('QUIT', [221]);
             return true;

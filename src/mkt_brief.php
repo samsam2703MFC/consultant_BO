@@ -1064,6 +1064,49 @@ function mktBriefNomFichier(array $d): string
 }
 
 /**
+ * Qui peut recevoir une copie : l'agence, et les consultants.
+ *
+ * L'agence est d'abord celle que la campagne DÉSIGNE sur un de ses canaux —
+ * elle sait mieux que le réglage général avec qui elle se fait ; celle des
+ * réglages complète. Les consultants viennent de la même source que l'écran
+ * Reporting : deux listes auraient fini par proposer d'autres personnes que
+ * celles qui reçoivent les rapports.
+ *
+ * @return list<array<string,mixed>>
+ */
+function mktBriefCopiesPossibles(int $campagne, array $c): array
+{
+    $out = []; $vu = [];
+    $ajoute = static function (string $nom, string $adresse, string $role) use (&$out, &$vu): void {
+        $adresse = mktBriefAdresse($adresse);
+        if ($adresse === '' || isset($vu[strtolower($adresse)])) { return; }
+        $vu[strtolower($adresse)] = true;
+        $out[] = ['nom' => $nom, 'adresse' => $adresse, 'role' => $role];
+    };
+
+    try {
+        foreach (Db::rows('SELECT DISTINCT a.name, a.email
+                             FROM mar_campaign_channel cc
+                             JOIN mar_agency a ON a.id = cc.agency_id
+                            WHERE cc.campaign_id = ?', [$campagne]) as $a) {
+            $ajoute((string) $a['name'], (string) ($a['email'] ?? ''), 'Agence de la campagne');
+        }
+    } catch (PDOException $e) { /* pas d'agence désignée, ou pas de colonne email */ }
+
+    $ag = $c['agence'] ?? [];
+    if (($ag['email'] ?? '') !== '') {
+        $ajoute(($ag['nom'] ?? '') !== '' ? (string) $ag['nom'] : 'Agence', (string) $ag['email'], 'Agence');
+    }
+
+    foreach (ep_people() as $p) {
+        if (($p['email'] ?? null) === null || $p['email'] === '') { continue; }
+        $ajoute((string) $p['nom'], (string) $p['email'], (string) ($p['role'] ?? 'Consultant'));
+    }
+
+    return $out;
+}
+
+/**
  * GET /marketing/campagne/{id}/note — l'aperçu, les destinataires, le journal.
  */
 function ep_mkt_brief(int $id): array
@@ -1087,7 +1130,11 @@ function ep_mkt_brief(int $id): array
         is_array(setting('mktBriefJournal')) ? setting('mktBriefJournal') : [],
         static fn ($e) => (int) ($e['campagne'] ?? 0) === $id));
 
-    return ['campagne' => $d, 'destinataires' => $dest, 'mot' => $d['mot'],
+    // Les copies : cochées si elles l'étaient la dernière fois.
+    $copies = array_map(static fn ($x) => $x + ['on' => in_array($x['adresse'], $c['copies'], true)],
+        mktBriefCopiesPossibles($id, $c));
+
+    return ['campagne' => $d, 'destinataires' => $dest, 'mot' => $d['mot'], 'copies' => $copies,
         'config' => ['expediteur' => $c['expediteur'], 'repondreA' => $c['repondreA'],
             'sujet' => $c['sujet'], 'intro' => $c['intro'], 'pied' => $c['pied'],
             'html' => (string) ($c['html'] ?? ''), 'copie' => (string) ($c['copie'] ?? ''),
@@ -1178,6 +1225,16 @@ function wr_mkt_brief_envoyer(int $id): array
             'magasin' => (string) ($x['magasin'] ?? ($shop['name'] ?? '')),
             'franchise' => (string) ($x['franchise'] ?? ($shop['franchisee'] ?? ''))];
     }
+    // Les copies : validées, dédoublonnées, et MÉMORISÉES pour la prochaine
+    // campagne — recocher l'agence à chaque envoi est le genre d'oubli qui se
+    // paie par un franchisé au courant avant son agence.
+    $copies = [];
+    foreach ((array) ($b['copies'] ?? []) as $cc) {
+        $a2 = mktBriefAdresse($cc);
+        if ($a2 !== '' && !in_array($a2, $copies, true)) { $copies[] = $a2; }
+    }
+    $c['copies'] = $copies;
+
     if ($cibles === []) {
         http_response_code(422);
         return ['error' => 'aucune adresse valable : renseignez au moins un destinataire'];
@@ -1242,12 +1299,13 @@ function wr_mkt_brief_envoyer(int $id): array
                 $html);
         }
 
-        $ok = Smtp::envoyer($t['adresse'], $sujet, $html, $pieces, (string) $c['expediteur']);
+        $ok = Smtp::envoyer($t['adresse'], $sujet, $html, $pieces, (string) $c['expediteur'], $copies);
         if ($ok === true) {
             $envoyes++;
             mktBriefJournalAdd($id, 'envoye', $d['nom'] . ' — ' . $t['magasin']
-                . ($sien === null ? ' (sans PDF : aucun moteur sur le serveur)' : ''), $t['adresse'],
-                ['sujet' => $sujet, 'magasin' => $t['magasin']]);
+                . ($sien === null ? ' (sans PDF : aucun moteur sur le serveur)' : '')
+                . ($copies === [] ? '' : ' · copie à ' . implode(', ', $copies)), $t['adresse'],
+                ['sujet' => $sujet, 'magasin' => $t['magasin'], 'copie' => implode(', ', $copies)]);
         } else {
             $echecs[] = $t['adresse'];
             mktBriefJournalAdd($id, 'echec', is_string($ok) ? $ok : 'refus du serveur d’envoi', $t['adresse'],
@@ -1261,7 +1319,9 @@ function wr_mkt_brief_envoyer(int $id): array
 
     return ['ok' => $echecs === [], 'envoyes' => $envoyes, 'echecs' => $echecs,
         'avecPdf' => $pdf !== null, 'annexes' => count($annexes), 'ecartees' => $ecartees,
+        'copies' => $copies,
         'message' => $envoyes . ' note(s) envoyée(s)'
+            . ($copies === [] ? '' : ', en copie à ' . count($copies) . ' adresse(s)')
             . ($annexes === [] ? '' : ' avec ' . count($annexes) . ' annexe(s)')
             . ($pdf === null ? ', sans PDF : aucun moteur sur ce serveur' : '')
             // Une annexe écartée se DIT : on ne laisse pas croire qu'elle est

@@ -4639,6 +4639,15 @@ class App {
           setAdresse: e => setDest(i, { adresse: e.target.value, on: !!e.target.value }),
           basculer: () => setDest(i, { on: !x2.on }),
         })),
+        // Les copies : l'agence de la campagne et les consultants. Une liste à
+        // cocher, pas un champ libre — une adresse retapée à chaque envoi finit
+        // par partir chez quelqu'un d'autre.
+        copies: (nt.copies || (D2.copies || [])).map((x2, i) => ({
+          nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on,
+          basculer: () => ntPatch({ copies: (nt.copies || (D2.copies || []))
+            .map((y, j) => j === i ? Object.assign({}, y, { on: !y.on }) : y) }),
+        })),
+        copiesVide: !(D2.copies || []).length,
         nPrets: prets.length,
         sansAdresse: dest.filter(x2 => !x2.adresse).map(x2 => x2.magasin),
         // L'agence : nom, site et logo. Le logo est LU dans le navigateur et
@@ -4649,6 +4658,8 @@ class App {
         setAgenceNom: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { nom: e.target.value }) }) }),
         agenceSite: (cfg.agence || {}).site || '',
         setAgenceSite: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { site: e.target.value }) }) }),
+        agenceEmail: (cfg.agence || {}).email || '',
+        setAgenceEmail: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { email: e.target.value }) }) }),
         agenceLogo: (cfg.agence || {}).logo || '',
         agenceLogoErr: nt.logoErr || '',
         setAgenceLogo: e => {
@@ -4679,6 +4690,7 @@ class App {
           this.api('PUT', '/marketing/note-config', {
             expediteur: cfg.expediteur, sujet: cfg.sujet, intro: cfg.intro,
             pied: cfg.pied, html: cfg.html, agence: cfg.agence || {},
+            copies: (nt.copies || (D2.copies || [])).filter(x2 => x2.on).map(x2 => x2.adresse),
           }).then(r => {
             if (r && r.error) { ntPatch({ err: r.error }); return; }
             this.notify('Gabarit du courrier enregistré');
@@ -4687,11 +4699,14 @@ class App {
         },
         envoi: nt.envoi || '',
         envoyer: prets.length === 0 || nt.envoi === 'en-cours' ? null : () => {
+            const cc = (nt.copies || (D2.copies || [])).filter(x2 => x2.on);
           if (!window.confirm('Envoyer la note « ' + camp.nom + ' » à ' + prets.length
-            + ' magasin(s) depuis ' + (cfg.expediteur || 'l’adresse marketing') + ' ?')) { return; }
+            + ' magasin(s) depuis ' + (cfg.expediteur || 'l’adresse marketing')
+            + (cc.length ? ', en copie à ' + cc.map(x2 => x2.nom).join(', ') : '') + ' ?')) { return; }
           ntPatch({ envoi: 'en-cours', err: '' });
           this.api('POST', '/marketing/campagne/' + camp.id + '/note',
-            { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise })) })
+            { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise })),
+              copies: (nt.copies || (D2.copies || [])).filter(x2 => x2.on).map(x2 => x2.adresse) })
             .then(r => {
               if (!r || r.error) { ntPatch({ envoi: '', err: (r && r.error) || 'Envoi refusé.' }); return; }
               this.notify(r.message || 'Note envoyée');
