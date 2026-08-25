@@ -10619,6 +10619,15 @@ class App {
         },
       })),
       sansAdresse: cmEt.sansAdresse || 0,
+      // Un gabarit enregistré avant le regroupement parle de « la » commande
+      // et de « le » magasin : il tient encore, mais il ne dit plus ce que le
+      // courrier fait. On le signale, et on propose de reprendre le nôtre.
+      vieux: !!cmEt.gabaritVieux,
+      restaurer: cmEt.defauts ? () => {
+        const d2 = cmEt.defauts;
+        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft,
+          { sujet: d2.sujet, corps: d2.corps, msg: 'Gabarit d’origine repris — enregistrez pour le garder.', ok: true }) }));
+      } : null,
     };
 
     // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les

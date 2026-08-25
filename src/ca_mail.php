@@ -59,6 +59,36 @@ function caMailNom(string $nom): string
     return $n;
 }
 
+/**
+ * Les adresses que le PANEL porte, par nom de fournisseur.
+ *
+ * MESURÉ : GET /material-suppliers rend six fournisseurs avec leur `email`
+ * (SLFood, Berdiff…). L'écran des commandes les lisait déjà, mais par
+ * identifiant, et cet identifiant ne voyage pas jusqu'ici — d'où un carnet
+ * qui paraissait vide alors que le panel savait. On rapproche donc par NOM,
+ * qui est ce que la réquisition nomme.
+ *
+ * `country_code` est accepté par la route ; on ne s'en sert pas pour filtrer —
+ * un fournisseur étranger qui livre la Belgique doit pouvoir être écrit.
+ */
+function caMailPanelAdresses(): array
+{
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $out = [];
+    if (!PanelApi::configured()) { $cache = $out; return $out; }
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+        $nom = trim((string) ($f['name'] ?? ''));
+        $mail = trim((string) ($f['email'] ?? ''));
+        // Le panel écrit « NULL » en toutes lettres quand la colonne est vide.
+        if ($nom === '' || $mail === '' || strtoupper($mail) === 'NULL') { continue; }
+        if (!filter_var($mail, FILTER_VALIDATE_EMAIL)) { continue; }
+        $out[caMailNom($nom)] = $mail;
+    }
+    $cache = $out;
+    return $out;
+}
+
 function caMailCarnet(): array
 {
     $v = setting('caFournisseursMails');
@@ -72,12 +102,17 @@ function caMailCarnet(): array
     return $out;
 }
 
-/** L'adresse d'un fournisseur : le carnet d'abord, le panel ensuite. */
+/**
+ * L'adresse d'un fournisseur : ce qu'on a corrigé ici d'abord, ce que le panel
+ * porte ensuite. Le carnet local n'existe que pour RATTRAPER une adresse
+ * absente ou fausse côté panel — il ne le remplace pas.
+ */
 function caMailAdresse(string $nom, array $carnet, array $panel = []): string
 {
     $cle = caMailNom($nom);
     if (($carnet[$cle] ?? '') !== '') { return $carnet[$cle]; }
-    return trim((string) ($panel[$cle] ?? ''));
+    if (($panel[$cle] ?? '') !== '') { return trim((string) $panel[$cle]); }
+    return trim((string) (caMailPanelAdresses()[$cle] ?? ''));
 }
 
 function caMailConfig(): array
@@ -104,14 +139,108 @@ function caMailVariables(array $l): array
 function caMailRemplir(string $texte, array $vars): string
 {
     foreach ($vars as $k => $v) { $texte = str_replace('{{' . $k . '}}', $v, $texte); }
-    return $texte;
+    // Ce qui reste entre accolades n'a pas de valeur : le laisser partirait
+    // « {{magasin}} » au fournisseur — c'est arrivé. On l'efface.
+    return trim((string) preg_replace('/\{\{[a-zA-Z0-9_]+\}\}/', '', $texte));
 }
 
-/** Corps texte → HTML sobre (le template s'écrit en texte, pas en HTML). */
-function caMailHtml(string $corps): string
+/** Le gabarit enregistré parle-t-il encore la langue d'aujourd'hui ? */
+function caMailGabaritVieux(array $c): bool
 {
-    return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222">'
-        . nl2br(htmlspecialchars($corps, ENT_QUOTES, 'UTF-8')) . '</div>';
+    $t = (string) ($c['sujet'] ?? '') . ' ' . (string) ($c['corps'] ?? '');
+    return !str_contains($t, '{{lignes}}');
+}
+
+/**
+ * Le courrier au fournisseur, aux couleurs de la maison.
+ *
+ * Tables imbriquées et styles en ligne : c'est la seule mise en page que Gmail
+ * et Outlook respectent — la même que les rapports, pour que tout ce qui sort
+ * du cockpit se ressemble. Le logo voyage EN DATA-URI : un lien vers le
+ * serveur du cockpit ne s'affiche pas chez un destinataire externe, qui n'y a
+ * pas accès et le verrait en cadre vide.
+ *
+ * Le corps reste écrit en TEXTE dans les Paramètres : on met en page ici, on
+ * ne demande à personne d'écrire du HTML. Les lignes commençant par « · »
+ * deviennent les cartes de commande.
+ */
+function caMailHtml(string $corps, array $g = []): string
+{
+    $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $reseau = setting('reseau', []);
+    $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
+    $logo = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
+
+    // Le texte se découpe : les lignes « · … » sont des commandes, le reste du
+    // discours. Une puce sans commande derrière n'invente pas de carte.
+    $avant = []; $cartes = []; $apres = [];
+    foreach (preg_split('/\r?\n/', $corps) ?: [] as $ligne) {
+        $t = trim($ligne);
+        if (str_starts_with($t, '·')) { $cartes[] = ltrim($t, "· \t"); continue; }
+        if ($cartes === []) { $avant[] = $ligne; } else { $apres[] = $ligne; }
+    }
+    $par = function (array $lignes) use ($e, $F): string {
+        $txt = trim(implode("\n", $lignes));
+        if ($txt === '') { return ''; }
+        return '<tr><td style="' . $F . ';font-size:14px;line-height:1.65;color:#221E1A;padding:0 30px 14px">'
+            . nl2br($e($txt)) . '</td></tr>';
+    };
+
+    $blocCartes = '';
+    foreach ($cartes as $c) {
+        // « #169 — Halle — 2 132,84 € — période du … — en attente depuis 12 jour(s) »
+        $morceaux = array_map('trim', explode('—', $c));
+        $titre = array_shift($morceaux) ?: '';
+        $retard = '';
+        foreach ($morceaux as $i => $m) {
+            if (str_contains($m, 'en attente depuis')) { $retard = $m; unset($morceaux[$i]); }
+        }
+        $blocCartes .= '<tr><td style="padding:0 30px 8px">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0">'
+            . '<tr><td style="' . $F . ';padding:11px 14px">'
+            . '<div style="font-size:14px;font-weight:700;color:#221E1A">' . $e($titre) . '</div>'
+            . ($morceaux !== [] ? '<div style="font-size:12.5px;color:#6E645A;margin-top:3px">' . $e(implode(' · ', $morceaux)) . '</div>' : '')
+            . ($retard !== '' ? '<div style="font-size:12px;font-weight:700;color:#8D1D2C;margin-top:5px">' . $e($retard) . '</div>' : '')
+            . '</td></tr></table></td></tr>';
+    }
+
+    $entete = ($g['nom'] ?? '') !== ''
+        ? '<tr><td style="padding:18px 30px 6px">'
+          . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+          . '<td style="' . $F . ';font-size:19px;font-weight:700;color:#221E1A">' . $e($g['nom']) . '</td>'
+          . '<td align="right"><span style="' . $F . ';display:inline-block;background:#F7ECEA;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#8D1D2C">'
+          . (int) ($g['n'] ?? 0) . ' commande' . (((int) ($g['n'] ?? 0)) > 1 ? 's' : '') . ' en attente</span></td>'
+          . '</tr></table></td></tr>'
+        : '';
+
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
+        . '<body style="margin:0;padding:0;background:#EFE9DF">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
+        . '<tr><td align="center" style="padding:26px 12px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" width="620" style="width:620px;max-width:96%">'
+        // Bandeau : le logo sur fond clair — le noir du logo disparaîtrait sur
+        // le bordeaux —, liseré bordeaux dessous.
+        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td>' . ($logo !== ''
+            ? '<img src="' . $logo . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
+            : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>') . '</td>'
+        . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">Centrale d’achat</td>'
+        . '</tr></table></td></tr>'
+        . '<tr><td style="background:#ffffff;border-radius:0 0 14px 14px;padding:0 0 22px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
+        . $entete
+        . $par($avant)
+        . $blocCartes
+        . ($blocCartes !== '' ? '<tr><td style="padding:6px 30px 0"></td></tr>' : '')
+        . $par($apres)
+        . '</table></td></tr>'
+        . '<tr><td style="' . $F . ';padding:14px 30px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
+        . $e($marque) . ' — ce message est envoyé automatiquement par la centrale d’achat.'
+        . '</td></tr>'
+        . '</table></td></tr></table></body></html>';
 }
 
 /**
@@ -149,7 +278,7 @@ function caMailEtat(): array
                 $adresse = caMailAdresse($g['nom'], $carnet, $g['mails']);
                 $fournisseurs[] = ['cle' => $cle, 'nom' => $g['nom'], 'commandes' => $g['n'],
                     'total' => round((float) $g['total'], 2), 'email' => $adresse,
-                    'source' => $adresse === '' ? '' : (isset($carnet[$cle]) ? 'cockpit' : 'panel'),
+                    'source' => $adresse === '' ? '' : (isset($carnet[$cle]) ? 'corrigée ici' : 'du panel'),
                     'dernier' => (string) (is_array($suivi) ? ($suivi[$cle]['dernier'] ?? '') : ''),
                     'envois' => (int) (is_array($suivi) ? ($suivi[$cle]['envois'] ?? 0) : 0)];
             }
@@ -164,6 +293,8 @@ function caMailEtat(): array
         'variables' => ['fournisseur', 'nCommandes', 'total', 'lignes', 'magasins', 'avis'],
         'fournisseurs' => $fournisseurs,
         'sansAdresse' => count(array_filter($fournisseurs, fn ($f) => $f['email'] === '')),
+        'gabaritVieux' => caMailGabaritVieux($c),
+        'defauts' => caMailDefauts(),
     ];
 }
 
@@ -216,7 +347,7 @@ function wr_ca_mail_test(): array
             ['id' => 999, 'magasin' => 'Magasin d’essai', 'valeur' => 123.45, 'debut' => date('Y-m-d', strtotime('-2 day'))],
         ]], false);
     $ok = Smtp::envoyer($vers, '[ESSAI] ' . caMailRemplir($c['sujet'], $vars),
-        caMailHtml(caMailRemplir($c['corps'], $vars)));
+        caMailHtml(caMailRemplir($c['corps'], $vars), ['nom' => 'Fournisseur d’essai', 'n' => 2]));
     caMailJournal($ok ? 'essai' : 'echec', $ok ? 'Essai du template envoyé'
         : ('Essai en échec — ' . (string) (Smtp::$lastError ?? '')), $vers);
     return $ok ? ['ok' => true, 'destinataire' => $vers]
@@ -295,7 +426,7 @@ function caMailRappels(array $lignes, array $c): array
 
         $vars = caMailVariablesGroupe($g, $adresse === '');
         $sujet = caMailRemplir((string) $c['sujet'], $vars);
-        $html = caMailHtml(caMailRemplir((string) $c['corps'], $vars));
+        $html = caMailHtml(caMailRemplir((string) $c['corps'], $vars), $g);
         $ok = Smtp::envoyer($vers, $sujet, $html);
         // La centrale garde la copie — sauf quand c'est déjà elle qui reçoit.
         $copie = trim((string) $c['copie']);
@@ -375,16 +506,32 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
             . ' — ' . number_format((float) ($l['valeur'] ?? 0), 2, ',', ' ') . ' €'
             . ($debut !== '' ? ' — période du ' . $debut : '') . $jours;
     }
+    $magasins = array_values(array_unique(array_map(
+        fn ($l) => (string) ($l['magasin'] ?? ''), $g['lignes'])));
+    $ids = array_map(fn ($l) => (string) ($l['id'] ?? ''), $g['lignes']);
+    $debuts = array_values(array_filter(array_map(fn ($l) => (string) ($l['debut'] ?? ''), $g['lignes'])));
+    sort($debuts);
+    $pars = array_values(array_unique(array_filter(array_map(
+        fn ($l) => (string) ($l['par'] ?? ''), $g['lignes']))));
     return [
         'fournisseur' => (string) $g['nom'],
         'nCommandes' => (string) $g['n'],
         'total' => number_format((float) $g['total'], 2, ',', ' ') . ' €',
         'lignes' => implode("\n", $lignes),
-        'magasins' => implode(', ', array_values(array_unique(array_map(
-            fn ($l) => (string) ($l['magasin'] ?? ''), $g['lignes'])))),
+        'magasins' => implode(', ', $magasins),
         'avis' => $sansAdresse
             ? '(Ce fournisseur n’a pas d’adresse e-mail dans le cockpit : ce rappel vous est adressé à sa place.)'
             : '',
+        // Les noms d'AVANT le regroupement. Un gabarit enregistré à l'époque
+        // où le mail parlait d'une seule réquisition doit continuer à dire
+        // quelque chose de vrai — sinon il sort tel quel, « {{magasin}} »
+        // compris, ce qui s'est vu.
+        'magasin' => $magasins === [] ? '—' : implode(', ', $magasins),
+        'id' => implode(', ', array_filter($ids)),
+        'debut' => $debuts === [] ? '—' : $debuts[0],
+        'valeur' => number_format((float) $g['total'], 2, ',', ' ') . ' €',
+        'par' => $pars === [] ? '—' : implode(', ', $pars),
+        'statut' => 'En attente',
     ];
 }
 
