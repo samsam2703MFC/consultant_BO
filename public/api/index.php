@@ -21,6 +21,7 @@ require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';
+require __DIR__ . '/../../src/mkt_agences.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
@@ -109,6 +110,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/mesure/comparaison'  => ep_mesure_comparaison(),
             $path === '/marketing/kpi-periode'         => ep_mkt_kpi_periode(),
             $path === '/marketing/note-config'         => ep_mkt_brief_config(),
+            $path === '/marketing/agences'             => ep_mkt_agences(),
             (bool) preg_match('#^/marketing/campagne/(\d+)/annexes$#', $path, $ma) => ep_mkt_annexes((int) $ma[1]),
             (bool) preg_match('#^/marketing/annexe/(\d+)/fichier$#', $path, $mf) => ep_mkt_annexe_fichier((int) $mf[1]),
             (bool) preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $mn) => ep_mkt_brief((int) $mn[1]),
@@ -245,6 +247,9 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
     if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $m)) { return wr_mkt_brief_envoyer((int) $m[1]); }
     if ($method === 'PUT' && $path === '/marketing/note-config') { return wr_mkt_brief_config(); }
+    if ($method === 'POST' && $path === '/marketing/agence') { return wr_mkt_agence(null); }
+    if ($method === 'PATCH' && preg_match('#^/marketing/agence/(\d+)$#', $path, $m)) { return wr_mkt_agence((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/marketing/agence/(\d+)$#', $path, $m)) { return wr_mkt_agence_suppr((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/annexe$#', $path, $m)) { return wr_mkt_annexe((int) $m[1]); }
     if ($method === 'PATCH' && preg_match('#^/marketing/annexe/(\d+)$#', $path, $m)) { return wr_mkt_annexe_maj((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/annexe/(\d+)$#', $path, $m)) { return wr_mkt_annexe_suppr((int) $m[1]); }

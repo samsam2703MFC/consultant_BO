@@ -4468,19 +4468,48 @@ function tplParams(c, x){
           <div style="padding:10px 0;border-top:0.5px solid var(--color-border-tertiary);font-size:12px;color:var(--color-text-muted);line-height:1.45;text-wrap:pretty">${esc(l.desc)}</div>`).join('')}
       </div>
     </div>
+    ${!c.prmAgences ? '' : `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Agences</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">Le réseau travaille avec plusieurs agences : chacune porte son nom, son adresse et son logo. La note de campagne signe celle que la campagne désigne sur un de ses canaux ; à défaut, celle marquée « par défaut ».</div>
+      ${c.prmAgences.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du référentiel…</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:720px">
+        <thead><tr>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 8px 0">Agence</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 8px">Adresse e-mail</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 8px">Site</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 8px">Logo</th>
+          <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 8px">Campagnes</th>
+          <th style="padding:0 0 8px 8px"></th>
+        </tr></thead>
+        <tbody>
+          ${c.prmAgences.lignes.map(a => `<tr style="border-top:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:7px 8px 7px 0"><input value="${esc(a.nom)}" ${x.C(a.setNom)} style="${rowInput}" />${a.defaut ? `<div style="font-size:10px;color:var(--color-primary);margin-top:3px">par défaut</div>` : `<button ${x.A(a.parDefaut)} style="border:none;background:none;padding:0;margin-top:3px;font-size:10px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">définir par défaut</button>`}</td>
+            <td style="padding:7px 8px"><input value="${esc(a.email)}" ${x.C(a.setEmail)} placeholder="contact@agence.be" style="${rowInput}" /></td>
+            <td style="padding:7px 8px"><input value="${esc(a.site)}" ${x.C(a.setSite)} placeholder="agence.be" style="${rowInput}" /></td>
+            <td style="padding:7px 8px">${a.logo ? `<img src="${esc(a.logo)}" alt="" style="height:24px;border-radius:3px;vertical-align:middle" />` : ''}<label style="display:inline-block;margin-left:${a.logo ? '8px' : '0'};font-size:11.5px;color:var(--color-primary);cursor:pointer;text-decoration:underline">${a.logo ? 'changer' : 'choisir'}<input type="file" accept="image/*" ${x.C(a.setLogo)} style="display:none" /></label></td>
+            <td style="padding:7px 8px;text-align:right;color:var(--color-text-muted)">${a.campagnes || '—'}</td>
+            <td style="padding:7px 0 7px 8px;text-align:right"><button ${x.A(a.retirer)} title="Retirer du référentiel" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></td>
+          </tr>`).join('')}
+          <tr style="border-top:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:9px 8px 9px 0"><input value="${esc(c.prmAgences.nom)}" ${x.C(c.prmAgences.setNom)} placeholder="Nouvelle agence" style="${rowInput}" /></td>
+            <td style="padding:9px 8px"><input value="${esc(c.prmAgences.email)}" ${x.C(c.prmAgences.setEmail)} placeholder="contact@agence.be" style="${rowInput}" /></td>
+            <td colspan="3"></td>
+            <td style="padding:9px 0 9px 8px;text-align:right"><button ${x.A(c.prmAgences.ajouter)} style="border:none;background:var(--color-primary);color:#fff;border-radius:7px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:${c.prmAgences.ajouter ? 'pointer' : 'not-allowed'};opacity:${c.prmAgences.ajouter ? '1' : '.5'}">Ajouter</button></td>
+          </tr>
+        </tbody>
+      </table></div>
+      ${c.prmAgences.err ? `<div style="font-size:11.5px;color:#8D1D2C;margin-top:8px">${esc(c.prmAgences.err)}</div>` : ''}`}
+    </div>`}
     ${!c.prmNote ? '' : `
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Agence de création</div>
-      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">Reprise au pied de la note de campagne et dans le courriel qui la porte. Le logo voyage avec la lettre : un lien vers le cockpit ne s’affiche pas chez le franchisé et ne s’imprime pas.</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Notes de campagne — expéditeur</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">L’adresse d’où partent les notes aux franchisés. Le nom, le logo et l’adresse des agences se règlent dans le tableau ci-dessus.</div>
       ${c.prmNote.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des réglages…</div>` : `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end">
-        <label style="font-size:12px;color:var(--color-text-muted)">Nom de l’agence<input value="${esc(c.prmNote.nom)}" ${x.C(c.prmNote.setNom)} style="${inputCss}" /></label>
-        <label style="font-size:12px;color:var(--color-text-muted)">Site ou contact<input value="${esc(c.prmNote.site)}" ${x.C(c.prmNote.setSite)} style="${inputCss}" /></label>
         <label style="font-size:12px;color:var(--color-text-muted)">Expéditeur des notes<input value="${esc(c.prmNote.expediteur)}" ${x.C(c.prmNote.setExpediteur)} style="${inputCss}" /></label>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
-        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 13px">Choisir un logo<input type="file" accept="image/*" ${x.C(c.prmNote.setLogo)} style="display:none" /></label>
-        ${c.prmNote.logo ? `<img src="${esc(c.prmNote.logo)}" alt="Logo de l’agence" style="height:30px;border-radius:4px" /><button ${x.A(c.prmNote.retirerLogo)} title="Retirer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button>` : `<span style="font-size:11.5px;color:var(--color-text-muted)">Aucun logo : la note ne portera que le nom.</span>`}
         <span style="flex:1"></span>
         <span style="font-size:11px;color:var(--color-text-muted)">${c.prmNote.nCarnet} adresse${c.prmNote.nCarnet > 1 ? 's' : ''} de franchisé au carnet</span>
         <button ${x.A(c.prmNote.enregistrer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:8px 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>

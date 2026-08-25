@@ -508,7 +508,10 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
     $logo = rapLogoDataUri();
     $accent = '#8D1D2C';
     if ($c === []) { $c = mktBriefConfig(); }
-    $agence = $c['agence'] ?? ['nom' => '', 'site' => '', 'logo' => ''];
+    // L'agence QUI A FAIT CETTE CAMPAGNE signe, pas celle du réglage général :
+    // le réseau travaille avec plusieurs agences, et la note en signait
+    // toujours une seule.
+    $agence = agenceDeCampagne((int) $d['id']) ?? ($c['agence'] ?? ['nom' => '', 'site' => '', 'logo' => '']);
     $visuel = (string) (($d['visuel']['uri'] ?? '') ?: '');
 
     $entete = '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid ' . $accent . ';padding-bottom:10px;margin-bottom:18px"><tr>'
@@ -1015,7 +1018,7 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
         : '<tr><td style="padding:0"><img src="' . $bandeau . '" alt="' . $e($d['nom'])
           . '" width="600" style="width:100%;max-width:100%;height:auto;display:block"></td></tr>';
 
-    $agence = $c['agence'] ?? [];
+    $agence = agenceDeCampagne((int) $d['id']) ?? ($c['agence'] ?? []);
     $signature = (($agence['nom'] ?? '') === '' && ($agence['logo'] ?? '') === '') ? ''
         : '<table cellpadding="0" cellspacing="0" style="margin-top:16px"><tr>'
           . (($agence['logo'] ?? '') !== ''
@@ -1100,17 +1103,29 @@ function mktBriefCopiesPossibles(int $campagne, array $c): array
             'groupe' => $groupe, 'sansAdresse' => false];
     };
 
+    // Les agences de la campagne d'abord — ce sont elles qui la produisent —,
+    // puis les autres du référentiel : on met parfois en copie celle qui
+    // prendra la suivante.
+    $deLaCampagne = [];
     try {
-        foreach (Db::rows('SELECT DISTINCT a.name, a.email
-                             FROM mar_campaign_channel cc
-                             JOIN mar_agency a ON a.id = cc.agency_id
-                            WHERE cc.campaign_id = ?', [$campagne]) as $a) {
-            $ajoute((string) $a['name'], (string) ($a['email'] ?? ''), 'Agence de la campagne', 'agence');
+        foreach (Db::rows('SELECT DISTINCT agency_id FROM mar_campaign_channel
+                            WHERE campaign_id = ? AND agency_id IS NOT NULL', [$campagne]) as $r) {
+            $deLaCampagne[] = (int) $r['agency_id'];
         }
-    } catch (PDOException $e) { /* pas d'agence désignée, ou pas de colonne email */ }
+    } catch (PDOException $e) { /* pas de canaux : le référentiel suffira */ }
 
+    foreach (agenceListe() as $a) {
+        if (!in_array($a['id'], $deLaCampagne, true)) { continue; }
+        $ajoute($a['nom'], $a['email'], 'Agence de la campagne', 'agence');
+    }
+    foreach (agenceListe() as $a) {
+        $ajoute($a['nom'], $a['email'], $a['defaut'] ? 'Agence par défaut' : 'Agence', 'agence');
+    }
+
+    // Le réglage unique ne sert plus QUE si le référentiel est vide : sinon la
+    // même agence apparaissait deux fois, une par source.
     $ag = $c['agence'] ?? [];
-    if (($ag['email'] ?? '') !== '') {
+    if (agenceListe() === [] && ($ag['email'] ?? '') !== '') {
         $ajoute(($ag['nom'] ?? '') !== '' ? (string) $ag['nom'] : 'Agence', (string) $ag['email'], 'Agence', 'agence');
     }
 
@@ -1123,9 +1138,14 @@ function mktBriefCopiesPossibles(int $campagne, array $c): array
     // absente laissait croire qu'on ne peut pas la mettre en copie, alors
     // qu'il ne manque qu'une adresse — et l'écran dit où la saisir.
     $aAgence = (bool) array_filter($out, static fn ($x) => $x['groupe'] === 'agence');
-    if (!$aAgence && ($ag['nom'] ?? '') !== '') {
-        array_unshift($out, ['nom' => (string) $ag['nom'], 'adresse' => '',
-            'role' => 'Agence', 'groupe' => 'agence', 'sansAdresse' => true]);
+    if (!$aAgence) {
+        $sansAdresse = array_values(array_filter(agenceListe(), static fn ($a) => $a['email'] === ''));
+        $premier = $sansAdresse[0] ?? (($ag['nom'] ?? '') !== ''
+            ? ['nom' => (string) $ag['nom']] : null);
+        if ($premier !== null) {
+            array_unshift($out, ['nom' => (string) $premier['nom'], 'adresse' => '',
+                'role' => 'Agence', 'groupe' => 'agence', 'sansAdresse' => true]);
+        }
     }
 
     return $out;

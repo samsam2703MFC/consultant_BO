@@ -10521,9 +10521,55 @@ class App {
         this.setState({});
       }).catch(() => { this._noteCfgEnCours = false; this._noteCfg = { agence: {} }; });
     }
+    // Le référentiel des agences : le réseau travaille avec plusieurs d'entre
+    // elles, et la note signe celle de la campagne.
+    if (!this._agences && !this._agencesEnCours) {
+      this._agencesEnCours = true;
+      readOne('/marketing/agences').then(d => {
+        this._agencesEnCours = false;
+        this._agences = (d && d.agences) ? d.agences : [];
+        this.setState({});
+      }).catch(() => { this._agencesEnCours = false; this._agences = []; });
+    }
     const nc = this._noteCfg || null;
     const ag = Object.assign({}, (nc && nc.agence) || {}, S.prmAgence || {});
     const setAg = k => e => this.setState(s2 => ({ prmAgence: Object.assign({}, s2.prmAgence, { [k]: e.target.value }) }));
+    const majAgences = r => {
+      if (!r || r.error) { this.setState({ prmAgenceErr: (r && r.error) || 'Refusé.' }); return; }
+      this._agences = r.agences || [];
+      this.setState({ prmAgenceErr: '', prmAgNouv: null });
+    };
+    const nouv = S.prmAgNouv || {};
+    common.prmAgences = {
+      chargement: !this._agences,
+      lignes: (this._agences || []).map(a => ({
+        id: a.id, nom: a.nom, email: a.email || '', site: a.site || '', logo: a.logo || '',
+        defaut: !!a.defaut, campagnes: a.campagnes,
+        setNom: e => this.api('PATCH', '/marketing/agence/' + a.id, { nom: e.target.value }).then(majAgences),
+        setEmail: e => this.api('PATCH', '/marketing/agence/' + a.id, { email: e.target.value }).then(majAgences),
+        setSite: e => this.api('PATCH', '/marketing/agence/' + a.id, { site: e.target.value }).then(majAgences),
+        parDefaut: () => this.api('PATCH', '/marketing/agence/' + a.id, { defaut: true }).then(majAgences),
+        setLogo: e => {
+          const f = e.target.files && e.target.files[0];
+          if (!f) { return; }
+          if (f.size > 500000) { this.setState({ prmAgenceErr: 'Logo trop lourd (' + Math.round(f.size / 1024) + ' Ko) : 500 Ko au plus.' }); return; }
+          const r2 = new FileReader();
+          r2.onload = () => this.api('PATCH', '/marketing/agence/' + a.id, { logo: String(r2.result) }).then(majAgences);
+          r2.readAsDataURL(f);
+        },
+        // Une agence qui porte des canaux ne s'efface pas : le serveur le
+        // refuse et le dit — le bouton reste, la raison arrive.
+        retirer: () => {
+          if (!window.confirm('Retirer « ' + a.nom + ' » du référentiel ?')) { return; }
+          this.api('DELETE', '/marketing/agence/' + a.id).then(majAgences);
+        },
+      })),
+      nom: nouv.nom || '', setNom: e => this.setState(s2 => ({ prmAgNouv: Object.assign({}, s2.prmAgNouv, { nom: e.target.value }) })),
+      email: nouv.email || '', setEmail: e => this.setState(s2 => ({ prmAgNouv: Object.assign({}, s2.prmAgNouv, { email: e.target.value }) })),
+      ajouter: !String(nouv.nom || '').trim() ? null
+        : () => this.api('POST', '/marketing/agence', { nom: nouv.nom, email: nouv.email || '' }).then(majAgences),
+      err: S.prmAgenceErr || '',
+    };
     common.prmNote = {
       chargement: !nc,
       nom: ag.nom || '', setNom: setAg('nom'),
