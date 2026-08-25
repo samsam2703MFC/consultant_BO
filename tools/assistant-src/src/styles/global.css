@@ -3865,3 +3865,7 @@ table.kpi-ref .objectif { font-weight: 500; }
    quand ils parlent, et la phrase qui portait les quatre dates obligeait à
    faire l'aller-retour entre elle et la colonne. */
 table.kpi-ref th small { display: block; margin-top: 2px; font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--faint); }
+
+/* Le renvoi d'un chiffre qui n'est pas la référence demandée. Discret mais
+   pas invisible : sans lui, une moyenne de trois mois se lirait comme un N-1. */
+table.kpi-ref sup.repli, .wizard-card sup.repli { color: var(--accent); font-weight: 600; font-size: 9px; margin-left: 2px; cursor: help; }

@@ -1561,8 +1561,18 @@ export interface KpiLigne {
   valeurAvant: number | null
   valeurPendant: number | null
   variation: number | null
-  /** Aucun relevé sur les mêmes dates l'an dernier : l'objectif se pose à la main. */
+  /** Aucun relevé sur les mêmes dates l'an dernier. */
   sansN1: boolean
+  /**
+   * Repli quand N-1 manque : la moyenne des trois derniers mois clos. Un
+   * magasin ouvert cette année a une activité — elle vaut mieux qu'une case
+   * vide, à condition de dire que c'en est une.
+   */
+  repli: { valeur: number; du: string; au: string; jours: number; libelle: string } | null
+  /** La valeur affichée, quelle que soit sa provenance. */
+  valeurRetenue: number | null
+  /** `n1` | `repli` | null — jamais un chiffre sans sa provenance. */
+  source: 'n1' | 'repli' | null
 }
 
 export interface KpiLevier {
@@ -1588,6 +1598,8 @@ export interface KpiPeriode {
     pendantN1Du: string
     pendantN1Au: string
     decalage: number
+    repliDu: string
+    repliAu: string
   }
   mesure: string
   kpi: KpiDefinition

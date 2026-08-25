@@ -1672,20 +1672,57 @@ function mktKpiPeriode(array $p): array
         return $b['ticketsJour'];
     };
 
+    // Un magasin sans N-1 n'a pas d'objectif « à zéro » : il a une activité
+    // récente, elle. À défaut de l'an dernier, la moyenne des TROIS DERNIERS
+    // MOIS COMPLETS donne un point de départ honnête — à condition de dire que
+    // c'en est un, et non la référence demandée.
+    $mDu = date('Y-m-01', strtotime('-3 month', strtotime(date('Y-m-01'))));
+    $mAu = date('Y-m-t', strtotime('-1 month', strtotime(date('Y-m-01'))));
+
     $lignes = [];
     $avecN1 = 0;
     $sansN1 = [];
+    $aReplier = [];
     foreach ($perim as $sid) {
         $a = mesCumul($ser[(string) $sid] ?? [], $f['avantN1Du'], $f['avantN1Au']);
         $p = mesCumul($ser[(string) $sid] ?? [], $f['pendantN1Du'], $f['pendantN1Au']);
         $va = $valeur($a); $vp = $valeur($p);
-        if ($va !== null && $vp !== null) { $avecN1++; } else { $sansN1[] = $nomDe[(string) $sid]; }
+        if ($va !== null && $vp !== null) { $avecN1++; }
+        else { $sansN1[] = $nomDe[(string) $sid]; $aReplier[] = (string) $sid; }
         $lignes[] = ['id' => (string) $sid, 'nom' => $nomDe[(string) $sid],
             'avant' => $a, 'pendant' => $p,
             'valeurAvant' => $va, 'valeurPendant' => $vp,
             'variation' => mesVar($vp === null ? null : (float) $vp, $va === null ? null : (float) $va),
             // Un magasin sans N-1 n'a pas un objectif à zéro : il n'en a pas.
-            'sansN1' => $va === null || $vp === null];
+            'sansN1' => $va === null || $vp === null,
+            'repli' => null];
+    }
+
+    // Le repli, seulement pour ceux qui en ont besoin : trois mois de plus par
+    // magasin coûtent trois appels chacun, et les magasins qui ont leur N-1
+    // n'en ont que faire.
+    if ($aReplier !== [] && count($aReplier) * 3 <= 24) {
+        $serR = mesSeriesJour($aReplier, $mDu, $mAu, $motifs);
+        foreach ($lignes as $i => $l) {
+            if (!$l['sansN1']) { continue; }
+            $b = mesCumul($serR[(string) $l['id']] ?? [], $mDu, $mAu);
+            $vb = $valeur($b);
+            if ($vb === null) { continue; }
+            $lignes[$i]['repli'] = ['valeur' => $vb, 'du' => $mDu, 'au' => $mAu,
+                'jours' => $b['jours'],
+                'libelle' => 'moyenne des 3 derniers mois'];
+        }
+    } elseif ($aReplier !== []) {
+        $motifs[] = 'trop de magasins sans N-1 pour calculer un repli sur les 3 derniers mois';
+    }
+
+    // La valeur RETENUE — et d'où elle vient. Les deux voyagent ensemble :
+    // afficher un chiffre sans sa provenance, c'est le faire passer pour la
+    // référence demandée.
+    foreach ($lignes as $i => $l) {
+        $lignes[$i]['valeurRetenue'] = $l['valeurPendant'] ?? ($l['repli']['valeur'] ?? null);
+        $lignes[$i]['source'] = $l['valeurPendant'] !== null ? 'n1'
+            : (($l['repli']['valeur'] ?? null) !== null ? 'repli' : null);
     }
 
     $ra = mesCumulGroupe($ser, $perim, $f['avantN1Du'], $f['avantN1Au']);
@@ -1703,7 +1740,7 @@ function mktKpiPeriode(array $p): array
     }
 
     return [
-        'fenetres' => $f,
+        'fenetres' => $f + ['repliDu' => $mDu, 'repliAu' => $mAu],
         'mesure' => $mesure,
         'kpi' => mktKpiCatalogue()[$mesure],
         'catalogue' => mktKpiCatalogue(),

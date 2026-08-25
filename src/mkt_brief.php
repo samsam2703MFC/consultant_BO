@@ -135,12 +135,18 @@ function mktBriefDonnees(int $id): ?array
     // à la main, et la note ne doit pas prétendre le contraire.
     $lignes = [];
     foreach (($kpi['magasins'] ?? []) as $m) {
-        $ref = $m['valeurPendant'];
+        // La valeur RETENUE : l'an dernier quand il existe, sinon la moyenne
+        // des trois derniers mois. Un magasin ouvert cette année a une
+        // activité, elle ; lui écrire « à poser ensemble » lui donnait la
+        // seule ligne vide de la note.
+        $ref = $m['valeurRetenue'] ?? $m['valeurPendant'];
         $lignes[] = [
             'id' => (string) $m['id'], 'nom' => (string) $m['nom'],
             'reference' => $ref,
             'cible' => ($ref === null || $pct === null) ? $ref : $ref * (1 + $pct / 100),
             'sansN1' => (bool) $m['sansN1'],
+            'source' => (string) ($m['source'] ?? ''),
+            'repli' => $m['repli'] ?? null,
         ];
     }
 
@@ -436,14 +442,34 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
             . '<tr><th align="left" style="padding:6px 8px;border-bottom:1px solid #e6e0d8;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a">Magasin</th>'
             . '<th align="right" style="padding:6px 8px;border-bottom:1px solid #e6e0d8;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a">L’an dernier</th>'
             . '<th align="right" style="padding:6px 8px;border-bottom:1px solid #e6e0d8;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a">Cible</th></tr>';
+        $repli = false;
         foreach ($d['lignes'] as $l) {
             $tab .= '<tr><td style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">' . $e($l['nom']) . '</td>';
-            $tab .= $l['sansN1']
-                ? '<td colspan="2" align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#b8b2a8">pas de relevé l’an dernier — cible à poser ensemble</td></tr>'
-                : '<td align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">' . mktBriefValeur($l['reference'], $d) . '</td>'
-                  . '<td align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600">' . mktBriefValeur($l['cible'], $d) . '</td></tr>';
+            if ($l['reference'] === null) {
+                $tab .= '<td colspan="2" align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#b8b2a8">aucun relevé exploitable — cible à poser ensemble</td></tr>';
+                continue;
+            }
+            $marque = ($l['source'] ?? '') === 'repli'
+                ? ' <sup style="color:' . $accent . ';font-weight:600">(i)</sup>' : '';
+            if ($marque !== '') { $repli = true; }
+            $tab .= '<td align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">'
+                . mktBriefValeur($l['reference'], $d) . $marque . '</td>'
+                . '<td align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600">'
+                . mktBriefValeur($l['cible'], $d) . '</td></tr>';
         }
         $tab .= '</table>';
+        // La légende n'apparaît que si une ligne la porte : une note de bas de
+        // tableau sans renvoi se lit comme un avertissement général.
+        if ($repli) {
+            $r0 = null;
+            foreach ($d['lignes'] as $l) { if (($l['source'] ?? '') === 'repli') { $r0 = $l['repli']; break; } }
+            $tab .= '<div style="font-size:9.5px;color:#7a736a;margin:-10px 0 16px">'
+                . '<sup style="color:' . $accent . ';font-weight:600">(i)</sup> '
+                . 'Pas de relevé sur ces dates l’an dernier — magasin ouvert depuis. La référence est la '
+                . '<strong>moyenne des 3 derniers mois</strong>'
+                . ($r0 !== null ? ' (' . mktBriefJour((string) $r0['du']) . ' → ' . mktBriefJour((string) $r0['au']) . ')' : '')
+                . ' : un point de départ, pas une comparaison saisonnière.</div>';
+        }
     }
 
     // Le rétroplanning : « ce qui va se passer », dans l'ordre.

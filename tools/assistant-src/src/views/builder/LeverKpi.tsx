@@ -234,12 +234,27 @@ function Reference({
               return (
                 <tr key={ligne.id}>
                   <td>{ligne.nom}</td>
-                  {ligne.sansN1 ? (
+                  {ligne.sansN1 && ligne.repli === null ? (
                     <>
                       <td className="num nil" colSpan={3}>
                         Aucun relevé sur ces dates l'an dernier
                       </td>
                       <td className="num nil">à poser à la main</td>
+                    </>
+                  ) : ligne.sansN1 && ligne.repli !== null ? (
+                    <>
+                      {/* Pas de N-1, mais une activité récente : on la montre,
+                          marquée — la comparaison saisonnière, elle, n'existe
+                          pas, et la colonne « variation » reste vide. */}
+                      <td className="num nil">—</td>
+                      <td className="num">
+                        {valeur(ligne.repli.valeur, kpi)}
+                        <sup className="repli" title={`Pas de relevé l'an dernier : moyenne du ${jour(ligne.repli.du)} au ${jour(ligne.repli.au)}`}>
+                          (i)
+                        </sup>
+                      </td>
+                      <td className="num nil">—</td>
+                      <td className="num objectif">{valeur(cible(ligne.repli.valeur, pct), kpi)}</td>
                     </>
                   ) : (
                     <>
@@ -275,6 +290,14 @@ function Reference({
         {kpi.nom} — la variation naturelle est ce que la période a fait de plus que la précédente{' '}
         <em>sans campagne</em> : l'objectif se pose au-dessus d'elle, pas au-dessus de zéro.
       </p>
+
+      {donnees.magasins.some((ligne) => ligne.source === 'repli') ? (
+        <p className="muted wizard__hint">
+          <sup className="repli">(i)</sup> Pas de relevé l'an dernier — magasin ouvert depuis. La
+          référence est la <strong>moyenne des 3 derniers mois</strong> ({jour(fenetres.repliDu)} →{' '}
+          {jour(fenetres.repliAu)}) : un point de départ, pas une comparaison saisonnière.
+        </p>
+      ) : null}
 
       {donnees.motifs.map((motif) => (
         <p key={motif} className="muted wizard__hint">
