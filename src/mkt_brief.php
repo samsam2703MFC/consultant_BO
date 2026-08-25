@@ -55,10 +55,16 @@ function mktBriefConfig(): array
     $out = array_merge(mktBriefDefauts(), $c);
     $out['carnet'] = is_array($out['carnet'] ?? null) ? $out['carnet'] : [];
     $ag = is_array($out['agence'] ?? null) ? $out['agence'] : [];
+    // « Site ou contact » invite à écrire une adresse, et c'est ce qui a été
+    // écrit : Collectif MKTG y portait yan@collectifmarketing.be pendant que
+    // le champ « Adresse e-mail », plus récent, restait vide — l'agence
+    // n'apparaissait donc pas dans les copies. On lit les DEUX, l'adresse
+    // dédiée d'abord.
+    $site = trim((string) ($ag['site'] ?? ''));
     $out['agence'] = ['nom' => trim((string) ($ag['nom'] ?? '')),
-        'site' => trim((string) ($ag['site'] ?? '')),
+        'site' => $site,
         'logo' => (string) ($ag['logo'] ?? ''),
-        'email' => mktBriefAdresse($ag['email'] ?? '')];
+        'email' => mktBriefAdresse($ag['email'] ?? '') ?: mktBriefAdresse($site)];
     // Un réglage enregistré AVANT les copies n'a pas la clé : sans ce filet,
     // `in_array(..., null)` faisait tomber l'écran entier en 500.
     $out['copies'] = is_array($out['copies'] ?? null)
@@ -1381,6 +1387,9 @@ function wr_mkt_brief_config(): array
             'nom' => mb_substr(trim((string) ($a['nom'] ?? $c['agence']['nom'])), 0, 120),
             'site' => mb_substr(trim((string) ($a['site'] ?? $c['agence']['site'])), 0, 160),
             'logo' => $logo,
+            // L'adresse est VALIDÉE à l'écriture : « à peu près une adresse »
+            // ne part nulle part, et se serait vue en copie d'un envoi réel.
+            'email' => mktBriefAdresse($a['email'] ?? $c['agence']['email']),
         ];
     }
     if (isset($b['carnet']) && is_array($b['carnet'])) {
