@@ -2632,6 +2632,7 @@ function tplMktCampagnes(c, x){
             <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:${v.couleur}"></span>${esc(v.type)}</span>
             <span><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:${v.couleur}1f;color:${v.couleur}">${esc(v.levier)}</span></span>
             <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(v.periode)}</span>
+            <button ${x.A(v.note)} class="hv-fade" title="La note pour les franchisés — à imprimer ou à envoyer" style="align-self:flex-start;margin-top:2px;border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text);cursor:pointer">Note aux franchisés</button>
           </div>
         </div>`).join('')}
       </div>
@@ -2656,11 +2657,116 @@ function tplMktCampagnes(c, x){
           <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || '—'}</td>
           <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
             ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Finir ce brouillon dans l’assistant" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Reprendre</button>` : ''}
+            <button ${x.A(l.note)} title="La note pour les franchisés — à imprimer ou à envoyer" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Note</button>
             <button ${x.A(l.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>
             <button ${x.A(l.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>
           </td>
         </tr>`).join('')}</tbody>
       </table></div>`}
+    </div>
+    ${tplMktNote(c, x)}
+  </div>`;
+}
+
+/**
+ * La note d'une campagne : la page A4 telle qu'elle s'imprimera, le courrier
+ * qui la porte, et ce qui est déjà parti.
+ *
+ * L'aperçu est un IFRAME nourri du HTML du serveur : le document imprimé et le
+ * PDF joint au courrier sortent du même rendu. Le reconstruire ici aurait
+ * donné deux pages qui se ressemblent — jusqu'au jour où elles ne se
+ * ressemblent plus.
+ */
+function tplMktNote(c, x){
+  const n = c.mkNote;
+  if (!n) { return ''; }
+  const { esc } = x;
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const zone = inp.replace('height:33px;padding:0 10px', 'min-height:74px;padding:8px 10px;line-height:1.5;resize:vertical');
+  const bt = 'border:0.5px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 15px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer';
+  const btPlein = 'border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:9px 18px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer';
+
+  return `
+  <div ${x.A(n.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;pointer-events:none;overflow:auto">
+    <div data-scroll="mknote" style="pointer-events:auto;background:var(--color-surface);border-radius:14px;width:min(980px,100%);max-height:100%;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)">
+      <div style="padding:16px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14.5px;font-weight:600">${esc(n.titre)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(n.sousTitre || 'Note aux franchisés')}</div>
+        </div>
+        <button ${x.A(n.fermer)} style="border:none;background:none;color:var(--color-text-muted);font-size:16px;cursor:pointer;line-height:1">✕</button>
+      </div>
+
+      ${n.chargement ? `<div style="padding:26px 18px;font-size:12.5px;color:var(--color-text-muted)">Lecture de la campagne et de sa référence de l’an dernier…</div>`
+      : n.err ? `<div style="padding:22px 18px;font-size:12.5px;color:#8D1D2C">${esc(n.err)}</div>` : `
+      <div style="padding:12px 18px 0;display:flex;gap:6px">
+        <button ${x.A(n.versNote)} style="${n.stNote}">La note</button>
+        <button ${x.A(n.versMail)} style="${n.stMail}">Le courrier</button>
+        <button ${x.A(n.versJournal)} style="${n.stJournal}">Envois${n.journal && n.journal.length ? ' (' + n.journal.length + ')' : ''}</button>
+      </div>
+
+      ${n.onglet === 'journal' ? `
+      <div style="padding:16px 18px 20px">
+        ${n.journalVide ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Cette note n’a encore été envoyée à personne.</div>` : `
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          ${n.journal.map(e => `<tr>
+            <td style="padding:8px 8px 8px 0;border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap;color:var(--color-text-muted)">${esc(e.quand)}</td>
+            <td style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="${e.etatSt}">${esc(e.etat)}</span></td>
+            <td style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary)">${esc(e.destinataire)}</td>
+            <td style="padding:8px 0 8px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-muted)">${esc(e.detail)}</td>
+          </tr>`).join('')}
+        </table>`}
+      </div>`
+      : n.onglet === 'mail' ? `
+      <div style="padding:16px 18px 20px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <span style="${k}">Destinataires — une note par magasin</span>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            ${n.dest.map(d => `<tr>
+              <td style="padding:7px 8px 7px 0;border-bottom:0.5px solid var(--color-border-tertiary);width:26px"><input type="checkbox" ${d.on ? 'checked' : ''} ${x.C(d.basculer)} /></td>
+              <td style="padding:7px 8px;border-bottom:0.5px solid var(--color-border-tertiary)">${esc(d.magasin)}<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(d.franchise)}</div></td>
+              <td style="padding:7px 0 7px 8px;border-bottom:0.5px solid var(--color-border-tertiary)"><input value="${esc(d.adresse)}" placeholder="adresse du franchisé" ${x.C(d.setAdresse)} style="${inp};height:30px${d.manque ? ';border-color:var(--color-primary)' : ''}" /></td>
+            </tr>`).join('')}
+          </table>
+          ${n.sansAdresse.length ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Sans adresse, donc sans envoi : ${esc(n.sansAdresse.join(', '))}. L’adresse saisie ici est retenue pour les campagnes suivantes.</div>` : ''}
+        </div>
+
+        <div><span style="${k}">Aperçu du courrier</span>
+          <iframe srcdoc="${esc(n.apercuMail)}" title="Aperçu du courrier" style="width:100%;height:300px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:#fff"></iframe>
+        </div>
+
+        <div>
+          <button ${x.A(n.basculerGabarit)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)">
+            <span style="display:inline-block;width:11px;transform:rotate(${n.gabaritOuvert ? '90' : '0'}deg)">▸</span> Expéditeur et gabarit du courrier
+          </button>
+          ${!n.gabaritOuvert ? '' : `
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+            <label><span style="${k}">Expéditeur</span><input value="${esc(n.expediteur)}" ${x.C(n.setExpediteur)} style="${inp}" /></label>
+            <label><span style="${k}">Sujet</span><input value="${esc(n.sujet)}" ${x.C(n.setSujet)} style="${inp}" /></label>
+            <label><span style="${k}">Introduction</span><textarea ${x.C(n.setIntro)} style="${zone}">${esc(n.intro)}</textarea></label>
+            <label><span style="${k}">Pied du courrier</span><textarea ${x.C(n.setPied)} style="${zone}">${esc(n.pied)}</textarea></label>
+            <label><span style="${k}">Gabarit HTML — vide = celui de la maison</span><textarea ${x.C(n.setHtml)} placeholder="{{logo}} {{marque}} {{entete}} {{contenu}}" style="${zone};font-family:ui-monospace,monospace;font-size:11.5px">${esc(n.html)}</textarea></label>
+            <div style="font-size:11px;color:var(--color-text-muted)">Variables disponibles : ${esc(n.variables)}</div>
+            <div><button ${x.A(n.enregistrerGabarit)} style="${bt}">Enregistrer le gabarit</button></div>
+          </div>`}
+        </div>
+      </div>`
+      : `
+      <div style="padding:16px 18px 0">
+        ${n.moteurNote ? `<div style="font-size:11.5px;color:var(--color-text-muted);border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:9px 11px;margin-bottom:12px">${esc(n.moteurNote)}</div>` : ''}
+        <iframe id="note-apercu" srcdoc="${esc(n.apercu)}" title="Aperçu de la note" style="width:100%;height:520px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:#fff"></iframe>
+      </div>`}
+
+      <div style="padding:14px 18px 18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);margin-top:16px">
+        <button ${x.A(n.imprimer)} style="${bt}">Imprimer</button>
+        ${n.telecharger ? `<button ${x.A(n.telecharger)} style="${bt}">Télécharger le PDF</button>` : ''}
+        <span style="flex:1"></span>
+        ${n.envoi === 'en-cours' ? `<span style="font-size:12px;color:var(--color-text-muted)">Envoi en cours…</span>` : ''}
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${n.nPrets} magasin${n.nPrets > 1 ? 's' : ''} prêt${n.nPrets > 1 ? 's' : ''}</span>
+        <button ${x.A(n.envoyer)} style="${btPlein}${n.envoyer ? '' : ';opacity:.5;cursor:not-allowed'}">Envoyer par mail</button>
+      </div>`}
     </div>
   </div>`;
 }

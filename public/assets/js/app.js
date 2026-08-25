@@ -4476,6 +4476,7 @@ class App {
       budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '—',
       nBoutiques: c2.nBoutiques,
       editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
+      note: () => this.mkNoteOuvrir(c2.id),
       // Un brouillon se FINIT dans l'assistant : la carte rapide ne porte ni
       // l'offre, ni les objectifs, ni le planning qu'il reste à remplir.
       reprendre: c2.statut !== 'draft' ? null : () => {
@@ -4511,8 +4512,110 @@ class App {
           // Un brouillon se finit dans l'assistant ; une planifiée se corrige.
           ouvrir: c2.statut === 'draft'
             ? () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); }
-            : () => this.setState({ mkEdit: this.mkVersForm(c2) }) };
+            : () => this.setState({ mkEdit: this.mkVersForm(c2) }),
+          // La note pour les franchisés : une page A4, imprimable, et le
+          // courrier qui la porte. Bouton à part sur la vignette — ouvrir la
+          // campagne et l'expliquer au réseau ne sont pas le même geste.
+          note: () => this.mkNoteOuvrir(c2.id) };
       });
+    // --- la note de campagne : une page A4 pour le réseau, et le courrier
+    // qui la porte. Chargée à l'ouverture, jamais avant : elle interroge le
+    // panel pour la référence de l'an dernier.
+    const nt = S.mkNote;
+    const ntPatch = pl => this.setState(s2 => ({ mkNote: Object.assign({}, s2.mkNote, pl) }));
+    common.mkNote = !nt ? null : {
+      chargement: !!nt.chargement,
+      err: nt.err || '',
+      fermer: () => this.setState({ mkNote: null }),
+      titre: (nt.d && nt.d.campagne ? nt.d.campagne.nom : 'Note de campagne'),
+      onglet: nt.onglet || 'note',
+      versNote: () => ntPatch({ onglet: 'note' }),
+      versMail: () => ntPatch({ onglet: 'mail' }),
+      versJournal: () => ntPatch({ onglet: 'journal' }),
+      stNote: this.tabBtn((nt.onglet || 'note') === 'note'),
+      stMail: this.tabBtn(nt.onglet === 'mail'),
+      stJournal: this.tabBtn(nt.onglet === 'journal'),
+    };
+    if (nt && nt.d && !nt.chargement) {
+      const D2 = nt.d, camp = D2.campagne || {};
+      const dest = nt.dest || (D2.destinataires || []).map(x2 => Object.assign({}, x2, { on: !!x2.adresse }));
+      const cfg = nt.cfg || Object.assign({}, D2.config || {});
+      const setDest = (i, pl) => ntPatch({ dest: dest.map((x2, j) => j === i ? Object.assign({}, x2, pl) : x2) });
+      const setCfg = k => e => ntPatch({ cfg: Object.assign({}, cfg, { [k]: e.target.value }) });
+      const prets = dest.filter(x2 => x2.on && x2.adresse);
+
+      Object.assign(common.mkNote, {
+        // L'aperçu EST le fichier : la page imprimée et le PDF joint sortent du
+        // même HTML, produit par le serveur. Deux rendus auraient fini par
+        // montrer deux choses.
+        apercu: D2.apercuPdf || '',
+        apercuMail: D2.apercuMail || '',
+        sousTitre: (camp.type || '') + ' · ' + (camp.portee || '') + ' · '
+          + (camp.du ? this.fD(camp.du) : '—') + ' → ' + (camp.fin || camp.au ? this.fD(camp.au) : '—'),
+        moteurPdf: !!D2.moteurPdf,
+        // Sans moteur sur le serveur, on le DIT : le navigateur imprime le même
+        // document, et personne n'attend un fichier qui ne viendra pas.
+        moteurNote: D2.moteurPdf ? ''
+          : 'Aucun moteur PDF sur ce serveur : « Imprimer » produit le même document depuis le navigateur (choisissez « Enregistrer en PDF »). Le courrier partira sans pièce jointe, et le dira.',
+        imprimer: () => {
+          const f = document.getElementById('note-apercu');
+          if (f && f.contentWindow) { f.contentWindow.focus(); f.contentWindow.print(); }
+        },
+        telecharger: !D2.moteurPdf ? null : () => {
+          try { window.open(API_BASE + '/marketing/campagne/' + camp.id + '/note.pdf', '_blank'); } catch (e2) {}
+        },
+        fichier: D2.fichier || '',
+        dest: dest.map((x2, i) => ({
+          magasin: x2.magasin, franchise: x2.franchise || '—',
+          adresse: x2.adresse, on: !!x2.on,
+          manque: !x2.adresse,
+          setAdresse: e => setDest(i, { adresse: e.target.value, on: !!e.target.value }),
+          basculer: () => setDest(i, { on: !x2.on }),
+        })),
+        nPrets: prets.length,
+        sansAdresse: dest.filter(x2 => !x2.adresse).map(x2 => x2.magasin),
+        expediteur: cfg.expediteur || '', setExpediteur: setCfg('expediteur'),
+        sujet: cfg.sujet || '', setSujet: setCfg('sujet'),
+        intro: cfg.intro || '', setIntro: setCfg('intro'),
+        pied: cfg.pied || '', setPied: setCfg('pied'),
+        html: cfg.html || '', setHtml: setCfg('html'),
+        gabaritOuvert: !!nt.gabarit,
+        basculerGabarit: () => ntPatch({ gabarit: !nt.gabarit }),
+        variables: '{{campagne}} {{type}} {{du}} {{au}} {{magasin}} {{franchise}} {{objectif}} {{cible}} {{budget}}',
+        enregistrerGabarit: () => {
+          this.api('PUT', '/marketing/note-config', {
+            expediteur: cfg.expediteur, sujet: cfg.sujet, intro: cfg.intro,
+            pied: cfg.pied, html: cfg.html,
+          }).then(r => {
+            if (r && r.error) { ntPatch({ err: r.error }); return; }
+            this.notify('Gabarit du courrier enregistré');
+            this.mkNoteOuvrir(camp.id, nt.onglet);
+          });
+        },
+        envoi: nt.envoi || '',
+        envoyer: prets.length === 0 || nt.envoi === 'en-cours' ? null : () => {
+          if (!window.confirm('Envoyer la note « ' + camp.nom + ' » à ' + prets.length
+            + ' magasin(s) depuis ' + (cfg.expediteur || 'l’adresse marketing') + ' ?')) { return; }
+          ntPatch({ envoi: 'en-cours', err: '' });
+          this.api('POST', '/marketing/campagne/' + camp.id + '/note',
+            { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise })) })
+            .then(r => {
+              if (!r || r.error) { ntPatch({ envoi: '', err: (r && r.error) || 'Envoi refusé.' }); return; }
+              this.notify(r.message || 'Note envoyée');
+              this.mkNoteOuvrir(camp.id, 'journal');
+            });
+        },
+        journal: (D2.journal || []).map(e2 => ({
+          quand: e2.quand, type: e2.type,
+          etat: e2.type === 'envoye' ? 'Envoyée' : 'Échec',
+          etatSt: 'font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;'
+            + (e2.type === 'envoye' ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C'),
+          destinataire: e2.destinataire || '—', detail: e2.detail || '', sujet: e2.sujet || '',
+        })),
+        journalVide: !(D2.journal || []).length,
+      });
+    }
+
     // L'assistant COMPLET (cadrage, offre, objectifs, prix, photos, budget,
     // communication, planning, récap, leads) est désormais HÉBERGÉ PAR LE
     // COCKPIT (page /assistant/, API /api/marketing/) : il travaille sur les
@@ -4667,6 +4770,25 @@ class App {
       },
     };
   }
+  /**
+   * Ouvre la note d'une campagne — la page A4 et le courrier qui la porte.
+   *
+   * Chargée À L'OUVERTURE et pas avant : la note lit la référence de l'an
+   * dernier sur le panel, et la calculer pour toutes les campagnes de l'écran
+   * coûterait quarante appels pour une seule qu'on ouvrira.
+   */
+  mkNoteOuvrir(id, onglet){
+    this.setState({ mkNote: { id, chargement: true, onglet: onglet || 'note' } });
+    readOne('/marketing/campagne/' + id + '/note').then(d => {
+      this.setState(s2 => (s2.mkNote && s2.mkNote.id === id)
+        ? { mkNote: { id, chargement: false, onglet: onglet || 'note',
+            d: (d && !d.error) ? d : null,
+            err: (d && d.error) ? d.error : (d ? '' : 'Note indisponible.') } }
+        : {});
+    }).catch(() => this.setState(s2 => (s2.mkNote && s2.mkNote.id === id)
+      ? { mkNote: { id, chargement: false, onglet: onglet || 'note', d: null, err: 'Note indisponible.' } } : {}));
+  }
+
   /** La campagne telle que le formulaire la mange. */
   mkVersForm(c2){
     return { id: c2.id, nom: c2.nom, typeId: c2.typeId ? String(c2.typeId) : '',

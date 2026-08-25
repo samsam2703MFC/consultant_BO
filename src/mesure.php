@@ -1600,10 +1600,22 @@ function ep_profil_jour(): array
  */
 function ep_mkt_kpi_periode(): array
 {
+    return mktKpiPeriode($_GET);
+}
+
+/**
+ * Le calcul lui-même, appelable sans passer par la requête : la note de
+ * campagne envoyée aux franchisés porte le MÊME objectif que l'assistant, et
+ * deux calculs séparés finiraient par ne plus dire le même chiffre.
+ *
+ * @param array<string,mixed> $p du, au, levier, mesure, magasins
+ */
+function mktKpiPeriode(array $p): array
+{
     $motifs = [];
     $dateOk = static fn (string $d): bool => (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
-    $du = (string) ($_GET['du'] ?? '');
-    $au = (string) ($_GET['au'] ?? '');
+    $du = (string) ($p['du'] ?? '');
+    $au = (string) ($p['au'] ?? '');
     if (!$dateOk($du) || !$dateOk($au) || $au < $du) {
         http_response_code(422);
         return ['error' => 'Période attendue : « du » et « au » au format AAAA-MM-JJ, « du » avant « au ».'];
@@ -1612,8 +1624,8 @@ function ep_mkt_kpi_periode(): array
     // Le KPI vient du LEVIER de la campagne : l'assistant envoie son code, le
     // serveur dit ce qui se mesure. Un `mesure=` explicite reste possible —
     // c'est ce que fait la bascule d'indicateur de l'écran.
-    $levier = (string) ($_GET['levier'] ?? '');
-    $mesure = (string) ($_GET['mesure'] ?? '');
+    $levier = (string) ($p['levier'] ?? '');
+    $mesure = (string) ($p['mesure'] ?? '');
     $duLevier = $levier === '' ? null : mktMesureDuLevier($levier);
     if (!in_array($mesure, ['trafic', 'panier', 'ca'], true)) { $mesure = $duLevier ?? 'trafic'; }
 
@@ -1646,7 +1658,7 @@ function ep_mkt_kpi_periode(): array
     // Périmètre demandé par l'assistant (campagne locale). Les identifiants
     // inconnus sont ignorés sans bruit : le paramètre vient d'une page, pas
     // d'un contrat.
-    $demandes = array_filter(array_map('trim', explode(',', (string) ($_GET['magasins'] ?? ''))));
+    $demandes = array_filter(array_map('trim', explode(',', (string) ($p['magasins'] ?? ''))));
     $perim = array_values(array_filter($demandes, static fn ($s) => isset($nomDe[$s])));
     if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
 

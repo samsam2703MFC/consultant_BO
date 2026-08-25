@@ -19,6 +19,7 @@ require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/ca_mail.php';
+require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
@@ -106,6 +107,8 @@ function route(string $method, string $path): mixed
             $path === '/marketing/mesure'              => ep_mesure(),
             $path === '/marketing/mesure/comparaison'  => ep_mesure_comparaison(),
             $path === '/marketing/kpi-periode'         => ep_mkt_kpi_periode(),
+            (bool) preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $mn) => ep_mkt_brief((int) $mn[1]),
+            (bool) preg_match('#^/marketing/campagne/(\d+)/note\.pdf$#', $path, $mp) => ep_mkt_brief_pdf((int) $mp[1]),
             $path === '/taches/classement'             => ep_taches_classement(),
             $path === '/fournisseurs/reclamations'     => ep_fournisseurs_reclamations(),
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
@@ -236,6 +239,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/reputation/sync') { return wr_reputation_sync(); }
     if ($method === 'PUT' && preg_match('#^/reputation/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
+    if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $m)) { return wr_mkt_brief_envoyer((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/marketing/note-config') { return wr_mkt_brief_config(); }
     if ($method === 'POST' && $path === '/marketing/type') { return wr_mkt_type(null); }
     if ($method === 'PATCH' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/marketing/type/(\d+)$#', $path, $m)) { return wr_mkt_type_suppr((int) $m[1]); }

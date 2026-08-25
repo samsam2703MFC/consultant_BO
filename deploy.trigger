@@ -43,3 +43,4 @@
 2026-08-25T16:09:46Z kpi-levier-magasins-nommes
 2026-08-25T16:20:32Z suivi-budget-relecture-base
 2026-08-25T16:30:57Z kpi-dates-en-tetes
+2026-08-25T16:49:43Z note-campagne-pdf-mail
