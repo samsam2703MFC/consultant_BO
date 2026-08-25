@@ -4378,6 +4378,10 @@ function tplParams(c, x){
           <input type="checkbox" ${c.cm.actif ? 'checked' : ''} ${x.C(c.cm.toggle)} style="width:15px;height:15px;accent-color:var(--color-primary)">
           Envoi automatique activé
         </label>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-bottom:12px">Expéditeur affiché — et adresse de réponse
+          <input value="${esc(c.cm.expediteur)}" ${x.C(c.cm.setExpediteur)} placeholder="Centrale d’achat &lt;achat@atelierby.be&gt;" style="${inputCss}">
+          <span style="display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Le fournisseur lit ce nom et répond à cette adresse. L’envoi passe toujours par le compte SMTP configuré plus haut — seul l’en-tête change.</span>
+        </label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label style="font-size:12px;color:var(--color-text-muted)">La centrale — copie, et repli si le fournisseur n’a pas d’adresse
             <input value="${esc(c.cm.destinataire)}" ${x.C(c.cm.setDestinataire)} placeholder="achat@atelierby.be" style="${inputCss}">
@@ -4395,6 +4399,18 @@ function tplParams(c, x){
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.cm.variables)}</div>
         ${c.cm.vieux ? `<div style="margin-top:9px;padding:9px 12px;border-radius:8px;background:#FBF3DC;border:1px solid #E8C9A0;font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Ce gabarit date d’avant le regroupement : il parle d’<b style="font-weight:600">une</b> commande alors que le courrier en liste plusieurs. Les anciennes variables restent remplies, mais <b style="font-weight:600">{{lignes}}</b> — la liste des commandes — n’y figure pas.
           ${c.cm.restaurer ? `<button ${x.A(c.cm.restaurer)} style="margin-left:6px;border:1px solid #E8C9A0;background:#fff;color:var(--color-on-abricot);border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer">Reprendre le gabarit d’origine</button>` : ''}</div>` : ''}
+        <div style="margin-top:12px;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button ${x.A(c.cm.htmlBascule)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${c.cm.htmlOuvert ? 'Masquer' : 'Modifier'} la mise en page HTML</button>
+            <button ${x.A(c.cm.apercuBascule)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">${c.cm.apercuOuvert ? 'Masquer' : 'Voir'} l’aperçu</button>
+            <span style="font-size:11px;color:var(--color-text-muted)">${c.cm.html ? 'mise en page personnalisée' : 'mise en page d’origine'}</span>
+          </div>
+          ${c.cm.htmlOuvert ? `
+            <textarea rows="12" ${x.C(c.cm.setHtml)} placeholder="Laissez vide pour la mise en page d’origine" style="${inputCss};resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;margin-top:9px">${esc(c.cm.html)}</textarea>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables de mise en page : ${esc(c.cm.variablesHtml)} — <b style="font-weight:500">{{contenu}}</b> porte le message et les cartes de commande.
+              ${c.cm.htmlDefaut ? `<button ${x.A(c.cm.htmlDefaut)} style="margin-left:6px;border:none;background:none;color:var(--color-primary);font-size:11px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px">reprendre le squelette d’origine</button>` : ''}</div>` : ''}
+          ${c.cm.apercuOuvert ? `<iframe src="${esc(c.cm.apercuUrl)}" style="width:100%;height:520px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;margin-top:10px;background:#fff"></iframe>` : ''}
+        </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
           <button ${x.A(c.cm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.cm.busy ? 'opacity:.6' : ''}">${c.cm.busy ? 'En cours…' : 'Enregistrer'}</button>
           <input value="${esc(c.cm.testVers)}" ${x.C(c.cm.setTestVers)} placeholder="adresse d’essai — vide = la centrale" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12px;min-width:220px">

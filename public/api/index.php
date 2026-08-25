@@ -33,7 +33,15 @@ $path = preg_replace('#^.*?/api/cockpit#', '', $uri) ?: '/';
 $path = rtrim($path, '/') ?: '/';
 
 try {
-    ensureInstalled();                      // tables + seed + secret au premier appel
+    ensureInstalled();
+    // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
+    // cadre, il ne se lit pas en JSON.
+    if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        header('Content-Type: text/html; charset=utf-8');
+        echo ep_ca_mail_apercu();
+        exit;
+    }                      // tables + seed + secret au premier appel
 
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
     if ($out === null) {

@@ -29,6 +29,10 @@ function caMailDefauts(): array
         // commande. La centrale reste en copie — elle veut savoir, elle n'a
         // pas à faire suivre.
         'auFournisseur' => true,
+        // Le courrier vient de la CENTRALE D'ACHAT, pas de la boîte des
+        // rapports : c'est elle que le fournisseur doit lire dans son client
+        // de messagerie, et à laquelle sa réponse doit revenir.
+        'expediteur' => 'Centrale d’achat <achat@atelierby.be>',
         'destinataire' => 'achat@atelierby.be',
         'copie' => '',
         // MESURÉ : l'ERP garde 115 réquisitions au statut « en attente »,
@@ -47,7 +51,37 @@ function caMailDefauts(): array
             . "Merci de les valider dans le portail fournisseur. Ce rappel repart chaque jour "
             . "tant qu'une commande reste en attente.\n\n"
             . "— Centrale d'achat, L'Atelier by",
+        // Le SQUELETTE du courrier, éditable comme le reste. Vide = celui
+        // d'origine (caMailSquelette). Les variables sont les mêmes que dans
+        // le texte, plus {{logo}}, {{marque}}, {{contenu}} et {{sujet}}.
+        'html' => '',
     ];
+}
+
+/**
+ * Le squelette d'origine : tables imbriquées et styles en ligne — la seule
+ * mise en page que Gmail et Outlook respectent.
+ */
+function caMailSquelette(): string
+{
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
+        . '<body style="margin:0;padding:0;background:#EFE9DF">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
+        . '<tr><td align="center" style="padding:26px 12px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" width="620" style="width:620px;max-width:96%">'
+        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td>{{logo}}</td>'
+        . '<td align="right" style="font-family:\'Segoe UI\',Arial,sans-serif;color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">Centrale d’achat</td>'
+        . '</tr></table></td></tr>'
+        . '<tr><td style="background:#ffffff;border-radius:0 0 14px 14px;padding:0 0 22px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{{contenu}}</table>'
+        . '</td></tr>'
+        . '<tr><td style="font-family:\'Segoe UI\',Arial,sans-serif;padding:14px 30px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
+        . '{{marque}} — ce message est envoyé automatiquement par la centrale d’achat.'
+        . '</td></tr>'
+        . '</table></td></tr></table></body></html>';
 }
 
 /**
@@ -172,13 +206,16 @@ function caMailGabaritVieux(array $c): bool
  * ne demande à personne d'écrire du HTML. Les lignes commençant par « · »
  * deviennent les cartes de commande.
  */
-function caMailHtml(string $corps, array $g = []): string
+function caMailHtml(string $corps, array $g = [], array $c = []): string
 {
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     $F = "font-family:'Segoe UI',Arial,sans-serif";
     $reseau = setting('reseau', []);
     $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
-    $logo = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
+    $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
+    $logo = $logoUri !== ''
+        ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
+        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
 
     // Le texte se découpe : les lignes « · … » sont des commandes, le reste du
     // discours. Une puce sans commande derrière n'invente pas de carte.
@@ -196,13 +233,13 @@ function caMailHtml(string $corps, array $g = []): string
     };
 
     $blocCartes = '';
-    foreach ($cartes as $c) {
+    foreach ($cartes as $c2) {
         // « #169 — Halle — 2 132,84 € — période du … — en attente depuis 12 jour(s) »
-        $morceaux = array_map('trim', explode('—', $c));
+        $morceaux = array_map('trim', explode('—', $c2));
         $titre = array_shift($morceaux) ?: '';
         $retard = '';
-        foreach ($morceaux as $i => $m) {
-            if (str_contains($m, 'en attente depuis')) { $retard = $m; unset($morceaux[$i]); }
+        foreach ($morceaux as $i2 => $m2) {
+            if (str_contains($m2, 'en attente depuis')) { $retard = $m2; unset($morceaux[$i2]); }
         }
         $blocCartes .= '<tr><td style="padding:0 30px 8px">'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0">'
@@ -222,33 +259,20 @@ function caMailHtml(string $corps, array $g = []): string
           . '</tr></table></td></tr>'
         : '';
 
-    return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-        . '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
-        . '<body style="margin:0;padding:0;background:#EFE9DF">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
-        . '<tr><td align="center" style="padding:26px 12px">'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" width="620" style="width:620px;max-width:96%">'
-        // Bandeau : le logo sur fond clair — le noir du logo disparaîtrait sur
-        // le bordeaux —, liseré bordeaux dessous.
-        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td>' . ($logo !== ''
-            ? '<img src="' . $logo . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-            : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>') . '</td>'
-        . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">Centrale d’achat</td>'
-        . '</tr></table></td></tr>'
-        . '<tr><td style="background:#ffffff;border-radius:0 0 14px 14px;padding:0 0 22px">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
-        . $entete
-        . $par($avant)
-        . $blocCartes
+    $contenu = $entete . $par($avant) . $blocCartes
         . ($blocCartes !== '' ? '<tr><td style="padding:6px 30px 0"></td></tr>' : '')
-        . $par($apres)
-        . '</table></td></tr>'
-        . '<tr><td style="' . $F . ';padding:14px 30px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
-        . $e($marque) . ' — ce message est envoyé automatiquement par la centrale d’achat.'
-        . '</td></tr>'
-        . '</table></td></tr></table></body></html>';
+        . $par($apres);
+
+    // Le squelette : celui des Paramètres s'il est posé, celui d'origine sinon.
+    // Une variable inconnue disparaît plutôt que de partir entre accolades.
+    $squelette = trim((string) ($c['html'] ?? ''));
+    if ($squelette === '') { $squelette = caMailSquelette(); }
+    return caMailRemplir($squelette, [
+        'logo' => $logo, 'marque' => $e($marque), 'contenu' => $contenu,
+        'entete' => $entete, 'cartes' => $blocCartes,
+        'fournisseur' => $e((string) ($g['nom'] ?? '')),
+        'nCommandes' => (string) (int) ($g['n'] ?? 0),
+    ]);
 }
 
 /**
@@ -306,6 +330,8 @@ function caMailEtat(): array
         'fournisseurs' => $fournisseurs,
         'sansAdresse' => count(array_filter($fournisseurs, fn ($f) => $f['email'] === '')),
         'gabaritVieux' => caMailGabaritVieux($c),
+        'squelette' => caMailSquelette(),
+        'variablesHtml' => ['logo', 'marque', 'contenu', 'entete', 'cartes', 'fournisseur', 'nCommandes'],
         'fenetreJours' => (int) ($c['fenetreJours'] ?? 30),
         'classees' => (function () { $v = setting('caMailClassees');
             return is_array($v)
@@ -331,6 +357,27 @@ function caMailClassees(): array
 {
     $v = setting('caMailClassees');
     return is_array($v) ? array_map('strval', (array) ($v['ids'] ?? [])) : [];
+}
+
+/**
+ * GET /centrale/commandes/mail/apercu — le courrier tel qu'il partira.
+ *
+ * Rendu avec un exemple, à partir du gabarit ENREGISTRÉ (ou de celui qu'on
+ * essaie, transmis en paramètre) : on doit pouvoir regarder avant d'envoyer,
+ * sans poster à personne.
+ */
+function ep_ca_mail_apercu(): string
+{
+    $c = caMailConfig();
+    foreach (['sujet', 'corps', 'html'] as $k) {
+        if (isset($_GET[$k]) && $_GET[$k] !== '') { $c[$k] = (string) $_GET[$k]; }
+    }
+    $g = ['nom' => 'Rawette', 'n' => 2, 'total' => 5845.30, 'anciennes' => 3, 'lignes' => [
+        ['id' => 169, 'magasin' => 'Atelier by - Halle', 'valeur' => 2132.84, 'debut' => date('Y-m-d', strtotime('-12 day'))],
+        ['id' => 168, 'magasin' => 'Atelier by - Halle', 'valeur' => 3712.46, 'debut' => date('Y-m-d', strtotime('-5 day'))],
+    ]];
+    $vars = caMailVariablesGroupe($g, false);
+    return caMailHtml(caMailRemplir((string) $c['corps'], $vars), $g, $c);
 }
 
 /**
@@ -461,7 +508,8 @@ function wr_ca_mail_test(): array
             ['id' => 999, 'magasin' => 'Magasin d’essai', 'valeur' => 123.45, 'debut' => date('Y-m-d', strtotime('-2 day'))],
         ]], false);
     $ok = Smtp::envoyer($vers, '[ESSAI] ' . caMailRemplir($c['sujet'], $vars),
-        caMailHtml(caMailRemplir($c['corps'], $vars), ['nom' => 'Fournisseur d’essai', 'n' => 2]));
+        caMailHtml(caMailRemplir($c['corps'], $vars), ['nom' => 'Fournisseur d’essai', 'n' => 2], $c),
+        [], trim((string) ($c['expediteur'] ?? '')));
     caMailJournal($ok ? 'essai' : 'echec', $ok ? 'Essai du template envoyé'
         : ('Essai en échec — ' . (string) (Smtp::$lastError ?? '')), $vers);
     return $ok ? ['ok' => true, 'destinataire' => $vers]
@@ -543,12 +591,13 @@ function caMailRappels(array $lignes, array $c): array
 
         $vars = caMailVariablesGroupe($g, $adresse === '');
         $sujet = caMailRemplir((string) $c['sujet'], $vars);
-        $html = caMailHtml(caMailRemplir((string) $c['corps'], $vars), $g);
-        $ok = Smtp::envoyer($vers, $sujet, $html);
+        $html = caMailHtml(caMailRemplir((string) $c['corps'], $vars), $g, $c);
+        $de = trim((string) ($c['expediteur'] ?? ''));
+        $ok = Smtp::envoyer($vers, $sujet, $html, [], $de);
         // La centrale garde la copie — sauf quand c'est déjà elle qui reçoit.
         $copie = trim((string) $c['copie']);
         if ($copie === '' && $adresse !== '') { $copie = trim((string) $c['destinataire']); }
-        if ($ok && $copie !== '' && $copie !== $vers) { Smtp::envoyer($copie, $sujet, $html); }
+        if ($ok && $copie !== '' && $copie !== $vers) { Smtp::envoyer($copie, $sujet, $html, [], $de); }
 
         if ($ok) {
             $suivi[$cle] = ['nom' => $g['nom'], 'dernier' => $auj,

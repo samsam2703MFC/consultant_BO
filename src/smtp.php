@@ -122,7 +122,12 @@ final class Smtp
             $partie .= '--' . $lim . '--' . "\r\n";
         }
 
+        $adresse = preg_match('/<([^>]+)>/', $expediteur, $mA) ? $mA[1] : $expediteur;
         $entetes = 'From: ' . $expediteur . "\r\n"
+            // Répondre doit atteindre l'expéditeur AFFICHÉ, pas le compte qui
+            // a servi à poster : sans Reply-To, la réponse d'un fournisseur
+            // tomberait dans la boîte des rapports.
+            . 'Reply-To: ' . $adresse . "\r\n"
             . 'To: ' . $a . "\r\n"
             . 'Subject: =?UTF-8?B?' . base64_encode($sujet) . "?=\r\n"
             . 'MIME-Version: 1.0' . "\r\n"
@@ -161,7 +166,15 @@ final class Smtp
      * images sont incorporées) ; avec pièces, le tout est emballé dans un
      * multipart/mixed — la forme que tous les clients savent lire.
      */
-    public static function envoyer(string $a, string $sujet, string $html, array $pieces = []): bool
+    /**
+     * @param string $expediteur Un expéditeur pour CE courrier — « Nom <a@b> ».
+     *   Le courrier au fournisseur ne peut pas partir de « L'Atelier By —
+     *   Rapport » : il vient de la centrale d'achat, et le destinataire doit
+     *   pouvoir répondre à la bonne boîte. L'ENVELOPPE (MAIL FROM) reste celle
+     *   du compte authentifié : la changer ferait refuser le message par la
+     *   plupart des serveurs. Seul l'en-tête From change, avec Reply-To.
+     */
+    public static function envoyer(string $a, string $sujet, string $html, array $pieces = [], string $expediteur = ''): bool
     {
         self::$lastError = null;
         $c = self::config();
@@ -211,7 +224,8 @@ final class Smtp
             if (!$dire('MAIL FROM:<' . $exp . '>', [250])) { return false; }
             if (!$dire('RCPT TO:<' . $a . '>', [250, 251])) { return false; }
             if (!$dire('DATA', [354])) { return false; }
-            [$entetes, $corps] = self::message($c['expediteur'], $a, $sujet, $html, $pieces);
+            $de = trim($expediteur) !== '' ? trim($expediteur) : $c['expediteur'];
+            [$entetes, $corps] = self::message($de, $a, $sujet, $html, $pieces);
             if (!$dire($entetes . "\r\n" . $corps . "\r\n.", [250])) { return false; }
             $dire('QUIT', [221]);
             return true;

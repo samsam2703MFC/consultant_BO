@@ -10580,6 +10580,24 @@ class App {
     const cmActif = cmD.actif != null ? cmD.actif : !!cmCf.actif;
     common.cm = {
       actif: cmActif,
+      expediteur: cmVal('expediteur', 'Centrale d’achat <achat@atelierby.be>'),
+      setExpediteur: cmSet('expediteur'),
+      // Le SQUELETTE HTML, éditable comme le reste. Vide = celui d'origine.
+      html: cmVal('html', ''),
+      setHtml: cmSet('html'),
+      htmlOuvert: !!cmD.htmlOuvert,
+      htmlBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { htmlOuvert: !(s2.cmDraft || {}).htmlOuvert }) })),
+      htmlDefaut: cmEt.squelette ? () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft,
+        { html: cmEt.squelette, msg: 'Squelette d’origine repris — enregistrez pour le garder.', ok: true }) })) : null,
+      variablesHtml: (cmEt.variablesHtml || []).map(v => '{{' + v + '}}').join(' · '),
+      // L'aperçu montre le gabarit EN COURS D'ÉDITION, pas celui enregistré :
+      // on regarde ce qu'on vient d'écrire, avant de l'enregistrer.
+      apercuUrl: this.apiBase() + '/centrale/commandes/mail/apercu'
+        + '?sujet=' + encodeURIComponent(cmVal('sujet', ''))
+        + '&corps=' + encodeURIComponent(cmVal('corps', ''))
+        + '&html=' + encodeURIComponent(cmVal('html', '')),
+      apercuOuvert: !!cmD.apercuOuvert,
+      apercuBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { apercuOuvert: !(s2.cmDraft || {}).apercuOuvert }) })),
       destinataire: cmVal('destinataire', 'achat@atelierby.be'),
       copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
       variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
@@ -10603,8 +10621,13 @@ class App {
       save: () => {
         this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
         this.api('PUT', '/parametres/caMailCommande', { valeur: {
-          actif: cmActif, destinataire: cmVal('destinataire', ''), copie: cmVal('copie', ''),
-          sujet: cmVal('sujet', ''), corps: cmVal('corps', '') } }).then(r => {
+          actif: cmActif, expediteur: cmVal('expediteur', ''),
+          destinataire: cmVal('destinataire', ''), copie: cmVal('copie', ''),
+          sujet: cmVal('sujet', ''), corps: cmVal('corps', ''), html: cmVal('html', ''),
+          // Ce qui ne se règle pas à l'écran doit SURVIVRE à un enregistrement :
+          // la fenêtre de relance et la borne de lignes vivent dans le même
+          // réglage, les omettre les remettrait à zéro.
+          fenetreJours: (cmEt.config || {}).fenetreJours, maxLignes: (cmEt.config || {}).maxLignes } }).then(r => {
           const ok = !(r && r.ok === false);
           this._caMailLu = false;
           this.setState(s2 => ({ cmDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.cmDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
