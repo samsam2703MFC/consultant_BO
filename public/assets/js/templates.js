@@ -1519,6 +1519,8 @@ function tplMesureComp(c, x){
       </div>
     </div>
     ${(c.mcMagasins || []).map(m => rangee(m, false)).join('')}
+    ${(c.mcHors || []).length ? `<div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);margin:14px 0 7px 2px">Hors campagne — ils n’ont rien lancé</div>` : ''}
+    ${(c.mcHors || []).map(m => rangee(m, false)).join('')}
     ${c.mcTemoin ? rangee(c.mcTemoin, true) : ''}
     <div style="${carte}">
       <div style="font-size:11.5px;line-height:1.55">${esc(c.mcBruitTxt)}

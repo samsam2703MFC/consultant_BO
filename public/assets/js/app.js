@@ -2728,12 +2728,17 @@ class App {
         net: pc(m.net), netCol: col(m.net),
         // Un effet plus petit que le bruit du réseau n'est pas une preuve :
         // l'écran le marque au lieu de laisser lire une victoire.
-        faible: m.net != null && bruit != null && Math.abs(m.net) < bruit * 3,
+        faible: m.net != null && bruit != null && Math.abs(m.net) < bruit * 3 && m.role !== 'hors',
+        hors: m.role === 'hors',
         manque: m.pendant.n == null ? 'pas encore de ventes sur la période'
           : (m.avant.ecart == null || m.pendant.ecart == null ? 'N-1 absent : l’écart ne peut pas se calculer' : ''),
       };
     };
-    common.mcMagasins = (d.magasins || []).map(ligne);
+    const tousMag = (d.magasins || []).map(ligne);
+    common.mcMagasins = tousMag.filter(m => !m.hors);
+    // Les magasins hors campagne gardent leur rangée, sous un intertitre : ils
+    // ne sont pas la campagne, mais ils sont le réseau.
+    common.mcHors = tousMag.filter(m => m.hors);
     common.mcTemoin = tem ? Object.assign(ligne(tem), { magasins: tem.magasins }) : null;
     common.mcBruitTxt = tem && tem.net != null
       ? 'Effet net du témoin : ' + pc(tem.net) + ' — tout ce qui reste dans cette marge n’est pas un effet de campagne.'

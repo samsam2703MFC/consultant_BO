@@ -514,11 +514,27 @@ function ep_mesure_comparaison(): array
         ];
     };
 
+    // TOUS les magasins ont leur rangée — ceux de la campagne d'abord, les
+    // autres ensuite. Un magasin hors campagne fondu dans le seul témoin
+    // disparaissait de l'écran : on ne pouvait plus lire ce qu'il a fait, ni
+    // vérifier que le bruit vient bien de lui.
     $out['magasins'] = [];
-    foreach ($perim as $sid) { $out['magasins'][] = $ligne([$sid], $nomDe[$sid] ?? ('Magasin ' . $sid), $sid); }
+    foreach ($perim as $sid) {
+        $l = $ligne([$sid], $nomDe[$sid] ?? ('Magasin ' . $sid), $sid);
+        $l['role'] = 'campagne';
+        $out['magasins'][] = $l;
+    }
+    foreach ($hors as $sid) {
+        $l = $ligne([$sid], $nomDe[$sid] ?? ('Magasin ' . $sid), $sid);
+        $l['role'] = 'hors';
+        $out['magasins'][] = $l;
+    }
     // Le témoin : les magasins qui n'ont RIEN lancé. Sans eux, on mesure la
     // saison et la météo.
+    // Le témoin reste la SOMME des magasins hors campagne : c'est elle qui
+    // donne le bruit, un magasin seul étant trop bavard pour servir d'étalon.
     $out['temoin'] = $hors ? $ligne($hors, 'Réseau hors campagne', null) : null;
+    if ($out['temoin'] !== null) { $out['temoin']['role'] = 'temoin'; }
     if (!$hors) { $motifs[] = 'toute la campagne couvre le réseau : aucun magasin témoin'; }
     $out['perimetre'] = array_map(fn ($sid) => $nomDe[$sid] ?? $sid, $perim);
     $out['source'] = 'ventes du panel, jour par jour ; N-1 aligné à 52 semaines (mêmes jours de semaine)';
