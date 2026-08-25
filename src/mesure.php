@@ -1719,15 +1719,28 @@ function mktKpiPeriode(array $p): array
     // La valeur RETENUE — et d'où elle vient. Les deux voyagent ensemble :
     // afficher un chiffre sans sa provenance, c'est le faire passer pour la
     // référence demandée.
+    //
+    // Arrondie À L'AFFICHAGE ICI, et non dans l'écran : le total du réseau est
+    // la somme de ces valeurs, et arrondir chacun de son côté ferait une
+    // colonne qui n'additionne pas à son propre total.
+    $dec = (int) mktKpiCatalogue()[$mesure]['decimales'];
+    $arr = static fn (?float $v): ?float => $v === null ? null : round($v, $dec);
     foreach ($lignes as $i => $l) {
-        $lignes[$i]['valeurRetenue'] = $l['valeurPendant'] ?? ($l['repli']['valeur'] ?? null);
-        $lignes[$i]['source'] = $l['valeurPendant'] !== null ? 'n1'
-            : (($l['repli']['valeur'] ?? null) !== null ? 'repli' : null);
+        $lignes[$i]['valeurAvant'] = $arr($l['valeurAvant'] === null ? null : (float) $l['valeurAvant']);
+        $lignes[$i]['valeurPendant'] = $arr($l['valeurPendant'] === null ? null : (float) $l['valeurPendant']);
+        if (($l['repli']['valeur'] ?? null) !== null) {
+            $lignes[$i]['repli']['valeur'] = $arr((float) $l['repli']['valeur']);
+        }
+        $lignes[$i]['valeurRetenue'] = $lignes[$i]['valeurPendant'] ?? ($lignes[$i]['repli']['valeur'] ?? null);
+        $lignes[$i]['source'] = $lignes[$i]['valeurPendant'] !== null ? 'n1'
+            : (($lignes[$i]['repli']['valeur'] ?? null) !== null ? 'repli' : null);
     }
 
     $ra = mesCumulGroupe($ser, $perim, $f['avantN1Du'], $f['avantN1Au']);
     $rp = mesCumulGroupe($ser, $perim, $f['pendantN1Du'], $f['pendantN1Au']);
     $rva = $valeur($ra); $rvp = $valeur($rp);
+    $rva = $rva === null ? null : round((float) $rva, $dec);
+    $rvp = $rvp === null ? null : round((float) $rvp, $dec);
 
     // Le total du réseau doit être la somme de ce que le tableau affiche.
     // Il ne l'était pas : la colonne montrait le repli d'un magasin sans N-1,
@@ -1759,7 +1772,7 @@ function mktKpiPeriode(array $p): array
             foreach ($lignes as $l) {
                 if ($l['valeurRetenue'] !== null) { $somme += (float) $l['valeurRetenue']; }
             }
-            $rvRetenue = round($somme, $mesure === 'trafic' ? 1 : 2);
+            $rvRetenue = round($somme, $dec);
         }
     }
 

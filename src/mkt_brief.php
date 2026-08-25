@@ -140,10 +140,14 @@ function mktBriefDonnees(int $id): ?array
         // activité, elle ; lui écrire « à poser ensemble » lui donnait la
         // seule ligne vide de la note.
         $ref = $m['valeurRetenue'] ?? $m['valeurPendant'];
+        // La cible s'arrondit dans l'unité du KPI, comme la référence : la
+        // colonne « cible » doit additionner à son propre total.
+        $cible = ($ref === null || $pct === null) ? $ref
+            : round((float) $ref * (1 + $pct / 100), (int) ($kpi['kpi']['decimales'] ?? 0));
         $lignes[] = [
             'id' => (string) $m['id'], 'nom' => (string) $m['nom'],
             'reference' => $ref,
-            'cible' => ($ref === null || $pct === null) ? $ref : $ref * (1 + $pct / 100),
+            'cible' => $cible,
             'sansN1' => (bool) $m['sansN1'],
             'source' => (string) ($m['source'] ?? ''),
             'repli' => $m['repli'] ?? null,
@@ -243,8 +247,9 @@ function mktBriefDonnees(int $id): ?array
         // des lignes du tableau. Prendre le seul cumul N-1 donnait un total
         // plus petit que ses propres lignes dès qu'un magasin était sur repli.
         'reference' => $kpi['reseau']['valeurRetenue'] ?? ($kpi['reseau']['valeurPendant'] ?? null),
-        'cible' => (($kpi['reseau']['valeurRetenue'] ?? ($kpi['reseau']['valeurPendant'] ?? null)) !== null && $pct !== null)
-            ? ($kpi['reseau']['valeurRetenue'] ?? $kpi['reseau']['valeurPendant']) * (1 + $pct / 100) : null,
+        // Le total des cibles est la SOMME DES CIBLES AFFICHÉES pour un KPI qui
+        // s'additionne ; pour un panier — un rapport — il se recalcule.
+        'cible' => mktBriefCibleReseau($kpi, $lignes, $pct),
         'referenceSource' => (string) ($kpi['reseau']['source'] ?? 'n1'),
         'referenceNRepli' => (int) ($kpi['reseau']['nRepli'] ?? 0),
         'lignes' => $lignes,
@@ -371,6 +376,27 @@ function mktBriefMagasin(string $id): ?array
         } catch (PDOException $e) { /* table absente ici : on tente la suivante */ }
     }
     return null;
+}
+
+/**
+ * La cible du réseau. Somme des cibles des magasins quand le KPI s'additionne
+ * (clients/jour, CA/jour) ; sinon le rapport recalculé — additionner quatre
+ * paniers moyens donnerait un panier de quarante-huit euros.
+ */
+function mktBriefCibleReseau(?array $kpi, array $lignes, ?float $pct): ?float
+{
+    if ($pct === null || $kpi === null) { return null; }
+    $dec = (int) ($kpi['kpi']['decimales'] ?? 0);
+    $base = $kpi['reseau']['valeurRetenue'] ?? ($kpi['reseau']['valeurPendant'] ?? null);
+    if (($kpi['mesure'] ?? '') === 'panier') {
+        return $base === null ? null : round((float) $base * (1 + $pct / 100), $dec);
+    }
+    $somme = null;
+    foreach ($lignes as $l) {
+        if ($l['cible'] === null) { continue; }
+        $somme = ($somme ?? 0) + (float) $l['cible'];
+    }
+    return $somme === null ? null : round($somme, $dec);
 }
 
 /** Un nombre dans l'unité du KPI, ou « — ». */

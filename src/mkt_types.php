@@ -222,12 +222,15 @@ function mktIcones(): array
  * bilan de campagne signé.
  */
 const MKT_KPI = [
+    // Des CLIENTS et des EUROS PAR JOUR se comptent en entiers : « 135,6
+    // clients » n'existe pas en boutique, et la décimale donnait une précision
+    // que la mesure n'a pas. Le panier, lui, garde ses centimes — c'est un prix.
     'trafic' => ['cle' => 'trafic', 'nom' => 'Clients par jour', 'unite' => 'clients / jour',
-                 'decimales' => 1, 'calcul' => 'tickets ÷ jours ouverts'],
+                 'decimales' => 0, 'calcul' => 'tickets ÷ jours ouverts'],
     'panier' => ['cle' => 'panier', 'nom' => 'Panier moyen', 'unite' => '€ / ticket',
                  'decimales' => 2, 'calcul' => 'CA ÷ tickets'],
     'ca'     => ['cle' => 'ca', 'nom' => 'CA par jour', 'unite' => '€ / jour',
-                 'decimales' => 2, 'calcul' => 'CA ÷ jours ouverts'],
+                 'decimales' => 0, 'calcul' => 'CA ÷ jours ouverts'],
 ];
 
 /** Le KPI de chaque levier, par code — ou la raison de son absence. */
