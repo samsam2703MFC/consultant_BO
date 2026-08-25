@@ -7,8 +7,10 @@ declare(strict_types=1);
  * Quand un franchisé passe commande (une réquisition matière naît côté panel),
  * la centrale veut un e-mail. L'ERP n'offre aucun déclencheur : la détection
  * se fait donc ici, au même rythme que les rapports (cron horaire), sur le
- * MÊME flux que l'écran « Commandes franchisés » — ep_ca_commandes() — pour ne
- * jamais raconter autre chose que ce que l'écran montre.
+ * MÊME flux que l'écran des commandes — le SUIVI des commandes fournisseur,
+ * ep_ca_achats() — pour ne jamais raconter autre chose que ce que l'écran
+ * montre. On relance sur ce que le FOURNISSEUR n'a pas accepté, pas sur ce que
+ * le magasin a demandé : ce sont deux objets, et deux responsabilités.
  *
  * Le template (sujet, corps, destinataire) vit dans
  * `ceo_app_setting.caMailCommande` et s'édite dans Paramètres, groupé avec
@@ -304,9 +306,9 @@ function caMailEtat(): array
     // un annuaire.
     $fournisseurs = [];
     try {
-        $d = ep_ca_commandes();
-        if (($d['etat'] ?? '') === 'ok') {
-            foreach (caMailGroupes((array) ($d['lignes'] ?? []), (int) ($c['fenetreJours'] ?? 30)) as $cle => $g) {
+        $aV = caMailAValider();
+        if ($aV !== null) {
+            foreach (caMailGroupes($aV, (int) ($c['fenetreJours'] ?? 30)) as $cle => $g) {
                 $adresse = caMailAdresse($g['nom'], $carnet, $g['mails']);
                 $fournisseurs[] = ['cle' => $cle, 'nom' => $g['nom'], 'commandes' => $g['n'],
                     'total' => round((float) $g['total'], 2), 'email' => $adresse,
@@ -484,12 +486,12 @@ function wr_ca_mail_envoyer(): array
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['caMailQuotidien', json_encode($suivi, JSON_UNESCAPED_UNICODE)]);
 
-    $d = ep_ca_commandes();
-    if (($d['etat'] ?? '') !== 'ok') { return ['ok' => false, 'erreur' => 'commandes indisponibles']; }
+    $lignesTout = caMailAValider();
+    if ($lignesTout === null) { return ['ok' => false, 'erreur' => 'commandes illisibles côté panel']; }
     // On ne relance QUE le fournisseur demandé : les autres gardent leur
     // rythme quotidien.
     $cible = caMailNom($nom);
-    $lignes = array_values(array_filter((array) ($d['lignes'] ?? []), function ($l) use ($cible) {
+    $lignes = array_values(array_filter($lignesTout, function ($l) use ($cible) {
         foreach ((array) ($l['fournisseurs'] ?? []) as $f) { if (caMailNom((string) $f) === $cible) { return true; } }
         return false;
     }));
@@ -692,10 +694,46 @@ function ep_ca_mail_cron(): array
     if (empty($c['actif'])) { return ['etat' => 'inactif']; }
     if (!Smtp::configured()) { return ['etat' => 'erreur', 'motif' => 'SMTP non configuré']; }
 
-    $d = ep_ca_commandes();
-    if (($d['etat'] ?? '') !== 'ok') { return ['etat' => 'attente', 'motif' => (string) ($d['source'] ?? '')]; }
+    $lignes = caMailAValider();
+    if ($lignes === null) { return ['etat' => 'attente', 'motif' => 'commandes illisibles côté panel']; }
+    return caMailRappels($lignes, $c);
+}
 
-    return caMailRappels((array) ($d['lignes'] ?? []), $c);
+/**
+ * Ce qu'on relance : les commandes que le FOURNISSEUR n'a pas acceptées.
+ *
+ * C'était l'erreur : le rappel se bâtissait sur les réquisitions — la demande
+ * du magasin. Or ce que le fournisseur doit faire, c'est accepter SA commande.
+ * On lit donc le suivi (étape « envoyée, pas encore acceptée »), sans la borne
+ * des deux par magasin qui ne vaut que pour l'affichage.
+ *
+ * Chaque commande ne nomme qu'UN fournisseur — celui de la commande, retenu
+ * par l'ERP. Le courrier ne peut donc plus s'adresser au mauvais.
+ *
+ * @return array<int,array>|null null quand le panel n'a rien rendu.
+ */
+function caMailAValider(): ?array
+{
+    $d = ep_ca_achats();
+    $sv = (array) ($d['suivi'] ?? []);
+    if (!isset($sv['aValider']) || !is_array($sv['aValider'])) { return null; }
+    $out = [];
+    foreach ($sv['aValider'] as $o) {
+        $out[] = [
+            // La CLÉ de la commande fait l'identifiant : c'est elle que le
+            // fournisseur lit dans son portail, pas un numéro interne.
+            'id' => (string) ($o['cle'] ?? ('#' . ($o['id'] ?? ''))),
+            'magasin' => (string) ($o['magasin'] ?? ''),
+            'fournisseurs' => [(string) ($o['fournisseur'] ?? '')],
+            'debut' => (string) ($o['date'] ?? ''),
+            'statut' => 'PENDING',
+            // MESURÉ : /deliveries/{id} ne porte aucun montant. Zéro ici veut
+            // dire « inconnu », et le courrier n'affiche pas de total faux.
+            'valeur' => 0.0,
+            'livraison' => (string) ($o['livraisonPrevue'] ?? ''),
+        ];
+    }
+    return $out;
 }
 
 /**
@@ -849,9 +887,12 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
             // 12 jours » se lit autrement qu'une date.
             if ($depuis < 0) { $jours = ' — en attente depuis ' . abs($depuis) . ' jour(s)'; }
         }
-        $lignes[] = '· Réquisition #' . (string) ($l['id'] ?? '') . ' — ' . (string) ($l['magasin'] ?? '—')
-            . ' — ' . number_format((float) ($l['valeur'] ?? 0), 2, ',', ' ') . ' €'
-            . ($debut !== '' ? ' — période du ' . $debut : '') . $jours;
+        $montant = (float) ($l['valeur'] ?? 0);
+        $lignes[] = '· Commande ' . (string) ($l['id'] ?? '') . ' — ' . (string) ($l['magasin'] ?? '—')
+            . ($montant > 0 ? ' — ' . number_format($montant, 2, ',', ' ') . ' €' : '')
+            . ($debut !== '' ? ' — passée le ' . $debut : '')
+            . (((string) ($l['livraison'] ?? '')) !== '' ? ' — livraison prévue le ' . $l['livraison'] : '')
+            . $jours;
     }
     $magasins = array_values(array_unique(array_map(
         fn ($l) => (string) ($l['magasin'] ?? ''), $g['lignes'])));
@@ -863,7 +904,11 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
     return [
         'fournisseur' => (string) $g['nom'],
         'nCommandes' => (string) $g['n'],
-        'total' => number_format((float) $g['total'], 2, ',', ' ') . ' €',
+        // Sans montant connu, on n'écrit pas « 0,00 € » : l'ERP ne porte aucun
+        // montant sur les commandes, et un zéro se lirait comme une gratuité.
+        'total' => ((float) $g['total']) > 0
+            ? number_format((float) $g['total'], 2, ',', ' ') . ' €'
+            : 'montant non communiqué par notre système',
         'lignes' => implode("\n", $lignes)
             . ($restant > 0 ? "\n… et " . $restant . " autre(s) commande(s) en attente." : '')
             . (((int) ($g['anciennes'] ?? 0)) > 0
@@ -880,7 +925,11 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
         'magasin' => $magasins === [] ? '—' : implode(', ', $magasins),
         'id' => implode(', ', array_filter($ids)),
         'debut' => $debuts === [] ? '—' : $debuts[0],
-        'valeur' => number_format((float) $g['total'], 2, ',', ' ') . ' €',
+        // Même règle que {{total}} : pas de « 0,00 € » là où le montant est
+        // simplement inconnu.
+        'valeur' => ((float) $g['total']) > 0
+            ? number_format((float) $g['total'], 2, ',', ' ') . ' €'
+            : 'montant non communiqué par notre système',
         'par' => $pars === [] ? '—' : implode(', ', $pars),
         'statut' => 'En attente',
     ];

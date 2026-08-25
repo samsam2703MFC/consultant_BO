@@ -6429,7 +6429,7 @@ function caSuiviCommandes(array $nomsMagasins): array
     usort($cmds, static fn ($a, $b) => [(string) ($b['order_date'] ?? ''), (int) ($b['id'] ?? 0)]
         <=> [(string) ($a['order_date'] ?? ''), (int) ($a['id'] ?? 0)]);
 
-    $parFourn = []; $pris = [];
+    $parFourn = []; $pris = []; $aValider = [];
     foreach ($cmds as $o) {
         $fid = (int) ($o['id_supplier'] ?? 0);
         $sid = (int) ($o['id_shop'] ?? 0);
@@ -6465,6 +6465,17 @@ function caSuiviCommandes(array $nomsMagasins): array
         $retard = null;
         if ($etape < 4 && !$bloque && $prevue !== '' && $prevue < $aujourdHui) {
             $retard = (int) floor((strtotime($aujourdHui) - strtotime($prevue)) / 86400);
+        }
+
+        // Ce que le fournisseur n'a PAS encore accepté — sans la borne des deux
+        // par magasin, qui ne vaut que pour l'affichage : un rappel doit citer
+        // TOUTES les commandes qui attendent, pas les deux dernières.
+        if ($etape === 1 && !$bloque) {
+            $aValider[] = ['id' => (int) $o['id'],
+                'cle' => (string) ($o['order_key'] ?? ('#' . $o['id'])),
+                'fournisseur' => $fourn, 'magasin' => $magasin,
+                'date' => substr((string) ($o['order_date'] ?? ''), 0, 10),
+                'livraisonPrevue' => $prevue, 'retardJours' => $retard];
         }
 
         $parFourn[$fourn]['magasins'][$magasin][] = [
@@ -6503,7 +6514,11 @@ function caSuiviCommandes(array $nomsMagasins): array
     usort($groupes, static fn ($a, $b) => [-$a['retard'], -$a['enCours'], $a['fournisseur']]
         <=> [-$b['retard'], -$b['enCours'], $b['fournisseur']]);
 
-    $out = ['groupes' => $groupes, 'lues' => count($cmds), 'maxId' => $max, 'quand' => time(),
+    // Les commandes que le fournisseur n'a pas acceptées, toutes, triées de la
+    // plus ancienne à la plus récente : c'est la matière du rappel.
+    usort($aValider, fn ($a, $b) => [(string) $a['date'], $a['id']] <=> [(string) $b['date'], $b['id']]);
+    $out = ['groupes' => $groupes, 'aValider' => $aValider,
+        'lues' => count($cmds), 'maxId' => $max, 'quand' => time(),
         'kpis' => ['enCours' => $kEnCours, 'retard' => $kRetard, 'aAccepter' => $kNouv,
             'fournisseurs' => count($groupes), 'total' => $kTotal]];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
