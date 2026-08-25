@@ -206,3 +206,78 @@ function mktIcones(): array
     }
     return $out;
 }
+
+/**
+ * Les KPI mesurables, et le levier auquel chacun appartient.
+ *
+ * Fermé, et côté serveur : le KPI décide de ce qu'on compare à N-1 dans
+ * l'assistant et de ce qui sera relu au bilan. Le laisser en texte libre — ce
+ * qu'est `default_kpi_label` sur un type — donne une phrase à afficher, pas un
+ * chiffre à mesurer : « Nouveaux clients, tickets/jour » ne dit pas au serveur
+ * quoi additionner.
+ *
+ * Trois seulement, parce que trois seulement se lisent sur la caisse. Les
+ * autres leviers portent leur raison plutôt qu'un KPI approché : un taux
+ * d'invendus déduit du CA serait une invention, et elle se retrouverait dans un
+ * bilan de campagne signé.
+ */
+const MKT_KPI = [
+    'trafic' => ['cle' => 'trafic', 'nom' => 'Clients par jour', 'unite' => 'clients / jour',
+                 'decimales' => 1, 'calcul' => 'tickets ÷ jours ouverts'],
+    'panier' => ['cle' => 'panier', 'nom' => 'Panier moyen', 'unite' => '€ / ticket',
+                 'decimales' => 2, 'calcul' => 'CA ÷ tickets'],
+    'ca'     => ['cle' => 'ca', 'nom' => 'CA par jour', 'unite' => '€ / jour',
+                 'decimales' => 2, 'calcul' => 'CA ÷ jours ouverts'],
+];
+
+/** Le KPI de chaque levier, par code — ou la raison de son absence. */
+const MKT_KPI_LEVIER = [
+    'TRAFIC'   => ['mesure' => 'trafic'],
+    'PANIER'   => ['mesure' => 'panier'],
+    'RECUR'    => ['mesure' => null, 'raison' => 'la caisse ne relie pas un ticket à un client : la récurrence se relève au bilan'],
+    'XP'       => ['mesure' => null, 'raison' => 'la part des tickets qui portent le produit se lit à l’étape « Objectifs de vente »'],
+    'FOOD'     => ['mesure' => null, 'raison' => 'les invendus ne passent pas en caisse : relevé au bilan'],
+    'LABOUR'   => ['mesure' => null, 'raison' => 'les heures ne passent pas en caisse : relevé au bilan'],
+    'OVERHEAD' => ['mesure' => null, 'raison' => 'les charges fixes ne passent pas en caisse : relevé au bilan'],
+];
+
+function mktKpiCatalogue(): array
+{
+    return MKT_KPI;
+}
+
+/**
+ * Les leviers tels que l'assistant les affiche : chacun avec son KPI, ou avec
+ * la raison pour laquelle il n'en a pas de mesurable.
+ *
+ * @return list<array<string,mixed>>
+ */
+function mktKpiParLevier(): array
+{
+    try { $leviers = Db::rows('SELECT id, code, label, color_hex FROM mar_lever ORDER BY sort_order, id'); }
+    catch (PDOException $e) { return []; }
+
+    $out = [];
+    foreach ($leviers as $l) {
+        $code = strtoupper(trim((string) $l['code']));
+        $regle = MKT_KPI_LEVIER[$code] ?? ['mesure' => null, 'raison' => 'aucun KPI n’est rattaché à ce levier'];
+        $m = $regle['mesure'] ?? null;
+        $out[] = ['id' => (int) $l['id'], 'code' => $code, 'nom' => (string) $l['label'],
+            'couleur' => (string) ($l['color_hex'] ?? ''),
+            'mesure' => $m,
+            'kpi' => $m === null ? null : MKT_KPI[$m],
+            'raison' => $m === null ? ($regle['raison'] ?? null) : null];
+    }
+    return $out;
+}
+
+/** Le KPI d'un levier désigné par son code ou son identifiant. Null si aucun. */
+function mktMesureDuLevier(string $levier): ?string
+{
+    $levier = trim($levier);
+    if ($levier === '') { return null; }
+    foreach (mktKpiParLevier() as $l) {
+        if ($l['code'] === strtoupper($levier) || (string) $l['id'] === $levier) { return $l['mesure']; }
+    }
+    return null;
+}

@@ -1522,3 +1522,103 @@ export function listKits(): Promise<Kit[]> {
 
 // Réexport pour les écrans d'alias, qui restent servis par l'ERP.
 export type { AliasType, LangCode }
+
+// ---------------------------------------------------------------------------
+// KPI d'une période — lu par le cockpit, pas par le module
+// ---------------------------------------------------------------------------
+
+/**
+ * Le KPI du levier sur la période choisie, comparé à N-1.
+ *
+ * Servi par le COCKPIT (`/api/cockpit/marketing/kpi-periode`) et non par le
+ * module : c'est lui qui tient le compte du panel, et c'est la même mécanique
+ * que son écran « Mesure des campagnes ». La refaire ici donnerait deux
+ * réponses à « combien a fait septembre l'an dernier », sans moyen de savoir
+ * laquelle croire.
+ */
+export interface KpiDefinition {
+  cle: string
+  nom: string
+  unite: string
+  decimales: number
+  calcul: string
+}
+
+export interface KpiBloc {
+  ca: number
+  tickets: number
+  jours: number
+  caJour: number | null
+  ticketsJour: number | null
+  panier: number | null
+}
+
+export interface KpiLigne {
+  id: string
+  nom: string
+  avant: KpiBloc
+  pendant: KpiBloc
+  valeurAvant: number | null
+  valeurPendant: number | null
+  variation: number | null
+  /** Aucun relevé sur les mêmes dates l'an dernier : l'objectif se pose à la main. */
+  sansN1: boolean
+}
+
+export interface KpiLevier {
+  id: number
+  code: string
+  nom: string
+  couleur: string
+  /** `null` : rien de mesurable en caisse — `raison` dit pourquoi. */
+  mesure: string | null
+  kpi: KpiDefinition | null
+  raison: string | null
+}
+
+export interface KpiPeriode {
+  fenetres: {
+    du: string
+    au: string
+    jours: number
+    avantDu: string
+    avantAu: string
+    avantN1Du: string
+    avantN1Au: string
+    pendantN1Du: string
+    pendantN1Au: string
+    decalage: number
+  }
+  mesure: string
+  kpi: KpiDefinition
+  catalogue: Record<string, KpiDefinition>
+  leviers: KpiLevier[]
+  levierDemande: string | null
+  levierMesurable: boolean | null
+  magasins: KpiLigne[]
+  reseau: {
+    avant: KpiBloc
+    pendant: KpiBloc
+    valeurAvant: number | null
+    valeurPendant: number | null
+    variation: number | null
+    sansN1: boolean
+  }
+  motifs: string[]
+  source: string
+}
+
+export function getKpiPeriode(query: {
+  from: string
+  to: string
+  lever?: string | null
+  metric?: string | null
+  shopIds?: string[]
+}): Promise<KpiPeriode> {
+  const params = new URLSearchParams({ du: query.from, au: query.to })
+  if (query.lever) params.set('levier', query.lever)
+  if (query.metric) params.set('mesure', query.metric)
+  if (query.shopIds && query.shopIds.length > 0) params.set('magasins', query.shopIds.join(','))
+
+  return request<KpiPeriode>(`${API_ROOT}/api/cockpit/marketing/kpi-periode?${params.toString()}`)
+}

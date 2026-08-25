@@ -5,6 +5,7 @@ import type { CampaignDraft, ClientTarget, ImageFit, OfferItem, References } fro
 import type { Role } from '../../lib/navigation'
 import { describeError } from '../../state/auth'
 import ObjectivesStep from './ObjectivesStep'
+import LeverKpi from './LeverKpi'
 import PricingStep from './PricingStep'
 import PhotosStep from './PhotosStep'
 import ProspectList from './ProspectList'
@@ -633,7 +634,7 @@ export default function CampaignBuilder({
         {here === 'objectives' ? <ObjectivesStep {...shared} /> : null}
         {here === 'pricing' ? <PricingStep {...shared} /> : null}
         {here === 'photos' ? <PhotosStep {...shared} /> : null}
-        {here === 'budget' ? <BudgetStep {...shared} /> : null}
+        {here === 'budget' ? <BudgetStep {...shared} shops={shops.data ?? []} /> : null}
         {here === 'communication' ? <CommunicationStep {...shared} agencies={agencies.data ?? []} /> : null}
         {here === 'planning' ? <PlanningStep {...shared} /> : null}
         {here === 'review' ? <ReviewStep {...shared} shops={shops.data ?? []} /> : null}
@@ -2049,7 +2050,12 @@ function OfferStep({ draft, patch }: StepProps) {
 // 5 — Budget & leviers
 // ---------------------------------------------------------------------------
 
-function BudgetStep({ refs, draft, patch }: StepProps) {
+function BudgetStep({
+  refs,
+  draft,
+  patch,
+  shops,
+}: StepProps & { shops: Array<{ id: number; code: string; name: string }> }) {
   return (
     <>
       <h2>Budget & leviers</h2>
@@ -2085,7 +2091,9 @@ function BudgetStep({ refs, draft, patch }: StepProps) {
           : `Objectif : N-1 ${Number(draft.objective_coef_pct) < 0 ? '−' : '+'} ${Math.abs(Number(draft.objective_coef_pct))} %`}
       </p>
 
-      <h3 className="section-label">Objectifs par levier</h3>
+      <LeverKpi draft={draft} refs={refs} shops={shops} />
+
+      <h3 className="section-label">Objectifs par levier — montants visés</h3>
       <p className="muted">
         Facultatif. Les leviers renseignés alimentent le ROI mesuré ; ceux laissés vides ne
         sont pas rattachés à la campagne.

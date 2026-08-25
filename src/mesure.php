@@ -1581,3 +1581,129 @@ function ep_profil_jour(): array
         'lecture' => 'Moyenne du CA par jour de semaine, mesurée sur la fenêtre lue par « Résultat du jour » '
             . 'et réécrite à chaque passage. La part est celle du jour dans une semaine type.'];
 }
+
+/**
+ * Le KPI d'une période, magasin par magasin — pour l'assistant de campagne.
+ *
+ * GET /marketing/kpi-periode?du=&au=[&magasins=2,3][&mesure=trafic|panier|ca]
+ *
+ * Même mécanique que « Mesure des campagnes », appelée au moment où la période
+ * est choisie dans l'assistant : mêmes fenêtres, même décalage de 364 jours,
+ * mêmes lectures du panel. Deux écrans qui comparent à N-1 ne doivent pas le
+ * faire chacun à leur façon — l'un dirait +2 %, l'autre +3 %, et il n'y aurait
+ * aucun moyen de savoir lequel a raison.
+ *
+ * La période visée est presque toujours À VENIR : on ne mesure donc pas elle,
+ * mais ce que les mêmes dates ont donné l'AN DERNIER, avant et pendant. L'écart
+ * entre les deux est la pente naturelle de la saison ; c'est au-dessus d'elle
+ * que l'objectif se pose, pas au-dessus de zéro.
+ */
+function ep_mkt_kpi_periode(): array
+{
+    $motifs = [];
+    $dateOk = static fn (string $d): bool => (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+    $du = (string) ($_GET['du'] ?? '');
+    $au = (string) ($_GET['au'] ?? '');
+    if (!$dateOk($du) || !$dateOk($au) || $au < $du) {
+        http_response_code(422);
+        return ['error' => 'Période attendue : « du » et « au » au format AAAA-MM-JJ, « du » avant « au ».'];
+    }
+
+    // Le KPI vient du LEVIER de la campagne : l'assistant envoie son code, le
+    // serveur dit ce qui se mesure. Un `mesure=` explicite reste possible —
+    // c'est ce que fait la bascule d'indicateur de l'écran.
+    $levier = (string) ($_GET['levier'] ?? '');
+    $mesure = (string) ($_GET['mesure'] ?? '');
+    $duLevier = $levier === '' ? null : mktMesureDuLevier($levier);
+    if (!in_array($mesure, ['trafic', 'panier', 'ca'], true)) { $mesure = $duLevier ?? 'trafic'; }
+
+    $duree = mesJours($du, $au);
+    // Garde-fou : la route quotidienne du panel se découpe en mois civils, un
+    // appel par magasin et par mois. Une période d'un an en demanderait plus de
+    // cent pour un écran de saisie — le panel resterait muet et l'assistant
+    // attendrait pour rien.
+    if ($duree > 122) {
+        http_response_code(422);
+        return ['error' => 'Période trop longue pour une référence quotidienne : 122 jours au plus.'];
+    }
+
+    $avantAu = mesDecale($du, -1);
+    $avantDu = mesDecale($avantAu, -($duree - 1));
+    // 364 jours et non « un an » : 52 semaines exactes mettent les mêmes jours
+    // de semaine en face. Un décalage d'un an calendaire compare un samedi à un
+    // dimanche, et l'écart qui en sort n'est que le calendrier.
+    $n1 = static fn (string $d): string => mesDecale($d, -364);
+    $f = ['du' => $du, 'au' => $au, 'jours' => $duree,
+        'avantDu' => $avantDu, 'avantAu' => $avantAu,
+        'avantN1Du' => $n1($avantDu), 'avantN1Au' => $n1($avantAu),
+        'pendantN1Du' => $n1($du), 'pendantN1Au' => $n1($au),
+        'decalage' => 364];
+
+    $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    $nomDe = [];
+    foreach ($shops as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
+
+    // Périmètre demandé par l'assistant (campagne locale). Les identifiants
+    // inconnus sont ignorés sans bruit : le paramètre vient d'une page, pas
+    // d'un contrat.
+    $demandes = array_filter(array_map('trim', explode(',', (string) ($_GET['magasins'] ?? ''))));
+    $perim = array_values(array_filter($demandes, static fn ($s) => isset($nomDe[$s])));
+    if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
+
+    // Les deux fenêtres N-1 se touchent : une seule étendue les couvre, donc
+    // une seule série par magasin.
+    $ser = mesSeriesJour($perim, $f['avantN1Du'], $f['pendantN1Au'], $motifs);
+
+    $valeur = static function (array $b) use ($mesure) {
+        if ($mesure === 'panier') { return $b['panier']; }
+        if ($mesure === 'ca') { return $b['caJour']; }
+        return $b['ticketsJour'];
+    };
+
+    $lignes = [];
+    $avecN1 = 0;
+    foreach ($perim as $sid) {
+        $a = mesCumul($ser[(string) $sid] ?? [], $f['avantN1Du'], $f['avantN1Au']);
+        $p = mesCumul($ser[(string) $sid] ?? [], $f['pendantN1Du'], $f['pendantN1Au']);
+        $va = $valeur($a); $vp = $valeur($p);
+        if ($va !== null && $vp !== null) { $avecN1++; }
+        $lignes[] = ['id' => (string) $sid, 'nom' => $nomDe[(string) $sid],
+            'avant' => $a, 'pendant' => $p,
+            'valeurAvant' => $va, 'valeurPendant' => $vp,
+            'variation' => mesVar($vp === null ? null : (float) $vp, $va === null ? null : (float) $va),
+            // Un magasin sans N-1 n'a pas un objectif à zéro : il n'en a pas.
+            'sansN1' => $va === null || $vp === null];
+    }
+
+    $ra = mesCumulGroupe($ser, $perim, $f['avantN1Du'], $f['avantN1Au']);
+    $rp = mesCumulGroupe($ser, $perim, $f['pendantN1Du'], $f['pendantN1Au']);
+    $rva = $valeur($ra); $rvp = $valeur($rp);
+
+    if ($avecN1 === 0) {
+        $motifs[] = 'aucun magasin n’a de relevé sur les mêmes dates l’an dernier';
+    } elseif ($avecN1 < count($perim)) {
+        $motifs[] = (count($perim) - $avecN1) . ' magasin(s) sans relevé N-1 : leur objectif se pose à la main';
+    }
+
+    return [
+        'fenetres' => $f,
+        'mesure' => $mesure,
+        'kpi' => mktKpiCatalogue()[$mesure],
+        'catalogue' => mktKpiCatalogue(),
+        'leviers' => mktKpiParLevier(),
+        // Le levier demandé n'a pas toujours un KPI en caisse : l'écran doit
+        // pouvoir écrire pourquoi, plutôt que d'afficher le trafic sans dire
+        // qu'il a changé d'indicateur en chemin.
+        'levierDemande' => $levier === '' ? null : $levier,
+        'levierMesurable' => $levier === '' ? null : ($duLevier !== null),
+        'magasins' => $lignes,
+        'reseau' => ['avant' => $ra, 'pendant' => $rp,
+            'valeurAvant' => $rva, 'valeurPendant' => $rvp,
+            'variation' => mesVar($rvp === null ? null : (float) $rvp, $rva === null ? null : (float) $rva),
+            'sansN1' => $rva === null || $rvp === null],
+        'motifs' => $motifs,
+        'source' => PanelApi::configured()
+            ? 'panel — ventes quotidiennes par magasin (/consultant/shops/{id}/margin-heatmap)'
+            : 'caisse du cockpit — le compte panel n’est pas configuré',
+    ];
+}

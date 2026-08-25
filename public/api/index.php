@@ -105,6 +105,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/budget-campagnes'    => ep_budget_campagnes(),
             $path === '/marketing/mesure'              => ep_mesure(),
             $path === '/marketing/mesure/comparaison'  => ep_mesure_comparaison(),
+            $path === '/marketing/kpi-periode'         => ep_mkt_kpi_periode(),
             $path === '/taches/classement'             => ep_taches_classement(),
             $path === '/fournisseurs/reclamations'     => ep_fournisseurs_reclamations(),
             $path === '/magasins/profil-jour'          => ep_profil_jour(),
