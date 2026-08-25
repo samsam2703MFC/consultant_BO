@@ -41,7 +41,10 @@ Voici la campagne du mois pour {{magasin}}. La note complète est en pièce join
         // L'agence qui signe la création. Son logo voyage en data-URI, comme
         // celui de la maison : un lien vers le cockpit ne s'affiche pas chez un
         // destinataire externe, et ne s'imprime pas du tout.
-        'agence'     => ['nom' => '', 'site' => '', 'logo' => ''],
+        'agence'     => ['nom' => '', 'site' => '', 'logo' => '', 'email' => ''],
+        // Qui reçoit une copie : l'agence, les consultants. Retenu d'une
+        // campagne à l'autre plutôt que recoché à chaque envoi.
+        'copies'     => [],
     ];
 }
 
@@ -54,7 +57,13 @@ function mktBriefConfig(): array
     $ag = is_array($out['agence'] ?? null) ? $out['agence'] : [];
     $out['agence'] = ['nom' => trim((string) ($ag['nom'] ?? '')),
         'site' => trim((string) ($ag['site'] ?? '')),
-        'logo' => (string) ($ag['logo'] ?? '')];
+        'logo' => (string) ($ag['logo'] ?? ''),
+        'email' => mktBriefAdresse($ag['email'] ?? '')];
+    // Un réglage enregistré AVANT les copies n'a pas la clé : sans ce filet,
+    // `in_array(..., null)` faisait tomber l'écran entier en 500.
+    $out['copies'] = is_array($out['copies'] ?? null)
+        ? array_values(array_filter(array_map('mktBriefAdresse', $out['copies']), static fn ($x) => $x !== ''))
+        : [];
     return $out;
 }
 
