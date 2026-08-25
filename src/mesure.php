@@ -345,7 +345,7 @@ function ep_mesure_comparaison(): array
 {
     $motifs = [];
     try {
-        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on,
+        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.scope,
                                   t.label AS type_label
                              FROM mar_campaign c
                              LEFT JOIN mar_campaign_type t ON t.id = c.type_id
@@ -358,7 +358,8 @@ function ep_mesure_comparaison(): array
     foreach ($camps as $c) {
         $liste[] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'],
             'debut' => (string) $c['starts_on'], 'fin' => (string) ($c['ends_on'] ?: $c['starts_on']),
-            'type' => (string) ($c['type_label'] ?? 'Sans type')];
+            'type' => (string) ($c['type_label'] ?? 'Sans type'),
+            'scope' => strtoupper(trim((string) ($c['scope'] ?? '')))];
     }
     $out = ['campagnes' => $liste, 'campagne' => null];
     if ($liste === []) { return ['campagnes' => [], 'campagne' => null, 'motifs' => [],
@@ -424,15 +425,27 @@ function ep_mesure_comparaison(): array
     $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
     $nomDe = [];
     foreach ($shops as $s2) { $nomDe[(string) $s2['id']] = (string) $s2['name']; }
+    // Le périmètre suit le SCOPE de la campagne, pas la table de liaison.
+    // MESURÉ : une campagne « RÉSEAU » porte quand même des lignes dans
+    // mar_campaign_shop — quatre pour Saint-Nicolas, dont un magasin FERMÉ et
+    // sans Sombreffe. S'y fier faisait sortir du périmètre un magasin que la
+    // campagne couvre pourtant, et le comptait comme témoin : l'effet mesuré
+    // était alors comparé à lui-même.
+    $reseau = str_starts_with((string) ($camp['scope'] ?? ''), 'RESEAU')
+        || str_starts_with((string) ($camp['scope'] ?? ''), 'RÉSEAU')
+        || str_starts_with((string) ($camp['scope'] ?? ''), 'NETWORK');
     $perim = [];
-    try {
-        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
-            $sid = (string) $r['shop_id'];
-            if (isset($nomDe[$sid])) { $perim[] = $sid; }
-        }
-    } catch (PDOException $e) { /* périmètre absent : réseau entier */ }
+    if (!$reseau) {
+        try {
+            foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
+                $sid = (string) $r['shop_id'];
+                if (isset($nomDe[$sid])) { $perim[] = $sid; }
+            }
+        } catch (PDOException $e) { /* périmètre absent : réseau entier */ }
+    }
     if ($perim === []) { $perim = array_map('strval', array_keys($nomDe)); }
     $hors = array_values(array_diff(array_map('strval', array_keys($nomDe)), $perim));
+    $out['scope'] = $reseau ? 'reseau' : 'locale';
 
     // --- les séries. DEUX étendues seulement — cette année et l'an dernier —
     // plutôt qu'une seule qui couvrirait quatorze mois : la route quotidienne
@@ -535,7 +548,11 @@ function ep_mesure_comparaison(): array
     // donne le bruit, un magasin seul étant trop bavard pour servir d'étalon.
     $out['temoin'] = $hors ? $ligne($hors, 'Réseau hors campagne', null) : null;
     if ($out['temoin'] !== null) { $out['temoin']['role'] = 'temoin'; }
-    if (!$hors) { $motifs[] = 'toute la campagne couvre le réseau : aucun magasin témoin'; }
+    if (!$hors) {
+        $motifs[] = $reseau
+            ? 'campagne réseau : tous les magasins en sont, il n’y a pas de témoin — c’est la comparaison au N-1 qui fait référence'
+            : 'toute la campagne couvre le réseau : aucun magasin témoin';
+    }
     $out['perimetre'] = array_map(fn ($sid) => $nomDe[$sid] ?? $sid, $perim);
     $out['source'] = 'ventes du panel, jour par jour ; N-1 aligné à 52 semaines (mêmes jours de semaine)';
     $out['motifs'] = array_values(array_unique($motifs));

@@ -2682,6 +2682,10 @@ class App {
     common.mcSource = d.source || '';
     common.mcMotifs = d.motifs || [];
     common.mcPerimetre = (d.perimetre || []).join(' · ');
+    // Réseau ou local : c'est ce qui décide s'il y a un témoin. Le dire évite
+    // de chercher une ligne « hors campagne » qui n'a pas lieu d'être.
+    common.mcScope = d.scope === 'reseau' ? 'Campagne réseau — tous les magasins'
+      : (d.scope === 'locale' ? 'Campagne locale' : '');
 
     // Le format d'une valeur : un panier et un chiffre d'affaires sont des
     // euros, le trafic des clients — et « par jour » ne veut pas dire la même

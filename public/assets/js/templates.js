@@ -1496,7 +1496,7 @@ function tplMesureComp(c, x){
     <div style="${carte};margin-bottom:12px">
       ${barre}
       <div style="display:flex;gap:22px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)">
-        <span><b style="color:var(--color-text);font-weight:600">${esc(c.mcNom)}</b>${c.mcType ? ' · ' + esc(c.mcType) : ''}</span>
+        <span><b style="color:var(--color-text);font-weight:600">${esc(c.mcNom)}</b>${c.mcType ? ' · ' + esc(c.mcType) : ''}${c.mcScope ? ' · ' + esc(c.mcScope) : ''}</span>
         <span>Avant : <b style="color:var(--color-text);font-weight:500">${esc(c.mcFen.avant)}</b> <span style="opacity:.7">(N-1 ${esc(c.mcFen.avantN1)})</span></span>
         <span>Pendant : <b style="color:var(--color-text);font-weight:500">${esc(c.mcFen.pendant)}</b> <span style="opacity:.7">(N-1 ${esc(c.mcFen.pendantN1)})</span></span>
         <span>${c.mcFen.jours} jour(s)</span>
