@@ -1709,7 +1709,7 @@ function mktKpiPeriode(array $p): array
             $vb = $valeur($b);
             if ($vb === null) { continue; }
             $lignes[$i]['repli'] = ['valeur' => $vb, 'du' => $mDu, 'au' => $mAu,
-                'jours' => $b['jours'],
+                'jours' => $b['jours'], 'ca' => $b['ca'], 'tickets' => $b['tickets'],
                 'libelle' => 'moyenne des 3 derniers mois'];
         }
     } elseif ($aReplier !== []) {
@@ -1728,6 +1728,40 @@ function mktKpiPeriode(array $p): array
     $ra = mesCumulGroupe($ser, $perim, $f['avantN1Du'], $f['avantN1Au']);
     $rp = mesCumulGroupe($ser, $perim, $f['pendantN1Du'], $f['pendantN1Au']);
     $rva = $valeur($ra); $rvp = $valeur($rp);
+
+    // Le total du réseau doit être la somme de ce que le tableau affiche.
+    // Il ne l'était pas : la colonne montrait le repli d'un magasin sans N-1,
+    // et le total ne comptait que les fenêtres N-1 — quatre lignes qui font
+    // 710 en face d'un total à 575. On recompose donc à partir des BLOCS
+    // retenus, ligne par ligne.
+    //
+    // Un panier moyen ne s'additionne pas : c'est un rapport. Le réseau le
+    // recalcule sur les cumuls (CA total ÷ tickets totaux) — additionner
+    // quatre paniers aurait donné 48 € le panier.
+    $caR = 0.0; $tkR = 0; $jrR = 0; $nN1 = 0; $nRepli = 0; $aucun = 0;
+    foreach ($lignes as $l) {
+        $bloc = $l['source'] === 'n1' ? $l['pendant']
+            : ($l['source'] === 'repli' ? $l['repli'] : null);
+        if ($bloc === null) { $aucun++; continue; }
+        if ($l['source'] === 'n1') { $nN1++; } else { $nRepli++; }
+        $caR += (float) ($bloc['ca'] ?? 0);
+        $tkR += (int) ($bloc['tickets'] ?? 0);
+        $jrR = max($jrR, (int) ($bloc['jours'] ?? 0));
+    }
+    $rvRetenue = null;
+    if ($nN1 + $nRepli > 0) {
+        if ($mesure === 'panier') {
+            $rvRetenue = $tkR > 0 ? round($caR / $tkR, 2) : null;
+        } else {
+            // Somme des moyennes journalières de chaque magasin : c'est bien
+            // ce que la colonne additionne, jour ouvert par jour ouvert.
+            $somme = 0.0;
+            foreach ($lignes as $l) {
+                if ($l['valeurRetenue'] !== null) { $somme += (float) $l['valeurRetenue']; }
+            }
+            $rvRetenue = round($somme, $mesure === 'trafic' ? 1 : 2);
+        }
+    }
 
     // Nommer les magasins plutôt que les compter : « 1 magasin sans relevé »
     // oblige à parcourir le tableau pour savoir lequel, et l'objectif qui reste
@@ -1753,6 +1787,13 @@ function mktKpiPeriode(array $p): array
         'magasins' => $lignes,
         'reseau' => ['avant' => $ra, 'pendant' => $rp,
             'valeurAvant' => $rva, 'valeurPendant' => $rvp,
+            // La valeur RETENUE — celle qui égale la somme des lignes — et sa
+            // composition. La variation, elle, reste calculée sur les seuls
+            // magasins qui ont un N-1 : comparer une moyenne de trois mois à
+            // l'été dernier ne veut rien dire.
+            'valeurRetenue' => $rvRetenue,
+            'source' => $nRepli === 0 ? 'n1' : ($nN1 === 0 ? 'repli' : 'mixte'),
+            'nN1' => $nN1, 'nRepli' => $nRepli, 'nSans' => $aucun,
             'variation' => mesVar($rvp === null ? null : (float) $rvp, $rva === null ? null : (float) $rva),
             'sansN1' => $rva === null || $rvp === null],
         'motifs' => $motifs,

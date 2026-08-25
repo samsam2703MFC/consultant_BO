@@ -239,9 +239,14 @@ function mktBriefDonnees(int $id): ?array
         'kpiMesure' => $kpi !== null,
         'kpiMotifs' => $kpi['motifs'] ?? [],
         'fenetres' => $kpi['fenetres'] ?? null,
-        'reference' => $kpi['reseau']['valeurPendant'] ?? null,
-        'cible' => ($kpi['reseau']['valeurPendant'] ?? null) !== null && $pct !== null
-            ? $kpi['reseau']['valeurPendant'] * (1 + $pct / 100) : null,
+        // La référence réseau est la valeur RETENUE : celle qui égale la somme
+        // des lignes du tableau. Prendre le seul cumul N-1 donnait un total
+        // plus petit que ses propres lignes dès qu'un magasin était sur repli.
+        'reference' => $kpi['reseau']['valeurRetenue'] ?? ($kpi['reseau']['valeurPendant'] ?? null),
+        'cible' => (($kpi['reseau']['valeurRetenue'] ?? ($kpi['reseau']['valeurPendant'] ?? null)) !== null && $pct !== null)
+            ? ($kpi['reseau']['valeurRetenue'] ?? $kpi['reseau']['valeurPendant']) * (1 + $pct / 100) : null,
+        'referenceSource' => (string) ($kpi['reseau']['source'] ?? 'n1'),
+        'referenceNRepli' => (int) ($kpi['reseau']['nRepli'] ?? 0),
         'lignes' => $lignes,
         'etapes' => $etapes,
         'investis' => $investis,
@@ -397,9 +402,21 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
         . '</td><td align="right" style="font-size:10px;color:#7a736a;line-height:1.5">Note de campagne'
         . ($magasin !== '' ? '<br>' . $e($magasin) : '') . '</td></tr></table>';
 
+    // La tuile du budget dit ce qui est DÉJÀ arrêté : l'enveloppe seule ne
+    // distingue pas ce qui est engagé de ce qui reste à décider.
+    $valides = array_values(array_filter($d['canaux'], static fn ($c2) => $c2['valide']));
+    $sousBudget = 'à la charge du fonds marketing';
+    if ($valides !== []) {
+        // Les plus gros d'abord : trois noms tiennent dans la tuile, autant que
+        // ce soient ceux qui pèsent.
+        usort($valides, static fn ($x, $y) => $y['montant'] <=> $x['montant']);
+        $noms = array_slice(array_map(static fn ($c2) => $c2['nom'], $valides), 0, 3);
+        $sousBudget = mktBriefEuros($d['canauxEngage']) . ' validés — ' . implode(', ', $noms)
+            . (count($valides) > 3 ? ' +' . (count($valides) - 3) : '');
+    }
     $cartes = [
         ['Période', mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']), $d['jours'] . ' jours'],
-        ['Budget engagé par la centrale', mktBriefEuros($d['budget']), 'à la charge du fonds marketing'],
+        ['Budget engagé par la centrale', mktBriefEuros($d['budget']), $sousBudget],
         ['Portée', $d['portee'], count($d['magasins']) . ' magasin' . (count($d['magasins']) > 1 ? 's' : '')],
     ];
     $blocCartes = '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px"><tr>';
@@ -426,7 +443,13 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
     } else {
         $obj .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px"><tr>'
             . '<td style="font-size:12px;line-height:1.55">' . $e($d['kpiNom']) . '<br>'
-            . '<span style="color:#7a736a;font-size:10.5px">l’an dernier, même période : <strong>' . mktBriefValeur($d['reference'], $d) . '</strong></span></td>'
+            . '<span style="color:#7a736a;font-size:10.5px">'
+            . ($d['referenceSource'] === 'n1'
+                ? 'l’an dernier, même période : <strong>' . mktBriefValeur($d['reference'], $d) . '</strong>'
+                : 'référence du réseau : <strong>' . mktBriefValeur($d['reference'], $d) . '</strong>'
+                  . ' — dont ' . $d['referenceNRepli'] . ' magasin'
+                  . ($d['referenceNRepli'] > 1 ? 's' : '') . ' sur moyenne 3 mois')
+            . '</span></td>'
             . '<td align="right" style="font-size:22px;font-weight:600;color:' . $accent . ';white-space:nowrap">'
             . mktBriefValeur($d['cible'], $d)
             . '<div style="font-size:9.5px;font-weight:400;color:#7a736a">cible, soit '

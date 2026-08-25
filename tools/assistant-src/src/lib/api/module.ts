@@ -1621,7 +1621,14 @@ export interface KpiPeriode {
     avant: KpiBloc
     pendant: KpiBloc
     valeurAvant: number | null
+    /** Cumul N-1 seul — sert à la variation, pas au total affiché. */
     valeurPendant: number | null
+    /** Le total qui ÉGALE la somme des lignes, replis compris. */
+    valeurRetenue: number | null
+    source: 'n1' | 'repli' | 'mixte'
+    nN1: number
+    nRepli: number
+    nSans: number
     variation: number | null
     sansN1: boolean
   }

@@ -157,7 +157,10 @@ function Reference({
 }) {
   const { kpi, fenetres, reseau } = donnees
   const mesurables = donnees.leviers.filter((lever) => lever.mesure !== null)
-  const objectif = cible(reseau.valeurPendant, pct)
+  // L'objectif du réseau se pose sur le total AFFICHÉ — celui qui égale la
+  // somme des lignes. Le poser sur le seul cumul N-1 donnait une cible plus
+  // petite que la somme des cibles du tableau.
+  const objectif = cible(reseau.valeurRetenue ?? reseau.valeurPendant, pct)
   const pente = ecart(reseau.variation)
 
   return (
@@ -195,8 +198,12 @@ function Reference({
           ) : null}
         </div>
         <div className="kpi-band__val">
-          <b>{valeur(reseau.valeurPendant, kpi)}</b>
-          <span>réseau, N-1 pendant</span>
+          <b>{valeur(reseau.valeurRetenue ?? reseau.valeurPendant, kpi)}</b>
+          <span>
+            {reseau.source === 'n1'
+              ? 'réseau, N-1 pendant'
+              : `réseau — dont ${reseau.nRepli} sur moyenne 3 mois`}
+          </span>
         </div>
         <div className="kpi-band__val">
           <b>{valeur(objectif, kpi)}</b>
@@ -269,15 +276,27 @@ function Reference({
             })}
             <tr className="total">
               <td>Réseau</td>
-              {reseau.sansN1 ? (
+              {reseau.valeurRetenue === null && reseau.sansN1 ? (
                 <td className="num nil" colSpan={4}>
                   Aucun relevé sur ces dates l'an dernier
                 </td>
               ) : (
                 <>
                   <td className="num">{valeur(reseau.valeurAvant, kpi)}</td>
-                  <td className="num">{valeur(reseau.valeurPendant, kpi)}</td>
-                  <td className={`num ${pente.ton}`}>{pente.texte}</td>
+                  <td className="num">
+                    {valeur(reseau.valeurRetenue ?? reseau.valeurPendant, kpi)}
+                    {reseau.source === 'n1' ? null : (
+                      <sup className="repli" title={`Dont ${reseau.nRepli} magasin(s) sur la moyenne des 3 derniers mois`}>
+                        (i)
+                      </sup>
+                    )}
+                  </td>
+                  {/* La variation ne porte que sur les magasins qui ont un N-1 :
+                      comparer une moyenne de trois mois à l'été dernier ne veut
+                      rien dire, et la mêler au réseau fausserait la pente. */}
+                  <td className={`num ${pente.ton}`} title={reseau.source === 'n1' ? undefined : `Calculée sur les ${reseau.nN1} magasins qui ont un N-1`}>
+                    {pente.texte}
+                  </td>
                   <td className="num objectif">{valeur(objectif, kpi)}</td>
                 </>
               )}
@@ -295,7 +314,9 @@ function Reference({
         <p className="muted wizard__hint">
           <sup className="repli">(i)</sup> Pas de relevé l'an dernier — magasin ouvert depuis. La
           référence est la <strong>moyenne des 3 derniers mois</strong> ({jour(fenetres.repliDu)} →{' '}
-          {jour(fenetres.repliAu)}) : un point de départ, pas une comparaison saisonnière.
+          {jour(fenetres.repliAu)}) : un point de départ, pas une comparaison saisonnière. Le total
+          du réseau les additionne ; sa variation, elle, ne porte que sur les {reseau.nN1} magasins
+          qui ont un N-1.
         </p>
       ) : null}
 
