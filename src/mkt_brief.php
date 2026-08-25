@@ -759,12 +759,15 @@ function mktBriefAnnexe(array $d, string $visuel, string $accent): string
         $cases = [];
         foreach (array_slice($formats, 0, 6) as $f) {
             $fw = max(1, (int) $f['largeur']); $fh = max(1, (int) $f['hauteur']);
-            // Hauteur bornée : un format 1080 × 1920 ferait une vignette de
-            // 373 px de haut et pousserait la liste sur une seconde page.
-            $h = min(200, (int) round($boite * $fh / $fw));
+            // Hauteur bornée et COMMUNE : un format 1080 × 1920 ferait une
+            // vignette de 373 px de haut, la rangée s'aligne sur la plus haute
+            // et la liste des fichiers passerait sur une seconde page. Chaque
+            // vignette garde en revanche ses proportions — c'est le cadrage
+            // publié qu'on vient regarder, pas une image redressée.
+            $h = min(132, (int) round($boite * $fh / $fw));
             $l = (int) round($h * $fw / $fh);
             // Couverture : l'image déborde la case, jamais l'inverse.
-            $cases[] = '<td width="' . ($boite + $gouttiere) . '" valign="top" style="padding:0 ' . $gouttiere . 'px 12px 0">'
+            $cases[] = '<td width="' . ($boite + $gouttiere) . '" valign="bottom" style="padding:0 ' . $gouttiere . 'px 12px 0">'
                 . mktBriefVignette($visuel, $iw, $ih, $l, $h, $focal, 'border:1px solid #e6e0d8;border-radius:5px')
                 . '<div style="font-size:10px;font-weight:600;margin-top:4px">' . $e($f['nom']) . '</div>'
                 . '<div style="font-size:9px;color:#7a736a">' . $fw . ' × ' . $fh . ' px'
