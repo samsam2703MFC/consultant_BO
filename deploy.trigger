@@ -61,3 +61,4 @@
 2026-08-25T18:27:59Z effet-attendu-campagne
 2026-08-25T18:31:56Z bxc-effet-attendu-ecran
 2026-08-25T18:33:43Z bxc-sous-titre
+2026-08-25T18:44:55Z bxc-clients-periode

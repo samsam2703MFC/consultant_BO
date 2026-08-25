@@ -1713,6 +1713,13 @@ class App {
         panierRepli: l.baseSource === 'repli',
         plus: l.clientsJourPlus != null
           ? (l.clientsJourPlus >= 0 ? '+' : '−') + Math.abs(l.clientsJourPlus).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—',
+        // Le nombre de CLIENTS sur la période : c'est ce qu'on annonce en
+        // boutique. « 145 par jour » ne se retient pas, « 4 350 en septembre »
+        // si — et l'écart entre les deux colonnes est ce que la campagne doit
+        // aller chercher.
+        clientsA1: l.clientsA1 != null ? l.clientsA1.toLocaleString('fr-BE') : '—',
+        clientsA1Note: l.clientsA1Source === 'repli' ? '3 derniers mois' : '',
+        clientsPrevus: l.clientsPrevus != null ? l.clientsPrevus.toLocaleString('fr-BE') : '—',
         base: l.base != null ? this.fE(l.base) : '—',
         baseNote: l.baseSource === 'repli' ? '3 derniers mois' : '',
         gain: l.gain != null ? '+' + this.fE(l.gain) : '—',
@@ -1762,6 +1769,8 @@ class App {
       gain: ef.gain != null ? '+' + this.fE(ef.gain) : '—',
       attendu: ef.attendu != null ? this.fE(ef.attendu) : '—',
       objectif: tB ? this.fE(tB) : '—',
+      clientsA1: ef.clientsA1 != null ? ef.clientsA1.toLocaleString('fr-BE') : '—',
+      clientsPrevus: ef.clientsPrevus != null ? ef.clientsPrevus.toLocaleString('fr-BE') : '—',
       pct: ef.pct != null ? (ef.pct >= 0 ? '+' : '−') + Math.abs(ef.pct) + ' %' : '—',
       jours: ef.jours || 0,
       note: 'Panier moyen des 3 derniers mois clos'

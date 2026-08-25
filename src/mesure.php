@@ -1865,6 +1865,7 @@ function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim):
     $serie = mesSeriesJour($perim, $pDu, $pAu, $motifs);
 
     $mags = []; $tBase = 0.0; $tGain = 0.0; $nBase = 0; $nGain = 0;
+    $tCliA1 = 0; $tCliPrevu = 0;
     foreach ($kpi['magasins'] as $m) {
         $sid = (string) $m['id'];
         $p = mesCumul($serie[$sid] ?? [], $pDu, $pAu);
@@ -1885,8 +1886,23 @@ function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim):
             $base = round((float) $p['ca'] / $p['jours'] * $jours, 2); $baseSrc = 'repli';
         }
 
+        // Le nombre de CLIENTS sur la période, pas seulement la moyenne par
+        // jour : c'est le chiffre qu'on annonce en boutique — « quatre mille
+        // trois cents clients en septembre », pas « 145 par jour ».
+        $cliA1 = null;
+        if ((int) ($m['pendant']['tickets'] ?? 0) > 0) {
+            $cliA1 = (int) $m['pendant']['tickets'];
+        } elseif ((int) ($p['tickets'] ?? 0) > 0 && (int) ($p['jours'] ?? 0) > 0) {
+            // Sans N-1 : les trois derniers mois ramenés à la durée visée.
+            $cliA1 = (int) round($p['tickets'] / $p['jours'] * $jours);
+        }
+        $cliPrevu = ($ref === null) ? null
+            : (int) round((float) $ref * (1 + ($pct ?? 0) / 100) * $jours);
+
         if ($base !== null) { $tBase += $base; $nBase++; }
         if ($gain !== null) { $tGain += $gain; $nGain++; }
+        if ($cliA1 !== null) { $tCliA1 += $cliA1; }
+        if ($cliPrevu !== null) { $tCliPrevu += $cliPrevu; }
 
         $mags[$sid] = [
             'panier' => $panier,
@@ -1894,6 +1910,9 @@ function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim):
             'panierJours' => (int) $p['jours'],
             'clientsJour' => $ref,
             'plus' => $plus,
+            'clientsA1' => $cliA1,
+            'clientsA1Source' => $cliA1 === null ? null : ((int) ($m['pendant']['tickets'] ?? 0) > 0 ? 'n1' : 'repli'),
+            'clientsPrevus' => $cliPrevu,
             'base' => $base, 'baseSource' => $baseSrc,
             'gain' => $gain,
         ];
@@ -1904,6 +1923,8 @@ function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim):
         'gain' => $nGain > 0 ? round($tGain, 2) : null,
         'attendu' => ($nBase > 0 && $nGain > 0) ? round($tBase + $tGain, 2) : null,
         'pct' => $pct, 'jours' => $jours,
+        'clientsA1' => $tCliA1 > 0 ? $tCliA1 : null,
+        'clientsPrevus' => $tCliPrevu > 0 ? $tCliPrevu : null,
         'panierDu' => $pDu, 'panierAu' => $pAu,
         'sansBase' => count($perim) - $nBase,
         'motifs' => $motifs,

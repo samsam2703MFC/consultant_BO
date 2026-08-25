@@ -1842,7 +1842,8 @@ function tplBxc(c, x){
         <thead><tr>
           <th style="text-align:left;${lbl};padding:0 8px 8px 0">Magasin</th>
           <th style="text-align:right;${lbl};padding:0 8px 8px">Panier moyen <sup style="color:var(--color-primary)">(i)</sup></th>
-          <th style="text-align:right;${lbl};padding:0 8px 8px">Clients / j en plus</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px">Clients A-1</th>
+          <th style="text-align:right;${lbl};padding:0 8px 8px">Clients prévus</th>
           <th style="text-align:right;${lbl};padding:0 8px 8px">Base A-1</th>
           <th style="text-align:right;${lbl};padding:0 8px 8px">Gain campagne</th>
           <th style="text-align:right;${lbl};padding:0 8px 8px">Attendu</th>
@@ -1854,7 +1855,8 @@ function tplBxc(c, x){
           ${c.bxcLignes.map(l => `<tr style="border-top:0.5px solid var(--color-border-tertiary)">
             <td style="padding:8px 8px 8px 0;font-weight:500">${esc(l.nom)}</td>
             <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.panier)}</td>
-            <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.plus)}</td>
+            <td style="padding:8px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(l.clientsA1)}${l.clientsA1Note ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.clientsA1Note)}</div>` : ''}</td>
+            <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.clientsPrevus)}<div style="font-size:9.5px;color:var(--color-primary)">${esc(l.plus)} / jour</div></td>
             <td style="padding:8px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(l.base)}${l.baseNote ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.baseNote)}</div>` : ''}</td>
             <td style="padding:8px;text-align:right;font-weight:600;color:var(--color-primary);font-variant-numeric:tabular-nums">${esc(l.gain)}</td>
             <td style="padding:8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(l.attendu)}</td>
@@ -1864,7 +1866,9 @@ function tplBxc(c, x){
           </tr>`).join('')}
           <tr style="border-top:1.5px solid var(--color-border-secondary)">
             <td style="padding:10px 8px 10px 0;font-weight:600">Total</td>
-            <td colspan="2"></td>
+            <td></td>
+            <td style="padding:10px 8px;text-align:right;font-weight:600;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(c.bxcEffet.clientsA1)}</td>
+            <td style="padding:10px 8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(c.bxcEffet.clientsPrevus)}</td>
             <td style="padding:10px 8px;text-align:right;font-weight:600;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(c.bxcEffet.base)}</td>
             <td style="padding:10px 8px;text-align:right;font-weight:600;color:var(--color-primary);font-variant-numeric:tabular-nums">${esc(c.bxcEffet.gain)}</td>
             <td style="padding:10px 8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(c.bxcEffet.attendu)}</td>
