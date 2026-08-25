@@ -205,6 +205,32 @@ function mktBriefDonnees(int $id): ?array
         }
     } catch (PDOException $e) { /* pas de canaux dans cette base */ }
 
+    // Le point de visée du visuel : c'est lui qui décide de ce qui reste dans
+    // un cadre plus étroit. Il vit sur le visuel maître, pas sur la campagne.
+    $cadrage = 50.0;
+    try {
+        $m = Db::row('SELECT focal_point_y FROM mar_campaign_asset
+                       WHERE campaign_id = ? ORDER BY is_master DESC, id LIMIT 1', [$id]);
+        if ($m !== null && $m['focal_point_y'] !== null) { $cadrage = (float) $m['focal_point_y']; }
+    } catch (PDOException $e) { /* pas de visuel : le centre fera l'affaire */ }
+
+    // Les formats de publication retenus : « Post Facebook », « Story »… Le
+    // franchisé doit voir de quoi la campagne aura l'air sur SON écran, pas
+    // seulement le visuel d'origine.
+    $formats = [];
+    try {
+        foreach (Db::rows('SELECT DISTINCT f.id, f.name, f.width_px, f.height_px, f.note, f.sort_order
+                             FROM mar_asset_render ar
+                             JOIN mar_campaign_asset ca ON ca.id = ar.campaign_asset_id
+                             JOIN mar_format f ON f.id = ar.format_id
+                            WHERE ca.campaign_id = ?
+                            ORDER BY f.sort_order, f.id', [$id]) as $f2) {
+            $formats[] = ['nom' => (string) $f2['name'],
+                'largeur' => (int) $f2['width_px'], 'hauteur' => (int) $f2['height_px'],
+                'note' => (string) ($f2['note'] ?? '')];
+        }
+    } catch (PDOException $e) { /* pas de déclinaisons dans cette base */ }
+
     $etapes = [];
     try {
         // `mar_retroplanning_step` : le nom que porte la table du module. Un nom
@@ -264,6 +290,8 @@ function mktBriefDonnees(int $id): ?array
         'mot' => mktBriefMot($id),
         'image' => (string) ($c['image_url'] ?? ''),
         'visuel' => mktBriefVisuel((string) ($c['image_url'] ?? '')),
+        'formats' => $formats,
+        'cadrage' => $cadrage,
     ];
 }
 
@@ -280,14 +308,14 @@ function mktBriefDonnees(int $id): ?array
 function mktBriefVisuel(string $url): array
 {
     $url = trim($url);
-    if ($url === '') { return ['uri' => '', 'motif' => '']; }
+    if ($url === '') { return ['uri' => '', 'motif' => '', 'largeur' => 0, 'hauteur' => 0]; }
 
     // « ./uploads/xxx.jpg » vit sous la page de l'assistant.
     $rel = ltrim(preg_replace('#^\./#', '', $url) ?? $url, '/');
     $chemin = __DIR__ . '/../public/assistant/' . $rel;
     if (!is_file($chemin)) { $chemin = __DIR__ . '/../public/' . $rel; }
     if (!is_file($chemin)) {
-        return ['uri' => '', 'motif' => 'le visuel de la campagne est introuvable sur le serveur'];
+        return ['uri' => '', 'motif' => 'le visuel de la campagne est introuvable sur le serveur', 'largeur' => 0, 'hauteur' => 0];
     }
 
     $octets = (string) file_get_contents($chemin);
@@ -296,10 +324,10 @@ function mktBriefVisuel(string $url): array
 
     if (strlen($octets) > 1000000) {
         if (!function_exists('imagecreatefromstring')) {
-            return ['uri' => '', 'motif' => 'le visuel dépasse 1 Mo et le serveur ne sait pas le réduire'];
+            return ['uri' => '', 'motif' => 'le visuel dépasse 1 Mo et le serveur ne sait pas le réduire', 'largeur' => 0, 'hauteur' => 0];
         }
         $src = @imagecreatefromstring($octets);
-        if ($src === false) { return ['uri' => '', 'motif' => 'le visuel n’a pas pu être lu']; }
+        if ($src === false) { return ['uri' => '', 'motif' => 'le visuel n’a pas pu être lu', 'largeur' => 0, 'hauteur' => 0]; }
         $l = imagesx($src); $h = imagesy($src);
         $k = min(1.0, 1600 / max($l, $h));
         $dst = imagecreatetruecolor((int) round($l * $k), (int) round($h * $k));
@@ -309,7 +337,9 @@ function mktBriefVisuel(string $url): array
         $type = 'image/jpeg';
     }
 
-    return ['uri' => 'data:' . $type . ';base64,' . base64_encode($octets), 'motif' => ''];
+    $dim = @getimagesizefromstring($octets);
+    return ['uri' => 'data:' . $type . ';base64,' . base64_encode($octets), 'motif' => '',
+        'largeur' => is_array($dim) ? (int) $dim[0] : 0, 'hauteur' => is_array($dim) ? (int) $dim[1] : 0];
 }
 
 /**
@@ -613,7 +643,10 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
         ? $bloc . '<div style="height:14px"></div>'
         : '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px"><tr>'
           . '<td valign="middle">' . $bloc . '</td>'
-          . '<td width="112" align="right" valign="middle"><img src="' . $visuel . '" alt="" style="width:104px;height:104px;object-fit:cover;border-radius:8px;border:1px solid #e6e0d8"></td>'
+          . '<td width="112" align="right" valign="middle">'
+          . mktBriefVignette($visuel, (int) ($d['visuel']['largeur'] ?? 0), (int) ($d['visuel']['hauteur'] ?? 0),
+              104, 104, (float) ($d['cadrage'] ?? 50), 'border-radius:8px;border:1px solid #e6e0d8')
+          . '</td>'
           . '</tr></table>';
 
     // Le mot, s'il y en a un. Pas de bloc vide : une signature sans texte
@@ -640,6 +673,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
             . '</td></tr></table>';
     }
 
+    $annexe = mktBriefAnnexe($d, $visuel, $accent);
     $jointes = array_values(array_filter($d['annexes'] ?? [], static fn ($a) => $a['enMail'] && $a['existe']));
     $listeAnnexes = $jointes === [] ? ''
         : '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:5px">Documents joints</div>'
@@ -654,26 +688,120 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
         . '<div style="margin-top:14px;padding-top:9px;border-top:1px solid #e6e0d8;font-size:9px;color:#7a736a;line-height:1.6">'
         . 'Note éditée le ' . date('d/m/Y') . ' par la centrale L’Atelier by.'
         . ($d['kpiMesure'] ? ' Les valeurs de l’an dernier sont lues sur la caisse, sur les mêmes dates décalées de 364 jours.' : '')
-        . ($visuel !== '' ? ' Le visuel de la campagne est en annexe, page 2.' : '')
+        . ($annexe !== '' ? ' L’annexe, page 2, montre le visuel format par format et la liste des fichiers joints.' : '')
         . (($d['visuel']['motif'] ?? '') !== '' ? ' Annexe absente : ' . $e($d['visuel']['motif']) . '.' : '')
         . '</div>';
 
-    // Annexe : le visuel seul, en pleine page. C'est ce que le magasin
-    // affichera — le voir petit à côté d'un tableau ne dit pas de quoi il a
-    // l'air en vitrine. Pas de visuel, pas de page : une annexe vide se
-    // remarque plus qu'une annexe absente.
-    $annexe = $visuel === '' ? ''
-        : '<div style="page-break-before:always;padding-top:8px">'
-          . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">Annexe — le visuel de la campagne</div>'
-          . '<div style="font-size:13px;font-weight:600;margin:3px 0 10px">' . $e($d['nom'])
-          . ' · ' . mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']) . '</div>'
-          . '<img src="' . $visuel . '" alt="Visuel de la campagne" style="width:100%;max-height:232mm;object-fit:contain;border:1px solid #e6e0d8;border-radius:6px">'
-          . '</div>';
 
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
         . $e($d['nom']) . '</title></head>'
         . '<body style="margin:0;padding:26px 30px;font-family:Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
         . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $com . $plan . $listeAnnexes . $pied . $annexe . '</body></html>';
+}
+
+/**
+ * Une image RECADRÉE à la taille demandée, sans `object-fit`.
+ *
+ * Les moteurs PDF du serveur ne rendent pas `object-fit` : l'image était
+ * étirée au lieu d'être recadrée, ce qui donnait un visuel déformé — et,
+ * page d'annexe, un cadrage qui n'est pas celui qui sera publié. On calcule
+ * donc la couverture ici, en pixels, et on la pose dans une boîte qui coupe.
+ *
+ * `$focal` : le point de visée vertical du visuel, en pourcentage.
+ */
+function mktBriefVignette(string $uri, int $iw, int $ih, int $l, int $h, float $focal, string $bord = ''): string
+{
+    if ($uri === '') { return ''; }
+    $boite = 'width:' . $l . 'px;height:' . $h . 'px;overflow:hidden;position:relative;' . $bord;
+    if ($iw <= 0 || $ih <= 0) {
+        // Dimensions inconnues : mieux vaut une image entière un peu petite
+        // qu'une image déformée dont on ne saurait pas qu'elle l'est.
+        return '<div style="' . $boite . '"><img src="' . $uri . '" alt="" style="width:' . $l . 'px"></div>';
+    }
+    $k = max($l / $iw, $h / $ih);
+    $pw = (int) ceil($iw * $k); $ph = (int) ceil($ih * $k);
+    $x = (int) round(($l - $pw) / 2);
+    $y = (int) round(-($ph - $h) * max(0.0, min(100.0, $focal)) / 100);
+
+    return '<div style="' . $boite . '">'
+        . '<img src="' . $uri . '" alt="" style="position:absolute;left:' . $x . 'px;top:' . $y . 'px;width:' . $pw . 'px;height:' . $ph . 'px">'
+        . '</div>';
+}
+
+/**
+ * L'annexe : UNE page A4, pas une de plus.
+ *
+ * Elle porte deux choses et rien d'autre : de quoi la campagne aura l'air dans
+ * chaque format publié — post Facebook, story, header — et la liste des
+ * documents joints au courriel. Le visuel occupait auparavant la page entière,
+ * ce qui montrait l'image d'origine mais pas ce que le client verra : un visuel
+ * carré recadré en 1200 × 630 perd la moitié de sa hauteur, et c'est ce
+ * cadrage-là qu'il faut regarder avant de publier.
+ *
+ * Le recadrage est calculé ICI, en pixels : `object-fit` n'est pas rendu par
+ * tous les moteurs PDF, et une vignette étirée mentirait sur le cadrage.
+ */
+function mktBriefAnnexe(array $d, string $visuel, string $accent): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $jointes = array_values(array_filter($d['annexes'] ?? [], static fn ($a) => $a['enMail'] && $a['existe']));
+    $formats = $d['formats'] ?? [];
+    if ($visuel === '' && $jointes === []) { return ''; }
+
+    // Trois vignettes par rangée dans la largeur utile d'un A4 (180 mm).
+    $boite = 210; $gouttiere = 12;
+    $iw = (int) ($d['visuel']['largeur'] ?? 0);
+    $ih = (int) ($d['visuel']['hauteur'] ?? 0);
+    $focal = max(0.0, min(100.0, (float) ($d['cadrage'] ?? 50)));
+
+    $vignettes = '';
+    if ($visuel !== '' && $formats !== [] && $iw > 0 && $ih > 0) {
+        $cases = [];
+        foreach (array_slice($formats, 0, 6) as $f) {
+            $fw = max(1, (int) $f['largeur']); $fh = max(1, (int) $f['hauteur']);
+            // Hauteur bornée : un format 1080 × 1920 ferait une vignette de
+            // 373 px de haut et pousserait la liste sur une seconde page.
+            $h = min(200, (int) round($boite * $fh / $fw));
+            $l = (int) round($h * $fw / $fh);
+            // Couverture : l'image déborde la case, jamais l'inverse.
+            $cases[] = '<td width="' . ($boite + $gouttiere) . '" valign="top" style="padding:0 ' . $gouttiere . 'px 12px 0">'
+                . mktBriefVignette($visuel, $iw, $ih, $l, $h, $focal, 'border:1px solid #e6e0d8;border-radius:5px')
+                . '<div style="font-size:10px;font-weight:600;margin-top:4px">' . $e($f['nom']) . '</div>'
+                . '<div style="font-size:9px;color:#7a736a">' . $fw . ' × ' . $fh . ' px'
+                . ($f['note'] !== '' ? ' · ' . $e($f['note']) : '') . '</div></td>';
+        }
+        $rangees = array_chunk($cases, 3);
+        $vignettes = '<table cellpadding="0" cellspacing="0" style="margin-bottom:14px">'
+            . implode('', array_map(static fn ($r) => '<tr>' . implode('', $r) . '</tr>', $rangees))
+            . '</table>';
+    } elseif ($visuel !== '') {
+        // Aucun format déclaré : on montre le visuel tel quel, en petit, et on
+        // dit pourquoi il n'y a pas de déclinaison à regarder.
+        $vignettes = '<img src="' . $visuel . '" alt="" style="max-width:340px;border:1px solid #e6e0d8;border-radius:5px">'
+            . '<div style="font-size:9.5px;color:#7a736a;margin:5px 0 14px">Aucun format de publication n’est retenu pour cette campagne :'
+            . ' le visuel est montré tel qu’il a été déposé.</div>';
+    }
+
+    $liste = '';
+    if ($jointes !== []) {
+        $liste = '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin:2px 0 5px">Fichiers joints à ce courriel</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:11px">'
+            . implode('', array_map(static fn ($a) =>
+                '<tr><td style="padding:6px 8px 6px 0;border-bottom:1px solid rgba(34,34,34,.06)">'
+                . $e($a['nom'])
+                . ($a['type'] !== '' ? '<span style="color:#7a736a"> · ' . $e($a['type']) . '</span>' : '')
+                . '</td><td width="90" align="right" style="padding:6px 0 6px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#7a736a;white-space:nowrap">PDF · '
+                . $e($a['tailleTxt']) . '</td></tr>', $jointes))
+            . '</table>';
+    }
+
+    return '<div style="page-break-before:always;padding-top:8px">'
+        . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:' . $accent . '">Annexe</div>'
+        . '<div style="font-size:13px;font-weight:600;margin:3px 0 12px">' . $e($d['nom'])
+        . ' · ' . mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']) . '</div>'
+        . ($vignettes === '' ? '' : '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:6px">Le visuel, format par format</div>')
+        . $vignettes . $liste
+        . '</div>';
 }
 
 /** Le corps du courrier — le gabarit d'achats, réutilisé tel quel. */
