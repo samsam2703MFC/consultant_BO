@@ -3869,3 +3869,21 @@ table.kpi-ref th small { display: block; margin-top: 2px; font-size: 10px; font-
 /* Le renvoi d'un chiffre qui n'est pas la référence demandée. Discret mais
    pas invisible : sans lui, une moyenne de trois mois se lirait comme un N-1. */
 table.kpi-ref sup.repli, .wizard-card sup.repli { color: var(--accent); font-weight: 600; font-size: 9px; margin-left: 2px; cursor: help; }
+
+/* --- Documents joints à une campagne ---------------------------------------
+   Le dépôt est une rangée de champs, pas un formulaire : le type se choisit ou
+   s'écrit, et le fichier part aussitôt choisi. */
+.annexes__depot { margin: 10px 0 6px; align-items: flex-end; }
+.annexes__bouton { position: relative; overflow: hidden; cursor: pointer; }
+.annexes__bouton input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.annexes__bouton.is-busy { opacity: .6; cursor: progress; }
+.annexes__types { font-size: 11.5px; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.annexes__type { gap: 4px; }
+.annexes__type button { margin: 0; padding: 0 0 0 3px; border: none; background: none; color: var(--muted); font-size: 11px; cursor: pointer; line-height: 1; }
+table.annexes { width: 100%; min-width: 0; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+table.annexes th { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: left; font-weight: 600; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); }
+table.annexes th.num, table.annexes td.num { text-align: right; }
+table.annexes td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--row-line); }
+table.annexes a { color: var(--ink); }
+.annexes__perdu { font-size: 11px; margin-top: 3px; }
+.annexes__retirer { margin: 0; padding: 0 2px; border: none; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }

@@ -4592,6 +4592,14 @@ class App {
           try { window.open(API_BASE + '/marketing/campagne/' + camp.id + '/note.pdf', '_blank'); } catch (e2) {}
         },
         fichier: D2.fichier || '',
+        // Ce qui partira EN PLUS de la note : les documents cochés dans
+        // l'assistant. En lecture seule ici — ils se gèrent là où on les
+        // dépose, sinon la même case se règlerait à deux endroits.
+        annexes: (camp.annexes || []).filter(a => a.enMail).map(a => ({
+          nom: a.nom, type: a.type || '—', taille: a.tailleTxt,
+          perdu: !a.existe,
+        })),
+        annexesNon: (camp.annexes || []).filter(a => !a.enMail).length,
         dest: dest.map((x2, i) => ({
           magasin: x2.magasin, franchise: x2.franchise || '—',
           adresse: x2.adresse, on: !!x2.on,

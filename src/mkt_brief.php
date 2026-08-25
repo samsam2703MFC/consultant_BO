@@ -256,6 +256,9 @@ function mktBriefDonnees(int $id): ?array
         'etapes' => $etapes,
         'investis' => $investis,
         'canaux' => $canaux,
+        // Les documents joints à la note : plan de publication, liste des
+        // produits… Ceux qui portent la case partent avec le courriel.
+        'annexes' => function_exists('annexeListe') ? annexeListe($id) : [],
         'canauxEngage' => $engage,
         'canauxEnvisage' => $envisage,
         'mot' => mktBriefMot($id),
@@ -637,6 +640,16 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
             . '</td></tr></table>';
     }
 
+    $jointes = array_values(array_filter($d['annexes'] ?? [], static fn ($a) => $a['enMail'] && $a['existe']));
+    $listeAnnexes = $jointes === [] ? ''
+        : '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:5px">Documents joints</div>'
+          . '<table width="100%" cellpadding="0" cellspacing="0" style="font-size:11px;margin-bottom:14px">'
+          . implode('', array_map(static fn ($a) =>
+              '<tr><td style="padding:4px 8px 4px 0">' . htmlspecialchars((string) $a['nom'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+              . ($a['type'] !== '' ? '<span style="color:#7a736a"> · ' . htmlspecialchars((string) $a['type'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>' : '')
+              . '</td><td align="right" style="padding:4px 0;color:#7a736a;white-space:nowrap">PDF · ' . htmlspecialchars((string) $a['tailleTxt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td></tr>', $jointes))
+          . '</table>';
+
     $pied = $signature
         . '<div style="margin-top:14px;padding-top:9px;border-top:1px solid #e6e0d8;font-size:9px;color:#7a736a;line-height:1.6">'
         . 'Note éditée le ' . date('d/m/Y') . ' par la centrale L’Atelier by.'
@@ -660,7 +673,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
         . $e($d['nom']) . '</title></head>'
         . '<body style="margin:0;padding:26px 30px;font-family:Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
-        . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $com . $plan . $pied . $annexe . '</body></html>';
+        . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $com . $plan . $listeAnnexes . $pied . $annexe . '</body></html>';
 }
 
 /** Le corps du courrier — le gabarit d'achats, réutilisé tel quel. */
@@ -878,6 +891,25 @@ function wr_mkt_brief_envoyer(int $id): array
 
     $pdf = mktBriefPdf($d, '', $c);
     $nomFichier = mktBriefNomFichier($d);
+
+    // Les annexes cochées, lues UNE fois pour tous les destinataires — le même
+    // fichier part à quatre magasins, le relire quatre fois ne l'améliore pas.
+    // Plafond global : au-delà, les serveurs de messagerie refusent le message
+    // entier, et le franchisé ne recevrait même pas la note.
+    $annexes = []; $poids = $pdf === null ? 0 : strlen($pdf); $ecartees = [];
+    foreach ($d['annexes'] as $a) {
+        if (!$a['enMail']) { continue; }
+        $oct = annexeOctets($a);
+        if ($oct === null) { $ecartees[] = $a['nom'] . ' (fichier absent du serveur)'; continue; }
+        if ($poids + strlen($oct) > 18 * 1024 * 1024) {
+            $ecartees[] = $a['nom'] . ' (le courriel dépasserait 18 Mo)';
+            continue;
+        }
+        $poids += strlen($oct);
+        $annexes[] = ['nom' => annexeNomFichier((string) $a['nom']),
+            'type' => 'application/pdf', 'contenu' => $oct];
+    }
+
     $envoyes = 0; $echecs = [];
 
     foreach ($cibles as $t) {
@@ -887,8 +919,8 @@ function wr_mkt_brief_envoyer(int $id): array
         $html = mktBriefMailHtml($d, $c, $t['magasin'], $t['franchise']);
         // Le PDF est joint QUAND il existe : sans moteur sur le serveur, la
         // lettre part quand même et le dit, plutôt que de ne pas partir.
-        $pieces = $pdf === null ? []
-            : [['nom' => $nomFichier, 'type' => 'application/pdf', 'contenu' => $pdf]];
+        $pieces = $pdf === null ? $annexes
+            : array_merge([['nom' => $nomFichier, 'type' => 'application/pdf', 'contenu' => $pdf]], $annexes);
         if ($pdf === null) {
             // La phrase promet une pièce jointe : sans PDF, elle mentirait.
             $html = (string) preg_replace('#<p[^>]*>La note complète est en pièce jointe.*?</p>#s',
@@ -914,9 +946,13 @@ function wr_mkt_brief_envoyer(int $id): array
         . ($echecs === [] ? '' : ' — échec pour ' . implode(', ', $echecs)));
 
     return ['ok' => $echecs === [], 'envoyes' => $envoyes, 'echecs' => $echecs,
-        'avecPdf' => $pdf !== null,
+        'avecPdf' => $pdf !== null, 'annexes' => count($annexes), 'ecartees' => $ecartees,
         'message' => $envoyes . ' note(s) envoyée(s)'
+            . ($annexes === [] ? '' : ' avec ' . count($annexes) . ' annexe(s)')
             . ($pdf === null ? ', sans PDF : aucun moteur sur ce serveur' : '')
+            // Une annexe écartée se DIT : on ne laisse pas croire qu'elle est
+            // partie parce que l'envoi a réussi.
+            . ($ecartees === [] ? '' : ' — non jointes : ' . implode(', ', $ecartees))
             . ($echecs === [] ? '' : ' — refusé pour : ' . implode(', ', $echecs))];
 }
 

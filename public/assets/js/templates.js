@@ -2733,6 +2733,15 @@ function tplMktNote(c, x){
           ${n.sansAdresse.length ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Sans adresse, donc sans envoi : ${esc(n.sansAdresse.join(', '))}. L’adresse saisie ici est retenue pour les campagnes suivantes.</div>` : ''}
         </div>
 
+        <div>
+          <span style="${k}">Pièces jointes</span>
+          <div style="font-size:12.5px;display:flex;flex-direction:column;gap:4px">
+            <div>La note de campagne (PDF)${n.fichier ? ` — <span style="color:var(--color-text-muted)">${esc(n.fichier)}</span>` : ''}</div>
+            ${n.annexes.map(a => `<div>${esc(a.nom)} <span style="color:var(--color-text-muted)">· ${esc(a.type)} · ${esc(a.taille)}</span>${a.perdu ? ` <span style="color:#8D1D2C">— fichier absent du serveur, ne partira pas</span>` : ''}</div>`).join('')}
+          </div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px">Les documents se déposent dans l’assistant, étape « Communication ».${n.annexesNon ? ` ${n.annexesNon} document(s) déposé(s) mais non coché(s) : ils ne partent pas.` : ''}</div>
+        </div>
+
         <div><span style="${k}">Aperçu du courrier</span>
           <iframe srcdoc="${esc(n.apercuMail)}" title="Aperçu du courrier" style="width:100%;height:300px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;background:#fff"></iframe>
         </div>

@@ -6,6 +6,7 @@ import type { Role } from '../../lib/navigation'
 import { describeError } from '../../state/auth'
 import ObjectivesStep from './ObjectivesStep'
 import LeverKpi from './LeverKpi'
+import Annexes from './Annexes'
 import PricingStep from './PricingStep'
 import PhotosStep from './PhotosStep'
 import ProspectList from './ProspectList'
@@ -640,7 +641,7 @@ export default function CampaignBuilder({
         {here === 'pricing' ? <PricingStep {...shared} /> : null}
         {here === 'photos' ? <PhotosStep {...shared} /> : null}
         {here === 'budget' ? <BudgetStep {...shared} shops={shops.data ?? []} /> : null}
-        {here === 'communication' ? <CommunicationStep {...shared} agencies={agencies.data ?? []} /> : null}
+        {here === 'communication' ? <CommunicationStep {...shared} agencies={agencies.data ?? []} campaignId={savedId} /> : null}
         {here === 'planning' ? <PlanningStep {...shared} /> : null}
         {here === 'review' ? <ReviewStep {...shared} shops={shops.data ?? []} /> : null}
         {here === 'leads' ? <LeadsStep {...shared} /> : null}
@@ -2152,7 +2153,8 @@ function CommunicationStep({
   draft,
   patch,
   agencies,
-}: StepProps & { agencies: Array<{ id: number; name: string }> }) {
+  campaignId,
+}: StepProps & { agencies: Array<{ id: number; name: string }>; campaignId: number | null }) {
   const toggleChannel = (channelId: number) => {
     const next = { ...draft.channels }
     if (channelId in next) {
@@ -2311,6 +2313,8 @@ function CommunicationStep({
           décide ce que la campagne est, celle-ci comment elle parle. « Festif »
           ou « Premium » n'engage ni le périmètre ni la cible — cela engage la
           création, qui se décide ici, à côté de ceux qui la produiront. */}
+      <Annexes campaignId={campaignId} />
+
       <h3 className="section-label">Ton</h3>
       <ChipList
         items={refs.tones.map((tone) => ({ id: tone.id, label: tone.label }))}

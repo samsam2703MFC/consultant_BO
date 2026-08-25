@@ -1650,3 +1650,76 @@ export function getKpiPeriode(query: {
 
   return request<KpiPeriode>(`${API_ROOT}/api/cockpit/marketing/kpi-periode?${params.toString()}`)
 }
+
+// ---------------------------------------------------------------------------
+// Annexes d'une campagne — servies par le cockpit
+// ---------------------------------------------------------------------------
+
+/**
+ * Les documents joints à une campagne : plan de publication, liste des
+ * produits, bon de commande. Ceux qui portent `enMail` partent avec la note
+ * envoyée aux franchisés.
+ *
+ * Servis par le COCKPIT, comme le KPI et la note : c'est lui qui écrit sur le
+ * disque et qui envoie les courriels. Le module n'aurait qu'une copie du
+ * fichier et une seconde vérité sur ce qui est joint.
+ */
+export interface Annexe {
+  id: number
+  nom: string
+  type: string
+  typeId: number | null
+  fichier: string
+  taille: number
+  tailleTxt: string
+  enMail: boolean
+  depuis: string
+  /** Le fichier est-il encore sur le serveur ? Une ligne peut lui survivre. */
+  existe: boolean
+}
+
+export interface AnnexeType {
+  id: number
+  nom: string
+  /** Nombre d'annexes rangées sous ce type — retirer n'efface pas l'historique. */
+  utilise: number
+}
+
+export interface AnnexesEtat {
+  annexes: Annexe[]
+  types: AnnexeType[]
+  maxOctets: number
+}
+
+const COCKPIT = `${API_ROOT}/api/cockpit`
+
+export function getAnnexes(campaignId: number): Promise<AnnexesEtat> {
+  return request<AnnexesEtat>(`${COCKPIT}/marketing/campagne/${campaignId}/annexes`)
+}
+
+export function addAnnexe(
+  campaignId: number,
+  body: { nom: string; typeId?: number | null; typeNom?: string; fichier: string; enMail?: boolean },
+): Promise<AnnexesEtat & { ok?: boolean; error?: string }> {
+  return request(`${COCKPIT}/marketing/campagne/${campaignId}/annexe`, { method: 'POST', body })
+}
+
+export function updateAnnexe(
+  annexeId: number,
+  body: { enMail?: boolean; nom?: string; typeId?: number | null; typeNom?: string },
+): Promise<AnnexesEtat> {
+  return request(`${COCKPIT}/marketing/annexe/${annexeId}`, { method: 'PATCH', body })
+}
+
+export function removeAnnexe(annexeId: number): Promise<AnnexesEtat> {
+  return request(`${COCKPIT}/marketing/annexe/${annexeId}`, { method: 'DELETE' })
+}
+
+export function removeAnnexeType(typeId: number): Promise<{ types: AnnexeType[] }> {
+  return request(`${COCKPIT}/marketing/annexe-type/${typeId}`, { method: 'DELETE' })
+}
+
+/** L'adresse du fichier, pour l'ouvrir dans un onglet. */
+export function annexeHref(annexeId: number): string {
+  return `${COCKPIT}/marketing/annexe/${annexeId}/fichier`
+}
