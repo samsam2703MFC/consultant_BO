@@ -139,6 +139,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),
             $path === '/centrale/reglages'             => ep_ca_reglages(),
+            $path === '/centrale/fournisseurs/annee'   => ep_ca_fournisseurs_annee(),
             $path === '/centrale/demandes'             => ep_ca_demandes(),
             $path === '/centrale/campagnes'            => ep_ca_manquant('campagnes'),
             $path === '/centrale/achats'               => ep_ca_achats(),

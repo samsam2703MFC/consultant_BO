@@ -632,8 +632,8 @@ class App {
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
-      caAchats: ['Commandes & fournisseurs', 'Une commande d’un bout à l’autre : ce que le magasin demande, ce que le fournisseur doit servir. Le franchisé se rappelle par notification, le fournisseur par courrier.'],
-      caCommandes: ['Commandes & fournisseurs', 'Une commande d’un bout à l’autre.'],
+      caAchats: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs, de l’envoi à la livraison. Un fournisseur se relance par courrier à tout moment.'],
+      caCommandes: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs.'],
       caStock: ['Stock', 'Stock, seuils et ruptures.'],
       caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
       caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
@@ -1009,7 +1009,7 @@ class App {
       // la demande — les écrans restent dans le code, comme le suivi de
       // production, ils ne s'atteignent plus depuis la navigation.
       ['Centrale d’achat', [
-        ['caAchats', 'Commandes & fournisseurs', 0],
+        ['caAchats', 'Commandes', 0],
         ['caStock', 'Stock', 0],
         ['caFacturation', 'Facturation magasins', 0]]],
       // Ce que la marque investit et ce qu'elle en retire, au même endroit : le
@@ -7033,7 +7033,7 @@ class App {
   }
   valsCentrale(common){
     const S = this.state;
-    // « Commandes franchisés » a rejoint « Commandes & fournisseurs » : un
+    // « Commandes franchisés » a rejoint « Commandes » : un
     // ancien lien ou un signet doit continuer à mener quelque part.
     if (S.screen === 'caCommandes') { this.setState({ screen: 'caAchats' }); return; }
     const ecr = S.screen;
@@ -7043,7 +7043,7 @@ class App {
     common.caEcran = ecr;
     common.caChargement = !d;
     // Ce que l'écran est en train de lire, dit en clair pendant l'attente.
-    common.caTitre = { caAchats: 'Commandes & fournisseurs', caStock: 'Stock',
+    common.caTitre = { caAchats: 'Commandes', caStock: 'Stock',
       caFacturation: 'Facturation magasins', caReglages: 'Réglages de la centrale',
       caDemande: 'Demandes', caCommandes: 'Commandes' }[ecr] || 'Lecture en cours';
     common.caChargeTxt = ecr === 'caAchats'
@@ -7192,6 +7192,39 @@ class App {
       }));
       common.caFrTronque = lgsF.length > 40 ? lgsF.length - 40 : 0;
 
+      // ── Le tableau des fournisseurs, année par année : ce que le réseau
+      //    leur a demandé, mois par mois. Chargé à part : il balaie une année
+      //    entière, l'écran ne doit pas l'attendre pour s'afficher.
+      const anF = S.caFournAn || new Date().getFullYear();
+      const cleF = 'caFournAnnee|' + anF;
+      this._caEnCours = this._caEnCours || {};
+      if (!(S.caData || {})[cleF] && !this._caEnCours[cleF]) {
+        this._caEnCours[cleF] = true;
+        readOne('/centrale/fournisseurs/annee?annee=' + anF).then(x2 => { this._caEnCours[cleF] = false;
+          this.setState(s2 => ({ caData: Object.assign({}, s2.caData, { [cleF]: x2 || { etat: 'erreur' } }) })); });
+      }
+      const fa = (S.caData || {})[cleF] || null;
+      common.caFaChargement = !fa;
+      common.caFaAnnee = anF;
+      common.caFaAnnees = ((fa || {}).annees || [anF]).map(a2 => ({ a: a2, on: a2 === anF,
+        go: () => this.setState({ caFournAn: a2 }) }));
+      common.caFaMois = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+      const eur0 = v => !v ? '—' : this.fE(v);
+      common.caFaLignes = ((fa || {}).lignes || []).map(l => ({
+        nom: l.fournisseur, n: l.n,
+        mois: (l.mois || []).map(v => ({ t: eur0(v), vide: !v })),
+        total: this.fE(l.total || 0) }));
+      common.caFaVentiler = (fa && fa.aVentiler && fa.aVentiler.n) ? {
+        n: fa.aVentiler.n, mois: fa.aVentiler.mois.map(v => ({ t: eur0(v), vide: !v })),
+        total: this.fE(fa.aVentiler.total || 0) } : null;
+      common.caFaTotaux = fa && fa.totaux ? {
+        mois: fa.totaux.mois.map(v => ({ t: eur0(v), vide: !v })),
+        total: this.fE(fa.totaux.total || 0) } : null;
+      common.caFaSource = (fa || {}).source || '';
+      common.caFaManque = (fa || {}).manque || '';
+      common.caFaVide = fa && fa.etat === 'ok' && !((fa.lignes || []).length) && !(fa.aVentiler || {}).n;
+      common.caFaMotif = (fa && fa.etat !== 'ok') ? (fa.motif || 'lecture impossible') : '';
+
       // ── Le suivi des commandes : 2 dernières par magasin chez chaque
       //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
       //    donc les fournisseurs en retard remontent (tri fait côté serveur).
@@ -7258,7 +7291,7 @@ class App {
             this.setState({ caSvMail: null });
             this.notify(!r2 || r2.ok === false
               ? ('Courrier non envoyé — ' + ((r2 && (r2.erreur || r2.error)) || 'échec'))
-              : ('Rappel envoyé à ' + g.fournisseur));
+              : ('Rappel envoyé à ' + g.fournisseur + (r2.vers ? ' · ' + r2.vers : '')));
           });
         },
         mailEnCours: this.state.caSvMail === g.fournisseur,

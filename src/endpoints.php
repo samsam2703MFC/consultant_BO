@@ -5906,6 +5906,94 @@ function ep_ca_ventes(): array
     return $out;
 }
 
+/**
+ * GET /centrale/fournisseurs/annee?annee=AAAA — un tableau par an : chaque
+ * fournisseur, mois par mois, et son total.
+ *
+ * D'OÙ VIENNENT LES CHIFFRES, et pourquoi ce ne sont pas des factures : le
+ * panel ne porte AUCUN montant sur les commandes (mesuré : GET
+ * /deliveries/{id} sans montant, aucune route de liste). Ce qui porte une
+ * valeur, ce sont les RÉQUISITIONS matière — la demande du magasin, chiffrée
+ * en estimation. C'est donc de l'achat ESTIMÉ, jamais du facturé, et l'écran
+ * doit le dire à côté du chiffre.
+ *
+ * L'ATTRIBUTION est stricte : une réquisition qui ne nomme qu'un fournisseur
+ * lui revient entière ; une réquisition qui en nomme plusieurs ne se ventile
+ * pas — la partager au prorata inventerait un chiffre. Elle va dans une ligne
+ * « à ventiler », et le total de la colonne reste juste.
+ */
+function ep_ca_fournisseurs_annee(): array
+{
+    $an = (int) ($_GET['annee'] ?? date('Y'));
+    if ($an < 2020 || $an > (int) date('Y') + 1) { $an = (int) date('Y'); }
+
+    $d = ep_ca_commandes();
+    if (($d['etat'] ?? '') !== 'ok') {
+        return ['etat' => 'attente', 'annee' => $an, 'motif' => (string) ($d['source'] ?? 'commandes indisponibles')];
+    }
+
+    $vide = array_fill(1, 12, 0.0);
+    $par = []; $aVentiler = $vide; $aVentilerN = 0;
+    $annees = [];
+    $nReq = 0; $nSeul = 0;
+    foreach ((array) ($d['lignes'] ?? []) as $l) {
+        $debut = (string) ($l['debut'] ?? '');
+        if (strlen($debut) < 7) { continue; }
+        $anL = (int) substr($debut, 0, 4);
+        $annees[$anL] = true;
+        if ($anL !== $an) { continue; }
+        $m = (int) substr($debut, 5, 2);
+        if ($m < 1 || $m > 12) { continue; }
+        $v = (float) ($l['valeur'] ?? 0);
+        $fours = array_values(array_filter(array_map('trim', (array) ($l['fournisseurs'] ?? []))));
+        $nReq++;
+        if (count($fours) === 1) {
+            $nom = $fours[0];
+            if (!isset($par[$nom])) { $par[$nom] = ['mois' => $vide, 'n' => 0]; }
+            $par[$nom]['mois'][$m] += $v;
+            $par[$nom]['n']++;
+            $nSeul++;
+        } else {
+            $aVentiler[$m] += $v;
+            $aVentilerN++;
+        }
+    }
+
+    $lignes = [];
+    foreach ($par as $nom => $x) {
+        $total = array_sum($x['mois']);
+        $lignes[] = ['fournisseur' => $nom, 'n' => $x['n'],
+            'mois' => array_map(fn ($v) => round($v, 2), array_values($x['mois'])),
+            'total' => round($total, 2)];
+    }
+    usort($lignes, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+    // Le total de chaque mois, ligne « à ventiler » comprise : c'est lui qui
+    // doit correspondre à ce que le réseau a demandé, sans quoi le tableau
+    // laisserait croire qu'une part a disparu.
+    $totMois = $vide;
+    foreach ($lignes as $l2) {
+        foreach ($l2['mois'] as $i => $v) { $totMois[$i + 1] += $v; }
+    }
+    foreach ($aVentiler as $m => $v) { $totMois[$m] += $v; }
+
+    krsort($annees);
+    return [
+        'etat' => 'ok', 'annee' => $an,
+        'annees' => array_values(array_map('intval', array_keys($annees))),
+        'lignes' => $lignes,
+        'aVentiler' => ['n' => $aVentilerN, 'mois' => array_map(fn ($v) => round($v, 2), array_values($aVentiler)),
+            'total' => round(array_sum($aVentiler), 2)],
+        'totaux' => ['mois' => array_map(fn ($v) => round($v, 2), array_values($totMois)),
+            'total' => round(array_sum($totMois), 2)],
+        'nRequisitions' => $nReq, 'nAttribuees' => $nSeul,
+        'source' => 'valeur ESTIMÉE des réquisitions matière (le panel ne porte aucun montant sur les commandes livrées)',
+        'manque' => $aVentilerN > 0
+            ? $aVentilerN . ' réquisition(s) nomment plusieurs fournisseurs : leur montant n’est pas ventilable, il figure à part'
+            : '',
+    ];
+}
+
 /** Fournisseurs et réglages du moteur (RFA en lecture seule, cf. handoff). */
 function ep_ca_reglages(): array
 {

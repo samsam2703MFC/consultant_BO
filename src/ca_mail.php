@@ -493,14 +493,20 @@ function wr_ca_mail_envoyer(): array
         foreach ((array) ($l['fournisseurs'] ?? []) as $f) { if (caMailNom((string) $f) === $cible) { return true; } }
         return false;
     }));
-    $r = caMailRappels($lignes, $c);
+    // À la main : ni fenêtre de trente jours, ni classement. On relance ce
+    // fournisseur, maintenant, avec tout ce qu'il a en attente.
+    $r = caMailRappels($lignes, $c, true);
     if (($r['envoyes'] ?? 0) < 1) {
         return ['ok' => false, 'erreur' => ($r['echecs'] ?? 0) > 0
-            ? 'envoi refusé par le serveur de courrier'
-            : 'rien à envoyer — aucune commande récente en attente pour ce fournisseur'];
+            ? 'envoi refusé par le serveur de courrier — ' . (string) (Smtp::$lastError ?? '')
+            : 'rien à envoyer : ce fournisseur n’a aucune commande en attente'];
     }
-    return ['ok' => true, 'envoyes' => (int) $r['envoyes'],
-        'sansAdresse' => (array) ($r['sansAdresse'] ?? [])];
+    $sans = (array) ($r['sansAdresse'] ?? []);
+    return ['ok' => true, 'envoyes' => (int) $r['envoyes'], 'sansAdresse' => $sans,
+        // Sans adresse, le courrier part à la centrale : le dire, sinon on
+        // croirait le fournisseur prévenu.
+        'vers' => $sans ? 'la centrale (ce fournisseur n’a pas d’adresse)'
+            : caMailAdresse($nom, caMailCarnet())];
 }
 
 /**
@@ -697,9 +703,9 @@ function ep_ca_mail_cron(): array
  * être vérifiable sans panel : c'est la règle d'envoi qui doit être sûre, pas
  * la plomberie qui va la chercher.
  */
-function caMailRappels(array $lignes, array $c): array
+function caMailRappels(array $lignes, array $c, bool $manuel = false): array
 {
-    $tous = caMailGroupes($lignes, (int) ($c['fenetreJours'] ?? 30));
+    $tous = caMailGroupes($lignes, $manuel ? 0 : (int) ($c['fenetreJours'] ?? 30), $manuel);
     // Un fournisseur dont TOUT est hors fenêtre n'est pas relancé — mais il
     // reste dans l'état de l'écran, qui dira ce qui dort.
     $groupes = array_filter($tous, fn ($g) => $g['n'] > 0);
@@ -730,8 +736,11 @@ function caMailRappels(array $lignes, array $c): array
             $vers = trim((string) $c['destinataire']);
             if ($vers === '') { continue; }
         }
-        // Un envoi par jour et par fournisseur : le cron passe toutes les heures.
-        if ((string) ($suivi[$cle]['dernier'] ?? '') === $auj) { continue; }
+        // Un envoi par jour et par fournisseur : le cron passe toutes les
+        // heures. La borne ne vaut QUE pour l'automatique — « à tout moment
+        // je dois pouvoir relancer » veut dire à tout moment, y compris deux
+        // fois le même jour.
+        if (!$manuel && (string) ($suivi[$cle]['dernier'] ?? '') === $auj) { continue; }
 
         $vars = caMailVariablesGroupe($g, $adresse === '');
         $sujet = caMailRemplir((string) $c['sujet'], $vars);
@@ -749,6 +758,8 @@ function caMailRappels(array $lignes, array $c): array
                 'depuis' => (string) ($suivi[$cle]['depuis'] ?? $auj)];
             $envoyes++;
         } else { $echecs++; }
+        // Un rappel envoyé à la main compte comme celui du jour : l'automatique
+        // ne repartira pas dans l'heure derrière lui.
         caMailJournal($ok ? 'envoye' : 'echec',
             ($ok ? 'Rappel envoyé — ' : 'Envoi en échec — ') . $g['nom'] . ' · '
             . $g['n'] . ' commande(s) en attente'
@@ -781,10 +792,13 @@ function caMailRappels(array $lignes, array $c): array
  * chez chacun d'eux — chacun ne peut servir que sa part, mais tous doivent
  * savoir qu'on les attend.
  */
-function caMailGroupes(array $lignes, int $fenetreJours = 0): array
+function caMailGroupes(array $lignes, int $fenetreJours = 0, bool $toutPrendre = false): array
 {
     $borne = $fenetreJours > 0 ? date('Y-m-d', strtotime('-' . $fenetreJours . ' day')) : '';
-    $classees = array_flip(caMailClassees());
+    // Un envoi demandé À LA MAIN ne se laisse borner par rien : quelqu'un a
+    // cliqué, il sait ce qu'il fait. La fenêtre et le classement protègent
+    // l'envoi AUTOMATIQUE, pas la décision d'un humain.
+    $classees = $toutPrendre ? [] : array_flip(caMailClassees());
     $out = [];
     foreach ($lignes as $l) {
         if (strtoupper((string) ($l['statut'] ?? '')) !== 'PENDING') { continue; }
