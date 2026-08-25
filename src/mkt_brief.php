@@ -138,8 +138,12 @@ function mktBriefDonnees(int $id): ?array
 
     $etapes = [];
     try {
-        foreach (Db::rows('SELECT label, days_before_launch, done_at FROM mar_campaign_task
-                            WHERE campaign_id = ? ORDER BY sort_order, id', [$id]) as $t) {
+        // `mar_retroplanning_step` : le nom que porte la table du module. Un nom
+        // deviné rendait la note muette sur le calendrier, sans erreur — et
+        // « ce qui va se passer ce mois-ci » est précisément ce qu'elle vient
+        // dire au franchisé.
+        foreach (Db::rows('SELECT label, days_before_launch, done_at FROM mar_retroplanning_step
+                            WHERE campaign_id = ? ORDER BY sort_order, days_before_launch DESC', [$id]) as $t) {
             $jours = (int) ($t['days_before_launch'] ?? 0);
             $etapes[] = ['libelle' => (string) $t['label'],
                 'quand' => $du === '' ? '' : mktBriefJour(mesDecale($du, -$jours)),
