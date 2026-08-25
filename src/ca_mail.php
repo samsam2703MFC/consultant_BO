@@ -248,12 +248,12 @@ function caMailHtml(string $corps, array $g = []): string
  * ou non) laisse une trace, lisible dans Paramètres. Vit dans
  * `ceo_app_setting.caMailJournal`, borné aux 200 dernières entrées.
  */
-function caMailJournal(string $type, string $detail, string $destinataire = ''): void
+function caMailJournal(string $type, string $detail, string $destinataire = '', array $plus = []): void
 {
     $j = setting('caMailJournal');
     if (!is_array($j)) { $j = []; }
-    array_unshift($j, ['quand' => date('Y-m-d H:i'), 'type' => $type,
-        'detail' => mb_substr($detail, 0, 200), 'destinataire' => $destinataire]);
+    array_unshift($j, array_merge(['quand' => date('Y-m-d H:i'), 'type' => $type,
+        'detail' => mb_substr($detail, 0, 200), 'destinataire' => $destinataire], $plus));
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['caMailJournal', json_encode(array_slice($j, 0, 200), JSON_UNESCAPED_UNICODE)]);
 }
@@ -296,6 +296,44 @@ function caMailEtat(): array
         'gabaritVieux' => caMailGabaritVieux($c),
         'defauts' => caMailDefauts(),
     ];
+}
+
+/**
+ * GET /centrale/commandes/mail/courriers?fournisseur=… — ce qui est parti.
+ *
+ * Le rappel parle de RÉQUISITIONS matière ; la ligne du suivi montre une
+ * COMMANDE (ORD-…). Le panel ne relie pas les deux : on rend donc les
+ * courriers envoyés au FOURNISSEUR de la commande, en disant ce que chacun
+ * citait — plutôt qu'un lien inventé entre deux objets qui ne se connaissent pas.
+ */
+function ep_ca_mail_courriers(): array
+{
+    $nom = trim((string) ($_GET['fournisseur'] ?? ''));
+    $j = setting('caMailJournal');
+    $j = is_array($j) ? $j : [];
+    $cle = $nom !== '' ? caMailNom($nom) : '';
+    $out = [];
+    foreach ($j as $e) {
+        if (!in_array((string) ($e['type'] ?? ''), ['envoye', 'echec', 'clos'], true)) { continue; }
+        if ($cle !== '' && caMailNom((string) ($e['fournisseur'] ?? '')) !== $cle) { continue; }
+        $out[] = [
+            'quand' => (string) ($e['quand'] ?? ''),
+            'type' => (string) ($e['type'] ?? ''),
+            'sujet' => (string) ($e['sujet'] ?? ''),
+            'destinataire' => (string) ($e['destinataire'] ?? ''),
+            'copie' => (string) ($e['copie'] ?? ''),
+            'reqs' => array_values((array) ($e['reqs'] ?? [])),
+            'detail' => (string) ($e['detail'] ?? ''),
+        ];
+        if (count($out) >= 40) { break; }
+    }
+    $suivi = setting('caMailQuotidien');
+    $etat = (is_array($suivi) && $cle !== '' && isset($suivi[$cle])) ? $suivi[$cle] : null;
+    return ['fournisseur' => $nom, 'courriers' => $out,
+        'depuis' => (string) ($etat['depuis'] ?? ''), 'envois' => (int) ($etat['envois'] ?? 0),
+        'dernier' => (string) ($etat['dernier'] ?? ''),
+        'note' => 'Les rappels portent sur les réquisitions matière ; le panel ne les relie pas aux commandes ORD-… '
+            . 'Ce sont donc les courriers envoyés à ce fournisseur.'];
 }
 
 /**
@@ -443,7 +481,13 @@ function caMailRappels(array $lignes, array $c): array
             ($ok ? 'Rappel envoyé — ' : 'Envoi en échec — ') . $g['nom'] . ' · '
             . $g['n'] . ' commande(s) en attente'
             . ($adresse === '' ? ' · SANS ADRESSE, envoyé à la centrale' : '')
-            . (!$ok ? ' · ' . (string) (Smtp::$lastError ?? '') : ''), $vers);
+            . (!$ok ? ' · ' . (string) (Smtp::$lastError ?? '') : ''), $vers,
+            // Ce que le courrier citait : c'est ce qui permet, depuis une
+            // commande, de retrouver les lettres qui en parlaient.
+            ['fournisseur' => $g['nom'], 'cle' => $cle, 'sujet' => $sujet,
+             'reqs' => array_values(array_filter(array_map(
+                 fn ($l) => (string) ($l['id'] ?? ''), $g['lignes']))),
+             'copie' => ($ok && $copie !== '' && $copie !== $vers) ? $copie : '']);
     }
 
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',

@@ -7100,10 +7100,37 @@ class App {
         ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
         ['Lecture', sv.lues ? String(sv.lues) : '—', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
       ] : null;
+      // La fenêtre des courriers : ce qui est parti, à qui, et ce qu'il citait.
+      const sm = S.svMails || null;
+      common.caSvMails = !sm ? null : {
+        fournisseur: sm.fournisseur, commande: sm.cle,
+        chargement: !!sm.chargement,
+        note: (sm.d || {}).note || '',
+        resume: (sm.d && sm.d.envois)
+          ? sm.d.envois + ' rappel(s) · depuis le ' + this.fD(sm.d.depuis)
+            + (sm.d.dernier ? ' · dernier le ' + this.fD(sm.d.dernier) : '')
+          : 'Aucun rappel en cours pour ce fournisseur.',
+        lignes: ((sm.d || {}).courriers || []).map(c2 => ({
+          quand: c2.quand, sujet: c2.sujet || c2.detail || '—',
+          vers: c2.destinataire || '—', copie: c2.copie || '',
+          reqs: (c2.reqs || []).length ? 'réquisitions ' + c2.reqs.join(', ') : '',
+          echec: c2.type === 'echec', clos: c2.type === 'clos',
+          detail: c2.detail || '',
+        })),
+        vide: !((sm.d || {}).courriers || []).length,
+        fermer: () => this.setState({ svMails: null }),
+      };
       common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
           ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
         .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
           pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
+      // Le clic sur une commande ouvre les COURRIERS envoyés à son fournisseur.
+      const svCourriers = (fournisseur, cle) => () => {
+        this.setState({ svMails: { fournisseur, cle, chargement: true, d: null } });
+        readOne('/centrale/commandes/mail/courriers?fournisseur=' + encodeURIComponent(fournisseur))
+          .then(d2 => this.setState(s2 => (s2.svMails && s2.svMails.cle === cle)
+            ? { svMails: Object.assign({}, s2.svMails, { chargement: false, d: d2 || null }) } : {}));
+      };
       common.caSvGroupes = (sv.groupes || []).map(g => ({
         nom: g.fournisseur,
         meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
@@ -7118,6 +7145,7 @@ class App {
           libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
           badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
           geste: o.geste || '—', source: o.source || '—',
+          courriers: svCourriers(g.fournisseur, o.cle),
           // Relance : la cloche n'apparaît que si la commande attend encore
           // le fournisseur. Elle crée une NOTIFICATION dans l'ERP, pas un mail.
           relancable: o.etape < 4 && !o.bloque,

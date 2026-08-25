@@ -137,6 +137,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/achats/catalogue'     => ep_ca_achats_catalogue(),
             $path === '/centrale/commandes'            => ep_ca_commandes(),
             $path === '/centrale/commandes/mail'       => caMailEtat(),
+            $path === '/centrale/commandes/mail/courriers' => ep_ca_mail_courriers(),
             $path === '/centrale/achats/relance'       => caRelanceEtat(),
             $path === '/centrale/commandes/mail/cron'  => ep_ca_mail_cron(),
             $path === '/centrale/stock'                => ep_ca_stock(),

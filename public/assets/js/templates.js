@@ -6476,7 +6476,7 @@ function tplCentrale(c, x){
               <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)"> · ${esc(g.meta)} · </span>
               <span style="font-weight:600;font-size:11px;color:${g.alerteCol}">${esc(g.alerte)}</span>
             </td></tr>
-            ${g.commandes.map(o => `<tr>
+            ${g.commandes.map(o => `<tr ${x.A(o.courriers)} title="Voir les courriers envoyés à ${esc(g.nom)}" style="cursor:pointer">
               <td style="${TD};font-weight:${o.magasin ? '500' : '400'}">${esc(o.magasin)}</td>
               <td style="${TD};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text-muted)">${esc(o.cle)}</td>
               <td style="${TD};color:var(--color-text-muted);white-space:nowrap">${esc(o.date)}</td>
@@ -6488,7 +6488,7 @@ function tplCentrale(c, x){
               </span></td>
               <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.geste)}</td>
               <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(o.source)}</td>
-              <td style="${TD};text-align:center">
+              <td ${x.A(e => e.stopPropagation())} style="${TD};text-align:center">
                 ${o.relancable ? `<button ${x.A(o.relancer)} title="${esc(o.relanceTitre)}" style="border:0.5px solid ${o.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${o.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${o.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${o.relanceEnCours ? ';opacity:.5' : ''}">${o.relanceEnCours ? '…' : '🔔'}</button>
                   ${o.relanceLe ? `<div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px;white-space:nowrap">${esc(o.relanceLe.slice(5, 10))}</div>` : ''}`
                   : `<span title="${esc(o.relanceTitre)}" style="color:var(--color-border-secondary)">—</span>`}
@@ -6496,6 +6496,35 @@ function tplCentrale(c, x){
             </tr>`).join('')}`).join('')}
         </tbody>
       </table></div>
+      ${c.caSvMails ? `
+      <div ${x.A(c.caSvMails.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:90"></div>
+      <div style="position:fixed;inset:0;z-index:91;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+        <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:680px;max-width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div>
+              <div style="font-size:10.5px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">Courriers envoyés · ${esc(c.caSvMails.commande)}</div>
+              <div style="font-size:16px;font-weight:500;margin-top:3px">${esc(c.caSvMails.fournisseur)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.caSvMails.resume)}</div>
+            </div>
+            <button ${x.A(c.caSvMails.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
+          </div>
+          <div style="padding:14px 19px;overflow-y:auto" data-scroll="svmails">
+            ${c.caSvMails.chargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Lecture du journal…</div>`
+              : (c.caSvMails.vide ? `<div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55">Aucun courrier envoyé à ce fournisseur pour l’instant. Le rappel part au passage horaire suivant si une commande reste en attente.</div>`
+              : c.caSvMails.lignes.map(l => `
+                <div style="display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+                  <span style="width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 auto;background:${l.echec ? 'var(--color-primary)' : (l.clos ? 'var(--color-border-secondary)' : '#2d7a3e')}"></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12.5px;font-weight:500">${esc(l.sujet)}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(l.quand)} · ${esc(l.vers)}${l.copie ? ' · copie ' + esc(l.copie) : ''}</div>
+                    ${l.reqs ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(l.reqs)}</div>` : ''}
+                    ${l.echec ? `<div style="font-size:11px;color:var(--color-primary);margin-top:2px">${esc(l.detail)}</div>` : ''}
+                  </div>
+                </div>`).join(''))}
+            ${c.caSvMails.note ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5">${esc(c.caSvMails.note)}</div>` : ''}
+          </div>
+        </div>
+      </div>` : ''}
       <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:12px">
         <span>étapes : envoyée → acceptée → en transit → livrée</span>
         <span style="display:inline-flex;align-items:center;gap:6px"><i style="display:block;width:22px;height:5px;border-radius:3px;background:#2d7a3e"></i> franchi</span>
