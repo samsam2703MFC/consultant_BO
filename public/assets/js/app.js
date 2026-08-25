@@ -170,13 +170,25 @@ class App {
     // L'adresse d'abord : ouvrir « …/#/planogramme » doit ouvrir le
     // planogramme, pas l'accueil.
     const depart = this.ecranDeAdresse();
-    if (depart) { this.state.screen = depart; }
+    if (depart) {
+      this.state.screen = depart;
+      // Arrivé par une adresse retirée, l'URL se remet d'aplomb : on ne laisse
+      // pas « #/stock » dans la barre d'un écran qui n'est plus le stock.
+      const juste = this.adresseDe(depart);
+      if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
+    }
     // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
     // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
     window.addEventListener('hashchange', () => {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
-      if (id && id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); }
+      if (!id) { return; }
+      if (id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); return; }
+      // Même écran, mais adresse retirée (« #/stock » alors qu'on est déjà sur
+      // les commandes) : la barre d'adresse se remet d'aplomb, sans quoi elle
+      // afficherait un écran qui n'existe plus.
+      const juste = this.adresseDe(id);
+      if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     });
     this.bindEvents();
   }
@@ -216,7 +228,7 @@ class App {
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
-      caAchats: 'commandes', caStock: 'stock', caFacturation: 'facturation',
+      caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
       bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne',
@@ -224,12 +236,21 @@ class App {
       diagnostic: 'diagnostic', params: 'parametres',
     };
   }
+  /**
+   * Les adresses d'écrans RETIRÉS. Un signet ou un lien envoyé par courriel
+   * survit à une réorganisation : il mène là où le contenu a déménagé, plutôt
+   * que de rouvrir l'accueil sans rien dire.
+   */
+  static get ADRESSES_RETIREES(){
+    return { stock: 'caAchats', 'commandes-franchises': 'caAchats' };
+  }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
     const brut = String(location.hash || '').replace(/^#\/?/, '').split('?')[0].trim();
     if (!brut) { return ''; }
     const t = App.ADRESSES;
     for (const id of Object.keys(t)) { if (t[id] === brut) { return id; } }
+    if (App.ADRESSES_RETIREES[brut]) { return App.ADRESSES_RETIREES[brut]; }
     // Un identifiant technique reste accepté : les liens d'avant continuent
     // de fonctionner.
     return Object.prototype.hasOwnProperty.call(t, brut) ? brut : '';
@@ -634,7 +655,6 @@ class App {
       caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
       caAchats: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs, de l’envoi à la livraison. Un fournisseur se relance par courrier à tout moment.'],
       caCommandes: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs.'],
-      caStock: ['Stock', 'Stock, seuils et ruptures.'],
       caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
       caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
@@ -1010,7 +1030,6 @@ class App {
       // production, ils ne s'atteignent plus depuis la navigation.
       ['Centrale d’achat', [
         ['caAchats', 'Commandes', 0],
-        ['caStock', 'Stock', 0],
         ['caFacturation', 'Facturation magasins', 0]]],
       // Ce que la marque investit et ce qu'elle en retire, au même endroit : le
       // fonds finance les projets de développement, et l'un ne se lit pas sans
@@ -3941,7 +3960,7 @@ class App {
   caRoute(){
     return { caCampagnes: '/centrale/campagnes', caDemande: '/centrale/demandes',
       caAchats: '/centrale/achats', caCommandes: '/centrale/commandes',
-      caStock: '/centrale/stock', caFacturation: '/centrale/facturation',
+      caFacturation: '/centrale/facturation',
       caReglages: '/centrale/reglages' }[this.state.screen];
   }
   /* --- fonds marketing & redevances ------------------------------------------ */
@@ -7035,7 +7054,11 @@ class App {
     const S = this.state;
     // « Commandes franchisés » a rejoint « Commandes » : un
     // ancien lien ou un signet doit continuer à mener quelque part.
-    if (S.screen === 'caCommandes') { this.setState({ screen: 'caAchats' }); return; }
+    // « Commandes franchisés » et « Stock » ont été retirés : un ancien lien ou
+    // un signet doit continuer à mener quelque part.
+    if (S.screen === 'caCommandes' || S.screen === 'caStock') {
+      this.setState({ screen: 'caAchats' }); return;
+    }
     const ecr = S.screen;
     const per = S.caPeriode || '30j';
     this.caCharge();
@@ -7043,7 +7066,7 @@ class App {
     common.caEcran = ecr;
     common.caChargement = !d;
     // Ce que l'écran est en train de lire, dit en clair pendant l'attente.
-    common.caTitre = { caAchats: 'Commandes', caStock: 'Stock',
+    common.caTitre = { caAchats: 'Commandes',
       caFacturation: 'Facturation magasins', caReglages: 'Réglages de la centrale',
       caDemande: 'Demandes', caCommandes: 'Commandes' }[ecr] || 'Lecture en cours';
     common.caChargeTxt = ecr === 'caAchats'
@@ -7094,25 +7117,6 @@ class App {
         { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
         { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
       common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
-    } else if (ecr === 'caStock') {
-      // Inventaire matière réel par magasin (API panel). Par DÉFAUT, seuls les
-      // produits en négatif ou sous le minimum journalier s'affichent : c'est
-      // là qu'un geste s'impose. Le badge se re-clique pour tout voir.
-      const lgsSt = d.lignes || [];
-      const enAlerte = S.caStockTous ? false : true;
-      const nAl = lgsSt.filter(x => x.alerte).length;
-      common.caChips = [{ nom: 'En alerte (négatif / sous minimum) · ' + nAl,
-        texte: '#8D1D2C', fond: 'rgba(141,29,44,0.10)', on: enAlerte,
-        pick: () => this.setState({ caStockTous: enAlerte }) }];
-      common.caCols = ['Magasin', 'Référence', 'Catégorie', 'Stock', 'Mini / jour', 'Unité', 'Compté le'];
-      common.caRows = lgsSt.filter(x => !enAlerte || x.alerte).map(x => ({ cells: [
-        { t: x.magasin, mut: true }, { t: x.ref }, { t: x.categorie, mut: true },
-        { t: (+x.stock).toLocaleString('fr-BE'), num: true, col: x.alerte ? '#8D1D2C' : '' },
-        { t: x.mini > 0 ? (+x.mini).toLocaleString('fr-BE') : '—', num: true, mut: true },
-        { t: x.unite || '—', mut: true }, { t: x.modif || '—', mut: true } ] }));
-      common.caRien = enAlerte ? 'Aucun produit en négatif ni sous son minimum — rien à traiter.'
-        : 'Aucun inventaire matière remonté par le panel.';
-      if (!enAlerte && d.tronque) { common.caNote = d.tronque + ' ligne(s) au-delà des 600 affichées — les alertes passent en premier.'; }
     } else if (ecr === 'caCommandes') {
       // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
       // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
