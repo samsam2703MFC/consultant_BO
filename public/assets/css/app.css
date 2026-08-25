@@ -22,3 +22,18 @@ button { font-family: inherit; }
    au vol par l'écouteur : redessiner l'écran pendant le geste ferait lâcher au
    navigateur ce qu'on tient. */
 .pl-slot.depot   { outline: 2px solid var(--color-primary); outline-offset: 1px; background: rgba(141,29,44,0.10) !important; }
+
+/* Attente d'un écran : une jauge aux couleurs de la maison plutôt qu'un mot
+   seul. Elle ne prétend PAS mesurer l'avancement — on ne le connaît pas :
+   c'est une bande qui va et vient, honnête sur ce qu'elle dit. */
+@keyframes jaugeVaEtVient {
+  0%   { left: -38%; width: 38%; }
+  50%  { left: 32%;  width: 46%; }
+  100% { left: 100%; width: 38%; }
+}
+.jauge      { position: relative; height: 6px; border-radius: 999px; overflow: hidden;
+              background: rgba(141,29,44,0.10); }
+.jauge i    { position: absolute; top: 0; bottom: 0; border-radius: 999px;
+              background: linear-gradient(90deg, rgba(141,29,44,0.25), #8D1D2C 55%, #C17A2A);
+              animation: jaugeVaEtVient 1.25s cubic-bezier(.65,.05,.36,1) infinite; }
+@media (prefers-reduced-motion: reduce) { .jauge i { animation-duration: 3s; } }

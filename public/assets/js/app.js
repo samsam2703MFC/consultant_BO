@@ -167,6 +167,17 @@ class App {
     this._h = [];
     this._tt = null;
     this._lastEn = null;
+    // L'adresse d'abord : ouvrir « …/#/planogramme » doit ouvrir le
+    // planogramme, pas l'accueil.
+    const depart = this.ecranDeAdresse();
+    if (depart) { this.state.screen = depart; }
+    // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
+    // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
+    window.addEventListener('hashchange', () => {
+      if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
+      const id = this.ecranDeAdresse();
+      if (id && id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); }
+    });
     this.bindEvents();
   }
 
@@ -189,8 +200,53 @@ class App {
   }
 
   /* --- cycle de rendu ------------------------------------------------------- */
+  /**
+   * L'adresse dit OÙ l'on est.
+   *
+   * Sans cela, un écran ne se partage pas : on envoyait « va dans Centrale
+   * d'achat puis Commandes », et un rafraîchissement ramenait à l'accueil.
+   * Chaque écran a donc son mot dans l'ancre — `#/planogramme` — choisi
+   * lisible plutôt que technique. Un identifiant sans entrée ici garde le
+   * sien : rien ne se casse si un écran naît sans qu'on y pense.
+   */
+  static get ADRESSES(){
+    return {
+      taches: 'taches-consultants', resultatJour: 'resultat-du-jour', exploitation: 'pl-magasins',
+      magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
+      reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
+      budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
+      planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
+      caAchats: 'commandes', caStock: 'stock', caFacturation: 'facturation',
+      caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
+      projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
+      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne',
+      suivi: 'suivi-taches', controle: 'controle-taches', reporting: 'reporting',
+      diagnostic: 'diagnostic', params: 'parametres',
+    };
+  }
+  /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
+  ecranDeAdresse(){
+    const brut = String(location.hash || '').replace(/^#\/?/, '').split('?')[0].trim();
+    if (!brut) { return ''; }
+    const t = App.ADRESSES;
+    for (const id of Object.keys(t)) { if (t[id] === brut) { return id; } }
+    // Un identifiant technique reste accepté : les liens d'avant continuent
+    // de fonctionner.
+    return Object.prototype.hasOwnProperty.call(t, brut) ? brut : '';
+  }
+  /** L'adresse d'un écran, pour un lien à copier. */
+  adresseDe(id){
+    return '#/' + (App.ADRESSES[id] || id);
+  }
   setState(patch){
+    const avant = this.state.screen;
     Object.assign(this.state, typeof patch === 'function' ? patch(this.state) : patch);
+    // L'ancre suit l'écran — et l'historique avec elle : le bouton « retour »
+    // du navigateur ramène à l'écran précédent, ce qu'on attend d'une adresse.
+    if (this.state.screen !== avant) {
+      const cible = this.adresseDe(this.state.screen);
+      if (location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
+    }
     this.render();
   }
   forceUpdate(){ this.render(); }
@@ -6986,6 +7042,13 @@ class App {
     const d = (S.caData || {})[ecr + '|' + per];
     common.caEcran = ecr;
     common.caChargement = !d;
+    // Ce que l'écran est en train de lire, dit en clair pendant l'attente.
+    common.caTitre = { caAchats: 'Commandes & fournisseurs', caStock: 'Stock',
+      caFacturation: 'Facturation magasins', caReglages: 'Réglages de la centrale',
+      caDemande: 'Demandes', caCommandes: 'Commandes' }[ecr] || 'Lecture en cours';
+    common.caChargeTxt = ecr === 'caAchats'
+      ? 'Lecture des commandes chez le panel, magasin par magasin — quelques secondes.'
+      : 'Lecture des données de la centrale…';
     common.caEtat = d ? (d.etat || 'ok') : '';
     common.caMotif = d && d.motif ? d.motif : '';
     common.caSource = d && d.source ? d.source : '';

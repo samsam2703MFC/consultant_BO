@@ -6394,7 +6394,14 @@ function tplCentrale(c, x){
   };
 
   if (c.caChargement) {
-    return `${periodes}<div style="${CARD};color:var(--color-text-muted);font-size:13px;padding:40px 16px">Chargement…</div>`;
+    // Ce qu'on attend est NOMMÉ : « chargement » seul laisse croire que
+    // l'écran est figé. Ici on dit d'où vient la lenteur — le panel est lu
+    // magasin par magasin, et c'est lui qui prend le temps.
+    return `${periodes}<div style="${CARD};padding:26px 20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">${esc(c.caTitre || 'Lecture en cours')}</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px">${esc(c.caChargeTxt || 'Lecture des commandes chez le panel, magasin par magasin…')}</div>
+      <div class="jauge"><i></i></div>
+    </div>`;
   }
   const recl = c.isCentrale && c.reclFourn !== undefined ? reclamations() : '';
 
@@ -6467,42 +6474,13 @@ function tplCentrale(c, x){
   // Suivi fournisseurs — le grand tableau : fournisseur ▸ magasin ▸ ses 2
   // dernières commandes, avec l'avancement en quatre segments.
   const SEG = { on: '#2d7a3e', cur: '#c17a2a', ko: '#8D1D2C', '': 'var(--color-border-tertiary)' };
-  // Ce que les franchisés ont demandé et qui attend LEUR validation. Il vient
-  // en premier : une commande non validée n'atteindra jamais le fournisseur,
-  // et c'est le seul bout de la chaîne que le réseau maîtrise entièrement.
-  const franchises = (c.caFrLignes && c.caFrLignes.length) ? `
-    <div style="${CARD};margin-bottom:16px;overflow:hidden;padding:0">
-      <div style="padding:13px 16px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:500">À valider par le magasin</span>
-        <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(193,122,42,0.16);color:#8a5a13">${c.caFrN} en attente · ${esc(c.caFrValeur)}</span>
-        <span style="flex:1"></span>
-        <span style="font-size:11px;color:var(--color-text-muted)">la cloche envoie une notification au magasin, dans l’ERP</span>
-      </div>
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
-        <thead><tr>
-          <th style="${TH}">Magasin</th><th style="${TH}">Réquisition</th><th style="${TH}">Fournisseur</th>
-          <th style="${TH}">Période</th><th style="${TH}">Attente</th>
-          <th style="${TH};text-align:right">Valeur</th><th style="${TH}">Par</th>
-          <th style="${TH};text-align:center">Rappel</th>
-        </tr></thead>
-        <tbody>${c.caFrLignes.map(l => `<tr>
-          <td style="${TD};font-weight:500">${esc(l.magasin)}</td>
-          <td style="${TD};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text-muted)">#${l.id}</td>
-          <td style="${TD};font-size:12px">${esc(l.fournisseur)}</td>
-          <td style="${TD};color:var(--color-text-muted);white-space:nowrap">${esc(l.debut)}</td>
-          <td style="${TD};white-space:nowrap;${l.attente != null && l.attente > 7 ? 'color:var(--color-primary);font-weight:600' : 'color:var(--color-text-muted)'}">${l.attente != null ? l.attente + ' j' : '—'}</td>
-          <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
-          <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(l.par)}</td>
-          <td style="${TD};text-align:center">
-            <button ${x.A(l.relancer)} title="${l.relanceLe ? 'Rappelé le ' + esc(l.relanceLe) + ' — rappeler à nouveau' : 'Rappeler au magasin de valider sa commande'}" style="border:0.5px solid ${l.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${l.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${l.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${l.enCours ? ';opacity:.5' : ''}">${l.enCours ? '…' : '🔔'}</button>
-            ${l.relanceLe ? `<div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px;white-space:nowrap">${esc(l.relanceLe.slice(5))}</div>` : ''}
-          </td>
-        </tr>`).join('')}</tbody>
-      </table></div>
-      ${c.caFrTronque ? `<div style="padding:9px 16px;font-size:11px;color:var(--color-text-muted);border-top:0.5px solid var(--color-border-tertiary)">${c.caFrTronque} réquisition(s) de plus, non affichées.</div>` : ''}
-    </div>` : (c.caFrChargement ? `<div style="${CARD};margin-bottom:16px;font-size:12.5px;color:var(--color-text-muted)">Lecture des commandes des magasins…</div>` : '');
+  // « À valider par le magasin » a été RETIRÉ de cet écran : il n'affichait
+  // que les 115 réquisitions que l'ERP garde ouvertes sans jamais les
+  // refermer — un tableau qui ne demandait aucune action. Le rappel au
+  // franchisé reste disponible (POST /centrale/commandes/relance-franchise,
+  // gabarit dans Paramètres) : il n'attend qu'un endroit où être posé.
 
-  const suivi = c.caSvGroupes ? franchises + `
+  const suivi = c.caSvGroupes ? `
     ${c.caSvKpis ? `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
       ${c.caSvKpis.map(k => `<div style="${CARD};flex:1;min-width:170px;padding:12px 14px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k[0])}</div>
