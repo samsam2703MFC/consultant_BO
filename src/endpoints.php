@@ -7530,13 +7530,35 @@ function ep_budget_campagnes(): array
                 if ($ca > 0) { $ventes[(string) $id] = $ca; $realiseDispo = true; }
             }
         }
+        // Ce que la campagne devrait RAPPORTER, magasin par magasin : le panier
+        // moyen des trois derniers mois clos × les clients par jour en plus
+        // visés × la durée. Le pourcentage d'objectif ne dit rien à personne en
+        // boutique ; des euros, si — et ils se comparent au budget encodé.
+        $effet = mktEffetAttendu($camp['id'], $camp['debut'], $camp['fin'], $perim);
+
         foreach ($perim as $sid) {
             $bud = budgetSurFenetre($parMag[$sid] ?? [], $camp['debut'], $camp['fin']);
             $o = $obj[$sid] ?? null;
             $r = $ventes[$sid] ?? null;
+            $ef = $effet['magasins'][$sid] ?? [];
+            $attendu = ($ef['base'] ?? null) !== null && ($ef['gain'] ?? null) !== null
+                ? $ef['base'] + $ef['gain'] : null;
             $lignes[] = [
                 'shopId' => $sid, 'nom' => $nomDe[$sid] ?? $sid,
                 'budgetPeriode' => $bud['montant'], 'source' => $bud['source'],
+                // L'effet attendu et ce qui le compose — jamais un total sans
+                // ses termes : « 56 653 € » ne se discute pas, « 50 594 + 6 059 »
+                // se discute.
+                'panier' => $ef['panier'] ?? null,
+                'panierSource' => $ef['panierSource'] ?? null,
+                'clientsJour' => $ef['clientsJour'] ?? null,
+                'clientsJourPlus' => $ef['plus'] ?? null,
+                'base' => $ef['base'] ?? null,
+                'baseSource' => $ef['baseSource'] ?? null,
+                'gain' => $ef['gain'] ?? null,
+                'attendu' => $attendu,
+                'atteinteAttendue' => $attendu !== null && $bud['montant']
+                    ? round(100 * $attendu / $bud['montant']) : null,
                 'objectif' => $o,
                 'objectifPct' => $o !== null && $bud['montant'] ? round(100 * ($o / $bud['montant'] - 1), 1) : null,
                 'realise' => $r,
@@ -7549,6 +7571,7 @@ function ep_budget_campagnes(): array
         'exercice' => $exercice,
         'mois' => $reseau, 'moisParMagasin' => $parMag, 'couvert' => $couvert,
         'campagnes' => $liste, 'campagne' => $camp, 'lignes' => $lignes,
+        'effet' => $camp !== null ? ($effet['entete'] ?? null) : null,
         'realiseJusquau' => $camp !== null ? min($camp['fin'], date('Y-m-d')) : null,
         'realiseDispo' => $realiseDispo,
         'magasins' => array_map(fn ($id) => ['id' => $id, 'nom' => $nomDe[$id]], array_keys($nomDe)),

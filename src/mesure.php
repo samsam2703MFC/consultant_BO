@@ -1815,3 +1815,97 @@ function mktKpiPeriode(array $p): array
             : 'caisse du cockpit — le compte panel n’est pas configuré',
     ];
 }
+
+/**
+ * L'effet attendu d'une campagne, en euros, magasin par magasin.
+ *
+ * Le pourcentage d'objectif ne dit rien à personne en boutique. Des euros, si :
+ * le panier moyen récent × les clients par jour qu'on vise en plus × la durée
+ * de la campagne. Ajouté à ce que le magasin faisait sur les mêmes dates l'an
+ * dernier, cela donne un attendu qui se compare au budget encodé.
+ *
+ * Le panier vient de la SÉRIE QUOTIDIENNE, jamais des totaux mensuels : mesuré
+ * sur juillet 2026, la colonne `tickets` de la table mensuelle vaut 1 765 pour
+ * Sombreffe quand son chiffre d'affaires en vaut 45 099 — le mois n'y est
+ * compté qu'à moitié côté tickets. Diviser l'un par l'autre donnait un panier
+ * de 25 €, et la moyenne sur trois mois montait à 14,61 € au lieu de 11,9 €.
+ * Une série quotidienne tronquée l'est des DEUX côtés à la fois : le rapport,
+ * lui, reste juste.
+ *
+ * @param list<string> $perim
+ * @return array{entete:array<string,mixed>,magasins:array<string,array<string,mixed>>}
+ */
+function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim): array
+{
+    $motifs = [];
+    $vide = ['entete' => ['base' => null, 'gain' => null, 'attendu' => null,
+        'panierDu' => '', 'panierAu' => '', 'jours' => 0, 'motifs' => $motifs], 'magasins' => []];
+    if ($du === '' || $au === '' || $au < $du || $perim === []) { return $vide; }
+
+    $camp = Db::row('SELECT c.objective_coef_pct, l.code AS lever_code
+                       FROM mar_campaign c
+                       LEFT JOIN mar_campaign_type t ON t.id = c.type_id
+                       LEFT JOIN mar_lever l ON l.id = t.lever_id
+                      WHERE c.id = ?', [$campagneId]);
+    $pct = ($camp !== null && $camp['objective_coef_pct'] !== null) ? (float) $camp['objective_coef_pct'] : null;
+
+    // Le trafic : la même mécanique que l'assistant et que la note, appelée et
+    // non recopiée — trois écrans qui annoncent trois cibles différentes pour
+    // la même campagne, c'est la fin de la confiance.
+    $kpi = mktKpiPeriode(['du' => $du, 'au' => $au, 'mesure' => 'trafic',
+        'magasins' => implode(',', $perim)]);
+    if (!empty($kpi['error'])) { return $vide; }
+    $jours = (int) ($kpi['fenetres']['jours'] ?? mesJours($du, $au));
+
+    // Le panier : les trois derniers mois CLOS, la fenêtre que le repli utilise
+    // déjà. Un panier pris sur la période de campagne n'existe pas — elle n'a
+    // pas eu lieu.
+    $pDu = (string) ($kpi['fenetres']['repliDu'] ?? date('Y-m-01', strtotime('-3 month', strtotime(date('Y-m-01')))));
+    $pAu = (string) ($kpi['fenetres']['repliAu'] ?? date('Y-m-t', strtotime('-1 month', strtotime(date('Y-m-01')))));
+    $serie = mesSeriesJour($perim, $pDu, $pAu, $motifs);
+
+    $mags = []; $tBase = 0.0; $tGain = 0.0; $nBase = 0; $nGain = 0;
+    foreach ($kpi['magasins'] as $m) {
+        $sid = (string) $m['id'];
+        $p = mesCumul($serie[$sid] ?? [], $pDu, $pAu);
+        $panier = $p['panier'];
+
+        // Les clients par jour visés en plus : la cible moins la référence.
+        $ref = $m['valeurRetenue'];
+        $plus = ($ref === null || $pct === null) ? null : round((float) $ref * $pct / 100, 1);
+        $gain = ($panier === null || $plus === null) ? null : round($panier * $plus * $jours, 2);
+
+        // La base : le chiffre d'affaires des mêmes dates l'an dernier. Un
+        // magasin sans N-1 prend ses trois derniers mois ramenés à la durée de
+        // la campagne — et le dit, c'est une autre chose.
+        $base = null; $baseSrc = null;
+        if ((float) ($m['pendant']['ca'] ?? 0) > 0 && (int) ($m['pendant']['jours'] ?? 0) > 0) {
+            $base = round((float) $m['pendant']['ca'], 2); $baseSrc = 'n1';
+        } elseif ((float) ($p['ca'] ?? 0) > 0 && (int) ($p['jours'] ?? 0) > 0) {
+            $base = round((float) $p['ca'] / $p['jours'] * $jours, 2); $baseSrc = 'repli';
+        }
+
+        if ($base !== null) { $tBase += $base; $nBase++; }
+        if ($gain !== null) { $tGain += $gain; $nGain++; }
+
+        $mags[$sid] = [
+            'panier' => $panier,
+            'panierSource' => $panier === null ? null : 'caisse',
+            'panierJours' => (int) $p['jours'],
+            'clientsJour' => $ref,
+            'plus' => $plus,
+            'base' => $base, 'baseSource' => $baseSrc,
+            'gain' => $gain,
+        ];
+    }
+
+    return ['entete' => [
+        'base' => $nBase > 0 ? round($tBase, 2) : null,
+        'gain' => $nGain > 0 ? round($tGain, 2) : null,
+        'attendu' => ($nBase > 0 && $nGain > 0) ? round($tBase + $tGain, 2) : null,
+        'pct' => $pct, 'jours' => $jours,
+        'panierDu' => $pDu, 'panierAu' => $pAu,
+        'sansBase' => count($perim) - $nBase,
+        'motifs' => $motifs,
+    ], 'magasins' => $mags];
+}
