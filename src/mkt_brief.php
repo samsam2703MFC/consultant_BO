@@ -130,6 +130,32 @@ function mktBriefDonnees(int $id): ?array
 
     $pct = $c['objective_coef_pct'] !== null ? (float) $c['objective_coef_pct'] : null;
 
+    // Ce que la campagne devrait rapporter, en clients et en euros — le même
+    // calcul que « Budget × Campagnes », nourri du trafic déjà lu.
+    $effet = ($kpi === null) ? ['entete' => [], 'magasins' => []]
+        : mktEffetAttendu($id, $du, $au, $perim, $kpi);
+
+    // Le budget de la période, magasin par magasin : c'est LE chiffre que le
+    // franchisé a en tête, et la campagne se juge contre lui.
+    $budgetDe = [];
+    try {
+        $an = (int) substr($du, 0, 4);
+        $mois = [];
+        foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique
+                             FROM ceo_shop_month_perf WHERE year = ?', [$an]) as $r) {
+            $sid = (string) $r['shop_id']; $m = (int) $r['month'];
+            if ($m < 1 || $m > 12) { continue; }
+            if (!isset($mois[$sid])) { $mois[$sid] = array_fill(0, 12, ['budget' => null, 'theorique' => null]); }
+            $mois[$sid][$m - 1] = [
+                'budget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
+                'theorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null];
+        }
+        foreach ($perim as $sid) {
+            $b = budgetSurFenetre($mois[$sid] ?? [], $du, $au);
+            $budgetDe[$sid] = $b;
+        }
+    } catch (PDOException $e) { /* pas de budget encodé dans cette base */ }
+
     // Ce qui est attendu, magasin par magasin : la référence de l'an dernier et
     // la cible qui en découle. Un magasin sans relevé le dit — sa cible se pose
     // à la main, et la note ne doit pas prétendre le contraire.
@@ -144,10 +170,20 @@ function mktBriefDonnees(int $id): ?array
         // colonne « cible » doit additionner à son propre total.
         $cible = ($ref === null || $pct === null) ? $ref
             : round((float) $ref * (1 + $pct / 100), (int) ($kpi['kpi']['decimales'] ?? 0));
+        $ef = $effet['magasins'][(string) $m['id']] ?? [];
+        $bud = $budgetDe[(string) $m['id']] ?? ['montant' => null, 'source' => null];
         $lignes[] = [
             'id' => (string) $m['id'], 'nom' => (string) $m['nom'],
             'reference' => $ref,
             'cible' => $cible,
+            // Le détail que le franchisé lit dans SON courriel.
+            'clientsA1' => $ef['clientsA1'] ?? null,
+            'clientsPrevus' => $ef['clientsPrevus'] ?? null,
+            'caA1' => $ef['base'] ?? null,
+            'caAttendu' => (($ef['base'] ?? null) !== null && ($ef['gain'] ?? null) !== null)
+                ? $ef['base'] + $ef['gain'] : null,
+            'budget' => $bud['montant'],
+            'budgetSource' => $bud['source'],
             'sansN1' => (bool) $m['sansN1'],
             'source' => (string) ($m['source'] ?? ''),
             'repli' => $m['repli'] ?? null,
@@ -894,14 +930,34 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
 
     // Les faits, en deux colonnes qui tiennent sur 320 points : le libellé à
     // gauche, la valeur à droite, et le libellé qui ne casse pas la valeur.
+    $fleche = static fn (?string $a, ?string $b): string => ($a ?? '—') . '  →  ' . ($b ?? '—');
+    $nb = static fn (?int $v): ?string => $v === null ? null : number_format($v, 0, ',', ' ');
+
     $faits = [['Période', mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']) . ' · ' . $d['jours'] . ' jours'],
               ['Budget engagé par la centrale', mktBriefEuros($d['budget'])]];
+
+    // Ce que le franchisé vient chercher : d'où il part, où on veut aller, et
+    // ce que son budget attendait de toute façon. Les trois côte à côte —
+    // séparés, ils ne se comparent pas.
     if ($cible !== null) {
-        $faits[] = [$d['kpiNom'] . ' visé' . ($magasin !== '' ? ' — ' . $magasin : ''),
-            mktBriefValeur($cible, $d) . ($reference !== null ? ' (contre ' . mktBriefValeur($reference, $d) . ' l’an dernier)' : '')];
-    } else {
-        $faits[] = ['Objectif', $vars['objectif']];
+        $faits[] = [$d['kpiNom'] . ' — l’an dernier → visé',
+            $fleche(mktBriefValeur($reference, $d), mktBriefValeur($cible, $d))];
     }
+    if ($sien !== null && ($sien['clientsPrevus'] ?? null) !== null) {
+        $faits[] = ['Clients sur la période — l’an dernier → visés',
+            $fleche($nb($sien['clientsA1']), $nb($sien['clientsPrevus']))];
+    }
+    if ($sien !== null && ($sien['caAttendu'] ?? null) !== null) {
+        $faits[] = ['Chiffre d’affaires — l’an dernier → attendu',
+            $fleche(mktBriefEuros($sien['caA1']), mktBriefEuros($sien['caAttendu']))];
+    }
+    if ($sien !== null && ($sien['budget'] ?? null) !== null) {
+        $faits[] = [($sien['budgetSource'] ?? '') === 'theorique'
+            ? 'Objectif de la période (CA théorique de l’étude)'
+            : 'Objectif de la période (budget validé)',
+            mktBriefEuros($sien['budget'])];
+    }
+    if ($cible === null) { $faits[] = ['Objectif', $vars['objectif']]; }
 
     $cartes = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0">';
     foreach ($faits as [$t, $v]) {

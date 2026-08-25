@@ -1835,7 +1835,7 @@ function mktKpiPeriode(array $p): array
  * @param list<string> $perim
  * @return array{entete:array<string,mixed>,magasins:array<string,array<string,mixed>>}
  */
-function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim): array
+function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim, ?array $kpiDeja = null): array
 {
     $motifs = [];
     $vide = ['entete' => ['base' => null, 'gain' => null, 'attendu' => null,
@@ -1852,7 +1852,9 @@ function mktEffetAttendu(int $campagneId, string $du, string $au, array $perim):
     // Le trafic : la même mécanique que l'assistant et que la note, appelée et
     // non recopiée — trois écrans qui annoncent trois cibles différentes pour
     // la même campagne, c'est la fin de la confiance.
-    $kpi = mktKpiPeriode(['du' => $du, 'au' => $au, 'mesure' => 'trafic',
+    // Le trafic peut être déjà lu par l'appelant — la note le fait. Le relire
+    // coûterait dix appels au panel pour le même résultat.
+    $kpi = $kpiDeja ?? mktKpiPeriode(['du' => $du, 'au' => $au, 'mesure' => 'trafic',
         'magasins' => implode(',', $perim)]);
     if (!empty($kpi['error'])) { return $vide; }
     $jours = (int) ($kpi['fenetres']['jours'] ?? mesJours($du, $au));
