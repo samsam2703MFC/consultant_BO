@@ -10583,14 +10583,42 @@ class App {
           if (ok) { this.log('Paramètre', '—', 'Template e-mail commande fournisseur mis à jour'); }
         });
       },
+      // L'essai part où on veut : l'envoyer à la centrale depuis la centrale
+      // ne prouve pas qu'un fournisseur recevra quoi que ce soit.
+      testVers: cmD.testVers != null ? cmD.testVers : '',
+      setTestVers: cmSet('testVers'),
       test: () => {
         this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
-        this.api('POST', '/centrale/commandes/mail/test').then(r => {
+        this.api('POST', '/centrale/commandes/mail/test', { vers: (cmD.testVers || '').trim() }).then(r => {
           this._caMailLu = false;
           this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: false, ok: !!(r && r.ok),
             msg: r && r.ok ? 'Essai envoyé à ' + (r.destinataire || '') + '.' : (r && (r.erreur || r.error)) || 'Essai impossible.' }) }));
         });
       },
+      // Le carnet d'adresses : les fournisseurs qui ont une commande en
+      // attente, et à qui l'on doit donc écrire. Ni le panel ni le référentiel
+      // local ne portent leur adresse — elle se saisit ici.
+      fournisseurs: (cmEt.fournisseurs || []).map(f => ({
+        nom: f.nom, commandes: f.commandes, total: this.fU(f.total || 0),
+        email: (cmD['mail:' + f.cle] != null) ? cmD['mail:' + f.cle] : (f.email || ''),
+        source: f.source === 'panel' ? 'du panel' : '',
+        sans: !f.email,
+        relance: f.dernier ? ('relancé le ' + this.fD(f.dernier) + ' · ' + f.envois + ' rappel(s)') : 'jamais relancé',
+        set: e => { const v = e.target.value;
+          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { ['mail:' + f.cle]: v }) })); },
+        enregistrer: () => {
+          const v = String((this.state.cmDraft || {})['mail:' + f.cle] != null
+            ? (this.state.cmDraft || {})['mail:' + f.cle] : (f.email || '')).trim();
+          this.api('PUT', '/centrale/fournisseurs/mail', { nom: f.nom, email: v }).then(r => {
+            this._caMailLu = false;
+            this.notify(!r || r.ok === false
+              ? ('Adresse refusée — ' + ((r && (r.error || r.erreur)) || 'écriture impossible'))
+              : (v ? f.nom + ' → ' + v : 'Adresse retirée pour ' + f.nom));
+            this.setState({});
+          });
+        },
+      })),
+      sansAdresse: cmEt.sansAdresse || 0,
     };
 
     // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les

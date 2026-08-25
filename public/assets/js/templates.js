@@ -4370,19 +4370,19 @@ function tplParams(c, x){
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:500">Centrale d’achat — e-mail « commande fournisseur »</div>
+          <div style="font-size:13px;font-weight:500">Centrale d’achat — rappel quotidien au fournisseur</div>
           <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
         </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Quand un franchisé passe une commande (réquisition matière), cet e-mail part automatiquement — détection au rythme du cron horaire des rapports, envoi par la machine SMTP ci-dessus.</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Un e-mail <b style="font-weight:500">par fournisseur et par jour</b>, listant toutes ses commandes encore en attente — il repart chaque jour tant qu’une commande n’est pas acceptée, et s’arrête d’elle-même ensuite. Le fournisseur est le destinataire, la centrale reçoit la copie. Détection au rythme du cron horaire des rapports, envoi par la machine SMTP ci-dessus.</div>
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin-bottom:12px">
           <input type="checkbox" ${c.cm.actif ? 'checked' : ''} ${x.C(c.cm.toggle)} style="width:15px;height:15px;accent-color:var(--color-primary)">
           Envoi automatique activé
         </label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label style="font-size:12px;color:var(--color-text-muted)">Destinataire
+          <label style="font-size:12px;color:var(--color-text-muted)">La centrale — copie, et repli si le fournisseur n’a pas d’adresse
             <input value="${esc(c.cm.destinataire)}" ${x.C(c.cm.setDestinataire)} placeholder="achat@atelierby.be" style="${inputCss}">
           </label>
-          <label style="font-size:12px;color:var(--color-text-muted)">Copie (optionnel)
+          <label style="font-size:12px;color:var(--color-text-muted)">Copie supplémentaire (optionnel)
             <input value="${esc(c.cm.copie)}" ${x.C(c.cm.setCopie)} placeholder="—" style="${inputCss}">
           </label>
         </div>
@@ -4395,10 +4395,27 @@ function tplParams(c, x){
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Variables : ${esc(c.cm.variables)}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
           <button ${x.A(c.cm.save)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${c.cm.busy ? 'opacity:.6' : ''}">${c.cm.busy ? 'En cours…' : 'Enregistrer'}</button>
+          <input value="${esc(c.cm.testVers)}" ${x.C(c.cm.setTestVers)} placeholder="adresse d’essai — vide = la centrale" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12px;min-width:220px">
           <button ${x.A(c.cm.test)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Envoyer un essai</button>
           <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.cm.dernier)}</span>
         </div>
         ${c.cm.msg ? `<div style="${c.cm.msgSt}">${esc(c.cm.msg)}</div>` : ''}
+
+        <div style="margin-top:16px;padding-top:14px;border-top:0.5px solid var(--color-border-tertiary)">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:12.5px;font-weight:500">Adresses des fournisseurs</span>
+            ${c.cm.sansAdresse ? `<span style="font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#FBF3DC;color:var(--color-on-abricot);border:1px solid #E8C9A0">${c.cm.sansAdresse} sans adresse</span>` : ''}
+          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;text-wrap:pretty">Ceux qui ont une commande en attente. Ni le panel ni le référentiel local ne portent leur adresse : sans elle, le rappel part à la centrale — la commande n’est jamais perdue, mais le fournisseur ne sait rien.</div>
+          ${!(c.cm.fournisseurs || []).length ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucune commande en attente pour l’instant.</div>` : c.cm.fournisseurs.map(f => `
+            <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
+              <span style="min-width:190px;font-size:12.5px;font-weight:500">${esc(f.nom)}${f.sans ? ` <span style="font-size:10px;font-weight:600;color:var(--color-on-abricot)">sans adresse</span>` : ''}</span>
+              <span style="font-size:11px;color:var(--color-text-muted);min-width:140px">${f.commandes} commande(s) · ${esc(f.total)}</span>
+              <input value="${esc(f.email)}" ${x.C(f.set)} placeholder="commandes@fournisseur.be" style="border:0.5px solid ${f.sans ? '#E8C9A0' : 'var(--color-border-secondary)'};background:var(--color-surface);color:var(--color-text);border-radius:8px;height:30px;padding:0 10px;font-family:var(--font-ui);font-size:12px;flex:1;min-width:210px">
+              <button ${x.A(f.enregistrer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Enregistrer</button>
+              <span style="font-size:10.5px;color:var(--color-text-muted);min-width:150px">${esc(f.relance)}${f.source ? ' · ' + esc(f.source) : ''}</span>
+            </div>`).join('')}
+        </div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">

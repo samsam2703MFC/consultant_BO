@@ -210,6 +210,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/parametres/smtp') { return wr_smtp(); }
     if ($method === 'POST' && $path === '/parametres/smtp/test') { return wr_smtp_test(); }
     if ($method === 'POST' && $path === '/centrale/commandes/mail/test') { return wr_ca_mail_test(); }
+    if ($method === 'PUT' && $path === '/centrale/fournisseurs/mail') { return wr_ca_fournisseur_mail(); }
     if ($method === 'POST' && $path === '/centrale/achats/relance') { return wr_ca_relance(); }
     // --- générateur de rapports (par levier, à seuils) + compositeur
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }

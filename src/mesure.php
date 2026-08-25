@@ -1114,6 +1114,9 @@ function ep_panel_sonde_consultant(): array
         'product-sectors'   => '/consultant/product-sectors',
         'responsibility-areas' => '/consultant/responsibility-areas',
         'material-complaints' => '/consultant/shops/material-complaints',
+        // Sonde temporaire : ce que le panel porte VRAIMENT sur les
+        // fournisseurs matière — c'est de là que doit venir leur adresse.
+        'material-suppliers' => '/material-suppliers',
     ];
 
     $apercu = static function ($v, int $prof = 0) use (&$apercu) {

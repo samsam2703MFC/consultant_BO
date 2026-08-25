@@ -25,18 +25,59 @@ function caMailDefauts(): array
 {
     return [
         'actif' => false,
+        // Le fournisseur est le DESTINATAIRE : c'est lui qui doit servir la
+        // commande. La centrale reste en copie — elle veut savoir, elle n'a
+        // pas à faire suivre.
+        'auFournisseur' => true,
         'destinataire' => 'achat@atelierby.be',
         'copie' => '',
-        'sujet' => 'Commande fournisseur — {{magasin}} → {{fournisseur}}',
+        'sujet' => 'Commandes en attente — {{fournisseur}} ({{nCommandes}})',
         'corps' => "Bonjour,\n\n"
-            . "Le magasin {{magasin}} vient de passer une commande fournisseur.\n\n"
-            . "Réquisition : #{{id}}\n"
-            . "Fournisseur : {{fournisseur}}\n"
-            . "Début de période : {{debut}}\n"
-            . "Valeur estimée : {{valeur}}\n"
-            . "Passée par : {{par}}\n\n"
-            . "— Cockpit CEO, Centrale d'achat",
+            . "Les commandes suivantes vous attendent et n'ont pas encore été acceptées :\n\n"
+            . "{{lignes}}\n"
+            . "Total en attente : {{total}}\n\n"
+            . "Merci de les valider dans le portail fournisseur. Ce rappel repart chaque jour "
+            . "tant qu'une commande reste en attente.\n\n"
+            . "— Centrale d'achat, L'Atelier by",
     ];
+}
+
+/**
+ * Le carnet d'adresses des fournisseurs.
+ *
+ * MESURÉ : le panel rend bien /material-suppliers, mais son champ `email` est
+ * VIDE pour les quatre fournisseurs qui reçoivent des commandes, et
+ * `ceo_supplier` n'en connaît qu'un, sans adresse. Sans carnet tenu ici, il
+ * n'y a donc personne à qui écrire. Il vit dans `ceo_app_setting`, saisi
+ * depuis l'écran, et le panel garde la priorité le jour où il portera l'adresse.
+ */
+function caMailNom(string $nom): string
+{
+    $n = mb_strtolower(trim($nom));
+    $n = strtr($n, ['’' => "'", '–' => '-', '—' => '-']);
+    $n = preg_replace('/[^a-z0-9]+/u', '', $n) ?? $n;
+    return $n;
+}
+
+function caMailCarnet(): array
+{
+    $v = setting('caFournisseursMails');
+    $out = [];
+    if (is_array($v)) {
+        foreach ($v as $nom => $mail) {
+            $mail = trim((string) $mail);
+            if ($mail !== '') { $out[caMailNom((string) $nom)] = $mail; }
+        }
+    }
+    return $out;
+}
+
+/** L'adresse d'un fournisseur : le carnet d'abord, le panel ensuite. */
+function caMailAdresse(string $nom, array $carnet, array $panel = []): string
+{
+    $cle = caMailNom($nom);
+    if (($carnet[$cle] ?? '') !== '') { return $carnet[$cle]; }
+    return trim((string) ($panel[$cle] ?? ''));
 }
 
 function caMailConfig(): array
@@ -94,13 +135,66 @@ function caMailEtat(): array
     $c = caMailConfig();
     $dernier = setting('caMailDernier');
     $journal = setting('caMailJournal');
+    $suivi = setting('caMailQuotidien');
+    $carnet = caMailCarnet();
+
+    // Les fournisseurs qui attendent VRAIMENT quelque chose : ceux qui portent
+    // une commande en attente. C'est à eux qu'il faut une adresse, pas à tout
+    // un annuaire.
+    $fournisseurs = [];
+    try {
+        $d = ep_ca_commandes();
+        if (($d['etat'] ?? '') === 'ok') {
+            foreach (caMailGroupes((array) ($d['lignes'] ?? [])) as $cle => $g) {
+                $adresse = caMailAdresse($g['nom'], $carnet, $g['mails']);
+                $fournisseurs[] = ['cle' => $cle, 'nom' => $g['nom'], 'commandes' => $g['n'],
+                    'total' => round((float) $g['total'], 2), 'email' => $adresse,
+                    'source' => $adresse === '' ? '' : (isset($carnet[$cle]) ? 'cockpit' : 'panel'),
+                    'dernier' => (string) (is_array($suivi) ? ($suivi[$cle]['dernier'] ?? '') : ''),
+                    'envois' => (int) (is_array($suivi) ? ($suivi[$cle]['envois'] ?? 0) : 0)];
+            }
+        }
+    } catch (Throwable $e) { /* commandes indisponibles : l'écran le dira */ }
+
     return [
         'config' => $c,
         'smtpPret' => Smtp::configured(),
         'dernier' => is_array($dernier) ? $dernier : null,
         'journal' => is_array($journal) ? array_slice($journal, 0, 50) : [],
-        'variables' => array_keys(caMailVariables([])),
+        'variables' => ['fournisseur', 'nCommandes', 'total', 'lignes', 'magasins', 'avis'],
+        'fournisseurs' => $fournisseurs,
+        'sansAdresse' => count(array_filter($fournisseurs, fn ($f) => $f['email'] === '')),
     ];
+}
+
+/**
+ * PUT /centrale/fournisseurs/mail — l'adresse d'un fournisseur.
+ *
+ * Le carnet est tenu ICI parce que ni le panel ni `ceo_supplier` ne portent
+ * l'adresse des fournisseurs qui reçoivent des commandes (mesuré). Une adresse
+ * vide EFFACE l'entrée : « pas d'adresse » doit rester dicible.
+ */
+function wr_ca_fournisseur_mail(): array
+{
+    $b = body();
+    $nom = trim((string) ($b['nom'] ?? ''));
+    if ($nom === '') { http_response_code(422); return ['error' => 'le fournisseur est requis']; }
+    $mail = trim((string) ($b['email'] ?? ''));
+    if ($mail !== '' && !filter_var($mail, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(422);
+        return ['error' => 'adresse e-mail illisible'];
+    }
+    $v = setting('caFournisseursMails');
+    $carnet = is_array($v) ? $v : [];
+    $cle = caMailNom($nom);
+    foreach (array_keys($carnet) as $k) { if (caMailNom((string) $k) === $cle) { unset($carnet[$k]); } }
+    if ($mail !== '') { $carnet[$nom] = $mail; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caFournisseursMails', json_encode($carnet, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Centrale', $nom, $mail !== ''
+        ? 'Adresse fournisseur enregistrée : ' . $mail
+        : 'Adresse fournisseur retirée');
+    return ['ok' => true, 'nom' => $nom, 'email' => $mail];
 }
 
 /** POST /centrale/commandes/mail/test — un essai avec des valeurs d'exemple. */
@@ -108,20 +202,40 @@ function wr_ca_mail_test(): array
 {
     $c = caMailConfig();
     if (!Smtp::configured()) { return ['ok' => false, 'erreur' => 'SMTP non configuré (Paramètres → SMTP)']; }
-    $vars = caMailVariables(['id' => 999, 'magasin' => 'Magasin d’essai', 'fournisseurs' => ['Fournisseur d’essai'],
-        'debut' => date('Y-m-d'), 'statut' => 'PENDING', 'valeur' => 123.45, 'par' => 'Essai']);
-    $ok = Smtp::envoyer($c['destinataire'], '[ESSAI] ' . caMailRemplir($c['sujet'], $vars),
+    // L'essai part où on le demande — sinon à la centrale. Envoyer l'essai à
+    // achat@ depuis achat@ ne prouvait pas qu'un fournisseur recevrait quoi
+    // que ce soit.
+    $vers = trim((string) (body()['vers'] ?? ''));
+    if ($vers !== '' && !filter_var($vers, FILTER_VALIDATE_EMAIL)) {
+        return ['ok' => false, 'erreur' => 'adresse d’essai illisible'];
+    }
+    if ($vers === '') { $vers = (string) $c['destinataire']; }
+    $vars = caMailVariablesGroupe(['nom' => 'Fournisseur d’essai', 'n' => 2, 'total' => 1234.56,
+        'lignes' => [
+            ['id' => 998, 'magasin' => 'Magasin d’essai', 'valeur' => 1111.11, 'debut' => date('Y-m-d', strtotime('-9 day'))],
+            ['id' => 999, 'magasin' => 'Magasin d’essai', 'valeur' => 123.45, 'debut' => date('Y-m-d', strtotime('-2 day'))],
+        ]], false);
+    $ok = Smtp::envoyer($vers, '[ESSAI] ' . caMailRemplir($c['sujet'], $vars),
         caMailHtml(caMailRemplir($c['corps'], $vars)));
     caMailJournal($ok ? 'essai' : 'echec', $ok ? 'Essai du template envoyé'
-        : ('Essai en échec — ' . (string) (Smtp::$lastError ?? '')), (string) $c['destinataire']);
-    return $ok ? ['ok' => true, 'destinataire' => $c['destinataire']]
+        : ('Essai en échec — ' . (string) (Smtp::$lastError ?? '')), $vers);
+    return $ok ? ['ok' => true, 'destinataire' => $vers]
                : ['ok' => false, 'erreur' => (string) (Smtp::$lastError ?? 'échec d’envoi')];
 }
 
 /**
- * GET /centrale/commandes/mail/cron?jeton= — détecte les réquisitions jamais
- * vues et envoie l'e-mail. Appelé par bin/rapports_cron.sh, même jeton que les
- * rapports. Premier passage : on sème le jeu des vues sans envoyer.
+ * GET /centrale/commandes/mail/cron?jeton= — le rappel QUOTIDIEN au fournisseur.
+ *
+ * Une commande passée n'est rien tant qu'elle n'est pas acceptée : le rappel
+ * repart donc chaque jour, et ne s'arrête que lorsqu'elle sort de l'attente.
+ *
+ * Un mail PAR FOURNISSEUR, pas par commande : Rawette a deux commandes en
+ * attente, elle reçoit UNE lettre qui les liste toutes les deux. Quatre
+ * fournisseurs et cent cinquante réquisitions donneraient sinon trois cents
+ * envois, que personne ne lirait.
+ *
+ * Le cron passe toutes les heures ; l'envoi est borné à un par fournisseur et
+ * par jour — la date du dernier envoi est gardée dans `caMailQuotidien`.
  */
 function ep_ca_mail_cron(): array
 {
@@ -136,45 +250,142 @@ function ep_ca_mail_cron(): array
     if (!Smtp::configured()) { return ['etat' => 'erreur', 'motif' => 'SMTP non configuré']; }
 
     $d = ep_ca_commandes();
-    $lignes = (array) ($d['lignes'] ?? []);
     if (($d['etat'] ?? '') !== 'ok') { return ['etat' => 'attente', 'motif' => (string) ($d['source'] ?? '')]; }
 
-    $vus = setting('caMailVus');
-    $ids = array_values(array_filter(array_map(fn ($l) => (int) ($l['id'] ?? 0), $lignes)));
+    return caMailRappels((array) ($d['lignes'] ?? []), $c);
+}
 
-    // Première fois : tout l'existant est considéré déjà annoncé.
-    if (!is_array($vus)) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['caMailVus', json_encode($ids)]);
-        return ['etat' => 'initialisation', 'semees' => count($ids)];
+/**
+ * L'envoi lui-même, à partir des lignes de commandes — séparé du cron pour
+ * être vérifiable sans panel : c'est la règle d'envoi qui doit être sûre, pas
+ * la plomberie qui va la chercher.
+ */
+function caMailRappels(array $lignes, array $c): array
+{
+    $groupes = caMailGroupes($lignes);
+    $carnet = caMailCarnet();
+    $suivi = setting('caMailQuotidien');
+    if (!is_array($suivi)) { $suivi = []; }
+    $auj = date('Y-m-d');
+
+    // Ce qui n'est plus en attente sort du suivi — et le journal le dit une
+    // fois : une commande acceptée doit cesser d'être relancée, et on doit
+    // pouvoir le vérifier.
+    foreach (array_keys($suivi) as $cle) {
+        if (!isset($groupes[$cle])) {
+            caMailJournal('clos', 'Plus de commande en attente pour « '
+                . (string) ($suivi[$cle]['nom'] ?? $cle) . ' » — rappels arrêtés');
+            unset($suivi[$cle]);
+        }
     }
 
-    $envoyes = 0; $echecs = 0;
-    foreach ($lignes as $l) {
-        $id = (int) ($l['id'] ?? 0);
-        if ($id <= 0 || in_array($id, $vus, true)) { continue; }
-        $vars = caMailVariables($l);
-        caMailJournal('recu', 'Commande reçue — réquisition #' . $vars['id'] . ' · ' . $vars['magasin']
-            . ' → ' . $vars['fournisseur'] . ' · ' . $vars['valeur']);
+    $envoyes = 0; $echecs = 0; $sansAdresse = [];
+    foreach ($groupes as $cle => $g) {
+        $adresse = caMailAdresse($g['nom'], $carnet, $g['mails']);
+        $vers = $adresse;
+        if ($vers === '') {
+            // Sans adresse, la commande ne doit pas disparaître : la centrale
+            // reçoit à la place, et l'écran nomme le fournisseur à renseigner.
+            $sansAdresse[] = $g['nom'];
+            $vers = trim((string) $c['destinataire']);
+            if ($vers === '') { continue; }
+        }
+        // Un envoi par jour et par fournisseur : le cron passe toutes les heures.
+        if ((string) ($suivi[$cle]['dernier'] ?? '') === $auj) { continue; }
+
+        $vars = caMailVariablesGroupe($g, $adresse === '');
         $sujet = caMailRemplir((string) $c['sujet'], $vars);
         $html = caMailHtml(caMailRemplir((string) $c['corps'], $vars));
-        $ok = Smtp::envoyer((string) $c['destinataire'], $sujet, $html);
-        if ($ok && trim((string) $c['copie']) !== '') { Smtp::envoyer(trim((string) $c['copie']), $sujet, $html); }
-        // Échec : l'identifiant n'est PAS marqué vu — nouvel essai au prochain
-        // passage, plutôt qu'une commande silencieusement jamais annoncée.
-        if ($ok) { $vus[] = $id; $envoyes++; } else { $echecs++; }
-        caMailJournal($ok ? 'envoye' : 'echec', ($ok ? 'E-mail envoyé — ' : 'Envoi en échec — ')
-            . 'réquisition #' . $vars['id'] . ' · ' . $vars['magasin']
-            . (!$ok ? ' · ' . (string) (Smtp::$lastError ?? '') : ''), (string) $c['destinataire']);
+        $ok = Smtp::envoyer($vers, $sujet, $html);
+        // La centrale garde la copie — sauf quand c'est déjà elle qui reçoit.
+        $copie = trim((string) $c['copie']);
+        if ($copie === '' && $adresse !== '') { $copie = trim((string) $c['destinataire']); }
+        if ($ok && $copie !== '' && $copie !== $vers) { Smtp::envoyer($copie, $sujet, $html); }
+
+        if ($ok) {
+            $suivi[$cle] = ['nom' => $g['nom'], 'dernier' => $auj,
+                'envois' => (int) ($suivi[$cle]['envois'] ?? 0) + 1,
+                'depuis' => (string) ($suivi[$cle]['depuis'] ?? $auj)];
+            $envoyes++;
+        } else { $echecs++; }
+        caMailJournal($ok ? 'envoye' : 'echec',
+            ($ok ? 'Rappel envoyé — ' : 'Envoi en échec — ') . $g['nom'] . ' · '
+            . $g['n'] . ' commande(s) en attente'
+            . ($adresse === '' ? ' · SANS ADRESSE, envoyé à la centrale' : '')
+            . (!$ok ? ' · ' . (string) (Smtp::$lastError ?? '') : ''), $vers);
     }
 
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['caMailVus', json_encode(array_slice(array_values(array_unique($vus)), -500))]);
+        ['caMailQuotidien', json_encode($suivi, JSON_UNESCAPED_UNICODE)]);
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['caMailDernier', json_encode(['quand' => date('c'), 'envoyes' => $envoyes, 'echecs' => $echecs,
-            'erreur' => $echecs ? (string) (Smtp::$lastError ?? '') : ''])]);
+            'fournisseurs' => count($groupes),
+            'sansAdresse' => array_values(array_unique($sansAdresse)),
+            'erreur' => $echecs ? (string) (Smtp::$lastError ?? '') : ''], JSON_UNESCAPED_UNICODE)]);
 
-    return ['etat' => 'ok', 'envoyes' => $envoyes, 'echecs' => $echecs];
+    return ['etat' => 'ok', 'envoyes' => $envoyes, 'echecs' => $echecs,
+        'fournisseurs' => count($groupes), 'sansAdresse' => array_values(array_unique($sansAdresse))];
+}
+
+/**
+ * Les commandes EN ATTENTE, groupées par fournisseur.
+ *
+ * Une réquisition peut nommer plusieurs fournisseurs : elle apparaît alors
+ * chez chacun d'eux — chacun ne peut servir que sa part, mais tous doivent
+ * savoir qu'on les attend.
+ */
+function caMailGroupes(array $lignes): array
+{
+    $out = [];
+    foreach ($lignes as $l) {
+        if (strtoupper((string) ($l['statut'] ?? '')) !== 'PENDING') { continue; }
+        $fours = (array) ($l['fournisseurs'] ?? []);
+        if ($fours === []) { $fours = ['—']; }
+        foreach ($fours as $nom) {
+            $nom = trim((string) $nom);
+            if ($nom === '' || $nom === '—') { continue; }
+            $cle = caMailNom($nom);
+            if (!isset($out[$cle])) {
+                $out[$cle] = ['nom' => $nom, 'n' => 0, 'total' => 0.0, 'lignes' => [], 'mails' => []];
+            }
+            $out[$cle]['n']++;
+            $out[$cle]['total'] += (float) ($l['valeur'] ?? 0);
+            $out[$cle]['lignes'][] = $l;
+            if (($l['email'] ?? '') !== '') { $out[$cle]['mails'][$cle] = (string) $l['email']; }
+        }
+    }
+    return $out;
+}
+
+/** Les variables d'un rappel groupé — dont la liste des commandes en clair. */
+function caMailVariablesGroupe(array $g, bool $sansAdresse): array
+{
+    $auj = new DateTimeImmutable(date('Y-m-d'));
+    $lignes = [];
+    foreach ($g['lignes'] as $l) {
+        $debut = (string) ($l['debut'] ?? '');
+        $jours = '';
+        if ($debut !== '') {
+            $depuis = (int) $auj->diff(new DateTimeImmutable($debut))->format('%r%a');
+            // Le nombre de jours d'attente est ce qui fait agir : « depuis
+            // 12 jours » se lit autrement qu'une date.
+            if ($depuis < 0) { $jours = ' — en attente depuis ' . abs($depuis) . ' jour(s)'; }
+        }
+        $lignes[] = '· Réquisition #' . (string) ($l['id'] ?? '') . ' — ' . (string) ($l['magasin'] ?? '—')
+            . ' — ' . number_format((float) ($l['valeur'] ?? 0), 2, ',', ' ') . ' €'
+            . ($debut !== '' ? ' — période du ' . $debut : '') . $jours;
+    }
+    return [
+        'fournisseur' => (string) $g['nom'],
+        'nCommandes' => (string) $g['n'],
+        'total' => number_format((float) $g['total'], 2, ',', ' ') . ' €',
+        'lignes' => implode("\n", $lignes),
+        'magasins' => implode(', ', array_values(array_unique(array_map(
+            fn ($l) => (string) ($l['magasin'] ?? ''), $g['lignes'])))),
+        'avis' => $sansAdresse
+            ? '(Ce fournisseur n’a pas d’adresse e-mail dans le cockpit : ce rappel vous est adressé à sa place.)'
+            : '',
+    ];
 }
 
 /* ==========================================================================
