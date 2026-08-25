@@ -66,21 +66,44 @@ function caMailDefauts(): array
  */
 function caMailSquelette(): string
 {
+    // Téléphone d'abord : la lettre se lit sur un écran de 360 points, souvent
+    // en THÈME SOMBRE. Trois choses s'y jouent, et elles ont été vues de
+    // travers avant d'être corrigées :
+    //  · `color-scheme: light` empêche le client d'inverser les couleurs — le
+    //    logo noir sur fond blanc devenait invisible ;
+    //  · l'en-tête s'EMPILE (logo, puis « Centrale d'achat ») au lieu de deux
+    //    colonnes qui se chevauchent sous 400 points ;
+    //  · la pastille du nombre passe SOUS le nom du fournisseur, qu'elle
+    //    recouvrait.
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-        . '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
-        . '<body style="margin:0;padding:0;background:#EFE9DF">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<meta name="color-scheme" content="light only">'
+        . '<meta name="supported-color-schemes" content="light only">'
+        . '<style>'
+        . ':root{color-scheme:light only;supported-color-schemes:light only}'
+        . 'body,table,td{color-scheme:light only}'
+        . 'img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}'
+        . '@media only screen and (max-width:480px){'
+        . '.carte{width:100% !important}'
+        . '.pad{padding-left:18px !important;padding-right:18px !important}'
+        . '.titre{font-size:17px !important}'
+        . '.cmd{font-size:13px !important;word-break:break-word}'
+        . '}'
+        . '</style></head>'
+        . '<body style="margin:0;padding:0;background:#EFE9DF;color:#221E1A">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
-        . '<tr><td align="center" style="padding:26px 12px">'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" width="620" style="width:620px;max-width:96%">'
-        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td>{{logo}}</td>'
-        . '<td align="right" style="font-family:\'Segoe UI\',Arial,sans-serif;color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">Centrale d’achat</td>'
-        . '</tr></table></td></tr>'
-        . '<tr><td style="background:#ffffff;border-radius:0 0 14px 14px;padding:0 0 22px">'
+        . '<tr><td align="center" style="padding:18px 10px">'
+        . '<table role="presentation" class="carte" cellpadding="0" cellspacing="0" width="600" style="width:600px;max-width:100%">'
+        // Bandeau : le logo seul sur sa ligne, la mention dessous — deux
+        // colonnes se chevauchaient sur un téléphone.
+        . '<tr><td class="pad" style="background:#ffffff;border-radius:12px 12px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 26px 12px">'
+        . '{{logo}}'
+        . '<div style="font-family:\'Segoe UI\',Arial,sans-serif;color:#8b8177;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;margin-top:8px">Centrale d’achat</div>'
+        . '</td></tr>'
+        . '<tr><td style="background:#ffffff;border-radius:0 0 12px 12px;padding:0 0 20px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{{contenu}}</table>'
         . '</td></tr>'
-        . '<tr><td style="font-family:\'Segoe UI\',Arial,sans-serif;padding:14px 30px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
+        . '<tr><td class="pad" style="font-family:\'Segoe UI\',Arial,sans-serif;padding:12px 26px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
         . '{{marque}} — ce message est envoyé automatiquement par la centrale d’achat.'
         . '</td></tr>'
         . '</table></td></tr></table></body></html>';
@@ -230,7 +253,7 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
     $par = function (array $lignes) use ($e, $F): string {
         $txt = trim(implode("\n", $lignes));
         if ($txt === '') { return ''; }
-        return '<tr><td style="' . $F . ';font-size:14px;line-height:1.65;color:#221E1A;padding:0 30px 14px">'
+        return '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:10px 26px 12px">'
             . nl2br($e($txt)) . '</td></tr>';
     };
 
@@ -243,22 +266,28 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
         foreach ($morceaux as $i2 => $m2) {
             if (str_contains($m2, 'en attente depuis')) { $retard = $m2; unset($morceaux[$i2]); }
         }
-        $blocCartes .= '<tr><td style="padding:0 30px 8px">'
+        $blocCartes .= '<tr><td class="pad" style="padding:0 26px 8px">'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0">'
-            . '<tr><td style="' . $F . ';padding:11px 14px">'
-            . '<div style="font-size:14px;font-weight:700;color:#221E1A">' . $e($titre) . '</div>'
-            . ($morceaux !== [] ? '<div style="font-size:12.5px;color:#6E645A;margin-top:3px">' . $e(implode(' · ', $morceaux)) . '</div>' : '')
+            . '<tr><td style="' . $F . ';padding:10px 13px">'
+            // La clé d'une commande est longue : elle doit pouvoir se couper,
+            // sinon elle déborde de l'écran d'un téléphone.
+            . '<div class="cmd" style="font-size:14px;font-weight:700;color:#221E1A;line-height:1.3;word-break:break-word">' . $e($titre) . '</div>'
+            . ($morceaux !== [] ? '<div style="font-size:12.5px;color:#6E645A;margin-top:4px;line-height:1.45">' . $e(implode(' · ', $morceaux)) . '</div>' : '')
             . ($retard !== '' ? '<div style="font-size:12px;font-weight:700;color:#8D1D2C;margin-top:5px">' . $e($retard) . '</div>' : '')
             . '</td></tr></table></td></tr>';
     }
 
+    // Le nom, puis la pastille DESSOUS : côte à côte, sur un téléphone, la
+    // pastille recouvrait le nom du fournisseur.
+    $n = (int) ($g['n'] ?? 0);
     $entete = ($g['nom'] ?? '') !== ''
-        ? '<tr><td style="padding:18px 30px 6px">'
-          . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-          . '<td style="' . $F . ';font-size:19px;font-weight:700;color:#221E1A">' . $e($g['nom']) . '</td>'
-          . '<td align="right"><span style="' . $F . ';display:inline-block;background:#F7ECEA;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#8D1D2C">'
-          . (int) ($g['n'] ?? 0) . ' commande' . (((int) ($g['n'] ?? 0)) > 1 ? 's' : '') . ' en attente</span></td>'
-          . '</tr></table></td></tr>'
+        ? '<tr><td class="pad" style="padding:18px 26px 4px">'
+          . '<div class="titre" style="' . $F . ';font-size:19px;font-weight:700;color:#221E1A;line-height:1.25">' . $e($g['nom']) . '</div>'
+          . ($n > 0
+            ? '<div style="margin-top:7px"><span style="' . $F . ';display:inline-block;background:#F7ECEA;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:#8D1D2C">'
+              . $n . ' commande' . ($n > 1 ? 's' : '') . ' en attente</span></div>'
+            : '')
+          . '</td></tr>'
         : '';
 
     $contenu = $entete . $par($avant) . $blocCartes
@@ -888,10 +917,14 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
             if ($depuis < 0) { $jours = ' — en attente depuis ' . abs($depuis) . ' jour(s)'; }
         }
         $montant = (float) ($l['valeur'] ?? 0);
+        // « 25/08/2026 » plutôt que « 2026-08-25 » : la lettre part chez un
+        // fournisseur, pas dans un fichier.
+        $fr = static fn (string $d): string => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)
+            ? substr($d, 8, 2) . '/' . substr($d, 5, 2) . '/' . substr($d, 0, 4) : $d;
         $lignes[] = '· Commande ' . (string) ($l['id'] ?? '') . ' — ' . (string) ($l['magasin'] ?? '—')
             . ($montant > 0 ? ' — ' . number_format($montant, 2, ',', ' ') . ' €' : '')
-            . ($debut !== '' ? ' — passée le ' . $debut : '')
-            . (((string) ($l['livraison'] ?? '')) !== '' ? ' — livraison prévue le ' . $l['livraison'] : '')
+            . ($debut !== '' ? ' — passée le ' . $fr($debut) : '')
+            . (((string) ($l['livraison'] ?? '')) !== '' ? ' — livraison prévue le ' . $fr((string) $l['livraison']) : '')
             . $jours;
     }
     $magasins = array_values(array_unique(array_map(
@@ -924,7 +957,9 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
         // compris, ce qui s'est vu.
         'magasin' => $magasins === [] ? '—' : implode(', ', $magasins),
         'id' => implode(', ', array_filter($ids)),
-        'debut' => $debuts === [] ? '—' : $debuts[0],
+        'debut' => $debuts === [] ? '—' : (preg_match('/^\d{4}-\d{2}-\d{2}$/', $debuts[0])
+            ? substr($debuts[0], 8, 2) . '/' . substr($debuts[0], 5, 2) . '/' . substr($debuts[0], 0, 4)
+            : $debuts[0]),
         // Même règle que {{total}} : pas de « 0,00 € » là où le montant est
         // simplement inconnu.
         'valeur' => ((float) $g['total']) > 0
