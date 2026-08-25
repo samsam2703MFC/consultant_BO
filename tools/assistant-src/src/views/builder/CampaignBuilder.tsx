@@ -212,7 +212,12 @@ export interface Draft {
   targets: Record<number, string>
 
   // 4 — Communication
-  channels: Record<number, { budget: string; agencyId: number | null }>
+  /**
+   * Un canal RETENU porte une entrée ; `valide` dit s'il est arrêté. Retenir
+   * n'est pas valider : un support qu'on envisage encore n'a rien à faire dans
+   * « Pub physique », et son budget n'est pas engagé.
+   */
+  channels: Record<number, { budget: string; agencyId: number | null; valide: boolean }>
   uniform_ids: number[]
   b2b_webshop_enabled: boolean
   b2b_option_ids: number[]
@@ -713,6 +718,9 @@ function fromState(state: api.CampaignDraftState, refs: References, role: Role):
     channels[channel.channel_id] = {
       budget: channel.budget_amount === null ? '' : String(channel.budget_amount),
       agencyId: channel.agency_id,
+      // Absent : les campagnes écrites avant la case ne doivent pas changer de
+      // sens en se rouvrant — elles étaient toutes enregistrées « activées ».
+      valide: channel.is_enabled ?? true,
     }
   }
 
@@ -999,6 +1007,7 @@ function toPayload(draft: Draft, brandId: number | 'all', stepKey?: string): Cam
       channel_id: Number(channelId),
       agency_id: entry.agencyId,
       budget_amount: entry.budget === '' ? null : Number(entry.budget),
+      is_enabled: entry.valide,
     })),
     lever_targets: Object.entries(draft.targets)
       .filter(([, value]) => value !== '' && Number(value) !== 0)
@@ -2135,6 +2144,9 @@ function BudgetStep({
 // 4 — Communication
 // ---------------------------------------------------------------------------
 
+/** `1 250` — le séparateur de milliers du reste de l'assistant. */
+const fr = (value: number): string => value.toLocaleString('fr-BE')
+
 function CommunicationStep({
   refs,
   draft,
@@ -2146,14 +2158,16 @@ function CommunicationStep({
     if (channelId in next) {
       delete next[channelId]
     } else {
-      next[channelId] = { budget: '', agencyId: null }
+      // Retenu, pas encore validé : la case « validé » se coche quand le
+      // support est arrêté et son budget engagé.
+      next[channelId] = { budget: '', agencyId: null, valide: false }
     }
     patch({ channels: next })
   }
 
   const updateChannel = (
     channelId: number,
-    change: Partial<{ budget: string; agencyId: number | null }>,
+    change: Partial<{ budget: string; agencyId: number | null; valide: boolean }>,
   ) =>
     patch({
       channels: { ...draft.channels, [channelId]: { ...draft.channels[channelId], ...change } },
@@ -2192,11 +2206,30 @@ function CommunicationStep({
         </span>
       </label>
 
-      {families.map((family) => (
+      {families.map((family) => {
+        const retenus = refs.channels
+          .filter((channel) => channel.family === family.key)
+          .filter((channel) => draft.channels[channel.id] !== undefined)
+        const engage = retenus
+          .filter((channel) => draft.channels[channel.id]?.valide)
+          .reduce((total, channel) => total + Number(draft.channels[channel.id]?.budget || 0), 0)
+        const envisage = retenus
+          .filter((channel) => !draft.channels[channel.id]?.valide)
+          .reduce((total, channel) => total + Number(draft.channels[channel.id]?.budget || 0), 0)
+
+        return (
         <div key={family.key}>
           <h3 className="section-label">{family.label}</h3>
           <div className="table-scroll">
             <table>
+              <thead>
+                <tr>
+                  <th>Canal</th>
+                  <th className="num">Budget</th>
+                  <th className="num">Validé</th>
+                  <th>Réalisé par</th>
+                </tr>
+              </thead>
               <tbody>
                 {refs.channels
                   .filter((channel) => channel.family === family.key)
@@ -2226,6 +2259,19 @@ function CommunicationStep({
                             onChange={(e) => updateChannel(channel.id, { budget: e.target.value })}
                           />
                         </td>
+                        {/* Retenir n'est pas valider : tant que la case est
+                            vide, le canal reste une intention — il n'alimente
+                            pas « Pub physique » / « Pub digitale » et son
+                            budget compte comme envisagé, pas comme engagé. */}
+                        <td className="num">
+                          <input
+                            type="checkbox"
+                            aria-label={`Valider ${channel.label}`}
+                            disabled={entry === undefined}
+                            checked={entry?.valide ?? false}
+                            onChange={(e) => updateChannel(channel.id, { valide: e.target.checked })}
+                          />
+                        </td>
                         <td>
                           <select
                             disabled={entry === undefined}
@@ -2250,8 +2296,17 @@ function CommunicationStep({
               </tbody>
             </table>
           </div>
+          {retenus.length === 0 ? null : (
+            <p className="muted wizard__hint">
+              {fr(engage)} € validés
+              {envisage > 0 ? ` · ${fr(envisage)} € encore à valider` : ''} sur{' '}
+              {retenus.length} canal{retenus.length > 1 ? 'ux' : ''} retenu
+              {retenus.length > 1 ? 's' : ''}.
+            </p>
+          )}
         </div>
-      ))}
+        )
+      })}
 
       {/* Le ton rejoint la communication, comme le brief d'agence : l'étape 1
           décide ce que la campagne est, celle-ci comment elle parle. « Festif »

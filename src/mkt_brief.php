@@ -178,6 +178,29 @@ function mktBriefDonnees(int $id): ?array
         }
     } catch (PDOException $e) { /* pas de ventilation par levier dans cette base */ }
 
+    // La communication : ce que la campagne achète, canal par canal. Les
+    // budgets viennent de l'étape « Communication » de l'assistant — c'est là
+    // qu'ils se saisissent, et les recopier ailleurs aurait fait deux vérités.
+    // Un canal RETENU mais pas validé compte à part : il n'est pas engagé.
+    $canaux = []; $engage = 0.0; $envisage = 0.0;
+    try {
+        foreach (Db::rows('SELECT ch.label, ch.family, cc.budget_amount, cc.is_enabled,
+                                  a.name AS agence
+                             FROM mar_campaign_channel cc
+                             JOIN mar_channel ch ON ch.id = cc.channel_id
+                             LEFT JOIN mar_agency a ON a.id = cc.agency_id
+                            WHERE cc.campaign_id = ?
+                            ORDER BY ch.family, ch.sort_order', [$id]) as $r) {
+            $montant = $r['budget_amount'] !== null ? (float) $r['budget_amount'] : 0.0;
+            $valide = (bool) $r['is_enabled'];
+            if ($valide) { $engage += $montant; } else { $envisage += $montant; }
+            $canaux[] = ['nom' => (string) $r['label'],
+                'famille' => (string) $r['family'] === 'DIGITAL' ? 'Digital' : 'Physique',
+                'montant' => $montant, 'valide' => $valide,
+                'agence' => (string) ($r['agence'] ?? '')];
+        }
+    } catch (PDOException $e) { /* pas de canaux dans cette base */ }
+
     $etapes = [];
     try {
         // `mar_retroplanning_step` : le nom que porte la table du module. Un nom
@@ -222,6 +245,9 @@ function mktBriefDonnees(int $id): ?array
         'lignes' => $lignes,
         'etapes' => $etapes,
         'investis' => $investis,
+        'canaux' => $canaux,
+        'canauxEngage' => $engage,
+        'canauxEnvisage' => $envisage,
         'mot' => mktBriefMot($id),
         'image' => (string) ($c['image_url'] ?? ''),
         'visuel' => mktBriefVisuel((string) ($c['image_url'] ?? '')),
@@ -472,6 +498,48 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
         }
     }
 
+    // Ce que la campagne achète. Les canaux VALIDÉS d'abord — ce sont eux qui
+    // partent en production ; les autres suivent, marqués, parce qu'un
+    // franchisé qui lit « affichage bus » doit savoir s'il aura lieu.
+    $com = '';
+    if ($d['canaux'] !== []) {
+        $com = '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:5px">Ce que la campagne achète</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:11px;margin-bottom:6px">';
+        foreach ($d['canaux'] as $ca) {
+            $com .= '<tr><td style="padding:6px 8px 6px 0;border-bottom:1px solid rgba(34,34,34,.06)">'
+                . $e($ca['nom'])
+                . '<span style="color:#b8b2a8;font-size:9.5px"> · ' . $e($ca['famille']) . '</span>'
+                . ($ca['agence'] !== '' ? '<span style="color:#7a736a;font-size:9.5px"> · ' . $e($ca['agence']) . '</span>' : '')
+                . '</td>'
+                . '<td width="92" align="right" style="padding:6px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:'
+                . ($ca['valide'] ? '#3f7a52' : '#b8b2a8') . ';font-size:9.5px;white-space:nowrap">'
+                . ($ca['valide'] ? '✓ validé' : 'à valider') . '</td>'
+                . '<td width="80" align="right" style="padding:6px 0 6px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600;white-space:nowrap'
+                . ($ca['valide'] ? '' : ';color:#b8b2a8') . '">' . mktBriefEuros($ca['montant']) . '</td></tr>';
+        }
+        $com .= '<tr><td style="padding:7px 8px 7px 0;font-weight:600">Total validé</td>'
+            . '<td></td><td align="right" style="padding:7px 0 7px 8px;font-weight:600;white-space:nowrap">'
+            . mktBriefEuros($d['canauxEngage']) . '</td></tr>';
+        if ($d['canauxEnvisage'] > 0) {
+            $com .= '<tr><td style="padding:0 8px 7px 0;color:#7a736a">Encore à valider</td>'
+                . '<td></td><td align="right" style="padding:0 0 7px 8px;color:#7a736a;white-space:nowrap">'
+                . mktBriefEuros($d['canauxEnvisage']) . '</td></tr>';
+        }
+        $com .= '</table>';
+
+        // L'écart avec l'enveloppe : ni alarme ni silence — la phrase dit ce
+        // qui reste, ou ce qui dépasse, et laisse décider.
+        if ($d['budget'] !== null) {
+            $reste = (float) $d['budget'] - $d['canauxEngage'] - $d['canauxEnvisage'];
+            $com .= '<div style="font-size:9.5px;color:#7a736a;margin:0 0 16px">'
+                . 'Enveloppe de la campagne : ' . mktBriefEuros($d['budget']) . ' — '
+                . ($reste >= 0
+                    ? 'il reste ' . mktBriefEuros($reste) . ' non affectés.'
+                    : 'les canaux dépassent l’enveloppe de ' . mktBriefEuros(abs($reste)) . '.')
+                . '</div>';
+        }
+    }
+
     // Le rétroplanning : « ce qui va se passer », dans l'ordre.
     $plan = '';
     if ($d['etapes'] !== []) {
@@ -543,7 +611,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
         . $e($d['nom']) . '</title></head>'
         . '<body style="margin:0;padding:26px 30px;font-family:Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
-        . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $plan . $pied . $annexe . '</body></html>';
+        . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $com . $plan . $pied . $annexe . '</body></html>';
 }
 
 /** Le corps du courrier — le gabarit d'achats, réutilisé tel quel. */

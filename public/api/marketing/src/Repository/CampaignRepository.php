@@ -996,7 +996,7 @@ final class CampaignRepository
             $statement = $connection->prepare(
                 'INSERT INTO mar_campaign_channel
                     (campaign_id, channel_id, agency_id, budget_amount, is_enabled, created_by)
-                 VALUES (:campaign_id, :channel_id, :agency_id, :budget_amount, 1, :created_by)'
+                 VALUES (:campaign_id, :channel_id, :agency_id, :budget_amount, :is_enabled, :created_by)'
             );
             foreach ($channels as $channel) {
                 $channelId = (int) ($channel['channel_id'] ?? 0);
@@ -1016,6 +1016,14 @@ final class CampaignRepository
                         ? (int) $channel['agency_id']
                         : null,
                     'budget_amount' => $budget === null || $budget === '' ? 0 : $budget,
+                    // `is_enabled` était écrit à 1 sans jamais être demandé :
+                    // un canal retenu et un canal VALIDÉ ne pouvaient pas se
+                    // distinguer, et « Pub physique » recevait des supports
+                    // qu'on envisageait encore. L'absence de clé vaut validé,
+                    // pour que les campagnes écrites avant ne changent pas de
+                    // sens en se rouvrant.
+                    'is_enabled'    => array_key_exists('is_enabled', $channel)
+                        ? (int) (bool) $channel['is_enabled'] : 1,
                     'created_by'    => $auth->userId,
                 ]);
             }
@@ -1451,7 +1459,7 @@ final class CampaignRepository
         );
 
         $channels = Database::connection()->prepare(
-            'SELECT channel_id, agency_id, budget_amount
+            'SELECT channel_id, agency_id, budget_amount, is_enabled
                FROM mar_campaign_channel WHERE campaign_id = :id'
         );
         $channels->execute(['id' => $id]);

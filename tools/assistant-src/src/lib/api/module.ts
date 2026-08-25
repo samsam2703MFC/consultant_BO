@@ -592,7 +592,16 @@ export interface CampaignDraftState
   b2b_option_ids: number[]
   uniform_ids: number[]
   format_ids: number[]
-  channels: Array<{ channel_id: number; agency_id: number | null; budget_amount: number | null }>
+  /**
+   * `is_enabled` : le canal est VALIDÉ, pas seulement retenu. Ce sont les
+   * canaux validés qui alimentent « Pub physique » et « Pub digitale ».
+   */
+  channels: Array<{
+    channel_id: number
+    agency_id: number | null
+    budget_amount: number | null
+    is_enabled?: boolean
+  }>
   /** `target_value` peut être nul : un levier retenu sans chiffre est légitime. */
   lever_targets: Array<{ lever_id: number; target_value: number | null }>
   retroplanning: Array<{ label: string; days_before_launch: number; position_id: number | null }>
