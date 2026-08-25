@@ -2744,12 +2744,24 @@ function tplMktNote(c, x){
         <div>
           <span style="${k}">En copie — l’agence et les consultants</span>
           ${n.copiesVide ? `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucune adresse disponible : renseignez celle de l’agence ci-dessous, et les consultants depuis Paramètres.</div>` : `
+          ${!n.copiesAgence.length ? '' : `
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-bottom:5px">Agence</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px">
+            ${n.copiesAgence.map(cc => cc.sansAdresse
+              ? `<span title="Renseignez son adresse dans « Expéditeur et gabarit », plus bas" style="display:inline-flex;align-items:center;gap:7px;border:0.5px dashed var(--color-border-secondary);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--color-text-muted)">${esc(cc.nom)} · adresse à renseigner</span>`
+              : `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:999px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
+                <input type="checkbox" ${cc.on ? 'checked' : ''} ${x.C(cc.basculer)} />
+                <span>${esc(cc.nom)}<span style="color:var(--color-text-muted)"> · ${esc(cc.role)}</span></span>
+              </label>`).join('')}
+          </div>`}
+          ${!n.copiesConsultants.length ? '' : `
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-bottom:5px">Consultants</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
-            ${n.copies.map(cc => `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:999px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
+            ${n.copiesConsultants.map(cc => `<label title="${esc(cc.adresse)}" style="display:inline-flex;align-items:center;gap:7px;border:0.5px solid ${cc.on ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:999px;padding:5px 12px 5px 9px;font-size:12px;cursor:pointer;background:${cc.on ? 'rgba(141,29,44,.06)' : 'var(--color-surface)'}">
               <input type="checkbox" ${cc.on ? 'checked' : ''} ${x.C(cc.basculer)} />
               <span>${esc(cc.nom)}<span style="color:var(--color-text-muted)"> · ${esc(cc.role)}</span></span>
             </label>`).join('')}
-          </div>`}
+          </div>`}`}
           <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Les personnes cochées reçoivent la note en copie visible — le franchisé voit qui d’autre l’a reçue. Le choix est retenu pour les campagnes suivantes.</div>
         </div>
 

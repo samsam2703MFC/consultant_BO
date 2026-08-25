@@ -1086,11 +1086,12 @@ function mktBriefNomFichier(array $d): string
 function mktBriefCopiesPossibles(int $campagne, array $c): array
 {
     $out = []; $vu = [];
-    $ajoute = static function (string $nom, string $adresse, string $role) use (&$out, &$vu): void {
+    $ajoute = static function (string $nom, string $adresse, string $role, string $groupe) use (&$out, &$vu): void {
         $adresse = mktBriefAdresse($adresse);
         if ($adresse === '' || isset($vu[strtolower($adresse)])) { return; }
         $vu[strtolower($adresse)] = true;
-        $out[] = ['nom' => $nom, 'adresse' => $adresse, 'role' => $role];
+        $out[] = ['nom' => $nom, 'adresse' => $adresse, 'role' => $role,
+            'groupe' => $groupe, 'sansAdresse' => false];
     };
 
     try {
@@ -1098,18 +1099,27 @@ function mktBriefCopiesPossibles(int $campagne, array $c): array
                              FROM mar_campaign_channel cc
                              JOIN mar_agency a ON a.id = cc.agency_id
                             WHERE cc.campaign_id = ?', [$campagne]) as $a) {
-            $ajoute((string) $a['name'], (string) ($a['email'] ?? ''), 'Agence de la campagne');
+            $ajoute((string) $a['name'], (string) ($a['email'] ?? ''), 'Agence de la campagne', 'agence');
         }
     } catch (PDOException $e) { /* pas d'agence désignée, ou pas de colonne email */ }
 
     $ag = $c['agence'] ?? [];
     if (($ag['email'] ?? '') !== '') {
-        $ajoute(($ag['nom'] ?? '') !== '' ? (string) $ag['nom'] : 'Agence', (string) $ag['email'], 'Agence');
+        $ajoute(($ag['nom'] ?? '') !== '' ? (string) $ag['nom'] : 'Agence', (string) $ag['email'], 'Agence', 'agence');
     }
 
     foreach (ep_people() as $p) {
         if (($p['email'] ?? null) === null || $p['email'] === '') { continue; }
-        $ajoute((string) $p['nom'], (string) $p['email'], (string) ($p['role'] ?? 'Consultant'));
+        $ajoute((string) $p['nom'], (string) $p['email'], (string) ($p['role'] ?? 'Consultant'), 'consultant');
+    }
+
+    // L'agence SANS adresse figure quand même, en tête et grisée : sa case
+    // absente laissait croire qu'on ne peut pas la mettre en copie, alors
+    // qu'il ne manque qu'une adresse — et l'écran dit où la saisir.
+    $aAgence = (bool) array_filter($out, static fn ($x) => $x['groupe'] === 'agence');
+    if (!$aAgence && ($ag['nom'] ?? '') !== '') {
+        array_unshift($out, ['nom' => (string) $ag['nom'], 'adresse' => '',
+            'role' => 'Agence', 'groupe' => 'agence', 'sansAdresse' => true]);
     }
 
     return $out;

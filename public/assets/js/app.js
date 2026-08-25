@@ -4642,11 +4642,21 @@ class App {
         // Les copies : l'agence de la campagne et les consultants. Une liste à
         // cocher, pas un champ libre — une adresse retapée à chaque envoi finit
         // par partir chez quelqu'un d'autre.
-        copies: (nt.copies || (D2.copies || [])).map((x2, i) => ({
-          nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on,
-          basculer: () => ntPatch({ copies: (nt.copies || (D2.copies || []))
-            .map((y, j) => j === i ? Object.assign({}, y, { on: !y.on }) : y) }),
-        })),
+        // L'agence d'abord, les consultants ensuite : ce ne sont pas les mêmes
+        // destinataires — l'une produit la campagne, les autres la suivent.
+        copiesAgence: (nt.copies || (D2.copies || [])).map((x2, i) => Object.assign({}, x2, { i }))
+          .filter(x2 => x2.groupe === 'agence').map(x2 => ({
+            nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on,
+            sansAdresse: !!x2.sansAdresse,
+            basculer: x2.sansAdresse ? null : () => ntPatch({ copies: (nt.copies || (D2.copies || []))
+              .map((y, j) => j === x2.i ? Object.assign({}, y, { on: !y.on }) : y) }),
+          })),
+        copiesConsultants: (nt.copies || (D2.copies || [])).map((x2, i) => Object.assign({}, x2, { i }))
+          .filter(x2 => x2.groupe !== 'agence').map(x2 => ({
+            nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on, sansAdresse: false,
+            basculer: () => ntPatch({ copies: (nt.copies || (D2.copies || []))
+              .map((y, j) => j === x2.i ? Object.assign({}, y, { on: !y.on }) : y) }),
+          })),
         copiesVide: !(D2.copies || []).length,
         nPrets: prets.length,
         sansAdresse: dest.filter(x2 => !x2.adresse).map(x2 => x2.magasin),
