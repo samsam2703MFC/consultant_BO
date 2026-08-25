@@ -231,6 +231,13 @@ function shape(p, source){
       SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
     D: Object.assign({}, p.raw || {}, {
       stores: joinPerf(p.stores, p.perf, meta && meta.exercice, p.etp),
+      // Les lignes PLATES telles que la base les rend, gardées à côté des
+      // magasins déjà assemblés. Sans elles, une relecture après encodage
+      // n'avait rien à quoi se raccrocher : le tableau de suivi continuait
+      // d'afficher l'instantané du chargement, et il fallait recharger la page
+      // pour voir ce qui venait d'être écrit.
+      perfRaw: p.perf || [],
+      etpRaw: p.etp || [],
       budgets: p.budgets,
       targets: p.targets,
       consultants: p.consultants,
@@ -264,7 +271,7 @@ function shape(p, source){
    en tableaux de 12 mois par année affichée, chaque cellule étant un objet aux
    champs à null. Sans ça, `perf[annee]` ou `perf[annee][mois]` est indéfini et
    les écrans Tableau/Heatmap/Marge plantent. */
-function joinPerf(stores, perf, exercice, etp){
+export function joinPerf(stores, perf, exercice, etp){
   stores = stores || [];
   perf = perf || [];
   const yEx = exercice || new Date().getFullYear();

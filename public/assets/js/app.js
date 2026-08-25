@@ -4,7 +4,7 @@
  * + délégation d'événements), données : api.js (REST, repli vide hors-ligne).
  * Chaque mutation est répercutée sur l'API quand elle est joignable (source === 'api').
  */
-import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz } from './api.js';
+import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender } from './templates.js';
 
 function escHtml(v){
@@ -1093,6 +1093,9 @@ class App {
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
     else if (key) { common[key] = true; }
+    // Quitter un écran arme sa prochaine relecture : y revenir doit relire la
+    // base, pas réafficher ce qui avait été lu la première fois.
+    if (this._perfEcran && this._perfEcran !== S.screen) { this._perfEcran = null; }
 
     // --- magasins
     if (common.isMagasins){
@@ -1379,7 +1382,10 @@ class App {
     // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
     if (common.isRJour) { this.rjCharge(false); this.valsResultatJour(common); }
     // --- suivi budget magasin
-    if (common.isBudget) this.valsBudget(common);
+    // Relu à CHAQUE ouverture de l'écran : ce tableau est la lecture du budget,
+    // et l'instantané pris au chargement de la page vieillit dès qu'un mois est
+    // encodé — ici ou depuis un autre poste. Une relecture, groupée, à l'entrée.
+    if (common.isBudget) { this.relirePerf('budget'); this.valsBudget(common); }
     // --- encodage du budget
     // Les deux écrans du budget partagent leurs valeurs : l'encodage mensuel
     // et les réglages annuels lisent le même magasin, le même exercice et le
@@ -2492,7 +2498,7 @@ class App {
         this.log('Budget', st.nom, jr);
         this.notify('Budget enregistré — ' + st.nom + ' · ' + this.fE(caTot));
         return readOne('/stores/perf?granularite=mois&annees=' + (this.exo() - 1) + ',' + this.exo())
-          .then(p => { if (p) { this.D.perfRaw = p; } this.setState({}); });
+          .then(p => { if (p) { this.poserPerf(p); } this.setState({}); });
       });
     };
     common.encNote = 'À l’enregistrement, la série validée devient le budget de référence du magasin et la série théorique alimente le CA d’étude de marché : elles servent de référence au suivi mensuel et au calcul des écarts. Le CA théorique et l’étude de marché restent indépendants du budget négocié avec ' + st.fr + '.';
@@ -2522,6 +2528,39 @@ class App {
    * mois écrits en base, zéro à l'écran. Groupé : une seule relecture après
    * la rafale de frappe, pas une par touche.
    */
+  /**
+   * Range une relecture de `/stores/perf` là où les écrans la lisent.
+   *
+   * Les écrans ne lisent pas les lignes plates : ils lisent
+   * `store.perf[annee][mois]`, un tableau dense assemblé UNE FOIS au
+   * chargement. Poser la relecture dans `D.perfRaw` sans réassembler ne
+   * changeait donc rien à l'affichage — la relecture partait bien, sa réponse
+   * n'allait nulle part. C'est ce qui laissait « Suivi budget » montrer un
+   * janvier et un février encore budgétés alors que l'encodage venait de les
+   * vider : le tableau montrait l'instantané du chargement de la page.
+   *
+   * L'assemblage est le même qu'au démarrage — une seule fonction, pour que la
+   * relecture et le premier chargement ne puissent pas diverger.
+   */
+  poserPerf(perf){
+    if (!perf) { return; }
+    this.D.perfRaw = perf;
+    this.D.stores = joinPerf(this.D.stores, perf, this.exo(), this.D.etpRaw || []);
+  }
+
+  /**
+   * Relit la perf en entrant sur un écran — une fois par entrée, pas à chaque
+   * rendu : le rendu se rejoue à chaque frappe et à chaque survol.
+   */
+  relirePerf(ecran){
+    // Une fois par ENTRÉE : le drapeau est remis à zéro en quittant l'écran,
+    // parce que sortir vers l'encodage puis revenir est précisément le moment
+    // où le tableau doit relire.
+    if (this._perfEcran === ecran) { return; }
+    this._perfEcran = ecran;
+    this.rafraichirBudget();
+  }
+
   rafraichirBudget(){
     clearTimeout(this._majBudT);
     this._majBudT = setTimeout(() => {
@@ -2529,7 +2568,7 @@ class App {
         readOne('/stores/perf?granularite=mois&annees=' + (this.exo() - 1) + ',' + this.exo()),
         readOne('/stores/budgets?exercice=' + this.exo()),
       ]).then(([p, bs]) => {
-        if (p) { this.D.perfRaw = p; }
+        if (p) { this.poserPerf(p); }
         if (bs) { this.D.budgets = bs; }
         this.setState({});
       }).catch(() => {});
