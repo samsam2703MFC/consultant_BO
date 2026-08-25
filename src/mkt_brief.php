@@ -487,7 +487,7 @@ function mktBriefValeur(?float $v, array $d): string
  * serveur sait rendre, et c'est aussi ce que le navigateur imprime à
  * l'identique quand aucun moteur n'est installé.
  */
-function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
+function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $shopId = ''): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $logo = rapLogoDataUri();
@@ -529,11 +529,22 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
 
     // L'objectif. Sans KPI mesuré, on écrit pourquoi plutôt qu'un chiffre rond
     // qui aurait l'air d'en être un.
+    // Adressée à un magasin, la note vise CE magasin : lui montrer la cible
+    // réseau — 783 clients par jour pour une boutique qui en fait 136 — ne lui
+    // dit rien de ce qu'on attend de lui.
+    $sien = null;
+    if ($shopId !== '') {
+        foreach ($d['lignes'] as $l) { if ((string) $l['id'] === $shopId) { $sien = $l; break; } }
+    }
+    $refBloc = $sien !== null ? $sien['reference'] : $d['reference'];
+    $cibleBloc = $sien !== null ? $sien['cible'] : $d['cible'];
+
     $obj = '<div style="border:1px solid #e6e0d8;border-radius:8px;padding:13px 14px;margin-bottom:16px;background:#fbf9f5">'
-        . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">Ce qu’on vise</div>';
+        . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">Ce qu’on vise'
+        . ($sien !== null ? ' — ' . $e($sien['nom']) : '') . '</div>';
     if ($d['objectifPct'] === null) {
         $obj .= '<div style="font-size:12px;margin-top:5px">Aucun écart chiffré n’est fixé pour cette campagne : le suivi se fera sur les valeurs réelles, sans cible.</div>';
-    } elseif (!$d['kpiMesure'] || $d['reference'] === null) {
+    } elseif (!$d['kpiMesure'] || $refBloc === null) {
         $obj .= '<div style="font-size:14px;font-weight:600;margin-top:4px">'
             . ($d['objectifPct'] >= 0 ? '+' : '−') . abs((float) $d['objectifPct']) . ' % par rapport à l’an dernier</div>'
             . '<div style="font-size:10.5px;color:#7a736a;margin-top:3px">'
@@ -543,14 +554,17 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
         $obj .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px"><tr>'
             . '<td style="font-size:12px;line-height:1.55">' . $e($d['kpiNom']) . '<br>'
             . '<span style="color:#7a736a;font-size:10.5px">'
-            . ($d['referenceSource'] === 'n1'
-                ? 'l’an dernier, même période : <strong>' . mktBriefValeur($d['reference'], $d) . '</strong>'
-                : 'référence du réseau : <strong>' . mktBriefValeur($d['reference'], $d) . '</strong>'
-                  . ' — dont ' . $d['referenceNRepli'] . ' magasin'
-                  . ($d['referenceNRepli'] > 1 ? 's' : '') . ' sur moyenne 3 mois')
+            . ($sien !== null
+                ? 'l’an dernier, même période : <strong>' . mktBriefValeur($refBloc, $d) . '</strong>'
+                  . (($sien['source'] ?? '') === 'repli' ? ' (moyenne des 3 derniers mois)' : '')
+                : ($d['referenceSource'] === 'n1'
+                    ? 'l’an dernier, même période : <strong>' . mktBriefValeur($refBloc, $d) . '</strong>'
+                    : 'référence du réseau : <strong>' . mktBriefValeur($refBloc, $d) . '</strong>'
+                      . ' — dont ' . $d['referenceNRepli'] . ' magasin'
+                      . ($d['referenceNRepli'] > 1 ? 's' : '') . ' sur moyenne 3 mois'))
             . '</span></td>'
             . '<td align="right" style="font-size:22px;font-weight:600;color:' . $accent . ';white-space:nowrap">'
-            . mktBriefValeur($d['cible'], $d)
+            . mktBriefValeur($cibleBloc, $d)
             . '<div style="font-size:9.5px;font-weight:400;color:#7a736a">cible, soit '
             . ($d['objectifPct'] >= 0 ? '+' : '−') . abs((float) $d['objectifPct']) . ' %</div></td></tr></table>';
     }
@@ -592,17 +606,21 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = []): string
             . '<th align="right" style="padding:6px 8px;border-bottom:1px solid #e6e0d8;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a">Cible</th></tr>';
         $repli = false;
         foreach ($d['lignes'] as $l) {
-            $tab .= '<tr><td style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">' . $e($l['nom']) . '</td>';
+            $moi = $shopId !== '' && (string) $l['id'] === $shopId;
+            $fond = $moi ? 'background:#fbf9f5;' : '';
+            $tab .= '<tr><td style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)'
+                . ($moi ? ';font-weight:600' : '') . '">' . $e($l['nom'])
+                . ($moi ? ' <span style="color:' . $accent . ';font-weight:600">— votre magasin</span>' : '') . '</td>';
             if ($l['reference'] === null) {
-                $tab .= '<td colspan="2" align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#b8b2a8">aucun relevé exploitable — cible à poser ensemble</td></tr>';
+                $tab .= '<td colspan="2" align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#b8b2a8">aucun relevé exploitable — cible à poser ensemble</td></tr>';
                 continue;
             }
             $marque = ($l['source'] ?? '') === 'repli'
                 ? ' <sup style="color:' . $accent . ';font-weight:600">(i)</sup>' : '';
             if ($marque !== '') { $repli = true; }
-            $tab .= '<td align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">'
+            $tab .= '<td align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">'
                 . mktBriefValeur($l['reference'], $d) . $marque . '</td>'
-                . '<td align="right" style="padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600">'
+                . '<td align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600">'
                 . mktBriefValeur($l['cible'], $d) . '</td></tr>';
         }
         $tab .= '</table>';
@@ -1027,9 +1045,9 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
 }
 
 /** Le PDF, ou null si aucun moteur ne rend sur ce serveur. */
-function mktBriefPdf(array $d, string $magasin = '', array $c = []): ?string
+function mktBriefPdf(array $d, string $magasin = '', array $c = [], string $shopId = ''): ?string
 {
-    return rapPdfRendu(mktBriefPdfHtml($d, $magasin, $c), [
+    return rapPdfRendu(mktBriefPdfHtml($d, $magasin, $c, $shopId), [
         'magasin' => $magasin !== '' ? $magasin : $d['portee'],
         'rapport' => 'Note de campagne — ' . $d['nom'],
         'genere' => date('d/m/Y à H:i'),
@@ -1075,7 +1093,11 @@ function ep_mkt_brief(int $id): array
             'html' => (string) ($c['html'] ?? ''), 'copie' => (string) ($c['copie'] ?? ''),
             'agence' => $c['agence']],
         'visuel' => ['present' => ($d['visuel']['uri'] ?? '') !== '', 'motif' => $d['visuel']['motif'] ?? ''],
-        'apercuPdf' => mktBriefPdfHtml($d, '', $c),
+        // L'aperçu montre la note telle qu'elle partira au PREMIER destinataire :
+        // une note « réseau » n'est plus envoyée à personne, l'afficher
+        // laisserait croire le contraire.
+        'apercuPdf' => mktBriefPdfHtml($d, (string) ($dest[0]['magasin'] ?? ''), $c, (string) ($dest[0]['id'] ?? '')),
+        'apercuPour' => (string) ($dest[0]['magasin'] ?? ''),
         'apercuMail' => mktBriefMailHtml($d, $c, $dest[0]['magasin'] ?? '', $dest[0]['franchise'] ?? '', (string) ($dest[0]['id'] ?? '')),
         'fichier' => mktBriefNomFichier($d),
         'journal' => array_slice($journal, 0, 30),
@@ -1104,7 +1126,11 @@ function ep_mkt_brief_pdf(int $id): array
     $d = mktBriefDonnees($id);
     if ($d === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     $magasin = trim((string) ($_GET['magasin'] ?? ''));
-    $pdf = mktBriefPdf($d, $magasin);
+    $sid = trim((string) ($_GET['shop'] ?? ''));
+    if ($sid !== '' && $magasin === '') {
+        foreach ($d['lignes'] as $l) { if ((string) $l['id'] === $sid) { $magasin = (string) $l['nom']; } }
+    }
+    $pdf = mktBriefPdf($d, $magasin, mktBriefConfig(), $sid);
     if ($pdf === null) {
         http_response_code(501);
         return ['error' => 'aucun moteur PDF sur ce serveur — utilisez « Imprimer » dans l’aperçu, le navigateur produit le même fichier'];
@@ -1163,8 +1189,21 @@ function wr_mkt_brief_envoyer(int $id): array
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['mktBrief', json_encode($c, JSON_UNESCAPED_UNICODE)]);
 
-    $pdf = mktBriefPdf($d, '', $c);
+    // UN PDF PAR MAGASIN : la note s'adresse à lui, elle porte son nom, sa
+    // cible et sa ligne marquée. Un seul fichier pour tout le monde envoyait
+    // au franchisé de Halle la cible du réseau.
+    //
+    // Le rendu est mis en cache par magasin : quatre destinataires, quatre
+    // rendus — pas quatre par destinataire.
     $nomFichier = mktBriefNomFichier($d);
+    $pdfs = [];
+    $pdfDe = static function (string $sid, string $magasin) use (&$pdfs, $d, $c): ?string {
+        if (!array_key_exists($sid, $pdfs)) { $pdfs[$sid] = mktBriefPdf($d, $magasin, $c, $sid); }
+        return $pdfs[$sid];
+    };
+    // Le poids des annexes se calcule sur la note la plus lourde : c'est celle
+    // qui décidera si le courriel passe.
+    $pdf = $pdfDe((string) ($cibles[0]['id'] ?? ''), (string) ($cibles[0]['magasin'] ?? ''));
 
     // Les annexes cochées, lues UNE fois pour tous les destinataires — le même
     // fichier part à quatre magasins, le relire quatre fois ne l'améliore pas.
@@ -1193,9 +1232,10 @@ function wr_mkt_brief_envoyer(int $id): array
         $html = mktBriefMailHtml($d, $c, $t['magasin'], $t['franchise'], (string) ($t['id'] ?? ''));
         // Le PDF est joint QUAND il existe : sans moteur sur le serveur, la
         // lettre part quand même et le dit, plutôt que de ne pas partir.
-        $pieces = $pdf === null ? $annexes
-            : array_merge([['nom' => $nomFichier, 'type' => 'application/pdf', 'contenu' => $pdf]], $annexes);
-        if ($pdf === null) {
+        $sien = $pdfDe((string) $t['id'], (string) $t['magasin']);
+        $pieces = $sien === null ? $annexes
+            : array_merge([['nom' => $nomFichier, 'type' => 'application/pdf', 'contenu' => $sien]], $annexes);
+        if ($sien === null) {
             // La phrase promet une pièce jointe : sans PDF, elle mentirait.
             $html = (string) preg_replace('#<p[^>]*>La note complète est en pièce jointe.*?</p>#s',
                 '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note détaillée suit par un autre envoi : le serveur n’a pas pu produire le PDF cette fois.</p>',
@@ -1206,7 +1246,7 @@ function wr_mkt_brief_envoyer(int $id): array
         if ($ok === true) {
             $envoyes++;
             mktBriefJournalAdd($id, 'envoye', $d['nom'] . ' — ' . $t['magasin']
-                . ($pdf === null ? ' (sans PDF : aucun moteur sur le serveur)' : ''), $t['adresse'],
+                . ($sien === null ? ' (sans PDF : aucun moteur sur le serveur)' : ''), $t['adresse'],
                 ['sujet' => $sujet, 'magasin' => $t['magasin']]);
         } else {
             $echecs[] = $t['adresse'];

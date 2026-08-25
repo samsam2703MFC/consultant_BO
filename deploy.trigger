@@ -65,3 +65,4 @@
 2026-08-25T18:51:02Z mail-note-responsive
 2026-08-25T18:53:52Z banniere-fond-blanc
 2026-08-25T19:01:22Z mail-trafic-ca-objectif
+2026-08-25T19:07:13Z note-par-magasin
