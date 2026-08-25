@@ -88,11 +88,19 @@ function caMailSquelette(string $service = 'Centrale d’achat',
         . ':root{color-scheme:light only;supported-color-schemes:light only}'
         . 'body,table,td{color-scheme:light only}'
         . 'img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}'
+        // Deux paliers, pas un : une tablette de 700 points n'est pas un
+        // téléphone, mais la carte de 600 y touchait les bords. Le premier
+        // palier rend la carte fluide, le second resserre les marges et
+        // agrandit le texte — lire à bout de bras, debout en réserve.
+        . '@media only screen and (max-width:720px){'
+        . '.carte{width:100% !important}'
+        . '.pad{padding-left:22px !important;padding-right:22px !important}'
+        . '}'
         . '@media only screen and (max-width:480px){'
         . '.carte{width:100% !important}'
-        . '.pad{padding-left:18px !important;padding-right:18px !important}'
+        . '.pad{padding-left:16px !important;padding-right:16px !important}'
         . '.titre{font-size:17px !important}'
-        . '.cmd{font-size:13px !important;word-break:break-word}'
+        . '.cmd{font-size:14px !important;line-height:1.6 !important;word-break:break-word}'
         . '}'
         . '</style></head>'
         . '<body style="margin:0;padding:0;background:#EFE9DF;color:#221E1A">'

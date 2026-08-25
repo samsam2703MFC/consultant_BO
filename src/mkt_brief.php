@@ -808,9 +808,55 @@ function mktBriefAnnexe(array $d, string $visuel, string $accent): string
 }
 
 /** Le corps du courrier — le gabarit d'achats, réutilisé tel quel. */
-function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise): string
+/**
+ * Une bannière au format lettre : large, basse, recadrée au point de visée.
+ *
+ * Le visuel d'origine est carré ou portrait ; posé en pleine largeur dans un
+ * courriel, il occupait deux écrans de téléphone avant le premier mot. On le
+ * recadre donc en 2,5:1 côté serveur — un `<img>` simple, sans position
+ * absolue ni `object-fit`, les deux étant ignorés par Outlook.
+ *
+ * Sans GD, on renonce à la bannière plutôt que d'envoyer l'image entière :
+ * mieux vaut pas d'image qu'une image qui repousse le texte hors de l'écran.
+ */
+function mktBriefBanniere(array $d): string
+{
+    $uri = (string) ($d['visuel']['uri'] ?? '');
+    if ($uri === '' || !function_exists('imagecreatefromstring')) { return ''; }
+
+    $octets = base64_decode((string) substr($uri, strpos($uri, ',') + 1), true);
+    if ($octets === false) { return ''; }
+    $src = @imagecreatefromstring($octets);
+    if ($src === false) { return ''; }
+
+    $iw = imagesx($src); $ih = imagesy($src);
+    $lw = 1200; $lh = 480;
+    $k = max($lw / $iw, $lh / $ih);
+    $pw = (int) ceil($iw * $k); $ph = (int) ceil($ih * $k);
+    $focal = max(0.0, min(100.0, (float) ($d['cadrage'] ?? 50)));
+    $dst = imagecreatetruecolor($lw, $lh);
+    imagecopyresampled($dst, $src, (int) round(($lw - $pw) / 2), (int) round(-($ph - $lh) * $focal / 100),
+        0, 0, $pw, $ph, $iw, $ih);
+    ob_start(); imagejpeg($dst, null, 80); $bandeau = (string) ob_get_clean();
+    imagedestroy($src); imagedestroy($dst);
+
+    return 'data:image/jpeg;base64,' . base64_encode($bandeau);
+}
+
+function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise, string $shopId = ''): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    // L'objectif du MAGASIN, pas celui du réseau. Chaque franchisé recevait la
+    // cible réseau — « 783 clients par jour » pour une boutique qui en fait
+    // 299 : le chiffre ne voulait rien dire, et il décourageait.
+    $sien = null;
+    foreach ($d['lignes'] as $l) {
+        if ($shopId !== '' && (string) $l['id'] === $shopId) { $sien = $l; break; }
+    }
+    $cible = $sien !== null ? $sien['cible'] : $d['cible'];
+    $reference = $sien !== null ? $sien['reference'] : $d['reference'];
+
     $vars = [
         'campagne' => $d['nom'], 'type' => $d['type'], 'levier' => $d['levier'],
         'du' => mktBriefJour($d['du']), 'au' => mktBriefJour($d['au']),
@@ -821,33 +867,45 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
         'objectif' => $d['objectifPct'] === null ? 'sans écart chiffré'
             : (($d['objectifPct'] >= 0 ? '+' : '−') . abs((float) $d['objectifPct']) . ' %'),
         'kpi' => $d['kpiNom'],
-        'cible' => mktBriefValeur($d['cible'], $d),
+        'cible' => mktBriefValeur($cible, $d),
     ];
 
     $intro = nl2br($e(caMailRemplir((string) ($c['intro'] ?? ''), array_map($e, $vars))));
     $pied = $e(caMailRemplir((string) ($c['pied'] ?? ''), array_map($e, $vars)));
 
-    $cartes = '<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">';
-    foreach ([['Période', mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au'])],
-              ['Budget centrale', mktBriefEuros($d['budget'])],
-              ['Objectif', $vars['objectif'] . ($d['cible'] !== null ? ' — ' . $vars['cible'] . ' ' . $d['kpiUnite'] : '')]] as [$t, $v]) {
-        $cartes .= '<tr><td style="padding:6px 0;border-bottom:1px solid #e6e0d8;font-size:12px;color:#7a736a">' . $e($t)
-            . '</td><td align="right" style="padding:6px 0;border-bottom:1px solid #e6e0d8;font-size:13px;font-weight:600">' . $e($v) . '</td></tr>';
+    // Les faits, en deux colonnes qui tiennent sur 320 points : le libellé à
+    // gauche, la valeur à droite, et le libellé qui ne casse pas la valeur.
+    $faits = [['Période', mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']) . ' · ' . $d['jours'] . ' jours'],
+              ['Budget engagé par la centrale', mktBriefEuros($d['budget'])]];
+    if ($cible !== null) {
+        $faits[] = [$d['kpiNom'] . ' visé' . ($magasin !== '' ? ' — ' . $magasin : ''),
+            mktBriefValeur($cible, $d) . ($reference !== null ? ' (contre ' . mktBriefValeur($reference, $d) . ' l’an dernier)' : '')];
+    } else {
+        $faits[] = ['Objectif', $vars['objectif']];
+    }
+
+    $cartes = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0">';
+    foreach ($faits as [$t, $v]) {
+        $cartes .= '<tr><td style="padding:9px 0;border-bottom:1px solid #e6e0d8;font-size:12.5px;color:#7a736a;line-height:1.45">'
+            . $e($t) . '</td>'
+            . '<td align="right" valign="top" style="padding:9px 0 9px 10px;border-bottom:1px solid #e6e0d8;font-size:13.5px;font-weight:600;line-height:1.45">'
+            . $e($v) . '</td></tr>';
     }
     $cartes .= '</table>';
 
     $mot = ($d['mot']['texte'] ?? '') === '' ? ''
-        : '<div style="border-left:3px solid #8D1D2C;padding:2px 0 2px 12px;margin:16px 0 0">'
-          . '<div style="font-size:12.5px;line-height:1.65">' . nl2br($e($d['mot']['texte'])) . '</div>'
+        : '<div style="border-left:3px solid #8D1D2C;padding:2px 0 2px 13px;margin:18px 0 0">'
+          . '<div class="cmd" style="font-size:13px;line-height:1.65">' . nl2br($e($d['mot']['texte'])) . '</div>'
           . '<div style="font-size:11.5px;color:#7a736a;margin-top:6px">' . $e($d['mot']['nom'])
           . (($d['mot']['fonction'] ?? '') !== '' ? ' — ' . $e($d['mot']['fonction']) : '')
           . '</div></div>';
 
-    // Le visuel en tête du courrier : le franchisé voit la campagne avant de
-    // lire ses chiffres. Il est déjà réduit — c'est le même que la note.
-    $banniere = ($d['visuel']['uri'] ?? '') === '' ? ''
-        : '<img src="' . $d['visuel']['uri'] . '" alt="' . $e($d['nom'])
-          . '" style="width:100%;max-width:100%;border-radius:8px;display:block;margin:0 0 14px">';
+    // Le visuel en tête, en bandeau : le franchisé voit la campagne avant de
+    // lire ses chiffres, sans que l'image mange l'écran.
+    $bandeau = mktBriefBanniere($d);
+    $banniere = $bandeau === '' ? ''
+        : '<tr><td style="padding:0"><img src="' . $bandeau . '" alt="' . $e($d['nom'])
+          . '" width="600" style="width:100%;max-width:100%;height:auto;display:block"></td></tr>';
 
     $agence = $c['agence'] ?? [];
     $signature = (($agence['nom'] ?? '') === '' && ($agence['logo'] ?? '') === '') ? ''
@@ -858,13 +916,23 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
           . $e(($agence['nom'] ?? '') !== '' ? $agence['nom'] : 'agence partenaire') . '</strong>'
           . (($agence['site'] ?? '') !== '' ? '<br>' . $e($agence['site']) : '') . '</td></tr></table>';
 
-    $contenu = $banniere . $intro . $mot . $cartes
-        . '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note complète est en pièce jointe, en PDF'
-        . (($d['visuel']['uri'] ?? '') === '' ? ' : une page, à imprimer et à afficher en réserve.'
-            : ' : la note en page 1, le visuel de la campagne en annexe page 2, à imprimer et à afficher.')
+    // Le corps entier tient dans UNE cellule padée : c'est la seule structure
+    // qu'un courriel rend pareil du téléphone au bureau. Les paragraphes
+    // posés directement dans le <table> du squelette en sortaient — les
+    // navigateurs les remontent hors du tableau, d'où une lettre sans marges
+    // et une image en pleine largeur.
+    $contenu = $banniere
+        . '<tr><td class="pad" style="padding:20px 26px 4px;font-family:\'Segoe UI\',Arial,sans-serif;color:#221E1A">'
+        . '<div class="cmd" style="font-size:13.5px;line-height:1.65">' . $intro . '</div>'
+        . $mot . $cartes
+        . '<p style="margin:18px 0 0;font-size:12.5px;line-height:1.6">'
+        . (($d['visuel']['uri'] ?? '') === ''
+            ? 'La note complète est en pièce jointe, en PDF — une page, à imprimer et à afficher en réserve.'
+            : 'La note complète est en pièce jointe : une page de chiffres, puis le visuel format par format et la liste des documents.')
         . '</p>'
-        . '<p style="margin:14px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>'
-        . $signature;
+        . '<p style="margin:16px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>'
+        . $signature
+        . '</td></tr>';
 
     $squelette = trim((string) ($c['html'] ?? ''));
     if ($squelette === '') {
@@ -933,7 +1001,7 @@ function ep_mkt_brief(int $id): array
             'agence' => $c['agence']],
         'visuel' => ['present' => ($d['visuel']['uri'] ?? '') !== '', 'motif' => $d['visuel']['motif'] ?? ''],
         'apercuPdf' => mktBriefPdfHtml($d, '', $c),
-        'apercuMail' => mktBriefMailHtml($d, $c, $dest[0]['magasin'] ?? '', $dest[0]['franchise'] ?? ''),
+        'apercuMail' => mktBriefMailHtml($d, $c, $dest[0]['magasin'] ?? '', $dest[0]['franchise'] ?? '', (string) ($dest[0]['id'] ?? '')),
         'fichier' => mktBriefNomFichier($d),
         'journal' => array_slice($journal, 0, 30),
         'moteurPdf' => mktBriefMoteur()];
@@ -1047,7 +1115,7 @@ function wr_mkt_brief_envoyer(int $id): array
         $vars = ['campagne' => $d['nom'], 'du' => mktBriefJour($d['du']), 'au' => mktBriefJour($d['au']),
             'magasin' => $t['magasin'], 'franchise' => $t['franchise'], 'type' => $d['type']];
         $sujet = caMailRemplir((string) $c['sujet'], $vars);
-        $html = mktBriefMailHtml($d, $c, $t['magasin'], $t['franchise']);
+        $html = mktBriefMailHtml($d, $c, $t['magasin'], $t['franchise'], (string) ($t['id'] ?? ''));
         // Le PDF est joint QUAND il existe : sans moteur sur le serveur, la
         // lettre part quand même et le dit, plutôt que de ne pas partir.
         $pieces = $pdf === null ? $annexes
