@@ -55,3 +55,4 @@
 2026-08-25T17:43:15Z total-reseau-et-tuile-budget
 2026-08-25T17:44:44Z chiffres-entiers
 2026-08-25T17:57:30Z annexes-campagne
+2026-08-25T18:08:44Z assistant-toutes-campagnes

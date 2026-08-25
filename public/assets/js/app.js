@@ -4481,11 +4481,15 @@ class App {
       nBoutiques: c2.nBoutiques,
       editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
       note: () => this.mkNoteOuvrir(c2.id),
-      // Un brouillon se FINIT dans l'assistant : la carte rapide ne porte ni
-      // l'offre, ni les objectifs, ni le planning qu'il reste à remplir.
-      reprendre: c2.statut !== 'draft' ? null : () => {
+      // L'assistant s'ouvre pour TOUTE campagne, pas seulement les brouillons.
+      // Il était réservé aux brouillons — « une planifiée se corrige dans la
+      // carte » —, mais la carte ne porte ni l'offre, ni les canaux, ni les
+      // documents joints : une campagne lancée n'avait plus aucun moyen d'être
+      // modifiée. L'assistant réécrit désormais le statut qu'elle a.
+      reprendre: () => {
         window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href);
       },
+      reprendreNom: c2.statut === 'draft' ? 'Reprendre' : 'Assistant',
       supprimer: () => {
         if (!window.confirm('Supprimer définitivement la campagne « ' + c2.nom + ' » ?')) { return; }
         this.api('DELETE', '/marketing/campagne/' + c2.id).then(r => {
@@ -4513,10 +4517,10 @@ class App {
           levier: t.levier || '—',
           statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
           periode: (c2.debut ? this.fD(c2.debut) : '—') + ' → ' + (c2.fin ? this.fD(c2.fin) : '—'),
-          // Un brouillon se finit dans l'assistant ; une planifiée se corrige.
-          ouvrir: c2.statut === 'draft'
-            ? () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); }
-            : () => this.setState({ mkEdit: this.mkVersForm(c2) }),
+          // La vignette ouvre l'assistant : c'est là que tout se règle, y
+          // compris pour une campagne déjà planifiée.
+          ouvrir: () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); },
+          corriger: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
           // La note pour les franchisés : une page A4, imprimable, et le
           // courrier qui la porte. Bouton à part sur la vignette — ouvrir la
           // campagne et l'expliquer au réseau ne sont pas le même geste.

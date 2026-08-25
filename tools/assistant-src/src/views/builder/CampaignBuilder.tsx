@@ -492,10 +492,21 @@ export default function CampaignBuilder({
   )
 
   const [restored, setRestored] = useState(campaignId === null)
+  /**
+   * Le statut TEL QU'IL EST EN BASE.
+   *
+   * L'enregistrement d'étape écrivait « draft » sans regarder : rouvrir une
+   * campagne planifiée pour corriger un budget la faisait retomber en
+   * brouillon, et elle disparaissait des écrans qui ne lisent que les
+   * campagnes lancées. On réécrit donc le statut qu'elle a — c'est l'étape
+   * « Récap » qui le change, elle seule.
+   */
+  const [statutServeur, setStatutServeur] = useState('draft')
 
   if (!restored && loaded.data) {
     const next = fromState(loaded.data, refs, role)
     setDraft(next)
+    setStatutServeur(loaded.data.status_code ?? 'draft')
     setStep(resumeStep(loaded.data.draft_step ?? null, next))
     setRestored(true)
   }
@@ -525,7 +536,7 @@ export default function CampaignBuilder({
         return inserted_id
       }
 
-      await api.replaceCampaignDraft(savedId, { ...payload, status_code: 'draft' })
+      await api.replaceCampaignDraft(savedId, { ...payload, status_code: statutServeur })
       setSavedAt(new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }))
 
       return savedId

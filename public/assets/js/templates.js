@@ -2632,7 +2632,10 @@ function tplMktCampagnes(c, x){
             <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:${v.couleur}"></span>${esc(v.type)}</span>
             <span><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:${v.couleur}1f;color:${v.couleur}">${esc(v.levier)}</span></span>
             <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(v.periode)}</span>
-            <button ${x.A(v.note)} class="hv-fade" title="La note pour les franchisés — à imprimer ou à envoyer" style="align-self:flex-start;margin-top:2px;border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text);cursor:pointer">Note aux franchisés</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
+              <button ${x.A(v.note)} class="hv-fade" title="La note pour les franchisés — à imprimer ou à envoyer" style="border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text);cursor:pointer">Note aux franchisés</button>
+              <button ${x.A(v.corriger)} class="hv-fade" title="Corriger nom, dates, budget et statut sans passer par l’assistant" style="border:1px solid var(--color-border-tertiary);background:#fff;border-radius:999px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;color:var(--color-text-muted);cursor:pointer">Corriger</button>
+            </div>
           </div>
         </div>`).join('')}
       </div>
@@ -2656,7 +2659,7 @@ function tplMktCampagnes(c, x){
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.depense)}</td>
           <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || '—'}</td>
           <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
-            ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Finir ce brouillon dans l’assistant" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Reprendre</button>` : ''}
+            ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Ouvrir la campagne dans l’assistant — offre, canaux, documents joints" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">${esc(l.reprendreNom || 'Assistant')}</button>` : ''}
             <button ${x.A(l.note)} title="La note pour les franchisés — à imprimer ou à envoyer" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Note</button>
             <button ${x.A(l.editer)} style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Corriger</button>
             <button ${x.A(l.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>
