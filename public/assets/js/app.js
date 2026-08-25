@@ -233,7 +233,11 @@ class App {
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
       bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne',
       suivi: 'suivi-taches', controle: 'controle-taches', reporting: 'reporting',
-      diagnostic: 'diagnostic', params: 'parametres',
+      // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
+      // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
+      // #/parametres depuis un signet résolvait vers un écran inconnu et
+      // l'affichage tombait — « rendu impossible », page blanche.
+      diagnostic: 'diagnostic', parametres: 'parametres',
     };
   }
   /**
