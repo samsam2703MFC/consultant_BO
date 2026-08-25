@@ -10626,8 +10626,15 @@ class App {
       // Le carnet d'adresses : les fournisseurs qui ont une commande en
       // attente, et à qui l'on doit donc écrire. Ni le panel ni le référentiel
       // local ne portent leur adresse — elle se saisit ici.
+      fenetre: (cmEt.fenetreJours || 30) + ' jours',
       fournisseurs: (cmEt.fournisseurs || []).map(f => ({
         nom: f.nom, commandes: f.commandes, total: this.fU(f.total || 0),
+        // Ce qui dort dans l'ERP : compté, jamais relancé. Le taire ferait
+        // croire que le fournisseur n'a rien en souffrance.
+        anciennes: f.anciennes
+          ? f.anciennes + ' ancienne(s) · ' + this.fU(f.anciennesTotal || 0)
+            + (f.plusRecenteAncienne ? ' · la plus récente ' + this.fD(f.plusRecenteAncienne) : '')
+          : '',
         email: (cmD['mail:' + f.cle] != null) ? cmD['mail:' + f.cle] : (f.email || ''),
         source: f.source === 'panel' ? 'du panel' : '',
         sans: !f.email,

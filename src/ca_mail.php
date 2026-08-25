@@ -31,6 +31,14 @@ function caMailDefauts(): array
         'auFournisseur' => true,
         'destinataire' => 'achat@atelierby.be',
         'copie' => '',
+        // MESURÉ : l'ERP garde 115 réquisitions au statut « en attente »,
+        // toutes de septembre 2025 à avril 2026 — ce statut ne se referme
+        // jamais. Relancer un fournisseur sur une commande de l'an dernier
+        // n'appelle rien : on ne chasse que ce qui est encore d'actualité.
+        'fenetreJours' => 30,
+        // Et jamais un mur de lignes : au-delà, le courrier dit combien il en
+        // reste plutôt que d'en imprimer cent.
+        'maxLignes' => 15,
         'sujet' => 'Commandes en attente — {{fournisseur}} ({{nCommandes}})',
         'corps' => "Bonjour,\n\n"
             . "Les commandes suivantes vous attendent et n'ont pas encore été acceptées :\n\n"
@@ -274,10 +282,14 @@ function caMailEtat(): array
     try {
         $d = ep_ca_commandes();
         if (($d['etat'] ?? '') === 'ok') {
-            foreach (caMailGroupes((array) ($d['lignes'] ?? [])) as $cle => $g) {
+            foreach (caMailGroupes((array) ($d['lignes'] ?? []), (int) ($c['fenetreJours'] ?? 30)) as $cle => $g) {
                 $adresse = caMailAdresse($g['nom'], $carnet, $g['mails']);
                 $fournisseurs[] = ['cle' => $cle, 'nom' => $g['nom'], 'commandes' => $g['n'],
                     'total' => round((float) $g['total'], 2), 'email' => $adresse,
+                    // Ce qui dort : compté, jamais relancé, et dit.
+                    'anciennes' => (int) $g['anciennes'],
+                    'anciennesTotal' => round((float) $g['anciennesTotal'], 2),
+                    'plusRecenteAncienne' => (string) $g['plusRecenteAncienne'],
                     'source' => $adresse === '' ? '' : (isset($carnet[$cle]) ? 'corrigée ici' : 'du panel'),
                     'dernier' => (string) (is_array($suivi) ? ($suivi[$cle]['dernier'] ?? '') : ''),
                     'envois' => (int) (is_array($suivi) ? ($suivi[$cle]['envois'] ?? 0) : 0)];
@@ -294,6 +306,7 @@ function caMailEtat(): array
         'fournisseurs' => $fournisseurs,
         'sansAdresse' => count(array_filter($fournisseurs, fn ($f) => $f['email'] === '')),
         'gabaritVieux' => caMailGabaritVieux($c),
+        'fenetreJours' => (int) ($c['fenetreJours'] ?? 30),
         'defauts' => caMailDefauts(),
     ];
 }
@@ -431,7 +444,10 @@ function ep_ca_mail_cron(): array
  */
 function caMailRappels(array $lignes, array $c): array
 {
-    $groupes = caMailGroupes($lignes);
+    $tous = caMailGroupes($lignes, (int) ($c['fenetreJours'] ?? 30));
+    // Un fournisseur dont TOUT est hors fenêtre n'est pas relancé — mais il
+    // reste dans l'état de l'écran, qui dira ce qui dort.
+    $groupes = array_filter($tous, fn ($g) => $g['n'] > 0);
     $carnet = caMailCarnet();
     $suivi = setting('caMailQuotidien');
     if (!is_array($suivi)) { $suivi = []; }
@@ -509,11 +525,15 @@ function caMailRappels(array $lignes, array $c): array
  * chez chacun d'eux — chacun ne peut servir que sa part, mais tous doivent
  * savoir qu'on les attend.
  */
-function caMailGroupes(array $lignes): array
+function caMailGroupes(array $lignes, int $fenetreJours = 0): array
 {
+    $borne = $fenetreJours > 0 ? date('Y-m-d', strtotime('-' . $fenetreJours . ' day')) : '';
     $out = [];
     foreach ($lignes as $l) {
         if (strtoupper((string) ($l['statut'] ?? '')) !== 'PENDING') { continue; }
+        // Hors fenêtre : compté, jamais relancé. Le taire ferait croire que le
+        // fournisseur n'a rien en souffrance.
+        $vieille = $borne !== '' && (string) ($l['debut'] ?? '') !== '' && (string) $l['debut'] < $borne;
         $fours = (array) ($l['fournisseurs'] ?? []);
         if ($fours === []) { $fours = ['—']; }
         foreach ($fours as $nom) {
@@ -521,7 +541,15 @@ function caMailGroupes(array $lignes): array
             if ($nom === '' || $nom === '—') { continue; }
             $cle = caMailNom($nom);
             if (!isset($out[$cle])) {
-                $out[$cle] = ['nom' => $nom, 'n' => 0, 'total' => 0.0, 'lignes' => [], 'mails' => []];
+                $out[$cle] = ['nom' => $nom, 'n' => 0, 'total' => 0.0, 'lignes' => [], 'mails' => [],
+                    'anciennes' => 0, 'anciennesTotal' => 0.0, 'plusRecenteAncienne' => ''];
+            }
+            if ($vieille) {
+                $out[$cle]['anciennes']++;
+                $out[$cle]['anciennesTotal'] += (float) ($l['valeur'] ?? 0);
+                $d2 = (string) ($l['debut'] ?? '');
+                if ($d2 > $out[$cle]['plusRecenteAncienne']) { $out[$cle]['plusRecenteAncienne'] = $d2; }
+                continue;
             }
             $out[$cle]['n']++;
             $out[$cle]['total'] += (float) ($l['valeur'] ?? 0);
@@ -537,7 +565,9 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
 {
     $auj = new DateTimeImmutable(date('Y-m-d'));
     $lignes = [];
-    foreach ($g['lignes'] as $l) {
+    $maxL = 15;
+    $restant = max(0, count($g['lignes']) - $maxL);
+    foreach (array_slice($g['lignes'], 0, $maxL) as $l) {
         $debut = (string) ($l['debut'] ?? '');
         $jours = '';
         if ($debut !== '') {
@@ -561,7 +591,11 @@ function caMailVariablesGroupe(array $g, bool $sansAdresse): array
         'fournisseur' => (string) $g['nom'],
         'nCommandes' => (string) $g['n'],
         'total' => number_format((float) $g['total'], 2, ',', ' ') . ' €',
-        'lignes' => implode("\n", $lignes),
+        'lignes' => implode("\n", $lignes)
+            . ($restant > 0 ? "\n… et " . $restant . " autre(s) commande(s) en attente." : '')
+            . (((int) ($g['anciennes'] ?? 0)) > 0
+                ? "\n(" . (int) $g['anciennes'] . ' commande(s) plus ancienne(s) restent marquées en attente dans notre système ; '
+                  . 'elles ne font pas l’objet de ce rappel.)' : ''),
         'magasins' => implode(', ', $magasins),
         'avis' => $sansAdresse
             ? '(Ce fournisseur n’a pas d’adresse e-mail dans le cockpit : ce rappel vous est adressé à sa place.)'

@@ -4373,7 +4373,7 @@ function tplParams(c, x){
           <div style="font-size:13px;font-weight:500">Centrale d’achat — rappel quotidien au fournisseur</div>
           <span style="${c.cm.etatSt}">${esc(c.cm.etatTxt)}</span>
         </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Un e-mail <b style="font-weight:500">par fournisseur et par jour</b>, listant toutes ses commandes encore en attente — il repart chaque jour tant qu’une commande n’est pas acceptée, et s’arrête d’elle-même ensuite. Le fournisseur est le destinataire, la centrale reçoit la copie. Détection au rythme du cron horaire des rapports, envoi par la machine SMTP ci-dessus.</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Un e-mail <b style="font-weight:500">par fournisseur et par jour</b>, listant toutes ses commandes encore en attente — il repart chaque jour tant qu’une commande n’est pas acceptée, et s’arrête d’elle-même ensuite. Le fournisseur est le destinataire, la centrale reçoit la copie. Détection au rythme du cron horaire des rapports, envoi par la machine SMTP ci-dessus. Seules les commandes des <b style="font-weight:500">${esc(c.cm.fenetre)}</b> écoulés sont relancées : l’ERP garde des réquisitions « en attente » qu’il ne referme jamais, et relancer un fournisseur sur une commande de l’an dernier n’appelle rien. Les plus anciennes sont comptées, et le courrier dit qu’elles existent.</div>
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin-bottom:12px">
           <input type="checkbox" ${c.cm.actif ? 'checked' : ''} ${x.C(c.cm.toggle)} style="width:15px;height:15px;accent-color:var(--color-primary)">
           Envoi automatique activé
@@ -4412,7 +4412,7 @@ function tplParams(c, x){
           ${!(c.cm.fournisseurs || []).length ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucune commande en attente pour l’instant.</div>` : c.cm.fournisseurs.map(f => `
             <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
               <span style="min-width:190px;font-size:12.5px;font-weight:500">${esc(f.nom)}${f.sans ? ` <span style="font-size:10px;font-weight:600;color:var(--color-on-abricot)">sans adresse</span>` : ''}</span>
-              <span style="font-size:11px;color:var(--color-text-muted);min-width:140px">${f.commandes} commande(s) · ${esc(f.total)}</span>
+              <span style="font-size:11px;color:var(--color-text-muted);min-width:140px">${f.commandes} commande(s) · ${esc(f.total)}${f.anciennes ? `<div style="color:var(--color-on-abricot)">${esc(f.anciennes)}</div>` : ''}</span>
               <input value="${esc(f.email)}" ${x.C(f.set)} placeholder="commandes@fournisseur.be" style="border:0.5px solid ${f.sans ? '#E8C9A0' : 'var(--color-border-secondary)'};background:var(--color-surface);color:var(--color-text);border-radius:8px;height:30px;padding:0 10px;font-family:var(--font-ui);font-size:12px;flex:1;min-width:210px">
               <button ${x.A(f.enregistrer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Enregistrer</button>
               <span style="font-size:10.5px;color:var(--color-text-muted);min-width:150px">${esc(f.relance)}${f.source ? ' · ' + esc(f.source) : ''}</span>
