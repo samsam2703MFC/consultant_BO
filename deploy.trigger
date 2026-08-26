@@ -86,3 +86,4 @@
 2026-08-26 16:37 gammes saisonnieres
 2026-08-26 16:56 manque a gagner
 2026-08-26 19:46 liste documents mail
+2026-08-26 20:23 analyse magasin wizard

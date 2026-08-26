@@ -118,6 +118,7 @@ export function render(c, x){
       ${c.isSeuil ? tplSeuil(c, x) : ''}
       ${c.isUsage ? tplUsage(c, x) : ''}
       ${c.isManque ? tplManque(c, x) : ''}
+      ${c.isAnm ? tplAnm(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
@@ -7046,6 +7047,180 @@ function tplDiagnostic(c, x){
  * références. Le basculement se fait sur les mêmes données déjà chargées —
  * rien n'est relu, et les trois lectures ne peuvent donc pas diverger.
  */
+/**
+ * Analyse magasin — un wizard en quatre étapes.
+ *
+ * Le wizard n'est pas un formulaire : rien ne s'y saisit. C'est un ORDRE DE
+ * LECTURE — la synthèse, puis chaque levier, puis le plan — pour qu'un
+ * entretien franchisé suive toujours le même fil. Les étapes restent
+ * cliquables directement : on revient sur un chiffre sans refaire le tour.
+ */
+function tplAnm(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
+  const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 12px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const badge = t => `<span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;${
+    t === 'Assortiment' ? 'background:rgba(141,29,44,.09);color:var(--color-primary)'
+    : t === 'Catégorie' ? 'background:#FBEFE0;color:#8a5a1c'
+    : 'background:rgba(45,122,62,.1);color:#2d7a3e'}">${esc(t)}</span>`;
+
+  // La tête du wizard : le magasin, la durée, et les quatre étapes.
+  const tete = `
+    <div style="${carte}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px 12px">
+        <span style="${lbl}">Magasin</span>
+        <select ${x.C(c.anmChoisir)} style="${SEL}">
+          ${c.anmShops.map(m => `<option value="${esc(m.id)}" ${m.on ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}
+        </select>
+        <span style="width:10px"></span>
+        ${c.anmDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        <span style="flex:1"></span>
+        <span style="font-size:11px;color:var(--color-text-muted)">comparé aux autres magasins, à fréquentation ramenée</span>
+      </div>
+      <div style="display:flex;gap:0;border-top:0.5px solid var(--color-border-tertiary)">
+        ${c.anmEtapes.map((e2, i) => `
+        <div ${x.A(e2.choisir)} style="flex:1;text-align:center;padding:11px 6px;cursor:pointer;font-size:12px;
+          ${e2.on ? 'font-weight:600;color:var(--color-primary);box-shadow:inset 0 -2px 0 var(--color-primary)'
+            : e2.fait ? 'color:var(--color-text)' : 'color:var(--color-text-muted)'}
+          ${i ? ';border-left:0.5px solid var(--color-border-tertiary)' : ''}">
+          <span style="display:inline-flex;width:17px;height:17px;border-radius:50%;align-items:center;justify-content:center;font-size:10px;margin-right:6px;
+            ${e2.on || e2.fait ? 'background:var(--color-primary);color:#fff' : 'background:rgba(34,34,34,.08);color:var(--color-text-muted)'}">${e2.fait ? '✓' : e2.v}</span>${esc(e2.nom)}
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  if (c.anmChargement) {
+    return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
+      <div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Analyse en cours — la caisse est relue sur toute la période…</div></div>`;
+  }
+  if (c.anmMotif) {
+    return `<div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">${tete}
+      <div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.anmMotif)}</div></div>`;
+  }
+
+  const e1 = `
+    <div style="${carte}">
+      <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px">
+        ${c.anmKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
+          <b style="display:block;font-size:20px;font-weight:600;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
+          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span></div>`).join('')}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+      ${c.anmLeviers.map(l => `
+      <div style="${carte};padding:16px 18px${l.aller ? ';cursor:pointer' : ''}" ${l.aller ? x.A(l.aller) : ''}>
+        <span style="${lbl}">${esc(l.lbl)}</span>
+        <b style="display:block;font-size:21px;font-weight:600;color:var(--color-primary);margin:4px 0 1px">${esc(l.moisTxt)}</b>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.anTxt)}</span>
+        <div style="font-size:11.5px;color:var(--color-text);margin-top:8px;line-height:1.5">${esc(l.note)}</div>
+      </div>`).join('')}
+    </div>`;
+
+  const e2c = `
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">${esc(c.anmNom)} — part du CA par catégorie, contre la part réseau</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Une catégorie en retrait est un rayon qui existe déjà : la développer ne demande ni référence ni prix nouveaux. Le trait noir marque la part réseau.</div>
+      </div>
+      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Catégorie</th>
+          <th style="${th}">Votre part</th><th style="${th}">Part réseau</th>
+          <th style="${th};text-align:left;padding-left:22px">Position</th>
+          <th style="${th}">Écart</th><th style="${th}">Potentiel / mois</th><th style="${th};padding-right:18px">Par an</th>
+        </tr></thead>
+        <tbody>
+          ${c.anmGroupes.map(g => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(g.nom)}</td>
+            <td style="${td}">${esc(g.part)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(g.partReseau)}</td>
+            <td style="${td};text-align:left;padding-left:22px"><span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.07);width:150px;vertical-align:middle">
+              <i style="position:absolute;left:0;top:0;height:8px;border-radius:999px;width:${g.barre}%;background:${g.retrait ? 'var(--color-primary)' : '#2d7a3e'}"></i>
+              <i style="position:absolute;top:-3px;width:2px;height:14px;background:#26221E;border-radius:2px;left:${g.barreReseau}%"></i></span></td>
+            <td style="${td};color:${g.retrait ? 'var(--color-primary)' : '#2d7a3e'};font-weight:600">${esc(g.delta)}</td>
+            <td style="${td};font-weight:600;${g.retrait ? 'color:var(--color-primary)' : 'color:var(--color-text-muted);font-weight:400;font-size:11px'}">${esc(g.potMois)}</td>
+            <td style="${td};padding-right:18px;color:var(--color-text-muted)">${esc(g.potAn)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Le potentiel = revenir à la part médiane des autres magasins, le CA mensuel actuel posé comme assiette. Une catégorie au-dessus du réseau n’est pas « à corriger » : c’est l’identité du magasin — elle est marquée comme force, jamais comptée en négatif.</div>
+    </div>`;
+
+  const e3 = `
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">${esc(c.anmNom)} — les prix sous le réseau</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Au prix réellement encaissé, remises comprises. Une référence dont le volume dépasse celui des autres n’apparaît pas : son prix bas travaille. Le gain est à volume constant — si le volume tient, c’est de la marge pure.</div>
+      </div>
+      ${!c.anmPrix.length ? `<div style="font-size:12.5px;color:#2d7a3e;padding:14px 18px 16px">Aucun prix sous le réseau : la grille de ce magasin est au niveau.</div>` : `
+      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Référence</th>
+          <th style="${th};text-align:left">Catégorie</th>
+          <th style="${th}">Votre prix</th><th style="${th}">Prix réseau</th><th style="${th}">Écart</th>
+          <th style="${th}">Volume / mois</th><th style="${th}">Gain / mois</th><th style="${th};padding-right:18px">Par an</th>
+        </tr></thead>
+        <tbody>
+          ${c.anmPrix.map(r => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(r.nom)}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.groupe)}</td>
+            <td style="${td}">${esc(r.prix)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(r.prixReseau)}</td>
+            <td style="${td};color:${r.fort ? 'var(--color-primary)' : '#C17A2A'};font-weight:600">${esc(r.ecart)}</td>
+            <td style="${td}">${esc(r.volMois)}</td>
+            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(r.gainMois)}</td>
+            <td style="${td};padding-right:18px;color:var(--color-text-muted)">${esc(r.gainAn)}</td>
+          </tr>`).join('')}
+          ${!c.anmPrixReste ? '' : `<tr><td colspan="8" style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${esc(c.anmPrixReste)}</td></tr>`}
+        </tbody>
+      </table></div>`}
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Prix comparés sur la même période, entre magasins ayant vendu au moins 5 unités. L’alignement est une décision du franchisé : l’écran chiffre, il ne fixe pas les prix.</div>
+    </div>`;
+
+  const e4 = `
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">${esc(c.anmNom)} — le plan, classé par euros mensuels</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Les actions des trois leviers fusionnées. La colonne « cumul » se lit comme un objectif d’équipe : jusqu’où on descend la liste, et ce que ça fait sur l’année.</div>
+      </div>
+      ${!c.anmPlan.length ? `<div style="font-size:12.5px;color:#2d7a3e;padding:14px 18px 16px">Rien à recommander : ce magasin vend ce que le réseau vend, aux prix du réseau.</div>` : `
+      <div style="overflow-x:auto;padding-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">#</th>
+          <th style="${th};text-align:left">Action</th><th style="${th};text-align:left">Levier</th>
+          <th style="${th}">/ mois</th><th style="${th}">/ an</th><th style="${th};padding-right:18px">Cumul / an</th>
+        </tr></thead>
+        <tbody>
+          ${c.anmPlan.map(a => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${a.rang}</td>
+            <td style="${td};text-align:left;font-weight:500;line-height:1.45">${esc(a.action)}</td>
+            <td style="${td};text-align:left">${badge(a.levier)}</td>
+            <td style="${td};font-weight:600">${esc(a.mois)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(a.an)}</td>
+            <td style="${td};padding-right:18px;font-weight:600;color:var(--color-primary)">${esc(a.cumul)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`}
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55"><b>${esc(c.anmPlanTotal)}</b> Les actions d’assortiment sont déjà retenues à la moitié de leur estimation — un plan qui promet le maximum n’est pas un plan.</div>
+    </div>`;
+
+  return `
+  <div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
+    ${tete}
+    ${c.anmEtape === 1 ? e1 : c.anmEtape === 2 ? e2c : c.anmEtape === 3 ? e3 : e4}
+    <div style="display:flex;align-items:center;gap:10px">
+      ${c.anmPrec ? `<button ${x.A(c.anmPrec)} style="${pill(false)}">← Précédent</button>` : ''}
+      <span style="flex:1"></span>
+      <span style="font-size:10.5px;color:var(--color-text-muted);max-width:760px;text-align:right;line-height:1.5">${esc(c.anmSource || '')}</span>
+      ${c.anmSuiv ? `<button ${x.A(c.anmSuiv)} style="${pill(true)}">Suivant →</button>` : ''}
+    </div>
+  </div>`;
+}
+
 function tplManque(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';

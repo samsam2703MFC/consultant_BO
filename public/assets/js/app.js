@@ -230,6 +230,7 @@ class App {
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
       usage: 'usage-catalogue',
       manque: 'manque-a-gagner',
+      analysemag: 'analyse-magasin',
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
@@ -655,6 +656,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
       manque: ['Manque à gagner', 'Ce que chaque magasin ne vend pas, en euros. Pour chaque référence qu’il n’a pas vendue alors que les autres la vendaient : leur volume médian par jour d’ouverture, ramené à sa fréquentation, au prix encaissé. Une estimation à assortiment comparable — pas une promesse de chiffre d’affaires.'],
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
@@ -1006,6 +1008,10 @@ class App {
         // Le badge compte les magasins sous la cible : il n'apparaît qu'une
         // fois l'écran ouvert une première fois, la lecture étant paresseuse.
         ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]]],
+      // Le franchisé ne demande pas « où est le problème ? » mais « qu'est-ce
+      // que JE fais ? » : cette section répond magasin par magasin.
+      ['Analyse magasin', [
+        ['analysemag', 'Analyse', 0]]],
       // Le budget est une affaire de finance, pas de performance : il a sa
       // section, demandée telle quelle, et garde son sous-menu.
       ['Finance', [
@@ -1094,11 +1100,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1404,6 +1410,7 @@ class App {
     if (common.isBxc) this.valsBxc(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
+    if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
       common.mesSimple = this.state.mesSimple !== false;
@@ -4929,6 +4936,110 @@ class App {
         .then(d => { this._usageDetEnCours = false; this._usageDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
         .catch(() => { this._usageDetEnCours = false; this._usageDet[cleD] = null; this.setState({}); });
     }
+  }
+
+  /**
+   * L'analyse d'un magasin : une lecture par magasin et par durée.
+   *
+   * Le serveur rend les quatre étapes d'un coup — leviers et plan viennent du
+   * même calcul, et un wizard qui rechargerait entre deux étapes pourrait
+   * afficher un plan qui ne correspond plus aux leviers montrés avant.
+   */
+  anmCharge(){
+    const S = this.state;
+    const cle = (S.anmShop || '') + '|' + (S.anmMois || 6);
+    if (!this._anm) { this._anm = {}; }
+    if (this._anm[cle] === undefined && !this._anmEnCours) {
+      this._anmEnCours = true;
+      readOne('/magasin/analyse?mois=' + (S.anmMois || 6)
+        + (S.anmShop ? '&shop=' + encodeURIComponent(S.anmShop) : ''))
+        .then(d => { this._anmEnCours = false; this._anm[cle] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._anmEnCours = false; this._anm[cle] = null; this.setState({}); });
+    }
+  }
+
+  valsAnm(common){
+    const S = this.state;
+    const d = (this._anm || {})[(S.anmShop || '') + '|' + (S.anmMois || 6)];
+    const court = nom => String(nom || '').split(' - ').pop();
+    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const nb = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
+    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+    const px = v => (v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €');
+
+    common.anmChargement = d === undefined;
+    common.anmMotif = d === null ? 'L’analyse n’a pas pu être calculée.' : ((d && d.motif) || '');
+    common.anmShops = ((d && d.shops) || []).map(x => ({ id: x.id, nom: court(x.nom),
+      on: (d && d.shop) === x.id }));
+    common.anmChoisir = e => this.setState({ anmShop: e.target.value, anmEtape: 1 });
+    common.anmDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === (S.anmMois || 6),
+      choisir: () => this.setState({ anmMois: v }) }));
+
+    const etape = S.anmEtape || 1;
+    common.anmEtapes = [[1, 'Vue d’ensemble'], [2, 'Catégories'], [3, 'Prix'], [4, 'Le plan']]
+      .map(([v, nom]) => ({ v, nom, on: etape === v, fait: v < etape,
+        choisir: () => this.setState({ anmEtape: v }) }));
+    common.anmEtape = etape;
+    common.anmPrec = etape > 1 ? () => this.setState({ anmEtape: etape - 1 }) : null;
+    common.anmSuiv = etape < 4 ? () => this.setState({ anmEtape: etape + 1 }) : null;
+    if (!d || d.motif) { return; }
+
+    const k = d.kpis, l1 = d.levier1, l2 = d.levier2, l3 = d.levier3;
+    common.anmNom = court(d.nom);
+    common.anmKpis = [
+      { lbl: 'CA — ' + d.n + ' mois', v: eur(k.ca), sub: eur(k.caMois) + ' / mois' },
+      { lbl: 'Panier', v: px(k.panier), sub: 'réseau : ' + px(k.panierReseau) },
+      { lbl: 'Assortiment vendu', v: nb(k.refsVendues), sub: 'meilleur magasin : ' + nb(k.refsMax) + ' références' },
+      { lbl: 'Potentiel identifié', v: '+ ' + eur(k.totalMois) + ' / mois',
+        sub: eur(k.totalAn) + ' / an — ' + pc(k.partCa) + ' du CA actuel', accent: true },
+    ];
+    common.anmLeviers = [
+      { lbl: 'Levier 1 — Assortiment', mois: l1.retenuMois, an: l1.retenuAn,
+        regle: 'en rattrapant la moitié du manque (' + eur(l1.manque) + ' sur ' + d.n + ' mois)',
+        note: nb(l1.refs) + ' références que les autres vendent et pas lui — le détail est à l’écran « Manque à gagner ».',
+        aller: null },
+      { lbl: 'Levier 2 — Catégories à pousser', mois: l2.potMois, an: l2.potAn,
+        regle: 'en revenant à la part réseau',
+        note: l2.enRetrait + ' catégorie(s) où sa part du CA est sous celle des autres — étape 2.',
+        aller: () => this.setState({ anmEtape: 2 }) },
+      { lbl: 'Levier 3 — Prix sous le réseau', mois: l3.potMois, an: l3.potAn,
+        regle: 'à volume constant',
+        note: l3.nb + ' référence(s) vendues sous le prix des autres, sans volume supérieur — étape 3.',
+        aller: () => this.setState({ anmEtape: 3 }) },
+    ].map(x => ({ ...x, moisTxt: '+ ' + eur(x.mois) + ' / mois', anTxt: eur(x.an) + ' / an — ' + x.regle }));
+
+    common.anmGroupes = (l2.groupes || []).map(g => ({
+      nom: g.nom, part: pc(g.part), partReseau: pc(g.partReseau),
+      delta: (g.delta > 0 ? '+ ' : '− ') + Math.abs(g.delta).toFixed(1).replace('.', ',') + ' pts',
+      retrait: g.potMois > 0, force: g.force,
+      potMois: g.potMois > 0 ? eur(g.potMois) : (g.force ? 'sa force' : 'au niveau'),
+      potAn: g.potMois > 0 ? eur(g.potAn) : '—',
+      // Les deux barres partagent l'échelle de la plus grande part de la
+      // liste : comparer des barres normalisées chacune sur soi ne dit rien.
+      barre: g.part, barreReseau: g.partReseau,
+    }));
+    const maxPart = Math.max(1, ...common.anmGroupes.map(g => Math.max(g.barre, g.barreReseau)));
+    common.anmGroupes.forEach(g => { g.barre = Math.round(100 * g.barre / maxPart);
+      g.barreReseau = Math.round(100 * g.barreReseau / maxPart); });
+
+    common.anmPrix = (l3.refs || []).map(r => ({
+      nom: r.nom, groupe: r.groupe, prix: px(r.prix), prixReseau: px(r.prixReseau),
+      ecart: '− ' + Math.abs(r.ecartPct).toFixed(1).replace('.', ',') + ' %',
+      fort: r.ecartPct <= -8,
+      volMois: nb(r.volMois) + ' u', gainMois: eur(r.gainMois), gainAn: eur(r.gainAn),
+    }));
+    common.anmPrixReste = l3.resteN ? '+ ' + l3.resteN + ' autres références — '
+      + eur(l3.resteMois) + ' / mois' : '';
+
+    common.anmPlan = (d.plan || []).map(a => ({
+      rang: a.rang, action: a.action, levier: a.levier,
+      mois: eur(a.eurMois), an: eur(a.eurAn), cumul: eur(a.cumulAn),
+    }));
+    common.anmPlanTotal = d.plan && d.plan.length
+      ? 'Plan complet : + ' + eur(d.plan.reduce((t, a) => t + a.eurMois, 0)) + ' / mois — '
+        + eur(d.plan[d.plan.length - 1].cumulAn) + ' / an si tout est tenu.'
+      : '';
+    common.anmSource = d.source || '';
   }
 
   /**
