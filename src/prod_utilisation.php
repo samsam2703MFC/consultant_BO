@@ -209,9 +209,40 @@ function ep_prod_utilisation(): array
         usort($manque, static fn ($a, $b) => $b['magasins'] <=> $a['magasins'] ?: strcmp($a['nom'], $b['nom']));
         $lignes[$i]['manquantes'] = count($manque);
         $lignes[$i]['manquantesTop'] = array_slice($manque, 0, 12);
-        unset($lignes[$i]['vues']);
     }
 
+    // --- Par catégorie : c'est là que l'écart se lit. « 30 % du catalogue »
+    // ne dit pas quoi faire ; « aucune tarte sur douze » si.
+    $parCat = [];
+    foreach ($refs as $pid => $r) {
+        $c = $r['categorie'] !== '' ? $r['categorie'] : '— sans catégorie';
+        if (!isset($parCat[$c])) { $parCat[$c] = ['nom' => $c, 'groupe' => $r['groupe'], 'catalogue' => 0, 'reseau' => 0, 'magasins' => []]; }
+        $parCat[$c]['catalogue']++;
+        if (isset($vuesReseau[$pid])) { $parCat[$c]['reseau']++; }
+    }
+    foreach ($lignes as $l) {
+        $vues = array_flip($l['vues'] ?? []);
+        foreach ($parCat as $c => $x) { $parCat[$c]['magasins'][$l['id']] = 0; }
+        foreach ($refs as $pid => $r) {
+            if (!isset($vues[$pid])) { continue; }
+            $c = $r['categorie'] !== '' ? $r['categorie'] : '— sans catégorie';
+            $parCat[$c]['magasins'][$l['id']]++;
+        }
+    }
+    // Les catégories les plus DÉLAISSÉES d'abord : celles où le réseau tient
+    // beaucoup de références et où les magasins en vendent peu.
+    $cats = array_values($parCat);
+    foreach ($cats as $i => $c) {
+        $moy = $c['catalogue'] > 0 && $c['magasins'] !== []
+            ? array_sum($c['magasins']) / count($c['magasins']) / $c['catalogue'] : 0;
+        $cats[$i]['tauxMoyen'] = round(100 * $moy, 1);
+        $cats[$i]['manque'] = $c['catalogue'] - $c['reseau'];
+    }
+    usort($cats, static fn ($a, $b) => ($b['catalogue'] - $b['reseau'] * 0) <=> ($a['catalogue'])
+        ?: $a['tauxMoyen'] <=> $b['tauxMoyen']);
+    $out['parCategorie'] = $cats;
+
+    foreach ($lignes as $i => $l) { unset($lignes[$i]['vues']); }
     $out['magasins'] = $lignes;
     $out['seuilManque'] = $seuil;
     $out['source'] = 'lignes de ticket de la caisse (transaction_product), '
