@@ -450,7 +450,14 @@ function ep_mag_analyse_pdf(): array
         http_response_code(422);
         return ['error' => $d['motif'] ?? 'analyse impossible'];
     }
-    $pdf = rapPdfRendu(anmPdfHtml($d), [
+    // Un document COMPLET, jamais un fragment : sans <html>/<body>,
+    // wkhtmltopdf ajoute une page fantôme en fin de fichier — sans pied de
+    // page, donc même pas une page à lui (mesuré : trois pages dont une
+    // vide, quel que soit l'idiome de saut employé).
+    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
+        . htmlspecialchars('Analyse magasin — ' . $d['nom'], ENT_QUOTES) . '</title></head><body>'
+        . anmPdfHtml($d) . '</body></html>';
+    $pdf = rapPdfRendu($doc, [
         'magasin' => $d['nom'],
         'rapport' => 'Analyse magasin — ' . (int) $d['n'] . ' mois',
         'genere' => date('d/m/Y à H:i'),

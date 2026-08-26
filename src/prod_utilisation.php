@@ -704,7 +704,11 @@ function ep_prod_utilisation_jamais_pdf(): array
     $groupe = trim((string) ($_GET['groupe'] ?? ''));
     $d = utilJamaisVendues($n, $groupe);
 
-    $pdf = rapPdfRendu(utilJamaisPdfHtml($d, $n), [
+    // Document complet, pour la même raison que l'analyse magasin : un
+    // fragment fait naître une page fantôme en fin de fichier.
+    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Références jamais vendues</title></head><body>'
+        . utilJamaisPdfHtml($d, $n) . '</body></html>';
+    $pdf = rapPdfRendu($doc, [
         'magasin' => 'Réseau',
         'rapport' => 'Références jamais vendues — ' . $n . ' mois',
         'genere' => date('d/m/Y à H:i'),

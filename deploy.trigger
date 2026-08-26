@@ -93,3 +93,4 @@
 2026-08-26 20:40 pdf page blanche
 2026-08-26 20:51 pdf identite maison
 2026-08-26 20:55 saut de page fiable
+2026-08-26 21:07 squelette html pdf
