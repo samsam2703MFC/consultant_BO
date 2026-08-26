@@ -7065,13 +7065,13 @@ function tplUsage(c, x){
         ${d.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du détail…</div>`
         : d.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(d.err)}</div>` : `
         <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">
-          <span style="${lbl}">${esc(d.nom)} — détail par catégorie</span>
+          <span style="${lbl}">${esc(d.nom)} — détail par groupe et sous-catégorie</span>
           <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.resume)}</span>
           <span style="flex:1"></span>
           ${d.tris.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
         </div>
         <div style="${GRILLE};font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
-          <span>Catégorie</span><span style="text-align:right">Catalogue</span><span></span>
+          <span>Groupe · sous-catégorie</span><span style="text-align:right">Catalogue</span><span></span>
           <span style="text-align:right">Vendues</span><span style="text-align:right">À rattraper</span>
         </div>
         ${d.groupes.map(g => `
