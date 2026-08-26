@@ -62,6 +62,119 @@ function utilColonnes(string $table, array $candidats): ?array
     return $out;
 }
 
+/**
+ * Les gammes saisonnières, par référence de caisse.
+ *
+ * Le catalogue n'est pas une liste plate : 441 références portent une gamme —
+ * Noël, Pascale, Estivale, Saint-Nicolas. Une bûche non vendue entre mars et
+ * août n'est pas une bûche délaissée : sa gamme n'était pas ouverte. Les
+ * compter avec les autres fait deux dégâts d'un coup — le taux d'usage du
+ * magasin baisse sans qu'il y soit pour rien, et la liste des « jamais
+ * vendues » se remplit de références qu'il était normal de ne pas vendre.
+ *
+ * Les gammes sont RÉCURRENTES (mesuré : les 14 le sont) : l'année portée par
+ * `start_date` ne veut rien dire, seuls comptent le jour et le mois. On
+ * travaille donc en MOIS, ce qui suffit à décider et se raconte en une phrase.
+ *
+ * @return array{parProduit:array<int,list<string>>,mois:array<string,list<int>>}
+ */
+function utilGammes(): array
+{
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $cache = ['parProduit' => [], 'mois' => []];
+
+    $periodes = [];
+    try {
+        foreach (Db::rows('SELECT id, name, start_date, end_date
+                             FROM product_availability_period WHERE is_active = 1') as $p) {
+            $du = (string) ($p['start_date'] ?? '');
+            $au = (string) ($p['end_date'] ?? '');
+            $nom = (string) $p['name'];
+            $mois = [];
+            $t1 = $du !== '' ? strtotime($du) : false;
+            $t2 = $au !== '' ? strtotime($au) : false;
+            if ($t1 === false || $t2 === false || $t2 - $t1 >= 364 * 86400) {
+                // Une gamme qui couvre l'année (la « Gamme Standard » va du
+                // 1er janvier au 31 décembre) n'est pas une saison : elle est
+                // ouverte tout le temps.
+                $mois = range(1, 12);
+            } else {
+                $m1 = (int) date('n', $t1); $m2 = (int) date('n', $t2);
+                $m = $m1;
+                for ($i = 0; $i < 12; $i++) {
+                    $mois[] = $m;
+                    if ($m === $m2) { break; }
+                    $m = $m === 12 ? 1 : $m + 1;   // les gammes passent l'hiver
+                }
+            }
+            $periodes[(int) $p['id']] = ['nom' => $nom, 'mois' => $mois];
+            $cache['mois'][$nom] = $mois;
+        }
+        foreach (Db::rows('SELECT id_product, id_period FROM product_availability_period_connection') as $k) {
+            $pid = (int) $k['id_product'];
+            $per = $periodes[(int) $k['id_period']] ?? null;
+            if ($per === null) { continue; }
+            $cache['parProduit'][$pid][] = $per['nom'];
+        }
+    } catch (PDOException $e) { /* pas de gammes lisibles : tout est permanent */ }
+    return $cache;
+}
+
+/** Les mois (1..12) que couvre la fenêtre d'analyse. */
+function utilMoisCouverts(array $mois): array
+{
+    $out = [];
+    foreach ($mois as $m) { $out[(int) substr($m['cle'], 5, 2)] = true; }
+    return array_keys($out);
+}
+
+/**
+ * Cette référence pouvait-elle se vendre sur la fenêtre lue ?
+ *
+ * Sans gamme, elle est permanente : oui. Avec des gammes, il suffit qu'une
+ * seule ouvre sur un des mois lus — une référence peut appartenir à la gamme
+ * standard ET à une gamme de fête.
+ */
+function utilOuverteSur(array $gammesDuProduit, array $moisGamme, array $moisFenetre): bool
+{
+    if ($gammesDuProduit === []) { return true; }
+    foreach ($gammesDuProduit as $nom) {
+        $m = $moisGamme[$nom] ?? null;
+        if ($m === null) { return true; }   // gamme illisible : on n'écarte pas
+        if (array_intersect($m, $moisFenetre) !== []) { return true; }
+    }
+    return false;
+}
+
+/**
+ * Retire de $refs ce qu'une gamme fermée rendait invendable sur la fenêtre.
+ *
+ * Passe par référence : les trois lectures — le tableau, le détail d'un
+ * magasin, la liste des jamais vendues — doivent écarter EXACTEMENT le même
+ * ensemble, sinon trois écrans annoncent trois catalogues.
+ *
+ * @param array<int,array<string,mixed>> $refs
+ * @return array{n:int,gammes:array<string,int>}
+ */
+function utilEcarterHorsGamme(array &$refs, array $mois, bool $tout): array
+{
+    if ($tout) { return ['n' => 0, 'gammes' => []]; }
+    $g = utilGammes();
+    if ($g['parProduit'] === []) { return ['n' => 0, 'gammes' => []]; }
+    $fenetre = utilMoisCouverts($mois);
+    $n = 0; $par = [];
+    foreach ($refs as $pid => $r) {
+        $sien = $g['parProduit'][$pid] ?? [];
+        if (utilOuverteSur($sien, $g['mois'], $fenetre)) { continue; }
+        foreach ($sien as $nom) { $par[$nom] = ($par[$nom] ?? 0) + 1; }
+        unset($refs[$pid]);
+        $n++;
+    }
+    arsort($par);
+    return ['n' => $n, 'gammes' => $par];
+}
+
 /** Les N derniers mois, du plus ancien au plus récent. */
 function utilMois(int $n): array
 {
@@ -110,8 +223,15 @@ function ep_prod_utilisation(): array
     }
     ksort($categories); ksort($groupes);
 
+    // Les gammes saisonnières fermées sur la fenêtre : écartées du
+    // dénominateur, jamais du décompte — l'écran dit combien et lesquelles.
+    $gamme = trim((string) ($_GET['gamme'] ?? ''));
+    $ecartees = utilEcarterHorsGamme($refs, $mois, $gamme === 'tout');
+
     $out = [
         'mois' => $mois, 'catalogue' => count($refs),
+        'gamme' => $gamme === 'tout' ? 'tout' : 'ouverte',
+        'horsGamme' => $ecartees['n'], 'gammesEcartees' => $ecartees['gammes'],
         'catalogueTotal' => count($cat),
         'groupes' => array_keys($groupes), 'categories' => array_keys($categories),
         'groupe' => $groupe, 'categorie' => $categorie,
@@ -306,8 +426,13 @@ function ep_prod_utilisation_magasin(): array
             'prix' => $p['prix'] ?? null];
     }
 
+    // Même écart qu'au tableau : sinon le détail d'un magasin annoncerait un
+    // catalogue plus large que la ligne d'où on vient de cliquer.
+    $ecartees = utilEcarterHorsGamme($refs, $mois, trim((string) ($_GET['gamme'] ?? '')) === 'tout');
+
     $out = ['shop' => $shop, 'nom' => $nomDe[$shop], 'mois' => $mois,
-        'catalogue' => count($refs), 'groupes' => [], 'motif' => null];
+        'catalogue' => count($refs), 'horsGamme' => $ecartees['n'],
+        'groupes' => [], 'motif' => null];
     if ($refs === []) { $out['motif'] = 'aucune référence à rapprocher'; return $out; }
 
     $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
@@ -439,7 +564,10 @@ function utilJamaisVendues(int $n, string $groupe = ''): array
             'categorie' => ((string) ($p['categorie'] ?? '')) !== '' ? (string) $p['categorie'] : '— sans catégorie',
             'prix' => $p['prix'] ?? null];
     }
+    $ecartees = utilEcarterHorsGamme($refs, $mois, false);
     $out['catalogue'] = count($refs);
+    $out['horsGamme'] = $ecartees['n'];
+    $out['gammesEcartees'] = $ecartees['gammes'];
     if ($refs === []) { $out['motif'] = 'aucune référence du catalogue ne porte d’identifiant de caisse'; return $out; }
 
     $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
@@ -520,6 +648,11 @@ function utilJamaisPdfHtml(array $d, int $n): string
         . number_format($d['catalogue'] > 0 ? 100 * $d['jamais'] / $d['catalogue'] : 0, 1, ',', ' ') . ' %. '
         . 'Chacune est à relancer ou à sortir : tant qu’elle reste au catalogue, elle occupe une ligne de commande, '
         . 'une fiche de production et une place au comptoir.'
+        . (($d['horsGamme'] ?? 0) > 0
+            ? '<br>' . (int) $d['horsGamme'] . ' références de gammes saisonnières fermées sur cette fenêtre '
+              . 'en sont écartées (' . $e(implode(', ', array_slice(array_keys($d['gammesEcartees'] ?? []), 0, 5)))
+              . ') : ne pas les avoir vendues n’est pas un manque, leur saison n’était pas ouverte.'
+            : '')
         . (($d['horsGroupe'] ?? 0) > 0
             ? '<br><em>' . (int) $d['horsGroupe'] . ' d’entre elles n’ont ni groupe ni catégorie au référentiel — '
               . 'matières premières, emballages : des articles d’achat qui ne passent pas en caisse. '

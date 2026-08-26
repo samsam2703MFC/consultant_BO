@@ -7068,11 +7068,8 @@ function tplUsage(c, x){
           <span style="${lbl}">${esc(d.nom)} — détail par groupe et sous-catégorie</span>
           <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.resume)}</span>
           <span style="flex:1"></span>
-          ${d.seuils.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
-          <span style="width:10px"></span>
           ${d.tris.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
         </div>
-        ${!d.vide ? '' : `<div style="font-size:12px;color:var(--color-text-muted);padding:10px 0">${esc(d.vide)}</div>`}
         <div style="${GRILLE};font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
           <span>Groupe · sous-catégorie</span><span style="text-align:right">Catalogue</span><span></span>
           <span style="text-align:right">Vendues</span><span style="text-align:right">À rattraper</span>
@@ -7154,6 +7151,7 @@ function tplUsage(c, x){
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
         « Sur la période » compte les références vendues au moins une fois — un magasin peut tourner sa gamme sans jamais en vendre beaucoup le même mois.
         « Manquantes » : les références vendues par au moins deux magasins et jamais par celui-ci. Le mois en cours n’est pas encore chargé en caisse : il reste vide plutôt que compté à zéro.
+        ${!c.usGammes ? '' : `<br>${esc(c.usGammes)}`}
         <br>${esc(c.usSource || '')}
       </div>
     </div>

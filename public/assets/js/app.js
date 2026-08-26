@@ -4950,8 +4950,15 @@ class App {
     if (!d) { common.usMois = []; common.usLignes = []; return; }
 
     common.usSource = d.source || '';
+    // Une bûche non vendue en juillet n'est pas une bûche délaissée : sa gamme
+    // était fermée. On l'écarte du calcul, et on dit laquelle — un chiffre
+    // corrigé sans être expliqué se lit comme un chiffre faux.
+    common.usGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
+      + ' référence(s) de gammes saisonnières fermées sur ces ' + mois + ' mois sont écartées du calcul : '
+      + Object.keys(d.gammesEcartees || {}).slice(0, 5).join(', ')
+      + '. Ne pas les avoir vendues n’est pas un manque du magasin.');
     common.usKpis = [
-      { lbl: 'Catalogue', v: nb(d.catalogue), sub: 'références actives'
+      { lbl: 'Catalogue', v: nb(d.catalogue), sub: 'références ouvertes sur la période'
         + (d.groupe ? ' — groupe ' + d.groupe : '') },
       { lbl: 'Vendues par le réseau', v: nb((d.reseau || {}).refs), sub: pc((d.reseau || {}).taux) + ' du catalogue' },
       { lbl: 'Jamais vendues', v: nb((d.reseau || {}).jamais), sub: 'par aucun magasin, sur ' + mois + ' mois', accent: true,
@@ -4989,11 +4996,6 @@ class App {
     const ordre = (a, b) => t === 'catalogue' ? b.catalogue - a.catalogue
       : t === 'nom' ? a.nom.localeCompare(b.nom, 'fr')
       : (b.aRattraper - a.aRattraper || b.catalogue - a.catalogue);
-    // Le filtre par taux : on cherche les sous-catégories qui décrochent, pas
-    // celles qui tournent. Il porte sur la SOUS-CATÉGORIE — un groupe à 69 %
-    // peut contenir une catégorie à 0 %, et c'est elle qu'on veut trouver.
-    const seuil = S.usSeuil || null;
-    const passe = c => seuil === null || (c.taux || 0) < seuil;
     common.usDetail = !sid ? null : {
       chargement: det === undefined,
       err: det === null ? 'Le détail de ce magasin n’a pas pu être lu.' : ((det && det.motif) || ''),
@@ -5003,24 +5005,15 @@ class App {
       tri: S.usTri || 'rattraper',
       tris: [['rattraper', 'À rattraper'], ['catalogue', 'Catalogue'], ['nom', 'A → Z']].map(([v, nom]) => ({
         v, nom, on: (S.usTri || 'rattraper') === v, choisir: () => this.setState({ usTri: v }) })),
-      seuils: [[null, 'Toutes'], [25, 'moins de 25 %'], [50, 'moins de 50 %'], [75, 'moins de 75 %']]
-        .map(([v, nom]) => ({ v, nom, on: (S.usSeuil || null) === v,
-          choisir: () => this.setState({ usSeuil: v, usCat: null }) })),
-      seuil,
-      vide: !det ? '' : (det.groupes || []).every(g => !(g.categories || []).some(passe))
-        ? 'Aucune sous-catégorie sous ' + seuil + ' % dans ce magasin.' : '',
-      groupes: !det ? [] : (det.groupes || []).slice()
-        .filter(g => (g.categories || []).some(passe)).sort(ordre).map(g => ({
+      groupes: !det ? [] : (det.groupes || []).slice().sort(ordre).map(g => ({
         nom: g.nom,
         catalogue: nb(g.catalogue), vendues: nb(g.nVendues), taux: pc(g.taux),
         col: teinte(g.taux), barre: Math.max(2, Math.min(100, g.taux || 0)),
         aRattraper: g.aRattraper,
-        sous: (seuil === null ? g.nCategories : (g.categories || []).filter(passe).length)
-          + ' sous-catégorie' + ((seuil === null ? g.nCategories : (g.categories || []).filter(passe).length) > 1 ? 's' : '')
-          + (seuil === null ? '' : ' sous ' + seuil + ' %'),
+        sous: g.nCategories + (g.nCategories > 1 ? ' sous-catégories' : ' sous-catégorie'),
         ouvert: S.usGrp === g.nom,
         basculer: () => this.setState({ usGrp: S.usGrp === g.nom ? null : g.nom, usCat: null }),
-        categories: (g.categories || []).filter(passe).slice().sort(ordre).map(c => this.usageCategorie(c, g.nom, nb, pc, teinte)),
+        categories: (g.categories || []).slice().sort(ordre).map(c => this.usageCategorie(c, g.nom, nb, pc, teinte)),
       })),
     };
   }
