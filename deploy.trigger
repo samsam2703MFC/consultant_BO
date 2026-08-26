@@ -74,3 +74,4 @@
 2026-08-26T12:38:42Z usage-catalogue-api
 2026-08-26T12:40:19Z usage-catalogue-categories
 2026-08-26T12:48:19Z usage-catalogue-detail-magasin
+2026-08-26T13:00:39Z ecran-usage-catalogue

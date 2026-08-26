@@ -228,6 +228,7 @@ class App {
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
+      usage: 'usage-catalogue',
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
@@ -653,6 +654,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Cliquez un magasin pour voir, catégorie par catégorie, ce qu’il vend et ce qui lui manque — et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
@@ -1022,7 +1024,8 @@ class App {
         { sub: 'Scoring & analyse', children: [
           ['produits', 'Scoring des références', 0],
           ['seuil', 'Références sous seuil', 0],
-          ['analyse', 'Analyse dans le temps', 0]] }]],
+          ['analyse', 'Analyse dans le temps', 0],
+          ['usage', 'Usage du catalogue', 0]] }]],
       // « Suivi de production » a quitté le rail : les fournées déclarées sont
       // trop lacunaires pour en tirer quoi que ce soit (une boutique sur
       // quatre n'en déclare aucune), et le taux de perte se lit déjà au
@@ -1088,11 +1091,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1396,6 +1399,7 @@ class App {
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBxc) this.valsBxc(common);
+    if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
       common.mesSimple = this.state.mesSimple !== false;
@@ -4888,6 +4892,127 @@ class App {
       },
     };
   }
+  /* --- usage du catalogue ------------------------------------------------ */
+
+  /**
+   * Lit l'usage du catalogue — et le détail d'un magasin quand il est ouvert.
+   *
+   * Deux routes, deux chargements : le tableau tient en une requête, le détail
+   * pèse sept cents lignes par magasin et n'est demandé qu'au clic. Les
+   * réponses sont mises en cache par clé de filtre — rouvrir le même magasin
+   * ne relit pas.
+   */
+  usageCharge(){
+    const S = this.state;
+    const cle = (S.usMois || 6) + '|' + (S.usGroupe || '');
+    if (!this._usage) { this._usage = {}; }
+    if (this._usage[cle] === undefined && !this._usageEnCours) {
+      this._usageEnCours = true;
+      readOne('/produits/utilisation?mois=' + (S.usMois || 6)
+        + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''))
+        .then(d => { this._usageEnCours = false; this._usage[cle] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._usageEnCours = false; this._usage[cle] = null; this.setState({}); });
+    }
+    const sid = S.usShop;
+    if (!sid) { return; }
+    const cleD = sid + '|' + cle;
+    if (!this._usageDet) { this._usageDet = {}; }
+    if (this._usageDet[cleD] === undefined && !this._usageDetEnCours) {
+      this._usageDetEnCours = true;
+      readOne('/produits/utilisation/magasin?shop=' + encodeURIComponent(sid)
+        + '&mois=' + (S.usMois || 6)
+        + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''))
+        .then(d => { this._usageDetEnCours = false; this._usageDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._usageDetEnCours = false; this._usageDet[cleD] = null; this.setState({}); });
+    }
+  }
+
+  valsUsage(common){
+    const S = this.state;
+    const mois = S.usMois || 6;
+    const cle = mois + '|' + (S.usGroupe || '');
+    const d = (this._usage || {})[cle];
+    const court = nom => String(nom || '').split(' - ').pop();
+    const nb = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
+    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+    // Vert au-dessus de 60 %, ambre au-dessus de 40, bordeaux en dessous : les
+    // mêmes paliers que le reste du cockpit.
+    const teinte = p => p == null ? 'var(--color-text-muted)' : (p >= 60 ? '#2d7a3e' : (p >= 40 ? '#C17A2A' : '#8D1D2C'));
+
+    common.usChargement = d === undefined;
+    common.usMotif = d === null ? 'L’usage du catalogue n’a pas pu être lu.' : ((d && d.motif) || '');
+    common.usDurees = [3, 6, 12].map(v => ({ v, nom: v + ' mois', on: v === mois,
+      choisir: () => this.setState({ usMois: v }) }));
+    common.usGroupes = [{ nom: 'Tous groupes', v: '', on: !S.usGroupe, choisir: () => this.setState({ usGroupe: '' }) }]
+      .concat(((d && d.groupes) || []).map(g => ({ nom: g, v: g, on: S.usGroupe === g,
+        choisir: () => this.setState({ usGroupe: g }) })));
+
+    if (!d) { common.usMois = []; common.usLignes = []; return; }
+
+    common.usSource = d.source || '';
+    common.usKpis = [
+      { lbl: 'Catalogue', v: nb(d.catalogue), sub: 'références actives'
+        + (d.groupe ? ' — groupe ' + d.groupe : '') },
+      { lbl: 'Vendues par le réseau', v: nb((d.reseau || {}).refs), sub: pc((d.reseau || {}).taux) + ' du catalogue' },
+      { lbl: 'Jamais vendues', v: nb((d.reseau || {}).jamais), sub: 'par aucun magasin, sur ' + mois + ' mois', accent: true },
+      { lbl: 'Meilleur magasin', v: pc(Math.max.apply(null, (d.magasins || []).map(m => m.tauxPeriode || 0))),
+        sub: court((d.magasins || []).reduce((a, b) => (b.tauxPeriode || 0) > (a.tauxPeriode || 0) ? b : a, {}).nom) },
+    ];
+    common.usEntetes = (d.mois || []).map(m => m.lib);
+    common.usLignes = (d.magasins || []).map(m => ({
+      id: m.id, nom: court(m.nom), complet: m.nom,
+      ouvert: S.usShop === m.id,
+      basculer: () => this.setState({ usShop: S.usShop === m.id ? null : m.id }),
+      mois: (m.mois || []).map(x => ({
+        // Un mois en cours SANS ligne de ticket n'est pas un mois à zéro : la
+        // caisse ne l'a pas encore chargé, et l'écran le dit.
+        v: (x.encours && !x.refs) ? '—' : nb(x.refs),
+        sub: (x.encours && !x.refs) ? 'non chargé' : pc(x.taux),
+        st: (x.encours && !x.refs) ? 'color:#b8b2a8' : '',
+      })),
+      refs: nb(m.refsPeriode), taux: pc(m.tauxPeriode),
+      tauxCol: teinte(m.tauxPeriode), barre: Math.max(2, Math.min(100, m.tauxPeriode || 0)),
+      manquantes: m.manquantes,
+    }));
+
+    // --- le détail du magasin ouvert.
+    const sid = S.usShop;
+    const det = sid ? (this._usageDet || {})[sid + '|' + cle] : undefined;
+    common.usDetail = !sid ? null : {
+      chargement: det === undefined,
+      err: det === null ? 'Le détail de ce magasin n’a pas pu être lu.' : ((det && det.motif) || ''),
+      nom: det ? det.nom : '',
+      resume: det ? (nb(det.vendues) + ' vendues · ' + nb(det.aRattraper) + ' à rattraper · '
+        + nb(det.orphelines) + ' que personne ne vend') : '',
+      tri: S.usTri || 'rattraper',
+      tris: [['rattraper', 'À rattraper'], ['catalogue', 'Catalogue'], ['nom', 'A → Z']].map(([v, nom]) => ({
+        v, nom, on: (S.usTri || 'rattraper') === v, choisir: () => this.setState({ usTri: v }) })),
+      categories: !det ? [] : (det.categories || []).slice().sort((a, b) => {
+        const t = S.usTri || 'rattraper';
+        if (t === 'catalogue') { return b.catalogue - a.catalogue; }
+        if (t === 'nom') { return a.nom.localeCompare(b.nom, 'fr'); }
+        return b.aRattraper - a.aRattraper || b.catalogue - a.catalogue;
+      }).map(c => ({
+        nom: c.nom, groupe: c.groupe || '',
+        catalogue: nb(c.catalogue), vendues: nb(c.nVendues), taux: pc(c.taux),
+        col: teinte(c.taux), barre: Math.max(2, Math.min(100, c.taux || 0)),
+        aRattraper: c.aRattraper,
+        ouverte: S.usCat === c.nom,
+        basculer: () => this.setState({ usCat: S.usCat === c.nom ? null : c.nom }),
+        nVendues: nb(c.nVendues), nAbsentes: nb(c.nNonVendues), orphelines: nb(c.orphelines),
+        // Douze lignes de chaque côté : au-delà, on ne lit plus, on fait
+        // défiler. Le compte complet reste dans l'en-tête de la colonne.
+        listeVendues: (c.vendues || []).slice(0, 12).map(x => ({ nom: x.nom, droite: nb(x.quantite) + ' u' })),
+        listeAbsentes: (c.nonVendues || []).slice(0, 12).map(x => ({
+          nom: x.nom,
+          droite: x.ailleurs ? 'vendue par ' + x.ailleurs : 'personne',
+          st: x.ailleurs ? 'color:var(--color-primary)' : 'color:var(--color-text-muted)' })),
+        resteVendues: Math.max(0, c.nVendues - 12),
+        resteAbsentes: Math.max(0, c.nNonVendues - 12),
+      })),
+    };
+  }
+
   /**
    * Ouvre la note d'une campagne — la page A4 et le courrier qui la porte.
    *

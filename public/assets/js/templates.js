@@ -116,6 +116,7 @@ export function render(c, x){
       ${c.isCentrale ? tplCentrale(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isSeuil ? tplSeuil(c, x) : ''}
+      ${c.isUsage ? tplUsage(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
@@ -7029,6 +7030,117 @@ function tplDiagnostic(c, x){
  * « cette référence est mauvaise » en « ce coût est à renégocier ». Sans elle
  * la liste ne dit pas sur quoi agir.
  */
+/**
+ * Usage du catalogue : ce que chaque magasin vend des références du réseau.
+ *
+ * Un tableau magasins × mois, et deux dépliants imbriqués — le magasin, puis
+ * la catégorie. Le détail n'est demandé au serveur qu'à l'ouverture : sept
+ * cents lignes par magasin n'ont rien à faire dans l'écran d'entrée.
+ */
+function tplUsage(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px 10px 9px;border-bottom:0.5px solid var(--color-border-tertiary)';
+  const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:80px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:999px"></i></span>`;
+
+  if (c.usChargement) {
+    return `<div data-screen="usage"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des lignes de ticket…</div></div>`;
+  }
+  if (c.usMotif) {
+    return `<div data-screen="usage"><div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.usMotif)}</div></div>`;
+  }
+
+  const detail = d => !d ? '' : `
+    <tr><td colspan="${c.usEntetes.length + 4}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        ${d.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du détail…</div>`
+        : d.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(d.err)}</div>` : `
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <span style="${lbl}">${esc(d.nom)} — détail par catégorie</span>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.resume)}</span>
+          <span style="flex:1"></span>
+          ${d.tris.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:210px 92px 1fr 116px 96px;gap:0 12px;align-items:center;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
+          <span>Catégorie</span><span style="text-align:right">Catalogue</span><span></span>
+          <span style="text-align:right">Vendues</span><span style="text-align:right">À rattraper</span>
+        </div>
+        ${d.categories.map(k => `
+          <div ${x.A(k.basculer)} style="display:grid;grid-template-columns:210px 92px 1fr 116px 96px;gap:0 12px;align-items:center;font-size:12px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer">
+            <span><span style="color:var(--color-text-muted);font-size:11px">${k.ouverte ? '▾' : '▸'}</span> ${esc(k.nom)}</span>
+            <span style="text-align:right;color:var(--color-text-muted)">${esc(k.catalogue)}</span>
+            <span>${jauge(k.barre, k.col)}</span>
+            <span style="text-align:right;color:${k.col};font-weight:600">${esc(k.vendues)} · ${esc(k.taux)}</span>
+            <span style="text-align:right">${k.aRattraper ? `<span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${k.aRattraper}</span>` : `<span style="color:#2d7a3e;font-size:11px">à jour</span>`}</span>
+          </div>
+          ${!k.ouverte ? '' : `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:10px 0 4px">
+            <div>
+              <div style="${lbl};margin-bottom:6px">Vendues ici (${esc(k.nVendues)})</div>
+              ${k.listeVendues.length ? k.listeVendues.map(r => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(r.nom)}</span><span style="color:var(--color-text-muted)">${esc(r.droite)}</span></div>`).join('')
+                : `<div style="font-size:12px;color:var(--color-text-muted);padding:5px 0">Aucune référence vendue dans cette catégorie.</div>`}
+              ${k.resteVendues ? `<div style="font-size:11px;color:var(--color-text-muted);padding:6px 0">+ ${k.resteVendues} autres</div>` : ''}
+            </div>
+            <div>
+              <div style="${lbl};margin-bottom:6px">Absentes (${esc(k.nAbsentes)}) — dont ${esc(k.orphelines)} que personne ne vend</div>
+              ${k.listeAbsentes.map(r => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(r.nom)}</span><span style="${r.st}">${esc(r.droite)}</span></div>`).join('')}
+              ${k.resteAbsentes ? `<div style="font-size:11px;color:var(--color-text-muted);padding:6px 0">+ ${k.resteAbsentes} autres</div>` : ''}
+            </div>
+          </div>`}`).join('')}
+        <div style="font-size:11px;color:var(--color-text-muted);padding:12px 0 0;line-height:1.55">Une référence que <strong>personne</strong> ne vend n’est pas un manque du magasin : c’est une question de catalogue, et elle est comptée à part.</div>`}
+      </div>
+    </td></tr>`;
+
+  return `
+  <div data-screen="usage" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
+    <div style="${carte}">
+      <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px 16px">
+        ${c.usKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
+          <b style="display:block;font-size:20px;font-weight:600;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
+          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">Références vendues, mois par mois</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez un magasin pour voir, catégorie par catégorie, ce qu’il vend et ce qu’il ne vend pas.</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
+        ${c.usDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${c.usGroupes.map(g => `<button ${x.A(g.choisir)} style="${pill(g.on)}">${esc(g.nom)}</button>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Magasin</th>
+          ${c.usEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+          <th style="${th}">Sur la période</th><th style="${th}">Taux</th><th style="${th};padding-right:18px">Manquantes</th>
+        </tr></thead>
+        <tbody>
+          ${c.usLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouvert ? ';background:#FBF8F4' : ''}">
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500" title="${esc(l.complet)}"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
+            ${l.mois.map(m => `<td style="${td};${m.st}">${esc(m.v)}<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(m.sub)}</div></td>`).join('')}
+            <td style="${td};font-weight:600">${esc(l.refs)}</td>
+            <td style="${td}"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">${jauge(l.barre, l.tauxCol)}<span style="color:${l.tauxCol};font-weight:600">${esc(l.taux)}</span></span></td>
+            <td style="${td};padding-right:18px"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${l.manquantes}</span></td>
+          </tr>
+          ${l.ouvert ? detail(c.usDetail) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        « Sur la période » compte les références vendues au moins une fois — un magasin peut tourner sa gamme sans jamais en vendre beaucoup le même mois.
+        « Manquantes » : les références vendues par au moins deux magasins et jamais par celui-ci. Le mois en cours n’est pas encore chargé en caisse : il reste vide plutôt que compté à zéro.
+        <br>${esc(c.usSource || '')}
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplSeuil(c, x){
   const { esc } = x;
   const CARD = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
