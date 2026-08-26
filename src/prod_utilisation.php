@@ -408,3 +408,166 @@ function ep_prod_utilisation_magasin(): array
     $out['source'] = 'lignes de ticket de la caisse, ' . mktBriefJour($du) . ' → ' . mktBriefJour($au);
     return $out;
 }
+
+/**
+ * Les références que PERSONNE n'a vendues sur la période.
+ *
+ * L'écran en donne le compte — « 251 jamais vendues » — mais un compte ne se
+ * traite pas : ce qui s'emporte en réunion catalogue, c'est la liste, groupe
+ * par groupe, avec le prix de vente en face. Une référence que personne ne
+ * vend est soit à relancer, soit à sortir ; dans les deux cas il faut la
+ * nommer.
+ *
+ * @return array{lignes:list<array<string,mixed>>,catalogue:int,jamais:int,du:string,au:string,motif:?string}
+ */
+function utilJamaisVendues(int $n, string $groupe = ''): array
+{
+    $mois = utilMois($n);
+    $du = $mois[0]['du'];
+    $au = $mois[count($mois) - 1]['au'];
+    $out = ['lignes' => [], 'catalogue' => 0, 'jamais' => 0,
+        'du' => $du, 'au' => $au, 'groupe' => $groupe, 'motif' => null];
+
+    $refs = [];
+    foreach (ep_prod_catalogue() as $p) {
+        $g = (string) ($p['groupe'] ?? '');
+        if ($groupe !== '' && $g !== $groupe) { continue; }
+        $pid = $p['pwaId'] ?? null;
+        if ($pid === null) { continue; }
+        $refs[(int) $pid] = ['ref' => (string) $p['ref'], 'nom' => (string) $p['nom'],
+            'groupe' => $g !== '' ? $g : '— hors groupe',
+            'categorie' => ((string) ($p['categorie'] ?? '')) !== '' ? (string) $p['categorie'] : '— sans catégorie',
+            'prix' => $p['prix'] ?? null];
+    }
+    $out['catalogue'] = count($refs);
+    if ($refs === []) { $out['motif'] = 'aucune référence du catalogue ne porte d’identifiant de caisse'; return $out; }
+
+    $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
+    $cl = utilColonnes('transaction_product', UTIL_COLS_LIGNE);
+    if ($ct === null || $cl === null) {
+        $out['motif'] = 'la caisse n’expose pas ses lignes de ticket sur cette base';
+        return $out;
+    }
+
+    // Les magasins ACTIFS seulement : une référence vendue par un magasin fermé
+    // n'est plus vendue par personne, et la sortir de la liste la ferait
+    // disparaître de la réunion.
+    $actifs = [];
+    foreach (Db::rows('SELECT id FROM shops WHERE active = 1') as $s) { $actifs[(string) $s['id']] = true; }
+
+    $vues = [];
+    try {
+        $sql = sprintf(
+            'SELECT DISTINCT t.`%s` AS shop, l.`%s` AS produit
+               FROM `transaction_product` l JOIN `transaction` t ON t.`%s` = l.`%s`
+              WHERE t.`%s` >= ? AND t.`%s` < ?',
+            $ct['shop'], $cl['produit'], $ct['id'], $cl['ticket'], $ct['date'], $ct['date']);
+        foreach (Db::rows($sql, [$du . ' 00:00:00', date('Y-m-d', strtotime($au . ' +1 day')) . ' 00:00:00']) as $r) {
+            if (!isset($actifs[(string) $r['shop']])) { continue; }
+            $vues[(int) $r['produit']] = true;
+        }
+    } catch (PDOException $e) {
+        $out['motif'] = 'lecture des lignes de ticket impossible';
+        return $out;
+    }
+
+    $par = [];
+    foreach ($refs as $pid => $r) {
+        if (isset($vues[$pid])) { continue; }
+        $par[$r['groupe']][$r['categorie']][] = $r;
+        $out['jamais']++;
+    }
+    ksort($par);
+    foreach ($par as $g => $cats) {
+        ksort($cats);
+        $n2 = 0;
+        $blocs = [];
+        foreach ($cats as $c => $lignes) {
+            usort($lignes, static fn ($a, $b) => strcmp($a['nom'], $b['nom']));
+            $n2 += count($lignes);
+            $blocs[] = ['nom' => $c, 'refs' => $lignes];
+        }
+        $out['lignes'][] = ['groupe' => $g, 'total' => $n2, 'categories' => $blocs];
+    }
+    usort($out['lignes'], static fn ($a, $b) => $b['total'] <=> $a['total']);
+    return $out;
+}
+
+/** La page A4 de la liste — même grammaire typographique que les autres PDF. */
+function utilJamaisPdfHtml(array $d, int $n): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $F = 'font-family:Helvetica,Arial,sans-serif';
+    $h = '<div style="' . $F . ';color:#222">'
+        . '<div style="font-size:17pt;font-weight:700;margin-bottom:2mm">Références jamais vendues</div>'
+        . '<div style="font-size:9pt;color:#6b6259;line-height:1.5;margin-bottom:6mm">'
+        . 'Aucun magasin du réseau n’en a vendu une seule unité entre le ' . $e(mktBriefJour($d['du']))
+        . ' et le ' . $e(mktBriefJour($d['au'])) . ' (' . $n . ' mois'
+        . ($d['groupe'] !== '' ? ', groupe ' . $e($d['groupe']) : '') . ').<br>'
+        . '<strong>' . $d['jamais'] . ' références</strong> sur les ' . $d['catalogue']
+        . ' du catalogue actif — soit '
+        . number_format($d['catalogue'] > 0 ? 100 * $d['jamais'] / $d['catalogue'] : 0, 1, ',', ' ') . ' %. '
+        . 'Chacune est à relancer ou à sortir : tant qu’elle reste au catalogue, elle occupe une ligne de commande, '
+        . 'une fiche de production et une place au comptoir.'
+        . '</div>';
+
+    if ($d['motif'] !== null) {
+        return $h . '<div style="font-size:10pt;color:#8D1D2C">' . $e($d['motif']) . '</div></div>';
+    }
+    if ($d['lignes'] === []) {
+        return $h . '<div style="font-size:10pt;color:#2d7a3e">Aucune : chaque référence du catalogue a trouvé preneur au moins une fois.</div></div>';
+    }
+
+    foreach ($d['lignes'] as $g) {
+        $h .= '<div style="page-break-inside:avoid">'
+            . '<div style="' . $F . ';font-size:11pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:6mm 0 2mm">'
+            . $e($g['groupe']) . ' <span style="font-weight:400;color:#6b6259">— ' . $g['total'] . ' référence'
+            . ($g['total'] > 1 ? 's' : '') . '</span></div>';
+        foreach ($g['categories'] as $c) {
+            $h .= '<div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:0.06em;color:#6b6259;margin:3mm 0 1mm">'
+                . $e($c['nom']) . ' · ' . count($c['refs']) . '</div>'
+                . '<table style="width:100%;border-collapse:collapse;' . $F . ';font-size:9pt">';
+            foreach ($c['refs'] as $r) {
+                $h .= '<tr>'
+                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6;width:22mm;color:#6b6259;font-size:8pt">' . $e($r['ref']) . '</td>'
+                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6">' . $e($r['nom']) . '</td>'
+                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6;text-align:right;width:20mm;color:#6b6259">'
+                    . ($r['prix'] === null ? '—' : $e(number_format((float) $r['prix'], 2, ',', ' ') . ' €')) . '</td>'
+                    . '</tr>';
+            }
+            $h .= '</table>';
+        }
+        $h .= '</div>';
+    }
+    return $h . '</div>';
+}
+
+/**
+ * GET /produits/utilisation/jamais.pdf?mois=6[&groupe=]
+ *
+ * Le même chiffre que la tuile « Jamais vendues », mais nommé : la liste part
+ * en réunion catalogue, pas l'écran.
+ */
+function ep_prod_utilisation_jamais_pdf(): array
+{
+    $n = (int) ($_GET['mois'] ?? 6);
+    if ($n < 1 || $n > 12) { $n = 6; }
+    $groupe = trim((string) ($_GET['groupe'] ?? ''));
+    $d = utilJamaisVendues($n, $groupe);
+
+    $pdf = rapPdfRendu(utilJamaisPdfHtml($d, $n), [
+        'magasin' => 'Réseau',
+        'rapport' => 'Références jamais vendues — ' . $n . ' mois',
+        'genere' => date('d/m/Y à H:i'),
+        'envoye' => '',
+    ]);
+    if ($pdf === null) {
+        http_response_code(501);
+        return ['error' => 'aucun moteur PDF sur ce serveur'];
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="references-jamais-vendues-'
+        . ($groupe !== '' ? mktSlug($groupe) . '-' : '') . $n . 'mois-' . date('Y-m-d') . '.pdf"');
+    echo $pdf;
+    exit;
+}

@@ -7118,7 +7118,8 @@ function tplUsage(c, x){
       <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px 16px">
         ${c.usKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
           <b style="display:block;font-size:20px;font-weight:600;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
-          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span></div>`).join('')}
+          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span>
+          ${!k.lien ? '' : `<a href="${esc(k.lien)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:5px;font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:3px 11px">↓ ${esc(k.lienNom)}</a>`}</div>`).join('')}
       </div>
     </div>
 

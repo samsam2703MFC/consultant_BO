@@ -4954,7 +4954,12 @@ class App {
       { lbl: 'Catalogue', v: nb(d.catalogue), sub: 'références actives'
         + (d.groupe ? ' — groupe ' + d.groupe : '') },
       { lbl: 'Vendues par le réseau', v: nb((d.reseau || {}).refs), sub: pc((d.reseau || {}).taux) + ' du catalogue' },
-      { lbl: 'Jamais vendues', v: nb((d.reseau || {}).jamais), sub: 'par aucun magasin, sur ' + mois + ' mois', accent: true },
+      { lbl: 'Jamais vendues', v: nb((d.reseau || {}).jamais), sub: 'par aucun magasin, sur ' + mois + ' mois', accent: true,
+        // La tuile donne le compte ; la liste, elle, se traite. Elle part en
+        // réunion catalogue : chaque référence est à relancer ou à sortir.
+        lien: API_BASE + '/produits/utilisation/jamais.pdf?mois=' + mois
+          + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''),
+        lienNom: 'Liste PDF' },
       { lbl: 'Meilleur magasin', v: pc(Math.max.apply(null, (d.magasins || []).map(m => m.tauxPeriode || 0))),
         sub: court((d.magasins || []).reduce((a, b) => (b.tauxPeriode || 0) > (a.tauxPeriode || 0) ? b : a, {}).nom) },
     ];
