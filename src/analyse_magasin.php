@@ -129,8 +129,10 @@ function ep_mag_analyse(): array
     $manque = ep_prod_manque();
     $_GET = $memGet;
     $lev1 = ['manque' => 0, 'retenuMois' => 0, 'refs' => 0, 'top' => []];
+    $manqueGrp = [];
     foreach ($manque['magasins'] ?? [] as $m) {
         if ((string) $m['id'] !== $shop) { continue; }
+        $manqueGrp = $m['parGroupe'] ?? [];
         $lev1 = ['manque' => (int) $m['eur'],
             // La MOITIÉ du manque : un plan qui promet le maximum n'est pas
             // un plan — même règle que la ligne verte de l'écran réseau.
@@ -165,13 +167,20 @@ function ep_mag_analyse(): array
         $ref = anmMediane($partsAutres);
         if ($ref <= 0 && $part <= 0) { continue; }
         $delta = $part - $ref;
-        // Revenir à la part réseau, le CA du mois posé comme assiette.
-        $pot = $delta < 0 ? (-$delta / 100) * $caMois : 0.0;
+        // Revenir à la part réseau, le CA du mois posé comme assiette…
+        $brut = $delta < 0 ? (-$delta / 100) * $caMois : 0.0;
+        // …MOINS ce que le levier 1 compte déjà sur ce groupe (à sa retenue
+        // de moitié) : une catégorie en retrait l'est souvent parce que des
+        // références y manquent, et additionner les deux leviers promettrait
+        // deux fois le même euro.
+        $deja = min($brut, ($manqueGrp[$g] ?? 0) / 2 / $n);
+        $pot = max(0.0, $brut - $deja);
         if ($pot > 0) { $potGrpMois += $pot; }
         $groupes[] = ['nom' => $g,
             'part' => round($part, 1), 'partReseau' => round($ref, 1),
             'delta' => round($delta, 1),
             'potMois' => (int) round($pot), 'potAn' => (int) round($pot * 12),
+            'dejaMois' => (int) round($deja),
             'force' => $delta >= 1.5];
     }
     usort($groupes, static fn ($a, $b) => $b['potMois'] <=> $a['potMois'] ?: $b['delta'] <=> $a['delta']);
