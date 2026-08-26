@@ -249,3 +249,130 @@ function ep_prod_utilisation(): array
         . mktBriefJour($du) . ' → ' . mktBriefJour($au);
     return $out;
 }
+
+/**
+ * GET /produits/utilisation/magasin?shop=4[&mois=6][&groupe=][&categorie=]
+ *
+ * Le détail d'UN magasin, catégorie par catégorie : ce qu'il vend, ce qu'il ne
+ * vend pas, et — pour chaque référence absente — combien d'autres magasins la
+ * vendent. Une référence que personne ne vend n'est pas un manque de ce
+ * magasin : c'est une question de catalogue, et les deux ne se traitent pas au
+ * même endroit.
+ *
+ * Route séparée du tableau : le détail pèse sept cents lignes par magasin, et
+ * l'écran d'entrée n'en a pas besoin pour s'afficher.
+ */
+function ep_prod_utilisation_magasin(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    $n = (int) ($_GET['mois'] ?? 6);
+    if ($n < 1 || $n > 12) { $n = 6; }
+    $groupe = trim((string) ($_GET['groupe'] ?? ''));
+    $categorie = trim((string) ($_GET['categorie'] ?? ''));
+
+    $nomDe = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+        $nomDe[(string) $s['id']] = (string) $s['name'];
+    }
+    if (!isset($nomDe[$shop])) {
+        http_response_code(404);
+        return ['error' => 'magasin inconnu'];
+    }
+
+    $mois = utilMois($n);
+    $du = $mois[0]['du'];
+    $au = $mois[count($mois) - 1]['au'];
+
+    $cat = ep_prod_catalogue();
+    $refs = [];
+    foreach ($cat as $p) {
+        $g = (string) ($p['groupe'] ?? '');
+        $c = (string) ($p['categorie'] ?? '');
+        if ($groupe !== '' && $g !== $groupe) { continue; }
+        if ($categorie !== '' && $c !== $categorie) { continue; }
+        $pid = $p['pwaId'] ?? null;
+        if ($pid === null) { continue; }
+        $refs[(int) $pid] = ['ref' => (string) $p['ref'], 'nom' => (string) $p['nom'],
+            'categorie' => $c !== '' ? $c : '— sans catégorie', 'groupe' => $g,
+            'prix' => $p['prix'] ?? null];
+    }
+
+    $out = ['shop' => $shop, 'nom' => $nomDe[$shop], 'mois' => $mois,
+        'catalogue' => count($refs), 'categories' => [], 'motif' => null];
+    if ($refs === []) { $out['motif'] = 'aucune référence à rapprocher'; return $out; }
+
+    $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
+    $cl = utilColonnes('transaction_product', UTIL_COLS_LIGNE);
+    if ($ct === null || $cl === null) {
+        $out['motif'] = 'la caisse n’expose pas ses lignes de ticket sur cette base';
+        return $out;
+    }
+
+    // Qui vend quoi, et combien ce magasin en a vendu.
+    $quantite = []; $vendeurs = [];
+    try {
+        $sql = sprintf(
+            'SELECT t.`%s` AS shop, l.`%s` AS produit, SUM(l.`%s`) AS q
+               FROM `transaction_product` l
+               JOIN `transaction` t ON t.`%s` = l.`%s`
+              WHERE t.`%s` >= ? AND t.`%s` < ?
+              GROUP BY shop, produit',
+            $ct['shop'], $cl['produit'], $cl['quantite'],
+            $ct['id'], $cl['ticket'], $ct['date'], $ct['date']);
+        foreach (Db::rows($sql, [$du . ' 00:00:00', date('Y-m-d', strtotime($au . ' +1 day')) . ' 00:00:00']) as $r) {
+            $pid = (int) $r['produit'];
+            if (!isset($refs[$pid])) { continue; }
+            $sid = (string) $r['shop'];
+            if (!isset($nomDe[$sid])) { continue; }
+            $vendeurs[$pid][$sid] = true;
+            if ($sid === $shop) { $quantite[$pid] = (float) $r['q']; }
+        }
+    } catch (PDOException $e) {
+        $out['motif'] = 'lecture des lignes de ticket impossible';
+        return $out;
+    }
+
+    $parCat = [];
+    foreach ($refs as $pid => $r) {
+        $c = $r['categorie'];
+        if (!isset($parCat[$c])) {
+            $parCat[$c] = ['nom' => $c, 'groupe' => $r['groupe'],
+                'catalogue' => 0, 'vendues' => [], 'nonVendues' => [], 'orphelines' => 0];
+        }
+        $parCat[$c]['catalogue']++;
+        $ailleurs = count($vendeurs[$pid] ?? []) - (isset($quantite[$pid]) ? 1 : 0);
+        if (isset($quantite[$pid])) {
+            $parCat[$c]['vendues'][] = ['ref' => $r['ref'], 'nom' => $r['nom'],
+                'quantite' => (int) round($quantite[$pid]), 'ailleurs' => $ailleurs];
+        } else {
+            $parCat[$c]['nonVendues'][] = ['ref' => $r['ref'], 'nom' => $r['nom'],
+                'ailleurs' => $ailleurs];
+            // Personne ne la vend : ce n'est pas un manque du magasin.
+            if ($ailleurs === 0) { $parCat[$c]['orphelines']++; }
+        }
+    }
+
+    $cats = [];
+    foreach ($parCat as $c) {
+        // Les plus vendues d'abord dans la colonne « vendues », les plus
+        // répandues ailleurs en tête des absentes : c'est l'ordre dans lequel
+        // on veut les lire.
+        usort($c['vendues'], static fn ($a, $b) => $b['quantite'] <=> $a['quantite']);
+        usort($c['nonVendues'], static fn ($a, $b) => $b['ailleurs'] <=> $a['ailleurs'] ?: strcmp($a['nom'], $b['nom']));
+        $c['nVendues'] = count($c['vendues']);
+        $c['nNonVendues'] = count($c['nonVendues']);
+        // Le manque RÉEL : les absentes que d'autres vendent.
+        $c['aRattraper'] = $c['nNonVendues'] - $c['orphelines'];
+        $c['taux'] = $c['catalogue'] > 0 ? round(100 * $c['nVendues'] / $c['catalogue'], 1) : null;
+        $cats[] = $c;
+    }
+    usort($cats, static fn ($a, $b) => $b['aRattraper'] <=> $a['aRattraper'] ?: $b['catalogue'] <=> $a['catalogue']);
+
+    $out['categories'] = $cats;
+    $out['vendues'] = array_sum(array_column($cats, 'nVendues'));
+    $out['aRattraper'] = array_sum(array_column($cats, 'aRattraper'));
+    $out['orphelines'] = array_sum(array_column($cats, 'orphelines'));
+    $out['taux'] = count($refs) > 0 ? round(100 * $out['vendues'] / count($refs), 1) : null;
+    $out['source'] = 'lignes de ticket de la caisse, ' . mktBriefJour($du) . ' → ' . mktBriefJour($au);
+    return $out;
+}

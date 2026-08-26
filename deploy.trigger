@@ -73,3 +73,4 @@
 2026-08-25T20:11:03Z referentiel-agences
 2026-08-26T12:38:42Z usage-catalogue-api
 2026-08-26T12:40:19Z usage-catalogue-categories
+2026-08-26T12:48:19Z usage-catalogue-detail-magasin
