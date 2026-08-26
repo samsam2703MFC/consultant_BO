@@ -321,7 +321,7 @@ function anmPdfHtml(array $d): string
       .pastille{font-size:7pt;font-weight:bold;border-radius:3mm;padding:.6mm 2.2mm;white-space:nowrap}
       .p-asso{background:#F6E4E7;color:#8D1D2C}.p-cat{background:#FBEFE0;color:#8a5a1c}.p-prix{background:#E3EFE6;color:#2d7a3e}
       .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;
-               font-size:7.6pt;color:#7a736a;line-height:1.6;page-break-inside:avoid}
+               font-size:7.6pt;color:#7a736a;line-height:1.6}
     </style>';
 
     // --- L'en-tête : le même bandeau que la note de campagne.
@@ -391,8 +391,12 @@ function anmPdfHtml(array $d): string
     }
     $h .= '</table></div>';
 
-    // --- Page 2 : les prix, puis le plan.
-    $h .= '<div style="page-break-before:always">'
+    // --- Page 2 : les prix, puis le plan. Le saut est porté par un div VIDE
+    // en page-break-after : posé en page-break-before sur un bloc plein,
+    // wkhtmltopdf ajoute une page blanche quand la page précédente finit au
+    // ras du bord (mesuré : trois pages dont une vide, sur les deux versions
+    // du document).
+    $h .= '<div style="page-break-after:always"></div><div>'
         . '<div class="sec">Les prix sous le réseau — gain à volume constant</div>';
     if ($l3['refs'] === []) {
         $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">Aucun : la grille de ce magasin est au niveau du réseau.</p>';
