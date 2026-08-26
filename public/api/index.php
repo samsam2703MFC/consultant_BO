@@ -22,6 +22,7 @@ require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';
 require __DIR__ . '/../../src/mkt_agences.php';
+require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
@@ -145,6 +146,7 @@ function route(string $method, string $path): mixed
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
             $path === '/produits/analyse/sonde'        => ep_produits_analyse_sonde(),
+            $path === '/produits/utilisation'          => ep_prod_utilisation(),
             $path === '/centrale/cockpit'              => ep_ca_cockpit(),
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),
