@@ -80,3 +80,4 @@
 2026-08-26 15:01 usage seuils
 2026-08-26 15:12 jamais vendues pdf
 2026-08-26 15:55 relance livraison
+2026-08-26 15:59 hors groupe en fin de liste

@@ -425,7 +425,7 @@ function utilJamaisVendues(int $n, string $groupe = ''): array
     $mois = utilMois($n);
     $du = $mois[0]['du'];
     $au = $mois[count($mois) - 1]['au'];
-    $out = ['lignes' => [], 'catalogue' => 0, 'jamais' => 0,
+    $out = ['lignes' => [], 'catalogue' => 0, 'jamais' => 0, 'horsGroupe' => 0,
         'du' => $du, 'au' => $au, 'groupe' => $groupe, 'motif' => null];
 
     $refs = [];
@@ -489,7 +489,18 @@ function utilJamaisVendues(int $n, string $groupe = ''): array
         }
         $out['lignes'][] = ['groupe' => $g, 'total' => $n2, 'categories' => $blocs];
     }
-    usort($out['lignes'], static fn ($a, $b) => $b['total'] <=> $a['total']);
+    // Les articles SANS GROUPE en dernier, quel que soit leur nombre : mesuré
+    // en ligne, ce sont pour l'essentiel des articles d'achat — matières
+    // premières, emballages — qui ne passent pas en caisse. Ils sont les plus
+    // nombreux, donc ils ouvraient le document et repoussaient en page 3 les
+    // vraies références à décider.
+    $horsGroupe = '— hors groupe';
+    usort($out['lignes'], static fn ($a, $b) =>
+        ($a['groupe'] === $horsGroupe ? 1 : 0) <=> ($b['groupe'] === $horsGroupe ? 1 : 0)
+        ?: $b['total'] <=> $a['total']);
+    foreach ($out['lignes'] as $l) {
+        if ($l['groupe'] === $horsGroupe) { $out['horsGroupe'] = $l['total']; }
+    }
     return $out;
 }
 
@@ -509,6 +520,11 @@ function utilJamaisPdfHtml(array $d, int $n): string
         . number_format($d['catalogue'] > 0 ? 100 * $d['jamais'] / $d['catalogue'] : 0, 1, ',', ' ') . ' %. '
         . 'Chacune est à relancer ou à sortir : tant qu’elle reste au catalogue, elle occupe une ligne de commande, '
         . 'une fiche de production et une place au comptoir.'
+        . (($d['horsGroupe'] ?? 0) > 0
+            ? '<br><em>' . (int) $d['horsGroupe'] . ' d’entre elles n’ont ni groupe ni catégorie au référentiel — '
+              . 'matières premières, emballages : des articles d’achat qui ne passent pas en caisse. '
+              . 'Elles sont regroupées en fin de document, à vérifier avant d’en conclure quoi que ce soit.</em>'
+            : '')
         . '</div>';
 
     if ($d['motif'] !== null) {
