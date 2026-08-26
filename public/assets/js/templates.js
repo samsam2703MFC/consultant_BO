@@ -117,6 +117,7 @@ export function render(c, x){
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isSeuil ? tplSeuil(c, x) : ''}
       ${c.isUsage ? tplUsage(c, x) : ''}
+      ${c.isManque ? tplManque(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
@@ -7037,6 +7038,139 @@ function tplDiagnostic(c, x){
  * la catégorie. Le détail n'est demandé au serveur qu'à l'ouverture : sept
  * cents lignes par magasin n'ont rien à faire dans l'écran d'entrée.
  */
+/**
+ * Manque à gagner — ce que l'assortiment absent coûte, en euros.
+ *
+ * Une seule mesure, trois façons de la lire : le tableau magasins × mois, le
+ * dépliant qui l'ouvre référence par référence, et le classement réseau des
+ * références. Le basculement se fait sur les mêmes données déjà chargées —
+ * rien n'est relu, et les trois lectures ne peuvent donc pas diverger.
+ */
+function tplManque(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
+  const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:120px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:999px"></i></span>`;
+
+  if (c.mqChargement) {
+    return `<div data-screen="manque"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Calcul du manque à gagner…</div></div>`;
+  }
+  if (c.mqMotif) {
+    return `<div data-screen="manque"><div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.mqMotif)}</div></div>`;
+  }
+
+  const detail = d => `
+    <tr><td colspan="${c.mqEntetes.length + 4}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="${lbl}">${esc(d.titre)}</span>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.sousTitre)}</span>
+          <span style="flex:1"></span>
+          <span style="font-size:11.5px;color:#2d7a3e">Rattraper la moitié : <b>${esc(d.gain)}</b> — ${esc(d.gainMois)} par mois</span>
+        </div>
+        ${d.vide ? `<div style="font-size:12px;color:var(--color-text-muted);padding:8px 0">Aucune référence en défaut : ce magasin vend tout ce que les autres vendent.</div>` : `
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th};text-align:left">Référence</th>
+            <th style="${th};text-align:left">Sous-catégorie</th>
+            <th style="${th}">Vendue par</th><th style="${th}">Volume / mois</th>
+            <th style="${th}">Prix encaissé</th><th style="${th}">Manque</th>
+          </tr></thead>
+          <tbody>
+            ${d.refs.map(r => `<tr>
+              <td style="${td};text-align:left;font-weight:500">${esc(r.nom)}</td>
+              <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.cat)}</td>
+              <td style="${td};color:var(--color-text-muted)">${esc(r.vendeurs)}</td>
+              <td style="${td}">${esc(r.unitesMois)}</td>
+              <td style="${td};color:var(--color-text-muted)">${esc(r.prix)}</td>
+              <td style="${td};font-weight:600;color:var(--color-primary)">${esc(r.total)}</td>
+            </tr>`).join('')}
+            ${!d.resteN ? '' : `<tr><td colspan="6" style="${td};text-align:left;color:var(--color-text-muted)">+ ${d.resteN} autres références — ${esc(d.resteEur)}</td></tr>`}
+          </tbody>
+        </table>
+        <div style="font-size:11px;color:var(--color-text-muted);padding:10px 0 0;line-height:1.55">Une ligne se traite de deux façons : la mettre en production, ou la sortir de l’assortiment en le disant. Pas la laisser sans décision.</div>`}
+      </div>
+    </td></tr>`;
+
+  return `
+  <div data-screen="manque" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
+    <div style="${carte}">
+      <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px">
+        ${c.mqKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
+          <b style="display:block;font-size:20px;font-weight:600;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
+          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">${c.mqVue === 'references' ? 'Ce que le réseau laisse sur la table' : 'Manque à gagner par magasin et par mois'}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${c.mqVue === 'references'
+          ? 'Absente chez presque tout le réseau : c’est une question de gamme. Absente chez un seul : une question de magasin.'
+          : 'Cliquez un magasin pour voir les références qui composent son manque.'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
+        ${c.mqVues.map(v => `<button ${x.A(v.choisir)} style="${pill(v.on)}">${esc(v.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${c.mqDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${c.mqUnites.map(u => `<button ${x.A(u.choisir)} style="${pill(u.on)}">${esc(u.nom)}</button>`).join('')}
+      </div>
+
+      ${c.mqVue === 'references' ? `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Référence</th>
+          <th style="${th};text-align:left">Groupe</th>
+          <th style="${th};text-align:left">Absente chez</th>
+          <th style="${th}">Manque réseau</th><th style="${th};padding-right:18px"></th>
+        </tr></thead>
+        <tbody>
+          ${c.mqRefs.map(r => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(r.nom)}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.groupe)}</td>
+            <td style="${td};text-align:left">${esc(r.absente)}</td>
+            <td style="${td};font-weight:600;color:${r.col}">${esc(r.total)}</td>
+            <td style="${td};padding-right:18px">${jauge(r.barre, r.col)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        ${c.mqRefs.length} références affichées sur ${c.mqRefsN} en défaut quelque part dans le réseau.
+        ${!c.mqGammes ? '' : '<br>' + esc(c.mqGammes)}<br>${esc(c.mqSource)}
+      </div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Magasin</th>
+          ${c.mqEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+          <th style="${th}">Sur la période</th><th style="${th}">% du CA</th><th style="${th};padding-right:18px">Réf.</th>
+        </tr></thead>
+        <tbody>
+          ${c.mqLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouvert ? ';background:#FBF8F4' : ''}">
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500" title="${esc(l.complet)}"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
+            ${l.mois.map(m => `<td style="${td};${m.st}">${esc(m.v)}${m.sub ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(m.sub)}</div>` : ''}</td>`).join('')}
+            <td style="${td}"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">${jauge(l.barre, 'var(--color-primary)')}<b style="color:var(--color-primary)">${esc(l.total)}</b></span></td>
+            <td style="${td};${l.fort ? 'color:var(--color-primary);font-weight:600' : 'color:var(--color-text-muted)'}">${esc(l.part)}</td>
+            <td style="${td};padding-right:18px"><span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${l.refs}</span></td>
+          </tr>
+          ${l.ouvert ? detail(l.detail) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        <b>Comment le chiffre est fait.</b> Une référence n’entre au calcul que si <b>au moins deux magasins</b> l’ont vendue ce mois-là — vendue par un seul, c’est une spécialité, pas un manque.
+        Le volume retenu est la <b>médiane</b> des vendeurs par jour d’ouverture, multipliée par les jours d’ouverture du magasin et par le <b>rapport de sa fréquentation</b> à la leur : un petit magasin ne se voit pas attribuer le potentiel d’un grand.
+        Le prix est celui <b>réellement encaissé</b> chez les vendeurs, remises comprises. Le mois que la caisse n’a pas encore chargé reste vide plutôt que compté à zéro.
+        <br><b>C’est une estimation à assortiment comparable, pas une promesse de chiffre d’affaires.</b>
+        ${!c.mqGammes ? '' : '<br>' + esc(c.mqGammes)}<br>${esc(c.mqSource)}
+      </div>`}
+    </div>
+  </div>`;
+}
+
 function tplUsage(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';

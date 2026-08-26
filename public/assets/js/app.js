@@ -229,6 +229,7 @@ class App {
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
       usage: 'usage-catalogue',
+      manque: 'manque-a-gagner',
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
@@ -654,6 +655,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      manque: ['Manque à gagner', 'Ce que chaque magasin ne vend pas, en euros. Pour chaque référence qu’il n’a pas vendue alors que les autres la vendaient : leur volume médian par jour d’ouverture, ramené à sa fréquentation, au prix encaissé. Une estimation à assortiment comparable — pas une promesse de chiffre d’affaires.'],
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
@@ -1025,7 +1027,8 @@ class App {
           ['produits', 'Scoring des références', 0],
           ['seuil', 'Références sous seuil', 0],
           ['analyse', 'Analyse dans le temps', 0],
-          ['usage', 'Usage du catalogue', 0]] }]],
+          ['usage', 'Usage du catalogue', 0],
+          ['manque', 'Manque à gagner', 0]] }]],
       // « Suivi de production » a quitté le rail : les fournées déclarées sont
       // trop lacunaires pour en tirer quoi que ce soit (une boutique sur
       // quatre n'en déclare aucune), et le taux de perte se lit déjà au
@@ -1091,11 +1094,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1400,6 +1403,7 @@ class App {
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBxc) this.valsBxc(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
+    if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
       common.mesSimple = this.state.mesSimple !== false;
@@ -4925,6 +4929,110 @@ class App {
         .then(d => { this._usageDetEnCours = false; this._usageDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
         .catch(() => { this._usageDetEnCours = false; this._usageDet[cleD] = null; this.setState({}); });
     }
+  }
+
+  /**
+   * Le manque à gagner — une seule lecture, tout est dedans.
+   *
+   * Le calcul est lourd (six mois × sept cents références × quatre magasins),
+   * mais il tient en une requête et son résultat porte déjà le détail par
+   * magasin et le classement par référence : deux appels renverraient deux
+   * fois la même lecture de caisse pour deux façons de la trier.
+   */
+  manqueCharge(){
+    const S = this.state;
+    const cle = (S.mqMois || 6) + '|' + (S.mqGroupe || '');
+    if (!this._manque) { this._manque = {}; }
+    if (this._manque[cle] === undefined && !this._manqueEnCours) {
+      this._manqueEnCours = true;
+      readOne('/produits/manque?mois=' + (S.mqMois || 6)
+        + (S.mqGroupe ? '&groupe=' + encodeURIComponent(S.mqGroupe) : ''))
+        .then(d => { this._manqueEnCours = false; this._manque[cle] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._manqueEnCours = false; this._manque[cle] = null; this.setState({}); });
+    }
+  }
+
+  valsManque(common){
+    const S = this.state;
+    const mois = S.mqMois || 6;
+    const d = (this._manque || {})[mois + '|' + (S.mqGroupe || '')];
+    const court = nom => String(nom || '').split(' - ').pop();
+    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const nb = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
+    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+
+    common.mqChargement = d === undefined;
+    common.mqMotif = d === null ? 'Le manque à gagner n’a pas pu être calculé.' : ((d && d.motif) || '');
+    common.mqDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === mois,
+      choisir: () => this.setState({ mqMois: v, mqShop: null }) }));
+    // Le CA parle au franchisé, la marge parle au réseau : les deux sont là,
+    // et l'unité choisie vaut pour tout l'écran — sinon on compare un total en
+    // CA à un détail en marge.
+    const unite = S.mqUnite || 'eur';
+    common.mqUnites = [['eur', 'En CA'], ['marge', 'En marge'], ['unites', 'En unités']]
+      .map(([v, nom]) => ({ nom, on: unite === v, choisir: () => this.setState({ mqUnite: v }) }));
+    common.mqVues = [['magasins', 'Par magasin'], ['references', 'Par référence']]
+      .map(([v, nom]) => ({ nom, on: (S.mqVue || 'magasins') === v, choisir: () => this.setState({ mqVue: v }) }));
+    common.mqVue = S.mqVue || 'magasins';
+    if (!d) { common.mqLignes = []; common.mqRefs = []; common.mqEntetes = []; return; }
+
+    const val = o => unite === 'unites' ? nb(o.unites) : eur(unite === 'marge' ? o.marge : o.eur);
+    const brut = o => (unite === 'unites' ? o.unites : (unite === 'marge' ? o.marge : o.eur)) || 0;
+    const r = d.reseau || {};
+    common.mqKpis = [
+      { lbl: 'Manque à gagner réseau', v: unite === 'unites' ? nb(r.unites) : eur(unite === 'marge' ? r.marge : r.eur),
+        sub: 'sur ' + mois + ' mois, ' + nb(r.magasins) + ' magasins', accent: true },
+      { lbl: 'Par mois', v: eur(r.parMois), sub: 'moyenne réseau, en CA' },
+      { lbl: 'Part du CA', v: pc(r.part), sub: 'du CA réalisé sur la période' },
+      { lbl: 'Références en cause', v: nb(r.refs), sub: 'vendues par au moins ' + (d.seuil || 2) + ' magasins' },
+    ];
+    common.mqEntetes = (d.mois || []).map(m => m.lib);
+    const maxShop = Math.max(1, ...(d.magasins || []).map(m => brut(m)));
+
+    common.mqLignes = (d.magasins || []).map(m => ({
+      id: m.id, nom: court(m.nom), complet: m.nom,
+      ouvert: S.mqShop === m.id,
+      basculer: () => this.setState({ mqShop: S.mqShop === m.id ? null : m.id }),
+      // Un mois que la caisse n'a pas encore chargé n'est pas un mois sans
+      // manque : il reste vide, comme partout ailleurs dans le cockpit.
+      mois: (m.mois || []).map(x => x.charge
+        ? { v: val(x), st: '' }
+        : { v: '—', st: 'color:#b8b2a8', sub: 'non chargé' }),
+      total: val(m), part: pc(m.part), ca: eur(m.ca), refs: m.refs,
+      barre: Math.max(2, Math.round(100 * brut(m) / maxShop)),
+      fort: m.part != null && m.part >= 8,
+      detail: {
+        titre: court(m.nom) + ' — ' + val(m) + ' sur ' + mois + ' mois',
+        sousTitre: m.part == null ? '' : pc(m.part) + ' du CA réalisé (' + eur(m.ca) + ')',
+        gain: eur((m.eur || 0) / 2), gainMois: eur((m.eur || 0) / 2 / mois),
+        refs: (m.top || []).map(t => ({
+          nom: t.nom, cat: t.categorie, groupe: t.groupe,
+          vendeurs: t.vendeurs + (t.vendeurs > 1 ? ' magasins' : ' magasin'),
+          unitesMois: nb(t.unitesMois) + ' u',
+          prix: t.prix ? t.prix.toFixed(2).replace('.', ',') + ' €' : '—',
+          total: unite === 'unites' ? nb(t.unites) : eur(unite === 'marge' ? t.marge : t.eur),
+        })),
+        resteN: m.resteN, resteEur: eur(m.resteEur),
+        vide: (m.top || []).length === 0,
+      },
+    }));
+
+    const maxRef = Math.max(1, ...(d.references || []).map(x => brut(x)));
+    common.mqRefs = (d.references || []).map(x => ({
+      nom: x.nom, groupe: x.groupe, cat: x.categorie,
+      absente: x.absente.map(court).join(' · '),
+      nAbsente: x.nAbsente,
+      total: unite === 'unites' ? nb(x.unites) : eur(unite === 'marge' ? x.marge : x.eur),
+      barre: Math.max(2, Math.round(100 * brut(x) / maxRef)),
+      // Absente chez presque tout le réseau : c'est la gamme qui est en cause,
+      // pas le magasin. La couleur le dit avant la lecture.
+      col: x.nAbsente >= Math.max(2, (d.reseau || {}).magasins - 1) ? 'var(--color-primary)' : '#C17A2A',
+    }));
+    common.mqRefsN = d.referencesN || 0;
+    common.mqSource = d.source || '';
+    common.mqGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
+      + ' référence(s) de gammes saisonnières fermées sur la période sont écartées : '
+      + Object.keys(d.gammesEcartees || {}).slice(0, 4).join(', ') + '.');
   }
 
   valsUsage(common){
