@@ -587,3 +587,102 @@ function ep_prod_utilisation_jamais_pdf(): array
     echo $pdf;
     exit;
 }
+
+/**
+ * POST /produits/actif — retirer (ou remettre) des références du catalogue.
+ *
+ * ÉCRITURE SUR UNE TABLE DU PANEL. C'est la seule du cockpit, et elle est
+ * volontairement étroite : un seul champ, `product.is_active`, celui-là même
+ * que le catalogue lit déjà (`WHERE is_active = 1`). Jamais de DELETE — les
+ * lignes de ticket pointent sur `product.id`, et supprimer la référence
+ * rendrait six mois d'historique illisibles, en changeant après coup des
+ * chiffres déjà lus.
+ *
+ * Trois garde-fous :
+ *  - une référence VENDUE sur les douze derniers mois est refusée, pas
+ *    désactivée : la liste vient d'une analyse, une analyse peut se tromper de
+ *    ligne, et une référence qui tourne ne se retire pas par mégarde ;
+ *  - chaque référence passe au journal, nommée, avec son motif ;
+ *  - le geste s'annule par le même appel (`actif: true`).
+ *
+ * Body : {refs: ["6700048", …], actif: false, motif: "…"}
+ */
+function wr_prod_actif(): array
+{
+    $b = body();
+    $refs = $b['refs'] ?? [];
+    if (!is_array($refs) || $refs === []) {
+        http_response_code(422); return ['error' => 'aucune référence fournie'];
+    }
+    if (count($refs) > 400) {
+        http_response_code(422); return ['error' => 'trop de références en une fois (400 au plus)'];
+    }
+    $actif = !empty($b['actif']);
+    $motif = mb_substr(trim((string) ($b['motif'] ?? '')), 0, 200);
+
+    // ref (code cockpit) → id de caisse, et le nom pour le journal.
+    $parRef = [];
+    foreach (ep_prod_catalogue() as $p) {
+        $parRef[(string) $p['ref']] = ['pid' => $p['pwaId'] ?? null, 'nom' => (string) $p['nom']];
+    }
+
+    // Ce qui s'est vendu sur douze mois : le garde-fou.
+    $vendus = [];
+    if (!$actif) {
+        $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
+        $cl = utilColonnes('transaction_product', UTIL_COLS_LIGNE);
+        if ($ct === null || $cl === null) {
+            http_response_code(503);
+            return ['error' => 'impossible de vérifier les ventes récentes : la caisse n’expose pas ses lignes de ticket. Rien n’a été modifié.'];
+        }
+        try {
+            $sql = sprintf(
+                'SELECT l.`%s` AS produit, SUM(l.`%s`) AS q
+                   FROM `transaction_product` l JOIN `transaction` t ON t.`%s` = l.`%s`
+                  WHERE t.`%s` >= ? GROUP BY produit',
+                $cl['produit'], $cl['quantite'], $ct['id'], $cl['ticket'], $ct['date']);
+            foreach (Db::rows($sql, [date('Y-m-d', strtotime('-12 months')) . ' 00:00:00']) as $r) {
+                if ((float) $r['q'] > 0) { $vendus[(int) $r['produit']] = (float) $r['q']; }
+            }
+        } catch (PDOException $e) {
+            http_response_code(503);
+            return ['error' => 'lecture des ventes impossible — rien n’a été modifié'];
+        }
+    }
+
+    $faits = []; $refuses = []; $inconnues = []; $inchangees = [];
+    foreach ($refs as $r) {
+        $ref = trim((string) $r);
+        if ($ref === '') { continue; }
+        $c = $parRef[$ref] ?? null;
+        if ($c === null || $c['pid'] === null) { $inconnues[] = $ref; continue; }
+        $pid = (int) $c['pid'];
+        if (!$actif && isset($vendus[$pid])) {
+            $refuses[] = ['ref' => $ref, 'nom' => $c['nom'], 'unites' => round($vendus[$pid], 1)];
+            continue;
+        }
+        try {
+            // `rowCount()` de l'UPDATE lui-même : MySQL rend 0 quand la valeur
+            // était déjà celle-là — c'est exactement « rien à faire ici ».
+            if (Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]) === 0) {
+                $inchangees[] = $ref; continue;
+            }
+        } catch (PDOException $e) {
+            http_response_code(503);
+            return ['error' => 'écriture refusée par la base : ' . $e->getMessage(),
+                'faits' => count($faits), 'refuses' => $refuses];
+        }
+        journalAdd('CEO', 'Produit', $c['nom'],
+            ($actif ? 'Remise au catalogue' : 'Retirée du catalogue (is_active = 0)')
+            . ' — réf. ' . $ref . ($motif !== '' ? ' — ' . $motif : ''));
+        $faits[] = ['ref' => $ref, 'nom' => $c['nom']];
+    }
+
+    return ['ok' => true, 'actif' => $actif, 'motif' => $motif,
+        'faits' => $faits, 'refuses' => $refuses,
+        'inconnues' => $inconnues, 'inchangees' => $inchangees,
+        'resume' => count($faits) . ($actif ? ' remise(s) au catalogue' : ' retirée(s) du catalogue')
+            . (count($refuses) ? ', ' . count($refuses) . ' refusée(s) car vendue(s) sur 12 mois' : '')
+            . (count($inconnues) ? ', ' . count($inconnues) . ' référence(s) inconnue(s)' : '')
+            . (count($inchangees) ? ', ' . count($inchangees) . ' déjà dans cet état' : '')];
+}

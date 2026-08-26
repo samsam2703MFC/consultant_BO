@@ -216,6 +216,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/marketing/mesure/(\d+)/gel$#', $path, $m)) { return wr_mesure_gel((int) $m[1]); }
     if ($method === 'POST' && $path === '/ecrans/vue') { return wr_ecran_vue(); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
+    // Retirer une référence du catalogue : le SEUL geste du cockpit sur une
+    // table du panel, et il ne touche qu'un booléen — jamais une suppression.
+    if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     if ($method === 'POST' && $path === '/fournisseurs/reclamation') { return wr_reclamation_creer(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)
