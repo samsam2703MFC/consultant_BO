@@ -4969,8 +4969,10 @@ class App {
 
     common.anmChargement = d === undefined;
     common.anmMotif = d === null ? 'L’analyse n’a pas pu être calculée.' : ((d && d.motif) || '');
-    common.anmShops = ((d && d.shops) || []).map(x => ({ id: x.id, nom: court(x.nom),
-      on: (d && d.shop) === x.id }));
+    common.anmShops = ((d && d.shops) || []).map(x => ({ id: String(x.id), nom: court(x.nom),
+      // Les identifiants voyagent tantôt en nombre, tantôt en chaîne selon la
+      // couche qui les a produits : on compare des chaînes, ou on compare rien.
+      on: String((d && d.shop) ?? '') === String(x.id) }));
     common.anmChoisir = e => this.setState({ anmShop: e.target.value, anmEtape: 1 });
     common.anmDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === (S.anmMois || 6),
       choisir: () => this.setState({ anmMois: v }) }));

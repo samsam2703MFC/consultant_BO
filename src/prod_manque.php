@@ -153,6 +153,7 @@ function ep_prod_manque(): array
 
     // --- Le calcul.
     $parShopMois = [];   // shop => mois => ['eur','marge','unites','refs']
+    $parShopGrp  = [];   // shop => groupe => eur — pour croiser avec le mix
     $parShopRef  = [];   // shop => pid => ['eur','marge','unites','mois']
     $parRef      = [];   // pid => ['eur','marge','unites','shops'=>[]]
 
@@ -197,6 +198,7 @@ function ep_prod_manque(): array
                 $parShopMois[$sid][$cle]['unites'] = ($parShopMois[$sid][$cle]['unites'] ?? 0) + $unites;
                 $parShopMois[$sid][$cle]['refs'] = ($parShopMois[$sid][$cle]['refs'] ?? 0) + 1;
 
+                $parShopGrp[$sid][$r['groupe']] = ($parShopGrp[$sid][$r['groupe']] ?? 0) + $eur;
                 $parShopRef[$sid][$pid]['eur'] = ($parShopRef[$sid][$pid]['eur'] ?? 0) + $eur;
                 $parShopRef[$sid][$pid]['marge'] = ($parShopRef[$sid][$pid]['marge'] ?? 0) + $mrg;
                 $parShopRef[$sid][$pid]['unites'] = ($parShopRef[$sid][$pid]['unites'] ?? 0) + $unites;
@@ -246,6 +248,10 @@ function ep_prod_manque(): array
             'eur' => round($totEur), 'marge' => round($totMrg), 'unites' => (int) round($totU),
             'ca' => round($ca), 'part' => $ca > 0 ? round(100 * $totEur / $ca, 1) : null,
             'refs' => count($top),
+            // Le manque VENTILÉ par groupe : l'analyse magasin s'en sert pour
+            // ne pas compter deux fois ce que le mix et l'assortiment
+            // expliquent ensemble.
+            'parGroupe' => array_map('intval', array_map('round', $parShopGrp[$sid] ?? [])),
             'top' => array_slice($top, 0, 12),
             'resteN' => count($reste), 'resteEur' => round(array_sum(array_column($reste, 'eur'))),
         ];

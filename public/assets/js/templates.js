@@ -7147,7 +7147,7 @@ function tplAnm(c, x){
           </tr>`).join('')}
         </tbody>
       </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Le potentiel = revenir à la part médiane des autres magasins, le CA mensuel actuel posé comme assiette. Une catégorie au-dessus du réseau n’est pas « à corriger » : c’est l’identité du magasin — elle est marquée comme force, jamais comptée en négatif.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">Le potentiel = revenir à la part médiane des autres magasins, le CA mensuel actuel posé comme assiette — <b>moins ce que le levier 1 compte déjà</b> : une catégorie en retrait l’est souvent parce que des références y manquent, et additionner les deux promettrait deux fois le même euro. Une catégorie au-dessus du réseau n’est pas « à corriger » : c’est l’identité du magasin — elle est marquée comme force, jamais comptée en négatif.</div>
     </div>`;
 
   const e3 = `
