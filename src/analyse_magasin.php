@@ -267,3 +267,153 @@ function ep_mag_analyse(): array
     ];
     return $out;
 }
+
+/**
+ * Le PDF de l'analyse — deux pages A4, celles qu'on pose sur la table.
+ *
+ * Le même jeu de données que le wizard, rendu par le même moteur que la note
+ * de campagne : l'entretien franchisé se prépare à l'écran et se mène sur
+ * papier, et les deux doivent dire exactement les mêmes chiffres.
+ */
+function anmPdfHtml(array $d): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
+    $pcs = static fn ($v) => number_format((float) $v, 1, ',', ' ') . ' %';
+    $F = 'font-family:Helvetica,Arial,sans-serif';
+    $ACCENT = '#8D1D2C'; $MUTE = '#6b6259'; $BORD = '#E7E0D6';
+    $court = static fn (string $nom) => trim((string) array_reverse(explode(' - ', $nom))[0]);
+
+    $k = $d['kpis']; $l1 = $d['levier1']; $l2 = $d['levier2']; $l3 = $d['levier3'];
+
+    $tuile = static fn (string $lbl, string $val, string $sub, bool $rouge = false) =>
+        '<td width="25%" style="padding:3mm 4mm;border:0.5pt solid ' . $BORD . ';border-radius:2mm">'
+        . '<div style="font-size:7pt;letter-spacing:.07em;text-transform:uppercase;color:' . $MUTE . '">' . $lbl . '</div>'
+        . '<div style="font-size:14pt;font-weight:700;margin-top:1mm' . ($rouge ? ';color:' . $ACCENT : '') . '">' . $val . '</div>'
+        . '<div style="font-size:7.5pt;color:' . $MUTE . ';margin-top:0.5mm">' . $sub . '</div></td>';
+
+    $h = '<div style="' . $F . ';color:#221E1A">'
+        . '<div style="font-size:17pt;font-weight:700">Analyse magasin — ' . $e($court($d['nom'])) . '</div>'
+        . '<div style="font-size:9pt;color:' . $MUTE . ';margin:1.5mm 0 5mm">Du ' . $e(mktBriefJour($d['du']))
+        . ' au ' . $e(mktBriefJour($d['au'])) . ' (' . (int) $d['n'] . ' mois) — comparé aux autres magasins du réseau, à fréquentation ramenée.</div>'
+
+        . '<table width="100%" cellpadding="0" cellspacing="4" style="margin-bottom:5mm"><tr>'
+        . $tuile('CA — ' . (int) $d['n'] . ' mois', $eur($k['ca']), $eur($k['caMois']) . ' / mois')
+        . $tuile('Panier', number_format((float) $k['panier'], 2, ',', ' ') . ' €',
+            'réseau : ' . number_format((float) $k['panierReseau'], 2, ',', ' ') . ' €')
+        . $tuile('Assortiment vendu', (string) (int) $k['refsVendues'],
+            'meilleur magasin : ' . (int) $k['refsMax'] . ' références')
+        . $tuile('Potentiel identifié', '+ ' . $eur($k['totalMois']) . ' / mois',
+            $eur($k['totalAn']) . ' / an — ' . $pcs($k['partCa']) . ' du CA', true)
+        . '</tr></table>';
+
+    // --- Les trois leviers.
+    $carte = static fn (string $lbl, int $mois, int $an, string $regle, string $note) =>
+        '<td width="33%" valign="top" style="padding:3mm 4mm;border:0.5pt solid ' . $BORD . ';border-radius:2mm">'
+        . '<div style="font-size:7pt;letter-spacing:.07em;text-transform:uppercase;color:' . $MUTE . '">' . $lbl . '</div>'
+        . '<div style="font-size:13pt;font-weight:700;color:' . $ACCENT . ';margin-top:1mm">+ ' . number_format($mois, 0, ',', ' ') . ' € / mois</div>'
+        . '<div style="font-size:7.5pt;color:' . $MUTE . '">' . number_format($an, 0, ',', ' ') . ' € / an — ' . $regle . '</div>'
+        . '<div style="font-size:8pt;margin-top:2mm;line-height:1.5">' . $note . '</div></td>';
+
+    $h .= '<div style="font-size:10.5pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:0 0 3mm">Les trois leviers</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="4" style="margin-bottom:5mm"><tr>'
+        . $carte('Levier 1 — Assortiment', (int) $l1['retenuMois'], (int) $l1['retenuAn'],
+            'la moitié du manque', (int) $l1['refs'] . ' références que les autres vendent et pas lui.')
+        . $carte('Levier 2 — Catégories', (int) $l2['potMois'], (int) $l2['potAn'],
+            'retour à la part réseau', $l2['enRetrait'] . ' catégorie(s) en retrait — hors ce que le levier 1 compte déjà.')
+        . $carte('Levier 3 — Prix', (int) $l3['potMois'], (int) $l3['potAn'],
+            'à volume constant', (int) $l3['nb'] . ' référence(s) sous le prix des autres, sans volume supérieur.')
+        . '</tr></table>';
+
+    // --- Les catégories.
+    $th = 'font-size:7pt;letter-spacing:.06em;text-transform:uppercase;color:' . $MUTE . ';text-align:right;padding:1.5mm 2mm;border-bottom:0.5pt solid #222';
+    $td = 'font-size:8.5pt;text-align:right;padding:1.6mm 2mm;border-bottom:0.5pt solid ' . $BORD;
+    $h .= '<div style="page-break-inside:avoid"><div style="font-size:10.5pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:0 0 2mm">Le mix par catégorie, contre le réseau</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td style="' . $th . ';text-align:left">Catégorie</td><td style="' . $th . '">Sa part</td>'
+        . '<td style="' . $th . '">Part réseau</td><td style="' . $th . '">Écart</td>'
+        . '<td style="' . $th . '">Potentiel / mois</td><td style="' . $th . '">Par an</td></tr>';
+    foreach (array_slice($l2['groupes'], 0, 10) as $g) {
+        $retrait = $g['potMois'] > 0;
+        $h .= '<tr><td style="' . $td . ';text-align:left;font-weight:600">' . $e($g['nom']) . '</td>'
+            . '<td style="' . $td . '">' . $pcs($g['part']) . '</td>'
+            . '<td style="' . $td . ';color:' . $MUTE . '">' . $pcs($g['partReseau']) . '</td>'
+            . '<td style="' . $td . ';font-weight:600;color:' . ($retrait ? $ACCENT : '#2d7a3e') . '">'
+            . ($g['delta'] > 0 ? '+ ' : '− ') . number_format(abs((float) $g['delta']), 1, ',', ' ') . ' pts</td>'
+            . '<td style="' . $td . ';font-weight:700' . ($retrait ? ';color:' . $ACCENT : ';color:' . $MUTE . ';font-weight:400') . '">'
+            . ($retrait ? $eur($g['potMois']) : ($g['force'] ? 'sa force' : 'au niveau')) . '</td>'
+            . '<td style="' . $td . ';color:' . $MUTE . '">' . ($retrait ? $eur($g['potAn']) : '—') . '</td></tr>';
+    }
+    $h .= '</table></div>';
+
+    // --- Page 2 : les prix, puis le plan.
+    $h .= '<div style="page-break-before:always">'
+        . '<div style="font-size:10.5pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:0 0 2mm">Les prix sous le réseau — gain à volume constant</div>';
+    if ($l3['refs'] === []) {
+        $h .= '<div style="font-size:9pt;color:#2d7a3e;margin-bottom:5mm">Aucun : la grille de ce magasin est au niveau du réseau.</div>';
+    } else {
+        $h .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:5mm"><tr>'
+            . '<td style="' . $th . ';text-align:left">Référence</td><td style="' . $th . '">Son prix</td>'
+            . '<td style="' . $th . '">Prix réseau</td><td style="' . $th . '">Écart</td>'
+            . '<td style="' . $th . '">Volume / mois</td><td style="' . $th . '">Gain / mois</td><td style="' . $th . '">Par an</td></tr>';
+        foreach ($l3['refs'] as $r) {
+            $h .= '<tr><td style="' . $td . ';text-align:left;font-weight:600">' . $e($r['nom'])
+                . ' <span style="color:' . $MUTE . ';font-weight:400">· ' . $e($r['groupe']) . '</span></td>'
+                . '<td style="' . $td . '">' . number_format((float) $r['prix'], 2, ',', ' ') . ' €</td>'
+                . '<td style="' . $td . ';color:' . $MUTE . '">' . number_format((float) $r['prixReseau'], 2, ',', ' ') . ' €</td>'
+                . '<td style="' . $td . ';color:' . $ACCENT . '">− ' . number_format(abs((float) $r['ecartPct']), 1, ',', ' ') . ' %</td>'
+                . '<td style="' . $td . '">' . (int) $r['volMois'] . ' u</td>'
+                . '<td style="' . $td . ';font-weight:700;color:' . $ACCENT . '">' . $eur($r['gainMois']) . '</td>'
+                . '<td style="' . $td . ';color:' . $MUTE . '">' . $eur($r['gainAn']) . '</td></tr>';
+        }
+        if (($l3['resteN'] ?? 0) > 0) {
+            $h .= '<tr><td colspan="7" style="' . $td . ';text-align:left;color:' . $MUTE . '">+ '
+                . (int) $l3['resteN'] . ' autres références — ' . $eur($l3['resteMois']) . ' / mois</td></tr>';
+        }
+        $h .= '</table>';
+    }
+
+    $h .= '<div style="font-size:10.5pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:0 0 2mm">Le plan, classé par euros mensuels</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td style="' . $th . ';text-align:left">#</td><td style="' . $th . ';text-align:left">Action</td>'
+        . '<td style="' . $th . ';text-align:left">Levier</td><td style="' . $th . '">/ mois</td>'
+        . '<td style="' . $th . '">/ an</td><td style="' . $th . '">Cumul / an</td></tr>';
+    foreach ($d['plan'] as $a) {
+        $h .= '<tr><td style="' . $td . ';text-align:left;color:' . $MUTE . '">' . (int) $a['rang'] . '</td>'
+            . '<td style="' . $td . ';text-align:left;line-height:1.45">' . $e($a['action']) . '</td>'
+            . '<td style="' . $td . ';text-align:left;font-size:7.5pt;color:' . $MUTE . '">' . $e($a['levier']) . '</td>'
+            . '<td style="' . $td . ';font-weight:700">' . $eur($a['eurMois']) . '</td>'
+            . '<td style="' . $td . ';color:' . $MUTE . '">' . $eur($a['eurAn']) . '</td>'
+            . '<td style="' . $td . ';font-weight:700;color:' . $ACCENT . '">' . $eur($a['cumulAn']) . '</td></tr>';
+    }
+    $h .= '</table>'
+        . '<div style="font-size:7.5pt;color:' . $MUTE . ';margin-top:4mm;line-height:1.6">'
+        . 'Comment lire ces chiffres. L’assortiment est retenu à la moitié de son estimation — un plan qui promet le maximum n’est pas un plan. '
+        . 'Le levier catégories déduit ce que l’assortiment compte déjà : jamais deux fois le même euro. '
+        . 'Les prix sont ceux réellement encaissés, remises comprises, et une référence dont le volume dépasse celui du réseau n’est pas comptée : son prix bas travaille. '
+        . $e($d['source'] ?? '') . '</div>'
+        . '</div></div>';
+    return $h;
+}
+
+/** GET /magasin/analyse.pdf?shop=4[&mois=6] */
+function ep_mag_analyse_pdf(): array
+{
+    $d = ep_mag_analyse();
+    if (($d['motif'] ?? null) !== null || !isset($d['kpis'])) {
+        http_response_code(422);
+        return ['error' => $d['motif'] ?? 'analyse impossible'];
+    }
+    $pdf = rapPdfRendu(anmPdfHtml($d), [
+        'magasin' => $d['nom'],
+        'rapport' => 'Analyse magasin — ' . (int) $d['n'] . ' mois',
+        'genere' => date('d/m/Y à H:i'),
+        'envoye' => '',
+    ]);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="analyse-' . mktSlug($d['nom'])
+        . '-' . date('Y-m') . '.pdf"');
+    echo $pdf;
+    exit;
+}

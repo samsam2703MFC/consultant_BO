@@ -4978,12 +4978,12 @@ class App {
       choisir: () => this.setState({ anmMois: v }) }));
 
     const etape = S.anmEtape || 1;
-    common.anmEtapes = [[1, 'Vue d’ensemble'], [2, 'Catégories'], [3, 'Prix'], [4, 'Le plan']]
+    common.anmEtapes = [[1, 'Vue d’ensemble'], [2, 'Catégories'], [3, 'Prix'], [4, 'Le plan'], [5, 'Le PDF']]
       .map(([v, nom]) => ({ v, nom, on: etape === v, fait: v < etape,
         choisir: () => this.setState({ anmEtape: v }) }));
     common.anmEtape = etape;
     common.anmPrec = etape > 1 ? () => this.setState({ anmEtape: etape - 1 }) : null;
-    common.anmSuiv = etape < 4 ? () => this.setState({ anmEtape: etape + 1 }) : null;
+    common.anmSuiv = etape < 5 ? () => this.setState({ anmEtape: etape + 1 }) : null;
     if (!d || d.motif) { return; }
 
     const k = d.kpis, l1 = d.levier1, l2 = d.levier2, l3 = d.levier3;
@@ -5042,6 +5042,18 @@ class App {
         + eur(d.plan[d.plan.length - 1].cumulAn) + ' / an si tout est tenu.'
       : '';
     common.anmSource = d.source || '';
+    common.anmPdfHref = API_BASE + '/magasin/analyse.pdf?shop=' + encodeURIComponent(d.shop)
+      + '&mois=' + (S.anmMois || 6);
+    common.anmPdfNom = 'analyse-' + court(d.nom).toLowerCase() + '.pdf';
+    // Ce que le PDF contient, énuméré depuis les données AFFICHÉES : la
+    // promesse de l'étape 5 ne peut pas diverger de ce qu'on vient de lire.
+    common.anmPdfContenu = [
+      'La synthèse : CA, panier, assortiment, et le potentiel de ' + eur(k.totalMois) + ' / mois — ' + eur(k.totalAn) + ' / an',
+      'Les trois leviers, chacun par mois et par an',
+      'Le mix par catégorie face au réseau (' + (common.anmGroupes || []).length + ' catégories)',
+      'Les prix sous le réseau (' + (d.levier3.nb || 0) + ' références, gain à volume constant)',
+      'Le plan : ' + (d.plan || []).length + ' actions classées, avec le cumul annuel',
+    ];
   }
 
   /**

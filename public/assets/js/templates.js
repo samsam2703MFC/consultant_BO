@@ -7208,10 +7208,24 @@ function tplAnm(c, x){
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55"><b>${esc(c.anmPlanTotal)}</b> Les actions d’assortiment sont déjà retenues à la moitié de leur estimation — un plan qui promet le maximum n’est pas un plan.</div>
     </div>`;
 
+  const e5 = `
+    <div style="${carte};padding:26px 28px;display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:320px">
+        <div style="${lbl}">${esc(c.anmNom)} — le dossier complet, en deux pages A4</div>
+        <div style="font-size:13px;line-height:1.6;margin:10px 0 14px;max-width:640px">Le même moteur que la note de campagne, les mêmes chiffres que les quatre étapes que vous venez de lire — mis en page pour être posés sur la table de l’entretien franchisé.</div>
+        ${(c.anmPdfContenu || []).map(t => `<div style="display:flex;gap:9px;font-size:12.5px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:#2d7a3e;font-weight:700">✓</span><span>${esc(t)}</span></div>`).join('')}
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:12px;line-height:1.55">Le pied de page porte le magasin, la période et la date d’édition — chaque feuille reste identifiable une fois agrafée à d’autres.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch;min-width:250px">
+        <a href="${esc(c.anmPdfHref)}" target="_blank" rel="noreferrer" style="display:block;text-align:center;background:var(--color-primary);color:#fff;border-radius:11px;padding:15px 26px;font-size:14px;font-weight:600;text-decoration:none">↓ Télécharger le PDF</a>
+        <span style="text-align:center;font-size:11px;color:var(--color-text-muted)">${esc(c.anmPdfNom || '')} · 2 pages A4</span>
+      </div>
+    </div>`;
+
   return `
   <div data-screen="anm" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
     ${tete}
-    ${c.anmEtape === 1 ? e1 : c.anmEtape === 2 ? e2c : c.anmEtape === 3 ? e3 : e4}
+    ${c.anmEtape === 1 ? e1 : c.anmEtape === 2 ? e2c : c.anmEtape === 3 ? e3 : c.anmEtape === 4 ? e4 : e5}
     <div style="display:flex;align-items:center;gap:10px">
       ${c.anmPrec ? `<button ${x.A(c.anmPrec)} style="${pill(false)}">← Précédent</button>` : ''}
       <span style="flex:1"></span>
