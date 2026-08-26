@@ -934,7 +934,7 @@ function mktBriefBanniere(array $d): string
     return 'data:image/jpeg;base64,' . base64_encode($bandeau);
 }
 
-function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise, string $shopId = ''): string
+function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise, string $shopId = '', ?array $jointes = null): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -1032,6 +1032,30 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
     // posés directement dans le <table> du squelette en sortaient — les
     // navigateurs les remontent hors du tableau, d'où une lettre sans marges
     // et une image en pleine largeur.
+    // Ce qui part VRAIMENT avec ce courriel. L'envoi passe la liste qu'il a
+    // réellement attachée — une annexe écartée pour le poids ne doit pas être
+    // annoncée ici : le franchisé la chercherait dans un trombone absent.
+    // Sans liste fournie (aperçu à l'écran), on montre les cases cochées.
+    if ($jointes === null) {
+        $jointes = array_values(array_filter($d['annexes'] ?? [],
+            static fn ($a) => $a['enMail'] && $a['existe']));
+    }
+    $blocJoints = $jointes === [] ? '' :
+        '<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:16px 0 0;border-top:1px solid #e6e0d8">'
+        . '<tr><td style="padding:12px 0 6px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">'
+        . 'Ce courriel contient ' . (count($jointes) + 1) . ' document' . (count($jointes) + 1 > 1 ? 's' : '')
+        . '</td></tr>'
+        . '<tr><td style="padding:2px 0;font-size:12.5px;line-height:1.55">'
+        . '<strong>La note de campagne</strong><span style="color:#7a736a"> · votre magasin · PDF</span></td></tr>'
+        . implode('', array_map(static fn ($a) =>
+            '<tr><td style="padding:2px 0;font-size:12.5px;line-height:1.55"><strong>'
+            . htmlspecialchars((string) $a['nom'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong>'
+            . '<span style="color:#7a736a">'
+            . (($a['type'] ?? '') !== '' ? ' · ' . htmlspecialchars((string) $a['type'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '')
+            . ' · PDF' . (($a['tailleTxt'] ?? '') !== '' ? ' · ' . htmlspecialchars((string) $a['tailleTxt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '')
+            . '</span></td></tr>', $jointes))
+        . '</table>';
+
     $contenu = $banniere
         . '<tr><td class="pad" style="padding:20px 26px 4px;font-family:\'Segoe UI\',Arial,sans-serif;color:#221E1A">'
         . '<div class="cmd" style="font-size:13.5px;line-height:1.65">' . $intro . '</div>'
@@ -1041,6 +1065,7 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
             ? 'La note complète est en pièce jointe, en PDF — une page, à imprimer et à afficher en réserve.'
             : 'La note complète est en pièce jointe : une page de chiffres, puis le visuel format par format et la liste des documents.')
         . '</p>'
+        . $blocJoints
         . '<p style="margin:16px 0 0;font-size:11.5px;color:#7a736a;line-height:1.6">' . $pied . '</p>'
         . $signature
         . '</td></tr>';
@@ -1311,7 +1336,7 @@ function wr_mkt_brief_envoyer(int $id): array
     // fichier part à quatre magasins, le relire quatre fois ne l'améliore pas.
     // Plafond global : au-delà, les serveurs de messagerie refusent le message
     // entier, et le franchisé ne recevrait même pas la note.
-    $annexes = []; $poids = $pdf === null ? 0 : strlen($pdf); $ecartees = [];
+    $annexes = []; $listeJointes = []; $poids = $pdf === null ? 0 : strlen($pdf); $ecartees = [];
     foreach ($d['annexes'] as $a) {
         if (!$a['enMail']) { continue; }
         $oct = annexeOctets($a);
@@ -1323,6 +1348,10 @@ function wr_mkt_brief_envoyer(int $id): array
         $poids += strlen($oct);
         $annexes[] = ['nom' => annexeNomFichier((string) $a['nom']),
             'type' => 'application/pdf', 'contenu' => $oct];
+        // Le corps du courriel annoncera CELLES-CI, et pas les cases cochées :
+        // les deux listes diffèrent dès qu'une annexe est écartée.
+        $listeJointes[] = ['nom' => $a['nom'], 'type' => $a['type'] ?? '',
+            'tailleTxt' => $a['tailleTxt'] ?? ''];
     }
 
     $envoyes = 0; $echecs = [];
@@ -1331,7 +1360,7 @@ function wr_mkt_brief_envoyer(int $id): array
         $vars = ['campagne' => $d['nom'], 'du' => mktBriefJour($d['du']), 'au' => mktBriefJour($d['au']),
             'magasin' => $t['magasin'], 'franchise' => $t['franchise'], 'type' => $d['type']];
         $sujet = caMailRemplir((string) $c['sujet'], $vars);
-        $html = mktBriefMailHtml($d, $c, $t['magasin'], $t['franchise'], (string) ($t['id'] ?? ''));
+        $html = mktBriefMailHtml($d, $c, $t['magasin'], $t['franchise'], (string) ($t['id'] ?? ''), $listeJointes);
         // Le PDF est joint QUAND il existe : sans moteur sur le serveur, la
         // lettre part quand même et le dit, plutôt que de ne pas partir.
         $sien = $pdfDe((string) $t['id'], (string) $t['magasin']);
@@ -1342,6 +1371,11 @@ function wr_mkt_brief_envoyer(int $id): array
             $html = (string) preg_replace('#<p[^>]*>La note complète est en pièce jointe.*?</p>#s',
                 '<p style="margin:14px 0 0;font-size:12.5px;line-height:1.6">La note détaillée suit par un autre envoi : le serveur n’a pas pu produire le PDF cette fois.</p>',
                 $html);
+            // La note n'est pas jointe : elle sort de la liste, sinon le
+            // franchisé chercherait un document qui n'est pas là.
+            $html = (string) preg_replace('#<tr><td style="padding:2px 0;font-size:12\.5px;line-height:1\.55"><strong>La note de campagne</strong>.*?</td></tr>#s', '', $html);
+            $html = (string) preg_replace('#Ce courriel contient \d+ documents?#',
+                'Ce courriel contient ' . count($annexes) . ' document' . (count($annexes) > 1 ? 's' : ''), $html);
         }
 
         $ok = Smtp::envoyer($t['adresse'], $sujet, $html, $pieces, (string) $c['expediteur'], $copies);
