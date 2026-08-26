@@ -336,7 +336,7 @@ function anmPdfHtml(array $d): string
 
     // --- Les catégories.
     $th = 'font-size:7pt;letter-spacing:.06em;text-transform:uppercase;color:' . $MUTE . ';text-align:right;padding:1.5mm 2mm;border-bottom:0.5pt solid #222';
-    $td = 'font-size:8.5pt;text-align:right;padding:1.6mm 2mm;border-bottom:0.5pt solid ' . $BORD;
+    $td = 'font-size:8.5pt;text-align:right;padding:1.3mm 2mm;border-bottom:0.5pt solid ' . $BORD;
     $h .= '<div style="page-break-inside:avoid"><div style="font-size:10.5pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:0 0 2mm">Le mix par catégorie, contre le réseau</div>'
         . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
         . '<td style="' . $th . ';text-align:left">Catégorie</td><td style="' . $th . '">Sa part</td>'
@@ -396,7 +396,7 @@ function anmPdfHtml(array $d): string
             . '<td style="' . $td . ';font-weight:700;color:' . $ACCENT . '">' . $eur($a['cumulAn']) . '</td></tr>';
     }
     $h .= '</table>'
-        . '<div style="font-size:7.5pt;color:' . $MUTE . ';margin-top:4mm;line-height:1.6">'
+        . '<div style="font-size:7.5pt;color:' . $MUTE . ';margin-top:3mm;line-height:1.5;page-break-inside:avoid">'
         . 'Comment lire ces chiffres. L’assortiment est retenu à la moitié de son estimation — un plan qui promet le maximum n’est pas un plan. '
         . 'Le levier catégories déduit ce que l’assortiment compte déjà : jamais deux fois le même euro. '
         . 'Les prix sont ceux réellement encaissés, remises comprises, et une référence dont le volume dépasse celui du réseau n’est pas comptée : son prix bas travaille. '
