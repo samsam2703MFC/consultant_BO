@@ -686,3 +686,28 @@ function wr_prod_actif(): array
             . (count($inconnues) ? ', ' . count($inconnues) . ' référence(s) inconnue(s)' : '')
             . (count($inchangees) ? ', ' . count($inchangees) . ' déjà dans cet état' : '')];
 }
+
+/**
+ * GET /produits/utilisation/jamais?mois=6[&groupe=]
+ *
+ * La même liste que le PDF, en JSON. Elle sert à AGIR dessus — retirer un
+ * bloc du catalogue — sans recopier des codes à la main : une liste retapée
+ * depuis un PDF est une liste où il manque une ligne.
+ */
+function ep_prod_utilisation_jamais(): array
+{
+    $n = (int) ($_GET['mois'] ?? 6);
+    if ($n < 1 || $n > 12) { $n = 6; }
+    $d = utilJamaisVendues($n, trim((string) ($_GET['groupe'] ?? '')));
+    // Les codes à plat, groupe par groupe : c'est ce qu'on passe ensuite à
+    // /produits/actif.
+    foreach ($d['lignes'] as $i => $g) {
+        $codes = [];
+        foreach ($g['categories'] as $c) {
+            foreach ($c['refs'] as $r) { $codes[] = $r['ref']; }
+        }
+        $d['lignes'][$i]['refs'] = $codes;
+    }
+    $d['mois'] = $n;
+    return $d;
+}

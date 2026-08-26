@@ -149,6 +149,7 @@ function route(string $method, string $path): mixed
             $path === '/produits/utilisation'          => ep_prod_utilisation(),
             $path === '/produits/utilisation/magasin'  => ep_prod_utilisation_magasin(),
             $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
+            $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/centrale/cockpit'              => ep_ca_cockpit(),
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),

@@ -82,3 +82,4 @@
 2026-08-26 15:55 relance livraison
 2026-08-26 15:59 hors groupe en fin de liste
 2026-08-26 16:20 retrait catalogue
+2026-08-26 16:29 jamais json
