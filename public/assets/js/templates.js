@@ -7045,6 +7045,12 @@ function tplUsage(c, x){
   const td = 'padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
   const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
   const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:80px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:999px"></i></span>`;
+  // Une seule grille pour les trois niveaux : les colonnes du groupe et celles
+  // de ses sous-catégories doivent tomber l'une sous l'autre, sinon les taux ne
+  // se comparent plus d'un coup d'œil.
+  const GRILLE = 'display:grid;grid-template-columns:230px 92px 1fr 116px 96px;gap:0 12px;align-items:center';
+  const badge = n => n ? `<span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${n}</span>`
+    : `<span style="color:#2d7a3e;font-size:11px">à jour</span>`;
 
   if (c.usChargement) {
     return `<div data-screen="usage"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des lignes de ticket…</div></div>`;
@@ -7064,20 +7070,29 @@ function tplUsage(c, x){
           <span style="flex:1"></span>
           ${d.tris.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
         </div>
-        <div style="display:grid;grid-template-columns:210px 92px 1fr 116px 96px;gap:0 12px;align-items:center;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
+        <div style="${GRILLE};font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
           <span>Catégorie</span><span style="text-align:right">Catalogue</span><span></span>
           <span style="text-align:right">Vendues</span><span style="text-align:right">À rattraper</span>
         </div>
-        ${d.categories.map(k => `
-          <div ${x.A(k.basculer)} style="display:grid;grid-template-columns:210px 92px 1fr 116px 96px;gap:0 12px;align-items:center;font-size:12px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer">
+        ${d.groupes.map(g => `
+          <div ${x.A(g.basculer)} style="${GRILLE};font-size:12.5px;padding:9px 0;border-bottom:0.5px solid var(--color-border-secondary);cursor:pointer${g.ouvert ? ';background:rgba(34,34,34,.025)' : ''}">
+            <span style="font-weight:600"><span style="color:var(--color-text-muted);font-size:11px">${g.ouvert ? '▾' : '▸'}</span> ${esc(g.nom)}
+              <span style="display:block;font-size:10.5px;font-weight:400;color:var(--color-text-muted);padding-left:14px">${esc(g.sous)}</span></span>
+            <span style="text-align:right;color:var(--color-text-muted)">${esc(g.catalogue)}</span>
+            <span>${jauge(g.barre, g.col)}</span>
+            <span style="text-align:right;color:${g.col};font-weight:600">${esc(g.vendues)} · ${esc(g.taux)}</span>
+            <span style="text-align:right">${badge(g.aRattraper)}</span>
+          </div>
+          ${!g.ouvert ? '' : g.categories.map(k => `
+          <div ${x.A(k.basculer)} style="${GRILLE};font-size:12px;padding:7px 0 7px 16px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;background:${k.ouverte ? 'rgba(141,29,44,.035)' : 'transparent'}">
             <span><span style="color:var(--color-text-muted);font-size:11px">${k.ouverte ? '▾' : '▸'}</span> ${esc(k.nom)}</span>
             <span style="text-align:right;color:var(--color-text-muted)">${esc(k.catalogue)}</span>
             <span>${jauge(k.barre, k.col)}</span>
             <span style="text-align:right;color:${k.col};font-weight:600">${esc(k.vendues)} · ${esc(k.taux)}</span>
-            <span style="text-align:right">${k.aRattraper ? `<span style="font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(141,29,44,.10);color:var(--color-primary)">${k.aRattraper}</span>` : `<span style="color:#2d7a3e;font-size:11px">à jour</span>`}</span>
+            <span style="text-align:right">${badge(k.aRattraper)}</span>
           </div>
           ${!k.ouverte ? '' : `
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:10px 0 4px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:10px 0 12px 16px;background:rgba(141,29,44,.035);border-bottom:0.5px solid var(--color-border-tertiary)">
             <div>
               <div style="${lbl};margin-bottom:6px">Vendues ici (${esc(k.nVendues)})</div>
               ${k.listeVendues.length ? k.listeVendues.map(r => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(r.nom)}</span><span style="color:var(--color-text-muted)">${esc(r.droite)}</span></div>`).join('')
@@ -7089,8 +7104,8 @@ function tplUsage(c, x){
               ${k.listeAbsentes.map(r => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(r.nom)}</span><span style="${r.st}">${esc(r.droite)}</span></div>`).join('')}
               ${k.resteAbsentes ? `<div style="font-size:11px;color:var(--color-text-muted);padding:6px 0">+ ${k.resteAbsentes} autres</div>` : ''}
             </div>
-          </div>`}`).join('')}
-        <div style="font-size:11px;color:var(--color-text-muted);padding:12px 0 0;line-height:1.55">Une référence que <strong>personne</strong> ne vend n’est pas un manque du magasin : c’est une question de catalogue, et elle est comptée à part.</div>`}
+          </div>`}`).join('')}`).join('')}
+        <div style="font-size:11px;color:var(--color-text-muted);padding:12px 0 0;line-height:1.55">Chaque groupe est le cumul de ses sous-catégories : ouvrir ne change jamais le chiffre du dessus. Une référence que <strong>personne</strong> ne vend n’est pas un manque du magasin : c’est une question de catalogue, et elle est comptée à part.</div>`}
       </div>
     </td></tr>`;
 
@@ -7107,7 +7122,7 @@ function tplUsage(c, x){
     <div style="${carte}">
       <div style="padding:16px 18px 0">
         <div style="${lbl}">Références vendues, mois par mois</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez un magasin pour voir, catégorie par catégorie, ce qu’il vend et ce qu’il ne vend pas.</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez un magasin, puis un groupe, puis une sous-catégorie : la liste des références vendues et absentes.</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
         ${c.usDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}

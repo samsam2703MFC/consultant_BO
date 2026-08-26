@@ -253,11 +253,20 @@ function ep_prod_utilisation(): array
 /**
  * GET /produits/utilisation/magasin?shop=4[&mois=6][&groupe=][&categorie=]
  *
- * Le détail d'UN magasin, catégorie par catégorie : ce qu'il vend, ce qu'il ne
- * vend pas, et — pour chaque référence absente — combien d'autres magasins la
- * vendent. Une référence que personne ne vend n'est pas un manque de ce
- * magasin : c'est une question de catalogue, et les deux ne se traitent pas au
- * même endroit.
+ * Le détail d'UN magasin, sur les TROIS niveaux de l'arbre produit : le
+ * groupe, la catégorie qu'il contient, puis les références elles-mêmes. Le
+ * catalogue en compte 710 réparties sur 80 catégories — une liste à plat de 80
+ * lignes ne se lit pas, alors que treize groupes tiennent dans un écran et
+ * disent tout de suite où le magasin décroche.
+ *
+ * Chaque niveau porte la même mesure : combien de références vendues sur
+ * combien au catalogue. Un groupe n'est donc pas un intertitre, c'est le
+ * cumul de ses catégories — ouvrir ne change jamais le chiffre du dessus.
+ *
+ * Pour chaque référence absente, le nombre d'autres magasins qui la vendent.
+ * Une référence que personne ne vend n'est pas un manque de ce magasin :
+ * c'est une question de catalogue, et les deux ne se traitent pas au même
+ * endroit.
  *
  * Route séparée du tableau : le détail pèse sept cents lignes par magasin, et
  * l'écran d'entrée n'en a pas besoin pour s'afficher.
@@ -298,7 +307,7 @@ function ep_prod_utilisation_magasin(): array
     }
 
     $out = ['shop' => $shop, 'nom' => $nomDe[$shop], 'mois' => $mois,
-        'catalogue' => count($refs), 'categories' => [], 'motif' => null];
+        'catalogue' => count($refs), 'groupes' => [], 'motif' => null];
     if ($refs === []) { $out['motif'] = 'aucune référence à rapprocher'; return $out; }
 
     $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
@@ -368,7 +377,30 @@ function ep_prod_utilisation_magasin(): array
     }
     usort($cats, static fn ($a, $b) => $b['aRattraper'] <=> $a['aRattraper'] ?: $b['catalogue'] <=> $a['catalogue']);
 
-    $out['categories'] = $cats;
+    // --- Le niveau du dessus : le groupe, cumul de ses catégories.
+    $parGrp = [];
+    foreach ($cats as $c) {
+        $g = $c['groupe'] !== '' ? $c['groupe'] : '— hors groupe';
+        if (!isset($parGrp[$g])) {
+            $parGrp[$g] = ['nom' => $g, 'catalogue' => 0, 'nVendues' => 0,
+                'nNonVendues' => 0, 'orphelines' => 0, 'categories' => []];
+        }
+        $parGrp[$g]['catalogue'] += $c['catalogue'];
+        $parGrp[$g]['nVendues'] += $c['nVendues'];
+        $parGrp[$g]['nNonVendues'] += $c['nNonVendues'];
+        $parGrp[$g]['orphelines'] += $c['orphelines'];
+        $parGrp[$g]['categories'][] = $c;
+    }
+    $grps = [];
+    foreach ($parGrp as $g) {
+        $g['aRattraper'] = $g['nNonVendues'] - $g['orphelines'];
+        $g['taux'] = $g['catalogue'] > 0 ? round(100 * $g['nVendues'] / $g['catalogue'], 1) : null;
+        $g['nCategories'] = count($g['categories']);
+        $grps[] = $g;
+    }
+    usort($grps, static fn ($a, $b) => $b['aRattraper'] <=> $a['aRattraper'] ?: $b['catalogue'] <=> $a['catalogue']);
+
+    $out['groupes'] = $grps;
     $out['vendues'] = array_sum(array_column($cats, 'nVendues'));
     $out['aRattraper'] = array_sum(array_column($cats, 'aRattraper'));
     $out['orphelines'] = array_sum(array_column($cats, 'orphelines'));

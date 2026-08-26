@@ -654,7 +654,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
-      usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Cliquez un magasin pour voir, catégorie par catégorie, ce qu’il vend et ce qui lui manque — et par combien d’autres magasins chaque absente est vendue.'],
+      usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
       caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
@@ -4978,6 +4978,12 @@ class App {
     // --- le détail du magasin ouvert.
     const sid = S.usShop;
     const det = sid ? (this._usageDet || {})[sid + '|' + cle] : undefined;
+    // Le même tri aux deux niveaux : trier les groupes par « à rattraper » et
+    // leurs catégories par ordre alphabétique ne se lirait pas.
+    const t = S.usTri || 'rattraper';
+    const ordre = (a, b) => t === 'catalogue' ? b.catalogue - a.catalogue
+      : t === 'nom' ? a.nom.localeCompare(b.nom, 'fr')
+      : (b.aRattraper - a.aRattraper || b.catalogue - a.catalogue);
     common.usDetail = !sid ? null : {
       chargement: det === undefined,
       err: det === null ? 'Le détail de ce magasin n’a pas pu être lu.' : ((det && det.motif) || ''),
@@ -4987,29 +4993,45 @@ class App {
       tri: S.usTri || 'rattraper',
       tris: [['rattraper', 'À rattraper'], ['catalogue', 'Catalogue'], ['nom', 'A → Z']].map(([v, nom]) => ({
         v, nom, on: (S.usTri || 'rattraper') === v, choisir: () => this.setState({ usTri: v }) })),
-      categories: !det ? [] : (det.categories || []).slice().sort((a, b) => {
-        const t = S.usTri || 'rattraper';
-        if (t === 'catalogue') { return b.catalogue - a.catalogue; }
-        if (t === 'nom') { return a.nom.localeCompare(b.nom, 'fr'); }
-        return b.aRattraper - a.aRattraper || b.catalogue - a.catalogue;
-      }).map(c => ({
-        nom: c.nom, groupe: c.groupe || '',
-        catalogue: nb(c.catalogue), vendues: nb(c.nVendues), taux: pc(c.taux),
-        col: teinte(c.taux), barre: Math.max(2, Math.min(100, c.taux || 0)),
-        aRattraper: c.aRattraper,
-        ouverte: S.usCat === c.nom,
-        basculer: () => this.setState({ usCat: S.usCat === c.nom ? null : c.nom }),
-        nVendues: nb(c.nVendues), nAbsentes: nb(c.nNonVendues), orphelines: nb(c.orphelines),
-        // Douze lignes de chaque côté : au-delà, on ne lit plus, on fait
-        // défiler. Le compte complet reste dans l'en-tête de la colonne.
-        listeVendues: (c.vendues || []).slice(0, 12).map(x => ({ nom: x.nom, droite: nb(x.quantite) + ' u' })),
-        listeAbsentes: (c.nonVendues || []).slice(0, 12).map(x => ({
-          nom: x.nom,
-          droite: x.ailleurs ? 'vendue par ' + x.ailleurs : 'personne',
-          st: x.ailleurs ? 'color:var(--color-primary)' : 'color:var(--color-text-muted)' })),
-        resteVendues: Math.max(0, c.nVendues - 12),
-        resteAbsentes: Math.max(0, c.nNonVendues - 12),
+      groupes: !det ? [] : (det.groupes || []).slice().sort(ordre).map(g => ({
+        nom: g.nom,
+        catalogue: nb(g.catalogue), vendues: nb(g.nVendues), taux: pc(g.taux),
+        col: teinte(g.taux), barre: Math.max(2, Math.min(100, g.taux || 0)),
+        aRattraper: g.aRattraper,
+        sous: g.nCategories + (g.nCategories > 1 ? ' sous-catégories' : ' sous-catégorie'),
+        ouvert: S.usGrp === g.nom,
+        basculer: () => this.setState({ usGrp: S.usGrp === g.nom ? null : g.nom, usCat: null }),
+        categories: (g.categories || []).slice().sort(ordre).map(c => this.usageCategorie(c, g.nom, nb, pc, teinte)),
       })),
+    };
+  }
+
+  /**
+   * Une sous-catégorie du détail magasin : la ligne, et ses deux colonnes.
+   *
+   * La clé d'ouverture porte le groupe : deux groupes peuvent contenir une
+   * catégorie du même nom, et l'ouvrir dans l'un déplierait l'autre.
+   */
+  usageCategorie(c, groupe, nb, pc, teinte){
+    const S = this.state;
+    const cle = groupe + ' ¦ ' + c.nom;
+    return {
+      nom: c.nom, groupe,
+      catalogue: nb(c.catalogue), vendues: nb(c.nVendues), taux: pc(c.taux),
+      col: teinte(c.taux), barre: Math.max(2, Math.min(100, c.taux || 0)),
+      aRattraper: c.aRattraper,
+      ouverte: S.usCat === cle,
+      basculer: () => this.setState({ usCat: S.usCat === cle ? null : cle }),
+      nVendues: nb(c.nVendues), nAbsentes: nb(c.nNonVendues), orphelines: nb(c.orphelines),
+      // Douze lignes de chaque côté : au-delà, on ne lit plus, on fait
+      // défiler. Le compte complet reste dans l'en-tête de la colonne.
+      listeVendues: (c.vendues || []).slice(0, 12).map(x => ({ nom: x.nom, droite: nb(x.quantite) + ' u' })),
+      listeAbsentes: (c.nonVendues || []).slice(0, 12).map(x => ({
+        nom: x.nom,
+        droite: x.ailleurs ? 'vendue par ' + x.ailleurs : 'personne',
+        st: x.ailleurs ? 'color:var(--color-primary)' : 'color:var(--color-text-muted)' })),
+      resteVendues: Math.max(0, c.nVendues - 12),
+      resteAbsentes: Math.max(0, c.nNonVendues - 12),
     };
   }
 
