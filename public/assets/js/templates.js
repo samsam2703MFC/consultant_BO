@@ -7068,8 +7068,11 @@ function tplUsage(c, x){
           <span style="${lbl}">${esc(d.nom)} — détail par groupe et sous-catégorie</span>
           <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.resume)}</span>
           <span style="flex:1"></span>
+          ${d.seuils.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+          <span style="width:10px"></span>
           ${d.tris.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
         </div>
+        ${!d.vide ? '' : `<div style="font-size:12px;color:var(--color-text-muted);padding:10px 0">${esc(d.vide)}</div>`}
         <div style="${GRILLE};font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 0;border-bottom:0.5px solid var(--color-border-secondary)">
           <span>Groupe · sous-catégorie</span><span style="text-align:right">Catalogue</span><span></span>
           <span style="text-align:right">Vendues</span><span style="text-align:right">À rattraper</span>
@@ -7080,7 +7083,7 @@ function tplUsage(c, x){
               <span style="display:block;font-size:10.5px;font-weight:400;color:var(--color-text-muted);padding-left:14px">${esc(g.sous)}</span></span>
             <span style="text-align:right;color:var(--color-text-muted)">${esc(g.catalogue)}</span>
             <span>${jauge(g.barre, g.col)}</span>
-            <span style="text-align:right;color:${g.col};font-weight:600">${esc(g.vendues)} · ${esc(g.taux)}</span>
+            <span style="text-align:right;color:${g.col};font-weight:600">${esc(g.taux)}</span>
             <span style="text-align:right">${badge(g.aRattraper)}</span>
           </div>
           ${!g.ouvert ? '' : g.categories.map(k => `
@@ -7088,7 +7091,7 @@ function tplUsage(c, x){
             <span><span style="color:var(--color-text-muted);font-size:11px">${k.ouverte ? '▾' : '▸'}</span> ${esc(k.nom)}</span>
             <span style="text-align:right;color:var(--color-text-muted)">${esc(k.catalogue)}</span>
             <span>${jauge(k.barre, k.col)}</span>
-            <span style="text-align:right;color:${k.col};font-weight:600">${esc(k.vendues)} · ${esc(k.taux)}</span>
+            <span style="text-align:right;color:${k.col};font-weight:600">${esc(k.taux)}</span>
             <span style="text-align:right">${badge(k.aRattraper)}</span>
           </div>
           ${!k.ouverte ? '' : `
