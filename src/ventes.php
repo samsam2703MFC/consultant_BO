@@ -349,8 +349,13 @@ function wr_ventes_primes(): array
 
 /**
  * GET /ventes/classement.pdf?m=2026-07 — le rapport mensuel, à afficher en
- * réserve. Une page réseau, puis une page par magasin ; TOUTES les colonnes y
- * sont — heures, CA, CA/heure, panier, lignes/ticket, tickets, rang, prime.
+ * réserve à côté du planning.
+ *
+ * Même identité que la note de campagne et l'analyse magasin : le bandeau
+ * logo, le filet bordeaux, la Georgia pour les grands chiffres, les cartes
+ * crème. Page 1 : les primes et les trois top 10 — CA, CA/heure, lignes par
+ * ticket. Page 2 : le classement complet, TOUTES les données. Puis une page
+ * par magasin.
  */
 function ep_ventes_pdf(): array
 {
@@ -358,23 +363,34 @@ function ep_ventes_pdf(): array
     if (($d['motif'] ?? null) !== null) { http_response_code(422); return ['error' => $d['motif']]; }
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
+    $n1 = static fn ($v) => number_format((float) $v, 1, ',', ' ');
     $court = static fn (string $nom) => trim((string) array_reverse(explode(' - ', $nom))[0]);
     $logo = rapLogoDataUri();
     $libMois = strftime_fr(strtotime($d['m'] . '-01'), 'M Y');
     $hist = $d['primeEnregistree'];
+    $g = $d['gagnantes'];
 
     $css = '<style>
       .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
       .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
       .h1{font-size:19pt;margin:4mm 0 1mm}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.or{color:#8a5a1c}
       .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
-      .prime{border:1px solid #E8C9A0;background:#FFF9EC;border-radius:8px;padding:2.6mm 3.5mm;margin-bottom:4mm;font-size:8.6pt;line-height:1.6}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
+      .k{font-size:7pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a}
+      .prime{border:1px solid #E8C9A0;background:#FFF9EC;border-radius:8px;padding:3mm 4mm;margin-bottom:4mm}
+      .prime .qui{font-family:Georgia,"DejaVu Serif",serif;font-size:13pt;margin:1mm 0}
+      .badge{display:inline-block;font-size:7pt;font-weight:bold;border-radius:3mm;padding:.6mm 2.4mm;background:#8D1D2C;color:#fff}
+      .badge.or{background:#FFF3D6;color:#8a5a1c;border:1px solid #E8C9A0}
       table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
       .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.4pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8}
+      .t td{font-size:8.3pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8}
       .t .l{text-align:left}
       .gris td{color:#9a9186}
+      .rang{display:inline-block;width:4.4mm;height:4.4mm;border-radius:50%;background:#EFE3D5;color:#8a5a1c;font-size:6.6pt;font-weight:bold;text-align:center;line-height:4.4mm}
+      .top td{font-size:8pt;text-align:left;padding:1.15mm 1mm;border-bottom:.5pt solid #EFE9DF}
+      .top .v{text-align:right;font-weight:bold;white-space:nowrap}
+      .top .s{text-align:right;color:#7a736a;font-size:6.8pt;white-space:nowrap}
       .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
     </style>';
 
@@ -383,61 +399,100 @@ function ep_ventes_pdf(): array
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
         . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Target de vente &amp; classement<br>' . $droite . '</td></tr></table>';
 
-    $tableau = static function (array $lignes, bool $avecMagasin) use ($e, $eur, $court, $hist): string {
-        $h = '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Vendeur·se</th>'
+    // --- Page 1 : les primes, puis les trois top 10.
+    $classables = array_values(array_filter($d['lignes'], static fn ($l) => $l['classable']));
+    $h = $css . '<div class="doc">' . $entete($e($libMois))
+        . '<div class="serif h1">Le mois de vente — ' . $e($libMois) . '</div>'
+        . '<div class="mut" style="font-size:9pt;margin-bottom:5mm">' . count($classables) . ' classé(e)s sur '
+        . count($d['lignes']) . ' · ' . count($d['magasins']) . ' magasins · classement au CA par heure prestée (planning du panel)</div>';
+
+    if (($g['reseau'] ?? null) !== null) {
+        $r = $g['reseau'];
+        $h .= '<div class="prime"><table width="100%" cellpadding="0" cellspacing="0"><tr>'
+            . '<td><div class="k">🏆 Prime réseau — ' . (int) $d['primes']['reseau'] . ' €'
+            . ($hist !== null ? ' · enregistrée le ' . $e($hist['quand']) : ' · à enregistrer dans le cockpit') . '</div>'
+            . '<div class="qui">' . $e($r['nom']) . ' <span class="badge">réseau</span></div>'
+            . '<div style="font-size:8pt;color:#7a736a">' . $e($court($r['magasin'])) . ' · <b class="acc">' . $eur($r['caHeure']) . ' / h</b>'
+            . ' · panier ' . number_format((float) $r['panier'], 2, ',', ' ') . ' € · ' . $n1($r['lignesTicket'])
+            . ' lignes/ticket · ' . $n1($r['heures']) . ' h</div></td>'
+            . '<td align="right" valign="top"><div class="k">🥇 Primes magasin — ' . (int) $d['primes']['magasin'] . ' €</div>'
+            . '<div style="font-size:8.2pt;line-height:1.7;margin-top:1mm">';
+        foreach ($g['magasins'] as $x) {
+            if ($x['id'] === $r['id']) { continue; }
+            $h .= '<b>' . $e($x['nom']) . '</b> <span class="mut">· ' . $e($court($x['magasin'])) . ' · ' . $eur($x['caHeure']) . ' / h</span><br>';
+        }
+        $h .= '</div></td></tr></table></div>';
+    }
+
+    // Les trois top 10, côte à côte — les mêmes règles que l'écran.
+    $actifs = array_values(array_filter($d['lignes'], static fn ($l) => ($l['tickets'] ?? 0) > 0));
+    $parCa = $actifs; usort($parCa, static fn ($a, $b) => $b['ca'] <=> $a['ca']);
+    $parCaH = array_values(array_filter($actifs, static fn ($l) => $l['caHeure'] !== null));
+    usort($parCaH, static fn ($a, $b) => $b['caHeure'] <=> $a['caHeure']);
+    $parLt = array_values(array_filter($actifs, static fn ($l) => $l['lignesTicket'] !== null && $l['tickets'] >= 30));
+    usort($parLt, static fn ($a, $b) => $b['lignesTicket'] <=> $a['lignesTicket']);
+
+    $colonne = static function (string $titre, string $note, array $liste, callable $val, callable $sub) use ($e, $court): string {
+        $h2 = '<td width="33%" valign="top" class="tile"><div class="k">' . $titre . '</div>'
+            . '<div style="font-size:6.8pt;color:#7a736a;margin:.6mm 0 1.6mm">' . $note . '</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" class="top">';
+        foreach (array_slice($liste, 0, 10) as $i => $l) {
+            $h2 .= '<tr><td width="16"><span class="rang">' . ($i + 1) . '</span></td>'
+                . '<td><b>' . $e($l['nom']) . '</b> <span style="color:#7a736a;font-size:6.8pt">' . $e($court($l['magasin'])) . '</span></td>'
+                . '<td class="v' . ($i === 0 ? ' acc' : '') . '">' . $val($l) . '</td>'
+                . '<td class="s">' . $sub($l) . '</td></tr>';
+        }
+        return $h2 . '</table></td>';
+    };
+    $h .= '<div class="sec">Les trois lectures du mois</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="4" style="margin:0 -1mm 4mm"><tr>'
+        . $colonne('Top 10 — CA', 'le volume, brut', $parCa,
+            static fn ($l) => $eur($l['ca']), static fn ($l) => $n1($l['heures']) . ' h')
+        . $colonne('Top 10 — CA / heure', 'le rendement — la mesure des primes', $parCaH,
+            static fn ($l) => $eur($l['caHeure']) . '/h', static fn ($l) => $n1($l['heures']) . ' h')
+        . $colonne('Top 10 — Lignes / ticket', 'le cross-selling — 30 tickets au moins', $parLt,
+            static fn ($l) => $n1($l['lignesTicket']), static fn ($l) => $l['tickets'] . ' tkt')
+        . '</tr></table>';
+
+    // --- Page 2 : le classement complet.
+    $tableau = static function (array $lignes, bool $avecMagasin) use ($e, $eur, $n1, $court, $hist): string {
+        $h2 = '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Vendeur·se</th>'
             . ($avecMagasin ? '<th class="l">Magasin</th>' : '')
             . '<th>Heures</th><th>CA</th><th>CA / h</th><th>Panier</th><th>Lignes / tkt</th><th>Tickets</th><th class="l">Prime</th></tr>';
         foreach ($lignes as $l) {
             $prime = '';
             if ($hist !== null) {
                 if ((int) ($hist['reseau']['id'] ?? 0) === $l['id']) { $prime = 'réseau · ' . $hist['montants']['reseau'] . ' €'; }
-                else { foreach ($hist['magasins'] ?? [] as $g) { if ((int) $g['id'] === $l['id']) { $prime = 'magasin · ' . $hist['montants']['magasin'] . ' €'; } } }
+                else { foreach ($hist['magasins'] ?? [] as $g2) { if ((int) $g2['id'] === $l['id']) { $prime = 'magasin · ' . $hist['montants']['magasin'] . ' €'; } } }
             }
-            $h .= '<tr' . ($l['classable'] ? '' : ' class="gris"') . '>'
+            $h2 .= '<tr' . ($l['classable'] ? '' : ' class="gris"') . '>'
                 . '<td class="l">' . ($l['rang'] !== null ? (int) $l['rang'] : '—') . '</td>'
                 . '<td class="l"><b>' . $e($l['nom']) . '</b>'
                 . ($l['classable'] ? '' : ' <span style="font-size:7pt;color:#9a9186">· ' . $e($l['motifHorsClassement']) . '</span>') . '</td>'
                 . ($avecMagasin ? '<td class="l mut">' . $e($court($l['magasin'])) . '</td>' : '')
-                . '<td>' . number_format((float) $l['heures'], 1, ',', ' ') . ' h</td>'
+                . '<td>' . $n1($l['heures']) . ' h</td>'
                 . '<td>' . $eur($l['ca']) . '</td>'
                 . '<td class="acc"><b>' . ($l['caHeure'] !== null ? $eur($l['caHeure']) : '—') . '</b></td>'
                 . '<td>' . ($l['panier'] !== null ? number_format((float) $l['panier'], 2, ',', ' ') . ' €' : '—') . '</td>'
-                . '<td>' . ($l['lignesTicket'] !== null ? number_format((float) $l['lignesTicket'], 1, ',', ' ') : '—') . '</td>'
+                . '<td>' . ($l['lignesTicket'] !== null ? $n1($l['lignesTicket']) : '—') . '</td>'
                 . '<td>' . number_format((float) $l['tickets'], 0, ',', ' ') . '</td>'
-                . '<td class="l" style="font-size:7.4pt;color:#8a5a1c"><b>' . $e($prime) . '</b></td></tr>';
+                . '<td class="l or" style="font-size:7.4pt"><b>' . $e($prime) . '</b></td></tr>';
         }
-        return $h . '</table>';
+        return $h2 . '</table>';
     };
 
-    $g = $d['gagnantes'];
-    $blocPrime = '';
-    if (($g['reseau'] ?? null) !== null) {
-        $noms = [];
-        foreach ($g['magasins'] as $x) {
-            if ($x['id'] === $g['reseau']['id']) { continue; }
-            $noms[] = $e($x['nom']) . ' (' . $e($court($x['magasin'])) . ')';
-        }
-        $blocPrime = '<div class="prime">🏆 <b>Prime réseau — ' . $e($g['reseau']['nom'])
-            . ' (' . $e($court($g['reseau']['magasin'])) . ') : ' . (int) $d['primes']['reseau'] . ' €</b> · '
-            . $eur($g['reseau']['caHeure']) . ' / h'
-            . ($noms === [] ? '' : ' &nbsp;|&nbsp; 🥇 Primes magasin (' . (int) $d['primes']['magasin'] . ' €) : ' . implode(' · ', $noms))
-            . ($hist === null ? ' — <i>désignées par le calcul, à enregistrer dans le cockpit</i>' : ' — enregistrées le ' . $e($hist['quand'])) . '</div>';
-    }
+    $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
+        . '<div class="serif h1">Le classement complet</div>'
+        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Toutes les personnes du mois — les non-classables restent visibles, avec leur motif.</div>'
+        . $tableau($d['lignes'], true) . '</div>';
 
-    $classables = array_values(array_filter($d['lignes'], static fn ($l) => $l['classable']));
-    $h = $css . '<div class="doc">' . $entete($e($libMois))
-        . '<div class="serif h1">Classement du réseau — ' . $e($libMois) . '</div>'
-        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">' . count($classables) . ' classé(e)s sur '
-        . count($d['lignes']) . ' · classement au CA par heure prestée (planning du panel)</div>'
-        . $blocPrime
-        . $tableau($d['lignes'], true);
-
+    // --- Une page par magasin.
     foreach ($d['magasins'] as $mag) {
         $siens = array_values(array_filter($d['lignes'], static fn ($l) => (string) $l['shopId'] === (string) $mag['id']));
         if ($siens === []) { continue; }
         $h .= '<div style="page-break-before:always">' . $entete($e($court($mag['nom'])) . ' · ' . $e($libMois))
             . '<div class="serif h1">' . $e($court($mag['nom'])) . ' — l’équipe de vente</div>'
-            . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Part du magasin dans chaque colonne : les mêmes mesures que la page réseau, resserrées sur l’équipe.</div>'
+            . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Les mêmes mesures que la page réseau, resserrées sur l’équipe — la feuille du brief du mois.</div>'
             . $tableau($siens, false) . '</div>';
     }
 
@@ -445,7 +500,7 @@ function ep_ventes_pdf(): array
         . 'une personne à 20 h ne se compare pas à une à 38 h. Le classement est ouvert à toutes les heures prestées'
         . (VENTE_SEUIL_HEURES > 0 ? ' dès ' . VENTE_SEUIL_HEURES . ' h au planning' : '')
         . ' ; sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '
-        . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket. '
+        . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket (30 tickets au moins pour le top 10). '
         . ($d['partSansVendeur'] !== null && $d['partSansVendeur'] > 0
             ? $d['partSansVendeur'] . ' % du CA du mois est encaissé sans vendeur identifié sur le ticket : cette part n’est attribuée à personne. '
             : '')
