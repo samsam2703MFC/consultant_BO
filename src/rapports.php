@@ -1594,8 +1594,11 @@ function venteClotureRun(array $rep, string $shop = ''): array
         [(int) $rep['id'], date('Y-m-d H:i:s'), $r['m'] . '-01', date('Y-m-t', strtotime($r['m'] . '-01')),
          'genere', $resume, $r['doc'],
          json_encode(['magasin' => $r['magasin'], 'rapport' => (string) ($rep['nom'] ?? '')], JSON_UNESCAPED_UNICODE)]);
+    // lastInsertId AVANT le journal : journalAdd insère aussi, et son id
+    // remplacerait celui du run — testé, run 116 annoncé 1032.
+    $runId = (int) Db::pdo()->lastInsertId();
     journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Généré — ' . $resume);
-    return ['runId' => (int) Db::pdo()->lastInsertId(), 'statut' => 'genere', 'resume' => $resume];
+    return ['runId' => $runId, 'statut' => 'genere', 'resume' => $resume];
 }
 
 /**
