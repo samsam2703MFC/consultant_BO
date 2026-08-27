@@ -182,6 +182,56 @@ function ep_taches_heatmap(): array
 }
 
 /**
+ * GET /pwa/tasks/heatmap/mois?m=2026-08 — la vue PAR MOIS, celle qui s'ouvre
+ * en premier : magasins × jours du mois, chaque cellule un jour (part faite,
+ * faites, pas faites). Les jours non relevés se distinguent des jours à zéro.
+ */
+function ep_taches_heatmap_mois(): array
+{
+    tachesSuiviTables();
+    $m = trim((string) ($_GET['m'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
+    $shopNames = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+            $shopNames[(string) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* liste vide */ }
+
+    $releves = array_map(fn ($r2) => (string) $r2['jour'],
+        Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour LIKE ? ORDER BY jour', [$m . '-%']));
+    $releves = array_flip($releves);
+
+    $parJour = [];
+    foreach (Db::rows("SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
+                       WHERE jour LIKE ? GROUP BY jour, id_shop", [$m . '-%']) as $r2) {
+        $parJour[(string) $r2['jour']][(string) $r2['id_shop']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
+    }
+
+    $nbJours = (int) date('t', strtotime($m . '-01'));
+    $jours = [];
+    for ($j = 1; $j <= $nbJours; $j++) { $jours[] = $m . '-' . str_pad((string) $j, 2, '0', STR_PAD_LEFT); }
+
+    $lignes = [];
+    foreach ($shopNames as $sid => $nom) {
+        $cells = []; $F = 0; $T = 0;
+        foreach ($jours as $j) {
+            $a = $parJour[$j][$sid] ?? $parJour[$j][(int) $sid] ?? null;
+            $f = $a['f'] ?? 0; $t = $a['t'] ?? 0;
+            $F += $f; $T += $t;
+            $cells[] = ['j' => $j, 'releve' => isset($releves[$j]), 'faites' => $f, 'pasFaites' => $t - $f,
+                'part' => $t > 0 ? round(100 * $f / $t) : null];
+        }
+        $lignes[] = ['shopId' => (string) $sid, 'shop' => $nom, 'jours' => $cells,
+            'faites' => $F, 'pasFaites' => $T - $F, 'part' => $T > 0 ? round(100 * $F / $T) : null];
+    }
+    $moisDispo = [];
+    for ($i = 11; $i >= 0; $i--) { $moisDispo[] = date('Y-m', strtotime('first day of -' . $i . ' months')); }
+    return ['m' => $m, 'mois' => $moisDispo, 'jours' => $jours, 'lignes' => $lignes,
+        'joursReleves' => count($releves), 'joursManquants' => count(tachesJoursManquants())];
+}
+
+/**
  * GET /pwa/tasks/heatmap/detail?shop=4&m=2026-02 — le détail d'une cellule :
  * chaque tâche du mois (les moins faites d'abord) ET la grille jour par jour
  * — fait / pas fait / pas attendue ce jour-là.

@@ -130,3 +130,4 @@ deploy 20260827T155434Z cloture ventes dans le reporting automatise
 deploy 20260827T155622Z fix runId cloture ventes
 deploy 20260827T160221Z retire affichage cadence dynamique
 deploy 20260827T162009Z heatmap suivi mensuel des taches
+deploy 20260827T162533Z suivi taches vue mois par defaut + vue annuelle sur appel

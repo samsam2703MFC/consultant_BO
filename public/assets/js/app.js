@@ -9941,23 +9941,72 @@ class App {
       common.ctrlZoom = dt.zoom && d.photo ? this.valsCtrlZoom(dt, d) : false;
     } else { common.ctrlDet = false; common.ctrlZoom = false; }
 
-    // --- Suivi mensuel : la heatmap magasin × mois, faites / pas faites.
+    // --- Suivi mensuel : la heatmap faites / pas faites. Deux vues : PAR MOIS
+    // d'abord (magasins × jours du mois), la vue ANNUELLE (12 mois) sur appel.
     // La donnée vient du cache serveur (une ligne par tâche × jour, relevée
     // par le cron heure après heure) — l'écran ne rappelle jamais le panel.
-    if (!this._ctrlHeatLu) { this._ctrlHeatLu = true;
+    const hmVue = S.ctrlHeatVue || 'mois';
+    common.hmVue = hmVue;
+    common.hmBascule = () => this.setState({ ctrlHeatVue: hmVue === 'mois' ? 'annee' : 'mois', ctrlHeat: null });
+    common.hmBasculeTxt = hmVue === 'mois' ? 'Vue annuelle' : 'Vue par mois';
+    if (hmVue === 'annee' && !this._ctrlHeatLu) { this._ctrlHeatLu = true;
       readOne('/pwa/tasks/heatmap').then(d2 => { this.D.tachesHeat = d2 || { indispo: true }; this.setState({}); }); }
     const TH = this.D.tachesHeat;
     const MOIS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const MOIS_FR_L = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     const hmLib = m => MOIS_FR[+m.slice(5, 7) - 1] + ' ' + m.slice(2, 4);
+    const hmLibLong = m => MOIS_FR_L[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
     const hmCourt = n => (String(n || '').split(' - ').reverse()[0] || '').trim() || n;
     const hmCoul = p => p == null ? ['var(--color-background-secondary)', 'var(--color-text-muted)']
       : p >= 90 ? ['#2d7a3e', '#fff'] : p >= 80 ? ['rgba(45,122,62,0.45)', 'var(--color-text)']
       : p >= 70 ? ['rgba(201,162,39,0.40)', 'var(--color-text)'] : p >= 60 ? ['rgba(217,119,6,0.45)', 'var(--color-text)']
       : ['rgba(141,29,44,0.75)', '#fff'];
-    common.hmChargement = !TH;
+    const hmSel = S.ctrlHeat || null;
+
+    // Vue PAR MOIS — la première : un mois choisi, les jours en colonnes.
+    const hmM = S.ctrlHeatMois || new Date().toISOString().slice(0, 7);
+    common.hmMoisTitre = hmLibLong(hmM);
+    if (!this._hmMois) { this._hmMois = {}; }
+    if (hmVue === 'mois' && !this._hmMois[hmM] && !this._hmMoisBusy) { this._hmMoisBusy = true;
+      readOne('/pwa/tasks/heatmap/mois?m=' + encodeURIComponent(hmM)).then(d2 => {
+        this._hmMoisBusy = false; this._hmMois[hmM] = d2 || { indispo: true }; this.setState({}); }); }
+    const TM = this._hmMois[hmM];
+    common.hmjChargement = hmVue === 'mois' && !TM;
+    common.hmjMoisOptions = (() => { const out = [];
+      for (let i2 = 11; i2 >= 0; i2--) { const d3 = new Date(); d3.setDate(1); d3.setMonth(d3.getMonth() - i2);
+        const v = d3.toISOString().slice(0, 7); out.push({ val: v, label: hmLibLong(v), sel: v === hmM }); }
+      return out; })();
+    common.hmjSetMois = e => this.setState({ ctrlHeatMois: e.target.value, ctrlHeat: null });
+    common.hmjJours = ((TM && TM.jours) || []).map(j => ({ n: String(+j.slice(8, 10)),
+      we: [0, 6].includes(new Date(j + 'T12:00:00').getDay()) }));
+    common.hmjLignes = ((TM && TM.lignes) || []).map(l => {
+      const cells = (l.jours || []).map(cj => {
+        const releve = !!cj.releve;
+        const [bg, fg] = releve ? hmCoul(cj.part) : ['transparent', 'var(--color-text-muted)'];
+        const selC = hmSel && String(hmSel.shop) === String(l.shopId) && hmSel.jour === cj.j;
+        return {
+          txt: releve && cj.part != null ? String(cj.part) : '',
+          titre: releve ? (cj.j.slice(8, 10) + ' : ' + cj.faites + ' faites · ' + cj.pasFaites + ' pas faites') : (cj.j.slice(8, 10) + ' : pas relevé'),
+          st: 'border-radius:5px;text-align:center;padding:8px 0 7px;font-size:10.5px;font-weight:700;'
+            + (releve ? 'background:' + bg + ';color:' + fg + ';cursor:pointer;' : 'border:0.5px dashed var(--color-border-secondary);')
+            + (selC ? 'outline:2px solid var(--color-text);outline-offset:1px;' : ''),
+          clic: releve ? () => this.setState({ ctrlHeat: selC ? null : { shop: l.shopId, m: hmM, jour: cj.j } }) : null,
+        };
+      });
+      const selT = hmSel && String(hmSel.shop) === String(l.shopId) && hmSel.m === hmM && !hmSel.jour;
+      return { shop: hmCourt(l.shop), cells,
+        totTxt: l.part == null ? '' : l.part + ' %', totSous: l.part == null ? '' : l.faites + ' · ' + l.pasFaites,
+        totSt: 'border:1.5px solid ' + (l.part == null ? 'var(--color-border-secondary)' : (l.part >= 80 ? '#2d7a3e' : '#8D1D2C'))
+          + ';border-radius:7px;text-align:center;padding:5px 6px 4px;cursor:pointer;'
+          + (selT ? 'outline:2px solid var(--color-text);outline-offset:1px;' : ''),
+        totClic: () => this.setState({ ctrlHeat: selT ? null : { shop: l.shopId, m: hmM } }) };
+    });
+    common.hmjVide = !!TM && !TM.indispo && (TM.joursReleves || 0) === 0;
+
+    // Vue ANNUELLE — sur appel : les 12 mois.
+    common.hmChargement = hmVue === 'annee' && !TH;
     common.hmVide = !!TH && !TH.indispo && (TH.joursReleves || 0) === 0;
     common.hmMois = ((TH && TH.mois) || []).map(hmLib);
-    const hmSel = S.ctrlHeat || null;
     common.hmLignes = ((TH && TH.lignes) || []).map(l => {
       const cells = (l.cellules || []).map(cc => {
         const [bg, fg] = hmCoul(cc.part);
@@ -9981,18 +10030,20 @@ class App {
         totSt: 'border:1.5px solid ' + (l.part == null ? 'var(--color-border-secondary)' : (l.part >= 80 ? '#2d7a3e' : '#8D1D2C'))
           + ';border-radius:7px;text-align:center;padding:7px 4px 6px;background:transparent', totBg: tb };
     });
-    common.hmNote = !TH ? '' : (TH.joursManquants > 0
-      ? TH.joursReleves + ' journée(s) relevée(s) · ' + TH.joursManquants + ' encore à relever — l’historique se complète tout seul, heure par heure.'
+    const hmSrc = hmVue === 'annee' ? TH : TM;
+    common.hmNote = !hmSrc ? '' : (hmSrc.joursManquants > 0
+      ? (hmVue === 'annee' ? hmSrc.joursReleves + ' journée(s) relevée(s) · ' : '')
+        + hmSrc.joursManquants + ' journée(s) encore à relever — l’historique se complète tout seul, heure par heure.'
       : 'Historique complet — la veille se relève chaque jour.');
     common.hmCompleterTxt = S.hmBusy ? 'Relevé en cours… (~20 s)' : 'Compléter maintenant';
-    common.hmCompleter = (!TH || !(TH.joursManquants > 0)) ? null : () => {
+    common.hmCompleter = (!hmSrc || !(hmSrc.joursManquants > 0)) ? null : () => {
       if (S.hmBusy) { return; }
       this.setState({ hmBusy: true });
       this.api('POST', '/pwa/tasks/releve', {}).then(r2 => {
         this.setState({ hmBusy: false });
         this.notify(r2 && r2.ok ? r2.releves + ' journée(s) relevée(s) — ' + (r2.reste || 0) + ' restante(s)'
           : 'Relevé impossible — voir Diagnostic API');
-        this._ctrlHeatLu = false; this._hmDet = {}; this.setState({});
+        this._ctrlHeatLu = false; this._hmMois = {}; this._hmDet = {}; this.setState({});
       });
     };
     if (hmSel) {
@@ -10002,9 +10053,21 @@ class App {
         readOne('/pwa/tasks/heatmap/detail?shop=' + encodeURIComponent(hmSel.shop) + '&m=' + encodeURIComponent(hmSel.m))
           .then(d2 => { this._hmDetBusy = false; this._hmDet[kH] = d2 || { error: 'lecture impossible' }; this.setState({}); }); }
       const dd = this._hmDet[kH];
+      // Une cellule JOUR cliquée (vue par mois) : le détail du jour se déduit
+      // du détail mensuel déjà lu — les tâches pas faites d'abord, nommées.
       common.hmDetail = !dd ? { chargement: true }
         : dd.error ? { erreur: dd.error, fermer: () => this.setState({ ctrlHeat: null }) }
-        : {
+        : hmSel.jour ? (() => {
+          const pas = []; const faites = [];
+          (dd.taches || []).forEach(t => { const cJ = (t.jours || {})[hmSel.jour];
+            if (cJ == null) { return; }
+            (cJ.fait ? faites : pas).push(t.tache + (cJ.fait && cJ.statut === 'sansPhoto' ? ' (sans photo)' : '')); });
+          return { jour: true,
+            titre: hmCourt(dd.shop) + ' — ' + (+hmSel.jour.slice(8, 10)) + ' ' + hmLibLong(dd.m).toLowerCase(),
+            resume: faites.length + ' faite(s) · ' + pas.length + ' pas faite(s)',
+            pasFaites: pas, faitesListe: faites,
+            fermer: () => this.setState({ ctrlHeat: null }) };
+        })() : {
           titre: hmCourt(dd.shop) + ' — ' + hmLib(dd.m),
           resume: (dd.part == null ? '' : dd.part + ' % faites · ') + dd.faites + ' faites · ' + dd.pasFaites + ' pas faites',
           joursLibs: (dd.jours || []).map(j => ({ n: String(+j.slice(8, 10)), we: [0, 6].includes(new Date(j + 'T12:00:00').getDay()) })),
