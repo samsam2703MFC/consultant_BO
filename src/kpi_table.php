@@ -136,12 +136,21 @@ function kpiClePeriode(string $grain): string
 function kpiCollecte(): array
 {
     kpiTableTables();
+    // Le périmètre est celui des magasins ACTIFS : une source peut rendre des
+    // boutiques de plus (fermées, techniques) — elles fausseraient sommes et
+    // moyennes réseau sans exister nulle part ailleurs dans le cockpit.
+    $actifs = [];
+    try {
+        foreach (Db::rows('SELECT id FROM shops WHERE active = 1') as $s) { $actifs[(string) $s['id']] = true; }
+    } catch (PDOException $e) { /* pas de filtre */ }
     $faits = 0; $rates = [];
     foreach (Db::rows('SELECT * FROM ceo_kpi_def WHERE actif = 1 AND source IS NOT NULL') as $def) {
         $src = json_decode((string) $def['source'], true);
         if (!is_array($src) || ($src['type'] ?? '') !== 'endpoint') { continue; }
         $vals = kpiSourceLit($src);
         if ($vals === null) { $rates[] = (string) $def['code']; continue; }
+        if ($actifs !== []) { $vals = array_filter($vals, fn ($sid) => isset($actifs[(string) $sid]), ARRAY_FILTER_USE_KEY); }
+        if ($vals === []) { $rates[] = (string) $def['code']; continue; }
         $cle = kpiClePeriode((string) ($src['grain'] ?? 'jour'));
         foreach ($vals as $sid => $v) {
             Db::exec('INSERT INTO ceo_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
@@ -198,7 +207,10 @@ function ep_kpi_table(): array
         $parMag = [];
         if ($der !== null) {
             foreach (Db::rows('SELECT shop, valeur FROM ceo_kpi_valeur WHERE code = ? AND jour = ? AND shop <> ?', [$code, (string) $der['jour'], '*']) as $r2) {
-                $parMag[] = ['shopId' => (string) $r2['shop'], 'magasin' => $nomDe[(string) $r2['shop']] ?? ('#' . $r2['shop']),
+                // Seuls les magasins ACTIFS s'affichent — une boutique fantôme
+                // d'une source (fermée, technique) ne parle à personne.
+                if (!isset($nomDe[(string) $r2['shop']])) { continue; }
+                $parMag[] = ['shopId' => (string) $r2['shop'], 'magasin' => $nomDe[(string) $r2['shop']],
                     'valeur' => $r2['valeur'] !== null ? (float) $r2['valeur'] : null];
             }
         }

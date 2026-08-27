@@ -135,3 +135,4 @@ deploy 20260827T162945Z suivi taches toggle simple mois en cours / annee
 deploy 20260827T163442Z suivi taches cases uniformes + toggle semaine
 deploy 20260827T164103Z suivi mensuel en sous-menu
 deploy 20260827T182942Z table kpi socle
+deploy 20260827T183333Z table kpi filtre magasins actifs
