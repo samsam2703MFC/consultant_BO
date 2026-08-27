@@ -5041,11 +5041,26 @@ class App {
         });
       },
     }));
+    // Le champ target : un VRAI input, pas une boîte de dialogue. Sur un
+    // combo enregistré il écrit directement (au blur / à Entrée) ; sur un
+    // croisement pas encore enregistré il retient la valeur, que le bouton
+    // 💾 emporte avec lui.
+    const comboActif = (o && o.combos || []).find(cb => cb.aSel === S.crA && cb.bSel === S.crB) || null;
+    common.crTargetChamp = !d ? null : {
+      val: comboActif ? (comboActif.target != null ? String(comboActif.target) : '') : (S.crTargetInput || ''),
+      enregistre: !!comboActif,
+      poser: e => {
+        const v = String(e.target.value || '').trim().replace(',', '.');
+        if (!comboActif) { this.setState({ crTargetInput: v }); return; }
+        this.api('PATCH', '/croisements/combo/' + comboActif.id, { target: v })
+          .then(r => { if (r && r.combos) { this._crOpt = r; this.notify(v ? 'Target posée à ' + v + ' %' : 'Target retirée'); } this.setState({}); });
+      },
+    };
     common.crEnregistrer = !d ? null : () => {
       const surnom = window.prompt('Un surnom pour ce combo ? (facultatif — « le déjeuner complet »)') || '';
-      const cible = window.prompt('Une target de taux d’attache, en % ? (facultatif — le delta s’affichera sur chaque ligne)') || '';
       this.api('POST', '/croisements/combo', { aSel: d.a.sel, bSel: d.b.sel,
-        aLib: d.a.lib, bLib: d.b.lib, surnom, target: cible.trim().replace(',', '.') }).then(r => {
+        aLib: d.a.lib, bLib: d.b.lib, surnom,
+        target: String(S.crTargetInput || '').trim().replace(',', '.') }).then(r => {
           if (r && r.combos) { this._crOpt = r; this.notify('Combo enregistré'); }
           this.setState({});
         });

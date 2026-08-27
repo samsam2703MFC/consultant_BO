@@ -7134,6 +7134,12 @@ function tplCrois(c, x){
         ${selecteur('B — combien contiennent aussi…', c.crSelB)}
         <span style="flex:1"></span>
         ${c.crDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        ${!c.crTargetChamp ? '' : `
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)" title="${c.crTargetChamp.enregistre ? 'La target du combo — écrite dès la sortie du champ' : 'La target partira avec l’enregistrement du combo'}">
+          🎯 Target
+          <input type="number" min="1" max="100" step="0.5" value="${esc(c.crTargetChamp.val)}" ${x.C(c.crTargetChamp.poser)}
+            placeholder="—" style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:right"> %
+        </label>`}
         ${c.crEnregistrer && !c.crDejaEnregistre ? `<button ${x.A(c.crEnregistrer)} style="${pill(true)}">💾 Enregistrer ce combo</button>` : ''}
       </div>
       ${!c.crCombos.length ? '' : `
