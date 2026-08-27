@@ -31,12 +31,13 @@ function kpiEndpointsOfferts(): array
         '/exploitation/reseau?periode=mois'    => 'Exploitation réseau — le mois en cours',
         '/pwa/tasks/heatmap/mois'              => 'Suivi des tâches — le mois en cours (part faite par magasin)',
         '/stores/kpis-annuels'                 => 'KPIs annuels — clients/jour, panier, articles par mois',
+        '/kpi-table/source/etp-mois'           => 'ETP planifiés — le mois en cours (planning du panel)',
         '/produits/manque'                     => 'Manque à gagner — par magasin',
         '/reputation'                          => 'Réputation Google — notes et avis',
     ];
 }
 
-const KPI_TABLE_SCHEMA = 2;
+const KPI_TABLE_SCHEMA = 3;
 
 function kpiTableTables(): void
 {
@@ -93,6 +94,8 @@ function kpiTableSemer(): void
             ['type' => 'endpoint', 'endpoint' => '/exploitation/reseau?periode=mois', 'liste' => 'magasins', 'cleShop' => 'shopId', 'champ' => 'n', 'grain' => 'mois']],
         ['tk-taches-faites', 'Tâches faites (panel)', 'Opérations', 'Tâches & contrôles', '%', 'moyenne',
             ['type' => 'endpoint', 'endpoint' => '/pwa/tasks/heatmap/mois', 'liste' => 'lignes', 'cleShop' => 'shopId', 'champ' => 'part', 'grain' => 'mois']],
+        ['tk-etp', 'ETP planifiés (mois)', 'Opérations', 'Planning', 'n', 'somme',
+            ['type' => 'endpoint', 'endpoint' => '/kpi-table/source/etp-mois', 'liste' => 'magasins', 'cleShop' => 'shopId', 'champ' => 'etp', 'grain' => 'mois']],
         // Le premier COMPOSÉ : le panier réseau PONDÉRÉ (CA ÷ tickets), le
         // vrai — pas la moyenne des paniers, où un petit magasin pèse autant
         // qu'un grand.
@@ -106,6 +109,33 @@ function kpiTableSemer(): void
             [$code, $nom, 'transverse', json_encode(['type' => 'table']), 'bas', 'tableau', 1, 50,
              $cat, $sscat, json_encode($src, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $agg, $unite]);
     }
+}
+
+/**
+ * GET /kpi-table/source/etp-mois — un ADAPTATEUR : l'endpoint des ETP rend
+ * une liste plate année × mois ; ici, le mois en cours par magasin (ou le
+ * dernier mois planifié si le planning du mois n'est pas encore posé), dans
+ * la forme que la Table KPI sait lire — une liste, une clé magasin, un champ.
+ */
+function ep_kpi_source_etp(): array
+{
+    $rows = rapAppel('ep_stores_etp', ['annees' => date('Y')]);
+    if (!is_array($rows)) { return ['magasins' => [], 'motif' => 'source ETP muette']; }
+    $moisCourant = (int) date('n');
+    $parShop = [];
+    foreach ($rows as $r) {
+        if (!is_array($r) || (int) ($r['annee'] ?? 0) !== (int) date('Y')) { continue; }
+        $sid = (string) ($r['storeId'] ?? '');
+        $m = (int) ($r['mois'] ?? 0);
+        if ($sid === '' || $m < 1 || $m > $moisCourant) { continue; }
+        // Le mois le plus récent ≤ mois courant gagne : le planning d'un mois
+        // pas encore posé ne met personne à zéro.
+        if (!isset($parShop[$sid]) || $m > $parShop[$sid]['mois']) {
+            $parShop[$sid] = ['shopId' => $sid, 'mois' => $m,
+                'etp' => (float) ($r['etp'] ?? 0), 'heures' => (float) ($r['heures'] ?? 0)];
+        }
+    }
+    return ['magasins' => array_values($parShop)];
 }
 
 /**

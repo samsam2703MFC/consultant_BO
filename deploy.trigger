@@ -141,3 +141,4 @@ deploy 20260827T192833Z table kpi dans administration
 deploy 20260827T193933Z trois blocs generiques rapports
 deploy 20260827T194328Z blocs croisements mois servi + tuiles sans doublon
 deploy 20260827T200359Z fiche magasin sans course au clic + ddl une fois
+deploy 20260827T202400Z kpi etp

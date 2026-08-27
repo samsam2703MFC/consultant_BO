@@ -104,6 +104,7 @@ function route(string $method, string $path): mixed
             $path === '/kpi-defs'                      => ep_kpi_referentiel(),
             $path === '/kpi-table'                     => ep_kpi_table(),
             $path === '/kpi-table/sonde'               => ep_kpi_sonde(),
+            $path === '/kpi-table/source/etp-mois'     => ep_kpi_source_etp(),
             $path === '/cadence'                       => ep_cadence(),
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
