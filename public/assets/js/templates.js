@@ -7146,7 +7146,8 @@ function tplCrois(c, x){
           <input type="number" min="1" max="100" step="0.5" value="${esc(c.crTargetChamp.val)}" ${x.C(c.crTargetChamp.poser)}
             placeholder="—" style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:right"> %
         </label>`}
-        ${c.crEnregistrer && !c.crDejaEnregistre ? `<button ${x.A(c.crEnregistrer)} style="${pill(true)}">💾 Enregistrer ce combo</button>` : ''}
+        ${c.crEnregistrer && !c.crDejaEnregistre ? `<button ${x.A(c.crEnregistrer)} style="${pill(true)}">💾 Enregistrer ce combo</button>`
+          : c.crDejaEnregistre ? `<span style="font-size:11.5px;color:#2d7a3e;font-weight:600">✓ combo enregistré — sa puce est ci-dessous</span>` : ''}
       </div>
       ${!c.crCombos.length ? '' : `
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -7260,8 +7261,64 @@ function tplVentes(c, x){
       </div>
     </td></tr>`;
 
+  const onglets = `
+    <div style="display:flex;gap:6px;align-items:center">
+      ${(c.tvOnglets || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.nom)}</button>`).join('')}
+    </div>`;
+
+  if (c.tvOnglet === 'targets') {
+    return `
+  <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    ${onglets}
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">Primes au score — la meilleure vendeuse</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 12px">Le score = CA ÷ (heures + 20) × coefficient de créneau. La meilleure du réseau et la meilleure de chaque magasin, chaque mois révolu — la meilleure du réseau ne cumule pas la prime magasin.</div>
+      <div style="display:flex;gap:22px;flex-wrap:wrap">
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">🏆 Prime réseau
+          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.reseau)}" ${x.C(c.tvPrimesCfg.poser('reseau'))} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">🥇 Prime magasin
+          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.magasin)}" ${x.C(c.tvPrimesCfg.poser('magasin'))} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+      </div>
+    </div>
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">Prime cross-selling — cibles et échelle</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 12px">La cible de lignes par ticket se pose par magasin et vaut dès ce mois, jusqu’à la suivante — le passé ne bouge jamais. L’échelle des paliers est la même pour tout le réseau ; le plus haut palier franchi paie, et cette prime s’ajoute à celles de la meilleure vendeuse.</div>
+      <div style="display:flex;gap:34px;flex-wrap:wrap;align-items:flex-start">
+        <div>
+          <div style="${lbl};margin-bottom:7px">Cible par magasin — dès ce mois</div>
+          ${(c.cxLignes || []).map(l => `
+          <div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:12.5px">
+            <span style="width:110px;font-weight:500">${esc(l.nom)}</span>
+            <input type="number" min="1" max="10" step="0.1" value="${esc(l.target)}" ${x.C(l.poser)} placeholder="—"
+              style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right">
+            <span style="font-size:11px;color:var(--color-text-muted)">lignes / ticket</span>
+          </div>`).join('')}
+        </div>
+        <div>
+          <div style="${lbl};margin-bottom:7px">Prime de base — la cible atteinte</div>
+          <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
+            <input type="number" min="1" step="5" value="${c.cxMontant != null ? c.cxMontant : ''}" ${x.C(c.cxMontantPoser)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+          <div style="${lbl};margin:16px 0 7px">Paliers réseau — chaque étape débloque sa prime</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            ${(c.cxPaliers || []).map(pal => `
+            <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
+              <input type="number" min="1" max="10" step="0.1" value="${esc(pal.seuil)}" ${x.C(pal.poserSeuil)} style="width:48px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
+              →
+              <input type="number" min="1" step="5" value="${esc(pal.montant)}" ${x.C(pal.poserMontant)} style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right"> €
+              <button ${x.A(pal.retirer)} title="Retirer ce palier" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
+            </span>`).join('')}
+            <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ palier</button>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:14px;line-height:1.55">Chaque réglage s’enregistre à la sortie du champ et passe au journal. Les résultats — qui atteint quoi, mois par mois — sont dans l’onglet Résultats.</div>
+    </div>
+  </div>`;
+  }
+
   return `
   <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    ${onglets}
     ${!c.tvPodium.length ? '' : `
     <div style="display:grid;grid-template-columns:1.35fr repeat(${Math.max(1, c.tvPodium.length - 1)}, 1fr);gap:12px">
       ${c.tvPodium.map((p, i) => `
@@ -7351,18 +7408,7 @@ function tplVentes(c, x){
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>
           <div style="${lbl}">Prime cross-selling — target évolutive par magasin</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">La cible de lignes par ticket se pose par magasin ; l’échelle des paliers est la même pour tout le réseau, et chaque étape franchie débloque SA prime — ${esc(c.cxEchelle || '')} Cette prime <b>s’ajoute</b> à celles de la meilleure vendeuse (réseau et magasin). 30 tickets au moins ; on peut être plusieurs à y arriver, c’est le but.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:9px">
-            <span style="${lbl}">Paliers réseau</span>
-            ${(c.cxPaliers || []).map(pal => `
-            <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
-              <input type="number" min="1" max="10" step="0.1" value="${esc(pal.seuil)}" ${x.C(pal.poserSeuil)} style="width:48px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
-              →
-              <input type="number" min="1" step="5" value="${esc(pal.montant)}" ${x.C(pal.poserMontant)} style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right"> €
-              <button ${x.A(pal.retirer)} title="Retirer ce palier" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
-            </span>`).join('')}
-            <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ palier</button>
-          </div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.cxEchelle || '')} Cette prime <b>s’ajoute</b> à celles de la meilleure vendeuse. Les réglages — cibles, montants, paliers — sont dans l’onglet Targets &amp; primes.</div>
         </div>
         <span style="flex:1"></span>
         ${!c.cxPrime ? '' : c.cxPrime.fait
@@ -7375,7 +7421,6 @@ function tplVentes(c, x){
         <thead><tr>
           <th style="${th};text-align:left;padding-left:18px">Magasin</th>
           ${(c.cxEntetes || []).map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
-          <th style="${th};padding-right:18px">Target dès ce mois</th>
         </tr></thead>
         <tbody>
           ${(c.cxLignes || []).map(l => `<tr>
@@ -7384,15 +7429,12 @@ function tplVentes(c, x){
               : `<span style="color:var(--color-text-muted)">${esc(c2.target)}</span> ${c2.nb > 0
                 ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb} · ${c2.eur} €</span>`
                 : `<span style="font-size:10.5px;color:var(--color-primary)">0</span>`}`}</td>`).join('')}
-            <td style="${td};padding-right:18px"><input type="number" min="1" max="10" step="0.1" value="${esc(l.target)}" ${x.C(l.poser)}
-              placeholder="—" style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:right"></td>
           </tr>`).join('')}
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
         Chaque cellule : la cible du mois · ✓ le nombre de vendeuses qui l’atteignent et le total des primes débloquées (survolez pour les noms, leur lignes/ticket et leur palier).
-        Sans cible posée, rien ne se compte — la colonne de droite pose la cible du magasin, valable dès ce mois et pour les suivants.
-        Les primes s’enregistrent une fois le mois fini, passent au journal, et le montant se règle avec la cible.
+        Sans cible posée, rien ne se compte. Les primes s’enregistrent une fois le mois fini et passent au journal ; cibles, montants et paliers se règlent dans l’onglet Targets &amp; primes.
       </div>`}
     </div>
   </div>`;

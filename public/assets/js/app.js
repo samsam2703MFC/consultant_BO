@@ -5041,7 +5041,7 @@ class App {
           + ' », en % (vide pour la retirer) :', cb.target != null ? String(cb.target) : '');
         if (v === null) { return; }
         this.api('PATCH', '/croisements/combo/' + cb.id, { target: v.trim().replace(',', '.') })
-          .then(r => { if (r && r.combos) { this._crOpt = r; this.notify(v.trim() ? 'Target posée' : 'Target retirée'); } this.setState({}); });
+          .then(r => { if (r && r.combos) { this._crOpt = r; this._cr = {}; this.notify(v.trim() ? 'Target posée' : 'Target retirée'); } this.setState({}); });
       },
       retirer: () => {
         if (!window.confirm('Retirer « ' + cb.aLib + ' × ' + cb.bLib + ' » ? L’historique en cache est gardé.')) { return; }
@@ -5063,7 +5063,7 @@ class App {
         const v = String(e.target.value || '').trim().replace(',', '.');
         if (!comboActif) { this.setState({ crTargetInput: v }); return; }
         this.api('PATCH', '/croisements/combo/' + comboActif.id, { target: v })
-          .then(r => { if (r && r.combos) { this._crOpt = r; this.notify(v ? 'Target posée à ' + v + ' %' : 'Target retirée'); } this.setState({}); });
+          .then(r => { if (r && r.combos) { this._crOpt = r; this._cr = {}; this.notify(v ? 'Target posée à ' + v + ' %' : 'Target retirée'); } this.setState({}); });
       },
     };
     common.crEnregistrer = !d ? null : () => {
