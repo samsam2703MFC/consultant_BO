@@ -189,8 +189,20 @@ function ep_taches_heatmap(): array
 function ep_taches_heatmap_mois(): array
 {
     tachesSuiviTables();
-    $m = trim((string) ($_GET['m'] ?? ''));
-    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
+    // Deux façons de borner : ?m=YYYY-MM (le mois entier), ou ?du=…&au=…
+    // (une plage libre — la vue Semaine s'en sert, 62 jours au plus).
+    $du = trim((string) ($_GET['du'] ?? ''));
+    $au = trim((string) ($_GET['au'] ?? ''));
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $au)
+        && $du <= $au && (strtotime($au) - strtotime($du)) / 86400 <= 62) {
+        $m = substr($du, 0, 7);
+        $deb = $du; $fin = $au;
+    } else {
+        $m = trim((string) ($_GET['m'] ?? ''));
+        if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
+        $deb = $m . '-01';
+        $fin = $m . '-' . date('t', strtotime($m . '-01'));
+    }
     $shopNames = [];
     try {
         foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
@@ -199,18 +211,17 @@ function ep_taches_heatmap_mois(): array
     } catch (PDOException $e) { /* liste vide */ }
 
     $releves = array_map(fn ($r2) => (string) $r2['jour'],
-        Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour LIKE ? ORDER BY jour', [$m . '-%']));
+        Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour BETWEEN ? AND ? ORDER BY jour', [$deb, $fin]));
     $releves = array_flip($releves);
 
     $parJour = [];
     foreach (Db::rows("SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
-                       WHERE jour LIKE ? GROUP BY jour, id_shop", [$m . '-%']) as $r2) {
+                       WHERE jour BETWEEN ? AND ? GROUP BY jour, id_shop", [$deb, $fin]) as $r2) {
         $parJour[(string) $r2['jour']][(string) $r2['id_shop']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
     }
 
-    $nbJours = (int) date('t', strtotime($m . '-01'));
     $jours = [];
-    for ($j = 1; $j <= $nbJours; $j++) { $jours[] = $m . '-' . str_pad((string) $j, 2, '0', STR_PAD_LEFT); }
+    for ($ts = strtotime($deb); $ts <= strtotime($fin); $ts += 86400) { $jours[] = date('Y-m-d', $ts); }
 
     $lignes = [];
     foreach ($shopNames as $sid => $nom) {

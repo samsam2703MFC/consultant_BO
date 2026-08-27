@@ -9946,12 +9946,11 @@ class App {
     // La donnée vient du cache serveur (une ligne par tâche × jour, relevée
     // par le cron heure après heure) — l'écran ne rappelle jamais le panel.
     const hmVue = S.ctrlHeatVue || 'mois';
-    common.hmVue = hmVue;
-    // Un seul geste : le badge à deux positions « Mois en cours / Année ».
-    common.hmToggle = [
-      { txt: 'Mois en cours', on: hmVue === 'mois', clic: () => this.setState({ ctrlHeatVue: 'mois', ctrlHeat: null }) },
-      { txt: 'Année', on: hmVue === 'annee', clic: () => this.setState({ ctrlHeatVue: 'annee', ctrlHeat: null }) },
-    ];
+    common.hmVue = hmVue === 'annee' ? 'annee' : 'jours';
+    // Un seul geste : le badge à trois positions.
+    common.hmToggle = ['semaine', 'mois', 'annee'].map(v => ({
+      txt: v === 'semaine' ? 'Semaine' : v === 'mois' ? 'Mois en cours' : 'Année',
+      on: hmVue === v, clic: () => this.setState({ ctrlHeatVue: v, ctrlHeat: null }) }));
     if (hmVue === 'annee' && !this._ctrlHeatLu) { this._ctrlHeatLu = true;
       readOne('/pwa/tasks/heatmap').then(d2 => { this.D.tachesHeat = d2 || { indispo: true }; this.setState({}); }); }
     const TH = this.D.tachesHeat;
@@ -9966,18 +9965,36 @@ class App {
       : ['rgba(141,29,44,0.75)', '#fff'];
     const hmSel = S.ctrlHeat || null;
 
-    // Vue PAR MOIS — la première : le mois en cours, les jours en colonnes.
-    // Un autre mois se regarde depuis la vue Année, en cliquant sa cellule.
+    // Vue PAR JOURS — Semaine (lundi → dimanche) ou Mois en cours : les mêmes
+    // cases, seule la fenêtre change. Un autre mois se regarde depuis la vue
+    // Année, en cliquant sa cellule.
     const hmM = new Date().toISOString().slice(0, 7);
-    common.hmMoisTitre = hmLibLong(hmM);
+    const hmIso = d3 => new Date(d3.getTime() - d3.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    let hmUrl, hmKey;
+    if (hmVue === 'semaine') {
+      const lun = new Date(); lun.setDate(lun.getDate() - ((lun.getDay() + 6) % 7));
+      const dim = new Date(lun.getTime() + 6 * 86400000);
+      hmKey = 's:' + hmIso(lun);
+      hmUrl = '/pwa/tasks/heatmap/mois?du=' + hmIso(lun) + '&au=' + hmIso(dim);
+      common.hmMoisTitre = 'Semaine du ' + (+hmIso(lun).slice(8, 10)) + ' au ' + (+hmIso(dim).slice(8, 10)) + ' ' + MOIS_FR_L[dim.getMonth()].toLowerCase();
+    } else {
+      hmKey = hmM;
+      hmUrl = '/pwa/tasks/heatmap/mois?m=' + encodeURIComponent(hmM);
+      common.hmMoisTitre = hmLibLong(hmM);
+    }
     if (!this._hmMois) { this._hmMois = {}; }
-    if (hmVue === 'mois' && !this._hmMois[hmM] && !this._hmMoisBusy) { this._hmMoisBusy = true;
-      readOne('/pwa/tasks/heatmap/mois?m=' + encodeURIComponent(hmM)).then(d2 => {
-        this._hmMoisBusy = false; this._hmMois[hmM] = d2 || { indispo: true }; this.setState({}); }); }
-    const TM = this._hmMois[hmM];
-    common.hmjChargement = hmVue === 'mois' && !TM;
-    common.hmjJours = ((TM && TM.jours) || []).map(j => ({ n: String(+j.slice(8, 10)),
-      we: [0, 6].includes(new Date(j + 'T12:00:00').getDay()) }));
+    if (hmVue !== 'annee' && !this._hmMois[hmKey] && !this._hmMoisBusy) { this._hmMoisBusy = true;
+      readOne(hmUrl).then(d2 => {
+        this._hmMoisBusy = false; this._hmMois[hmKey] = d2 || { indispo: true }; this.setState({}); }); }
+    const TM = this._hmMois[hmKey];
+    common.hmjChargement = hmVue !== 'annee' && !TM;
+    // Des cases IDENTIQUES : la taille est fixée ici, la semaine en plus grand.
+    common.hmjTaille = hmVue === 'semaine' ? 46 : 32;
+    common.hmjTotLabel = hmVue === 'semaine' ? 'Semaine' : 'Mois';
+    const JSEM = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    common.hmjJours = ((TM && TM.jours) || []).map(j => { const dj = new Date(j + 'T12:00:00');
+      return { n: hmVue === 'semaine' ? JSEM[dj.getDay()] + ' ' + (+j.slice(8, 10)) : String(+j.slice(8, 10)),
+        we: [0, 6].includes(dj.getDay()) }; });
     common.hmjLignes = ((TM && TM.lignes) || []).map(l => {
       const cells = (l.jours || []).map(cj => {
         const releve = !!cj.releve;
@@ -9986,10 +10003,13 @@ class App {
         return {
           txt: releve && cj.part != null ? String(cj.part) : '',
           titre: releve ? (cj.j.slice(8, 10) + ' : ' + cj.faites + ' faites · ' + cj.pasFaites + ' pas faites') : (cj.j.slice(8, 10) + ' : pas relevé'),
-          st: 'border-radius:5px;text-align:center;padding:8px 0 7px;font-size:10.5px;font-weight:700;'
+          // Des cases toutes IDENTIQUES : carré fixe, quel que soit le contenu.
+          st: 'box-sizing:border-box;width:' + common.hmjTaille + 'px;min-width:' + common.hmjTaille + 'px;max-width:' + common.hmjTaille + 'px;'
+            + 'height:' + common.hmjTaille + 'px;line-height:' + (common.hmjTaille - 2) + 'px;'
+            + 'border-radius:6px;text-align:center;padding:0;font-size:' + (hmVue === 'semaine' ? '12' : '10.5') + 'px;font-weight:700;'
             + (releve ? 'background:' + bg + ';color:' + fg + ';cursor:pointer;' : 'border:0.5px dashed var(--color-border-secondary);')
             + (selC ? 'outline:2px solid var(--color-text);outline-offset:1px;' : ''),
-          clic: releve ? () => this.setState({ ctrlHeat: selC ? null : { shop: l.shopId, m: hmM, jour: cj.j } }) : null,
+          clic: releve ? () => this.setState({ ctrlHeat: selC ? null : { shop: l.shopId, m: cj.j.slice(0, 7), jour: cj.j } }) : null,
         };
       });
       const selT = hmSel && String(hmSel.shop) === String(l.shopId) && hmSel.m === hmM && !hmSel.jour;

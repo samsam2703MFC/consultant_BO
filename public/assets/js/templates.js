@@ -2354,7 +2354,6 @@ function tplControle(c, x){
 function tplCtrlHeat(c, x, card){
   const { esc } = x;
   const TH10 = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)';
-  const chargement = c.hmVue === 'mois' ? c.hmjChargement : c.hmChargement;
   const leg = `
     <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:12px">
       <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em">Part des t\u00e2ches faites</span>
@@ -2426,11 +2425,11 @@ function tplCtrlHeat(c, x, card){
     ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucune journ\u00e9e relev\u00e9e sur ce mois \u2014 le relev\u00e9 avance heure par heure (ou tout de suite avec \u00ab\u00a0Compl\u00e9ter maintenant\u00a0\u00bb).</div>${leg}`
     : `
     <div style="overflow-x:auto;margin-top:12px">
-      <table style="border-collapse:separate;border-spacing:2px;width:100%;min-width:980px;font-variant-numeric:tabular-nums">
+      <table style="border-collapse:separate;border-spacing:2px;font-variant-numeric:tabular-nums">
         <tr>
           <th style="text-align:left;${TH10};padding:2px 6px">Magasin</th>
-          ${c.hmjJours.map(j => `<th style="font-size:9px;font-weight:${j.we ? '600' : '400'};color:${j.we ? 'var(--color-primary)' : 'var(--color-text-muted)'};padding:2px 0;text-align:center">${esc(j.n)}</th>`).join('')}
-          <th style="${TH10};padding:2px 4px;text-align:center">Mois</th>
+          ${c.hmjJours.map(j => `<th style="width:${c.hmjTaille}px;min-width:${c.hmjTaille}px;font-size:9px;font-weight:${j.we ? '600' : '400'};color:${j.we ? 'var(--color-primary)' : 'var(--color-text-muted)'};padding:2px 0;text-align:center;white-space:nowrap">${esc(j.n)}</th>`).join('')}
+          <th style="${TH10};padding:2px 8px;text-align:center">${esc(c.hmjTotLabel)}</th>
         </tr>
         ${c.hmjLignes.map(l => `
         <tr>
@@ -2443,7 +2442,7 @@ function tplCtrlHeat(c, x, card){
         </tr>`).join('')}
       </table>
     </div>
-    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">Chaque colonne est un jour du mois (les week-ends en bordeaux, les jours non relev\u00e9s en pointill\u00e9). Cliquez un jour pour ses t\u00e2ches, la colonne Mois pour la grille compl\u00e8te du mois.</div>
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">Chaque colonne est un jour du mois (les week-ends en bordeaux, les jours non relev\u00e9s en pointill\u00e9). Cliquez un jour pour ses t\u00e2ches, la derni\u00e8re colonne pour la grille compl\u00e8te du mois.</div>
     ${leg}`;
   const corpsAnnee = c.hmChargement
     ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Lecture du cache\u2026</div>`
@@ -2478,14 +2477,14 @@ function tplCtrlHeat(c, x, card){
   <div style="${card};padding:16px 18px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
-        <div style="font-size:13.5px;font-weight:600">Suivi mensuel \u2014 faites / pas faites${c.hmVue === 'mois' ? ' \u00b7 ' + esc(c.hmMoisTitre) : ' \u00b7 12 mois glissants'}</div>
+        <div style="font-size:13.5px;font-weight:600">Suivi mensuel \u2014 faites / pas faites${c.hmVue === 'jours' ? ' \u00b7 ' + esc(c.hmMoisTitre) : ' \u00b7 12 mois glissants'}</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Faite = rendue dans le panel ce jour-l\u00e0 (not\u00e9e, photographi\u00e9e ou au statut fait) \u00b7 Pas faite = attendue et rest\u00e9e sans rendu. La note des contr\u00f4les est une autre affaire \u2014 ici on mesure si le travail est fait.</div>
       </div>
       <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
         ${c.hmToggle.map(t => `<span ${x.A(t.clic)} style="padding:7px 15px;font-size:12px;font-weight:500;cursor:pointer;${t.on ? 'background:var(--color-primary);color:#fff' : 'color:var(--color-text-muted)'}">${esc(t.txt)}</span>`).join('')}
       </div>
     </div>
-    ${c.hmVue === 'mois' ? corpsMois : corpsAnnee}
+    ${c.hmVue === 'jours' ? corpsMois : corpsAnnee}
     ${det}
   </div>`;
 }
