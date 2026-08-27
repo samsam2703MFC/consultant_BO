@@ -25,6 +25,7 @@ require __DIR__ . '/../../src/mkt_agences.php';
 require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/prod_manque.php';
 require __DIR__ . '/../../src/analyse_magasin.php';
+require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
@@ -155,6 +156,7 @@ function route(string $method, string $path): mixed
             $path === '/produits/manque'              => ep_prod_manque(),
             $path === '/magasin/analyse'              => ep_mag_analyse(),
             $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
+            $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/centrale/cockpit'              => ep_ca_cockpit(),
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),
