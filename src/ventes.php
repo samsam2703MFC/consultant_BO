@@ -442,6 +442,97 @@ function wr_ventes_primes(): array
 }
 
 /**
+ * Le croisement Flip & Flap × boissons : l'attache, ticket par ticket.
+ *
+ * Le cross-selling global (lignes par ticket) dit qu'on vend plusieurs
+ * choses ; il ne dit pas LE geste qu'on veut coacher — « un Flip & Flap ?
+ * proposez la boisson ». Ici : sur les tickets contenant un Flip & Flap,
+ * la part qui contient AUSSI une boisson, par magasin et par personne, et
+ * les euros laissés au comptoir (tickets sans boisson × prix moyen d'une
+ * boisson réellement encaissé ce mois-là).
+ *
+ * @return array{magasins:array,vendeurs:array,prixBoisson:float,motif:?string}
+ */
+function venteCroisementFF(string $du, string $au, array $nomDe): array
+{
+    $ff = []; $boi = [];
+    foreach (ep_prod_catalogue() as $pr) {
+        $pid = $pr['pwaId'] ?? null;
+        if ($pid === null) { continue; }
+        if (stripos((string) ($pr['categorie'] ?? ''), 'flip') !== false) { $ff[] = (int) $pid; }
+        if ((string) ($pr['groupe'] ?? '') === 'Boissons') { $boi[] = (int) $pid; }
+    }
+    if ($ff === [] || $boi === []) {
+        return ['magasins' => [], 'vendeurs' => [], 'prixBoisson' => 0.0,
+            'motif' => 'le catalogue ne porte pas la catégorie Flip & Flap ou le groupe Boissons'];
+    }
+    $marks = static fn (array $ids) => implode(',', array_map('intval', $ids));
+
+    // Un passage par famille : les tickets qui contiennent l'une, l'autre —
+    // l'intersection se fait en PHP, sur les identifiants de tickets.
+    $ticketsFF = [];   // ticket => ['emp'=>, 'shop'=>]
+    $avecBoisson = [];
+    $caBoi = 0.0; $qBoi = 0.0;
+    try {
+        foreach (Db::rows('SELECT DISTINCT t.id, t.id_employee, t.id_shop
+                             FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                              AND l.id_product IN (' . $marks($ff) . ')', [$du, $au]) as $r) {
+            $ticketsFF[(int) $r['id']] = ['emp' => $r['id_employee'] !== null ? (int) $r['id_employee'] : null,
+                'shop' => (string) $r['id_shop']];
+        }
+        foreach (Db::rows('SELECT t.id, SUM(l.total_gross_value_after_discount) ca, SUM(l.`quantity`) q
+                             FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                              AND l.id_product IN (' . $marks($boi) . ')
+                            GROUP BY t.id', [$du, $au]) as $r) {
+            $avecBoisson[(int) $r['id']] = true;
+            $caBoi += (float) $r['ca']; $qBoi += (float) $r['q'];
+        }
+    } catch (PDOException $e) {
+        return ['magasins' => [], 'vendeurs' => [], 'prixBoisson' => 0.0,
+            'motif' => 'lecture des tickets impossible'];
+    }
+    $prixBoisson = $qBoi > 0 ? $caBoi / $qBoi : 0.0;
+
+    $emp = venteEmployes();
+    $parShop = []; $parVend = [];
+    foreach ($ticketsFF as $tid => $t) {
+        $avec = isset($avecBoisson[$tid]) ? 1 : 0;
+        $sid = $t['shop'];
+        if (isset($nomDe[$sid])) {
+            $parShop[$sid] = $parShop[$sid] ?? ['ff' => 0, 'avec' => 0];
+            $parShop[$sid]['ff']++; $parShop[$sid]['avec'] += $avec;
+        }
+        if ($t['emp'] !== null && isset($emp[$t['emp']])) {
+            $parVend[$t['emp']] = $parVend[$t['emp']] ?? ['ff' => 0, 'avec' => 0];
+            $parVend[$t['emp']]['ff']++; $parVend[$t['emp']]['avec'] += $avec;
+        }
+    }
+    $mags = [];
+    foreach ($parShop as $sid => $x) {
+        $mags[] = ['id' => (string) $sid, 'nom' => $nomDe[$sid],
+            'ff' => $x['ff'], 'avec' => $x['avec'],
+            'taux' => $x['ff'] > 0 ? round(100 * $x['avec'] / $x['ff'], 1) : null,
+            'manques' => $x['ff'] - $x['avec'],
+            'eur' => (int) round(($x['ff'] - $x['avec']) * $prixBoisson)];
+    }
+    usort($mags, static fn ($a, $b) => ($a['taux'] ?? 0) <=> ($b['taux'] ?? 0));
+    $vends = [];
+    foreach ($parVend as $id => $x) {
+        $vends[] = ['id' => $id, 'nom' => $emp[$id]['nom'],
+            'magasin' => $nomDe[$emp[$id]['shop']] ?? '', 'shopId' => (string) $emp[$id]['shop'],
+            'ff' => $x['ff'], 'avec' => $x['avec'],
+            'taux' => $x['ff'] > 0 ? round(100 * $x['avec'] / $x['ff'], 1) : null,
+            'manques' => $x['ff'] - $x['avec'],
+            'eur' => (int) round(($x['ff'] - $x['avec']) * $prixBoisson)];
+    }
+    usort($vends, static fn ($a, $b) => $b['ff'] <=> $a['ff']);
+    return ['magasins' => $mags, 'vendeurs' => $vends,
+        'prixBoisson' => round($prixBoisson, 2), 'motif' => null];
+}
+
+/**
  * GET /ventes/classement.pdf?m=2026-07 — le rapport mensuel, à afficher en
  * réserve à côté du planning.
  *
@@ -603,6 +694,56 @@ function ep_ventes_pdf(): array
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">' . count($classables)
         . ' classé(e)s au score. Les personnes sans heures au planning ou sans vente à leur nom ne figurent que sur la page de leur magasin.</div>'
         . $tableau($classables, true) . $methode . '</div>';
+
+    // --- La feuille à part : le croisement Flip & Flap × boissons.
+    [$duX, $auX] = venteBornes($d['m']);
+    $x = venteCroisementFF($duX, $auX, array_column($d['magasins'], 'nom', 'id'));
+    if ($x['motif'] === null && $x['magasins'] !== []) {
+        $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
+            . '<div class="serif h1">Le croisement Flip &amp; Flap × boissons</div>'
+            . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Sur les tickets contenant un Flip &amp; Flap : la part qui contient aussi une boisson. '
+            . 'Chaque ticket sans boisson est une proposition qui n’a pas été faite — valorisée au prix moyen d’une boisson encaissé ce mois-ci ('
+            . number_format($x['prixBoisson'], 2, ',', ' ') . ' €).</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="4" style="margin:0 -1mm 4mm"><tr>';
+        foreach ($x['magasins'] as $mg) {
+            $h .= '<td width="' . (int) (100 / max(1, count($x['magasins']))) . '%" valign="top" class="tile">'
+                . '<div class="k">' . $e($court($mg['nom'])) . '</div>'
+                . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 30 ? '#2d7a3e' : '#8D1D2C') . '">'
+                . number_format((float) $mg['taux'], 1, ',', ' ') . ' %</div>'
+                . '<div style="font-size:7.5pt;color:#7a736a;margin-top:.8mm">' . $mg['avec'] . ' / ' . $mg['ff'] . ' tickets Flip &amp; Flap<br>'
+                . 'laissé au comptoir : <b style="color:#8D1D2C">' . $eur($mg['eur']) . '</b></div></td>';
+        }
+        $h .= '</tr></table>'
+            . '<table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Vendeur·se</th><th class="l">Magasin</th><th>Tickets F&amp;F</th><th>Avec boisson</th>'
+            . '<th>Taux d’attache</th><th>Manqués</th><th>À la clé / mois</th></tr>';
+        $petits = ['ff' => 0, 'avec' => 0, 'eur' => 0, 'n' => 0];
+        foreach ($x['vendeurs'] as $v) {
+            // Dix tickets au moins : en dessous, un taux d'attache n'est pas
+            // un geste, c'est un hasard — cumulés sur une ligne.
+            if ($v['ff'] < 10) { $petits['ff'] += $v['ff']; $petits['avec'] += $v['avec']; $petits['eur'] += $v['eur']; $petits['n']++; continue; }
+            $h .= '<tr><td class="l"><b>' . $e($v['nom']) . '</b></td>'
+                . '<td class="l mut">' . $e($court($v['magasin'])) . '</td>'
+                . '<td>' . $v['ff'] . '</td><td>' . $v['avec'] . '</td>'
+                . '<td style="font-weight:bold;color:' . (($v['taux'] ?? 0) >= 30 ? '#2d7a3e' : '#8D1D2C') . '">'
+                . number_format((float) $v['taux'], 1, ',', ' ') . ' %</td>'
+                . '<td>' . $v['manques'] . '</td>'
+                . '<td class="acc"><b>' . $eur($v['eur']) . '</b></td></tr>';
+        }
+        if ($petits['n'] > 0) {
+            $h .= '<tr class="gris"><td class="l" colspan="2">' . $petits['n'] . ' personne(s) sous 10 tickets F&amp;F — cumulées</td>'
+                . '<td>' . $petits['ff'] . '</td><td>' . $petits['avec'] . '</td>'
+                . '<td>' . ($petits['ff'] > 0 ? number_format(100 * $petits['avec'] / $petits['ff'], 1, ',', ' ') : '—') . ' %</td>'
+                . '<td>' . ($petits['ff'] - $petits['avec']) . '</td><td>' . $eur($petits['eur']) . '</td></tr>';
+        }
+        $h .= '</table>'
+            . '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Le taux d’attache = tickets Flip &amp; Flap contenant aussi une boisson ÷ tickets Flip &amp; Flap. '
+            . 'C’est LE geste qui se coache en brief : « un Flip &amp; Flap ? proposez la boisson ». '
+            . 'Le « à la clé » suppose une boisson par ticket manqué, au prix moyen réellement encaissé — un plafond de geste, pas une promesse. '
+            . 'Sous 10 tickets Flip &amp; Flap dans le mois, le taux est cumulé plutôt qu’affiché : deux tickets ne font pas un geste. '
+            . 'Les tickets sans vendeur identifié comptent dans les totaux magasin, pas dans les lignes individuelles.</div>'
+            . '</div>';
+    }
 
     // --- Une page par magasin.
     foreach ($d['magasins'] as $mag) {
