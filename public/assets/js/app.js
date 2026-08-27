@@ -5035,6 +5035,9 @@ class App {
     if (enCours) { common.tvPrime = { fait: true, txt: 'Le mois en cours ne se prime pas : il n’est pas fini.' }; }
 
     common.tvSeuil = d.seuil;
+    common.tvCreneaux = !d.creneaux ? '' : ('La difficulté des créneaux, mesurée sur le mois (CA réseau par heure planifiée) : '
+      + 'matin semaine ' + eur(d.creneaux.matSem) + '/h · après-midi semaine ' + eur(d.creneaux.amSem)
+      + '/h · matin week-end ' + eur(d.creneaux.matWe) + '/h · après-midi week-end ' + eur(d.creneaux.amWe) + '/h.');
     common.tvSansVendeur = d.partSansVendeur > 0
       ? d.partSansVendeur.toFixed(1).replace('.', ',') + ' % du CA du mois est encaissé sans vendeur identifié sur le ticket — cette part n’est attribuée à personne.'
       : '';
@@ -5048,6 +5051,9 @@ class App {
         heures: nb1(l.heures) + ' h', ca: eur(l.ca),
         caHeure: l.caHeure != null ? eur(l.caHeure) + ' / h' : '—',
         coef: l.coef != null ? l.coef.toFixed(2).replace('.', ',') : '—',
+        coefCreneau: l.coefCreneau != null ? l.coefCreneau.toFixed(2).replace('.', ',') : '—',
+        creneauTitre: (l.partAm != null ? l.partAm + ' % de ses heures l’après-midi' : '')
+          + (l.partWe != null ? ' · ' + l.partWe + ' % le week-end' : ''),
         score: l.score != null ? eur(l.score) : '—',
         barre: Math.max(2, Math.round(100 * (l.score || 0) / maxScore)),
         panier: px(l.panier), lignesTicket: nb1(l.lignesTicket),

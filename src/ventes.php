@@ -37,6 +37,20 @@ const VENTE_SEUIL_HEURES = 0;
  */
 const VENTE_LISSAGE_HEURES = 20;
 
+/**
+ * Le coefficient de créneau : vendre l'après-midi ou en semaine est plus dur
+ * que le samedi matin — la file fait le chiffre toute seule.
+ *
+ * La difficulté n'est pas DÉCRÉTÉE, elle est MESURÉE : le CA du réseau par
+ * heure planifiée, sur quatre créneaux (matin/après-midi × semaine/week-end,
+ * la bascule à 13 h). Une personne dont le planning porte surtout les
+ * créneaux creux reçoit un coefficient > 1, une personne sur les rushs < 1 —
+ * borné, pour qu'un mois entier ne se joue jamais sur le seul planning.
+ */
+const VENTE_CRENEAU_BASCULE = 13;        // heure de bascule matin → après-midi
+const VENTE_COEF_CRENEAU_MIN = 0.8;
+const VENTE_COEF_CRENEAU_MAX = 1.3;
+
 /** Les colonnes candidates pour le vendeur, sur `transaction`. */
 const VENTE_COLS_VENDEUR = ['id_user', 'user_id', 'id_employee', 'employee_id',
     'id_seller', 'seller_id', 'id_cashier', 'cashier_id', 'id_user_membership',
@@ -123,19 +137,53 @@ function venteMois(string $m, array $nomDe): array
 
     // Les heures du planning — la SEULE base de comparaison. start/end sont
     // des heures du jour : la différence se prend modulo 24 h, un service qui
-    // passe minuit ne devient pas négatif.
-    $heures = [];
+    // passe minuit ne devient pas négatif. Chaque service est aussi VENTILÉ
+    // sur quatre créneaux (la bascule à 13 h, le week-end au samedi-dimanche) ;
+    // un service qui passe minuit n'est pas ventilé — trop rare pour mériter
+    // une arithmétique qui se lirait mal.
+    $bascule = VENTE_CRENEAU_BASCULE * 3600;
+    $matin = 'GREATEST(0, LEAST(TIME_TO_SEC(end_hour), ' . $bascule . ') - LEAST(TIME_TO_SEC(start_hour), ' . $bascule . '))';
+    $duree = 'GREATEST(TIME_TO_SEC(end_hour) - TIME_TO_SEC(start_hour), 0)';
+    $heures = []; $creneauxEmp = [];
     try {
         foreach (Db::rows('SELECT id_employee,
-                                  SUM((TIME_TO_SEC(end_hour) - TIME_TO_SEC(start_hour) + 86400) % 86400) / 3600 h
+                                  SUM((TIME_TO_SEC(end_hour) - TIME_TO_SEC(start_hour) + 86400) % 86400) / 3600 h,
+                                  SUM(CASE WHEN WEEKDAY(work_date) < 5 THEN ' . $matin . ' ELSE 0 END) / 3600 matSem,
+                                  SUM(CASE WHEN WEEKDAY(work_date) < 5 THEN ' . $duree . ' - ' . $matin . ' ELSE 0 END) / 3600 amSem,
+                                  SUM(CASE WHEN WEEKDAY(work_date) >= 5 THEN ' . $matin . ' ELSE 0 END) / 3600 matWe,
+                                  SUM(CASE WHEN WEEKDAY(work_date) >= 5 THEN ' . $duree . ' - ' . $matin . ' ELSE 0 END) / 3600 amWe
                              FROM franchisee_employee_schedule
                             WHERE work_date >= ? AND work_date < ?
                             GROUP BY id_employee', [substr($du, 0, 10), substr($au, 0, 10)]) as $r) {
-            $heures[(int) $r['id_employee']] = (float) $r['h'];
+            $id = (int) $r['id_employee'];
+            $heures[$id] = (float) $r['h'];
+            $creneauxEmp[$id] = ['matSem' => (float) $r['matSem'], 'amSem' => (float) $r['amSem'],
+                'matWe' => (float) $r['matWe'], 'amWe' => (float) $r['amWe']];
         }
     } catch (PDOException $e) {
         return ['lignes' => [], 'sansVendeur' => [], 'motif' => 'le planning du panel n’a pas pu être lu : ' . $e->getMessage()];
     }
+
+    // La difficulté MESURÉE de chaque créneau : le CA du réseau ÷ les heures
+    // planifiées du réseau, créneau par créneau.
+    $caSeg = ['matSem' => 0.0, 'amSem' => 0.0, 'matWe' => 0.0, 'amWe' => 0.0];
+    try {
+        foreach (Db::rows('SELECT (WEEKDAY(DATE(insert_timestamp)) >= 5) we,
+                                  (HOUR(insert_timestamp) >= ' . VENTE_CRENEAU_BASCULE . ') am,
+                                  SUM(total_gross_amount_after_discount) ca
+                             FROM `transaction`
+                            WHERE insert_timestamp >= ? AND insert_timestamp < ?
+                            GROUP BY we, am', [$du, $au]) as $r) {
+            $cle = ((int) $r['we'] ? ($r['am'] ? 'amWe' : 'matWe') : ((int) $r['am'] ? 'amSem' : 'matSem'));
+            $caSeg[$cle] = (float) $r['ca'];
+        }
+    } catch (PDOException $e) { /* sans ventilation : coefficient neutre partout */ }
+    $hSeg = ['matSem' => 0.0, 'amSem' => 0.0, 'matWe' => 0.0, 'amWe' => 0.0];
+    foreach ($creneauxEmp as $c2) { foreach ($hSeg as $k => $v) { $hSeg[$k] += $c2[$k]; } }
+    $intens = [];
+    $caTous = array_sum($caSeg); $hTous = array_sum($hSeg);
+    $iGlobal = $hTous > 0 ? $caTous / $hTous : 0.0;
+    foreach ($hSeg as $k => $h2) { $intens[$k] = $h2 > 1 ? $caSeg[$k] / $h2 : null; }
 
     // Les ventes, par vendeur.
     $ventes = []; $sans = ['tickets' => 0, 'ca' => 0.0];
@@ -172,6 +220,27 @@ function venteMois(string $m, array $nomDe): array
         $tickets = $v['tickets'] ?? 0;
         $classable = $h > 0 && $h >= VENTE_SEUIL_HEURES && $ca > 0;
         $lisse = $h + VENTE_LISSAGE_HEURES;
+        // Le créneau : à quel « débit réseau » cette personne était-elle
+        // exposée ? Son attendu = la moyenne des intensités de SES créneaux,
+        // pondérée par ses heures. Coefficient = intensité moyenne réseau ÷
+        // son attendu — > 1 sur les créneaux creux, < 1 sur les rushs, borné.
+        $c2 = $creneauxEmp[$id] ?? null;
+        $coefCre = 1.0; $partAm = null; $partWe = null;
+        if ($c2 !== null && $iGlobal > 0) {
+            $hVent = array_sum($c2);
+            if ($hVent > 0.5) {
+                $attendu = 0.0; $hPris = 0.0;
+                foreach ($c2 as $k => $h3) {
+                    if ($h3 <= 0 || $intens[$k] === null) { continue; }
+                    $attendu += $h3 * $intens[$k]; $hPris += $h3;
+                }
+                if ($hPris > 0 && $attendu > 0) {
+                    $coefCre = max(VENTE_COEF_CRENEAU_MIN, min(VENTE_COEF_CRENEAU_MAX, $iGlobal / ($attendu / $hPris)));
+                }
+                $partAm = round(100 * ($c2['amSem'] + $c2['amWe']) / $hVent);
+                $partWe = round(100 * ($c2['matWe'] + $c2['amWe']) / $hVent);
+            }
+        }
         $lignes[] = [
             'id' => $id, 'nom' => $e['nom'],
             'shopId' => $e['shop'], 'magasin' => $nomDe[$e['shop']] ?? ('Magasin ' . $e['shop']),
@@ -180,7 +249,9 @@ function venteMois(string $m, array $nomDe): array
             'tickets' => $tickets,
             'caHeure' => $classable ? (int) round($ca / $h) : null,
             'coef' => $classable ? round($h / $lisse, 2) : null,
-            'score' => $classable ? (int) round($ca / $lisse) : null,
+            'coefCreneau' => $classable ? round($coefCre, 2) : null,
+            'partAm' => $partAm, 'partWe' => $partWe,
+            'score' => $classable ? (int) round($ca / $lisse * $coefCre) : null,
             'panier' => $tickets > 0 ? round($ca / $tickets, 2) : null,
             'lignesTicket' => $tickets > 0 ? round(($v['lignes'] ?? 0) / $tickets, 1) : null,
             'classable' => $classable,
@@ -200,7 +271,12 @@ function venteMois(string $m, array $nomDe): array
     foreach ($lignes as $i => $l) {
         $lignes[$i]['rang'] = $l['classable'] ? ++$rang : null;
     }
-    return ['lignes' => $lignes, 'sansVendeur' => $sans, 'motif' => null];
+    return ['lignes' => $lignes, 'sansVendeur' => $sans, 'motif' => null,
+        'creneaux' => ['matSem' => $intens['matSem'] !== null ? (int) round($intens['matSem']) : null,
+            'amSem' => $intens['amSem'] !== null ? (int) round($intens['amSem']) : null,
+            'matWe' => $intens['matWe'] !== null ? (int) round($intens['matWe']) : null,
+            'amWe' => $intens['amWe'] !== null ? (int) round($intens['amWe']) : null,
+            'global' => (int) round($iGlobal)]];
 }
 
 /** Les montants de prime, réglables. */
@@ -254,6 +330,7 @@ function ep_ventes_classement(): array
     $r = venteMois($m, $nomDe);
     $out['lignes'] = $r['lignes'];
     $out['sansVendeur'] = $r['sansVendeur'];
+    $out['creneaux'] = $r['creneaux'] ?? null;
     $out['motif'] = $r['motif'];
     if ($r['motif'] === null) {
         $out['gagnantes'] = venteGagnantes($r['lignes']);
@@ -475,7 +552,7 @@ function ep_ventes_pdf(): array
     $tableau = static function (array $lignes, bool $avecMagasin) use ($e, $eur, $n1, $court, $hist): string {
         $h2 = '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Vendeur·se</th>'
             . ($avecMagasin ? '<th class="l">Magasin</th>' : '')
-            . '<th>Heures</th><th>CA</th><th>CA / h</th><th>Coef.</th><th>Score</th><th>Panier</th><th>Lignes / tkt</th><th>Tickets</th><th class="l">Prime</th></tr>';
+            . '<th>Heures</th><th>CA</th><th>CA / h</th><th>Coef. h</th><th>Coef. crén.</th><th>Score</th><th>Panier</th><th>Lignes / tkt</th><th>Tickets</th><th class="l">Prime</th></tr>';
         foreach ($lignes as $l) {
             $prime = '';
             if ($hist !== null) {
@@ -491,6 +568,7 @@ function ep_ventes_pdf(): array
                 . '<td>' . $eur($l['ca']) . '</td>'
                 . '<td>' . ($l['caHeure'] !== null ? $eur($l['caHeure']) : '—') . '</td>'
                 . '<td class="mut">' . ($l['coef'] !== null ? number_format((float) $l['coef'], 2, ',', ' ') : '—') . '</td>'
+                . '<td class="mut">' . ($l['coefCreneau'] !== null ? number_format((float) $l['coefCreneau'], 2, ',', ' ') : '—') . '</td>'
                 . '<td class="acc"><b>' . ($l['score'] !== null ? $eur($l['score']) : '—') . '</b></td>'
                 . '<td>' . ($l['panier'] !== null ? number_format((float) $l['panier'], 2, ',', ' ') . ' €' : '—') . '</td>'
                 . '<td>' . ($l['lignesTicket'] !== null ? $n1($l['lignesTicket']) : '—') . '</td>'
@@ -518,6 +596,12 @@ function ep_ventes_pdf(): array
     $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Le classement se fait au <b>CA/h pondéré</b> : '
         . 'CA/heure × coefficient d’heures, où coefficient = heures ÷ (heures + ' . VENTE_LISSAGE_HEURES . '). '
         . 'Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier. '
+        . 'S’y multiplie le <b>coefficient de créneau</b> : vendre l’après-midi ou en semaine est plus dur que le samedi matin, et la difficulté est MESURÉE, pas décrétée — '
+        . 'le CA du réseau par heure planifiée ce mois-ci : '
+        . ($d['creneaux'] !== null ? 'matin semaine ' . $eur($d['creneaux']['matSem']) . '/h · après-midi semaine ' . $eur($d['creneaux']['amSem'])
+            . '/h · matin week-end ' . $eur($d['creneaux']['matWe']) . '/h · après-midi week-end ' . $eur($d['creneaux']['amWe']) . '/h. ' : '')
+        . 'Le coefficient est borné entre ' . number_format(VENTE_COEF_CRENEAU_MIN, 2, ',', ' ') . ' et ' . number_format(VENTE_COEF_CRENEAU_MAX, 2, ',', ' ')
+        . ' : un mois ne se joue jamais sur le seul planning. '
         . 'Le CA/heure réel reste affiché à côté. Le classement est ouvert à toutes les heures prestées'
         . (VENTE_SEUIL_HEURES > 0 ? ' dès ' . VENTE_SEUIL_HEURES . ' h au planning' : '')
         . ' ; sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '

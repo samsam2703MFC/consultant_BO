@@ -7090,7 +7090,7 @@ function tplVentes(c, x){
   }
 
   const fiche = f => !f ? '' : `
-    <tr><td colspan="12" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+    <tr><td colspan="13" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
       <div style="padding:14px 18px 16px">
         ${f.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la fiche…</div>`
         : f.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(f.err)}</div>` : `
@@ -7162,7 +7162,7 @@ function tplVentes(c, x){
           <th style="${th};text-align:left">Vendeur·se</th>
           <th style="${th};text-align:left">Magasin</th>
           <th style="${th}">Heures</th><th style="${th}">CA</th><th style="${th}">CA / heure</th>
-          <th style="${th}">Coef.</th><th style="${th}">Score</th>
+          <th style="${th}">Coef. h</th><th style="${th}" title="coefficient de créneau">Coef. crén.</th><th style="${th}">Score</th>
           <th style="${th};text-align:left;padding-left:18px"></th>
           <th style="${th}">Panier</th><th style="${th}">Lignes / ticket</th><th style="${th};padding-right:18px">Tickets</th>
         </tr></thead>
@@ -7178,6 +7178,7 @@ function tplVentes(c, x){
             <td style="${td}">${esc(l.ca)}</td>
             <td style="${td}">${esc(l.caHeure)}</td>
             <td style="${td};color:var(--color-text-muted)">${esc(l.coef)}</td>
+            <td style="${td};color:var(--color-text-muted)" title="${esc(l.creneauTitre)}">${esc(l.coefCreneau)}</td>
             <td style="${td};font-weight:600${l.classable ? ';color:var(--color-primary)' : ''}">${esc(l.score)}</td>
             <td style="${td};text-align:left;padding-left:18px"><span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:96px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${l.barre}%;background:${l.classable ? 'var(--color-primary)' : '#CFC7BA'};border-radius:999px"></i></span></td>
             <td style="${td}">${esc(l.panier)}</td>
@@ -7189,7 +7190,9 @@ function tplVentes(c, x){
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
         Le classement se fait au <b>CA/h pondéré</b> : CA/heure × coefficient d’heures, où coefficient = heures ÷ (heures + 20).
-        Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier. Le CA/heure réel reste affiché.
+        Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier.
+        S’y multiplie le <b>coefficient de créneau</b> (borné 0,80 – 1,30) : vendre l’après-midi ou en semaine est plus dur que le samedi matin — survolez la colonne pour voir la part d’après-midi et de week-end de chacun. Le CA/heure réel reste affiché.
+        ${!c.tvCreneaux ? '' : '<br>' + esc(c.tvCreneaux)}
         Le classement est ouvert à toutes les heures prestées${c.tvSeuil > 0 ? ` dès ${c.tvSeuil} h au planning` : ''} — sans heure au planning ou sans vente à son nom : montré·e, jamais classé·e ni primé·e. Panier = CA ÷ tickets · cross-selling = lignes par ticket.
         La meilleure du réseau ne cumule pas la prime magasin. Les primes s’enregistrent d’un clic et passent au journal.
         ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}
