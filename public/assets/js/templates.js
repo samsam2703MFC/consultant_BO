@@ -7307,11 +7307,11 @@ function tplVentes(c, x){
           <div style="${lbl};margin-bottom:7px">Prime de base — la cible atteinte</div>
           <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
             <input type="number" min="1" step="5" value="${c.cxMontant != null ? c.cxMontant : ''}" ${x.C(c.cxMontantPoser)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
-          <div style="${lbl};margin:16px 0 7px">Prime de magasin — la moyenne de l’équipe atteint la cible</div>
+          <div style="${lbl};margin:16px 0 7px">Prime d’équipe — la MOYENNE du magasin à la cible</div>
           <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
             <input type="number" min="1" step="5" value="${c.cxMontantShop != null ? c.cxMontantShop : ''}" ${x.C(c.cxMontantShopPoser)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €
             <span style="font-size:11px;color:var(--color-text-muted)">s’ajoute aux primes personnelles</span></label>
-          <div style="${lbl};margin:16px 0 7px">Paliers réseau — chaque cran AU-DESSUS de la cible du magasin débloque sa prime</div>
+          <div style="${lbl};margin:16px 0 7px">Les crans de l’équipe — la moyenne du magasin au-dessus de sa cible</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             ${(c.cxPaliers || []).map(pal => `
             <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
@@ -7322,7 +7322,7 @@ function tplVentes(c, x){
             </span>`).join('')}
             <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ cran</button>
           </div>
-          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Cible +0,1 » vaut 2,6 là où la cible est 2,5 — l’effort est le même partout, le point de départ non.</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">C’est la MOYENNE du magasin qui gravit ces crans — « cible +0,1 » vaut 2,6 là où la cible est 2,5. La vendeuse, elle, touche la prime de base en atteignant la cible.</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:14px;line-height:1.55">Chaque réglage s’enregistre à la sortie du champ et passe au journal. Les résultats — qui atteint quoi, mois par mois — sont dans l’onglet Résultats.</div>
@@ -7444,12 +7444,12 @@ function tplVentes(c, x){
               : `<span style="color:var(--color-text-muted)">${esc(c2.target)}</span> ${c2.nb > 0
                 ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb} · ${c2.eur} €</span>`
                 : `<span style="font-size:10.5px;color:var(--color-primary)">0</span>`}
-                <div style="font-size:9.5px;margin-top:2px;color:${c2.shopOk ? '#2d7a3e' : 'var(--color-text-muted)'}">moy ${esc(c2.moyenne)}${c2.shopOk ? ' 🏅' : ''}</div>`}</td>`).join('')}
+                <div style="font-size:9.5px;margin-top:2px;color:${c2.shopOk ? '#2d7a3e' : 'var(--color-text-muted)'}">moy ${esc(c2.moyenne)}${c2.primeShop ? ' 🏅 ' + c2.primeShop + ' €' : ''}</div>`}</td>`).join('')}
           </tr>`).join('')}
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        Chaque cellule : la cible du mois · ✓ les vendeuses qui l’atteignent et leurs primes personnelles · la moyenne du magasin, 🏅 quand elle atteint la cible — la prime de MAGASIN s’ajoute alors aux primes personnelles.
+        Chaque cellule : la cible du mois · ✓ les vendeuses qui l’atteignent (prime personnelle de base chacune) · la moyenne du magasin avec 🏅 et la prime d’ÉQUIPE du cran franchi — c’est la moyenne qui gravit l’escalier, pas chaque vendeuse, et elle s’ajoute aux primes personnelles.
         Sans cible posée, rien ne se compte. Les primes s’enregistrent une fois le mois fini et passent au journal ; cibles, montants et paliers se règlent dans l’onglet Targets &amp; primes.
       </div>`}
     </div>

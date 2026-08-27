@@ -5221,8 +5221,9 @@ class App {
         eur: c2.eur || 0,
         moyenne: c2.moyenne != null ? n1(c2.moyenne) : '',
         shopOk: !!c2.shopOk,
+        primeShop: c2.primeShop || 0,
         noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · ')
-          + (c2.shopOk ? ' | moyenne magasin ' + n1(c2.moyenne) + ' ≥ cible : prime magasin' : ''),
+          + (c2.primeShop ? ' | équipe : moyenne ' + n1(c2.moyenne) + ', cran ' + n1(c2.cranShop) + ' franchi → ' + c2.primeShop + ' €' : ''),
       })),
     }));
     const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);

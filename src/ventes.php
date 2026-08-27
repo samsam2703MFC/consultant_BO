@@ -890,11 +890,12 @@ function ep_ventes_cross(): array
                 foreach ($parMois[$m] as $l) {
                     if ((string) $l['shopId'] !== (string) $sid) { continue; }
                     if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-                    $prime = venteCrossPrime((float) ($l['lignesTicket'] ?? 0), $target, $montant, $paliers);
-                    if ($prime !== null) {
+                    // La prime PERSONNELLE est la base, un point c'est tout :
+                    // les crans, eux, se jouent sur la moyenne du MAGASIN.
+                    if (($l['lignesTicket'] ?? 0) >= $target) {
                         $atteintes[] = ['id' => $l['id'], 'nom' => $l['nom'],
                             'lignesTicket' => $l['lignesTicket'],
-                            'prime' => $prime['montant'], 'palier' => $prime['seuil']];
+                            'prime' => $montant, 'palier' => $target];
                     }
                 }
                 usort($atteintes, static fn ($a, $b) => $b['lignesTicket'] <=> $a['lignesTicket']);
@@ -915,6 +916,12 @@ function ep_ventes_cross(): array
             $moy = $tk > 0 ? round($lg / $tk, 2) : null;
             $cells[$i2]['moyenne'] = $moy;
             $cells[$i2]['shopOk'] = $c3['target'] !== null && $moy !== null && $moy >= $c3['target'];
+            // Le cran franchi par la MOYENNE : cible → prime d'équipe de
+            // base, puis chaque +0,1 paie son montant — le plus haut gagne.
+            $primeShop = ($c3['target'] !== null && $moy !== null)
+                ? venteCrossPrime($moy, $c3['target'], $montantShop, $paliers) : null;
+            $cells[$i2]['primeShop'] = $primeShop !== null ? $primeShop['montant'] : 0;
+            $cells[$i2]['cranShop'] = $primeShop !== null ? $primeShop['seuil'] : null;
         }
         $out['magasins'][] = ['id' => (string) $sid, 'nom' => $nom,
             'targetActuelle' => venteCrossTarget($cfg, (string) $sid, date('Y-m')),
@@ -1029,13 +1036,12 @@ function wr_ventes_cross_primes(): array
         $target = venteCrossTarget($cfg, (string) $l['shopId'], $m);
         if ($target === null) { continue; }
         if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-        $prime = venteCrossPrime((float) ($l['lignesTicket'] ?? 0), $target, $montant, $paliers);
-        if ($prime === null) { continue; }
+        if (($l['lignesTicket'] ?? 0) < $target) { continue; }
         $enr['gagnantes'][] = ['id' => $l['id'], 'nom' => $l['nom'], 'magasin' => $l['magasin'],
             'lignesTicket' => $l['lignesTicket'], 'target' => $target,
-            'prime' => $prime['montant'], 'palier' => $prime['seuil']];
-        journalAdd('CEO', 'Vente', $l['nom'], 'Prime cross-selling ' . $m . ' — ' . $prime['montant']
-            . ' € (palier ' . number_format($prime['seuil'], 1, ',', ' ') . ' franchi : '
+            'prime' => $montant, 'palier' => $target];
+        journalAdd('CEO', 'Vente', $l['nom'], 'Prime cross-selling ' . $m . ' — ' . $montant
+            . ' € (cible ' . number_format($target, 1, ',', ' ') . ' atteinte : '
             . number_format((float) $l['lignesTicket'], 1, ',', ' ') . ' lignes/ticket, ' . $l['magasin'] . ')');
     }
     // La prime de MAGASIN : la moyenne de l'équipe atteint la cible — elle
@@ -1052,12 +1058,15 @@ function wr_ventes_cross_primes(): array
             $lg += $l['lignesTicket'] * $l['tickets']; $tk += $l['tickets'];
         }
         $moy = $tk > 0 ? round($lg / $tk, 2) : null;
-        if ($moy !== null && $moy >= $target) {
+        $primeShop = $moy !== null ? venteCrossPrime($moy, $target, $montantShop, $paliers) : null;
+        if ($primeShop !== null) {
             $enr['magasinsGagnants'][] = ['id' => (string) $sid, 'nom' => $nomShop,
-                'moyenne' => $moy, 'target' => $target];
+                'moyenne' => $moy, 'target' => $target,
+                'prime' => $primeShop['montant'], 'cran' => $primeShop['seuil']];
             journalAdd('CEO', 'Vente', $nomShop, 'Prime cross-selling MAGASIN ' . $m . ' — '
-                . $montantShop . ' € (moyenne ' . number_format($moy, 2, ',', ' ')
-                . ' lignes/ticket, cible ' . number_format($target, 1, ',', ' ') . ')');
+                . $primeShop['montant'] . ' € (moyenne ' . number_format($moy, 2, ',', ' ')
+                . ' lignes/ticket, cran ' . number_format($primeShop['seuil'], 1, ',', ' ')
+                . ' franchi, cible ' . number_format($target, 1, ',', ' ') . ')');
         }
     }
     if ($enr['gagnantes'] === [] && $enr['magasinsGagnants'] === []) {
@@ -1157,14 +1166,16 @@ function ep_ventes_affiche(): array
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'
-            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm">Vos <b>lignes par ticket</b> du mois débloquent une prime — chaque marche gagnée, c’est la prime de la marche'
-            . ($cible !== null ? ' (cible du magasin ce mois-ci : <b class="acc">' . $n1($cible) . '</b>)' : '') . ' :</div>'
+            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm">Atteignez la cible du magasin'
+            . ($cible !== null ? ' — <b class="acc">' . $n1($cible) . ' lignes par ticket</b> —' : '')
+            . ' et la prime de <b class="acc">' . $montantBase . ' €</b> est à vous. Et ENSEMBLE, chaque marche gagnée par la <b>moyenne du magasin</b> paie l’équipe :</div>'
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>';
         $marches = [];
         if ($cible !== null) {
-            $marches[] = [$n1($cible), $montantBase];
+            $marches[] = [$n1($cible), $montantShop];
             foreach ($paliers as $p) { $marches[] = [$n1($cible + $p['plus']), $p['montant']]; }
         } else {
+            $marches[] = ['la cible', $montantShop];
             foreach ($paliers as $p) { $marches[] = ['cible +' . $n1($p['plus']), $p['montant']]; }
         }
         $w = (int) (100 / max(1, count($marches)));
@@ -1173,10 +1184,7 @@ function ep_ventes_affiche(): array
                 . '<div class="v">' . (int) $mnt . ' €</div></td>';
         }
         $h .= '</tr></table>'
-            . '<div class="carte" style="text-align:left;display:block;margin-bottom:7mm"><table width="100%" cellpadding="0" cellspacing="0"><tr>'
-            . '<td><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🤝 Et ensemble</div>'
-            . '<div style="font-size:11pt;margin-top:1.5mm">La <b>moyenne du magasin</b> atteint la cible → <b class="acc" style="font-family:Georgia,serif;font-size:16pt">' . $montantShop . ' €</b> pour l’équipe.</div></td>'
-            . '</tr></table></div>'
+            . '<div class="regle" style="margin-bottom:7mm">Ces marches sont celles de l’ÉQUIPE : c’est la moyenne du magasin qui les gravit, et le plus haut cran franchi paie — tout le monde y contribue, à chaque ticket.</div>'
 
             . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
                 . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="mut">📋 Le classement de ' . $e($libPrec) . ' — à détrôner</div>'
