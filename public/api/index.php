@@ -237,6 +237,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
+    if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     if ($method === 'POST' && $path === '/fournisseurs/reclamation') { return wr_reclamation_creer(); }

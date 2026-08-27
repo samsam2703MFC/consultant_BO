@@ -5022,8 +5022,18 @@ class App {
     const d = (S.crA && S.crB) ? (this._cr || {})[S.crA + '¦' + S.crB + '¦' + (S.crMois || 6)] : undefined;
     common.crCombos = (o && o.combos || []).map(cb => ({
       id: cb.id, nom: cb.aLib + ' × ' + cb.bLib, surnom: cb.surnom || '',
+      target: cb.target != null ? cb.target.toFixed(0) + ' %' : '',
       on: S.crA === cb.aSel && S.crB === cb.bSel,
       choisir: () => this.setState({ crA: cb.aSel, crB: cb.bSel, crShop: null }),
+      // La target se pose (ou se change) sur la puce : c'est un engagement du
+      // combo, pas du croisement du jour.
+      cibler: () => {
+        const v = window.prompt('Target de taux d’attache pour « ' + cb.aLib + ' × ' + cb.bLib
+          + ' », en % (vide pour la retirer) :', cb.target != null ? String(cb.target) : '');
+        if (v === null) { return; }
+        this.api('PATCH', '/croisements/combo/' + cb.id, { target: v.trim().replace(',', '.') })
+          .then(r => { if (r && r.combos) { this._crOpt = r; this.notify(v.trim() ? 'Target posée' : 'Target retirée'); } this.setState({}); });
+      },
       retirer: () => {
         if (!window.confirm('Retirer « ' + cb.aLib + ' × ' + cb.bLib + ' » ? L’historique en cache est gardé.')) { return; }
         this.api('DELETE', '/croisements/combo/' + cb.id).then(r => {
@@ -5033,8 +5043,9 @@ class App {
     }));
     common.crEnregistrer = !d ? null : () => {
       const surnom = window.prompt('Un surnom pour ce combo ? (facultatif — « le déjeuner complet »)') || '';
+      const cible = window.prompt('Une target de taux d’attache, en % ? (facultatif — le delta s’affichera sur chaque ligne)') || '';
       this.api('POST', '/croisements/combo', { aSel: d.a.sel, bSel: d.b.sel,
-        aLib: d.a.lib, bLib: d.b.lib, surnom }).then(r => {
+        aLib: d.a.lib, bLib: d.b.lib, surnom, target: cible.trim().replace(',', '.') }).then(r => {
           if (r && r.combos) { this._crOpt = r; this.notify('Combo enregistré'); }
           this.setState({});
         });
@@ -5047,15 +5058,24 @@ class App {
     if (!d) { common.crLignes = []; return; }
 
     common.crTitre = d.a.lib + ' × ' + d.b.lib;
+    common.crTarget = d.target != null ? d.target : null;
+    const delta = t => {
+      if (d.target == null || t == null) { return null; }
+      const e2 = t - d.target;
+      return { txt: (e2 >= 0 ? '+ ' : '− ') + Math.abs(e2).toFixed(1).replace('.', ',') + ' pt',
+        col: e2 >= 0 ? '#2d7a3e' : '#8D1D2C' };
+    };
     common.crSousTitre = 'Sur les tickets contenant ' + d.a.lib + ' (' + d.a.refs
       + ' réf.) : la part contenant aussi ' + d.b.lib + ' (' + d.b.refs + ' réf.). Prix moyen de B : '
-      + (d.prixB || 0).toFixed(2).replace('.', ',') + ' € — dernier mois complet.';
+      + (d.prixB || 0).toFixed(2).replace('.', ',') + ' € — dernier mois complet.'
+      + (d.target != null ? ' 🎯 Target : ' + d.target.toFixed(1).replace('.', ',') + ' %.' : '');
     common.crEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
     const spark = cases => cases.map(x => x.taux);
     const ligne = (l, id, nom) => ({
       id, nom,
       cases: l.cases.map(x => ({ v: pc(x.taux), st: x.taux == null ? 'color:#b8b2a8' : '' })),
       tauxDernier: pc(l.tauxDernier), col: teinte(l.tauxDernier),
+      delta: delta(l.tauxDernier),
       ff: l.ffDernier == null ? '—' : l.ffDernier.toLocaleString('fr-BE'),
       eur: eur(l.eurDernier),
       spark: spark(l.cases),

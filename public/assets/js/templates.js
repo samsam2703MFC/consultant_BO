@@ -7104,7 +7104,7 @@ function tplCrois(c, x){
   }
 
   const detail = dt => !dt ? '' : `
-    <tr><td colspan="${c.crEntetes.length + 5}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+    <tr><td colspan="${c.crEntetes.length + (c.crTarget != null ? 6 : 5)}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
       <div style="padding:14px 18px 16px">
         ${dt.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des tickets du magasin…</div>`
         : dt.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(dt.err)}</div>` : `
@@ -7142,6 +7142,7 @@ function tplCrois(c, x){
         ${c.crCombos.map(cb => `
         <span style="display:inline-flex;align-items:center;gap:7px;background:${cb.on ? 'rgba(141,29,44,.06)' : '#FBF8F4'};border:0.5px solid ${cb.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:999px;padding:5px 6px 5px 13px;font-size:12px;font-weight:500;${cb.on ? 'color:var(--color-primary)' : ''}">
           <span ${x.A(cb.choisir)} style="cursor:pointer">${esc(cb.nom)}${cb.surnom ? ` <i style="font-style:normal;color:var(--color-text-muted);font-weight:400;font-size:10.5px">${esc(cb.surnom)}</i>` : ''}</span>
+          <span ${x.A(cb.cibler)} title="Poser ou changer la target d’attache" style="cursor:pointer;font-size:10.5px;color:${cb.target ? '#8a5a1c' : 'var(--color-text-muted)'}">🎯${cb.target ? ' ' + esc(cb.target) : ''}</span>
           <button ${x.A(cb.retirer)} title="Retirer ce combo — l’historique en cache est gardé" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 4px">✕</button>
         </span>`).join('')}
       </div>`}
@@ -7164,6 +7165,7 @@ function tplCrois(c, x){
           <th style="${th};text-align:left;padding-left:18px">Périmètre</th>
           ${c.crEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
           <th style="${th};text-align:left;padding-left:20px">Tendance</th>
+          ${c.crTarget != null ? `<th style="${th}" title="écart au target du dernier mois complet">Δ target</th>` : ''}
           <th style="${th}">Tickets A</th><th style="${th};padding-right:18px">Laissé au comptoir</th>
         </tr></thead>
         <tbody>
@@ -7171,6 +7173,7 @@ function tplCrois(c, x){
             <td style="${td};text-align:left;padding-left:18px">RÉSEAU</td>
             ${c.crReseau.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
             <td style="${td};text-align:left;padding-left:20px">${spark(c.crReseau.spark)}</td>
+            ${c.crTarget != null ? `<td style="${td};font-weight:600;color:${c.crReseau.delta ? c.crReseau.delta.col : 'var(--color-text-muted)'}">${c.crReseau.delta ? esc(c.crReseau.delta.txt) : '—'}</td>` : ''}
             <td style="${td}">${esc(c.crReseau.ff)}</td>
             <td style="${td};padding-right:18px;color:var(--color-primary)">${esc(c.crReseau.eur)}</td>
           </tr>
@@ -7179,6 +7182,7 @@ function tplCrois(c, x){
             <td style="${td};text-align:left;padding-left:18px;font-weight:500"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
             ${l.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
             <td style="${td};text-align:left;padding-left:20px">${spark(l.spark)}</td>
+            ${c.crTarget != null ? `<td style="${td};font-weight:600;color:${l.delta ? l.delta.col : 'var(--color-text-muted)'}">${l.delta ? esc(l.delta.txt) : '—'}</td>` : ''}
             <td style="${td}">${esc(l.ff)}</td>
             <td style="${td};padding-right:18px;font-weight:600;color:${l.col}">${esc(l.eur)}</td>
           </tr>

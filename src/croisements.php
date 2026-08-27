@@ -41,6 +41,8 @@ function croisTables(): void
             ca_b DOUBLE NOT NULL DEFAULT 0, q_b DOUBLE NOT NULL DEFAULT 0,
             PRIMARY KEY (a_sel, b_sel, mois, shop)
         ) DEFAULT CHARSET=utf8mb4');
+        try { Db::exec('ALTER TABLE ceo_combo ADD COLUMN target DOUBLE NULL'); }
+        catch (Throwable $e) { /* déjà ajoutée */ }
     } catch (Throwable $e) { /* l'écran dira ce qui manque */ }
 }
 
@@ -158,7 +160,8 @@ function ep_croisements_options(): array
         foreach (Db::rows('SELECT * FROM ceo_combo ORDER BY id') as $r) {
             $combos[] = ['id' => (int) $r['id'], 'aSel' => (string) $r['a_sel'], 'aLib' => (string) $r['a_lib'],
                 'bSel' => (string) $r['b_sel'], 'bLib' => (string) $r['b_lib'],
-                'surnom' => (string) ($r['surnom'] ?? '')];
+                'surnom' => (string) ($r['surnom'] ?? ''),
+                'target' => isset($r['target']) && $r['target'] !== null ? (float) $r['target'] : null];
         }
     } catch (Throwable $e) { /* table absente */ }
     return ['groupes' => array_keys($groupes), 'categories' => array_keys($categories),
@@ -223,6 +226,10 @@ function ep_croisements(): array
             'manquesDernier' => $ffDer - $avecDer,
             'eurDernier' => (int) round(($ffDer - $avecDer) * $prixB)];
     };
+    try {
+        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ?', [$aSel, $bSel]);
+        $out['target'] = $cb !== null && $cb['target'] !== null ? (float) $cb['target'] : null;
+    } catch (Throwable $e) { $out['target'] = null; }
     $out['reseau'] = $ligne(null);
     foreach ($nomDe as $sid => $nom) {
         $out['magasins'][] = ['id' => (string) $sid, 'nom' => $nom] + $ligne((string) $sid);
@@ -289,11 +296,37 @@ function wr_croisement_combo(): array
     }
     $dej = Db::row('SELECT id FROM ceo_combo WHERE a_sel = ? AND b_sel = ?', [$aSel, $bSel]);
     if ($dej !== null) { http_response_code(409); return ['error' => 'ce combo est déjà enregistré']; }
-    Db::exec('INSERT INTO ceo_combo (a_sel, a_lib, b_sel, b_lib, surnom, cree_le) VALUES (?,?,?,?,?,?)',
+    // La target : un taux d'attache visé, en pour cent. Bornée à [1, 100] —
+    // une target à 0 ne demande rien, au-delà de 100 ne veut rien dire.
+    $target = null;
+    if (isset($b['target']) && $b['target'] !== '' && is_numeric($b['target'])) {
+        $target = max(1.0, min(100.0, (float) $b['target']));
+    }
+    Db::exec('INSERT INTO ceo_combo (a_sel, a_lib, b_sel, b_lib, surnom, target, cree_le) VALUES (?,?,?,?,?,?,?)',
         [$aSel, mb_substr(trim((string) ($b['aLib'] ?? $aSel)), 0, 160),
          $bSel, mb_substr(trim((string) ($b['bLib'] ?? $bSel)), 0, 160),
-         mb_substr(trim((string) ($b['surnom'] ?? '')), 0, 120) ?: null, date('Y-m-d')]);
+         mb_substr(trim((string) ($b['surnom'] ?? '')), 0, 120) ?: null, $target, date('Y-m-d')]);
     journalAdd('CEO', 'Croisement', trim((string) ($b['aLib'] ?? $aSel)) . ' × ' . trim((string) ($b['bLib'] ?? $bSel)), 'Combo enregistré');
+    return ['ok' => true] + ep_croisements_options();
+}
+
+/** PATCH /croisements/combo/{id} — changer la target ou le surnom. */
+function wr_croisement_combo_patch(int $id): array
+{
+    croisTables();
+    $dej = Db::row('SELECT * FROM ceo_combo WHERE id = ?', [$id]);
+    if ($dej === null) { http_response_code(404); return ['error' => 'combo inconnu']; }
+    $b = body();
+    $target = $dej['target'] ?? null;
+    if (array_key_exists('target', $b)) {
+        $target = ($b['target'] === '' || $b['target'] === null || !is_numeric($b['target']))
+            ? null : max(1.0, min(100.0, (float) $b['target']));
+    }
+    $surnom = array_key_exists('surnom', $b)
+        ? (mb_substr(trim((string) $b['surnom']), 0, 120) ?: null) : ($dej['surnom'] ?? null);
+    Db::exec('UPDATE ceo_combo SET target = ?, surnom = ? WHERE id = ?', [$target, $surnom, $id]);
+    journalAdd('CEO', 'Croisement', $dej['a_lib'] . ' × ' . $dej['b_lib'],
+        $target !== null ? 'Target posée à ' . $target . ' %' : 'Target retirée');
     return ['ok' => true] + ep_croisements_options();
 }
 
@@ -327,6 +360,11 @@ function ep_croisements_feuille(): array
     $c = croisMoisServi($aSel, $bSel, $a['ids'], $b['ids'], $m, $nomDe);
     if ($c === null) { http_response_code(503); return ['error' => 'lecture des tickets impossible']; }
     $prixB = $c['qB'] > 0 ? $c['caB'] / $c['qB'] : 0.0;
+    $target = null;
+    try {
+        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ?', [$aSel, $bSel]);
+        $target = $cb !== null && $cb['target'] !== null ? (float) $cb['target'] : null;
+    } catch (Throwable $e) { /* sans target */ }
     $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
     $logo = rapLogoDataUri();
 
@@ -360,7 +398,8 @@ function ep_croisements_feuille(): array
         . '<div class="serif" style="font-size:18pt;margin:4mm 0 1mm">' . $e($a['lib']) . ' × ' . $e($b['lib']) . '</div>'
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Sur les tickets contenant ' . $e($a['lib'])
         . ' : la part contenant aussi ' . $e($b['lib']) . '. Prix moyen de B encaissé ce mois-ci : '
-        . number_format($prixB, 2, ',', ' ') . ' €.</div>'
+        . number_format($prixB, 2, ',', ' ') . ' €.'
+        . ($target !== null ? ' <b>Target : ' . number_format($target, 1, ',', ' ') . ' %.</b>' : '') . '</div>'
         . '<table width="100%" cellpadding="0" cellspacing="4" style="margin:0 -1mm 4mm"><tr>';
     $mags = [];
     foreach ($nomDe as $sid => $nomShop) {
@@ -373,7 +412,11 @@ function ep_croisements_feuille(): array
         $h .= '<td width="' . (int) (100 / max(1, count($mags))) . '%" valign="top" class="tile">'
             . '<div class="k">' . $e($court($mg['nom'])) . '</div>'
             . '<div class="serif" style="font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 25 ? '#2d7a3e' : '#8D1D2C') . '">'
-            . ($mg['taux'] !== null ? number_format($mg['taux'], 1, ',', ' ') . ' %' : '—') . '</div>'
+            . ($mg['taux'] !== null ? number_format($mg['taux'], 1, ',', ' ') . ' %' : '—')
+            . ($target !== null && $mg['taux'] !== null
+                ? ' <span style="font-size:8pt;color:' . ($mg['taux'] >= $target ? '#2d7a3e' : '#8D1D2C') . '">'
+                  . ($mg['taux'] >= $target ? '+' : '−') . number_format(abs($mg['taux'] - $target), 1, ',', ' ') . ' pt</span>'
+                : '') . '</div>'
             . '<div style="font-size:7.5pt;color:#7a736a;margin-top:.8mm">' . $mg['avec'] . ' / ' . $mg['ff'] . ' tickets<br>'
             . 'laissé au comptoir : <b style="color:#8D1D2C">' . $eur(($mg['ff'] - $mg['avec']) * $prixB) . '</b></div></td>';
     }
