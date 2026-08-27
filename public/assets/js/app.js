@@ -5057,6 +5057,31 @@ class App {
       }));
     common.tvPdfHref = API_BASE + '/ventes/classement.pdf?m=' + d.m;
 
+    // Trois lectures du même mois : l'endurance (CA), le rendement (CA/h),
+    // le geste de vente (lignes/ticket). Une seule serait un angle mort —
+    // le CA prime les gros horaires, le CA/h prime les bons créneaux, le
+    // cross-selling prime la proposition. Les trois ensemble se corrigent.
+    const actifs = (d.lignes || []).filter(l => (l.tickets || 0) > 0);
+    const topDix = (liste, val, sub) => liste.slice(0, 10).map((l, i) => ({
+      rang: i + 1, nom: l.nom, magasin: court(l.magasin),
+      val: val(l), sub: sub(l),
+      moi: g.reseau && g.reseau.id === l.id,
+    }));
+    common.tvTops = [
+      { titre: 'Top 10 — CA', note: 'le volume, brut',
+        lignes: topDix(actifs.slice().sort((a, b) => b.ca - a.ca),
+          l => eur(l.ca), l => nb1(l.heures) + ' h') },
+      { titre: 'Top 10 — CA / heure', note: 'le rendement — la mesure des primes',
+        lignes: topDix(actifs.filter(l => l.caHeure != null).sort((a, b) => b.caHeure - a.caHeure),
+          l => eur(l.caHeure) + ' / h', l => nb1(l.heures) + ' h · ' + eur(l.ca)) },
+      // 30 tickets au moins : 3,0 lignes sur 12 tickets, c'est un après-midi,
+      // pas un geste de vente.
+      { titre: 'Top 10 — Lignes / ticket', note: 'le cross-selling — 30 tickets au moins',
+        lignes: topDix(actifs.filter(l => l.lignesTicket != null && l.tickets >= 30)
+            .sort((a, b) => b.lignesTicket - a.lignesTicket),
+          l => nb1(l.lignesTicket) + ' lignes', l => l.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + px(l.panier)) },
+    ];
+
     const f = S.tvFiche ? (this._tvFiches || {})[S.tvFiche] : undefined;
     common.tvFiche = !S.tvFiche ? null : {
       chargement: f === undefined,

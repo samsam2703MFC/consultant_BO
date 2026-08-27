@@ -7124,6 +7124,24 @@ function tplVentes(c, x){
       </div>`).join('')}
     </div>`}
 
+    ${!(c.tvTops || []).length ? '' : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
+      ${c.tvTops.map(t => `
+      <div style="${carte};padding:14px 16px">
+        <div style="${lbl}">${esc(t.titre)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px">${esc(t.note)}</div>
+        ${t.lignes.map(l => `
+        <div style="display:flex;align-items:baseline;gap:8px;padding:4.5px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px">
+          <span style="width:16px;color:var(--color-text-muted)">${l.rang}</span>
+          <span style="font-weight:500">${esc(l.nom)}</span>
+          <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.magasin)}</span>
+          <span style="flex:1"></span>
+          <span style="font-weight:600;font-variant-numeric:tabular-nums${l.rang === 1 ? ';color:var(--color-primary)' : ''}">${esc(l.val)}</span>
+          <span style="font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap">${esc(l.sub)}</span>
+        </div>`).join('')}
+      </div>`).join('')}
+    </div>`}
+
     <div style="${carte}">
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>
