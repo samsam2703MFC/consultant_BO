@@ -7351,7 +7351,18 @@ function tplVentes(c, x){
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>
           <div style="${lbl}">Prime cross-selling — target évolutive par magasin</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">La cible de lignes par ticket se pose par magasin et vaut jusqu’à la suivante. Toute vendeuse qui l’atteint (30 tickets au moins) touche la prime de ${c.cxMontant != null ? c.cxMontant : '—'} € — ce n’est pas un podium, c’est un seuil : on peut être plusieurs à y arriver, c’est le but.</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">La cible de lignes par ticket se pose par magasin ; l’échelle des paliers est la même pour tout le réseau, et chaque étape franchie débloque SA prime — ${esc(c.cxEchelle || '')} Cette prime <b>s’ajoute</b> à celles de la meilleure vendeuse (réseau et magasin). 30 tickets au moins ; on peut être plusieurs à y arriver, c’est le but.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:9px">
+            <span style="${lbl}">Paliers réseau</span>
+            ${(c.cxPaliers || []).map(pal => `
+            <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
+              <input type="number" min="1" max="10" step="0.1" value="${esc(pal.seuil)}" ${x.C(pal.poserSeuil)} style="width:48px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
+              →
+              <input type="number" min="1" step="5" value="${esc(pal.montant)}" ${x.C(pal.poserMontant)} style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right"> €
+              <button ${x.A(pal.retirer)} title="Retirer ce palier" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
+            </span>`).join('')}
+            <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ palier</button>
+          </div>
         </div>
         <span style="flex:1"></span>
         ${!c.cxPrime ? '' : c.cxPrime.fait
@@ -7371,7 +7382,7 @@ function tplVentes(c, x){
             <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(l.nom)}</td>
             ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:#b8b2a8">—</span>'
               : `<span style="color:var(--color-text-muted)">${esc(c2.target)}</span> ${c2.nb > 0
-                ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb}</span>`
+                ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb} · ${c2.eur} €</span>`
                 : `<span style="font-size:10.5px;color:var(--color-primary)">0</span>`}`}</td>`).join('')}
             <td style="${td};padding-right:18px"><input type="number" min="1" max="10" step="0.1" value="${esc(l.target)}" ${x.C(l.poser)}
               placeholder="—" style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:right"></td>
@@ -7379,7 +7390,7 @@ function tplVentes(c, x){
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        Chaque cellule : la cible du mois · ✓ le nombre de vendeuses qui l’atteignent (survolez pour leurs noms et leur lignes/ticket).
+        Chaque cellule : la cible du mois · ✓ le nombre de vendeuses qui l’atteignent et le total des primes débloquées (survolez pour les noms, leur lignes/ticket et leur palier).
         Sans cible posée, rien ne se compte — la colonne de droite pose la cible du magasin, valable dès ce mois et pour les suivants.
         Les primes s’enregistrent une fois le mois fini, passent au journal, et le montant se règle avec la cible.
       </div>`}

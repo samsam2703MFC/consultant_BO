@@ -780,6 +780,44 @@ function ep_ventes_pdf(): array
  */
 const VENTE_CROSS_MIN_TICKETS = 30;
 
+/**
+ * Les paliers de prime : des seuils ABSOLUS de lignes/ticket, communs au
+ * réseau, chacun avec son montant. La cible du magasin reste le premier
+ * échelon (montant de base) ; au-delà, chaque palier franchi débloque SA
+ * prime — la plus haute atteinte, jamais la somme.
+ *
+ * @return list<array{seuil:float,montant:int}> triés par seuil croissant
+ */
+function venteCrossPaliers(): array
+{
+    $p = setting('venteCrossPaliers');
+    if (!is_array($p)) { return []; }
+    $out = [];
+    foreach ($p as $x) {
+        if (!is_array($x) || !isset($x['seuil'], $x['montant'])) { continue; }
+        $out[] = ['seuil' => round((float) $x['seuil'], 1), 'montant' => max(1, (int) $x['montant'])];
+    }
+    usort($out, static fn ($a, $b) => $a['seuil'] <=> $b['seuil']);
+    return $out;
+}
+
+/**
+ * La prime d'une vendeuse : le plus haut échelon franchi.
+ *
+ * @return array{montant:int,seuil:float}|null
+ */
+function venteCrossPrime(float $lignesTicket, float $targetMagasin, int $montantBase, array $paliers): ?array
+{
+    if ($lignesTicket < $targetMagasin) { return null; }
+    $prime = ['montant' => $montantBase, 'seuil' => $targetMagasin];
+    foreach ($paliers as $pal) {
+        if ($pal['seuil'] > $targetMagasin && $lignesTicket >= $pal['seuil']) {
+            $prime = ['montant' => $pal['montant'], 'seuil' => $pal['seuil']];
+        }
+    }
+    return $prime;
+}
+
 /** La target applicable pour un magasin et un mois : la dernière posée. */
 function venteCrossTarget(array $cfg, string $shop, string $m): ?float
 {
@@ -806,7 +844,8 @@ function ep_ventes_cross(): array
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
 
-    $out = ['montant' => $montant, 'minTickets' => VENTE_CROSS_MIN_TICKETS,
+    $paliers = venteCrossPaliers();
+    $out = ['montant' => $montant, 'paliers' => $paliers, 'minTickets' => VENTE_CROSS_MIN_TICKETS,
         'mois' => [], 'magasins' => [], 'dernierRevolu' => null];
     $moisListe = [];
     for ($i = $n - 1; $i >= 0; $i--) {
@@ -834,13 +873,17 @@ function ep_ventes_cross(): array
                 foreach ($parMois[$m] as $l) {
                     if ((string) $l['shopId'] !== (string) $sid) { continue; }
                     if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-                    if (($l['lignesTicket'] ?? 0) >= $target) {
-                        $atteintes[] = ['id' => $l['id'], 'nom' => $l['nom'], 'lignesTicket' => $l['lignesTicket']];
+                    $prime = venteCrossPrime((float) ($l['lignesTicket'] ?? 0), $target, $montant, $paliers);
+                    if ($prime !== null) {
+                        $atteintes[] = ['id' => $l['id'], 'nom' => $l['nom'],
+                            'lignesTicket' => $l['lignesTicket'],
+                            'prime' => $prime['montant'], 'palier' => $prime['seuil']];
                     }
                 }
                 usort($atteintes, static fn ($a, $b) => $b['lignesTicket'] <=> $a['lignesTicket']);
             }
-            $cells[] = ['m' => $m, 'target' => $target, 'atteintes' => $atteintes, 'nb' => count($atteintes)];
+            $cells[] = ['m' => $m, 'target' => $target, 'atteintes' => $atteintes, 'nb' => count($atteintes),
+                'eur' => array_sum(array_column($atteintes, 'prime'))];
         }
         $out['magasins'][] = ['id' => (string) $sid, 'nom' => $nom,
             'targetActuelle' => venteCrossTarget($cfg, (string) $sid, date('Y-m')),
@@ -883,6 +926,26 @@ function wr_ventes_cross_target(): array
     return ['ok' => true];
 }
 
+/** POST /ventes/cross-paliers {paliers: [{seuil, montant}]} — l'échelle des primes. */
+function wr_ventes_cross_paliers(): array
+{
+    $b = body();
+    $liste = [];
+    foreach ((array) ($b['paliers'] ?? []) as $x) {
+        $seuil = str_replace(',', '.', (string) ($x['seuil'] ?? ''));
+        if (!is_numeric($seuil) || !is_numeric($x['montant'] ?? null)) { continue; }
+        $liste[] = ['seuil' => round(max(1.0, min(10.0, (float) $seuil)), 1),
+            'montant' => max(1, (int) $x['montant'])];
+    }
+    usort($liste, static fn ($p, $q) => $p['seuil'] <=> $q['seuil']);
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['venteCrossPaliers', json_encode($liste)]);
+    journalAdd('CEO', 'Vente', null, 'Paliers cross-selling : '
+        . ($liste === [] ? 'retirés' : implode(' · ', array_map(
+            static fn ($p) => number_format($p['seuil'], 1, ',', ' ') . ' → ' . $p['montant'] . ' €', $liste))));
+    return ['ok' => true, 'paliers' => $liste];
+}
+
 /** POST /ventes/cross-primes {m} — enregistre les primes cross d'un mois révolu. */
 function wr_ventes_cross_primes(): array
 {
@@ -902,17 +965,21 @@ function wr_ventes_cross_primes(): array
     $r = venteMois($m, $nomDe);
     if ($r['motif'] !== null) { http_response_code(503); return ['error' => $r['motif']]; }
 
-    $enr = ['m' => $m, 'quand' => date('Y-m-d H:i'), 'montant' => $montant, 'gagnantes' => []];
+    $paliers = venteCrossPaliers();
+    $enr = ['m' => $m, 'quand' => date('Y-m-d H:i'), 'montant' => $montant,
+        'paliers' => $paliers, 'gagnantes' => []];
     foreach ($r['lignes'] as $l) {
         $target = venteCrossTarget($cfg, (string) $l['shopId'], $m);
         if ($target === null) { continue; }
         if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-        if (($l['lignesTicket'] ?? 0) < $target) { continue; }
+        $prime = venteCrossPrime((float) ($l['lignesTicket'] ?? 0), $target, $montant, $paliers);
+        if ($prime === null) { continue; }
         $enr['gagnantes'][] = ['id' => $l['id'], 'nom' => $l['nom'], 'magasin' => $l['magasin'],
-            'lignesTicket' => $l['lignesTicket'], 'target' => $target];
-        journalAdd('CEO', 'Vente', $l['nom'], 'Prime cross-selling ' . $m . ' — ' . $montant
-            . ' € (' . number_format((float) $l['lignesTicket'], 1, ',', ' ') . ' lignes/ticket, cible '
-            . number_format($target, 1, ',', ' ') . ', ' . $l['magasin'] . ')');
+            'lignesTicket' => $l['lignesTicket'], 'target' => $target,
+            'prime' => $prime['montant'], 'palier' => $prime['seuil']];
+        journalAdd('CEO', 'Vente', $l['nom'], 'Prime cross-selling ' . $m . ' — ' . $prime['montant']
+            . ' € (palier ' . number_format($prime['seuil'], 1, ',', ' ') . ' franchi : '
+            . number_format((float) $l['lignesTicket'], 1, ',', ' ') . ' lignes/ticket, ' . $l['magasin'] . ')');
     }
     if ($enr['gagnantes'] === []) { http_response_code(422); return ['error' => 'personne n’atteint sa target sur ' . $m . ' — rien à primer']; }
     $hist[$m] = $enr;

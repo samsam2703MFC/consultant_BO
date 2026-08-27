@@ -5161,6 +5161,24 @@ class App {
     common.cxMotif = d === null ? 'Le tableau cross-selling n’a pas pu être lu.' : '';
     if (!d) { common.cxLignes = []; return; }
     common.cxMontant = d.montant;
+    // L'échelle des paliers, ÉGALE pour tout le réseau : chaque champ écrit
+    // la liste entière — l'échelle est une, pas quatre réglages épars.
+    const paliers = (d.paliers || []).slice();
+    const poserPaliers = liste => this.api('POST', '/ventes/cross-paliers', { paliers: liste })
+      .then(() => { this._cross = undefined; this.notify('Échelle des paliers enregistrée'); this.setState({}); });
+    common.cxPaliers = paliers.map((pal, i) => ({
+      seuil: String(pal.seuil), montant: String(pal.montant),
+      poserSeuil: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], seuil: e.target.value }; poserPaliers(l2); },
+      poserMontant: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], montant: e.target.value }; poserPaliers(l2); },
+      retirer: () => poserPaliers(paliers.filter((x2, j) => j !== i)),
+    }));
+    common.cxPalierAjouter = () => {
+      const dernier = paliers.length ? paliers[paliers.length - 1] : { seuil: 2.5, montant: d.montant };
+      poserPaliers(paliers.concat([{ seuil: Math.min(10, (+dernier.seuil) + 0.2), montant: (+dernier.montant) + 25 }]));
+    };
+    common.cxEchelle = 'cible magasin → ' + d.montant + ' €'
+      + paliers.map(pal => ' · ' + String(pal.seuil).replace('.', ',') + ' → ' + pal.montant + ' €').join('')
+      + ' — le plus haut palier franchi paie.';
     common.cxEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
     common.cxLignes = (d.magasins || []).map(mg => ({
       nom: court(mg.nom),
@@ -5174,7 +5192,8 @@ class App {
         target: c2.target != null ? n1(c2.target) : '—',
         nb: c2.nb,
         vide: c2.target == null,
-        noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ')').join(' · '),
+        eur: c2.eur || 0,
+        noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · '),
       })),
     }));
     const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);

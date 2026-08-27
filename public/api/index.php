@@ -239,6 +239,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-target') { return wr_ventes_cross_target(); }
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }
+    if ($method === 'POST' && $path === '/ventes/cross-paliers') { return wr_ventes_cross_paliers(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }
