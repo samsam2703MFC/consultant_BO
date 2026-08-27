@@ -4973,24 +4973,25 @@ class App {
         .then(d => { this._crOptEnCours = false; this._crOpt = d || null; this.setState({}); })
         .catch(() => { this._crOptEnCours = false; this._crOpt = null; this.setState({}); });
     }
-    const a = S.crA || '', b = S.crB || '';
+    const a = S.crA || '', b = S.crB || '', dp = S.crDp || '';
     if (!a || !b) { return; }
-    const cle = a + '¦' + b + '¦' + (S.crMois || 6);
+    const cle = a + '¦' + b + '¦' + dp + '¦' + (S.crMois || 6);
     if (!this._cr) { this._cr = {}; }
     if (this._cr[cle] === undefined && !this._crEnCours) {
       this._crEnCours = true;
-      readOne('/croisements?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b) + '&mois=' + (S.crMois || 6))
+      readOne('/croisements?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b) + '&mois=' + (S.crMois || 6)
+        + (dp ? '&dp=' + dp : ''))
         .then(d => { this._crEnCours = false; this._cr[cle] = (d && !d.error) ? d : null; this.setState({}); })
         .catch(() => { this._crEnCours = false; this._cr[cle] = null; this.setState({}); });
     }
     const sid = S.crShop, m = S.crM;
     if (!sid || !m) { return; }
-    const cleD = a + '¦' + b + '¦' + m + '¦' + sid;
+    const cleD = a + '¦' + b + '¦' + dp + '¦' + m + '¦' + sid;
     if (!this._crDet) { this._crDet = {}; }
     if (this._crDet[cleD] === undefined && !this._crDetEnCours) {
       this._crDetEnCours = true;
       readOne('/croisements/detail?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b)
-        + '&m=' + m + '&shop=' + encodeURIComponent(sid))
+        + '&m=' + m + '&shop=' + encodeURIComponent(sid) + (dp ? '&dp=' + dp : ''))
         .then(d => { this._crDetEnCours = false; this._crDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
         .catch(() => { this._crDetEnCours = false; this._crDet[cleD] = null; this.setState({}); });
     }
@@ -5018,13 +5019,21 @@ class App {
     common.crSelB = fam('crB', S.crB || '');
     common.crDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === (S.crMois || 6),
       choisir: () => this.setState({ crMois: v }) }));
+    // Le daypart fait partie du combo : le choisir recharge, et il partira
+    // avec l'enregistrement — « le midi » et « toute la journée » sont deux
+    // engagements différents.
+    common.crDayparts = [['', 'Toute la journée'], ['matin', 'Matin'], ['midi', 'Midi'], ['apresmidi', 'Après-midi']]
+      .map(([v, nom]) => ({ nom, on: (S.crDp || '') === v,
+        choisir: () => this.setState({ crDp: v, crShop: null }) }));
 
-    const d = (S.crA && S.crB) ? (this._cr || {})[S.crA + '¦' + S.crB + '¦' + (S.crMois || 6)] : undefined;
+    const d = (S.crA && S.crB) ? (this._cr || {})[S.crA + '¦' + S.crB + '¦' + (S.crDp || '') + '¦' + (S.crMois || 6)] : undefined;
+    const dpNoms = { matin: 'matin', midi: 'midi', apresmidi: 'après-midi' };
     common.crCombos = (o && o.combos || []).map(cb => ({
-      id: cb.id, nom: cb.aLib + ' × ' + cb.bLib, surnom: cb.surnom || '',
+      id: cb.id, nom: cb.aLib + ' × ' + cb.bLib
+        + (cb.dp ? ' · ' + (dpNoms[cb.dp] || cb.dp) : ''), surnom: cb.surnom || '',
       target: cb.target != null ? cb.target.toFixed(0) + ' %' : '',
-      on: S.crA === cb.aSel && S.crB === cb.bSel,
-      choisir: () => this.setState({ crA: cb.aSel, crB: cb.bSel, crShop: null }),
+      on: S.crA === cb.aSel && S.crB === cb.bSel && (S.crDp || '') === (cb.dp || ''),
+      choisir: () => this.setState({ crA: cb.aSel, crB: cb.bSel, crDp: cb.dp || '', crShop: null }),
       // La target se pose (ou se change) sur la puce : c'est un engagement du
       // combo, pas du croisement du jour.
       cibler: () => {
@@ -5045,7 +5054,8 @@ class App {
     // combo enregistré il écrit directement (au blur / à Entrée) ; sur un
     // croisement pas encore enregistré il retient la valeur, que le bouton
     // 💾 emporte avec lui.
-    const comboActif = (o && o.combos || []).find(cb => cb.aSel === S.crA && cb.bSel === S.crB) || null;
+    const comboActif = (o && o.combos || []).find(cb => cb.aSel === S.crA && cb.bSel === S.crB
+      && (cb.dp || '') === (S.crDp || '')) || null;
     common.crTargetChamp = !d ? null : {
       val: comboActif ? (comboActif.target != null ? String(comboActif.target) : '') : (S.crTargetInput || ''),
       enregistre: !!comboActif,
@@ -5059,13 +5069,13 @@ class App {
     common.crEnregistrer = !d ? null : () => {
       const surnom = window.prompt('Un surnom pour ce combo ? (facultatif — « le déjeuner complet »)') || '';
       this.api('POST', '/croisements/combo', { aSel: d.a.sel, bSel: d.b.sel,
-        aLib: d.a.lib, bLib: d.b.lib, surnom,
+        aLib: d.a.lib, bLib: d.b.lib, surnom, dp: S.crDp || '',
         target: String(S.crTargetInput || '').trim().replace(',', '.') }).then(r => {
           if (r && r.combos) { this._crOpt = r; this.notify('Combo enregistré'); }
           this.setState({});
         });
     };
-    common.crDejaEnregistre = !!(d && (o && o.combos || []).find(cb => cb.aSel === d.a.sel && cb.bSel === d.b.sel));
+    common.crDejaEnregistre = !!comboActif;
 
     common.crRien = !S.crA || !S.crB;
     common.crChargement = !common.crRien && d === undefined;
@@ -5083,6 +5093,7 @@ class App {
     common.crSousTitre = 'Sur les tickets contenant ' + d.a.lib + ' (' + d.a.refs
       + ' réf.) : la part contenant aussi ' + d.b.lib + ' (' + d.b.refs + ' réf.). Prix moyen de B : '
       + (d.prixB || 0).toFixed(2).replace('.', ',') + ' € — dernier mois complet.'
+      + (d.daypartLib ? ' ⏰ ' + d.daypartLib + '.' : '')
       + (d.target != null ? ' 🎯 Target : ' + d.target.toFixed(1).replace('.', ',') + ' %.' : '');
     common.crEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
     const spark = cases => cases.map(x => x.taux);
@@ -5101,9 +5112,13 @@ class App {
       ...ligne(mg, mg.id, court(mg.nom)),
       ouvert: S.crShop === mg.id,
       basculer: () => this.setState({ crShop: S.crShop === mg.id ? null : mg.id, crM: mDetail }),
+      // La feuille de CE magasin : celle qu'on épingle dans sa réserve.
+      feuille: hrefFeuille(mg.id),
     }));
-    common.crPdfHref = API_BASE + '/croisements/feuille.pdf?a=' + encodeURIComponent(d.a.sel)
-      + '&b=' + encodeURIComponent(d.b.sel) + (mDetail ? '&m=' + mDetail : '');
+    const hrefFeuille = shop => API_BASE + '/croisements/feuille.pdf?a=' + encodeURIComponent(d.a.sel)
+      + '&b=' + encodeURIComponent(d.b.sel) + (mDetail ? '&m=' + mDetail : '')
+      + (S.crDp ? '&dp=' + S.crDp : '') + (shop ? '&shop=' + encodeURIComponent(shop) : '');
+    common.crPdfHref = hrefFeuille(null);
     common.crMoisDetail = mDetail || '';
 
     const det = (S.crShop && S.crM) ? (this._crDet || {})[S.crA + '¦' + S.crB + '¦' + S.crM + '¦' + S.crShop] : undefined;

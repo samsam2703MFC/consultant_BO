@@ -7103,12 +7103,16 @@ function tplCrois(c, x){
     return `<div data-screen="croisements"><div style="${carte};padding:20px 22px;font-size:12.5px">Le catalogue n’a pas pu être lu.</div></div>`;
   }
 
-  const detail = dt => !dt ? '' : `
+  const detail = (dt, feuille) => !dt ? '' : (dt.feuille = feuille, '') || `
     <tr><td colspan="${c.crEntetes.length + (c.crTarget != null ? 6 : 5)}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
       <div style="padding:14px 18px 16px">
         ${dt.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des tickets du magasin…</div>`
         : dt.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(dt.err)}</div>` : `
-        <div style="${lbl};margin-bottom:8px">Vendeuse par vendeuse — ${esc(c.crMoisDetail)}</div>
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+          <span style="${lbl}">Vendeuse par vendeuse — ${esc(c.crMoisDetail)}</span>
+          <span style="flex:1"></span>
+          ${dt.feuille ? `<a href="${esc(dt.feuille)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:4px 11px">↓ Feuille de ce magasin</a>` : ''}
+        </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr><th style="${th};text-align:left">Vendeur·se</th><th style="${th}">Tickets A</th>
             <th style="${th}">Avec B</th><th style="${th}">Taux</th><th style="${th}">Manqués</th><th style="${th}">À la clé / mois</th></tr></thead>
@@ -7134,6 +7138,8 @@ function tplCrois(c, x){
         ${selecteur('B — combien contiennent aussi…', c.crSelB)}
         <span style="flex:1"></span>
         ${c.crDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        <span style="width:10px"></span>
+        ${(c.crDayparts || []).map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
         ${!c.crTargetChamp ? '' : `
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)" title="${c.crTargetChamp.enregistre ? 'La target du combo — écrite dès la sortie du champ' : 'La target partira avec l’enregistrement du combo'}">
           🎯 Target
@@ -7192,7 +7198,7 @@ function tplCrois(c, x){
             <td style="${td}">${esc(l.ff)}</td>
             <td style="${td};padding-right:18px;font-weight:600;color:${l.col}">${esc(l.eur)}</td>
           </tr>
-          ${l.ouvert ? detail(c.crDetail) : ''}`).join('')}
+          ${l.ouvert ? detail(c.crDetail, l.feuille) : ''}`).join('')}
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">

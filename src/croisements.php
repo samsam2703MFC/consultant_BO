@@ -21,6 +21,27 @@ declare(strict_types=1);
  * parce que lui seul change encore.
  */
 
+/**
+ * Les dayparts : un ticket appartient à un moment de la journée par son heure
+ * d'encaissement. Les bornes suivent le métier — le rush du matin, le service
+ * du midi, le creux de l'après-midi — et sont écrites ici une fois : l'écran,
+ * le détail et la feuille PDF lisent la même définition.
+ */
+const CROIS_DAYPARTS = [
+    'matin' => ['lib' => 'Matin (avant 11 h)', 'sql' => 'HOUR(t.insert_timestamp) < 11'],
+    'midi' => ['lib' => 'Midi (11 – 14 h)', 'sql' => 'HOUR(t.insert_timestamp) >= 11 AND HOUR(t.insert_timestamp) < 14'],
+    'apresmidi' => ['lib' => 'Après-midi (14 h et plus)', 'sql' => 'HOUR(t.insert_timestamp) >= 14'],
+];
+
+/** La condition SQL du daypart demandé — vide : toute la journée. */
+function croisDaypart(string $dp): array
+{
+    $d = CROIS_DAYPARTS[$dp] ?? null;
+    return ['cle' => $d !== null ? $dp : '',
+        'lib' => $d !== null ? $d['lib'] : '',
+        'sql' => $d !== null ? ' AND ' . $d['sql'] : ''];
+}
+
 function croisTables(): void
 {
     static $fait = false;
@@ -42,6 +63,11 @@ function croisTables(): void
             PRIMARY KEY (a_sel, b_sel, mois, shop)
         ) DEFAULT CHARSET=utf8mb4');
         try { Db::exec('ALTER TABLE ceo_combo ADD COLUMN target DOUBLE NULL'); }
+        catch (Throwable $e) { /* déjà ajoutée */ }
+        // Le daypart fait PARTIE du combo : « Flip & Flap × Boissons le midi »
+        // et « …toute la journée » sont deux engagements différents, avec
+        // chacun sa target et son historique.
+        try { Db::exec("ALTER TABLE ceo_combo ADD COLUMN dp VARCHAR(12) NOT NULL DEFAULT ''"); }
         catch (Throwable $e) { /* déjà ajoutée */ }
     } catch (Throwable $e) { /* l'écran dira ce qui manque */ }
 }
@@ -75,7 +101,7 @@ function croisIds(string $sel): ?array
  *
  * @return array{shops:array<string,array{ff:int,avec:int}>,caB:float,qB:float}|null
  */
-function croisCalcul(array $idsA, array $idsB, string $mois): ?array
+function croisCalcul(array $idsA, array $idsB, string $mois, string $dpSql = ''): ?array
 {
     [$du, $au] = venteBornes($mois);
     $in = static fn (array $ids) => implode(',', array_map('intval', $ids));
@@ -83,13 +109,13 @@ function croisCalcul(array $idsA, array $idsB, string $mois): ?array
     try {
         foreach (Db::rows('SELECT DISTINCT t.id, t.id_shop
                              FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dpSql . '
                               AND l.id_product IN (' . $in($idsA) . ')', [$du, $au]) as $r) {
             $ticketsA[(int) $r['id']] = (string) $r['id_shop'];
         }
         foreach (Db::rows('SELECT t.id, SUM(l.total_gross_value_after_discount) ca, SUM(l.quantity) q
                              FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dpSql . '
                               AND l.id_product IN (' . $in($idsB) . ')
                             GROUP BY t.id', [$du, $au]) as $r) {
             $avecB[(int) $r['id']] = true;
@@ -106,9 +132,14 @@ function croisCalcul(array $idsA, array $idsB, string $mois): ?array
 }
 
 /** Le mois, servi du cache s'il y est — et mis en cache s'il est révolu. */
-function croisMoisServi(string $aSel, string $bSel, array $idsA, array $idsB, string $mois, array $nomDe): ?array
+function croisMoisServi(string $aSel, string $bSel, array $idsA, array $idsB, string $mois, array $nomDe, string $dp = ''): ?array
 {
     croisTables();
+    // Le daypart entre dans la CLÉ de cache, pas dans le schéma : un même
+    // combo porte quatre historiques indépendants (journée, matin, midi,
+    // après-midi) sans toucher la table.
+    $dpDef = croisDaypart($dp);
+    if ($dpDef['cle'] !== '') { $aSel .= '|dp:' . $dpDef['cle']; }
     $encours = $mois >= date('Y-m');
     if (!$encours) {
         try {
@@ -124,7 +155,7 @@ function croisMoisServi(string $aSel, string $bSel, array $idsA, array $idsB, st
             }
         } catch (Throwable $e) { /* cache muet : on calcule */ }
     }
-    $c = croisCalcul($idsA, $idsB, $mois);
+    $c = croisCalcul($idsA, $idsB, $mois, $dpDef['sql']);
     if ($c === null) { return null; }
     if (!$encours) {
         try {
@@ -161,6 +192,8 @@ function ep_croisements_options(): array
             $combos[] = ['id' => (int) $r['id'], 'aSel' => (string) $r['a_sel'], 'aLib' => (string) $r['a_lib'],
                 'bSel' => (string) $r['b_sel'], 'bLib' => (string) $r['b_lib'],
                 'surnom' => (string) ($r['surnom'] ?? ''),
+                'dp' => (string) ($r['dp'] ?? ''),
+                'dpLib' => croisDaypart((string) ($r['dp'] ?? ''))['lib'],
                 'target' => isset($r['target']) && $r['target'] !== null ? (float) $r['target'] : null];
         }
     } catch (Throwable $e) { /* table absente */ }
@@ -176,6 +209,7 @@ function ep_croisements(): array
     $n = (int) ($_GET['mois'] ?? 6);
     if ($n < 2 || $n > 12) { $n = 6; }
     $a = croisIds($aSel); $b = croisIds($bSel);
+    $dp = croisDaypart(trim((string) ($_GET['dp'] ?? '')));
     if ($a === null || $b === null) {
         http_response_code(422);
         return ['error' => 'choisissez deux familles — la sélection ne correspond à rien au catalogue'];
@@ -187,6 +221,7 @@ function ep_croisements(): array
 
     $out = ['a' => ['sel' => $aSel, 'lib' => $a['lib'], 'refs' => count($a['ids'])],
         'b' => ['sel' => $bSel, 'lib' => $b['lib'], 'refs' => count($b['ids'])],
+        'daypart' => $dp['cle'], 'daypartLib' => $dp['lib'],
         'mois' => [], 'reseau' => [], 'magasins' => [], 'prixB' => null, 'motif' => null];
 
     $parMois = [];
@@ -194,7 +229,7 @@ function ep_croisements(): array
         $t = strtotime("-$i month", strtotime(date('Y-m-01')));
         $m = date('Y-m', $t);
         $out['mois'][] = ['cle' => $m, 'lib' => strftime_fr($t, 'M'), 'encours' => $m === date('Y-m')];
-        $parMois[$m] = croisMoisServi($aSel, $bSel, $a['ids'], $b['ids'], $m, $nomDe);
+        $parMois[$m] = croisMoisServi($aSel, $bSel, $a['ids'], $b['ids'], $m, $nomDe, $dp['cle']);
     }
     $dernierRevolu = null;
     foreach (array_reverse(array_keys($parMois)) as $m) {
@@ -227,7 +262,7 @@ function ep_croisements(): array
             'eurDernier' => (int) round(($ffDer - $avecDer) * $prixB)];
     };
     try {
-        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ?', [$aSel, $bSel]);
+        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
         $out['target'] = $cb !== null && $cb['target'] !== null ? (float) $cb['target'] : null;
     } catch (Throwable $e) { $out['target'] = null; }
     $out['reseau'] = $ligne(null);
@@ -249,19 +284,20 @@ function ep_croisements_detail(): array
         http_response_code(422); return ['error' => 'sélection ou mois invalide'];
     }
     [$du, $au] = venteBornes($m);
+    $dp = croisDaypart(trim((string) ($_GET['dp'] ?? '')));
     $in = static fn (array $ids) => implode(',', array_map('intval', $ids));
     $emp = venteEmployes();
     $tickets = []; $avecB = [];
     try {
         foreach (Db::rows('SELECT DISTINCT t.id, t.id_employee
                              FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dp['sql'] . '
                               AND t.id_shop = ? AND l.id_product IN (' . $in($a['ids']) . ')', [$du, $au, $shop]) as $r) {
             $tickets[(int) $r['id']] = $r['id_employee'] !== null ? (int) $r['id_employee'] : null;
         }
         foreach (Db::rows('SELECT DISTINCT t.id
                              FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dp['sql'] . '
                               AND t.id_shop = ? AND l.id_product IN (' . $in($b['ids']) . ')', [$du, $au, $shop]) as $r) {
             $avecB[(int) $r['id']] = true;
         }
@@ -294,18 +330,19 @@ function wr_croisement_combo(): array
     if (croisIds($aSel) === null || croisIds($bSel) === null) {
         http_response_code(422); return ['error' => 'le combo ne correspond à rien au catalogue'];
     }
-    $dej = Db::row('SELECT id FROM ceo_combo WHERE a_sel = ? AND b_sel = ?', [$aSel, $bSel]);
-    if ($dej !== null) { http_response_code(409); return ['error' => 'ce combo est déjà enregistré']; }
+    $dp = croisDaypart(trim((string) ($b['dp'] ?? '')));
+    $dej = Db::row('SELECT id FROM ceo_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
+    if ($dej !== null) { http_response_code(409); return ['error' => 'ce combo est déjà enregistré sur ce daypart']; }
     // La target : un taux d'attache visé, en pour cent. Bornée à [1, 100] —
     // une target à 0 ne demande rien, au-delà de 100 ne veut rien dire.
     $target = null;
     if (isset($b['target']) && $b['target'] !== '' && is_numeric($b['target'])) {
         $target = max(1.0, min(100.0, (float) $b['target']));
     }
-    Db::exec('INSERT INTO ceo_combo (a_sel, a_lib, b_sel, b_lib, surnom, target, cree_le) VALUES (?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO ceo_combo (a_sel, a_lib, b_sel, b_lib, surnom, target, dp, cree_le) VALUES (?,?,?,?,?,?,?,?)',
         [$aSel, mb_substr(trim((string) ($b['aLib'] ?? $aSel)), 0, 160),
          $bSel, mb_substr(trim((string) ($b['bLib'] ?? $bSel)), 0, 160),
-         mb_substr(trim((string) ($b['surnom'] ?? '')), 0, 120) ?: null, $target, date('Y-m-d')]);
+         mb_substr(trim((string) ($b['surnom'] ?? '')), 0, 120) ?: null, $target, $dp['cle'], date('Y-m-d')]);
     journalAdd('CEO', 'Croisement', trim((string) ($b['aLib'] ?? $aSel)) . ' × ' . trim((string) ($b['bLib'] ?? $bSel)), 'Combo enregistré');
     return ['ok' => true] + ep_croisements_options();
 }
@@ -353,24 +390,30 @@ function ep_croisements_feuille(): array
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
     $court = static fn (string $nom) => trim((string) array_reverse(explode(' - ', $nom))[0]);
+    // Une feuille PAR MAGASIN : la même mise en page, resserrée sur lui — la
+    // feuille qu'on épingle dans SA réserve, pas celle du réseau entier.
+    $seulShop = trim((string) ($_GET['shop'] ?? ''));
     $nomDe = [];
     foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
-    $c = croisMoisServi($aSel, $bSel, $a['ids'], $b['ids'], $m, $nomDe);
+    if ($seulShop !== '' && !isset($nomDe[$seulShop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $dp = croisDaypart(trim((string) ($_GET['dp'] ?? '')));
+    $c = croisMoisServi($aSel, $bSel, $a['ids'], $b['ids'], $m, $nomDe, $dp['cle']);
     if ($c === null) { http_response_code(503); return ['error' => 'lecture des tickets impossible']; }
     $prixB = $c['qB'] > 0 ? $c['caB'] / $c['qB'] : 0.0;
     $target = null;
     try {
-        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ?', [$aSel, $bSel]);
+        $cb = Db::row('SELECT target FROM ceo_combo WHERE a_sel = ? AND b_sel = ? AND dp = ?', [$aSel, $bSel, $dp['cle']]);
         $target = $cb !== null && $cb['target'] !== null ? (float) $cb['target'] : null;
     } catch (Throwable $e) { /* sans target */ }
     $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
     $logo = rapLogoDataUri();
 
-    // Les vendeuses, tous magasins.
+    // Les vendeuses — tous magasins, ou le seul demandé.
     $vend = [];
     foreach ($nomDe as $sid => $nomShop) {
+        if ($seulShop !== '' && (string) $sid !== $seulShop) { continue; }
         $_GET2 = ['a' => $aSel, 'b' => $bSel, 'm' => $m, 'shop' => (string) $sid];
         $mem = $_GET; $_GET = $_GET2;
         $det = ep_croisements_detail();
@@ -395,7 +438,8 @@ function ep_croisements_feuille(): array
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
         . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Croisements<br>' . $e($libMois) . '</td></tr></table>'
-        . '<div class="serif" style="font-size:18pt;margin:4mm 0 1mm">' . $e($a['lib']) . ' × ' . $e($b['lib']) . '</div>'
+        . '<div class="serif" style="font-size:18pt;margin:4mm 0 1mm">' . $e($a['lib']) . ' × ' . $e($b['lib'])
+        . ($dp['lib'] !== '' ? ' <span style="font-size:10pt;color:#7a736a">· ' . $e($dp['lib']) . '</span>' : '') . '</div>'
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Sur les tickets contenant ' . $e($a['lib'])
         . ' : la part contenant aussi ' . $e($b['lib']) . '. Prix moyen de B encaissé ce mois-ci : '
         . number_format($prixB, 2, ',', ' ') . ' €.'
@@ -403,7 +447,8 @@ function ep_croisements_feuille(): array
         . '<table width="100%" cellpadding="0" cellspacing="4" style="margin:0 -1mm 4mm"><tr>';
     $mags = [];
     foreach ($nomDe as $sid => $nomShop) {
-        $x = $c['shops'][(string) $sid] ?? ['ff' => 0, 'avec' => 0];
+        if ($seulShop !== '' && (string) $sid !== $seulShop) { continue; }
+        $x = $c['shops'][$sid] ?? $c['shops'][(string) $sid] ?? ['ff' => 0, 'avec' => 0];
         $mags[] = ['nom' => $nomShop, 'ff' => $x['ff'], 'avec' => $x['avec'],
             'taux' => $x['ff'] > 0 ? 100 * $x['avec'] / $x['ff'] : null];
     }
@@ -444,11 +489,14 @@ function ep_croisements_feuille(): array
         . 'Sous 10 tickets dans le mois : cumulé plutôt qu’affiché. Les tickets sans vendeur comptent au magasin, jamais aux personnes.</div></div>';
 
     $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Croisement</title></head><body>' . $h . '</body></html>';
-    $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => $a['lib'] . ' × ' . $b['lib'] . ' — ' . $libMois,
+    $pdf = rapPdfRendu($doc, ['magasin' => $seulShop !== '' ? $nomDe[$seulShop] : 'Réseau',
+        'rapport' => $a['lib'] . ' × ' . $b['lib'] . ' — ' . $libMois,
         'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
     if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
     header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="croisement-' . mktSlug($a['lib'] . '-' . $b['lib']) . '-' . $m . '.pdf"');
+    header('Content-Disposition: attachment; filename="croisement-' . mktSlug($a['lib'] . '-' . $b['lib'])
+        . ($dp['cle'] !== '' ? '-' . $dp['cle'] : '')
+        . ($seulShop !== '' ? '-' . mktSlug($court($nomDe[$seulShop])) : '') . '-' . $m . '.pdf"');
     echo $pdf;
     exit;
 }
