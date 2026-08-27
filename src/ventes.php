@@ -938,12 +938,29 @@ function wr_ventes_cross_paliers(): array
             'montant' => max(1, (int) $x['montant'])];
     }
     usort($liste, static fn ($p, $q) => $p['seuil'] <=> $q['seuil']);
+    if (isset($b['montantBase']) && is_numeric($b['montantBase'])) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['venteCrossMontant', json_encode(max(1, (int) $b['montantBase']))]);
+    }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['venteCrossPaliers', json_encode($liste)]);
     journalAdd('CEO', 'Vente', null, 'Paliers cross-selling : '
         . ($liste === [] ? 'retirés' : implode(' · ', array_map(
             static fn ($p) => number_format($p['seuil'], 1, ',', ' ') . ' → ' . $p['montant'] . ' €', $liste))));
     return ['ok' => true, 'paliers' => $liste];
+}
+
+/** POST /ventes/primes-montants {reseau, magasin} — les montants du score. */
+function wr_ventes_primes_montants(): array
+{
+    $b = body();
+    $c = ventePrimesConfig();
+    if (isset($b['reseau']) && is_numeric($b['reseau'])) { $c['reseau'] = max(1, (int) $b['reseau']); }
+    if (isset($b['magasin']) && is_numeric($b['magasin'])) { $c['magasin'] = max(1, (int) $b['magasin']); }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['ventePrimes', json_encode($c)]);
+    journalAdd('CEO', 'Vente', null, 'Montants des primes au score : réseau ' . $c['reseau'] . ' € · magasin ' . $c['magasin'] . ' €');
+    return ['ok' => true, 'primes' => $c];
 }
 
 /** POST /ventes/cross-primes {m} — enregistre les primes cross d'un mois révolu. */

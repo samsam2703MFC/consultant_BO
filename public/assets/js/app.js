@@ -5161,6 +5161,9 @@ class App {
     common.cxMotif = d === null ? 'Le tableau cross-selling n’a pas pu être lu.' : '';
     if (!d) { common.cxLignes = []; return; }
     common.cxMontant = d.montant;
+    common.cxMontantPoser = e => this.api('POST', '/ventes/cross-paliers',
+      { paliers: (d.paliers || []), montantBase: e.target.value })
+      .then(() => { this._cross = undefined; this.notify('Montant de base enregistré'); this.setState({}); });
     // L'échelle des paliers, ÉGALE pour tout le réseau : chaque champ écrit
     // la liste entière — l'échelle est une, pas quatre réglages épars.
     const paliers = (d.paliers || []).slice();
@@ -5217,6 +5220,13 @@ class App {
     const px = v => (v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €');
     const initiales = nom => nom.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase();
 
+    // Deux sous-pages : les RÉSULTATS (podium, tops, classement, primes
+    // débloquées) et les TARGETS (tous les réglages au même endroit). Lire ne
+    // se mélange pas avec régler.
+    const onglet = S.tvOnglet || 'resultats';
+    common.tvOnglet = onglet;
+    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes']]
+      .map(([v, nom]) => ({ nom, on: onglet === v, choisir: () => this.setState({ tvOnglet: v }) }));
     common.tvChargement = d === undefined;
     common.tvMotif = d === null ? 'Le classement n’a pas pu être calculé.' : ((d && d.motif) || '');
     common.tvMoisPills = ((d && d.mois) || []).map(m => ({
@@ -5256,6 +5266,13 @@ class App {
     const enCours = (d.mois.find(x => x.cle === d.m) || {}).encours;
     if (enCours) { common.tvPrime = { fait: true, txt: 'Le mois en cours ne se prime pas : il n’est pas fini.' }; }
 
+    // Les réglages des primes au score, pour la sous-page Targets.
+    common.tvPrimesCfg = {
+      reseau: String((d.primes || {}).reseau || ''),
+      magasin: String((d.primes || {}).magasin || ''),
+      poser: quoi => e => this.api('POST', '/ventes/primes-montants', { [quoi]: e.target.value })
+        .then(() => { this._tv = {}; this.notify('Montant enregistré'); this.setState({}); }),
+    };
     common.tvSeuil = d.seuil;
     common.tvCreneaux = !d.creneaux ? '' : ('La difficulté des créneaux, mesurée sur le mois (CA réseau par heure planifiée) : '
       + 'matin semaine ' + eur(d.creneaux.matSem) + '/h · après-midi semaine ' + eur(d.creneaux.amSem)
