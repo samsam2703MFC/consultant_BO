@@ -124,3 +124,4 @@
 2026-08-27 15:23 paliers relatifs
 2026-08-27 15:25 cases vides sans tiret
 2026-08-27 15:29 crans par magasin
+2026-08-27 15:35 page cloture

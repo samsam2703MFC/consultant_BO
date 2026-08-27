@@ -656,7 +656,86 @@ function ep_ventes_pdf(): array
             static fn ($l) => $n1($l['lignesTicket']), static fn ($l) => $l['tickets'] . ' tkt')
         . '</tr></table>' . $methode;
 
-    // --- Page 2 : le classement complet.
+    // --- La page de CLÔTURE : qui a gagné quoi, toutes primes confondues.
+    // C'est la feuille qu'on imprime en fin de mois — le score, le geste
+    // personnel, l'équipe, et le total que la marque verse.
+    $cfgT = setting('venteCrossTargets'); if (!is_array($cfgT)) { $cfgT = []; }
+    $paliersC = venteCrossPaliers();
+    $mBase = (int) (setting('venteCrossMontant') ?: 25);
+    $mShop = (int) (setting('venteCrossMontantShop') ?: 100);
+    $histCross = setting('ventePrimesCrossHist');
+    $histCrossM = is_array($histCross) && isset($histCross[$d['m']]) ? $histCross[$d['m']] : null;
+    $g2 = $d['gagnantes'];
+    $totalPrimes = 0;
+    $hClot = '<div style="page-break-before:always">' . $entete($e($libMois))
+        . '<div class="serif h1">La clôture — qui a gagné quoi</div>'
+        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Toutes les primes de ' . $e($libMois) . ' — '
+        . ($hist !== null || $histCrossM !== null ? 'enregistrées au journal.' : 'désignées par le calcul, à enregistrer dans le cockpit.') . '</div>';
+
+    // 1. le score
+    $hClot .= '<div class="sec">Au score — les meilleures vendeuses</div><table class="t" cellpadding="0" cellspacing="0">'
+        . '<tr><th class="l">Prime</th><th class="l">Gagnante</th><th class="l">Magasin</th><th>Score</th><th>CA / h réel</th><th>Montant</th></tr>';
+    if (($g2['reseau'] ?? null) !== null) {
+        $r2 = $g2['reseau']; $totalPrimes += (int) $d['primes']['reseau'];
+        $hClot .= '<tr><td class="l or"><b>🏆 Réseau</b></td><td class="l"><b>' . $e($r2['nom']) . '</b></td>'
+            . '<td class="l mut">' . $e($court($r2['magasin'])) . '</td><td>' . (int) $r2['score'] . '</td>'
+            . '<td>' . $eur($r2['caHeure']) . '</td><td class="acc"><b>' . $eur($d['primes']['reseau']) . '</b></td></tr>';
+        foreach ($g2['magasins'] as $x2) {
+            if ($x2['id'] === $r2['id']) { continue; }
+            $totalPrimes += (int) $d['primes']['magasin'];
+            $hClot .= '<tr><td class="l or">🥇 Magasin</td><td class="l"><b>' . $e($x2['nom']) . '</b></td>'
+                . '<td class="l mut">' . $e($court($x2['magasin'])) . '</td><td>' . (int) $x2['score'] . '</td>'
+                . '<td>' . $eur($x2['caHeure']) . '</td><td class="acc"><b>' . $eur($d['primes']['magasin']) . '</b></td></tr>';
+        }
+    } else { $hClot .= '<tr><td class="l mut" colspan="6">aucune classable ce mois-ci</td></tr>'; }
+    $hClot .= '</table>';
+
+    // 2. le geste personnel (cible atteinte) et 3. l'équipe (crans de la moyenne)
+    $hClot .= '<div class="sec">Le geste — cible personnelle atteinte (' . $eur($mBase) . ' chacune)</div>'
+        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th class="l">Gagnantes</th><th>Total</th></tr>';
+    $parShopG = [];
+    foreach ($d['lignes'] as $l2) {
+        $t3 = venteCrossTarget($cfgT, (string) $l2['shopId'], $d['m']);
+        if ($t3 === null || ($l2['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
+        if (($l2['lignesTicket'] ?? 0) >= $t3) { $parShopG[(string) $l2['shopId']][] = $l2; }
+    }
+    foreach ($d['magasins'] as $mag2) {
+        $siens2 = $parShopG[(string) $mag2['id']] ?? [];
+        $t3 = venteCrossTarget($cfgT, (string) $mag2['id'], $d['m']);
+        $totalPrimes += count($siens2) * $mBase;
+        $hClot .= '<tr><td class="l"><b>' . $e($court($mag2['nom'])) . '</b>'
+            . ($t3 !== null ? ' <span class="mut" style="font-size:7pt">cible ' . $n1($t3) . '</span>' : '') . '</td>'
+            . '<td class="l" style="font-size:7.8pt">' . ($t3 === null ? '<span class="mut">pas de cible posée ce mois-là</span>'
+                : ($siens2 === [] ? '<span class="mut">personne</span>'
+                    : implode(' · ', array_map(static fn ($l3) => $e($l3['nom']) . ' (' . $n1($l3['lignesTicket']) . ')', $siens2)))) . '</td>'
+            . '<td class="acc"><b>' . ($siens2 !== [] ? $eur(count($siens2) * $mBase) : '') . '</b></td></tr>';
+    }
+    $hClot .= '</table><div class="sec">L’équipe — la moyenne du magasin gravit les crans</div>'
+        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th>Moyenne</th><th>Cible</th><th>Cran franchi</th><th>Prime d’équipe</th></tr>';
+    foreach ($d['magasins'] as $mag2) {
+        $t3 = venteCrossTarget($cfgT, (string) $mag2['id'], $d['m']);
+        $lg2 = 0.0; $tk2 = 0;
+        foreach ($d['lignes'] as $l3) {
+            if ((string) $l3['shopId'] !== (string) $mag2['id'] || $l3['lignesTicket'] === null) { continue; }
+            $lg2 += $l3['lignesTicket'] * $l3['tickets']; $tk2 += $l3['tickets'];
+        }
+        $moy2 = $tk2 > 0 ? round($lg2 / $tk2, 2) : null;
+        $pS = ($t3 !== null && $moy2 !== null) ? venteCrossPrime($moy2, $t3, $mShop, $paliersC) : null;
+        if ($pS !== null) { $totalPrimes += $pS['montant']; }
+        $hClot .= '<tr><td class="l"><b>' . $e($court($mag2['nom'])) . '</b></td>'
+            . '<td>' . ($moy2 !== null ? number_format($moy2, 2, ',', ' ') : '') . '</td>'
+            . '<td class="mut">' . ($t3 !== null ? $n1($t3) : 'pas de cible') . '</td>'
+            . '<td>' . ($pS !== null ? '<b class="ok">' . $n1($pS['seuil']) . ' ✓</b>' : '<span class="mut">non atteint</span>') . '</td>'
+            . '<td class="acc"><b>' . ($pS !== null ? $eur($pS['montant']) : '') . '</b></td></tr>';
+    }
+    $hClot .= '</table>'
+        . '<div class="prime" style="text-align:center"><span class="k">Total des primes du mois</span>'
+        . '<div class="serif" style="font-size:24pt;color:#8D1D2C;margin-top:1mm">' . $eur($totalPrimes) . '</div>'
+        . '<div class="regle" style="font-size:7.6pt;color:#7a736a">versés par la marque — chaque prime est au journal du cockpit, avec son motif et sa formule.</div></div>'
+        . '</div>';
+    $h .= $hClot;
+
+    // --- Page suivante : le classement complet.
     $tableau = static function (array $lignes, bool $avecMagasin) use ($e, $eur, $n1, $court, $hist): string {
         $h2 = '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Vendeur·se</th>'
             . ($avecMagasin ? '<th class="l">Magasin</th>' : '')
