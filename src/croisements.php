@@ -129,7 +129,7 @@ function croisMoisServi(string $aSel, string $bSel, array $idsA, array $idsB, st
             Db::exec('INSERT INTO ceo_crois_cache (a_sel,b_sel,mois,shop,ff,avec,ca_b,q_b) VALUES (?,?,?,?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE ff = VALUES(ff)', [$aSel, $bSel, $mois, '*', 0, 0, $c['caB'], $c['qB']]);
             foreach ($nomDe as $sid => $n) {
-                $x = $c['shops'][$sid] ?? ['ff' => 0, 'avec' => 0];
+                $x = $c['shops'][$sid] ?? $c['shops'][(string) $sid] ?? ['ff' => 0, 'avec' => 0];
                 Db::exec('INSERT INTO ceo_crois_cache (a_sel,b_sel,mois,shop,ff,avec) VALUES (?,?,?,?,?,?)
                           ON DUPLICATE KEY UPDATE ff = VALUES(ff), avec = VALUES(avec)',
                     [$aSel, $bSel, $mois, (string) $sid, $x['ff'], $x['avec']]);
@@ -210,7 +210,9 @@ function ep_croisements(): array
             if ($c === null) { $cases[] = ['taux' => null, 'ff' => null]; continue; }
             $ff = 0; $avec = 0;
             foreach ($c['shops'] as $s2 => $x) {
-                if ($sid !== null && $s2 !== $sid) { continue; }
+                // Les clés numériques d'un tableau PHP redeviennent des
+                // entiers : on compare des chaînes, ou on ne compare rien.
+                if ($sid !== null && (string) $s2 !== $sid) { continue; }
                 $ff += $x['ff']; $avec += $x['avec'];
             }
             $cases[] = ['taux' => $ff > 0 ? round(100 * $avec / $ff, 1) : null, 'ff' => $ff];
