@@ -218,8 +218,11 @@ function ep_ventes_classement(): array
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
 
+    // Les identifiants de magasins partent en CHAÎNES : les clés numériques
+    // d'un tableau PHP redeviennent des entiers, et `'4' === 4` est faux —
+    // le filtre de l'écran et les pages du PDF comparaient dans le vide.
     $out = ['m' => $m, 'seuil' => VENTE_SEUIL_HEURES, 'primes' => ventePrimesConfig(),
-        'mois' => [], 'magasins' => array_map(static fn ($id, $n) => ['id' => $id, 'nom' => $n],
+        'mois' => [], 'magasins' => array_map(static fn ($id, $n) => ['id' => (string) $id, 'nom' => $n],
             array_keys($nomDe), $nomDe)];
     for ($i = 5; $i >= 0; $i--) {
         $t = strtotime("-$i month", strtotime(date('Y-m-01')));
@@ -424,7 +427,7 @@ function ep_ventes_pdf(): array
         . $tableau($d['lignes'], true);
 
     foreach ($d['magasins'] as $mag) {
-        $siens = array_values(array_filter($d['lignes'], static fn ($l) => $l['shopId'] === $mag['id']));
+        $siens = array_values(array_filter($d['lignes'], static fn ($l) => (string) $l['shopId'] === (string) $mag['id']));
         if ($siens === []) { continue; }
         $h .= '<div style="page-break-before:always">' . $entete($e($court($mag['nom'])) . ' · ' . $e($libMois))
             . '<div class="serif h1">' . $e($court($mag['nom'])) . ' — l’équipe de vente</div>'

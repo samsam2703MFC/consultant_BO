@@ -96,3 +96,4 @@
 2026-08-26 21:07 squelette html pdf
 2026-08-27 09:36 sonde ventes
 2026-08-27 09:41 target de vente
+2026-08-27 09:49 ids magasins en chaines
