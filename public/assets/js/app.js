@@ -5088,6 +5088,7 @@ class App {
     if (!d) { common.crLignes = []; return; }
 
     common.crTitre = d.a.lib + ' × ' + d.b.lib;
+    common.crTous = d.a.sel === 't:tous';
     common.crTarget = d.target != null ? d.target : null;
     const delta = t => {
       if (d.target == null || t == null) { return null; }
@@ -5095,8 +5096,10 @@ class App {
       return { txt: (e2 >= 0 ? '+ ' : '− ') + Math.abs(e2).toFixed(1).replace('.', ',') + ' pt',
         col: e2 >= 0 ? '#2d7a3e' : '#8D1D2C' };
     };
-    common.crSousTitre = 'Sur les tickets contenant ' + d.a.lib + ' (' + d.a.refs
-      + ' réf.) : la part contenant aussi ' + d.b.lib + ' (' + d.b.refs + ' réf.). Prix moyen de B : '
+    common.crSousTitre = (d.a.sel === 't:tous'
+        ? 'Sur TOUS les tickets — le taux de pénétration'
+        : 'Sur les tickets contenant ' + d.a.lib + ' (' + d.a.refs + ' réf.)')
+      + ' : la part contenant aussi ' + d.b.lib + ' (' + d.b.refs + ' réf.). Prix moyen de B : '
       + (d.prixB || 0).toFixed(2).replace('.', ',') + ' € — dernier mois complet.'
       + (d.daypartLib ? ' ⏰ ' + d.daypartLib + '.' : '')
       + (d.target != null ? ' 🎯 Target : ' + d.target.toFixed(1).replace('.', ',') + ' %.' : '');

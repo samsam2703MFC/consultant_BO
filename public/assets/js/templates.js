@@ -7085,11 +7085,12 @@ function tplCrois(c, x){
     return `<span style="display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle">${vals.map((v, i) =>
       `<i style="width:6px;border-radius:2px 2px 0 0;height:${v == null ? 2 : Math.max(2, Math.round(18 * v / max))}px;background:${i === vals.length - 1 ? 'var(--color-primary)' : '#D6CBBA'}"></i>`).join('')}</span>`;
   };
-  const selecteur = (titre, f) => `
+  const selecteur = (titre, f, avecTous) => `
     <div>
       <span style="${lbl}">${esc(titre)}</span><br>
       <select ${x.C(f.choisir)} style="${SEL};margin-top:6px">
         <option value="">— choisir —</option>
+        ${avecTous ? `<option value="t:tous" ${f.val === 't:tous' ? 'selected' : ''}>★ Tous les tickets — tout produit</option>` : ''}
         <optgroup label="Groupes">${f.groupes.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
         <optgroup label="Catégories">${f.categories.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
         <optgroup label="Produits">${f.produits.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
@@ -7133,9 +7134,9 @@ function tplCrois(c, x){
   <div data-screen="croisements" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
     <div style="${carte};padding:16px 18px">
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
-        ${selecteur('A — sur les tickets contenant…', c.crSelA)}
+        ${selecteur('A — sur les tickets contenant…', c.crSelA, true)}
         <span style="font-family:var(--font-display);font-size:18px;color:var(--color-text-muted);padding-bottom:8px">×</span>
-        ${selecteur('B — combien contiennent aussi…', c.crSelB)}
+        ${selecteur('B — combien contiennent aussi…', c.crSelB, false)}
         <span style="flex:1"></span>
         ${c.crDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
         <span style="width:10px"></span>

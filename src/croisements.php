@@ -80,6 +80,10 @@ function croisTables(): void
  */
 function croisIds(string $sel): ?array
 {
+    // « Tous les tickets » : A sans filtre — la lecture devient le taux de
+    // PÉNÉTRATION de B sur l'ensemble des tickets. C'est la mesure d'un
+    // nouveau produit : quelle part des clients repart avec ?
+    if ($sel === 't:tous') { return ['ids' => null, 'lib' => 'Tous les tickets']; }
     $type = substr($sel, 0, 2);
     $val = (string) substr($sel, 2);
     if ($val === '' || !in_array($type, ['g:', 'c:', 'p:'], true)) { return null; }
@@ -101,16 +105,22 @@ function croisIds(string $sel): ?array
  *
  * @return array{shops:array<string,array{ff:int,avec:int}>,caB:float,qB:float}|null
  */
-function croisCalcul(array $idsA, array $idsB, string $mois, string $dpSql = ''): ?array
+function croisCalcul(?array $idsA, array $idsB, string $mois, string $dpSql = ''): ?array
 {
     [$du, $au] = venteBornes($mois);
     $in = static fn (array $ids) => implode(',', array_map('intval', $ids));
     $ticketsA = []; $avecB = []; $caB = 0.0; $qB = 0.0;
     try {
-        foreach (Db::rows('SELECT DISTINCT t.id, t.id_shop
-                             FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dpSql . '
-                              AND l.id_product IN (' . $in($idsA) . ')', [$du, $au]) as $r) {
+        // A sans filtre (« tous les tickets ») : la table des tickets suffit,
+        // pas besoin de joindre les lignes.
+        $sqlA = $idsA === null
+            ? 'SELECT t.id, t.id_shop FROM `transaction` t
+                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dpSql
+            : 'SELECT DISTINCT t.id, t.id_shop
+                 FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
+                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dpSql . '
+                  AND l.id_product IN (' . $in($idsA) . ')';
+        foreach (Db::rows($sqlA, [$du, $au]) as $r) {
             $ticketsA[(int) $r['id']] = (string) $r['id_shop'];
         }
         foreach (Db::rows('SELECT t.id, SUM(l.total_gross_value_after_discount) ca, SUM(l.quantity) q
@@ -132,7 +142,7 @@ function croisCalcul(array $idsA, array $idsB, string $mois, string $dpSql = '')
 }
 
 /** Le mois, servi du cache s'il y est — et mis en cache s'il est révolu. */
-function croisMoisServi(string $aSel, string $bSel, array $idsA, array $idsB, string $mois, array $nomDe, string $dp = ''): ?array
+function croisMoisServi(string $aSel, string $bSel, ?array $idsA, array $idsB, string $mois, array $nomDe, string $dp = ''): ?array
 {
     croisTables();
     // Le daypart entre dans la CLÉ de cache, pas dans le schéma : un même
@@ -219,7 +229,8 @@ function ep_croisements(): array
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
 
-    $out = ['a' => ['sel' => $aSel, 'lib' => $a['lib'], 'refs' => count($a['ids'])],
+    $out = ['a' => ['sel' => $aSel, 'lib' => $a['lib'],
+            'refs' => $a['ids'] !== null ? count($a['ids']) : null],
         'b' => ['sel' => $bSel, 'lib' => $b['lib'], 'refs' => count($b['ids'])],
         'daypart' => $dp['cle'], 'daypartLib' => $dp['lib'],
         'mois' => [], 'reseau' => [], 'magasins' => [], 'prixB' => null, 'motif' => null];
@@ -289,10 +300,14 @@ function ep_croisements_detail(): array
     $emp = venteEmployes();
     $tickets = []; $avecB = [];
     try {
-        foreach (Db::rows('SELECT DISTINCT t.id, t.id_employee
-                             FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dp['sql'] . '
-                              AND t.id_shop = ? AND l.id_product IN (' . $in($a['ids']) . ')', [$du, $au, $shop]) as $r) {
+        $sqlDetA = $a['ids'] === null
+            ? 'SELECT t.id, t.id_employee FROM `transaction` t
+                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dp['sql'] . ' AND t.id_shop = ?'
+            : 'SELECT DISTINCT t.id, t.id_employee
+                 FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
+                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?' . $dp['sql'] . '
+                  AND t.id_shop = ? AND l.id_product IN (' . $in($a['ids']) . ')';
+        foreach (Db::rows($sqlDetA, [$du, $au, $shop]) as $r) {
             $tickets[(int) $r['id']] = $r['id_employee'] !== null ? (int) $r['id_employee'] : null;
         }
         foreach (Db::rows('SELECT DISTINCT t.id
@@ -440,7 +455,8 @@ function ep_croisements_feuille(): array
         . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Croisements<br>' . $e($libMois) . '</td></tr></table>'
         . '<div class="serif" style="font-size:18pt;margin:4mm 0 1mm">' . $e($a['lib']) . ' × ' . $e($b['lib'])
         . ($dp['lib'] !== '' ? ' <span style="font-size:10pt;color:#7a736a">· ' . $e($dp['lib']) . '</span>' : '') . '</div>'
-        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Sur les tickets contenant ' . $e($a['lib'])
+        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">'
+        . ($aSel === 't:tous' ? 'Sur TOUS les tickets' : 'Sur les tickets contenant ' . $e($a['lib']))
         . ' : la part contenant aussi ' . $e($b['lib']) . '. Prix moyen de B encaissé ce mois-ci : '
         . number_format($prixB, 2, ',', ' ') . ' €.'
         . ($target !== null ? ' <b>Target : ' . number_format($target, 1, ',', ' ') . ' %.</b>' : '') . '</div>'
