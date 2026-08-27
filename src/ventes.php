@@ -25,6 +25,18 @@ declare(strict_types=1);
  */
 const VENTE_SEUIL_HEURES = 0;
 
+/**
+ * Le lissage du classement : chacun se voit ajouter ces heures « à vide ».
+ *
+ * Le CA/heure brut couronnait cinq bonnes heures (mesuré : 509 €/h sur 5 h
+ * devant 241 €/h sur 53 h). Le score classant est donc le CA/heure PONDÉRÉ
+ * par un coefficient qui monte avec les heures prestées —
+ * coefficient = heures ÷ (heures + lissage), soit score = CA ÷ (heures +
+ * lissage). Au plus d'heures, au plus le coefficient approche 1 : la
+ * régularité pèse, sans jamais cacher le CA/heure réel, affiché à côté.
+ */
+const VENTE_LISSAGE_HEURES = 20;
+
 /** Les colonnes candidates pour le vendeur, sur `transaction`. */
 const VENTE_COLS_VENDEUR = ['id_user', 'user_id', 'id_employee', 'employee_id',
     'id_seller', 'seller_id', 'id_cashier', 'cashier_id', 'id_user_membership',
@@ -159,6 +171,7 @@ function venteMois(string $m, array $nomDe): array
         $ca = $v['ca'] ?? 0.0;
         $tickets = $v['tickets'] ?? 0;
         $classable = $h > 0 && $h >= VENTE_SEUIL_HEURES && $ca > 0;
+        $lisse = $h + VENTE_LISSAGE_HEURES;
         $lignes[] = [
             'id' => $id, 'nom' => $e['nom'],
             'shopId' => $e['shop'], 'magasin' => $nomDe[$e['shop']] ?? ('Magasin ' . $e['shop']),
@@ -166,6 +179,8 @@ function venteMois(string $m, array $nomDe): array
             'ca' => (int) round($ca),
             'tickets' => $tickets,
             'caHeure' => $classable ? (int) round($ca / $h) : null,
+            'coef' => $classable ? round($h / $lisse, 2) : null,
+            'score' => $classable ? (int) round($ca / $lisse) : null,
             'panier' => $tickets > 0 ? round($ca / $tickets, 2) : null,
             'lignesTicket' => $tickets > 0 ? round(($v['lignes'] ?? 0) / $tickets, 1) : null,
             'classable' => $classable,
@@ -179,7 +194,7 @@ function venteMois(string $m, array $nomDe): array
     // mais jamais classés.
     usort($lignes, static fn ($a, $b) =>
         ($b['classable'] <=> $a['classable'])
-        ?: (($b['caHeure'] ?? 0) <=> ($a['caHeure'] ?? 0))
+        ?: (($b['score'] ?? 0) <=> ($a['score'] ?? 0))
         ?: ($b['ca'] <=> $a['ca']));
     $rang = 0;
     foreach ($lignes as $i => $l) {
@@ -287,6 +302,7 @@ function ep_ventes_fiche(): array
             $classables = count(array_filter($r['lignes'], static fn ($x) => $x['classable']));
             $out['mois'][] = ['cle' => $m, 'lib' => strftime_fr($t, 'M Y'),
                 'heures' => $l['heures'], 'ca' => $l['ca'], 'caHeure' => $l['caHeure'],
+                'coef' => $l['coef'] ?? null, 'score' => $l['score'] ?? null,
                 'panier' => $l['panier'], 'lignesTicket' => $l['lignesTicket'],
                 'rang' => $l['rang'], 'sur' => $classables, 'prime' => $prime,
                 'encours' => $m === date('Y-m')];
@@ -332,7 +348,8 @@ function wr_ventes_primes(): array
             'magasin' => $g['reseau']['magasin'], 'caHeure' => $g['reseau']['caHeure']],
         'magasins' => []];
     journalAdd('CEO', 'Vente', $g['reseau']['nom'],
-        'Prime réseau ' . $m . ' — ' . $montants['reseau'] . ' € (' . $g['reseau']['caHeure'] . ' €/h, ' . $g['reseau']['magasin'] . ')');
+        'Prime réseau ' . $m . ' — ' . $montants['reseau'] . ' € (score ' . ($g['reseau']['score'] ?? '?')
+        . ', ' . $g['reseau']['caHeure'] . ' €/h sur ' . $g['reseau']['heures'] . ' h, ' . $g['reseau']['magasin'] . ')');
     foreach ($g['magasins'] as $x) {
         // La meilleure du réseau ne cumule pas : sa prime magasin irait à un
         // classement qu'elle a déjà gagné plus haut.
@@ -412,14 +429,14 @@ function ep_ventes_pdf(): array
             . '<td><div class="k">🏆 Prime réseau — ' . (int) $d['primes']['reseau'] . ' €'
             . ($hist !== null ? ' · enregistrée le ' . $e($hist['quand']) : ' · à enregistrer dans le cockpit') . '</div>'
             . '<div class="qui">' . $e($r['nom']) . ' <span class="badge">réseau</span></div>'
-            . '<div style="font-size:8pt;color:#7a736a">' . $e($court($r['magasin'])) . ' · <b class="acc">' . $eur($r['caHeure']) . ' / h</b>'
+            . '<div style="font-size:8pt;color:#7a736a">' . $e($court($r['magasin'])) . ' · <b class="acc">score ' . $eur($r['score'] ?? 0) . '</b> · ' . $eur($r['caHeure']) . ' / h réel'
             . ' · panier ' . number_format((float) $r['panier'], 2, ',', ' ') . ' € · ' . $n1($r['lignesTicket'])
             . ' lignes/ticket · ' . $n1($r['heures']) . ' h</div></td>'
             . '<td align="right" valign="top"><div class="k">🥇 Primes magasin — ' . (int) $d['primes']['magasin'] . ' €</div>'
             . '<div style="font-size:8.2pt;line-height:1.7;margin-top:1mm">';
         foreach ($g['magasins'] as $x) {
             if ($x['id'] === $r['id']) { continue; }
-            $h .= '<b>' . $e($x['nom']) . '</b> <span class="mut">· ' . $e($court($x['magasin'])) . ' · ' . $eur($x['caHeure']) . ' / h</span><br>';
+            $h .= '<b>' . $e($x['nom']) . '</b> <span class="mut">· ' . $e($court($x['magasin'])) . ' · score ' . $eur($x['score'] ?? 0) . '</span><br>';
         }
         $h .= '</div></td></tr></table></div>';
     }
@@ -427,8 +444,8 @@ function ep_ventes_pdf(): array
     // Les trois top 10, côte à côte — les mêmes règles que l'écran.
     $actifs = array_values(array_filter($d['lignes'], static fn ($l) => ($l['tickets'] ?? 0) > 0));
     $parCa = $actifs; usort($parCa, static fn ($a, $b) => $b['ca'] <=> $a['ca']);
-    $parCaH = array_values(array_filter($actifs, static fn ($l) => $l['caHeure'] !== null));
-    usort($parCaH, static fn ($a, $b) => $b['caHeure'] <=> $a['caHeure']);
+    $parCaH = array_values(array_filter($actifs, static fn ($l) => $l['score'] !== null));
+    usort($parCaH, static fn ($a, $b) => $b['score'] <=> $a['score']);
     $parLt = array_values(array_filter($actifs, static fn ($l) => $l['lignesTicket'] !== null && $l['tickets'] >= 30));
     usort($parLt, static fn ($a, $b) => $b['lignesTicket'] <=> $a['lignesTicket']);
 
@@ -448,8 +465,8 @@ function ep_ventes_pdf(): array
         . '<table width="100%" cellpadding="0" cellspacing="4" style="margin:0 -1mm 4mm"><tr>'
         . $colonne('Top 10 — CA', 'le volume, brut', $parCa,
             static fn ($l) => $eur($l['ca']), static fn ($l) => $n1($l['heures']) . ' h')
-        . $colonne('Top 10 — CA / heure', 'le rendement — la mesure des primes', $parCaH,
-            static fn ($l) => $eur($l['caHeure']) . '/h', static fn ($l) => $n1($l['heures']) . ' h')
+        . $colonne('Top 10 — CA/h pondéré', 'CA/h × coefficient d’heures — la mesure des primes', $parCaH,
+            static fn ($l) => $eur($l['score']), static fn ($l) => $eur($l['caHeure']) . '/h · ' . $n1($l['heures']) . ' h')
         . $colonne('Top 10 — Lignes / ticket', 'le cross-selling — 30 tickets au moins', $parLt,
             static fn ($l) => $n1($l['lignesTicket']), static fn ($l) => $l['tickets'] . ' tkt')
         . '</tr></table>';
@@ -458,7 +475,7 @@ function ep_ventes_pdf(): array
     $tableau = static function (array $lignes, bool $avecMagasin) use ($e, $eur, $n1, $court, $hist): string {
         $h2 = '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Vendeur·se</th>'
             . ($avecMagasin ? '<th class="l">Magasin</th>' : '')
-            . '<th>Heures</th><th>CA</th><th>CA / h</th><th>Panier</th><th>Lignes / tkt</th><th>Tickets</th><th class="l">Prime</th></tr>';
+            . '<th>Heures</th><th>CA</th><th>CA / h</th><th>Coef.</th><th>Score</th><th>Panier</th><th>Lignes / tkt</th><th>Tickets</th><th class="l">Prime</th></tr>';
         foreach ($lignes as $l) {
             $prime = '';
             if ($hist !== null) {
@@ -472,7 +489,9 @@ function ep_ventes_pdf(): array
                 . ($avecMagasin ? '<td class="l mut">' . $e($court($l['magasin'])) . '</td>' : '')
                 . '<td>' . $n1($l['heures']) . ' h</td>'
                 . '<td>' . $eur($l['ca']) . '</td>'
-                . '<td class="acc"><b>' . ($l['caHeure'] !== null ? $eur($l['caHeure']) : '—') . '</b></td>'
+                . '<td>' . ($l['caHeure'] !== null ? $eur($l['caHeure']) : '—') . '</td>'
+                . '<td class="mut">' . ($l['coef'] !== null ? number_format((float) $l['coef'], 2, ',', ' ') : '—') . '</td>'
+                . '<td class="acc"><b>' . ($l['score'] !== null ? $eur($l['score']) : '—') . '</b></td>'
                 . '<td>' . ($l['panier'] !== null ? number_format((float) $l['panier'], 2, ',', ' ') . ' €' : '—') . '</td>'
                 . '<td>' . ($l['lignesTicket'] !== null ? $n1($l['lignesTicket']) : '—') . '</td>'
                 . '<td>' . number_format((float) $l['tickets'], 0, ',', ' ') . '</td>'
@@ -496,8 +515,10 @@ function ep_ventes_pdf(): array
             . $tableau($siens, false) . '</div>';
     }
 
-    $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Classement au CA ÷ heures prestées — jamais au CA brut : '
-        . 'une personne à 20 h ne se compare pas à une à 38 h. Le classement est ouvert à toutes les heures prestées'
+    $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Le classement se fait au <b>CA/h pondéré</b> : '
+        . 'CA/heure × coefficient d’heures, où coefficient = heures ÷ (heures + ' . VENTE_LISSAGE_HEURES . '). '
+        . 'Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier. '
+        . 'Le CA/heure réel reste affiché à côté. Le classement est ouvert à toutes les heures prestées'
         . (VENTE_SEUIL_HEURES > 0 ? ' dès ' . VENTE_SEUIL_HEURES . ' h au planning' : '')
         . ' ; sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '
         . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket (30 tickets au moins pour le top 10). '

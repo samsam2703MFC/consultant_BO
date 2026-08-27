@@ -7090,19 +7090,20 @@ function tplVentes(c, x){
   }
 
   const fiche = f => !f ? '' : `
-    <tr><td colspan="10" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+    <tr><td colspan="12" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
       <div style="padding:14px 18px 16px">
         ${f.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la fiche…</div>`
         : f.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(f.err)}</div>` : `
         <div style="${lbl};margin-bottom:8px">${esc(f.nom)} — ${esc(f.magasin)} · six mois</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr><th style="${th};text-align:left">Mois</th><th style="${th}">Heures</th><th style="${th}">CA</th>
-            <th style="${th}">CA / heure</th><th style="${th}">Rang réseau</th><th style="${th}">Panier</th>
+            <th style="${th}">CA / heure</th><th style="${th}">Score</th><th style="${th}">Rang réseau</th><th style="${th}">Panier</th>
             <th style="${th}">Lignes / ticket</th><th style="${th};text-align:left;padding-left:16px">Prime</th></tr></thead>
           <tbody>${f.mois.map(m => `<tr>
             <td style="${td};text-align:left;font-weight:500">${esc(m.lib)}</td>
             <td style="${td}">${esc(m.heures)}</td><td style="${td}">${esc(m.ca)}</td>
-            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(m.caHeure)}</td>
+            <td style="${td}">${esc(m.caHeure)}</td>
+            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(m.score)}</td>
             <td style="${td};font-weight:600">${esc(m.rang)}</td>
             <td style="${td}">${esc(m.panier)}</td><td style="${td}">${esc(m.lignesTicket)}</td>
             <td style="${td};text-align:left;padding-left:16px">${m.prime ? `<span style="${primeOr}">${esc(m.prime)}</span>` : ''}</td>
@@ -7145,7 +7146,7 @@ function tplVentes(c, x){
     <div style="${carte}">
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>
-          <div style="${lbl}">Le personnel de vente, classé au CA / heure</div>
+          <div style="${lbl}">Le personnel de vente, classé au CA/h pondéré par les heures</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez une personne pour ses six derniers mois.</div>
         </div>
         <span style="flex:1"></span>
@@ -7161,6 +7162,7 @@ function tplVentes(c, x){
           <th style="${th};text-align:left">Vendeur·se</th>
           <th style="${th};text-align:left">Magasin</th>
           <th style="${th}">Heures</th><th style="${th}">CA</th><th style="${th}">CA / heure</th>
+          <th style="${th}">Coef.</th><th style="${th}">Score</th>
           <th style="${th};text-align:left;padding-left:18px"></th>
           <th style="${th}">Panier</th><th style="${th}">Lignes / ticket</th><th style="${th};padding-right:18px">Tickets</th>
         </tr></thead>
@@ -7174,7 +7176,9 @@ function tplVentes(c, x){
             <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(l.magasin)}</td>
             <td style="${td}">${esc(l.heures)}</td>
             <td style="${td}">${esc(l.ca)}</td>
-            <td style="${td};font-weight:600${l.classable ? ';color:var(--color-primary)' : ''}">${esc(l.caHeure)}</td>
+            <td style="${td}">${esc(l.caHeure)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(l.coef)}</td>
+            <td style="${td};font-weight:600${l.classable ? ';color:var(--color-primary)' : ''}">${esc(l.score)}</td>
             <td style="${td};text-align:left;padding-left:18px"><span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:96px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${l.barre}%;background:${l.classable ? 'var(--color-primary)' : '#CFC7BA'};border-radius:999px"></i></span></td>
             <td style="${td}">${esc(l.panier)}</td>
             <td style="${td};font-weight:600">${esc(l.lignesTicket)}</td>
@@ -7184,7 +7188,8 @@ function tplVentes(c, x){
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        Classement au <b>CA ÷ heures prestées</b> (planning du panel) — jamais au CA brut : une personne à 20 h ne se compare pas à une à 38 h.
+        Le classement se fait au <b>CA/h pondéré</b> : CA/heure × coefficient d’heures, où coefficient = heures ÷ (heures + 20).
+        Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier. Le CA/heure réel reste affiché.
         Le classement est ouvert à toutes les heures prestées${c.tvSeuil > 0 ? ` dès ${c.tvSeuil} h au planning` : ''} — sans heure au planning ou sans vente à son nom : montré·e, jamais classé·e ni primé·e. Panier = CA ÷ tickets · cross-selling = lignes par ticket.
         La meilleure du réseau ne cumule pas la prime magasin. Les primes s’enregistrent d’un clic et passent au journal.
         ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}

@@ -5014,12 +5014,12 @@ class App {
       titre: '🏆 Meilleure du réseau — ' + ((d.mois.find(x => x.cle === d.m) || {}).lib || d.m),
       nom: g.reseau.nom, reseau: true,
       prime: (hist ? '' : 'à enregistrer · ') + (d.primes || {}).reseau + ' €',
-      sub: court(g.reseau.magasin) + ' · ' + eur(g.reseau.caHeure) + ' / h · panier ' + px(g.reseau.panier)
-        + ' · ' + nb1(g.reseau.lignesTicket) + ' lignes/ticket · ' + nb1(g.reseau.heures) + ' h',
+      sub: court(g.reseau.magasin) + ' · score ' + eur(g.reseau.score) + ' (' + eur(g.reseau.caHeure) + ' / h réel · '
+        + nb1(g.reseau.heures) + ' h) · panier ' + px(g.reseau.panier) + ' · ' + nb1(g.reseau.lignesTicket) + ' lignes/ticket',
     }].concat((g.magasins || []).map(x => ({
       titre: '🥇 ' + court(x.magasin), nom: x.nom, reseau: false,
       prime: x.id === g.reseau.id ? 'réseau ✓' : (d.primes || {}).magasin + ' €',
-      sub: eur(x.caHeure) + ' / h · ' + nb1(x.heures) + ' h',
+      sub: 'score ' + eur(x.score) + ' · ' + eur(x.caHeure) + ' / h · ' + nb1(x.heures) + ' h',
     })));
 
     // La prime s'enregistre ici : le calcul désigne, l'humain confirme.
@@ -5038,7 +5038,7 @@ class App {
     common.tvSansVendeur = d.partSansVendeur > 0
       ? d.partSansVendeur.toFixed(1).replace('.', ',') + ' % du CA du mois est encaissé sans vendeur identifié sur le ticket — cette part n’est attribuée à personne.'
       : '';
-    const maxCaH = Math.max(1, ...(d.lignes || []).map(l => l.caHeure || 0));
+    const maxScore = Math.max(1, ...(d.lignes || []).map(l => l.score || 0));
     common.tvLignes = (d.lignes || [])
       .filter(l => !filtre || l.shopId === filtre)
       .map(l => ({
@@ -5047,7 +5047,9 @@ class App {
         motif: l.motifHorsClassement || '',
         heures: nb1(l.heures) + ' h', ca: eur(l.ca),
         caHeure: l.caHeure != null ? eur(l.caHeure) + ' / h' : '—',
-        barre: Math.max(2, Math.round(100 * (l.caHeure || 0) / maxCaH)),
+        coef: l.coef != null ? l.coef.toFixed(2).replace('.', ',') : '—',
+        score: l.score != null ? eur(l.score) : '—',
+        barre: Math.max(2, Math.round(100 * (l.score || 0) / maxScore)),
         panier: px(l.panier), lignesTicket: nb1(l.lignesTicket),
         tickets: (l.tickets || 0).toLocaleString('fr-BE'),
         primeReseau: g.reseau && g.reseau.id === l.id,
@@ -5071,9 +5073,9 @@ class App {
       { titre: 'Top 10 — CA', note: 'le volume, brut',
         lignes: topDix(actifs.slice().sort((a, b) => b.ca - a.ca),
           l => eur(l.ca), l => nb1(l.heures) + ' h') },
-      { titre: 'Top 10 — CA / heure', note: 'le rendement — la mesure des primes',
-        lignes: topDix(actifs.filter(l => l.caHeure != null).sort((a, b) => b.caHeure - a.caHeure),
-          l => eur(l.caHeure) + ' / h', l => nb1(l.heures) + ' h · ' + eur(l.ca)) },
+      { titre: 'Top 10 — CA/h pondéré', note: 'CA/h × coefficient d’heures — la mesure des primes',
+        lignes: topDix(actifs.filter(l => l.score != null).sort((a, b) => b.score - a.score),
+          l => eur(l.score), l => eur(l.caHeure) + ' / h réel · ' + nb1(l.heures) + ' h') },
       // 30 tickets au moins : 3,0 lignes sur 12 tickets, c'est un après-midi,
       // pas un geste de vente.
       { titre: 'Top 10 — Lignes / ticket', note: 'le cross-selling — 30 tickets au moins',
@@ -5090,6 +5092,7 @@ class App {
       mois: !f ? [] : (f.mois || []).slice().reverse().map(m => ({
         lib: m.lib + (m.encours ? ' (en cours)' : ''),
         heures: nb1(m.heures) + ' h', ca: eur(m.ca),
+        score: m.score != null ? eur(m.score) : '—',
         caHeure: m.caHeure != null ? eur(m.caHeure) + ' / h' : '—',
         rang: m.rang != null ? m.rang + ' / ' + m.sur : '—',
         panier: px(m.panier), lignesTicket: nb1(m.lignesTicket),
