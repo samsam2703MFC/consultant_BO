@@ -26,6 +26,7 @@ require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/prod_manque.php';
 require __DIR__ . '/../../src/analyse_magasin.php';
 require __DIR__ . '/../../src/ventes.php';
+require __DIR__ . '/../../src/croisements.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
@@ -160,6 +161,10 @@ function route(string $method, string $path): mixed
             $path === '/ventes/classement'            => ep_ventes_classement(),
             $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),
+            $path === '/croisements'                  => ep_croisements(),
+            $path === '/croisements/options'          => ep_croisements_options(),
+            $path === '/croisements/detail'           => ep_croisements_detail(),
+            $path === '/croisements/feuille.pdf'      => ep_croisements_feuille(),
             $path === '/centrale/cockpit'              => ep_ca_cockpit(),
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),
@@ -231,6 +236,8 @@ function route(string $method, string $path): mixed
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
+    if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
+    if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     if ($method === 'POST' && $path === '/fournisseurs/reclamation') { return wr_reclamation_creer(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)

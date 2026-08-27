@@ -232,6 +232,7 @@ class App {
       manque: 'manque-a-gagner',
       analysemag: 'analyse-magasin',
       ventes: 'target-ventes',
+      croisements: 'croisements',
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
@@ -658,6 +659,7 @@ class App {
     };
     const titles = {
       analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
+      croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
       manque: ['Manque à gagner', 'Ce que chaque magasin ne vend pas, en euros. Pour chaque référence qu’il n’a pas vendue alors que les autres la vendaient : leur volume médian par jour d’ouverture, ramené à sa fréquentation, au prix encaissé. Une estimation à assortiment comparable — pas une promesse de chiffre d’affaires.'],
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
@@ -1014,7 +1016,8 @@ class App {
       // que JE fais ? » : cette section répond magasin par magasin.
       ['Analyse magasin', [
         ['analysemag', 'Analyse', 0],
-        ['ventes', 'Target de vente & classement', 0]]],
+        ['ventes', 'Target de vente & classement', 0],
+        ['croisements', 'Croisements', 0]]],
       // Le budget est une affaire de finance, pas de performance : il a sa
       // section, demandée telle quelle, et garde son sous-menu.
       ['Finance', [
@@ -1103,11 +1106,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes', 'isCrois'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1415,6 +1418,7 @@ class App {
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
     if (common.isVentes) { this.ventesCharge(); this.valsVentes(common); }
+    if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
       common.mesSimple = this.state.mesSimple !== false;
@@ -4984,6 +4988,137 @@ class App {
         .then(d => { this._tvFicheEnCours = false; this._tvFiches[fid] = (d && !d.error) ? d : null; this.setState({}); })
         .catch(() => { this._tvFicheEnCours = false; this._tvFiches[fid] = null; this.setState({}); });
     }
+  }
+
+  /**
+   * Les croisements : les options une fois, le tableau par combo choisi, le
+   * détail d'un magasin au clic. Les mois révolus sont en cache serveur — la
+   * première lecture d'un combo paie, les suivantes non.
+   */
+  croisCharge(){
+    const S = this.state;
+    if (!this._crOpt && !this._crOptEnCours) {
+      this._crOptEnCours = true;
+      readOne('/croisements/options')
+        .then(d => { this._crOptEnCours = false; this._crOpt = d || null; this.setState({}); })
+        .catch(() => { this._crOptEnCours = false; this._crOpt = null; this.setState({}); });
+    }
+    const a = S.crA || '', b = S.crB || '';
+    if (!a || !b) { return; }
+    const cle = a + '¦' + b + '¦' + (S.crMois || 6);
+    if (!this._cr) { this._cr = {}; }
+    if (this._cr[cle] === undefined && !this._crEnCours) {
+      this._crEnCours = true;
+      readOne('/croisements?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b) + '&mois=' + (S.crMois || 6))
+        .then(d => { this._crEnCours = false; this._cr[cle] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._crEnCours = false; this._cr[cle] = null; this.setState({}); });
+    }
+    const sid = S.crShop, m = S.crM;
+    if (!sid || !m) { return; }
+    const cleD = a + '¦' + b + '¦' + m + '¦' + sid;
+    if (!this._crDet) { this._crDet = {}; }
+    if (this._crDet[cleD] === undefined && !this._crDetEnCours) {
+      this._crDetEnCours = true;
+      readOne('/croisements/detail?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b)
+        + '&m=' + m + '&shop=' + encodeURIComponent(sid))
+        .then(d => { this._crDetEnCours = false; this._crDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._crDetEnCours = false; this._crDet[cleD] = null; this.setState({}); });
+    }
+  }
+
+  valsCrois(common){
+    const S = this.state;
+    const o = this._crOpt;
+    const court = nom => String(nom || '').split(' - ').pop();
+    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+    const teinte = t => t == null ? 'var(--color-text-muted)' : (t >= 25 ? '#2d7a3e' : (t >= 15 ? '#C17A2A' : '#8D1D2C'));
+
+    common.crChargementOpt = o === undefined || (o === null && this._crOptEnCours);
+    common.crOptIndispo = o === null && !this._crOptEnCours;
+
+    const fam = (prefixe, val) => ({
+      groupes: (o && o.groupes || []).map(g => ({ v: 'g:' + g, nom: g + ' (groupe)' })),
+      categories: (o && o.categories || []).map(c2 => ({ v: 'c:' + c2, nom: c2 })),
+      produits: (o && o.produits || []).map(p => ({ v: 'p:' + p.id, nom: p.nom })),
+      val,
+      choisir: e => this.setState({ [prefixe]: e.target.value, crShop: null }),
+    });
+    common.crSelA = fam('crA', S.crA || '');
+    common.crSelB = fam('crB', S.crB || '');
+    common.crDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === (S.crMois || 6),
+      choisir: () => this.setState({ crMois: v }) }));
+
+    const d = (S.crA && S.crB) ? (this._cr || {})[S.crA + '¦' + S.crB + '¦' + (S.crMois || 6)] : undefined;
+    common.crCombos = (o && o.combos || []).map(cb => ({
+      id: cb.id, nom: cb.aLib + ' × ' + cb.bLib, surnom: cb.surnom || '',
+      on: S.crA === cb.aSel && S.crB === cb.bSel,
+      choisir: () => this.setState({ crA: cb.aSel, crB: cb.bSel, crShop: null }),
+      retirer: () => {
+        if (!window.confirm('Retirer « ' + cb.aLib + ' × ' + cb.bLib + ' » ? L’historique en cache est gardé.')) { return; }
+        this.api('DELETE', '/croisements/combo/' + cb.id).then(r => {
+          if (r && r.combos) { this._crOpt = r; } this.setState({});
+        });
+      },
+    }));
+    common.crEnregistrer = !d ? null : () => {
+      const surnom = window.prompt('Un surnom pour ce combo ? (facultatif — « le déjeuner complet »)') || '';
+      this.api('POST', '/croisements/combo', { aSel: d.a.sel, bSel: d.b.sel,
+        aLib: d.a.lib, bLib: d.b.lib, surnom }).then(r => {
+          if (r && r.combos) { this._crOpt = r; this.notify('Combo enregistré'); }
+          this.setState({});
+        });
+    };
+    common.crDejaEnregistre = !!(d && (o && o.combos || []).find(cb => cb.aSel === d.a.sel && cb.bSel === d.b.sel));
+
+    common.crRien = !S.crA || !S.crB;
+    common.crChargement = !common.crRien && d === undefined;
+    common.crMotif = d === null ? 'Le croisement n’a pas pu être calculé.' : '';
+    if (!d) { common.crLignes = []; return; }
+
+    common.crTitre = d.a.lib + ' × ' + d.b.lib;
+    common.crSousTitre = 'Sur les tickets contenant ' + d.a.lib + ' (' + d.a.refs
+      + ' réf.) : la part contenant aussi ' + d.b.lib + ' (' + d.b.refs + ' réf.). Prix moyen de B : '
+      + (d.prixB || 0).toFixed(2).replace('.', ',') + ' € — dernier mois complet.';
+    common.crEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
+    const spark = cases => cases.map(x => x.taux);
+    const ligne = (l, id, nom) => ({
+      id, nom,
+      cases: l.cases.map(x => ({ v: pc(x.taux), st: x.taux == null ? 'color:#b8b2a8' : '' })),
+      tauxDernier: pc(l.tauxDernier), col: teinte(l.tauxDernier),
+      ff: l.ffDernier == null ? '—' : l.ffDernier.toLocaleString('fr-BE'),
+      eur: eur(l.eurDernier),
+      spark: spark(l.cases),
+    });
+    common.crReseau = ligne(d.reseau, null, 'RÉSEAU');
+    const mDetail = d.dernierRevolu;
+    common.crLignes = (d.magasins || []).map(mg => ({
+      ...ligne(mg, mg.id, court(mg.nom)),
+      ouvert: S.crShop === mg.id,
+      basculer: () => this.setState({ crShop: S.crShop === mg.id ? null : mg.id, crM: mDetail }),
+    }));
+    common.crPdfHref = API_BASE + '/croisements/feuille.pdf?a=' + encodeURIComponent(d.a.sel)
+      + '&b=' + encodeURIComponent(d.b.sel) + (mDetail ? '&m=' + mDetail : '');
+    common.crMoisDetail = mDetail || '';
+
+    const det = (S.crShop && S.crM) ? (this._crDet || {})[S.crA + '¦' + S.crB + '¦' + S.crM + '¦' + S.crShop] : undefined;
+    common.crDetail = !S.crShop ? null : {
+      chargement: det === undefined,
+      err: det === null ? 'Le détail n’a pas pu être lu.' : '',
+      lignes: !det ? [] : (det.lignes || []).filter(l => l.ff >= 10).map(l => ({
+        nom: l.nom, ff: l.ff, avec: l.avec, taux: pc(l.taux), col: teinte(l.taux),
+        manques: l.manques, eur: eur(l.manques * (d.prixB || 0)),
+      })),
+      petits: !det ? '' : (() => {
+        const p = (det.lignes || []).filter(l => l.ff < 10);
+        if (!p.length) { return ''; }
+        const ff = p.reduce((t, l) => t + l.ff, 0), avec = p.reduce((t, l) => t + l.avec, 0);
+        return p.length + ' personne(s) sous 10 tickets — cumulées : ' + ff + ' tickets · '
+          + avec + ' avec B · ' + (ff ? (100 * avec / ff).toFixed(1).replace('.', ',') : '—') + ' %';
+      })(),
+      sans: !det || !det.sansVendeur || !det.sansVendeur.ff ? ''
+        : det.sansVendeur.ff + ' ticket(s) sans vendeur identifié — comptés au magasin, à personne d’autre.',
+    };
   }
 
   valsVentes(common){

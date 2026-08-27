@@ -120,6 +120,7 @@ export function render(c, x){
       ${c.isManque ? tplManque(c, x) : ''}
       ${c.isAnm ? tplAnm(c, x) : ''}
       ${c.isVentes ? tplVentes(c, x) : ''}
+      ${c.isCrois ? tplCrois(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
@@ -7064,6 +7065,137 @@ function tplDiagnostic(c, x){
  * d'heures, ou sans vente à leur nom) restent VISIBLES, grisés, avec leur
  * motif : les sortir du tableau ferait croire qu'ils n'ont pas travaillé.
  */
+/**
+ * Croisements — l'attache entre deux familles, au choix.
+ *
+ * L'ordre A × B est écrit en toutes lettres au-dessus des sélecteurs : le
+ * croisement est asymétrique, et un écran qui laisse deviner l'ordre produit
+ * des conclusions inversées.
+ */
+function tplCrois(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
+  const td = 'padding:9px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:280px';
+  const spark = vals => {
+    const max = Math.max(1, ...vals.filter(v => v != null));
+    return `<span style="display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle">${vals.map((v, i) =>
+      `<i style="width:6px;border-radius:2px 2px 0 0;height:${v == null ? 2 : Math.max(2, Math.round(18 * v / max))}px;background:${i === vals.length - 1 ? 'var(--color-primary)' : '#D6CBBA'}"></i>`).join('')}</span>`;
+  };
+  const selecteur = (titre, f) => `
+    <div>
+      <span style="${lbl}">${esc(titre)}</span><br>
+      <select ${x.C(f.choisir)} style="${SEL};margin-top:6px">
+        <option value="">— choisir —</option>
+        <optgroup label="Groupes">${f.groupes.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
+        <optgroup label="Catégories">${f.categories.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
+        <optgroup label="Produits">${f.produits.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
+      </select>
+    </div>`;
+
+  if (c.crChargementOpt) {
+    return `<div data-screen="croisements"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture du catalogue…</div></div>`;
+  }
+  if (c.crOptIndispo) {
+    return `<div data-screen="croisements"><div style="${carte};padding:20px 22px;font-size:12.5px">Le catalogue n’a pas pu être lu.</div></div>`;
+  }
+
+  const detail = dt => !dt ? '' : `
+    <tr><td colspan="${c.crEntetes.length + 5}" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        ${dt.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des tickets du magasin…</div>`
+        : dt.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(dt.err)}</div>` : `
+        <div style="${lbl};margin-bottom:8px">Vendeuse par vendeuse — ${esc(c.crMoisDetail)}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="${th};text-align:left">Vendeur·se</th><th style="${th}">Tickets A</th>
+            <th style="${th}">Avec B</th><th style="${th}">Taux</th><th style="${th}">Manqués</th><th style="${th}">À la clé / mois</th></tr></thead>
+          <tbody>${dt.lignes.map(l => `<tr>
+            <td style="${td};text-align:left;font-weight:500">${esc(l.nom)}</td>
+            <td style="${td}">${l.ff}</td><td style="${td}">${l.avec}</td>
+            <td style="${td};font-weight:600;color:${l.col}">${esc(l.taux)}</td>
+            <td style="${td}">${l.manques}</td>
+            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(l.eur)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        ${dt.petits ? `<div style="font-size:11px;color:var(--color-text-muted);padding-top:8px">${esc(dt.petits)}</div>` : ''}
+        ${dt.sans ? `<div style="font-size:11px;color:var(--color-text-muted);padding-top:3px">${esc(dt.sans)}</div>` : ''}`}
+      </div>
+    </td></tr>`;
+
+  return `
+  <div data-screen="croisements" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    <div style="${carte};padding:16px 18px">
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+        ${selecteur('A — sur les tickets contenant…', c.crSelA)}
+        <span style="font-family:var(--font-display);font-size:18px;color:var(--color-text-muted);padding-bottom:8px">×</span>
+        ${selecteur('B — combien contiennent aussi…', c.crSelB)}
+        <span style="flex:1"></span>
+        ${c.crDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        ${c.crEnregistrer && !c.crDejaEnregistre ? `<button ${x.A(c.crEnregistrer)} style="${pill(true)}">💾 Enregistrer ce combo</button>` : ''}
+      </div>
+      ${!c.crCombos.length ? '' : `
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="${lbl};margin-right:2px">Combos enregistrés</span>
+        ${c.crCombos.map(cb => `
+        <span style="display:inline-flex;align-items:center;gap:7px;background:${cb.on ? 'rgba(141,29,44,.06)' : '#FBF8F4'};border:0.5px solid ${cb.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:999px;padding:5px 6px 5px 13px;font-size:12px;font-weight:500;${cb.on ? 'color:var(--color-primary)' : ''}">
+          <span ${x.A(cb.choisir)} style="cursor:pointer">${esc(cb.nom)}${cb.surnom ? ` <i style="font-style:normal;color:var(--color-text-muted);font-weight:400;font-size:10.5px">${esc(cb.surnom)}</i>` : ''}</span>
+          <button ${x.A(cb.retirer)} title="Retirer ce combo — l’historique en cache est gardé" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 4px">✕</button>
+        </span>`).join('')}
+      </div>`}
+    </div>
+
+    ${c.crRien ? `<div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Choisissez une famille A et une famille B — ou cliquez un combo enregistré.</div>`
+    : c.crChargement ? `<div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des tickets — les mois déjà en cache ne se relisent pas…</div>`
+    : c.crMotif ? `<div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.crMotif)}</div>` : `
+    <div style="${carte}">
+      <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+        <div>
+          <div style="${lbl}">${esc(c.crTitre)} — taux d’attache, mois par mois</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.crSousTitre)}</div>
+        </div>
+        <span style="flex:1"></span>
+        <a href="${esc(c.crPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Feuille PDF</a>
+      </div>
+      <div style="overflow-x:auto;padding-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Périmètre</th>
+          ${c.crEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+          <th style="${th};text-align:left;padding-left:20px">Tendance</th>
+          <th style="${th}">Tickets A</th><th style="${th};padding-right:18px">Laissé au comptoir</th>
+        </tr></thead>
+        <tbody>
+          <tr style="background:#FBF8F4;font-weight:600">
+            <td style="${td};text-align:left;padding-left:18px">RÉSEAU</td>
+            ${c.crReseau.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
+            <td style="${td};text-align:left;padding-left:20px">${spark(c.crReseau.spark)}</td>
+            <td style="${td}">${esc(c.crReseau.ff)}</td>
+            <td style="${td};padding-right:18px;color:var(--color-primary)">${esc(c.crReseau.eur)}</td>
+          </tr>
+          ${c.crLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouvert ? ';background:#FBF8F4' : ''}">
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
+            ${l.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
+            <td style="${td};text-align:left;padding-left:20px">${spark(l.spark)}</td>
+            <td style="${td}">${esc(l.ff)}</td>
+            <td style="${td};padding-right:18px;font-weight:600;color:${l.col}">${esc(l.eur)}</td>
+          </tr>
+          ${l.ouvert ? detail(c.crDetail) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        Le croisement est <b>asymétrique</b>, et c’est voulu : « tickets A avec B » n’est pas « tickets B avec A ».
+        Le mois marqué * est en cours : il se recalcule à chaque lecture, les mois révolus sont en cache.
+        « Tickets A » et « laissé au comptoir » portent sur le dernier mois complet — manqués × prix moyen de B réellement encaissé, un plafond de geste, pas une promesse.
+        Les euros ne s’additionnent pas d’un combo à l’autre : un même ticket peut manquer deux combos.
+        Vert ≥ 25 % · ambre 15-25 % · bordeaux &lt; 15 %.
+      </div>
+    </div>`}
+  </div>`;
+}
+
 function tplVentes(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
