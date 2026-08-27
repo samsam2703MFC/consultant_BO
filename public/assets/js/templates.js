@@ -7371,6 +7371,7 @@ function tplVentes(c, x){
           ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.tvPrime.txt)}</span>`
           : `<button ${x.A(c.tvPrime.agir)} style="${pill(true)}">🏆 ${esc(c.tvPrime.txt)}</button>`}
         <a href="${esc(c.tvPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Rapport PDF</a>
+        <a href="${esc(c.tvAfficheHref)}" target="_blank" rel="noreferrer" title="Une page par magasin, à épingler en réserve : le système de primes du mois et les montants à gagner" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Affiche primes</a>
       </div>
       ${filtres}
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">

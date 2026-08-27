@@ -1060,3 +1060,104 @@ function wr_ventes_cross_primes(): array
         ['ventePrimesCrossHist', json_encode($hist, JSON_UNESCAPED_UNICODE)]);
     return ['ok' => true, 'primes' => $enr];
 }
+
+/**
+ * GET /ventes/affiche.pdf[?m=2026-08] — l'affiche des primes, une page par
+ * magasin, à imprimer et épingler en réserve.
+ *
+ * Elle ne s'adresse pas au gérant mais à la VENDEUSE : ce qu'il y a à gagner
+ * ce mois-ci, en grand, avec le geste qui y mène — pas la méthode complète,
+ * qui a son propre document. Les montants et la cible sont ceux du mois du
+ * magasin : l'affiche de Corbais n'est pas celle de Halle.
+ */
+function ep_ventes_affiche(): array
+{
+    $m = trim((string) ($_GET['m'] ?? date('Y-m')));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $n1 = static fn ($v) => number_format((float) $v, 1, ',', ' ');
+    $court = static fn (string $nom) => trim((string) array_reverse(explode(' - ', $nom))[0]);
+    $logo = rapLogoDataUri();
+    $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
+
+    $primes = ventePrimesConfig();
+    $montantBase = (int) (setting('venteCrossMontant') ?: 25);
+    $montantShop = (int) (setting('venteCrossMontantShop') ?: 100);
+    $paliers = venteCrossPaliers();
+    $cfg = setting('venteCrossTargets');
+    if (!is_array($cfg)) { $cfg = []; }
+    $nomDe = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+        $nomDe[(string) $s['id']] = (string) $s['name'];
+    }
+    $maxPalier = $montantBase;
+    foreach ($paliers as $p) { $maxPalier = max($maxPalier, $p['montant']); }
+    $maxTotal = $primes['reseau'] + $maxPalier;
+
+    $css = '<style>
+      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A}
+      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .or{color:#8a5a1c}.acc{color:#8D1D2C}.mut{color:#7a736a}
+      .carte{border:1.5px solid #E8C9A0;background:#FFF9EC;border-radius:12px;padding:6mm 7mm;text-align:center}
+      .carte .gros{font-family:Georgia,"DejaVu Serif",serif;font-size:30pt;color:#8D1D2C;line-height:1.1}
+      .marche{border:1.5px solid #E8C9A0;background:#FFF9EC;border-radius:10px;text-align:center;padding:4mm 3mm}
+      .marche .v{font-family:Georgia,"DejaVu Serif",serif;font-size:19pt;color:#8D1D2C}
+      .regle{font-size:9pt;color:#7a736a;line-height:1.7}
+    </style>';
+
+    $h = $css;
+    $premier = true;
+    foreach ($nomDe as $sid => $nom) {
+        $cible = venteCrossTarget($cfg, (string) $sid, $m);
+        $h .= '<div class="doc"' . ($premier ? '' : ' style="page-break-before:always"') . '>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:3mm"><tr>'
+            . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:38px">' : '<b>L’Atelier by</b>') . '</td>'
+            . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
+
+            . '<div class="serif" style="font-size:26pt;margin:7mm 0 1mm;letter-spacing:-.01em">Ce qu’il y a à gagner ce mois-ci</div>'
+            . '<div style="font-size:11pt;color:#5d564e;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes — versées par la marque, cumulables.</div>'
+
+            . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 6mm"><tr>'
+            . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏆 Meilleure vendeuse du réseau</div>'
+            . '<div class="gros">' . (int) $primes['reseau'] . ' €</div>'
+            . '<div class="regle">Le meilleur score du mois, tous magasins confondus.</div></td>'
+            . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🥇 Meilleure vendeuse du magasin</div>'
+            . '<div class="gros">' . (int) $primes['magasin'] . ' €</div>'
+            . '<div class="regle">Le meilleur score de ' . $e($court($nom)) . ' ce mois-ci.</div></td>'
+            . '</tr></table>'
+            . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
+
+            . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'
+            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm">Vos <b>lignes par ticket</b> du mois débloquent une prime — chaque marche gagnée, c’est la prime de la marche'
+            . ($cible !== null ? ' (cible du magasin ce mois-ci : <b class="acc">' . $n1($cible) . '</b>)' : '') . ' :</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>';
+        $marches = [];
+        if ($cible !== null) { $marches[] = [$n1($cible), $montantBase]; }
+        foreach ($paliers as $p) {
+            if ($cible === null || $p['seuil'] > $cible) { $marches[] = [$n1($p['seuil']), $p['montant']]; }
+        }
+        $w = (int) (100 / max(1, count($marches)));
+        foreach ($marches as [$seuil, $mnt]) {
+            $h .= '<td width="' . $w . '%" class="marche"><div style="font-size:9pt" class="mut">' . $seuil . ' lignes / ticket</div>'
+                . '<div class="v">' . (int) $mnt . ' €</div></td>';
+        }
+        $h .= '</tr></table>'
+            . '<div class="carte" style="text-align:left;display:block;margin-bottom:7mm"><table width="100%" cellpadding="0" cellspacing="0"><tr>'
+            . '<td><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🤝 Et ensemble</div>'
+            . '<div style="font-size:11pt;margin-top:1.5mm">La <b>moyenne du magasin</b> atteint la cible → <b class="acc" style="font-family:Georgia,serif;font-size:16pt">' . $montantShop . ' €</b> pour l’équipe.</div></td>'
+            . '</tr></table></div>'
+
+            . '<div class="regle" style="border-top:1px solid #e6e0d8;padding-top:3mm">Les règles, simplement : au moins 30 tickets dans le mois pour les primes du geste · les primes se versent une fois le mois fini · la meilleure du réseau ne cumule pas la prime magasin, mais les primes du geste s’ajoutent toujours · tout est vérifiable dans le cockpit, la formule est affichée. Bonne chasse ! — L’Atelier by, ' . $e($libMois) . '</div>'
+            . '</div>';
+        $premier = false;
+    }
+
+    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Primes — ' . $e($libMois) . '</title></head><body>' . $h . '</body></html>';
+    $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => 'Affiche des primes — ' . $libMois,
+        'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="affiche-primes-' . $m . '.pdf"');
+    echo $pdf;
+    exit;
+}

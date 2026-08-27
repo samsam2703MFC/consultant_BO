@@ -5326,6 +5326,7 @@ class App {
         basculer: () => this.setState({ tvFiche: S.tvFiche === l.id ? null : l.id }),
       }));
     common.tvPdfHref = API_BASE + '/ventes/classement.pdf?m=' + d.m;
+    common.tvAfficheHref = API_BASE + '/ventes/affiche.pdf';
 
     // Trois lectures du même mois : l'endurance (CA), le rendement (CA/h),
     // le geste de vente (lignes/ticket). Une seule serait un angle mort —
