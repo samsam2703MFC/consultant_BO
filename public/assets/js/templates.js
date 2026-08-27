@@ -2344,6 +2344,97 @@ function tplControle(c, x){
         </table>
         </div>
       </div>` : ''}
+    ${tplCtrlHeat(c, x, card)}
+  </div>`;
+}
+
+/* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le
+   détail d'une cellule cliquée — les tâches les moins faites d'abord, puis la
+   grille jour par jour (vert fait, bordeaux pas fait, pointillé pas attendue). */
+function tplCtrlHeat(c, x, card){
+  const { esc } = x;
+  if (c.hmChargement) { return `<div style="${card};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Suivi mensuel — lecture du cache…</div>`; }
+  const leg = `
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:12px">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em">Part des tâches faites</span>
+      ${[['rgba(141,29,44,0.75)', '&lt; 60 %'], ['rgba(217,119,6,0.45)', '60–70 %'], ['rgba(201,162,39,0.40)', '70–80 %'], ['rgba(45,122,62,0.45)', '80–90 %'], ['#2d7a3e', '&#8805; 90 %']]
+        .map(([cl, tx]) => `<span><i style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${cl};margin-right:5px;vertical-align:-2px"></i>${tx}</span>`).join('')}
+      <span style="margin-left:auto">${esc(c.hmNote)}</span>
+      ${c.hmCompleter ? `<button ${x.A(c.hmCompleter)} style="border:none;border-radius:999px;padding:6px 13px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">${esc(c.hmCompleterTxt)}</button>` : ''}
+    </div>`;
+  const det = !c.hmDetail ? '' : c.hmDetail.chargement
+    ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--color-text-muted)">Lecture du détail…</div>`
+    : c.hmDetail.erreur
+    ? `<div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12.5px;color:#8D1D2C">${esc(c.hmDetail.erreur)}</div>`
+    : `
+    <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:600">${esc(c.hmDetail.titre)} <span style="font-weight:400;color:var(--color-text-muted);font-size:11.5px">cellule cliquée</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-size:12px">${esc(c.hmDetail.resume)}</span>
+          <span ${x.A(c.hmDetail.fermer)} style="cursor:pointer;font-size:11.5px;color:var(--color-text-muted);text-decoration:underline">fermer</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table style="border-collapse:collapse;font-size:12px;min-width:720px">
+          <tr>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:5px 8px 5px 0">Tâche — les moins faites d'abord</th>
+            <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:5px 8px">Att.</th>
+            <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:5px 8px">Faites</th>
+            <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:5px 10px 5px 8px">Part</th>
+            <th style="text-align:left;padding:5px 0 5px 6px">
+              <span style="display:inline-flex;gap:2px">${c.hmDetail.joursLibs.map(j => `<i style="width:16px;text-align:center;font-size:8.5px;font-style:normal;color:${j.we ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-weight:${j.we ? '600' : '400'}">${esc(j.n)}</i>`).join('')}</span>
+            </th>
+          </tr>
+          ${c.hmDetail.taches.map(t => `
+          <tr style="border-top:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:6px 8px 6px 0;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(t.nom)}">${esc(t.nom)}</td>
+            <td style="padding:6px 8px;text-align:right;color:var(--color-text-muted)">${esc(t.attendues)}</td>
+            <td style="padding:6px 8px;text-align:right">${esc(t.faites)}</td>
+            <td style="padding:6px 10px 6px 8px;text-align:right;${t.partSt}">${esc(t.partTxt)}</td>
+            <td style="padding:6px 0 6px 6px">
+              <span style="display:inline-flex;gap:2px">${t.cases.map(cs => `<i title="${esc(cs.titre)}" style="display:inline-block;width:16px;height:16px;border-radius:4px;${cs.st}"></i>`).join('')}</span>
+            </td>
+          </tr>`).join('')}
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">Chaque case est un jour du mois : vert = faite, bordeaux = pas faite, pointillé = pas attendue ce jour-là. Les jours de week-end sont numérotés en bordeaux.</div>
+    </div>`;
+  return `
+  <div style="${card};padding:16px 18px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13.5px;font-weight:600">Suivi mensuel — faites / pas faites</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:760px">Faite = rendue dans le panel ce jour-là (notée, photographiée ou au statut fait) · Pas faite = attendue et restée sans rendu. La note des contrôles est une autre affaire — ici on mesure si le travail est fait. Cliquez une cellule pour le détail du mois, tâche par tâche et jour par jour.</div>
+      </div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);text-align:right">12 mois glissants<br><span style="text-transform:none;letter-spacing:0;font-size:10.5px">le mois en cours au jour le jour</span></div>
+    </div>
+    ${c.hmVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucune journée encore relevée — le relevé démarre au prochain passage du cron (chaque heure), ou tout de suite avec le bouton ci-dessous.</div>${leg}` : `
+    <div style="overflow-x:auto;margin-top:12px">
+      <table style="border-collapse:separate;border-spacing:3px;width:100%;min-width:920px;font-variant-numeric:tabular-nums">
+        <tr>
+          <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:2px 6px">Magasin</th>
+          ${c.hmMois.map(mLib => `<th style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.03em;color:var(--color-text-muted);padding:2px 1px;text-align:center">${esc(mLib)}</th>`).join('')}
+          <th style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:2px 1px;text-align:center">12 mois</th>
+        </tr>
+        ${c.hmLignes.map(l => `
+        <tr>
+          <td style="font-size:12.5px;font-weight:600;white-space:nowrap;padding:0 10px 0 6px">${esc(l.shop)}</td>
+          ${l.cells.map(cc => `
+          <td ${cc.clic ? x.A(cc.clic) : ''} title="${esc(cc.titre)}" style="${cc.st}">
+            <div style="font-size:12px;font-weight:700">${esc(cc.txt)}</div>
+            <div style="font-size:8.6px;opacity:.85;margin-top:1px">${esc(cc.sous)}${cc.partiel ? ' *' : ''}</div>
+          </td>`).join('')}
+          <td style="${l.totSt}">
+            <div style="font-size:12px;font-weight:700">${esc(l.totTxt)}</div>
+            <div style="font-size:8.6px;color:var(--color-text-muted);margin-top:1px">${esc(l.totSous)}</div>
+          </td>
+        </tr>`).join('')}
+      </table>
+    </div>
+    ${leg}
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">* mois partiellement relevé — le pourcentage ne porte que sur les journées déjà relevées.</div>`}
+    ${det}
   </div>`;
 }
 

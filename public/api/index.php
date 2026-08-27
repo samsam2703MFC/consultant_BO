@@ -31,6 +31,7 @@ require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
+require __DIR__ . '/../../src/taches_suivi.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -189,6 +190,8 @@ function route(string $method, string $path): mixed
             $path === '/products/periodes'             => ep_product_periodes(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),
             $path === '/pwa/tasks'                     => ep_pwa_tasks(),
+            $path === '/pwa/tasks/heatmap'             => ep_taches_heatmap(),
+            $path === '/pwa/tasks/heatmap/detail'      => ep_taches_heatmap_detail(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
@@ -203,6 +206,7 @@ function route(string $method, string $path): mixed
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
+    if ($method === 'POST' && $path === '/pwa/tasks/releve') { return wr_taches_releve(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }

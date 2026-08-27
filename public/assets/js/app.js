@@ -9940,6 +9940,86 @@ class App {
       };
       common.ctrlZoom = dt.zoom && d.photo ? this.valsCtrlZoom(dt, d) : false;
     } else { common.ctrlDet = false; common.ctrlZoom = false; }
+
+    // --- Suivi mensuel : la heatmap magasin × mois, faites / pas faites.
+    // La donnée vient du cache serveur (une ligne par tâche × jour, relevée
+    // par le cron heure après heure) — l'écran ne rappelle jamais le panel.
+    if (!this._ctrlHeatLu) { this._ctrlHeatLu = true;
+      readOne('/pwa/tasks/heatmap').then(d2 => { this.D.tachesHeat = d2 || { indispo: true }; this.setState({}); }); }
+    const TH = this.D.tachesHeat;
+    const MOIS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const hmLib = m => MOIS_FR[+m.slice(5, 7) - 1] + ' ' + m.slice(2, 4);
+    const hmCourt = n => (String(n || '').split(' - ').reverse()[0] || '').trim() || n;
+    const hmCoul = p => p == null ? ['var(--color-background-secondary)', 'var(--color-text-muted)']
+      : p >= 90 ? ['#2d7a3e', '#fff'] : p >= 80 ? ['rgba(45,122,62,0.45)', 'var(--color-text)']
+      : p >= 70 ? ['rgba(201,162,39,0.40)', 'var(--color-text)'] : p >= 60 ? ['rgba(217,119,6,0.45)', 'var(--color-text)']
+      : ['rgba(141,29,44,0.75)', '#fff'];
+    common.hmChargement = !TH;
+    common.hmVide = !!TH && !TH.indispo && (TH.joursReleves || 0) === 0;
+    common.hmMois = ((TH && TH.mois) || []).map(hmLib);
+    const hmSel = S.ctrlHeat || null;
+    common.hmLignes = ((TH && TH.lignes) || []).map(l => {
+      const cells = (l.cellules || []).map(cc => {
+        const [bg, fg] = hmCoul(cc.part);
+        const partiel = cc.couverture > 0 && cc.couverture < cc.joursRevolus;
+        return {
+          txt: cc.part == null ? '' : cc.part + ' %',
+          sous: cc.part == null ? (cc.couverture === 0 ? 'pas relevé' : '') : cc.faites + ' · ' + cc.pasFaites,
+          titre: cc.faites + ' faites · ' + cc.pasFaites + ' pas faites'
+            + (partiel ? ' — ' + cc.couverture + ' j relevés sur ' + cc.joursRevolus : ''),
+          st: 'background:' + bg + ';color:' + fg + ';border-radius:7px;text-align:center;padding:7px 2px 6px;cursor:pointer;'
+            + (hmSel && hmSel.shop === l.shopId && hmSel.m === cc.m ? 'outline:2px solid var(--color-text);outline-offset:1px;' : '')
+            + (partiel ? 'opacity:.75;' : ''),
+          partiel,
+          clic: cc.part == null && cc.couverture === 0 ? null
+            : () => this.setState({ ctrlHeat: (hmSel && hmSel.shop === l.shopId && hmSel.m === cc.m) ? null : { shop: l.shopId, m: cc.m } }),
+        };
+      });
+      const [tb] = hmCoul(l.part);
+      return { shop: hmCourt(l.shop), cells,
+        totTxt: l.part == null ? '' : l.part + ' %', totSous: l.part == null ? '' : l.faites + ' · ' + l.pasFaites,
+        totSt: 'border:1.5px solid ' + (l.part == null ? 'var(--color-border-secondary)' : (l.part >= 80 ? '#2d7a3e' : '#8D1D2C'))
+          + ';border-radius:7px;text-align:center;padding:7px 4px 6px;background:transparent', totBg: tb };
+    });
+    common.hmNote = !TH ? '' : (TH.joursManquants > 0
+      ? TH.joursReleves + ' journée(s) relevée(s) · ' + TH.joursManquants + ' encore à relever — l’historique se complète tout seul, heure par heure.'
+      : 'Historique complet — la veille se relève chaque jour.');
+    common.hmCompleterTxt = S.hmBusy ? 'Relevé en cours… (~20 s)' : 'Compléter maintenant';
+    common.hmCompleter = (!TH || !(TH.joursManquants > 0)) ? null : () => {
+      if (S.hmBusy) { return; }
+      this.setState({ hmBusy: true });
+      this.api('POST', '/pwa/tasks/releve', {}).then(r2 => {
+        this.setState({ hmBusy: false });
+        this.notify(r2 && r2.ok ? r2.releves + ' journée(s) relevée(s) — ' + (r2.reste || 0) + ' restante(s)'
+          : 'Relevé impossible — voir Diagnostic API');
+        this._ctrlHeatLu = false; this._hmDet = {}; this.setState({});
+      });
+    };
+    if (hmSel) {
+      const kH = hmSel.shop + '|' + hmSel.m;
+      if (!this._hmDet) { this._hmDet = {}; }
+      if (!this._hmDet[kH] && !this._hmDetBusy) { this._hmDetBusy = true;
+        readOne('/pwa/tasks/heatmap/detail?shop=' + encodeURIComponent(hmSel.shop) + '&m=' + encodeURIComponent(hmSel.m))
+          .then(d2 => { this._hmDetBusy = false; this._hmDet[kH] = d2 || { error: 'lecture impossible' }; this.setState({}); }); }
+      const dd = this._hmDet[kH];
+      common.hmDetail = !dd ? { chargement: true }
+        : dd.error ? { erreur: dd.error, fermer: () => this.setState({ ctrlHeat: null }) }
+        : {
+          titre: hmCourt(dd.shop) + ' — ' + hmLib(dd.m),
+          resume: (dd.part == null ? '' : dd.part + ' % faites · ') + dd.faites + ' faites · ' + dd.pasFaites + ' pas faites',
+          joursLibs: (dd.jours || []).map(j => ({ n: String(+j.slice(8, 10)), we: [0, 6].includes(new Date(j + 'T12:00:00').getDay()) })),
+          taches: (dd.taches || []).map(t => ({
+            nom: t.tache, attendues: String(t.attendues), faites: String(t.faites),
+            partTxt: t.part == null ? '' : t.part + ' %',
+            partSt: 'font-weight:700;color:' + (t.part == null ? 'var(--color-text-muted)' : t.part >= 80 ? '#2d7a3e' : t.part < 60 ? '#8D1D2C' : '#6b5308'),
+            cases: (dd.jours || []).map(j => { const cJ = (t.jours || {})[j];
+              return cJ == null ? { st: 'background:transparent;border:0.5px dashed var(--color-border-secondary)', titre: hmLib(dd.m) + '-' + j.slice(8) + ' : pas attendue' }
+                : cJ.fait ? { st: 'background:#2d7a3e;opacity:.82', titre: j.slice(8, 10) + ' : faite' + (cJ.statut === 'sansPhoto' ? ' (sans photo)' : '') }
+                : { st: 'background:#8D1D2C;opacity:.8', titre: j.slice(8, 10) + ' : pas faite' }; }),
+          })),
+          fermer: () => this.setState({ ctrlHeat: null }),
+        };
+    } else { common.hmDetail = false; }
   }
 
   /** L'agrandissement annotable : cadres numérotés + liste des remarques. */

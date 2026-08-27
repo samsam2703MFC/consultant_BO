@@ -1910,7 +1910,12 @@ function ep_rapports_cron(): array
     // Le plan de cadence des contrôles suit le même battement : une fois par
     // jour au premier passage après 5 h (voir cadenceCron), sans cron dédié.
     $cadence = function_exists('cadenceCron') ? cadenceCron() : 'module absent';
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence];
+    // Le relevé des tâches suit le même battement : un lot par heure, jusqu'à
+    // ce que les douze mois de la heatmap soient là — puis la seule veille.
+    $taches = 'module absent';
+    try { if (function_exists('tachesSuiviCron')) { $taches = tachesSuiviCron(); } }
+    catch (Throwable $eT) { $taches = 'échec — ' . $eT->getMessage(); }
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches];
 }
 
 /**

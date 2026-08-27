@@ -129,3 +129,4 @@ deploy 20260827T154257Z rapport clôture ?shop= + page combos
 deploy 20260827T155434Z cloture ventes dans le reporting automatise
 deploy 20260827T155622Z fix runId cloture ventes
 deploy 20260827T160221Z retire affichage cadence dynamique
+deploy 20260827T162009Z heatmap suivi mensuel des taches
