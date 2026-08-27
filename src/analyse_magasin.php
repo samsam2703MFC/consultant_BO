@@ -386,7 +386,7 @@ function anmPdfHtml(array $d): string
             . number_format(abs((float) $g['delta']), 1, ',', ' ') . ' pts</b></td>'
             . ($retrait
                 ? '<td class="acc"><b>' . $eur($g['potMois']) . '</b></td><td class="mut">' . $eur($g['potAn']) . '</td>'
-                : '<td class="mut" style="font-size:7.5pt">' . ($g['force'] ? 'sa force' : 'au niveau') . '</td><td class="mut">—</td>');
+                : '<td class="mut" style="font-size:7.5pt">' . ($g['force'] ? 'sa force' : 'au niveau') . '</td><td class="mut"></td>');
         $h .= '</tr>';
     }
     $h .= '</table></div>';

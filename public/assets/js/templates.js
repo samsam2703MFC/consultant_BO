@@ -524,7 +524,7 @@ function tplReferentiel(c, x){
           <td style="${TD}">
             <button ${x.A(l.ouvrir)} style="border:none;background:transparent;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(l.nom)}</button>
             ${l.finLe ? `<span style="display:inline-block;margin-left:7px;font-size:10px;font-weight:600;padding:1px 8px;border-radius:999px;background:rgba(141,29,44,0.09);color:var(--color-primary)">fin le ${esc(l.finLe)}</span>` : ''}
-            <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.ref)}${l.gamme !== '—' ? ' · ' + esc(l.gamme) : ''}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.ref)}${l.gamme !== '' ? ' · ' + esc(l.gamme) : ''}</div>
           </td>
           <td style="${TD};color:var(--color-text-muted)">${esc(l.categorie)}<div style="font-size:10.5px">${esc(l.groupe)}</div></td>
           ${c.isCat ? `<td style="${TD};${num}"><span style="${l.scoreSt}">${esc(l.scoreTxt)}</span>${l.scoreVerdict ? `<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted);margin-top:2px">${esc(l.scoreVerdict)}</div>` : ''}</td>
@@ -554,15 +554,15 @@ function tplReferentiel(c, x){
                  sans changer d'écran. -->
             <td style="${TD}">
               <div style="display:flex;align-items:center;gap:9px;justify-content:space-between">
-                <span style="font-size:12px;${l.place ? '' : 'color:var(--color-text-muted)'}">${l.place ? esc(l.emplacement) : (l.must ? 'pas de place au comptoir' : '—')}</span>
+                <span style="font-size:12px;${l.place ? '' : 'color:var(--color-text-muted)'}">${l.place ? esc(l.emplacement) : (l.must ? 'pas de place au comptoir' : '')}</span>
                 <button ${x.A(l.planoGo)} title="Ouvrir le planogramme actuel pour cette référence"
                   style="flex:0 0 auto;border:0.5px solid ${l.place ? 'var(--color-border-secondary)' : 'var(--color-primary)'};background:transparent;color:${l.place ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap">${esc(l.planoBtn)}</button>
               </div>
             </td>` : ''}
-          ${c.isPlano ? `<td style="${TD}">${esc(l.zone) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
-            <td style="${TD};color:var(--color-text-muted)">${esc(l.meuble) || '—'}</td>
-            <td style="${TD};color:var(--color-text-muted)">${esc(l.niveau) || '—'}</td>
-            <td style="${TD};${num}">${esc(l.slot) || '—'}</td>` : ''}
+          ${c.isPlano ? `<td style="${TD}">${esc(l.zone) || '<span style="color:var(--color-text-muted)"></span>'}</td>
+            <td style="${TD};color:var(--color-text-muted)">${esc(l.meuble) || ''}</td>
+            <td style="${TD};color:var(--color-text-muted)">${esc(l.niveau) || ''}</td>
+            <td style="${TD};${num}">${esc(l.slot) || ''}</td>` : ''}
           <td style="${TD};text-align:right">${l.parametre ? '<span style="font-size:11px;color:#2d7a3e">remplie</span>' : '<span style="font-size:11px;color:var(--color-text-muted)">vide</span>'}</td>
         </tr>`).join('')}
       </tbody>
@@ -1701,7 +1701,7 @@ function tplMesure(c, x){
         ${(c.mesTuiles || []).map(t => `<div style="${boite}">
           <div style="${lbl}">${esc(t.nom)}</div>
           <div style="font-family:var(--font-display);font-size:23px;margin-top:6px;letter-spacing:-0.4px">${esc(t.val)}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(t.avant)}${t.d !== '—' ? ' · <b style="color:' + t.dCol + '">' + esc(t.d) + '</b>' : ''}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(t.avant)}${t.d !== '' ? ' · <b style="color:' + t.dCol + '">' + esc(t.d) + '</b>' : ''}</div>
           ${(t.temoin || t.net) ? `<div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
             ${t.temoin ? `<span style="font-size:10.5px;padding:3px 8px;border-radius:999px;background:#EDEAE5;color:var(--color-text-muted)">${esc(t.temoin)}</span>` : ''}
             ${t.net ? `<span style="font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--color-surface);color:${t.netCol}">${esc(t.net)}</span>` : ''}
@@ -1742,7 +1742,7 @@ function tplMesure(c, x){
               <td style="${td};text-align:left"><b>Témoin — ${esc(l.nom)}</b></td>
               <td style="${td}">${esc(l.trafAv)}</td><td style="${td}">${esc(l.trafPd)}</td>
               <td style="${td}">${esc(l.dTraf)}</td><td style="${td}">${esc(l.dPan)}</td>
-              <td style="${td};color:var(--color-text-muted);font-style:italic">bruit de fond</td><td style="${td}">—</td></tr>`).join('')}
+              <td style="${td};color:var(--color-text-muted);font-style:italic">bruit de fond</td><td style="${td}"></td></tr>`).join('')}
           </table>
           <div style="font-size:11px;color:var(--color-text-muted);margin-top:7px;font-style:italic">Δ CA net = variation du magasin − variation du témoin sur la même fenêtre. € gagnés = ce qu'il a fait en plus de ce qu'il aurait fait en suivant le témoin.</div>
         </div>
@@ -1777,7 +1777,7 @@ function tplMesure(c, x){
         <tr><th style="${th};text-align:left">Référence</th><th style="${th};text-align:left">Catégorie</th><th style="${th}">Base / jour</th><th style="${th}">Campagne / jour</th><th style="${th}">Réponse</th><th style="${th}">vs N-1</th><th style="${th}">Rémanence</th><th style="${th};text-align:left">Score</th></tr>
         ${c.mesProduits.map(p => `<tr>
           <td style="${td};text-align:left"><b>${esc(p.nom)}</b><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(p.sku)}${p.source === 'saisie' ? ' · ajoutée à la main' : ''}</div></td>
-          <td style="${td};text-align:left;color:var(--color-text-muted);font-size:12px">${esc(p.categorie || '—')}</td>
+          <td style="${td};text-align:left;color:var(--color-text-muted);font-size:12px">${esc(p.categorie || '')}</td>
           <td style="${td}">${esc(p.refJour)} u</td>
           <td style="${td}">${esc(p.campJour)} u</td>
           <td style="${td};color:${p.reponseCol};font-weight:600">${esc(p.reponse)}</td>
@@ -1867,7 +1867,7 @@ function tplBxc(c, x){
             <td style="padding:8px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${esc(l.attendu)}</td>
             <td style="padding:5px 8px;text-align:right"><input type="number" value="${esc(String(l.objectif))}" ${x.C(l.setObjectif)} placeholder="—" style="width:112px;box-sizing:border-box;text-align:right;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)"></td>
             <td style="padding:8px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(l.budget)}${l.source ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.source)}</div>` : ''}</td>
-            <td style="padding:8px 0 8px 8px;text-align:right"><span style="${l.attAttSt}">${esc(l.attAtt || '—')}</span></td>
+            <td style="padding:8px 0 8px 8px;text-align:right"><span style="${l.attAttSt}">${esc(l.attAtt || '')}</span></td>
           </tr>`).join('')}
           <tr style="border-top:1.5px solid var(--color-border-secondary)">
             <td style="padding:10px 8px 10px 0;font-weight:600">Total</td>
@@ -2287,7 +2287,7 @@ function tplControle(c, x){
                     <td style="padding:10px 12px;text-align:center;white-space:nowrap;${t.noteSt}">${esc(t.note)}</td>
                     <td style="padding:10px 12px;${t.accSt}">${esc(t.acc)}</td>
                     <td style="padding:10px 12px;color:var(--color-text)">${esc(t.consultant)}</td>
-                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">${t.hasComment ? esc(t.comment) : '<span style="opacity:0.6">—</span>'}</td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">${t.hasComment ? esc(t.comment) : '<span style="opacity:0.6"></span>'}</td>
                     <td style="padding:10px 14px;text-align:right;white-space:nowrap">
                       <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
                         <span style="font-size:11px;color:${t.valide ? '#2d7a3e' : 'var(--color-text-muted)'}">${esc(t.valideMeta)}</span>
@@ -2667,7 +2667,7 @@ function tplMktCampagnes(c, x){
           <td style="${td};white-space:nowrap;color:var(--color-text-muted)">${esc(l.periode)}</td>
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(l.budget)}</td>
           <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.depense)}</td>
-          <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || '—'}</td>
+          <td style="${td};text-align:right;color:var(--color-text-muted)">${l.nBoutiques || ''}</td>
           <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
             ${l.reprendre ? `<button ${x.A(l.reprendre)} title="Ouvrir la campagne dans l’assistant — offre, canaux, documents joints" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-primary);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">${esc(l.reprendreNom || 'Assistant')}</button>` : ''}
             <button ${x.A(l.note)} title="La note pour les franchisés — à imprimer ou à envoyer" style="border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer;margin-right:4px">Note</button>
@@ -2911,9 +2911,9 @@ function tplMktTypes(c, x){
               </span>
             </div>
           </td>
-          <td style="padding:8px">${t.levier ? `<span style="${t.levierSt}">${esc(t.levier)}</span>` : `<span style="font-size:11.5px;color:var(--color-text-muted)">—</span>`}</td>
+          <td style="padding:8px">${t.levier ? `<span style="${t.levierSt}">${esc(t.levier)}</span>` : `<span style="font-size:11.5px;color:var(--color-text-muted)"></span>`}</td>
           <td style="padding:8px;font-size:11.5px;color:var(--color-text-muted)">${esc(t.kpi)}</td>
-          <td style="padding:8px;text-align:right;font-size:12px;color:var(--color-text-muted)">${t.nCampagnes || '—'}</td>
+          <td style="padding:8px;text-align:right;font-size:12px;color:var(--color-text-muted)">${t.nCampagnes || ''}</td>
           <td style="padding:8px 0;text-align:right;white-space:nowrap">
             <button ${x.A(t.monter)} title="Monter" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.premier ? 'default' : 'pointer'};padding:0 3px;${t.premier ? 'opacity:.3' : ''}">▲</button>
             <button ${x.A(t.descendre)} title="Descendre" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.dernier ? 'default' : 'pointer'};padding:0 3px;${t.dernier ? 'opacity:.3' : ''}">▼</button>
@@ -3623,7 +3623,7 @@ function tplFonds(c, x){
           <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
             ${r.inserer ? `<button ${x.A(r.inserer)} title="Insérer la redevance marketing de ce client au grand livre — le libellé porte la sorte et le montant" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:7px;padding:4px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;cursor:pointer">Insérer au grand livre</button>` : ''}
             ${r.ecrit ? `<span style="font-size:10.5px;color:#2d7a3e;font-weight:500">✓ ${esc(r.ecrit)}</span>` : ''}
-            ${!r.inserer && !r.ecrit ? `<span style="font-size:10.5px;color:var(--color-text-muted)">—</span>` : ''}
+            ${!r.inserer && !r.ecrit ? `<span style="font-size:10.5px;color:var(--color-text-muted)"></span>` : ''}
           </td>
         </tr>`).join('')}</tbody>
       </table></div>`}
@@ -3908,13 +3908,13 @@ function tplTaches(c, x){
             <span style="${m.barre};margin-top:5px;max-width:200px"></span></td>
           <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500">${esc(m.ca)}</td>
           <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.n1)}</td>
-          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500;color:${m.ecartCol}">${esc(m.ecart) || '—'}</td>
+          <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500;color:${m.ecartCol}">${esc(m.ecart) || ''}</td>
           <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.tickets)}</td>
           <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--color-text-muted)">${esc(m.panier)}</td>
           <td style="padding:9px 12px 9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-size:12.5px">${m.obj
             ? `<span style="font-variant-numeric:tabular-nums">${esc(m.obj)}</span>`
             : `<span style="font-size:10.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap">à renseigner</span>`}</td>
-          <td style="padding:9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:${m.attCol}">${m.att ? esc(m.att) : '—'}</td>
+          <td style="padding:9px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:${m.attCol}">${m.att ? esc(m.att) : ''}</td>
         </tr>`).join('')}</tbody>
       </table></div>
       ${c.tkPnlSansObj ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">
@@ -4493,7 +4493,7 @@ function tplParams(c, x){
             <td style="padding:7px 8px"><input value="${esc(a.email)}" ${x.C(a.setEmail)} placeholder="contact@agence.be" style="${rowInput}" /></td>
             <td style="padding:7px 8px"><input value="${esc(a.site)}" ${x.C(a.setSite)} placeholder="agence.be" style="${rowInput}" /></td>
             <td style="padding:7px 8px">${a.logo ? `<img src="${esc(a.logo)}" alt="" style="height:24px;border-radius:3px;vertical-align:middle" />` : ''}<label style="display:inline-block;margin-left:${a.logo ? '8px' : '0'};font-size:11.5px;color:var(--color-primary);cursor:pointer;text-decoration:underline">${a.logo ? 'changer' : 'choisir'}<input type="file" accept="image/*" ${x.C(a.setLogo)} style="display:none" /></label></td>
-            <td style="padding:7px 8px;text-align:right;color:var(--color-text-muted)">${a.campagnes || '—'}</td>
+            <td style="padding:7px 8px;text-align:right;color:var(--color-text-muted)">${a.campagnes || ''}</td>
             <td style="padding:7px 0 7px 8px;text-align:right"><button ${x.A(a.retirer)} title="Retirer du référentiel" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></td>
           </tr>`).join('')}
           <tr style="border-top:0.5px solid var(--color-border-tertiary)">
@@ -5241,7 +5241,7 @@ function tplWizardProjet(c, x){
             <div><div style="${lbl}">Volume prévisionnel réseau${c.npEco.volReseauAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculé</span>' : ''}</div>
               <input type="number" step="1" min="0" value="${esc(String(c.npEco.volReseau))}" ${x.C(c.npEco.setVolReseau)} placeholder="${esc(c.npEco.volReseauAide)}" style="${inpD}"></div>
             <div><div style="${lbl}">Retour royalties marque (€)${c.npEco.royaltiesAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculé</span>' : ''}</div>
-              <input type="number" step="1" min="0" value="${esc(String(c.npEco.royaltiesEuro))}" ${x.C(c.npEco.setRoyaltiesEuro)} placeholder="au taux ${esc(String(c.npEco.royaltiesTaux || '—'))} %" style="${inpD}"></div>
+              <input type="number" step="1" min="0" value="${esc(String(c.npEco.royaltiesEuro))}" ${x.C(c.npEco.setRoyaltiesEuro)} placeholder="au taux ${esc(String(c.npEco.royaltiesTaux || ''))} %" style="${inpD}"></div>
             <div><div style="${lbl}">Marge moyenne / magasin / an (€)${c.npEco.margeMagAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculée</span>' : ''}</div>
               <input type="number" step="1" min="0" value="${esc(String(c.npEco.margeMagAn))}" ${x.C(c.npEco.setMargeMagAn)} placeholder="prix × volume × marge" style="${inpD}"></div>
           </div>
@@ -5732,18 +5732,18 @@ function tplPlanoComptoir(c, x){
             <tbody>
               ${c.plRangs.map(r => `<tr ${x.A(r.ouvrir)} ${x.DP(r.deposer)} class="pl-slot" style="${r.trSt}" title="${r.libre ? 'Viser cet emplacement, ou y glisser une référence' : esc(r.nom) + ' — cliquez pour la fiche'}">
                 <td style="${TD}"><span style="font-weight:500">${esc(r.meuble)} · ${esc(r.niveau)} · ${r.position}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.zone)}</div></td>
-                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : `
+                <td style="${TD}">${r.libre ? '<span style="color:var(--color-text-muted)"></span>' : `
                   <div ${x.A(e => e.stopPropagation())} style="display:flex;align-items:center;gap:4px">
                     <label title="${r.photo ? 'Remplacer la photo' : 'Annexer la photo du produit'}" style="flex:0 0 auto;width:34px;height:34px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;${r.photo ? 'border:0.5px solid var(--color-border-secondary)' : 'border:1px dashed var(--color-border-secondary);color:var(--color-text-muted);font-size:14px;line-height:1'}">${r.photo ? `<img src="${esc(r.photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '＋'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.photoSet)} style="display:none"></label>
                     ${r.photoDel ? `<button ${x.A(r.photoDel)} title="Retirer la photo" style="border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 1px">⊗</button>` : ''}
                   </div>`}</td>
                 <td style="${TD}">${plCbx(r.format, x)}${r.dims ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.dims)}</div>` : ''}</td>
                 <td style="${TD}">${plCbx(r.contenant, x)}</td>
-                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)">—</span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}${r.autresOcc ? ' · +' + r.autresOcc + ' autre(s) moment(s)' : ''}</div>`
+                <td style="${TD}${r.prendre ? ';cursor:grab' : ''}" ${r.prendre ? 'draggable="true" ' + x.DS(r.prendre) + ' title="Glissez-la sur un autre emplacement"' : ''}>${r.libre ? '<span style="color:var(--color-text-muted)"></span>' : esc(r.nom) + `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ref)}${r.autresOcc ? ' · +' + r.autresOcc + ' autre(s) moment(s)' : ''}</div>`
                   + ((r.periodesRef || []).length ? `<div ${x.A(e => e.stopPropagation())} style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
                     ${r.periodesRef.map(pr => `<button ${x.A(pr.bascule)} title="Présentée ${esc(pr.nom.toLowerCase())} ?" style="border-radius:999px;padding:1px 8px;font-family:var(--font-ui);font-size:9.5px;font-weight:500;cursor:pointer;${pr.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">${esc(pr.nom)}</button>`).join('')}
                   </div>` : '')}</td>
-                <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)">—</span>'
+                <td style="${TD};text-align:right">${r.libre ? '<span style="color:var(--color-text-muted)"></span>'
                   : `<input ${x.A(e => e.stopPropagation())} type="number" min="0" max="400" value="${esc(r.parSlot)}" ${x.I(r.parSlotSet)} ${x.C(r.parSlotEcrire)} placeholder="—" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:27px;width:58px;padding:0 6px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;text-align:right">`}</td>
                 <td style="${TD}">${r.grille ? `
                   <div style="display:inline-flex;border:0.5px solid var(--color-border-tertiary);border-radius:999px;overflow:hidden">
@@ -5751,7 +5751,7 @@ function tplPlanoComptoir(c, x){
                   </div>
                   <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${r.grille.txt} = <b style="font-weight:600;color:var(--color-text)">${r.grille.poses}</b> posés${r.grille.taille ? ' · ' + esc(r.grille.taille) : ''}</div>
                   ${r.grille.reste ? `<div style="margin-top:4px;font-size:10px;background:rgba(199,158,44,0.14);color:var(--color-on-abricot);border-radius:5px;padding:2px 6px;display:inline-block">${r.grille.reste} hors grille${r.grille.justeTxt ? ` — <button ${x.A(r.grille.justeGo)} style="border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer">${esc(r.grille.justeTxt)}</button>` : ''}</div>` : ''}`
-                  : `<span style="color:var(--color-text-muted);font-size:11px">${r.libre ? '—' : 'nombre à saisir'}</span>`}</td>
+                  : `<span style="color:var(--color-text-muted);font-size:11px">${r.libre ? '' : 'nombre à saisir'}</span>`}</td>
                 <td style="${TD}"><span style="${r.etatSt}">${r.vise ? 'visé' : esc(r.etat)}</span></td>
               </tr>`).join('')}
             </tbody>
@@ -6256,7 +6256,7 @@ function tplUserPanel(c, x){
     <div style="padding:24px 28px 60px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:42px;height:42px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500">${esc(u.initiales || '—')}</div>
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500">${esc(u.initiales || '')}</div>
           <div>
             <div style="${sec}">Mon compte</div>
             <h2 style="font-family:var(--font-display);font-size:21px;font-weight:400;margin:2px 0 0;line-height:1.2">${esc(u.nom || 'Sans nom')}</h2>
@@ -6683,7 +6683,7 @@ function tplCentrale(c, x){
          ['TVA par défaut', c.caParams.tvaDefautPct, '%'], ['Objectif baisse prix', c.caParams.objectifBaissePrixPct, '%'],
          ['Objectif hausse volume', c.caParams.objectifHausseVolPct, '%']].map(p => `<div>
         <div style="font-size:11px;color:var(--color-text-muted)">${esc(p[0])}</div>
-        <div style="font-size:15px;font-variant-numeric:tabular-nums">${esc(String(p[1] == null ? '—' : String(p[1]).replace('.', ',')))} ${esc(p[2])}</div></div>`).join('')}
+        <div style="font-size:15px;font-variant-numeric:tabular-nums">${esc(String(p[1] == null ? '' : String(p[1]).replace('.', ',')))} ${esc(p[2])}</div></div>`).join('')}
     </div></div>` : '';
 
   const recherche = (c.caEcran === 'caCatalogue') ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
@@ -6753,7 +6753,7 @@ function tplCentrale(c, x){
               <td ${x.A(e => e.stopPropagation())} style="${TD};text-align:center">
                 ${o.relancable ? `<button ${x.A(o.relancer)} title="${esc(o.relanceTitre)}" style="border:0.5px solid ${o.relanceLe ? 'var(--color-border-tertiary)' : 'var(--color-primary)'};background:${o.relanceLe ? 'transparent' : 'rgba(141,29,44,0.06)'};color:${o.relanceLe ? 'var(--color-text-muted)' : 'var(--color-primary)'};border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:13px;line-height:1;padding:0${o.relanceEnCours ? ';opacity:.5' : ''}">${o.relanceEnCours ? '…' : '🔔'}</button>
                   ${o.relanceLe ? `<div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px;white-space:nowrap">${esc(o.relanceLe.slice(5, 10))}</div>` : ''}`
-                  : `<span title="${esc(o.relanceTitre)}" style="color:var(--color-border-secondary)">—</span>`}
+                  : `<span title="${esc(o.relanceTitre)}" style="color:var(--color-border-secondary)"></span>`}
               </td>
             </tr>`).join('')}`).join('')}
         </tbody>
@@ -7188,7 +7188,7 @@ function tplCrois(c, x){
             <td style="${td};text-align:left;padding-left:18px">RÉSEAU</td>
             ${c.crReseau.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
             <td style="${td};text-align:left;padding-left:20px">${spark(c.crReseau.spark)}</td>
-            ${c.crTarget != null ? `<td style="${td};font-weight:600;color:${c.crReseau.delta ? c.crReseau.delta.col : 'var(--color-text-muted)'}">${c.crReseau.delta ? esc(c.crReseau.delta.txt) : '—'}</td>` : ''}
+            ${c.crTarget != null ? `<td style="${td};font-weight:600;color:${c.crReseau.delta ? c.crReseau.delta.col : 'var(--color-text-muted)'}">${c.crReseau.delta ? esc(c.crReseau.delta.txt) : ''}</td>` : ''}
             <td style="${td}">${esc(c.crReseau.ff)}</td>
             <td style="${td};padding-right:18px;color:var(--color-primary)">${esc(c.crReseau.eur)}</td>
           </tr>
@@ -7197,7 +7197,7 @@ function tplCrois(c, x){
             <td style="${td};text-align:left;padding-left:18px;font-weight:500"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
             ${l.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
             <td style="${td};text-align:left;padding-left:20px">${spark(l.spark)}</td>
-            ${c.crTarget != null ? `<td style="${td};font-weight:600;color:${l.delta ? l.delta.col : 'var(--color-text-muted)'}">${l.delta ? esc(l.delta.txt) : '—'}</td>` : ''}
+            ${c.crTarget != null ? `<td style="${td};font-weight:600;color:${l.delta ? l.delta.col : 'var(--color-text-muted)'}">${l.delta ? esc(l.delta.txt) : ''}</td>` : ''}
             <td style="${td}">${esc(l.ff)}</td>
             <td style="${td};padding-right:18px;font-weight:600;color:${l.col}">${esc(l.eur)}</td>
           </tr>
@@ -7294,7 +7294,7 @@ function tplVentes(c, x){
           ${(c.cxLignes || []).map(l => `<tr>
             <td style="${td};text-align:left;font-weight:500">${esc(l.nom)}</td>
             ${(l.annee || []).map(t => `<td style="${td};padding:4px 4px">${t.passe
-              ? `<span style="color:${t.pose ? 'var(--color-text)' : '#b8b2a8'}" title="${t.pose ? 'cible posée ce mois-là' : 'héritée — le passé ne se réécrit pas'}">${esc(t.val || '—')}</span>`
+              ? `<span style="color:${t.pose ? 'var(--color-text)' : '#b8b2a8'}" title="${t.pose ? 'cible posée ce mois-là' : 'héritée — le passé ne se réécrit pas'}">${esc(t.val || '')}</span>`
               : `<input type="number" min="1" max="10" step="0.1" value="${esc(t.val)}" ${x.C(t.poser)} placeholder="—"
                   style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:4px 5px;border-radius:7px;border:0.5px solid ${t.pose ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:var(--color-surface);text-align:right">`}</td>`).join('')}
           </tr>`).join('')}
@@ -7389,7 +7389,7 @@ function tplVentes(c, x){
         <tbody>
           ${c.tvLignes.map(l => `
           <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouverte ? ';background:#FBF8F4' : ''}${l.classable ? '' : ';color:#9a9186'}">
-            <td style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${l.rang != null ? l.rang : '—'}</td>
+            <td style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${l.rang != null ? l.rang : ''}</td>
             <td style="${td};text-align:left;font-weight:500">${avatar(l.ini)}${esc(l.nom)}
               ${l.primeReseau ? ` <span style="${primeR}">réseau</span>` : l.primeMagasin ? ` <span style="${primeOr}">${esc(l.magasin)}</span>` : ''}
               ${l.classable ? '' : `<span style="font-size:10.5px;color:#9a9186"> · ${esc(l.motif)}</span>`}</td>
@@ -7440,7 +7440,7 @@ function tplVentes(c, x){
         <tbody>
           ${(c.cxLignes || []).map(l => `<tr>
             <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(l.nom)}</td>
-            ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:#b8b2a8">—</span>'
+            ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:#b8b2a8"></span>'
               : `<span style="color:var(--color-text-muted)">${esc(c2.target)}</span> ${c2.nb > 0
                 ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb} · ${c2.eur} €</span>`
                 : `<span style="font-size:10.5px;color:var(--color-primary)">0</span>`}

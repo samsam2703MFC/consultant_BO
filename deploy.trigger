@@ -122,3 +122,4 @@
 2026-08-27 15:16 affiche podium precedent
 2026-08-27 15:18 penetration tous tickets
 2026-08-27 15:23 paliers relatifs
+2026-08-27 15:25 cases vides sans tiret

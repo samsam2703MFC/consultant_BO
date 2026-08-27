@@ -681,7 +681,7 @@ function utilJamaisPdfHtml(array $d, int $n): string
                     . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6;width:22mm;color:#6b6259;font-size:8pt">' . $e($r['ref']) . '</td>'
                     . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6">' . $e($r['nom']) . '</td>'
                     . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6;text-align:right;width:20mm;color:#6b6259">'
-                    . ($r['prix'] === null ? '—' : $e(number_format((float) $r['prix'], 2, ',', ' ') . ' €')) . '</td>'
+                    . ($r['prix'] === null ? '' : $e(number_format((float) $r['prix'], 2, ',', ' ') . ' €')) . '</td>'
                     . '</tr>';
             }
             $h .= '</table>';

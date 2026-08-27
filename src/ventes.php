@@ -668,18 +668,18 @@ function ep_ventes_pdf(): array
                 else { foreach ($hist['magasins'] ?? [] as $g2) { if ((int) $g2['id'] === $l['id']) { $prime = 'magasin · ' . $hist['montants']['magasin'] . ' €'; } } }
             }
             $h2 .= '<tr' . ($l['classable'] ? '' : ' class="gris"') . '>'
-                . '<td class="l">' . ($l['rang'] !== null ? (int) $l['rang'] : '—') . '</td>'
+                . '<td class="l">' . ($l['rang'] !== null ? (int) $l['rang'] : '') . '</td>'
                 . '<td class="l"><b>' . $e($l['nom']) . '</b>'
                 . ($l['classable'] ? '' : ' <span style="font-size:7pt;color:#9a9186">· ' . $e($l['motifHorsClassement']) . '</span>') . '</td>'
                 . ($avecMagasin ? '<td class="l mut">' . $e($court($l['magasin'])) . '</td>' : '')
                 . '<td>' . $n1($l['heures']) . ' h</td>'
                 . '<td>' . $eur($l['ca']) . '</td>'
-                . '<td>' . ($l['caHeure'] !== null ? $eur($l['caHeure']) : '—') . '</td>'
-                . '<td class="mut">' . ($l['coef'] !== null ? number_format((float) $l['coef'], 2, ',', ' ') : '—') . '</td>'
-                . '<td class="mut">' . ($l['coefCreneau'] !== null ? number_format((float) $l['coefCreneau'], 2, ',', ' ') : '—') . '</td>'
-                . '<td class="acc"><b>' . ($l['score'] !== null ? $eur($l['score']) : '—') . '</b></td>'
-                . '<td>' . ($l['panier'] !== null ? number_format((float) $l['panier'], 2, ',', ' ') . ' €' : '—') . '</td>'
-                . '<td>' . ($l['lignesTicket'] !== null ? $n1($l['lignesTicket']) : '—') . '</td>'
+                . '<td>' . ($l['caHeure'] !== null ? $eur($l['caHeure']) : '') . '</td>'
+                . '<td class="mut">' . ($l['coef'] !== null ? number_format((float) $l['coef'], 2, ',', ' ') : '') . '</td>'
+                . '<td class="mut">' . ($l['coefCreneau'] !== null ? number_format((float) $l['coefCreneau'], 2, ',', ' ') : '') . '</td>'
+                . '<td class="acc"><b>' . ($l['score'] !== null ? $eur($l['score']) : '') . '</b></td>'
+                . '<td>' . ($l['panier'] !== null ? number_format((float) $l['panier'], 2, ',', ' ') . ' €' : '') . '</td>'
+                . '<td>' . ($l['lignesTicket'] !== null ? $n1($l['lignesTicket']) : '') . '</td>'
                 . '<td>' . number_format((float) $l['tickets'], 0, ',', ' ') . '</td>'
                 . '<td class="l or" style="font-size:7.4pt"><b>' . $e($prime) . '</b></td></tr>';
         }
@@ -733,7 +733,7 @@ function ep_ventes_pdf(): array
         if ($petits['n'] > 0) {
             $h .= '<tr class="gris"><td class="l" colspan="2">' . $petits['n'] . ' personne(s) sous 10 tickets F&amp;F — cumulées</td>'
                 . '<td>' . $petits['ff'] . '</td><td>' . $petits['avec'] . '</td>'
-                . '<td>' . ($petits['ff'] > 0 ? number_format(100 * $petits['avec'] / $petits['ff'], 1, ',', ' ') : '—') . ' %</td>'
+                . '<td>' . ($petits['ff'] > 0 ? number_format(100 * $petits['avec'] / $petits['ff'], 1, ',', ' ') : '') . ' %</td>'
                 . '<td>' . ($petits['ff'] - $petits['avec']) . '</td><td>' . $eur($petits['eur']) . '</td></tr>';
         }
         $h .= '</table>'

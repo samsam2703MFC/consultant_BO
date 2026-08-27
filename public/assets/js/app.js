@@ -518,23 +518,23 @@ class App {
   notify(msg){ clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: null }), 3600); }
   log(type, projet, msg){
     const ts = (this.M ? this.M.TODAY : '2026-07-31') + ' ' + new Date().toTimeString().slice(0, 5);
-    this.api('POST', '/journal', { ts: ts + ':00', qui: 'CEO', type, projet: projet || '—', msg });
-    this.setState(s => ({ logsExtra: [{ ts, qui: 'CEO', type, projet: projet || '—', msg }, ...s.logsExtra] }));
+    this.api('POST', '/journal', { ts: ts + ':00', qui: 'CEO', type, projet: projet || '', msg });
+    this.setState(s => ({ logsExtra: [{ ts, qui: 'CEO', type, projet: projet || '', msg }, ...s.logsExtra] }));
   }
-  fE(n){ return n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €'; }
+  fE(n){ return n == null ? '' : Math.round(n).toLocaleString('fr-BE') + ' €'; }
   // Prix unitaire : deux décimales. fE() arrondit à l'euro, ce qui ramène un
   // prix d'achat de 2,10 € à « 2 € » et rend toute marge illisible.
-  fU(n){ return (n == null || !isFinite(n)) ? '—' : n.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+  fU(n){ return (n == null || !isFinite(n)) ? '' : n.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
   // Montant lisible quel que soit l'ordre de grandeur : le réseau se compte en
   // centaines de milliers, un magasin en dizaines de milliers.
-  fMt(n){ return (n == null || !isFinite(n)) ? '—'
+  fMt(n){ return (n == null || !isFinite(n)) ? ''
     : (Math.abs(n) >= 1e6 ? this.fM(n) : (Math.abs(n) >= 1000 ? this.fK(n) : this.fU(n))); }
-  fK(n){ return n == null ? '—' : Math.round(n / 1000).toLocaleString('fr-BE') + ' k€'; }
-  fM(n){ return (n == null || !isFinite(n)) ? '—' : (n / 1e6).toFixed(1).replace('.', ',') + ' M€'; }
-  fP(x, d){ return (x == null || !isFinite(x)) ? '—' : (x * 100).toFixed(d == null ? 1 : d).replace('.', ',') + ' %'; }
-  fD(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—'; }
-  fDA(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '—'; }   // année RÉELLE de la date, jamais figée
-  fDY(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(2, 4) : '—'; }
+  fK(n){ return n == null ? '' : Math.round(n / 1000).toLocaleString('fr-BE') + ' k€'; }
+  fM(n){ return (n == null || !isFinite(n)) ? '' : (n / 1e6).toFixed(1).replace('.', ',') + ' M€'; }
+  fP(x, d){ return (x == null || !isFinite(x)) ? '' : (x * 100).toFixed(d == null ? 1 : d).replace('.', ',') + ' %'; }
+  fD(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : ''; }
+  fDA(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : ''; }   // année RÉELLE de la date, jamais figée
+  fDY(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(2, 4) : ''; }
   pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
     if (pct == null || !isFinite(pct)) return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)';
     if (pct >= 1) return base + 'background:rgba(45,122,62,0.12);color:#2d7a3e';
@@ -768,7 +768,7 @@ class App {
         const lev = M.LEVIERS.find(l => l.slug === f.lev), tot = f.couts.reduce((a, c) => a + (+c.prevu || 0), 0);
         const val = +f.valeur || 0;
         common.npRecap = [
-          { k: 'Projet', v: f.nom.trim() || '—' }, { k: 'Axe', v: f.axe }, { k: 'Levier', v: lev ? lev.nom : f.lev }, { k: 'Priorité', v: f.prio },
+          { k: 'Projet', v: f.nom.trim() || '' }, { k: 'Axe', v: f.axe }, { k: 'Levier', v: lev ? lev.nom : f.lev }, { k: 'Priorité', v: f.prio },
           { k: 'Fenêtre', v: this.fD(f.debut) + ' → ' + this.fD(f.fin) }, { k: 'Jalons', v: f.jalons.filter(j => j.nom.trim()).length + ' jalon(s)' },
           { k: 'Tâches', v: f.taches.filter(t => t.nom.trim()).length + ' tâche(s)' },
           { k: 'Budget / valeur', v: this.fE(tot) + ' → ' + (val ? this.fE(val) : 'à chiffrer') }];
@@ -815,9 +815,9 @@ class App {
       common.ntPrev = () => set('step', st - 1);
       common.ntNext = () => { if (st === 1 && !f.nom.trim()){ this.notify('Intitulé de la tâche requis'); return; }
         this.setState(s2 => ({ nt: Object.assign({}, s2.nt, { step: st + 1, reached: Math.max(s2.nt.reached, st + 1) }) })); };
-      common.ntRecap = [{ k: 'Tâche', v: f.nom.trim() || '—' }, { k: 'Projet', v: proj.nom }, { k: 'Magasin', v: ntMagNom || 'Réseau' },
-        { k: 'Responsable', v: own ? own.nom : '—' }, { k: 'Échéance', v: this.fD(f.due) }, { k: 'Colonne', v: f.col },
-        { k: 'Notification', v: own ? own.email : '—' }];
+      common.ntRecap = [{ k: 'Tâche', v: f.nom.trim() || '' }, { k: 'Projet', v: proj.nom }, { k: 'Magasin', v: ntMagNom || 'Réseau' },
+        { k: 'Responsable', v: own ? own.nom : '' }, { k: 'Échéance', v: this.fD(f.due) }, { k: 'Colonne', v: f.col },
+        { k: 'Notification', v: own ? own.email : '' }];
       common.ntCreate = () => { const w = f.who.split(':');
         const id = 'nt' + Date.now().toString().slice(-6);
         proj.taches.push({ id, nom: f.nom.trim(), owner: { t: w[0], id: w[1] }, magasin: f.magasin || null, due: f.due, done: null, relance: null });
@@ -927,8 +927,8 @@ class App {
         margeMagAn: f.margeMagAn !== '' ? f.margeMagAn : (margeMag ? String(Math.round(margeMag)) : ''),
         setMargeMagAn: npEcoSet('margeMagAn'),
         margeMagAuto: f.margeMagAn === '' && margeMag > 0,
-        caReseau: caRes ? this.fE(caRes) : '—',
-        caMagasin: caMag ? this.fE(caMag) : '—',
+        caReseau: caRes ? this.fE(caRes) : '',
+        caMagasin: caMag ? this.fE(caMag) : '',
         // Une ligne de lecture, en français : c'est elle qu'on relira dans six
         // mois pour savoir ce qui avait été promis.
         resume: (prix && volMag)
@@ -1107,8 +1107,8 @@ class App {
         return { nom: r.nom, code: r.code, fr: r.fr, marge: this.fE(r._marge), margeN1: this.fE(r._margeN1), margeVar: tv.txt, margeVarSt: tv.st,
           val: this.fK(r._val), valT: this.fK(r.s.valT), valPct: this.fP(r._valPct, 0), valPctSt: this.pill(r._valPct + 0.08),
           ca: this.fK(r._ca), caT: this.fK(r.s.perf[E][MI].caT), caPct: this.fP(r._caPct, 0), caPctSt: this.pill(r._caPct),
-          tickets: r._tickets != null ? r._tickets.toLocaleString('fr-BE') : '—', tickEvo: te.txt + ' vs N-1', tickEvoSt: te.st + ';font-size:10.5px',
-          panier: r._panier != null ? r._panier.toFixed(2).replace('.', ',') + ' €' : '—', panEvo: pe.txt + ' vs N-1', panEvoSt: pe.st + ';font-size:10.5px' }; });
+          tickets: r._tickets != null ? r._tickets.toLocaleString('fr-BE') : '', tickEvo: te.txt + ' vs N-1', tickEvoSt: te.st + ';font-size:10.5px',
+          panier: r._panier != null ? r._panier.toFixed(2).replace('.', ',') + ' €' : '', panEvo: pe.txt + ' vs N-1', panEvoSt: pe.st + ';font-size:10.5px' }; });
 
       // --- trois tableaux annuels (une colonne par mois), servis par l'API :
       // clients/jour, ticket moyen, articles par ticket. Lecture paresseuse.
@@ -1116,7 +1116,7 @@ class App {
       if (!anz) { setTimeout(() => this.mgAnCharge(), 0); }
       const ad = anz && anz.d;
       const nMois = ad ? ad.moisMax : 0;
-      const fN = (v, dec) => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      const fN = (v, dec) => v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
       // Le CHIFFRE se colore (pas la cellule) selon son écart à la moyenne
       // réseau du mois, par paliers : +5 % vert clair, +10 % vert foncé,
       // +20 % doré ; −5 % orange, −10 % rouge, −20 % rouge vif. Entre −5 et
@@ -1191,7 +1191,7 @@ class App {
       let mn = Infinity, mx = -Infinity;
       if (metric === 'ca') for (const s of this.open()) for (const r of s.perf[year]) if (r.ca != null){ mn = Math.min(mn, r.ca); mx = Math.max(mx, r.ca); }
       const cellBase = 'border-radius:5px;min-height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;cursor:default;';
-      const mkCell = (nomM, mi, ca, caT, theorique) => { let st = cellBase, txt = '—';
+      const mkCell = (nomM, mi, ca, caT, theorique) => { let st = cellBase, txt = '';
         if (ca == null){ st += 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
         else if (metric === 'ca'){ const t = (ca - mn) / (mx - mn || 1); st += 'background:' + this.mix('#F7F2EA', '#8D1D2C', t) + ';color:' + (t > 0.55 ? '#fff' : '#222'); txt = Math.round(ca / 1000) + 'k'; }
         else if (!caT && !theorique) {
@@ -1239,26 +1239,26 @@ class App {
           magasin: dt.nomM,
           sous: src ? 'objectif : ' + src : 'aucun objectif encodé pour ce mois',
           lignes: [
-            { l: 'Budget validé', v: dt.caT ? this.fE(dt.caT) : '—',
+            { l: 'Budget validé', v: dt.caT ? this.fE(dt.caT) : '',
               aide: dt.caT ? '' : 'non encodé pour ce mois' },
-            { l: 'CA théorique (étude de marché)', v: dt.theo ? this.fE(dt.theo) : '—',
+            { l: 'CA théorique (étude de marché)', v: dt.theo ? this.fE(dt.theo) : '',
               aide: dt.theo ? '' : 'aucune étude projetée sur ce mois' },
-            { l: 'Réel encaissé', v: dt.ca != null ? this.fE(dt.ca) : '—',
+            { l: 'Réel encaissé', v: dt.ca != null ? this.fE(dt.ca) : '',
               aide: dt.ca == null ? 'mois sans remontée de caisse' : '' },
           ],
-          ecart: ecart == null ? '—' : (ecart >= 0 ? '+' : '−') + this.fE(Math.abs(ecart)),
+          ecart: ecart == null ? '' : (ecart >= 0 ? '+' : '−') + this.fE(Math.abs(ecart)),
           ecartSt: 'font-weight:600;color:' + (ecart == null ? 'var(--color-text-muted)' : (ecart >= 0 ? '#2d7a3e' : '#8D1D2C')),
-          att: att == null ? '—' : Math.round(att * 100) + ' %',
+          att: att == null ? '' : Math.round(att * 100) + ' %',
           attSt: 'font-weight:600;color:' + (att == null ? 'var(--color-text-muted)'
             : (att >= 1 ? '#8a6a10' : (att >= 0.95 ? '#8a5a13' : (att >= 0.9 ? '#C0182B' : (att >= 0.85 ? '#7E1220' : '#151515'))))),
-          cibleTxt: cible ? this.fE(cible) : '—',
+          cibleTxt: cible ? this.fE(cible) : '',
           close: () => this.setState({ hmDet: null }),
         };
       })() : null;
       common.hmDetail = h
-        ? (h.nomM + ' — ' + M.MOIS[h.mi] + ' ' + year + ' : CA ' + (h.ca != null ? this.fE(h.ca) : '—')
+        ? (h.nomM + ' — ' + M.MOIS[h.mi] + ' ' + year + ' : CA ' + (h.ca != null ? this.fE(h.ca) : '')
           + (cibleH ? ' · objectif ' + this.fE(cibleH) + (h.caT ? '' : ' (théorique — budget non encodé)')
-              + ' · écart ' + (h.ca != null ? this.fE(h.ca - cibleH) + ' (' + this.fP(h.ca / cibleH - 1) + ')' : '—')
+              + ' · écart ' + (h.ca != null ? this.fE(h.ca - cibleH) + ' (' + this.fP(h.ca / cibleH - 1) + ')' : '')
             : ' · aucun objectif encodé pour ce mois'))
         : 'Survolez une cellule pour le détail (magasin, mois, CA, objectif, écart).';
     }
@@ -1285,14 +1285,14 @@ class App {
         const rows = this.open().map(s => { const cible = s.perf[E].reduce((a, r) => a + cibleDe(r), 0);
           let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += cibleDe(s.perf[E][m]); }
           reelT += reel; prorataT += pro; cibleT += cible; const att = pro > 0 ? reel / pro : null;
-          const t = att == null ? { txt: '—', st: 'color:var(--color-text-muted)' } : this.trend(att, 1);
+          const t = att == null ? { txt: '', st: 'color:var(--color-text-muted)' } : this.trend(att, 1);
           // D'où vient la cible : validée, ou reprise de l'étude. Les deux ne
           // se valent pas, et la ligne doit pouvoir le dire.
           const nBud = s.perf[E].filter(r => r.caT).length;
-          return { nom: s.nom, cible: cible > 0 ? this.fK(cible) : '—',
+          return { nom: s.nom, cible: cible > 0 ? this.fK(cible) : '',
             source: nBud === 12 ? '' : (nBud > 0 ? nBud + ' mois validés, le reste théorique' : 'théorique'),
-            reel: this.fK(reel), prorata: pro > 0 ? this.fK(pro) : '—', ecart: t.txt, ecartSt: t.st,
-            att: att == null ? '—' : this.fP(att, 0), attSt: att == null ? 'color:var(--color-text-muted)' : this.pill(att), _att: att || 0,
+            reel: this.fK(reel), prorata: pro > 0 ? this.fK(pro) : '', ecart: t.txt, ecartSt: t.st,
+            att: att == null ? '' : this.fP(att, 0), attSt: att == null ? 'color:var(--color-text-muted)' : this.pill(att), _att: att || 0,
             goBudget: () => this.setState({ bStore: s.id, screen: 'budget' }) }; });
         rows.sort((a, b) => b._att - a._att);
         common.objRows = rows;
@@ -1438,7 +1438,7 @@ class App {
         budgetTot: this.fE(bt), reelTot: this.fE(c),
         ecartTxt: dep > 0 ? 'Dépassement de budget : +' + this.fE(dep) + ' (+' + this.fP(dep / opP.budget, 0) + ')' : 'Sous le budget : ' + this.fE(dep) + ' (' + this.fP(c / opP.budget, 0) + ' consommé)',
         ecartSt: 'margin-top:6px;font-size:12px;font-weight:500;padding:8px 12px;border-radius:8px;' + (dep > 0 ? 'background:rgba(141,29,44,0.08);color:#8D1D2C' : 'background:rgba(45,122,62,0.08);color:#2d7a3e'),
-        roi: roi == null ? '—' : '+' + this.fK(roi), roiCl: roi != null && roi > 0 ? '#2d7a3e' : 'var(--color-text)',
+        roi: roi == null ? '' : '+' + this.fK(roi), roiCl: roi != null && roi > 0 ? '#2d7a3e' : 'var(--color-text)',
         roiPct: roi == null ? 'valeur non chiffrée' : '+' + this.fP(roi / c, 0), kpis: opP.kpis.join(' · ') };
       common.closeProj = () => this.setState({ openProjId: null });
       common.deleteProj = () => {
@@ -1463,7 +1463,7 @@ class App {
     common.bExercice = this.meta.exercice;
     common.bCumMois = this.moisLabel();
     common.bEncodes = (bud.moisEncodes || 0) + ' / ' + (bud.moisTotal || 12);
-    common.bDernier = bud.dernierEncodage ? this.fD(bud.dernierEncodage) + '/' + bud.dernierEncodage.slice(0, 4) : '—';
+    common.bDernier = bud.dernierEncodage ? this.fD(bud.dernierEncodage) + '/' + bud.dernierEncodage.slice(0, 4) : '';
     common.bStore = st.id;
     common.setBStore = e => this.setState({ bStore: e.target.value });
     common.bStoreOpts = this.open().map(x => ({ id: x.id, nom: x.nom }));
@@ -1526,10 +1526,10 @@ class App {
     common.bMoisCols = M.MOIS.map((nom, i) => ({ nom, st: i <= 6 ? 'color:var(--color-text);font-weight:500' : 'color:var(--color-text-muted)' }));
     // Zéro n'est pas une valeur ici : un mois budgété à 0 € n'existe pas en
     // boutique, c'est un mois qu'on n'a pas encodé. On l'affiche comme tel.
-    const fn = v => (v == null || v === 0) ? '—' : Math.round(v).toLocaleString('fr-BE');
+    const fn = v => (v == null || v === 0) ? '' : Math.round(v).toLocaleString('fr-BE');
     common.bHasTheoChart = !!theoC2;
     common.bLigneTheo = theoC2 ? theoC2.map(v => fn(v)) : [];
-    common.bTotTheo = theoC2 ? fn(theoAnC) : '—';
+    common.bTotTheo = theoC2 ? fn(theoAnC) : '';
     common.bLigneBud = Pc.map(r => fn(r.caT));
     common.bLigneReel = Pc.map(r => fn(r.ca));
     const ecSt = v => v == null ? 'padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)' : 'padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + col(v);
@@ -1539,7 +1539,7 @@ class App {
     // n'y avait rien à battre. Zéro compte donc comme une absence, ici aussi.
     const ecPair = (a, b) => Pc.map((r, i) => { const av = a(r, i), bv = b(r, i);
       const v = (av == null || bv == null || bv === 0) ? null : av - bv;
-      return { txt: v == null ? '—' : sg(v).replace(' €', ''), st: ecSt(v),
+      return { txt: v == null ? '' : sg(v).replace(' €', ''), st: ecSt(v),
         pct: v == null ? '' : sgp(av / bv - 1), pctSt: pctSt(v) }; });
     common.bLigneEc = ecPair(r => r.ca, r => r.caT);
     common.bEcTheo = theoC2 ? ecPair(r => r.ca, (r, i) => theoC2[i]) : [];
@@ -1594,23 +1594,23 @@ class App {
       let tot = 0, totCa = 0;
       const cells = Pc.map((r, i) => { const v = monthCharge(d, i);
         if (v != null){ tot += v; totCa += r.ca; }
-        return { txt: v == null ? '—' : fn(v), pct: v == null ? '' : this.fP(v / r.ca, 1),
+        return { txt: v == null ? '' : fn(v), pct: v == null ? '' : this.fP(v / r.ca, 1),
           st: 'padding:9px 6px;text-align:right;white-space:nowrap;' + (v == null ? 'color:var(--color-text-muted)' : '') };
       });
-      return { nom: d.poste, lev: d.levier, cells, tot: fn(tot), totPct: totCa ? this.fP(tot / totCa, 1) : '—' };
+      return { nom: d.poste, lev: d.levier, cells, tot: fn(tot), totPct: totCa ? this.fP(tot / totCa, 1) : '' };
     });
     const chTotM = Pc.map(() => 0); let chTotAll = 0, chTotCa = 0;
     Pc.forEach((r, i) => { let v = null;
       chDefs.forEach(d => { const x2 = monthCharge(d, i); if (x2 != null) v = (v || 0) + x2; });
       chTotM[i] = v; if (v != null){ chTotAll += v; chTotCa += r.ca; } });
-    common.bChTotRow = chTotM.map((v, i) => ({ txt: v == null ? '—' : fn(v), pct: v == null ? '' : this.fP(v / Pc[i].ca, 1),
+    common.bChTotRow = chTotM.map((v, i) => ({ txt: v == null ? '' : fn(v), pct: v == null ? '' : this.fP(v / Pc[i].ca, 1),
       st: 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;' + (v == null ? 'color:var(--color-text-muted)' : '') }));
-    common.bChTotAll = fn(chTotAll); common.bChTotAllPct = chTotCa ? this.fP(chTotAll / chTotCa, 1) : '—';
+    common.bChTotAll = fn(chTotAll); common.bChTotAllPct = chTotCa ? this.fP(chTotAll / chTotCa, 1) : '';
     common.bMargeRow = chTotM.map((v, i) => { const ca = Pc[i].ca;
       const m = v == null || ca == null ? null : ca - v;
-      return { txt: m == null ? '—' : fn(m), pct: m == null ? '' : this.fP(m / ca, 1),
+      return { txt: m == null ? '' : fn(m), pct: m == null ? '' : this.fP(m / ca, 1),
         st: 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (m == null ? 'var(--color-text-muted)' : col(m)) }; });
-    common.bMargeTot = fn(chTotCa - chTotAll); common.bMargeTotPct = chTotCa ? this.fP((chTotCa - chTotAll) / chTotCa, 1) : '—';
+    common.bMargeTot = fn(chTotCa - chTotAll); common.bMargeTotPct = chTotCa ? this.fP((chTotCa - chTotAll) / chTotCa, 1) : '';
 
     let mgTotRes = 0, ecTotRes = 0, resReel = 0, resBud = 0, resTheo = 0;
     const sgK = v => (v >= 0 ? '+' : '−') + this.fK(Math.abs(v));
@@ -1621,27 +1621,27 @@ class App {
       mgTotRes += mq; ecTotRes += ecB; resReel += r7; resBud += b7; resTheo += (t7 || 0);
       return { nom: x2.s.nom, zone: x2.s.zone,
         rowSt: 'border-top:0.5px solid var(--color-border-tertiary);background:' + (x2.s.id === st.id ? 'var(--color-background-secondary)' : 'transparent'),
-        reel: this.fK(r7), budget: this.fK(b7), theo: t7 == null ? '—' : this.fK(t7),
+        reel: this.fK(r7), budget: this.fK(b7), theo: t7 == null ? '' : this.fK(t7),
         ecB: sgK(ecB), ecBSt: 'padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + col(ecB),
         ecBP: sgp(r7 / b7 - 1),
-        ecT: ecT == null ? '—' : sgK(ecT), ecTP: ecT == null ? '' : sgp(r7 / t7 - 1),
-        real: t7 == null ? '—' : this.fP(r7 / t7, 0),
+        ecT: ecT == null ? '' : sgK(ecT), ecTP: ecT == null ? '' : sgp(r7 / t7 - 1),
+        real: t7 == null ? '' : this.fP(r7 / t7, 0),
         realSt: 'padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (t7 == null ? 'var(--color-text-muted)' : col(r7 - t7)),
         ecTSt: 'padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (ecT == null ? 'var(--color-text-muted)' : col(ecT)),
-        mq: mq ? this.fK(mq) : '—',
+        mq: mq ? this.fK(mq) : '',
         mqPct: mq && t7 ? this.fP(mq / t7, 1) + ' du théorique' : '',
         mqSt: 'padding:9px 6px 9px 14px;text-align:right;white-space:nowrap;font-weight:500;border-left:0.5px solid var(--color-border-tertiary);color:' + (mq ? 'var(--pkg-abricot)' : 'var(--color-text-muted)'),
         barSt: 'display:block;height:5px;border-radius:999px;background:var(--pkg-abricot);width:' + (t7 ? Math.min(100, Math.round(100 * mq / t7)) : 0) + '%',
         select: () => this.setState({ bStore: x2.s.id }) }; });
-    common.bResReal = resTheo ? this.fP(resReel / resTheo, 0) : '—';
+    common.bResReal = resTheo ? this.fP(resReel / resTheo, 0) : '';
     common.bResRealSt = 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (resTheo ? col(resReel - resTheo) : 'var(--color-text-muted)');
     common.bResReel = this.fK(resReel); common.bResBud = this.fK(resBud); common.bResTheo = this.fK(resTheo);
     common.bMagTotEc = sgK(ecTotRes); common.bMagTotEcP = sgp(resReel / resBud - 1);
     common.bMagTotEcSt = 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + col(ecTotRes);
     const ecTRes = resTheo ? resReel - resTheo : null;
-    common.bMagTotEcT = ecTRes == null ? '—' : sgK(ecTRes); common.bMagTotEcTP = ecTRes == null ? '' : sgp(resReel / resTheo - 1);
+    common.bMagTotEcT = ecTRes == null ? '' : sgK(ecTRes); common.bMagTotEcTP = ecTRes == null ? '' : sgp(resReel / resTheo - 1);
     common.bMagTotEcTSt = 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (ecTRes == null ? 'var(--color-text-muted)' : col(ecTRes));
-    common.bMagTotMq = mgTotRes ? this.fK(mgTotRes) : '—';
+    common.bMagTotMq = mgTotRes ? this.fK(mgTotRes) : '';
     common.bMagTotMqPct = mgTotRes && resTheo ? this.fP(mgTotRes / resTheo, 1) + ' du théorique' : '';
     common.bMagNote = 'Manque à gagner = part du CA théorique de l’étude de marché non réalisée sur les 7 mois encodés, magasin par magasin. Total réseau : ' + this.fK(mgTotRes) + '.';
   }
@@ -1699,24 +1699,24 @@ class App {
       const attAtt = (attendu != null && cible) ? Math.round(100 * attendu / cible) : null;
       return {
         nom: l.nom,
-        budget: l.budgetPeriode != null ? this.fE(l.budgetPeriode) : '—',
+        budget: l.budgetPeriode != null ? this.fE(l.budgetPeriode) : '',
         // L'effet attendu, terme par terme — un total sans ses termes ne se
         // discute pas.
-        panier: l.panier != null ? this.fEd(l.panier) : '—',
+        panier: l.panier != null ? this.fEd(l.panier) : '',
         panierRepli: l.baseSource === 'repli',
         plus: l.clientsJourPlus != null
-          ? (l.clientsJourPlus >= 0 ? '+' : '−') + Math.abs(l.clientsJourPlus).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—',
+          ? (l.clientsJourPlus >= 0 ? '+' : '−') + Math.abs(l.clientsJourPlus).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '',
         // Le nombre de CLIENTS sur la période : c'est ce qu'on annonce en
         // boutique. « 145 par jour » ne se retient pas, « 4 350 en septembre »
         // si — et l'écart entre les deux colonnes est ce que la campagne doit
         // aller chercher.
-        clientsA1: l.clientsA1 != null ? l.clientsA1.toLocaleString('fr-BE') : '—',
+        clientsA1: l.clientsA1 != null ? l.clientsA1.toLocaleString('fr-BE') : '',
         clientsA1Note: l.clientsA1Source === 'repli' ? '3 derniers mois' : '',
-        clientsPrevus: l.clientsPrevus != null ? l.clientsPrevus.toLocaleString('fr-BE') : '—',
-        base: l.base != null ? this.fE(l.base) : '—',
+        clientsPrevus: l.clientsPrevus != null ? l.clientsPrevus.toLocaleString('fr-BE') : '',
+        base: l.base != null ? this.fE(l.base) : '',
         baseNote: l.baseSource === 'repli' ? '3 derniers mois' : '',
-        gain: l.gain != null ? '+' + this.fE(l.gain) : '—',
-        attendu: attendu != null ? this.fE(attendu) : '—',
+        gain: l.gain != null ? '+' + this.fE(l.gain) : '',
+        attendu: attendu != null ? this.fE(attendu) : '',
         attAtt: attAtt == null ? '' : attAtt + ' %',
         attAttSt: attAtt == null ? 'color:var(--color-text-muted)'
           : (attAtt >= 100 ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C')
@@ -1727,7 +1727,7 @@ class App {
           this.setState(s2 => ({ bxcDraft: Object.assign({}, s2.bxcDraft, { [cle(l.shopId)]: v }) }));
           this.autoEnreg('bxc' + (d.campagne || {}).id, () => this.bxcEcrire(d.campagne.id)); },
         pct: pct == null ? '' : (pct >= 0 ? '+' : '−') + String(Math.abs(pct)).replace('.', ',') + ' %',
-        realise: l.realise != null ? this.fE(l.realise) : '—',
+        realise: l.realise != null ? this.fE(l.realise) : '',
         ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
         ecartCol: ec == null ? 'var(--color-text-muted)' : (ec >= 0 ? '#2d7a3e' : '#8D1D2C'),
         atteinte: att == null ? '' : att + ' %',
@@ -1758,13 +1758,13 @@ class App {
       };
     });
     common.bxcEffet = {
-      base: ef.base != null ? this.fE(ef.base) : '—',
-      gain: ef.gain != null ? '+' + this.fE(ef.gain) : '—',
-      attendu: ef.attendu != null ? this.fE(ef.attendu) : '—',
-      objectif: tB ? this.fE(tB) : '—',
-      clientsA1: ef.clientsA1 != null ? ef.clientsA1.toLocaleString('fr-BE') : '—',
-      clientsPrevus: ef.clientsPrevus != null ? ef.clientsPrevus.toLocaleString('fr-BE') : '—',
-      pct: ef.pct != null ? (ef.pct >= 0 ? '+' : '−') + Math.abs(ef.pct) + ' %' : '—',
+      base: ef.base != null ? this.fE(ef.base) : '',
+      gain: ef.gain != null ? '+' + this.fE(ef.gain) : '',
+      attendu: ef.attendu != null ? this.fE(ef.attendu) : '',
+      objectif: tB ? this.fE(tB) : '',
+      clientsA1: ef.clientsA1 != null ? ef.clientsA1.toLocaleString('fr-BE') : '',
+      clientsPrevus: ef.clientsPrevus != null ? ef.clientsPrevus.toLocaleString('fr-BE') : '',
+      pct: ef.pct != null ? (ef.pct >= 0 ? '+' : '−') + Math.abs(ef.pct) + ' %' : '',
       jours: ef.jours || 0,
       note: 'Panier moyen des 3 derniers mois clos'
         + (ef.panierDu ? ' (' + this.fD(ef.panierDu) + ' → ' + this.fD(ef.panierAu) + ')' : '')
@@ -1772,9 +1772,9 @@ class App {
         + (ef.jours || 0) + ' jours de la campagne — pas une prévision de saison.',
       sansBase: ef.sansBase || 0,
     };
-    common.bxcTotBudget = tB ? this.fE(tB) : '—';
-    common.bxcTotObjectif = tO ? this.fE(tO) : '—';
-    common.bxcTotRealise = aucunR ? '—' : this.fE(tR);
+    common.bxcTotBudget = tB ? this.fE(tB) : '';
+    common.bxcTotObjectif = tO ? this.fE(tO) : '';
+    common.bxcTotRealise = aucunR ? '' : this.fE(tR);
     common.bxcTotEcart = (!aucunR && tO) ? ((tR - tO >= 0 ? '+' : '−') + this.fE(Math.abs(tR - tO))) : '';
     common.bxcTotEcartCol = (tR - tO) >= 0 ? '#2d7a3e' : '#8D1D2C';
     common.bxcTotPct = tO && tB ? ((tO / tB - 1) >= 0 ? '+' : '−') + this.fP(Math.abs(tO / tB - 1), 1) : '';
@@ -1878,7 +1878,7 @@ class App {
     common.encCaTot = this.fE(caTot);
     common.encTheoTot = this.fE(theoTot);
     const dTheo = theoTot ? caTot - theoTot : null;
-    common.encTheoDelta = dTheo == null ? '—' : (dTheo >= 0 ? '+' : '−') + this.fE(Math.abs(dTheo)) + ' (' + (dTheo >= 0 ? '+' : '−') + this.fP(Math.abs(caTot / theoTot - 1), 1) + ')';
+    common.encTheoDelta = dTheo == null ? '' : (dTheo >= 0 ? '+' : '−') + this.fE(Math.abs(dTheo)) + ' (' + (dTheo >= 0 ? '+' : '−') + this.fP(Math.abs(caTot / theoTot - 1), 1) + ')';
     common.encTheoDeltaSt = 'font-size:22px;font-weight:500;color:' + (dTheo == null ? 'var(--color-text-muted)' : dTheo >= 0 ? '#2d7a3e' : '#8D1D2C');
     const inputSt = 'width:100%;font-family:var(--font-ui);font-size:13px;text-align:right;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)';
     common.encInputSt = inputSt;
@@ -2001,7 +2001,7 @@ class App {
     // la troisième et la première qui dit si la charge tient.
     const reelMois = P.filter(r => r.ca != null && r.ca > 0);
     const caReel = reelMois.reduce((a, r) => a + (r.ca || 0), 0);
-    common.encReelTot = caReel ? this.fE(caReel) : '—';
+    common.encReelTot = caReel ? this.fE(caReel) : '';
     common.encReelMois = reelMois.length;
     common.encReelNote = reelMois.length
       ? 'Réel encaissé sur ' + reelMois.length + ' mois — les euros de la colonne « réel » portent sur cette période, pas sur l’année.'
@@ -2122,7 +2122,7 @@ class App {
         valeur: v, set: setR('ch' + i), valeurT: vt, setT: setR('cht' + i),
         montant: this.fE(caTot * num(v) / 100), montantT: this.fE(theoTot * num(vt) / 100),
         // Le réel ne s'invente pas : sans mois encaissé, la case reste vide.
-        montantR: caReel ? this.fE(caReel * num(v) / 100) : '—',
+        montantR: caReel ? this.fE(caReel * num(v) / 100) : '',
         ecart: (ec >= 0 ? '+' : '−') + pc(Math.abs(ec)).replace(' %', ' pt'),
         ecartSt: 'padding:9px 0 9px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (Math.abs(ec) < 0.05 ? 'var(--color-text-muted)' : ec > 0 ? '#8D1D2C' : '#2d7a3e'),
         retirer: () => { const l = lignes.slice(); l.splice(i, 1); poseLignes(l); },
@@ -2244,7 +2244,7 @@ class App {
           + ((opts.find(o => o.v === z.droite) || {}).nom || '(rien)'),
         pct: pc(p2), pctT: pc(pT),
         montant: this.fE(caTot * p2 / 100), montantT: this.fE(theoTot * pT / 100),
-        montantR: caReel ? this.fE(caReel * p2 / 100) : '—',
+        montantR: caReel ? this.fE(caReel * p2 / 100) : '',
         col: p2 < 0 ? '#8D1D2C' : '#2d7a3e',
         retirer: () => { const pl = paliersSrc.slice(); pl.splice(i2, 1); posePaliers(pl); } };
     };
@@ -2270,12 +2270,12 @@ class App {
     common.encChTot = this.fE(caTot * pctTot / 100); common.encChTotT = this.fE(theoTot * pctTotT / 100);
     // Ce que les charges pèsent sur ce qui est RÉELLEMENT rentré : sans mois
     // encaissé, la case reste vide — un zéro se lirait comme « rien à payer ».
-    common.encChTotR = caReel ? this.fE(caReel * pctTot / 100) : '—';
+    common.encChTotR = caReel ? this.fE(caReel * pctTot / 100) : '';
     const mgPct = 100 - pctTot, mgPctT = 100 - pctTotT;
     common.encMarge = this.fE(caTot * mgPct / 100);
     common.encMargePct = pc(mgPct) + ' du CA budgété';
     common.encMargeSt = 'font-size:24px;font-weight:500;line-height:1.1;color:' + (mgPct <= 0 ? '#8D1D2C' : mgPct < 12 ? '#8a5a13' : '#2d7a3e');
-    common.encMargeT = theoTot ? this.fE(theoTot * mgPctT / 100) : '—';
+    common.encMargeT = theoTot ? this.fE(theoTot * mgPctT / 100) : '';
     common.encMargePctT = theoTot ? pc(mgPctT) + ' du CA théorique' : 'CA théorique non renseigné';
     common.encAlerte = pctTot > 100 ? 'La somme des charges validées dépasse 100 % du CA : le budget est déficitaire.' : false;
 
@@ -2305,7 +2305,7 @@ class App {
       return { reel: r.ca, budget: r.caT }; };
     common.encChMagasins = magasins.map(x2 => { const ca = caMoisDe(x2);
       return { id: x2.id, nom: x2.nom,
-        ca: ca.reel != null ? this.fE(ca.reel) : (ca.budget ? this.fE(ca.budget) + ' (budget)' : '—'),
+        ca: ca.reel != null ? this.fE(ca.reel) : (ca.budget ? this.fE(ca.budget) + ' (budget)' : ''),
         sansCa: ca.reel == null && !ca.budget }; });
 
     const budDe = id2 => (D.budgets || []).find(z => z.storeId === id2) || {};
@@ -2346,7 +2346,7 @@ class App {
         totAttendu += attendu;
         const ec = String(enc).trim() === '' ? null : num(enc) - attendu;
         return { magasin: x2.id, valeur: enc, set: setCh(cleCh(x2.id, id)),
-          attendu: attendu ? this.fE(attendu) : '—',
+          attendu: attendu ? this.fE(attendu) : '',
           ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
           ecartCol: ec == null ? 'var(--color-text-muted)' : (ec > 0 ? '#8D1D2C' : '#2d7a3e') };
       });
@@ -2360,8 +2360,8 @@ class App {
     common.encChTotaux = magasins.map(x2 => { const ca = caMoisDe(x2);
       const base = ca.reel != null ? ca.reel : (ca.budget || 0);
       const vide = nMag[x2.id] === 0;
-      return { nom: x2.nom, total: vide ? '—' : this.fE(totMag[x2.id]),
-        pct: vide ? 'aucune saisie' : (base ? pc(100 * totMag[x2.id] / base) + ' du CA' : '—'),
+      return { nom: x2.nom, total: vide ? '' : this.fE(totMag[x2.id]),
+        pct: vide ? 'aucune saisie' : (base ? pc(100 * totMag[x2.id] / base) + ' du CA' : ''),
         partiel: !vide && nMag[x2.id] < common.encCharges.length
           ? nMag[x2.id] + ' / ' + common.encCharges.length + ' poste(s)' : '' }; });
     common.encChTotAttendu = this.fE(totAttendu);
@@ -2829,7 +2829,7 @@ class App {
     // euros, le trafic des clients — et « par jour » ne veut pas dire la même
     // chose qu'« au total ».
     const fmt = (v, total) => {
-      if (v == null) { return '—'; }
+      if (v == null) { return ''; }
       if (mesure === 'panier') { return this.fU(v); }
       if (mesure === 'ca') { return total ? this.fE(v) : this.fU(v); }
       return total ? Math.round(v).toLocaleString('fr-BE') : (Math.round(v * 10) / 10).toString().replace('.', ',');
@@ -2850,7 +2850,7 @@ class App {
       iDeb = j > 0 ? Math.round(j / 7) : -1;
     }
     const iFin = prem ? (prem.courbe || []).length - 1 : -1;
-    const pc = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
+    const pc = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
     const col = v => v == null ? 'var(--color-text-muted)' : (v >= 0 ? '#2d7a3e' : 'var(--color-primary)');
     const tem = d.temoin || null;
     const bruit = tem && tem.net != null ? Math.abs(tem.net) : null;
@@ -2979,25 +2979,25 @@ class App {
       : ((d.temoinLignes || []).map(l => l.nom).join(', ') || 'aucun');
     common.mesPerimNoms = enCamp.map(m => m.nom).join(', ');
 
-    const pct = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
-    const pt = v => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' pt';
+    const pct = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
+    const pt = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' pt';
     const col = v => v == null ? 'var(--color-text-muted)' : (v > 0.05 ? '#2d7a3e' : (v < -0.05 ? 'var(--color-primary)' : 'var(--color-text)'));
     const gC = (R.campagne || {}), gT = (R.temoin || {});
     const base = (gC.ref || {});
     common.mesIndics = [
       { nom: 'Trafic', detail: 'tickets / jour', src: 'caisse — par magasin, par jour',
-        base: base.ticketsJour == null ? '—' : base.ticketsJour.toLocaleString('fr-BE'),
+        base: base.ticketsJour == null ? '' : base.ticketsJour.toLocaleString('fr-BE'),
         gran: 'par magasin', cible: champ('cibleTrafic', P.cibleTrafic), unite: '%' },
       { nom: 'Panier moyen', detail: 'CA / ticket', src: 'caisse — par magasin, par jour',
-        base: base.panier == null ? '—' : this.fEd(base.panier),
+        base: base.panier == null ? '' : this.fEd(base.panier),
         gran: 'par magasin', cible: champ('ciblePanier', P.ciblePanier), unite: '%' },
       { nom: 'CA / jour', detail: 'trafic × panier', src: 'caisse — par magasin, par jour',
         base: this.fE(base.caJour), gran: 'par magasin', cible: champ('cibleCa', P.cibleCa), unite: '%' },
       { nom: 'Produits promus', detail: 'volume vendu', src: 'panel — références',
-        base: (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '—',
+        base: (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
         gran: 'réseau seulement', alerte: true, cible: champ('ciblePromo', P.ciblePromo), unite: '%' },
       { nom: 'Abonnés Facebook', detail: 'relevé manuel', src: 'saisie — 2 champs',
-        base: (d.fb || {}).avant == null ? '—' : d.fb.avant.toLocaleString('fr-BE'),
+        base: (d.fb || {}).avant == null ? '' : d.fb.avant.toLocaleString('fr-BE'),
         gran: 'par page', cible: champ('cibleFb', P.cibleFb), unite: 'abonnés' }
     ];
     common.mesCout = champ('cout', P.cout, true);
@@ -3036,18 +3036,18 @@ class App {
       netCol: col(nv), note: note || '' });
     const camp2 = gC.camp || {}, ref2 = gC.ref || {};
     common.mesTuiles = [
-      tuile('Trafic — tickets / jour', camp2.ticketsJour == null ? '—' : camp2.ticketsJour.toLocaleString('fr-BE'),
-        ref2.ticketsJour == null ? '—' : 'avant ' + ref2.ticketsJour.toLocaleString('fr-BE'),
+      tuile('Trafic — tickets / jour', camp2.ticketsJour == null ? '' : camp2.ticketsJour.toLocaleString('fr-BE'),
+        ref2.ticketsJour == null ? '' : 'avant ' + ref2.ticketsJour.toLocaleString('fr-BE'),
         R.dTrafic, R.tTrafic, R.netTrafic),
       tuile('Panier moyen', this.fEd(camp2.panier), 'avant ' + this.fEd(ref2.panier), R.dPanier, R.tPanier, R.netPanier,
         (R.netTrafic > 0 && R.netPanier < 0) ? 'la promo attire, mais dilue le ticket' : ''),
       tuile('CA / jour', this.fE(camp2.caJour), 'avant ' + this.fE(ref2.caJour), R.dCa, R.tCa, R.netCa,
         R.euros == null ? '' : 'soit ' + (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)) + ' sur la période'),
       tuile('Produits promus — volume',
-        (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.camp || 0), 0)).toLocaleString('fr-BE') + ' u' : '—',
-        (d.produits || []).length ? 'avant ' + (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '—',
+        (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.camp || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
+        (d.produits || []).length ? 'avant ' + (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
         null, null, null, 'réseau — pas de détail magasin'),
-      tuile('Abonnés Facebook', (d.fb || {}).apres == null ? '—' : d.fb.apres.toLocaleString('fr-BE'),
+      tuile('Abonnés Facebook', (d.fb || {}).apres == null ? '' : d.fb.apres.toLocaleString('fr-BE'),
         (d.fb || {}).avant == null ? 'relevé « avant » manquant' : 'avant ' + d.fb.avant.toLocaleString('fr-BE'),
         null, null, null,
         (d.fb || {}).delta == null ? '' : ((d.fb.delta >= 0 ? '+' : '−') + Math.abs(d.fb.delta) + ' abonnés'))
@@ -3091,28 +3091,28 @@ class App {
 
     common.mesLignes = (d.lignes || []).map(l => ({
       nom: l.nom,
-      trafAv: l.ref.ticketsJour == null ? '—' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      trafPd: l.camp.ticketsJour == null ? '—' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      trafAv: l.ref.ticketsJour == null ? '' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      trafPd: l.camp.ticketsJour == null ? '' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
       dTraf: pct(l.dTrafic), dTrafCol: col(l.dTrafic),
       dPan: pct(l.dPanier), dPanCol: col(l.dPanier),
       net: pct(l.netCa == null ? l.dCa : l.netCa), netCol: col(l.netCa == null ? l.dCa : l.netCa),
-      euros: l.euros == null ? '—' : (l.euros >= 0 ? '+' : '−') + this.fE(Math.abs(l.euros)),
+      euros: l.euros == null ? '' : (l.euros >= 0 ? '+' : '−') + this.fE(Math.abs(l.euros)),
       eurosCol: col(l.euros)
     }));
     common.mesTemLignes = (d.temoinLignes || []).map(l => ({
       nom: l.nom,
-      trafAv: l.ref.ticketsJour == null ? '—' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      trafPd: l.camp.ticketsJour == null ? '—' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      trafAv: l.ref.ticketsJour == null ? '' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
+      trafPd: l.camp.ticketsJour == null ? '' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
       dTraf: pct(l.dTrafic), dPan: pct(l.dPanier), dCa: pct(l.dCa)
     }));
     common.mesRenta = {
-      euros: R.euros == null ? '—' : (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)),
-      marge: R.marge == null ? '—' : this.fE(R.marge),
+      euros: R.euros == null ? '' : (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)),
+      marge: R.marge == null ? '' : this.fE(R.marge),
       margePct: (P.margePct == null ? 63 : P.margePct).toString().replace('.', ',') + ' %',
-      cout: R.cout == null ? '—' : this.fE(R.cout),
-      gain: R.gain == null ? '—' : (R.gain >= 0 ? '+' : '−') + this.fE(Math.abs(R.gain)),
+      cout: R.cout == null ? '' : this.fE(R.cout),
+      gain: R.gain == null ? '' : (R.gain >= 0 ? '+' : '−') + this.fE(Math.abs(R.gain)),
       gainCol: col(R.gain),
-      retour: R.retour == null ? '—' : R.retour.toFixed(2).replace('.', ',') + ' ×',
+      retour: R.retour == null ? '' : R.retour.toFixed(2).replace('.', ',') + ' ×',
       manque: R.cout == null ? 'coût de la campagne à saisir dans le paramétrage' : ''
     };
     common.mesRemanence = { pct: pct(R.remanence), col: col(R.remanence),
@@ -3126,11 +3126,11 @@ class App {
 
     // ── vue C : produits promus
     common.mesProduitsNote = d.produitsNote || '';
-    const pj = v => v == null ? '—' : v.toLocaleString('fr-BE');
+    const pj = v => v == null ? '' : v.toLocaleString('fr-BE');
     const maxQ = Math.max.apply(null, [1].concat((d.produits || []).map(p => Math.max(p.refJour || 0, p.campJour || 0))));
     common.mesProduits = (d.produits || []).map(p => {
       const rep = p.reponse;
-      const score = rep == null ? { t: '—', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
+      const score = rep == null ? { t: '', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
         : rep >= 25 ? { t: 'A — répond fort', st: 'background:#E6F2E9;color:#2d7a3e' }
         : rep >= 10 ? { t: 'B — répond', st: 'background:#E6F2E9;color:#2d7a3e' }
         : rep >= 2 ? { t: 'C — peu sensible', st: 'background:#FBEFE0;color:#C17A2A' }
@@ -3140,8 +3140,8 @@ class App {
       }
       return { sku: p.sku, nom: p.nom, categorie: p.categorie, source: p.source,
         ref: pj(p.ref), camp: pj(p.camp), rem: pj(p.rem), n1: pj(p.n1),
-        refJour: p.refJour == null ? '—' : p.refJour.toLocaleString('fr-BE'),
-        campJour: p.campJour == null ? '—' : p.campJour.toLocaleString('fr-BE'),
+        refJour: p.refJour == null ? '' : p.refJour.toLocaleString('fr-BE'),
+        campJour: p.campJour == null ? '' : p.campJour.toLocaleString('fr-BE'),
         reponse: pct(rep), reponseCol: col(rep),
         n1Var: pct(p.n1Var), remanence: pct(p.remanence), remanenceCol: col(p.remanence),
         score,
@@ -3287,19 +3287,19 @@ class App {
       : '';
 
     common.refLignes = lignes.slice(0, 400).map(p => ({
-      ref: String(p.ref), nom: p.nom, categorie: p.categorie || '—',
-      groupe: p.groupe || '—',
-      gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '—',
+      ref: String(p.ref), nom: p.nom, categorie: p.categorie || '',
+      groupe: p.groupe || '',
+      gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
       prix: this.fEd(p.prix), cout: this.fEd(p.mat),
       // Une marge non publiée n'est pas une marge nulle : le coût est visible,
       // la marge se tait, et la mention dit laquelle des deux on regarde.
-      marge: p.margePct == null ? (p.mat != null ? 'non fiable' : '—') : this.fP(p.margePct, 0),
+      marge: p.margePct == null ? (p.mat != null ? 'non fiable' : '') : this.fP(p.margePct, 0),
       margeC: this.echelleMarge(p.margePct == null ? null : 100 * p.margePct),
       // Marge NETTE, commission de marque déduite : c'est celle que pilote la
       // centrale d'achat, qui n'a plus d'écran catalogue propre. Deux
       // catalogues sur les mêmes 711 références finissaient par se contredire.
       commission: this.fU(p.commission),
-      margeNette: p.margeNettePct == null ? '—' : this.fP(p.margeNettePct, 0),
+      margeNette: p.margeNettePct == null ? '' : this.fP(p.margeNettePct, 0),
       margeNetteEur: this.fU(p.margeNette),
       margeNetteC: this.echelleMarge(p.margeNettePct == null ? null : 100 * p.margeNettePct),
       // Score : la note, son verdict et sa couleur — les trois ensemble, sinon
@@ -3307,7 +3307,7 @@ class App {
       score: (() => { const s = scores && scores[String(p.ref)];
         return s ? Math.round(s.score) : null; })(),
       scoreTxt: (() => { const s = scores && scores[String(p.ref)];
-        return s ? String(Math.round(s.score)) : '—'; })(),
+        return s ? String(Math.round(s.score)) : ''; })(),
       scoreVerdict: (() => { const s = scores && scores[String(p.ref)];
         return s && common.refVerdict ? common.refVerdict(s.score)[0] : ''; })(),
       scoreSt: (() => { const s = scores && scores[String(p.ref)];
@@ -3346,7 +3346,7 @@ class App {
       // le plan du comptoir, on y choisit l'emplacement sur le plan.
       planoGo: () => this.plFicheOuvrir(String(p.ref)),
       planoBtn: p.zone ? 'Modifier' : 'Attribuer',
-      dlv: p.dlv ? p.dlv + ' h' : '—',
+      dlv: p.dlv ? p.dlv + ' h' : '',
       parametre: !!p.parametre,
       // Au planogramme, la ligne ouvre la FICHE de présentation : c'est là que
       // se choisit l'emplacement, sur le plan, et non dans un formulaire où il
@@ -3449,7 +3449,7 @@ class App {
     common.prReseau = [
       { l: 'vendu', v: (r.vendu || 0).toLocaleString('fr-BE') },
       { l: 'jeté', v: (r.jete || 0).toLocaleString('fr-BE') },
-      { l: 'taux de perte', v: r.taux == null ? '—' : this.fP(r.taux, 1) },
+      { l: 'taux de perte', v: r.taux == null ? '' : this.fP(r.taux, 1) },
       { l: 'fournées déclarées', v: (r.produit || 0).toLocaleString('fr-BE') }
     ];
     const tx = t => t == null ? 'var(--color-text-muted)'
@@ -3457,7 +3457,7 @@ class App {
     common.prMagasins = (d.magasins || []).map(m => ({
       magasin: m.magasin, vendu: (m.vendu || 0).toLocaleString('fr-BE'),
       jete: (m.jete || 0).toLocaleString('fr-BE'),
-      taux: m.taux == null ? '—' : this.fP(m.taux, 1), col: tx(m.taux),
+      taux: m.taux == null ? '' : this.fP(m.taux, 1), col: tx(m.taux),
       // « Journal non tenu » n'est pas « zéro fournée » : la distinction décide
       // de ce qu'on va dire au franchisé.
       note: m.journalTenu ? '' : 'journal des fournées non tenu'
@@ -3466,11 +3466,11 @@ class App {
     common.prProduits = (d.produits || []).slice(0, 20).map(p => ({
       nom: p.nom, jete: (p.jete || 0).toLocaleString('fr-BE'),
       vendu: (p.vendu || 0).toLocaleString('fr-BE'),
-      taux: p.taux == null ? '—' : this.fP(p.taux, 1), col: tx(p.taux),
+      taux: p.taux == null ? '' : this.fP(p.taux, 1), col: tx(p.taux),
       w: Math.max(2, 100 * (p.jete || 0) / mx).toFixed(0) + '%'
     }));
     common.prMotifs = (d.motifs || []).map(m => ({
-      motif: m.motif || '—', quantite: (m.quantite || 0).toLocaleString('fr-BE'),
+      motif: m.motif || '', quantite: (m.quantite || 0).toLocaleString('fr-BE'),
       lignes: (m.lignes || 0).toLocaleString('fr-BE')
     }));
     return common;
@@ -3676,7 +3676,7 @@ class App {
             d: pt.map((q, j) => (j ? 'L' : 'M') + q.x + ' ' + q.y).join(' '),
             pts: pt.map(q => ({ x: q.x, y: q.y, t: m.nom + ' · ' + ptsC[q.i].libelle + ' : '
               + fmtM(brut[k][q.i]) + (base100 ? ' — base ' + Math.round(q.v) : '') })),
-            evo: e == null ? '—' : (e >= 0 ? '+' : '') + this.fP(e, 1),
+            evo: e == null ? '' : (e >= 0 ? '+' : '') + this.fP(e, 1),
             phase: ph,
             // Nommer la période du plus grand écart : « s'écarte » invite à
             // chercher, « s'écarte en Mai » dit où regarder.
@@ -3690,7 +3690,7 @@ class App {
             vCol: ph == null ? 'var(--color-text-muted)' : Math.abs(ph.max) <= 8 ? '#2d7a3e'
               : (Math.abs(ph.max) <= 20 ? '#B87512' : 'var(--color-primary)'),
             fin: der ? { y: der.y, xd: der.x } : null,
-            cells: ptsC.map((p, i) => ({ v: brut[k][i] == null ? '—' : fmtM(brut[k][i]) })) };
+            cells: ptsC.map((p, i) => ({ v: brut[k][i] == null ? '' : fmtM(brut[k][i]) })) };
         }).filter(s => s.pts.length);
 
         const mp = [];
@@ -3700,8 +3700,8 @@ class App {
           pts: mp.map(q => ({ x: q.x, y: q.y, t: 'Moyenne réseau · ' + ptsC[q.i].libelle + ' : '
             + fmtM(moy[q.i]) + (base100 ? ' — base ' + Math.round(q.v) : '') })),
           fin: { xd: mp[mp.length - 1].x, y: mp[mp.length - 1].y },
-          evo: evoRes == null ? '—' : (evoRes >= 0 ? '+' : '') + this.fP(evoRes, 1),
-          cells: moy.map(v => ({ v: v == null ? '—' : fmtM(v) }))
+          evo: evoRes == null ? '' : (evoRes >= 0 ? '+' : '') + this.fP(evoRes, 1),
+          cells: moy.map(v => ({ v: v == null ? '' : fmtM(v) }))
         } : null;
 
         // L'étiquette du réseau entre dans le MÊME écartement : traitée à part,
@@ -3754,9 +3754,9 @@ class App {
           : null,
         unite: euro ? '€' : 'unités',
         lignes: pts.map(p => ({ libelle: p.libelle,
-          valeur: p.valeur == null ? '—' : fmt(p.valeur),
-          n1: p.n1 == null ? '—' : fmt(p.n1),
-          delta: p.delta == null ? '—' : (p.delta >= 0 ? '+' : '') + this.fP(p.delta, 1),
+          valeur: p.valeur == null ? '' : fmt(p.valeur),
+          n1: p.n1 == null ? '' : fmt(p.n1),
+          delta: p.delta == null ? '' : (p.delta >= 0 ? '+' : '') + this.fP(p.delta, 1),
           deltaCol: p.delta == null ? 'var(--color-text-muted)'
             : (p.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
           // Un point sans valeur n'est pas un zéro : il dit pourquoi il est
@@ -3790,7 +3790,7 @@ class App {
     const p = pts[i];
     if (!p) { return false; }
     const euro = (d.unite || '') === '€';
-    const fmt = v => v == null ? '—' : (euro ? this.fE(v) : Math.round(v).toLocaleString('fr-BE') + ' u');
+    const fmt = v => v == null ? '' : (euro ? this.fE(v) : Math.round(v).toLocaleString('fr-BE') + ' u');
     const noms = {};
     (this.D.stores || []).forEach(s => { noms[String(s.id)] = s.nom; });
     const parM = p.parMagasin || {};
@@ -3802,10 +3802,10 @@ class App {
       const n1 = parN1[id] == null ? null : +parN1[id];
       const delta = (n1 == null || n1 === 0) ? null : (v - n1) / n1;
       return { id, nom: noms[id] || ('Magasin ' + id), valeur: fmt(v),
-        part: total > 0 ? this.fP(v / total, 1) : '—',
+        part: total > 0 ? this.fP(v / total, 1) : '',
         partPct: total > 0 ? (100 * v / total) : 0,
-        n1: n1 == null ? '—' : fmt(n1),
-        delta: delta == null ? '—' : (delta >= 0 ? '+' : '') + this.fP(delta, 1),
+        n1: n1 == null ? '' : fmt(n1),
+        delta: delta == null ? '' : (delta >= 0 ? '+' : '') + this.fP(delta, 1),
         deltaCol: delta == null ? 'var(--color-text-muted)' : (delta >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
         // Sans N-1, pas de comparaison : le dire plutôt que d'afficher un tiret
         // muet qu'on lirait comme une stabilité.
@@ -3822,8 +3822,8 @@ class App {
         const n1 = (q.parMagasinN1 || {})[det.shop];
         const dl = (v == null || n1 == null || +n1 === 0) ? null : (+v - +n1) / +n1;
         return { libelle: q.libelle, enCours: !!q.enCours,
-          valeur: v == null ? '—' : fmt(+v), n1: n1 == null ? '—' : fmt(+n1),
-          delta: dl == null ? '—' : (dl >= 0 ? '+' : '') + this.fP(dl, 1),
+          valeur: v == null ? '' : fmt(+v), n1: n1 == null ? '' : fmt(+n1),
+          delta: dl == null ? '' : (dl >= 0 ? '+' : '') + this.fP(dl, 1),
           deltaCol: dl == null ? 'var(--color-text-muted)' : (dl >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
           courant: q === p };
       });
@@ -3837,8 +3837,8 @@ class App {
       bornes: this.fD(p.du) + ' → ' + this.fD(p.au),
       enCours: !!p.enCours,
       mesure: d.mesure || '', unite: d.unite || '',
-      reseau: fmt(p.valeur), reseauN1: p.n1 == null ? '—' : fmt(p.n1),
-      delta: p.delta == null ? '—' : (p.delta >= 0 ? '+' : '') + this.fP(p.delta, 1),
+      reseau: fmt(p.valeur), reseauN1: p.n1 == null ? '' : fmt(p.n1),
+      delta: p.delta == null ? '' : (p.delta >= 0 ? '+' : '') + this.fP(p.delta, 1),
       deltaCol: p.delta == null ? 'var(--color-text-muted)'
         : (p.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
       mags, magsVide: !mags.length,
@@ -3896,9 +3896,9 @@ class App {
         etat: txt,
         etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
           + coul + '1f;color:' + coul,
-        succes: c2.dernierSucces ? this.fD(c2.dernierSucces.slice(0, 10)) + ' à ' + c2.dernierSucces.slice(11, 16) : '—',
-        appel: c2.dernierAppel ? this.fD(c2.dernierAppel.slice(0, 10)) + ' à ' + c2.dernierAppel.slice(11, 16) : '—',
-        passages: c2.passages ? String(c2.passages) : '—',
+        succes: c2.dernierSucces ? this.fD(c2.dernierSucces.slice(0, 10)) + ' à ' + c2.dernierSucces.slice(11, 16) : '',
+        appel: c2.dernierAppel ? this.fD(c2.dernierAppel.slice(0, 10)) + ' à ' + c2.dernierAppel.slice(11, 16) : '',
+        passages: c2.passages ? String(c2.passages) : '',
         detail: c2.erreur || c2.detail || '',
         detailSt: 'font-size:11px;line-height:1.4;text-wrap:pretty;color:' + (c2.erreur ? '#8D1D2C' : 'var(--color-text-muted)'),
       };
@@ -3943,7 +3943,7 @@ class App {
     common.frRetard = F ? (F.retardCaisse == null ? null : F.retardCaisse) : null;
     common.frAuj = F && F.aujourdhui ? F.aujourdhui : '';
     common.frSources = (F && F.sources || []).map(x => ({ table: x.table, quoi: x.quoi,
-      derniere: x.derniere || (x.erreur || '—'),
+      derniere: x.derniere || (x.erreur || ''),
       retard: x.retard == null ? '' : x.retard + ' j',
       // Deux jours de décalage sur des avis se comprend ; trente-quatre sur la
       // caisse est un écran qui ment sans le savoir.
@@ -4055,7 +4055,7 @@ class App {
         lignes.push({
           id: m.id != null ? +m.id : null,
           date: this.fD(m.movement_date), jour: m.movement_date || '', periode: cle,
-          libelle: m.label || '—',
+          libelle: m.label || '',
           sens: sort ? 'sortie' : 'entrée',
           montant: (sort ? '− ' : '+ ') + this.fU(mt),
           col: sort ? 'var(--color-primary)' : '#2d7a3e',
@@ -4084,7 +4084,7 @@ class App {
   }
   /** « 2026-08-01 » → « Août 2026 ». */
   fPeriode(cle){
-    if (!cle) { return '—'; }
+    if (!cle) { return ''; }
     const mo = ((this.M && this.M.MOIS) || [])[+cle.slice(5, 7) - 1];
     return mo ? mo + ' ' + cle.slice(0, 4) : cle;
   }
@@ -4164,7 +4164,7 @@ class App {
         totInvest: invest > 0 ? 'dont investissements ' + this.fU(invest) : '',
         // Le solde de clôture vient du calcul séquentiel de fondsMouvements :
         // c'est le même cumul que la tuile « Solde », arrêté à ce mois-là.
-        solde: t.cloture == null ? '—' : this.fU(t.cloture),
+        solde: t.cloture == null ? '' : this.fU(t.cloture),
         soldeCol: (t.cloture == null ? 0 : t.cloture) >= 0 ? '#2d7a3e' : 'var(--color-primary)',
       });
     }
@@ -4204,11 +4204,11 @@ class App {
     common.foLeviers = (f.leviers || []).map(l => {
       const dep = +l.spent_amount || 0;
       return {
-        nom: l.lever_label || l.lever_code || '—', couleur: l.color_hex || '#666666',
+        nom: l.lever_label || l.lever_code || '', couleur: l.color_hex || '#666666',
         depense: this.fU(dep),
         part: sorties > 0 ? Math.round(100 * dep / sorties) + ' % des sorties' : '',
         barre: depMax > 0 ? Math.max(0, Math.min(100, 100 * dep / depMax)) : 0,
-        roi: l.roi_value == null ? '—' : '×' + (+l.roi_value).toFixed(1).replace('.', ','),
+        roi: l.roi_value == null ? '' : '×' + (+l.roi_value).toFixed(1).replace('.', ','),
         // Un levier sans dépense n'a pas de ROI à montrer : c'est une absence,
         // pas un zéro.
         inactif: dep === 0,
@@ -4307,9 +4307,9 @@ class App {
         cell.montant = this.fU(+d2.amount || 0);
       } });
       return { nom, ville: s.city || '',
-        ca: ca == null ? '—' : this.fE(ca),
-        cellules: common.foRoyTypes.map(t => parSorte[t.nom] || { taux: '—', montant: '' }),
-        du: du != null ? this.fU(du) : '—',
+        ca: ca == null ? '' : this.fE(ca),
+        cellules: common.foRoyTypes.map(t => parSorte[t.nom] || { taux: '', montant: '' }),
+        du: du != null ? this.fU(du) : '',
         // Le bouton de la ligne : la redevance MARKETING de ce client, pour
         // le mois affiché — le libellé de l'écriture porte la sorte et le
         // montant. Déjà écrite = un rappel, pas un second bouton : le
@@ -4410,7 +4410,7 @@ class App {
     // --- frais récurrents : un modèle, autant d'échéances écrites d'un coup.
     const fr = S2.foRec || null;
     common.foRecurrences = (f.recurrences || []).map(r => ({
-      id: r.id, libelle: r.label || '—',
+      id: r.id, libelle: r.label || '',
       sens: (r.direction || '') === 'IN' ? 'entrée' : 'sortie',
       col: (r.direction || '') === 'IN' ? '#2d7a3e' : 'var(--color-primary)',
       montant: this.fU(+r.amount || 0),
@@ -4483,7 +4483,7 @@ class App {
         const d0 = new Date(c2.debut + 'T00:00:00'), f0 = new Date(c2.fin + 'T00:00:00');
         const m1 = d0.getFullYear() < annee ? 0 : d0.getMonth();
         const m2 = f0.getFullYear() > annee ? 11 : f0.getMonth();
-        return { id: c2.id, nom: c2.nom, type: c2.type || '—',
+        return { id: c2.id, nom: c2.nom, type: c2.type || '',
           couleur: c2.typeCouleur || '#8D1D2C',
           statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
           debut: this.fD(c2.debut), fin: this.fD(c2.fin),
@@ -4494,11 +4494,11 @@ class App {
 
     // --- liste des campagnes.
     common.mkCampagnes = camps.map(c2 => ({
-      id: c2.id, nom: c2.nom, type: c2.type || '—', typeCouleur: c2.typeCouleur || '#666',
+      id: c2.id, nom: c2.nom, type: c2.type || '', typeCouleur: c2.typeCouleur || '#666',
       scope: c2.scope === 'LOCALE' ? 'Locale' : 'Réseau',
       statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-      periode: (c2.debut ? this.fD(c2.debut) : '—') + ' → ' + (c2.fin ? this.fD(c2.fin) : '—'),
-      budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '—',
+      periode: (c2.debut ? this.fD(c2.debut) : '') + ' → ' + (c2.fin ? this.fD(c2.fin) : ''),
+      budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '',
       nBoutiques: c2.nBoutiques,
       editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
       note: () => this.mkNoteOuvrir(c2.id),
@@ -4534,10 +4534,10 @@ class App {
       .map(c2 => {
         const t = parTypeId[String(c2.typeId)] || {};
         return { id: c2.id, nom: c2.nom, image: imageSrc(c2.image),
-          couleur: c2.typeCouleur || '#8D1D2C', type: c2.type || '—',
-          levier: t.levier || '—',
+          couleur: c2.typeCouleur || '#8D1D2C', type: c2.type || '',
+          levier: t.levier || '',
           statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-          periode: (c2.debut ? this.fD(c2.debut) : '—') + ' → ' + (c2.fin ? this.fD(c2.fin) : '—'),
+          periode: (c2.debut ? this.fD(c2.debut) : '') + ' → ' + (c2.fin ? this.fD(c2.fin) : ''),
           // La vignette ouvre l'assistant : c'est là que tout se règle, y
           // compris pour une campagne déjà planifiée.
           ouvrir: () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); },
@@ -4603,7 +4603,7 @@ class App {
         },
         apercuMail: D2.apercuMail || '',
         sousTitre: (camp.type || '') + ' · ' + (camp.portee || '') + ' · '
-          + (camp.du ? this.fD(camp.du) : '—') + ' → ' + (camp.fin || camp.au ? this.fD(camp.au) : '—'),
+          + (camp.du ? this.fD(camp.du) : '') + ' → ' + (camp.fin || camp.au ? this.fD(camp.au) : ''),
         moteurPdf: !!D2.moteurPdf,
         // Sans moteur sur le serveur, on le DIT : le navigateur imprime le même
         // document, et personne n'attend un fichier qui ne viendra pas.
@@ -4621,12 +4621,12 @@ class App {
         // l'assistant. En lecture seule ici — ils se gèrent là où on les
         // dépose, sinon la même case se règlerait à deux endroits.
         annexes: (camp.annexes || []).filter(a => a.enMail).map(a => ({
-          nom: a.nom, type: a.type || '—', taille: a.tailleTxt,
+          nom: a.nom, type: a.type || '', taille: a.tailleTxt,
           perdu: !a.existe,
         })),
         annexesNon: (camp.annexes || []).filter(a => !a.enMail).length,
         dest: dest.map((x2, i) => ({
-          magasin: x2.magasin, franchise: x2.franchise || '—',
+          magasin: x2.magasin, franchise: x2.franchise || '',
           adresse: x2.adresse, on: !!x2.on,
           manque: !x2.adresse,
           setAdresse: e => setDest(i, { adresse: e.target.value, on: !!e.target.value }),
@@ -4721,7 +4721,7 @@ class App {
           etat: e2.type === 'envoye' ? 'Envoyée' : 'Échec',
           etatSt: 'font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;'
             + (e2.type === 'envoye' ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C'),
-          destinataire: e2.destinataire || '—', detail: e2.detail || '', sujet: e2.sujet || '',
+          destinataire: e2.destinataire || '', detail: e2.detail || '', sujet: e2.sujet || '',
         })),
         journalVide: !(D2.journal || []).length,
       });
@@ -4799,7 +4799,7 @@ class App {
     };
 
     common.mkTypes = (mk.types || []).map((t, i) => ({
-      id: t.id, nom: t.nom, code: t.code, kpi: t.kpi || '—',
+      id: t.id, nom: t.nom, code: t.code, kpi: t.kpi || '',
       description: t.description || '',
       couleur: t.couleur || '#8D1D2C',
       // Le tracé vient du serveur (colonne icon_path) ; la bibliothèque sert de
@@ -5001,8 +5001,8 @@ class App {
     const S = this.state;
     const o = this._crOpt;
     const court = nom => String(nom || '').split(' - ').pop();
-    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
     const teinte = t => t == null ? 'var(--color-text-muted)' : (t >= 25 ? '#2d7a3e' : (t >= 15 ? '#C17A2A' : '#8D1D2C'));
 
     common.crChargementOpt = o === undefined || (o === null && this._crOptEnCours);
@@ -5110,7 +5110,7 @@ class App {
       cases: l.cases.map(x => ({ v: pc(x.taux), st: x.taux == null ? 'color:#b8b2a8' : '' })),
       tauxDernier: pc(l.tauxDernier), col: teinte(l.tauxDernier),
       delta: delta(l.tauxDernier),
-      ff: l.ffDernier == null ? '—' : l.ffDernier.toLocaleString('fr-BE'),
+      ff: l.ffDernier == null ? '' : l.ffDernier.toLocaleString('fr-BE'),
       eur: eur(l.eurDernier),
       spark: spark(l.cases),
     });
@@ -5144,7 +5144,7 @@ class App {
         if (!p.length) { return ''; }
         const ff = p.reduce((t, l) => t + l.ff, 0), avec = p.reduce((t, l) => t + l.avec, 0);
         return p.length + ' personne(s) sous 10 tickets — cumulées : ' + ff + ' tickets · '
-          + avec + ' avec B · ' + (ff ? (100 * avec / ff).toFixed(1).replace('.', ',') : '—') + ' %';
+          + avec + ' avec B · ' + (ff ? (100 * avec / ff).toFixed(1).replace('.', ',') : '') + ' %';
       })(),
       sans: !det || !det.sansVendeur || !det.sansVendeur.ff ? ''
         : det.sansVendeur.ff + ' ticket(s) sans vendeur identifié — comptés au magasin, à personne d’autre.',
@@ -5164,7 +5164,7 @@ class App {
   valsCross(common){
     const d = this._cross;
     const court = nom => String(nom || '').split(' - ').pop();
-    const n1 = v => (v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
     common.cxChargement = d === undefined;
     common.cxMotif = d === null ? 'Le tableau cross-selling n’a pas pu être lu.' : '';
     if (!d) { common.cxLignes = []; return; }
@@ -5215,11 +5215,11 @@ class App {
           target: String(e.target.value || '').trim().replace(',', '.') })
         .then(() => { this._cross = undefined; this.notify('Target posée — elle vaut dès ce mois'); this.setState({}); }),
       cells: (mg.cells || []).map(c2 => ({
-        target: c2.target != null ? n1(c2.target) : '—',
+        target: c2.target != null ? n1(c2.target) : '',
         nb: c2.nb,
         vide: c2.target == null,
         eur: c2.eur || 0,
-        moyenne: c2.moyenne != null ? n1(c2.moyenne) : '—',
+        moyenne: c2.moyenne != null ? n1(c2.moyenne) : '',
         shopOk: !!c2.shopOk,
         noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · ')
           + (c2.shopOk ? ' | moyenne magasin ' + n1(c2.moyenne) + ' ≥ cible : prime magasin' : ''),
@@ -5241,9 +5241,9 @@ class App {
     const S = this.state;
     const d = (this._tv || {})[S.tvMois || ''];
     const court = nom => String(nom || '').split(' - ').pop();
-    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const nb1 = v => (v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-    const px = v => (v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €');
+    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const nb1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    const px = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
     const initiales = nom => nom.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase();
 
     // Deux sous-pages : les RÉSULTATS (podium, tops, classement, primes
@@ -5314,12 +5314,12 @@ class App {
         magasin: court(l.magasin), classable: l.classable,
         motif: l.motifHorsClassement || '',
         heures: nb1(l.heures) + ' h', ca: eur(l.ca),
-        caHeure: l.caHeure != null ? eur(l.caHeure) + ' / h' : '—',
-        coef: l.coef != null ? l.coef.toFixed(2).replace('.', ',') : '—',
-        coefCreneau: l.coefCreneau != null ? l.coefCreneau.toFixed(2).replace('.', ',') : '—',
+        caHeure: l.caHeure != null ? eur(l.caHeure) + ' / h' : '',
+        coef: l.coef != null ? l.coef.toFixed(2).replace('.', ',') : '',
+        coefCreneau: l.coefCreneau != null ? l.coefCreneau.toFixed(2).replace('.', ',') : '',
         creneauTitre: (l.partAm != null ? l.partAm + ' % de ses heures l’après-midi' : '')
           + (l.partWe != null ? ' · ' + l.partWe + ' % le week-end' : ''),
-        score: l.score != null ? eur(l.score) : '—',
+        score: l.score != null ? eur(l.score) : '',
         barre: Math.max(2, Math.round(100 * (l.score || 0) / maxScore)),
         panier: px(l.panier), lignesTicket: nb1(l.lignesTicket),
         tickets: (l.tickets || 0).toLocaleString('fr-BE'),
@@ -5364,9 +5364,9 @@ class App {
       mois: !f ? [] : (f.mois || []).slice().reverse().map(m => ({
         lib: m.lib + (m.encours ? ' (en cours)' : ''),
         heures: nb1(m.heures) + ' h', ca: eur(m.ca),
-        score: m.score != null ? eur(m.score) : '—',
-        caHeure: m.caHeure != null ? eur(m.caHeure) + ' / h' : '—',
-        rang: m.rang != null ? m.rang + ' / ' + m.sur : '—',
+        score: m.score != null ? eur(m.score) : '',
+        caHeure: m.caHeure != null ? eur(m.caHeure) + ' / h' : '',
+        rang: m.rang != null ? m.rang + ' / ' + m.sur : '',
         panier: px(m.panier), lignesTicket: nb1(m.lignesTicket),
         prime: m.prime || '',
       })),
@@ -5377,10 +5377,10 @@ class App {
     const S = this.state;
     const d = (this._anm || {})[(S.anmShop || '') + '|' + (S.anmMois || 6)];
     const court = nom => String(nom || '').split(' - ').pop();
-    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const nb = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
-    const px = v => (v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €');
+    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
+    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
+    const px = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
 
     common.anmChargement = d === undefined;
     common.anmMotif = d === null ? 'L’analyse n’a pas pu être calculée.' : ((d && d.motif) || '');
@@ -5430,7 +5430,7 @@ class App {
       delta: (g.delta > 0 ? '+ ' : '− ') + Math.abs(g.delta).toFixed(1).replace('.', ',') + ' pts',
       retrait: g.potMois > 0, force: g.force,
       potMois: g.potMois > 0 ? eur(g.potMois) : (g.force ? 'sa force' : 'au niveau'),
-      potAn: g.potMois > 0 ? eur(g.potAn) : '—',
+      potAn: g.potMois > 0 ? eur(g.potAn) : '',
       // Les deux barres partagent l'échelle de la plus grande part de la
       // liste : comparer des barres normalisées chacune sur soi ne dit rien.
       barre: g.part, barreReseau: g.partReseau,
@@ -5497,9 +5497,9 @@ class App {
     const mois = S.mqMois || 6;
     const d = (this._manque || {})[mois + '|' + (S.mqGroupe || '')];
     const court = nom => String(nom || '').split(' - ').pop();
-    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const nb = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
+    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
 
     common.mqChargement = d === undefined;
     common.mqMotif = d === null ? 'Le manque à gagner n’a pas pu être calculé.' : ((d && d.motif) || '');
@@ -5537,7 +5537,7 @@ class App {
       // manque : il reste vide, comme partout ailleurs dans le cockpit.
       mois: (m.mois || []).map(x => x.charge
         ? { v: val(x), st: '' }
-        : { v: '—', st: 'color:#b8b2a8', sub: 'non chargé' }),
+        : { v: '', st: 'color:#b8b2a8', sub: 'non chargé' }),
       total: val(m), part: pc(m.part), ca: eur(m.ca), refs: m.refs,
       barre: Math.max(2, Math.round(100 * brut(m) / maxShop)),
       fort: m.part != null && m.part >= 8,
@@ -5549,7 +5549,7 @@ class App {
           nom: t.nom, cat: t.categorie, groupe: t.groupe,
           vendeurs: t.vendeurs + (t.vendeurs > 1 ? ' magasins' : ' magasin'),
           unitesMois: nb(t.unitesMois) + ' u',
-          prix: t.prix ? t.prix.toFixed(2).replace('.', ',') + ' €' : '—',
+          prix: t.prix ? t.prix.toFixed(2).replace('.', ',') + ' €' : '',
           total: unite === 'unites' ? nb(t.unites) : eur(unite === 'marge' ? t.marge : t.eur),
         })),
         resteN: m.resteN, resteEur: eur(m.resteEur),
@@ -5581,8 +5581,8 @@ class App {
     const cle = mois + '|' + (S.usGroupe || '');
     const d = (this._usage || {})[cle];
     const court = nom => String(nom || '').split(' - ').pop();
-    const nb = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %');
+    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
+    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
     // Vert au-dessus de 60 %, ambre au-dessus de 40, bordeaux en dessous : les
     // mêmes paliers que le reste du cockpit.
     const teinte = p => p == null ? 'var(--color-text-muted)' : (p >= 60 ? '#2d7a3e' : (p >= 40 ? '#C17A2A' : '#8D1D2C'));
@@ -5626,7 +5626,7 @@ class App {
       mois: (m.mois || []).map(x => ({
         // Un mois en cours SANS ligne de ticket n'est pas un mois à zéro : la
         // caisse ne l'a pas encore chargé, et l'écran le dit.
-        v: (x.encours && !x.refs) ? '—' : nb(x.refs),
+        v: (x.encours && !x.refs) ? '' : nb(x.refs),
         sub: (x.encours && !x.refs) ? 'non chargé' : pc(x.taux),
         st: (x.encours && !x.refs) ? 'color:#b8b2a8' : '',
       })),
@@ -6235,9 +6235,9 @@ class App {
 
     const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
     const fE = n => this.fE(n);
-    const fPct = (n, d) => (n == null) ? '—' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
-    const fInt = n => (n == null) ? '—' : Math.round(n).toLocaleString('fr-BE');
-    const fU = n => (n == null) ? '—' : n.toFixed(2).replace('.', ',') + ' €';
+    const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
+    const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');
+    const fU = n => (n == null) ? '' : n.toFixed(2).replace('.', ',') + ' €';
     const fDelta = n => (n == null) ? '' : (n > 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + ' %';
     // Un écart de moins d'un point ne mérite pas de couleur : au jour le jour,
     // ±0,4 % est du bruit, et le colorier ferait lire une tendance.
@@ -6274,10 +6274,10 @@ class App {
     common.rjClIndispo = cl && cl.indispo ? (cl.motif || 'classement indisponible') : '';
     if (cl && !cl.indispo) {
       const R = cl.reseau || {};
-      const pct = v => v == null ? '—' : String(v).replace('.', ',') + ' %';
+      const pct = v => v == null ? '' : String(v).replace('.', ',') + ' %';
       common.rjClReseau = {
         taux: pct(R.taux),
-        detail: (R.faites == null ? '—' : R.faites) + ' faites sur ' + (R.total == null ? '—' : R.total)
+        detail: (R.faites == null ? '' : R.faites) + ' faites sur ' + (R.total == null ? '' : R.total)
           + (R.sautees ? ' · ' + R.sautees + ' sautée(s)' : '')
           + (R.ratees ? ' · ' + R.ratees + ' en échec' : ''),
         clos: (R.magasinsClos == null ? 0 : R.magasinsClos) + ' / ' + (R.magasins == null ? 0 : R.magasins) + ' journées closes',
@@ -6287,7 +6287,7 @@ class App {
         taux: pct(m.taux),
         tauxCol: m.taux == null ? 'var(--color-text-muted)' : (m.taux >= 80 ? '#2d7a3e' : (m.taux >= 50 ? '#C17A2A' : 'var(--color-primary)')),
         barre: Math.max(0, Math.min(100, m.taux == null ? 0 : m.taux)),
-        detail: (m.faites == null ? '—' : m.faites) + ' / ' + (m.total == null ? '—' : m.total)
+        detail: (m.faites == null ? '' : m.faites) + ' / ' + (m.total == null ? '' : m.total)
           + (m.sautees ? ' · ' + m.sautees + ' sautée(s)' : '')
           + (m.ratees ? ' · ' + m.ratees + ' en échec' : ''),
         // Une obligatoire manquée n'est pas un retard : elle se voit.
@@ -6321,7 +6321,7 @@ class App {
     const res = r.reseau || {};
     common.rjReseau = {
       ca: fE(res.ca), tickets: fInt(res.tickets), panier: fU(res.panier),
-      ppc: res.produitsParClient != null ? res.produitsParClient.toFixed(2).replace('.', ',') : '—',
+      ppc: res.produitsParClient != null ? res.produitsParClient.toFixed(2).replace('.', ',') : '',
       delta: fDelta(res.caDelta), deltaCoul: coulDelta(res.caDelta),
       deltaTitre: res.refCa == null ? 'aucune référence complète'
         : fE(res.refCa) + ' en moyenne sur les mêmes jours',
@@ -6329,7 +6329,7 @@ class App {
       // Réseau : la somme des objectifs CONNUS. Un magasin sans budget ne
       // compte pas pour zéro — la case le dit plutôt que de fausser le total.
       fc: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null);
-        return l.length ? fE(l.reduce((a, m2) => a + m2.objectifJour, 0)) : '—'; })(),
+        return l.length ? fE(l.reduce((a, m2) => a + m2.objectifJour, 0)) : ''; })(),
       fcPct: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null);
         if (!l.length) { return ''; }
         const o = l.reduce((a, m2) => a + m2.objectifJour, 0), c = l.reduce((a, m2) => a + (m2.ca || 0), 0);
@@ -6357,7 +6357,7 @@ class App {
         // Le « produits par client » a désormais SA colonne : le sous-titre
         // ne sert plus qu'à dire pourquoi une ligne fermée l'est.
         sousTitre: m.ouvert ? '' : (m.motif || 'sans réponse'),
-        ppc: m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') : '—',
+        ppc: m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') : '',
         ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
         // L'infobulle donne la référence en clair : un écart sans son point de
         // comparaison ne se vérifie pas.
@@ -6368,7 +6368,7 @@ class App {
         panier: fU(m.panier),
         // La colonne dit désormais l'OBJECTIF du jour et son atteinte : le coût
         // matière se lit dans le détail, l'objectif est ce qui se pilote.
-        fc: m.objectifJour == null ? '—' : fE(m.objectifJour),
+        fc: m.objectifJour == null ? '' : fE(m.objectifJour),
         fcPct: m.objectifAtteinte == null ? '' : this.fP(m.objectifAtteinte, 0),
         fcCoul: m.objectifAtteinte == null ? 'var(--color-text-muted)'
           : (m.objectifAtteinte >= 1 ? '#2d7a3e' : (m.objectifAtteinte >= 0.9 ? '#C17A2A' : 'var(--color-primary)')),
@@ -6452,7 +6452,7 @@ class App {
              + (m.objectifJourNom || 'jour') + (m.objectifJoursVus > 1 ? 's' : '') + ' de ce magasin'
              + (m.objectifProfil === 'memoire' ? ' (profil mémorisé)' : ''))
           : (fE(m.objectifMois) + ' / mois ÷ ' + fInt(m.joursOuverts) + ' j d’ouverture — historique trop court pour peser les jours'),
-        pct: m.objectifAtteinte == null ? '—' : this.fP(m.objectifAtteinte, 0),
+        pct: m.objectifAtteinte == null ? '' : this.fP(m.objectifAtteinte, 0),
         // La barre peut dépasser : on la borne à 100 % de largeur et l'excédent
         // se lit sur le chiffre, pas sur une barre qui sortirait de la carte.
         w: Math.max(0, Math.min(100, (m.objectifAtteinte || 0) * 100)).toFixed(1),
@@ -6495,7 +6495,7 @@ class App {
       kpis: [
         { l: 'Tickets', v: fInt(m.tickets), s: 'clients servis' },
         { l: 'Ticket moyen', v: fU(m.panier), s: 'réseau ' + fU(res.panier) },
-        { l: 'Produits vendus', v: fInt(m.produits), s: (m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') : '—') + ' par client' },
+        { l: 'Produits vendus', v: fInt(m.produits), s: (m.produitsParClient != null ? m.produitsParClient.toFixed(2).replace('.', ',') : '') + ' par client' },
         { l: 'Marge brute', v: fE(m.margeBrute), s: fPct(m.margeBrutePct) },
         { l: 'Résultat', v: fE(m.net), s: fPct(m.netPct) },
       ],
@@ -6550,7 +6550,7 @@ class App {
     if (!r || common.repErreur) { common.repMagasins = []; return; }
 
     const cible = r.cible, res = r.reseau || {};
-    const fN = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
+    const fN = v => v == null ? '' : v.toFixed(2).replace('.', ',');
     const fInt = v => (v == null ? 0 : v).toLocaleString('fr-BE');
 
     // --- le connecteur : son état voyage avec les données, l'écran ne devine rien
@@ -6608,7 +6608,7 @@ class App {
           const part = lus ? l.n / lus : 0;
           return {
             note: String(l.note), n: fInt(l.n),
-            pct: lus ? (part * 100).toFixed(0) + ' %' : '—',
+            pct: lus ? (part * 100).toFixed(0) + ' %' : '',
             // Une part non nulle garde au moins un filet visible : à 1 % sur
             // 200 avis, une barre à 1 px se confond avec l'absence de barre.
             jaugeSt: 'height:7px;border-radius:999px;background:' + this.COUL_ETOILE[l.note]
@@ -6815,7 +6815,7 @@ class App {
     for (let i = 0; i < nMax; i++) {
       const noms = meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean);
       common.plLignes.push({
-        nom: noms.length ? noms[0] : '—',
+        nom: noms.length ? noms[0] : '',
         cases: meubles.map(m => {
           const niv = (m.niveaux || [])[i];
           if (!niv) { return { absent: true, slots: [] }; }
@@ -6940,7 +6940,7 @@ class App {
       const items = q ? liste.filter(o => o.nom.toLowerCase().indexOf(q) >= 0) : liste;
       const exact = liste.some(o => o.nom.toLowerCase() === q);
       return {
-        val: val || '—', vide: !val, ouvert, q: saisie, quoi,
+        val: val || '', vide: !val, ouvert, q: saisie, quoi,
         ouvrir: () => this.setState({ plCbx: ouvert ? null : { slot: sl.id, quoi, q: '' } }),
         setQ: cbxQ,
         items: items.map(o => ({ id: o.id, nom: o.nom, on: o.nom === val,
@@ -6973,7 +6973,7 @@ class App {
       const juste = g && g.reste > 0
         ? this.plGrilleCalc(+nSaisi, s.largeurMm, s.hauteurMm, null) : null;
       return { id: s.id, zone: s.zone, meuble: s.meuble, niveau: s.niveau, position: s.position,
-        taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '—',
+        taille: [s.largeurMm ? s.largeurMm + ' mm' : '', s.capacite ? 'cap. ' + s.capacite : ''].filter(Boolean).join(' · ') || '',
         format: combo(s, 'format'), contenant: combo(s, 'contenant'),
         photo: occ ? photoProduit(occ.ref) : null,
         photoSet: occ ? e => this.plPhoto('ref', occ.ref, (e.target.files || [])[0]) : null,
@@ -7015,7 +7015,7 @@ class App {
               { slotId: s.id, periodes: dej.length ? dej : refPerT.map(p3 => p3.slug) })
               .then(r => { if (r && r.ok !== false) { this.plCharge(true); }
                 else { this.notify('Moment refusé — ' + ((r && r.error) || 'écriture impossible')); } }); } })) : [],
-        fronts: occ ? String(occ.fronts) : '—', libre: !occ,
+        fronts: occ ? String(occ.fronts) : '', libre: !occ,
         etat: occ ? 'occupé' : 'libre',
         vise: cible === s.id,
         ouvrir: occ ? () => this.plFicheOuvrir(occ.ref) : () => this.setState({ plCible: cible === s.id ? null : s.id }) };
@@ -7468,9 +7468,9 @@ class App {
       // qu'on a compris, pas un formulaire qu'on a rempli de mémoire.
       recap: [
         { k: 'Meuble', v: (w.nom || '(sans nom)') + (w.type ? ' — ' + w.type : '') },
-        { k: 'Zone', v: zone ? zone.nom : '—' },
-        { k: 'Température', v: w.temperature || '—' },
-        { k: 'Présentation', v: w.presentation || '—' },
+        { k: 'Zone', v: zone ? zone.nom : '' },
+        { k: 'Température', v: w.temperature || '' },
+        { k: 'Présentation', v: w.presentation || '' },
         { k: 'Moments de la journée', v: (() => { const ref = r.periodes || [];
           const l = (w.periodes || []);
           if (!ref.length || l.length === ref.length) { return 'toute la journée'; }
@@ -7650,7 +7650,7 @@ class App {
     const nMax = meubles.reduce((a, m) => Math.max(a, (m.niveaux || []).length), 0);
     const lignes = [];
     for (let i = 0; i < nMax; i++) {
-      lignes.push({ nom: (meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean)[0]) || '—',
+      lignes.push({ nom: (meubles.map(m => ((m.niveaux || [])[i] || {}).nom).filter(Boolean)[0]) || '',
         cases: meubles.map(m => { const niv = (m.niveaux || [])[i];
           if (!niv) { return { absent: true, slots: [] }; }
           return { absent: false, slots: (niv.slots || []).map(s => {
@@ -7703,7 +7703,7 @@ class App {
       noteGrav: n.gravite != null ? n.gravite : ((d.note || {}).gravite || 3),
       noteDu: n.du != null ? n.du : ((d.note || {}).du || ''),
       noteAu: n.au != null ? n.au : ((d.note || {}).au || ''),
-      noteMaj: (d.note || {}).majLe ? ('modifiée par ' + ((d.note || {}).auteur || '—') + ', ' + (d.note || {}).majLe) : '',
+      noteMaj: (d.note || {}).majLe ? ('modifiée par ' + ((d.note || {}).auteur || '') + ', ' + (d.note || {}).majLe) : '',
       noteSet: k => e => { const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         this.setState(s2 => ({ plFiche: Object.assign({}, s2.plFiche,
           { note: Object.assign({}, s2.plFiche.note, { [k]: v }) }) }));
@@ -8193,13 +8193,13 @@ class App {
       common.caRien = 'Aucun fournisseur au référentiel du cockpit — la table existe, elle n’est pas remplie.';
       common.caCols = ['Fournisseur', 'Périmètre', 'Courriel', 'RFA %', 'Redevance centrale %'];
       common.caRows = (d.fournisseurs || []).map(f => ({ cells: [
-        { t: f.nom }, { t: f.perimetre || '—', mut: true }, { t: f.email || '—', mut: true },
+        { t: f.nom }, { t: f.perimetre || '', mut: true }, { t: f.email || '', mut: true },
         { t: 'manque API', vide: true }, { t: 'manque API', vide: true } ] }));
     } else if (ecr === 'caDemande') {
       common.caCols = ['Demande', 'Fournisseur', 'Base', 'Période', 'Quantité', 'Prix cible', 'Statut'];
       common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: '#' + x.id }, { t: x.fournisseur || '—' }, { t: x.base, mut: true },
-        { t: (x.du || '—') + ' → ' + (x.au || '—'), mut: true },
+        { t: '#' + x.id }, { t: x.fournisseur || '' }, { t: x.base, mut: true },
+        { t: (x.du || '') + ' → ' + (x.au || ''), mut: true },
         { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
         { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
       common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
@@ -8228,10 +8228,10 @@ class App {
         resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
         note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
         commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
-          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '—',
-          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '—')),
+          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '',
+          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '')),
           col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
-          valeur: this.fE(x.valeur), par: x.par || '—' })),
+          valeur: this.fE(x.valeur), par: x.par || '' })),
       })).filter(g => g.commandes.length);
       common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
         : 'Aucune réquisition matière remontée par le panel.';
@@ -8255,12 +8255,12 @@ class App {
       common.caFrN = lgsF.length;
       common.caFrValeur = this.fE(lgsF.reduce((a, l) => a + (+l.valeur || 0), 0));
       common.caFrLignes = lgsF.slice(0, 40).map(l => ({
-        id: l.id, magasin: l.magasin || '—',
-        fournisseur: (l.fournisseurs || []).join(' + ') || '—',
-        debut: l.debut ? this.fD(l.debut) : '—',
+        id: l.id, magasin: l.magasin || '',
+        fournisseur: (l.fournisseurs || []).join(' + ') || '',
+        debut: l.debut ? this.fD(l.debut) : '',
         // Depuis quand ça attend : c'est ce chiffre qui fait agir, pas la date.
         attente: l.debut ? Math.max(0, Math.round((Date.now() - new Date(l.debut)) / 86400000)) : null,
-        valeur: this.fE(l.valeur || 0), par: l.par || '—',
+        valeur: this.fE(l.valeur || 0), par: l.par || '',
         relanceLe: (relF[String(l.id)] || {}).quand || '',
         relancer: () => {
           if (this.state.caFrRel === l.id) { return; }
@@ -8288,7 +8288,7 @@ class App {
       const sv = d.suivi || {};
       const svK = sv.kpis || null;
       const fSv = S.caSvFiltre || '';
-      const jf = z => !z ? '—' : String(z).slice(5).split('-').reverse().join('.');
+      const jf = z => !z ? '' : String(z).slice(5).split('-').reverse().join('.');
       const garde = o => !fSv
         || (fSv === 'cours' && o.etape < 4 && !o.bloque)
         || (fSv === 'retard' && o.retardJours != null)
@@ -8304,7 +8304,7 @@ class App {
         ['Commandes en cours', String(svK.enCours), nFourn + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
         ['En retard', String(svK.retard), 'livraison prévue dépassée', svK.retard ? '#8D1D2C' : ''],
         ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
-        ['Lecture', sv.lues ? String(sv.lues) : '—', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
+        ['Lecture', sv.lues ? String(sv.lues) : '', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
       ] : null;
       // La fenêtre des courriers : ce qui est parti, à qui, et ce qu'il citait.
       const sm = S.svMails || null;
@@ -8317,8 +8317,8 @@ class App {
             + (sm.d.dernier ? ' · dernier le ' + this.fD(sm.d.dernier) : '')
           : 'Aucun rappel en cours pour ce fournisseur.',
         lignes: ((sm.d || {}).courriers || []).map(c2 => ({
-          quand: c2.quand, sujet: c2.sujet || c2.detail || '—',
-          vers: c2.destinataire || '—', copie: c2.copie || '',
+          quand: c2.quand, sujet: c2.sujet || c2.detail || '',
+          vers: c2.destinataire || '', copie: c2.copie || '',
           reqs: (c2.reqs || []).length ? 'réquisitions ' + c2.reqs.join(', ') : '',
           echec: c2.type === 'echec', clos: c2.type === 'clos',
           detail: c2.detail || '',
@@ -8363,7 +8363,7 @@ class App {
           libelle: o.libelle,
           libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
           badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
-          geste: o.geste || '—', source: o.source || '—',
+          geste: o.geste || '', source: o.source || '',
           courriers: svCourriers(g.fournisseur, o.cle),
           // Relance : la cloche n'apparaît que si la commande attend encore
           // le fournisseur. Elle crée une NOTIFICATION dans l'ERP, pas un mail.
@@ -8413,7 +8413,7 @@ class App {
     } else if (ecr === 'caFacturation') {
       // Factures de redevances émises aux magasins, l'impayé en tête et en
       // couleur ; les abonnements TFBuddy en second tableau.
-      const fmtD = v => v ? this.fD(v) : '—';
+      const fmtD = v => v ? this.fD(v) : '';
       common.caCols = ['Facture', 'Magasin', 'Émise', 'Échéance', 'Montant', 'Paiement', 'Relance'];
       common.caRows = (d.redevances || []).map(x => {
         const enRetard = x.paiement !== 'paid' && x.echeance && x.echeance < (this.M && this.M.TODAY || '');
@@ -8425,16 +8425,16 @@ class App {
           { t: x.paiement === 'paid' ? 'payée' + (x.payeLe ? ' le ' + this.fD(x.payeLe) : '')
               : (enRetard ? 'impayée — en retard' : 'impayée'),
             col: x.paiement === 'paid' ? '#2d7a3e' : (enRetard ? '#8D1D2C' : '#8a5a13') },
-          { t: x.relanceLe ? this.fD(x.relanceLe) : '—', mut: true } ] };
+          { t: x.relanceLe ? this.fD(x.relanceLe) : '', mut: true } ] };
       });
       common.caRien = 'Aucune facture de redevances émise.';
       common.caTable2 = (d.abonnements && d.abonnements.length) ? {
         titre: 'Abonnements TFBuddy par magasin (Stripe)',
         cols: ['Magasin', 'Offre', 'Montant', 'Payé', 'Statut'],
         rows: d.abonnements.map(a => ({ cells: [
-          { t: a.magasin || '—' }, { t: a.offre || '—', mut: true },
+          { t: a.magasin || '' }, { t: a.offre || '', mut: true },
           { t: this.fU(a.montant), num: true }, { t: this.fU(a.paye), num: true },
-          { t: a.statut || '—', mut: a.statut === 'paid' } ] })),
+          { t: a.statut || '', mut: a.statut === 'paid' } ] })),
       } : null;
       // --- CA du réseau, mois par mois avec cumul : l'assiette des redevances.
       const M3 = (this.M && this.M.MOIS) || [];
@@ -8443,7 +8443,7 @@ class App {
         cols: ['Mois', 'CA du mois', 'Cumul année'],
         rows: d.caMensuel.map(m2 => ({ cells: [
           { t: (M3[m2.mois - 1] || String(m2.mois)) + (m2.enCours ? ' (en cours)' : ''), mut: !!m2.enCours },
-          { t: m2.ca != null ? this.fE(m2.ca) : '—', num: true },
+          { t: m2.ca != null ? this.fE(m2.ca) : '', num: true },
           { t: this.fE(m2.cumul), num: true } ] })),
       } : null;
     }
@@ -8472,7 +8472,7 @@ class App {
   valsExploitation(common){
     const D = this.D, E = D.exploitation || {};
     const MOIS1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-    common.exJour = E.jour || '—';
+    common.exJour = E.jour || '';
     common.exAvertissement = E.avertissement || '';
     common.exBase = E.objectifBase || '';
     common.exVide = !(E.magasins || []).length;
@@ -8508,11 +8508,11 @@ class App {
       source: rz && rz.d ? (rz.d.source || '') : '',
       lignes: (rz && rz.d && rz.d.magasins ? rz.d.magasins : []).map(m => ({
         magasin: m.magasin,
-        n: m.n == null ? '—' : (Math.abs(m.n) >= 100000 ? this.fK(m.n) : this.fE(m.n)),
-        n1: m.n1 == null ? '—' : (Math.abs(m.n1) >= 100000 ? this.fK(m.n1) : this.fE(m.n1)),
+        n: m.n == null ? '' : (Math.abs(m.n) >= 100000 ? this.fK(m.n) : this.fE(m.n)),
+        n1: m.n1 == null ? '' : (Math.abs(m.n1) >= 100000 ? this.fK(m.n1) : this.fE(m.n1)),
         // Pas d'écart sans N-1 : une boutique ouverte cette année n'a pas
         // « 0 % de croissance », elle n'a pas d'an dernier.
-        ecart: m.ecart == null ? '—' : (m.ecart > 0 ? '+' : '') + m.ecart.toFixed(1).replace('.', ',') + ' %',
+        ecart: m.ecart == null ? '' : (m.ecart > 0 ? '+' : '') + m.ecart.toFixed(1).replace('.', ',') + ' %',
         col: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
         pt: m.ecart == null ? 'transparent' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)') }))
     };
@@ -8528,7 +8528,7 @@ class App {
       : p < 0 ? 'background:#8D1D2C;color:#fff' : p < 5 ? 'background:#C17A2A;color:#fff'
       : p < 10 ? 'background:#A8B545;color:#fff' : p < 15 ? 'background:#7CB342;color:#fff'
       : p < 25 ? 'background:#3D8B44;color:#fff' : 'background:#C9A227;color:#fff';
-    const fp1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %';
+    const fp1 = v => v == null ? '' : v.toFixed(1).replace('.', ',') + ' %';
     const hd = hz && hz.d;
     const ongR = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
       + 'padding:4px 11px;border-radius:7px;'
@@ -8549,7 +8549,7 @@ class App {
           semaine: hp === 'semaine',
           lib: hp === 'semaine' ? (JR[j.wd - 1] || '') : String(+j.date.slice(8, 10)),
           pct: !j.ouvert ? (hp === 'semaine' ? 'fermé' : '·')
-            : (j.netPct == null ? '—' : (hp === 'semaine' ? fp1(j.netPct) : Math.round(j.netPct) + '%')),
+            : (j.netPct == null ? '' : (hp === 'semaine' ? fp1(j.netPct) : Math.round(j.netPct) + '%')),
           title: j.date + (j.ouvert && j.netPct != null ? ' — résultat net ' + fp1(j.netPct) : ''),
           st: teinte(j.ouvert ? j.netPct : null),
           go: j.ouvert ? () => this.setState({ exRentDet: { id: m.id, date: j.date } }) : null,
@@ -8583,7 +8583,7 @@ class App {
             // ferait douter du bon chiffre.
             { op: '−', lib: 'Labour' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.labourJour), v: j.labourJour != null ? this.fU(j.labourJour) : 'manque API', fort: false },
             { op: '−', lib: 'Overhead' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fU(j.overheadJour) : 'manque API', fort: false },
-            { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fU(j.net) : '—', fort: true,
+            { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fU(j.net) : '', fort: true,
               col: j.net == null ? 'var(--color-text-muted)' : (j.net >= 0 ? '#2d7a3e' : '#8D1D2C') },
           ],
           sous: j.tickets != null ? (j.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + this.fU(j.panier)) : '',
@@ -8624,12 +8624,12 @@ class App {
         if (k === 'kpis'){
           o.tuiles = [
             { l: 'CA de la période', v: this.fE(D2.ca) },
-            { l: 'tickets', v: D2.tickets == null ? '—' : D2.tickets.toLocaleString('fr-BE') },
+            { l: 'tickets', v: D2.tickets == null ? '' : D2.tickets.toLocaleString('fr-BE') },
             { l: 'panier moyen', v: this.fEd(D2.panier) },
-            { l: 'produits / client', v: D2.produitsParClient == null ? '—' : String(D2.produitsParClient) }];
+            { l: 'produits / client', v: D2.produitsParClient == null ? '' : String(D2.produitsParClient) }];
         } else if (k === 'pnl'){
-          const p = x => x && x.pct != null ? x.pct.toFixed(1).replace('.', ',') + ' %' : '—';
-          const v = x => x && x.valeur != null ? this.fE(x.valeur) : '—';
+          const p = x => x && x.pct != null ? x.pct.toFixed(1).replace('.', ',') + ' %' : '';
+          const v = x => x && x.valeur != null ? this.fE(x.valeur) : '';
           o.cascade = [
             { l: 'Chiffre d\u2019affaires', v: this.fE(D2.ca), p: '', fort: true },
             { l: 'Food cost', v: v(D2.food), p: p(D2.food) },
@@ -8647,7 +8647,7 @@ class App {
           // verte par défaut dirait « tout va bien ».
           const tm = m => this.echelleMarge(m);
           o.cats = D2.slice(0, 12).map(c => ({ nom: c.categorie, ca: this.fE(c.ca),
-            part: c.partCa == null ? '—' : this.fP(c.partCa, 0),
+            part: c.partCa == null ? '' : this.fP(c.partCa, 0),
             w: Math.max(2, 100 * (c.ca || 0) / mx).toFixed(0) + '%',
             col: tm(c.margePct),
             marge: c.margePct == null ? '' : 'marge ' + c.margePct.toFixed(0) + ' %',
@@ -8661,7 +8661,7 @@ class App {
           o.rang = { moyenne: this.fEd(moy),
             lignes: D2.slice().sort((a, b2) => (b2.panier || 0) - (a.panier || 0)).map(r => ({
               magasin: r.magasin, moi: r.moi, panier: this.fEd(r.panier),
-              ppc: r.produitsParClient == null ? '—' : String(r.produitsParClient) })) };
+              ppc: r.produitsParClient == null ? '' : String(r.produitsParClient) })) };
         }
         return o;
       }) : []
@@ -8685,8 +8685,8 @@ class App {
 
     const r = E.reseau || {};
     const rm = r.mois || {};
-    common.exRes = { ca: this.fE(rm.ca), clients: rm.tickets == null ? '—' : rm.tickets.toLocaleString('fr-BE'),
-      panier: rm.panier == null ? '—' : this.fEd(rm.panier), objectif: this.fE(rm.objectif),
+    common.exRes = { ca: this.fE(rm.ca), clients: rm.tickets == null ? '' : rm.tickets.toLocaleString('fr-BE'),
+      panier: rm.panier == null ? '' : this.fEd(rm.panier), objectif: this.fE(rm.objectif),
       att: att(rm.atteinte), jauge: jauge(rm.atteinte) };
 
     common.exMagasins = (E.magasins || []).map(m => {
@@ -8767,7 +8767,7 @@ class App {
         return { vide: !vals.length, W: W, H: H,
           grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
           barres: barres, reperes: reperes, labels: labels,
-          max: hi > 0 ? this.fK(hi / 1.15) : '—' };
+          max: hi > 0 ? this.fK(hi / 1.15) : '' };
       };
       // Le cumulé se lit en trajectoire, pas en volumes : deux courbes, réel
       // plein et cible pointillée, comme l'écran Objectifs de CA. Empiler des
@@ -8791,7 +8791,7 @@ class App {
           grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
           reel: pts(rs), cible: pts(bs), barres: [], reperes: [], labels: labels,
           base: (H - PB).toFixed(2),
-          max: hi > 0 ? this.fK(hi / 1.15) : '—' };
+          max: hi > 0 ? this.fK(hi / 1.15) : '' };
       };
       const g = cumule ? courbes(cumR, cumB) : serie(reels, buds);
       const vals = reels.concat(buds).filter(v => v != null);
@@ -8801,7 +8801,7 @@ class App {
         // un budget négocié, et la carte ne doit pas laisser croire l'inverse.
         objMois: this.fE(m.moisPlein) + (m.budgetSource === 'theorique' ? ' (théorique)' : ''),
         jourCa: this.fE(m.jour.ca), jourClients: (m.jour.tickets || 0).toLocaleString('fr-BE'),
-        jourPanier: m.jour.panier == null ? '—' : this.fEd(m.jour.panier),
+        jourPanier: m.jour.panier == null ? '' : this.fEd(m.jour.panier),
         semCa: this.fE(m.semaine.ca), semJauge: jauge(m.semaine.atteinte),
         moisCa: this.fE(m.mois.ca), moisJauge: jauge(m.mois.atteinte),
         att: att(m.mois.atteinte),
@@ -8837,7 +8837,7 @@ class App {
     if (typeof d !== 'object'){ return [{ k: prefixe || 'valeur', v: String(d) }]; }
     Object.keys(d).slice(0, 24).forEach(k => {
       const v = d[k];
-      if (v == null){ out.push({ k: pre + k, v: '—' }); return; }
+      if (v == null){ out.push({ k: pre + k, v: '' }); return; }
       if (typeof v === 'object'){ out.push.apply(out, this.exAplat(v, pre + k)); return; }
       out.push({ k: pre + k, v: typeof v === 'number' ? v.toLocaleString('fr-BE') : String(v) });
     });
@@ -8864,7 +8864,7 @@ class App {
            .map(e => ({ l: e[0], c: e[1] }));
   }
   /** Montant à deux décimales — un panier moyen arrondi à l'euro ne dit rien. */
-  fEd(n){ return n == null ? '—' : n.toFixed(2).replace('.', ',') + ' €'; }
+  fEd(n){ return n == null ? '' : n.toFixed(2).replace('.', ',') + ' €'; }
   /**
    * Score des références — calcul UNIQUE, partagé par l'écran de scoring et
    * par l'extraction sous seuil. Le dupliquer aurait suffi à le faire
@@ -8975,7 +8975,7 @@ class App {
     const faible = p => {
       const c = [['volume', p.sVol], ['marge nette', p.sMg], ['perte', p.sPerte], ['comptoir', p.sComptoir]]
         .filter(x => x[1] != null);
-      if (!c.length) { return '—'; }
+      if (!c.length) { return ''; }
       c.sort((a, b) => a[1] - b[1]);
       return c[0][0] + ' (' + Math.round(c[0][1]) + '/100)';
     };
@@ -8983,7 +8983,7 @@ class App {
     common.sqCaPart = this.fP(l.reduce((a, p) => a + p.ca, 0) / caTot, 1);
     common.sqNb = l.length;
     common.sqLignes = l.map(p => { const v = verdict(p.score);
-      return { nom: p.nom, cat: p.cat || '—',
+      return { nom: p.nom, cat: p.cat || '',
         score: Math.round(p.score),
         scoreCol: p.score < SC.conforter ? 'var(--color-primary)' : '#B87512',
         verdict: v[0], vFond: v[2], vCol: v[1],
@@ -9073,7 +9073,7 @@ class App {
     });
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
     const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
-    const eur = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €';
+    const eur = v => v == null ? '' : v.toFixed(2).replace('.', ',') + ' €';
     // La ligne, à plat : une seule ligne par référence, aucun graphique — la
     // couleur ne reste que sur trois signaux (taux de marge, perte, score).
     // Ce qui a quitté la ligne (tendance, pénétration, CA, marge brute,
@@ -9085,12 +9085,12 @@ class App {
         prix: eur(p.prix), mu: eur(p.mu),
         // Le prix d'achat (coût matière) se déduit : la marge unitaire est
         // prix − coût, donc coût = prix − marge. Sans coût, un tiret.
-        achat: p.mu == null ? '—' : eur(p.prix - p.mu),
+        achat: p.mu == null ? '' : eur(p.prix - p.mu),
         // Taux de marge : une puce et un pourcentage colorés au palier de
         // l'échelle de marge du réseau — la même couleur que partout.
-        margeTxt: p.mp == null ? '—' : (p.mp < 0 ? 'Perte' : Math.round(p.mp * 100) + ' %'),
+        margeTxt: p.mp == null ? '' : (p.mp < 0 ? 'Perte' : Math.round(p.mp * 100) + ' %'),
         margeCol: this.echelleMarge(p.mp == null ? null : p.mp * 100),
-        perteTxt: p.perte == null ? '—' : this.fP(p.perte, 1),
+        perteTxt: p.perte == null ? '' : this.fP(p.perte, 1),
         perteSt: p.perte == null ? 'color:var(--color-text-muted)'
           : (p.perte >= 0.10 ? 'color:#8D1D2C;font-weight:600' : p.perte >= 0.05 ? 'color:#8a5a13;font-weight:500' : 'color:#2d7a3e'),
         perteDetail: p.jete != null ? (Math.round(p.jete).toLocaleString('fr-BE') + ' jeté(s)' + (p.motifPerte ? ' · ' + p.motifPerte : '')) : '',
@@ -9119,10 +9119,10 @@ class App {
         perChargement: !per2 || !!per2.chargement,
         perIndispo: !!(per2 && !per2.chargement && !per2.d),
         periodes: (per2 && per2.d ? per2.d.fenetres : []).map(f => ({
-          label: f.label || f.cle || '—',
-          volume: f.volume == null ? '—' : Math.round(+f.volume).toLocaleString('fr-BE'),
+          label: f.label || f.cle || '',
+          volume: f.volume == null ? '' : Math.round(+f.volume).toLocaleString('fr-BE'),
           ca: this.fE(f.ca),
-          marge: f.marge == null ? '—' : this.fE(f.marge),
+          marge: f.marge == null ? '' : this.fE(f.marge),
         })),
         criteres: [
           { nom: 'Volume vendu', poids: wt('v') + ' %', note: det.sVol, brut: Math.round(det.vol).toLocaleString('fr-BE') + ' pièces', col: '#8D1D2C' },
@@ -9130,7 +9130,7 @@ class App {
           { nom: 'Taux de perte', poids: wt('perte') + ' %', note: det.sPerte, brut: det.perte == null ? 'perte non mesurée' : this.fP(det.perte, 1) + ' jeté', col: '#C17A2A' },
           { nom: 'Présence comptoir', poids: wt('comptoir') + ' %', note: det.sComptoir, brut: det.mags + ' / ' + nbOuv + ' magasins', col: '#6b7fa8' },
         ].map(cr => ({ nom: cr.nom, poids: cr.poids, col: cr.col,
-          note: cr.note == null ? '—' : String(Math.round(cr.note)) + ' / 100',
+          note: cr.note == null ? '' : String(Math.round(cr.note)) + ' / 100',
           barre: cr.note == null ? 0 : Math.max(2, Math.min(100, cr.note)),
           brut: cr.brut, absent: cr.note == null })),
         // Fin de gamme déjà programmée ? Elle s'affiche, et s'annule d'ici.
@@ -9211,13 +9211,13 @@ class App {
         nom: d.nom || pw.nom || ('#' + pw.id),
         chargement: !!pw.chargement,
         periode: d.du && d.au ? (this.fDA(d.du) + ' → ' + this.fDA(d.au)) : '',
-        reseauTaux: (d.reseau && d.reseau.taux != null) ? this.fP(d.reseau.taux, 1) : '—',
+        reseauTaux: (d.reseau && d.reseau.taux != null) ? this.fP(d.reseau.taux, 1) : '',
         reseauDetail: d.reseau ? ((d.reseau.jete || 0).toLocaleString('fr-BE') + ' jeté(s) · ' + (d.reseau.vendu || 0).toLocaleString('fr-BE') + ' vendu(s)') : '',
         erreur: (d.api && d.api.erreur) || '',
         vide: !pw.chargement && avecTaux.length === 0,
         rows: mags.map(m => ({
           magasin: m.magasin,
-          taux: m.taux == null ? '—' : this.fP(m.taux, 1),
+          taux: m.taux == null ? '' : this.fP(m.taux, 1),
           tauxSt: m.taux == null ? 'color:var(--color-text-muted)'
             : (m.taux >= 0.10 ? 'color:#8D1D2C;font-weight:600' : m.taux >= 0.05 ? 'color:#8a5a13;font-weight:600' : 'color:#2d7a3e;font-weight:500'),
           detail: m.taux == null ? 'Référence non proposée ici' : ((m.jete || 0).toLocaleString('fr-BE') + ' jeté(s) / ' + (m.vendu || 0).toLocaleString('fr-BE') + ' vendu(s)'),
@@ -9249,7 +9249,7 @@ class App {
     // Un ratio absent du P&L (le panel n'expose pas le food cost) s'affichait
     // « null % » : le mot « null » n'est pas une valeur, et une pastille verte
     // sur une donnée manquante se lit comme une performance.
-    const pct = v => (v == null || !isFinite(v)) ? '—' : String(v).replace('.', ',') + ' %';
+    const pct = v => (v == null || !isFinite(v)) ? '' : String(v).replace('.', ',') + ' %';
     const rat = (v, seuil) => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
       if (v == null || !isFinite(v)) { return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
       return v > seuil ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v > seuil - 1.5 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
@@ -9267,7 +9267,7 @@ class App {
       const caEtp = (etp && r.ca != null) ? r.ca / etp : null;
       return { _mp: mp26, nom: st.nom, marge: this.fP(mp26), var: tv.txt, varSt: tv.st,
         food: pct(r.food), foodSt: rat(r.food, s.f), labour: pct(r.labour), labourSt: rat(r.labour, s.l), ov: pct(r.overhead), ovSt: rat(r.overhead, s.o),
-        caEtp: caEtp == null ? '—' : this.fE(caEtp),
+        caEtp: caEtp == null ? '' : this.fE(caEtp),
         etp: etp == null ? 'ETP inconnu' : (etp.toFixed(1).replace('.', ',') + ' ETP' + (r.heures != null ? ' · ' + Math.round(r.heures) + ' h' : '')),
         caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),
         statut: nAl === 0 ? 'OK' : nAl + (nAl > 1 ? ' leviers à traiter' : ' levier à traiter') + (st.risk ? ' · sous-perf. 3 mois consécutifs' : '') }; });
@@ -9623,10 +9623,10 @@ class App {
     const T = pt.totals || {};
     common.ctrlIndispo = !!pt.indispo && (pt.shops || []).length === 0;
     common.ctrlDate = pt.date || '';
-    common.ctrlDateLabel = pt.date ? this.fD(pt.date) + '/' + String(pt.date).slice(0, 4) : '—';
+    common.ctrlDateLabel = pt.date ? this.fD(pt.date) + '/' + String(pt.date).slice(0, 4) : '';
     common.ctrlDates = (pt.dates || []).map(d => ({ val: d, label: this.fD(d) + '/' + String(d).slice(0, 4), sel: d === pt.date }));
     common.setCtrlDate = e => this.ctrlSetDate(e.target.value);
-    const nMoy = T.noteMoy != null ? String(T.noteMoy).replace('.', ',') + ' / 5' : '—';
+    const nMoy = T.noteMoy != null ? String(T.noteMoy).replace('.', ',') + ' / 5' : '';
     common.ctrlKpis = [
       { k: 'Tâches évaluées', v: String(T.taches || 0), s: (pt.shops || []).length + ' boutique(s) — journée du ' + common.ctrlDateLabel },
       { k: 'À noter', v: String(T.aValider || 0), s: 'Tâches rendues sans évaluation — la note vaut validation' },
@@ -9669,14 +9669,14 @@ class App {
           : (t.note != null && t.note < seuilC))
           .map(t => ({
             taskId: t.taskId, tache: t.tache,
-            note: t.note == null ? '—' : t.note + ' / 5', noteSt: noteSt(t.note),
+            note: t.note == null ? '' : t.note + ' / 5', noteSt: noteSt(t.note),
             // Le niveau NOMMÉ prime sur le verdict binaire : « Non conforme »
             // sans gravité ne dit pas s'il faut repasser demain ou tout de suite.
-            acc: t.note != null ? nomNiveau(t.note) : (t.accepte == null ? '—' : (t.accepte ? 'Conforme' : 'Non conforme')),
+            acc: t.note != null ? nomNiveau(t.note) : (t.accepte == null ? '' : (t.accepte ? 'Conforme' : 'Non conforme')),
             accSt: (t.note != null ? (t.note >= seuilC ? 'color:#2d7a3e;font-weight:500' : 'color:#8D1D2C;font-weight:500')
               : (t.accepte == null ? 'color:var(--color-text-muted)' : (t.accepte ? 'color:#2d7a3e' : 'color:#8D1D2C;font-weight:500'))),
             comment: t.comment || '', hasComment: !!t.comment,
-            consultant: t.consultant || '—',
+            consultant: t.consultant || '',
             // La note EST la validation : une tâche notée est validée, une tâche
             // sans note reste à noter. Pas de case à cocher en plus — pour
             // changer un verdict, on renote.
@@ -9717,7 +9717,7 @@ class App {
 
     common.ctrlConsultants = (pt.consultants || []).map(c => ({
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
-      noteMoy: c.noteMoy != null ? String(c.noteMoy).replace('.', ',') + ' / 5' : '—',
+      noteMoy: c.noteMoy != null ? String(c.noteMoy).replace('.', ',') + ' / 5' : '',
     }));
 
     // Répartition par niveau de conformité (Exemplaire … NC critique) — même
@@ -9748,7 +9748,7 @@ class App {
         photoTxt: d.photo ? '' : (dt.chargement ? 'Chargement de la photo…'
           : (d.api && d.api.configure === false ? 'Compte API non configuré — photo indisponible.'
             : (d.photoRequise === false ? 'Cette tâche n’exige pas de photo.' : 'Aucune photo de réalisation pour cette tâche.'))),
-        statut: d.statut || '—', obligatoire: d.obligatoire ? 'Obligatoire' : '',
+        statut: d.statut || '', obligatoire: d.obligatoire ? 'Obligatoire' : '',
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
         avisComment: a.comment || '',
@@ -10184,12 +10184,12 @@ class App {
         vide: !moisTri.length,
         lignes: moisTri.map(x => ({
           mois: this.fPeriode(x.m + '-01'),
-          fonds: x.fonds ? this.fE(x.fonds) : '—',
-          prev: x.prev ? this.fE(x.prev) : '—',
-          reel: x.reel ? this.fE(x.reel) : '—',
+          fonds: x.fonds ? this.fE(x.fonds) : '',
+          prev: x.prev ? this.fE(x.prev) : '',
+          reel: x.reel ? this.fE(x.reel) : '',
           // L'écart ne se lit qu'une fois le mois joué : avant, un réel à zéro
           // n'est pas un écart, c'est un mois qui n'a pas encore eu lieu.
-          ecart: (x.nbR ? this.fE(x.reel - x.prev) : '—'),
+          ecart: (x.nbR ? this.fE(x.reel - x.prev) : ''),
           ecartCol: !x.nbR ? 'var(--color-text-muted)'
             : (x.reel > x.prev ? 'var(--color-primary)' : '#2d7a3e'),
           detail: [x.nbP ? x.nbP + ' tâche(s) à échéance' : '', x.nbR ? x.nbR + ' réalisée(s)' : '']
@@ -10198,9 +10198,9 @@ class App {
           bPrev: maxi > 0 ? 100 * x.prev / maxi : 0,
           bReel: maxi > 0 ? 100 * x.reel / maxi : 0,
         })),
-        totFonds: totF ? this.fE(totF) : '—',
-        totPrev: totP ? this.fE(totP) : '—',
-        totReel: totR ? this.fE(totR) : '—',
+        totFonds: totF ? this.fE(totF) : '',
+        totPrev: totP ? this.fE(totP) : '',
+        totReel: totR ? this.fE(totR) : '',
         // Ce que le calendrier NE PORTE PAS, dit chiffre en main. Un poste de
         // coût à zéro n'est pas un poste absent : la phrase distingue les deux,
         // sinon on chercherait une saisie qui existe déjà.
@@ -10222,9 +10222,9 @@ class App {
           { k: 'Budget voté', v: this.fE(T.vote), aide: lignes.length + ' projet(s)' },
           { k: 'Engagé', v: this.fE(T.engage), aide: T.vote > 0 ? Math.round(pct(T.engage, T.vote)) + ' % du voté' : 'aucun budget voté',
             barre: pct(T.engage, T.vote), col: 'var(--color-primary)' },
-          { k: 'Consommé', v: this.fE(T.conso), aide: T.vote > 0 ? 'reste ' + this.fE(Math.max(0, T.vote - T.conso)) : '—',
+          { k: 'Consommé', v: this.fE(T.conso), aide: T.vote > 0 ? 'reste ' + this.fE(Math.max(0, T.vote - T.conso)) : '',
             barre: pct(T.conso, T.vote), col: '#c9a06a' },
-          { k: 'Valeur réalisée', v: T.real > 0 ? this.fE(T.real) : '—',
+          { k: 'Valeur réalisée', v: T.real > 0 ? this.fE(T.real) : '',
             aide: (T.real > 0 && T.conso > 0) ? '× ' + (T.real / T.conso).toFixed(1).replace('.', ',') + ' le consommé'
               : 'aucune valeur réalisée saisie' },
         ],
@@ -10232,14 +10232,14 @@ class App {
           nom: l.nom, famille: l.famille, statut: l.statut,
           leviers: this.pjLeviers(l.leviers),
           vote: this.fE(l.vote), engage: this.fE(l.engage), conso: this.fE(l.conso),
-          est: l.est == null ? '—' : this.fE(l.est),
-          real: l.real == null ? '—' : this.fE(l.real),
+          est: l.est == null ? '' : this.fE(l.est),
+          real: l.real == null ? '' : this.fE(l.real),
           roi: l.roi != null ? '×' + l.roi.toFixed(1).replace('.', ',')
-            : (l.roiEst != null ? '×' + l.roiEst.toFixed(1).replace('.', ',') : '—'),
+            : (l.roiEst != null ? '×' + l.roiEst.toFixed(1).replace('.', ',') : ''),
           roiEstime: l.roi == null && l.roiEst != null,
           roiCol: l.roi == null ? 'var(--color-text-muted)'
             : (l.roi >= 1 ? '#2d7a3e' : 'var(--color-primary)'),
-          retour: l.retour != null ? l.retour + ' mois' : '—',
+          retour: l.retour != null ? l.retour + ' mois' : '',
           ouvrir: () => this.setState({ pjVue: 'franchise', pjSel: l.id }),
         })),
         vide: !lignes.length,
@@ -10269,7 +10269,7 @@ class App {
       choix: lignes.map(l => ({ id: l.id, nom: l.nom, on: l.id === sel.id,
         go: () => this.setState({ pjSel: l.id }) })),
       nom: sel.nom, famille: sel.famille, statut: sel.statut,
-      periode: (sel.debut ? this.fD(sel.debut) : '—') + ' → ' + (sel.fin ? this.fD(sel.fin) : '—'),
+      periode: (sel.debut ? this.fD(sel.debut) : '') + ' → ' + (sel.fin ? this.fD(sel.fin) : ''),
       leviers: this.pjLeviers(sel.leviers),
       // « Ce qui est recherché » : les KPI visés, tels qu'ils ont été choisis.
       // Aucune cible chiffrée n'existe en base — l'inventer donnerait un
@@ -10278,14 +10278,14 @@ class App {
       kpisVide: !(sel.kpis || []).length,
       pourquoi: sel.valeurTxt || '',
       tuiles: [
-        { k: 'Ce que ça coûte à une boutique', v: sel.vote > 0 ? this.fE(sel.vote / nbMag) : '—',
+        { k: 'Ce que ça coûte à une boutique', v: sel.vote > 0 ? this.fE(sel.vote / nbMag) : '',
           aide: sel.vote > 0 ? this.fE(sel.vote) + ' réseau ÷ ' + nbMag + ' boutiques' : 'budget non voté' },
-        { k: 'Ce que ça rapporte', v: sel.est != null ? this.fE(sel.est / nbMag) : '—',
+        { k: 'Ce que ça rapporte', v: sel.est != null ? this.fE(sel.est / nbMag) : '',
           aide: sel.est != null ? 'estimation réseau répartie' : 'valeur estimée non saisie',
           vert: sel.est != null },
-        { k: 'Retour', v: sel.retour != null ? sel.retour + ' mois' : '—',
+        { k: 'Retour', v: sel.retour != null ? sel.retour + ' mois' : '',
           aide: sel.retour != null ? 'sur la valeur réellement constatée' : 'pas encore de valeur réalisée' },
-        { k: 'Où en est le projet', v: jal.length ? faits + ' / ' + jal.length : '—',
+        { k: 'Où en est le projet', v: jal.length ? faits + ' / ' + jal.length : '',
           aide: jal.length ? 'jalons livrés' : 'aucun jalon posé' },
       ],
       etapes: etapes.slice(0, 8).map(e => ({ nom: e.nom, date: e.date, fait: e.fait, tache: !!e.tache,
@@ -10375,7 +10375,7 @@ class App {
       .some(t => !t.done && t.due && t.due < M.TODAY)).length;
     const tuile = (cle, n, lib, sous, ecran, urgent) => ({
       cle, n, lib, sous,
-      valeur: n == null ? '—' : Math.round(n).toLocaleString('fr-BE'),
+      valeur: n == null ? '' : Math.round(n).toLocaleString('fr-BE'),
       vif: !!n && urgent,
       col: (!!n && urgent) ? 'var(--color-primary)' : (n ? 'var(--color-text)' : 'var(--color-text-muted)'),
       // La tuile emmène AVEC son filtre : arriver sur la liste complète après
@@ -10407,11 +10407,11 @@ class App {
         // qui n'existe pas.
         barre: 'display:block;height:6px;border-radius:999px;background:var(--color-primary);width:'
           + Math.max(3, Math.round(100 * (m.n || 0) / hi)) + '%',
-        n1: m.n1 ? this.fMt(m.n1) : '—',
+        n1: m.n1 ? this.fMt(m.n1) : '',
         ecart: m.ecart == null ? '' : (m.ecart >= 0 ? '+' : '') + String(m.ecart).replace('.', ',') + ' %',
         ecartCol: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
-        tickets: m.tickets ? Math.round(m.tickets).toLocaleString('fr-BE') : '—',
-        panier: m.panier ? this.fU(m.panier) : '—',
+        tickets: m.tickets ? Math.round(m.tickets).toLocaleString('fr-BE') : '',
+        panier: m.panier ? this.fU(m.panier) : '',
         obj: obj ? this.fMt(obj) : null,
         att: att == null ? null : this.fP(att, 0),
         attCol: att == null ? '' : (att >= 0.95 ? '#2d7a3e' : att >= 0.8 ? '#B87512' : 'var(--color-primary)') };
@@ -10509,12 +10509,12 @@ class App {
         sigTxt: sig && sig.ouvert ? 'Signalement · ' + sig.famille + ' · ' + sig.type : '',
         sigSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
         chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        rows: [{ k: 'Attendu', v: x.t.desc || crm && crm.objectif || x.p.valeurTxt || '—' },
+        rows: [{ k: 'Attendu', v: x.t.desc || crm && crm.objectif || x.p.valeurTxt || '' },
           { k: 'Intervenant', v: x.o.nom + ' — ' + x.o.type }, { k: 'Contact', v: x.o.email },
           { k: 'Échéance', v: this.fD(x.t.due) + (done ? ' · rendue le ' + this.fD(x.t.done) : late ? ' · dépassée' : '') },
-          { k: 'Budget', v: x.t.budget !== null && x.t.budget !== undefined ? this.fE(x.t.budget) : '—' },
+          { k: 'Budget', v: x.t.budget !== null && x.t.budget !== undefined ? this.fE(x.t.budget) : '' },
           { k: 'Remise', v: done ? (x.t.renduePar ? 'Annoncée par ' + x.t.renduePar + ' le ' + this.fD(x.t.done) : 'Cochée par la direction le ' + this.fD(x.t.done)) : 'Pas encore annoncée' },
-          { k: 'Mot du consultant', v: x.t.noteRemise || '—' },
+          { k: 'Mot du consultant', v: x.t.noteRemise || '' },
           { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
           { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }]
           .concat(x.t.panelNote ? [{ k: 'Panel', v: 'Note #' + x.t.panelNote + ' déposée sur le magasin — visible par le consultant' }] : []),
@@ -10642,7 +10642,7 @@ class App {
     const S = this.state, D = this.D, M = this.M;
     const SG = M.SIGNAL || { seuil: 4, niveaux: [] };
     const niv = n => (SG.niveaux || []).find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666' };
-    const nomDe = o => { if (!o) return '—';
+    const nomDe = o => { if (!o) return '';
       const l = (o.t === 'c' ? D.consultants : D.suppliers) || [];
       return (l.find(x => x.id === o.id) || {}).nom || o.id; };
 
@@ -10663,7 +10663,7 @@ class App {
     const lib = S.suiviPeriode === 'semaine' ? '7 derniers jours' : '30 derniers jours';
     common.suTuiles = [
       { k: 'Validées', v: String(d.validees), s: lib, c: 'var(--color-text)' },
-      { k: 'Note moyenne', v: d.moyenne === null ? '—' : String(d.moyenne).replace('.', ','), s: 'sur 5', c: d.moyenne === null ? 'var(--color-text-muted)' : niv(Math.round(d.moyenne)).couleur },
+      { k: 'Note moyenne', v: d.moyenne === null ? '' : String(d.moyenne).replace('.', ','), s: 'sur 5', c: d.moyenne === null ? 'var(--color-text-muted)' : niv(Math.round(d.moyenne)).couleur },
       { k: 'À traiter', v: String(d.ouverts), s: 'signalements ouverts', c: d.ouverts ? '#8D1D2C' : '#2d7a3e' },
       { k: 'Traités', v: String(d.traites), s: lib, c: '#2d7a3e' }
     ].map(t => ({ ...t, vSt: 'font-size:26px;font-weight:500;line-height:1.1;color:' + t.c }));
@@ -10677,11 +10677,11 @@ class App {
 
     common.suGens = d.parIntervenant.map(x => ({
       nom: nomDe(x.owner), validees: String(x.validees),
-      moyenne: x.moyenne === null ? '—' : String(x.moyenne).replace('.', ','),
+      moyenne: x.moyenne === null ? '' : String(x.moyenne).replace('.', ','),
       moySt: 'font-size:12px;font-weight:500;color:' + (x.moyenne === null ? 'var(--color-text-muted)' : niv(Math.round(x.moyenne)).couleur),
-      ouverts: x.ouverts ? String(x.ouverts) : '—',
+      ouverts: x.ouverts ? String(x.ouverts) : '',
       ouvSt: 'font-size:12px;font-weight:500;color:' + (x.ouverts ? '#8D1D2C' : 'var(--color-text-muted)')
-    })).sort((a, b) => Number(b.ouverts === '—' ? 0 : b.ouverts) - Number(a.ouverts === '—' ? 0 : a.ouverts));
+    })).sort((a, b) => Number(b.ouverts === '' ? 0 : b.ouverts) - Number(a.ouverts === '' ? 0 : a.ouverts));
 
     const jours = iso => { if (!iso) return ''; const j = Math.floor((new Date(M.TODAY) - new Date(iso.slice(0, 10))) / 86400000);
       return j <= 0 ? "aujourd'hui" : j === 1 ? 'hier' : 'depuis ' + j + ' jours'; };
@@ -11157,7 +11157,7 @@ class App {
     // qui n'existe pas ferait chercher pour rien.
     common.logTypes = ['Tous les types'].concat([...new Set(all.map(l => l.type))]);
     common.logQuis = ['Tous les auteurs'].concat([...new Set(all.map(l => l.qui))]);
-    common.logProjets = ['Tous les projets'].concat([...new Set(all.map(l => l.projet).filter(p2 => p2 && p2 !== '—'))].sort());
+    common.logProjets = ['Tous les projets'].concat([...new Set(all.map(l => l.projet).filter(p2 => p2 && p2 !== ''))].sort());
     common.logPeriodes = ['Toute la période', 'Aujourd’hui', '7 derniers jours', '30 derniers jours'];
     const logProjet = S.logProjet || 'Tous les projets';
     const logPeriode = S.logPeriode || 'Toute la période';
@@ -11215,8 +11215,8 @@ class App {
     common.mailsTout = mailsTout;
     common.mailsPlier = mails.length > LOG_N ? () => this.setState({ mailsTout: !mailsTout }) : null;
     common.mailsRows = mVisibles.map(m2 => ({
-      ts: m2.ts || '—', source: m2.source || '', objet: m2.objet || '—',
-      dest: m2.dest || '—', detail: m2.detail || '',
+      ts: m2.ts || '', source: m2.source || '', objet: m2.objet || '',
+      dest: m2.dest || '', detail: m2.detail || '',
       // Le sort de l'envoi d'abord : un e-mail en échec se voit sans lire.
       etat: m2.ok ? 'Envoyé' : 'Échec',
       etatSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
@@ -11436,7 +11436,7 @@ class App {
     common.setScMHaut = scSet('mHaut'); common.setScMHautNote = scSet('mHautNote');
     // Les poids sont relatifs : montrer la part effective, pour que « 40 » ne se
     // lise pas « 40 % » quand la somme ne fait pas 100.
-    const part = w => somme > 0 ? Math.round(100 * w / somme) + ' %' : '—';
+    const part = w => somme > 0 ? Math.round(100 * w / somme) + ' %' : '';
     common.scCriteres = [
       { k: 'volume', nom: 'Volume de ventes', aide: 'Médiane des 6 dernières semaines, par période.', val: common.scVolume, set: common.setScVolume, part: part(pv) },
       { k: 'marge', nom: 'Marge nette', aide: 'Prix de vente moins matière et coût main d’œuvre.', val: common.scMarge, set: common.setScMarge, part: part(pm) },
@@ -11519,21 +11519,21 @@ class App {
       this.api('PUT', '/parametres/google-cle', { cle: v }).then(() => {
         this.D.reput = null; this.repCharge(true);
         this.notify('Clé Google enregistrée'); });
-      this.log('Paramètre', '—', 'Connecteur Google — clé enregistrée');
+      this.log('Paramètre', '', 'Connecteur Google — clé enregistrée');
     };
     common.gEffacer = () => {
       if (!window.confirm('Effacer la clé Google ? La synchronisation des avis s’arrêtera.')) { return; }
       this.api('PUT', '/parametres/google-cle', { effacer: true }).then(() => {
         this.D.reput = null; this.repCharge(true);
         this.notify('Clé Google effacée'); });
-      this.log('Paramètre', '—', 'Connecteur Google — clé effacée');
+      this.log('Paramètre', '', 'Connecteur Google — clé effacée');
     };
     common.setRepCible = e => {
       const v = Math.min(5, Math.max(1, parseFloat(String(e.target.value).replace(',', '.')) || 4.5));
       this.setState({ repCible: v });
       this.api('PUT', '/parametres/reputationCible', { valeur: v })
         .then(() => { this.D.reput = null; this.repCharge(true); });
-      this.log('Paramètre', '—', 'Cible de note Google portée à ' + String(v).replace('.', ','));
+      this.log('Paramètre', '', 'Cible de note Google portée à ' + String(v).replace('.', ','));
     };
     common.paramTpls = D.emailTemplates.map(t => ({ nom: t.nom, sujet: t.sujet, corps: S.tpl[t.id] != null ? S.tpl[t.id] : t.corps,
       set: e => { this.setState(s2 => ({ tpl: Object.assign({}, s2.tpl, { [t.id]: e.target.value }) })); this.api('PUT', '/parametres/email-' + t.id, { corps: e.target.value }); } }));
@@ -11570,7 +11570,7 @@ class App {
           .then(r => r.json())
           .then(r => { this.D.smtpStatut = r;
             this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, motDePasse: '', ok: true, msg: 'Enregistré.' }) }));
-            this.log('Paramètre', '—', 'Machine d’envoi SMTP mise à jour'); })
+            this.log('Paramètre', '', 'Machine d’envoi SMTP mise à jour'); })
           .catch(() => this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) })));
       },
       test: () => {
@@ -11607,7 +11607,7 @@ class App {
           jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
           const ok = !(r && r.ok === false); this._rlLu = false;
           this.setState(s2 => ({ rlDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.rlDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
-          if (ok) { this.log('Paramètre', '—', 'Template de relance commande mis à jour'); }
+          if (ok) { this.log('Paramètre', '', 'Template de relance commande mis à jour'); }
         });
       },
     };
@@ -11646,12 +11646,12 @@ class App {
       copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
       variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
       smtpPret: !!cmEt.smtpPret,
-      dernier: cmEt.dernier ? ('Dernier passage : ' + (cmEt.dernier.quand || '—').replace('T', ' ').slice(0, 16)
+      dernier: cmEt.dernier ? ('Dernier passage : ' + (cmEt.dernier.quand || '').replace('T', ' ').slice(0, 16)
         + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
         + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
-      journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '—',
+      journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '',
         type: { recu: 'Commande reçue', envoye: 'E-mail envoyé', relance: 'Relance envoyée',
-          essai: 'Essai', echec: 'Échec' }[j.type] || (j.type || '—'),
+          essai: 'Essai', echec: 'Échec' }[j.type] || (j.type || ''),
         col: j.type === 'echec' ? '#8D1D2C'
           : (j.type === 'envoye' || j.type === 'relance') ? '#2d7a3e' : 'var(--color-text)',
         detail: j.detail || '', destinataire: j.destinataire || '' })),
@@ -11675,7 +11675,7 @@ class App {
           const ok = !(r && r.ok === false);
           this._caMailLu = false;
           this.setState(s2 => ({ cmDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.cmDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
-          if (ok) { this.log('Paramètre', '—', 'Template e-mail commande fournisseur mis à jour'); }
+          if (ok) { this.log('Paramètre', '', 'Template e-mail commande fournisseur mis à jour'); }
         });
       },
       // L'essai part où on veut : l'envoyer à la centrale depuis la centrale
@@ -11831,7 +11831,7 @@ class App {
     const cdMaj = (patch, msg) => this.api('PUT', '/cadence', patch)
       .then(r2 => { if (r2 && r2.regles && this.D.cadence) { this.D.cadence.regles = r2.regles; }
         this.notify(msg || 'Règle de cadence enregistrée'); this.setState({}); });
-    const cdDate = d3 => d3 ? d3.slice(8, 10) + '/' + d3.slice(5, 7) : '—';
+    const cdDate = d3 => d3 ? d3.slice(8, 10) + '/' + d3.slice(5, 7) : '';
     const cdCoul = { 5: '#1F7A3D', 4: '#6FA84C', 3: '#D9A226', 2: '#C64B22', 1: '#A31220' };
     const cdPaliers = (cdReg.paliers && cdReg.paliers.length ? cdReg.paliers : [1, 2, 3, 5, 7]);
     const cdMouv = m => m === 'espacee' ? ['↗ espacée', 'background:rgba(45,122,62,0.12);color:#2d7a3e']
@@ -11869,7 +11869,7 @@ class App {
           if (r2 && r2.plan && this.D.cadence) { this.D.cadence.plan = r2.plan; }
           this.setState({ cadBusy: false });
           this.notify(r2 && r2.plan ? 'Plan recalculé — ' + r2.plan.lignes.length + ' tâche(s) suivie(s)' : 'Recalcul impossible');
-          this.log('Paramètre', '—', 'Cadence dynamique — plan de contrôle recalculé'); }); },
+          this.log('Paramètre', '', 'Cadence dynamique — plan de contrôle recalculé'); }); },
       planLignes: ((cdPlan && cdPlan.lignes) || []).map(l => {
         const [mTxt, mSt] = cdMouv(l.mouvement);
         return { tache: l.tache, magasin: l.magasin,

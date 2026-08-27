@@ -473,7 +473,7 @@ function ep_croisements_feuille(): array
         $h .= '<td width="' . (int) (100 / max(1, count($mags))) . '%" valign="top" class="tile">'
             . '<div class="k">' . $e($court($mg['nom'])) . '</div>'
             . '<div class="serif" style="font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 25 ? '#2d7a3e' : '#8D1D2C') . '">'
-            . ($mg['taux'] !== null ? number_format($mg['taux'], 1, ',', ' ') . ' %' : '—')
+            . ($mg['taux'] !== null ? number_format($mg['taux'], 1, ',', ' ') . ' %' : '')
             . ($target !== null && $mg['taux'] !== null
                 ? ' <span style="font-size:8pt;color:' . ($mg['taux'] >= $target ? '#2d7a3e' : '#8D1D2C') . '">'
                   . ($mg['taux'] >= $target ? '+' : '−') . number_format(abs($mg['taux'] - $target), 1, ',', ' ') . ' pt</span>'
@@ -495,7 +495,7 @@ function ep_croisements_feuille(): array
     if ($petits['n'] > 0) {
         $h .= '<tr class="gris"><td class="l" colspan="2">' . $petits['n'] . ' personne(s) sous 10 tickets — cumulées</td>'
             . '<td>' . $petits['ff'] . '</td><td>' . $petits['avec'] . '</td>'
-            . '<td>' . ($petits['ff'] > 0 ? number_format(100 * $petits['avec'] / $petits['ff'], 1, ',', ' ') : '—') . ' %</td>'
+            . '<td>' . ($petits['ff'] > 0 ? number_format(100 * $petits['avec'] / $petits['ff'], 1, ',', ' ') : '') . ' %</td>'
             . '<td>' . ($petits['ff'] - $petits['avec']) . '</td><td>' . $eur(($petits['ff'] - $petits['avec']) * $prixB) . '</td></tr>';
     }
     $h .= '</table>'
@@ -538,7 +538,7 @@ function ep_croisements_rapport(): array
 
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
-    $pcs = static fn ($v) => $v === null ? '—' : number_format((float) $v, 1, ',', ' ') . ' %';
+    $pcs = static fn ($v) => $v === null ? '' : number_format((float) $v, 1, ',', ' ') . ' %';
     $court = static fn (string $nom) => trim((string) array_reverse(explode(' - ', $nom))[0]);
     $logo = rapLogoDataUri();
     $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
@@ -600,10 +600,10 @@ function ep_croisements_rapport(): array
             $h2 .= '<tr><td class="l"><b>' . $e($d2['lib']) . '</b>'
                 . ($d2['surnom'] !== '' ? ' <span class="mut" style="font-size:7pt">' . $e($d2['surnom']) . '</span>' : '') . '</td>'
                 . '<td class="l mut" style="font-size:7.5pt">' . ($d2['dp'] !== '' ? $e($d2['dp']) : 'toute la journée') . '</td>'
-                . '<td class="mut">' . ($d2['target'] !== null ? $pcs($d2['target']) : '—') . '</td>'
+                . '<td class="mut">' . ($d2['target'] !== null ? $pcs($d2['target']) : '') . '</td>'
                 . '<td style="font-weight:bold">' . $pcs($taux) . '</td>'
                 . '<td style="font-weight:bold;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
-                . ($delta === null ? '—' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
+                . ($delta === null ? '' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
                 . '<td>' . number_format($ff, 0, ',', ' ') . '</td>'
                 . '<td class="acc"><b>' . $eur(($ff - $avec) * $d2['prixB']) . '</b></td></tr>';
         }
@@ -641,7 +641,7 @@ function ep_croisements_rapport(): array
                 . '<td>' . number_format($avec, 0, ',', ' ') . '</td>'
                 . '<td style="font-weight:bold">' . $pcs($taux) . '</td>'
                 . '<td style="font-weight:bold;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
-                . ($delta === null ? '—' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
+                . ($delta === null ? '' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
                 . '<td class="acc"><b>' . $eur(($ff - $avec) * $d2['prixB']) . '</b></td></tr>';
         }
         $h .= '</table></div>';
