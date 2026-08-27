@@ -5066,6 +5066,8 @@ class App {
           .then(r => { if (r && r.combos) { this._crOpt = r; this._cr = {}; this.notify(v ? 'Target posée à ' + v + ' %' : 'Target retirée'); } this.setState({}); });
       },
     };
+    common.crRapportHref = (o && o.combos || []).length
+      ? API_BASE + '/croisements/rapport.pdf' : null;
     common.crEnregistrer = !d ? null : () => {
       const surnom = window.prompt('Un surnom pour ce combo ? (facultatif — « le déjeuner complet »)') || '';
       this.api('POST', '/croisements/combo', { aSel: d.a.sel, bSel: d.b.sel,

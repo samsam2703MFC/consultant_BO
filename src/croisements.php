@@ -500,3 +500,122 @@ function ep_croisements_feuille(): array
     echo $pdf;
     exit;
 }
+
+/**
+ * GET /croisements/rapport.pdf[?m=2026-07] — TOUS les combos enregistrés,
+ * une page réseau puis une page par magasin.
+ *
+ * C'est le rapport de réunion : la bibliothèque entière sur une feuille —
+ * chaque combo avec son daypart, sa target, son taux du mois, l'écart et les
+ * euros laissés — puis la même lecture resserrée sur chaque magasin, la
+ * feuille de SON brief. Les mois révolus viennent du cache : un combo jamais
+ * ouvert paie sa première lecture ici, les suivants non.
+ */
+function ep_croisements_rapport(): array
+{
+    croisTables();
+    $m = trim((string) ($_GET['m'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m', strtotime('first day of last month')); }
+    $combos = [];
+    try { $combos = Db::rows('SELECT * FROM ceo_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $e) {}
+    if ($combos === []) { http_response_code(422); return ['error' => 'aucun combo enregistré — enregistrez-en depuis l’écran Croisements']; }
+
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
+    $pcs = static fn ($v) => $v === null ? '—' : number_format((float) $v, 1, ',', ' ') . ' %';
+    $court = static fn (string $nom) => trim((string) array_reverse(explode(' - ', $nom))[0]);
+    $logo = rapLogoDataUri();
+    $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
+
+    $nomDe = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+        $nomDe[(string) $s['id']] = (string) $s['name'];
+    }
+
+    // Chaque combo : le mois demandé, par magasin et réseau.
+    $donnees = [];
+    foreach ($combos as $cb) {
+        $a = croisIds((string) $cb['a_sel']); $b = croisIds((string) $cb['b_sel']);
+        if ($a === null || $b === null) { continue; }
+        $dp = croisDaypart((string) ($cb['dp'] ?? ''));
+        $c = croisMoisServi((string) $cb['a_sel'], (string) $cb['b_sel'], $a['ids'], $b['ids'], $m, $nomDe, $dp['cle']);
+        if ($c === null) { continue; }
+        $prixB = $c['qB'] > 0 ? $c['caB'] / $c['qB'] : 0.0;
+        $parShop = []; $ffT = 0; $avecT = 0;
+        foreach ($nomDe as $sid => $n2) {
+            $x = $c['shops'][$sid] ?? $c['shops'][(string) $sid] ?? ['ff' => 0, 'avec' => 0];
+            $parShop[(string) $sid] = $x;
+            $ffT += $x['ff']; $avecT += $x['avec'];
+        }
+        $donnees[] = ['lib' => $cb['a_lib'] . ' × ' . $cb['b_lib'],
+            'dp' => $dp['lib'], 'surnom' => (string) ($cb['surnom'] ?? ''),
+            'target' => isset($cb['target']) && $cb['target'] !== null ? (float) $cb['target'] : null,
+            'prixB' => $prixB, 'parShop' => $parShop,
+            'ff' => $ffT, 'avec' => $avecT,
+            'taux' => $ffT > 0 ? round(100 * $avecT / $ffT, 1) : null,
+            'eur' => (int) round(($ffT - $avecT) * $prixB)];
+    }
+    if ($donnees === []) { http_response_code(503); return ['error' => 'aucun combo n’a pu être calculé']; }
+
+    $css = '<style>
+      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
+      .serif{font-family:Georgia,"DejaVu Serif",serif}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
+      table.t{width:100%;border-collapse:collapse;margin-bottom:4mm}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
+      .t td{font-size:8.4pt;text-align:right;padding:1.5mm 2mm;border-bottom:.5pt solid #EAE3D8}
+      .t .l{text-align:left}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
+    </style>';
+    $entete = static fn (string $droite) =>
+        '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
+        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
+        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Croisements — le rapport des combos<br>' . $droite . '</td></tr></table>';
+
+    $tableau = static function (?string $sid) use ($donnees, $e, $eur, $pcs): string {
+        $h2 = '<table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Combo</th><th class="l">Daypart</th><th>Target</th><th>Taux</th><th>Δ target</th>'
+            . '<th>Tickets A</th><th>Laissé au comptoir</th></tr>';
+        foreach ($donnees as $d2) {
+            if ($sid === null) { $ff = $d2['ff']; $avec = $d2['avec']; }
+            else { $x = $d2['parShop'][$sid] ?? ['ff' => 0, 'avec' => 0]; $ff = $x['ff']; $avec = $x['avec']; }
+            $taux = $ff > 0 ? round(100 * $avec / $ff, 1) : null;
+            $delta = ($d2['target'] !== null && $taux !== null) ? $taux - $d2['target'] : null;
+            $h2 .= '<tr><td class="l"><b>' . $e($d2['lib']) . '</b>'
+                . ($d2['surnom'] !== '' ? ' <span class="mut" style="font-size:7pt">' . $e($d2['surnom']) . '</span>' : '') . '</td>'
+                . '<td class="l mut" style="font-size:7.5pt">' . ($d2['dp'] !== '' ? $e($d2['dp']) : 'toute la journée') . '</td>'
+                . '<td class="mut">' . ($d2['target'] !== null ? $pcs($d2['target']) : '—') . '</td>'
+                . '<td style="font-weight:bold">' . $pcs($taux) . '</td>'
+                . '<td style="font-weight:bold;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                . ($delta === null ? '—' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
+                . '<td>' . number_format($ff, 0, ',', ' ') . '</td>'
+                . '<td class="acc"><b>' . $eur(($ff - $avec) * $d2['prixB']) . '</b></td></tr>';
+        }
+        return $h2 . '</table>';
+    };
+
+    $h = $css . '<div class="doc">' . $entete($e($libMois))
+        . '<div class="serif" style="font-size:19pt;margin:4mm 0 1mm">Le réseau — tous les combos</div>'
+        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">' . count($donnees) . ' combo(s) enregistré(s) · '
+        . $e($libMois) . ' · taux = tickets A contenant aussi B ÷ tickets A.</div>'
+        . $tableau(null);
+    foreach ($nomDe as $sid => $nom) {
+        $h .= '<div style="page-break-before:always">' . $entete($e($court($nom)) . ' · ' . $e($libMois))
+            . '<div class="serif" style="font-size:19pt;margin:4mm 0 1mm">' . $e($court($nom)) . ' — ses combos</div>'
+            . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">La même lecture, resserrée sur ce magasin — la feuille de son brief.</div>'
+            . $tableau((string) $sid) . '</div>';
+    }
+    $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Chaque ligne est un combo enregistré — le croisement est asymétrique (tickets A avec B, jamais l’inverse), '
+        . 'le daypart borne les tickets à ce moment de la journée, la target est celle du combo. '
+        . '« Laissé au comptoir » = tickets manqués × prix moyen de B réellement encaissé ce mois-là — un plafond de geste, pas une promesse, '
+        . 'et les euros ne s’additionnent pas d’un combo à l’autre : un même ticket peut manquer deux combos.</div></div>';
+
+    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Combos — ' . $e($libMois) . '</title></head><body>' . $h . '</body></html>';
+    $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => 'Croisements — tous les combos, ' . $libMois,
+        'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="combos-' . $m . '.pdf"');
+    echo $pdf;
+    exit;
+}

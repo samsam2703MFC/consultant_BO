@@ -7152,6 +7152,7 @@ function tplCrois(c, x){
       ${!c.crCombos.length ? '' : `
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="${lbl};margin-right:2px">Combos enregistrés</span>
+        ${!c.crRapportHref ? '' : `<a href="${esc(c.crRapportHref)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:4px 11px;order:99;margin-left:auto">↓ Rapport de tous les combos — réseau + par magasin</a>`}
         ${c.crCombos.map(cb => `
         <span style="display:inline-flex;align-items:center;gap:7px;background:${cb.on ? 'rgba(141,29,44,.06)' : '#FBF8F4'};border:0.5px solid ${cb.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:999px;padding:5px 6px 5px 13px;font-size:12px;font-weight:500;${cb.on ? 'color:var(--color-primary)' : ''}">
           <span ${x.A(cb.choisir)} style="cursor:pointer">${esc(cb.nom)}${cb.surnom ? ` <i style="font-style:normal;color:var(--color-text-muted);font-weight:400;font-size:10.5px">${esc(cb.surnom)}</i>` : ''}</span>

@@ -166,6 +166,7 @@ function route(string $method, string $path): mixed
             $path === '/croisements/options'          => ep_croisements_options(),
             $path === '/croisements/detail'           => ep_croisements_detail(),
             $path === '/croisements/feuille.pdf'      => ep_croisements_feuille(),
+            $path === '/croisements/rapport.pdf'      => ep_croisements_rapport(),
             $path === '/centrale/cockpit'              => ep_ca_cockpit(),
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),
