@@ -595,10 +595,14 @@ function ep_ventes_pdf(): array
         return $h2 . '</table>';
     };
 
+    // Le classement complet ne liste QUE les classées : les grisés y faisaient
+    // du bruit sans rien classer. Personne ne disparaît pour autant — chacun
+    // reste sur la page de SON magasin, avec son motif.
     $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
         . '<div class="serif h1">Le classement complet</div>'
-        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Toutes les personnes du mois — les non-classables restent visibles, avec leur motif.</div>'
-        . $tableau($d['lignes'], true) . $methode . '</div>';
+        . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">' . count($classables)
+        . ' classé(e)s au score. Les personnes sans heures au planning ou sans vente à leur nom ne figurent que sur la page de leur magasin.</div>'
+        . $tableau($classables, true) . $methode . '</div>';
 
     // --- Une page par magasin.
     foreach ($d['magasins'] as $mag) {
