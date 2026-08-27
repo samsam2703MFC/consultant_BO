@@ -991,45 +991,36 @@ class App {
     const projEff = D.projects.map(p => Object.assign({}, p, { statut: this.pStatut(p) }));
     const nLate = projEff.filter(p => p.statut === 'En retard').length;
 
-    // Le rail suit le geste, pas l'organigramme : on pilote sa journée, puis on
-    // regarde la performance des magasins, puis les produits qui la font, puis
-    // les achats, puis ce que la marque investit et ce qu'elle met en avant,
-    // puis ce qu'on contrôle.
-    // « Exploitation » et « Réseau & marque » ne portaient qu'une entrée
-    // chacune : une section d'un seul item coûte un titre pour rien.
+    // Le rail suit les QUESTIONS du métier, pas l'historique des modules :
+    // qu'est-ce qui se passe aujourd'hui ? comment vont les magasins, et que
+    // faire pour chacun ? que valent les produits ? qu'achète-t-on ? que fait
+    // la marque ? qu'a-t-on contrôlé ? — puis l'administration. Dix sections
+    // avaient poussé l'une après l'autre ; les écrans magasin, éclatés en
+    // trois sections (performance, analyse, budget), retrouvent un seul toit.
     const navDef = [
+      // Le matin : ce qui s'est passé, ce qui presse.
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
-        // Le résultat du JOUR précède le P&L : c'est ce qu'on regarde le matin,
-        // magasin par magasin, avant de dérouler le mois.
         ['resultatJour', 'Résultat du jour', 0],
         ['exploitation', 'P&L magasins', 0]]],
-      ['Performance magasins', [
-        ['magasins', 'Tableau des magasins', 0],
-        ['heatmap', 'Heatmap mensuelle', 0],
-        ['objectifs', 'Objectifs de CA', 0],
-        ['marge', 'Marge & coûts', 0],
-        // Le badge compte les magasins sous la cible : il n'apparaît qu'une
-        // fois l'écran ouvert une première fois, la lecture étant paresseuse.
-        ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]]],
-      // Le franchisé ne demande pas « où est le problème ? » mais « qu'est-ce
-      // que JE fais ? » : cette section répond magasin par magasin.
-      ['Analyse magasin', [
-        ['analysemag', 'Analyse', 0],
-        ['ventes', 'Target de vente & classement', 0],
-        ['croisements', 'Croisements', 0]]],
-      // Le budget est une affaire de finance, pas de performance : il a sa
-      // section, demandée telle quelle, et garde son sous-menu.
-      ['Finance', [
-        { sub: 'Budget magasin', children: [
+      // LE cœur du métier : d'abord constater (performance), puis agir
+      // magasin par magasin (analyse & leviers), puis cadrer (budget).
+      ['Magasins', [
+        { sub: 'Performance', children: [
+          ['magasins', 'Tableau des magasins', 0],
+          ['heatmap', 'Heatmap mensuelle', 0],
+          ['objectifs', 'Objectifs de CA', 0],
+          ['marge', 'Marge & coûts', 0],
+          ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]] },
+        { sub: 'Analyse & leviers', children: [
+          ['analysemag', 'Analyse magasin', 0],
+          ['ventes', 'Target de vente & classement', 0],
+          ['croisements', 'Croisements', 0]] },
+        { sub: 'Budget', children: [
           ['budget', 'Suivi du budget', 0],
           ['encodage', 'Encodage du budget', 0],
-          // L'étude de marché et les taux de charges se règlent une fois par
-          // an (ou à l'ouverture d'un magasin) : ils quittent l'écran de
-          // saisie mensuelle pour ne pas encombrer ce qu'on fait chaque mois.
           ['budgetparam', 'Paramètres du budget', 0]] }]],
-      // Le produit d'abord tel qu'il est (catalogue, comptoir), ensuite ce
-      // qu'il vaut (scoring), enfin ce qu'on en produit.
+      // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
       ['Produits', [
         { sub: 'Catalogue & comptoir', children: [
           ['catalogue', 'Catalogue produit', 0],
@@ -1041,42 +1032,21 @@ class App {
           ['analyse', 'Analyse dans le temps', 0],
           ['usage', 'Usage du catalogue', 0],
           ['manque', 'Manque à gagner', 0]] }]],
-      // « Suivi de production » a quitté le rail : les fournées déclarées sont
-      // trop lacunaires pour en tirer quoi que ce soit (une boutique sur
-      // quatre n'en déclare aucune), et le taux de perte se lit déjà au
-      // scoring. L'écran reste dans le code, il ne s'atteint plus depuis la
-      // navigation.
-
-      // « Campagnes commerciales » et « Demande de prix » ont quitté le rail à
-      // la demande — les écrans restent dans le code, comme le suivi de
-      // production, ils ne s'atteignent plus depuis la navigation.
       ['Centrale d’achat', [
         ['caAchats', 'Commandes', 0],
         ['caFacturation', 'Facturation magasins', 0]]],
-      // Ce que la marque investit et ce qu'elle en retire, au même endroit : le
-      // fonds finance les projets de développement, et l'un ne se lit pas sans
-      // l'autre.
-      ['Marque & développement', [
+      // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
+      // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
+      // l'autre — les deux anciennes sections n'en font qu'une.
+      ['Marque & marketing', [
         ['projets', 'Projets de développement', nLate],
-        ['fonds', 'Fonds & Royalties', 0]]],
-      // Le marketing suit la marque : le fonds finance les campagnes, et une
-      // campagne se lit à côté de ce qu'elle a coûté. Repris du module
-      // marketing autonome, qui disparaît — le cockpit lit et écrit les tables
-      // mar_* directement, comme il le fait pour pla_*.
-      // « Types de campagne » vient d'Administration : c'est un réglage, mais
-      // celui-là s'ouvre en écrivant une campagne, pas en administrant l'appli.
-      ['Marketing', [
-        ['mktCalendrier', 'Calendrier marketing', 0],
-        ['mktCampagnes', 'Campagnes', 0],
-        // Le budget dit ce qu'un magasin doit faire, la campagne ce qu'on lui
-        // demande en plus : les deux se lisent enfin sur le même écran.
-        ['bxcampagnes', 'Budget × Campagnes', 0],
-        // Ce qu'une campagne a vraiment donné : avant / après, net du témoin.
-        ['mesure', 'Mesure des campagnes', 0],
-        ['mktTypes', 'Types de campagne', 0]]],
-      // Le reporting EST un contrôle : il rend compte de ce qui a été fait, au
-      // même endroit que les checklists. Le journal, lui, est une trace
-      // d'administration — il rejoint les paramètres.
+        ['fonds', 'Fonds & Royalties', 0],
+        { sub: 'Campagnes', children: [
+          ['mktCalendrier', 'Calendrier marketing', 0],
+          ['mktCampagnes', 'Campagnes', 0],
+          ['bxcampagnes', 'Budget × Campagnes', 0],
+          ['mesure', 'Mesure des campagnes', 0],
+          ['mktTypes', 'Types de campagne', 0]] }]],
       ['Contrôle', [
         { sub: 'Checklists consultants', children: [
           ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
