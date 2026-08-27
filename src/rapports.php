@@ -270,6 +270,9 @@ function rapBlocDefs(): array
         'rentab-heatmap' => ['levier' => 'overhead-cost', 'nom' => 'Rentabilité par jour (heatmap)'],
         'kpi-derives' => ['levier' => 'transverse', 'nom' => 'KPI personnalisés'],
         'kpi-table' => ['levier' => 'transverse', 'nom' => 'Table KPI — les indicateurs encodés, par magasin'],
+        'kpi-tuiles' => ['levier' => 'transverse', 'nom' => 'Tuiles KPI — les chiffres en grand'],
+        'crois-combos' => ['levier' => 'recurrence', 'nom' => 'Croisements A × B — les combos enregistrés, target et écart'],
+        'kpi-heatmap' => ['levier' => 'transverse', 'nom' => 'Heatmap 7 jours — les KPI quotidiens, magasin par magasin'],
         'royalties-retard' => ['levier' => 'transverse', 'nom' => 'Redevances en retard'],
         'centrale-commandes' => ['levier' => 'transverse', 'nom' => 'Commandes fournisseurs à passer'],
     ];
@@ -801,6 +804,240 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     . 'collecte du ' . htmlspecialchars((string) ($liste2[0]['derniere']['maj'] ?? '')) . '</div>';
                 $b['htmlPar'][] = ['', $h2];
             }
+            break;
+        }
+        case 'kpi-tuiles': {
+            // Les chiffres EN GRAND : les KPI encodés (Table KPI), en tuiles —
+            // la ligne réseau d'abord, puis chaque magasin. Six tuiles au plus.
+            $b['action'] = 'Le choix des KPI se fait dans l’écran Table KPI (marqués « au rapport »).';
+            if (!function_exists('ep_kpi_table')) { $b['motif'] = 'module absent'; break; }
+            $t2 = ep_kpi_table();
+            $liste = array_slice(array_values(array_filter($t2['kpis'],
+                fn ($k2) => $k2['auRapport'] && $k2['derniere'] !== null)), 0, 6);
+            if ($liste === []) { $b['motif'] = 'aucune valeur collectée encore — la collecte tourne chaque heure'; break; }
+            $fmtK = static function (array $k2, $v): string {
+                if ($v === null) { return ''; }
+                $u = $k2['unite'];
+                $dec = $u === '€' ? ((float) $v >= 100 ? 0 : 2) : ((float) $v == (int) $v ? 0 : 1);
+                return number_format((float) $v, $dec, ',', ' ') . ($u !== '' && $u !== 'n' ? ' ' . $u : '');
+            };
+            $tuiles = static function (array $paires) use ($fmtK): string {
+                $h2 = '<table style="border-collapse:separate;border-spacing:4px;width:100%;font-family:sans-serif;margin-top:6px"><tr>';
+                foreach ($paires as [$k2, $v2]) {
+                    $h2 .= '<td style="width:' . (int) (100 / max(1, count($paires))) . '%;border:1px solid #e5e0d8;border-radius:8px;background:#fbf9f5;padding:8px 10px;vertical-align:top">'
+                        . '<div style="font-size:8.5px;text-transform:uppercase;letter-spacing:0.05em;color:#6E645A">' . htmlspecialchars($k2['nom']) . '</div>'
+                        . '<div style="font-family:Georgia,serif;font-size:16px;margin-top:3px">' . $fmtK($k2, $v2) . '</div>'
+                        . '<div style="font-size:8px;color:#9a938a;margin-top:2px">' . htmlspecialchars($k2['categorie'] . ($k2['sousCategorie'] !== '' ? ' · ' . $k2['sousCategorie'] : '')) . '</div></td>';
+                }
+                return $h2 . '</tr></table>';
+            };
+            $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif">Réseau</div>'
+                . $tuiles(array_map(fn ($k2) => [$k2, $k2['derniere']['valeur']], $liste))];
+            foreach ($t2['magasins'] as $m2) {
+                $paires = [];
+                foreach ($liste as $k2) {
+                    $deSid = array_column($k2['parMagasin'], 'valeur', 'shopId');
+                    $paires[] = [$k2, $deSid[$m2['id']] ?? $deSid[(int) $m2['id']] ?? null];
+                }
+                $b['htmlPar'][] = [(string) $m2['nom'],
+                    '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:8px">'
+                    . htmlspecialchars((string) $m2['nom']) . '</div>' . $tuiles($paires)];
+            }
+            break;
+        }
+        case 'crois-combos': {
+            // Les combos ENREGISTRÉS (écran Croisements) : le taux d'attache du
+            // mois en cours, le réseau, la target et l'écart — la page réseau
+            // montre tous les magasins, la version d'un magasin se compare au
+            // réseau. Les montants restent sur l'écran Croisements.
+            $b['action'] = 'Les combos et leurs targets se gèrent dans l’écran Croisements.';
+            if (!function_exists('croisMoisServi')) { $b['motif'] = 'module absent'; break; }
+            croisTables();
+            $combos = [];
+            try { $combos = Db::rows('SELECT * FROM ceo_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $eC) { $combos = []; }
+            if ($combos === []) { $b['motif'] = 'aucun combo enregistré — créez-en dans Croisements'; break; }
+            $nomDeC = [];
+            try {
+                foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s2) {
+                    $nomDeC[(string) $s2['id']] = (string) $s2['name'];
+                }
+            } catch (PDOException $e2) { /* vide */ }
+            $mC = date('Y-m');
+            $donnees = [];
+            foreach ($combos as $cb2) {
+                $aC = croisIds((string) $cb2['a_sel']); $bC = croisIds((string) $cb2['b_sel']);
+                if ($aC === null || $bC === null || $bC['ids'] === null) { continue; }
+                $dpC = croisDaypart((string) ($cb2['dp'] ?? ''));
+                $cC = croisMoisServi((string) $cb2['a_sel'], (string) $cb2['b_sel'], $aC['ids'], $bC['ids'], $mC, $nomDeC, $dpC['cle']);
+                if ($cC === null) { continue; }
+                $ffR = 0; $avR = 0; $parShop = [];
+                foreach ($nomDeC as $sidC => $nC) {
+                    $xC = $cC['shops'][$sidC] ?? $cC['shops'][(string) $sidC] ?? ['ff' => 0, 'avec' => 0];
+                    $parShop[(string) $sidC] = $xC;
+                    $ffR += $xC['ff']; $avR += $xC['avec'];
+                }
+                $donnees[] = ['lib' => $cb2['a_lib'] . ' × ' . $cb2['b_lib'] . ($dpC['lib'] !== '' ? ' (' . $dpC['lib'] . ')' : ''),
+                    'target' => isset($cb2['target']) && $cb2['target'] !== null ? (float) $cb2['target'] : null,
+                    'reseau' => $ffR > 0 ? round(100 * $avR / $ffR, 1) : null, 'parShop' => $parShop];
+            }
+            if ($donnees === []) { $b['motif'] = 'combos sans données sur le mois en cours'; break; }
+            $tauxTd = static function (?float $t3, ?float $cible): string {
+                if ($t3 === null) { return '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8"></td>'; }
+                $rouge = $cible !== null && $t3 < $cible;
+                return '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;'
+                    . ($rouge ? 'color:#8D1D2C;font-weight:700' : '') . '">'
+                    . str_replace('.', ',', (string) $t3) . ' %</td>';
+            };
+            // Le tableau réseau : une colonne par magasin.
+            $h2 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:6px"><tr>'
+                . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (mois en cours)</th>'
+                . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th>';
+            foreach ($nomDeC as $nC) {
+                $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">'
+                    . htmlspecialchars(trim((string) array_reverse(explode(' - ', $nC))[0])) . '</th>';
+            }
+            $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Target</th></tr>';
+            foreach ($donnees as $d2) {
+                $h2 .= '<tr><td style="padding:4px 6px;border-bottom:0.5px solid #e5e0d8">' . htmlspecialchars($d2['lib']) . '</td>'
+                    . $tauxTd($d2['reseau'], $d2['target']);
+                foreach (array_keys($nomDeC) as $sidC) {
+                    $xC = $d2['parShop'][(string) $sidC];
+                    $h2 .= $tauxTd($xC['ff'] > 0 ? round(100 * $xC['avec'] / $xC['ff'], 1) : null, $d2['target']);
+                }
+                $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;color:#6E645A">'
+                    . ($d2['target'] !== null ? str_replace('.', ',', (string) $d2['target']) . ' %' : '') . '</td></tr>';
+            }
+            $b['htmlPar'][] = ['', $h2 . '</table>'];
+            // La version d'un magasin : vous / réseau / target / écart.
+            foreach ($nomDeC as $sidC => $nC) {
+                $h3 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:6px"><tr>'
+                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (mois en cours)</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Vous</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Réseau</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Target</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Écart</th></tr>';
+                foreach ($donnees as $d2) {
+                    $xC = $d2['parShop'][(string) $sidC];
+                    $vous = $xC['ff'] > 0 ? round(100 * $xC['avec'] / $xC['ff'], 1) : null;
+                    $dT = ($d2['target'] !== null && $vous !== null) ? round($vous - $d2['target'], 1) : null;
+                    $h3 .= '<tr><td style="padding:4px 6px;border-bottom:0.5px solid #e5e0d8">' . htmlspecialchars($d2['lib']) . '</td>'
+                        . $tauxTd($vous, $d2['target']) . $tauxTd($d2['reseau'], null)
+                        . '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;color:#6E645A">'
+                        . ($d2['target'] !== null ? str_replace('.', ',', (string) $d2['target']) . ' %' : '') . '</td>'
+                        . '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;font-weight:700;color:'
+                        . ($dT === null ? '#6E645A' : ($dT >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                        . ($dT === null ? '' : ($dT >= 0 ? '+ ' : '− ') . str_replace('.', ',', (string) abs($dT)) . ' pt') . '</td></tr>';
+                }
+                $b['htmlPar'][] = [(string) $nC, $h3 . '</table>'];
+            }
+            break;
+        }
+        case 'kpi-heatmap': {
+            // Les KPI QUOTIDIENS en heatmap : magasins × 7 derniers jours
+            // collectés. La couleur vient de l'échelle en crans du KPI quand il
+            // en a une, de l'échelle pour-cent sinon (les % type tâches faites).
+            $b['action'] = 'Les KPI, leur maille et leur échelle se règlent dans l’écran Table KPI.';
+            if (!function_exists('ep_kpi_table')) { $b['motif'] = 'module absent'; break; }
+            $t2 = ep_kpi_table();
+            $quotidiens = array_values(array_filter($t2['kpis'],
+                fn ($k2) => $k2['auRapport'] && $k2['source']['grain'] === 'jour'
+                    && ($k2['echelle'] !== null || $k2['unite'] === '%')));
+            if ($quotidiens === []) {
+                // Sans échelle ni %, une heatmap n'a pas de couleur honnête :
+                // on prend alors tous les quotidiens, cellules neutres.
+                $quotidiens = array_values(array_filter($t2['kpis'],
+                    fn ($k2) => $k2['auRapport'] && $k2['source']['grain'] === 'jour'));
+            }
+            $coulPct = static function (float $p): array {
+                if ($p >= 90) { return ['#2d7a3e', '#fff']; }
+                if ($p >= 80) { return ['#a8c8ae', '#1c4527']; }
+                if ($p >= 70) { return ['#e3d29b', '#5f4a0a']; }
+                if ($p >= 60) { return ['#ecc08c', '#6b3a03']; }
+                return ['#c17983', '#fff'];
+            };
+            $coulCran = static function (float $v, array $bornes): array {
+                $i2 = 0;
+                foreach ($bornes as $b3) { if ($v >= (float) $b3) { $i2++; } }
+                return [['#c17983', '#fff'], ['#ecc08c', '#6b3a03'], ['#eceae6', '#222'],
+                    ['#a8c8ae', '#1c4527'], ['#2d7a3e', '#fff']][$i2];
+            };
+            // D'abord les TÂCHES FAITES jour par jour — le relevé quotidien du
+            // panel (Suivi mensuel), à sa maille naturelle : le jour. Le KPI de
+            // la Table est mensuel ; la heatmap, elle, veut la semaine.
+            try {
+                $joursT = array_reverse(array_map(fn ($r2) => (string) $r2['jour'],
+                    Db::rows('SELECT jour FROM ceo_tache_jour_etat ORDER BY jour DESC LIMIT 7')));
+                if ($joursT !== []) {
+                    $gT = [];
+                    foreach (Db::rows('SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
+                                       WHERE jour >= ? GROUP BY jour, id_shop', [$joursT[0]]) as $r2) {
+                        $gT[(string) $r2['id_shop']][(string) $r2['jour']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
+                    }
+                    $h2 = '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:10px">Tâches faites — jour par jour'
+                        . ' <span style="font-weight:400;color:#9a938a;font-size:9px">7 derniers jours relevés · part des tâches rendues</span></div>'
+                        . '<table style="border-collapse:separate;border-spacing:2px;font-family:sans-serif;font-size:10px;margin-top:4px"><tr>'
+                        . '<th style="text-align:left;font-size:8.5px;text-transform:uppercase;color:#6E645A;padding:2px 6px 2px 0">Magasin</th>';
+                    foreach ($joursT as $j2) {
+                        $h2 .= '<th style="width:52px;font-size:8.5px;color:#6E645A;padding:2px 0;text-align:center">' . substr($j2, 8, 2) . '/' . substr($j2, 5, 2) . '</th>';
+                    }
+                    $h2 .= '</tr>';
+                    $lignesT = array_map(fn ($m2) => [(string) $m2['id'], (string) $m2['nom']], $t2['magasins']);
+                    $lignesT[] = ['*', 'RÉSEAU'];
+                    foreach ($lignesT as [$sid2, $nom2]) {
+                        $h2 .= '<tr><td style="font-weight:' . ($sid2 === '*' ? '700' : '600') . ';padding:2px 8px 2px 0;white-space:nowrap">'
+                            . htmlspecialchars(trim((string) array_reverse(explode(' - ', $nom2))[0])) . '</td>';
+                        foreach ($joursT as $j2) {
+                            if ($sid2 === '*') {
+                                $f2 = 0; $tt2 = 0;
+                                foreach ($gT as $deJ) { $f2 += $deJ[$j2]['f'] ?? 0; $tt2 += $deJ[$j2]['t'] ?? 0; }
+                            } else {
+                                $f2 = $gT[$sid2][$j2]['f'] ?? 0; $tt2 = $gT[$sid2][$j2]['t'] ?? 0;
+                            }
+                            if ($tt2 === 0) { $h2 .= '<td style="border:1px dashed #d8d2c8;border-radius:5px;height:22px"></td>'; continue; }
+                            $p2 = round(100 * $f2 / $tt2);
+                            [$bg2, $fg2] = $coulPct((float) $p2);
+                            $h2 .= '<td style="background:' . $bg2 . ';color:' . $fg2 . ';border-radius:5px;text-align:center;height:22px;font-weight:700">' . $p2 . '</td>';
+                        }
+                        $h2 .= '</tr>';
+                    }
+                    $b['htmlPar'][] = ['', $h2 . '</table>'];
+                }
+            } catch (Throwable $eT2) { /* relevé absent : les KPI quotidiens suivent */ }
+            foreach ($quotidiens as $k2) {
+                $jours = array_reverse(array_map(fn ($r2) => (string) $r2['jour'],
+                    Db::rows('SELECT DISTINCT jour FROM ceo_kpi_valeur WHERE code = ? ORDER BY jour DESC LIMIT 7', [$k2['code']])));
+                if ($jours === []) { continue; }
+                $grille = [];
+                foreach (Db::rows('SELECT shop, jour, valeur FROM ceo_kpi_valeur WHERE code = ? AND jour >= ?',
+                    [$k2['code'], $jours[0]]) as $r2) {
+                    $grille[(string) $r2['shop']][(string) $r2['jour']] = $r2['valeur'] !== null ? (float) $r2['valeur'] : null;
+                }
+                $h2 = '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:10px">' . htmlspecialchars($k2['nom'])
+                    . ' <span style="font-weight:400;color:#9a938a;font-size:9px">7 derniers jours collectés'
+                    . ($k2['unite'] !== '' ? ' · ' . htmlspecialchars($k2['unite']) : '') . '</span></div>'
+                    . '<table style="border-collapse:separate;border-spacing:2px;font-family:sans-serif;font-size:10px;margin-top:4px"><tr>'
+                    . '<th style="text-align:left;font-size:8.5px;text-transform:uppercase;color:#6E645A;padding:2px 6px 2px 0">Magasin</th>';
+                foreach ($jours as $j2) {
+                    $h2 .= '<th style="width:52px;font-size:8.5px;color:#6E645A;padding:2px 0;text-align:center">' . substr($j2, 8, 2) . '/' . substr($j2, 5, 2) . '</th>';
+                }
+                $h2 .= '</tr>';
+                foreach (array_merge(array_map(fn ($m2) => [(string) $m2['id'], (string) $m2['nom']], $t2['magasins']), [['*', 'RÉSEAU']]) as [$sid2, $nom2]) {
+                    $h2 .= '<tr><td style="font-weight:' . ($sid2 === '*' ? '700' : '600') . ';padding:2px 8px 2px 0;white-space:nowrap">'
+                        . htmlspecialchars(trim((string) array_reverse(explode(' - ', $nom2))[0])) . '</td>';
+                    foreach ($jours as $j2) {
+                        $v2 = $grille[$sid2][$j2] ?? null;
+                        if ($v2 === null) { $h2 .= '<td style="border:1px dashed #d8d2c8;border-radius:5px;height:22px"></td>'; continue; }
+                        [$bg2, $fg2] = $k2['echelle'] !== null ? $coulCran($v2, $k2['echelle'])
+                            : ($k2['unite'] === '%' ? $coulPct($v2) : ['#f1eee9', '#222']);
+                        $dec2 = $v2 == (int) $v2 ? 0 : 1;
+                        $h2 .= '<td style="background:' . $bg2 . ';color:' . $fg2 . ';border-radius:5px;text-align:center;height:22px;font-weight:700">'
+                            . number_format($v2, $dec2, ',', ' ') . '</td>';
+                    }
+                    $h2 .= '</tr>';
+                }
+                $b['htmlPar'][] = ['', $h2 . '</table>'];
+            }
+            if ($b['htmlPar'] === []) { $b['motif'] = 'aucune journée collectée encore'; }
             break;
         }
         case 'royalties-retard': {
