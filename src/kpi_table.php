@@ -31,7 +31,7 @@ function kpiEndpointsOfferts(): array
         '/exploitation/reseau?periode=mois'    => 'Exploitation réseau — le mois en cours',
         '/pwa/tasks/heatmap/mois'              => 'Suivi des tâches — le mois en cours (part faite par magasin)',
         '/stores/kpis-annuels'                 => 'KPIs annuels — clients/jour, panier, articles par mois',
-        '/kpi-table/source/etp-mois'           => 'ETP planifiés — le mois en cours (planning du panel)',
+        '/kpi-table/source/etp-mois'           => 'ETP — heures du planning ÷ 164 h (plein temps), le mois en cours',
         '/produits/manque'                     => 'Manque à gagner — par magasin',
         '/reputation'                          => 'Réputation Google — notes et avis',
     ];
@@ -116,6 +116,9 @@ function kpiTableSemer(): void
  * une liste plate année × mois ; ici, le mois en cours par magasin (ou le
  * dernier mois planifié si le planning du mois n'est pas encore posé), dans
  * la forme que la Table KPI sait lire — une liste, une clé magasin, un champ.
+ *
+ * ETP = heures prestées (planning) ÷ heures d'un plein temps — 164 h/mois,
+ * la règle de la maison, ajustable par le réglage `etpHeuresPleinTemps`.
  */
 function ep_kpi_source_etp(): array
 {
@@ -131,11 +134,15 @@ function ep_kpi_source_etp(): array
         // Le mois le plus récent ≤ mois courant gagne : le planning d'un mois
         // pas encore posé ne met personne à zéro.
         if (!isset($parShop[$sid]) || $m > $parShop[$sid]['mois']) {
-            $parShop[$sid] = ['shopId' => $sid, 'mois' => $m,
-                'etp' => (float) ($r['etp'] ?? 0), 'heures' => (float) ($r['heures'] ?? 0)];
+            $parShop[$sid] = ['shopId' => $sid, 'mois' => $m, 'heures' => (float) ($r['heures'] ?? 0)];
         }
     }
-    return ['magasins' => array_values($parShop)];
+    $plein = (float) setting('etpHeuresPleinTemps', 164);
+    if ($plein <= 0) { $plein = 164.0; }
+    foreach ($parShop as $sid => $x) {
+        $parShop[$sid]['etp'] = round($x['heures'] / $plein, 2);
+    }
+    return ['magasins' => array_values($parShop), 'heuresPleinTemps' => $plein];
 }
 
 /**
