@@ -1002,7 +1002,6 @@ class App {
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
         ['resultatJour', 'Résultat du jour', 0],
-        ['kpiTable', 'Table KPI', 0],
         ['exploitation', 'P&L magasins', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
@@ -1055,6 +1054,7 @@ class App {
           ['suiviMensuel', 'Suivi mensuel', 0]] },
         ['reporting', 'Reporting automatisé', 0]]],
       ['Administration', [
+        ['kpiTable', 'Table KPI', 0],
         ['diagnostic', 'Diagnostic API', 0],
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
           ['caReglages', 'Centrale d’achat', 0],

@@ -137,3 +137,4 @@ deploy 20260827T164103Z suivi mensuel en sous-menu
 deploy 20260827T182942Z table kpi socle
 deploy 20260827T183333Z table kpi filtre magasins actifs
 deploy 20260827T190825Z kpi composes + fiche magasin + echelle crans
+deploy 20260827T192833Z table kpi dans administration
