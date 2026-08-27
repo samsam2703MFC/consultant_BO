@@ -32,6 +32,7 @@ require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
+require __DIR__ . '/../../src/kpi_table.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -101,6 +102,8 @@ function route(string $method, string $path): mixed
             $path === '/connecteurs'                   => ep_connecteurs(),
             $path === '/rapports'                      => ep_rapports(),
             $path === '/kpi-defs'                      => ep_kpi_referentiel(),
+            $path === '/kpi-table'                     => ep_kpi_table(),
+            $path === '/kpi-table/sonde'               => ep_kpi_sonde(),
             $path === '/cadence'                       => ep_cadence(),
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
@@ -207,6 +210,8 @@ function route(string $method, string $path): mixed
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
+    if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
+    if ($method === 'POST' && $path === '/kpi-table/collecte') { return wr_kpi_collecte(); }
     if ($method === 'POST' && $path === '/pwa/tasks/releve') { return wr_taches_releve(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }

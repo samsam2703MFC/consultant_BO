@@ -237,7 +237,7 @@ class App {
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
       bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne',
-      suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', reporting: 'reporting',
+      suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
@@ -683,7 +683,7 @@ class App {
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -1002,6 +1002,7 @@ class App {
       ['Pilotage', [
         ['taches', 'Tâches consultants', lateTasks.length],
         ['resultatJour', 'Résultat du jour', 0],
+        ['kpiTable', 'Table KPI', 0],
         ['exploitation', 'P&L magasins', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
@@ -1077,11 +1078,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1405,6 +1406,7 @@ class App {
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
+    if (common.isKpiT) this.valsKpiT(common);
     // --- tâches consultants
     if (common.isTaches) this.valsTaches(common, flat);
     // --- reporting
@@ -10110,6 +10112,97 @@ class App {
           fermer: () => this.setState({ ctrlHeat: null }),
         };
     } else { common.hmDetail = false; }
+  }
+
+  /** L'écran « Table KPI » : encodage (catégorie, source endpoint) + valeurs. */
+  valsKpiT(common){
+    const S = this.state;
+    if (!this._kpiTLu) { this._kpiTLu = true;
+      readOne('/kpi-table').then(d2 => { this.D.kpiTable = d2 || { indispo: true }; this.setState({}); }); }
+    const T = this.D.kpiTable;
+    common.ktChargement = !T;
+    const court = n => (String(n || '').split(' - ').reverse()[0] || '').trim() || n;
+    const fmt = (k, v) => { if (v == null) { return ''; }
+      const dec = k.unite === '€' ? (v >= 100 ? 0 : 2) : (v === Math.round(v) ? 0 : 1);
+      return v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+        + (k.unite && k.unite !== 'n' ? ' ' + k.unite : ''); };
+    // Groupes catégorie › sous-catégorie, dans l'ordre servi.
+    const groupes = [];
+    ((T && T.kpis) || []).forEach(k => {
+      let g = groupes.find(g2 => g2.nom === k.categorie);
+      if (!g) { g = { nom: k.categorie, kpis: [] }; groupes.push(g); }
+      const serie = (k.serie || []).map(p => p.valeur).filter(v => v != null);
+      const max = Math.max(1, ...serie);
+      g.kpis.push({
+        nom: k.nom, sousCat: k.sousCategorie || '',
+        valeur: k.derniere ? fmt(k, k.derniere.valeur) : '',
+        quand: k.derniere ? (k.source.grain === 'mois' ? 'mois en cours' : k.derniere.jour.slice(8, 10) + '/' + k.derniere.jour.slice(5, 7)) : 'pas encore collecté',
+        maj: k.derniere ? k.derniere.maj : '',
+        sourceTxt: 'GET ' + k.source.endpoint, champTxt: k.source.liste + '[].' + k.source.champ,
+        grain: k.source.grain === 'mois' ? 'mois' : 'jour',
+        agregat: k.agregat === 'moyenne' ? 'moyenne réseau' : 'somme réseau',
+        spark: serie.map(v => ({ h: Math.max(2, Math.round(20 * v / max)) })),
+        parMagasin: (k.parMagasin || []).map(m => ({ nom: court(m.magasin), val: fmt(k, m.valeur) })),
+        suppr: () => { if (!window.confirm('Retirer le KPI « ' + k.nom + ' » de la table ? Son historique reste en base.')) { return; }
+          this.api('POST', '/kpi-table', { id: k.id, supprimer: true }).then(() => { this._kpiTLu = false; this.setState({}); }); },
+      });
+    });
+    common.ktGroupes = groupes;
+    common.ktVide = !!T && !T.indispo && groupes.length === 0;
+    common.ktCollecte = () => { if (S.ktBusy) { return; }
+      this.setState({ ktBusy: true });
+      this.api('POST', '/kpi-table/collecte', {}).then(r2 => {
+        this.setState({ ktBusy: false });
+        this.notify(r2 && r2.ok ? r2.collectes + ' KPI collecté(s)' + ((r2.rates || []).length ? ' — en échec : ' + r2.rates.join(', ') : '')
+          : 'Collecte impossible — voir Diagnostic API');
+        this._kpiTLu = false; this.setState({}); }); };
+    common.ktCollecteTxt = S.ktBusy ? 'Collecte en cours…' : 'Collecter maintenant';
+
+    // --- La fiche d'encodage. La sonde remplit listes et champs depuis la
+    // réponse RÉELLE de l'endpoint choisi — on choisit, on ne devine pas.
+    const f = S.ktForm || {};
+    const fSet = patch => this.setState(s2 => ({ ktForm: Object.assign({}, s2.ktForm, patch) }));
+    const sonde = S.ktSonde || null;
+    const listes = (sonde && sonde.listes) || [];
+    const listeSel = listes.find(l => l.liste === f.liste) || listes[0] || null;
+    common.ktForm = {
+      ouvert: !!S.ktFormOn,
+      ouvrir: () => this.setState({ ktFormOn: true }),
+      fermer: () => this.setState({ ktFormOn: false, ktForm: {}, ktSonde: null }),
+      nom: f.nom || '', setNom: e => fSet({ nom: e.target.value }),
+      categorie: f.categorie || '', setCategorie: e => fSet({ categorie: e.target.value }),
+      sousCategorie: f.sousCategorie || '', setSousCategorie: e => fSet({ sousCategorie: e.target.value }),
+      categories: [...new Set(groupes.map(g => g.nom))],
+      unite: f.unite || '€', setUnite: e => fSet({ unite: e.target.value }),
+      agregat: f.agregat || 'somme', setAgregat: e => fSet({ agregat: e.target.value }),
+      grain: f.grain || 'jour', setGrain: e => fSet({ grain: e.target.value }),
+      endpoints: Object.entries((T && T.endpoints) || {}).map(([val, nom]) => ({ val, nom, sel: val === f.endpoint })),
+      endpoint: f.endpoint || '', setEndpoint: e => { fSet({ endpoint: e.target.value, liste: '', champ: '' }); this.setState({ ktSonde: null }); },
+      tester: () => { if (!f.endpoint || S.ktSondeBusy) { return; }
+        this.setState({ ktSondeBusy: true });
+        readOne('/kpi-table/sonde?endpoint=' + encodeURIComponent(f.endpoint)).then(d2 => {
+          this.setState({ ktSondeBusy: false, ktSonde: d2 || { ok: false, error: 'la sonde n’a pas répondu' } }); }); },
+      testerTxt: S.ktSondeBusy ? 'Lecture en cours…' : 'Tester la source',
+      sondeErreur: sonde && !sonde.ok ? (sonde.error || 'rien de lisible dans la réponse') : '',
+      listes: listes.map(l => ({ val: l.liste, sel: listeSel && l.liste === listeSel.liste })),
+      setListe: e => fSet({ liste: e.target.value, champ: '' }),
+      champs: listeSel ? listeSel.champs.map(c => ({ val: c.champ, sel: c.champ === f.champ })) : [],
+      setChamp: e => fSet({ champ: e.target.value }),
+      apercu: (() => { if (!listeSel || !f.champ) { return []; }
+        const c = listeSel.champs.find(c2 => c2.champ === f.champ);
+        return c ? c.apercu.map(a => ({ nom: court(a.magasin), val: a.valeur == null ? '' : String(a.valeur) })) : []; })(),
+      pret: !!(f.nom && f.endpoint && listeSel && f.champ),
+      enregistrer: () => { if (!(f.nom && f.endpoint && listeSel && f.champ) || S.ktSaveBusy) { return; }
+        this.setState({ ktSaveBusy: true });
+        this.api('POST', '/kpi-table', { nom: f.nom, categorie: f.categorie, sousCategorie: f.sousCategorie,
+          unite: f.unite || '', agregat: f.agregat || 'somme',
+          source: { endpoint: f.endpoint, liste: listeSel.liste, cleShop: listeSel.cleShop, champ: f.champ, grain: f.grain || 'jour' } })
+        .then(r2 => { this.setState({ ktSaveBusy: false });
+          if (r2 && r2.ok) { this.notify('KPI encodé — première collecte au prochain battement (ou « Collecter maintenant »)');
+            this.setState({ ktFormOn: false, ktForm: {}, ktSonde: null }); this._kpiTLu = false; this.setState({}); }
+          else { this.notify('Enregistrement refusé — ' + ((r2 && r2.error) || 'voir Diagnostic API')); } }); },
+      enregistrerTxt: S.ktSaveBusy ? 'Enregistrement…' : 'Enregistrer le KPI',
+    };
   }
 
   /** L'agrandissement annotable : cadres numérotés + liste des remarques. */

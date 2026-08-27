@@ -98,7 +98,7 @@ function ensureRapports(): void
         // Évolution des semis : les blocs nés après le premier semis rejoignent
         // les rapports déjà en base — une fois, sans toucher au reste.
         $evolutions = [
-            'ceo-hebdo' => ['rentab-heatmap', 'kpi-derives'],
+            'ceo-hebdo' => ['rentab-heatmap', 'kpi-derives', 'kpi-table'],
             'franchise-hebdo' => ['rentab-heatmap'],
         ];
         foreach ($evolutions as $code => $nouveaux) {
@@ -269,6 +269,7 @@ function rapBlocDefs(): array
         'overhead-jours' => ['levier' => 'overhead-cost', 'nom' => 'Jours à résultat net négatif'],
         'rentab-heatmap' => ['levier' => 'overhead-cost', 'nom' => 'Rentabilité par jour (heatmap)'],
         'kpi-derives' => ['levier' => 'transverse', 'nom' => 'KPI personnalisés'],
+        'kpi-table' => ['levier' => 'transverse', 'nom' => 'Table KPI — les indicateurs encodés, par magasin'],
         'royalties-retard' => ['levier' => 'transverse', 'nom' => 'Redevances en retard'],
         'centrale-commandes' => ['levier' => 'transverse', 'nom' => 'Commandes fournisseurs à passer'],
     ];
@@ -751,6 +752,55 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 }
             }
             if ($aucunActif) { $b['motif'] = 'aucun KPI dérivé actif — créez-en dans Paramètres'; }
+            break;
+        }
+        case 'kpi-table': {
+            // La Table KPI dans le rapport : les indicateurs ENCODÉS (écran
+            // Table KPI), dernière valeur collectée par magasin + réseau,
+            // groupés par catégorie. Aucun recalcul : on lit ceo_kpi_valeur.
+            $b['action'] = 'Les KPI s’encodent (source, seuils, catégorie) dans l’écran Table KPI.';
+            if (!function_exists('ep_kpi_table')) { $b['motif'] = 'module absent'; break; }
+            $t2 = ep_kpi_table();
+            $parCat = [];
+            foreach ($t2['kpis'] as $k2) {
+                if (!$k2['auRapport'] || $k2['derniere'] === null) { continue; }
+                $parCat[$k2['categorie']][] = $k2;
+            }
+            if ($parCat === []) { $b['motif'] = 'aucune valeur collectée encore — la collecte tourne chaque heure'; break; }
+            $fmtK = static function (array $k2, $v): string {
+                if ($v === null) { return ''; }
+                $u = $k2['unite'];
+                $dec = $u === '€' ? ((float) $v >= 100 ? 0 : 2) : ($u === '%' || $u === 'n' ? ($v == (int) $v ? 0 : 1) : 1);
+                return number_format((float) $v, $dec, ',', ' ') . ($u !== '' && $u !== 'n' ? ' ' . $u : '');
+            };
+            $mags2 = $t2['magasins'];
+            foreach ($parCat as $cat2 => $liste2) {
+                $h2 = '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:10px">' . htmlspecialchars($cat2) . '</div>'
+                    . '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:4px"><tr>'
+                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">KPI</th>';
+                foreach ($mags2 as $m2) {
+                    $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">'
+                        . htmlspecialchars(trim((string) array_reverse(explode(' - ', (string) $m2['nom']))[0])) . '</th>';
+                }
+                $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th></tr>';
+                foreach ($liste2 as $k2) {
+                    $deSid = array_column($k2['parMagasin'], 'valeur', 'shopId');
+                    $h2 .= '<tr><td style="padding:4px 6px;border-bottom:0.5px solid #e5e0d8">' . htmlspecialchars($k2['nom'])
+                        . ' <span style="color:#9a938a;font-size:9px">' . htmlspecialchars($k2['sousCategorie']) . '</span></td>';
+                    foreach ($mags2 as $m2) {
+                        $v2 = $deSid[$m2['id']] ?? $deSid[(int) $m2['id']] ?? null;
+                        $rouge = $v2 !== null && $k2['seuilAlerte'] !== null
+                            && (($k2['sens'] === 'haut' && $v2 > $k2['seuilAlerte']) || ($k2['sens'] === 'bas' && $v2 < $k2['seuilAlerte']));
+                        $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;'
+                            . ($rouge ? 'color:#8D1D2C;font-weight:700' : '') . '">' . $fmtK($k2, $v2) . '</td>';
+                    }
+                    $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;font-weight:700">'
+                        . $fmtK($k2, $k2['derniere']['valeur']) . '</td></tr>';
+                }
+                $h2 .= '</table><div style="font-size:9px;color:#9a938a;font-family:sans-serif;margin-top:2px">'
+                    . 'collecte du ' . htmlspecialchars((string) ($liste2[0]['derniere']['maj'] ?? '')) . '</div>';
+                $b['htmlPar'][] = ['', $h2];
+            }
             break;
         }
         case 'royalties-retard': {
@@ -1915,7 +1965,12 @@ function ep_rapports_cron(): array
     $taches = 'module absent';
     try { if (function_exists('tachesSuiviCron')) { $taches = tachesSuiviCron(); } }
     catch (Throwable $eT) { $taches = 'échec — ' . $eT->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches];
+    // La Table KPI se collecte au même battement : chaque KPI encodé est lu
+    // une fois par heure, la dernière écriture de la journée fait foi.
+    $kpiT = 'module absent';
+    try { if (function_exists('kpiTableCron')) { $kpiT = kpiTableCron(); } }
+    catch (Throwable $eK) { $kpiT = 'échec — ' . $eK->getMessage(); }
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT];
 }
 
 /**

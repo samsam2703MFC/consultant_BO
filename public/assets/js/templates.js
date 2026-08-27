@@ -141,6 +141,7 @@ export function render(c, x){
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
+      ${c.isKpiT ? tplKpiT(c, x) : ''}
       ${c.isTaches ? tplTaches(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
@@ -2351,6 +2352,84 @@ function tplControle(c, x){
 /* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le
    détail d'une cellule cliquée — les tâches les moins faites d'abord, puis la
    grille jour par jour (vert fait, bordeaux pas fait, pointillé pas attendue). */
+/* L'écran « Table KPI » : l'encodage (catégorie, source endpoint, test en
+   direct) et les valeurs collectées — le magasin de valeurs du réseau. */
+function tplKpiT(c, x){
+  const { esc } = x;
+  const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const TH10 = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)';
+  const inp = 'font-family:var(--font-ui);font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 11px;background:var(--color-surface);color:var(--color-text)';
+  const src = 'font-family:ui-monospace,Menlo,monospace;font-size:10.5px;background:var(--color-background-secondary);border-radius:5px;padding:2px 7px';
+  if (c.ktChargement) { return `<div data-screen="table-kpi"><div style="${card};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Table KPI — lecture…</div></div>`; }
+  const F = c.ktForm;
+  const fiche = !F.ouvert ? '' : `
+  <div style="${card};padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-size:13.5px;font-weight:600">Nouveau KPI — la fiche d'encodage</div>
+      <span ${x.A(F.fermer)} style="cursor:pointer;font-size:11.5px;color:var(--color-text-muted);text-decoration:underline">fermer</span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <label style="${TH10}">Nom<br><input value="${esc(F.nom)}" ${x.C(F.setNom)} placeholder="Panier moyen" style="${inp};min-width:220px;margin-top:4px"></label>
+      <label style="${TH10}">Catégorie<br><input value="${esc(F.categorie)}" ${x.C(F.setCategorie)} list="ktCats" placeholder="Ventes" style="${inp};width:150px;margin-top:4px"><datalist id="ktCats">${F.categories.map(cg => `<option value="${esc(cg)}">`).join('')}</datalist></label>
+      <label style="${TH10}">Sous-catégorie<br><input value="${esc(F.sousCategorie)}" ${x.C(F.setSousCategorie)} placeholder="Récurrence" style="${inp};width:150px;margin-top:4px"></label>
+      <label style="${TH10}">Unité<br><select ${x.C(F.setUnite)} style="${inp};margin-top:4px">${['€','%','n','min','★'].map(u => `<option${u === F.unite ? ' selected' : ''}>${u}</option>`).join('')}</select></label>
+      <label style="${TH10}">Réseau =<br><select ${x.C(F.setAgregat)} style="${inp};margin-top:4px"><option value="somme"${F.agregat === 'somme' ? ' selected' : ''}>somme des magasins</option><option value="moyenne"${F.agregat === 'moyenne' ? ' selected' : ''}>moyenne des magasins</option></select></label>
+      <label style="${TH10}">Maille<br><select ${x.C(F.setGrain)} style="${inp};margin-top:4px"><option value="jour"${F.grain === 'jour' ? ' selected' : ''}>par jour</option><option value="mois"${F.grain === 'mois' ? ' selected' : ''}>par mois</option></select></label>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
+      <label style="${TH10}">Source — endpoint de l'application<br>
+        <select ${x.C(F.setEndpoint)} style="${inp};min-width:340px;margin-top:4px">
+          <option value="">choisir…</option>
+          ${F.endpoints.map(e => `<option value="${esc(e.val)}"${e.sel ? ' selected' : ''}>${esc(e.nom)}</option>`).join('')}
+        </select></label>
+      <button ${x.A(F.tester)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(F.testerTxt)}</button>
+      ${F.listes.length ? `<label style="${TH10}">Liste<br><select ${x.C(F.setListe)} style="${inp};margin-top:4px">${F.listes.map(l => `<option value="${esc(l.val)}"${l.sel ? ' selected' : ''}>${esc(l.val)}[]</option>`).join('')}</select></label>` : ''}
+      ${F.champs.length ? `<label style="${TH10}">Champ à lire<br><select ${x.C(F.setChamp)} style="${inp};margin-top:4px"><option value="">choisir…</option>${F.champs.map(ch => `<option value="${esc(ch.val)}"${ch.sel ? ' selected' : ''}>${esc(ch.val)}</option>`).join('')}</select></label>` : ''}
+    </div>
+    ${F.sondeErreur ? `<div style="font-size:12px;color:#8D1D2C;margin-top:10px">${esc(F.sondeErreur)}</div>` : ''}
+    ${F.apercu.length ? `<div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:9px 13px;margin-top:10px;background:rgba(45,122,62,0.05);font-size:12px">
+      <b style="color:#2d7a3e">test réussi</b> — valeurs lues à l'instant : ${F.apercu.map(a2 => `${esc(a2.nom)} <b>${esc(a2.val)}</b>`).join(' · ')}</div>` : ''}
+    <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+      <button ${x.A(F.enregistrer)} style="border:none;border-radius:999px;padding:9px 18px;background:${F.pret ? 'var(--color-primary)' : 'var(--color-border-secondary)'};color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${F.pret ? 'pointer' : 'default'}">${esc(F.enregistrerTxt)}</button>
+      <span style="font-size:11px;color:var(--color-text-muted)">Dès l'enregistrement : collecte au prochain battement du cron, historique au fil des jours, repris dans le bloc « Table KPI » des rapports.</span>
+    </div>
+  </div>`;
+  return `
+  <div data-screen="table-kpi" style="display:flex;flex-direction:column;gap:16px">
+    <div style="${card};padding:16px 18px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13.5px;font-weight:600">Les KPI encodés — par catégorie</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Chaque KPI déclare sa source (l'endpoint, la liste, le champ) ; le cron le collecte chaque heure et range les valeurs par magasin + réseau. Les rapports lisent cette table telle quelle (bloc « Table KPI »).</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button ${x.A(c.ktCollecte)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(c.ktCollecteTxt)}</button>
+          <button ${x.A(F.ouvrir)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">+ Nouveau KPI</button>
+        </div>
+      </div>
+      ${c.ktVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucun KPI encodé — « + Nouveau KPI » pour commencer.</div>` : ''}
+      ${c.ktGroupes.map(g => `
+      <div style="margin-top:14px">
+        <div style="font-size:12.5px;font-weight:700;border-bottom:1.5px solid var(--color-border-secondary);padding-bottom:4px">${esc(g.nom)}</div>
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:860px;font-size:12px;font-variant-numeric:tabular-nums">
+          <tr><th style="text-align:left;${TH10};padding:6px 8px 5px 0">KPI</th><th style="text-align:right;${TH10};padding:6px 8px">Réseau</th><th style="text-align:left;${TH10};padding:6px 8px">Quand</th><th style="text-align:left;${TH10};padding:6px 8px">Historique</th><th style="text-align:left;${TH10};padding:6px 8px">Par magasin</th><th style="text-align:left;${TH10};padding:6px 8px">Source</th><th></th></tr>
+          ${g.kpis.map(k => `
+          <tr style="border-top:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:8px 8px 8px 0"><b>${esc(k.nom)}</b>${k.sousCat ? ` <span style="font-size:10px;color:var(--color-text-muted)">${esc(k.sousCat)}</span>` : ''}<br><span style="font-size:10px;color:var(--color-text-muted)">${esc(k.grain)} · ${esc(k.agregat)}</span></td>
+            <td style="padding:8px;text-align:right;font-weight:700;font-size:13px">${esc(k.valeur)}</td>
+            <td style="padding:8px;color:var(--color-text-muted)">${esc(k.quand)}<br><span style="font-size:10px">${esc(k.maj)}</span></td>
+            <td style="padding:8px"><span style="display:inline-flex;align-items:flex-end;gap:2px;height:20px">${k.spark.map((pt, i2) => `<i style="display:inline-block;width:6px;height:${pt.h}px;border-radius:2px 2px 0 0;background:${i2 === k.spark.length - 1 ? 'var(--color-primary)' : '#D8CEC2'}"></i>`).join('')}</span></td>
+            <td style="padding:8px;font-size:11px">${k.parMagasin.map(m => `${esc(m.nom)} <b>${esc(m.val)}</b>`).join(' · ')}</td>
+            <td style="padding:8px"><span style="${src}">${esc(k.sourceTxt)}</span><br><span style="${src};margin-top:3px;display:inline-block">${esc(k.champTxt)}</span></td>
+            <td style="padding:8px;text-align:right"><span ${x.A(k.suppr)} style="cursor:pointer;color:var(--color-text-muted);font-size:11px">retirer</span></td>
+          </tr>`).join('')}
+        </table></div>
+      </div>`).join('')}
+    </div>
+    ${fiche}
+  </div>`;
+}
+
 /* L'écran « Suivi mensuel » : la heatmap seule, sur sa propre page. */
 function tplSuiviM(c, x){
   const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
