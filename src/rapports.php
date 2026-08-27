@@ -113,6 +113,7 @@ function ensureRapports(): void
                 Db::exec('UPDATE ceo_rapport SET blocs = ? WHERE id = ?', [json_encode($blocs), (int) $r['id']]);
             }
         }
+        rapVentesSemer();
         return;
     }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
@@ -133,6 +134,23 @@ function ensureRapports(): void
                   VALUES (?,?,?,?,?,?,?,?,?,1)',
             [$s[0], $s[1], $s[2], $s[3], $s[4], $s[5], json_encode($s[6]), json_encode([]), $s[7]]);
     }
+    rapVentesSemer();
+}
+
+/**
+ * Le rapport de CLÔTURE Target de vente rejoint le reporting automatisé —
+ * une ligne comme les autres à l'écran (heure, jour, adresses, carnet par
+ * magasin), mais sa génération ne passe pas par les blocs : c'est le PDF de
+ * ventes.php, réseau pour les destinataires réseau, la version d'un magasin
+ * pour son carnet. Le 3 du mois : le mois révolu est complet et primé.
+ */
+function rapVentesSemer(): void
+{
+    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', ['target-vente-cloture']) !== null) { return; }
+    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        ['target-vente-cloture', 'Clôture Target de vente', 'Franchisé & direction', 'mensuel', 8, 3,
+         json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
 }
 
 /**
@@ -1560,6 +1578,78 @@ function rapportDistribuer(array $rep): array
     return $bilan;
 }
 
+/**
+ * Un run pour la clôture Target de vente : le document de ventes.php entre
+ * dans ceo_rapport_run comme n'importe quel rapport — l'historique, la
+ * relecture à l'écran et rapportEnvoyer (rendu PDF + pièce jointe) marchent
+ * sans rien leur apprendre. `$shop` vide = la version réseau.
+ */
+function venteClotureRun(array $rep, string $shop = ''): array
+{
+    $r = venteClotureDoc('', $shop);
+    if (isset($r['error'])) { return ['statut' => 'erreur', 'error' => $r['error']]; }
+    $resume = 'Clôture ' . $r['libMois'] . ' — ' . $r['magasin'];
+    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+              VALUES (?,?,?,?,?,?,?,?)',
+        [(int) $rep['id'], date('Y-m-d H:i:s'), $r['m'] . '-01', date('Y-m-t', strtotime($r['m'] . '-01')),
+         'genere', $resume, $r['doc'],
+         json_encode(['magasin' => $r['magasin'], 'rapport' => (string) ($rep['nom'] ?? '')], JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Généré — ' . $resume);
+    return ['runId' => (int) Db::pdo()->lastInsertId(), 'statut' => 'genere', 'resume' => $resume];
+}
+
+/**
+ * Distribution de la clôture Target de vente : la version RÉSEAU complète aux
+ * destinataires réseau, puis la version de CHAQUE magasin (?shop=) aux
+ * adresses de son carnet — le même carnet magasin → emails que les autres
+ * rapports par magasin. Sans adresse, pas de génération : rien à archiver
+ * pour personne.
+ */
+function ventesClotureDistribuer(array $rep): array
+{
+    $carnet = json_decode((string) ($rep['dest_par_magasin'] ?? ''), true) ?: [];
+    $bilan = ['reseau' => null, 'magasins' => []];
+
+    $g = venteClotureRun($rep, '');
+    if (($g['statut'] ?? '') === 'erreur') {
+        journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Génération impossible — ' . ($g['error'] ?? ''));
+        return $bilan + ['resume' => $g['error'] ?? 'génération impossible'];
+    }
+    $bilan['runId'] = $g['runId'];
+    $bilan['resume'] = $g['resume'];
+    $destsReseau = array_values(array_filter(json_decode((string) ($rep['destinataires'] ?? '[]'), true) ?: [],
+        fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+    if ($destsReseau !== []) { $bilan['reseau'] = rapportEnvoyer($rep, $g['runId']); }
+
+    try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name'); }
+    catch (PDOException $e) { $shops = []; }
+    foreach ($shops as $s) {
+        $nom = (string) $s['name'];
+        $dests = array_values(array_filter((array) ($carnet[$nom] ?? []), fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+        if ($dests === []) {
+            $bilan['magasins'][] = ['magasin' => $nom, 'statut' => 'sans-adresse',
+                'note' => 'aucune adresse dans le carnet — version non générée'];
+            continue;
+        }
+        $repMag = $rep;
+        $repMag['nom'] = $rep['nom'] . ' — ' . trim((string) array_reverse(explode(' - ', $nom))[0]);
+        $repMag['destinataires'] = json_encode($dests);
+        $repMag['magasins'] = json_encode([$nom]);   // le pied du PDF porte le magasin
+        $gm = venteClotureRun($repMag, (string) $s['id']);
+        if (($gm['statut'] ?? '') === 'erreur') {
+            $bilan['magasins'][] = ['magasin' => $nom, 'statut' => 'erreur', 'note' => $gm['error'] ?? null];
+            continue;
+        }
+        $env = rapportEnvoyer($repMag, $gm['runId']);
+        $bilan['magasins'][] = ['magasin' => $nom, 'statut' => $env['ok'] ? 'envoye' : 'echec',
+            'runId' => $gm['runId'], 'envoyes' => $env['envoyes'] ?? [], 'note' => $env['note'] ?? null];
+    }
+    journalAdd('CEO', 'Rapport', (string) $rep['nom'], 'Distribution clôture ventes — '
+        . count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s), '
+        . count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'sans-adresse')) . ' sans adresse');
+    return $bilan;
+}
+
 /* --- Endpoints -------------------------------------------------------------- */
 
 function ep_rapports(): array
@@ -1721,6 +1811,7 @@ function wr_rapport_generer(int $id): array
     ensureRapports();
     $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
+    if ((string) $rep['code'] === 'target-vente-cloture') { return ['ok' => true] + venteClotureRun($rep, ''); }
     return ['ok' => true] + rapportGenerer($rep);
 }
 
@@ -1729,6 +1820,9 @@ function wr_rapport_envoyer(int $id): array
     ensureRapports();
     $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
+    if ((string) $rep['code'] === 'target-vente-cloture') {
+        return ['ok' => true, 'mode' => 'par-magasin'] + ventesClotureDistribuer($rep);
+    }
     if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
         return ['ok' => true, 'mode' => 'par-magasin'] + rapportDistribuer($rep);
     }
@@ -1792,6 +1886,12 @@ function ep_rapports_cron(): array
         $deja = Db::row('SELECT id FROM ceo_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
             [(int) $rep['id'], date('Y-m-d 00:00:00'), 'erreur']);
         if ($deja !== null) { continue; }
+        if ((string) $rep['code'] === 'target-vente-cloture') {
+            $bilan = ventesClotureDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue',
+                'envoi' => count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s)'];
+            continue;
+        }
         if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
             $bilan = rapportDistribuer($rep);
             $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'], 'statut' => 'distribue',

@@ -542,14 +542,20 @@ function venteCroisementFF(string $du, string $au, array $nomDe): array
  * ticket. Page 2 : le classement complet, TOUTES les données. Puis une page
  * par magasin.
  */
-function ep_ventes_pdf(): array
+function venteClotureDoc(string $mois = '', string $shop = ''): array
 {
+    // Le mois voyage par $_GET jusqu'à ep_ventes_classement — on le pose puis
+    // on le repose, pour que le reporting automatisé passe par le même chemin
+    // que l'écran sans dupliquer la lecture du paramètre.
+    $mAvant = $_GET['m'] ?? null;
+    if ($mois !== '') { $_GET['m'] = $mois; }
     $d = ep_ventes_classement();
-    if (($d['motif'] ?? null) !== null) { http_response_code(422); return ['error' => $d['motif']]; }
-    // `?shop=` réduit le rapport à UN magasin (sa clôture, ses combos face au
+    if ($mAvant === null) { unset($_GET['m']); } else { $_GET['m'] = $mAvant; }
+    if (($d['motif'] ?? null) !== null) { return ['error' => $d['motif']]; }
+    // `shop` réduit le rapport à UN magasin (sa clôture, ses combos face au
     // réseau, son équipe) : la version que le reporting automatisé envoie à
-    // chaque gérant — `?m=` choisit le mois, dernier révolu sinon.
-    $seulShop = trim((string) ($_GET['shop'] ?? ''));
+    // chaque gérant — `mois` choisit le mois, dernier révolu sinon.
+    $seulShop = trim($shop);
     $garde = static fn ($sid) => $seulShop === '' || (string) $sid === $seulShop;
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
@@ -911,13 +917,23 @@ function ep_ventes_pdf(): array
 
 
     $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Target de vente — ' . $e($libMois) . '</title></head><body>' . $h . '</body></html>';
-    $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => 'Target de vente — ' . $libMois,
+    $label = 'Réseau';
+    $nomSeul = '';
+    if ($seulShop !== '') { foreach ($d['magasins'] as $magF) { if ((string) $magF['id'] === $seulShop) { $label = $court($magF['nom']); $nomSeul = '-' . mktSlug($label); } } }
+    return ['doc' => $doc, 'm' => $d['m'], 'libMois' => $libMois, 'magasin' => $label,
+        'nom' => 'target-vente-' . $d['m'] . $nomSeul . '.pdf'];
+}
+
+/** GET /ventes/classement.pdf?m=2026-07&shop=2 — le document, rendu et servi. */
+function ep_ventes_pdf(): array
+{
+    $r = venteClotureDoc(trim((string) ($_GET['m'] ?? '')), trim((string) ($_GET['shop'] ?? '')));
+    if (isset($r['error'])) { http_response_code(422); return ['error' => $r['error']]; }
+    $pdf = rapPdfRendu($r['doc'], ['magasin' => $r['magasin'], 'rapport' => 'Target de vente — ' . $r['libMois'],
         'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
     if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
     header('Content-Type: application/pdf');
-    $nomSeul = '';
-    if ($seulShop !== '') { foreach ($d['magasins'] as $magF) { if ((string) $magF['id'] === $seulShop) { $nomSeul = '-' . mktSlug($court($magF['nom'])); } } }
-    header('Content-Disposition: attachment; filename="target-vente-' . $d['m'] . $nomSeul . '.pdf"');
+    header('Content-Disposition: attachment; filename="' . $r['nom'] . '"');
     echo $pdf;
     exit;
 }

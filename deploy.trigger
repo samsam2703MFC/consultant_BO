@@ -126,3 +126,4 @@
 2026-08-27 15:29 crans par magasin
 2026-08-27 15:35 page cloture
 deploy 20260827T154257Z rapport clôture ?shop= + page combos
+deploy 20260827T155434Z cloture ventes dans le reporting automatise
