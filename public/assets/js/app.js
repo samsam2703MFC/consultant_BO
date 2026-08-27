@@ -5108,6 +5108,11 @@ class App {
     });
     common.crReseau = ligne(d.reseau, null, 'RÉSEAU');
     const mDetail = d.dernierRevolu;
+    // Déclarée AVANT les lignes magasin qui s'en servent : une const en zone
+    // morte fait tomber tout le rendu, pas seulement le lien.
+    const hrefFeuille = shop => API_BASE + '/croisements/feuille.pdf?a=' + encodeURIComponent(d.a.sel)
+      + '&b=' + encodeURIComponent(d.b.sel) + (mDetail ? '&m=' + mDetail : '')
+      + (S.crDp ? '&dp=' + S.crDp : '') + (shop ? '&shop=' + encodeURIComponent(shop) : '');
     common.crLignes = (d.magasins || []).map(mg => ({
       ...ligne(mg, mg.id, court(mg.nom)),
       ouvert: S.crShop === mg.id,
@@ -5115,9 +5120,6 @@ class App {
       // La feuille de CE magasin : celle qu'on épingle dans sa réserve.
       feuille: hrefFeuille(mg.id),
     }));
-    const hrefFeuille = shop => API_BASE + '/croisements/feuille.pdf?a=' + encodeURIComponent(d.a.sel)
-      + '&b=' + encodeURIComponent(d.b.sel) + (mDetail ? '&m=' + mDetail : '')
-      + (S.crDp ? '&dp=' + S.crDp : '') + (shop ? '&shop=' + encodeURIComponent(shop) : '');
     common.crPdfHref = hrefFeuille(null);
     common.crMoisDetail = mDetail || '';
 
