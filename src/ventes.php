@@ -546,6 +546,11 @@ function ep_ventes_pdf(): array
 {
     $d = ep_ventes_classement();
     if (($d['motif'] ?? null) !== null) { http_response_code(422); return ['error' => $d['motif']]; }
+    // `?shop=` réduit le rapport à UN magasin (sa clôture, ses combos face au
+    // réseau, son équipe) : la version que le reporting automatisé envoie à
+    // chaque gérant — `?m=` choisit le mois, dernier révolu sinon.
+    $seulShop = trim((string) ($_GET['shop'] ?? ''));
+    $garde = static fn ($sid) => $seulShop === '' || (string) $sid === $seulShop;
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $eur = static fn ($v) => number_format((float) $v, 0, ',', ' ') . ' €';
     $n1 = static fn ($v) => number_format((float) $v, 1, ',', ' ');
@@ -656,6 +661,65 @@ function ep_ventes_pdf(): array
             static fn ($l) => $n1($l['lignesTicket']), static fn ($l) => $l['tickets'] . ' tkt')
         . '</tr></table>' . $methode;
 
+    // --- Page 2 : les COMBOS du mois — les taux et les écarts, sans un euro :
+    // cette page-là parle du geste, pas de l'argent.
+    $combosRows = [];
+    try { $combosRows = Db::rows('SELECT * FROM ceo_combo ORDER BY a_lib, b_lib, dp'); } catch (Throwable $eC) {}
+    if ($combosRows !== []) {
+        $nomDeC = [];
+        foreach ($d['magasins'] as $magC) { $nomDeC[(string) $magC['id']] = $magC['nom']; }
+        $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
+            . '<div class="serif h1">Les combos du mois</div>'
+            . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Taux d’attache = tickets contenant A qui contiennent aussi B'
+            . ($seulShop !== '' ? ' — ce magasin face au réseau.' : ' — réseau et magasin par magasin.') . '</div>';
+        foreach ($combosRows as $cb2) {
+            $aC = croisIds((string) $cb2['a_sel']); $bC = croisIds((string) $cb2['b_sel']);
+            if ($aC === null || $bC === null) { continue; }
+            $dpC = croisDaypart((string) ($cb2['dp'] ?? ''));
+            $cC = croisMoisServi((string) $cb2['a_sel'], (string) $cb2['b_sel'], $aC['ids'], $bC['ids'], $d['m'], $nomDeC, $dpC['cle']);
+            if ($cC === null) { continue; }
+            $tC = isset($cb2['target']) && $cb2['target'] !== null ? (float) $cb2['target'] : null;
+            $ffR = 0; $avR = 0;
+            foreach ($nomDeC as $sidC => $nC) {
+                $xC = $cC['shops'][$sidC] ?? $cC['shops'][(string) $sidC] ?? ['ff' => 0, 'avec' => 0];
+                $ffR += $xC['ff']; $avR += $xC['avec'];
+            }
+            $rangsC = [];
+            if ($seulShop !== '') {
+                $xC = $cC['shops'][$seulShop] ?? $cC['shops'][(int) $seulShop] ?? ['ff' => 0, 'avec' => 0];
+                $rangsC[] = [$court($nomDeC[$seulShop] ?? ''), $xC['ff'], $xC['avec'], true];
+                $rangsC[] = ['RÉSEAU', $ffR, $avR, false];
+            } else {
+                $rangsC[] = ['RÉSEAU', $ffR, $avR, true];
+                foreach ($nomDeC as $sidC => $nC) {
+                    $xC = $cC['shops'][$sidC] ?? $cC['shops'][(string) $sidC] ?? ['ff' => 0, 'avec' => 0];
+                    $rangsC[] = [$court($nC), $xC['ff'], $xC['avec'], false];
+                }
+            }
+            $h .= '<div style="page-break-inside:avoid;margin-bottom:4mm">'
+                . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:11pt;border-bottom:1.2pt solid #8D1D2C;padding-bottom:1.2mm;margin-bottom:1.5mm">'
+                . $e($cb2['a_lib'] . ' × ' . $cb2['b_lib'])
+                . ' <span class="mut" style="font-size:7.5pt;font-family:Helvetica,Arial,sans-serif">· '
+                . ($dpC['lib'] !== '' ? $e($dpC['lib']) : 'toute la journée')
+                . ($tC !== null ? ' · target ' . number_format($tC, 1, ',', ' ') . ' %' : '') . '</span></div>'
+                . '<table class="t" cellpadding="0" cellspacing="0"><tr>'
+                . '<th class="l">Périmètre</th><th>Tickets A</th><th>Avec B</th><th>Taux</th><th>Δ target</th></tr>';
+            foreach ($rangsC as [$nomR, $ffX, $avX, $grasX]) {
+                $tauxX = $ffX > 0 ? round(100 * $avX / $ffX, 1) : null;
+                $dX = ($tC !== null && $tauxX !== null) ? $tauxX - $tC : null;
+                $h .= '<tr' . ($grasX ? ' style="background:#fbf9f5;font-weight:bold"' : '') . '>'
+                    . '<td class="l">' . $e($nomR) . '</td>'
+                    . '<td>' . number_format($ffX, 0, ',', ' ') . '</td>'
+                    . '<td>' . number_format($avX, 0, ',', ' ') . '</td>'
+                    . '<td style="font-weight:bold">' . ($tauxX !== null ? number_format($tauxX, 1, ',', ' ') . ' %' : '') . '</td>'
+                    . '<td style="font-weight:bold;color:' . ($dX === null ? '#7a736a' : ($dX >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                    . ($dX === null ? '' : ($dX >= 0 ? '+ ' : '− ') . number_format(abs($dX), 1, ',', ' ') . ' pt') . '</td></tr>';
+            }
+            $h .= '</table></div>';
+        }
+        $h .= '</div>';
+    }
+
     // --- La page de CLÔTURE : qui a gagné quoi, toutes primes confondues.
     // C'est la feuille qu'on imprime en fin de mois — le score, le geste
     // personnel, l'équipe, et le total que la marque verse.
@@ -676,12 +740,16 @@ function ep_ventes_pdf(): array
     $hClot .= '<div class="sec">Au score — les meilleures vendeuses</div><table class="t" cellpadding="0" cellspacing="0">'
         . '<tr><th class="l">Prime</th><th class="l">Gagnante</th><th class="l">Magasin</th><th>Score</th><th>CA / h réel</th><th>Montant</th></tr>';
     if (($g2['reseau'] ?? null) !== null) {
-        $r2 = $g2['reseau']; $totalPrimes += (int) $d['primes']['reseau'];
+        // La ligne réseau s'affiche toujours — c'est le « rapport au réseau » —
+        // mais son montant n'entre dans le total d'un magasin que s'il y dort.
+        $r2 = $g2['reseau'];
+        if ($garde($r2['shopId'] ?? '')) { $totalPrimes += (int) $d['primes']['reseau']; }
         $hClot .= '<tr><td class="l or"><b>🏆 Réseau</b></td><td class="l"><b>' . $e($r2['nom']) . '</b></td>'
             . '<td class="l mut">' . $e($court($r2['magasin'])) . '</td><td>' . (int) $r2['score'] . '</td>'
             . '<td>' . $eur($r2['caHeure']) . '</td><td class="acc"><b>' . $eur($d['primes']['reseau']) . '</b></td></tr>';
         foreach ($g2['magasins'] as $x2) {
             if ($x2['id'] === $r2['id']) { continue; }
+            if (!$garde($x2['shopId'] ?? '')) { continue; }
             $totalPrimes += (int) $d['primes']['magasin'];
             $hClot .= '<tr><td class="l or">🥇 Magasin</td><td class="l"><b>' . $e($x2['nom']) . '</b></td>'
                 . '<td class="l mut">' . $e($court($x2['magasin'])) . '</td><td>' . (int) $x2['score'] . '</td>'
@@ -700,6 +768,7 @@ function ep_ventes_pdf(): array
         if (($l2['lignesTicket'] ?? 0) >= $t3) { $parShopG[(string) $l2['shopId']][] = $l2; }
     }
     foreach ($d['magasins'] as $mag2) {
+        if (!$garde($mag2['id'])) { continue; }
         $siens2 = $parShopG[(string) $mag2['id']] ?? [];
         $t3 = venteCrossTarget($cfgT, (string) $mag2['id'], $d['m']);
         $totalPrimes += count($siens2) * $mBase;
@@ -713,6 +782,7 @@ function ep_ventes_pdf(): array
     $hClot .= '</table><div class="sec">L’équipe — la moyenne du magasin gravit les crans</div>'
         . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th>Moyenne</th><th>Cible</th><th>Cran franchi</th><th>Prime d’équipe</th></tr>';
     foreach ($d['magasins'] as $mag2) {
+        if (!$garde($mag2['id'])) { continue; }
         $t3 = venteCrossTarget($cfgT, (string) $mag2['id'], $d['m']);
         $lg2 = 0.0; $tk2 = 0;
         foreach ($d['lignes'] as $l3) {
@@ -729,7 +799,7 @@ function ep_ventes_pdf(): array
             . '<td class="acc"><b>' . ($pS !== null ? $eur($pS['montant']) : '') . '</b></td></tr>';
     }
     $hClot .= '</table>'
-        . '<div class="prime" style="text-align:center"><span class="k">Total des primes du mois</span>'
+        . '<div class="prime" style="text-align:center"><span class="k">Total des primes du mois' . ($seulShop !== '' ? ' — ce magasin' : '') . '</span>'
         . '<div class="serif" style="font-size:24pt;color:#8D1D2C;margin-top:1mm">' . $eur($totalPrimes) . '</div>'
         . '<div class="regle" style="font-size:7.6pt;color:#7a736a">versés par la marque — chaque prime est au journal du cockpit, avec son motif et sa formule.</div></div>'
         . '</div>';
@@ -768,15 +838,17 @@ function ep_ventes_pdf(): array
     // Le classement complet ne liste QUE les classées : les grisés y faisaient
     // du bruit sans rien classer. Personne ne disparaît pour autant — chacun
     // reste sur la page de SON magasin, avec son motif.
-    $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
+    if ($seulShop === '') $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
         . '<div class="serif h1">Le classement complet</div>'
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">' . count($classables)
         . ' classé(e)s au score. Les personnes sans heures au planning ou sans vente à leur nom ne figurent que sur la page de leur magasin.</div>'
         . $tableau($classables, true) . $methode . '</div>';
 
     // --- La feuille à part : le croisement Flip & Flap × boissons.
+    // Réseau seulement : la version d'un magasin a sa page de combos, sans
+    // les euros ni les vendeuses des autres.
     [$duX, $auX] = venteBornes($d['m']);
-    $x = venteCroisementFF($duX, $auX, array_column($d['magasins'], 'nom', 'id'));
+    $x = $seulShop === '' ? venteCroisementFF($duX, $auX, array_column($d['magasins'], 'nom', 'id')) : ['motif' => 'hors périmètre', 'magasins' => []];
     if ($x['motif'] === null && $x['magasins'] !== []) {
         $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
             . '<div class="serif h1">Le croisement Flip &amp; Flap × boissons</div>'
@@ -826,6 +898,7 @@ function ep_ventes_pdf(): array
 
     // --- Une page par magasin.
     foreach ($d['magasins'] as $mag) {
+        if (!$garde($mag['id'])) { continue; }
         $siens = array_values(array_filter($d['lignes'], static fn ($l) => (string) $l['shopId'] === (string) $mag['id']));
         if ($siens === []) { continue; }
         $h .= '<div style="page-break-before:always">' . $entete($e($court($mag['nom'])) . ' · ' . $e($libMois))
@@ -842,7 +915,9 @@ function ep_ventes_pdf(): array
         'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
     if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
     header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="target-vente-' . $d['m'] . '.pdf"');
+    $nomSeul = '';
+    if ($seulShop !== '') { foreach ($d['magasins'] as $magF) { if ((string) $magF['id'] === $seulShop) { $nomSeul = '-' . mktSlug($court($magF['nom'])); } } }
+    header('Content-Disposition: attachment; filename="target-vente-' . $d['m'] . $nomSeul . '.pdf"');
     echo $pdf;
     exit;
 }
