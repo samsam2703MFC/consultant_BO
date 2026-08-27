@@ -1094,6 +1094,27 @@ function ep_ventes_affiche(): array
     foreach ($paliers as $p) { $maxPalier = max($maxPalier, $p['montant']); }
     $maxTotal = $primes['reseau'] + $maxPalier;
 
+    // Le classement du MOIS PRÉCÉDENT : le podium du magasin et la gagnante
+    // réseau — c'est ce qui donne envie de détrôner. Calculé une fois pour
+    // toutes les pages.
+    $mPrec = date('Y-m', strtotime($m . '-01 -1 month'));
+    $libPrec = strftime_fr(strtotime($mPrec . '-01'), 'M');
+    $rPrec = venteMois($mPrec, $nomDe);
+    $podiums = []; $reseauPrec = null; $gestePrec = [];
+    if ($rPrec['motif'] === null) {
+        foreach ($rPrec['lignes'] as $l) {
+            if (!$l['classable']) { continue; }
+            if ($reseauPrec === null) { $reseauPrec = $l; }
+            $sid2 = (string) $l['shopId'];
+            if (count($podiums[$sid2] ?? []) < 3) { $podiums[$sid2][] = $l; }
+            $t2 = venteCrossTarget($cfg, $sid2, $mPrec);
+            if ($t2 !== null && ($l['tickets'] ?? 0) >= VENTE_CROSS_MIN_TICKETS
+                && venteCrossPrime((float) ($l['lignesTicket'] ?? 0), $t2, $montantBase, $paliers) !== null) {
+                $gestePrec[$sid2] = ($gestePrec[$sid2] ?? 0) + 1;
+            }
+        }
+    }
+
     $css = '<style>
       .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A}
       .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
@@ -1147,6 +1168,19 @@ function ep_ventes_affiche(): array
             . '<div style="font-size:11pt;margin-top:1.5mm">La <b>moyenne du magasin</b> atteint la cible → <b class="acc" style="font-family:Georgia,serif;font-size:16pt">' . $montantShop . ' €</b> pour l’équipe.</div></td>'
             . '</tr></table></div>'
 
+            . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="mut">📋 Le classement de ' . $e($libPrec) . ' — à détrôner</div>'
+                . '<div style="font-size:10.5pt;margin-top:2mm;line-height:1.8">'
+                . implode('<br>', array_map(static function ($i2, $l2) {
+                    return ($i2 + 1) . '. <b>' . htmlspecialchars((string) $l2['nom'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                        . '</b> — score ' . (int) $l2['score']
+                        . ' <span style="color:#7a736a;font-size:8.5pt">(' . number_format((float) $l2['lignesTicket'], 1, ',', ' ') . ' lignes/ticket)</span>';
+                }, array_keys($podiums[(string) $sid]), $podiums[(string) $sid]))
+                . '</div>'
+                . ($reseauPrec !== null ? '<div style="font-size:9pt;margin-top:2mm" class="mut">🏆 Meilleure du réseau en ' . $e($libPrec) . ' : <b style="color:#221E1A">'
+                    . $e($reseauPrec['nom']) . '</b> (' . $e($court($reseauPrec['magasin'])) . ', score ' . (int) $reseauPrec['score'] . ')'
+                    . (($gestePrec[(string) $sid] ?? 0) > 0 ? ' · ' . $gestePrec[(string) $sid] . ' prime(s) du geste décrochée(s) ici' : '') . '</div>' : '')
+                . '</div>' : '')
             . '<div class="regle" style="border-top:1px solid #e6e0d8;padding-top:3mm">Les règles, simplement : au moins 30 tickets dans le mois pour les primes du geste · les primes se versent une fois le mois fini · la meilleure du réseau ne cumule pas la prime magasin, mais les primes du geste s’ajoutent toujours · tout est vérifiable dans le cockpit, la formule est affichée. Bonne chasse ! — L’Atelier by, ' . $e($libMois) . '</div>'
             . '</div>';
         $premier = false;
