@@ -102,3 +102,4 @@
 2026-08-27 10:34 pdf ventes identite
 2026-08-27 10:40 coefficient heures
 2026-08-27 10:44 coefficient creneau
+2026-08-27 10:52 methode chaque page

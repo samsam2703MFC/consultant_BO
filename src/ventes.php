@@ -493,6 +493,23 @@ function ep_ventes_pdf(): array
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
         . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Target de vente &amp; classement<br>' . $droite . '</td></tr></table>';
 
+    // L'encadré de méthode, construit UNE fois et répété en pied de CHAQUE
+    // page : une feuille magasin s'affiche seule en réserve, et un classement
+    // dont la formule n'est pas sur la même feuille se conteste.
+    $methode = '<div class="methode" style="margin-top:2mm"><b style="color:#221E1A">Comment lire.</b> Le classement se fait au <b>score</b> : '
+        . 'CA ÷ (heures + ' . VENTE_LISSAGE_HEURES . ') × coefficient de créneau. '
+        . 'Le coefficient d’heures — heures ÷ (heures + ' . VENTE_LISSAGE_HEURES . ') — monte avec les heures prestées : la régularité pèse, cinq bonnes heures ne battent pas un mois entier. '
+        . 'Le coefficient de créneau paie ceux qui vendent quand c’est difficile, et la difficulté est MESURÉE, pas décrétée — le CA du réseau par heure planifiée ce mois-ci : '
+        . ($d['creneaux'] !== null ? 'matin semaine ' . $eur($d['creneaux']['matSem']) . '/h · après-midi semaine ' . $eur($d['creneaux']['amSem'])
+            . '/h · matin week-end ' . $eur($d['creneaux']['matWe']) . '/h · après-midi week-end ' . $eur($d['creneaux']['amWe']) . '/h' : '')
+        . ' — borné entre ' . number_format(VENTE_COEF_CRENEAU_MIN, 2, ',', ' ') . ' et ' . number_format(VENTE_COEF_CRENEAU_MAX, 2, ',', ' ') . '. '
+        . 'Le CA/heure réel reste affiché. Sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '
+        . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket (30 tickets au moins pour le top 10). '
+        . ($d['partSansVendeur'] !== null && $d['partSansVendeur'] > 0
+            ? $d['partSansVendeur'] . ' % du CA du mois est encaissé sans vendeur identifié sur le ticket : cette part n’est attribuée à personne. '
+            : '')
+        . 'La meilleure du réseau ne cumule pas la prime magasin.</div>';
+
     // --- Page 1 : les primes, puis les trois top 10.
     $classables = array_values(array_filter($d['lignes'], static fn ($l) => $l['classable']));
     $h = $css . '<div class="doc">' . $entete($e($libMois))
@@ -546,7 +563,7 @@ function ep_ventes_pdf(): array
             static fn ($l) => $eur($l['score']), static fn ($l) => $eur($l['caHeure']) . '/h · ' . $n1($l['heures']) . ' h')
         . $colonne('Top 10 — Lignes / ticket', 'le cross-selling — 30 tickets au moins', $parLt,
             static fn ($l) => $n1($l['lignesTicket']), static fn ($l) => $l['tickets'] . ' tkt')
-        . '</tr></table>';
+        . '</tr></table>' . $methode;
 
     // --- Page 2 : le classement complet.
     $tableau = static function (array $lignes, bool $avecMagasin) use ($e, $eur, $n1, $court, $hist): string {
@@ -581,7 +598,7 @@ function ep_ventes_pdf(): array
     $h .= '<div style="page-break-before:always">' . $entete($e($libMois))
         . '<div class="serif h1">Le classement complet</div>'
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Toutes les personnes du mois — les non-classables restent visibles, avec leur motif.</div>'
-        . $tableau($d['lignes'], true) . '</div>';
+        . $tableau($d['lignes'], true) . $methode . '</div>';
 
     // --- Une page par magasin.
     foreach ($d['magasins'] as $mag) {
@@ -590,26 +607,11 @@ function ep_ventes_pdf(): array
         $h .= '<div style="page-break-before:always">' . $entete($e($court($mag['nom'])) . ' · ' . $e($libMois))
             . '<div class="serif h1">' . $e($court($mag['nom'])) . ' — l’équipe de vente</div>'
             . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">Les mêmes mesures que la page réseau, resserrées sur l’équipe — la feuille du brief du mois.</div>'
-            . $tableau($siens, false) . '</div>';
+            . $tableau($siens, false) . $methode . '</div>';
     }
 
-    $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Le classement se fait au <b>CA/h pondéré</b> : '
-        . 'CA/heure × coefficient d’heures, où coefficient = heures ÷ (heures + ' . VENTE_LISSAGE_HEURES . '). '
-        . 'Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier. '
-        . 'S’y multiplie le <b>coefficient de créneau</b> : vendre l’après-midi ou en semaine est plus dur que le samedi matin, et la difficulté est MESURÉE, pas décrétée — '
-        . 'le CA du réseau par heure planifiée ce mois-ci : '
-        . ($d['creneaux'] !== null ? 'matin semaine ' . $eur($d['creneaux']['matSem']) . '/h · après-midi semaine ' . $eur($d['creneaux']['amSem'])
-            . '/h · matin week-end ' . $eur($d['creneaux']['matWe']) . '/h · après-midi week-end ' . $eur($d['creneaux']['amWe']) . '/h. ' : '')
-        . 'Le coefficient est borné entre ' . number_format(VENTE_COEF_CRENEAU_MIN, 2, ',', ' ') . ' et ' . number_format(VENTE_COEF_CRENEAU_MAX, 2, ',', ' ')
-        . ' : un mois ne se joue jamais sur le seul planning. '
-        . 'Le CA/heure réel reste affiché à côté. Le classement est ouvert à toutes les heures prestées'
-        . (VENTE_SEUIL_HEURES > 0 ? ' dès ' . VENTE_SEUIL_HEURES . ' h au planning' : '')
-        . ' ; sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '
-        . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket (30 tickets au moins pour le top 10). '
-        . ($d['partSansVendeur'] !== null && $d['partSansVendeur'] > 0
-            ? $d['partSansVendeur'] . ' % du CA du mois est encaissé sans vendeur identifié sur le ticket : cette part n’est attribuée à personne. '
-            : '')
-        . 'La meilleure du réseau ne cumule pas la prime magasin.</div></div>';
+    $h .= '</div>';
+
 
     $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Target de vente — ' . $e($libMois) . '</title></head><body>' . $h . '</body></html>';
     $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => 'Target de vente — ' . $libMois,
