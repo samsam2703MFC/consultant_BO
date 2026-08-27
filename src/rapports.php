@@ -839,9 +839,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $deSid = array_column($k2['parMagasin'], 'valeur', 'shopId');
                     $paires[] = [$k2, $deSid[$m2['id']] ?? $deSid[(int) $m2['id']] ?? null];
                 }
-                $b['htmlPar'][] = [(string) $m2['nom'],
-                    '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:8px">'
-                    . htmlspecialchars((string) $m2['nom']) . '</div>' . $tuiles($paires)];
+                $b['htmlPar'][] = [(string) $m2['nom'], $tuiles($paires)];
             }
             break;
         }
@@ -862,25 +860,38 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $nomDeC[(string) $s2['id']] = (string) $s2['name'];
                 }
             } catch (PDOException $e2) { /* vide */ }
-            $mC = date('Y-m');
-            $donnees = [];
-            foreach ($combos as $cb2) {
-                $aC = croisIds((string) $cb2['a_sel']); $bC = croisIds((string) $cb2['b_sel']);
-                if ($aC === null || $bC === null || $bC['ids'] === null) { continue; }
-                $dpC = croisDaypart((string) ($cb2['dp'] ?? ''));
-                $cC = croisMoisServi((string) $cb2['a_sel'], (string) $cb2['b_sel'], $aC['ids'], $bC['ids'], $mC, $nomDeC, $dpC['cle']);
-                if ($cC === null) { continue; }
-                $ffR = 0; $avR = 0; $parShop = [];
-                foreach ($nomDeC as $sidC => $nC) {
-                    $xC = $cC['shops'][$sidC] ?? $cC['shops'][(string) $sidC] ?? ['ff' => 0, 'avec' => 0];
-                    $parShop[(string) $sidC] = $xC;
-                    $ffR += $xC['ff']; $avR += $xC['avec'];
+            // Le mois SERVI : le mois en cours s'il a des tickets — sinon le
+            // dernier mois qui en a (la table des transactions se synchronise
+            // avec du retard), et le rapport DIT lequel il montre.
+            $calcule = static function (string $mC) use ($combos, $nomDeC): array {
+                $donnees = [];
+                foreach ($combos as $cb2) {
+                    $aC = croisIds((string) $cb2['a_sel']); $bC = croisIds((string) $cb2['b_sel']);
+                    if ($aC === null || $bC === null || $bC['ids'] === null) { continue; }
+                    $dpC = croisDaypart((string) ($cb2['dp'] ?? ''));
+                    $cC = croisMoisServi((string) $cb2['a_sel'], (string) $cb2['b_sel'], $aC['ids'], $bC['ids'], $mC, $nomDeC, $dpC['cle']);
+                    if ($cC === null) { continue; }
+                    $ffR = 0; $avR = 0; $parShop = [];
+                    foreach ($nomDeC as $sidC => $nC) {
+                        $xC = $cC['shops'][$sidC] ?? $cC['shops'][(string) $sidC] ?? ['ff' => 0, 'avec' => 0];
+                        $parShop[(string) $sidC] = $xC;
+                        $ffR += $xC['ff']; $avR += $xC['avec'];
+                    }
+                    $donnees[] = ['lib' => $cb2['a_lib'] . ' × ' . $cb2['b_lib'] . ($dpC['lib'] !== '' ? ' (' . $dpC['lib'] . ')' : ''),
+                        'target' => isset($cb2['target']) && $cb2['target'] !== null ? (float) $cb2['target'] : null,
+                        'reseau' => $ffR > 0 ? round(100 * $avR / $ffR, 1) : null, 'ff' => $ffR, 'parShop' => $parShop];
                 }
-                $donnees[] = ['lib' => $cb2['a_lib'] . ' × ' . $cb2['b_lib'] . ($dpC['lib'] !== '' ? ' (' . $dpC['lib'] . ')' : ''),
-                    'target' => isset($cb2['target']) && $cb2['target'] !== null ? (float) $cb2['target'] : null,
-                    'reseau' => $ffR > 0 ? round(100 * $avR / $ffR, 1) : null, 'parShop' => $parShop];
+                return $donnees;
+            };
+            $mC = date('Y-m');
+            $libM = 'mois en cours';
+            $donnees = $calcule($mC);
+            for ($rec = 1; $rec <= 2 && array_sum(array_column($donnees, 'ff')) === 0; $rec++) {
+                $mC = date('Y-m', strtotime('first day of -' . $rec . ' months'));
+                $libM = strftime_fr(strtotime($mC . '-01'), 'M Y') . ' — dernier mois servi';
+                $donnees = $calcule($mC);
             }
-            if ($donnees === []) { $b['motif'] = 'combos sans données sur le mois en cours'; break; }
+            if ($donnees === [] || array_sum(array_column($donnees, 'ff')) === 0) { $b['motif'] = 'combos sans données sur les derniers mois'; break; }
             $tauxTd = static function (?float $t3, ?float $cible): string {
                 if ($t3 === null) { return '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8"></td>'; }
                 $rouge = $cible !== null && $t3 < $cible;
@@ -890,7 +901,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             };
             // Le tableau réseau : une colonne par magasin.
             $h2 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:6px"><tr>'
-                . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (mois en cours)</th>'
+                . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (' . htmlspecialchars($libM) . ')</th>'
                 . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th>';
             foreach ($nomDeC as $nC) {
                 $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">'
@@ -911,7 +922,7 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             // La version d'un magasin : vous / réseau / target / écart.
             foreach ($nomDeC as $sidC => $nC) {
                 $h3 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:6px"><tr>'
-                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (mois en cours)</th>'
+                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (' . htmlspecialchars($libM) . ')</th>'
                     . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Vous</th>'
                     . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Réseau</th>'
                     . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Target</th>'

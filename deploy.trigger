@@ -139,3 +139,4 @@ deploy 20260827T183333Z table kpi filtre magasins actifs
 deploy 20260827T190825Z kpi composes + fiche magasin + echelle crans
 deploy 20260827T192833Z table kpi dans administration
 deploy 20260827T193933Z trois blocs generiques rapports
+deploy 20260827T194328Z blocs croisements mois servi + tuiles sans doublon
