@@ -2481,9 +2481,8 @@ function tplCtrlHeat(c, x, card){
         <div style="font-size:13.5px;font-weight:600">Suivi mensuel \u2014 faites / pas faites${c.hmVue === 'mois' ? ' \u00b7 ' + esc(c.hmMoisTitre) : ' \u00b7 12 mois glissants'}</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Faite = rendue dans le panel ce jour-l\u00e0 (not\u00e9e, photographi\u00e9e ou au statut fait) \u00b7 Pas faite = attendue et rest\u00e9e sans rendu. La note des contr\u00f4les est une autre affaire \u2014 ici on mesure si le travail est fait.</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        ${c.hmVue === 'mois' ? `<select ${x.C(c.hmjSetMois)} style="font-family:var(--font-ui);font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">${c.hmjMoisOptions.map(o => `<option value="${o.val}"${o.sel ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select>` : ''}
-        <button ${x.A(c.hmBascule)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:7px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${esc(c.hmBasculeTxt)}</button>
+      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
+        ${c.hmToggle.map(t => `<span ${x.A(t.clic)} style="padding:7px 15px;font-size:12px;font-weight:500;cursor:pointer;${t.on ? 'background:var(--color-primary);color:#fff' : 'color:var(--color-text-muted)'}">${esc(t.txt)}</span>`).join('')}
       </div>
     </div>
     ${c.hmVue === 'mois' ? corpsMois : corpsAnnee}

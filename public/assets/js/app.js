@@ -9947,8 +9947,11 @@ class App {
     // par le cron heure après heure) — l'écran ne rappelle jamais le panel.
     const hmVue = S.ctrlHeatVue || 'mois';
     common.hmVue = hmVue;
-    common.hmBascule = () => this.setState({ ctrlHeatVue: hmVue === 'mois' ? 'annee' : 'mois', ctrlHeat: null });
-    common.hmBasculeTxt = hmVue === 'mois' ? 'Vue annuelle' : 'Vue par mois';
+    // Un seul geste : le badge à deux positions « Mois en cours / Année ».
+    common.hmToggle = [
+      { txt: 'Mois en cours', on: hmVue === 'mois', clic: () => this.setState({ ctrlHeatVue: 'mois', ctrlHeat: null }) },
+      { txt: 'Année', on: hmVue === 'annee', clic: () => this.setState({ ctrlHeatVue: 'annee', ctrlHeat: null }) },
+    ];
     if (hmVue === 'annee' && !this._ctrlHeatLu) { this._ctrlHeatLu = true;
       readOne('/pwa/tasks/heatmap').then(d2 => { this.D.tachesHeat = d2 || { indispo: true }; this.setState({}); }); }
     const TH = this.D.tachesHeat;
@@ -9963,8 +9966,9 @@ class App {
       : ['rgba(141,29,44,0.75)', '#fff'];
     const hmSel = S.ctrlHeat || null;
 
-    // Vue PAR MOIS — la première : un mois choisi, les jours en colonnes.
-    const hmM = S.ctrlHeatMois || new Date().toISOString().slice(0, 7);
+    // Vue PAR MOIS — la première : le mois en cours, les jours en colonnes.
+    // Un autre mois se regarde depuis la vue Année, en cliquant sa cellule.
+    const hmM = new Date().toISOString().slice(0, 7);
     common.hmMoisTitre = hmLibLong(hmM);
     if (!this._hmMois) { this._hmMois = {}; }
     if (hmVue === 'mois' && !this._hmMois[hmM] && !this._hmMoisBusy) { this._hmMoisBusy = true;
@@ -9972,11 +9976,6 @@ class App {
         this._hmMoisBusy = false; this._hmMois[hmM] = d2 || { indispo: true }; this.setState({}); }); }
     const TM = this._hmMois[hmM];
     common.hmjChargement = hmVue === 'mois' && !TM;
-    common.hmjMoisOptions = (() => { const out = [];
-      for (let i2 = 11; i2 >= 0; i2--) { const d3 = new Date(); d3.setDate(1); d3.setMonth(d3.getMonth() - i2);
-        const v = d3.toISOString().slice(0, 7); out.push({ val: v, label: hmLibLong(v), sel: v === hmM }); }
-      return out; })();
-    common.hmjSetMois = e => this.setState({ ctrlHeatMois: e.target.value, ctrlHeat: null });
     common.hmjJours = ((TM && TM.jours) || []).map(j => ({ n: String(+j.slice(8, 10)),
       we: [0, 6].includes(new Date(j + 'T12:00:00').getDay()) }));
     common.hmjLignes = ((TM && TM.lignes) || []).map(l => {
