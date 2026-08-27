@@ -5030,7 +5030,8 @@ class App {
     const dpNoms = { matin: 'matin', midi: 'midi', apresmidi: 'après-midi' };
     common.crCombos = (o && o.combos || []).map(cb => ({
       id: cb.id, nom: cb.aLib + ' × ' + cb.bLib
-        + (cb.dp ? ' · ' + (dpNoms[cb.dp] || cb.dp) : ''), surnom: cb.surnom || '',
+        + (cb.dp ? ' · ' + (dpNoms[cb.dp] || cb.dp) : ''),
+      surnom: (cb.surnom && cb.surnom !== cb.aLib + ' × ' + cb.bLib) ? cb.surnom : '',
       target: cb.target != null ? cb.target.toFixed(0) + ' %' : '',
       on: S.crA === cb.aSel && S.crB === cb.bSel && (S.crDp || '') === (cb.dp || ''),
       choisir: () => this.setState({ crA: cb.aSel, crB: cb.bSel, crDp: cb.dp || '', crShop: null }),
@@ -5069,7 +5070,9 @@ class App {
     common.crRapportHref = (o && o.combos || []).length
       ? API_BASE + '/croisements/rapport.pdf' : null;
     common.crEnregistrer = !d ? null : () => {
-      const surnom = window.prompt('Un surnom pour ce combo ? (facultatif — « le déjeuner complet »)') || '';
+      // Le surnom proposé est le nom réel du combo — « A × B » — qu'on
+      // garde tel quel ou qu'on remplace par un vrai surnom métier.
+      const surnom = window.prompt('Un surnom pour ce combo ?', d.a.lib + ' × ' + d.b.lib) || '';
       this.api('POST', '/croisements/combo', { aSel: d.a.sel, bSel: d.b.sel,
         aLib: d.a.lib, bLib: d.b.lib, surnom, dp: S.crDp || '',
         target: String(S.crTargetInput || '').trim().replace(',', '.') }).then(r => {
@@ -5185,9 +5188,24 @@ class App {
       + paliers.map(pal => ' · ' + String(pal.seuil).replace('.', ',') + ' → ' + pal.montant + ' €').join('')
       + ' — le plus haut palier franchi paie.';
     common.cxEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
+    common.cxAnnee = (d.annee || []).map(m => ({ lib: m.lib, passe: m.passe }));
+    common.cxMontantShop = d.montantShop;
+    common.cxMontantShopPoser = e => this.api('POST', '/ventes/cross-paliers',
+      { paliers: (d.paliers || []), montantShop: e.target.value })
+      .then(() => { this._cross = undefined; this.notify('Prime magasin enregistrée'); this.setState({}); });
     common.cxLignes = (d.magasins || []).map(mg => ({
       nom: court(mg.nom),
       target: mg.targetActuelle != null ? String(mg.targetActuelle) : '',
+      // La grille des 12 mois : le passé en lecture (l'histoire ne se réécrit
+      // pas), le présent et l'avenir en saisie — on ajuste en fin de mois.
+      annee: (mg.targetsAnnee || []).map(t => ({
+        passe: (d.annee || []).find(m => m.cle === t.m)?.passe,
+        val: t.target != null ? String(t.target) : '',
+        pose: t.pose,
+        poser: e => this.api('POST', '/ventes/cross-target', { shop: mg.id, m: t.m,
+            target: String(e.target.value || '').trim().replace(',', '.') })
+          .then(() => { this._cross = undefined; this.notify('Cible posée pour ' + t.m); this.setState({}); }),
+      })),
       // La target se pose dans la cellule du magasin : elle vaut dès ce
       // mois-ci et pour les suivants, jusqu'à la prochaine.
       poser: e => this.api('POST', '/ventes/cross-target', { shop: mg.id,
@@ -5198,7 +5216,10 @@ class App {
         nb: c2.nb,
         vide: c2.target == null,
         eur: c2.eur || 0,
-        noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · '),
+        moyenne: c2.moyenne != null ? n1(c2.moyenne) : '—',
+        shopOk: !!c2.shopOk,
+        noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · ')
+          + (c2.shopOk ? ' | moyenne magasin ' + n1(c2.moyenne) + ' ≥ cible : prime magasin' : ''),
       })),
     }));
     const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);

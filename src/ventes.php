@@ -845,8 +845,17 @@ function ep_ventes_cross(): array
     }
 
     $paliers = venteCrossPaliers();
-    $out = ['montant' => $montant, 'paliers' => $paliers, 'minTickets' => VENTE_CROSS_MIN_TICKETS,
-        'mois' => [], 'magasins' => [], 'dernierRevolu' => null];
+    $montantShop = (int) (setting('venteCrossMontantShop') ?: 100);
+    $out = ['montant' => $montant, 'montantShop' => $montantShop, 'paliers' => $paliers,
+        'minTickets' => VENTE_CROSS_MIN_TICKETS,
+        'mois' => [], 'magasins' => [], 'annee' => [], 'dernierRevolu' => null];
+    // Les 12 mois de l'année CIVILE, pour la grille des cibles : on ajuste
+    // les seuils en fin de mois, mois par mois — le passé reste en lecture.
+    for ($k = 1; $k <= 12; $k++) {
+        $mA = sprintf('%04d-%02d', (int) date('Y'), $k);
+        $out['annee'][] = ['cle' => $mA, 'lib' => strftime_fr(strtotime($mA . '-01'), 'M'),
+            'passe' => $mA < date('Y-m')];
+    }
     $moisListe = [];
     for ($i = $n - 1; $i >= 0; $i--) {
         $t = strtotime("-$i month", strtotime(date('Y-m-01')));
@@ -885,8 +894,27 @@ function ep_ventes_cross(): array
             $cells[] = ['m' => $m, 'target' => $target, 'atteintes' => $atteintes, 'nb' => count($atteintes),
                 'eur' => array_sum(array_column($atteintes, 'prime'))];
         }
+        // La MOYENNE du magasin, mois par mois : c'est elle qui déclenche la
+        // prime d'équipe — le geste ne vaut que s'il devient collectif.
+        foreach ($cells as $i2 => $c3) {
+            $lg = 0.0; $tk = 0;
+            if ($parMois[$c3['m']] !== null) {
+                foreach ($parMois[$c3['m']] as $l) {
+                    if ((string) $l['shopId'] !== (string) $sid || $l['lignesTicket'] === null) { continue; }
+                    $lg += $l['lignesTicket'] * $l['tickets']; $tk += $l['tickets'];
+                }
+            }
+            $moy = $tk > 0 ? round($lg / $tk, 2) : null;
+            $cells[$i2]['moyenne'] = $moy;
+            $cells[$i2]['shopOk'] = $c3['target'] !== null && $moy !== null && $moy >= $c3['target'];
+        }
         $out['magasins'][] = ['id' => (string) $sid, 'nom' => $nom,
             'targetActuelle' => venteCrossTarget($cfg, (string) $sid, date('Y-m')),
+            'targetsAnnee' => array_map(function ($mA) use ($cfg, $sid) {
+                return ['m' => $mA['cle'],
+                    'target' => venteCrossTarget($cfg, (string) $sid, $mA['cle']),
+                    'pose' => isset($cfg[(string) $sid][$mA['cle']])];
+            }, $out['annee']),
             'cells' => $cells];
     }
     $out['enregistre'] = $out['dernierRevolu'] !== null && isset($hist[$out['dernierRevolu']])
@@ -941,6 +969,10 @@ function wr_ventes_cross_paliers(): array
     if (isset($b['montantBase']) && is_numeric($b['montantBase'])) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['venteCrossMontant', json_encode(max(1, (int) $b['montantBase']))]);
+    }
+    if (isset($b['montantShop']) && is_numeric($b['montantShop'])) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['venteCrossMontantShop', json_encode(max(1, (int) $b['montantShop']))]);
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['venteCrossPaliers', json_encode($liste)]);
@@ -998,7 +1030,31 @@ function wr_ventes_cross_primes(): array
             . ' € (palier ' . number_format($prime['seuil'], 1, ',', ' ') . ' franchi : '
             . number_format((float) $l['lignesTicket'], 1, ',', ' ') . ' lignes/ticket, ' . $l['magasin'] . ')');
     }
-    if ($enr['gagnantes'] === []) { http_response_code(422); return ['error' => 'personne n’atteint sa target sur ' . $m . ' — rien à primer']; }
+    // La prime de MAGASIN : la moyenne de l'équipe atteint la cible — elle
+    // s'ajoute aux primes personnelles, elle ne les remplace pas.
+    $montantShop = (int) (setting('venteCrossMontantShop') ?: 100);
+    $enr['montantShop'] = $montantShop;
+    $enr['magasinsGagnants'] = [];
+    foreach ($nomDe as $sid => $nomShop) {
+        $target = venteCrossTarget($cfg, (string) $sid, $m);
+        if ($target === null) { continue; }
+        $lg = 0.0; $tk = 0;
+        foreach ($r['lignes'] as $l) {
+            if ((string) $l['shopId'] !== (string) $sid || $l['lignesTicket'] === null) { continue; }
+            $lg += $l['lignesTicket'] * $l['tickets']; $tk += $l['tickets'];
+        }
+        $moy = $tk > 0 ? round($lg / $tk, 2) : null;
+        if ($moy !== null && $moy >= $target) {
+            $enr['magasinsGagnants'][] = ['id' => (string) $sid, 'nom' => $nomShop,
+                'moyenne' => $moy, 'target' => $target];
+            journalAdd('CEO', 'Vente', $nomShop, 'Prime cross-selling MAGASIN ' . $m . ' — '
+                . $montantShop . ' € (moyenne ' . number_format($moy, 2, ',', ' ')
+                . ' lignes/ticket, cible ' . number_format($target, 1, ',', ' ') . ')');
+        }
+    }
+    if ($enr['gagnantes'] === [] && $enr['magasinsGagnants'] === []) {
+        http_response_code(422); return ['error' => 'personne n’atteint sa target sur ' . $m . ' — rien à primer'];
+    }
     $hist[$m] = $enr;
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['ventePrimesCrossHist', json_encode($hist, JSON_UNESCAPED_UNICODE)]);

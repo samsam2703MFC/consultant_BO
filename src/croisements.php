@@ -594,11 +594,42 @@ function ep_croisements_rapport(): array
         return $h2 . '</table>';
     };
 
+    // La page réseau détaille CHAQUE combo magasin par magasin : le total
+    // réseau seul cacherait l'écart qui fait le brief — 25 % à Halle et 11 %
+    // à Corbais ne se lisent pas dans un 13,5 %.
     $h = $css . '<div class="doc">' . $entete($e($libMois))
         . '<div class="serif" style="font-size:19pt;margin:4mm 0 1mm">Le réseau — tous les combos</div>'
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">' . count($donnees) . ' combo(s) enregistré(s) · '
-        . $e($libMois) . ' · taux = tickets A contenant aussi B ÷ tickets A.</div>'
-        . $tableau(null);
+        . $e($libMois) . ' · taux = tickets A contenant aussi B ÷ tickets A · chaque combo est détaillé magasin par magasin.</div>';
+    foreach ($donnees as $d2) {
+        $h .= '<div style="page-break-inside:avoid;margin-bottom:4mm">'
+            . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:11.5pt;border-bottom:1.2pt solid #8D1D2C;padding-bottom:1.2mm;margin-bottom:1.5mm">'
+            . $e($d2['lib'])
+            . ' <span class="mut" style="font-size:8pt;font-family:Helvetica,Arial,sans-serif">· '
+            . ($d2['dp'] !== '' ? $e($d2['dp']) : 'toute la journée')
+            . ($d2['surnom'] !== '' && $d2['surnom'] !== $d2['lib'] ? ' · ' . $e($d2['surnom']) : '')
+            . ($d2['target'] !== null ? ' · target ' . $pcs($d2['target']) : '') . '</span></div>'
+            . '<table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Périmètre</th><th>Tickets A</th><th>Avec B</th><th>Taux</th><th>Δ target</th><th>Laissé au comptoir</th></tr>';
+        $rangs = [['RÉSEAU', $d2['ff'], $d2['avec'], true]];
+        foreach ($nomDe as $sid => $n2) {
+            $x = $d2['parShop'][(string) $sid] ?? ['ff' => 0, 'avec' => 0];
+            $rangs[] = [$court($n2), $x['ff'], $x['avec'], false];
+        }
+        foreach ($rangs as [$nomR, $ff, $avec, $gras]) {
+            $taux = $ff > 0 ? round(100 * $avec / $ff, 1) : null;
+            $delta = ($d2['target'] !== null && $taux !== null) ? $taux - $d2['target'] : null;
+            $h .= '<tr' . ($gras ? ' style="background:#fbf9f5;font-weight:bold"' : '') . '>'
+                . '<td class="l">' . $e($nomR) . '</td>'
+                . '<td>' . number_format($ff, 0, ',', ' ') . '</td>'
+                . '<td>' . number_format($avec, 0, ',', ' ') . '</td>'
+                . '<td style="font-weight:bold">' . $pcs($taux) . '</td>'
+                . '<td style="font-weight:bold;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                . ($delta === null ? '—' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
+                . '<td class="acc"><b>' . $eur(($ff - $avec) * $d2['prixB']) . '</b></td></tr>';
+        }
+        $h .= '</table></div>';
+    }
     foreach ($nomDe as $sid => $nom) {
         $h .= '<div style="page-break-before:always">' . $entete($e($court($nom)) . ' · ' . $e($libMois))
             . '<div class="serif" style="font-size:19pt;margin:4mm 0 1mm">' . $e($court($nom)) . ' — ses combos</div>'
