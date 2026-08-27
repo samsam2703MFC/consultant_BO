@@ -36,8 +36,18 @@ function kpiEndpointsOfferts(): array
     ];
 }
 
+const KPI_TABLE_SCHEMA = 2;
+
 function kpiTableTables(): void
 {
+    // Le DDL ne se rejoue PAS à chaque requête : un ALTER même sans effet
+    // prend un verrou de métadonnées — si une requête traîne sur la table,
+    // tout le monde s'empile derrière et l'application entière s'étouffe.
+    // Une version de schéma en réglage, un SELECT par requête, rien de plus.
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    if ((int) setting('kpiTableSchema', 0) >= KPI_TABLE_SCHEMA) { return; }
     ensureKpiDefs();
     foreach (['ADD COLUMN categorie VARCHAR(60) NULL', 'ADD COLUMN sous_categorie VARCHAR(60) NULL',
               'ADD COLUMN source TEXT NULL', "ADD COLUMN agregat VARCHAR(10) NOT NULL DEFAULT 'somme'",
@@ -65,6 +75,8 @@ function kpiTableTables(): void
         . 'KEY idx_kv_code_jour (code, jour)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     kpiTableSemer();
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['kpiTableSchema', json_encode(KPI_TABLE_SCHEMA)]);
 }
 
 /** Les premiers KPI encodés d'office — sources vérifiées, modifiables ensuite. */
@@ -255,9 +267,16 @@ function kpiCran(?float $v, ?array $bornes): ?array
     return ['cran' => $i, 'lib' => $libs[$i]];
 }
 
-/** Le battement du cron — une phrase pour le journal de la route. */
+/** Le battement du cron — au plus une collecte par heure, même si la route
+ *  est appelée plus souvent (le bouton de l'écran, lui, force toujours). */
 function kpiTableCron(): string
 {
+    $der = (string) setting('kpiCollecteLe', '');
+    if ($der !== '' && strtotime($der) !== false && time() - strtotime($der) < 3000) {
+        return 'collecte déjà faite à ' . substr($der, 11, 5);
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['kpiCollecteLe', json_encode(date('Y-m-d H:i:s'))]);
     $b = kpiCollecte();
     return $b['collectes'] . ' KPI collecté(s)' . ($b['rates'] !== [] ? ' — en échec : ' . implode(', ', $b['rates']) : '');
 }

@@ -23,8 +23,15 @@ declare(strict_types=1);
 const TACHES_SUIVI_BUDGET_S = 20;   // budget d'un lot de relevés (cron ou bouton)
 const TACHES_SUIVI_PROFONDEUR = 380; // jours d'historique visés (12 mois + marge)
 
+const TACHES_SUIVI_SCHEMA = 1;
+
 function tachesSuiviTables(): void
 {
+    // Le DDL une seule fois — jamais à chaque requête (verrou de métadonnées).
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    if ((int) setting('tachesSuiviSchema', 0) >= TACHES_SUIVI_SCHEMA) { return; }
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_tache_jour ('
         . 'jour DATE NOT NULL,'
         . 'id_shop INT NOT NULL,'
@@ -42,6 +49,8 @@ function tachesSuiviTables(): void
         . 'releve_le DATETIME NOT NULL,'
         . 'nb INT NOT NULL DEFAULT 0'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['tachesSuiviSchema', json_encode(TACHES_SUIVI_SCHEMA)]);
 }
 
 /**

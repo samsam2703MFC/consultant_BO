@@ -10243,8 +10243,11 @@ class App {
       enregistrerTxt: S.ktSaveBusy ? 'Enregistrement…' : 'Enregistrer le KPI',
     };
 
-    // --- La fiche magasin : la grille attributs × magasins, éditée en place.
-    const fi = S.ktFiche || null;
+    // --- La fiche magasin : la grille attributs × magasins. Les champs ne
+    // sont PAS liés à l'état : taper ne redessine rien (un re-rendu entre le
+    // blur du champ et le clic avalait le clic — « + Ajouter » semblait
+    // mort). Les valeurs se lisent DANS LE DOM au moment du geste, et s'y
+    // remoissonnent avant chaque re-rendu pour ne rien perdre.
     const fiInit = () => {
       const attrs = ((T && T.fiche && T.fiche.attributs) || []).map(a => ({ cle: a.cle, libelle: a.libelle }));
       const vals = {};
@@ -10253,29 +10256,38 @@ class App {
       });
       return { attrs, vals };
     };
-    const fiEtat = fi || fiInit();
-    const fiSet = patch => this.setState({ ktFiche: Object.assign({}, fiEtat, patch) });
+    const fiEtat = S.ktFiche || fiInit();
+    const fiMoissonne = () => {
+      const vals = {};
+      Object.keys(fiEtat.vals || {}).forEach(sid => { vals[sid] = Object.assign({}, fiEtat.vals[sid]); });
+      document.querySelectorAll('input[data-ktf]').forEach(el => {
+        const [sid, cle] = el.getAttribute('data-ktf').split('|');
+        vals[sid] = vals[sid] || {};
+        vals[sid][cle] = el.value.replace(',', '.');
+      });
+      return vals;
+    };
     common.ktFiche = {
       magasins: ((T && T.magasins) || []).map(m => ({ id: m.id, nom: court(m.nom) })),
       attrs: fiEtat.attrs.map((a, i2) => ({ cle: a.cle, libelle: a.libelle,
-        retirer: () => fiSet({ attrs: fiEtat.attrs.filter((_, j2) => j2 !== i2) }) })),
+        retirer: () => this.setState({ ktFiche: { attrs: fiEtat.attrs.filter((_, j2) => j2 !== i2), vals: fiMoissonne() } }) })),
       val: (sid, cle) => { const v = (fiEtat.vals[sid] || {})[cle]; return v == null ? '' : String(v); },
-      setVal: (sid, cle) => e => { const vals = Object.assign({}, fiEtat.vals);
-        vals[sid] = Object.assign({}, vals[sid], { [cle]: e.target.value.replace(',', '.') }); fiSet({ vals }); },
-      nouvelAttr: S.ktFicheAttr || '',
-      setNouvelAttr: e => this.setState({ ktFicheAttr: e.target.value }),
-      ajouter: () => { const lib = (S.ktFicheAttr || '').trim(); if (!lib) { return; }
+      ajouter: () => {
+        const champ = document.getElementById('kt-attr-neuf');
+        const lib = ((champ && champ.value) || '').trim();
+        if (!lib) { this.notify('Nommez l\u2019attribut d\u2019abord \u2014 ex. Surface de vente (m\u00b2)'); return; }
         const cle = lib.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-        if (fiEtat.attrs.some(a => a.cle === cle)) { return; }
-        this.setState({ ktFicheAttr: '' });
-        fiSet({ attrs: fiEtat.attrs.concat([{ cle, libelle: lib }]) }); },
+        if (fiEtat.attrs.some(a => a.cle === cle)) { this.notify('Cet attribut existe d\u00e9j\u00e0'); return; }
+        this.setState({ ktFiche: { attrs: fiEtat.attrs.concat([{ cle, libelle: lib }]), vals: fiMoissonne() } });
+      },
       enregistrer: () => { if (S.ktFicheBusy) { return; }
-        this.setState({ ktFicheBusy: true });
-        this.api('POST', '/kpi-table/fiche', { attributs: fiEtat.attrs, valeurs: fiEtat.vals }).then(r2 => {
+        const vals = fiMoissonne();
+        this.setState({ ktFicheBusy: true, ktFiche: { attrs: fiEtat.attrs, vals } });
+        this.api('POST', '/kpi-table/fiche', { attributs: fiEtat.attrs, valeurs: vals }).then(r2 => {
           this.setState({ ktFicheBusy: false, ktFiche: null });
-          this.notify(r2 && r2.ok ? 'Fiche magasin enregistrée — utilisable comme opérande (fiche : …)' : 'Enregistrement refusé');
+          this.notify(r2 && r2.ok ? 'Fiche magasin enregistr\u00e9e \u2014 utilisable comme op\u00e9rande (fiche : \u2026)' : 'Enregistrement refus\u00e9');
           this._kpiTLu = false; this.setState({}); }); },
-      enregistrerTxt: S.ktFicheBusy ? 'Enregistrement…' : 'Enregistrer la fiche',
+      enregistrerTxt: S.ktFicheBusy ? 'Enregistrement\u2026' : 'Enregistrer la fiche',
     };
   }
 

@@ -2432,12 +2432,12 @@ function tplKpiT(c, x){
         ${FI.magasins.map(m => `
         <tr style="border-top:0.5px solid var(--color-border-tertiary)">
           <td style="padding:7px 10px 7px 0;font-weight:600">${esc(m.nom)}</td>
-          ${FI.attrs.map(a => `<td style="padding:5px 10px;text-align:right"><input value="${esc(FI.val(m.id, a.cle))}" ${x.C(FI.setVal(m.id, a.cle))} style="${inp};width:90px;text-align:right;padding:6px 8px"></td>`).join('')}
+          ${FI.attrs.map(a => `<td style="padding:5px 10px;text-align:right"><input value="${esc(FI.val(m.id, a.cle))}" data-ktf="${esc(m.id)}|${esc(a.cle)}" style="${inp};width:90px;text-align:right;padding:6px 8px"></td>`).join('')}
         </tr>`).join('')}
       </table>
     </div>
     <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
-      <input value="${esc(FI.nouvelAttr)}" ${x.C(FI.setNouvelAttr)} placeholder="Nouvel attribut — ex. Surface de vente (m²)" style="${inp};min-width:260px">
+      <input id="kt-attr-neuf" placeholder="Nouvel attribut — ex. Surface de vente (m²)" style="${inp};min-width:260px">
       <button ${x.A(FI.ajouter)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">+ Ajouter</button>
       <button ${x.A(FI.enregistrer)} style="border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">${esc(FI.enregistrerTxt)}</button>
     </div>
