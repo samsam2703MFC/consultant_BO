@@ -7311,17 +7311,18 @@ function tplVentes(c, x){
           <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
             <input type="number" min="1" step="5" value="${c.cxMontantShop != null ? c.cxMontantShop : ''}" ${x.C(c.cxMontantShopPoser)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €
             <span style="font-size:11px;color:var(--color-text-muted)">s’ajoute aux primes personnelles</span></label>
-          <div style="${lbl};margin:16px 0 7px">Paliers réseau — chaque étape débloque sa prime personnelle</div>
+          <div style="${lbl};margin:16px 0 7px">Paliers réseau — chaque cran AU-DESSUS de la cible du magasin débloque sa prime</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             ${(c.cxPaliers || []).map(pal => `
             <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
-              <input type="number" min="1" max="10" step="0.1" value="${esc(pal.seuil)}" ${x.C(pal.poserSeuil)} style="width:48px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
+              cible +<input type="number" min="0.1" max="5" step="0.1" value="${esc(pal.plus)}" ${x.C(pal.poserPlus)} style="width:48px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
               →
               <input type="number" min="1" step="5" value="${esc(pal.montant)}" ${x.C(pal.poserMontant)} style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right"> €
-              <button ${x.A(pal.retirer)} title="Retirer ce palier" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
+              <button ${x.A(pal.retirer)} title="Retirer ce cran" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
             </span>`).join('')}
-            <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ palier</button>
+            <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ cran</button>
           </div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Cible +0,1 » vaut 2,6 là où la cible est 2,5 — l’effort est le même partout, le point de départ non.</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:14px;line-height:1.55">Chaque réglage s’enregistre à la sortie du champ et passe au journal. Les résultats — qui atteint quoi, mois par mois — sont dans l’onglet Résultats.</div>

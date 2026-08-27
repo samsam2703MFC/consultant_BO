@@ -5178,18 +5178,18 @@ class App {
     const poserPaliers = liste => this.api('POST', '/ventes/cross-paliers', { paliers: liste })
       .then(() => { this._cross = undefined; this.notify('Échelle des paliers enregistrée'); this.setState({}); });
     common.cxPaliers = paliers.map((pal, i) => ({
-      seuil: String(pal.seuil), montant: String(pal.montant),
-      poserSeuil: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], seuil: e.target.value }; poserPaliers(l2); },
+      plus: String(pal.plus), montant: String(pal.montant),
+      poserPlus: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], plus: e.target.value }; poserPaliers(l2); },
       poserMontant: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], montant: e.target.value }; poserPaliers(l2); },
       retirer: () => poserPaliers(paliers.filter((x2, j) => j !== i)),
     }));
     common.cxPalierAjouter = () => {
-      const dernier = paliers.length ? paliers[paliers.length - 1] : { seuil: 2.5, montant: d.montant };
-      poserPaliers(paliers.concat([{ seuil: Math.min(10, (+dernier.seuil) + 0.2), montant: (+dernier.montant) + 25 }]));
+      const dernier = paliers.length ? paliers[paliers.length - 1] : { plus: 0, montant: d.montant };
+      poserPaliers(paliers.concat([{ plus: Math.min(5, Math.round(((+dernier.plus) + 0.1) * 10) / 10), montant: (+dernier.montant) + 25 }]));
     };
-    common.cxEchelle = 'cible magasin → ' + d.montant + ' €'
-      + paliers.map(pal => ' · ' + String(pal.seuil).replace('.', ',') + ' → ' + pal.montant + ' €').join('')
-      + ' — le plus haut palier franchi paie.';
+    common.cxEchelle = 'cible du magasin → ' + d.montant + ' €'
+      + paliers.map(pal => ' · cible +' + String(pal.plus).replace('.', ',') + ' → ' + pal.montant + ' €').join('')
+      + ' — le plus haut cran franchi paie, chaque magasin part de SA cible.';
     common.cxEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
     common.cxAnnee = (d.annee || []).map(m => ({ lib: m.lib, passe: m.passe }));
     common.cxMontantShop = d.montantShop;

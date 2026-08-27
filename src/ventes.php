@@ -781,12 +781,16 @@ function ep_ventes_pdf(): array
 const VENTE_CROSS_MIN_TICKETS = 30;
 
 /**
- * Les paliers de prime : des seuils ABSOLUS de lignes/ticket, communs au
- * réseau, chacun avec son montant. La cible du magasin reste le premier
- * échelon (montant de base) ; au-delà, chaque palier franchi débloque SA
- * prime — la plus haute atteinte, jamais la somme.
+ * Les paliers de prime : des CRANS AU-DESSUS DE LA CIBLE DU MAGASIN — pas
+ * des seuils absolus. « Cible +0,1 » vaut 2,6 là où la cible est 2,5 et 2,4
+ * là où elle est 2,3 : l'effort demandé est le même partout, le point de
+ * départ non. L'échelle des crans et des montants reste UNE pour le réseau.
  *
- * @return list<array{seuil:float,montant:int}> triés par seuil croissant
+ * Les anciens paliers absolus (2,6 / 2,8 / 3,0 posés quand la cible commune
+ * était 2,5) se relisent comme des écarts à 2,5 — la conversion est
+ * transparente et ne change aucun montant.
+ *
+ * @return list<array{plus:float,montant:int}> triés par écart croissant
  */
 function venteCrossPaliers(): array
 {
@@ -794,25 +798,29 @@ function venteCrossPaliers(): array
     if (!is_array($p)) { return []; }
     $out = [];
     foreach ($p as $x) {
-        if (!is_array($x) || !isset($x['seuil'], $x['montant'])) { continue; }
-        $out[] = ['seuil' => round((float) $x['seuil'], 1), 'montant' => max(1, (int) $x['montant'])];
+        if (!is_array($x) || !isset($x['montant'])) { continue; }
+        $plus = isset($x['plus']) ? (float) $x['plus']
+            : (isset($x['seuil']) ? (float) $x['seuil'] - 2.5 : null);
+        if ($plus === null || $plus < 0.05) { continue; }
+        $out[] = ['plus' => round($plus, 1), 'montant' => max(1, (int) $x['montant'])];
     }
-    usort($out, static fn ($a, $b) => $a['seuil'] <=> $b['seuil']);
+    usort($out, static fn ($a, $b) => $a['plus'] <=> $b['plus']);
     return $out;
 }
 
 /**
- * La prime d'une vendeuse : le plus haut échelon franchi.
+ * La prime d'une vendeuse : le plus haut cran franchi au-dessus de SA cible.
  *
- * @return array{montant:int,seuil:float}|null
+ * @return array{montant:int,seuil:float}|null  seuil = la valeur absolue franchie
  */
 function venteCrossPrime(float $lignesTicket, float $targetMagasin, int $montantBase, array $paliers): ?array
 {
     if ($lignesTicket < $targetMagasin) { return null; }
     $prime = ['montant' => $montantBase, 'seuil' => $targetMagasin];
     foreach ($paliers as $pal) {
-        if ($pal['seuil'] > $targetMagasin && $lignesTicket >= $pal['seuil']) {
-            $prime = ['montant' => $pal['montant'], 'seuil' => $pal['seuil']];
+        $seuil = round($targetMagasin + $pal['plus'], 2);
+        if ($lignesTicket >= $seuil) {
+            $prime = ['montant' => $pal['montant'], 'seuil' => $seuil];
         }
     }
     return $prime;
@@ -960,12 +968,12 @@ function wr_ventes_cross_paliers(): array
     $b = body();
     $liste = [];
     foreach ((array) ($b['paliers'] ?? []) as $x) {
-        $seuil = str_replace(',', '.', (string) ($x['seuil'] ?? ''));
-        if (!is_numeric($seuil) || !is_numeric($x['montant'] ?? null)) { continue; }
-        $liste[] = ['seuil' => round(max(1.0, min(10.0, (float) $seuil)), 1),
+        $plus = str_replace(',', '.', (string) ($x['plus'] ?? $x['seuil'] ?? ''));
+        if (!is_numeric($plus) || !is_numeric($x['montant'] ?? null)) { continue; }
+        $liste[] = ['plus' => round(max(0.1, min(5.0, (float) $plus)), 1),
             'montant' => max(1, (int) $x['montant'])];
     }
-    usort($liste, static fn ($p, $q) => $p['seuil'] <=> $q['seuil']);
+    usort($liste, static fn ($p, $q) => $p['plus'] <=> $q['plus']);
     if (isset($b['montantBase']) && is_numeric($b['montantBase'])) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['venteCrossMontant', json_encode(max(1, (int) $b['montantBase']))]);
@@ -978,7 +986,7 @@ function wr_ventes_cross_paliers(): array
         ['venteCrossPaliers', json_encode($liste)]);
     journalAdd('CEO', 'Vente', null, 'Paliers cross-selling : '
         . ($liste === [] ? 'retirés' : implode(' · ', array_map(
-            static fn ($p) => number_format($p['seuil'], 1, ',', ' ') . ' → ' . $p['montant'] . ' €', $liste))));
+            static fn ($p) => 'cible +' . number_format($p['plus'], 1, ',', ' ') . ' → ' . $p['montant'] . ' €', $liste))));
     return ['ok' => true, 'paliers' => $liste];
 }
 
@@ -1153,9 +1161,11 @@ function ep_ventes_affiche(): array
             . ($cible !== null ? ' (cible du magasin ce mois-ci : <b class="acc">' . $n1($cible) . '</b>)' : '') . ' :</div>'
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>';
         $marches = [];
-        if ($cible !== null) { $marches[] = [$n1($cible), $montantBase]; }
-        foreach ($paliers as $p) {
-            if ($cible === null || $p['seuil'] > $cible) { $marches[] = [$n1($p['seuil']), $p['montant']]; }
+        if ($cible !== null) {
+            $marches[] = [$n1($cible), $montantBase];
+            foreach ($paliers as $p) { $marches[] = [$n1($cible + $p['plus']), $p['montant']]; }
+        } else {
+            foreach ($paliers as $p) { $marches[] = ['cible +' . $n1($p['plus']), $p['montant']]; }
         }
         $w = (int) (100 / max(1, count($marches)));
         foreach ($marches as [$seuil, $mnt]) {
