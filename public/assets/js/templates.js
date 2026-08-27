@@ -7167,7 +7167,7 @@ function tplVentes(c, x){
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
         Classement au <b>CA ÷ heures prestées</b> (planning du panel) — jamais au CA brut : une personne à 20 h ne se compare pas à une à 38 h.
-        Sous ${c.tvSeuil} h dans le mois : montrée, jamais classée ni primée. Panier = CA ÷ tickets · cross-selling = lignes par ticket.
+        Le classement est ouvert à toutes les heures prestées${c.tvSeuil > 0 ? ` dès ${c.tvSeuil} h au planning` : ''} — sans heure au planning ou sans vente à son nom : montré·e, jamais classé·e ni primé·e. Panier = CA ÷ tickets · cross-selling = lignes par ticket.
         La meilleure du réseau ne cumule pas la prime magasin. Les primes s’enregistrent d’un clic et passent au journal.
         ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}
       </div>

@@ -17,8 +17,13 @@ declare(strict_types=1);
  * en silence, ce qui ferait gagner les plus gros horaires.
  */
 
-/** Sous ce volume d'heures, on montre mais on ne classe pas. */
-const VENTE_SEUIL_HEURES = 20;
+/**
+ * Sous ce volume d'heures, on montre mais on ne classe pas. À ZÉRO sur
+ * demande du réseau : le classement est ouvert à toutes les heures prestées —
+ * il reste impossible de classer sans AUCUNE heure au planning, un CA par
+ * heure sans heures n'existe pas.
+ */
+const VENTE_SEUIL_HEURES = 0;
 
 /** Les colonnes candidates pour le vendeur, sur `transaction`. */
 const VENTE_COLS_VENDEUR = ['id_user', 'user_id', 'id_employee', 'employee_id',
@@ -153,7 +158,7 @@ function venteMois(string $m, array $nomDe): array
         if ($v === null && $h <= 0) { continue; }   // ni vente ni planning : pas ce mois-ci
         $ca = $v['ca'] ?? 0.0;
         $tickets = $v['tickets'] ?? 0;
-        $classable = $h >= VENTE_SEUIL_HEURES && $ca > 0;
+        $classable = $h > 0 && $h >= VENTE_SEUIL_HEURES && $ca > 0;
         $lignes[] = [
             'id' => $id, 'nom' => $e['nom'],
             'shopId' => $e['shop'], 'magasin' => $nomDe[$e['shop']] ?? ('Magasin ' . $e['shop']),
@@ -166,7 +171,8 @@ function venteMois(string $m, array $nomDe): array
             'classable' => $classable,
             'motifHorsClassement' => $classable ? null
                 : ($ca <= 0 ? 'aucune vente à son nom'
-                    : ($h <= 0 ? 'aucune heure au planning' : 'moins de ' . VENTE_SEUIL_HEURES . ' h au planning')),
+                    : ($h <= 0 ? 'aucune heure au planning'
+                        : 'moins de ' . VENTE_SEUIL_HEURES . ' h au planning')),
         ];
     }
     // Les classables d'abord, au CA / heure ; les autres suivent, montrés
@@ -436,7 +442,9 @@ function ep_ventes_pdf(): array
     }
 
     $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Classement au CA ÷ heures prestées — jamais au CA brut : '
-        . 'une personne à 20 h ne se compare pas à une à 38 h. Sous ' . VENTE_SEUIL_HEURES . ' h au planning : montrée, jamais classée ni primée. '
+        . 'une personne à 20 h ne se compare pas à une à 38 h. Le classement est ouvert à toutes les heures prestées'
+        . (VENTE_SEUIL_HEURES > 0 ? ' dès ' . VENTE_SEUIL_HEURES . ' h au planning' : '')
+        . ' ; sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '
         . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket. '
         . ($d['partSansVendeur'] !== null && $d['partSansVendeur'] > 0
             ? $d['partSansVendeur'] . ' % du CA du mois est encaissé sans vendeur identifié sur le ticket : cette part n’est attribuée à personne. '
