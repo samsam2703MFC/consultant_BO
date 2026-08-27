@@ -10114,7 +10114,7 @@ class App {
     } else { common.hmDetail = false; }
   }
 
-  /** L'écran « Table KPI » : encodage (catégorie, source endpoint) + valeurs. */
+  /** L'écran « Table KPI » : encodage (endpoint ou composé), crans, fiche magasin. */
   valsKpiT(common){
     const S = this.state;
     if (!this._kpiTLu) { this._kpiTLu = true;
@@ -10126,23 +10126,35 @@ class App {
       const dec = k.unite === '€' ? (v >= 100 ? 0 : 2) : (v === Math.round(v) ? 0 : 1);
       return v.toLocaleString('fr-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec })
         + (k.unite && k.unite !== 'n' ? ' ' + k.unite : ''); };
-    // Groupes catégorie › sous-catégorie, dans l'ordre servi.
+    const OPS = { '/': '÷', '*': '×', '+': '+', '-': '−' };
+    const cranSt = c => c == null ? '' : ['background:rgba(141,29,44,0.75);color:#fff', 'background:rgba(217,119,6,0.45)',
+      'background:rgba(34,34,34,0.08)', 'background:rgba(45,122,62,0.45)', 'background:#2d7a3e;color:#fff'][c.cran];
+    const kpiNoms = {};
+    ((T && T.kpis) || []).forEach(k => { kpiNoms[k.code] = k.nom; });
+    ((T && T.fiche && T.fiche.attributs) || []).forEach(a => { kpiNoms['fiche:' + a.cle] = a.libelle + ' (fiche)'; });
     const groupes = [];
     ((T && T.kpis) || []).forEach(k => {
       let g = groupes.find(g2 => g2.nom === k.categorie);
       if (!g) { g = { nom: k.categorie, kpis: [] }; groupes.push(g); }
-      const serie = (k.serie || []).map(p => p.valeur).filter(v => v != null);
+      const serie = (k.serie || []).map(pt => pt.valeur).filter(v => v != null);
       const max = Math.max(1, ...serie);
+      const compose = k.source.type === 'compose';
       g.kpis.push({
         nom: k.nom, sousCat: k.sousCategorie || '',
         valeur: k.derniere ? fmt(k, k.derniere.valeur) : '',
+        cranReseau: k.derniere && k.derniere.cran ? { lib: k.derniere.cran.lib, st: cranSt(k.derniere.cran) } : null,
         quand: k.derniere ? (k.source.grain === 'mois' ? 'mois en cours' : k.derniere.jour.slice(8, 10) + '/' + k.derniere.jour.slice(5, 7)) : 'pas encore collecté',
         maj: k.derniere ? k.derniere.maj : '',
-        sourceTxt: 'GET ' + k.source.endpoint, champTxt: k.source.liste + '[].' + k.source.champ,
+        sourceTxt: compose ? 'composé' : 'GET ' + k.source.endpoint,
+        champTxt: compose
+          ? [k.source.a, OPS[k.source.op1] || '', k.source.b, k.source.c ? (OPS[k.source.op2] || '') : '', k.source.c || '']
+            .filter(Boolean).map(t2 => kpiNoms[t2] || t2).join(' ')
+          : k.source.liste + '[].' + k.source.champ,
         grain: k.source.grain === 'mois' ? 'mois' : 'jour',
-        agregat: k.agregat === 'moyenne' ? 'moyenne réseau' : 'somme réseau',
+        agregat: compose ? 'formule réseau' : (k.agregat === 'moyenne' ? 'moyenne réseau' : 'somme réseau'),
         spark: serie.map(v => ({ h: Math.max(2, Math.round(20 * v / max)) })),
-        parMagasin: (k.parMagasin || []).map(m => ({ nom: court(m.magasin), val: fmt(k, m.valeur) })),
+        parMagasin: (k.parMagasin || []).map(m => ({ nom: court(m.magasin), val: fmt(k, m.valeur),
+          cran: m.cran ? { lib: m.cran.lib, st: cranSt(m.cran) } : null })),
         suppr: () => { if (!window.confirm('Retirer le KPI « ' + k.nom + ' » de la table ? Son historique reste en base.')) { return; }
           this.api('POST', '/kpi-table', { id: k.id, supprimer: true }).then(() => { this._kpiTLu = false; this.setState({}); }); },
       });
@@ -10158,17 +10170,27 @@ class App {
         this._kpiTLu = false; this.setState({}); }); };
     common.ktCollecteTxt = S.ktBusy ? 'Collecte en cours…' : 'Collecter maintenant';
 
-    // --- La fiche d'encodage. La sonde remplit listes et champs depuis la
-    // réponse RÉELLE de l'endpoint choisi — on choisit, on ne devine pas.
+    // --- La fiche d'encodage : endpoint (sonde) OU composé (formule + crans).
     const f = S.ktForm || {};
     const fSet = patch => this.setState(s2 => ({ ktForm: Object.assign({}, s2.ktForm, patch) }));
     const sonde = S.ktSonde || null;
     const listes = (sonde && sonde.listes) || [];
     const listeSel = listes.find(l => l.liste === f.liste) || listes[0] || null;
+    const type = f.type || 'endpoint';
+    const operandes = Object.entries(kpiNoms).map(([val, nom]) => ({ val, nom }));
+    const echelleOk = ['e1', 'e2', 'e3', 'e4'].every(k2 => f[k2] == null || f[k2] === '' || !isNaN(parseFloat(String(f[k2]).replace(',', '.'))));
+    const echelle = ['e1', 'e2', 'e3', 'e4'].map(k2 => f[k2]).filter(v => v != null && v !== '')
+      .map(v => parseFloat(String(v).replace(',', '.')));
+    const pretEndpoint = !!(f.nom && f.endpoint && listeSel && f.champ);
+    const pretCompose = !!(f.nom && f.a && f.b);
     common.ktForm = {
       ouvert: !!S.ktFormOn,
       ouvrir: () => this.setState({ ktFormOn: true }),
       fermer: () => this.setState({ ktFormOn: false, ktForm: {}, ktSonde: null }),
+      type,
+      types: [{ val: 'endpoint', nom: 'Endpoint de l’application', sel: type === 'endpoint' },
+        { val: 'compose', nom: 'Composé — une formule sur d’autres KPI', sel: type === 'compose' }],
+      setType: e => fSet({ type: e.target.value }),
       nom: f.nom || '', setNom: e => fSet({ nom: e.target.value }),
       categorie: f.categorie || '', setCategorie: e => fSet({ categorie: e.target.value }),
       sousCategorie: f.sousCategorie || '', setSousCategorie: e => fSet({ sousCategorie: e.target.value }),
@@ -10191,17 +10213,69 @@ class App {
       apercu: (() => { if (!listeSel || !f.champ) { return []; }
         const c = listeSel.champs.find(c2 => c2.champ === f.champ);
         return c ? c.apercu.map(a => ({ nom: court(a.magasin), val: a.valeur == null ? '' : String(a.valeur) })) : []; })(),
-      pret: !!(f.nom && f.endpoint && listeSel && f.champ),
-      enregistrer: () => { if (!(f.nom && f.endpoint && listeSel && f.champ) || S.ktSaveBusy) { return; }
+      // Le composé : trois opérandes au plus, opérateurs ÷ × + −.
+      operandes,
+      a: f.a || '', setA: e => fSet({ a: e.target.value }),
+      b: f.b || '', setB: e => fSet({ b: e.target.value }),
+      c: f.c || '', setC: e => fSet({ c: e.target.value }),
+      op1: f.op1 || '/', setOp1: e => fSet({ op1: e.target.value }),
+      op2: f.op2 || '/', setOp2: e => fSet({ op2: e.target.value }),
+      ops: Object.entries(OPS).map(([val, nom]) => ({ val, nom })),
+      // L'échelle en crans : 4 bornes (facultatif), −− sous la 1re, ++ dès la 4e.
+      e1: f.e1 || '', e2: f.e2 || '', e3: f.e3 || '', e4: f.e4 || '',
+      setE1: e => fSet({ e1: e.target.value }), setE2: e => fSet({ e2: e.target.value }),
+      setE3: e => fSet({ e3: e.target.value }), setE4: e => fSet({ e4: e.target.value }),
+      pret: (type === 'compose' ? pretCompose : pretEndpoint) && echelleOk,
+      enregistrer: () => {
+        const pret = (type === 'compose' ? pretCompose : pretEndpoint) && echelleOk;
+        if (!pret || S.ktSaveBusy) { return; }
         this.setState({ ktSaveBusy: true });
+        const source = type === 'compose'
+          ? { type: 'compose', a: f.a, op1: f.op1 || '/', b: f.b, op2: f.op2 || '/', c: f.c || '', grain: f.grain || 'jour' }
+          : { endpoint: f.endpoint, liste: listeSel.liste, cleShop: listeSel.cleShop, champ: f.champ, grain: f.grain || 'jour' };
         this.api('POST', '/kpi-table', { nom: f.nom, categorie: f.categorie, sousCategorie: f.sousCategorie,
-          unite: f.unite || '', agregat: f.agregat || 'somme',
-          source: { endpoint: f.endpoint, liste: listeSel.liste, cleShop: listeSel.cleShop, champ: f.champ, grain: f.grain || 'jour' } })
+          unite: f.unite || '', agregat: f.agregat || 'somme', source,
+          echelle: echelle.length === 4 ? echelle : null })
         .then(r2 => { this.setState({ ktSaveBusy: false });
           if (r2 && r2.ok) { this.notify('KPI encodé — première collecte au prochain battement (ou « Collecter maintenant »)');
             this.setState({ ktFormOn: false, ktForm: {}, ktSonde: null }); this._kpiTLu = false; this.setState({}); }
           else { this.notify('Enregistrement refusé — ' + ((r2 && r2.error) || 'voir Diagnostic API')); } }); },
       enregistrerTxt: S.ktSaveBusy ? 'Enregistrement…' : 'Enregistrer le KPI',
+    };
+
+    // --- La fiche magasin : la grille attributs × magasins, éditée en place.
+    const fi = S.ktFiche || null;
+    const fiInit = () => {
+      const attrs = ((T && T.fiche && T.fiche.attributs) || []).map(a => ({ cle: a.cle, libelle: a.libelle }));
+      const vals = {};
+      ((T && T.magasins) || []).forEach(m => {
+        vals[m.id] = Object.assign({}, ((T.fiche || {}).valeurs || {})[m.id] || {});
+      });
+      return { attrs, vals };
+    };
+    const fiEtat = fi || fiInit();
+    const fiSet = patch => this.setState({ ktFiche: Object.assign({}, fiEtat, patch) });
+    common.ktFiche = {
+      magasins: ((T && T.magasins) || []).map(m => ({ id: m.id, nom: court(m.nom) })),
+      attrs: fiEtat.attrs.map((a, i2) => ({ cle: a.cle, libelle: a.libelle,
+        retirer: () => fiSet({ attrs: fiEtat.attrs.filter((_, j2) => j2 !== i2) }) })),
+      val: (sid, cle) => { const v = (fiEtat.vals[sid] || {})[cle]; return v == null ? '' : String(v); },
+      setVal: (sid, cle) => e => { const vals = Object.assign({}, fiEtat.vals);
+        vals[sid] = Object.assign({}, vals[sid], { [cle]: e.target.value.replace(',', '.') }); fiSet({ vals }); },
+      nouvelAttr: S.ktFicheAttr || '',
+      setNouvelAttr: e => this.setState({ ktFicheAttr: e.target.value }),
+      ajouter: () => { const lib = (S.ktFicheAttr || '').trim(); if (!lib) { return; }
+        const cle = lib.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        if (fiEtat.attrs.some(a => a.cle === cle)) { return; }
+        this.setState({ ktFicheAttr: '' });
+        fiSet({ attrs: fiEtat.attrs.concat([{ cle, libelle: lib }]) }); },
+      enregistrer: () => { if (S.ktFicheBusy) { return; }
+        this.setState({ ktFicheBusy: true });
+        this.api('POST', '/kpi-table/fiche', { attributs: fiEtat.attrs, valeurs: fiEtat.vals }).then(r2 => {
+          this.setState({ ktFicheBusy: false, ktFiche: null });
+          this.notify(r2 && r2.ok ? 'Fiche magasin enregistrée — utilisable comme opérande (fiche : …)' : 'Enregistrement refusé');
+          this._kpiTLu = false; this.setState({}); }); },
+      enregistrerTxt: S.ktFicheBusy ? 'Enregistrement…' : 'Enregistrer la fiche',
     };
   }
 

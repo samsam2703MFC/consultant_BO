@@ -211,6 +211,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
+    if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }
     if ($method === 'POST' && $path === '/kpi-table/collecte') { return wr_kpi_collecte(); }
     if ($method === 'POST' && $path === '/pwa/tasks/releve') { return wr_taches_releve(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }

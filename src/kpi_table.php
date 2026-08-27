@@ -41,9 +41,20 @@ function kpiTableTables(): void
     ensureKpiDefs();
     foreach (['ADD COLUMN categorie VARCHAR(60) NULL', 'ADD COLUMN sous_categorie VARCHAR(60) NULL',
               'ADD COLUMN source TEXT NULL', "ADD COLUMN agregat VARCHAR(10) NOT NULL DEFAULT 'somme'",
-              'ADD COLUMN unite VARCHAR(20) NULL', 'ADD COLUMN au_rapport TINYINT NOT NULL DEFAULT 1'] as $a) {
+              'ADD COLUMN unite VARCHAR(20) NULL', 'ADD COLUMN au_rapport TINYINT NOT NULL DEFAULT 1',
+              'ADD COLUMN echelle TEXT NULL'] as $a) {
         try { Db::exec('ALTER TABLE ceo_kpi_def ' . $a); } catch (PDOException $e) { /* déjà là */ }
     }
+    // La FICHE MAGASIN : les données statiques d'un magasin (m², places
+    // assises…), saisies une fois, utilisables comme opérandes des KPI
+    // composés. Une ligne par magasin × attribut.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_magasin_fiche ('
+        . 'id_shop INT NOT NULL,'
+        . 'cle VARCHAR(40) NOT NULL,'
+        . 'libelle VARCHAR(80) NOT NULL,'
+        . 'valeur DECIMAL(14,4) NULL,'
+        . 'PRIMARY KEY (id_shop, cle)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_kpi_valeur ('
         . 'code VARCHAR(40) NOT NULL,'
         . "shop VARCHAR(20) NOT NULL,"          // id magasin, ou * pour le réseau
@@ -70,6 +81,11 @@ function kpiTableSemer(): void
             ['type' => 'endpoint', 'endpoint' => '/exploitation/reseau?periode=mois', 'liste' => 'magasins', 'cleShop' => 'shopId', 'champ' => 'n', 'grain' => 'mois']],
         ['tk-taches-faites', 'Tâches faites (panel)', 'Opérations', 'Tâches & contrôles', '%', 'moyenne',
             ['type' => 'endpoint', 'endpoint' => '/pwa/tasks/heatmap/mois', 'liste' => 'lignes', 'cleShop' => 'shopId', 'champ' => 'part', 'grain' => 'mois']],
+        // Le premier COMPOSÉ : le panier réseau PONDÉRÉ (CA ÷ tickets), le
+        // vrai — pas la moyenne des paniers, où un petit magasin pèse autant
+        // qu'un grand.
+        ['tk-panier-pondere', 'Panier moyen pondéré (CA ÷ tickets)', 'Ventes', 'Récurrence', '€', 'formule',
+            ['type' => 'compose', 'a' => 'tk-ca-jour', 'op1' => '/', 'b' => 'tk-tickets-jour', 'op2' => '', 'c' => '', 'grain' => 'jour']],
     ];
     foreach ($seed as [$code, $nom, $cat, $sscat, $unite, $agg, $src]) {
         if (Db::row('SELECT id FROM ceo_kpi_def WHERE code = ?', [$code]) !== null) { continue; }
@@ -164,7 +180,79 @@ function kpiCollecte(): array
             [(string) $def['code'], '*', $cle, round($reseau, 4), date('Y-m-d H:i:s')]);
         $faits++;
     }
-    return ['collectes' => $faits, 'rates' => $rates];
+    // Les composés après les endpoints : leurs opérandes viennent d'être posées.
+    $c2 = kpiCollecteComposes($actifs);
+    return ['collectes' => $faits + $c2['faits'], 'rates' => array_merge($rates, $c2['rates'])];
+}
+
+/** Une opérande de KPI composé : un code de KPI, ou `fiche:<cle>`. */
+function kpiOperande(string $ref, string $shop): ?float
+{
+    if (str_starts_with($ref, 'fiche:')) {
+        if ($shop === '*') {
+            $r = Db::row('SELECT SUM(valeur) v FROM ceo_magasin_fiche WHERE cle = ?', [substr($ref, 6)]);
+        } else {
+            $r = Db::row('SELECT valeur v FROM ceo_magasin_fiche WHERE cle = ? AND id_shop = ?', [substr($ref, 6), (int) $shop]);
+        }
+        return isset($r['v']) && $r['v'] !== null ? (float) $r['v'] : null;
+    }
+    $r = Db::row('SELECT valeur v FROM ceo_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 1', [$ref, $shop]);
+    return isset($r['v']) && $r['v'] !== null ? (float) $r['v'] : null;
+}
+
+/** Applique un opérateur — la division par zéro rend null, jamais l'infini. */
+function kpiOpere(?float $a, string $op, ?float $b): ?float
+{
+    if ($a === null || $b === null) { return null; }
+    return match ($op) {
+        '/' => abs($b) < 1e-9 ? null : $a / $b,
+        '*' => $a * $b,
+        '+' => $a + $b,
+        '-' => $a - $b,
+        default => null,
+    };
+}
+
+/**
+ * La passe des KPI COMPOSÉS : chaque formule (A op B [op C]) s'évalue par
+ * magasin ET pour le réseau — la ligne réseau applique la formule aux
+ * valeurs réseau des opérandes, ce qui donne les ratios pondérés justes
+ * (CA ÷ tickets = le vrai panier réseau, pas la moyenne des paniers).
+ */
+function kpiCollecteComposes(array $actifs): array
+{
+    $faits = 0; $rates = [];
+    foreach (Db::rows('SELECT * FROM ceo_kpi_def WHERE actif = 1 AND source IS NOT NULL') as $def) {
+        $src = json_decode((string) $def['source'], true);
+        if (!is_array($src) || ($src['type'] ?? '') !== 'compose') { continue; }
+        $cle = kpiClePeriode((string) ($src['grain'] ?? 'jour'));
+        $shops = $actifs !== [] ? array_keys($actifs) : [];
+        $ecrits = 0;
+        foreach (array_merge($shops, ['*']) as $sid) {
+            $v = kpiOpere(kpiOperande((string) ($src['a'] ?? ''), (string) $sid),
+                (string) ($src['op1'] ?? '/'), kpiOperande((string) ($src['b'] ?? ''), (string) $sid));
+            if (($src['c'] ?? '') !== '' && $src['c'] !== null) {
+                $v = kpiOpere($v, (string) ($src['op2'] ?? '/'), kpiOperande((string) $src['c'], (string) $sid));
+            }
+            if ($v === null) { continue; }
+            Db::exec('INSERT INTO ceo_kpi_valeur (code, shop, jour, valeur, maj) VALUES (?,?,?,?,?)
+                      ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj = VALUES(maj)',
+                [(string) $def['code'], (string) $sid, $cle, round($v, 4), date('Y-m-d H:i:s')]);
+            $ecrits++;
+        }
+        if ($ecrits === 0) { $rates[] = (string) $def['code']; } else { $faits++; }
+    }
+    return ['faits' => $faits, 'rates' => $rates];
+}
+
+/** L'échelle en crans : la valeur face aux 4 bornes → −− à ++ (0 à 4). */
+function kpiCran(?float $v, ?array $bornes): ?array
+{
+    if ($v === null || !is_array($bornes) || count($bornes) !== 4) { return null; }
+    $i = 0;
+    foreach ($bornes as $b2) { if ($v >= (float) $b2) { $i++; } }
+    $libs = ['−−', '−', '=', '+', '++'];
+    return ['cran' => $i, 'lib' => $libs[$i]];
 }
 
 /** Le battement du cron — une phrase pour le journal de la route. */
@@ -198,7 +286,9 @@ function ep_kpi_table(): array
     $kpis = [];
     foreach (Db::rows('SELECT * FROM ceo_kpi_def WHERE actif = 1 AND source IS NOT NULL ORDER BY categorie, sous_categorie, ordre, id') as $def) {
         $src = json_decode((string) $def['source'], true) ?: [];
-        if (($src['type'] ?? '') !== 'endpoint') { continue; }
+        if (!in_array($src['type'] ?? '', ['endpoint', 'compose'], true)) { continue; }
+        $bornes = json_decode((string) ($def['echelle'] ?? ''), true);
+        $bornes = is_array($bornes) && count($bornes) === 4 ? array_map('floatval', $bornes) : null;
         $code = (string) $def['code'];
         $der = Db::row('SELECT jour, valeur, maj FROM ceo_kpi_valeur WHERE code = ? AND shop = ? ORDER BY jour DESC LIMIT 1', [$code, '*']);
         $serie = array_reverse(array_map(
@@ -210,8 +300,9 @@ function ep_kpi_table(): array
                 // Seuls les magasins ACTIFS s'affichent — une boutique fantôme
                 // d'une source (fermée, technique) ne parle à personne.
                 if (!isset($nomDe[(string) $r2['shop']])) { continue; }
+                $v3 = $r2['valeur'] !== null ? (float) $r2['valeur'] : null;
                 $parMag[] = ['shopId' => (string) $r2['shop'], 'magasin' => $nomDe[(string) $r2['shop']],
-                    'valeur' => $r2['valeur'] !== null ? (float) $r2['valeur'] : null];
+                    'valeur' => $v3, 'cran' => kpiCran($v3, $bornes)];
             }
         }
         $kpis[] = [
@@ -222,18 +313,60 @@ function ep_kpi_table(): array
             'auRapport' => (bool) (int) ($def['au_rapport'] ?? 1),
             'seuilAlerte' => $def['seuil_alerte'] !== null ? (float) $def['seuil_alerte'] : null,
             'sens' => (string) $def['sens'],
-            'source' => ['endpoint' => (string) ($src['endpoint'] ?? ''), 'liste' => (string) ($src['liste'] ?? ''),
+            'source' => ['type' => (string) $src['type'],
+                'endpoint' => (string) ($src['endpoint'] ?? ''), 'liste' => (string) ($src['liste'] ?? ''),
                 'cleShop' => (string) ($src['cleShop'] ?? ''), 'champ' => (string) ($src['champ'] ?? ''),
+                'a' => (string) ($src['a'] ?? ''), 'op1' => (string) ($src['op1'] ?? ''),
+                'b' => (string) ($src['b'] ?? ''), 'op2' => (string) ($src['op2'] ?? ''), 'c' => (string) ($src['c'] ?? ''),
                 'grain' => (string) ($src['grain'] ?? 'jour')],
+            'echelle' => $bornes,
             'derniere' => $der !== null ? ['jour' => (string) $der['jour'],
                 'valeur' => $der['valeur'] !== null ? (float) $der['valeur'] : null,
-                'maj' => substr((string) $der['maj'], 0, 16)] : null,
+                'maj' => substr((string) $der['maj'], 0, 16),
+                'cran' => kpiCran($der['valeur'] !== null ? (float) $der['valeur'] : null, $bornes)] : null,
             'serie' => $serie,
             'parMagasin' => $parMag,
         ];
     }
+    // La fiche magasin : les attributs et leurs valeurs, pour l'écran et
+    // comme opérandes des composés (`fiche:<cle>`).
+    $attrs = []; $valeursF = [];
+    foreach (Db::rows('SELECT * FROM ceo_magasin_fiche ORDER BY cle') as $r2) {
+        $attrs[(string) $r2['cle']] = (string) $r2['libelle'];
+        $valeursF[(string) $r2['id_shop']][(string) $r2['cle']] = $r2['valeur'] !== null ? (float) $r2['valeur'] : null;
+    }
     return ['kpis' => $kpis, 'endpoints' => kpiEndpointsOfferts(),
+        'fiche' => ['attributs' => array_map(fn ($cle) => ['cle' => $cle, 'libelle' => $attrs[$cle]], array_keys($attrs)),
+            'valeurs' => $valeursF],
         'magasins' => array_map(fn ($id) => ['id' => $id, 'nom' => $nomDe[$id]], array_keys($nomDe))];
+}
+
+/**
+ * POST /kpi-table/fiche — la fiche magasin entière : les attributs (clé,
+ * libellé) et la grille magasin × attribut. Remplacement complet, simple.
+ */
+function wr_kpi_fiche(): array
+{
+    kpiTableTables();
+    $b = body();
+    $attrs = is_array($b['attributs'] ?? null) ? $b['attributs'] : [];
+    $vals = is_array($b['valeurs'] ?? null) ? $b['valeurs'] : [];
+    Db::exec('DELETE FROM ceo_magasin_fiche');
+    $n = 0;
+    foreach ($attrs as $a2) {
+        $cle = mktSlug(trim((string) ($a2['cle'] ?? $a2['libelle'] ?? '')));
+        $lib = trim((string) ($a2['libelle'] ?? $cle));
+        if ($cle === '' || $lib === '') { continue; }
+        foreach ($vals as $sid => $deCle) {
+            $v = $deCle[$cle] ?? ($deCle[(string) ($a2['cle'] ?? '')] ?? null);
+            Db::exec('INSERT INTO ceo_magasin_fiche (id_shop, cle, libelle, valeur) VALUES (?,?,?,?)
+                      ON DUPLICATE KEY UPDATE libelle = VALUES(libelle), valeur = VALUES(valeur)',
+                [(int) $sid, $cle, $lib, is_numeric($v) ? (float) $v : null]);
+            $n++;
+        }
+    }
+    journalAdd('CEO', 'Paramètre', 'Table KPI', 'Fiche magasin enregistrée — ' . count($attrs) . ' attribut(s)');
+    return ['ok' => true, 'lignes' => $n];
 }
 
 /**
@@ -288,17 +421,37 @@ function wr_kpi_table(): array
     }
     $nom = trim((string) ($b['nom'] ?? ''));
     $src = is_array($b['source'] ?? null) ? $b['source'] : [];
-    $endpoint = trim((string) ($src['endpoint'] ?? ''));
-    if ($nom === '' || !isset(kpiEndpointsOfferts()[$endpoint])
-        || trim((string) ($src['liste'] ?? '')) === '' || trim((string) ($src['champ'] ?? '')) === '') {
-        http_response_code(422);
-        return ['error' => 'il faut un nom, un endpoint offert, la liste et le champ à lire'];
+    $grain = in_array($src['grain'] ?? '', ['jour', 'mois'], true) ? $src['grain'] : 'jour';
+    if (($src['type'] ?? '') === 'compose') {
+        // Un COMPOSÉ : A op B [op C], chaque opérande = un KPI ou `fiche:<cle>`.
+        $ops = ['/', '*', '+', '-'];
+        $a2 = trim((string) ($src['a'] ?? '')); $b2 = trim((string) ($src['b'] ?? '')); $c2 = trim((string) ($src['c'] ?? ''));
+        if ($nom === '' || $a2 === '' || $b2 === '' || !in_array($src['op1'] ?? '', $ops, true)
+            || ($c2 !== '' && !in_array($src['op2'] ?? '', $ops, true))) {
+            http_response_code(422);
+            return ['error' => 'il faut un nom, deux opérandes au moins et leurs opérateurs'];
+        }
+        $source = json_encode(['type' => 'compose', 'a' => $a2, 'op1' => (string) $src['op1'],
+            'b' => $b2, 'op2' => $c2 !== '' ? (string) ($src['op2'] ?? '/') : '', 'c' => $c2, 'grain' => $grain],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    } else {
+        $endpoint = trim((string) ($src['endpoint'] ?? ''));
+        if ($nom === '' || !isset(kpiEndpointsOfferts()[$endpoint])
+            || trim((string) ($src['liste'] ?? '')) === '' || trim((string) ($src['champ'] ?? '')) === '') {
+            http_response_code(422);
+            return ['error' => 'il faut un nom, un endpoint offert, la liste et le champ à lire'];
+        }
+        $source = json_encode(['type' => 'endpoint', 'endpoint' => $endpoint,
+            'liste' => trim((string) $src['liste']), 'cleShop' => trim((string) ($src['cleShop'] ?? 'shopId')),
+            'champ' => trim((string) $src['champ']), 'grain' => $grain],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
-    $source = json_encode(['type' => 'endpoint', 'endpoint' => $endpoint,
-        'liste' => trim((string) $src['liste']), 'cleShop' => trim((string) ($src['cleShop'] ?? 'shopId')),
-        'champ' => trim((string) $src['champ']),
-        'grain' => in_array($src['grain'] ?? '', ['jour', 'mois'], true) ? $src['grain'] : 'jour'],
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    // L'échelle en crans : 4 bornes croissantes → −− / − / = / + / ++.
+    $echelle = null;
+    if (is_array($b['echelle'] ?? null)) {
+        $bs = array_values(array_filter(array_map(fn ($v) => is_numeric($v) ? (float) $v : null, $b['echelle']), fn ($v) => $v !== null));
+        if (count($bs) === 4) { sort($bs); $echelle = json_encode($bs); }
+    }
     $cat = trim((string) ($b['categorie'] ?? '')) ?: 'Sans catégorie';
     $sscat = trim((string) ($b['sousCategorie'] ?? ''));
     $unite = trim((string) ($b['unite'] ?? ''));
@@ -306,17 +459,18 @@ function wr_kpi_table(): array
     $seuil = is_numeric($b['seuilAlerte'] ?? null) ? (float) $b['seuilAlerte'] : null;
     $sens = ($b['sens'] ?? '') === 'haut' ? 'haut' : 'bas';
     if ($id > 0) {
-        Db::exec('UPDATE ceo_kpi_def SET nom = ?, categorie = ?, sous_categorie = ?, unite = ?, agregat = ?, source = ?, seuil_alerte = ?, sens = ?, au_rapport = ? WHERE id = ?',
-            [$nom, $cat, $sscat, $unite, $agg, $source, $seuil, $sens, !empty($b['auRapport']) ? 1 : 0, $id]);
+        Db::exec('UPDATE ceo_kpi_def SET nom = ?, categorie = ?, sous_categorie = ?, unite = ?, agregat = ?, source = ?, seuil_alerte = ?, sens = ?, au_rapport = ?, echelle = ? WHERE id = ?',
+            [$nom, $cat, $sscat, $unite, $agg, $source, $seuil, $sens, !empty($b['auRapport']) ? 1 : 0, $echelle, $id]);
         journalAdd('CEO', 'Paramètre', 'Table KPI', 'KPI modifié — ' . $nom);
         return ['ok' => true, 'id' => $id];
     }
     $code = 'tk-' . mktSlug(mb_substr($nom, 0, 30));
     if (Db::row('SELECT id FROM ceo_kpi_def WHERE code = ?', [$code]) !== null) { $code .= '-' . random_int(10, 99); }
-    Db::exec('INSERT INTO ceo_kpi_def (code, nom, levier, calcul, sens, sortie, actif, ordre, categorie, sous_categorie, source, agregat, unite, seuil_alerte, au_rapport)
-              VALUES (?,?,?,?,?,?,1,50,?,?,?,?,?,?,1)',
+    Db::exec('INSERT INTO ceo_kpi_def (code, nom, levier, calcul, sens, sortie, actif, ordre, categorie, sous_categorie, source, agregat, unite, seuil_alerte, au_rapport, echelle)
+              VALUES (?,?,?,?,?,?,1,50,?,?,?,?,?,?,1,?)',
         [$code, $nom, 'transverse', json_encode(['type' => 'table']), $sens, 'tableau',
-         $cat, $sscat, $source, $agg, $unite, $seuil]);
-    journalAdd('CEO', 'Paramètre', 'Table KPI', 'KPI encodé — ' . $nom . ' (' . $endpoint . ' › ' . $src['champ'] . ')');
+         $cat, $sscat, $source, $agg, $unite, $seuil, $echelle]);
+    journalAdd('CEO', 'Paramètre', 'Table KPI', 'KPI encodé — ' . $nom
+        . (($src['type'] ?? '') === 'compose' ? ' (composé)' : ' (' . ($src['endpoint'] ?? '') . ' › ' . ($src['champ'] ?? '') . ')'));
     return ['ok' => true, 'code' => $code];
 }
