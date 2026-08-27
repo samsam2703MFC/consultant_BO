@@ -161,6 +161,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/classement'            => ep_ventes_classement(),
             $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),
+            $path === '/ventes/cross'                 => ep_ventes_cross(),
             $path === '/croisements'                  => ep_croisements(),
             $path === '/croisements/options'          => ep_croisements_options(),
             $path === '/croisements/detail'           => ep_croisements_detail(),
@@ -236,6 +237,8 @@ function route(string $method, string $path): mixed
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
+    if ($method === 'POST' && $path === '/ventes/cross-target') { return wr_ventes_cross_target(); }
+    if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }

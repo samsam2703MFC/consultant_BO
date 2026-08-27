@@ -1387,7 +1387,7 @@ class App {
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
-    if (common.isVentes) { this.ventesCharge(); this.valsVentes(common); }
+    if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
@@ -5141,6 +5141,52 @@ class App {
       sans: !det || !det.sansVendeur || !det.sansVendeur.ff ? ''
         : det.sansVendeur.ff + ' ticket(s) sans vendeur identifié — comptés au magasin, à personne d’autre.',
     };
+  }
+
+  /** La prime cross-selling : le tableau mois × magasin, chargé une fois. */
+  crossCharge(){
+    if (this._cross === undefined && !this._crossEnCours) {
+      this._crossEnCours = true;
+      readOne('/ventes/cross?n=6')
+        .then(d => { this._crossEnCours = false; this._cross = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._crossEnCours = false; this._cross = null; this.setState({}); });
+    }
+  }
+
+  valsCross(common){
+    const d = this._cross;
+    const court = nom => String(nom || '').split(' - ').pop();
+    const n1 = v => (v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    common.cxChargement = d === undefined;
+    common.cxMotif = d === null ? 'Le tableau cross-selling n’a pas pu être lu.' : '';
+    if (!d) { common.cxLignes = []; return; }
+    common.cxMontant = d.montant;
+    common.cxEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
+    common.cxLignes = (d.magasins || []).map(mg => ({
+      nom: court(mg.nom),
+      target: mg.targetActuelle != null ? String(mg.targetActuelle) : '',
+      // La target se pose dans la cellule du magasin : elle vaut dès ce
+      // mois-ci et pour les suivants, jusqu'à la prochaine.
+      poser: e => this.api('POST', '/ventes/cross-target', { shop: mg.id,
+          target: String(e.target.value || '').trim().replace(',', '.') })
+        .then(() => { this._cross = undefined; this.notify('Target posée — elle vaut dès ce mois'); this.setState({}); }),
+      cells: (mg.cells || []).map(c2 => ({
+        target: c2.target != null ? n1(c2.target) : '—',
+        nb: c2.nb,
+        vide: c2.target == null,
+        noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ')').join(' · '),
+      })),
+    }));
+    const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);
+    common.cxPrime = d.enregistre
+      ? { fait: true, txt: 'Primes cross de ' + d.dernierRevolu + ' enregistrées le ' + d.enregistre.quand
+          + ' — ' + (d.enregistre.gagnantes || []).length + ' gagnante(s)' }
+      : !der ? null : { fait: false, txt: 'Enregistrer les primes cross de ' + d.dernierRevolu,
+          agir: () => this.api('POST', '/ventes/cross-primes', { m: d.dernierRevolu }).then(r => {
+            if (r && r.ok === false) { return; }
+            this.notify('Primes cross enregistrées — elles sont au journal');
+            this._cross = undefined; this.setState({});
+          }) };
   }
 
   valsVentes(common){

@@ -7346,6 +7346,44 @@ function tplVentes(c, x){
         ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}
       </div>
     </div>
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+        <div>
+          <div style="${lbl}">Prime cross-selling — target évolutive par magasin</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">La cible de lignes par ticket se pose par magasin et vaut jusqu’à la suivante. Toute vendeuse qui l’atteint (30 tickets au moins) touche la prime de ${c.cxMontant != null ? c.cxMontant : '—'} € — ce n’est pas un podium, c’est un seuil : on peut être plusieurs à y arriver, c’est le but.</div>
+        </div>
+        <span style="flex:1"></span>
+        ${!c.cxPrime ? '' : c.cxPrime.fait
+          ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.cxPrime.txt)}</span>`
+          : `<button ${x.A(c.cxPrime.agir)} style="${pill(true)}">🎯 ${esc(c.cxPrime.txt)}</button>`}
+      </div>
+      ${c.cxChargement ? `<div style="padding:14px 18px 16px;font-size:12px;color:var(--color-text-muted)">Lecture des six mois…</div>`
+      : c.cxMotif ? `<div style="padding:14px 18px 16px;font-size:12px">${esc(c.cxMotif)}</div>` : `
+      <div style="overflow-x:auto;padding-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Magasin</th>
+          ${(c.cxEntetes || []).map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+          <th style="${th};padding-right:18px">Target dès ce mois</th>
+        </tr></thead>
+        <tbody>
+          ${(c.cxLignes || []).map(l => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(l.nom)}</td>
+            ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:#b8b2a8">—</span>'
+              : `<span style="color:var(--color-text-muted)">${esc(c2.target)}</span> ${c2.nb > 0
+                ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb}</span>`
+                : `<span style="font-size:10.5px;color:var(--color-primary)">0</span>`}`}</td>`).join('')}
+            <td style="${td};padding-right:18px"><input type="number" min="1" max="10" step="0.1" value="${esc(l.target)}" ${x.C(l.poser)}
+              placeholder="—" style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:right"></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        Chaque cellule : la cible du mois · ✓ le nombre de vendeuses qui l’atteignent (survolez pour leurs noms et leur lignes/ticket).
+        Sans cible posée, rien ne se compte — la colonne de droite pose la cible du magasin, valable dès ce mois et pour les suivants.
+        Les primes s’enregistrent une fois le mois fini, passent au journal, et le montant se règle avec la cible.
+      </div>`}
+    </div>
   </div>`;
 }
 

@@ -767,3 +767,156 @@ function ep_ventes_pdf(): array
     echo $pdf;
     exit;
 }
+
+/**
+ * La prime cross-selling : une target de lignes par ticket, PAR MAGASIN et
+ * ÉVOLUTIVE — posée un mois, elle vaut pour les suivants jusqu'à la
+ * prochaine. Toute vendeuse qui l'atteint touche la prime : ce n'est pas un
+ * podium, c'est un seuil — on peut être plusieurs à y arriver, c'est le but.
+ *
+ * Le geste visé est celui du comptoir : proposer le dessert, proposer la
+ * boisson. Trente tickets au moins dans le mois, comme partout : deux tickets
+ * ne font pas un geste.
+ */
+const VENTE_CROSS_MIN_TICKETS = 30;
+
+/** La target applicable pour un magasin et un mois : la dernière posée. */
+function venteCrossTarget(array $cfg, string $shop, string $m): ?float
+{
+    $par = $cfg[$shop] ?? [];
+    $val = null; $depuis = null;
+    foreach ($par as $depuisM => $t) {
+        if ($depuisM <= $m && ($depuis === null || $depuisM > $depuis)) { $depuis = $depuisM; $val = (float) $t; }
+    }
+    return $val;
+}
+
+/** GET /ventes/cross?n=6 — le tableau mois × magasin, targets et atteintes. */
+function ep_ventes_cross(): array
+{
+    $n = max(2, min(12, (int) ($_GET['n'] ?? 6)));
+    $cfg = setting('venteCrossTargets');
+    if (!is_array($cfg)) { $cfg = []; }
+    $montant = (int) (setting('venteCrossMontant') ?: 25);
+    $hist = setting('ventePrimesCrossHist');
+    if (!is_array($hist)) { $hist = []; }
+
+    $nomDe = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+        $nomDe[(string) $s['id']] = (string) $s['name'];
+    }
+
+    $out = ['montant' => $montant, 'minTickets' => VENTE_CROSS_MIN_TICKETS,
+        'mois' => [], 'magasins' => [], 'dernierRevolu' => null];
+    $moisListe = [];
+    for ($i = $n - 1; $i >= 0; $i--) {
+        $t = strtotime("-$i month", strtotime(date('Y-m-01')));
+        $m = date('Y-m', $t);
+        $enc = $m === date('Y-m');
+        $moisListe[] = $m;
+        $out['mois'][] = ['cle' => $m, 'lib' => strftime_fr($t, 'M Y'), 'encours' => $enc];
+        if (!$enc) { $out['dernierRevolu'] = $m; }
+    }
+
+    // Un venteMois par mois — les lignes portent déjà lignesTicket et tickets.
+    $parMois = [];
+    foreach ($moisListe as $m) {
+        $r = venteMois($m, $nomDe);
+        $parMois[$m] = $r['motif'] === null ? $r['lignes'] : null;
+    }
+
+    foreach ($nomDe as $sid => $nom) {
+        $cells = [];
+        foreach ($moisListe as $m) {
+            $target = venteCrossTarget($cfg, (string) $sid, $m);
+            $atteintes = [];
+            if ($target !== null && $parMois[$m] !== null) {
+                foreach ($parMois[$m] as $l) {
+                    if ((string) $l['shopId'] !== (string) $sid) { continue; }
+                    if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
+                    if (($l['lignesTicket'] ?? 0) >= $target) {
+                        $atteintes[] = ['id' => $l['id'], 'nom' => $l['nom'], 'lignesTicket' => $l['lignesTicket']];
+                    }
+                }
+                usort($atteintes, static fn ($a, $b) => $b['lignesTicket'] <=> $a['lignesTicket']);
+            }
+            $cells[] = ['m' => $m, 'target' => $target, 'atteintes' => $atteintes, 'nb' => count($atteintes)];
+        }
+        $out['magasins'][] = ['id' => (string) $sid, 'nom' => $nom,
+            'targetActuelle' => venteCrossTarget($cfg, (string) $sid, date('Y-m')),
+            'cells' => $cells];
+    }
+    $out['enregistre'] = $out['dernierRevolu'] !== null && isset($hist[$out['dernierRevolu']])
+        ? $hist[$out['dernierRevolu']] : null;
+    return $out;
+}
+
+/** POST /ventes/cross-target {shop, target[, m]} — poser la target, dès ce mois. */
+function wr_ventes_cross_target(): array
+{
+    $b = body();
+    $shop = trim((string) ($b['shop'] ?? ''));
+    $m = trim((string) ($b['m'] ?? date('Y-m')));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
+    $cfg = setting('venteCrossTargets');
+    if (!is_array($cfg)) { $cfg = []; }
+    $t = $b['target'] ?? '';
+    if ($t === '' || $t === null || !is_numeric(str_replace(',', '.', (string) $t))) {
+        unset($cfg[$shop][$m]);
+        $msg = 'Target cross-selling retirée';
+    } else {
+        // Entre 1 et 10 lignes par ticket : au-delà, ce n'est plus un geste
+        // de vente, c'est une erreur de saisie.
+        $v = max(1.0, min(10.0, (float) str_replace(',', '.', (string) $t)));
+        $cfg[$shop][$m] = round($v, 1);
+        $msg = 'Target cross-selling posée à ' . number_format($v, 1, ',', ' ') . ' lignes/ticket dès ' . $m;
+    }
+    if (isset($b['montant']) && is_numeric($b['montant'])) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['venteCrossMontant', json_encode(max(1, (int) $b['montant']))]);
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['venteCrossTargets', json_encode($cfg, JSON_UNESCAPED_UNICODE)]);
+    $nomDe = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
+    journalAdd('CEO', 'Vente', $nomDe[$shop] ?? ('Magasin ' . $shop), $msg);
+    return ['ok' => true];
+}
+
+/** POST /ventes/cross-primes {m} — enregistre les primes cross d'un mois révolu. */
+function wr_ventes_cross_primes(): array
+{
+    $b = body();
+    $m = trim((string) ($b['m'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { http_response_code(422); return ['error' => 'mois attendu : AAAA-MM']; }
+    if ($m >= date('Y-m')) { http_response_code(422); return ['error' => 'le mois en cours ne se prime pas : il n’est pas fini']; }
+    $hist = setting('ventePrimesCrossHist');
+    if (!is_array($hist)) { $hist = []; }
+    if (isset($hist[$m])) { http_response_code(409); return ['error' => 'les primes cross de ' . $m . ' sont déjà enregistrées']; }
+
+    $cfg = setting('venteCrossTargets');
+    if (!is_array($cfg)) { $cfg = []; }
+    $montant = (int) (setting('venteCrossMontant') ?: 25);
+    $nomDe = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
+    $r = venteMois($m, $nomDe);
+    if ($r['motif'] !== null) { http_response_code(503); return ['error' => $r['motif']]; }
+
+    $enr = ['m' => $m, 'quand' => date('Y-m-d H:i'), 'montant' => $montant, 'gagnantes' => []];
+    foreach ($r['lignes'] as $l) {
+        $target = venteCrossTarget($cfg, (string) $l['shopId'], $m);
+        if ($target === null) { continue; }
+        if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
+        if (($l['lignesTicket'] ?? 0) < $target) { continue; }
+        $enr['gagnantes'][] = ['id' => $l['id'], 'nom' => $l['nom'], 'magasin' => $l['magasin'],
+            'lignesTicket' => $l['lignesTicket'], 'target' => $target];
+        journalAdd('CEO', 'Vente', $l['nom'], 'Prime cross-selling ' . $m . ' — ' . $montant
+            . ' € (' . number_format((float) $l['lignesTicket'], 1, ',', ' ') . ' lignes/ticket, cible '
+            . number_format($target, 1, ',', ' ') . ', ' . $l['magasin'] . ')');
+    }
+    if ($enr['gagnantes'] === []) { http_response_code(422); return ['error' => 'personne n’atteint sa target sur ' . $m . ' — rien à primer']; }
+    $hist[$m] = $enr;
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['ventePrimesCrossHist', json_encode($hist, JSON_UNESCAPED_UNICODE)]);
+    return ['ok' => true, 'primes' => $enr];
+}
