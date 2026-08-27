@@ -140,6 +140,7 @@ export function render(c, x){
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
+      ${c.isSuiviM ? tplSuiviM(c, x) : ''}
       ${c.isTaches ? tplTaches(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
@@ -2344,13 +2345,21 @@ function tplControle(c, x){
         </table>
         </div>
       </div>` : ''}
-    ${tplCtrlHeat(c, x, card)}
   </div>`;
 }
 
 /* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le
    détail d'une cellule cliquée — les tâches les moins faites d'abord, puis la
    grille jour par jour (vert fait, bordeaux pas fait, pointillé pas attendue). */
+/* L'écran « Suivi mensuel » : la heatmap seule, sur sa propre page. */
+function tplSuiviM(c, x){
+  const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  return `
+  <div data-screen="suivi-mensuel" style="display:flex;flex-direction:column;gap:16px">
+    ${tplCtrlHeat(c, x, card)}
+  </div>`;
+}
+
 function tplCtrlHeat(c, x, card){
   const { esc } = x;
   const TH10 = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)';
