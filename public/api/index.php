@@ -157,6 +157,9 @@ function route(string $method, string $path): mixed
             $path === '/magasin/analyse'              => ep_mag_analyse(),
             $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
+            $path === '/ventes/classement'            => ep_ventes_classement(),
+            $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
+            $path === '/ventes/fiche'                 => ep_ventes_fiche(),
             $path === '/centrale/cockpit'              => ep_ca_cockpit(),
             $path === '/centrale/catalogue'            => ep_ca_catalogue(),
             $path === '/centrale/ventes'               => ep_ca_ventes(),
@@ -227,6 +230,7 @@ function route(string $method, string $path): mixed
     // Retirer une référence du catalogue : le SEUL geste du cockpit sur une
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
+    if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
     if ($method === 'POST' && $path === '/consultants/note') { return wr_consultant_note(); }
     if ($method === 'POST' && $path === '/fournisseurs/reclamation') { return wr_reclamation_creer(); }
     // --- campagnes marketing (tables mar_*, reprises du module supprimé)

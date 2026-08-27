@@ -119,6 +119,7 @@ export function render(c, x){
       ${c.isUsage ? tplUsage(c, x) : ''}
       ${c.isManque ? tplManque(c, x) : ''}
       ${c.isAnm ? tplAnm(c, x) : ''}
+      ${c.isVentes ? tplVentes(c, x) : ''}
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktCal ? tplMktCalendrier(c, x) : ''}
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
@@ -7055,6 +7056,125 @@ function tplDiagnostic(c, x){
  * entretien franchisé suive toujours le même fil. Les étapes restent
  * cliquables directement : on revient sur un chiffre sans refaire le tour.
  */
+/**
+ * Target de vente & classement — le personnel, au CA par heure prestée.
+ *
+ * Le podium des primes d'abord, puis le tableau ; la fiche d'une personne
+ * s'ouvre en dépliant sous sa ligne. Les non-classables (sous le seuil
+ * d'heures, ou sans vente à leur nom) restent VISIBLES, grisés, avec leur
+ * motif : les sortir du tableau ferait croire qu'ils n'ont pas travaillé.
+ */
+function tplVentes(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:500';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary)';
+  const td = 'padding:9px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const primeOr = `background:#FFF7E0;border:0.5px solid #E8C9A0;color:#8a5a1c;border-radius:999px;padding:2px 10px;font-size:10.5px;font-weight:600;white-space:nowrap`;
+  const primeR = `background:var(--color-primary);color:#fff;border-radius:999px;padding:2px 10px;font-size:10.5px;font-weight:600;white-space:nowrap`;
+  const avatar = ini => `<span style="display:inline-flex;width:24px;height:24px;border-radius:50%;background:#EFE3D5;color:#8a5a1c;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:8px;vertical-align:middle">${esc(ini)}</span>`;
+
+  const filtres = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
+        ${c.tvMoisPills.map(m => `<button ${x.A(m.choisir)} style="${pill(m.on)}">${esc(m.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${(c.tvShops || []).map(m => `<button ${x.A(m.choisir)} style="${pill(m.on)}">${esc(m.nom)}</button>`).join('')}
+      </div>`;
+
+  if (c.tvChargement) {
+    return `<div data-screen="ventes"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des tickets et du planning…</div></div>`;
+  }
+  if (c.tvMotif) {
+    return `<div data-screen="ventes"><div style="${carte}">${filtres}<div style="padding:0 22px 20px;font-size:12.5px">${esc(c.tvMotif)}</div></div></div>`;
+  }
+
+  const fiche = f => !f ? '' : `
+    <tr><td colspan="10" style="padding:0;background:#FBF8F4;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        ${f.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la fiche…</div>`
+        : f.err ? `<div style="font-size:12px;color:#8D1D2C">${esc(f.err)}</div>` : `
+        <div style="${lbl};margin-bottom:8px">${esc(f.nom)} — ${esc(f.magasin)} · six mois</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="${th};text-align:left">Mois</th><th style="${th}">Heures</th><th style="${th}">CA</th>
+            <th style="${th}">CA / heure</th><th style="${th}">Rang réseau</th><th style="${th}">Panier</th>
+            <th style="${th}">Lignes / ticket</th><th style="${th};text-align:left;padding-left:16px">Prime</th></tr></thead>
+          <tbody>${f.mois.map(m => `<tr>
+            <td style="${td};text-align:left;font-weight:500">${esc(m.lib)}</td>
+            <td style="${td}">${esc(m.heures)}</td><td style="${td}">${esc(m.ca)}</td>
+            <td style="${td};font-weight:600;color:var(--color-primary)">${esc(m.caHeure)}</td>
+            <td style="${td};font-weight:600">${esc(m.rang)}</td>
+            <td style="${td}">${esc(m.panier)}</td><td style="${td}">${esc(m.lignesTicket)}</td>
+            <td style="${td};text-align:left;padding-left:16px">${m.prime ? `<span style="${primeOr}">${esc(m.prime)}</span>` : ''}</td>
+          </tr>`).join('')}</tbody>
+        </table>`}
+      </div>
+    </td></tr>`;
+
+  return `
+  <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    ${!c.tvPodium.length ? '' : `
+    <div style="display:grid;grid-template-columns:1.35fr repeat(${Math.max(1, c.tvPodium.length - 1)}, 1fr);gap:12px">
+      ${c.tvPodium.map((p, i) => `
+      <div style="${carte};padding:14px 16px${i === 0 ? ';border-color:var(--color-primary)' : ''}">
+        <span style="${lbl}${i === 0 ? ';color:var(--color-primary)' : ''}">${esc(p.titre)}</span>
+        <div style="font-family:var(--font-display);font-size:${i === 0 ? 20 : 16}px;font-weight:600;margin:5px 0 3px">${esc(p.nom)}
+          <span style="${p.reseau && i === 0 ? primeR : primeOr};margin-left:6px">${esc(p.prime)}</span></div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(p.sub)}</div>
+      </div>`).join('')}
+    </div>`}
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+        <div>
+          <div style="${lbl}">Le personnel de vente, classé au CA / heure</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez une personne pour ses six derniers mois.</div>
+        </div>
+        <span style="flex:1"></span>
+        ${c.tvPrime.fait
+          ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.tvPrime.txt)}</span>`
+          : `<button ${x.A(c.tvPrime.agir)} style="${pill(true)}">🏆 ${esc(c.tvPrime.txt)}</button>`}
+        <a href="${esc(c.tvPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:500;color:var(--color-primary);text-decoration:none;border:0.5px solid var(--color-primary);border-radius:999px;padding:5px 13px">↓ Rapport PDF</a>
+      </div>
+      ${filtres}
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">#</th>
+          <th style="${th};text-align:left">Vendeur·se</th>
+          <th style="${th};text-align:left">Magasin</th>
+          <th style="${th}">Heures</th><th style="${th}">CA</th><th style="${th}">CA / heure</th>
+          <th style="${th};text-align:left;padding-left:18px"></th>
+          <th style="${th}">Panier</th><th style="${th}">Lignes / ticket</th><th style="${th};padding-right:18px">Tickets</th>
+        </tr></thead>
+        <tbody>
+          ${c.tvLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouverte ? ';background:#FBF8F4' : ''}${l.classable ? '' : ';color:#9a9186'}">
+            <td style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${l.rang != null ? l.rang : '—'}</td>
+            <td style="${td};text-align:left;font-weight:500">${avatar(l.ini)}${esc(l.nom)}
+              ${l.primeReseau ? ` <span style="${primeR}">réseau</span>` : l.primeMagasin ? ` <span style="${primeOr}">${esc(l.magasin)}</span>` : ''}
+              ${l.classable ? '' : `<span style="font-size:10.5px;color:#9a9186"> · ${esc(l.motif)}</span>`}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(l.magasin)}</td>
+            <td style="${td}">${esc(l.heures)}</td>
+            <td style="${td}">${esc(l.ca)}</td>
+            <td style="${td};font-weight:600${l.classable ? ';color:var(--color-primary)' : ''}">${esc(l.caHeure)}</td>
+            <td style="${td};text-align:left;padding-left:18px"><span style="position:relative;display:inline-block;height:8px;border-radius:999px;background:rgba(34,34,34,.06);width:96px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${l.barre}%;background:${l.classable ? 'var(--color-primary)' : '#CFC7BA'};border-radius:999px"></i></span></td>
+            <td style="${td}">${esc(l.panier)}</td>
+            <td style="${td};font-weight:600">${esc(l.lignesTicket)}</td>
+            <td style="${td};padding-right:18px">${esc(l.tickets)}</td>
+          </tr>
+          ${l.ouverte ? fiche(c.tvFiche) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        Classement au <b>CA ÷ heures prestées</b> (planning du panel) — jamais au CA brut : une personne à 20 h ne se compare pas à une à 38 h.
+        Sous ${c.tvSeuil} h dans le mois : montrée, jamais classée ni primée. Panier = CA ÷ tickets · cross-selling = lignes par ticket.
+        La meilleure du réseau ne cumule pas la prime magasin. Les primes s’enregistrent d’un clic et passent au journal.
+        ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplAnm(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';

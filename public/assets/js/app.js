@@ -231,6 +231,7 @@ class App {
       usage: 'usage-catalogue',
       manque: 'manque-a-gagner',
       analysemag: 'analyse-magasin',
+      ventes: 'target-ventes',
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
@@ -657,6 +658,7 @@ class App {
     };
     const titles = {
       analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
+      ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
       manque: ['Manque à gagner', 'Ce que chaque magasin ne vend pas, en euros. Pour chaque référence qu’il n’a pas vendue alors que les autres la vendaient : leur volume médian par jour d’ouverture, ramené à sa fréquentation, au prix encaissé. Une estimation à assortiment comparable — pas une promesse de chiffre d’affaires.'],
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
@@ -1011,7 +1013,8 @@ class App {
       // Le franchisé ne demande pas « où est le problème ? » mais « qu'est-ce
       // que JE fais ? » : cette section répond magasin par magasin.
       ['Analyse magasin', [
-        ['analysemag', 'Analyse', 0]]],
+        ['analysemag', 'Analyse', 0],
+        ['ventes', 'Target de vente & classement', 0]]],
       // Le budget est une affaire de finance, pas de performance : il a sa
       // section, demandée telle quelle, et garde son sous-menu.
       ['Finance', [
@@ -1100,11 +1103,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm' }[S.screen];
+      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1411,6 +1414,7 @@ class App {
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
+    if (common.isVentes) { this.ventesCharge(); this.valsVentes(common); }
     if (common.isMesure) {
       // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
       common.mesSimple = this.state.mesSimple !== false;
@@ -4956,6 +4960,117 @@ class App {
         .then(d => { this._anmEnCours = false; this._anm[cle] = (d && !d.error) ? d : null; this.setState({}); })
         .catch(() => { this._anmEnCours = false; this._anm[cle] = null; this.setState({}); });
     }
+  }
+
+  /** Le classement des ventes : une lecture par mois, la fiche au clic. */
+  ventesCharge(){
+    const S = this.state;
+    const cle = S.tvMois || '';
+    if (!this._tv) { this._tv = {}; }
+    if (this._tv[cle] === undefined && !this._tvEnCours) {
+      this._tvEnCours = true;
+      readOne('/ventes/classement' + (cle ? '?m=' + cle : ''))
+        .then(d => { this._tvEnCours = false; this._tv[cle] = (d && !d.error) ? d : null;
+          if (d && d.m && !cle) { this._tv[d.m] = this._tv[cle]; }
+          this.setState({}); })
+        .catch(() => { this._tvEnCours = false; this._tv[cle] = null; this.setState({}); });
+    }
+    const fid = S.tvFiche;
+    if (!fid) { return; }
+    if (!this._tvFiches) { this._tvFiches = {}; }
+    if (this._tvFiches[fid] === undefined && !this._tvFicheEnCours) {
+      this._tvFicheEnCours = true;
+      readOne('/ventes/fiche?id=' + fid + '&n=6')
+        .then(d => { this._tvFicheEnCours = false; this._tvFiches[fid] = (d && !d.error) ? d : null; this.setState({}); })
+        .catch(() => { this._tvFicheEnCours = false; this._tvFiches[fid] = null; this.setState({}); });
+    }
+  }
+
+  valsVentes(common){
+    const S = this.state;
+    const d = (this._tv || {})[S.tvMois || ''];
+    const court = nom => String(nom || '').split(' - ').pop();
+    const eur = v => (v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €');
+    const nb1 = v => (v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    const px = v => (v == null ? '—' : v.toFixed(2).replace('.', ',') + ' €');
+    const initiales = nom => nom.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase();
+
+    common.tvChargement = d === undefined;
+    common.tvMotif = d === null ? 'Le classement n’a pas pu être calculé.' : ((d && d.motif) || '');
+    common.tvMoisPills = ((d && d.mois) || []).map(m => ({
+      nom: m.lib + (m.encours ? ' (en cours)' : ''),
+      on: (S.tvMois || (d && d.m)) === m.cle,
+      choisir: () => this.setState({ tvMois: m.cle, tvFiche: null }) }));
+    if (!d || d.motif) { common.tvLignes = []; return; }
+
+    const filtre = S.tvShop || '';
+    common.tvShops = [{ nom: 'Tous magasins', on: !filtre, choisir: () => this.setState({ tvShop: '' }) }]
+      .concat((d.magasins || []).map(m => ({ nom: court(m.nom), on: filtre === m.id,
+        choisir: () => this.setState({ tvShop: m.id }) })));
+
+    const g = d.gagnantes || {};
+    const hist = d.primeEnregistree;
+    common.tvPodium = !g.reseau ? [] : [{
+      titre: '🏆 Meilleure du réseau — ' + ((d.mois.find(x => x.cle === d.m) || {}).lib || d.m),
+      nom: g.reseau.nom, reseau: true,
+      prime: (hist ? '' : 'à enregistrer · ') + (d.primes || {}).reseau + ' €',
+      sub: court(g.reseau.magasin) + ' · ' + eur(g.reseau.caHeure) + ' / h · panier ' + px(g.reseau.panier)
+        + ' · ' + nb1(g.reseau.lignesTicket) + ' lignes/ticket · ' + nb1(g.reseau.heures) + ' h',
+    }].concat((g.magasins || []).map(x => ({
+      titre: '🥇 ' + court(x.magasin), nom: x.nom, reseau: false,
+      prime: x.id === g.reseau.id ? 'réseau ✓' : (d.primes || {}).magasin + ' €',
+      sub: eur(x.caHeure) + ' / h · ' + nb1(x.heures) + ' h',
+    })));
+
+    // La prime s'enregistre ici : le calcul désigne, l'humain confirme.
+    common.tvPrime = hist
+      ? { fait: true, txt: 'Primes de ' + d.m + ' enregistrées le ' + hist.quand }
+      : { fait: false, txt: 'Enregistrer les primes de ' + d.m,
+          agir: () => this.api('POST', '/ventes/primes', { m: d.m }).then(r => {
+            if (r && r.ok === false) { return; }
+            this.notify('Primes enregistrées — elles sont au journal');
+            this._tv = {}; this.setState({});
+          }) };
+    const enCours = (d.mois.find(x => x.cle === d.m) || {}).encours;
+    if (enCours) { common.tvPrime = { fait: true, txt: 'Le mois en cours ne se prime pas : il n’est pas fini.' }; }
+
+    common.tvSeuil = d.seuil;
+    common.tvSansVendeur = d.partSansVendeur > 0
+      ? d.partSansVendeur.toFixed(1).replace('.', ',') + ' % du CA du mois est encaissé sans vendeur identifié sur le ticket — cette part n’est attribuée à personne.'
+      : '';
+    const maxCaH = Math.max(1, ...(d.lignes || []).map(l => l.caHeure || 0));
+    common.tvLignes = (d.lignes || [])
+      .filter(l => !filtre || l.shopId === filtre)
+      .map(l => ({
+        id: l.id, rang: l.rang, nom: l.nom, ini: initiales(l.nom),
+        magasin: court(l.magasin), classable: l.classable,
+        motif: l.motifHorsClassement || '',
+        heures: nb1(l.heures) + ' h', ca: eur(l.ca),
+        caHeure: l.caHeure != null ? eur(l.caHeure) + ' / h' : '—',
+        barre: Math.max(2, Math.round(100 * (l.caHeure || 0) / maxCaH)),
+        panier: px(l.panier), lignesTicket: nb1(l.lignesTicket),
+        tickets: (l.tickets || 0).toLocaleString('fr-BE'),
+        primeReseau: g.reseau && g.reseau.id === l.id,
+        primeMagasin: !!(g.magasins || []).find(x => x.id === l.id && x.id !== (g.reseau || {}).id),
+        ouverte: S.tvFiche === l.id,
+        basculer: () => this.setState({ tvFiche: S.tvFiche === l.id ? null : l.id }),
+      }));
+    common.tvPdfHref = API_BASE + '/ventes/classement.pdf?m=' + d.m;
+
+    const f = S.tvFiche ? (this._tvFiches || {})[S.tvFiche] : undefined;
+    common.tvFiche = !S.tvFiche ? null : {
+      chargement: f === undefined,
+      err: f === null ? 'La fiche n’a pas pu être lue.' : '',
+      nom: f ? f.nom : '', magasin: f ? court(f.magasin) : '',
+      mois: !f ? [] : (f.mois || []).slice().reverse().map(m => ({
+        lib: m.lib + (m.encours ? ' (en cours)' : ''),
+        heures: nb1(m.heures) + ' h', ca: eur(m.ca),
+        caHeure: m.caHeure != null ? eur(m.caHeure) + ' / h' : '—',
+        rang: m.rang != null ? m.rang + ' / ' + m.sur : '—',
+        panier: px(m.panier), lignesTicket: nb1(m.lignesTicket),
+        prime: m.prime || '',
+      })),
+    };
   }
 
   valsAnm(common){
