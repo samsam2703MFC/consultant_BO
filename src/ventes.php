@@ -989,7 +989,12 @@ function venteCrossPrime(float $lignesTicket, float $targetMagasin, int $montant
     $prime = ['montant' => $montantBase, 'seuil' => $targetMagasin];
     foreach ($paliers as $pal) {
         $seuil = round($targetMagasin + $pal['plus'], 2);
-        if ($lignesTicket >= $seuil) {
+        // MIEUX NE PAIE JAMAIS MOINS : un cran mal réglé sous la prime de
+        // cible (cible → 500 €, +0,1 → 75 €) rendait le barème absurde —
+        // dépasser la cible faisait PERDRE de l'argent à l'équipe. Le cran
+        // ne s'applique que s'il paie au moins autant que l'étage d'en
+        // dessous ; sinon l'étage tient.
+        if ($lignesTicket >= $seuil && $pal['montant'] >= $prime['montant']) {
             $prime = ['montant' => $pal['montant'], 'seuil' => $seuil];
         }
     }
