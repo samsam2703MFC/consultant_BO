@@ -6600,7 +6600,13 @@ class App {
       this.api('POST', '/reputation/sync', {}).then(async r2 => {
         const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
         this.setState({ repBusy: false });
-        if (!j || j.error) { this.notify((j && j.error) || 'Synchronisation impossible.'); return; }
+        // « Synchronisation impossible » tout court ne dit rien : montrer ce
+        // qu'on sait (statut HTTP ou réponse illisible) pour diagnostiquer.
+        if (!j || j.error) {
+          this.notify((j && j.error)
+            || (r2 && r2.status ? 'Synchronisation impossible (HTTP ' + r2.status + ') : réessayez.' : 'Synchronisation impossible : le serveur n\'a pas répondu, réessayez.'));
+          return;
+        }
         this.D.reput = null; this.repCharge(true);
         this.notify(j.magasins + ' magasin(s) synchronisé(s), ' + j.nouveaux + ' nouvel(s) avis'
           + (j.erreurs && j.erreurs.length ? ' — ' + j.erreurs.length + ' en échec' : ''));
