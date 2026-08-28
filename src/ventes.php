@@ -729,21 +729,27 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     // --- La page de CLÔTURE : qui a gagné quoi, toutes primes confondues.
     // C'est la feuille qu'on imprime en fin de mois — le score, le geste
     // personnel, l'équipe, et le total que la marque verse.
-    $echelleA = venteEchelle();
-    $progresA = venteProgres();
+    $reglagesR = venteRecordReglages();
     $nomDeC2 = [];
     foreach ($d['magasins'] as $magN) { $nomDeC2[(string) $magN['id']] = (string) $magN['nom']; }
-    $mPrecA = date('Y-m', strtotime($d['m'] . '-01 -1 month'));
-    $rPrecA = venteMois($mPrecA, $nomDeC2);
-    $moyenneDeA = static function (?array $lignes, string $sid): ?float {
-        if ($lignes === null) { return null; }
-        $lg = 0.0; $tk = 0;
-        foreach ($lignes as $l4) {
-            if ((string) $l4['shopId'] !== $sid || $l4['lignesTicket'] === null) { continue; }
-            $lg += $l4['lignesTicket'] * $l4['tickets']; $tk += $l4['tickets'];
+    // La fenêtre des records du mois clôturé.
+    $parMoisR = [$d['m'] => $d['lignes']];
+    foreach (venteFenetreRecord($d['m']) as $mF) {
+        $rF = venteMois($mF, $nomDeC2);
+        $parMoisR[$mF] = $rF['motif'] === null ? $rF['lignes'] : null;
+    }
+    // Les couronnes du mois : plus haute moyenne du réseau, vendeuse et magasin.
+    $couronneV = null; $couronneM = null;
+    foreach ($d['lignes'] as $l4) {
+        if (($l4['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l4['lignesTicket'] === null) { continue; }
+        if ($couronneV === null || (float) $l4['lignesTicket'] > (float) $couronneV['lignesTicket']) { $couronneV = $l4; }
+    }
+    foreach ($nomDeC2 as $sidR => $nomR2) {
+        $xR = venteMoyenneMagasin($d['lignes'], (string) $sidR);
+        if ($xR !== null && ($couronneM === null || $xR['moyenne'] > $couronneM['moyenne'])) {
+            $couronneM = ['id' => (string) $sidR, 'moyenne' => $xR['moyenne']];
         }
-        return $tk > 0 ? round($lg / $tk, 2) : null;
-    };
+    }
     $histCross = setting('ventePrimesCrossHist');
     $histCrossM = is_array($histCross) && isset($histCross[$d['m']]) ? $histCross[$d['m']] : null;
     $g2 = $d['gagnantes'];
@@ -775,45 +781,49 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     } else { $hClot .= '<tr><td class="l mut" colspan="6">aucune classable ce mois-ci</td></tr>'; }
     $hClot .= '</table>';
 
-    // 2. L'ÉCHELLE (chacune face à l'échelle réseau) et 3. le PROGRÈS (le
-    // magasin face à son propre mois précédent).
-    $libEchelle = implode(' · ', array_map(static fn ($m4) => '≥ ' . $n1($m4['seuil']) . ' → ' . $m4['montant'] . ' €', $echelleA));
-    $hClot .= '<div class="sec">L’échelle — ta moyenne, ta prime (' . $e($libEchelle) . ')</div>'
-        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th class="l">Sur l’échelle</th><th>Total</th></tr>';
-    $parShopE = [];
+    // 2. BATS TON RECORD — chacune face à son record, et 3. l'équipe.
+    $hClot .= '<div class="sec">Bats ton record — ' . $reglagesR['eurDixieme'] . ' € par dixième au-dessus de ton record (12 mois glissants) · 👑 couronne ' . $reglagesR['couronneVendeuse'] . ' €</div>'
+        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th class="l">Records battus &amp; couronne</th><th>Total</th></tr>';
+    $parShopR = [];
     foreach ($d['lignes'] as $l2) {
-        if (($l2['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-        $prE = venteEchellePrime($l2['lignesTicket'] !== null ? (float) $l2['lignesTicket'] : null);
-        if ($prE === null) { continue; }
-        $parShopE[(string) $l2['shopId']][] = ['l' => $l2, 'prime' => $prE];
+        if (($l2['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l2['lignesTicket'] === null) { continue; }
+        $recV2 = venteRecordVendeuse($parMoisR, (string) $l2['id'], $d['m']);
+        $prV2 = venteRecordPrime((float) $l2['lignesTicket'], $recV2, $reglagesR['eurDixieme']);
+        $estCour = $couronneV !== null && (string) $couronneV['id'] === (string) $l2['id'];
+        $tot2 = $prV2['prime'] + ($estCour ? $reglagesR['couronneVendeuse'] : 0);
+        if ($tot2 === 0) { continue; }
+        $parShopR[(string) $l2['shopId']][] = ['l' => $l2, 'rec' => $recV2, 'prime' => $tot2, 'couronne' => $estCour];
     }
     foreach ($d['magasins'] as $mag2) {
         if (!$garde($mag2['id'])) { continue; }
-        $siens2 = $parShopE[(string) $mag2['id']] ?? [];
-        $totE = array_sum(array_map(static fn ($x4) => $x4['prime']['montant'], $siens2));
-        $totalPrimes += $totE;
+        $siens2 = $parShopR[(string) $mag2['id']] ?? [];
+        $totR = array_sum(array_column($siens2, 'prime'));
+        $totalPrimes += $totR;
         $hClot .= '<tr><td class="l"><b>' . $e($court($mag2['nom'])) . '</b></td>'
-            . '<td class="l" style="font-size:7.8pt">' . ($siens2 === [] ? '<span class="mut">personne sur l’échelle ce mois-ci</span>'
-                : implode(' · ', array_map(static fn ($x4) => $e($x4['l']['nom']) . ' (' . $n1($x4['l']['lignesTicket'])
-                    . ' → ' . $x4['prime']['montant'] . ' €)', $siens2))) . '</td>'
-            . '<td class="acc"><b>' . ($totE > 0 ? $eur($totE) : '') . '</b></td></tr>';
+            . '<td class="l" style="font-size:7.8pt">' . ($siens2 === [] ? '<span class="mut">aucun record battu ce mois-ci</span>'
+                : implode(' · ', array_map(static fn ($x4) => ($x4['couronne'] ? '👑 ' : '') . $e($x4['l']['nom'])
+                    . ' (' . ($x4['rec'] !== null ? number_format($x4['rec'], 2, ',', ' ') . ' → ' : '')
+                    . number_format((float) $x4['l']['lignesTicket'], 2, ',', ' ') . ' = ' . $x4['prime'] . ' €)', $siens2))) . '</td>'
+            . '<td class="acc"><b>' . ($totR > 0 ? $eur($totR) : '') . '</b></td></tr>';
     }
-    $hClot .= '</table><div class="sec">Le progrès — l’équipe fait mieux que son mois dernier (+ '
-        . $n1($progresA['pas']) . ' → ' . $eur($progresA['montant']) . ')</div>'
-        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th>Mois passé</th><th>Ce mois</th><th>Progrès</th><th>Prime d’équipe</th></tr>';
+    $hClot .= '</table><div class="sec">L’équipe — le record du magasin (' . $reglagesR['eurDixieme']
+        . ' € par dixième · 👑 plus haute moyenne du réseau ' . $reglagesR['couronneMagasin'] . ' €)</div>'
+        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th>Record 12 mois</th><th>Ce mois</th><th>Écart</th><th>Prime d’équipe</th></tr>';
     foreach ($d['magasins'] as $mag2) {
         if (!$garde($mag2['id'])) { continue; }
-        $moy2 = $moyenneDeA($d['lignes'], (string) $mag2['id']);
-        $avant2 = $moyenneDeA($rPrecA['motif'] === null ? $rPrecA['lignes'] : null, (string) $mag2['id']);
-        $delta2 = ($moy2 !== null && $avant2 !== null) ? round($moy2 - $avant2, 2) : null;
-        $okP = $delta2 !== null && $delta2 >= $progresA['pas'] - 1e-9;
-        if ($okP) { $totalPrimes += $progresA['montant']; }
-        $hClot .= '<tr><td class="l"><b>' . $e($court($mag2['nom'])) . '</b></td>'
-            . '<td>' . ($avant2 !== null ? number_format($avant2, 2, ',', ' ') : '') . '</td>'
-            . '<td>' . ($moy2 !== null ? number_format($moy2, 2, ',', ' ') : '') . '</td>'
-            . '<td style="font-weight:bold;color:' . ($delta2 === null ? '#7a736a' : ($delta2 >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
-            . ($delta2 === null ? '' : ($delta2 >= 0 ? '+ ' : '− ') . number_format(abs($delta2), 2, ',', ' ')) . '</td>'
-            . '<td class="acc"><b>' . ($okP ? $eur($progresA['montant']) : '') . '</b></td></tr>';
+        $xM = venteMoyenneMagasin($d['lignes'], (string) $mag2['id']);
+        $recM2 = venteRecordMagasin($parMoisR, (string) $mag2['id'], $d['m']);
+        $prM2 = venteRecordPrime($xM['moyenne'] ?? null, $recM2, $reglagesR['eurDixieme']);
+        $estCourM = $couronneM !== null && $couronneM['id'] === (string) $mag2['id'];
+        $totM = $prM2['prime'] + ($estCourM ? $reglagesR['couronneMagasin'] : 0);
+        $totalPrimes += $totM;
+        $deltaM = ($xM !== null && $recM2 !== null) ? round($xM['moyenne'] - $recM2, 2) : null;
+        $hClot .= '<tr><td class="l"><b>' . ($estCourM ? '👑 ' : '') . $e($court($mag2['nom'])) . '</b></td>'
+            . '<td>' . ($recM2 !== null ? number_format($recM2, 2, ',', ' ') : '<span class="mut">pas encore de record</span>') . '</td>'
+            . '<td>' . ($xM !== null ? number_format($xM['moyenne'], 2, ',', ' ') : '') . '</td>'
+            . '<td style="font-weight:bold;color:' . ($deltaM === null ? '#7a736a' : ($deltaM > 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+            . ($deltaM === null ? '' : ($deltaM >= 0 ? '+ ' : '− ') . number_format(abs($deltaM), 2, ',', ' ')) . '</td>'
+            . '<td class="acc"><b>' . ($totM > 0 ? $eur($totM) : '') . '</b></td></tr>';
     }
     $hClot .= '</table>'
         . '<div class="prime" style="text-align:center"><span class="k">Total des primes du mois' . ($seulShop !== '' ? ' — ce magasin' : '') . '</span>'
@@ -1024,79 +1034,97 @@ function venteCrossTarget(array $cfg, string $shop, string $m): ?float
 }
 
 /**
- * LE SYSTÈME A — « l'échelle et le progrès », deux règles dicibles :
- *  - POUR CHACUNE : une ÉCHELLE réseau unique (ta moyenne du mois, ta
- *    prime) — la marche la plus haute atteinte paie ;
- *  - POUR LE MAGASIN : le PROGRÈS — faire mieux que son propre mois
- *    précédent d'au moins « le pas » déclenche la prime d'équipe. La barre
- *    se repose toute seule chaque mois : personne ne règle plus de cible.
+ * « BATS TON RECORD » — une seule règle, pour chaque vendeuse ET chaque
+ * magasin : ta référence est TON RECORD des 12 derniers mois (ta meilleure
+ * moyenne mensuelle de lignes par ticket) ; chaque dixième au-dessus paie.
+ * Le record GLISSE (un exploit de plus d'un an sort de la fenêtre — la barre
+ * reste à portée), et la COURONNE du mois (plus haute moyenne du réseau,
+ * vendeuse et magasin) garde le sommet concurrentiel. On ne paie jamais deux
+ * fois le même progrès : le nouveau record devient la référence.
  */
-function venteEchelle(): array
+function venteRecordReglages(): array
 {
-    $s = setting('venteEchelle');
-    $out = [];
-    if (is_array($s)) {
-        foreach ($s as $m2) {
-            if (is_numeric($m2['seuil'] ?? null) && is_numeric($m2['montant'] ?? null)) {
-                $out[] = ['seuil' => round((float) $m2['seuil'], 2), 'montant' => (int) $m2['montant']];
-            }
+    return [
+        'eurDixieme' => is_numeric(setting('venteRecordEurDixieme')) ? (int) setting('venteRecordEurDixieme') : 100,
+        'couronneVendeuse' => is_numeric(setting('venteCouronneVendeuse')) ? (int) setting('venteCouronneVendeuse') : 50,
+        'couronneMagasin' => is_numeric(setting('venteCouronneMagasin')) ? (int) setting('venteCouronneMagasin') : 100,
+    ];
+}
+
+/** POST /ventes/record — les trois réglages du système. */
+function wr_ventes_record(): array
+{
+    $b = body();
+    foreach ([['eurDixieme', 'venteRecordEurDixieme'], ['couronneVendeuse', 'venteCouronneVendeuse'],
+              ['couronneMagasin', 'venteCouronneMagasin']] as [$cle, $reg]) {
+        if (isset($b[$cle]) && is_numeric($b[$cle])) {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                [$reg, json_encode(max(0, (int) $b[$cle]))]);
         }
     }
-    if ($out === []) { $out = [['seuil' => 2.5, 'montant' => 30], ['seuil' => 2.8, 'montant' => 60], ['seuil' => 3.1, 'montant' => 120]]; }
-    usort($out, static fn ($a, $b) => $a['seuil'] <=> $b['seuil']);
+    journalAdd('CEO', 'Paramètre', 'Bats ton record', 'Réglages mis à jour');
+    return ['ok' => true, 'reglages' => venteRecordReglages()];
+}
+
+/** Les 12 mois AVANT $m — la fenêtre glissante du record. */
+function venteFenetreRecord(string $m): array
+{
+    $out = [];
+    for ($i = 1; $i <= 12; $i++) { $out[] = date('Y-m', strtotime($m . '-01 -' . $i . ' month')); }
     return $out;
 }
 
-/** La marche la plus haute atteinte — mieux ne paie jamais moins. */
-function venteEchellePrime(?float $moy): ?array
+/** Le record d'une vendeuse sur la fenêtre : sa meilleure moyenne mensuelle
+ *  (30 tickets au moins ce mois-là — un record se pose sur du réel). */
+function venteRecordVendeuse(array $parMois, string $id, string $m): ?float
 {
-    if ($moy === null) { return null; }
-    $prime = null;
-    foreach (venteEchelle() as $m2) {
-        if ($moy >= $m2['seuil'] && ($prime === null || $m2['montant'] >= $prime['montant'])) { $prime = $m2; }
-    }
-    return $prime;
-}
-
-function venteProgres(): array
-{
-    return ['pas' => is_numeric(setting('venteProgresPas')) ? (float) setting('venteProgresPas') : 0.15,
-        'montant' => is_numeric(setting('venteProgresMontant')) ? (int) setting('venteProgresMontant') : 400];
-}
-
-/** POST /ventes/echelle — l'échelle et le progrès, les seuls réglages. */
-function wr_ventes_echelle(): array
-{
-    $b = body();
-    if (is_array($b['echelle'] ?? null)) {
-        $liste = [];
-        foreach ($b['echelle'] as $m2) {
-            if (is_numeric($m2['seuil'] ?? null) && is_numeric($m2['montant'] ?? null)) {
-                $liste[] = ['seuil' => round((float) $m2['seuil'], 2), 'montant' => (int) $m2['montant']];
-            }
+    $rec = null;
+    foreach (venteFenetreRecord($m) as $mF) {
+        foreach (($parMois[$mF] ?? []) ?: [] as $l) {
+            if ((string) $l['id'] !== $id) { continue; }
+            if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
+            if ($rec === null || (float) $l['lignesTicket'] > $rec) { $rec = (float) $l['lignesTicket']; }
         }
-        usort($liste, static fn ($a2, $b2) => $a2['seuil'] <=> $b2['seuil']);
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['venteEchelle', json_encode($liste)]);
     }
-    if (isset($b['pas']) && is_numeric($b['pas'])) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['venteProgresPas', json_encode(max(0.01, min(2, (float) $b['pas'])))]);
+    return $rec;
+}
+
+/** La moyenne d'un magasin sur un mois — la même règle partout. */
+function venteMoyenneMagasin(?array $lignes, string $sid): ?array
+{
+    if ($lignes === null) { return null; }
+    $lg = 0.0; $tk = 0;
+    foreach ($lignes as $l) {
+        if ((string) $l['shopId'] !== $sid || $l['lignesTicket'] === null) { continue; }
+        $lg += $l['lignesTicket'] * $l['tickets']; $tk += $l['tickets'];
     }
-    if (isset($b['montantEquipe']) && is_numeric($b['montantEquipe'])) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['venteProgresMontant', json_encode(max(0, (int) $b['montantEquipe']))]);
+    return $tk > 0 ? ['moyenne' => round($lg / $tk, 2), 'tickets' => $tk] : null;
+}
+
+/** Le record d'un magasin sur la fenêtre glissante. */
+function venteRecordMagasin(array $parMois, string $sid, string $m): ?float
+{
+    $rec = null;
+    foreach (venteFenetreRecord($m) as $mF) {
+        $x = venteMoyenneMagasin($parMois[$mF] ?? null, $sid);
+        if ($x !== null && ($rec === null || $x['moyenne'] > $rec)) { $rec = $x['moyenne']; }
     }
-    journalAdd('CEO', 'Paramètre', 'Prime de vente complémentaire', 'Échelle / progrès mis à jour');
-    return ['ok' => true, 'echelle' => venteEchelle(), 'progres' => venteProgres()];
+    return $rec;
+}
+
+/** Les tranches de 0,1 gagnées au-dessus du record → la prime. */
+function venteRecordPrime(?float $moy, ?float $record, int $eurDixieme): array
+{
+    if ($moy === null || $record === null || $moy <= $record + 1e-9) { return ['tranches' => 0, 'prime' => 0]; }
+    $tranches = (int) floor(($moy - $record + 1e-9) / 0.1);
+    return ['tranches' => $tranches, 'prime' => $tranches * $eurDixieme];
 }
 
 /** GET /ventes/cross?n=6 — le tableau mois × magasin, targets et atteintes. */
 function ep_ventes_cross(): array
 {
     $n = max(2, min(12, (int) ($_GET['n'] ?? 6)));
-    $echelle = venteEchelle();
-    $progres = venteProgres();
+    $reglages = venteRecordReglages();
     $hist = setting('ventePrimesCrossHist');
     if (!is_array($hist)) { $hist = []; }
 
@@ -1105,8 +1133,7 @@ function ep_ventes_cross(): array
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
 
-    $out = ['echelle' => $echelle, 'progres' => $progres,
-        'minTickets' => VENTE_CROSS_MIN_TICKETS,
+    $out = ['reglages' => $reglages, 'minTickets' => VENTE_CROSS_MIN_TICKETS,
         'mois' => [], 'magasins' => [], 'dernierRevolu' => null];
     $moisListe = [];
     for ($i = $n - 1; $i >= 0; $i--) {
@@ -1117,55 +1144,72 @@ function ep_ventes_cross(): array
         $out['mois'][] = ['cle' => $m, 'lib' => strftime_fr($t, 'M Y'), 'encours' => $enc];
         if (!$enc) { $out['dernierRevolu'] = $m; }
     }
-    // Un mois de plus en amont : le PROGRÈS du plus ancien mois affiché se
-    // mesure contre son précédent.
-    $mAvant = date('Y-m', strtotime('-' . $n . ' month', strtotime(date('Y-m-01'))));
-
+    // La fenêtre des RECORDS : douze mois avant le plus ancien mois affiché.
+    // Un mois sans transaction se lit vite — la table ne remonte pas si loin.
     $parMois = [];
-    foreach (array_merge([$mAvant], $moisListe) as $m) {
+    for ($i = $n - 1 + 12; $i >= 0; $i--) {
+        $m = date('Y-m', strtotime('-' . $i . ' month', strtotime(date('Y-m-01'))));
         $r = venteMois($m, $nomDe);
         $parMois[$m] = $r['motif'] === null ? $r['lignes'] : null;
     }
-    // La MOYENNE d'un magasin sur un mois — la même règle partout.
-    $moyenneDe = static function (string $sid, string $m) use ($parMois): ?array {
-        if (($parMois[$m] ?? null) === null) { return null; }
-        $lg = 0.0; $tk = 0;
-        foreach ($parMois[$m] as $l) {
-            if ((string) $l['shopId'] !== $sid || $l['lignesTicket'] === null) { continue; }
-            $lg += $l['lignesTicket'] * $l['tickets']; $tk += $l['tickets'];
+
+    // Par mois : la meilleure moyenne du réseau (couronne vendeuse) et le
+    // magasin à la plus haute moyenne (couronne magasin).
+    $couronnes = [];
+    foreach ($moisListe as $m) {
+        $meilleure = null; $meilleurShop = null;
+        foreach (($parMois[$m] ?? []) ?: [] as $l) {
+            if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
+            if ($meilleure === null || (float) $l['lignesTicket'] > (float) $meilleure['lignesTicket']) { $meilleure = $l; }
         }
-        return $tk > 0 ? ['moyenne' => round($lg / $tk, 2), 'tickets' => $tk] : null;
-    };
+        foreach ($nomDe as $sid => $nom) {
+            $x = venteMoyenneMagasin($parMois[$m] ?? null, (string) $sid);
+            if ($x !== null && ($meilleurShop === null || $x['moyenne'] > $meilleurShop['moyenne'])) {
+                $meilleurShop = ['id' => (string) $sid, 'moyenne' => $x['moyenne']];
+            }
+        }
+        $couronnes[$m] = ['vendeuse' => $meilleure !== null ? (string) $meilleure['id'] : null,
+            'vendeuseNom' => $meilleure !== null ? (string) $meilleure['nom'] : null,
+            'magasin' => $meilleurShop !== null ? $meilleurShop['id'] : null];
+    }
+    $out['couronnes'] = [];
+    foreach ($moisListe as $m) {
+        $out['couronnes'][$m] = ['vendeuse' => $couronnes[$m]['vendeuseNom'],
+            'magasin' => $couronnes[$m]['magasin'] !== null ? ($nomDe[$couronnes[$m]['magasin']] ?? null) : null];
+    }
 
     foreach ($nomDe as $sid => $nom) {
         $cells = [];
-        foreach ($moisListe as $iM => $m) {
-            // L'ÉCHELLE : chaque vendeuse du magasin face à l'échelle réseau.
-            $atteintes = [];
-            if (($parMois[$m] ?? null) !== null) {
-                foreach ($parMois[$m] as $l) {
-                    if ((string) $l['shopId'] !== (string) $sid) { continue; }
-                    if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-                    $pr = venteEchellePrime($l['lignesTicket'] !== null ? (float) $l['lignesTicket'] : null);
-                    if ($pr === null) { continue; }
-                    $atteintes[] = ['id' => $l['id'], 'nom' => $l['nom'],
-                        'lignesTicket' => $l['lignesTicket'],
-                        'prime' => $pr['montant'], 'palier' => $pr['seuil']];
-                }
-                usort($atteintes, static fn ($a, $b) => $b['lignesTicket'] <=> $a['lignesTicket']);
+        foreach ($moisListe as $m) {
+            $x = venteMoyenneMagasin($parMois[$m] ?? null, (string) $sid);
+            $recM = venteRecordMagasin($parMois, (string) $sid, $m);
+            $prM = venteRecordPrime($x['moyenne'] ?? null, $recM, $reglages['eurDixieme']);
+            $couronneM = ($couronnes[$m]['magasin'] ?? null) === (string) $sid;
+            // Les vendeuses du magasin face à LEUR record.
+            $gagnantes = [];
+            foreach (($parMois[$m] ?? []) ?: [] as $l) {
+                if ((string) $l['shopId'] !== (string) $sid) { continue; }
+                if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
+                $recV = venteRecordVendeuse($parMois, (string) $l['id'], $m);
+                $prV = venteRecordPrime((float) $l['lignesTicket'], $recV, $reglages['eurDixieme']);
+                $couronneV = ($couronnes[$m]['vendeuse'] ?? null) === (string) $l['id'];
+                if ($prV['prime'] === 0 && !$couronneV) { continue; }
+                $gagnantes[] = ['id' => $l['id'], 'nom' => $l['nom'],
+                    'lignesTicket' => $l['lignesTicket'], 'record' => $recV,
+                    'tranches' => $prV['tranches'], 'prime' => $prV['prime']
+                        + ($couronneV ? $reglages['couronneVendeuse'] : 0),
+                    'couronne' => $couronneV];
             }
-            // Le PROGRÈS : la moyenne du magasin face à SON mois précédent.
-            $mPrec = $iM === 0 ? $mAvant : $moisListe[$iM - 1];
-            $ceMois = $moyenneDe((string) $sid, $m);
-            $avant = $moyenneDe((string) $sid, $mPrec);
-            $delta = ($ceMois !== null && $avant !== null) ? round($ceMois['moyenne'] - $avant['moyenne'], 2) : null;
-            $equipeOk = $delta !== null && $delta >= $progres['pas'] - 1e-9;
+            usort($gagnantes, static fn ($a, $b) => $b['prime'] <=> $a['prime']);
+            $primeEquipe = $prM['prime'] + ($couronneM ? $reglages['couronneMagasin'] : 0);
             $cells[] = ['m' => $m,
-                'moyenne' => $ceMois['moyenne'] ?? null, 'tickets' => $ceMois['tickets'] ?? 0,
-                'precedent' => $avant['moyenne'] ?? null, 'delta' => $delta,
-                'equipeOk' => $equipeOk, 'primeEquipe' => $equipeOk ? $progres['montant'] : 0,
-                'atteintes' => $atteintes, 'nb' => count($atteintes),
-                'eur' => array_sum(array_column($atteintes, 'prime'))];
+                'moyenne' => $x['moyenne'] ?? null, 'tickets' => $x['tickets'] ?? 0,
+                'record' => $recM,
+                'delta' => ($x !== null && $recM !== null) ? round($x['moyenne'] - $recM, 2) : null,
+                'tranches' => $prM['tranches'], 'primeEquipe' => $primeEquipe,
+                'couronne' => $couronneM,
+                'gagnantes' => $gagnantes, 'nb' => count($gagnantes),
+                'eur' => array_sum(array_column($gagnantes, 'prime'))];
         }
         $out['magasins'][] = ['id' => (string) $sid, 'nom' => $nom, 'cells' => $cells];
     }
@@ -1269,9 +1313,7 @@ function ep_ventes_explication_pdf(): array
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $primes = ventePrimesConfig();
-    $echelle = venteEchelle();
-    $progres = venteProgres();
-    $plafondE = $echelle !== [] ? max(array_column($echelle, 'montant')) : 0;
+    $reg = venteRecordReglages();
     $logo = rapLogoDataUri();
     $blocTitre = static fn (string $n, string $t2) =>
         '<div style="display:flex;align-items:baseline;gap:3mm;margin:6mm 0 2mm">'
@@ -1290,28 +1332,23 @@ function ep_ventes_explication_pdf(): array
         . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, trois primes. Elles s\'additionnent.</div>'
         . '<div style="color:#7a736a;font-size:9.5pt;margin-top:1mm">Un seul geste les nourrit toutes : proposer quelque chose en plus à chaque client. « Et avec ça ? »</div>'
 
-        . $blocTitre('1', 'Ta moyenne, ta prime — jusqu\'à ' . $plafondE . ' € pour toi')
-        . '<div>La même échelle dans tout le réseau : ta moyenne de lignes par ticket du mois te place sur une marche — la plus haute atteinte paie. '
-        . '<span style="color:#7a736a">(Au moins ' . VENTE_CROSS_MIN_TICKETS . ' tickets dans le mois — deux tickets ne font pas une moyenne.)</span></div>'
-        . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>';
-    $nE = count($echelleA2 = venteEchelle()) + 1;
-    $h .= '<td width="' . (int) (100 / $nE) . '%" align="center" style="background:#d8cec2;border-radius:8px;padding:3mm 1mm;color:#6b5f52">'
-        . '<div style="font-size:8pt">sous ' . str_replace('.', ',', (string) ($echelleA2[0]['seuil'] ?? 0)) . '</div>'
-        . '<div style="font-family:Georgia,serif;font-size:14pt">0 €</div></td>';
-    foreach ($echelleA2 as $iE => $mE) {
-        $fond = ['#a8734d', '#8d5a3a', '#8D1D2C', '#6d1522'][min(3, $iE)];
-        $h .= '<td width="' . (int) (100 / $nE) . '%" align="center" style="background:' . $fond . ';border-radius:8px;padding:3mm 1mm;color:#fff">'
-            . '<div style="font-size:8pt">≥ ' . str_replace('.', ',', (string) $mE['seuil']) . '</div>'
-            . '<div style="font-family:Georgia,serif;font-size:14pt">' . $mE['montant'] . ' €</div></td>';
-    }
-    $h .= '</tr></table>'
-        . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Un article proposé en plus à chaque client, et la marche suivante se rapproche.</div>'
+        . $blocTitre('1', 'Bats ton record — ' . $reg['eurDixieme'] . ' € par dixième')
+        . '<div>Ta référence, c\'est <b>ton record des 12 derniers mois</b> — ta meilleure moyenne de lignes par ticket. '
+        . 'Chaque <b>0,1 au-dessus</b> = <b>' . $reg['eurDixieme'] . ' €</b>. Bats-le de 0,3 : ' . (3 * $reg['eurDixieme']) . ' €. '
+        . 'Le nouveau record devient ta référence — et un record de plus d\'un an sort du compte : la barre reste toujours à ta portée. '
+        . '<span style="color:#7a736a">(Au moins ' . VENTE_CROSS_MIN_TICKETS . ' tickets dans le mois.)</span></div>'
+        . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>'
+        . '<td width="25%" align="center" style="background:#d8cec2;border-radius:8px;padding:3mm 1mm;color:#6b5f52"><div style="font-size:8pt">ton record</div><div style="font-family:Georgia,serif;font-size:14pt">0 €</div></td>'
+        . '<td width="25%" align="center" style="background:#a8734d;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,1</div><div style="font-family:Georgia,serif;font-size:14pt">' . $reg['eurDixieme'] . ' €</div></td>'
+        . '<td width="25%" align="center" style="background:#8d5a3a;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,2</div><div style="font-family:Georgia,serif;font-size:14pt">' . (2 * $reg['eurDixieme']) . ' €</div></td>'
+        . '<td width="25%" align="center" style="background:#8D1D2C;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,3</div><div style="font-family:Georgia,serif;font-size:14pt">' . (3 * $reg['eurDixieme']) . ' €</div></td>'
+        . '</tr></table>'
+        . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Et c\'est pareil pour le MAGASIN : la moyenne de l\'équipe bat son record → ' . $reg['eurDixieme'] . ' € par dixième, pour l\'équipe.</div>'
 
-        . $blocTitre('2', 'Le progrès — ' . $progres['montant'] . ' € pour l\'équipe')
-        . '<div><b>Faites mieux que votre mois dernier.</b> Si la moyenne du magasin gagne <b>+ '
-        . str_replace('.', ',', (string) $progres['pas']) . '</b> ligne par ticket sur son propre mois précédent, l\'équipe touche <b>'
-        . $progres['montant'] . ' €</b>. La barre se repose toute seule chaque mois sur le niveau atteint : on se bat contre soi-même, jamais contre un plus grand magasin. '
-        . '<span style="color:#7a736a">Une seule personne ne peut pas la gagner seule — et une seule peut la faire perdre. On se tire vers le haut.</span></div>'
+        . $blocTitre('2', 'La couronne du mois — ' . $reg['couronneVendeuse'] . ' € / ' . $reg['couronneMagasin'] . ' €')
+        . '<div>Chaque mois, la <b>plus haute moyenne du réseau</b> porte la couronne 👑 : <b>' . $reg['couronneVendeuse'] . ' €</b> pour la vendeuse, '
+        . '<b>' . $reg['couronneMagasin'] . ' €</b> pour le magasin à la plus haute moyenne. '
+        . 'Au sommet, on la défend ; en dessous, on va la chercher — la course ne s\'arrête jamais.</div>'
 
         . $blocTitre('3', 'La meilleure vendeuse — ' . $primes['magasin'] . ' € / ' . $primes['reseau'] . ' €')
         . '<div>Chaque mois, un score est calculé pour chacune : vos ventes, ramenées à vos <b>heures de travail</b>. '
@@ -1426,53 +1463,64 @@ function wr_ventes_cross_primes(): array
 
     $nomDe = [];
     foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
-    $r = venteMois($m, $nomDe);
-    if ($r['motif'] !== null) { http_response_code(503); return ['error' => $r['motif']]; }
-    $mPrec = date('Y-m', strtotime($m . '-01 -1 month'));
-    $rPrec = venteMois($mPrec, $nomDe);
+    // Le mois primé + sa fenêtre de records.
+    $parMois = [];
+    foreach (array_merge(venteFenetreRecord($m), [$m]) as $mF) {
+        $r2 = venteMois($mF, $nomDe);
+        $parMois[$mF] = $r2['motif'] === null ? $r2['lignes'] : null;
+    }
+    if (($parMois[$m] ?? null) === null) { http_response_code(503); return ['error' => 'le mois ' . $m . ' n’a pas pu être calculé']; }
 
-    $echelle = venteEchelle();
-    $progres = venteProgres();
-    $enr = ['m' => $m, 'quand' => date('Y-m-d H:i'), 'echelle' => $echelle, 'progres' => $progres, 'gagnantes' => []];
+    $reglages = venteRecordReglages();
+    $enr = ['m' => $m, 'quand' => date('Y-m-d H:i'), 'reglages' => $reglages, 'gagnantes' => [], 'magasinsGagnants' => []];
 
-    // L'ÉCHELLE : chaque vendeuse face à l'échelle réseau — la marche la
-    // plus haute atteinte paie.
-    foreach ($r['lignes'] as $l) {
-        if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
-        $pr = venteEchellePrime($l['lignesTicket'] !== null ? (float) $l['lignesTicket'] : null);
-        if ($pr === null) { continue; }
-        $enr['gagnantes'][] = ['id' => $l['id'], 'nom' => $l['nom'], 'magasin' => $l['magasin'],
-            'lignesTicket' => $l['lignesTicket'], 'prime' => $pr['montant'], 'palier' => $pr['seuil']];
-        journalAdd('CEO', 'Vente', $l['nom'], 'Prime de vente complémentaire ' . $m . ' — ' . $pr['montant']
-            . ' € (marche ' . number_format($pr['seuil'], 1, ',', ' ') . ' : '
-            . number_format((float) $l['lignesTicket'], 1, ',', ' ') . ' lignes/ticket, ' . $l['magasin'] . ')');
+    // La couronne du mois : la plus haute moyenne du réseau, vendeuse et magasin.
+    $meilleure = null; $meilleurShop = null;
+    foreach ($parMois[$m] as $l) {
+        if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
+        if ($meilleure === null || (float) $l['lignesTicket'] > (float) $meilleure['lignesTicket']) { $meilleure = $l; }
+    }
+    foreach ($nomDe as $sid => $nomShop) {
+        $x = venteMoyenneMagasin($parMois[$m], (string) $sid);
+        if ($x !== null && ($meilleurShop === null || $x['moyenne'] > $meilleurShop['moyenne'])) {
+            $meilleurShop = ['id' => (string) $sid, 'moyenne' => $x['moyenne']];
+        }
     }
 
-    // Le PROGRÈS : la moyenne du magasin gagne « le pas » sur SON mois
-    // précédent — la prime d'équipe.
-    $moyenneDe = static function (array $lignes, string $sid): ?float {
-        $lg = 0.0; $tk = 0;
-        foreach ($lignes as $l) {
-            if ((string) $l['shopId'] !== $sid || $l['lignesTicket'] === null) { continue; }
-            $lg += $l['lignesTicket'] * $l['tickets']; $tk += $l['tickets'];
-        }
-        return $tk > 0 ? round($lg / $tk, 2) : null;
-    };
-    $enr['magasinsGagnants'] = [];
+    // CHACUNE face à son record — et la couronne s'ajoute.
+    foreach ($parMois[$m] as $l) {
+        if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
+        $rec = venteRecordVendeuse($parMois, (string) $l['id'], $m);
+        $pr = venteRecordPrime((float) $l['lignesTicket'], $rec, $reglages['eurDixieme']);
+        $couronne = $meilleure !== null && (string) $meilleure['id'] === (string) $l['id'];
+        $total = $pr['prime'] + ($couronne ? $reglages['couronneVendeuse'] : 0);
+        if ($total === 0) { continue; }
+        $enr['gagnantes'][] = ['id' => $l['id'], 'nom' => $l['nom'], 'magasin' => $l['magasin'],
+            'lignesTicket' => $l['lignesTicket'], 'record' => $rec,
+            'tranches' => $pr['tranches'], 'couronne' => $couronne, 'prime' => $total];
+        journalAdd('CEO', 'Vente', $l['nom'], 'Bats ton record ' . $m . ' — ' . $total . ' €'
+            . ($pr['tranches'] > 0 ? ' (record ' . ($rec !== null ? number_format($rec, 2, ',', ' ') : 'aucun')
+                . ' → ' . number_format((float) $l['lignesTicket'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s))' : '')
+            . ($couronne ? ' 👑 couronne du réseau' : '') . ' — ' . $l['magasin']);
+    }
+    // CHAQUE MAGASIN face à son record — et la couronne du magasin.
     foreach ($nomDe as $sid => $nomShop) {
-        $moy = $moyenneDe($r['lignes'], (string) $sid);
-        $avant = $rPrec['motif'] === null ? $moyenneDe($rPrec['lignes'], (string) $sid) : null;
-        if ($moy === null || $avant === null) { continue; }
-        $delta = round($moy - $avant, 2);
-        if ($delta < $progres['pas'] - 1e-9) { continue; }
+        $x = venteMoyenneMagasin($parMois[$m], (string) $sid);
+        $rec = venteRecordMagasin($parMois, (string) $sid, $m);
+        $pr = venteRecordPrime($x['moyenne'] ?? null, $rec, $reglages['eurDixieme']);
+        $couronne = $meilleurShop !== null && $meilleurShop['id'] === (string) $sid;
+        $total = $pr['prime'] + ($couronne ? $reglages['couronneMagasin'] : 0);
+        if ($total === 0) { continue; }
         $enr['magasinsGagnants'][] = ['id' => (string) $sid, 'nom' => $nomShop,
-            'moyenne' => $moy, 'precedent' => $avant, 'delta' => $delta, 'prime' => $progres['montant']];
-        journalAdd('CEO', 'Vente', $nomShop, 'Prime d’ÉQUIPE ' . $m . ' — ' . $progres['montant']
-            . ' € (progrès + ' . number_format($delta, 2, ',', ' ') . ' : '
-            . number_format($avant, 2, ',', ' ') . ' → ' . number_format($moy, 2, ',', ' ') . ' lignes/ticket)');
+            'moyenne' => $x['moyenne'] ?? null, 'record' => $rec,
+            'tranches' => $pr['tranches'], 'couronne' => $couronne, 'prime' => $total];
+        journalAdd('CEO', 'Vente', $nomShop, 'Prime d’ÉQUIPE ' . $m . ' — ' . $total . ' €'
+            . ($pr['tranches'] > 0 ? ' (record ' . number_format((float) $rec, 2, ',', ' ') . ' → '
+                . number_format((float) $x['moyenne'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s))' : '')
+            . ($couronne ? ' 👑 plus haute moyenne du réseau' : ''));
     }
     if ($enr['gagnantes'] === [] && $enr['magasinsGagnants'] === []) {
-        http_response_code(422); return ['error' => 'personne sur l’échelle et aucun magasin en progrès sur ' . $m . ' — rien à primer'];
+        http_response_code(422); return ['error' => 'aucun record battu et pas de couronne sur ' . $m . ' — rien à primer'];
     }
     $hist[$m] = $enr;
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
@@ -1500,14 +1548,12 @@ function ep_ventes_affiche(): array
     $libMois = strftime_fr(strtotime($m . '-01'), 'M Y');
 
     $primes = ventePrimesConfig();
-    $echelleAff = venteEchelle();
-    $progresAff = venteProgres();
+    $regAff = venteRecordReglages();
     $nomDe = [];
     foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
-    $maxEchelle = $echelleAff !== [] ? max(array_column($echelleAff, 'montant')) : 0;
-    $maxTotal = $primes['reseau'] + $maxEchelle;
+    $maxTotal = $primes['reseau'] + 3 * $regAff['eurDixieme'] + $regAff['couronneVendeuse'];
 
     // Le classement du MOIS PRÉCÉDENT : le podium du magasin et la gagnante
     // réseau — c'est ce qui donne envie de détrôner. Calculé une fois pour
@@ -1522,10 +1568,9 @@ function ep_ventes_affiche(): array
             if ($reseauPrec === null) { $reseauPrec = $l; }
             $sid2 = (string) $l['shopId'];
             if (count($podiums[$sid2] ?? []) < 3) { $podiums[$sid2][] = $l; }
-            if (($l['tickets'] ?? 0) >= VENTE_CROSS_MIN_TICKETS
-                && venteEchellePrime($l['lignesTicket'] !== null ? (float) $l['lignesTicket'] : null) !== null) {
-                $gestePrec[$sid2] = ($gestePrec[$sid2] ?? 0) + 1;
-            }
+            // Les records battus du mois passé se lisent dans l'historique
+            // enregistré — le calcul complet vit dans l'enregistrement.
+
         }
     }
 
@@ -1562,16 +1607,14 @@ function ep_ventes_affiche(): array
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'
-            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm"><b>Ta moyenne du mois, ta prime</b> — la même échelle dans tout le réseau, la marche la plus haute atteinte paie :</div>'
-            . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>';
-        $wE = (int) (100 / max(1, count($echelleAff)));
-        foreach ($echelleAff as $mE) {
-            $h .= '<td width="' . $wE . '%" class="marche"><div style="font-size:9pt" class="mut">≥ ' . $n1($mE['seuil']) . ' lignes / ticket</div>'
-                . '<div class="v">' . (int) $mE['montant'] . ' €</div></td>';
-        }
-        $h .= '</tr></table>'
-            . '<div class="regle" style="margin-bottom:5mm">Et ENSEMBLE : si la moyenne du magasin fait <b>mieux que son mois dernier de + '
-            . $n1($progresAff['pas']) . '</b>, l’équipe touche <b class="acc">' . (int) $progresAff['montant'] . ' €</b> — on se bat contre soi-même, jamais contre un plus grand magasin.</div>'
+            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm"><b>Bats ton record</b> — ta meilleure moyenne des 12 derniers mois est ta barre : chaque dixi&#232;me au-dessus = <b class="acc">' . $regAff['eurDixieme'] . ' €</b>. Pareil pour le magasin : l\'&#233;quipe bat son record &#8594; ' . $regAff['eurDixieme'] . ' € par dixi&#232;me, pour tous.</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
+            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">ton record</div><div class="v">0 €</div></td>'
+            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,1</div><div class="v">' . $regAff['eurDixieme'] . ' €</div></td>'
+            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,2</div><div class="v">' . (2 * $regAff['eurDixieme']) . ' €</div></td>'
+            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,3</div><div class="v">' . (3 * $regAff['eurDixieme']) . ' €</div></td>'
+            . '</tr></table>'
+            . '<div class="regle" style="margin-bottom:5mm">Et chaque mois, la COURONNE 👑 : la plus haute moyenne du r&#233;seau — <b class="acc">' . $regAff['couronneVendeuse'] . ' €</b> pour la vendeuse, <b class="acc">' . $regAff['couronneMagasin'] . ' €</b> pour le magasin. &#192; prendre, ou &#224; d&#233;fendre.</div>'
 
             . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
                 . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="mut">📋 Le classement de ' . $e($libPrec) . ' — à détrôner</div>'

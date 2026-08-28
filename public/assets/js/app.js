@@ -5168,72 +5168,63 @@ class App {
   valsCross(common){
     const d = this._cross;
     const court = nom => String(nom || '').split(' - ').pop();
-    const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
     const n2 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     common.cxChargement = d === undefined;
-    common.cxMotif = d === null ? 'Le tableau de la prime de vente complémentaire n’a pas pu être lu.' : '';
+    common.cxMotif = d === null ? 'Le tableau « Bats ton record » n’a pas pu être lu.' : '';
     common.cxPdfEquipe = API_BASE + '/ventes/explication.pdf';
     if (!d) { common.cxLignes = []; return; }
 
-    // --- LE SYSTÈME A. L'échelle (pour chacune) : liste de marches, éditée
-    // entière à chaque champ — l'échelle est une, pas des réglages épars.
-    const echelle = (d.echelle || []).slice();
-    const poserEchelle = (liste, extra) => this.api('POST', '/ventes/echelle', Object.assign({ echelle: liste }, extra || {}))
+    // --- « BATS TON RECORD » : trois réglages, c'est tout.
+    const reg = d.reglages || { eurDixieme: 100, couronneVendeuse: 50, couronneMagasin: 100 };
+    const poser = cle => e => this.api('POST', '/ventes/record', { [cle]: e.target.value })
       .then(() => { this._cross = undefined; this.notify('Réglage enregistré — il vaut dès ce mois'); this.setState({}); });
-    common.cxEchelleMarches = echelle.map((m2, i) => ({
-      seuil: String(m2.seuil), montant: String(m2.montant),
-      poserSeuil: e => { const l2 = echelle.slice(); l2[i] = { ...l2[i], seuil: e.target.value.replace(',', '.') }; poserEchelle(l2); },
-      poserMontant: e => { const l2 = echelle.slice(); l2[i] = { ...l2[i], montant: e.target.value }; poserEchelle(l2); },
-      retirer: () => poserEchelle(echelle.filter((x2, j) => j !== i)),
-    }));
-    common.cxEchelleAjouter = () => {
-      const der = echelle.length ? echelle[echelle.length - 1] : { seuil: 2.2, montant: 0 };
-      poserEchelle(echelle.concat([{ seuil: Math.round(((+der.seuil) + 0.3) * 10) / 10, montant: (+der.montant) + 30 }]));
+    common.cxReglages = {
+      eurDixieme: String(reg.eurDixieme), poserEurDixieme: poser('eurDixieme'),
+      couronneVendeuse: String(reg.couronneVendeuse), poserCouronneVendeuse: poser('couronneVendeuse'),
+      couronneMagasin: String(reg.couronneMagasin), poserCouronneMagasin: poser('couronneMagasin'),
     };
-    // Le progrès (pour l'équipe) : le pas et le montant.
-    const progres = d.progres || { pas: 0.15, montant: 400 };
-    common.cxProgres = {
-      pas: String(progres.pas), montant: String(progres.montant),
-      poserPas: e => poserEchelle(echelle, { pas: String(e.target.value || '').replace(',', '.') }),
-      poserMontant: e => poserEchelle(echelle, { montantEquipe: e.target.value }),
-    };
-    common.cxPhraseEchelle = 'Ta moyenne du mois, ta prime : '
-      + echelle.map(m2 => '≥ ' + String(m2.seuil).replace('.', ',') + ' → ' + m2.montant + ' €').join(' · ')
-      + ' — la marche la plus haute atteinte paie.';
-    common.cxPhraseProgres = 'Faites mieux que votre mois dernier : la moyenne du magasin gagne + '
-      + String(progres.pas).replace('.', ',') + ' → ' + progres.montant + ' € pour l’équipe. La barre se repose toute seule chaque mois.';
+    common.cxPhrase = 'Bats ton record : ' + reg.eurDixieme + ' € par dixième au-dessus de ta meilleure moyenne des 12 derniers mois — toi comme ton magasin. '
+      + 'Et chaque mois, la couronne 👑 de la plus haute moyenne du réseau : ' + reg.couronneVendeuse + ' € (vendeuse) · ' + reg.couronneMagasin + ' € (magasin).';
 
-    // --- Les RÉSULTATS (onglet Résultats) : par magasin × mois — la moyenne,
-    // le progrès (Δ vs son mois précédent), et les vendeuses sur l'échelle.
+    // --- Les RÉSULTATS : par magasin × mois — moyenne, record, écart,
+    // primes d'équipe et records battus par les vendeuses.
     common.cxEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
     common.cxLignes = (d.magasins || []).map(mg => ({
       nom: court(mg.nom),
       cells: (mg.cells || []).map(c2 => ({
         vide: c2.moyenne == null,
         moyenne: n2(c2.moyenne),
+        record: c2.record != null ? n2(c2.record) : '',
         delta: c2.delta == null ? '' : (c2.delta >= 0 ? '+ ' : '− ') + n2(Math.abs(c2.delta)),
-        deltaPos: c2.delta != null && c2.delta >= 0,
-        equipeOk: !!c2.equipeOk, primeEquipe: c2.primeEquipe || 0,
+        deltaPos: c2.delta != null && c2.delta > 0,
+        primeEquipe: c2.primeEquipe || 0, couronne: !!c2.couronne,
         nb: c2.nb, eur: c2.eur || 0,
-        noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · ')
-          + (c2.equipeOk ? ' | équipe : ' + n2(c2.precedent) + ' → ' + n2(c2.moyenne) + ' = ' + c2.primeEquipe + ' €' : ''),
+        noms: (c2.gagnantes || []).map(a2 => (a2.couronne ? '👑 ' : '') + a2.nom
+          + ' (' + (a2.record != null ? n2(a2.record) + ' → ' : '') + n2(a2.lignesTicket) + ' = ' + (a2.prime || 0) + ' €)').join(' · ')
+          + (c2.primeEquipe ? ' | équipe : ' + c2.primeEquipe + ' €' : ''),
       })),
     }));
 
-    // --- Le SIMULATEUR : le progrès chiffré sur les tickets caisse.
+    // --- Le SIMULATEUR : « et si chacun battait son record de 0,1 / 0,2 / 0,3 »
+    // sur les tickets caisse — le record du magasin vient du dernier mois servi.
     const sim = d.sim;
     common.cxSim = null;
     if (sim && (sim.magasins || []).length) {
       const vl = +sim.valeurLigne || 0;
       const marge = +sim.marge || 65;
-      const pas = +progres.pas || 0.15;
-      const mEq = +progres.montant || 0;
-      const marche1 = echelle.length ? +echelle[0].montant : 0;
+      const eurD = +reg.eurDixieme || 0;
       const eur0 = v => Math.round(v).toLocaleString('fr-BE') + ' €';
       const eurS = v => (v >= 0 ? '+ ' : '− ') + Math.round(Math.abs(v)).toLocaleString('fr-BE') + ' €';
+      // Le record d'équipe par magasin : la meilleure cellule servie.
+      const recDe = {};
+      (d.magasins || []).forEach(mg => {
+        let r2 = null;
+        (mg.cells || []).forEach(c2 => { if (c2.record != null && (r2 == null || c2.record > r2)) { r2 = c2.record; }
+          if (c2.moyenne != null && (r2 == null || c2.moyenne > r2)) { r2 = c2.moyenne; } });
+        recDe[String(mg.id)] = r2;
+      });
       const totTickets = sim.magasins.reduce((a2, m2) => a2 + (m2.tickets || 0), 0);
       const totVend = sim.magasins.reduce((a2, m2) => a2 + (m2.vendeuses || 0), 0);
-      const budget = sim.magasins.length * mEq + totVend * marche1;
       common.cxSim = {
         moisLib: sim.lib + (sim.ticketsCaisse ? ' · tickets : caisse' : ' · tickets : table locale (partielle)'),
         valeurLigne: sim.valeurLigne != null ? String(sim.valeurLigne).replace('.', ',') : '',
@@ -5245,27 +5236,39 @@ class App {
         poserMarge: e => this.api('POST', '/ventes/sim', { marge: String(e.target.value || '').trim().replace(',', '.') })
           .then(() => { this._cross = undefined; this.notify('Marge enregistrée'); this.setState({}); }),
         etages: [1, 2, 3].map(k => {
-          const ca = k * pas * totTickets * vl;
-          return { nom: k === 1 ? 'Le pas — + ' + String(pas).replace('.', ',') : k + ' pas — + ' + String(Math.round(k * pas * 100) / 100).replace('.', ','),
-            premier: k === 1, ca: '+ ' + eur0(ca), bud: '− ' + eur0(budget),
-            net: eurS(ca * marge / 100 - budget) };
+          // CA en plus : chaque magasin passe de sa moyenne actuelle à
+          // record + k×0,1 ; primes : k dixièmes pour chaque magasin ET
+          // chaque vendeuse classable (pire cas), plus les deux couronnes.
+          let ca = 0;
+          sim.magasins.forEach(m2 => {
+            const rec = recDe[String(m2.id)];
+            if (rec == null || m2.moyenne == null) { return; }
+            ca += Math.max(0, (rec + k * 0.1) - m2.moyenne) * (m2.tickets || 0) * vl;
+          });
+          const bud = (sim.magasins.length + totVend) * k * eurD + (+reg.couronneVendeuse || 0) + (+reg.couronneMagasin || 0);
+          return { nom: 'Record + 0,' + k, premier: k === 1,
+            ca: '+ ' + eur0(ca), bud: '− ' + eur0(bud), net: eurS(ca * marge / 100 - bud) };
         }),
         compte: (() => {
-          let tca = 0;
+          let tca = 0, tbud = 0;
           const lignes = sim.magasins.map(m2 => {
-            const ca = pas * (m2.tickets || 0) * vl;
-            tca += ca;
-            const budM = mEq + (m2.vendeuses || 0) * marche1;
+            const rec = recDe[String(m2.id)];
+            const objectif = rec != null ? Math.round((rec + 0.1) * 100) / 100 : null;
+            const ca = (rec != null && m2.moyenne != null) ? Math.max(0, objectif - m2.moyenne) * (m2.tickets || 0) * vl : 0;
+            const bud = eurD * (1 + (m2.vendeuses || 0));
+            tca += ca; tbud += bud;
             return { nom: court(m2.nom),
-              moyenne: m2.moyenne != null ? String(m2.moyenne).replace('.', ',') : '',
-              objectif: m2.moyenne != null ? String(Math.round((m2.moyenne + pas) * 100) / 100).replace('.', ',') : '',
+              moyenne: m2.moyenne != null ? n2(m2.moyenne) : '',
+              record: rec != null ? n2(rec) : '',
+              objectif: objectif != null ? n2(objectif) : '',
               tickets: (m2.tickets || 0).toLocaleString('fr-BE'),
-              ca: '+ ' + eur0(ca), primes: eur0(budM),
-              cout: ca > 0 ? String(Math.round(1000 * budM / ca) / 10).replace('.', ',') + ' %' : '' };
+              ca: ca > 0 ? '+ ' + eur0(ca) : '', primes: eur0(bud),
+              cout: ca > 0 ? String(Math.round(1000 * bud / ca) / 10).replace('.', ',') + ' %' : '' };
           });
+          tbud += (+reg.couronneVendeuse || 0) + (+reg.couronneMagasin || 0);
           return { lignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
-            totPrimes: eur0(budget), totNet: eurS(tca * marge / 100 - budget),
-            totCout: tca > 0 ? String(Math.round(1000 * budget / tca) / 10).replace('.', ',') + ' %' : '' };
+            totPrimes: eur0(tbud), totNet: eurS(tca * marge / 100 - tbud),
+            totCout: tca > 0 ? String(Math.round(1000 * tbud / tca) / 10).replace('.', ',') + ' %' : '' };
         })(),
       };
     }
@@ -5273,8 +5276,8 @@ class App {
     const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);
     common.cxPrime = d.enregistre
       ? { fait: true, txt: 'Primes de ' + d.dernierRevolu + ' enregistrées le ' + d.enregistre.quand
-          + ' — ' + (d.enregistre.gagnantes || []).length + ' sur l’échelle, '
-          + (d.enregistre.magasinsGagnants || []).length + ' équipe(s) en progrès' }
+          + ' — ' + (d.enregistre.gagnantes || []).length + ' record(s) battu(s), '
+          + (d.enregistre.magasinsGagnants || []).length + ' équipe(s) primée(s)' }
       : !der ? null : { fait: false, txt: 'Enregistrer les primes de ' + d.dernierRevolu,
           agir: () => this.api('POST', '/ventes/cross-primes', { m: d.dernierRevolu }).then(r => {
             if (r && r.ok === false) { return; }

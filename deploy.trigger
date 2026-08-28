@@ -149,3 +149,4 @@ deploy 20260828T065348Z sim lignes pas unites
 deploy 20260828T065903Z sim tickets caisse
 deploy 20260828T072653Z systeme A echelle et progres
 deploy 20260828T072920Z fix pas input + net signe
+deploy 20260828T074126Z systeme bats ton record
