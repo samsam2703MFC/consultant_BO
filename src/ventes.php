@@ -1850,6 +1850,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                     . '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:4mm">'
                     . '<tr><td style="' . $thP . '">Vendeuse</td><td style="' . $thP . '" align="right">' . $e($libDet2) . '</td>'
                     . '<td style="' . $thP . '" align="right">' . $e($libDetE) . '</td><td style="' . $thP . '" align="right">&#201;volution</td>'
+                    . '<td style="' . $thP . '" align="right">Record 12 mois glissants</td>'
                     . '<td style="' . $thP . '" align="right">Prime d&#232;s</td></tr>';
                 foreach ($evo as $l6) {
                     $d6 = $l6['delta'];
@@ -1860,6 +1861,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                         . '<td style="' . $tdP . '" align="right">' . ($l6['avant'] !== null ? $n2p($l6['avant']) : '&#8211;') . '</td>'
                         . '<td style="' . $tdP . '" align="right"><b>' . $n2p($l6['apres']) . '</b></td>'
                         . '<td style="' . $tdP . '" align="right">' . $evoTxt . '</td>'
+                        . '<td style="' . $tdP . '" align="right">' . ($l6['record'] !== null ? $n2p($l6['record']) : '&#8211;') . '</td>'
                         . '<td style="' . $tdP . '" align="right">' . ($l6['record'] !== null ? '<b class="acc">' . $n2p($l6['record'] + 0.2) . '</b>' : 'pose ta barre') . '</td></tr>';
                 }
                 $h .= '</table>';
