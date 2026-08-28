@@ -1701,18 +1701,25 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             // LA VIGNETTE « comment on calcule » — la formule et le
             // coefficient de créneau expliqués avec les intensités MESURÉES
             // du mois détaillé : rien de magique, tout se vérifie.
-            $celC = static function (string $lib, ?int $v) {
+            // Les cases montrent le COEFFICIENT de chaque créneau (× 1,xx),
+            // pas les €/h bruts : la moyenne du mois divisée par l'intensité
+            // du créneau, bornée comme dans le calcul du score.
+            $glDet = ($creneauxDet['global'] ?? 0) > 0 ? (float) $creneauxDet['global'] : null;
+            $celC = static function (string $lib, ?int $v) use ($glDet) {
+                $coef = ($glDet !== null && $v !== null && $v > 0)
+                    ? max(VENTE_COEF_CRENEAU_MIN, min(VENTE_COEF_CRENEAU_MAX, $glDet / $v)) : null;
                 return '<td width="25%" style="border:1px solid #e6e0d8;background:#fff;border-radius:6px;padding:1.8mm 2mm;text-align:center">'
                     . '<div style="font-size:7.5pt;color:#7a736a">' . $lib . '</div>'
-                    . '<div style="font-family:Georgia,serif;font-size:11pt;color:#221E1A">' . ($v !== null ? $v . ' €/h' : '&#8212;') . '</div></td>';
+                    . '<div style="font-family:Georgia,serif;font-size:11pt;color:#221E1A">'
+                    . ($coef !== null ? '&#215; ' . number_format($coef, 2, ',', ' ') : '&#8211;') . '</div></td>';
             };
             $h .= '</table>'
                 . '<div style="border:1.5px solid #E8C9A0;background:#FFF9EC;border-radius:10px;padding:4mm 5mm;margin-bottom:4mm">'
-                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🧮 Comment on calcule — le score et le coefficient</div>'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🧮 Comment on calcule le score et le coefficient</div>'
                 . '<div class="serif" style="font-size:13pt;margin:2mm 0 1.5mm">score = CA &#247; (heures du planning + ' . VENTE_LISSAGE_HEURES . ') &#215; coefficient de cr&#233;neau</div>'
-                . '<div class="regle" style="margin-bottom:2mm">Le &#171;&#8202;+ ' . VENTE_LISSAGE_HEURES . '&#8202;&#187; lisse les heures : peu d&#8217;heures ou beaucoup, chacun a sa chance — personne ne gagne juste parce qu&#8217;il a un petit contrat. '
-                . 'Le <b>coefficient de cr&#233;neau</b> compare la difficult&#233; de VOS heures &#224; la moyenne : c&#8217;est le CA du r&#233;seau divis&#233; par les heures planifi&#233;es, mesur&#233; cr&#233;neau par cr&#233;neau'
-                . ($creneauxDet !== null ? ' — en ' . $e($libDet) . ' :' : '.') . '</div>'
+                . '<div class="regle" style="margin-bottom:2mm">Le &#171;&#8202;+ ' . VENTE_LISSAGE_HEURES . '&#8202;&#187; lisse les heures : peu d&#8217;heures ou beaucoup, chacun a sa chance, personne ne gagne juste parce qu&#8217;il a un petit contrat. '
+                . 'Le <b>coefficient de cr&#233;neau</b> compare la difficult&#233; de VOS heures &#224; la moyenne du r&#233;seau, cr&#233;neau par cr&#233;neau. Votre score est multipli&#233; par le coefficient de vos cr&#233;neaux'
+                . ($creneauxDet !== null ? ', mesur&#233;s en ' . $e($libDet) . ' :' : '.') . '</div>'
                 . ($creneauxDet !== null
                     ? '<table width="100%" cellpadding="0" cellspacing="4" style="margin-bottom:2mm"><tr>'
                         . $celC('Semaine matin', $creneauxDet['matSem'] ?? null)
@@ -1720,9 +1727,9 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                         . $celC('Week-end matin', $creneauxDet['matWe'] ?? null)
                         . $celC('Week-end apr&#232;s-midi', $creneauxDet['amWe'] ?? null)
                         . '</tr></table>' : '')
-                . '<div class="regle">Vendre sur les cr&#233;neaux creux — la semaine, l&#8217;apr&#232;s-midi — <b>multiplie</b> votre score ; le rush du samedi matin compte un peu moins. Le coefficient reste born&#233; entre &#215; ' . number_format(VENTE_COEF_CRENEAU_MIN, 1, ',', '') . ' et &#215; ' . number_format(VENTE_COEF_CRENEAU_MAX, 1, ',', '') . ' : les cr&#233;neaux ne font jamais tout, vendre reste l&#8217;essentiel.</div>'
+                . '<div class="regle">Vendre sur les cr&#233;neaux creux (la semaine, l&#8217;apr&#232;s-midi) <b>multiplie</b> votre score ; le rush du samedi matin compte un peu moins. Le coefficient reste born&#233; entre &#215; ' . number_format(VENTE_COEF_CRENEAU_MIN, 1, ',', '') . ' et &#215; ' . number_format(VENTE_COEF_CRENEAU_MAX, 1, ',', '') . ' : les cr&#233;neaux ne font jamais tout, vendre reste l&#8217;essentiel.</div>'
                 . '</div>'
-                . '<div class="regle">Tout est v&#233;rifiable dans le cockpit : la formule, les intensit&#233;s du mois et le d&#233;tail de chacune. — L&#8217;Atelier by, ' . $e($libMois) . '</div>'
+                . '<div class="regle">Tout est v&#233;rifiable dans le cockpit : la formule, les coefficients du mois et le d&#233;tail de chacune. L&#8217;Atelier by, ' . $e($libMois) . '</div>'
                 . '</div>';
         }
         $premier = false;
