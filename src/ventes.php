@@ -813,7 +813,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     $hClot .= '</table>'
         . '<div class="prime" style="text-align:center"><span class="k">Total des primes du mois' . ($seulShop !== '' ? ' — ce magasin' : '') . '</span>'
         . '<div class="serif" style="font-size:24pt;color:#8D1D2C;margin-top:1mm">' . $eur($totalPrimes) . '</div>'
-        . '<div class="regle" style="font-size:7.6pt;color:#7a736a">versés par la marque — chaque prime est au journal du cockpit, avec son motif et sa formule.</div></div>'
+        . '<div class="regle" style="font-size:7.6pt;color:#7a736a">payés en bons par la marque — jamais par le magasin. Chaque prime est au journal du cockpit, avec son motif et sa formule.</div></div>'
         . '</div>';
     $h .= $hClot;
 
@@ -955,6 +955,10 @@ function ep_ventes_pdf(): array
  * ne font pas un geste.
  */
 const VENTE_CROSS_MIN_TICKETS = 30;
+
+/** L'appli du personnel — le QR imprimé au pied de l'affiche. */
+const VENTE_APPLI_URL = 'https://atelierby.tfbuddy.com/employee';
+const VENTE_APPLI_QR = 'iVBORw0KGgoAAAANSUhEUgAAAPgAAAD4CAIAAABOs7xcAAAE2klEQVR4nO3dMY5kNRRAURqxiwkI2P+SCAhmHZ8NjCWM7LZ/3XNSpOpfNVcOXplXX8/z/Aaf7vfTDwDfQegkCJ0EoZMgdBKEToLQSfhj9B/++vPHdz7H//b3Pz9PP8J/Mvt5zr6v217/lNH7cqKTIHQShE6C0EkQOglCJ0HoJAzn6COn5tar5rij1xm9r93z6Vmrnmf2c5h9/d1mPwcnOglCJ0HoJAidBKGTIHQShE7C9Bx9ZNWc+7a57Kr5+sju1z/lth6c6CQInQShkyB0EoROgtBJEDoJy+bobzE7t151b3uVVc9f40QnQegkCJ0EoZMgdBKEToLQScjN0UdO7QvfPed+y/743ZzoJAidBKGTIHQShE6C0EkQOgnL5ui3zWtv2ytyan/Lqf3ut/XgRCdB6CQInQShkyB0EoROgtBJmJ6jv31PyG37zm97nllv6cGJToLQSRA6CUInQegkCJ0EoZPw9TzP6Wf4Vqvm2av2wOx+ndv2u5/iRCdB6CQInQShkyB0EoROgtBJGM7Rb5v7jpzalzKye8/67vn3p87pnegkCJ0EoZMgdBKEToLQSRA6Ccvuo5/aR757Dn1qTrx7nn3bv9fu13GikyB0EoROgtBJEDoJQidB6CRMz9FPzWt3e/t960/d7z4y+/k70UkQOglCJ0HoJAidBKGTIHQShr8zOjsH/dT9JKucuv+96nN++x4eJzoJQidB6CQInQShkyB0EoROwvR+9JFV89q37DVf5dS97bfsdVnVoROdBKGTIHQShE6C0EkQOglCJ2H7HP3UvHZk9/uq7Xt5Cyc6CUInQegkCJ0EoZMgdBKETsJwr8vIqT0hb5lbr7Lq/a66L37bnpwR99FJEzoJQidB6CQInQShkyB0Epb9zuhun7p3ZeTU732+ZW+93xmFXxA6CUInQegkCJ0EoZMgdBKm76PPWjXf3T1/XTWvvW0fzqq/u/v/Q9jNiU6C0EkQOglCJ0HoJAidBKGTcN199Lfchx7Zvcf9LffyT31fYa8LaUInQegkCJ0EoZMgdBKETsLwPvpb7nOPjP7ubXP6kd1z/VPPeaoHJzoJQidB6CQInQShkyB0EoROwvR99Nt86v7yt/x+526rvjdwopMgdBKEToLQSRA6CUInQegkDOfop+a7b7nfXPu7q5zay+5EJ0HoJAidBKGTIHQShE6C0EkY7nVZtd9jld37s1e5bd4/a/d+992v4z46aUInQegkCJ0EoZMgdBKETsL0ffTb3Db3nXXq901P7Z859X2IE50EoZMgdBKEToLQSRA6CUInYXgffeQte7J3z8VP7Ts/tTf9tu8rZj9nJzoJQidB6CQInQShkyB0EoROwvQcfeTU/u/Z13n7fH33Pe/b5vGrnseJToLQSRA6CUInQegkCJ0EoZOwbI5+m933vG+bN4+c2q+y+3Oz1wV+QegkCJ0EoZMgdBKEToLQSfjYOfru++i37bcZPc+q+/Gn3u+q53eikyB0EoROgtBJEDoJQidB6CQsm6OfmrOuctvvYq7aB3/q+W+7T+9EJ0HoJAidBKGTIHQShE6C0EmYnqPv3meyyu7f+5z19t8TPfX7qas40UkQOglCJ0HoJAidBKGTIHQSvp7nOf0MsJ0TnQShkyB0EoROgtBJEDoJQifhXwBfLKJaMdi9AAAAAElFTkSuQmCC';
 
 /**
  * Les paliers de prime : des CRANS AU-DESSUS DE LA CIBLE DU MAGASIN — pas
@@ -1324,7 +1328,7 @@ function ep_ventes_explication_pdf(): array
 
         . '<div class="encart" style="margin-top:6mm">'
         . '<span class="k">Les règles, en clair</span>'
-        . '<div style="font-size:9.5pt;margin-top:1mm">Tout se calcule sur le <b>mois complet</b>, jamais en cours de route — les primes tombent au début du mois suivant. '
+        . '<div style="font-size:9.5pt;margin-top:1mm">Tout se calcule sur le <b>mois complet</b>, jamais en cours de route — les primes tombent au début du mois suivant, <b>en bons payés par la marque</b>, jamais par le magasin. '
         . 'Rien n\'est caché : l\'affiche du magasin montre les cibles, les montants et le podium du mois dernier. '
         . 'Le calcul est le même pour toutes, écrit noir sur blanc — s\'il vous semble faux, dites-le, on vérifie.</div></div>'
 
@@ -1566,7 +1570,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
 
             . '<div class="serif" style="font-size:26pt;margin:7mm 0 1mm;letter-spacing:-.01em">Ce qu’il y a à gagner ce mois-ci</div>'
-            . '<div style="font-size:11pt;color:#5d564e;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes — versées par la marque, cumulables.</div>'
+            . '<div style="font-size:11pt;color:#5d564e;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes — payées en bons par la marque, jamais par le magasin, et cumulables.</div>'
 
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 6mm"><tr>'
             . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏆 Meilleure vendeuse du réseau</div>'
@@ -1634,7 +1638,12 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                     . $e($reseauPrec['nom']) . '</b> (' . $e($court($reseauPrec['magasin'])) . ', score ' . (int) $reseauPrec['score'] . ')'
                     . (($gestePrec[(string) $sid] ?? 0) > 0 ? ' · ' . $gestePrec[(string) $sid] . ' prime(s) du geste décrochée(s) ici' : '') . '</div>' : '')
                 . '</div>' : '')
-            . '<div class="regle" style="border-top:1px solid #e6e0d8;padding-top:3mm">Les règles, simplement : au moins 30 tickets dans le mois pour les primes du geste · les primes se versent une fois le mois fini · la meilleure du réseau ne cumule pas la prime magasin, mais les primes du geste s’ajoutent toujours · tout est vérifiable dans le cockpit, la formule est affichée. Bonne chasse ! — L’Atelier by, ' . $e($libMois) . '</div>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e6e0d8;margin-top:1mm"><tr>'
+            . '<td style="padding-top:3mm"><div class="regle">Les règles, simplement : au moins 30 tickets dans le mois · les primes se versent une fois le mois fini, <b>en bons payés par la marque</b> — jamais par le magasin · la meilleure du réseau ne cumule pas la prime magasin, mais les primes du record s’ajoutent toujours · tout est vérifiable dans le cockpit, la formule est affichée. Bonne chasse ! — L’Atelier by, ' . $e($libMois) . '</div></td>'
+            . '<td width="60" align="right" style="padding-top:3mm;padding-left:4mm">'
+            . '<img src="data:image/png;base64,' . VENTE_APPLI_QR . '" style="width:19mm;height:19mm"><br>'
+            . '<span style="font-size:6.5pt;color:#7a736a">ton appli du personnel</span></td>'
+            . '</tr></table>'
             . '</div>';
         $premier = false;
     }
