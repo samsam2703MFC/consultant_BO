@@ -1531,6 +1531,16 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
     // LA 3e PAGE — qui a TOUCHÉ quelle prime : les enregistrements réels
     // (pas un calcul du moment), au dernier mois enregistré de chaque
     // famille. Les montants affichés sont ceux payés à l'enregistrement.
+    // Le mois servi AVANT le mois détail : l'évolution de chacune se lit
+    // entre ces deux-là, en plus ou en moins, sans maquiller.
+    $mDet2 = null;
+    if ($mDet !== null) {
+        for ($recD2 = 1; $recD2 <= 6; $recD2++) {
+            $mD2 = date('Y-m', strtotime($mDet . '-01 -' . $recD2 . ' month'));
+            if (($parMoisAff[$mD2] ?? null) !== null && $parMoisAff[$mD2] !== []) { $mDet2 = $mD2; break; }
+        }
+    }
+
     $histSco = setting('ventePrimesHist');
     $dernSco = is_array($histSco) && $histSco !== [] ? $histSco[max(array_keys($histSco))] : null;
     $histRec = setting('ventePrimesCrossHist');
@@ -1791,7 +1801,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 fn ($g3) => (string) ($g3['magasin'] ?? '') === (string) $nom));
             $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Bats ton record, ' . $e($libRec) . '</div>';
             if ($gagR3 === []) {
-                $h .= '<div class="regle" style="margin-bottom:5mm">Aucun record battu &#224; ' . $e($court($nom)) . ' ce mois-l&#224; : toutes les barres restent &#224; prendre.</div>';
+                $h .= '<div class="regle" style="margin-bottom:4mm">Aucun record battu &#224; ' . $e($court($nom)) . ' ce mois-l&#224; : toutes les barres restent &#224; prendre.</div>';
             } else {
                 $tot3 = 0;
                 $h .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:2mm">'
@@ -1811,7 +1821,49 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             }
         } else {
             $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Bats ton record</div>'
-                . '<div class="regle" style="margin-bottom:5mm">Le syst&#232;me d&#233;marre : les premi&#232;res primes du record s&#8217;afficheront ici d&#232;s l&#8217;enregistrement du premier mois fini. Vos barres sont pos&#233;es (page pr&#233;c&#233;dente), &#224; vous de jouer.</div>';
+                . '<div class="regle" style="margin-bottom:4mm">Aucun mois encore enregistr&#233; : les premi&#232;res primes du record tombent &#224; la cl&#244;ture du premier mois fini. En attendant, l&#8217;&#233;volution de chacune est d&#233;j&#224; l&#224;.</div>';
+        }
+
+        // L'ÉVOLUTION entre les deux derniers mois servis, en plus ou en
+        // moins : la vérité du terrain, jamais maquillée, avec la barre à
+        // battre en face pour dire ce qui déclencherait la prime.
+        if ($mDet2 !== null && $lignesDet !== null) {
+            $libDet2 = strftime_fr(strtotime($mDet2 . '-01'), 'M Y');
+            $libDetE = strftime_fr(strtotime((string) $mDet . '-01'), 'M Y');
+            $prevDe = [];
+            foreach (($parMoisAff[$mDet2] ?? []) as $lp) {
+                if ((string) $lp['shopId'] === (string) $sid && $lp['lignesTicket'] !== null && ($lp['tickets'] ?? 0) > 0) {
+                    $prevDe[(string) $lp['id']] = (float) $lp['lignesTicket'];
+                }
+            }
+            $evo = [];
+            foreach ($lignesDet as $l6) {
+                if ((string) $l6['shopId'] !== (string) $sid || $l6['lignesTicket'] === null || ($l6['tickets'] ?? 0) <= 0 || (float) $l6['ca'] <= 0) { continue; }
+                $av = $prevDe[(string) $l6['id']] ?? null;
+                $rec6 = venteRecordVendeuse($parMoisAff, (string) $l6['id'], $m);
+                $evo[] = ['nom' => (string) $l6['nom'], 'avant' => $av, 'apres' => (float) $l6['lignesTicket'],
+                    'delta' => $av !== null ? round((float) $l6['lignesTicket'] - $av, 2) : null, 'record' => $rec6];
+            }
+            usort($evo, static fn ($a6, $b6) => (($b6['delta'] ?? -99) <=> ($a6['delta'] ?? -99)));
+            if ($evo !== []) {
+                $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">L&#8217;&#233;volution de chacune, ' . $e($libDet2) . ' &#8594; ' . $e($libDetE) . '</div>'
+                    . '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:4mm">'
+                    . '<tr><td style="' . $thP . '">Vendeuse</td><td style="' . $thP . '" align="right">' . $e($libDet2) . '</td>'
+                    . '<td style="' . $thP . '" align="right">' . $e($libDetE) . '</td><td style="' . $thP . '" align="right">&#201;volution</td>'
+                    . '<td style="' . $thP . '" align="right">Prime d&#232;s</td></tr>';
+                foreach ($evo as $l6) {
+                    $d6 = $l6['delta'];
+                    $evoTxt = $d6 === null ? '<span style="color:#7a736a">nouvelle</span>'
+                        : ($d6 > 0 ? '<b style="color:#2d7a3e">+ ' . $n2p($d6) . '</b>'
+                            : ($d6 < 0 ? '<b style="color:#8D1D2C">&#8722; ' . $n2p(abs($d6)) . '</b>' : '<span style="color:#7a736a">=</span>'));
+                    $h .= '<tr><td style="' . $tdP . '"><b>' . $e($l6['nom']) . '</b></td>'
+                        . '<td style="' . $tdP . '" align="right">' . ($l6['avant'] !== null ? $n2p($l6['avant']) : '&#8211;') . '</td>'
+                        . '<td style="' . $tdP . '" align="right"><b>' . $n2p($l6['apres']) . '</b></td>'
+                        . '<td style="' . $tdP . '" align="right">' . $evoTxt . '</td>'
+                        . '<td style="' . $tdP . '" align="right">' . ($l6['record'] !== null ? '<b class="acc">' . $n2p($l6['record'] + 0.2) . '</b>' : 'pose ta barre') . '</td></tr>';
+                }
+                $h .= '</table>';
+            }
         }
 
         $h .= '<div class="regle" style="border-top:1px solid #e6e0d8;padding-top:3mm">Toutes les primes sont pay&#233;es en bons par la marque, jamais par le magasin. Les enregistrements se font une fois le mois fini et se retrouvent au journal du cockpit. L&#8217;Atelier by, ' . $e($libMois) . '</div>'
