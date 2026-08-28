@@ -167,3 +167,4 @@ deploy 1787912028 page detail sans zero vente
 deploy 1787912234 vignette comment on calcule
 deploy 1787912956 vignette coefficients
 deploy 1787913059 pied sans tiret
+deploy 1787913333 page 3 primes touchees

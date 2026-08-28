@@ -1528,6 +1528,14 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
     $topReseau = $lignesDet === null ? []
         : array_slice(array_values(array_filter($lignesDet, static fn ($l5) => $l5['classable'])), 0, 5);
 
+    // LA 3e PAGE — qui a TOUCHÉ quelle prime : les enregistrements réels
+    // (pas un calcul du moment), au dernier mois enregistré de chaque
+    // famille. Les montants affichés sont ceux payés à l'enregistrement.
+    $histSco = setting('ventePrimesHist');
+    $dernSco = is_array($histSco) && $histSco !== [] ? $histSco[max(array_keys($histSco))] : null;
+    $histRec = setting('ventePrimesCrossHist');
+    $dernRec = is_array($histRec) && $histRec !== [] ? $histRec[max(array_keys($histRec))] : null;
+
     if ($seulShop !== '') {
         $nomDe = array_filter($nomDe, fn ($sid2) => (string) $sid2 === $seulShop, ARRAY_FILTER_USE_KEY);
     }
@@ -1732,6 +1740,82 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 . '<div class="regle">Tout est v&#233;rifiable dans le cockpit : la formule, les coefficients du mois et le d&#233;tail de chacune. L&#8217;Atelier by, ' . $e($libMois) . '</div>'
                 . '</div>';
         }
+
+        // LA 3e A4 DU MAGASIN — qui a touché quelle prime : la preuve que ça
+        // paie vraiment. Uniquement les primes ENREGISTRÉES, aux montants de
+        // l'enregistrement ; sans enregistrement, la page le dit simplement.
+        $thP = 'font-size:8pt;color:#7a736a;text-transform:uppercase;letter-spacing:.06em;padding:1.5mm 2mm;border-bottom:1pt solid #e6e0d8';
+        $tdP = 'padding:1.8mm 2mm;border-bottom:0.5pt solid #efe9e0;font-size:10pt';
+        $n2p = static fn ($v) => number_format((float) $v, 2, ',', ' ');
+        $h .= '<div class="doc" style="page-break-before:always">'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:3mm"><tr>'
+            . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:38px">' : '<b>L’Atelier by</b>') . '</td>'
+            . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
+            . '<div class="serif" style="font-size:22pt;margin:6mm 0 1mm;letter-spacing:-.01em">Qui a touch&#233; quelle prime</div>'
+            . '<div style="font-size:10.5pt;color:#5d564e;margin-bottom:5mm">Les primes enregistr&#233;es, noir sur blanc : &#231;a paie vraiment, en bons de la marque.</div>';
+
+        // Les primes au score du dernier mois enregistré.
+        if ($dernSco !== null) {
+            $libSco = strftime_fr(strtotime((string) $dernSco['m'] . '-01'), 'M Y');
+            $mntSco = (array) ($dernSco['montants'] ?? []);
+            $res3 = (array) ($dernSco['reseau'] ?? []);
+            $gagM3 = null;
+            foreach ((array) ($dernSco['magasins'] ?? []) as $g3) {
+                if ((string) ($g3['magasin'] ?? '') === (string) $nom) { $gagM3 = $g3; break; }
+            }
+            $resIci = (string) ($res3['magasin'] ?? '') === (string) $nom;
+            $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2.5mm">Les primes au score, ' . $e($libSco) . '</div>'
+                . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
+                . '<td width="50%" class="carte" style="text-align:left">'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏆 Meilleure vendeuse du r&#233;seau</div>'
+                . '<div class="serif" style="font-size:18pt;color:#8D1D2C;margin:1.5mm 0 1mm">' . $e((string) ($res3['nom'] ?? '')) . '</div>'
+                . '<div style="font-size:10.5pt"><b>' . (int) ($mntSco['reseau'] ?? 0) . ' € en bons</b> &#183; ' . $e($court((string) ($res3['magasin'] ?? ''))) . ' &#183; ' . (int) ($res3['caHeure'] ?? 0) . ' €/h</div></td>'
+                . '<td width="50%" class="carte" style="text-align:left">'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🥇 Meilleure vendeuse de ' . $e($court($nom)) . '</div>'
+                . ($gagM3 !== null
+                    ? '<div class="serif" style="font-size:18pt;color:#8D1D2C;margin:1.5mm 0 1mm">' . $e((string) $gagM3['nom']) . '</div>'
+                        . '<div style="font-size:10.5pt"><b>' . (int) ($mntSco['magasin'] ?? 0) . ' € en bons</b> &#183; ' . (int) ($gagM3['caHeure'] ?? 0) . ' €/h</div>'
+                    : ($resIci
+                        ? '<div class="serif" style="font-size:18pt;color:#8D1D2C;margin:1.5mm 0 1mm">' . $e((string) ($res3['nom'] ?? '')) . '</div>'
+                            . '<div style="font-size:10.5pt">d&#233;j&#224; prim&#233;e au r&#233;seau : les primes du score ne se cumulent pas, la sienne est la grosse.</div>'
+                        : '<div class="regle" style="margin-top:2mm">pas de gagnante class&#233;e ce mois-l&#224;</div>'))
+                . '</td></tr></table>';
+        } else {
+            $h .= '<div class="regle" style="margin-bottom:5mm">Les primes au score s&#8217;afficheront ici d&#232;s le premier enregistrement d&#8217;un mois fini.</div>';
+        }
+
+        // Les primes « Bats ton record » du dernier mois enregistré.
+        if ($dernRec !== null) {
+            $libRec = strftime_fr(strtotime((string) $dernRec['m'] . '-01'), 'M Y');
+            $gagR3 = array_values(array_filter((array) ($dernRec['gagnantes'] ?? []),
+                fn ($g3) => (string) ($g3['magasin'] ?? '') === (string) $nom));
+            $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Bats ton record, ' . $e($libRec) . '</div>';
+            if ($gagR3 === []) {
+                $h .= '<div class="regle" style="margin-bottom:5mm">Aucun record battu &#224; ' . $e($court($nom)) . ' ce mois-l&#224; : toutes les barres restent &#224; prendre.</div>';
+            } else {
+                $tot3 = 0;
+                $h .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:2mm">'
+                    . '<tr><td style="' . $thP . '">Vendeuse</td><td style="' . $thP . '" align="right">Son record</td>'
+                    . '<td style="' . $thP . '" align="right">Sa moyenne du mois</td><td style="' . $thP . '" align="right">Dixi&#232;mes pay&#233;s</td>'
+                    . '<td style="' . $thP . '" align="right">Prime</td></tr>';
+                foreach ($gagR3 as $g3) {
+                    $tot3 += (int) ($g3['prime'] ?? 0);
+                    $h .= '<tr><td style="' . $tdP . '"><b>' . $e((string) $g3['nom']) . '</b></td>'
+                        . '<td style="' . $tdP . '" align="right">' . ($g3['record'] !== null ? $n2p($g3['record']) : 'premi&#232;re barre') . '</td>'
+                        . '<td style="' . $tdP . '" align="right"><b>' . $n2p($g3['lignesTicket'] ?? 0) . '</b></td>'
+                        . '<td style="' . $tdP . '" align="right">' . (int) ($g3['tranches'] ?? 0) . '</td>'
+                        . '<td style="' . $tdP . '" align="right"><b class="acc">' . (int) ($g3['prime'] ?? 0) . ' €</b></td></tr>';
+                }
+                $h .= '<tr><td style="' . $tdP . ';border-bottom:none" colspan="4"><b>Total ' . $e($court($nom)) . '</b></td>'
+                    . '<td style="' . $tdP . ';border-bottom:none" align="right"><b class="acc">' . $tot3 . ' €</b></td></tr></table>';
+            }
+        } else {
+            $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Bats ton record</div>'
+                . '<div class="regle" style="margin-bottom:5mm">Le syst&#232;me d&#233;marre : les premi&#232;res primes du record s&#8217;afficheront ici d&#232;s l&#8217;enregistrement du premier mois fini. Vos barres sont pos&#233;es (page pr&#233;c&#233;dente), &#224; vous de jouer.</div>';
+        }
+
+        $h .= '<div class="regle" style="border-top:1px solid #e6e0d8;padding-top:3mm">Toutes les primes sont pay&#233;es en bons par la marque, jamais par le magasin. Les enregistrements se font une fois le mois fini et se retrouvent au journal du cockpit. L&#8217;Atelier by, ' . $e($libMois) . '</div>'
+            . '</div>';
         $premier = false;
     }
 
