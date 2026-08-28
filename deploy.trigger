@@ -156,3 +156,4 @@ deploy 20260828T075940Z retirer couronne magasin + explication refaite
 deploy 20260828T080313Z legende une couronne
 deploy 20260828T080903Z retrait couronne vendeuse
 deploy 20260828T081826Z barres a battre + colis mensuel + envoi test
+deploy 20260828T083547Z affiche barres nominatives + un seul fichier

@@ -1942,14 +1942,7 @@ function ventesClotureDistribuer(array $rep): array
             $bilan['magasins'][] = ['magasin' => $nom, 'statut' => 'erreur', 'note' => $gm['error'] ?? null];
             continue;
         }
-        // L'AFFICHE du mois qui commence voyage avec la clôture : le colis
-        // mensuel complet du magasin, en un seul email.
-        $px = [];
-        try {
-            $aff = function_exists('venteAffichePdf') ? venteAffichePdf(date('Y-m'), (string) $s['id']) : null;
-            if ($aff !== null) { $px[] = ['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]; }
-        } catch (Throwable $eA) { /* sans affiche, la clôture part quand même */ }
-        $env = rapportEnvoyer($repMag, $gm['runId'], $px);
+        $env = rapportEnvoyer($repMag, $gm['runId']);
         $bilan['magasins'][] = ['magasin' => $nom, 'statut' => $env['ok'] ? 'envoye' : 'echec',
             'runId' => $gm['runId'], 'envoyes' => $env['envoyes'] ?? [], 'note' => $env['note'] ?? null];
     }

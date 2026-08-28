@@ -1510,19 +1510,23 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
         $rF = venteMois($mF, $nomDe);
         $parMoisAff[$mF] = $rF['motif'] === null ? $rF['lignes'] : null;
     }
-    // Les vendeuses ACTIVES de chaque magasin (au moins 30 tickets le mois
-    // dernier) et leur record — la barre nominative de chacune.
+    // Les vendeuses ACTIVES de chaque magasin et leur record — la barre
+    // nominative de chacune. Le « mois dernier » peut ne pas être servi par
+    // la table des transactions : on recule jusqu'au dernier mois qui l'est.
     $barres = [];
-    if ($rPrec['motif'] === null) {
-        foreach ($rPrec['lignes'] as $l) {
+    for ($recB = 1; $recB <= 3 && $barres === []; $recB++) {
+        $mB = date('Y-m', strtotime($m . '-01 -' . $recB . ' month'));
+        $lB = $parMoisAff[$mB] ?? null;
+        if ($lB === null) { continue; }
+        foreach ($lB as $l) {
             if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS) { continue; }
             $barres[(string) $l['shopId']][] = ['nom' => (string) $l['nom'],
                 'record' => venteRecordVendeuse($parMoisAff, (string) $l['id'], $m)];
         }
-        foreach ($barres as $sidB => $liste) {
-            usort($liste, static fn ($a, $b) => ($b['record'] ?? 0) <=> ($a['record'] ?? 0));
-            $barres[$sidB] = $liste;
-        }
+    }
+    foreach ($barres as $sidB => $liste) {
+        usort($liste, static fn ($a, $b) => ($b['record'] ?? 0) <=> ($a['record'] ?? 0));
+        $barres[$sidB] = $liste;
     }
     $podiums = []; $reseauPrec = null; $gestePrec = [];
     if ($rPrec['motif'] === null) {
@@ -1603,8 +1607,10 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 foreach ($rangee as $b2) {
                     $h .= '<td width="50%" style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:8px;padding:2.2mm 3mm">'
                         . '<span style="font-size:9.5pt"><b>' . $e($b2['nom']) . '</b></span>'
-                        . '<span style="float:right;font-family:Georgia,serif;font-size:11pt;color:#8D1D2C">'
-                        . ($b2['record'] !== null ? $n2f($b2['record']) : '&#224; poser') . '</span></td>';
+                        . '<span style="float:right;font-family:Georgia,serif;font-size:10.5pt">'
+                        . ($b2['record'] !== null
+                            ? '<span style="color:#7a736a">' . $n2f($b2['record']) . '</span> &#8594; <b style="color:#8D1D2C">vise ' . $n2f($b2['record'] + 0.1) . '</b>'
+                            : '<b style="color:#8D1D2C">pose ta barre ce mois-ci</b>') . '</span></td>';
                 }
                 if (count($rangee) < 2) { $h .= '<td width="50%"></td>'; }
                 $h .= '</tr>';
@@ -1667,31 +1673,17 @@ function wr_ventes_envoi_test(): array
     $m = trim((string) ($b['m'] ?? date('Y-m')));
     if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
 
-    $pieces = [];
+    // UN SEUL fichier : « Ce qu'il y a à gagner ce mois-ci » — l'affiche,
+    // avec les barres à battre nominatives. La clôture a son propre envoi.
     $aff = venteAffichePdf($m, $shop);
-    if ($aff !== null) { $pieces[] = ['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]; }
-    // La clôture du mois PRÉCÉDENT le mois affiché — en reculant jusqu'à un
-    // mois réellement servi par la table des transactions.
-    $clot = null;
-    for ($rec = 1; $rec <= 3; $rec++) {
-        $essai = date('Y-m', strtotime($m . '-01 -' . $rec . ' month'));
-        $doc = venteClotureDoc($essai, $shop);
-        if (!isset($doc['error'])) { $clot = ['doc' => $doc, 'm' => $essai]; break; }
-    }
-    if ($clot !== null) {
-        $pdfC = rapPdfRendu($clot['doc']['doc'], ['magasin' => $clot['doc']['magasin'],
-            'rapport' => 'Target de vente — ' . $clot['doc']['libMois'],
-            'genere' => date('d/m/Y à H:i'), 'envoye' => date('d/m/Y')]);
-        if ($pdfC !== null) { $pieces[] = ['nom' => $clot['doc']['nom'], 'type' => 'application/pdf', 'contenu' => $pdfC]; }
-    }
-    if ($pieces === []) { http_response_code(503); return ['error' => 'aucun PDF n’a pu être rendu']; }
+    if ($aff === null) { http_response_code(503); return ['error' => 'le PDF n’a pas pu être rendu']; }
+    $pieces = [['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]];
     $libM = strftime_fr(strtotime($m . '-01'), 'M Y');
     $corps = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6">'
-        . '<p>Bonjour,</p><p>Voici le colis du mois — <b>' . htmlspecialchars($libM) . '</b> :</p><ul>'
-        . '<li><b>L’affiche des primes</b> du mois qui commence — à imprimer pour le vestiaire.</li>'
-        . ($clot !== null ? '<li><b>Le rapport de clôture</b> du dernier mois servi (' . $clot['m'] . ') — qui a gagné quoi.</li>' : '')
-        . '</ul><p style="color:#7a736a;font-size:11px">Envoi de test depuis le cockpit — le Reporting automatisé enverra ce colis chaque mois.</p></div>';
-    $ok = Smtp::envoyer($email, '[Test] Le colis du mois — ' . $libM, $corps, $pieces);
+        . '<p>Bonjour,</p><p>Voici <b>« Ce qu’il y a à gagner ce mois-ci »</b> — ' . htmlspecialchars($libM)
+        . ' : l’affiche à imprimer pour le vestiaire, avec la barre à battre de chaque vendeuse et celle de l’équipe.</p>'
+        . '<p style="color:#7a736a;font-size:11px">Envoyé depuis le cockpit.</p></div>';
+    $ok = Smtp::envoyer($email, 'Ce qu’il y a à gagner ce mois-ci — ' . $libM, $corps, $pieces);
     journalAdd('CEO', 'Vente', 'Envoi test', ($ok ? 'Envoyé' : 'Échec') . ' à ' . $email . ' — ' . count($pieces) . ' PDF (' . $m . ($shop !== '' ? ', magasin ' . $shop : '') . ')');
     if (!$ok) { http_response_code(502); return ['error' => 'envoi refusé — ' . (string) Smtp::$lastError]; }
     return ['ok' => true, 'pieces' => array_column($pieces, 'nom')];
