@@ -7484,23 +7484,89 @@ function tplVentes(c, x){
     </div>`;
 
   if (c.tvOnglet === 'targets') {
+    const SIM = c.cxSim;
+    const thS = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:7px 9px;border-bottom:0.5px solid var(--color-border-secondary);text-align:right';
+    const tdS = 'padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
     return `
   <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
-    ${onglets}
+    <div style="display:flex;gap:6px;align-items:center">${(c.tvOnglets || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.nom)}</button>`).join('')}
+      <span style="flex:1"></span>
+      <a href="${esc(c.cxPdfEquipe || '')}" target="_blank" style="${pill(false)};text-decoration:none">📄 PDF équipes — le mode d'emploi</a>
+    </div>
+
     <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">Primes au score — la meilleure vendeuse</div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 12px">Le score = CA ÷ (heures + 20) × coefficient de créneau. La meilleure du réseau et la meilleure de chaque magasin, chaque mois révolu — la meilleure du réseau ne cumule pas la prime magasin.</div>
-      <div style="display:flex;gap:22px;flex-wrap:wrap">
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">🏆 Prime réseau
-          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.reseau)}" ${x.C(c.tvPrimesCfg.poser('reseau'))} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">🥇 Prime magasin
-          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.magasin)}" ${x.C(c.tvPrimesCfg.poser('magasin'))} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:320px">
+          <div style="${lbl}">1 · Primes au score — la meilleure vendeuse</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Score = CA ÷ (heures + 20) × coefficient de créneau. Chaque mois révolu — la meilleure du réseau ne cumule pas la prime magasin.</div>
+        </div>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">🏆 Réseau
+          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.reseau)}" ${x.C(c.tvPrimesCfg.poser('reseau'))} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">🥇 Magasin
+          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.magasin)}" ${x.C(c.tvPrimesCfg.poser('magasin'))} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
       </div>
     </div>
+
+    ${!SIM ? `<div style="${carte};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Le simulateur attend un mois de ventes servi par la caisse.</div>` : `
     <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">Prime cross-selling — cibles et échelle</div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 12px">La cible de lignes par ticket se pose par magasin et vaut dès ce mois, jusqu’à la suivante — le passé ne bouge jamais. L’échelle des paliers est la même pour tout le réseau ; le plus haut palier franchi paie, et cette prime s’ajoute à celles de la meilleure vendeuse.</div>
-      <div style="${lbl};margin-bottom:7px">Cible par magasin — les 12 mois de l’année</div>
+      <div style="${lbl}">2 · La prime de vente complémentaire — quel étage viser ?</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Sur les chiffres de ${esc(SIM.moisLib)} — dernier mois servi (tickets et moyennes réels, la cible de chaque magasin). Les deux variables s'enregistrent.</div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Valeur d'une ligne
+          <input value="${esc(SIM.valeurLigne)}" ${x.C(SIM.poserValeur)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(SIM.valeurNote)}</span>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Marge récupérée
+          <input value="${esc(SIM.marge)}" ${x.C(SIM.poserMarge)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right;width:56px"> %</label>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">
+        ${SIM.etages.map(et => `
+        <div style="border:${et.premier ? '1.5px solid var(--color-primary)' : '0.5px solid var(--color-border-secondary)'};border-radius:10px;padding:10px 13px${et.premier ? ';background:rgba(141,29,44,0.03)' : ''}">
+          <div style="font-size:12px;font-weight:700">${esc(et.nom)} <span style="font-weight:400;color:var(--color-text-muted);font-size:10px">équipe ${esc(et.prime)}</span></div>
+          <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+            <div><div style="${lbl}">CA en plus</div><div style="font-weight:700;color:#2d7a3e">${esc(et.ca)}</div></div>
+            <div><div style="${lbl}">Primes</div><div style="font-weight:700;color:var(--color-primary)">${esc(et.bud)}</div></div>
+            <div><div style="${lbl}">Net</div><div style="font-weight:700">${esc(et.net)}</div></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">3 · Le compte, magasin par magasin</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 8px">Où en est chaque magasin face à SA cible, ce que l'atteindre rapporterait, ce que les primes coûteraient au maximum. La cible s'édite ici — elle vaut dès ce mois.</div>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:820px;font-size:12px">
+        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Cible</th><th style="${thS}">Moyenne (${esc(SIM.moisLib)})</th><th style="${thS}">Écart</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus si cible</th><th style="${thS}">Marge</th><th style="${thS}">Primes max</th><th style="${thS}">Coût / CA</th></tr>
+        ${SIM.compte.lignes.map(l => `
+        <tr>
+          <td style="${tdS};text-align:left;font-weight:600">${esc(l.nom)}</td>
+          <td style="${tdS}"><input type="number" min="1" max="10" step="0.1" value="${esc(l.cible)}" ${x.C(l.poser)} style="width:56px;font-family:var(--font-ui);font-size:12px;padding:4px 6px;border-radius:7px;border:0.5px solid var(--color-primary);background:var(--color-surface);text-align:right"></td>
+          <td style="${tdS}">${esc(l.moyenne)}</td>
+          <td style="${tdS};color:var(--color-primary);font-weight:700">${esc(l.ecart)}</td>
+          <td style="${tdS}">${esc(l.tickets)}</td>
+          <td style="${tdS};font-weight:700;color:#2d7a3e">${esc(l.ca)}</td>
+          <td style="${tdS}">${esc(l.margeE)}</td>
+          <td style="${tdS}">${esc(l.primes)}</td>
+          <td style="${tdS};color:var(--color-text-muted)">${esc(l.cout)}</td>
+        </tr>`).join('')}
+        <tr style="background:var(--color-background-secondary)">
+          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
+          <td style="${tdS};font-family:var(--font-display);font-size:16px;color:#2d7a3e">${esc(SIM.compte.totCa)}</td>
+          <td style="${tdS};font-weight:700">${esc(SIM.compte.totMarge)}</td>
+          <td style="${tdS};font-weight:700;color:var(--color-primary)">${esc(SIM.compte.totPrimes)}</td>
+          <td style="${tdS}"></td>
+        </tr>
+        <tr>
+          <td style="${tdS};text-align:left;font-weight:700">Net pour vous (marge ${esc(SIM.marge)} %)</td>
+          <td style="${tdS}" colspan="7"><span style="font-family:var(--font-display);font-size:18px;color:var(--color-primary)">${esc(SIM.compte.totNet)}</span></td>
+          <td style="${tdS};color:var(--color-text-muted)">${esc(SIM.compte.totCout)}</td>
+        </tr>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = prime d'équipe + toutes les vendeuses classables à la cible — le pire cas pour votre budget, le meilleur pour le comptoir.</div>
+    </div>`}
+
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">4 · Les cibles posées — l'année, mois par mois</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Le passé en lecture — l'histoire ne se réécrit pas. Une cible posée (bord bordeaux) vaut pour son mois et les suivants, jusqu'à la prochaine.</div>
       <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px">
         <thead><tr><th style="${th};text-align:left">Magasin</th>
           ${(c.cxAnnee || []).map(m => `<th style="${th}${m.passe ? ';color:#b8b2a8' : ''}">${esc(m.lib)}</th>`).join('')}
@@ -7510,23 +7576,25 @@ function tplVentes(c, x){
             <td style="${td};text-align:left;font-weight:500">${esc(l.nom)}</td>
             ${(l.annee || []).map(t => `<td style="${td};padding:4px 4px">${t.passe
               ? `<span style="color:${t.pose ? 'var(--color-text)' : '#b8b2a8'}" title="${t.pose ? 'cible posée ce mois-là' : 'héritée — le passé ne se réécrit pas'}">${esc(t.val || '')}</span>`
-              : `<input type="number" min="1" max="10" step="0.1" value="${esc(t.val)}" ${x.C(t.poser)} placeholder="—"
+              : `<input type="number" min="1" max="10" step="0.1" value="${esc(t.val)}" ${x.C(t.poser)}
                   style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:4px 5px;border-radius:7px;border:0.5px solid ${t.pose ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:var(--color-surface);text-align:right">`}</td>`).join('')}
           </tr>`).join('')}
         </tbody>
       </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin:8px 0 16px">Les mois passés sont en lecture — l’histoire ne se réécrit pas. Une cible posée (bord bordeaux) vaut pour son mois et les suivants, jusqu’à la prochaine : ajustez les seuils en fin de chaque mois.</div>
+    </div>
 
-      <div style="display:flex;gap:34px;flex-wrap:wrap;align-items:flex-start">
-        <div>
-          <div style="${lbl};margin-bottom:7px">Prime de base — la cible atteinte</div>
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">5 · Le barème de la prime de vente complémentaire</div>
+      <div style="display:flex;gap:34px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+        <div><div style="${lbl};margin-bottom:6px">Le geste — vendeuse à la cible</div>
           <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
-            <input type="number" min="1" step="5" value="${c.cxMontant != null ? c.cxMontant : ''}" ${x.C(c.cxMontantPoser)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
-          <div style="${lbl};margin:16px 0 7px">Prime d’équipe — la MOYENNE du magasin à la cible</div>
+          <input type="number" min="1" step="5" value="${c.cxMontant != null ? c.cxMontant : ''}" ${x.C(c.cxMontantPoser)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label></div>
+        <div><div style="${lbl};margin-bottom:6px">L'équipe — moyenne du magasin à la cible</div>
           <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
-            <input type="number" min="1" step="5" value="${c.cxMontantShop != null ? c.cxMontantShop : ''}" ${x.C(c.cxMontantShopPoser)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €
-            <span style="font-size:11px;color:var(--color-text-muted)">s’ajoute aux primes personnelles</span></label>
-          <div style="${lbl};margin:16px 0 7px">Les crans de l’équipe — la moyenne du magasin au-dessus de sa cible</div>
+          <input type="number" min="1" step="5" value="${c.cxMontantShop != null ? c.cxMontantShop : ''}" ${x.C(c.cxMontantShopPoser)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €
+          <span style="font-size:11px;color:var(--color-text-muted)">s'ajoute aux primes personnelles</span></label></div>
+        <div style="border-left:0.5px solid var(--color-border-secondary);padding-left:24px">
+          <div style="${lbl};margin-bottom:6px">Les crans — la moyenne au-dessus de la cible</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             ${(c.cxPaliers || []).map(pal => `
             <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
@@ -7537,10 +7605,9 @@ function tplVentes(c, x){
             </span>`).join('')}
             <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ cran</button>
           </div>
-          <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">C’est la MOYENNE du magasin qui gravit ces crans — « cible +0,1 » vaut 2,6 là où la cible est 2,5. La vendeuse, elle, touche la prime de base en atteignant la cible.</div>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:14px;line-height:1.55">Chaque réglage s’enregistre à la sortie du champ et passe au journal. Les résultats — qui atteint quoi, mois par mois — sont dans l’onglet Résultats.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.55">Le plus haut cran franchi paie — et <b>mieux ne paie jamais moins</b> : un cran saisi sous l'étage d'en dessous est ignoré, le simulateur du haut vous le montre aussitôt. Chaque réglage s'enregistre à la sortie du champ et passe au journal. Les résultats — qui atteint quoi, mois par mois — sont dans l'onglet Résultats.</div>
     </div>
   </div>`;
   }
@@ -7628,7 +7695,7 @@ function tplVentes(c, x){
         Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier.
         S’y multiplie le <b>coefficient de créneau</b> (borné 0,80 – 1,30) : vendre l’après-midi ou en semaine est plus dur que le samedi matin — survolez la colonne pour voir la part d’après-midi et de week-end de chacun. Le CA/heure réel reste affiché.
         ${!c.tvCreneaux ? '' : '<br>' + esc(c.tvCreneaux)}
-        Le classement est ouvert à toutes les heures prestées${c.tvSeuil > 0 ? ` dès ${c.tvSeuil} h au planning` : ''} — sans heure au planning ou sans vente à son nom : montré·e, jamais classé·e ni primé·e. Panier = CA ÷ tickets · cross-selling = lignes par ticket.
+        Le classement est ouvert à toutes les heures prestées${c.tvSeuil > 0 ? ` dès ${c.tvSeuil} h au planning` : ''} — sans heure au planning ou sans vente à son nom : montré·e, jamais classé·e ni primé·e. Panier = CA ÷ tickets · vente complémentaire = lignes par ticket.
         La meilleure du réseau ne cumule pas la prime magasin. Les primes s’enregistrent d’un clic et passent au journal.
         ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}
       </div>
@@ -7637,7 +7704,7 @@ function tplVentes(c, x){
     <div style="${carte}">
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>
-          <div style="${lbl}">Prime cross-selling — target évolutive par magasin</div>
+          <div style="${lbl}">La prime de vente complémentaire — target évolutive par magasin</div>
           <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.cxEchelle || '')} Cette prime <b>s’ajoute</b> à celles de la meilleure vendeuse. Les réglages — cibles, montants, paliers — sont dans l’onglet Targets &amp; primes.</div>
         </div>
         <span style="flex:1"></span>

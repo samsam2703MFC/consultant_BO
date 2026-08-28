@@ -144,3 +144,4 @@ deploy 20260827T200359Z fiche magasin sans course au clic + ddl une fois
 deploy 20260827T202400Z kpi etp
 deploy 20260827T202608Z etp = heures / 164
 deploy 20260828T063203Z prime equipe mieux ne paie jamais moins
+deploy 20260828T065012Z targets V1 + pdf equipes + vente complementaire

@@ -168,6 +168,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),
             $path === '/ventes/affiche.pdf'           => ep_ventes_affiche(),
+            $path === '/ventes/explication.pdf'        => ep_ventes_explication_pdf(),
             $path === '/croisements'                  => ep_croisements(),
             $path === '/croisements/options'          => ep_croisements_options(),
             $path === '/croisements/detail'           => ep_croisements_detail(),
@@ -250,6 +251,7 @@ function route(string $method, string $path): mixed
     // Retirer une référence du catalogue : le SEUL geste du cockpit sur une
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
+    if ($method === 'POST' && $path === '/ventes/sim') { return wr_ventes_sim(); }
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-target') { return wr_ventes_cross_target(); }
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }

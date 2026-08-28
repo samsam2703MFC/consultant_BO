@@ -5170,7 +5170,7 @@ class App {
     const court = nom => String(nom || '').split(' - ').pop();
     const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
     common.cxChargement = d === undefined;
-    common.cxMotif = d === null ? 'Le tableau cross-selling n’a pas pu être lu.' : '';
+    common.cxMotif = d === null ? 'Le tableau de la prime de vente complémentaire n’a pas pu être lu.' : '';
     if (!d) { common.cxLignes = []; return; }
     common.cxMontant = d.montant;
     common.cxMontantPoser = e => this.api('POST', '/ventes/cross-paliers',
@@ -5230,6 +5230,72 @@ class App {
           + (c2.primeShop ? ' | équipe : moyenne ' + n1(c2.moyenne) + ', cran ' + n1(c2.cranShop) + ' franchi → ' + c2.primeShop + ' €' : ''),
       })),
     }));
+    // --- Le simulateur (page V1) : scénarios et compte, dernier mois servi.
+    const sim = d.sim;
+    common.cxPdfEquipe = API_BASE + '/ventes/explication.pdf';
+    common.cxSim = null;
+    if (sim && (sim.magasins || []).length) {
+      const vl = +sim.valeurLigne || 0;
+      const marge = +sim.marge || 65;
+      const paliersFx = (d.paliers || []).map(p2 => ({ plus: +p2.plus, montant: +p2.montant }));
+      // « Mieux ne paie jamais moins » : l'étage vaut le max des crans franchis.
+      const primeEquipeEtage = plus => {
+        let m2 = +d.montantShop || 0;
+        paliersFx.forEach(p2 => { if (plus >= p2.plus - 1e-9 && p2.montant >= m2) { m2 = p2.montant; } });
+        return m2;
+      };
+      const cibleDe = {};
+      (d.magasins || []).forEach(mg => { cibleDe[String(mg.id)] = mg.targetActuelle != null ? +mg.targetActuelle : null; });
+      const eur0 = v => Math.round(v).toLocaleString('fr-BE') + ' €';
+      const calc = plus => {
+        let ca = 0, bud = 0;
+        sim.magasins.forEach(m2 => {
+          const cib = cibleDe[String(m2.id)];
+          if (cib == null || m2.moyenne == null) { return; }
+          ca += Math.max(0, (cib + plus) - m2.moyenne) * m2.tickets * vl;
+          bud += primeEquipeEtage(plus) + (m2.vendeuses || 0) * (+d.montant || 0);
+        });
+        return { ca, bud, net: ca * marge / 100 - bud };
+      };
+      let tca = 0, tbud = 0;
+      const compteLignes = sim.magasins.map(m2 => {
+        const cib = cibleDe[String(m2.id)];
+        const ec = cib != null && m2.moyenne != null ? Math.max(0, cib - m2.moyenne) : null;
+        const ca = ec != null ? ec * m2.tickets * vl : 0;
+        const bud = (+d.montantShop || 0) + (m2.vendeuses || 0) * (+d.montant || 0);
+        tca += ca; tbud += cib != null ? bud : 0;
+        return { nom: court(m2.nom),
+          cible: cib != null ? String(cib) : '',
+          poser: e => this.api('POST', '/ventes/cross-target', { shop: m2.id,
+              target: String(e.target.value || '').trim().replace(',', '.') })
+            .then(() => { this._cross = undefined; this.notify('Cible posée — elle vaut dès ce mois'); this.setState({}); }),
+          moyenne: m2.moyenne != null ? String(m2.moyenne).replace('.', ',') : '',
+          ecart: ec != null && ec > 0 ? '−' + String(Math.round(ec * 100) / 100).replace('.', ',') : (ec === 0 ? '✓' : ''),
+          tickets: (m2.tickets || 0).toLocaleString('fr-BE'),
+          ca: ca > 0 ? '+ ' + eur0(ca) : '', margeE: ca > 0 ? '+ ' + eur0(ca * marge / 100) : '',
+          primes: cib != null ? eur0(bud) : '',
+          cout: ca > 0 ? String(Math.round(1000 * bud / ca) / 10).replace('.', ',') + ' %' : '' };
+      });
+      common.cxSim = {
+        moisLib: sim.lib,
+        valeurLigne: sim.valeurLigne != null ? String(sim.valeurLigne).replace('.', ',') : '',
+        valeurNote: sim.valeurForcee ? 'forcée — videz le champ pour revenir à la valeur mesurée ('
+          + String(sim.valeurLigneMesuree).replace('.', ',') + ' €)' : 'mesurée sur les ventes ; modifiable',
+        marge: String(sim.marge).replace('.', ','),
+        poserValeur: e => this.api('POST', '/ventes/sim', { valeurLigne: String(e.target.value || '').trim().replace(',', '.') })
+          .then(() => { this._cross = undefined; this.notify('Valeur d’une ligne enregistrée'); this.setState({}); }),
+        poserMarge: e => this.api('POST', '/ventes/sim', { marge: String(e.target.value || '').trim().replace(',', '.') })
+          .then(() => { this._cross = undefined; this.notify('Marge enregistrée'); this.setState({}); }),
+        etages: [{ plus: 0, nom: 'À la cible' }].concat(paliersFx.map(p2 => ({ plus: p2.plus, nom: 'Cran +' + String(p2.plus).replace('.', ',') })))
+          .map((et, i2) => { const r2 = calc(et.plus);
+            return { nom: et.nom, premier: i2 === 0, prime: primeEquipeEtage(et.plus) + ' €',
+              ca: '+ ' + eur0(r2.ca), bud: '− ' + eur0(r2.bud), net: '+ ' + eur0(r2.net) }; }),
+        compte: { lignes: compteLignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
+          totPrimes: eur0(tbud), totNet: '+ ' + eur0(tca * marge / 100 - tbud),
+          totCout: tca > 0 ? String(Math.round(1000 * tbud / tca) / 10).replace('.', ',') + ' %' : '' },
+      };
+    }
+
     const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);
     common.cxPrime = d.enregistre
       ? { fait: true, txt: 'Primes cross de ' + d.dernierRevolu + ' enregistrées le ' + d.enregistre.quand
@@ -5355,7 +5421,7 @@ class App {
           l => eur(l.score), l => eur(l.caHeure) + ' / h réel · ' + nb1(l.heures) + ' h') },
       // 30 tickets au moins : 3,0 lignes sur 12 tickets, c'est un après-midi,
       // pas un geste de vente.
-      { titre: 'Top 10 — Lignes / ticket', note: 'le cross-selling — 30 tickets au moins',
+      { titre: 'Top 10 — Lignes / ticket', note: 'la vente complémentaire — 30 tickets au moins',
         lignes: topDix(actifs.filter(l => l.lignesTicket != null && l.tickets >= 30)
             .sort((a, b) => b.lignesTicket - a.lignesTicket),
           l => nb1(l.lignesTicket) + ' lignes', l => l.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + px(l.panier)) },

@@ -606,7 +606,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
             . '/h · matin week-end ' . $eur($d['creneaux']['matWe']) . '/h · après-midi week-end ' . $eur($d['creneaux']['amWe']) . '/h' : '')
         . ' — borné entre ' . number_format(VENTE_COEF_CRENEAU_MIN, 2, ',', ' ') . ' et ' . number_format(VENTE_COEF_CRENEAU_MAX, 2, ',', ' ') . '. '
         . 'Le CA/heure réel reste affiché. Sans heure au planning ou sans vente à son nom : montré(e), jamais classé(e) ni primé(e). '
-        . 'Panier = CA ÷ tickets · cross-selling = lignes par ticket (30 tickets au moins pour le top 10). '
+        . 'Panier = CA ÷ tickets · vente complémentaire = lignes par ticket (30 tickets au moins pour le top 10). '
         . ($d['partSansVendeur'] !== null && $d['partSansVendeur'] > 0
             ? $d['partSansVendeur'] . ' % du CA du mois est encaissé sans vendeur identifié sur le ticket : cette part n’est attribuée à personne. '
             : '')
@@ -663,7 +663,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
             static fn ($l) => $eur($l['ca']), static fn ($l) => $n1($l['heures']) . ' h')
         . $colonne('Top 10 — CA/h pondéré', 'CA/h × coefficient d’heures — la mesure des primes', $parCaH,
             static fn ($l) => $eur($l['score']), static fn ($l) => $eur($l['caHeure']) . '/h · ' . $n1($l['heures']) . ' h')
-        . $colonne('Top 10 — Lignes / ticket', 'le cross-selling — 30 tickets au moins', $parLt,
+        . $colonne('Top 10 — Lignes / ticket', 'la vente complémentaire — 30 tickets au moins', $parLt,
             static fn ($l) => $n1($l['lignesTicket']), static fn ($l) => $l['tickets'] . ' tkt')
         . '</tr></table>' . $methode;
 
@@ -1109,7 +1109,166 @@ function ep_ventes_cross(): array
     }
     $out['enregistre'] = $out['dernierRevolu'] !== null && isset($hist[$out['dernierRevolu']])
         ? $hist[$out['dernierRevolu']] : null;
+
+    // --- Le SIMULATEUR : les données du dernier mois SERVI (la table des
+    // transactions peut être en retard sur la caisse) — tickets, moyenne de
+    // lignes par ticket TOUS tickets confondus, valeur moyenne d'une ligne
+    // encaissée. Les scénarios et le compte se calculent à l'écran avec ça.
+    $sim = null;
+    for ($rec = 0; $rec <= 2; $rec++) {
+        $mSim = date('Y-m', strtotime('first day of -' . $rec . ' months'));
+        [$duS, $auS] = venteBornes($mSim);
+        try {
+            $rows = Db::rows('SELECT t.id_shop sid, COUNT(DISTINCT t.id) tickets,
+                                     SUM(l.quantity) q, SUM(l.total_gross_value_after_discount) ca
+                                FROM `transaction` t JOIN transaction_product l ON l.id_transaction = t.id
+                               WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                               GROUP BY t.id_shop', [$duS, $auS]);
+        } catch (PDOException $e) { $rows = []; }
+        $tk = array_sum(array_map(fn ($r2) => (int) $r2['tickets'], $rows));
+        if ($tk === 0) { continue; }
+        $qTot = 0.0; $caTot = 0.0; $mags = [];
+        foreach ($rows as $r2) {
+            $sid2 = (string) $r2['sid'];
+            if (!isset($nomDe[$sid2])) { continue; }
+            $qTot += (float) $r2['q']; $caTot += (float) $r2['ca'];
+            $vend = 0;
+            foreach (($parMois[$mSim] ?? []) ?: [] as $l2) {
+                if ((string) $l2['shopId'] === $sid2 && ($l2['tickets'] ?? 0) >= VENTE_CROSS_MIN_TICKETS) { $vend++; }
+            }
+            $mags[] = ['id' => $sid2, 'nom' => $nomDe[$sid2],
+                'tickets' => (int) $r2['tickets'],
+                'moyenne' => (int) $r2['tickets'] > 0 ? round((float) $r2['q'] / (int) $r2['tickets'], 2) : null,
+                'vendeuses' => $vend];
+        }
+        $mesuree = $qTot > 0 ? round($caTot / $qTot, 2) : null;
+        $forcee = setting('venteSimValeurLigne');
+        $sim = ['mois' => $mSim, 'lib' => strftime_fr(strtotime($mSim . '-01'), 'M Y'),
+            'valeurLigneMesuree' => $mesuree,
+            'valeurLigne' => is_numeric($forcee) ? (float) $forcee : $mesuree,
+            'valeurForcee' => is_numeric($forcee),
+            'marge' => is_numeric(setting('venteSimMarge')) ? (float) setting('venteSimMarge') : 65.0,
+            'magasins' => $mags];
+        break;
+    }
+    $out['sim'] = $sim;
     return $out;
+}
+
+/** POST /ventes/sim — les deux variables du simulateur, en réglages. */
+function wr_ventes_sim(): array
+{
+    $b = body();
+    if (array_key_exists('marge', $b)) {
+        $v = is_numeric($b['marge']) ? max(0, min(100, (float) $b['marge'])) : 65;
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['venteSimMarge', json_encode($v)]);
+    }
+    if (array_key_exists('valeurLigne', $b)) {
+        // Vide = retour à la valeur MESURÉE ; un nombre = la forcer.
+        $v = is_numeric($b['valeurLigne']) ? (float) $b['valeurLigne'] : null;
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['venteSimValeurLigne', json_encode($v)]);
+    }
+    journalAdd('CEO', 'Paramètre', 'Simulateur ventes', 'Variables mises à jour');
+    return ['ok' => true];
+}
+
+/**
+ * GET /ventes/explication.pdf — la feuille pour les ÉQUIPES : le système des
+ * primes expliqué simplement, avec les montants et cibles RÉELLEMENT réglés
+ * au moment de l'impression — jamais un chiffre recopié à la main.
+ */
+function ep_ventes_explication_pdf(): array
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $primes = ventePrimesConfig();
+    $base = (int) (setting('venteCrossMontant') ?: 25);
+    $mShop = (int) (setting('venteCrossMontantShop') ?: 100);
+    $paliers = venteCrossPaliers();
+    // Le barème AFFICHÉ applique la règle « mieux ne paie jamais moins ».
+    $marches = [['lib' => 'la cible', 'eur' => $mShop]];
+    $plafond = $mShop;
+    foreach ($paliers as $pal) {
+        if ((int) $pal['montant'] >= $plafond) {
+            $plafond = (int) $pal['montant'];
+            $marches[] = ['lib' => 'cible + ' . str_replace('.', ',', (string) $pal['plus']), 'eur' => $plafond];
+        }
+    }
+    $cfg = setting('venteCrossTargets');
+    if (!is_array($cfg)) { $cfg = []; }
+    $cibles = [];
+    foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
+        $t = venteCrossTarget($cfg, (string) $s['id'], date('Y-m'));
+        if ($t !== null) {
+            $cibles[] = trim((string) array_reverse(explode(' - ', (string) $s['name']))[0]) . ' : <b>'
+                . str_replace('.', ',', (string) $t) . '</b>';
+        }
+    }
+    $logo = rapLogoDataUri();
+    $blocTitre = static fn (string $n, string $t2) =>
+        '<div style="display:flex;align-items:baseline;gap:3mm;margin:6mm 0 2mm">'
+        . '<span style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:16pt;color:#8D1D2C">' . $n . '</span>'
+        . '<span style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:13pt">' . $t2 . '</span></div>';
+    $h = '<style>
+      .doc { font-family: Helvetica, Arial, sans-serif; color: #222; font-size: 10pt; line-height: 1.55; }
+      .k { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #7a736a; }
+      .eur { font-family: Georgia, "DejaVu Serif", serif; font-size: 15pt; color: #8D1D2C; }
+      .encart { background: #fbf9f5; border: 1px solid #e5e0d8; border-radius: 10px; padding: 4mm 5mm; }
+    </style><div class="doc">'
+        . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:11mm">' : '') . '</td>'
+        . '<td align="right" class="k">Les primes de vente — le mode d\'emploi de l\'équipe</td></tr></table>'
+        . '<div style="border-bottom:2px solid #8D1D2C;margin:2mm 0 4mm"></div>'
+        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, trois primes. Elles s\'additionnent.</div>'
+        . '<div style="color:#7a736a;font-size:9.5pt;margin-top:1mm">Un seul geste les nourrit toutes : proposer quelque chose en plus à chaque client. « Et avec ça ? »</div>'
+
+        . $blocTitre('1', 'La prime du geste — ' . $base . ' € pour vous')
+        . '<div>Chaque magasin a sa cible de lignes par ticket'
+        . ($cibles !== [] ? ' — en ce moment : ' . implode(' · ', $cibles) . ' —' : '')
+        . ' et si <b>votre</b> moyenne du mois l\'atteint, <b>' . $base . ' €</b> pour vous. '
+        . 'Plusieurs vendeuses peuvent la gagner en même temps : ce n\'est pas un concours, c\'est un geste. '
+        . '<span style="color:#7a736a">(Au moins ' . VENTE_CROSS_MIN_TICKETS . ' tickets dans le mois — deux tickets ne font pas une moyenne.)</span></div>'
+
+        . $blocTitre('2', 'La prime d\'équipe — jusqu\'à ' . $plafond . ' € pour le magasin')
+        . '<div>Là, on gagne <b>ensemble</b> : c\'est la moyenne de tout le magasin qui compte.</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>';
+    $n2 = count($marches);
+    foreach ($marches as $i2 => $mch) {
+        $fond = ['#c9a227', '#a8734d', '#8d5a3a', '#8D1D2C'][min(3, $i2)];
+        $h .= '<td width="' . (int) (100 / max(1, $n2)) . '%" align="center" style="background:' . $fond
+            . ';border-radius:8px;padding:3mm 1mm;color:#fff">'
+            . '<div style="font-size:8pt">' . $e($mch['lib']) . '</div>'
+            . '<div style="font-family:Georgia,serif;font-size:14pt">' . $mch['eur'] . ' €</div></td>';
+    }
+    $h .= '</tr></table>'
+        . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Une seule personne ne peut pas la gagner seule — et une seule peut la faire perdre. On se tire vers le haut.</div>'
+
+        . $blocTitre('3', 'La meilleure vendeuse — ' . $primes['magasin'] . ' € / ' . $primes['reseau'] . ' €')
+        . '<div>Chaque mois, un score est calculé pour chacune : vos ventes, ramenées à vos <b>heures de travail</b>. '
+        . 'Le calcul tient compte de vos horaires — l\'après-midi et la semaine, c\'est plus dur que le samedi matin : le score le sait, et corrige. '
+        . 'Peu d\'heures ce mois-ci ? Vous êtes quand même dans la course : c\'est par heure travaillée.</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>'
+        . '<td width="50%" class="encart" align="center"><span class="k">Meilleure du magasin</span><div class="eur">' . $primes['magasin'] . ' €</div></td>'
+        . '<td width="50%" class="encart" align="center"><span class="k">Meilleure du réseau</span><div class="eur">' . $primes['reseau'] . ' €</div></td>'
+        . '</tr></table>'
+
+        . '<div class="encart" style="margin-top:6mm">'
+        . '<span class="k">Les règles, en clair</span>'
+        . '<div style="font-size:9.5pt;margin-top:1mm">Tout se calcule sur le <b>mois complet</b>, jamais en cours de route — les primes tombent au début du mois suivant. '
+        . 'Rien n\'est caché : l\'affiche du magasin montre les cibles, les montants et le podium du mois dernier. '
+        . 'Le calcul est le même pour toutes, écrit noir sur blanc — s\'il vous semble faux, dites-le, on vérifie.</div></div>'
+
+        . '<div style="margin-top:5mm;font-family:Georgia,\'DejaVu Serif\',serif;font-size:12pt;text-align:center;color:#8D1D2C">'
+        . 'Un article en plus à chaque client : bon pour votre prime, celle de l\'équipe, et votre score.<br>Un seul geste, trois primes.</div>'
+        . '</div>';
+    $pdf = rapPdfRendu($h, ['magasin' => 'Réseau', 'rapport' => 'Primes de vente — mode d\'emploi',
+        'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="primes-mode-demploi.pdf"');
+    echo $pdf;
+    exit;
 }
 
 /** POST /ventes/cross-target {shop, target[, m]} — poser la target, dès ce mois. */
