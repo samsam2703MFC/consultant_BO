@@ -5193,7 +5193,7 @@ class App {
     // Le progrès (pour l'équipe) : le pas et le montant.
     const progres = d.progres || { pas: 0.15, montant: 400 };
     common.cxProgres = {
-      pas: String(progres.pas).replace('.', ','), montant: String(progres.montant),
+      pas: String(progres.pas), montant: String(progres.montant),
       poserPas: e => poserEchelle(echelle, { pas: String(e.target.value || '').replace(',', '.') }),
       poserMontant: e => poserEchelle(echelle, { montantEquipe: e.target.value }),
     };
@@ -5230,6 +5230,7 @@ class App {
       const mEq = +progres.montant || 0;
       const marche1 = echelle.length ? +echelle[0].montant : 0;
       const eur0 = v => Math.round(v).toLocaleString('fr-BE') + ' €';
+      const eurS = v => (v >= 0 ? '+ ' : '− ') + Math.round(Math.abs(v)).toLocaleString('fr-BE') + ' €';
       const totTickets = sim.magasins.reduce((a2, m2) => a2 + (m2.tickets || 0), 0);
       const totVend = sim.magasins.reduce((a2, m2) => a2 + (m2.vendeuses || 0), 0);
       const budget = sim.magasins.length * mEq + totVend * marche1;
@@ -5247,7 +5248,7 @@ class App {
           const ca = k * pas * totTickets * vl;
           return { nom: k === 1 ? 'Le pas — + ' + String(pas).replace('.', ',') : k + ' pas — + ' + String(Math.round(k * pas * 100) / 100).replace('.', ','),
             premier: k === 1, ca: '+ ' + eur0(ca), bud: '− ' + eur0(budget),
-            net: '+ ' + eur0(ca * marge / 100 - budget) };
+            net: eurS(ca * marge / 100 - budget) };
         }),
         compte: (() => {
           let tca = 0;
@@ -5263,7 +5264,7 @@ class App {
               cout: ca > 0 ? String(Math.round(1000 * budM / ca) / 10).replace('.', ',') + ' %' : '' };
           });
           return { lignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
-            totPrimes: eur0(budget), totNet: '+ ' + eur0(tca * marge / 100 - budget),
+            totPrimes: eur0(budget), totNet: eurS(tca * marge / 100 - budget),
             totCout: tca > 0 ? String(Math.round(1000 * budget / tca) / 10).replace('.', ',') + ' %' : '' };
         })(),
       };
