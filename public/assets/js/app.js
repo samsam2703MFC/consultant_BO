@@ -5181,11 +5181,10 @@ class App {
     common.cxReglages = {
       eurDixieme: String(reg.eurDixieme), poserEurDixieme: poser('eurDixieme'),
       couronneVendeuse: String(reg.couronneVendeuse), poserCouronneVendeuse: poser('couronneVendeuse'),
-      couronneMagasin: String(reg.couronneMagasin), poserCouronneMagasin: poser('couronneMagasin'),
       maxDixiemes: String(reg.maxDixiemes || 3), poserMaxDixiemes: poser('maxDixiemes'),
     };
-    common.cxPhrase = 'Bats ton record : ' + reg.eurDixieme + ' € par dixième au-dessus de ta meilleure moyenne des 12 derniers mois — toi comme ton magasin. '
-      + 'Et chaque mois, la couronne 👑 de la plus haute moyenne du réseau : ' + reg.couronneVendeuse + ' € (vendeuse) · ' + reg.couronneMagasin + ' € (magasin).';
+    common.cxPhrase = 'Bats ton record : ' + reg.eurDixieme + ' € par dixième au-dessus de ta meilleure moyenne des 12 derniers mois — toi comme ton magasin (payés jusqu’à '
+      + (reg.maxDixiemes || 3) + ' dixièmes par mois). Et chaque mois, la couronne 👑 : ' + reg.couronneVendeuse + ' € pour la plus haute moyenne du réseau.';
 
     // --- Les RÉSULTATS : par magasin × mois — moyenne, record, écart,
     // primes d'équipe et records battus par les vendeuses.
@@ -5198,7 +5197,7 @@ class App {
         record: c2.record != null ? n2(c2.record) : '',
         delta: c2.delta == null ? '' : (c2.delta >= 0 ? '+ ' : '− ') + n2(Math.abs(c2.delta)),
         deltaPos: c2.delta != null && c2.delta > 0,
-        primeEquipe: c2.primeEquipe || 0, couronne: !!c2.couronne,
+        primeEquipe: c2.primeEquipe || 0,
         nb: c2.nb, eur: c2.eur || 0,
         noms: (c2.gagnantes || []).map(a2 => (a2.couronne ? '👑 ' : '') + a2.nom
           + ' (' + (a2.record != null ? n2(a2.record) + ' → ' : '') + n2(a2.lignesTicket) + ' = ' + (a2.prime || 0) + ' €)').join(' · ')
@@ -5248,7 +5247,7 @@ class App {
             ca += Math.max(0, (rec + k * 0.1) - m2.moyenne) * (m2.tickets || 0) * vl;
           });
           const kPaye = Math.min(k, +reg.maxDixiemes || 3);
-          const bud = (sim.magasins.length + totVend) * kPaye * eurD + (+reg.couronneVendeuse || 0) + (+reg.couronneMagasin || 0);
+          const bud = (sim.magasins.length + totVend) * kPaye * eurD + (+reg.couronneVendeuse || 0);
           return { nom: 'Record + 0,' + k, premier: k === 1,
             ca: '+ ' + eur0(ca), bud: '− ' + eur0(bud), net: eurS(ca * marge / 100 - bud) };
         }),
@@ -5268,7 +5267,7 @@ class App {
               ca: ca > 0 ? '+ ' + eur0(ca) : '', primes: eur0(bud),
               cout: ca > 0 ? String(Math.round(1000 * bud / ca) / 10).replace('.', ',') + ' %' : '' };
           });
-          tbud += (+reg.couronneVendeuse || 0) + (+reg.couronneMagasin || 0);
+          tbud += (+reg.couronneVendeuse || 0);
           return { lignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
             totPrimes: eur0(tbud), totNet: eurS(tca * marge / 100 - tbud),
             totCout: tca > 0 ? String(Math.round(1000 * tbud / tca) / 10).replace('.', ',') + ' %' : '' };
