@@ -114,6 +114,7 @@ function ensureRapports(): void
             }
         }
         rapVentesSemer();
+    rapAfficheSemer();
         return;
     }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
@@ -135,6 +136,7 @@ function ensureRapports(): void
             [$s[0], $s[1], $s[2], $s[3], $s[4], $s[5], json_encode($s[6]), json_encode([]), $s[7]]);
     }
     rapVentesSemer();
+    rapAfficheSemer();
 }
 
 /**
@@ -151,6 +153,81 @@ function rapVentesSemer(): void
               VALUES (?,?,?,?,?,?,?,?,?,?,?)',
         ['target-vente-cloture', 'Clôture Target de vente', 'Franchisé & direction', 'mensuel', 8, 3,
          json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
+}
+
+/**
+ * L'AFFICHE du mois — « Ce qu'il y a à gagner ce mois-ci » — rejoint elle
+ * aussi le reporting automatisé : le 1er du mois à 8 h, chaque magasin dont
+ * le carnet porte au moins une adresse mail active reçoit SON affiche (les
+ * barres à battre nominatives de son équipe). Pas d'adresse = pas d'envoi,
+ * pas de génération : le mail doit être actif sur la ligne du magasin.
+ */
+function rapAfficheSemer(): void
+{
+    if (Db::row('SELECT id FROM ceo_rapport WHERE code = ?', ['affiche-vente-mois']) !== null) { return; }
+    Db::exec('INSERT INTO ceo_rapport (code, nom, poste, frequence, heure, jour, blocs, destinataires, par_magasin, actif, envoi_mode)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        ['affiche-vente-mois', 'Affiche du mois — Ce qu\'il y a à gagner', 'Magasins', 'mensuel', 8, 1,
+         json_encode([]), json_encode([]), 1, 1, 'par-magasin']);
+}
+
+/**
+ * Distribution de l'affiche : une version PAR MAGASIN, envoyée aux seules
+ * adresses du carnet de ce magasin. La génération ne passe pas par les blocs
+ * ni par rapportEnvoyer — le PDF est celui de venteAffichePdf(), un seul
+ * fichier par mail, prêt à imprimer.
+ */
+function ventesAfficheDistribuer(array $rep): array
+{
+    $carnet = json_decode((string) ($rep['dest_par_magasin'] ?? ''), true) ?: [];
+    $bilan = ['magasins' => []];
+    if (!Smtp::configured()) { return $bilan + ['resume' => 'SMTP non configuré (Paramètres) — aucun envoi']; }
+
+    try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name'); }
+    catch (PDOException $e) { $shops = []; }
+    foreach ($shops as $s) {
+        $nom = (string) $s['name'];
+        $dests = array_values(array_filter((array) ($carnet[$nom] ?? []), fn ($d) => filter_var($d, FILTER_VALIDATE_EMAIL)));
+        if ($dests === []) {
+            $bilan['magasins'][] = ['magasin' => $nom, 'statut' => 'sans-adresse',
+                'note' => 'mail non actif sur ce magasin — affiche non générée'];
+            continue;
+        }
+        $aff = venteAffichePdf('', (string) $s['id']);
+        if ($aff === null) {
+            $bilan['magasins'][] = ['magasin' => $nom, 'statut' => 'erreur', 'note' => 'le PDF n\'a pas pu être rendu'];
+            continue;
+        }
+        $pieces = [['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]];
+        $libM = strftime_fr(strtotime(date('Y-m') . '-01'), 'M Y');
+        $corps = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6">'
+            . '<p>Bonjour,</p><p>Voici <b>« Ce qu\'il y a à gagner ce mois-ci »</b> — ' . htmlspecialchars($libM)
+            . ' : l\'affiche à imprimer pour le vestiaire, avec la barre à battre de chaque vendeuse.</p>'
+            . '<p style="color:#7a736a;font-size:11px">Envoyée automatiquement par le cockpit, le 1er du mois.</p></div>';
+        $envoyes = []; $rate = null;
+        foreach ($dests as $d) {
+            if (Smtp::envoyer($d, 'Ce qu\'il y a à gagner ce mois-ci — ' . $libM, $corps, $pieces)) { $envoyes[] = $d; }
+            else { $rate = (string) Smtp::$lastError; }
+        }
+        $bilan['magasins'][] = ['magasin' => $nom, 'statut' => $envoyes !== [] ? 'envoye' : 'echec',
+            'envoyes' => $envoyes, 'note' => $rate];
+    }
+    $servis = count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye'));
+    $sans = count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'sans-adresse'));
+    $resume = 'Affiche ' . strftime_fr(time(), 'M Y') . ' — ' . $servis . ' magasin(s) servi(s), ' . $sans . ' sans mail actif';
+    // Un run d'archive pour la ligne du rapport : la trace de qui a été servi.
+    $html = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
+        . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
+            . (isset($m2['envoyes']) && $m2['envoyes'] !== [] ? ' (' . implode(', ', $m2['envoyes']) . ')' : '')) . '</li>', $bilan['magasins']))
+        . '</ul></div>';
+    Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte)
+              VALUES (?,?,?,?,?,?,?,?)',
+        [(int) $rep['id'], date('Y-m-d H:i:s'), date('Y-m-01'), date('Y-m-t'),
+         $servis > 0 ? 'envoye' : 'vide', $resume, $html, json_encode([], JSON_UNESCAPED_UNICODE)]);
+    $bilan['runId'] = (int) Db::pdo()->lastInsertId();
+    $bilan['resume'] = $resume;
+    journalAdd('CEO', 'Rapport', (string) $rep['nom'], $resume);
+    return $bilan;
 }
 
 /**
@@ -2114,6 +2191,11 @@ function wr_rapport_generer(int $id): array
     $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ((string) $rep['code'] === 'target-vente-cloture') { return ['ok' => true] + venteClotureRun($rep, ''); }
+    if ((string) $rep['code'] === 'affiche-vente-mois') {
+        // L'affiche n'a pas de « génération » à blanc : générer, c'est servir
+        // les magasins dont le mail est actif — comme au 1er du mois.
+        return ['ok' => true, 'mode' => 'par-magasin'] + ventesAfficheDistribuer($rep);
+    }
     return ['ok' => true] + rapportGenerer($rep);
 }
 
@@ -2124,6 +2206,9 @@ function wr_rapport_envoyer(int $id): array
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ((string) $rep['code'] === 'target-vente-cloture') {
         return ['ok' => true, 'mode' => 'par-magasin'] + ventesClotureDistribuer($rep);
+    }
+    if ((string) $rep['code'] === 'affiche-vente-mois') {
+        return ['ok' => true, 'mode' => 'par-magasin'] + ventesAfficheDistribuer($rep);
     }
     if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
         return ['ok' => true, 'mode' => 'par-magasin'] + rapportDistribuer($rep);
@@ -2190,6 +2275,12 @@ function ep_rapports_cron(): array
         if ($deja !== null) { continue; }
         if ((string) $rep['code'] === 'target-vente-cloture') {
             $bilan = ventesClotureDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue',
+                'envoi' => count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s)'];
+            continue;
+        }
+        if ((string) $rep['code'] === 'affiche-vente-mois') {
+            $bilan = ventesAfficheDistribuer($rep);
             $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue',
                 'envoi' => count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'envoye')) . ' magasin(s) servi(s)'];
             continue;

@@ -7509,11 +7509,9 @@ function tplVentes(c, x){
     </div>
 
     <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">2 · Bats ton record — la règle, pour chacune ET chaque magasin</div>
+      <div style="${lbl}">2 · Bats ton record — la règle, pour chacune</div>
       <div style="font-size:12px;margin:5px 0 12px;max-width:960px">
-        <b>Comment ça marche, en deux phrases.</b><br>
-        1 · <b>Chacune</b> a une barre : sa meilleure moyenne de lignes par ticket des 12 derniers mois — son record. Le 1er dixième au-dessus pose son nouveau record ; <b>à partir du 2e</b>, chaque dixième gagne le montant ci-dessous.<br>
-        2 · <b>Chaque magasin</b> a la même règle sur la moyenne de l'équipe : battre son record fait gagner tout le monde.<br>
+        <b>Comment ça marche, en une phrase.</b> Chacune a une barre : sa meilleure moyenne de lignes par ticket des 12 derniers mois — son record. Le 1er dixième au-dessus pose son nouveau record ; <b>à partir du 2e</b>, chaque dixième gagne le montant ci-dessous, en bons payés par la marque.<br>
         <span style="color:var(--color-text-muted)">Un record de plus d'un an expire (la barre reste à portée) · payés jusqu'au plafond de dixièmes ci-dessous · 30 tickets minimum dans le mois.</span></div>
       <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap">
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Par dixième (dès le 2e au-dessus du record)
@@ -7526,7 +7524,7 @@ function tplVentes(c, x){
 
     ${!SIM ? `<div style="${carte};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Le simulateur attend un mois de ventes servi par la caisse.</div>` : `
     <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">3 · Le compte — et si chacun battait son record ?</div>
+      <div style="${lbl}">3 · Le compte — et si chacune battait son record de 0,2 ?</div>
       <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Sur les chiffres de ${esc(SIM.moisLib)}. Les deux variables s'enregistrent.</div>
       <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Valeur d'une ligne
@@ -7547,20 +7545,19 @@ function tplVentes(c, x){
         </div>`).join('')}
       </div>
       <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:760px;font-size:12px">
-        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Moyenne</th><th style="${thS}">Record d'équipe</th><th style="${thS}">Prime dès (+ 0,2)</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus</th><th style="${thS}">Primes max</th><th style="${thS}">Coût / CA</th></tr>
+        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Moyenne</th><th style="${thS}">Vendeuses</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus</th><th style="${thS}">Primes (1 tranche chacune)</th><th style="${thS}">Coût / CA</th></tr>
         ${SIM.compte.lignes.map(l => `
         <tr>
           <td style="${tdS};text-align:left;font-weight:600">${esc(l.nom)}</td>
           <td style="${tdS}">${esc(l.moyenne)}</td>
-          <td style="${tdS}">${esc(l.record)}</td>
-          <td style="${tdS};font-weight:700;color:var(--color-primary)">${esc(l.objectif)}</td>
+          <td style="${tdS}">${esc(l.vendeuses)}</td>
           <td style="${tdS}">${esc(l.tickets)}</td>
           <td style="${tdS};font-weight:700;color:#2d7a3e">${esc(l.ca)}</td>
           <td style="${tdS}">${esc(l.primes)}</td>
           <td style="${tdS};color:var(--color-text-muted)">${esc(l.cout)}</td>
         </tr>`).join('')}
         <tr style="background:var(--color-background-secondary)">
-          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
+          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
           <td style="${tdS};font-family:var(--font-display);font-size:16px;color:#2d7a3e">${esc(SIM.compte.totCa)}</td>
           <td style="${tdS};font-weight:700;color:var(--color-primary)">${esc(SIM.compte.totPrimes)}</td>
           <td style="${tdS}"></td>
@@ -7688,15 +7685,12 @@ function tplVentes(c, x){
             <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(l.nom)}</td>
             ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:#b8b2a8"></span>'
               : `<span style="font-weight:600">${esc(c2.moyenne)}</span>
-                 <span style="font-size:9.5px;color:var(--color-text-muted)">rec ${esc(c2.record)}</span>
-                 <span style="font-size:10px;font-weight:600;color:${c2.deltaPos ? '#2d7a3e' : 'var(--color-text-muted)'}">${esc(c2.delta)}</span>
-                 ${c2.primeEquipe ? `<span style="font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">équipe ${c2.primeEquipe} €</span>` : ''}
-                 <div style="font-size:9.5px;margin-top:2px;color:var(--color-text-muted)">${c2.nb > 0 ? '✓ ' + c2.nb + ' record(s) battu(s) · ' + c2.eur + ' €' : 'aucun record battu'}</div>`}</td>`).join('')}
+                 <div style="font-size:9.5px;margin-top:2px;color:${c2.nb > 0 ? '#2d7a3e' : 'var(--color-text-muted)'}">${c2.nb > 0 ? '✓ ' + c2.nb + ' record(s) battu(s) · ' + c2.eur + ' €' : 'aucun record battu'}</div>`}</td>`).join('')}
           </tr>`).join('')}
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        Chaque cellule : la moyenne du magasin, son record des 12 mois glissants et l’écart — la prime d’équipe quand le record du magasin tombe, et les vendeuses qui battent leur propre record (survolez pour les noms). Les primes s’enregistrent une fois le mois fini et passent au journal.
+        Chaque cellule : la moyenne du magasin, et les vendeuses qui battent leur propre record (survolez pour les noms et les primes). Les primes s’enregistrent une fois le mois fini et passent au journal.
       </div>`}
     </div>
   </div>`;

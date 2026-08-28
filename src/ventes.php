@@ -769,7 +769,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     } else { $hClot .= '<tr><td class="l mut" colspan="6">aucune classable ce mois-ci</td></tr>'; }
     $hClot .= '</table>';
 
-    // 2. BATS TON RECORD — chacune face à son record, et 3. l'équipe.
+    // 2. BATS TON RECORD — chacune face à son propre record.
     $hClot .= '<div class="sec">Bats ton record — ' . $reglagesR['eurDixieme'] . ' € par dixième dès le deuxième au-dessus du record (12 mois glissants, plafonné à ' . $reglagesR['maxDixiemes'] . ' tranches)</div>'
         . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th class="l">Records battus</th><th>Total</th></tr>';
     $parShopR = [];
@@ -791,24 +791,6 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
                     . ' (' . ($x4['rec'] !== null ? number_format($x4['rec'], 2, ',', ' ') . ' → ' : '')
                     . number_format((float) $x4['l']['lignesTicket'], 2, ',', ' ') . ' = ' . $x4['prime'] . ' €)', $siens2))) . '</td>'
             . '<td class="acc"><b>' . ($totR > 0 ? $eur($totR) : '') . '</b></td></tr>';
-    }
-    $hClot .= '</table><div class="sec">L’équipe — le record du magasin (' . $reglagesR['eurDixieme']
-        . ' € par dixième dès le deuxième, plafonné à ' . $reglagesR['maxDixiemes'] . ' tranches)</div>'
-        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th>Record 12 mois</th><th>Ce mois</th><th>Écart</th><th>Prime d’équipe</th></tr>';
-    foreach ($d['magasins'] as $mag2) {
-        if (!$garde($mag2['id'])) { continue; }
-        $xM = venteMoyenneMagasin($d['lignes'], (string) $mag2['id']);
-        $recM2 = venteRecordMagasin($parMoisR, (string) $mag2['id'], $d['m']);
-        $prM2 = venteRecordPrime($xM['moyenne'] ?? null, $recM2, $reglagesR['eurDixieme'], $reglagesR['maxDixiemes']);
-        $totM = $prM2['prime'];
-        $totalPrimes += $totM;
-        $deltaM = ($xM !== null && $recM2 !== null) ? round($xM['moyenne'] - $recM2, 2) : null;
-        $hClot .= '<tr><td class="l"><b>' . $e($court($mag2['nom'])) . '</b></td>'
-            . '<td>' . ($recM2 !== null ? number_format($recM2, 2, ',', ' ') : '<span class="mut">pas encore de record</span>') . '</td>'
-            . '<td>' . ($xM !== null ? number_format($xM['moyenne'], 2, ',', ' ') : '') . '</td>'
-            . '<td style="font-weight:bold;color:' . ($deltaM === null ? '#7a736a' : ($deltaM > 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
-            . ($deltaM === null ? '' : ($deltaM >= 0 ? '+ ' : '− ') . number_format(abs($deltaM), 2, ',', ' ')) . '</td>'
-            . '<td class="acc"><b>' . ($totM > 0 ? $eur($totM) : '') . '</b></td></tr>';
     }
     $hClot .= '</table>'
         . '<div class="prime" style="text-align:center"><span class="k">Total des primes du mois' . ($seulShop !== '' ? ' — ce magasin' : '') . '</span>'
@@ -1159,8 +1141,6 @@ function ep_ventes_cross(): array
         $cells = [];
         foreach ($moisListe as $m) {
             $x = venteMoyenneMagasin($parMois[$m] ?? null, (string) $sid);
-            $recM = venteRecordMagasin($parMois, (string) $sid, $m);
-            $prM = venteRecordPrime($x['moyenne'] ?? null, $recM, $reglages['eurDixieme'], $reglages['maxDixiemes']);
             // Les vendeuses du magasin face à LEUR record.
             $gagnantes = [];
             foreach (($parMois[$m] ?? []) ?: [] as $l) {
@@ -1176,9 +1156,6 @@ function ep_ventes_cross(): array
             usort($gagnantes, static fn ($a, $b) => $b['prime'] <=> $a['prime']);
             $cells[] = ['m' => $m,
                 'moyenne' => $x['moyenne'] ?? null, 'tickets' => $x['tickets'] ?? 0,
-                'record' => $recM,
-                'delta' => ($x !== null && $recM !== null) ? round($x['moyenne'] - $recM, 2) : null,
-                'tranches' => $prM['tranches'], 'primeEquipe' => $prM['prime'],
                 'gagnantes' => $gagnantes, 'nb' => count($gagnantes),
                 'eur' => array_sum(array_column($gagnantes, 'prime'))];
         }
@@ -1300,7 +1277,7 @@ function ep_ventes_explication_pdf(): array
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:11mm">' : '') . '</td>'
         . '<td align="right" class="k">Les primes de vente — le mode d\'emploi de l\'équipe</td></tr></table>'
         . '<div style="border-bottom:2px solid #8D1D2C;margin:2mm 0 4mm"></div>'
-        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, trois façons de gagner. Elles s\'additionnent.</div>'
+        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, deux façons de gagner. Elles s\'additionnent.</div>'
         . '<div style="color:#7a736a;font-size:9.5pt;margin-top:1mm">Un seul geste les nourrit toutes : proposer quelque chose en plus à chaque client. « Et avec ça ? »</div>'
 
         . $blocTitre('1', 'Bats ton record — ' . $reg['eurDixieme'] . ' € par dixième dès le deuxième')
@@ -1314,7 +1291,7 @@ function ep_ventes_explication_pdf(): array
         . '<td width="25%" align="center" style="background:#8d5a3a;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,3</div><div style="font-family:Georgia,serif;font-size:14pt">' . (2 * $reg['eurDixieme']) . ' €</div></td>'
         . '<td width="25%" align="center" style="background:#8D1D2C;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,4</div><div style="font-family:Georgia,serif;font-size:14pt">' . (3 * $reg['eurDixieme']) . ' €</div></td>'
         . '</tr></table>'
-        . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Et c\'est pareil pour le MAGASIN : la moyenne de l\'équipe bat son record → ' . $reg['eurDixieme'] . ' € par dixième, en bons à partager entre l\'équipe.</div>'
+        . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Ta barre est &#224; toi : personne d\'autre &#224; battre que toi-m&#234;me.</div>'
 
 
         . $blocTitre('2', 'La meilleure vendeuse — ' . $primes['magasin'] . ' € / ' . $primes['reseau'] . ' €')
@@ -1333,7 +1310,7 @@ function ep_ventes_explication_pdf(): array
         . 'Le calcul est le même pour toutes, écrit noir sur blanc — s\'il vous semble faux, dites-le, on vérifie.</div></div>'
 
         . '<div style="margin-top:5mm;font-family:Georgia,\'DejaVu Serif\',serif;font-size:12pt;text-align:center;color:#8D1D2C">'
-        . 'Un article en plus à chaque client : bon pour votre prime, celle de l\'équipe, et votre score.<br>Un seul geste, trois primes.</div>'
+        . 'Un article en plus à chaque client : bon pour votre record et pour votre score.<br>Un seul geste, deux primes.</div>'
         . '</div>';
     $pdf = rapPdfRendu($h, ['magasin' => 'Réseau', 'rapport' => 'Primes de vente — mode d\'emploi',
         'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
@@ -1454,20 +1431,8 @@ function wr_ventes_cross_primes(): array
             . ' (record ' . ($rec !== null ? number_format($rec, 2, ',', ' ') : 'aucun')
             . ' → ' . number_format((float) $l['lignesTicket'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s)) — ' . $l['magasin']);
     }
-    // CHAQUE MAGASIN face à son record.
-    foreach ($nomDe as $sid => $nomShop) {
-        $x = venteMoyenneMagasin($parMois[$m], (string) $sid);
-        $rec = venteRecordMagasin($parMois, (string) $sid, $m);
-        $pr = venteRecordPrime($x['moyenne'] ?? null, $rec, $reglages['eurDixieme'], $reglages['maxDixiemes']);
-        if ($pr['prime'] === 0) { continue; }
-        $enr['magasinsGagnants'][] = ['id' => (string) $sid, 'nom' => $nomShop,
-            'moyenne' => $x['moyenne'] ?? null, 'record' => $rec,
-            'tranches' => $pr['tranches'], 'prime' => $pr['prime']];
-        journalAdd('CEO', 'Vente', $nomShop, 'Prime d’ÉQUIPE ' . $m . ' — ' . $pr['prime']
-            . ' € (record ' . number_format((float) $rec, 2, ',', ' ') . ' → '
-            . number_format((float) $x['moyenne'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s))');
-    }
-    if ($enr['gagnantes'] === [] && $enr['magasinsGagnants'] === []) {
+    $enr['magasinsGagnants'] = [];
+    if ($enr['gagnantes'] === []) {
         http_response_code(422); return ['error' => 'aucun record battu sur ' . $m . ' — rien à primer'];
     }
     $hist[$m] = $enr;
@@ -1583,7 +1548,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'
-            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm"><b>Bats ton record</b> — ta meilleure moyenne des 12 derniers mois est ta barre. Le premier dixi&#232;me au-dessus pose ton nouveau record ; <b class="acc">&#224; partir du deuxi&#232;me, chaque dixi&#232;me = ' . $regAff['eurDixieme'] . ' €</b> pour toi. Et quand la MOYENNE du magasin bat son record : la m&#234;me somme <b>pour l\'&#233;quipe, en bons &#224; partager</b>.</div>'
+            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm"><b>Bats ton record</b> — ta meilleure moyenne des 12 derniers mois est ta barre. Le premier dixi&#232;me au-dessus pose ton nouveau record ; <b class="acc">&#224; partir du deuxi&#232;me, chaque dixi&#232;me = ' . $regAff['eurDixieme'] . ' €</b> pour toi, en bons.</div>'
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
             . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,1</div><div class="v" style="color:#7a736a">nouveau record</div></td>';
         for ($t4 = 1; $t4 <= 3; $t4++) {
@@ -1596,37 +1561,29 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '</tr></table>'
             . '<div class="regle" style="margin-bottom:5mm">Payé jusqu&#8217;&#224; ' . $regAff['maxDixiemes'] . ' dixi&#232;mes par mois — et ton nouveau record devient ta barre : on ne paie jamais deux fois le m&#234;me progr&#232;s.</div>';
 
-        // LES BARRES À BATTRE — le record d'équipe du magasin, puis la barre
-        // nominative de chaque vendeuse active : l'info du mois.
-        $recEquipe = venteRecordMagasin($parMoisAff, (string) $sid, $m);
+        // LES BARRES À BATTRE — la barre nominative de chaque vendeuse active.
         $n2f = static fn ($v) => number_format((float) $v, 2, ',', ' ');
         $h .= '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Les barres &#224; battre ce mois-ci</div>'
-            . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 4mm"><tr>'
-            . '<td width="34%" class="carte" style="vertical-align:top"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">L&#8217;&#201;quipe — record du magasin</div>'
-            . '<div class="gros">' . ($recEquipe !== null ? $n2f($recEquipe) : '&#224; poser') . '</div>'
-            . '<div style="font-size:10.5pt;margin-top:1mm">' . ($recEquipe !== null
-                ? 'D&#232;s <b class="acc">' . $n2f($recEquipe + 0.2) . '</b> de moyenne du magasin : <b class="acc">' . $regAff['eurDixieme'] . ' €</b> en bons, <b>&#224; partager entre l&#8217;&#233;quipe</b>.'
-                : 'Ce mois-ci pose le premier record de l&#8217;&#233;quipe.') . '</div></td>'
-            . '<td width="66%" style="vertical-align:top"><table width="100%" cellpadding="0" cellspacing="3">';
+            . '<table width="100%" cellpadding="0" cellspacing="3" style="margin:0 0 4mm">';
         $listeB = $barres[(string) $sid] ?? [];
         if ($listeB === []) {
             $h .= '<tr><td class="regle">Les barres nominatives appara&#238;tront d&#232;s un mois d&#8217;historique (30 tickets au moins).</td></tr>';
         } else {
-            foreach (array_chunk($listeB, 2) as $rangee) {
+            foreach (array_chunk($listeB, 3) as $rangee) {
                 $h .= '<tr>';
                 foreach ($rangee as $b2) {
-                    $h .= '<td width="50%" style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:8px;padding:2.2mm 3mm">'
+                    $h .= '<td width="33%" style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:8px;padding:2.2mm 3mm">'
                         . '<span style="font-size:9.5pt"><b>' . $e($b2['nom']) . '</b></span>'
                         . '<span style="float:right;font-family:Georgia,serif;font-size:10.5pt">'
                         . ($b2['record'] !== null
                             ? '<span style="color:#7a736a">' . $n2f($b2['record']) . '</span> &#8594; <b style="color:#8D1D2C">prime d&#232;s ' . $n2f($b2['record'] + 0.2) . '</b>'
                             : '<b style="color:#8D1D2C">pose ta barre ce mois-ci</b>') . '</span></td>';
                 }
-                if (count($rangee) < 2) { $h .= '<td width="50%"></td>'; }
+                for ($v4 = count($rangee); $v4 < 3; $v4++) { $h .= '<td width="33%"></td>'; }
                 $h .= '</tr>';
             }
         }
-        $h .= '</table></td></tr></table>'
+        $h .= '</table>'
             . '<div class="regle" style="margin-bottom:6mm">Ta barre = ta meilleure moyenne des 12 derniers mois. Personne d&#8217;autre &#224; battre que toi-m&#234;me.</div>'
 
             . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
@@ -1698,7 +1655,7 @@ function wr_ventes_envoi_test(): array
     $libM = strftime_fr(strtotime($m . '-01'), 'M Y');
     $corps = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6">'
         . '<p>Bonjour,</p><p>Voici <b>« Ce qu’il y a à gagner ce mois-ci »</b> — ' . htmlspecialchars($libM)
-        . ' : l’affiche à imprimer pour le vestiaire, avec la barre à battre de chaque vendeuse et celle de l’équipe.</p>'
+        . ' : l’affiche à imprimer pour le vestiaire, avec la barre à battre de chaque vendeuse.</p>'
         . '<p style="color:#7a736a;font-size:11px">Envoyé depuis le cockpit.</p></div>';
     $ok = Smtp::envoyer($email, 'Ce qu’il y a à gagner ce mois-ci — ' . $libM, $corps, $pieces);
     journalAdd('CEO', 'Vente', 'Envoi test', ($ok ? 'Envoyé' : 'Échec') . ' à ' . $email . ' — ' . count($pieces) . ' PDF (' . $m . ($shop !== '' ? ', magasin ' . $shop : '') . ')');
