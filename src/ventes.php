@@ -1119,8 +1119,11 @@ function ep_ventes_cross(): array
         $mSim = date('Y-m', strtotime('first day of -' . $rec . ' months'));
         [$duS, $auS] = venteBornes($mSim);
         try {
+            // COUNT(*) et pas SUM(quantity) : la cible parle en LIGNES par
+            // ticket (le geste de proposer), pas en unités — trois croissants
+            // sur une ligne restent un seul geste. La même règle que venteMois.
             $rows = Db::rows('SELECT t.id_shop sid, COUNT(DISTINCT t.id) tickets,
-                                     SUM(l.quantity) q, SUM(l.total_gross_value_after_discount) ca
+                                     COUNT(*) q, SUM(l.total_gross_value_after_discount) ca
                                 FROM `transaction` t JOIN transaction_product l ON l.id_transaction = t.id
                                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
                                GROUP BY t.id_shop', [$duS, $auS]);
