@@ -146,3 +146,4 @@ deploy 20260827T202608Z etp = heures / 164
 deploy 20260828T063203Z prime equipe mieux ne paie jamais moins
 deploy 20260828T065012Z targets V1 + pdf equipes + vente complementaire
 deploy 20260828T065348Z sim lignes pas unites
+deploy 20260828T065903Z sim tickets caisse

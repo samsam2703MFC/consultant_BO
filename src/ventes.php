@@ -1130,6 +1130,25 @@ function ep_ventes_cross(): array
         } catch (PDOException $e) { $rows = []; }
         $tk = array_sum(array_map(fn ($r2) => (int) $r2['tickets'], $rows));
         if ($tk === 0) { continue; }
+        // Les TICKETS viennent de la CAISSE (clients/jour × jours du mois,
+        // endpoint des KPIs annuels) : la table locale n'en porte qu'une
+        // partie et aurait sous-estimé le CA en plus. La moyenne de lignes
+        // par ticket, elle, reste mesurée sur la table — la seule qui voit
+        // les lignes — et la source des tickets est dite à l'écran.
+        $caisse = [];
+        try {
+            $ka = rapAppel('ep_stores_kpis_annuels');
+            $numMois = (int) substr($mSim, 5, 2);
+            $joursMois = (int) date('t', strtotime($mSim . '-01'));
+            if (is_array($ka) && (int) ($ka['annee'] ?? 0) === (int) substr($mSim, 0, 4)) {
+                foreach (($ka['magasins'] ?? []) as $kaM) {
+                    $cj = $kaM['mois'][$numMois]['clientsJour'] ?? ($kaM['mois'][(string) $numMois]['clientsJour'] ?? null);
+                    if (is_numeric($cj) && (float) $cj > 0) {
+                        $caisse[(string) $kaM['id']] = (int) round((float) $cj * $joursMois);
+                    }
+                }
+            }
+        } catch (Throwable $eK) { /* caisse muette : repli table locale */ }
         $qTot = 0.0; $caTot = 0.0; $mags = [];
         foreach ($rows as $r2) {
             $sid2 = (string) $r2['sid'];
@@ -1140,13 +1159,15 @@ function ep_ventes_cross(): array
                 if ((string) $l2['shopId'] === $sid2 && ($l2['tickets'] ?? 0) >= VENTE_CROSS_MIN_TICKETS) { $vend++; }
             }
             $mags[] = ['id' => $sid2, 'nom' => $nomDe[$sid2],
-                'tickets' => (int) $r2['tickets'],
+                'tickets' => $caisse[$sid2] ?? (int) $r2['tickets'],
+                'ticketsCaisse' => isset($caisse[$sid2]),
                 'moyenne' => (int) $r2['tickets'] > 0 ? round((float) $r2['q'] / (int) $r2['tickets'], 2) : null,
                 'vendeuses' => $vend];
         }
         $mesuree = $qTot > 0 ? round($caTot / $qTot, 2) : null;
         $forcee = setting('venteSimValeurLigne');
         $sim = ['mois' => $mSim, 'lib' => strftime_fr(strtotime($mSim . '-01'), 'M Y'),
+            'ticketsCaisse' => $caisse !== [],
             'valeurLigneMesuree' => $mesuree,
             'valeurLigne' => is_numeric($forcee) ? (float) $forcee : $mesuree,
             'valeurForcee' => is_numeric($forcee),

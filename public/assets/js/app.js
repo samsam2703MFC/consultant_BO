@@ -5277,7 +5277,7 @@ class App {
           cout: ca > 0 ? String(Math.round(1000 * bud / ca) / 10).replace('.', ',') + ' %' : '' };
       });
       common.cxSim = {
-        moisLib: sim.lib,
+        moisLib: sim.lib + (sim.ticketsCaisse ? ' · tickets : caisse' : ' · tickets : table locale (partielle)'),
         valeurLigne: sim.valeurLigne != null ? String(sim.valeurLigne).replace('.', ',') : '',
         valeurNote: sim.valeurForcee ? 'forcée — videz le champ pour revenir à la valeur mesurée ('
           + String(sim.valeurLigneMesuree).replace('.', ',') + ' €)' : 'mesurée sur les ventes ; modifiable',
