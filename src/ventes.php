@@ -1611,7 +1611,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                         . '<span style="float:right;font-family:Georgia,serif;font-size:10.5pt">'
                         . ($b2['record'] !== null
                             ? '<span style="color:#7a736a">' . $n2f($b2['record']) . '</span> &#8594; <b style="color:#8D1D2C">prime d&#232;s ' . $n2f($b2['record'] + 0.2) . '</b>'
-                            : '<b style="color:#8D1D2C">pose ta barre ce mois-ci</b>') . '</span></td>';
+                            : '<b style="color:#8D1D2C">1er mois : sa moyenne devient sa r&#233;f&#233;rence (d&#232;s ' . VENTE_CROSS_MIN_TICKETS . ' tickets)</b>') . '</span></td>';
                 }
                 for ($v4 = count($rangee); $v4 < 3; $v4++) { $h .= '<td width="33%"></td>'; }
                 $h .= '</tr>';
@@ -1811,7 +1811,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 foreach ($gagR3 as $g3) {
                     $tot3 += (int) ($g3['prime'] ?? 0);
                     $h .= '<tr><td style="' . $tdP . '"><b>' . $e((string) $g3['nom']) . '</b></td>'
-                        . '<td style="' . $tdP . '" align="right">' . ($g3['record'] !== null ? $n2p($g3['record']) : 'premi&#232;re barre') . '</td>'
+                        . '<td style="' . $tdP . '" align="right">' . ($g3['record'] !== null ? $n2p($g3['record']) : 'sans r&#233;f&#233;rence') . '</td>'
                         . '<td style="' . $tdP . '" align="right"><b>' . $n2p($g3['lignesTicket'] ?? 0) . '</b></td>'
                         . '<td style="' . $tdP . '" align="right">' . (int) ($g3['tranches'] ?? 0) . '</td>'
                         . '<td style="' . $tdP . '" align="right"><b class="acc">' . (int) ($g3['prime'] ?? 0) . ' €</b></td></tr>';
@@ -1862,7 +1862,8 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                         . '<td style="' . $tdP . '" align="right"><b>' . $n2p($l6['apres']) . '</b></td>'
                         . '<td style="' . $tdP . '" align="right">' . $evoTxt . '</td>'
                         . '<td style="' . $tdP . '" align="right">' . ($l6['record'] !== null ? $n2p($l6['record']) : '&#8211;') . '</td>'
-                        . '<td style="' . $tdP . '" align="right">' . ($l6['record'] !== null ? '<b class="acc">' . $n2p($l6['record'] + 0.2) . '</b>' : 'pose ta barre') . '</td></tr>';
+                        . '<td style="' . $tdP . '" align="right">' . ($l6['record'] !== null ? '<b class="acc">' . $n2p($l6['record'] + 0.2) . '</b>'
+                            : '<span style="color:#7a736a">1er mois &#224; ' . VENTE_CROSS_MIN_TICKETS . ' tickets = sa r&#233;f&#233;rence</span>') . '</td></tr>';
                 }
                 $h .= '</table>';
             }
