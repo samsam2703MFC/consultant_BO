@@ -1739,7 +1739,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
     $labelA = 'Réseau';
     $nomA = 'affiche-primes-' . $m;
     if ($seulShop !== '' && $nomDe !== []) { $labelA = $court((string) reset($nomDe)); $nomA .= '-' . mktSlug($labelA); }
-    $pdf = rapPdfRendu($doc, ['magasin' => $labelA, 'rapport' => 'Affiche des primes — ' . $libMois,
+    $pdf = rapPdfRendu($doc, ['magasin' => $labelA, 'rapport' => 'Affiche des primes ' . $libMois,
         'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
     if ($pdf === null) { return null; }
     return ['pdf' => $pdf, 'nom' => $nomA . '.pdf'];
