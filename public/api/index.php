@@ -253,6 +253,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
     if ($method === 'POST' && $path === '/ventes/sim') { return wr_ventes_sim(); }
     if ($method === 'POST' && $path === '/ventes/record') { return wr_ventes_record(); }
+    if ($method === 'POST' && $path === '/ventes/envoi-test') { return wr_ventes_envoi_test(); }
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-target') { return wr_ventes_cross_target(); }
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }

@@ -1748,7 +1748,7 @@ function rapMailGarde(array $rep, array $run, string $labelPeriode, string $nomP
         . '</td></tr></table></body></html>';
 }
 
-function rapportEnvoyer(array $rep, int $runId): array
+function rapportEnvoyer(array $rep, int $runId, array $piecesExtra = []): array
 {
     $run = Db::row('SELECT * FROM ceo_rapport_run WHERE id = ? AND rapport_id = ?', [$runId, (int) $rep['id']]);
     if ($run === null) { return ['ok' => false, 'error' => 'run inconnu']; }
@@ -1777,6 +1777,7 @@ function rapportEnvoyer(array $rep, int $runId): array
         if ($pdf !== null) {
             $nomPdf = rapPdfNom($rep, $run);
             $pieces[] = ['nom' => $nomPdf, 'type' => 'application/pdf', 'contenu' => $pdf];
+            foreach ($piecesExtra as $px) { $pieces[] = $px; }
             // Le rapport EST la pièce jointe : le message n'en est que la page
             // de garde. Le corps ne le répète plus.
             $corpsMail = rapMailGarde($rep, $run + ['id' => $runId], rapPeriodeLabelRun($run), $nomPdf, rapBaseUrl());
@@ -1941,7 +1942,14 @@ function ventesClotureDistribuer(array $rep): array
             $bilan['magasins'][] = ['magasin' => $nom, 'statut' => 'erreur', 'note' => $gm['error'] ?? null];
             continue;
         }
-        $env = rapportEnvoyer($repMag, $gm['runId']);
+        // L'AFFICHE du mois qui commence voyage avec la clôture : le colis
+        // mensuel complet du magasin, en un seul email.
+        $px = [];
+        try {
+            $aff = function_exists('venteAffichePdf') ? venteAffichePdf(date('Y-m'), (string) $s['id']) : null;
+            if ($aff !== null) { $px[] = ['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]; }
+        } catch (Throwable $eA) { /* sans affiche, la clôture part quand même */ }
+        $env = rapportEnvoyer($repMag, $gm['runId'], $px);
         $bilan['magasins'][] = ['magasin' => $nom, 'statut' => $env['ok'] ? 'envoye' : 'echec',
             'runId' => $gm['runId'], 'envoyes' => $env['envoyes'] ?? [], 'note' => $env['note'] ?? null];
     }
