@@ -7511,16 +7511,13 @@ function tplVentes(c, x){
     <div style="${carte};padding:16px 18px">
       <div style="${lbl}">2 · Bats ton record — la règle, pour chacune ET chaque magasin</div>
       <div style="font-size:12px;margin:5px 0 12px;max-width:960px">
-        <b>Comment ça marche, en trois phrases.</b><br>
+        <b>Comment ça marche, en deux phrases.</b><br>
         1 · <b>Chacune</b> a une barre : sa meilleure moyenne de lignes par ticket des 12 derniers mois — son record. Chaque dixième au-dessus, elle gagne le montant ci-dessous ; son nouveau record devient sa barre.<br>
         2 · <b>Chaque magasin</b> a la même règle sur la moyenne de l'équipe : battre son record fait gagner tout le monde.<br>
-        3 · <b>La couronne 👑</b> : chaque mois, la vendeuse à la plus haute moyenne du réseau — à prendre, ou à défendre.
         <span style="color:var(--color-text-muted)">Un record de plus d'un an expire (la barre reste à portée) · payés jusqu'au plafond de dixièmes ci-dessous · 30 tickets minimum dans le mois.</span></div>
       <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap">
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Par dixième au-dessus du record
           <input type="number" min="0" step="10" value="${esc(R.eurDixieme || '')}" ${x.C(R.poserEurDixieme)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">👑 Couronne vendeuse
-          <input type="number" min="0" step="10" value="${esc(R.couronneVendeuse || '')}" ${x.C(R.poserCouronneVendeuse)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Dixièmes payés max / mois
           <input type="number" min="1" max="10" step="1" value="${esc(R.maxDixiemes || '')}" ${x.C(R.poserMaxDixiemes)} style="width:56px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"></label>
       </div>
@@ -7563,7 +7560,7 @@ function tplVentes(c, x){
           <td style="${tdS};color:var(--color-text-muted)">${esc(l.cout)}</td>
         </tr>`).join('')}
         <tr style="background:var(--color-background-secondary)">
-          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois <span style="font-weight:400;color:var(--color-text-muted);font-size:10px">couronnes comprises</span></td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
+          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
           <td style="${tdS};font-family:var(--font-display);font-size:16px;color:#2d7a3e">${esc(SIM.compte.totCa)}</td>
           <td style="${tdS};font-weight:700;color:var(--color-primary)">${esc(SIM.compte.totPrimes)}</td>
           <td style="${tdS}"></td>
@@ -7574,7 +7571,7 @@ function tplVentes(c, x){
           <td style="${tdS};color:var(--color-text-muted)">${esc(SIM.compte.totCout)}</td>
         </tr>
       </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = un dixième pour le magasin ET chaque vendeuse classable, plus la couronne — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = un dixième pour le magasin ET chaque vendeuse classable — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
     </div>`}
   </div>`;
   }
@@ -7699,7 +7696,7 @@ function tplVentes(c, x){
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        Chaque cellule : la moyenne du magasin, son record des 12 mois glissants et l’écart — la prime d’équipe quand le record du magasin tombe, et les vendeuses qui battent leur propre record (👑 : la couronne de la plus haute moyenne du réseau) (survolez pour les noms). Les primes s’enregistrent une fois le mois fini et passent au journal.
+        Chaque cellule : la moyenne du magasin, son record des 12 mois glissants et l’écart — la prime d’équipe quand le record du magasin tombe, et les vendeuses qui battent leur propre record (survolez pour les noms). Les primes s’enregistrent une fois le mois fini et passent au journal.
       </div>`}
     </div>
   </div>`;

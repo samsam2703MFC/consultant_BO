@@ -5175,16 +5175,15 @@ class App {
     if (!d) { common.cxLignes = []; return; }
 
     // --- « BATS TON RECORD » : trois réglages, c'est tout.
-    const reg = d.reglages || { eurDixieme: 100, couronneVendeuse: 50, couronneMagasin: 100 };
+    const reg = d.reglages || { eurDixieme: 100, maxDixiemes: 3 };
     const poser = cle => e => this.api('POST', '/ventes/record', { [cle]: e.target.value })
       .then(() => { this._cross = undefined; this.notify('Réglage enregistré — il vaut dès ce mois'); this.setState({}); });
     common.cxReglages = {
       eurDixieme: String(reg.eurDixieme), poserEurDixieme: poser('eurDixieme'),
-      couronneVendeuse: String(reg.couronneVendeuse), poserCouronneVendeuse: poser('couronneVendeuse'),
       maxDixiemes: String(reg.maxDixiemes || 3), poserMaxDixiemes: poser('maxDixiemes'),
     };
     common.cxPhrase = 'Bats ton record : ' + reg.eurDixieme + ' € par dixième au-dessus de ta meilleure moyenne des 12 derniers mois — toi comme ton magasin (payés jusqu’à '
-      + (reg.maxDixiemes || 3) + ' dixièmes par mois). Et chaque mois, la couronne 👑 : ' + reg.couronneVendeuse + ' € pour la plus haute moyenne du réseau.';
+      + (reg.maxDixiemes || 3) + ' dixièmes par mois).';
 
     // --- Les RÉSULTATS : par magasin × mois — moyenne, record, écart,
     // primes d'équipe et records battus par les vendeuses.
@@ -5199,7 +5198,7 @@ class App {
         deltaPos: c2.delta != null && c2.delta > 0,
         primeEquipe: c2.primeEquipe || 0,
         nb: c2.nb, eur: c2.eur || 0,
-        noms: (c2.gagnantes || []).map(a2 => (a2.couronne ? '👑 ' : '') + a2.nom
+        noms: (c2.gagnantes || []).map(a2 => a2.nom
           + ' (' + (a2.record != null ? n2(a2.record) + ' → ' : '') + n2(a2.lignesTicket) + ' = ' + (a2.prime || 0) + ' €)').join(' · ')
           + (c2.primeEquipe ? ' | équipe : ' + c2.primeEquipe + ' €' : ''),
       })),
@@ -5239,7 +5238,7 @@ class App {
         etages: [1, 2, 3].map(k => {
           // CA en plus : chaque magasin passe de sa moyenne actuelle à
           // record + k×0,1 ; primes : k dixièmes pour chaque magasin ET
-          // chaque vendeuse classable (pire cas), plus les deux couronnes.
+          // chaque vendeuse classable (pire cas).
           let ca = 0;
           sim.magasins.forEach(m2 => {
             const rec = recDe[String(m2.id)];
@@ -5247,7 +5246,7 @@ class App {
             ca += Math.max(0, (rec + k * 0.1) - m2.moyenne) * (m2.tickets || 0) * vl;
           });
           const kPaye = Math.min(k, +reg.maxDixiemes || 3);
-          const bud = (sim.magasins.length + totVend) * kPaye * eurD + (+reg.couronneVendeuse || 0);
+          const bud = (sim.magasins.length + totVend) * kPaye * eurD;
           return { nom: 'Record + 0,' + k, premier: k === 1,
             ca: '+ ' + eur0(ca), bud: '− ' + eur0(bud), net: eurS(ca * marge / 100 - bud) };
         }),
@@ -5267,7 +5266,6 @@ class App {
               ca: ca > 0 ? '+ ' + eur0(ca) : '', primes: eur0(bud),
               cout: ca > 0 ? String(Math.round(1000 * bud / ca) / 10).replace('.', ',') + ' %' : '' };
           });
-          tbud += (+reg.couronneVendeuse || 0);
           return { lignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
             totPrimes: eur0(tbud), totNet: eurS(tca * marge / 100 - tbud),
             totCout: tca > 0 ? String(Math.round(1000 * tbud / tca) / 10).replace('.', ',') + ' %' : '' };

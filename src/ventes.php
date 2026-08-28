@@ -738,12 +738,6 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
         $rF = venteMois($mF, $nomDeC2);
         $parMoisR[$mF] = $rF['motif'] === null ? $rF['lignes'] : null;
     }
-    // Les couronnes du mois : plus haute moyenne du réseau, vendeuse et magasin.
-    $couronneV = null;
-    foreach ($d['lignes'] as $l4) {
-        if (($l4['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l4['lignesTicket'] === null) { continue; }
-        if ($couronneV === null || (float) $l4['lignesTicket'] > (float) $couronneV['lignesTicket']) { $couronneV = $l4; }
-    }
     $histCross = setting('ventePrimesCrossHist');
     $histCrossM = is_array($histCross) && isset($histCross[$d['m']]) ? $histCross[$d['m']] : null;
     $g2 = $d['gagnantes'];
@@ -776,17 +770,15 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     $hClot .= '</table>';
 
     // 2. BATS TON RECORD — chacune face à son record, et 3. l'équipe.
-    $hClot .= '<div class="sec">Bats ton record — ' . $reglagesR['eurDixieme'] . ' € par dixième au-dessus de ton record (12 mois glissants) · 👑 couronne ' . $reglagesR['couronneVendeuse'] . ' €</div>'
-        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th class="l">Records battus &amp; couronne</th><th>Total</th></tr>';
+    $hClot .= '<div class="sec">Bats ton record — ' . $reglagesR['eurDixieme'] . ' € par dixième au-dessus de ton record (12 mois glissants, payés jusqu’à ' . $reglagesR['maxDixiemes'] . ' dixièmes)</div>'
+        . '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Magasin</th><th class="l">Records battus</th><th>Total</th></tr>';
     $parShopR = [];
     foreach ($d['lignes'] as $l2) {
         if (($l2['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l2['lignesTicket'] === null) { continue; }
         $recV2 = venteRecordVendeuse($parMoisR, (string) $l2['id'], $d['m']);
         $prV2 = venteRecordPrime((float) $l2['lignesTicket'], $recV2, $reglagesR['eurDixieme'], $reglagesR['maxDixiemes']);
-        $estCour = $couronneV !== null && (string) $couronneV['id'] === (string) $l2['id'];
-        $tot2 = $prV2['prime'] + ($estCour ? $reglagesR['couronneVendeuse'] : 0);
-        if ($tot2 === 0) { continue; }
-        $parShopR[(string) $l2['shopId']][] = ['l' => $l2, 'rec' => $recV2, 'prime' => $tot2, 'couronne' => $estCour];
+        if ($prV2['prime'] === 0) { continue; }
+        $parShopR[(string) $l2['shopId']][] = ['l' => $l2, 'rec' => $recV2, 'prime' => $prV2['prime']];
     }
     foreach ($d['magasins'] as $mag2) {
         if (!$garde($mag2['id'])) { continue; }
@@ -795,7 +787,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
         $totalPrimes += $totR;
         $hClot .= '<tr><td class="l"><b>' . $e($court($mag2['nom'])) . '</b></td>'
             . '<td class="l" style="font-size:7.8pt">' . ($siens2 === [] ? '<span class="mut">aucun record battu ce mois-ci</span>'
-                : implode(' · ', array_map(static fn ($x4) => ($x4['couronne'] ? '👑 ' : '') . $e($x4['l']['nom'])
+                : implode(' · ', array_map(static fn ($x4) => $e($x4['l']['nom'])
                     . ' (' . ($x4['rec'] !== null ? number_format($x4['rec'], 2, ',', ' ') . ' → ' : '')
                     . number_format((float) $x4['l']['lignesTicket'], 2, ',', ' ') . ' = ' . $x4['prime'] . ' €)', $siens2))) . '</td>'
             . '<td class="acc"><b>' . ($totR > 0 ? $eur($totR) : '') . '</b></td></tr>';
@@ -1039,7 +1031,6 @@ function venteRecordReglages(): array
 {
     return [
         'eurDixieme' => is_numeric(setting('venteRecordEurDixieme')) ? (int) setting('venteRecordEurDixieme') : 100,
-        'couronneVendeuse' => is_numeric(setting('venteCouronneVendeuse')) ? (int) setting('venteCouronneVendeuse') : 50,
         // Le garde-fou : on paie au plus N dixièmes par mois — un record
         // fantôme (mois faible) ne fait pas sauter la banque ; le nouveau
         // record se pose quand même, le compteur repart le mois suivant.
@@ -1051,8 +1042,7 @@ function venteRecordReglages(): array
 function wr_ventes_record(): array
 {
     $b = body();
-    foreach ([['eurDixieme', 'venteRecordEurDixieme'], ['couronneVendeuse', 'venteCouronneVendeuse'],
-              ['maxDixiemes', 'venteRecordMaxDixiemes']] as [$cle, $reg]) {
+    foreach ([['eurDixieme', 'venteRecordEurDixieme'], ['maxDixiemes', 'venteRecordMaxDixiemes']] as [$cle, $reg]) {
         if (isset($b[$cle]) && is_numeric($b[$cle])) {
             Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
                 [$reg, json_encode(max(0, (int) $b[$cle]))]);
@@ -1159,23 +1149,6 @@ function ep_ventes_cross(): array
         $parMois[$m] = $r['motif'] === null ? $r['lignes'] : null;
     }
 
-    // Par mois : la meilleure moyenne du réseau (couronne vendeuse) et le
-    // magasin à la plus haute moyenne (couronne magasin).
-    $couronnes = [];
-    foreach ($moisListe as $m) {
-        $meilleure = null;
-        foreach (($parMois[$m] ?? []) ?: [] as $l) {
-            if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
-            if ($meilleure === null || (float) $l['lignesTicket'] > (float) $meilleure['lignesTicket']) { $meilleure = $l; }
-        }
-        $couronnes[$m] = ['vendeuse' => $meilleure !== null ? (string) $meilleure['id'] : null,
-            'vendeuseNom' => $meilleure !== null ? (string) $meilleure['nom'] : null];
-    }
-    $out['couronnes'] = [];
-    foreach ($moisListe as $m) {
-        $out['couronnes'][$m] = ['vendeuse' => $couronnes[$m]['vendeuseNom']];
-    }
-
     foreach ($nomDe as $sid => $nom) {
         $cells = [];
         foreach ($moisListe as $m) {
@@ -1189,13 +1162,10 @@ function ep_ventes_cross(): array
                 if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
                 $recV = venteRecordVendeuse($parMois, (string) $l['id'], $m);
                 $prV = venteRecordPrime((float) $l['lignesTicket'], $recV, $reglages['eurDixieme'], $reglages['maxDixiemes']);
-                $couronneV = ($couronnes[$m]['vendeuse'] ?? null) === (string) $l['id'];
-                if ($prV['prime'] === 0 && !$couronneV) { continue; }
+                if ($prV['prime'] === 0) { continue; }
                 $gagnantes[] = ['id' => $l['id'], 'nom' => $l['nom'],
                     'lignesTicket' => $l['lignesTicket'], 'record' => $recV,
-                    'tranches' => $prV['tranches'], 'prime' => $prV['prime']
-                        + ($couronneV ? $reglages['couronneVendeuse'] : 0),
-                    'couronne' => $couronneV];
+                    'tranches' => $prV['tranches'], 'prime' => $prV['prime']];
             }
             usort($gagnantes, static fn ($a, $b) => $b['prime'] <=> $a['prime']);
             $cells[] = ['m' => $m,
@@ -1324,7 +1294,7 @@ function ep_ventes_explication_pdf(): array
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:11mm">' : '') . '</td>'
         . '<td align="right" class="k">Les primes de vente — le mode d\'emploi de l\'équipe</td></tr></table>'
         . '<div style="border-bottom:2px solid #8D1D2C;margin:2mm 0 4mm"></div>'
-        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, trois primes. Elles s\'additionnent.</div>'
+        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, trois façons de gagner. Elles s\'additionnent.</div>'
         . '<div style="color:#7a736a;font-size:9.5pt;margin-top:1mm">Un seul geste les nourrit toutes : proposer quelque chose en plus à chaque client. « Et avec ça ? »</div>'
 
         . $blocTitre('1', 'Bats ton record — ' . $reg['eurDixieme'] . ' € par dixième')
@@ -1340,11 +1310,8 @@ function ep_ventes_explication_pdf(): array
         . '</tr></table>'
         . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Et c\'est pareil pour le MAGASIN : la moyenne de l\'équipe bat son record → ' . $reg['eurDixieme'] . ' € par dixième, pour l\'équipe.</div>'
 
-        . $blocTitre('2', 'La couronne du mois — ' . $reg['couronneVendeuse'] . ' € 👑')
-        . '<div>Chaque mois, <b>une seule vendeuse</b> porte la couronne : la plus haute moyenne de lignes par ticket du réseau, tous magasins confondus — <b>'
-        . $reg['couronneVendeuse'] . ' €</b>. Au sommet, on la défend ; en dessous, on va la chercher — la course ne s\'arrête jamais, même quand ton record est difficile à battre.</div>'
 
-        . $blocTitre('3', 'La meilleure vendeuse — ' . $primes['magasin'] . ' € / ' . $primes['reseau'] . ' €')
+        . $blocTitre('2', 'La meilleure vendeuse — ' . $primes['magasin'] . ' € / ' . $primes['reseau'] . ' €')
         . '<div>Chaque mois, un score est calculé pour chacune : vos ventes, ramenées à vos <b>heures de travail</b>. '
         . 'Le calcul tient compte de vos horaires — l\'après-midi et la semaine, c\'est plus dur que le samedi matin : le score le sait, et corrige. '
         . 'Peu d\'heures ce mois-ci ? Vous êtes quand même dans la course : c\'est par heure travaillée.</div>'
@@ -1468,30 +1435,20 @@ function wr_ventes_cross_primes(): array
     $reglages = venteRecordReglages();
     $enr = ['m' => $m, 'quand' => date('Y-m-d H:i'), 'reglages' => $reglages, 'gagnantes' => [], 'magasinsGagnants' => []];
 
-    // La couronne du mois : la plus haute moyenne du réseau, vendeuse et magasin.
-    $meilleure = null;
-    foreach ($parMois[$m] as $l) {
-        if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
-        if ($meilleure === null || (float) $l['lignesTicket'] > (float) $meilleure['lignesTicket']) { $meilleure = $l; }
-    }
-
-    // CHACUNE face à son record — et la couronne s'ajoute.
+    // CHACUNE face à son record.
     foreach ($parMois[$m] as $l) {
         if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
         $rec = venteRecordVendeuse($parMois, (string) $l['id'], $m);
         $pr = venteRecordPrime((float) $l['lignesTicket'], $rec, $reglages['eurDixieme'], $reglages['maxDixiemes']);
-        $couronne = $meilleure !== null && (string) $meilleure['id'] === (string) $l['id'];
-        $total = $pr['prime'] + ($couronne ? $reglages['couronneVendeuse'] : 0);
-        if ($total === 0) { continue; }
+        if ($pr['prime'] === 0) { continue; }
         $enr['gagnantes'][] = ['id' => $l['id'], 'nom' => $l['nom'], 'magasin' => $l['magasin'],
             'lignesTicket' => $l['lignesTicket'], 'record' => $rec,
-            'tranches' => $pr['tranches'], 'couronne' => $couronne, 'prime' => $total];
-        journalAdd('CEO', 'Vente', $l['nom'], 'Bats ton record ' . $m . ' — ' . $total . ' €'
-            . ($pr['tranches'] > 0 ? ' (record ' . ($rec !== null ? number_format($rec, 2, ',', ' ') : 'aucun')
-                . ' → ' . number_format((float) $l['lignesTicket'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s))' : '')
-            . ($couronne ? ' 👑 couronne du réseau' : '') . ' — ' . $l['magasin']);
+            'tranches' => $pr['tranches'], 'prime' => $pr['prime']];
+        journalAdd('CEO', 'Vente', $l['nom'], 'Bats ton record ' . $m . ' — ' . $pr['prime'] . ' €'
+            . ' (record ' . ($rec !== null ? number_format($rec, 2, ',', ' ') : 'aucun')
+            . ' → ' . number_format((float) $l['lignesTicket'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s)) — ' . $l['magasin']);
     }
-    // CHAQUE MAGASIN face à son record — et la couronne du magasin.
+    // CHAQUE MAGASIN face à son record.
     foreach ($nomDe as $sid => $nomShop) {
         $x = venteMoyenneMagasin($parMois[$m], (string) $sid);
         $rec = venteRecordMagasin($parMois, (string) $sid, $m);
@@ -1505,7 +1462,7 @@ function wr_ventes_cross_primes(): array
             . number_format((float) $x['moyenne'], 2, ',', ' ') . ', ' . $pr['tranches'] . ' dixième(s))');
     }
     if ($enr['gagnantes'] === [] && $enr['magasinsGagnants'] === []) {
-        http_response_code(422); return ['error' => 'aucun record battu et pas de couronne sur ' . $m . ' — rien à primer'];
+        http_response_code(422); return ['error' => 'aucun record battu sur ' . $m . ' — rien à primer'];
     }
     $hist[$m] = $enr;
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
@@ -1538,7 +1495,7 @@ function ep_ventes_affiche(): array
     foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $s) {
         $nomDe[(string) $s['id']] = (string) $s['name'];
     }
-    $maxTotal = $primes['reseau'] + 3 * $regAff['eurDixieme'] + $regAff['couronneVendeuse'];
+    $maxTotal = $primes['reseau'] + $regAff['maxDixiemes'] * $regAff['eurDixieme'];
 
     // Le classement du MOIS PRÉCÉDENT : le podium du magasin et la gagnante
     // réseau — c'est ce qui donne envie de détrôner. Calculé une fois pour
@@ -1599,7 +1556,7 @@ function ep_ventes_affiche(): array
             . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,2</div><div class="v">' . (2 * $regAff['eurDixieme']) . ' €</div></td>'
             . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,3</div><div class="v">' . (3 * $regAff['eurDixieme']) . ' €</div></td>'
             . '</tr></table>'
-            . '<div class="regle" style="margin-bottom:5mm">Et chaque mois, la COURONNE 👑 : la vendeuse &#224; la plus haute moyenne du r&#233;seau gagne <b class="acc">' . $regAff['couronneVendeuse'] . ' €</b> — &#224; prendre, ou &#224; d&#233;fendre.</div>'
+            . '<div class="regle" style="margin-bottom:5mm">Payé jusqu&#8217;&#224; ' . $regAff['maxDixiemes'] . ' dixi&#232;mes par mois — et ton nouveau record devient ta barre : on ne paie jamais deux fois le m&#234;me progr&#232;s.</div>'
 
             . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
                 . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="mut">📋 Le classement de ' . $e($libPrec) . ' — à détrôner</div>'
