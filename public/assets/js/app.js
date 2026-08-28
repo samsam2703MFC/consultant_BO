@@ -5216,12 +5216,13 @@ class App {
       const eurD = +reg.eurDixieme || 0;
       const eur0 = v => Math.round(v).toLocaleString('fr-BE') + ' €';
       const eurS = v => (v >= 0 ? '+ ' : '− ') + Math.round(Math.abs(v)).toLocaleString('fr-BE') + ' €';
-      // Le record d'équipe par magasin : la meilleure cellule servie.
+      // Le record d'équipe ACTUEL de chaque magasin : celui de la dernière
+      // cellule servie (la fenêtre glissante d'aujourd'hui) — pas le max des
+      // vieilles fenêtres, qui peut traîner un record expiré.
       const recDe = {};
       (d.magasins || []).forEach(mg => {
         let r2 = null;
-        (mg.cells || []).forEach(c2 => { if (c2.record != null && (r2 == null || c2.record > r2)) { r2 = c2.record; }
-          if (c2.moyenne != null && (r2 == null || c2.moyenne > r2)) { r2 = c2.moyenne; } });
+        (mg.cells || []).forEach(c2 => { if (c2.record != null) { r2 = c2.record; } });
         recDe[String(mg.id)] = r2;
       });
       const totTickets = sim.magasins.reduce((a2, m2) => a2 + (m2.tickets || 0), 0);
