@@ -162,3 +162,4 @@ deploy 20260828T084559Z qr appli personnel + primes en bons
 deploy 20260828T085315Z affiche escalier plafond + qr progres
 deploy 20260828T085924Z objectifs + equipe a partager
 deploy 1787908135 prime equipe retiree + affiche automatique
+deploy 1787911585 affiche page 2 detail

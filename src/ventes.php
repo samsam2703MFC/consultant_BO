@@ -1512,6 +1512,17 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
         }
     }
 
+    // LA 2e PAGE — le détail : le dernier mois SERVI par la table des
+    // transactions (le mois dernier peut être vide), son top réseau et le
+    // classement complet de chaque magasin. Même recul que les barres.
+    $mDet = null; $lignesDet = null;
+    for ($recD = 1; $recD <= 3; $recD++) {
+        $mD = date('Y-m', strtotime($m . '-01 -' . $recD . ' month'));
+        if (($parMoisAff[$mD] ?? null) !== null && $parMoisAff[$mD] !== []) { $mDet = $mD; $lignesDet = $parMoisAff[$mD]; break; }
+    }
+    $topReseau = $lignesDet === null ? []
+        : array_slice(array_values(array_filter($lignesDet, static fn ($l5) => $l5['classable'])), 0, 5);
+
     if ($seulShop !== '') {
         $nomDe = array_filter($nomDe, fn ($sid2) => (string) $sid2 === $seulShop, ARRAY_FILTER_USE_KEY);
     }
@@ -1608,6 +1619,81 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '</tr></table></td>'
             . '</tr></table>'
             . '</div>';
+
+        // LA 2e A4 DU MAGASIN — le détail : qui a gagné quoi le mois dernier
+        // servi, avec les chiffres derrière chaque prime, et le classement
+        // complet du magasin. La page qui répond à « et moi, j'en suis où ? ».
+        if ($lignesDet !== null) {
+            $libDet = strftime_fr(strtotime($mDet . '-01'), 'M Y');
+            $n2d = static fn ($v) => number_format((float) $v, 2, ',', ' ');
+            $eur0f = static fn ($v) => number_format((float) $v, 0, ',', ' ');
+            $duShop = array_values(array_filter($lignesDet, fn ($l5) => (string) $l5['shopId'] === (string) $sid));
+            $meilleure = null;
+            foreach ($duShop as $l5) { if ($l5['classable']) { $meilleure = $l5; break; } }
+            $reseau1 = $topReseau[0] ?? null;
+            $ficheDe = static function (?array $l5, string $titre, int $prime) use ($e, $eur0f, $n1, $court) {
+                return '<td width="50%" class="carte" style="text-align:left">'
+                    . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">' . $titre . '</div>'
+                    . ($l5 === null ? '<div class="regle" style="margin-top:2mm">pas de classement ce mois-l&#224;</div>'
+                        : '<div class="serif" style="font-size:18pt;color:#8D1D2C;margin:1.5mm 0 1mm">' . $e($l5['nom']) . '</div>'
+                        . '<div style="font-size:10.5pt;margin-bottom:1.5mm"><b class="acc">score ' . (int) $l5['score'] . '</b> &#183; '
+                        . $e($court((string) $l5['magasin'])) . ' &#183; <b>' . $prime . ' € en bons</b></div>'
+                        . '<div class="regle">' . $eur0f($l5['ca']) . ' € de CA &#183; ' . $n1($l5['heures']) . ' h au planning &#183; '
+                        . $eur0f($l5['caHeure']) . ' €/h'
+                        . ($l5['lignesTicket'] !== null ? ' &#183; ' . $n1($l5['lignesTicket']) . ' lignes/ticket' : '')
+                        . ($l5['coefCreneau'] !== null ? ' &#183; coef cr&#233;neau &#215; ' . number_format((float) $l5['coefCreneau'], 2, ',', ' ') : '') . '</div>')
+                    . '</td>';
+            };
+            $thD = 'font-size:8pt;color:#7a736a;text-transform:uppercase;letter-spacing:.06em;padding:1.5mm 2mm;border-bottom:1pt solid #e6e0d8';
+            $tdD = 'padding:1.6mm 2mm;border-bottom:0.5pt solid #efe9e0;font-size:9.5pt';
+            $h .= '<div class="doc" style="page-break-before:always">'
+                . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:3mm"><tr>'
+                . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:38px">' : '<b>L’Atelier by</b>') . '</td>'
+                . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
+                . '<div class="serif" style="font-size:22pt;margin:6mm 0 1mm;letter-spacing:-.01em">Le d&#233;tail de ' . $e($libDet) . '</div>'
+                . '<div style="font-size:10.5pt;color:#5d564e;margin-bottom:5mm">Qui a gagn&#233; quoi, avec quels chiffres — pour savoir exactement quoi battre ce mois-ci.</div>'
+                . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
+                . $ficheDe($reseau1, '🏆 Meilleure vendeuse du r&#233;seau', (int) $primes['reseau'])
+                . $ficheDe($meilleure, '🥇 Meilleure vendeuse du magasin', (int) $primes['magasin'])
+                . '</tr></table>'
+
+                . '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Le classement de ' . $e($court($nom)) . ' — ' . $e($libDet) . '</div>'
+                . '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:5mm">'
+                . '<tr><td style="' . $thD . '" width="8%">&nbsp;</td><td style="' . $thD . '">Vendeuse</td>'
+                . '<td style="' . $thD . '" align="right">Score</td><td style="' . $thD . '" align="right">CA</td>'
+                . '<td style="' . $thD . '" align="right">Heures</td><td style="' . $thD . '" align="right">CA/h</td>'
+                . '<td style="' . $thD . '" align="right">Lignes/ticket</td></tr>';
+            if ($duShop === []) {
+                $h .= '<tr><td colspan="7" class="regle" style="padding:2mm">aucune vendeuse class&#233;e ce mois-l&#224;</td></tr>';
+            }
+            foreach ($duShop as $l5) {
+                $prem5 = ($l5['rang'] ?? 0) === 1;
+                $h .= '<tr' . ($prem5 ? ' style="background:#FFF9EC"' : '') . '>'
+                    . '<td style="' . $tdD . ';color:#7a736a">' . ($l5['rang'] !== null ? $l5['rang'] . '.' : '&#8212;') . '</td>'
+                    . '<td style="' . $tdD . '"><b>' . $e($l5['nom']) . '</b>'
+                    . ($l5['classable'] ? '' : ' <span style="font-size:8pt;color:#7a736a">' . $e((string) $l5['motifHorsClassement']) . '</span>') . '</td>'
+                    . '<td style="' . $tdD . '" align="right">' . ($l5['score'] !== null ? '<b' . ($prem5 ? ' class="acc"' : '') . '>' . (int) $l5['score'] . '</b>' : '&#8212;') . '</td>'
+                    . '<td style="' . $tdD . '" align="right">' . $eur0f($l5['ca']) . ' €</td>'
+                    . '<td style="' . $tdD . '" align="right">' . $n1($l5['heures']) . ' h</td>'
+                    . '<td style="' . $tdD . '" align="right">' . ($l5['caHeure'] !== null ? $eur0f($l5['caHeure']) . ' €' : '&#8212;') . '</td>'
+                    . '<td style="' . $tdD . '" align="right">' . ($l5['lignesTicket'] !== null ? $n1($l5['lignesTicket']) : '&#8212;') . '</td></tr>';
+            }
+            $h .= '</table>'
+
+                . '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Les meilleures du r&#233;seau — ' . $e($libDet) . '</div>'
+                . '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:5mm">';
+            foreach ($topReseau as $i5 => $l5) {
+                $h .= '<tr' . ($i5 === 0 ? ' style="background:#FFF9EC"' : '') . '>'
+                    . '<td style="' . $tdD . ';color:#7a736a" width="8%">' . ($i5 + 1) . '.</td>'
+                    . '<td style="' . $tdD . '"><b>' . $e($l5['nom']) . '</b></td>'
+                    . '<td style="' . $tdD . '">' . $e($court((string) $l5['magasin'])) . '</td>'
+                    . '<td style="' . $tdD . '" align="right"><b' . ($i5 === 0 ? ' class="acc"' : '') . '>score ' . (int) $l5['score'] . '</b></td>'
+                    . '<td style="' . $tdD . '" align="right">' . ($l5['lignesTicket'] !== null ? $n1($l5['lignesTicket']) . ' lignes/ticket' : '') . '</td></tr>';
+            }
+            $h .= '</table>'
+                . '<div class="regle">Le score = votre CA &#247; (vos heures du planning + ' . VENTE_LISSAGE_HEURES . ') &#215; le coefficient de cr&#233;neau — vendre quand c&#8217;est difficile compte davantage. La formule et le d&#233;tail de chacune sont v&#233;rifiables dans le cockpit. — L&#8217;Atelier by, ' . $e($libMois) . '</div>'
+                . '</div>';
+        }
         $premier = false;
     }
 
