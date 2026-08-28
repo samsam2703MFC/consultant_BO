@@ -7518,8 +7518,10 @@ function tplVentes(c, x){
           <input type="number" min="0" step="10" value="${esc(R.couronneVendeuse || '')}" ${x.C(R.poserCouronneVendeuse)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">👑 Couronne magasin
           <input type="number" min="0" step="10" value="${esc(R.couronneMagasin || '')}" ${x.C(R.poserCouronneMagasin)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Dixièmes payés max / mois
+          <input type="number" min="1" max="10" step="1" value="${esc(R.maxDixiemes || '')}" ${x.C(R.poserMaxDixiemes)} style="width:56px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"></label>
       </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">La couronne : chaque mois, la plus haute moyenne du réseau — à prendre, ou à défendre. Elle garde le sommet concurrentiel quand le record devient dur à battre. Ces primes s'ajoutent à celles du score.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">La couronne : chaque mois, la plus haute moyenne du réseau — à prendre, ou à défendre. Le plafond de dixièmes protège le budget d'un record fantôme : au-delà, le nouveau record se pose quand même et le compteur repart le mois suivant. Ces primes s'ajoutent à celles du score.</div>
     </div>
 
     ${!SIM ? `<div style="${carte};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Le simulateur attend un mois de ventes servi par la caisse.</div>` : `

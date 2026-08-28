@@ -788,7 +788,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     foreach ($d['lignes'] as $l2) {
         if (($l2['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l2['lignesTicket'] === null) { continue; }
         $recV2 = venteRecordVendeuse($parMoisR, (string) $l2['id'], $d['m']);
-        $prV2 = venteRecordPrime((float) $l2['lignesTicket'], $recV2, $reglagesR['eurDixieme']);
+        $prV2 = venteRecordPrime((float) $l2['lignesTicket'], $recV2, $reglagesR['eurDixieme'], $reglagesR['maxDixiemes']);
         $estCour = $couronneV !== null && (string) $couronneV['id'] === (string) $l2['id'];
         $tot2 = $prV2['prime'] + ($estCour ? $reglagesR['couronneVendeuse'] : 0);
         if ($tot2 === 0) { continue; }
@@ -813,7 +813,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
         if (!$garde($mag2['id'])) { continue; }
         $xM = venteMoyenneMagasin($d['lignes'], (string) $mag2['id']);
         $recM2 = venteRecordMagasin($parMoisR, (string) $mag2['id'], $d['m']);
-        $prM2 = venteRecordPrime($xM['moyenne'] ?? null, $recM2, $reglagesR['eurDixieme']);
+        $prM2 = venteRecordPrime($xM['moyenne'] ?? null, $recM2, $reglagesR['eurDixieme'], $reglagesR['maxDixiemes']);
         $estCourM = $couronneM !== null && $couronneM['id'] === (string) $mag2['id'];
         $totM = $prM2['prime'] + ($estCourM ? $reglagesR['couronneMagasin'] : 0);
         $totalPrimes += $totM;
@@ -1048,6 +1048,10 @@ function venteRecordReglages(): array
         'eurDixieme' => is_numeric(setting('venteRecordEurDixieme')) ? (int) setting('venteRecordEurDixieme') : 100,
         'couronneVendeuse' => is_numeric(setting('venteCouronneVendeuse')) ? (int) setting('venteCouronneVendeuse') : 50,
         'couronneMagasin' => is_numeric(setting('venteCouronneMagasin')) ? (int) setting('venteCouronneMagasin') : 100,
+        // Le garde-fou : on paie au plus N dixièmes par mois — un record
+        // fantôme (mois faible) ne fait pas sauter la banque ; le nouveau
+        // record se pose quand même, le compteur repart le mois suivant.
+        'maxDixiemes' => is_numeric(setting('venteRecordMaxDixiemes')) ? (int) setting('venteRecordMaxDixiemes') : 3,
     ];
 }
 
@@ -1056,7 +1060,7 @@ function wr_ventes_record(): array
 {
     $b = body();
     foreach ([['eurDixieme', 'venteRecordEurDixieme'], ['couronneVendeuse', 'venteCouronneVendeuse'],
-              ['couronneMagasin', 'venteCouronneMagasin']] as [$cle, $reg]) {
+              ['couronneMagasin', 'venteCouronneMagasin'], ['maxDixiemes', 'venteRecordMaxDixiemes']] as [$cle, $reg]) {
         if (isset($b[$cle]) && is_numeric($b[$cle])) {
             Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
                 [$reg, json_encode(max(0, (int) $b[$cle]))]);
@@ -1104,19 +1108,29 @@ function venteMoyenneMagasin(?array $lignes, string $sid): ?array
 /** Le record d'un magasin sur la fenêtre glissante. */
 function venteRecordMagasin(array $parMois, string $sid, string $m): ?float
 {
-    $rec = null;
+    // Un mois trop maigre ne pose pas de record : sa moyenne est du bruit.
+    // Le plancher se cale sur le magasin lui-même — 40 % de son meilleur
+    // mois en tickets sur la fenêtre — plutôt que sur une constante.
+    $mois = [];
+    $maxTk = 0;
     foreach (venteFenetreRecord($m) as $mF) {
         $x = venteMoyenneMagasin($parMois[$mF] ?? null, $sid);
-        if ($x !== null && ($rec === null || $x['moyenne'] > $rec)) { $rec = $x['moyenne']; }
+        if ($x !== null) { $mois[] = $x; $maxTk = max($maxTk, $x['tickets']); }
+    }
+    $rec = null;
+    foreach ($mois as $x) {
+        if ($x['tickets'] < 0.4 * $maxTk) { continue; }
+        if ($rec === null || $x['moyenne'] > $rec) { $rec = $x['moyenne']; }
     }
     return $rec;
 }
 
 /** Les tranches de 0,1 gagnées au-dessus du record → la prime. */
-function venteRecordPrime(?float $moy, ?float $record, int $eurDixieme): array
+function venteRecordPrime(?float $moy, ?float $record, int $eurDixieme, int $maxDixiemes = 0): array
 {
     if ($moy === null || $record === null || $moy <= $record + 1e-9) { return ['tranches' => 0, 'prime' => 0]; }
     $tranches = (int) floor(($moy - $record + 1e-9) / 0.1);
+    if ($maxDixiemes > 0) { $tranches = min($tranches, $maxDixiemes); }
     return ['tranches' => $tranches, 'prime' => $tranches * $eurDixieme];
 }
 
@@ -1183,7 +1197,7 @@ function ep_ventes_cross(): array
         foreach ($moisListe as $m) {
             $x = venteMoyenneMagasin($parMois[$m] ?? null, (string) $sid);
             $recM = venteRecordMagasin($parMois, (string) $sid, $m);
-            $prM = venteRecordPrime($x['moyenne'] ?? null, $recM, $reglages['eurDixieme']);
+            $prM = venteRecordPrime($x['moyenne'] ?? null, $recM, $reglages['eurDixieme'], $reglages['maxDixiemes']);
             $couronneM = ($couronnes[$m]['magasin'] ?? null) === (string) $sid;
             // Les vendeuses du magasin face à LEUR record.
             $gagnantes = [];
@@ -1191,7 +1205,7 @@ function ep_ventes_cross(): array
                 if ((string) $l['shopId'] !== (string) $sid) { continue; }
                 if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
                 $recV = venteRecordVendeuse($parMois, (string) $l['id'], $m);
-                $prV = venteRecordPrime((float) $l['lignesTicket'], $recV, $reglages['eurDixieme']);
+                $prV = venteRecordPrime((float) $l['lignesTicket'], $recV, $reglages['eurDixieme'], $reglages['maxDixiemes']);
                 $couronneV = ($couronnes[$m]['vendeuse'] ?? null) === (string) $l['id'];
                 if ($prV['prime'] === 0 && !$couronneV) { continue; }
                 $gagnantes[] = ['id' => $l['id'], 'nom' => $l['nom'],
@@ -1491,7 +1505,7 @@ function wr_ventes_cross_primes(): array
     foreach ($parMois[$m] as $l) {
         if (($l['tickets'] ?? 0) < VENTE_CROSS_MIN_TICKETS || $l['lignesTicket'] === null) { continue; }
         $rec = venteRecordVendeuse($parMois, (string) $l['id'], $m);
-        $pr = venteRecordPrime((float) $l['lignesTicket'], $rec, $reglages['eurDixieme']);
+        $pr = venteRecordPrime((float) $l['lignesTicket'], $rec, $reglages['eurDixieme'], $reglages['maxDixiemes']);
         $couronne = $meilleure !== null && (string) $meilleure['id'] === (string) $l['id'];
         $total = $pr['prime'] + ($couronne ? $reglages['couronneVendeuse'] : 0);
         if ($total === 0) { continue; }
@@ -1507,7 +1521,7 @@ function wr_ventes_cross_primes(): array
     foreach ($nomDe as $sid => $nomShop) {
         $x = venteMoyenneMagasin($parMois[$m], (string) $sid);
         $rec = venteRecordMagasin($parMois, (string) $sid, $m);
-        $pr = venteRecordPrime($x['moyenne'] ?? null, $rec, $reglages['eurDixieme']);
+        $pr = venteRecordPrime($x['moyenne'] ?? null, $rec, $reglages['eurDixieme'], $reglages['maxDixiemes']);
         $couronne = $meilleurShop !== null && $meilleurShop['id'] === (string) $sid;
         $total = $pr['prime'] + ($couronne ? $reglages['couronneMagasin'] : 0);
         if ($total === 0) { continue; }

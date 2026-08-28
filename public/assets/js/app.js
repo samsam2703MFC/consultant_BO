@@ -5182,6 +5182,7 @@ class App {
       eurDixieme: String(reg.eurDixieme), poserEurDixieme: poser('eurDixieme'),
       couronneVendeuse: String(reg.couronneVendeuse), poserCouronneVendeuse: poser('couronneVendeuse'),
       couronneMagasin: String(reg.couronneMagasin), poserCouronneMagasin: poser('couronneMagasin'),
+      maxDixiemes: String(reg.maxDixiemes || 3), poserMaxDixiemes: poser('maxDixiemes'),
     };
     common.cxPhrase = 'Bats ton record : ' + reg.eurDixieme + ' € par dixième au-dessus de ta meilleure moyenne des 12 derniers mois — toi comme ton magasin. '
       + 'Et chaque mois, la couronne 👑 de la plus haute moyenne du réseau : ' + reg.couronneVendeuse + ' € (vendeuse) · ' + reg.couronneMagasin + ' € (magasin).';
@@ -5245,7 +5246,8 @@ class App {
             if (rec == null || m2.moyenne == null) { return; }
             ca += Math.max(0, (rec + k * 0.1) - m2.moyenne) * (m2.tickets || 0) * vl;
           });
-          const bud = (sim.magasins.length + totVend) * k * eurD + (+reg.couronneVendeuse || 0) + (+reg.couronneMagasin || 0);
+          const kPaye = Math.min(k, +reg.maxDixiemes || 3);
+          const bud = (sim.magasins.length + totVend) * kPaye * eurD + (+reg.couronneVendeuse || 0) + (+reg.couronneMagasin || 0);
           return { nom: 'Record + 0,' + k, premier: k === 1,
             ca: '+ ' + eur0(ca), bud: '− ' + eur0(bud), net: eurS(ca * marge / 100 - bud) };
         }),
