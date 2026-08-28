@@ -7574,7 +7574,7 @@ function tplVentes(c, x){
           <td style="${tdS};color:var(--color-text-muted)">${esc(SIM.compte.totCout)}</td>
         </tr>
       </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = un dixième pour le magasin ET chaque vendeuse classable, plus les deux couronnes — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = un dixième pour le magasin ET chaque vendeuse classable, plus la couronne — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
     </div>`}
   </div>`;
   }
