@@ -1801,7 +1801,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 fn ($g3) => (string) ($g3['magasin'] ?? '') === (string) $nom));
             $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Bats ton record, ' . $e($libRec) . '</div>';
             if ($gagR3 === []) {
-                $h .= '<div class="regle" style="margin-bottom:4mm">Aucun record battu &#224; ' . $e($court($nom)) . ' ce mois-l&#224; : toutes les barres restent &#224; prendre.</div>';
+                $h .= '<div class="regle" style="margin-bottom:4mm">Aucun record battu &#224; ' . $e($court($nom)) . ' ce mois-ci.</div>';
             } else {
                 $tot3 = 0;
                 $h .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:2mm">'
