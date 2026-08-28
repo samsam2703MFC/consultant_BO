@@ -252,6 +252,7 @@ function route(string $method, string $path): mixed
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
     if ($method === 'POST' && $path === '/ventes/sim') { return wr_ventes_sim(); }
+    if ($method === 'POST' && $path === '/ventes/echelle') { return wr_ventes_echelle(); }
     if ($method === 'POST' && $path === '/ventes/primes') { return wr_ventes_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-target') { return wr_ventes_cross_target(); }
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }

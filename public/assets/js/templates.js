@@ -7507,10 +7507,37 @@ function tplVentes(c, x){
       </div>
     </div>
 
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">2 · L'échelle — pour chacune</div>
+      <div style="font-size:12px;margin:5px 0 10px">« <b>Ta moyenne du mois, ta prime.</b> » Une seule échelle, la même dans tout le réseau — la marche la plus haute atteinte paie. ${(c.tvSeuil || 0) === 0 ? '' : ''}<span style="color:var(--color-text-muted)">Au moins 30 tickets dans le mois.</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${(c.cxEchelleMarches || []).map(m2 => `
+        <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
+          ≥ <input type="number" min="1" max="10" step="0.1" value="${esc(m2.seuil)}" ${x.C(m2.poserSeuil)} style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
+          →
+          <input type="number" min="1" step="5" value="${esc(m2.montant)}" ${x.C(m2.poserMontant)} style="width:56px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right"> €
+          <button ${x.A(m2.retirer)} title="Retirer cette marche" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
+        </span>`).join('')}
+        <button ${x.A(c.cxEchelleAjouter)} style="${pill(false)}">+ marche</button>
+      </div>
+    </div>
+
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">3 · Le progrès — pour l'équipe</div>
+      <div style="font-size:12px;margin:5px 0 10px">« <b>Faites mieux que votre mois dernier.</b> » La moyenne du magasin gagne le pas sur son propre mois précédent → la prime d'équipe. La barre se repose toute seule chaque mois — personne ne règle plus de cible.</div>
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Le pas
+          + <input type="number" min="0.05" max="1" step="0.05" value="${esc((c.cxProgres || {}).pas || '')}" ${x.C((c.cxProgres || {}).poserPas)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right;width:56px"> ligne/ticket</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Prime d'équipe
+          <input type="number" min="0" step="25" value="${esc((c.cxProgres || {}).montant || '')}" ${x.C((c.cxProgres || {}).poserMontant)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right;width:72px"> €</label>
+        <span style="font-size:11px;color:var(--color-text-muted)">s'ajoute aux primes de l'échelle et du score</span>
+      </div>
+    </div>
+
     ${!SIM ? `<div style="${carte};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Le simulateur attend un mois de ventes servi par la caisse.</div>` : `
     <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">2 · La prime de vente complémentaire — quel étage viser ?</div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Sur les chiffres de ${esc(SIM.moisLib)} — dernier mois servi (tickets et moyennes réels, la cible de chaque magasin). Les deux variables s'enregistrent.</div>
+      <div style="${lbl}">4 · Le compte — ce que le pas rapporte</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Sur les chiffres de ${esc(SIM.moisLib)}. Les deux variables s'enregistrent.</div>
       <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Valeur d'une ligne
           <input value="${esc(SIM.valeurLigne)}" ${x.C(SIM.poserValeur)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
@@ -7518,97 +7545,43 @@ function tplVentes(c, x){
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Marge récupérée
           <input value="${esc(SIM.marge)}" ${x.C(SIM.poserMarge)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right;width:56px"> %</label>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px">
         ${SIM.etages.map(et => `
         <div style="border:${et.premier ? '1.5px solid var(--color-primary)' : '0.5px solid var(--color-border-secondary)'};border-radius:10px;padding:10px 13px${et.premier ? ';background:rgba(141,29,44,0.03)' : ''}">
-          <div style="font-size:12px;font-weight:700">${esc(et.nom)} <span style="font-weight:400;color:var(--color-text-muted);font-size:10px">équipe ${esc(et.prime)}</span></div>
+          <div style="font-size:12px;font-weight:700">${esc(et.nom)}</div>
           <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
-            <div><div style="${lbl}">CA en plus</div><div style="font-weight:700;color:#2d7a3e">${esc(et.ca)}</div></div>
-            <div><div style="${lbl}">Primes</div><div style="font-weight:700;color:var(--color-primary)">${esc(et.bud)}</div></div>
+            <div><div style="${lbl}">CA en plus / mois</div><div style="font-weight:700;color:#2d7a3e">${esc(et.ca)}</div></div>
+            <div><div style="${lbl}">Primes max</div><div style="font-weight:700;color:var(--color-primary)">${esc(et.bud)}</div></div>
             <div><div style="${lbl}">Net</div><div style="font-weight:700">${esc(et.net)}</div></div>
           </div>
         </div>`).join('')}
       </div>
-    </div>
-
-    <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">3 · Le compte, magasin par magasin</div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 8px">Où en est chaque magasin face à SA cible, ce que l'atteindre rapporterait, ce que les primes coûteraient au maximum. La cible s'édite ici — elle vaut dès ce mois.</div>
-      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:820px;font-size:12px">
-        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Cible</th><th style="${thS}">Moyenne (${esc(SIM.moisLib)})</th><th style="${thS}">Écart</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus si cible</th><th style="${thS}">Marge</th><th style="${thS}">Primes max</th><th style="${thS}">Coût / CA</th></tr>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:720px;font-size:12px">
+        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Moyenne (${esc(SIM.moisLib.split(' ·')[0])})</th><th style="${thS}">Objectif (+ le pas)</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus si le pas</th><th style="${thS}">Primes max</th><th style="${thS}">Coût / CA</th></tr>
         ${SIM.compte.lignes.map(l => `
         <tr>
           <td style="${tdS};text-align:left;font-weight:600">${esc(l.nom)}</td>
-          <td style="${tdS}"><input type="number" min="1" max="10" step="0.1" value="${esc(l.cible)}" ${x.C(l.poser)} style="width:56px;font-family:var(--font-ui);font-size:12px;padding:4px 6px;border-radius:7px;border:0.5px solid var(--color-primary);background:var(--color-surface);text-align:right"></td>
           <td style="${tdS}">${esc(l.moyenne)}</td>
-          <td style="${tdS};color:var(--color-primary);font-weight:700">${esc(l.ecart)}</td>
+          <td style="${tdS};font-weight:700;color:var(--color-primary)">${esc(l.objectif)}</td>
           <td style="${tdS}">${esc(l.tickets)}</td>
           <td style="${tdS};font-weight:700;color:#2d7a3e">${esc(l.ca)}</td>
-          <td style="${tdS}">${esc(l.margeE)}</td>
           <td style="${tdS}">${esc(l.primes)}</td>
           <td style="${tdS};color:var(--color-text-muted)">${esc(l.cout)}</td>
         </tr>`).join('')}
         <tr style="background:var(--color-background-secondary)">
-          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
+          <td style="${tdS};text-align:left;font-weight:700">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
           <td style="${tdS};font-family:var(--font-display);font-size:16px;color:#2d7a3e">${esc(SIM.compte.totCa)}</td>
-          <td style="${tdS};font-weight:700">${esc(SIM.compte.totMarge)}</td>
           <td style="${tdS};font-weight:700;color:var(--color-primary)">${esc(SIM.compte.totPrimes)}</td>
           <td style="${tdS}"></td>
         </tr>
         <tr>
           <td style="${tdS};text-align:left;font-weight:700">Net pour vous (marge ${esc(SIM.marge)} %)</td>
-          <td style="${tdS}" colspan="7"><span style="font-family:var(--font-display);font-size:18px;color:var(--color-primary)">${esc(SIM.compte.totNet)}</span></td>
+          <td style="${tdS}" colspan="5"><span style="font-family:var(--font-display);font-size:18px;color:var(--color-primary)">${esc(SIM.compte.totNet)}</span></td>
           <td style="${tdS};color:var(--color-text-muted)">${esc(SIM.compte.totCout)}</td>
         </tr>
       </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = prime d'équipe + toutes les vendeuses classables à la cible — le pire cas pour votre budget, le meilleur pour le comptoir.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = la prime d'équipe + toutes les vendeuses classables sur la première marche — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
     </div>`}
-
-    <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">4 · Les cibles posées — l'année, mois par mois</div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Le passé en lecture — l'histoire ne se réécrit pas. Une cible posée (bord bordeaux) vaut pour son mois et les suivants, jusqu'à la prochaine.</div>
-      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px">
-        <thead><tr><th style="${th};text-align:left">Magasin</th>
-          ${(c.cxAnnee || []).map(m => `<th style="${th}${m.passe ? ';color:#b8b2a8' : ''}">${esc(m.lib)}</th>`).join('')}
-        </tr></thead>
-        <tbody>
-          ${(c.cxLignes || []).map(l => `<tr>
-            <td style="${td};text-align:left;font-weight:500">${esc(l.nom)}</td>
-            ${(l.annee || []).map(t => `<td style="${td};padding:4px 4px">${t.passe
-              ? `<span style="color:${t.pose ? 'var(--color-text)' : '#b8b2a8'}" title="${t.pose ? 'cible posée ce mois-là' : 'héritée — le passé ne se réécrit pas'}">${esc(t.val || '')}</span>`
-              : `<input type="number" min="1" max="10" step="0.1" value="${esc(t.val)}" ${x.C(t.poser)}
-                  style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:4px 5px;border-radius:7px;border:0.5px solid ${t.pose ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:var(--color-surface);text-align:right">`}</td>`).join('')}
-          </tr>`).join('')}
-        </tbody>
-      </table></div>
-    </div>
-
-    <div style="${carte};padding:16px 18px">
-      <div style="${lbl}">5 · Le barème de la prime de vente complémentaire</div>
-      <div style="display:flex;gap:34px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
-        <div><div style="${lbl};margin-bottom:6px">Le geste — vendeuse à la cible</div>
-          <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
-          <input type="number" min="1" step="5" value="${c.cxMontant != null ? c.cxMontant : ''}" ${x.C(c.cxMontantPoser)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label></div>
-        <div><div style="${lbl};margin-bottom:6px">L'équipe — moyenne du magasin à la cible</div>
-          <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">
-          <input type="number" min="1" step="5" value="${c.cxMontantShop != null ? c.cxMontantShop : ''}" ${x.C(c.cxMontantShopPoser)} style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €
-          <span style="font-size:11px;color:var(--color-text-muted)">s'ajoute aux primes personnelles</span></label></div>
-        <div style="border-left:0.5px solid var(--color-border-secondary);padding-left:24px">
-          <div style="${lbl};margin-bottom:6px">Les crans — la moyenne au-dessus de la cible</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            ${(c.cxPaliers || []).map(pal => `
-            <span style="display:inline-flex;align-items:center;gap:5px;background:#FFF7E0;border:0.5px solid #E8C9A0;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px">
-              cible +<input type="number" min="0.1" max="5" step="0.1" value="${esc(pal.plus)}" ${x.C(pal.poserPlus)} style="width:48px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right">
-              →
-              <input type="number" min="1" step="5" value="${esc(pal.montant)}" ${x.C(pal.poserMontant)} style="width:52px;font-family:var(--font-ui);font-size:11.5px;padding:3px 5px;border-radius:6px;border:0.5px solid #E8C9A0;background:var(--color-surface);text-align:right"> €
-              <button ${x.A(pal.retirer)} title="Retirer ce cran" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 3px">✕</button>
-            </span>`).join('')}
-            <button ${x.A(c.cxPalierAjouter)} style="${pill(false)}">+ cran</button>
-          </div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.55">Le plus haut cran franchi paie — et <b>mieux ne paie jamais moins</b> : un cran saisi sous l'étage d'en dessous est ignoré, le simulateur du haut vous le montre aussitôt. Chaque réglage s'enregistre à la sortie du champ et passe au journal. Les résultats — qui atteint quoi, mois par mois — sont dans l'onglet Résultats.</div>
-    </div>
   </div>`;
   }
 
@@ -7705,7 +7678,7 @@ function tplVentes(c, x){
       <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
         <div>
           <div style="${lbl}">La prime de vente complémentaire — target évolutive par magasin</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.cxEchelle || '')} Cette prime <b>s’ajoute</b> à celles de la meilleure vendeuse. Les réglages — cibles, montants, paliers — sont dans l’onglet Targets &amp; primes.</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.cxPhraseEchelle || '')}<br>${esc(c.cxPhraseProgres || '')} Ces primes <b>s’ajoutent</b> à celles de la meilleure vendeuse — réglages dans l’onglet Targets &amp; primes.</div>
         </div>
         <span style="flex:1"></span>
         ${!c.cxPrime ? '' : c.cxPrime.fait
@@ -7723,16 +7696,15 @@ function tplVentes(c, x){
           ${(c.cxLignes || []).map(l => `<tr>
             <td style="${td};text-align:left;padding-left:18px;font-weight:500">${esc(l.nom)}</td>
             ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:#b8b2a8"></span>'
-              : `<span style="color:var(--color-text-muted)">${esc(c2.target)}</span> ${c2.nb > 0
-                ? `<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">✓ ${c2.nb} · ${c2.eur} €</span>`
-                : `<span style="font-size:10.5px;color:var(--color-primary)">0</span>`}
-                <div style="font-size:9.5px;margin-top:2px;color:${c2.shopOk ? '#2d7a3e' : 'var(--color-text-muted)'}">moy ${esc(c2.moyenne)}${c2.primeShop ? ' 🏅 ' + c2.primeShop + ' €' : ''}</div>`}</td>`).join('')}
+              : `<span style="font-weight:600">${esc(c2.moyenne)}</span>
+                 <span style="font-size:10px;font-weight:600;color:${c2.deltaPos ? '#2d7a3e' : 'var(--color-primary)'}">${esc(c2.delta)}</span>
+                 ${c2.equipeOk ? `<span style="font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:#E6F2E9;color:#2d7a3e">🏅 ${c2.primeEquipe} €</span>` : ''}
+                 <div style="font-size:9.5px;margin-top:2px;color:var(--color-text-muted)">${c2.nb > 0 ? '✓ ' + c2.nb + ' sur l’échelle · ' + c2.eur + ' €' : 'personne sur l’échelle'}</div>`}</td>`).join('')}
           </tr>`).join('')}
         </tbody>
       </table></div>
       <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
-        Chaque cellule : la cible du mois · ✓ les vendeuses qui l’atteignent (prime personnelle de base chacune) · la moyenne du magasin avec 🏅 et la prime d’ÉQUIPE du cran franchi — c’est la moyenne qui gravit l’escalier, pas chaque vendeuse, et elle s’ajoute aux primes personnelles.
-        Sans cible posée, rien ne se compte. Les primes s’enregistrent une fois le mois fini et passent au journal ; cibles, montants et paliers se règlent dans l’onglet Targets &amp; primes.
+        Chaque cellule : la moyenne du magasin, son progrès vs SON mois précédent (🏅 la prime d’équipe quand le pas est gagné), et les vendeuses sur l’échelle réseau avec le total de leurs primes. Les primes s’enregistrent une fois le mois fini et passent au journal.
       </div>`}
     </div>
   </div>`;

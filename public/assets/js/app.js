@@ -5169,113 +5169,70 @@ class App {
     const d = this._cross;
     const court = nom => String(nom || '').split(' - ').pop();
     const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    const n2 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     common.cxChargement = d === undefined;
     common.cxMotif = d === null ? 'Le tableau de la prime de vente complémentaire n’a pas pu être lu.' : '';
+    common.cxPdfEquipe = API_BASE + '/ventes/explication.pdf';
     if (!d) { common.cxLignes = []; return; }
-    common.cxMontant = d.montant;
-    common.cxMontantPoser = e => this.api('POST', '/ventes/cross-paliers',
-      { paliers: (d.paliers || []), montantBase: e.target.value })
-      .then(() => { this._cross = undefined; this.notify('Montant de base enregistré'); this.setState({}); });
-    // L'échelle des paliers, ÉGALE pour tout le réseau : chaque champ écrit
-    // la liste entière — l'échelle est une, pas quatre réglages épars.
-    const paliers = (d.paliers || []).slice();
-    const poserPaliers = liste => this.api('POST', '/ventes/cross-paliers', { paliers: liste })
-      .then(() => { this._cross = undefined; this.notify('Échelle des paliers enregistrée'); this.setState({}); });
-    common.cxPaliers = paliers.map((pal, i) => ({
-      plus: String(pal.plus), montant: String(pal.montant),
-      poserPlus: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], plus: e.target.value }; poserPaliers(l2); },
-      poserMontant: e => { const l2 = paliers.slice(); l2[i] = { ...l2[i], montant: e.target.value }; poserPaliers(l2); },
-      retirer: () => poserPaliers(paliers.filter((x2, j) => j !== i)),
+
+    // --- LE SYSTÈME A. L'échelle (pour chacune) : liste de marches, éditée
+    // entière à chaque champ — l'échelle est une, pas des réglages épars.
+    const echelle = (d.echelle || []).slice();
+    const poserEchelle = (liste, extra) => this.api('POST', '/ventes/echelle', Object.assign({ echelle: liste }, extra || {}))
+      .then(() => { this._cross = undefined; this.notify('Réglage enregistré — il vaut dès ce mois'); this.setState({}); });
+    common.cxEchelleMarches = echelle.map((m2, i) => ({
+      seuil: String(m2.seuil), montant: String(m2.montant),
+      poserSeuil: e => { const l2 = echelle.slice(); l2[i] = { ...l2[i], seuil: e.target.value.replace(',', '.') }; poserEchelle(l2); },
+      poserMontant: e => { const l2 = echelle.slice(); l2[i] = { ...l2[i], montant: e.target.value }; poserEchelle(l2); },
+      retirer: () => poserEchelle(echelle.filter((x2, j) => j !== i)),
     }));
-    common.cxPalierAjouter = () => {
-      const dernier = paliers.length ? paliers[paliers.length - 1] : { plus: 0, montant: d.montant };
-      poserPaliers(paliers.concat([{ plus: Math.min(5, Math.round(((+dernier.plus) + 0.1) * 10) / 10), montant: (+dernier.montant) + 25 }]));
+    common.cxEchelleAjouter = () => {
+      const der = echelle.length ? echelle[echelle.length - 1] : { seuil: 2.2, montant: 0 };
+      poserEchelle(echelle.concat([{ seuil: Math.round(((+der.seuil) + 0.3) * 10) / 10, montant: (+der.montant) + 30 }]));
     };
-    common.cxEchelle = 'cible du magasin → ' + d.montant + ' €'
-      + paliers.map(pal => ' · cible +' + String(pal.plus).replace('.', ',') + ' → ' + pal.montant + ' €').join('')
-      + ' — le plus haut cran franchi paie, chaque magasin part de SA cible.';
+    // Le progrès (pour l'équipe) : le pas et le montant.
+    const progres = d.progres || { pas: 0.15, montant: 400 };
+    common.cxProgres = {
+      pas: String(progres.pas).replace('.', ','), montant: String(progres.montant),
+      poserPas: e => poserEchelle(echelle, { pas: String(e.target.value || '').replace(',', '.') }),
+      poserMontant: e => poserEchelle(echelle, { montantEquipe: e.target.value }),
+    };
+    common.cxPhraseEchelle = 'Ta moyenne du mois, ta prime : '
+      + echelle.map(m2 => '≥ ' + String(m2.seuil).replace('.', ',') + ' → ' + m2.montant + ' €').join(' · ')
+      + ' — la marche la plus haute atteinte paie.';
+    common.cxPhraseProgres = 'Faites mieux que votre mois dernier : la moyenne du magasin gagne + '
+      + String(progres.pas).replace('.', ',') + ' → ' + progres.montant + ' € pour l’équipe. La barre se repose toute seule chaque mois.';
+
+    // --- Les RÉSULTATS (onglet Résultats) : par magasin × mois — la moyenne,
+    // le progrès (Δ vs son mois précédent), et les vendeuses sur l'échelle.
     common.cxEntetes = (d.mois || []).map(m => m.lib + (m.encours ? '*' : ''));
-    common.cxAnnee = (d.annee || []).map(m => ({ lib: m.lib, passe: m.passe }));
-    common.cxMontantShop = d.montantShop;
-    common.cxMontantShopPoser = e => this.api('POST', '/ventes/cross-paliers',
-      { paliers: (d.paliers || []), montantShop: e.target.value })
-      .then(() => { this._cross = undefined; this.notify('Prime magasin enregistrée'); this.setState({}); });
     common.cxLignes = (d.magasins || []).map(mg => ({
       nom: court(mg.nom),
-      target: mg.targetActuelle != null ? String(mg.targetActuelle) : '',
-      // La grille des 12 mois : le passé en lecture (l'histoire ne se réécrit
-      // pas), le présent et l'avenir en saisie — on ajuste en fin de mois.
-      annee: (mg.targetsAnnee || []).map(t => ({
-        passe: (d.annee || []).find(m => m.cle === t.m)?.passe,
-        val: t.target != null ? String(t.target) : '',
-        pose: t.pose,
-        poser: e => this.api('POST', '/ventes/cross-target', { shop: mg.id, m: t.m,
-            target: String(e.target.value || '').trim().replace(',', '.') })
-          .then(() => { this._cross = undefined; this.notify('Cible posée pour ' + t.m); this.setState({}); }),
-      })),
-      // La target se pose dans la cellule du magasin : elle vaut dès ce
-      // mois-ci et pour les suivants, jusqu'à la prochaine.
-      poser: e => this.api('POST', '/ventes/cross-target', { shop: mg.id,
-          target: String(e.target.value || '').trim().replace(',', '.') })
-        .then(() => { this._cross = undefined; this.notify('Target posée — elle vaut dès ce mois'); this.setState({}); }),
       cells: (mg.cells || []).map(c2 => ({
-        target: c2.target != null ? n1(c2.target) : '',
-        nb: c2.nb,
-        vide: c2.target == null,
-        eur: c2.eur || 0,
-        moyenne: c2.moyenne != null ? n1(c2.moyenne) : '',
-        shopOk: !!c2.shopOk,
-        primeShop: c2.primeShop || 0,
+        vide: c2.moyenne == null,
+        moyenne: n2(c2.moyenne),
+        delta: c2.delta == null ? '' : (c2.delta >= 0 ? '+ ' : '− ') + n2(Math.abs(c2.delta)),
+        deltaPos: c2.delta != null && c2.delta >= 0,
+        equipeOk: !!c2.equipeOk, primeEquipe: c2.primeEquipe || 0,
+        nb: c2.nb, eur: c2.eur || 0,
         noms: (c2.atteintes || []).map(a2 => a2.nom + ' (' + n1(a2.lignesTicket) + ' → ' + (a2.prime || 0) + ' €)').join(' · ')
-          + (c2.primeShop ? ' | équipe : moyenne ' + n1(c2.moyenne) + ', cran ' + n1(c2.cranShop) + ' franchi → ' + c2.primeShop + ' €' : ''),
+          + (c2.equipeOk ? ' | équipe : ' + n2(c2.precedent) + ' → ' + n2(c2.moyenne) + ' = ' + c2.primeEquipe + ' €' : ''),
       })),
     }));
-    // --- Le simulateur (page V1) : scénarios et compte, dernier mois servi.
+
+    // --- Le SIMULATEUR : le progrès chiffré sur les tickets caisse.
     const sim = d.sim;
-    common.cxPdfEquipe = API_BASE + '/ventes/explication.pdf';
     common.cxSim = null;
     if (sim && (sim.magasins || []).length) {
       const vl = +sim.valeurLigne || 0;
       const marge = +sim.marge || 65;
-      const paliersFx = (d.paliers || []).map(p2 => ({ plus: +p2.plus, montant: +p2.montant }));
-      // « Mieux ne paie jamais moins » : l'étage vaut le max des crans franchis.
-      const primeEquipeEtage = plus => {
-        let m2 = +d.montantShop || 0;
-        paliersFx.forEach(p2 => { if (plus >= p2.plus - 1e-9 && p2.montant >= m2) { m2 = p2.montant; } });
-        return m2;
-      };
-      const cibleDe = {};
-      (d.magasins || []).forEach(mg => { cibleDe[String(mg.id)] = mg.targetActuelle != null ? +mg.targetActuelle : null; });
+      const pas = +progres.pas || 0.15;
+      const mEq = +progres.montant || 0;
+      const marche1 = echelle.length ? +echelle[0].montant : 0;
       const eur0 = v => Math.round(v).toLocaleString('fr-BE') + ' €';
-      const calc = plus => {
-        let ca = 0, bud = 0;
-        sim.magasins.forEach(m2 => {
-          const cib = cibleDe[String(m2.id)];
-          if (cib == null || m2.moyenne == null) { return; }
-          ca += Math.max(0, (cib + plus) - m2.moyenne) * m2.tickets * vl;
-          bud += primeEquipeEtage(plus) + (m2.vendeuses || 0) * (+d.montant || 0);
-        });
-        return { ca, bud, net: ca * marge / 100 - bud };
-      };
-      let tca = 0, tbud = 0;
-      const compteLignes = sim.magasins.map(m2 => {
-        const cib = cibleDe[String(m2.id)];
-        const ec = cib != null && m2.moyenne != null ? Math.max(0, cib - m2.moyenne) : null;
-        const ca = ec != null ? ec * m2.tickets * vl : 0;
-        const bud = (+d.montantShop || 0) + (m2.vendeuses || 0) * (+d.montant || 0);
-        tca += ca; tbud += cib != null ? bud : 0;
-        return { nom: court(m2.nom),
-          cible: cib != null ? String(cib) : '',
-          poser: e => this.api('POST', '/ventes/cross-target', { shop: m2.id,
-              target: String(e.target.value || '').trim().replace(',', '.') })
-            .then(() => { this._cross = undefined; this.notify('Cible posée — elle vaut dès ce mois'); this.setState({}); }),
-          moyenne: m2.moyenne != null ? String(m2.moyenne).replace('.', ',') : '',
-          ecart: ec != null && ec > 0 ? '−' + String(Math.round(ec * 100) / 100).replace('.', ',') : (ec === 0 ? '✓' : ''),
-          tickets: (m2.tickets || 0).toLocaleString('fr-BE'),
-          ca: ca > 0 ? '+ ' + eur0(ca) : '', margeE: ca > 0 ? '+ ' + eur0(ca * marge / 100) : '',
-          primes: cib != null ? eur0(bud) : '',
-          cout: ca > 0 ? String(Math.round(1000 * bud / ca) / 10).replace('.', ',') + ' %' : '' };
-      });
+      const totTickets = sim.magasins.reduce((a2, m2) => a2 + (m2.tickets || 0), 0);
+      const totVend = sim.magasins.reduce((a2, m2) => a2 + (m2.vendeuses || 0), 0);
+      const budget = sim.magasins.length * mEq + totVend * marche1;
       common.cxSim = {
         moisLib: sim.lib + (sim.ticketsCaisse ? ' · tickets : caisse' : ' · tickets : table locale (partielle)'),
         valeurLigne: sim.valeurLigne != null ? String(sim.valeurLigne).replace('.', ',') : '',
@@ -5286,24 +5243,41 @@ class App {
           .then(() => { this._cross = undefined; this.notify('Valeur d’une ligne enregistrée'); this.setState({}); }),
         poserMarge: e => this.api('POST', '/ventes/sim', { marge: String(e.target.value || '').trim().replace(',', '.') })
           .then(() => { this._cross = undefined; this.notify('Marge enregistrée'); this.setState({}); }),
-        etages: [{ plus: 0, nom: 'À la cible' }].concat(paliersFx.map(p2 => ({ plus: p2.plus, nom: 'Cran +' + String(p2.plus).replace('.', ',') })))
-          .map((et, i2) => { const r2 = calc(et.plus);
-            return { nom: et.nom, premier: i2 === 0, prime: primeEquipeEtage(et.plus) + ' €',
-              ca: '+ ' + eur0(r2.ca), bud: '− ' + eur0(r2.bud), net: '+ ' + eur0(r2.net) }; }),
-        compte: { lignes: compteLignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
-          totPrimes: eur0(tbud), totNet: '+ ' + eur0(tca * marge / 100 - tbud),
-          totCout: tca > 0 ? String(Math.round(1000 * tbud / tca) / 10).replace('.', ',') + ' %' : '' },
+        etages: [1, 2, 3].map(k => {
+          const ca = k * pas * totTickets * vl;
+          return { nom: k === 1 ? 'Le pas — + ' + String(pas).replace('.', ',') : k + ' pas — + ' + String(Math.round(k * pas * 100) / 100).replace('.', ','),
+            premier: k === 1, ca: '+ ' + eur0(ca), bud: '− ' + eur0(budget),
+            net: '+ ' + eur0(ca * marge / 100 - budget) };
+        }),
+        compte: (() => {
+          let tca = 0;
+          const lignes = sim.magasins.map(m2 => {
+            const ca = pas * (m2.tickets || 0) * vl;
+            tca += ca;
+            const budM = mEq + (m2.vendeuses || 0) * marche1;
+            return { nom: court(m2.nom),
+              moyenne: m2.moyenne != null ? String(m2.moyenne).replace('.', ',') : '',
+              objectif: m2.moyenne != null ? String(Math.round((m2.moyenne + pas) * 100) / 100).replace('.', ',') : '',
+              tickets: (m2.tickets || 0).toLocaleString('fr-BE'),
+              ca: '+ ' + eur0(ca), primes: eur0(budM),
+              cout: ca > 0 ? String(Math.round(1000 * budM / ca) / 10).replace('.', ',') + ' %' : '' };
+          });
+          return { lignes, totCa: '+ ' + eur0(tca), totMarge: '+ ' + eur0(tca * marge / 100),
+            totPrimes: eur0(budget), totNet: '+ ' + eur0(tca * marge / 100 - budget),
+            totCout: tca > 0 ? String(Math.round(1000 * budget / tca) / 10).replace('.', ',') + ' %' : '' };
+        })(),
       };
     }
 
     const der = (d.mois || []).find(m => m.cle === d.dernierRevolu);
     common.cxPrime = d.enregistre
-      ? { fait: true, txt: 'Primes cross de ' + d.dernierRevolu + ' enregistrées le ' + d.enregistre.quand
-          + ' — ' + (d.enregistre.gagnantes || []).length + ' gagnante(s)' }
-      : !der ? null : { fait: false, txt: 'Enregistrer les primes cross de ' + d.dernierRevolu,
+      ? { fait: true, txt: 'Primes de ' + d.dernierRevolu + ' enregistrées le ' + d.enregistre.quand
+          + ' — ' + (d.enregistre.gagnantes || []).length + ' sur l’échelle, '
+          + (d.enregistre.magasinsGagnants || []).length + ' équipe(s) en progrès' }
+      : !der ? null : { fait: false, txt: 'Enregistrer les primes de ' + d.dernierRevolu,
           agir: () => this.api('POST', '/ventes/cross-primes', { m: d.dernierRevolu }).then(r => {
             if (r && r.ok === false) { return; }
-            this.notify('Primes cross enregistrées — elles sont au journal');
+            this.notify('Primes enregistrées — elles sont au journal');
             this._cross = undefined; this.setState({});
           }) };
   }
