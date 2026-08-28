@@ -7512,11 +7512,11 @@ function tplVentes(c, x){
       <div style="${lbl}">2 · Bats ton record — la règle, pour chacune ET chaque magasin</div>
       <div style="font-size:12px;margin:5px 0 12px;max-width:960px">
         <b>Comment ça marche, en deux phrases.</b><br>
-        1 · <b>Chacune</b> a une barre : sa meilleure moyenne de lignes par ticket des 12 derniers mois — son record. Chaque dixième au-dessus, elle gagne le montant ci-dessous ; son nouveau record devient sa barre.<br>
+        1 · <b>Chacune</b> a une barre : sa meilleure moyenne de lignes par ticket des 12 derniers mois — son record. Le 1er dixième au-dessus pose son nouveau record ; <b>à partir du 2e</b>, chaque dixième gagne le montant ci-dessous.<br>
         2 · <b>Chaque magasin</b> a la même règle sur la moyenne de l'équipe : battre son record fait gagner tout le monde.<br>
         <span style="color:var(--color-text-muted)">Un record de plus d'un an expire (la barre reste à portée) · payés jusqu'au plafond de dixièmes ci-dessous · 30 tickets minimum dans le mois.</span></div>
       <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap">
-        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Par dixième au-dessus du record
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Par dixième (dès le 2e au-dessus du record)
           <input type="number" min="0" step="10" value="${esc(R.eurDixieme || '')}" ${x.C(R.poserEurDixieme)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Dixièmes payés max / mois
           <input type="number" min="1" max="10" step="1" value="${esc(R.maxDixiemes || '')}" ${x.C(R.poserMaxDixiemes)} style="width:56px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"></label>
@@ -7547,7 +7547,7 @@ function tplVentes(c, x){
         </div>`).join('')}
       </div>
       <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:760px;font-size:12px">
-        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Moyenne</th><th style="${thS}">Record d'équipe</th><th style="${thS}">À battre (+ 0,1)</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus</th><th style="${thS}">Primes max</th><th style="${thS}">Coût / CA</th></tr>
+        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Moyenne</th><th style="${thS}">Record d'équipe</th><th style="${thS}">Prime dès (+ 0,2)</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus</th><th style="${thS}">Primes max</th><th style="${thS}">Coût / CA</th></tr>
         ${SIM.compte.lignes.map(l => `
         <tr>
           <td style="${tdS};text-align:left;font-weight:600">${esc(l.nom)}</td>
@@ -7571,7 +7571,7 @@ function tplVentes(c, x){
           <td style="${tdS};color:var(--color-text-muted)">${esc(SIM.compte.totCout)}</td>
         </tr>
       </table></div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = un dixième pour le magasin ET chaque vendeuse classable — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = une tranche pour le magasin ET chaque vendeuse classable (le 1er dixième ne paie pas) — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
     </div>`}
   </div>`;
   }

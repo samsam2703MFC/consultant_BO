@@ -5182,8 +5182,8 @@ class App {
       eurDixieme: String(reg.eurDixieme), poserEurDixieme: poser('eurDixieme'),
       maxDixiemes: String(reg.maxDixiemes || 3), poserMaxDixiemes: poser('maxDixiemes'),
     };
-    common.cxPhrase = 'Bats ton record : ' + reg.eurDixieme + ' € par dixième au-dessus de ta meilleure moyenne des 12 derniers mois — toi comme ton magasin (payés jusqu’à '
-      + (reg.maxDixiemes || 3) + ' dixièmes par mois).';
+    common.cxPhrase = 'Bats ton record : le 1er dixième au-dessus de ta meilleure moyenne des 12 derniers mois pose ton nouveau record, puis chaque dixième = '
+      + reg.eurDixieme + ' € — toi comme ton magasin (plafonné à ' + (reg.maxDixiemes || 3) + ' tranches par mois).';
 
     // --- Les RÉSULTATS : par magasin × mois — moyenne, record, écart,
     // primes d'équipe et records battus par les vendeuses.
@@ -5235,26 +5235,26 @@ class App {
           .then(() => { this._cross = undefined; this.notify('Valeur d’une ligne enregistrée'); this.setState({}); }),
         poserMarge: e => this.api('POST', '/ventes/sim', { marge: String(e.target.value || '').trim().replace(',', '.') })
           .then(() => { this._cross = undefined; this.notify('Marge enregistrée'); this.setState({}); }),
-        etages: [1, 2, 3].map(k => {
+        etages: [2, 3, 4].map(k => {
           // CA en plus : chaque magasin passe de sa moyenne actuelle à
-          // record + k×0,1 ; primes : k dixièmes pour chaque magasin ET
-          // chaque vendeuse classable (pire cas).
+          // record + k×0,1. Le 1er dixième ne paie pas : k dixièmes au-dessus
+          // du record = k−1 tranches, pour le magasin ET chaque vendeuse.
           let ca = 0;
           sim.magasins.forEach(m2 => {
             const rec = recDe[String(m2.id)];
             if (rec == null || m2.moyenne == null) { return; }
             ca += Math.max(0, (rec + k * 0.1) - m2.moyenne) * (m2.tickets || 0) * vl;
           });
-          const kPaye = Math.min(k, +reg.maxDixiemes || 3);
+          const kPaye = Math.min(k - 1, +reg.maxDixiemes || 3);
           const bud = (sim.magasins.length + totVend) * kPaye * eurD;
-          return { nom: 'Record + 0,' + k, premier: k === 1,
+          return { nom: 'Record + 0,' + k, premier: k === 2,
             ca: '+ ' + eur0(ca), bud: '− ' + eur0(bud), net: eurS(ca * marge / 100 - bud) };
         }),
         compte: (() => {
           let tca = 0, tbud = 0;
           const lignes = sim.magasins.map(m2 => {
             const rec = recDe[String(m2.id)];
-            const objectif = rec != null ? Math.round((rec + 0.1) * 100) / 100 : null;
+            const objectif = rec != null ? Math.round((rec + 0.2) * 100) / 100 : null;
             const ca = (rec != null && m2.moyenne != null) ? Math.max(0, objectif - m2.moyenne) * (m2.tickets || 0) * vl : 0;
             const bud = eurD * (1 + (m2.vendeuses || 0));
             tca += ca; tbud += bud;
