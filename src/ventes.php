@@ -1627,7 +1627,10 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             $libDet = strftime_fr(strtotime($mDet . '-01'), 'M Y');
             $n2d = static fn ($v) => number_format((float) $v, 2, ',', ' ');
             $eur0f = static fn ($v) => number_format((float) $v, 0, ',', ' ');
-            $duShop = array_values(array_filter($lignesDet, fn ($l5) => (string) $l5['shopId'] === (string) $sid));
+            // Sans vente à son nom, pas de ligne : la page parle de ce qui
+            // s'est vendu, pas du planning de la production.
+            $duShop = array_values(array_filter($lignesDet,
+                fn ($l5) => (string) $l5['shopId'] === (string) $sid && (float) $l5['ca'] > 0));
             $meilleure = null;
             foreach ($duShop as $l5) { if ($l5['classable']) { $meilleure = $l5; break; } }
             $reseau1 = $topReseau[0] ?? null;
