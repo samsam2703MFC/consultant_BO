@@ -159,3 +159,4 @@ deploy 20260828T081826Z barres a battre + colis mensuel + envoi test
 deploy 20260828T083547Z affiche barres nominatives + un seul fichier
 deploy 20260828T084349Z premier dixieme ne paie pas
 deploy 20260828T084559Z qr appli personnel + primes en bons
+deploy 20260828T085315Z affiche escalier plafond + qr progres

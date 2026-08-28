@@ -1585,10 +1585,14 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'
             . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm"><b>Bats ton record</b> — ta meilleure moyenne des 12 derniers mois est ta barre. Le premier dixi&#232;me au-dessus pose ton nouveau record ; <b class="acc">&#224; partir du deuxi&#232;me, chaque dixi&#232;me = ' . $regAff['eurDixieme'] . ' €</b>. Pareil pour le magasin, pour toute l\'&#233;quipe.</div>'
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
-            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,1</div><div class="v" style="color:#7a736a">nouveau record</div></td>'
-            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,2</div><div class="v">' . $regAff['eurDixieme'] . ' €</div></td>'
-            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,3</div><div class="v">' . (2 * $regAff['eurDixieme']) . ' €</div></td>'
-            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,4</div><div class="v">' . (3 * $regAff['eurDixieme']) . ' €</div></td>'
+            . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,1</div><div class="v" style="color:#7a736a">nouveau record</div></td>';
+        for ($t4 = 1; $t4 <= 3; $t4++) {
+            $paye4 = min($t4, $regAff['maxDixiemes']);
+            $h .= '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,' . ($t4 + 1) . '</div>'
+                . '<div class="v">' . ($paye4 * $regAff['eurDixieme']) . ' €'
+                . ($t4 > $regAff['maxDixiemes'] ? ' <span style="font-size:7pt;color:#7a736a">(plafond)</span>' : '') . '</div></td>';
+        }
+        $h .= ''
             . '</tr></table>'
             . '<div class="regle" style="margin-bottom:5mm">Payé jusqu&#8217;&#224; ' . $regAff['maxDixiemes'] . ' dixi&#232;mes par mois — et ton nouveau record devient ta barre : on ne paie jamais deux fois le m&#234;me progr&#232;s.</div>';
 
@@ -1600,8 +1604,8 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 4mm"><tr>'
             . '<td width="34%" class="carte" style="vertical-align:top"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">L&#8217;&#201;quipe — record du magasin</div>'
             . '<div class="gros">' . ($recEquipe !== null ? $n2f($recEquipe) : '&#224; poser') . '</div>'
-            . '<div class="regle">' . ($recEquipe !== null
-                ? 'D&#232;s ' . $n2f($recEquipe + 0.2) . ', l&#8217;&#233;quipe gagne ' . $regAff['eurDixieme'] . ' €.'
+            . '<div style="font-size:10.5pt;margin-top:1mm">' . ($recEquipe !== null
+                ? 'D&#232;s <b class="acc">' . $n2f($recEquipe + 0.2) . '</b>, l&#8217;&#233;quipe gagne <b class="acc">' . $regAff['eurDixieme'] . ' €</b>.'
                 : 'Ce mois-ci pose le premier record de l&#8217;&#233;quipe.') . '</div></td>'
             . '<td width="66%" style="vertical-align:top"><table width="100%" cellpadding="0" cellspacing="3">';
         $listeB = $barres[(string) $sid] ?? [];
@@ -1640,9 +1644,11 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 . '</div>' : '')
             . '<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e6e0d8;margin-top:1mm"><tr>'
             . '<td style="padding-top:3mm"><div class="regle">Les règles, simplement : au moins 30 tickets dans le mois · les primes se versent une fois le mois fini, <b>en bons payés par la marque</b> — jamais par le magasin · la meilleure du réseau ne cumule pas la prime magasin, mais les primes du record s’ajoutent toujours · tout est vérifiable dans le cockpit, la formule est affichée. Bonne chasse ! — L’Atelier by, ' . $e($libMois) . '</div></td>'
-            . '<td width="60" align="right" style="padding-top:3mm;padding-left:4mm">'
-            . '<img src="data:image/png;base64,' . VENTE_APPLI_QR . '" style="width:19mm;height:19mm"><br>'
-            . '<span style="font-size:6.5pt;color:#7a736a">ton appli du personnel</span></td>'
+            . '<td width="150" align="right" style="padding-top:3mm;padding-left:4mm">'
+            . '<table cellpadding="0" cellspacing="0"><tr>'
+            . '<td style="text-align:right;padding-right:2.5mm;font-size:8pt;color:#5d564e;line-height:1.5"><b>Pour suivre vos progr&#232;s,</b><br>rendez-vous sur votre compte<br>sur l&#8217;appli du personnel &#8594;</td>'
+            . '<td><img src="data:image/png;base64,' . VENTE_APPLI_QR . '" style="width:19mm;height:19mm"></td>'
+            . '</tr></table></td>'
             . '</tr></table>'
             . '</div>';
         $premier = false;
