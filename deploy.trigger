@@ -177,3 +177,4 @@ deploy 1788018214 bouton portail mail fournisseur
 deploy 1788020682 resultat du jour heures + planning
 deploy 1788020829 sparkline sans la nuit
 deploy 1788022124 synchro planning api
+deploy 1788022703 sparklines alignees

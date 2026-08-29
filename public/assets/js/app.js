@@ -6377,6 +6377,13 @@ class App {
     };
 
     const sel = S.rjSel;
+    // L'axe des heures est COMMUN à toutes les sparklines : la barre de midi
+    // de Corbais est pile sous celle de Halle — sinon chaque magasin commence
+    // à sa première vente et plus rien ne se compare d'une ligne à l'autre.
+    let hMin = 99, hMax = -1;
+    (r.magasins || []).forEach(m2 => (m2.heures || []).forEach(h2 => {
+      if (h2.ca > 0) { hMin = Math.min(hMin, h2.h); hMax = Math.max(hMax, h2.h); }
+    }));
     common.rjLignes = (r.magasins || []).map(m => {
       const actif = m.shopId === sel;
       return {
@@ -6384,16 +6391,24 @@ class App {
         // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
         ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
         // La journée heure par heure, en miniature : chaque barre porte son
-        // heure et son CA en infobulle, la plus haute en bordeaux.
+        // heure et son CA en infobulle, la plus haute en bordeaux — sur
+        // l'axe d'heures commun au réseau.
         heures: (() => {
-          const hs = (m.heures || []).filter(h2 => h2.ca > 0);
-          if (hs.length < 2) { return null; }
-          const max2 = Math.max(...hs.map(h2 => h2.ca));
-          return (m.heures || []).map(h2 => ({
-            t: h2.h + ' h — ' + fE(h2.ca),
-            w: h2.ca > 0 ? Math.max(2, Math.round(h2.ca / max2 * 26)) : 2,
-            top: h2.ca === max2,
-          }));
+          const de = {};
+          (m.heures || []).forEach(h2 => { de[h2.h] = h2.ca; });
+          const vs = Object.values(de).filter(v => v > 0);
+          if (hMax < 0 || vs.length < 2) { return null; }
+          const max2 = Math.max(...vs);
+          const out = [];
+          for (let h2 = hMin; h2 <= hMax; h2++) {
+            const ca2 = de[h2] || 0;
+            out.push({
+              t: h2 + ' h — ' + fE(ca2),
+              w: ca2 > 0 ? Math.max(2, Math.round(ca2 / max2 * 26)) : 2,
+              top: ca2 > 0 && ca2 === max2,
+            });
+          }
+          return out;
         })(),
         // Le « produits par client » a désormais SA colonne : le sous-titre
         // ne sert plus qu'à dire pourquoi une ligne fermée l'est.
