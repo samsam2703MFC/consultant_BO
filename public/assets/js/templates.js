@@ -3230,7 +3230,7 @@ function tplResultatJour(c, x){
   // puis l'activité qui l'explique (tickets → panier → produits par client),
   // et la ligne finale. Marge, main-d'œuvre et frais vivent dans le détail
   // qu'on ouvre — comme le coût matière avant eux.
-  const ent = ['Magasin', 'CA du jour', c.rjRefEntete, 'Objectif du jour', 'Tickets', 'Panier',
+  const ent = ['Magasin', 'Ventes par heure', 'CA du jour', c.rjRefEntete, 'Objectif du jour', 'Tickets', 'Panier',
     'Produits / client', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
@@ -3286,13 +3286,16 @@ function tplResultatJour(c, x){
 
       <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
-        <tr>${ent.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}${i === 2 ? aide(c.rjRefAide) : ''}</th>`).join('')}</tr>
+        <tr>${ent.map((e, i) => `<th style="text-align:${i <= 1 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}${i === 3 ? aide(c.rjRefAide) : ''}</th>`).join('')}</tr>
         ${c.rjLignes.map(l => `
           <tr ${x.A(l.ouvrir)} class="hv-bg" style="${l.st}">
             <td style="padding:9px 10px;${bord}">
               <div style="font-weight:500"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nom)}</div>
               ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>` : ''}
             </td>
+            <td style="padding:6px 10px;${bord};vertical-align:middle">${l.heures
+              ? `<div style="display:flex;align-items:flex-end;gap:2px;height:26px;min-width:130px;max-width:190px">${l.heures.map(h2 => `<div title="${esc(h2.t)}" style="flex:1;background:${h2.top ? 'var(--color-primary)' : '#D9BCBF'};border-radius:2px;height:${h2.w}px"></div>`).join('')}</div>`
+              : `<span style="font-size:10px;color:var(--color-text-muted)">—</span>`}</td>
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
                 + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
@@ -3304,6 +3307,7 @@ function tplResultatJour(c, x){
         <tr style="background:var(--color-background-secondary)">
           <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:500">Réseau
             <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
           ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
           ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
           ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
@@ -3382,6 +3386,24 @@ function tplResultatJour(c, x){
           ${c.rjDetail.objectif.proj.rythme ? `<span style="font-weight:400;color:var(--color-text-muted)"> · ${esc(c.rjDetail.objectif.proj.rythme)}</span>` : ''}
         </span>` : (c.rjDetail.projMotif ? `<span style="width:100%;font-size:11px;color:var(--color-text-muted)">Pas de projection : ${esc(c.rjDetail.projMotif)}.</span>` : '')}
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
+      </div>` : ''}
+
+      ${c.rjDetail.planning ? `
+      <div style="margin-top:13px;padding:12px 13px;border-radius:10px;background:var(--color-background-secondary)">
+        <div style="${cap};margin-bottom:8px">Le planning du jour, par personne</div>
+        <table style="width:100%;border-collapse:separate;border-spacing:0 5px;font-size:12px">
+          ${c.rjDetail.planning.lignes.map(p => `
+          <tr>
+            <td style="padding:0 10px 0 0;white-space:nowrap;width:170px"><span style="font-weight:500">${esc(p.nom)}</span>
+              <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(p.creneau)} · ${esc(p.h)} h</div></td>
+            <td style="padding:0"><div style="position:relative;height:22px;background:var(--color-surface);border-radius:6px">
+              <div style="position:absolute;left:${p.g}%;width:${p.w}%;top:0;height:22px;background:#E8C9A0;border:1px solid #D9B489;border-radius:6px"></div></div></td>
+            <td style="padding:0 0 0 12px;text-align:right;white-space:nowrap;${num};width:110px">${p.ca
+              ? `<span style="font-weight:600">${esc(p.ca)}</span><div style="font-size:9.5px;color:var(--color-text-muted)">${esc(p.caH)} attribués</div>`
+              : `<span style="font-size:10px;color:var(--color-text-muted)">sans vente lisible</span>`}</td>
+          </tr>`).join('')}
+        </table>
+        <div style="font-size:10px;color:var(--color-text-muted);margin-top:4px">${esc(c.rjDetail.planning.note)}</div>
       </div>` : ''}
 
       <div style="display:grid;grid-template-columns:1.02fr 1fr;gap:22px;margin-top:13px">

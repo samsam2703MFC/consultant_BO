@@ -2084,6 +2084,25 @@ function ep_exploitation_jour(): array
     $catsRef = [];
     foreach ($refDates as $i => $rd) { $catsRef[$rd] = $lireCats($res['catsR' . $i] ?? null); }
 
+    // Le PLANNING de la journée, par personne : qui est en poste, de quand à
+    // quand — la face humaine des ventes par heure. Le CA attribué se calcule
+    // dans la boucle, une fois les heures du magasin connues.
+    $planParShop = [];
+    try {
+        $empsJ = function_exists('venteEmployes') ? venteEmployes() : [];
+        foreach (Db::rows('SELECT id_employee, start_hour, end_hour FROM franchisee_employee_schedule
+                            WHERE work_date = ? ORDER BY start_hour', [$date]) as $pj) {
+            $ej = $empsJ[(int) $pj['id_employee']] ?? null;
+            if ($ej === null) { continue; }
+            $dj = substr((string) $pj['start_hour'], 0, 5); $fj = substr((string) $pj['end_hour'], 0, 5);
+            $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
+            $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
+            if ($hF <= $hD) { continue; }   // un service qui passe minuit sort du cadre du jour
+            $planParShop[(string) $ej['shop']][] = ['nom' => $ej['nom'], 'debut' => $dj, 'fin' => $fj,
+                'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2)];
+        }
+    } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
+
     $GLOBALS['_profilHRefaits'] = 0;
     $joursMois = (int) date('t', strtotime($date));
     $premier   = new DateTimeImmutable($mois1);
@@ -2324,7 +2343,35 @@ function ep_exploitation_jour(): array
             $objJour = $part !== null ? round($bm['montant'] * $part, 2)
                 : ($joursOuverts > 0 ? round($bm['montant'] / $joursOuverts, 2) : null);
         }
+        // Les ventes PAR HEURE du jour (déjà lues par la route des heures) et
+        // le planning par personne : la sparkline de la vue réseau et le Gantt
+        // du détail. Le CA attribué = le CA de chaque heure partagé entre les
+        // personnes en poste cette heure-là.
+        $hjV = $res['hj' . $id] ?? null;
+        $heuresCa = [];
+        foreach ((array) (is_array($hjV) ? ($hjV['hours'] ?? []) : []) as $x9) {
+            $h9 = (int) ($x9['hour'] ?? -1);
+            if ($h9 >= 0 && $h9 <= 23) { $heuresCa[$h9] = round((float) ($x9['ca'] ?? 0), 2); }
+        }
+        ksort($heuresCa);
+        $planM = $planParShop[(string) $id] ?? [];
+        foreach ($planM as $i9 => $p9) {
+            $att = 0.0;
+            foreach ($heuresCa as $h9 => $ca9) {
+                if ($ca9 <= 0 || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
+                $nb9 = 0;
+                foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
+                $att += $ca9 / max(1, $nb9);
+            }
+            $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
+            $planM[$i9]['caH'] = ($att > 0 && $p9['h'] > 0) ? round($att / $p9['h'], 2) : null;
+            unset($planM[$i9]['hD'], $planM[$i9]['hF']);
+        }
+        usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
+
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
+            'heures' => array_map(static fn ($h9) => ['h' => $h9, 'ca' => $heuresCa[$h9]], array_keys($heuresCa)),
+            'planning' => $planM,
             'ca' => round($ca, 2),
             'refCa' => $refCa !== null ? round($refCa, 2) : null,
             'refJours' => $refN,

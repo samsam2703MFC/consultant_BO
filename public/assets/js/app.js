@@ -6383,6 +6383,18 @@ class App {
         id: m.shopId, nom: m.magasin, ouvert: !!m.ouvert, actif,
         // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
         ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        // La journée heure par heure, en miniature : chaque barre porte son
+        // heure et son CA en infobulle, la plus haute en bordeaux.
+        heures: (() => {
+          const hs = (m.heures || []).filter(h2 => h2.ca > 0);
+          if (hs.length < 2) { return null; }
+          const max2 = Math.max(...hs.map(h2 => h2.ca));
+          return (m.heures || []).map(h2 => ({
+            t: h2.h + ' h — ' + fE(h2.ca),
+            w: h2.ca > 0 ? Math.max(2, Math.round(h2.ca / max2 * 26)) : 2,
+            top: h2.ca === max2,
+          }));
+        })(),
         // Le « produits par client » a désormais SA colonne : le sous-titre
         // ne sert plus qu'à dire pourquoi une ligne fermée l'est.
         sousTitre: m.ouvert ? '' : (m.motif || 'sans réponse'),
@@ -6457,9 +6469,31 @@ class App {
     const moisNet = serie.reduce((t, j) => t + (j.net || 0), 0);
     const moisCa = serie.reduce((t, j) => t + (j.ca || 0), 0);
 
+    const hNum = t2 => +t2.slice(0, 2) + (+t2.slice(3, 5)) / 60;
     common.rjDetail = {
       id: m.shopId, nom: m.magasin,
       fermer: () => this.setState({ rjSel: null }),
+      // Le planning du jour en barres : chaque personne, son créneau posé sur
+      // l'axe des heures du magasin, et le CA attribué (le CA de chaque heure
+      // partagé entre les personnes en poste cette heure-là).
+      planning: (m.planning || []).length === 0 ? null : (() => {
+        const ps = m.planning;
+        const h0 = Math.floor(Math.min(...ps.map(p2 => hNum(p2.debut))));
+        const h1 = Math.ceil(Math.max(...ps.map(p2 => hNum(p2.fin))));
+        const span = Math.max(1, h1 - h0);
+        return {
+          note: 'Axe de ' + h0 + ' h à ' + h1 + ' h · CA attribué = le CA de chaque heure partagé entre les personnes en poste — pas les ventes encaissées à son nom.',
+          lignes: ps.map(p2 => ({
+            nom: p2.nom,
+            creneau: p2.debut.replace(':', 'h') + ' – ' + p2.fin.replace(':', 'h'),
+            h: String(p2.h).replace('.', ','),
+            g: ((hNum(p2.debut) - h0) / span * 100).toFixed(1),
+            w: Math.max(2, (hNum(p2.fin) - hNum(p2.debut)) / span * 100).toFixed(1),
+            ca: p2.ca != null ? fE(p2.ca) : '',
+            caH: p2.caH != null ? fE(p2.caH) + '/h' : '',
+          })),
+        };
+      })(),
       ca: fE(m.ca), delta: fDelta(m.caDelta), deltaCoul: coulDelta(m.caDelta),
       deltaTxt: m.caDelta == null
         ? 'aucun ' + (ref.jourSemaine || 'jour') + ' de référence ouvert'
