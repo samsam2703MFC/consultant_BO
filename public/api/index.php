@@ -19,6 +19,7 @@ require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
+require __DIR__ . '/../../src/panel_ventes.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';

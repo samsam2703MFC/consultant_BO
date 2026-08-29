@@ -185,30 +185,57 @@ function venteMois(string $m, array $nomDe): array
     $iGlobal = $hTous > 0 ? $caTous / $hTous : 0.0;
     foreach ($hSeg as $k => $h2) { $intens[$k] = $h2 > 1 ? $caSeg[$k] / $h2 : null; }
 
-    // Les ventes, par vendeur.
+    // Les ventes, par vendeur. La table locale d'abord (l'historique jusqu'à
+    // la mi-juillet y vit encore) ; un mois qu'elle ne porte plus vient des
+    // ENDPOINTS du panel — CA et tickets par vendeuse, exacts. Les lignes par
+    // ticket n'ont pas encore de route côté tfbuddy : elles restent nulles
+    // sur ces mois-là, et aucun record ne se joue sur un zéro inventé.
     $ventes = []; $sans = ['tickets' => 0, 'ca' => 0.0];
+    $apiMois = false;
     try {
-        foreach (Db::rows('SELECT id_employee, COUNT(DISTINCT ticket_key) tickets,
-                                  SUM(total_gross_amount_after_discount) ca
-                             FROM `transaction`
-                            WHERE insert_timestamp >= ? AND insert_timestamp < ?
-                            GROUP BY id_employee', [$du, $au]) as $r) {
-            if ($r['id_employee'] === null) {
-                $sans = ['tickets' => (int) $r['tickets'], 'ca' => (float) $r['ca']];
-                continue;
+        $nLoc = Db::row('SELECT COUNT(*) n FROM `transaction`
+                          WHERE insert_timestamp >= ? AND insert_timestamp < ?', [$du, $au]);
+        $apiMois = (int) ($nLoc['n'] ?? 0) === 0;
+    } catch (PDOException $e) { $apiMois = true; }
+    if ($apiMois) {
+        $pv = function_exists('panelVentesMois') ? panelVentesMois($m) : null;
+        if ($pv === null) {
+            return ['lignes' => [], 'sansVendeur' => [],
+                'motif' => 'mois absent de la caisse locale, et les endpoints du panel n’ont pas répondu'];
+        }
+        $ventes = $pv['ventes']; $sans = $pv['sans'];
+        // La ventilation par créneau vient elle aussi des endpoints : les
+        // intensités se recalculent avec elle, le coefficient reste mesuré.
+        if (array_sum((array) ($pv['caSeg'] ?? [])) > 0) {
+            $caSeg = $pv['caSeg'];
+            $caTous = array_sum($caSeg);
+            $iGlobal = $hTous > 0 ? $caTous / $hTous : 0.0;
+            foreach ($hSeg as $k => $h2) { $intens[$k] = $h2 > 1 ? $caSeg[$k] / $h2 : null; }
+        }
+    } else {
+        try {
+            foreach (Db::rows('SELECT id_employee, COUNT(DISTINCT ticket_key) tickets,
+                                      SUM(total_gross_amount_after_discount) ca
+                                 FROM `transaction`
+                                WHERE insert_timestamp >= ? AND insert_timestamp < ?
+                                GROUP BY id_employee', [$du, $au]) as $r) {
+                if ($r['id_employee'] === null) {
+                    $sans = ['tickets' => (int) $r['tickets'], 'ca' => (float) $r['ca']];
+                    continue;
+                }
+                $ventes[(int) $r['id_employee']] = ['tickets' => (int) $r['tickets'], 'ca' => (float) $r['ca'], 'lignes' => 0];
             }
-            $ventes[(int) $r['id_employee']] = ['tickets' => (int) $r['tickets'], 'ca' => (float) $r['ca'], 'lignes' => 0];
+            foreach (Db::rows('SELECT t.id_employee, COUNT(*) lignes
+                                 FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
+                                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                                  AND t.id_employee IS NOT NULL
+                                GROUP BY t.id_employee', [$du, $au]) as $r) {
+                $id = (int) $r['id_employee'];
+                if (isset($ventes[$id])) { $ventes[$id]['lignes'] = (int) $r['lignes']; }
+            }
+        } catch (PDOException $e) {
+            return ['lignes' => [], 'sansVendeur' => [], 'motif' => 'lecture des tickets impossible'];
         }
-        foreach (Db::rows('SELECT t.id_employee, COUNT(*) lignes
-                             FROM transaction_product l JOIN `transaction` t ON t.id = l.id_transaction
-                            WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
-                              AND t.id_employee IS NOT NULL
-                            GROUP BY t.id_employee', [$du, $au]) as $r) {
-            $id = (int) $r['id_employee'];
-            if (isset($ventes[$id])) { $ventes[$id]['lignes'] = (int) $r['lignes']; }
-        }
-    } catch (PDOException $e) {
-        return ['lignes' => [], 'sansVendeur' => [], 'motif' => 'lecture des tickets impossible'];
     }
 
     $lignes = [];
@@ -253,7 +280,10 @@ function venteMois(string $m, array $nomDe): array
             'partAm' => $partAm, 'partWe' => $partWe,
             'score' => $classable ? (int) round($ca / $lisse * $coefCre) : null,
             'panier' => $tickets > 0 ? round($ca / $tickets, 2) : null,
-            'lignesTicket' => $tickets > 0 ? round(($v['lignes'] ?? 0) / $tickets, 1) : null,
+            // Lignes inconnues (mois servi par les endpoints, sans route
+            // produits) : null, jamais un 0,0 qui écraserait les records.
+            'lignesTicket' => ($tickets > 0 && ($v['lignes'] ?? null) !== null)
+                ? round($v['lignes'] / $tickets, 1) : null,
             'classable' => $classable,
             'motifHorsClassement' => $classable ? null
                 : ($ca <= 0 ? 'aucune vente à son nom'
