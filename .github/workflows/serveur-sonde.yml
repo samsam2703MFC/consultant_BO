@@ -1,0 +1,78 @@
+name: Sonde serveur — synchro caisse
+
+# Diagnostic EN LECTURE SEULE : retrouver le job qui alimente les tables
+# `transaction` et `franchisee_employee_schedule` (synchro arrêtée fin
+# juillet), sans rien changer sur le serveur. Le résultat se lit dans les
+# logs du run.
+
+on:
+  workflow_dispatch:
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Inventaire des crons et services
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
+            echo "=== crontab root ==="; crontab -l 2>/dev/null || echo "(vide)"
+            echo; echo "=== crontabs des autres comptes ==="
+            for u in $(cut -d: -f1 /etc/passwd); do
+              c=$(crontab -l -u "$u" 2>/dev/null) && [ -n "$c" ] && { echo "--- $u ---"; echo "$c"; }
+            done; true
+            echo; echo "=== /etc/cron.d ==="; ls -la /etc/cron.d 2>/dev/null; cat /etc/cron.d/* 2>/dev/null
+            echo; echo "=== cron.daily/hourly ==="; ls /etc/cron.daily /etc/cron.hourly 2>/dev/null
+            echo; echo "=== timers systemd ==="; systemctl list-timers --all --no-pager 2>/dev/null | head -25
+            echo; echo "=== services suspects ==="; systemctl list-units --type=service --no-pager 2>/dev/null | grep -i -E "sync|tfb|atelier|import" || echo "(aucun)"
+          '
+
+      - name: Chercher le script de synchro
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
+            echo "=== racines web ==="; ls /var/www 2>/dev/null; ls /var/www/html 2>/dev/null | head; ls /opt 2>/dev/null
+            echo; echo "=== scripts qui écrivent transaction / planning ==="
+            grep -rln -E "INSERT INTO .?transaction|franchisee_employee_schedule" \
+              /var/www /opt --include="*.php" --include="*.sh" --include="*.py" 2>/dev/null \
+              | grep -v -E "consulant_bo|/vendor/" | head -20 || echo "(rien trouvé)"
+            echo; echo "=== logs de cron récents ==="
+            grep -i cron /var/log/syslog 2>/dev/null | tail -12 || journalctl -u cron --no-pager 2>/dev/null | tail -12 || echo "(pas de log lisible)"
+          '
+
+      - name: Fraîcheur des tables
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
+            creds=""
+            [ -f /opt/consulant_bo_src/.deployenv ] && . /opt/consulant_bo_src/.deployenv 2>/dev/null || true
+            if [ -n "${COCKPIT_DB_USER:-}" ]; then
+              mysql -u"${COCKPIT_DB_USER}" -p"${COCKPIT_DB_PASSWORD}" atelierby_db -e \
+                "SELECT MAX(insert_timestamp) derniere_transaction FROM \`transaction\`;
+                 SELECT MAX(work_date) dernier_planning FROM franchisee_employee_schedule;" 2>&1 | head -8
+            else
+              echo "(pas d identifiants MySQL dans .deployenv — fraicheur non lue)"
+            fi
+          '
