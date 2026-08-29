@@ -3294,7 +3294,7 @@ function tplResultatJour(c, x){
               ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>` : ''}
             </td>
             <td style="padding:6px 10px;${bord};vertical-align:middle">${l.heures
-              ? `<div style="display:flex;align-items:flex-end;gap:2px;height:26px;min-width:130px;max-width:190px">${l.heures.map(h2 => `<div title="${esc(h2.t)}" style="flex:1;background:${h2.top ? 'var(--color-primary)' : '#D9BCBF'};border-radius:2px;height:${h2.w}px"></div>`).join('')}</div>`
+              ? `<div ${l.voirHeures ? x.A(l.voirHeures) : ''} title="Voir le CA heure par heure" style="display:flex;align-items:flex-end;gap:2px;height:26px;min-width:130px;max-width:190px;cursor:${l.voirHeures ? 'pointer' : 'default'}">${l.heures.map(h2 => `<div title="${esc(h2.t)}" style="flex:1;background:${h2.top ? 'var(--color-primary)' : '#D9BCBF'};border-radius:2px;height:${h2.w}px"></div>`).join('')}</div>`
               : `<span style="font-size:10px;color:var(--color-text-muted)">—</span>`}</td>
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
@@ -3460,6 +3460,38 @@ function tplResultatJour(c, x){
       </div>
     </div>` : (c.rjInvite ? `
     <div style="font-size:11.5px;color:var(--color-text-muted);padding:2px 2px 0;text-wrap:pretty">${esc(c.rjInvite)}</div>` : '')}
+
+    ${c.rjHeures ? `
+    <!-- La modale du CA heure par heure : le voile ferme, la carte non (son
+         data-h vide capte le clic avant le voile). -->
+    <div ${x.A(c.rjHeures.fermer)} style="position:fixed;inset:0;background:rgba(34,30,26,.45);z-index:120;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div ${x.A(c.rjHeures.rien)} style="${carte};width:420px;max-width:94vw;max-height:86vh;overflow:auto;padding:17px 19px;cursor:default;box-shadow:0 18px 50px rgba(34,30,26,.35)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div>
+            <div style="${cap}">Ventes par heure</div>
+            <div style="font-family:var(--font-display);font-size:18px;margin-top:3px">${esc(c.rjHeures.nom)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.rjHeures.date)}</div>
+          </div>
+          <button ${x.A(c.rjHeures.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:11px">
+          ${c.rjHeures.lignes.map(h2 => `
+          <tr>
+            <td style="padding:5px 0;width:74px;white-space:nowrap;${num};color:${h2.top ? 'var(--color-primary)' : 'var(--color-text)'};font-weight:${h2.top ? '700' : '400'}">${esc(h2.h)}</td>
+            <td style="padding:5px 8px"><span style="display:block;height:9px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden">
+              <i style="display:block;height:100%;width:${h2.w}%;border-radius:999px;background:${h2.top ? 'var(--color-primary)' : '#D9BCBF'}"></i></span></td>
+            <td style="padding:5px 0;width:76px;text-align:right;${num};font-weight:${h2.top ? '700' : '500'}">${esc(h2.ca)}</td>
+            <td style="padding:5px 0 5px 10px;width:52px;text-align:right;${num};font-size:10.5px;color:var(--color-text-muted)">${esc(h2.part)}</td>
+          </tr>`).join('')}
+          <tr>
+            <td style="padding:8px 0 0;border-top:1px solid var(--color-border-secondary);font-weight:700">Total</td>
+            <td style="padding:8px 8px 0;border-top:1px solid var(--color-border-secondary);font-size:10.5px;color:var(--color-text-muted)">${esc(c.rjHeures.tickets)}</td>
+            <td style="padding:8px 0 0;border-top:1px solid var(--color-border-secondary);text-align:right;${num};font-weight:700">${esc(c.rjHeures.total)}</td>
+            <td style="padding:8px 0 0 10px;border-top:1px solid var(--color-border-secondary)"></td>
+          </tr>
+        </table>
+      </div>
+    </div>` : ''}
 
   </div>`;
 }

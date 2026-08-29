@@ -6390,6 +6390,10 @@ class App {
         id: m.shopId, nom: m.magasin, ouvert: !!m.ouvert, actif,
         // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
         ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        // Cliquer la sparkline ouvre la MODALE du CA heure par heure — la
+        // délégation prend le data-h le plus proche, la ligne ne bascule pas.
+        voirHeures: (m.heures || []).some(h2 => h2.ca > 0)
+          ? () => this.setState({ rjHeuresSel: m.shopId }) : null,
         // La journée heure par heure, en miniature : chaque barre porte son
         // heure et son CA en infobulle, la plus haute en bordeaux — sur
         // l'axe d'heures commun au réseau.
@@ -6442,6 +6446,31 @@ class App {
         st: 'cursor:pointer;background:' + (actif ? 'var(--color-background-secondary)' : 'transparent'),
       };
     });
+
+    // --- La MODALE du CA heure par heure : le clic sur une sparkline ouvre
+    //     le relevé complet du magasin — chaque heure, son CA, sa part.
+    common.rjHeures = null;
+    if (S.rjHeuresSel) {
+      const mH = (r.magasins || []).find(m2 => m2.shopId === S.rjHeuresSel);
+      const hs = mH ? (mH.heures || []).filter(h2 => h2.ca > 0) : [];
+      if (hs.length) {
+        const tot = hs.reduce((a2, h2) => a2 + h2.ca, 0);
+        const max2 = Math.max(...hs.map(h2 => h2.ca));
+        common.rjHeures = {
+          nom: mH.magasin, date: common.rjDateTxt,
+          fermer: () => this.setState({ rjHeuresSel: null }),
+          rien: () => {},
+          total: fE(tot), tickets: mH.tickets != null ? fInt(mH.tickets) + ' tickets' : '',
+          lignes: hs.map(h2 => ({
+            h: h2.h + ' h – ' + (h2.h + 1) + ' h',
+            ca: fE(h2.ca),
+            w: max2 > 0 ? Math.max(1, Math.round(h2.ca / max2 * 100)) : 0,
+            part: tot > 0 ? (100 * h2.ca / tot).toFixed(1).replace('.', ',') + ' %' : '',
+            top: h2.ca === max2,
+          })),
+        };
+      }
+    }
 
     const ouverts = (r.magasins || []).filter(m => m.ouvert);
     const magSel = ouverts.filter(m => m.shopId === sel)[0] || null;

@@ -179,3 +179,4 @@ deploy 1788020829 sparkline sans la nuit
 deploy 1788022124 synchro planning api
 deploy 1788022703 sparklines alignees
 deploy 1788023514 ventes full endpoints
+deploy 1788024678 modale ventes par heure
