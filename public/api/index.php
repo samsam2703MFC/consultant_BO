@@ -18,6 +18,7 @@ require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
+require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';
@@ -216,6 +217,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }
     if ($method === 'POST' && $path === '/kpi-table/collecte') { return wr_kpi_collecte(); }
     if ($method === 'POST' && $path === '/pwa/tasks/releve') { return wr_taches_releve(); }
+    if ($method === 'POST' && $path === '/planning/sync') { return wr_planning_sync(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }

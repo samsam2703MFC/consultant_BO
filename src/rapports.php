@@ -2310,7 +2310,12 @@ function ep_rapports_cron(): array
     $kpiT = 'module absent';
     try { if (function_exists('kpiTableCron')) { $kpiT = kpiTableCron(); } }
     catch (Throwable $eK) { $kpiT = 'échec — ' . $eK->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT];
+    // Le planning se synchronise au même battement : un passage par heure,
+    // depuis l'API du panel — le remplaçant de la synchro Merisu muette.
+    $plan = 'module absent';
+    try { if (function_exists('planningSyncCron')) { $plan = planningSyncCron(); } }
+    catch (Throwable $eP) { $plan = 'échec — ' . $eP->getMessage(); }
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan];
 }
 
 /**
