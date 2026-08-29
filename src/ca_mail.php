@@ -57,6 +57,9 @@ function caMailDefauts(): array
         // d'origine (caMailSquelette). Les variables sont les mêmes que dans
         // le texte, plus {{logo}}, {{marque}}, {{contenu}} et {{sujet}}.
         'html' => '',
+        // Le BOUTON du courrier : un clic, le fournisseur atterrit sur sa
+        // liste de commandes à valider. Vider l'URL retire le bouton.
+        'portailUrl' => 'https://atelierby.tfbuddy.com/panel/material-orders/pending',
     ];
 }
 
@@ -303,7 +306,18 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
           . '</td></tr>'
         : '';
 
-    $contenu = $entete . $par($avant) . $blocCartes
+    // Le bouton vers le portail — en table pleine, la seule forme de bouton
+    // qu'Outlook et Gmail dessinent pareil. Sous les cartes : d'abord ce qui
+    // attend, puis le geste qui règle tout.
+    $portail = trim((string) ($c['portailUrl'] ?? ''));
+    $bouton = ($portail === '' || $blocCartes === '') ? ''
+        : '<tr><td class="pad" align="center" style="padding:14px 26px 4px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+        . '<td style="background:#8D1D2C;border-radius:9px">'
+        . '<a href="' . $e($portail) . '" target="_blank" style="' . $F . ';display:inline-block;padding:12px 26px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none">Valider dans le portail &#8594;</a>'
+        . '</td></tr></table></td></tr>';
+
+    $contenu = $entete . $par($avant) . $blocCartes . $bouton
         . ($blocCartes !== '' ? '<tr><td style="padding:6px 30px 0"></td></tr>' : '')
         . $par($apres);
 
