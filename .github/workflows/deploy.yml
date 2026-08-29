@@ -196,11 +196,10 @@ jobs:
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail
 
-  # MÉNAGE MERISU (une fois, demandé le 29/08) : Merisu n'est pas la marque —
-  # un projet gelato polonais hébergé sur le même serveur, sans lien avec
-  # atelierby_db. On retire ses deux lignes de cron et son dossier, avec
-  # l'état avant/après dans les logs. À retirer du workflow ensuite.
-  menage-merisu:
+  # SONDE ROUTES API (lecture seule) : lister les routes de l'API tfb depuis
+  # son code sur le serveur — le contrat définitif pour le passage « full
+  # endpoints » du cockpit (transactions, lignes produits, planning).
+  routes-api:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -216,15 +215,17 @@ jobs:
           }
           sshpass -V | head -1
 
-      - name: Retirer le cron et le dossier Merisu
+      - name: Lister les routes de l'API tfb
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
-            echo "=== crontab AVANT ==="; crontab -l 2>/dev/null || echo "(vide)"
-            crontab -l 2>/dev/null | grep -v merisu | crontab -
-            echo; echo "=== crontab APRÈS ==="; crontab -l 2>/dev/null || echo "(vide)"
-            echo; echo "=== dossier ==="; du -sh /var/www/merisu-src 2>/dev/null || echo "(déjà absent)"
-            rm -rf /var/www/merisu-src
-            echo "supprimé : "; ls -la /var/www/ | grep -c merisu || echo "0 trace merisu dans /var/www"
+            echo "=== fichiers de routes ==="
+            find /var/www/html/tfb/api -maxdepth 3 -iname "*route*" -o -maxdepth 3 -iname "*Router*" 2>/dev/null | grep -v vendor | head -20
+            echo; echo "=== routes déclarées (transaction / product / schedule / sales) ==="
+            grep -rhoE "(get|post|put|delete)\([\"'\''][^\"'\'']+" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
+              | grep -v vendor | sort -u | grep -iE "transaction|product|schedule|sales|statistic" | head -60
+            echo; echo "=== toutes les routes GET ==="
+            grep -rhoE "get\([\"'\''][^\"'\'']+" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
+              | grep -v vendor | sort -u | head -100
           '
