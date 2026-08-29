@@ -196,14 +196,13 @@ jobs:
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail
 
-  # RELANCE TEMPORAIRE de la synchro caisse : le cron nocturne
-  # (30 2 * * * php8.3 bin/console merisu:ventes, sortie dans /dev/null)
-  # échoue en silence depuis la mi-juillet — dernière transaction le 14/07,
-  # dernier planning le 19/07. Ici on le relance À LA MAIN, sortie visible,
-  # et on relit la fraîcheur des tables derrière. À retirer ensuite.
-  relance-synchro:
+  # MÉNAGE MERISU (une fois, demandé le 29/08) : Merisu n'est pas la marque —
+  # un projet gelato polonais hébergé sur le même serveur, sans lien avec
+  # atelierby_db. On retire ses deux lignes de cron et son dossier, avec
+  # l'état avant/après dans les logs. À retirer du workflow ensuite.
+  menage-merisu:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 8
     steps:
       - name: Installer sshpass
         timeout-minutes: 4
@@ -217,29 +216,15 @@ jobs:
           }
           sshpass -V | head -1
 
-      - name: Les commandes merisu disponibles
-        env:
-          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
-        run: |
-          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            'cd /var/www/merisu-src/symfony && php8.3 bin/console list merisu 2>&1 | head -30'
-
-      - name: Relancer merisu:ventes (sortie visible)
-        env:
-          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
-        run: |
-          sshpass -e ssh ${SSH_OPTS} -o ServerAliveCountMax=120 -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            'cd /var/www/merisu-src/symfony && timeout 1800 php8.3 bin/console merisu:ventes -vv 2>&1 | tail -80; echo "code sortie : $?"'
-
-      - name: Fraîcheur des tables après relance
+      - name: Retirer le cron et le dossier Merisu
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
-            [ -f /opt/consulant_bo_src/.deployenv ] && . /opt/consulant_bo_src/.deployenv 2>/dev/null || true
-            if [ -n "${COCKPIT_DB_USER:-}" ]; then
-              mysql -u"${COCKPIT_DB_USER}" -p"${COCKPIT_DB_PASSWORD}" atelierby_db -e \
-                "SELECT MAX(insert_timestamp) derniere_transaction FROM \`transaction\`;
-                 SELECT MAX(work_date) dernier_planning FROM franchisee_employee_schedule;" 2>&1 | head -8
-            fi
+            echo "=== crontab AVANT ==="; crontab -l 2>/dev/null || echo "(vide)"
+            crontab -l 2>/dev/null | grep -v merisu | crontab -
+            echo; echo "=== crontab APRÈS ==="; crontab -l 2>/dev/null || echo "(vide)"
+            echo; echo "=== dossier ==="; du -sh /var/www/merisu-src 2>/dev/null || echo "(déjà absent)"
+            rm -rf /var/www/merisu-src
+            echo "supprimé : "; ls -la /var/www/ | grep -c merisu || echo "0 trace merisu dans /var/www"
           '
