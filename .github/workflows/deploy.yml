@@ -196,13 +196,14 @@ jobs:
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail
 
-  # SONDE TEMPORAIRE (lecture seule) : retrouver le job de synchro caisse —
-  # les tables `transaction` et `franchisee_employee_schedule` n'avancent
-  # plus depuis fin juillet. Inventaire des crons, timers et scripts, et
-  # fraîcheur des deux tables. À retirer une fois la synchro relancée.
-  sonde-synchro:
+  # RELANCE TEMPORAIRE de la synchro caisse : le cron nocturne
+  # (30 2 * * * php8.3 bin/console merisu:ventes, sortie dans /dev/null)
+  # échoue en silence depuis la mi-juillet — dernière transaction le 14/07,
+  # dernier planning le 19/07. Ici on le relance À LA MAIN, sortie visible,
+  # et on relit la fraîcheur des tables derrière. À retirer ensuite.
+  relance-synchro:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 40
     steps:
       - name: Installer sshpass
         timeout-minutes: 4
@@ -216,37 +217,21 @@ jobs:
           }
           sshpass -V | head -1
 
-      - name: Inventaire des crons et services
+      - name: Les commandes merisu disponibles
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
-          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
-            echo "=== crontab root ==="; crontab -l 2>/dev/null || echo "(vide)"
-            echo; echo "=== crontabs des autres comptes ==="
-            for u in $(cut -d: -f1 /etc/passwd); do
-              c=$(crontab -l -u "$u" 2>/dev/null) && [ -n "$c" ] && { echo "--- $u ---"; echo "$c"; }
-            done; true
-            echo; echo "=== /etc/cron.d ==="; ls -la /etc/cron.d 2>/dev/null; cat /etc/cron.d/* 2>/dev/null
-            echo; echo "=== cron.daily/hourly ==="; ls /etc/cron.daily /etc/cron.hourly 2>/dev/null
-            echo; echo "=== timers systemd ==="; systemctl list-timers --all --no-pager 2>/dev/null | head -25
-            echo; echo "=== services suspects ==="; systemctl list-units --type=service --no-pager 2>/dev/null | grep -i -E "sync|tfb|atelier|import" || echo "(aucun)"
-          '
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            'cd /var/www/merisu-src/symfony && php8.3 bin/console list merisu 2>&1 | head -30'
 
-      - name: Chercher le script de synchro
+      - name: Relancer merisu:ventes (sortie visible)
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
-          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
-            echo "=== racines web ==="; ls /var/www 2>/dev/null; ls /var/www/html 2>/dev/null | head; ls /opt 2>/dev/null
-            echo; echo "=== scripts qui écrivent transaction / planning ==="
-            grep -rln -E "INSERT INTO .?transaction|franchisee_employee_schedule" \
-              /var/www /opt --include="*.php" --include="*.sh" --include="*.py" 2>/dev/null \
-              | grep -v -E "consulant_bo|/vendor/" | head -20 || echo "(rien trouvé)"
-            echo; echo "=== logs de cron récents ==="
-            grep -i cron /var/log/syslog 2>/dev/null | tail -12 || journalctl -u cron --no-pager 2>/dev/null | tail -12 || echo "(pas de log lisible)"
-          '
+          sshpass -e ssh ${SSH_OPTS} -o ServerAliveCountMax=120 -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            'cd /var/www/merisu-src/symfony && timeout 1800 php8.3 bin/console merisu:ventes -vv 2>&1 | tail -80; echo "code sortie : $?"'
 
-      - name: Fraîcheur des tables
+      - name: Fraîcheur des tables après relance
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
@@ -256,7 +241,5 @@ jobs:
               mysql -u"${COCKPIT_DB_USER}" -p"${COCKPIT_DB_PASSWORD}" atelierby_db -e \
                 "SELECT MAX(insert_timestamp) derniere_transaction FROM \`transaction\`;
                  SELECT MAX(work_date) dernier_planning FROM franchisee_employee_schedule;" 2>&1 | head -8
-            else
-              echo "(pas d identifiants MySQL dans .deployenv — fraicheur non lue)"
             fi
           '
