@@ -2354,6 +2354,13 @@ function ep_exploitation_jour(): array
             if ($h9 >= 0 && $h9 <= 23) { $heuresCa[$h9] = round((float) ($x9['ca'] ?? 0), 2); }
         }
         ksort($heuresCa);
+        // La nuit ne se dessine pas : la série se coupe à la première et à la
+        // dernière heure vendue — sinon la sparkline traîne 24 barres vides.
+        $actives = array_keys(array_filter($heuresCa, static fn ($v9) => $v9 > 0));
+        if ($actives !== []) {
+            $heuresCa = array_filter($heuresCa,
+                static fn ($h9) => $h9 >= min($actives) && $h9 <= max($actives), ARRAY_FILTER_USE_KEY);
+        }
         $planM = $planParShop[(string) $id] ?? [];
         foreach ($planM as $i9 => $p9) {
             $att = 0.0;
