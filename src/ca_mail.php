@@ -731,13 +731,16 @@ function wr_ca_mail_test(): array
         return ['ok' => false, 'erreur' => 'adresse d’essai illisible'];
     }
     if ($vers === '') { $vers = (string) $c['destinataire']; }
-    $vars = caMailVariablesGroupe(['nom' => 'Fournisseur d’essai', 'n' => 2, 'total' => 1234.56,
+    // Le groupe complet (lignes et numéros compris) passe à la mise en page :
+    // l'essai porte les mêmes liens par commande que le vrai courrier.
+    $gEssai = ['nom' => 'Fournisseur d’essai', 'n' => 2, 'total' => 1234.56,
         'lignes' => [
-            ['id' => 998, 'magasin' => 'Magasin d’essai', 'valeur' => 1111.11, 'debut' => date('Y-m-d', strtotime('-9 day'))],
-            ['id' => 999, 'magasin' => 'Magasin d’essai', 'valeur' => 123.45, 'debut' => date('Y-m-d', strtotime('-2 day'))],
-        ]], false);
+            ['id' => 998, 'idNum' => 998, 'magasin' => 'Magasin d’essai', 'valeur' => 1111.11, 'debut' => date('Y-m-d', strtotime('-9 day'))],
+            ['id' => 999, 'idNum' => 999, 'magasin' => 'Magasin d’essai', 'valeur' => 123.45, 'debut' => date('Y-m-d', strtotime('-2 day'))],
+        ]];
+    $vars = caMailVariablesGroupe($gEssai, false);
     $ok = Smtp::envoyer($vers, '[ESSAI] ' . caMailRemplir($c['sujet'], $vars),
-        caMailHtml(caMailRemplir($c['corps'], $vars), ['nom' => 'Fournisseur d’essai', 'n' => 2], $c),
+        caMailHtml(caMailRemplir($c['corps'], $vars), $gEssai, $c),
         [], trim((string) ($c['expediteur'] ?? '')));
     caMailJournal($ok ? 'essai' : 'echec', $ok ? 'Essai du template envoyé'
         : ('Essai en échec — ' . (string) (Smtp::$lastError ?? '')), $vers);
