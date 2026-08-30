@@ -6327,18 +6327,26 @@ class App {
 
     common.apEntetes = mags.map(m2 => court(m2.nom));
     common.apLignes = prods.slice(0, 80).map(p => {
+      // La JAUGE de chaque case : le magasin face à la moyenne réseau de la
+      // référence — rouge à gauche sous la moyenne, vert à droite au-dessus,
+      // le delta en %. Bornée à ±100 % pour que la barre reste comparable.
+      const totR = reseauDe(p).reduce((a2, v) => a2 + v, 0);
       const cells = mags.map(m2 => {
         const serie = (p.parShop || {})[m2.id] || null;
         const tot = serie ? serie.reduce((a2, v) => a2 + v, 0) : 0;
         if (!serie || tot === 0) { return { jamais: true }; }
         const dort = dortDepuis(serie);
-        return { mini: mini(serie),
+        const delta = totR > 0 ? Math.round((tot / totR - 1) * 100) : null;
+        return {
+          delta: delta == null ? '' : (delta >= 0 ? '+ ' : '− ') + Math.abs(delta) + ' %',
+          pos: (delta || 0) >= 0,
+          w: delta == null ? 0 : (Math.min(100, Math.abs(delta)) / 2).toFixed(1),
           dort: dort >= seuilRouge ? 'éteint depuis ' + dort + ' ' + uniPas : '',
-          titre: Math.round(tot) + ' pcs' };
+          titre: Math.round(tot) + ' pcs · moyenne réseau ' + Math.round(totR) };
       });
       return { pid: p.pid, nom: p.nom, cat: p.cat,
         total: Math.round(p.total).toLocaleString('fr-BE'),
-        rMini: mini(reseauDe(p)), cells,
+        reseauMoy: Math.round(totR).toLocaleString('fr-BE'), cells,
         ouvrir: () => { this.apChargeAd(p.pid); this.setState({ apFiche: p.pid }); } };
     });
     common.apNbFiltre = prods.length;

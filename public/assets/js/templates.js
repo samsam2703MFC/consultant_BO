@@ -772,7 +772,7 @@ function tplAnaprod(c, x){
 
   return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1280px">
     <div style="${carte};padding:16px 18px">${entete}
-      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.apPas || '')} · case grise = jamais vendu ici sur la période · <span style="color:#C0182B">rouge</span> = éteint · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Chaque case : la jauge du magasin face à la moyenne réseau — <span style="color:#2d7a3e;font-weight:600">vert à droite</span> au-dessus, <span style="color:#C0182B;font-weight:600">rouge à gauche</span> en dessous, le delta en % (borné à ±100 %) · case grise = jamais vendu ici · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
     </div>
     <div style="${carte};padding:0;overflow:hidden">
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
@@ -782,10 +782,18 @@ function tplAnaprod(c, x){
         ${(c.apLignes || []).map(l => `
         <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
           <td style="${td};padding-left:18px"><span style="font-weight:600">${esc(l.nom)}</span><div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.cat)}</div></td>
-          <td style="${td};text-align:center">${mini(l.rMini)}</td>
+          <td style="${td};text-align:center;${num};color:var(--color-text-muted)">${esc(l.reseauMoy)} pcs</td>
           ${l.cells.map(c2 => c2.jamais
             ? `<td style="${td};text-align:center;background:var(--color-background-secondary)"><span style="font-size:10px;color:var(--color-text-muted)">jamais vendu</span></td>`
-            : `<td style="${td};text-align:center${c2.dort ? ';background:#FDF3F0' : ''}" title="${esc(c2.titre)}">${mini(c2.mini)}${c2.dort ? `<div style="font-size:9px;color:#C0182B;font-weight:700">${esc(c2.dort)}</div>` : ''}</td>`).join('')}
+            : `<td style="${td};text-align:center${c2.dort ? ';background:#FDF3F0' : ''}" title="${esc(c2.titre)}">
+                 <div style="position:relative;width:110px;height:10px;margin:0 auto;background:var(--color-background-secondary);border-radius:999px">
+                   <i style="position:absolute;left:calc(50% - 1px);top:-2px;height:14px;width:2px;background:var(--color-border-secondary)"></i>
+                   <i style="position:absolute;top:1px;height:8px;border-radius:999px;${c2.pos
+                     ? `left:50%;width:${c2.w}%;background:#2d7a3e`
+                     : `right:50%;width:${c2.w}%;background:#C0182B`}"></i>
+                 </div>
+                 <div style="font-size:10px;font-weight:700;margin-top:2px;${num};color:${c2.pos ? '#2d7a3e' : '#C0182B'}">${esc(c2.delta)}</div>
+                 ${c2.dort ? `<div style="font-size:9px;color:#C0182B;font-weight:700">${esc(c2.dort)}</div>` : ''}</td>`).join('')}
           <td style="${td};text-align:right;${num};font-weight:600">${esc(l.total)}</td>
         </tr>`).join('')}
       </table></div>

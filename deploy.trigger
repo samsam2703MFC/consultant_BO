@@ -184,3 +184,4 @@ deploy 1788066476 liens portail fournisseur
 deploy 1788066579 apercu avec liens
 deploy 1788066897 essai mail avec liens
 deploy 1788097945 produits x magasins
+deploy 1788098637 jauge delta grille produits
