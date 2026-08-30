@@ -57,9 +57,11 @@ function caMailDefauts(): array
         // d'origine (caMailSquelette). Les variables sont les mêmes que dans
         // le texte, plus {{logo}}, {{marque}}, {{contenu}} et {{sujet}}.
         'html' => '',
-        // Le BOUTON du courrier : un clic, le fournisseur atterrit sur sa
-        // liste de commandes à valider. Vider l'URL retire le bouton.
-        'portailUrl' => 'https://atelierby.tfbuddy.com/panel/material-orders/pending',
+        // Le BOUTON du courrier : un clic, le fournisseur atterrit sur SA
+        // liste de commandes dans SON portail. Vider l'URL retire le bouton ;
+        // quand elle finit par /orders, chaque carte de commande devient en
+        // plus un lien direct …/orders/{id}.
+        'portailUrl' => 'https://atelierby.tfbuddy.com/supplier/orders',
     ];
 }
 
@@ -273,6 +275,18 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
             . nl2br($e($txt)) . '</td></tr>';
     };
 
+    // Le lien DIRECT de chaque commande : quand la ligne porte son numéro et
+    // que l'URL du portail finit par /orders, le titre de la carte devient
+    // …/orders/{id} — le fournisseur tombe pile sur SA commande. Sans numéro,
+    // la carte reste muette et le bouton de la liste fait le travail.
+    $idParCle = [];
+    foreach ((array) ($g['lignes'] ?? []) as $l9) {
+        $k9 = (string) ($l9['id'] ?? ''); $n9 = (int) ($l9['idNum'] ?? 0);
+        if ($k9 !== '' && $n9 > 0) { $idParCle[$k9] = $n9; }
+    }
+    $portail9 = rtrim(trim((string) ($c['portailUrl'] ?? '')), '/');
+    if (!str_ends_with($portail9, '/orders')) { $portail9 = ''; }
+
     $blocCartes = '';
     foreach ($cartes as $c2) {
         // « #169 — Halle — 2 132,84 € — période du … — en attente depuis 12 jour(s) »
@@ -282,12 +296,19 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
         foreach ($morceaux as $i2 => $m2) {
             if (str_contains($m2, 'en attente depuis')) { $retard = $m2; unset($morceaux[$i2]); }
         }
+        $lien9 = '';
+        if ($portail9 !== '' && preg_match('/Commande\s+(\S+)/u', $titre, $m9) === 1 && isset($idParCle[$m9[1]])) {
+            $lien9 = $portail9 . '/' . $idParCle[$m9[1]];
+        }
         $blocCartes .= '<tr><td class="pad" style="padding:0 26px 8px">'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0">'
             . '<tr><td style="' . $F . ';padding:10px 13px">'
             // La clé d'une commande est longue : elle doit pouvoir se couper,
             // sinon elle déborde de l'écran d'un téléphone.
-            . '<div class="cmd" style="font-size:14px;font-weight:700;color:#221E1A;line-height:1.3;word-break:break-word">' . $e($titre) . '</div>'
+            . '<div class="cmd" style="font-size:14px;font-weight:700;color:#221E1A;line-height:1.3;word-break:break-word">'
+            . ($lien9 !== ''
+                ? '<a href="' . $e($lien9) . '" target="_blank" style="color:#8D1D2C;text-decoration:underline">' . $e($titre) . '</a>'
+                : $e($titre)) . '</div>'
             . ($morceaux !== [] ? '<div style="font-size:12.5px;color:#6E645A;margin-top:4px;line-height:1.45">' . $e(implode(' · ', $morceaux)) . '</div>' : '')
             . ($retard !== '' ? '<div style="font-size:12px;font-weight:700;color:#8D1D2C;margin-top:5px">' . $e($retard) . '</div>' : '')
             . '</td></tr></table></td></tr>';
@@ -777,7 +798,9 @@ function caMailAValider(): ?array
     foreach ($sv['aValider'] as $o) {
         $out[] = [
             // La CLÉ de la commande fait l'identifiant : c'est elle que le
-            // fournisseur lit dans son portail, pas un numéro interne.
+            // fournisseur lit dans son portail, pas un numéro interne. Le
+            // numéro voyage quand même : il fait le lien direct …/orders/{id}.
+            'idNum' => (int) ($o['id'] ?? 0),
             'id' => (string) ($o['cle'] ?? ('#' . ($o['id'] ?? ''))),
             'magasin' => (string) ($o['magasin'] ?? ''),
             'fournisseurs' => [(string) ($o['fournisseur'] ?? '')],
