@@ -6334,6 +6334,11 @@ class App {
     // en rouge, seuls les vrais déséquilibres de mix se voient.
     const tailles = d.tailles || {};
     const caReseau = Object.values(tailles).reduce((a2, v) => a2 + v, 0);
+    // L'AMORTISSEUR : le delta brut est multiplié par attendu/(attendu+L),
+    // L valant ~une demi-pièce par jour de fenêtre. Une référence à 5 pièces
+    // ne peut plus crier ±100 % à côté d'une référence à 5 000 — le % reflète
+    // le déséquilibre ET le poids de la référence.
+    const lissage = mois * 15;
     common.apEntetes = mags.map(m2 => court(m2.nom));
     common.apLignes = prods.slice(0, 80).map(p => {
       const totReseau = p.total || 0;
@@ -6343,7 +6348,8 @@ class App {
         if (!serie || tot === 0) { return { jamais: true }; }
         const dort = dortDepuis(serie);
         const attendu = caReseau > 0 ? totReseau * ((tailles[m2.id] || 0) / caReseau) : 0;
-        const delta = attendu > 0 ? Math.round((tot / attendu - 1) * 100) : null;
+        const delta = attendu > 0
+          ? Math.round((tot / attendu - 1) * (attendu / (attendu + lissage)) * 100) : null;
         return {
           delta: delta == null ? '' : (delta >= 0 ? '+ ' : '− ') + Math.abs(delta) + ' %',
           pos: (delta || 0) >= 0,

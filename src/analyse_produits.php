@@ -273,7 +273,13 @@ function ep_analyse_shop(): array
                     'manque' => (int) round($moy * $prix)];
             }
         } else {
-            $delta = $moy > 0 ? (int) round(($p['ici'] / $moy - 1) * 100) : 0;
+            // Le delta est AMORTI par le volume (attendu/(attendu+L), L ≈ une
+            // demi-pièce par jour de fenêtre) : une petite référence ne crie
+            // plus ±100 % à côté d'une grosse — le % reflète le déséquilibre
+            // ET le poids de la référence.
+            $lissage = $per * 0.5;
+            $delta = $moy > 0
+                ? (int) round(($p['ici'] / $moy - 1) * ($moy / ($moy + $lissage)) * 100) : 0;
             $ligne['delta'] = $delta;
             if ($delta <= -40) { $sous[] = $ligne; } else { $ok[] = $ligne; }
         }

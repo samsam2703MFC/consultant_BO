@@ -187,3 +187,4 @@ deploy 1788097945 produits x magasins
 deploy 1788098637 jauge delta grille produits
 deploy 1788098759 textes jauge
 deploy 1788099463 analyse shop + delta pondere
+deploy 1788102628 delta amorti volume
