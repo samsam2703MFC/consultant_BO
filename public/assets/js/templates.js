@@ -772,7 +772,7 @@ function tplAnaprod(c, x){
 
   return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1280px">
     <div style="${carte};padding:16px 18px">${entete}
-      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Chaque case : la jauge du magasin face à la moyenne réseau — <span style="color:#2d7a3e;font-weight:600">vert à droite</span> au-dessus, <span style="color:#C0182B;font-weight:600">rouge à gauche</span> en dessous, le delta en % (borné à ±100 %) · case grise = jamais vendu ici · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Chaque case : la jauge du magasin face à la moyenne réseau — <span style="color:#2d7a3e;font-weight:600">vert à droite</span> au-dessus, <span style="color:#C0182B;font-weight:600">rouge à gauche</span> en dessous, le delta en % (la barre plafonne &agrave; 100 %) · case grise = jamais vendu ici · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
     </div>
     <div style="${carte};padding:0;overflow:hidden">
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
