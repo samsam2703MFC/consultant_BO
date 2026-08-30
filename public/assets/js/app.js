@@ -228,7 +228,7 @@ class App {
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
-      usage: 'usage-catalogue',
+      usage: 'usage-catalogue', anaprod: 'analyse-produits',
       manque: 'manque-a-gagner',
       analysemag: 'analyse-magasin',
       ventes: 'target-ventes',
@@ -661,6 +661,7 @@ class App {
       analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
       croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
+      anaprod: ['Produits × magasins', 'Chaque référence, où elle se vend : une mini-courbe par magasin, la moyenne réseau, les « jamais vendu » et les éteints qui sautent aux yeux. Cliquez une référence pour sa fiche de vie — courbe fine par magasin, moyenne réseau et an dernier. Lu en direct chez le panel, tranche par tranche.'],
       manque: ['Manque à gagner', 'Ce que chaque magasin ne vend pas, en euros. Pour chaque référence qu’il n’a pas vendue alors que les autres la vendaient : leur volume médian par jour d’ouverture, ramené à sa fréquentation, au prix encaissé. Une estimation à assortiment comparable — pas une promesse de chiffre d’affaires.'],
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
@@ -1030,6 +1031,7 @@ class App {
           ['produits', 'Scoring des références', 0],
           ['seuil', 'Références sous seuil', 0],
           ['analyse', 'Analyse dans le temps', 0],
+          ['anaprod', 'Produits × magasins', 0],
           ['usage', 'Usage du catalogue', 0],
           ['manque', 'Manque à gagner', 0]] }]],
       ['Centrale d’achat', [
@@ -1078,11 +1080,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1365,6 +1367,7 @@ class App {
     if (common.isMktCal || common.isMktCamp || common.isMktTypes) this.valsMkt(common);
     if (common.isProd) this.valsProduction(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
+    if (common.isAnaprod) { this.apCharge(false); this.valsAnaprod(common); }
     if (common.isCentrale) this.valsCentrale(common);
     this.valsLacunes(common);
     if (common.isDiag) { this.coCharge(); this.valsDiag(common); }
@@ -6250,6 +6253,142 @@ class App {
           + 'padding:' + (wpx > 92 && hpx > 52 ? '7px 9px' : '4px 6px') + ';overflow:hidden',
       };
     });
+  }
+
+  /* == Produits × magasins : la grille de distribution et la fiche de vie
+        d'un produit. Tout vient des endpoints du panel, par tranches gravées
+        côté serveur — le premier chargement d'une période paie le voyage,
+        les suivants sont instantanés. == */
+  apCharge(force){
+    const S = this.state;
+    const mois = S.apMois || 3;
+    if (!this.D.aprod) { this.D.aprod = {}; }
+    if (this._apEnCours === mois) { return; }
+    if (this.D.aprod[mois] && !force) { return; }
+    this._apEnCours = mois;
+    readOne('/analyse/produits?mois=' + mois).then(d => {
+      this._apEnCours = null;
+      this.D.aprod[mois] = d || { indispo: true, motif: 'lecture impossible' };
+      this.setState({});
+    });
+  }
+
+  apChargeAd(pid){
+    const S = this.state, mois = S.apMois || 3;
+    const k = mois + ':' + pid;
+    if (!this.D.aprodAd) { this.D.aprodAd = {}; }
+    if (this.D.aprodAd[k] || this._apAdEnCours === k) { return; }
+    this._apAdEnCours = k;
+    readOne('/analyse/produits?mois=' + mois + '&pid=' + pid).then(d => {
+      this._apAdEnCours = null;
+      this.D.aprodAd[k] = (d && d.anDernier) ? d.anDernier : [];
+      this.setState({});
+    });
+  }
+
+  valsAnaprod(common){
+    const S = this.state;
+    const mois = S.apMois || 3;
+    const d = this.D.aprod ? this.D.aprod[mois] : null;
+    common.apChargement = !d;
+    common.apMoisChoix = [1, 3, 6, 12].map(n => ({ n, lib: n === 1 ? '1 mois' : n + ' mois', on: n === mois,
+      choisir: () => this.setState({ apMois: n, apFiche: null }) }));
+    if (!d) { return; }
+    common.apIndispo = d.indispo ? (d.motif || 'indisponible') : '';
+    if (d.indispo) { return; }
+    const mags = d.magasins || [];
+    const nT = (d.tranches || []).length;
+    const court = n2 => (String(n2).split(' - ').pop() || String(n2)).trim();
+    const cat = S.apCat || '';
+    const q = (S.apQ || '').toLowerCase();
+    common.apPas = d.pas === 'semaine' ? 'mini-courbes hebdomadaires' : 'mini-courbes mensuelles';
+    common.apCats = [''].concat(d.categories || []).map(c2 => ({ v: c2, lib: c2 || 'Toutes les catégories', on: c2 === cat }));
+    common.apPoserCat = (e) => this.setState({ apCat: e.target.value, apFiche: null });
+    common.apPoserQ = (e) => this.setState({ apQ: e.target.value, apFiche: null });
+    common.apQVal = S.apQ || '';
+    common.apMuets = d.muets || 0;
+
+    const tousProds = d.produits || [];
+    const prods = tousProds.filter(p => (!cat || p.cat === cat) && (!q || p.nom.toLowerCase().includes(q)));
+    const mini = serie => {
+      const max2 = Math.max(...serie, 0);
+      return serie.map(v => ({ w: max2 > 0 ? Math.max(2, Math.round(v / max2 * 20)) : 2, top: v === max2 && v > 0 }));
+    };
+    const dortDepuis = serie => {
+      let k = 0;
+      for (let i = serie.length - 1; i >= 0 && !serie[i]; i--) { k++; }
+      return k;
+    };
+    // Une référence « s'éteint » après ~3 semaines (ou 1 mois) sans vente.
+    const seuilRouge = d.pas === 'semaine' ? 3 : 1;
+    const uniPas = d.pas === 'semaine' ? 'sem.' : 'mois';
+    const reseauDe = p => Array.from({ length: nT }, (_, i) =>
+      mags.reduce((a2, m2) => a2 + (((p.parShop || {})[m2.id] || [])[i] || 0), 0) / Math.max(1, mags.length));
+
+    common.apEntetes = mags.map(m2 => court(m2.nom));
+    common.apLignes = prods.slice(0, 80).map(p => {
+      const cells = mags.map(m2 => {
+        const serie = (p.parShop || {})[m2.id] || null;
+        const tot = serie ? serie.reduce((a2, v) => a2 + v, 0) : 0;
+        if (!serie || tot === 0) { return { jamais: true }; }
+        const dort = dortDepuis(serie);
+        return { mini: mini(serie),
+          dort: dort >= seuilRouge ? 'éteint depuis ' + dort + ' ' + uniPas : '',
+          titre: Math.round(tot) + ' pcs' };
+      });
+      return { pid: p.pid, nom: p.nom, cat: p.cat,
+        total: Math.round(p.total).toLocaleString('fr-BE'),
+        rMini: mini(reseauDe(p)), cells,
+        ouvrir: () => { this.apChargeAd(p.pid); this.setState({ apFiche: p.pid }); } };
+    });
+    common.apNbFiltre = prods.length;
+    common.apNbMontre = Math.min(prods.length, 80);
+
+    // --- LA FICHE DE VIE : courbe fine par magasin, moyenne réseau épaisse,
+    //     an dernier en pointillé, et les cartes « vendu ou pas, où ».
+    common.apFiche = null;
+    if (S.apFiche) {
+      const p = tousProds.find(p2 => p2.pid === S.apFiche);
+      if (p && nT > 1) {
+        const reseau = reseauDe(p);
+        const ad = (this.D.aprodAd || {})[mois + ':' + p.pid] || null;
+        const COULS = ['#C17A2A', '#5B7FA6', '#7A9E7E', '#A67AA6', '#8a6d12', '#607080'];
+        const toutes = mags.map((m2, i) => ({ nom: court(m2.nom), coul: COULS[i % COULS.length],
+            vals: (p.parShop || {})[m2.id] || Array(nT).fill(0), ep: 1.3, dash: '' }))
+          .concat([{ nom: 'Moyenne réseau', coul: '#8D1D2C', vals: reseau, ep: 2.6, dash: '' }])
+          .concat(ad && ad.some(v => v != null) ? [{ nom: 'An dernier (réseau)', coul: '#b8b2a8',
+            vals: ad.map(v => v || 0), ep: 1.2, dash: '4 4' }] : []);
+        const W = 880, H = 190;
+        const maxv = Math.max(...toutes.map(t2 => Math.max(...t2.vals)), 1) * 1.12;
+        const totR = reseau.reduce((a2, v) => a2 + v, 0);
+        common.apFiche = {
+          nom: p.nom, cat: p.cat, w: W, h: H,
+          fermer: () => this.setState({ apFiche: null }),
+          adEnCours: !ad,
+          courbes: toutes.map(t2 => ({ coul: t2.coul, ep: t2.ep, dash: t2.dash,
+            pts: t2.vals.map((v, i) => (i / (nT - 1) * W).toFixed(1) + ',' + (H - v / maxv * (H - 8)).toFixed(1)).join(' ') })),
+          legende: toutes.map(t2 => ({ nom: t2.nom, coul: t2.coul, epais: t2.ep >= 2 })),
+          labels: (d.tranches || []).map((l2, i) => ({ x: (i / (nT - 1) * (W - 26)).toFixed(0), t: l2 })),
+          cartes: mags.map((m2, i) => {
+            const serie = (p.parShop || {})[m2.id] || Array(nT).fill(0);
+            const tot = serie.reduce((a2, v) => a2 + v, 0);
+            const demi = Math.floor(nT / 2);
+            const m1 = serie.slice(0, demi).reduce((a2, v) => a2 + v, 0);
+            const m2b = serie.slice(demi).reduce((a2, v) => a2 + v, 0);
+            const evol = m1 > 0 ? Math.round((m2b - m1) / m1 * 100) : null;
+            const dort = dortDepuis(serie);
+            return { nom: court(m2.nom), coul: COULS[i % COULS.length],
+              tot: Math.round(tot).toLocaleString('fr-BE') + ' pcs',
+              evol: evol == null ? '' : (evol >= 0 ? '+ ' : '− ') + Math.abs(evol) + ' % (2e moitié vs 1re)',
+              evolPos: (evol || 0) >= 0,
+              etat: tot === 0 ? 'jamais vendu sur la période'
+                : (dort >= seuilRouge ? 'PLUS VENDU DEPUIS ' + dort + ' ' + uniPas.toUpperCase() : 'vendu récemment'),
+              alerte: tot === 0 || dort >= seuilRouge,
+              part: totR > 0 ? (tot / totR).toFixed(1).replace('.', ',') + ' × la moyenne réseau' : '' };
+          }),
+        };
+      }
+    }
   }
 
   valsResultatJour(common){

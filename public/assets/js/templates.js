@@ -113,6 +113,7 @@ export function render(c, x){
       ${c.isCat || c.isAsso || c.isPlano ? tplReferentiel(c, x) : ''}
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
+      ${c.isAnaprod ? tplAnaprod(c, x) : ''}
       ${c.isCentrale ? tplCentrale(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isSeuil ? tplSeuil(c, x) : ''}
@@ -700,6 +701,99 @@ function tplProduction(c, x){
 
 /* Analyse dans le temps. La série coûte un appel par point : rien ne part
    avant une sélection explicite, et le nombre de points est annoncé. */
+function tplAnaprod(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const mini = cells => `<span style="display:inline-flex;align-items:flex-end;gap:1.5px;height:20px">${cells.map(v => `<i style="width:4px;background:${v.top ? 'var(--color-primary)' : '#D9BCBF'};height:${v.w}px;border-radius:1px"></i>`).join('')}</span>`;
+
+  const entete = `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="${cap}">Produits × magasins</div>
+        <div style="font-family:var(--font-display);font-size:17px;margin-top:2px">Où chaque référence se vend</div>
+      </div>
+      <input value="${esc(c.apQVal || '')}" placeholder="Filtrer les références…" ${x.C(c.apPoserQ)} style="width:210px;font-family:var(--font-ui);font-size:12px;padding:8px 12px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface)">
+      <select ${x.C(c.apPoserCat)} style="font-family:var(--font-ui);font-size:12px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface)">
+        ${(c.apCats || []).map(o2 => `<option value="${esc(o2.v)}" ${o2.on ? 'selected' : ''}>${esc(o2.lib)}</option>`).join('')}
+      </select>
+      ${(c.apMoisChoix || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.lib)}</button>`).join('')}
+    </div>`;
+
+  if (c.apChargement) {
+    return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">${entete}
+        <div style="padding:30px 0 16px;font-size:13px;color:var(--color-text-muted)">Lecture des ventes produit chez le panel — le premier chargement d’une période grave ses tranches, les suivants sont instantanés…</div>
+      </div></div>`;
+  }
+  if (c.apIndispo) {
+    return `<div data-screen="anaprod" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.apIndispo)}</div>`;
+  }
+
+  const th = 'font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 9px;border-bottom:0.5px solid var(--color-border-secondary)';
+  const td = 'padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary)';
+
+  if (c.apFiche) {
+    const F = c.apFiche;
+    return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">
+      <div style="${carte};padding:16px 18px">${entete}</div>
+      <div style="${carte};padding:17px 19px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div>
+            <button ${x.A(F.fermer)} style="${pill(false)};margin-bottom:8px">← Retour à la grille</button>
+            <div style="font-family:var(--font-display);font-size:19px">${esc(F.nom)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">${esc(F.cat)}${F.adEnCours ? ' · lecture de l’an dernier…' : ''}</div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;margin-top:10px">
+        <svg width="${F.w}" height="${F.h + 22}" style="display:block">
+          ${[1, 2, 3].map(g2 => `<line x1="0" y1="${(F.h - g2 * F.h / 4).toFixed(0)}" x2="${F.w}" y2="${(F.h - g2 * F.h / 4).toFixed(0)}" stroke="var(--color-border-tertiary)" stroke-width="1"/>`).join('')}
+          ${F.courbes.map(cb => `<polyline points="${cb.pts}" fill="none" stroke="${cb.coul}" stroke-width="${cb.ep}" ${cb.dash ? `stroke-dasharray="${cb.dash}"` : ''}/>`).join('')}
+          ${F.labels.map(l2 => `<text x="${l2.x}" y="${F.h + 16}" font-size="9" fill="var(--color-text-muted)">${esc(l2.t)}</text>`).join('')}
+        </svg></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:6px">
+          ${F.legende.map(l2 => `<span><i style="display:inline-block;width:16px;height:${l2.epais ? '3px' : '2px'};background:${l2.coul};vertical-align:3px;border-radius:2px"></i> ${esc(l2.nom)}</span>`).join('')}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">
+        ${F.cartes.map(k2 => `
+        <div style="${carte};padding:12px 14px${k2.alerte ? ';background:#FDF3F0;border-color:#E8C0B5' : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12.5px">${esc(k2.nom)}</b><i style="width:10px;height:10px;border-radius:3px;background:${k2.coul}"></i></div>
+          <div style="font-family:var(--font-display);font-size:20px;margin-top:4px;${num}">${esc(k2.tot)}</div>
+          <div style="font-size:11px;font-weight:600;color:${k2.evolPos ? '#2d7a3e' : '#C0182B'};${num}">${esc(k2.evol)}</div>
+          <div style="font-size:10px;margin-top:5px;color:${k2.alerte ? '#C0182B' : 'var(--color-text-muted)'};font-weight:${k2.alerte ? '700' : '400'}">${esc(k2.etat)}</div>
+          <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(k2.part)}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1280px">
+    <div style="${carte};padding:16px 18px">${entete}
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.apPas || '')} · case grise = jamais vendu ici sur la période · <span style="color:#C0182B">rouge</span> = éteint · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
+    </div>
+    <div style="${carte};padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <tr><th style="${th};text-align:left;padding-left:18px">Référence</th><th style="${th};text-align:center">Réseau (moy.)</th>
+          ${(c.apEntetes || []).map(m2 => `<th style="${th};text-align:center">${esc(m2)}</th>`).join('')}
+          <th style="${th};text-align:right">Pièces</th></tr>
+        ${(c.apLignes || []).map(l => `
+        <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+          <td style="${td};padding-left:18px"><span style="font-weight:600">${esc(l.nom)}</span><div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.cat)}</div></td>
+          <td style="${td};text-align:center">${mini(l.rMini)}</td>
+          ${l.cells.map(c2 => c2.jamais
+            ? `<td style="${td};text-align:center;background:var(--color-background-secondary)"><span style="font-size:10px;color:var(--color-text-muted)">jamais vendu</span></td>`
+            : `<td style="${td};text-align:center${c2.dort ? ';background:#FDF3F0' : ''}" title="${esc(c2.titre)}">${mini(c2.mini)}${c2.dort ? `<div style="font-size:9px;color:#C0182B;font-weight:700">${esc(c2.dort)}</div>` : ''}</td>`).join('')}
+          <td style="${td};text-align:right;${num};font-weight:600">${esc(l.total)}</td>
+        </tr>`).join('')}
+      </table></div>
+      ${c.apNbFiltre > c.apNbMontre ? `<div style="padding:10px 18px;font-size:11px;color:var(--color-text-muted)">${c.apNbMontre} références montrées sur ${c.apNbFiltre} — affinez par catégorie ou par le filtre.</div>` : ''}
+    </div>
+  </div>`;
+}
+
 function tplAnalyse(c, x){
   const { esc } = x;
   const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:240px;flex:1';
