@@ -114,6 +114,7 @@ export function render(c, x){
       ${c.isProd ? tplProduction(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
+      ${c.isAnashop ? tplAnashop(c, x) : ''}
       ${c.isCentrale ? tplCentrale(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
       ${c.isSeuil ? tplSeuil(c, x) : ''}
@@ -701,6 +702,121 @@ function tplProduction(c, x){
 
 /* Analyse dans le temps. La série coûte un appel par point : rien ne part
    avant une sélection explicite, et le nombre de points est annoncé. */
+function tplAnashop(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:999px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const th = 'font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:7px 9px;border-bottom:0.5px solid var(--color-border-secondary);text-align:right';
+  const td = 'padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;' + num;
+  const jauge = j => `
+    <div style="width:120px;margin-left:auto"><div style="position:relative;height:10px;background:var(--color-background-secondary);border-radius:999px">
+      <i style="position:absolute;left:calc(50% - 1px);top:-2px;height:14px;width:2px;background:var(--color-border-secondary)"></i>
+      <i style="position:absolute;top:1px;height:8px;border-radius:999px;${j.pos ? `left:50%;width:${j.w}%;background:#2d7a3e` : `right:50%;width:${j.w}%;background:#C0182B`}"></i>
+    </div><div style="font-size:10px;font-weight:700;margin-top:2px;text-align:center;color:${j.pos ? '#2d7a3e' : '#C0182B'}">${esc(j.delta)}</div></div>`;
+
+  const entete = `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="${cap}">Analyse shop · l'assortiment face au réseau, à taille égale</div>
+        <div style="font-family:var(--font-display);font-size:17px;margin-top:2px">${esc(c.asNom || '…')} <span style="font-size:11px;color:var(--color-text-muted);font-family:var(--font-ui)">${esc(c.asFenetre || '')}</span></div>
+      </div>
+      <select ${x.C(c.asPoserShop)} style="font-family:var(--font-ui);font-size:12px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface)">
+        ${(c.asMagasins || []).map(o2 => `<option value="${o2.v}" ${o2.on ? 'selected' : ''}>${esc(o2.lib)}</option>`).join('')}
+      </select>
+      ${(c.asPers || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.lib)}</button>`).join('')}
+    </div>`;
+
+  if (c.asChargement) {
+    return `<div data-screen="anashop" style="${carte};padding:16px 18px">${entete}
+      <div style="padding:28px 0 14px;font-size:13px;color:var(--color-text-muted)">Lecture de l'assortiment chez le panel…</div></div>`;
+  }
+  if (c.asIndispo) {
+    return `<div data-screen="anashop" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.asIndispo)}</div>`;
+  }
+
+  return `<div data-screen="anashop" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">
+    <div style="${carte};padding:16px 18px">${entete}</div>
+
+    <!-- Le bandeau de COUVERTURE par catégorie : cliquer filtre les étages. -->
+    <div style="${carte};padding:14px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="${cap}">Couverture de l'assortiment, par catégorie — cliquez pour filtrer</div>
+        <div style="font-size:10px;color:var(--color-text-muted)">couverture = la part des références du réseau vendues au moins une fois ici</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px 16px;margin-top:10px">
+        ${(c.asCats || []).map(k2 => `
+        <div ${x.A(k2.choisir)} class="hv-bg" style="cursor:pointer;padding:6px 8px;border-radius:8px;${k2.on ? 'background:var(--color-background-secondary);outline:1.5px solid var(--color-primary)' : ''}">
+          <div style="display:flex;justify-content:space-between;font-size:11.5px"><b>${esc(k2.nom)}</b><span style="${num};color:${k2.coul};font-weight:700">${k2.couverture} %</span></div>
+          <div style="height:7px;border-radius:999px;background:var(--color-background-secondary);margin-top:3px"><i style="display:block;height:7px;width:${k2.couverture}%;background:${k2.coul};border-radius:999px"></i></div>
+          <div style="font-size:9.5px;color:var(--color-text-muted);margin-top:2px">${k2.nonVendues} non vendue(s) / ${k2.refs}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Étage 1 : LES TROUS — pas vendu ici, vendu ailleurs, le manque en €. -->
+    <div style="${carte};padding:16px 18px;background:#FDF6F4;border-color:#E8C0B5">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <div style="${cap};color:#C0182B">⚠ Pas vendu ${c.asCatActive ? 'en ' + esc(c.asCatActive) + ' ' : ''}ici — vendu ailleurs</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted)">manque estimé = l'attendu à taille égale × le prix encaissé réseau</div>
+      </div>
+      ${(c.asTrous || []).length === 0
+        ? `<div style="font-size:12.5px;margin-top:10px;color:#2d7a3e;font-weight:600">Aucun trou : tout ce que le réseau vend se vend aussi ici. 👌</div>`
+        : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;margin-top:6px">
+          <tr><th style="${th};text-align:left">Référence</th><th style="${th};text-align:left">Catégorie</th><th style="${th}">Attendu ici</th><th style="${th}">Vendu ailleurs dans</th><th style="${th}">Manque estimé</th></tr>
+          ${c.asTrous.map(l => `
+          <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+            <td style="${td};text-align:left;font-weight:600">${esc(l.nom)}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(l.cat)}</td>
+            <td style="${td}">${esc(l.moy)}</td>
+            <td style="${td}">${esc(l.ailleurs)}</td>
+            <td style="${td};color:#C0182B;font-weight:700">${esc(l.manque)}</td>
+          </tr>`).join('')}
+          <tr><td style="${td};text-align:left;font-weight:700;border-bottom:none" colspan="4">Total du manque sur la période</td>
+            <td style="${td};border-bottom:none;color:#C0182B;font-weight:700;font-size:14px">${esc(c.asManqueTotal)}</td></tr>
+        </table></div>`}
+    </div>
+
+    <!-- Étage 2 : SOUS LA MOYENNE, en jauges à taille égale. -->
+    <div style="${carte};padding:16px 18px">
+      <div style="${cap}">Vendu, mais loin sous l'attendu (− 40 % et plus, à taille de magasin égale)</div>
+      ${(c.asSous || []).length === 0
+        ? `<div style="font-size:12.5px;margin-top:10px;color:var(--color-text-muted)">Rien de nettement sous l'attendu.</div>`
+        : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;margin-top:6px">
+          <tr><th style="${th};text-align:left">Référence</th><th style="${th};text-align:left">Catégorie</th><th style="${th}">Vendu ici</th><th style="${th}">Attendu ici</th><th style="${th}">Jauge</th></tr>
+          ${c.asSous.map(l => `
+          <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+            <td style="${td};text-align:left;font-weight:600">${esc(l.nom)}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(l.cat)}</td>
+            <td style="${td};font-weight:600">${esc(l.ici)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(l.moy)}</td>
+            <td style="${td}">${jauge(l.j)}</td>
+          </tr>`).join('')}
+        </table></div>`}
+    </div>
+
+    <!-- Étage 3 : LE RESTE, replié par défaut. -->
+    <div style="${carte};padding:14px 18px">
+      <div ${x.A(c.asDeplier)} style="cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+        <div style="${cap}">Dans l'attendu ou au-dessus — ${c.asOkNb} référence(s)</div>
+        <span style="font-size:12px;color:var(--color-text-muted)">${c.asOuvert ? '▾ replier' : '▸ dérouler'}</span>
+      </div>
+      ${c.asOuvert ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;margin-top:8px">
+        <tr><th style="${th};text-align:left">Référence</th><th style="${th};text-align:left">Catégorie</th><th style="${th}">Vendu ici</th><th style="${th}">Attendu ici</th><th style="${th}">Jauge</th></tr>
+        ${(c.asOk || []).map(l => `
+        <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+          <td style="${td};text-align:left;font-weight:600">${esc(l.nom)}</td>
+          <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(l.cat)}</td>
+          <td style="${td};font-weight:600">${esc(l.ici)}</td>
+          <td style="${td};color:var(--color-text-muted)">${esc(l.moy)}</td>
+          <td style="${td}">${jauge(l.j)}</td>
+        </tr>`).join('')}
+      </table></div>` : ''}
+    </div>
+  </div>`;
+}
+
 function tplAnaprod(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -772,7 +888,7 @@ function tplAnaprod(c, x){
 
   return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1280px">
     <div style="${carte};padding:16px 18px">${entete}
-      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Chaque case : la jauge du magasin face à la moyenne réseau — <span style="color:#2d7a3e;font-weight:600">vert à droite</span> au-dessus, <span style="color:#C0182B;font-weight:600">rouge à gauche</span> en dessous, le delta en % (la barre plafonne &agrave; 100 %) · case grise = jamais vendu ici · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Chaque case : la jauge du magasin face à son attendu <b>à taille égale</b> (pondéré par le CA du magasin) — <span style="color:#2d7a3e;font-weight:600">vert à droite</span> au-dessus, <span style="color:#C0182B;font-weight:600">rouge à gauche</span> en dessous, le delta en % (la barre plafonne &agrave; 100 %) · case grise = jamais vendu ici · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
     </div>
     <div style="${carte};padding:0;overflow:hidden">
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
