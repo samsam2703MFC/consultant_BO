@@ -602,8 +602,8 @@ function ep_ca_mail_apercu(): string
         if (isset($_GET[$k]) && $_GET[$k] !== '') { $c[$k] = (string) $_GET[$k]; }
     }
     $g = ['nom' => 'Rawette', 'n' => 2, 'total' => 5845.30, 'anciennes' => 3, 'lignes' => [
-        ['id' => 169, 'magasin' => 'Atelier by - Halle', 'valeur' => 2132.84, 'debut' => date('Y-m-d', strtotime('-12 day'))],
-        ['id' => 168, 'magasin' => 'Atelier by - Halle', 'valeur' => 3712.46, 'debut' => date('Y-m-d', strtotime('-5 day'))],
+        ['id' => 169, 'idNum' => 169, 'magasin' => 'Atelier by - Halle', 'valeur' => 2132.84, 'debut' => date('Y-m-d', strtotime('-12 day'))],
+        ['id' => 168, 'idNum' => 168, 'magasin' => 'Atelier by - Halle', 'valeur' => 3712.46, 'debut' => date('Y-m-d', strtotime('-5 day'))],
     ]];
     $vars = caMailVariablesGroupe($g, false);
     return caMailHtml(caMailRemplir((string) $c['corps'], $vars), $g, $c);
