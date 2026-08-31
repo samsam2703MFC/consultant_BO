@@ -1186,14 +1186,29 @@ function ep_mkt_brief(int $id): array
     $c = mktBriefConfig();
 
     // Les destinataires : un par magasin du périmètre, avec l'adresse du
-    // carnet quand elle existe. Les manquantes sont NOMMÉES — c'est ce qui
-    // permet de les compléter, plutôt que de découvrir un envoi partiel.
+    // carnet quand elle existe. Les manquantes se COMBLENT à la fiche magasin
+    // de l'ERP (GET /shops porte l'email de la boutique) — le carnet saisi à
+    // la main reste maître, l'endpoint ne fait que remplir les vides, et un
+    // magasin sans adresse nulle part reste nommé plutôt que découvert après
+    // un envoi partiel.
+    $mailsErp = [];
+    if (PanelApi::configured()) {
+        foreach (analyseListe(PanelApi::get('/shops') ?? []) as $s2) {
+            $sid2 = (string) ($s2['id'] ?? '');
+            $m2 = mktBriefAdresse((string) ($s2['email'] ?? ''));
+            if ($sid2 !== '' && $m2 !== '') { $mailsErp[$sid2] = $m2; }
+        }
+    }
     $dest = [];
     foreach ($d['magasinIds'] as $i => $sid) {
         $shop = mktBriefMagasin((string) $sid) ?? ['name' => $d['magasins'][$i] ?? $sid, 'franchisee' => ''];
+        $adresse = mktBriefAdresse($c['carnet'][(string) $sid] ?? '');
+        if ($adresse === '') { $adresse = $mailsErp[(string) $sid] ?? ''; }
         $dest[] = ['id' => (string) $sid, 'magasin' => (string) $shop['name'],
             'franchise' => (string) ($shop['franchisee'] ?? ''),
-            'adresse' => mktBriefAdresse($c['carnet'][(string) $sid] ?? '')];
+            'adresse' => $adresse,
+            'source' => ($c['carnet'][(string) $sid] ?? '') !== '' ? 'carnet'
+                : ($adresse !== '' ? 'fiche magasin ERP' : '')];
     }
 
     $journal = array_values(array_filter(
