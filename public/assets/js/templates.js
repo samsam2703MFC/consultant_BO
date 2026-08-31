@@ -3330,7 +3330,30 @@ function tplMktNote(c, x){
         ${n.envoi === 'en-cours' ? `<span style="font-size:12px;color:var(--color-text-muted)">Envoi en cours…</span>` : ''}
         <span style="font-size:11.5px;color:var(--color-text-muted)">${n.nPrets} magasin${n.nPrets > 1 ? 's' : ''} prêt${n.nPrets > 1 ? 's' : ''}</span>
         <button ${x.A(n.envoyer)} style="${btPlein}${n.envoyer ? '' : ';opacity:.5;cursor:not-allowed'}">Envoyer par mail</button>
-      </div>`}
+      </div>
+
+      ${n.validation ? `
+      <!-- Le FORMULAIRE de validation d'envoi : qui reçoit, coché noir sur
+           blanc — c'est la confirmation qui poste, jamais le premier clic. -->
+      <div style="position:fixed;inset:0;background:rgba(34,30,26,.45);z-index:140;display:flex;align-items:center;justify-content:center;padding:20px">
+        <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;width:520px;max-width:94vw;max-height:86vh;overflow:auto;padding:17px 19px;box-shadow:0 18px 50px rgba(34,30,26,.35)">
+          <div style="font-family:var(--font-display);font-size:17px">${esc(n.validation.titre)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">Expéditeur : ${esc(n.validation.expediteur)} · un PDF nominatif par magasin</div>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+            ${n.validation.lignes.map(l => `
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-tertiary);${l.manque ? 'background:var(--color-background-secondary)' : (l.on ? 'background:rgba(45,122,62,.05)' : '')};cursor:${l.basculer ? 'pointer' : 'default'}">
+              <input type="checkbox" ${l.on ? 'checked' : ''} ${l.basculer ? x.C(l.basculer) : 'disabled'} style="width:16px;height:16px;accent-color:var(--color-primary)">
+              <span style="flex:1"><b style="font-size:12.5px">${esc(l.magasin)}</b>${l.franchise ? ` <span style="font-size:11px;color:var(--color-text-muted)">· ${esc(l.franchise)}</span>` : ''}
+                <div style="font-size:11px;color:${l.manque ? '#C0182B' : 'var(--color-text-muted)'}">${l.manque ? 'aucune adresse — complétez l’onglet Le courrier' : esc(l.adresse)}</div></span>
+            </label>`).join('')}
+          </div>
+          ${n.validation.copies.length ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">En copie : ${n.validation.copies.map(esc).join(' · ')}</div>` : ''}
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+            <button ${x.A(n.validation.annuler)} style="${bt}">Annuler</button>
+            <button ${x.A(n.validation.confirmer)} style="${btPlein}${n.validation.confirmer ? '' : ';opacity:.5;cursor:not-allowed'}">Confirmer l’envoi (${n.validation.n})</button>
+          </div>
+        </div>
+      </div>` : ''}`}
     </div>
   </div>`;
 }
