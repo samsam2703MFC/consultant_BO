@@ -2315,7 +2315,12 @@ function ep_rapports_cron(): array
     $plan = 'module absent';
     try { if (function_exists('planningSyncCron')) { $plan = planningSyncCron(); } }
     catch (Throwable $eP) { $plan = 'échec — ' . $eP->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan];
+    // La moisson des lignes par ticket avance au même battement : un lot par
+    // heure, jusqu'à ce que chaque mois endpoints ait ses lignes — puis rien.
+    $moisson = 'module absent';
+    try { if (function_exists('pvLignesCron')) { $moisson = pvLignesCron(); } }
+    catch (Throwable $eM) { $moisson = 'échec — ' . $eM->getMessage(); }
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson];
 }
 
 /**

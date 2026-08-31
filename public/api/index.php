@@ -222,6 +222,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/kpi-table/collecte') { return wr_kpi_collecte(); }
     if ($method === 'POST' && $path === '/pwa/tasks/releve') { return wr_taches_releve(); }
     if ($method === 'POST' && $path === '/planning/sync') { return wr_planning_sync(); }
+    if ($method === 'POST' && $path === '/ventes/lignes-moisson') { return wr_pv_lignes_moisson(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
