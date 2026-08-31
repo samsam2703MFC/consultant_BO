@@ -3347,7 +3347,25 @@ function tplMktNote(c, x){
                 <div style="font-size:11px;color:${l.manque ? '#C0182B' : 'var(--color-text-muted)'}">${l.manque ? 'aucune adresse — complétez l’onglet Le courrier' : esc(l.adresse)}</div></span>
             </label>`).join('')}
           </div>
-          ${n.validation.copies.length ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">En copie : ${n.validation.copies.map(esc).join(' · ')}</div>` : ''}
+          ${n.validation.extras.map(e2 => `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;border:0.5px solid var(--color-border-tertiary);background:rgba(45,122,62,.05);margin-top:6px">
+            <input type="checkbox" checked ${x.C(e2.retirer)} style="width:16px;height:16px;accent-color:var(--color-primary)">
+            <span style="flex:1"><b style="font-size:12.5px">Destinataire ajouté</b>
+              <div style="font-size:11px;color:var(--color-text-muted)">${esc(e2.adresse)}</div></span>
+          </label>`).join('')}
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input value="${esc(n.validation.saisie)}" placeholder="adresse@exemple.be" ${x.C(n.validation.poserSaisie)} style="flex:1;font-family:var(--font-ui);font-size:12px;padding:8px 12px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface)">
+            <button ${x.A(n.validation.ajouter)} style="${bt}">+ Ajouter</button>
+          </div>
+          ${n.validation.copies.length ? `
+          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-top:12px">En copie</div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-top:5px">
+            ${n.validation.copies.map(c2 => `
+            <label style="display:flex;align-items:center;gap:9px;font-size:12px;${c2.sansAdresse ? 'opacity:.55' : 'cursor:pointer'}">
+              <input type="checkbox" ${c2.on ? 'checked' : ''} ${c2.basculer ? x.C(c2.basculer) : 'disabled'} style="width:14px;height:14px;accent-color:var(--color-primary)">
+              <span><b>${esc(c2.nom)}</b> <span style="color:var(--color-text-muted)">· ${esc(c2.role)}${c2.adresse ? ' · ' + esc(c2.adresse) : ' · sans adresse'}</span></span>
+            </label>`).join('')}
+          </div>` : ''}
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
             <button ${x.A(n.validation.annuler)} style="${bt}">Annuler</button>
             <button ${x.A(n.validation.confirmer)} style="${btPlein}${n.validation.confirmer ? '' : ';opacity:.5;cursor:not-allowed'}">Confirmer l’envoi (${n.validation.n})</button>

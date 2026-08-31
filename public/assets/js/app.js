@@ -4716,30 +4716,52 @@ class App {
         // et c'est la confirmation qui poste. Un window.confirm ne montrait
         // ni qui, ni où.
         envoyer: prets.length === 0 || nt.envoi === 'en-cours' ? null : () => ntPatch({ valider: true, err: '' }),
-        validation: !nt.valider ? null : {
-          titre: 'Valider l’envoi — ' + camp.nom,
-          expediteur: cfg.expediteur || 'l’adresse marketing',
-          lignes: dest.map((x2, i) => ({
-            magasin: x2.magasin, franchise: x2.franchise || '',
-            adresse: x2.adresse || '', manque: !x2.adresse,
-            on: !!x2.on && !!x2.adresse,
-            basculer: x2.adresse ? () => setDest(i, { on: !x2.on }) : null,
-          })),
-          copies: (nt.copies || (D2.copies || [])).filter(x2 => x2.on).map(x2 => x2.nom + ' <' + x2.adresse + '>'),
-          n: prets.length,
-          annuler: () => ntPatch({ valider: false }),
-          confirmer: prets.length === 0 ? null : () => {
-            ntPatch({ envoi: 'en-cours', err: '', valider: false });
-            this.api('POST', '/marketing/campagne/' + camp.id + '/note',
-              { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise })),
-                copies: (nt.copies || (D2.copies || [])).filter(x2 => x2.on).map(x2 => x2.adresse) })
-              .then(r => {
-                if (!r || r.error) { ntPatch({ envoi: '', err: (r && r.error) || 'Envoi refusé.' }); return; }
-                this.notify(r.message || 'Note envoyée');
-                this.mkNoteOuvrir(camp.id, 'journal');
-              });
-          },
-        },
+        validation: !nt.valider ? null : (() => {
+          const extras = nt.extras || [];
+          const copiesT = nt.copies || (D2.copies || []);
+          const nTot = prets.length + extras.length;
+          return {
+            titre: 'Valider l’envoi — ' + camp.nom,
+            expediteur: cfg.expediteur || 'l’adresse marketing',
+            lignes: dest.map((x2, i) => ({
+              magasin: x2.magasin, franchise: x2.franchise || '',
+              adresse: x2.adresse || '', manque: !x2.adresse,
+              on: !!x2.on && !!x2.adresse,
+              basculer: x2.adresse ? () => setDest(i, { on: !x2.on }) : null,
+            })),
+            // Les POSITIONS AJOUTÉES à la main : une adresse de plus (un
+            // consultant, un intérim, la marque…) reçoit la note réseau,
+            // sans entrer au carnet des magasins.
+            extras: extras.map((a2, i) => ({ adresse: a2,
+              retirer: () => ntPatch({ extras: extras.filter((y, j) => j !== i) }) })),
+            saisie: nt.extraSaisie || '',
+            poserSaisie: e => ntPatch({ extraSaisie: e.target.value }),
+            ajouter: () => {
+              const a2 = (nt.extraSaisie || '').trim();
+              if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a2)) { this.notify('Adresse illisible — rien d’ajouté'); return; }
+              if (!extras.includes(a2)) { ntPatch({ extras: extras.concat([a2]), extraSaisie: '' }); }
+            },
+            // Les copies (agence, consultants) se cochent ICI aussi : la
+            // validation montre tout ce qui partira, rien d'implicite.
+            copies: copiesT.map((x2, i) => ({ nom: x2.nom, role: x2.role || '',
+              adresse: x2.adresse || '', on: !!x2.on, sansAdresse: !!x2.sansAdresse,
+              basculer: x2.sansAdresse ? null : () => ntPatch({ copies: copiesT.map((y, j) => j === i ? Object.assign({}, y, { on: !y.on }) : y) }) })),
+            n: nTot,
+            annuler: () => ntPatch({ valider: false }),
+            confirmer: nTot === 0 ? null : () => {
+              ntPatch({ envoi: 'en-cours', err: '', valider: false });
+              this.api('POST', '/marketing/campagne/' + camp.id + '/note',
+                { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise }))
+                    .concat(extras.map(a2 => ({ id: '', adresse: a2, magasin: 'Destinataire ajouté', franchise: '' }))),
+                  copies: copiesT.filter(x2 => x2.on).map(x2 => x2.adresse) })
+                .then(r => {
+                  if (!r || r.error) { ntPatch({ envoi: '', err: (r && r.error) || 'Envoi refusé.' }); return; }
+                  this.notify(r.message || 'Note envoyée');
+                  this.mkNoteOuvrir(camp.id, 'journal');
+                });
+            },
+          };
+        })(),
         journal: (D2.journal || []).map(e2 => ({
           quand: e2.quand, type: e2.type,
           etat: e2.type === 'envoye' ? 'Envoyée' : 'Échec',
