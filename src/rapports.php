@@ -1643,10 +1643,17 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // dans le pied de chaque page — l'écrire une troisième fois au-
             // dessus des photos n'apprend rien.
             $plusieursMags = count($htmls) > 1;
+            $premierTM = true;
             foreach ($htmls as $l) {
-                // Construit par nos soins, jamais issu d'une saisie — pas d'échappement.
-                $h .= ($magasin === null && $plusieursMags && $l[0] !== '' ? '<div data-titre-magasin="1" style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>' : '')
-                    . $l[1];
+                // Construit par nos soins, jamais issu d'une saisie — pas
+                // d'échappement. Dès le deuxième magasin d'un même bloc, le
+                // titre emporte un saut de page : chaque magasin sur sa
+                // feuille, absolument.
+                if ($magasin === null && $plusieursMags && $l[0] !== '') {
+                    $h .= '<div data-titre-magasin="1" data-saut-magasin="' . ($premierTM ? '0' : '1') . '" style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>';
+                    $premierTM = false;
+                }
+                $h .= $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
                 $h .= '<div style="' . $F . ';font-size:11.5px;color:#8b8177;padding:7px 0 0;font-style:italic">&rarr; ' . $e($s['action']) . '</div>';
@@ -1660,10 +1667,15 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
     if ($parMagasin) {
         try { $shops = Db::rows('SELECT name FROM shops WHERE active = 1 ORDER BY name'); }
         catch (PDOException $ex) { $shops = []; }
+        $premierMag = true;
         foreach ($shops as $s) {
-            $corps .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:26px"><tr>'
+            // CHAQUE MAGASIN COMMENCE SA PAGE : un rapport qui s'imprime se
+            // distribue feuille par feuille — deux magasins sur la même page
+            // ne se découpent pas. Le premier reste collé à l'en-tête.
+            $corps .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-saut-magasin="' . ($premierMag ? '0' : '1') . '" style="margin-top:26px"><tr>'
                 . '<td style="' . $F . ';background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0;padding:10px 15px;font-size:15px;font-weight:700;color:#221E1A">' . $e($s['name']) . '</td></tr></table>'
                 . $rendSections($sections, (string) $s['name']);
+            $premierMag = false;
         }
     } else {
         $corps = $rendSections($sections, null);
@@ -2426,6 +2438,9 @@ function rapPdfHtml(string $html): string
             : '')
         // Un titre ne se sépare jamais de ce qu'il annonce.
         . 'div[data-titre-bloc],div[data-titre-magasin]{page-break-after:avoid}'
+        // Chaque magasin commence sa page — le bandeau du document groupé
+        // comme le titre de magasin d'une grille réseau, sauf le premier.
+        . 'table[data-saut-magasin="1"],div[data-saut-magasin="1"]{page-break-before:always;margin-top:0 !important}'
         // Un peu d'air entre le bandeau et le titre, et entre les blocs.
         . 'table[data-carte]>tbody>tr:first-child>td{padding-top:6px !important;padding-bottom:12px !important}'
         . 'table[data-cta]{display:none !important}'
