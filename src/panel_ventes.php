@@ -243,3 +243,46 @@ function pvLignesMois(string $m): ?array
     }
     return $out;
 }
+
+/**
+ * Les lignes et tickets d'un mois moissonné, PAR MAGASIN — null tant que le
+ * mois n'est pas clos et entièrement moissonné.
+ */
+function pvLignesMoisShops(string $m): ?array
+{
+    try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return null; }
+    $fin = date('Y-m-t', strtotime($m . '-01'));
+    if ($fin >= date('Y-m-d')) { return null; }
+    $out = [];
+    for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
+        foreach ($shops as $sid) {
+            $c = setting('pvL' . $sid . ':' . $j);
+            if (!is_array($c) || !isset($c['e'])) { return null; }
+            if (!isset($out[$sid])) { $out[$sid] = ['l' => 0, 't' => 0]; }
+            foreach ((array) $c['e'] as $x) {
+                $out[$sid]['l'] += (int) ($x['l'] ?? 0);
+                $out[$sid]['t'] += (int) ($x['t'] ?? 0);
+            }
+        }
+    }
+    return $out;
+}
+
+/** Le CA d'un magasin sur un mois, par l'endpoint des KPIs — gravé une fois clos. */
+function pvCaMois(int $sid, string $m): ?float
+{
+    $cle = 'pvCa' . $sid . ':' . $m;
+    $cache = setting($cle);
+    $clos = date('Y-m-t', strtotime($m . '-01')) < date('Y-m-d');
+    if (is_array($cache) && isset($cache['ca'])
+        && ($clos || (int) ($cache['quand'] ?? 0) > time() - 3600)) {
+        return (float) $cache['ca'];
+    }
+    $k = PanelApi::get('/shops/' . $sid . '/statistics/sales/kpis?' . http_build_query(
+        ['date_from' => $m . '-01', 'date_to' => date('Y-m-t', strtotime($m . '-01'))]));
+    if (!is_array($k) || !isset($k['ca'])) { return null; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        [$cle, json_encode(['quand' => time(), 'ca' => (float) $k['ca']])]);
+    return (float) $k['ca'];
+}

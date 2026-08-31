@@ -1212,6 +1212,20 @@ function ep_ventes_cross(): array
                                WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
                                GROUP BY t.id_shop', [$duS, $auS]);
         } catch (PDOException $e) { $rows = []; }
+        // Le mois n'est plus dans la table locale : la MOISSON donne les
+        // lignes et tickets par magasin, l'endpoint des KPIs le CA — la
+        // valeur d'une ligne reste mesurée, plus figée sur juillet.
+        if ($rows === [] && function_exists('pvLignesMoisShops')) {
+            $parShopL = pvLignesMoisShops($mSim);
+            if ($parShopL !== null) {
+                foreach ($parShopL as $sidL => $xL) {
+                    if (($xL['t'] ?? 0) <= 0) { continue; }
+                    $caL = function_exists('pvCaMois') ? pvCaMois((int) $sidL, $mSim) : null;
+                    $rows[] = ['sid' => (string) $sidL, 'tickets' => (int) $xL['t'],
+                        'q' => (int) $xL['l'], 'ca' => (float) ($caL ?? 0)];
+                }
+            }
+        }
         $tk = array_sum(array_map(fn ($r2) => (int) $r2['tickets'], $rows));
         if ($tk === 0) { continue; }
         // Les TICKETS viennent de la CAISSE (clients/jour × jours du mois,
