@@ -197,3 +197,4 @@ deploy 1788168736 saut de page par magasin
 deploy 1788245802 heatmap endpoints
 deploy 1788249929 retrait analyse shop
 2026-09-01 18:27:50
+2026-09-01 18:32:20

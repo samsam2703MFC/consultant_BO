@@ -224,12 +224,12 @@ function ep_dossier_pdf(): array
         . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:4mm">Chiffres exacts des endpoints du réseau, gravés à la clôture. Fenêtre : du ' . $e(date('d/m', strtotime($du))) . ' au ' . $e(date('d/m/Y', strtotime($au))) . '.</div>';
     $tuiles = [
         ['CA', $eur0($pnl['ca']), $caPrecTxt, $pnl['ca'] >= ($pnlPrec['ca'] ?? 0) ? 'vert' : 'rouge'],
-        ['Tickets', number_format($pnl['tickets'], 0, ',', ' '), 'panier ' . ($pnl['tickets'] > 0 ? number_format($pnl['ca'] / $pnl['tickets'], 2, ',', ' ') . ' €' : '—'), 'mut'],
-        ['Objectif budget', $budget !== null && $budget > 0 ? round($pnl['ca'] / $budget * 100) . ' %' : '—', $budget !== null ? $eur0($budget) . ' visés' : 'pas de budget posé', 'acc'],
-        ['CA par ETP', $caEtpIci !== null ? $eur0($caEtpIci) : '—', $etpIci !== null ? str_replace('.', ',', (string) $etpIci) . ' ETP (heures ÷ 164)' : 'planning incomplet', 'vert'],
-        ['Food cost', $foodPct !== null ? $n1($foodPct) . ' %' : '—', 'seuil ' . $n1(kpiSeuil('food-cost-pct', 32.0)) . ' %' . ($foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0) ? ' dépassé' : ' tenu'), $foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0) ? 'rouge' : 'vert'],
-        ['Main-d’œuvre', $moPct !== null ? $n1($moPct) . ' %' : '—', 'seuil ' . $n1(kpiSeuil('labour-pct', 33.0)) . ' %' . ($moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? ' dépassé' : ' tenu'), $moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? 'rouge' : 'vert'],
-        ['Meilleure vendeuse', $meilleure !== null ? $meilleure['nom'] : '—', $meilleure !== null ? 'score ' . $meilleure['score'] : '', 'mut'],
+        ['Tickets', number_format($pnl['tickets'], 0, ',', ' '), 'panier ' . ($pnl['tickets'] > 0 ? number_format($pnl['ca'] / $pnl['tickets'], 2, ',', ' ') . ' €' : ''), 'mut'],
+        ['Objectif budget', $budget !== null && $budget > 0 ? round($pnl['ca'] / $budget * 100) . ' %' : '', $budget !== null ? $eur0($budget) . ' visés' : 'pas de budget posé', 'acc'],
+        ['CA par ETP', $caEtpIci !== null ? $eur0($caEtpIci) : '', $etpIci !== null ? str_replace('.', ',', (string) $etpIci) . ' ETP (heures ÷ 164)' : 'planning incomplet', 'vert'],
+        ['Food cost', $foodPct !== null ? $n1($foodPct) . ' %' : '', 'seuil ' . $n1(kpiSeuil('food-cost-pct', 32.0)) . ' %' . ($foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0) ? ' dépassé' : ' tenu'), $foodPct !== null && $foodPct > kpiSeuil('food-cost-pct', 32.0) ? 'rouge' : 'vert'],
+        ['Main-d’œuvre', $moPct !== null ? $n1($moPct) . ' %' : '', 'seuil ' . $n1(kpiSeuil('labour-pct', 33.0)) . ' %' . ($moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? ' dépassé' : ' tenu'), $moPct !== null && $moPct > kpiSeuil('labour-pct', 33.0) ? 'rouge' : 'vert'],
+        ['Meilleure vendeuse', $meilleure !== null ? $meilleure['nom'] : '', $meilleure !== null ? 'score ' . $meilleure['score'] : '', 'mut'],
         ['Résultat', $eur0($pnl['resultat']), $pnl['ca'] > 0 ? $n1($pnl['resultat'] / $pnl['ca'] * 100) . ' % du CA' : '', $pnl['resultat'] >= 0 ? 'vert' : 'rouge'],
     ];
     $h .= '<table width="100%" cellpadding="0" cellspacing="4"><tr>';
@@ -249,7 +249,7 @@ function ep_dossier_pdf(): array
         $h .= '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:1.2mm"><tr>'
             . '<td style="width:26mm;font-size:8.5pt;' . ($s2 === $sid ? 'font-weight:bold' : '') . '">' . $e($court($nom2)) . '</td>'
             . '<td><div style="height:3.4mm;background:#F4F1EB;border-radius:2mm"><div style="height:3.4mm;width:' . $w . 'mm;background:' . ($s2 === $sid ? '#8D1D2C' : '#D9BCBF') . ';border-radius:2mm"></div></div></td>'
-            . '<td style="width:38mm;text-align:right;font-size:8.5pt"><b>' . ($v !== null ? $eur0($v) : '—') . '</b> / ETP <span class="mut">· ' . ($etpDe[$s2] !== null ? str_replace('.', ',', (string) $etpDe[$s2]) : '—') . ' ETP</span></td></tr></table>';
+            . '<td style="width:38mm;text-align:right;font-size:8.5pt"><b>' . ($v !== null ? $eur0($v) : '') . '</b> / ETP <span class="mut">· ' . ($etpDe[$s2] !== null ? str_replace('.', ',', (string) $etpDe[$s2]) : '') . ' ETP</span></td></tr></table>';
     }
     // à retenir
     $h .= '<div class="sec">À retenir — écrit par les seuils</div><div style="font-size:9pt;line-height:1.7">';
@@ -277,7 +277,7 @@ function ep_dossier_pdf(): array
     $h .= '</div>';
 
     // ============ PAGE 2 : BUDGET & P&L ============
-    $h .= '<div class="saut"></div>' . $entete('budget &amp; compte de résultat');
+    $h .= '<div class="saut"></div>' . $entete('budget & compte de résultat');
     $h .= '<div class="sec" style="margin-top:0">Le compte de résultat de la période</div>';
     $lignesP = [
         ['Chiffre d’affaires', $pnl['ca'], 100.0, null, false],
@@ -294,8 +294,8 @@ function ep_dossier_pdf(): array
         $h .= '<tr><td class="l" style="font-weight:bold">' . $e($lib) . '</td>'
             . '<td style="width:52mm"><div style="height:2.6mm;background:#F4F1EB;border-radius:2mm"><div style="height:2.6mm;width:' . $w . 'mm;background:' . ($depasse ? '#C0182B' : ($lib === 'Chiffre d’affaires' ? '#5B7FA6' : '#7A9E7E')) . ';border-radius:2mm"></div></div></td>'
             . '<td style="font-weight:bold">' . ($mnt < 0 ? '− ' : '') . $eur0(abs($mnt)) . '</td>'
-            . '<td>' . ($pct !== null ? $n1($pct) . ' %' : '—') . '</td>'
-            . '<td class="' . ($depasse ? 'rouge' : 'mut') . '">' . ($seuil !== null ? $n1($seuil) . ' %' . ($depasse ? ' dépassé' : '') : '—') . '</td></tr>';
+            . '<td>' . ($pct !== null ? $n1($pct) . ' %' : '') . '</td>'
+            . '<td class="' . ($depasse ? 'rouge' : 'mut') . '">' . ($seuil !== null ? $n1($seuil) . ' %' . ($depasse ? ' dépassé' : '') : '') . '</td></tr>';
     }
     $h .= '</table>';
     // budget 5 mois
@@ -322,7 +322,7 @@ function ep_dossier_pdf(): array
             . '<td style="vertical-align:bottom"><div style="width:6mm;height:' . max(2, $hR) . 'mm;background:#8D1D2C;border-radius:1mm 1mm 0 0"></div></td>'
             . '<td style="vertical-align:bottom"><div style="width:6mm;height:' . max(2, $hB) . 'mm;background:#E8C9A0;border-radius:1mm 1mm 0 0"></div></td></tr></table>'
             . '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">' . $e(strftime_fr(strtotime($mB . '-01'), 'M')) . '</div>'
-            . '<div style="font-size:8pt;font-weight:bold;color:' . ($att !== null && $att >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($att !== null ? $att . ' %' : '—') . '</div></td>';
+            . '<div style="font-size:8pt;font-weight:bold;color:' . ($att !== null && $att >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($att !== null ? $att . ' %' : '') . '</div></td>';
     }
     $h .= '</tr></table><div style="font-size:7.5pt;color:#8b8177">Bordeaux : réalisé (endpoints) · sable : budget validé (à défaut le CA théorique de l’étude).</div>';
     // jours
@@ -350,7 +350,9 @@ function ep_dossier_pdf(): array
         return (float) ($r3['revenue_budget'] ?? 0) > 0 ? (float) $r3['revenue_budget']
             : ((float) ($r3['ca_theorique'] ?? 0) > 0 ? (float) $r3['ca_theorique'] : null);
     };
-    $moisMax = (int) date('n');
+    // Seuls les mois CLOS comptent : le mois en cours n'a que quelques jours,
+    // son atteinte partielle mentirait en rouge.
+    $moisMax = $annee < (int) date('Y') ? 12 : ($annee > (int) date('Y') ? 0 : (int) date('n') - 1);
     $h .= '<div class="saut"></div>' . $entete('le budget de l’année ' . $annee);
     $h .= '<div class="sec" style="margin-top:0">' . $e($nomC) . ' — les douze mois face au budget</div>';
     $h .= '<table class="t"><tr><th class="l">Mois</th><th>Budget</th><th>Réalisé</th><th>Atteinte</th><th>Écart</th><th>Cumul réalisé</th><th>Cumul budget</th></tr>';
@@ -366,22 +368,23 @@ function ep_dossier_pdf(): array
         $coulA = $att === null ? '#8b8177' : ($att >= 100 ? '#2d7a3e' : ($att >= 90 ? '#D97706' : '#C0182B'));
         $h .= '<tr' . ($mM === $m ? ' style="background:#FFF9EC"' : '') . '>'
             . '<td class="l" style="font-weight:bold">' . $e(strftime_fr(strtotime($mM . '-01'), 'M')) . '</td>'
-            . '<td class="mut">' . ($bM !== null ? $eur0($bM) : '—') . '</td>'
-            . '<td style="font-weight:bold">' . ($rM !== null ? $eur0($rM) : '—') . '</td>'
-            . '<td style="font-weight:bold;color:' . $coulA . '">' . ($att !== null ? round($att) . ' %' : '—') . '</td>'
-            . '<td style="color:' . $coulA . '">' . (($rM !== null && $bM !== null) ? (($rM >= $bM ? '+ ' : '− ') . $eur0(abs($rM - $bM))) : '—') . '</td>'
+            . '<td class="mut">' . ($bM !== null ? $eur0($bM) : '') . '</td>'
+            . '<td style="font-weight:bold">' . ($rM !== null ? $eur0($rM) : '') . '</td>'
+            . '<td style="font-weight:bold;color:' . $coulA . '">' . ($att !== null ? round($att) . ' %' : '') . '</td>'
+            . '<td style="color:' . $coulA . '">' . (($rM !== null && $bM !== null) ? (($rM >= $bM ? '+ ' : '− ') . $eur0(abs($rM - $bM))) : '') . '</td>'
             . '<td>' . ($mo <= $moisMax ? $eur0($cumR) : '') . '</td>'
             . '<td class="mut">' . ($mo <= $moisMax ? $eur0($cumB) : '') . '</td></tr>';
     }
     $attAn = $cumB > 0 ? round($cumR / $cumB * 100) : null;
     $h .= '<tr style="background:#F7F3EC"><td class="l" style="font-weight:bold">Année à date</td><td class="mut" style="font-weight:bold">' . $eur0($cumB) . '</td>'
         . '<td style="font-weight:bold">' . $eur0($cumR) . '</td>'
-        . '<td style="font-weight:bold;color:' . ($attAn !== null && $attAn >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($attAn !== null ? $attAn . ' %' : '—') . '</td>'
+        . '<td style="font-weight:bold;color:' . ($attAn !== null && $attAn >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($attAn !== null ? $attAn . ' %' : '') . '</td>'
         . '<td colspan="3"></td></tr></table>';
     // La HEATMAP réseau : magasins × mois, colorée à l'atteinte du budget.
     $h .= '<div class="sec">La heatmap de l’année — chaque magasin face à son budget, mois par mois</div>';
     $h .= '<table class="t" style="table-layout:fixed"><tr><th class="l" style="width:22mm">Magasin</th>';
-    for ($mo = 1; $mo <= 12; $mo++) { $h .= '<th style="text-align:center">' . $e(mb_substr(strftime_fr(strtotime(sprintf('%04d-%02d-01', $annee, $mo)), 'M'), 0, 3)) . '</th>'; }
+    $moisCourt = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    for ($mo = 1; $mo <= 12; $mo++) { $h .= '<th style="text-align:center">' . $moisCourt[$mo - 1] . '</th>'; }
     $h .= '</tr>';
     foreach ($shops as $s3 => $nom3) {
         $h .= '<tr><td class="l" style="font-weight:' . ($s3 === $sid ? 'bold' : 'normal') . '">' . $e($court($nom3)) . '</td>';
@@ -390,7 +393,7 @@ function ep_dossier_pdf(): array
             $bM = $budDe((int) $s3, $mo);
             $kM = pvKpisMois((int) $s3, sprintf('%04d-%02d', $annee, $mo));
             $att = ($kM !== null && $bM !== null && $bM > 0) ? $kM['ca'] / $bM * 100 : null;
-            if ($att === null) { $h .= '<td style="text-align:center;background:#F4F1EB;color:#b8b2a8;font-size:6.5pt">—</td>'; continue; }
+            if ($att === null) { $h .= '<td style="text-align:center;background:#F4F1EB;color:#b8b2a8;font-size:6.5pt"></td>'; continue; }
             $bg = $att >= 105 ? '#2d7a3e' : ($att >= 100 ? '#5f9e5f' : ($att >= 90 ? '#D9A73E' : ($att >= 80 ? '#CC7A4A' : '#C0182B')));
             $h .= '<td style="text-align:center;background:' . $bg . ';color:#fff;font-weight:bold;font-size:7pt;border-bottom:1pt solid #fff">' . round($att) . '</td>';
         }
@@ -399,7 +402,7 @@ function ep_dossier_pdf(): array
     $h .= '</table><div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Chaque case : le % d’atteinte du budget du mois (réalisé endpoints ÷ budget validé, à défaut le CA théorique). Vert foncé ≥ 105 · vert ≥ 100 · ambre ≥ 90 · orange ≥ 80 · rouge en dessous · gris : pas de budget posé.</div>';
 
     // ============ PAGE 3 : PRODUITS ============
-    $h .= '<div class="saut"></div>' . $entete('produits &amp; assortiment');
+    $h .= '<div class="saut"></div>' . $entete('produits & assortiment');
     $prods = $prodD['prods']; $part = $prodD['part'];
     $lTop = array_filter($prods, fn ($p2) => $p2['ici'] > 0);
     uasort($lTop, fn ($a, $b) => $b['ici'] <=> $a['ici']);
@@ -476,12 +479,12 @@ function ep_dossier_pdf(): array
         $caEtp2 = $x['etp'] > 0 ? (int) round($x['ca'] / $x['etp']) : null;
         $h .= '<tr' . ($rg === 1 ? ' style="background:#FFF9EC"' : '') . '><td class="l mut">' . $rg . '.</td>'
             . '<td class="l" style="font-weight:bold">' . $e($x['nom']) . '</td>'
-            . '<td style="font-weight:bold;' . ($rg === 1 ? 'color:#8D1D2C' : '') . '">' . ($x['score'] ?? '—') . '</td>'
+            . '<td style="font-weight:bold;' . ($rg === 1 ? 'color:#8D1D2C' : '') . '">' . ($x['score'] ?? '') . '</td>'
             . '<td>' . $eur0($x['ca']) . '</td><td>' . number_format($x['tickets'], 0, ',', ' ') . '</td>'
-            . '<td>' . $n1($x['heures']) . ' h</td><td>' . ($x['caH'] !== null ? $x['caH'] . ' €' : '—') . '</td>'
-            . '<td>' . ($x['lignesT'] !== null ? str_replace('.', ',', (string) $x['lignesT']) : '—') . '</td>'
+            . '<td>' . $n1($x['heures']) . ' h</td><td>' . ($x['caH'] !== null ? $x['caH'] . ' €' : '') . '</td>'
+            . '<td>' . ($x['lignesT'] !== null ? str_replace('.', ',', (string) $x['lignesT']) : '') . '</td>'
             . '<td class="mut">' . str_replace('.', ',', (string) $x['etp']) . '</td>'
-            . '<td>' . ($caEtp2 !== null ? $eur0($caEtp2) : '—') . '</td></tr>';
+            . '<td>' . ($caEtp2 !== null ? $eur0($caEtp2) : '') . '</td></tr>';
     }
     $h .= '</table>';
     // records
@@ -510,8 +513,8 @@ function ep_dossier_pdf(): array
             $h .= '<tr' . ($paie ? ' style="background:#F2F7F3"' : '') . '><td class="l" style="font-weight:bold">' . $e($l['nom']) . '</td>'
                 . '<td class="mut">' . ($rec !== null ? str_replace('.', ',', (string) $rec) : 'sans référence') . '</td>'
                 . '<td style="font-weight:bold">' . str_replace('.', ',', (string) $l['lignesTicket']) . '</td>'
-                . '<td class="' . ($d2 !== null && $d2 > 0 ? 'vert' : 'mut') . '">' . ($d2 === null ? '—' : (($d2 > 0 ? '+ ' : ($d2 < 0 ? '− ' : '＝ ')) . str_replace('.', ',', (string) abs($d2)))) . '</td>'
-                . '<td class="' . ($paie ? 'vert' : 'mut') . '" style="font-weight:bold">' . ($paie ? $pr['prime'] . ' € (' . $pr['tranches'] . ' dixième(s))' : '—') . '</td></tr>';
+                . '<td class="' . ($d2 !== null && $d2 > 0 ? 'vert' : 'mut') . '">' . ($d2 === null ? '' : (($d2 > 0 ? '+ ' : ($d2 < 0 ? '− ' : '＝ ')) . str_replace('.', ',', (string) abs($d2)))) . '</td>'
+                . '<td class="' . ($paie ? 'vert' : 'mut') . '" style="font-weight:bold">' . ($paie ? $pr['prime'] . ' € (' . $pr['tranches'] . ' dixième(s))' : '') . '</td></tr>';
         }
         if ($nR === 0) { $h .= '<tr><td class="l mut" colspan="5">Les lignes par ticket du mois ne sont pas encore moissonnées — la section se remplira toute seule.</td></tr>'; }
         $h .= '</table>';
