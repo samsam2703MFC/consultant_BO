@@ -525,10 +525,10 @@ function ep_dossier_pdf(): array
     if ($crois === null || ($crois['jours'] ?? []) === []) {
         $h .= '<div style="font-size:9.5pt" class="mut">La moisson des croisements de ' . $e($libP) . ' n’est pas encore passée — cette page se remplira toute seule (POST /ventes/crois-moisson pour forcer).</div>';
     } else {
-        $parEmp = (array) ($crois['emp'] ?? []);
+        $parEmp = (array) ($crois['emp'][$sid] ?? []);
         $fT = array_sum(array_map(fn ($x2) => (int) ($x2['f'] ?? 0), $parEmp));
         $fbT = array_sum(array_map(fn ($x2) => (int) ($x2['fb'] ?? 0), $parEmp));
-        $prixB = (float) ($crois['prixBoisson'] ?? 0);
+        $prixB = (float) ($crois['prixBoisson'][$sid] ?? 0);
         $h .= '<div class="sec" style="margin-top:0">L’attache Flip &amp; Flap → boisson — ' . $e($nomC) . '</div>'
             . '<table width="100%" cellpadding="0" cellspacing="4"><tr>'
             . '<td width="25%" class="tuile"><div class="cap">Tickets F&amp;F</div><div class="serif" style="font-size:14pt;color:#8D1D2C;margin-top:1mm">' . number_format($fT, 0, ',', ' ') . '</div></td>'
@@ -558,7 +558,7 @@ function ep_dossier_pdf(): array
         }
         $h .= '</table>';
         // paires
-        $paires = (array) ($crois['paires'] ?? []);
+        $paires = (array) ($crois['paires'][$sid] ?? []);
         arsort($paires);
         $h .= '<div class="sec">Les paires de la période — ce qui part ensemble</div>';
         $h .= '<table width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" style="vertical-align:top;padding-right:4mm">';

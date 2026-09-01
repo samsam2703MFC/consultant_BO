@@ -322,7 +322,15 @@ function pvCroisMoisson(string $m, int $budget = 450): array
 
     $etat = setting('pvCrois' . $m);
     $etat = is_array($etat) ? $etat : [];
-    $etat += ['jours' => [], 'emp' => [], 'paires' => [], 'caBoi' => 0.0, 'qBoi' => 0.0];
+    // emp/paires/caBoi/qBoi se rangent PAR MAGASIN — un croisement ne se lit
+    // jamais mélangé entre magasins. Un ancien état à plat (versions
+    // précédentes, emp[eid]=['f','fb'] directement) est irrécupérable :
+    // on repart de zéro plutôt que de le lire de travers.
+    if (isset($etat['emp']) && is_array($etat['emp']) && $etat['emp'] !== []
+        && is_array($u = reset($etat['emp'])) && isset($u['f'])) {
+        $etat = [];
+    }
+    $etat += ['jours' => [], 'emp' => [], 'paires' => [], 'caBoi' => [], 'qBoi' => []];
     try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
     catch (PDOException $e) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
 
@@ -352,16 +360,16 @@ function pvCroisMoisson(string $m, int $budget = 450): array
                         if (isset($ff[$pid])) { $aFF = true; }
                         if (isset($boi[$pid])) {
                             $aBoi = true;
-                            $etat['caBoi'] += (float) ($l['total_gross_value_after_discount'] ?? 0);
-                            $etat['qBoi'] += (float) ($l['quantity'] ?? 0);
+                            $etat['caBoi'][$sid] = ($etat['caBoi'][$sid] ?? 0.0) + (float) ($l['total_gross_value_after_discount'] ?? 0);
+                            $etat['qBoi'][$sid] = ($etat['qBoi'][$sid] ?? 0.0) + (float) ($l['quantity'] ?? 0);
                         }
                         $n2 = trim((string) ($l['product_display_name'] ?? ($l['product_name'] ?? '')));
                         if ($n2 !== '') { $noms[$n2] = true; }
                     }
                     if ($aFF) {
-                        if (!isset($etat['emp'][$emp])) { $etat['emp'][$emp] = ['f' => 0, 'fb' => 0]; }
-                        $etat['emp'][$emp]['f']++;
-                        if ($aBoi) { $etat['emp'][$emp]['fb']++; }
+                        if (!isset($etat['emp'][$sid][$emp])) { $etat['emp'][$sid][$emp] = ['f' => 0, 'fb' => 0]; }
+                        $etat['emp'][$sid][$emp]['f']++;
+                        if ($aBoi) { $etat['emp'][$sid][$emp]['fb']++; }
                     }
                     $noms = array_keys($noms);
                     sort($noms);
@@ -370,7 +378,7 @@ function pvCroisMoisson(string $m, int $budget = 450): array
                         for ($a2 = 0; $a2 < $nn; $a2++) {
                             for ($b2 = $a2 + 1; $b2 < $nn; $b2++) {
                                 $p2 = $noms[$a2] . '|' . $noms[$b2];
-                                $etat['paires'][$p2] = ($etat['paires'][$p2] ?? 0) + 1;
+                                $etat['paires'][$sid][$p2] = ($etat['paires'][$sid][$p2] ?? 0) + 1;
                             }
                         }
                     }
@@ -378,14 +386,18 @@ function pvCroisMoisson(string $m, int $budget = 450): array
             }
             if ($jourOk) { $etat['jours'][$k] = 1; $faits++; $cout += count($ids); }
             else { $restants++; }
-            // Les paires se taillent au passage : garder les 400 plus jouées.
-            if (count($etat['paires']) > 900) {
-                arsort($etat['paires']);
-                $etat['paires'] = array_slice($etat['paires'], 0, 400, true);
+            // Les paires se taillent au passage : garder les 400 plus jouées, par magasin.
+            if (isset($etat['paires'][$sid]) && count($etat['paires'][$sid]) > 900) {
+                arsort($etat['paires'][$sid]);
+                $etat['paires'][$sid] = array_slice($etat['paires'][$sid], 0, 400, true);
             }
         }
     }
-    $etat['prixBoisson'] = $etat['qBoi'] > 0 ? round($etat['caBoi'] / $etat['qBoi'], 2) : 0.0;
+    $etat['prixBoisson'] = [];
+    foreach ($shops as $sid2) {
+        $q2 = $etat['qBoi'][$sid2] ?? 0.0;
+        $etat['prixBoisson'][$sid2] = $q2 > 0 ? round(($etat['caBoi'][$sid2] ?? 0.0) / $q2, 2) : 0.0;
+    }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['pvCrois' . $m, json_encode($etat, JSON_UNESCAPED_UNICODE)]);
     return ['ok' => true, 'joursFaits' => $faits, 'joursRestants' => $restants, 'tickets' => $cout,
