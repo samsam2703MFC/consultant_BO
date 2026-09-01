@@ -300,3 +300,103 @@ function pvCaMois(int $sid, string $m): ?float
     $k = pvKpisMois($sid, $m);
     return $k !== null ? $k['ca'] : null;
 }
+
+/**
+ * La moisson des CROISEMENTS d'un mois : l'attache Flip & Flap → boisson par
+ * vendeuse, les paires de produits, le prix moyen d'une boisson encaissée —
+ * tout depuis /transactions/{id}?include=products, par lots bornés, jour-
+ * magasin par jour-magasin, accumulé dans ceo_app_setting.pvCrois{mois}.
+ * Un jour au ticket muet reste à refaire : pas de croisement à moitié.
+ */
+function pvCroisMoisson(string $m, int $budget = 450): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
+    $ff = []; $boi = [];
+    foreach (ep_prod_catalogue() as $pr) {
+        $pid = $pr['pwaId'] ?? null;
+        if ($pid === null) { continue; }
+        if (stripos((string) ($pr['categorie'] ?? ''), 'flip') !== false) { $ff[(int) $pid] = true; }
+        if ((string) ($pr['groupe'] ?? '') === 'Boissons') { $boi[(int) $pid] = true; }
+    }
+    if ($ff === [] || $boi === []) { return ['ok' => false, 'motif' => 'catalogue sans Flip & Flap ou groupe Boissons']; }
+
+    $etat = setting('pvCrois' . $m);
+    $etat = is_array($etat) ? $etat : [];
+    $etat += ['jours' => [], 'emp' => [], 'paires' => [], 'caBoi' => 0.0, 'qBoi' => 0.0];
+    try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
+
+    $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d', strtotime('-1 day')));
+    $cout = 0; $faits = 0; $restants = 0;
+    for ($j = $m . '-01'; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
+        foreach ($shops as $sid) {
+            $k = $sid . ':' . $j;
+            if (!empty($etat['jours'][$k])) { continue; }
+            if ($cout >= $budget) { $restants++; continue; }
+            $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
+            if (!is_array($liste)) { $restants++; continue; }
+            $ids = [];
+            foreach (analyseListe($liste) as $t) { if ((int) ($t['id'] ?? 0) > 0) { $ids[] = (int) $t['id']; } }
+            $jourOk = true;
+            foreach (array_chunk($ids, 40) as $lot) {
+                $chemins = [];
+                foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+                $res = PanelApi::getParallele($chemins, 8);
+                foreach ($lot as $id) {
+                    $t = $res[$id] ?? null;
+                    if (!is_array($t)) { $jourOk = false; break 2; }
+                    $emp = (int) ($t['id_employee'] ?? 0);
+                    $noms = []; $aFF = false; $aBoi = false;
+                    foreach ((array) ($t['products'] ?? []) as $l) {
+                        $pid = (int) ($l['id_product'] ?? 0);
+                        if (isset($ff[$pid])) { $aFF = true; }
+                        if (isset($boi[$pid])) {
+                            $aBoi = true;
+                            $etat['caBoi'] += (float) ($l['total_gross_value_after_discount'] ?? 0);
+                            $etat['qBoi'] += (float) ($l['quantity'] ?? 0);
+                        }
+                        $n2 = trim((string) ($l['product_display_name'] ?? ($l['product_name'] ?? '')));
+                        if ($n2 !== '') { $noms[$n2] = true; }
+                    }
+                    if ($aFF) {
+                        if (!isset($etat['emp'][$emp])) { $etat['emp'][$emp] = ['f' => 0, 'fb' => 0]; }
+                        $etat['emp'][$emp]['f']++;
+                        if ($aBoi) { $etat['emp'][$emp]['fb']++; }
+                    }
+                    $noms = array_keys($noms);
+                    sort($noms);
+                    $nn = count($noms);
+                    if ($nn >= 2 && $nn <= 8) {
+                        for ($a2 = 0; $a2 < $nn; $a2++) {
+                            for ($b2 = $a2 + 1; $b2 < $nn; $b2++) {
+                                $p2 = $noms[$a2] . '|' . $noms[$b2];
+                                $etat['paires'][$p2] = ($etat['paires'][$p2] ?? 0) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            if ($jourOk) { $etat['jours'][$k] = 1; $faits++; $cout += count($ids); }
+            else { $restants++; }
+            // Les paires se taillent au passage : garder les 400 plus jouées.
+            if (count($etat['paires']) > 900) {
+                arsort($etat['paires']);
+                $etat['paires'] = array_slice($etat['paires'], 0, 400, true);
+            }
+        }
+    }
+    $etat['prixBoisson'] = $etat['qBoi'] > 0 ? round($etat['caBoi'] / $etat['qBoi'], 2) : 0.0;
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['pvCrois' . $m, json_encode($etat, JSON_UNESCAPED_UNICODE)]);
+    return ['ok' => true, 'joursFaits' => $faits, 'joursRestants' => $restants, 'tickets' => $cout,
+        'etat' => $restants === 0 ? 'à jour' : $restants . ' jour(s)-magasin restants'];
+}
+
+/** POST /ventes/crois-moisson {m, budget} — une passe de moisson des croisements. */
+function wr_pv_crois_moisson(): array
+{
+    $b = body();
+    $m = (string) ($b['m'] ?? date('Y-m', strtotime('first day of last month')));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m', strtotime('first day of last month')); }
+    return pvCroisMoisson($m, (int) ($b['budget'] ?? 450));
+}

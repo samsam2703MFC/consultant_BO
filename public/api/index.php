@@ -21,6 +21,7 @@ require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
 require __DIR__ . '/../../src/analyse_produits.php';
+require __DIR__ . '/../../src/dossier.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';
@@ -111,6 +112,7 @@ function route(string $method, string $path): mixed
             $path === '/cadence'                       => ep_cadence(),
             $path === '/parametres/smtp'               => ep_smtp(),
             $path === '/analyse/produits'              => ep_analyse_produits(),
+            $path === '/dossier.pdf'                  => ep_dossier_pdf(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
@@ -222,6 +224,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/pwa/tasks/releve') { return wr_taches_releve(); }
     if ($method === 'POST' && $path === '/planning/sync') { return wr_planning_sync(); }
     if ($method === 'POST' && $path === '/ventes/lignes-moisson') { return wr_pv_lignes_moisson(); }
+    if ($method === 'POST' && $path === '/ventes/crois-moisson') { return wr_pv_crois_moisson(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
