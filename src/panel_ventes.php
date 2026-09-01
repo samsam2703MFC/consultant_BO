@@ -269,20 +269,34 @@ function pvLignesMoisShops(string $m): ?array
     return $out;
 }
 
-/** Le CA d'un magasin sur un mois, par l'endpoint des KPIs — gravé une fois clos. */
-function pvCaMois(int $sid, string $m): ?float
+/**
+ * Les KPIs d'un magasin sur un mois (CA, tickets, panier) par l'endpoint —
+ * gravés une fois le mois clos, rafraîchis à l'heure pour le mois en cours.
+ */
+function pvKpisMois(int $sid, string $m): ?array
 {
     $cle = 'pvCa' . $sid . ':' . $m;
     $cache = setting($cle);
     $clos = date('Y-m-t', strtotime($m . '-01')) < date('Y-m-d');
-    if (is_array($cache) && isset($cache['ca'])
+    if (is_array($cache) && isset($cache['ca'], $cache['tickets'])
         && ($clos || (int) ($cache['quand'] ?? 0) > time() - 3600)) {
-        return (float) $cache['ca'];
+        return ['ca' => (float) $cache['ca'], 'tickets' => (int) $cache['tickets'],
+            'panier' => isset($cache['panier']) ? (float) $cache['panier'] : null];
     }
+    $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d'));
     $k = PanelApi::get('/shops/' . $sid . '/statistics/sales/kpis?' . http_build_query(
-        ['date_from' => $m . '-01', 'date_to' => date('Y-m-t', strtotime($m . '-01'))]));
+        ['date_from' => $m . '-01', 'date_to' => $fin]));
     if (!is_array($k) || !isset($k['ca'])) { return null; }
+    $d = ['ca' => (float) $k['ca'], 'tickets' => (int) ($k['tickets'] ?? 0),
+        'panier' => isset($k['avg_basket']) ? (float) $k['avg_basket'] : null];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        [$cle, json_encode(['quand' => time(), 'ca' => (float) $k['ca']])]);
-    return (float) $k['ca'];
+        [$cle, json_encode(['quand' => time()] + $d)]);
+    return $d;
+}
+
+/** Le CA seul — l'habillage historique de pvKpisMois. */
+function pvCaMois(int $sid, string $m): ?float
+{
+    $k = pvKpisMois($sid, $m);
+    return $k !== null ? $k['ca'] : null;
 }

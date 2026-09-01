@@ -4808,6 +4808,39 @@ function ep_perf(): array
             }
         } catch (PDOException $eTx) { /* transaction lente/absente : P&L seul */ }
 
+        // 2ante) Les MOIS DEPUIS JUILLET 2026 se corrigent aux ENDPOINTS : la
+        //        caisse locale meurt au 14/07 (tickets de juillet à moitié) et
+        //        le P&L partagé garde un début d'août figé — l'endpoint des
+        //        KPIs donne CA, tickets et panier exacts, gravés une fois le
+        //        mois clos. L'historique d'avant reste aux sources d'époque.
+        if (PanelApi::configured() && function_exists('pvKpisMois') && in_array(2026, $annees, true)) {
+            try { $idsFix = array_map(fn ($r2) => (int) $r2['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+            catch (PDOException $eF) { $idsFix = []; }
+            for ($mFix = '2026-07'; $mFix <= date('Y-m'); $mFix = date('Y-m', strtotime($mFix . '-01 +1 month'))) {
+                $numF = (int) substr($mFix, 5, 2);
+                foreach ($idsFix as $idF) {
+                    $kF = pvKpisMois($idF, $mFix);
+                    if ($kF === null) { continue; }
+                    $k2 = $key($idF, 2026, $numF);
+                    if (!isset($cells[$k2])) {
+                        $cells[$k2] = ['storeId' => (string) $idF, 'annee' => 2026, 'mois' => $numF,
+                            'ca' => null, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
+                            'tickets' => null, 'panierMoyen' => null, 'foodCostPct' => null,
+                            'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null];
+                    }
+                    $cells[$k2]['ca'] = round($kF['ca'], 2);
+                    $cells[$k2]['tickets'] = $kF['tickets'];
+                    $cells[$k2]['panierMoyen'] = $kF['panier'] !== null ? round($kF['panier'], 2)
+                        : ($kF['tickets'] > 0 ? round($kF['ca'] / $kF['tickets'], 2) : null);
+                    // Une marge calculée sur un CA partiel ment : elle s'efface
+                    // dès que le CA du P&L diverge nettement du CA réel.
+                    if ($cells[$k2]['margePct'] !== null && $cells[$k2]['margePct'] > 0.5) {
+                        $cells[$k2]['margePct'] = null; $cells[$k2]['margeNette'] = null;
+                    }
+                }
+            }
+        }
+
         // 2bis) Le MOIS COURANT vient de l'API du panel : la caisse en base
         //       s'arrête à sa dernière journée encodée, l'API sert le jour
         //       même. Seule la cellule du mois en cours est rafraîchie —

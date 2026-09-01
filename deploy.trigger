@@ -194,3 +194,4 @@ deploy 1788157947 validation avec ajout destinataire
 deploy 1788161504 moissonneuse lignes tickets
 deploy 1788166160 sim valeur ligne endpoints
 deploy 1788168736 saut de page par magasin
+deploy 1788245802 heatmap endpoints
