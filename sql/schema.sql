@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS ceo_journal_entry (
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ceo_app_setting (
   `key` VARCHAR(60) PRIMARY KEY,
-  value TEXT NOT NULL
+  value MEDIUMTEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------

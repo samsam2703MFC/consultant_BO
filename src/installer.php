@@ -45,7 +45,24 @@ function ensureInstalled(): void
     ensureAnnotation();
     ensurePlanogramme();
     ensureReputation();
+    ensureReglageLarge();
     connecteurTable();
+}
+
+/**
+ * L'état de la moisson des croisements (pvCrois{mois}) range maintenant ses
+ * paires et son attache PAR MAGASIN — sur un réseau à 4 boutiques, le blob
+ * dépasse la limite 64 Ko de TEXT (« Data too long »). `value` passe en
+ * MEDIUMTEXT (16 Mo) une fois pour toutes ; idempotent, ne touche à rien
+ * d'autre.
+ */
+function ensureReglageLarge(): void
+{
+    $r = Db::row("SELECT DATA_TYPE AS t FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_app_setting' AND column_name = 'value'");
+    if ($r !== null && strtolower((string) ($r['t'] ?? '')) === 'text') {
+        Db::exec('ALTER TABLE ceo_app_setting MODIFY COLUMN value MEDIUMTEXT NOT NULL');
+    }
 }
 
 /**
