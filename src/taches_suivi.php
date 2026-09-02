@@ -92,6 +92,15 @@ function tachesJourEnsureNote(): void
     if ((int) ($r4['n'] ?? 0) === 0) {
         Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN fait_le DATETIME NULL, ADD COLUMN fait_par VARCHAR(120) NULL');
     }
+    // Les jours relevés AVANT ces colonnes sont marqués « faits » : sans
+    // rouvrir ce drapeau, le rattrapage les sauterait et l'heure comme
+    // l'opérateur resteraient vides pour toujours. Une seule fois, à la
+    // bascule — le réglage garde la trace du passage.
+    if (setting('tachesFaitParReset') === null) {
+        try { Db::exec('UPDATE ceo_tache_jour_etat SET notes_ok = 0'); } catch (PDOException $e5) { /* rien à rouvrir */ }
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['tachesFaitParReset', json_encode(date('Y-m-d H:i:s'))]);
+    }
 }
 
 /**
