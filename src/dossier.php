@@ -289,6 +289,9 @@ function ep_dossier_pdf(): array
          parties sur la suivante. */
       .sec{page-break-after:avoid}
       table.nocut{page-break-inside:avoid}
+      /* Le moteur PDF ignore page-break-after sur un titre : seule une
+         enveloppe insecable garde ensemble un titre et son tableau. */
+      div.bloc{page-break-inside:avoid}
     </style>';
     $logo = rapLogoDataUri();
     $entete = fn (string $sous) => '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:4mm"><tr>'
@@ -556,7 +559,7 @@ function ep_dossier_pdf(): array
     }
     $caSem = array_sum(array_column($sem, 'ca'));
     if ($sem !== [] && $caSem > 0) {
-        $h .= '<div class="sec">Le rythme de la semaine</div>';
+        $h .= '<div class="bloc"><div class="sec">Le rythme de la semaine</div>';
         $h .= '<table class="t nocut"><tr><th class="l">Jour</th><th>Jours comptés</th><th>Clients / jour</th><th>CA moyen</th><th>Part du CA</th><th></th></tr>';
         $maxPart = max(array_map(fn ($x4) => $x4['ca'] / $caSem, $sem));
         for ($dow4 = 1; $dow4 <= 7; $dow4++) {
@@ -574,7 +577,7 @@ function ep_dossier_pdf(): array
                 . '<td style="font-weight:bold">' . $n1($part4) . ' %</td>'
                 . '<td style="width:34mm"><div style="height:2.4mm;width:' . max(1, $w4) . 'mm;background:#8D1D2C;border-radius:1mm"></div></td></tr>';
         }
-        $h .= '</table><div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Clients / jour : la moyenne des tickets de ce jour de semaine sur la période. Part du CA : ce que ce jour pèse dans le chiffre de la période, tous ses passages cumulés.</div>';
+        $h .= '</table><div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Clients / jour : la moyenne des tickets de ce jour de semaine sur la période. Part du CA : ce que ce jour pèse dans le chiffre de la période, tous ses passages cumulés.</div></div>';
     }
 
     // ============ PAGE 2bis : LE BUDGET DE L'ANNÉE + HEATMAP ============
