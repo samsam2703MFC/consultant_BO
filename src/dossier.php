@@ -753,24 +753,36 @@ function ep_dossier_pdf(): array
     // Les mêmes fiches que le rapport hebdomadaire : la photo prise en
     // boutique, ses repères dessinés, la date et la cote. Douze par page,
     // ce qu'une A4 porte exactement — au-delà, on dit combien restent.
-    $fichesDe = function (array $liste) use ($sid, $nomC): array {
+    $fichesDe = function (array $liste, int $max) use ($sid, $nomC): array {
         $cartes = [];
-        foreach (array_slice($liste, 0, 12) as $t4) {
+        foreach (array_slice($liste, 0, $max) as $t4) {
             $f = rapFicheTache((string) $sid, $t4['taskId'], $t4['jour'], $t4['nom'], $nomC,
                 (int) $t4['note'], (string) ($t4['commentaire'] ?? ''), true);
             if ($f !== '') { $cartes[] = rapFondNote((int) $t4['note']) + ['html' => $f]; }
         }
         return $cartes;
     };
-    foreach ([['exemplaires', 'les tâches exemplaires (5/5)', 'Ce qui a été bien fait sur la période, photo à l’appui.'],
-              ['nonConformes', 'les non-conformités (3, 2, 1)', 'Chaque écart avec sa photo et ses repères — de quoi le reprendre en boutique.']] as [$cle, $sousT, $chapeau]) {
+    // Les exemplaires tiennent en UNE page : douze félicitations suffisent.
+    // Les écarts, eux, se déroulent en entier — c'est la matière de la
+    // reprise en boutique, on n'en garde pas la moitié pour soi. La borne
+    // haute n'est là que pour qu'un mois catastrophique ne fasse pas un
+    // document de cinquante pages.
+    foreach ([['exemplaires', 'les tâches exemplaires (5/5)', 'Ce qui a été bien fait sur la période, photo à l’appui.', 12],
+              ['nonConformes', 'les non-conformités (3, 2, 1)', 'Chaque écart avec sa photo et ses repères, de quoi le reprendre en boutique.', 60]] as [$cle, $sousT, $chapeau, $max]) {
         $liste = $tachesD[$cle] ?? [];
         if ($liste === []) { continue; }
-        $cartes = $fichesDe($liste);
+        $cartes = $fichesDe($liste, $max);
         if ($cartes === []) { continue; }
-        $h .= '<div class="saut"></div>' . $entete($sousT)
-            . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . $e($chapeau) . '</div>'
-            . rapFichesGrille($cartes, 3, 4, false, false);
+        // Douze vignettes par A4, et CHAQUE page garde son en-tête : une
+        // grille paginée d'un seul tenant laisserait les pages suivantes
+        // sans titre ni magasin.
+        foreach (array_chunk($cartes, 12) as $iPage => $paquet) {
+            $h .= '<div class="saut"></div>' . $entete($sousT . ($iPage > 0 ? ' (suite)' : ''));
+            if ($iPage === 0) {
+                $h .= '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . $e($chapeau) . '</div>';
+            }
+            $h .= rapFichesGrille($paquet, 3, 4, false, false);
+        }
         $reste3 = count($liste) - count($cartes);
         if ($reste3 > 0) {
             $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:2mm">+ ' . $reste3
