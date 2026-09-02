@@ -114,6 +114,36 @@ function dossierProduits(int $sid, string $du, string $au): array
     return ['prods' => $prods, 'part' => $part, 'nbShops' => count($sids)];
 }
 
+/**
+ * Les tâches de projet validées pour CE magasin sur la fenêtre : le compte
+ * des 5/5 (exemplaires), et le détail des non-conformes (note 3, 2 ou 1) —
+ * les 4/5 (conformes, le travail attendu) ne se listent pas, ils ne disent
+ * rien de plus qu'un livrable normal.
+ */
+function dossierTaches(int $sid, string $du, string $au): array
+{
+    $rows = [];
+    try {
+        $rows = Db::rows(
+            'SELECT t.id, t.name, t.note, COALESCE(t.validated_at, t.done_on) AS quand,'
+            . ' p.name AS projet, t.delivery_note'
+            . ' FROM ceo_project_task t JOIN ceo_project p ON p.id = t.project_id'
+            . ' WHERE t.shop_id = ? AND t.note IS NOT NULL'
+            . ' AND COALESCE(t.validated_at, t.done_on) BETWEEN ? AND ?'
+            . ' ORDER BY t.note ASC, quand DESC',
+            [(string) $sid, $du, $au . ' 23:59:59']);
+    } catch (PDOException $e) { /* table absente ou vide : la section le dira */ }
+    $n5 = 0; $nonConformes = [];
+    foreach ($rows as $r) {
+        $note = (int) $r['note'];
+        if ($note === 5) { $n5++; continue; }
+        if ($note === 4) { continue; }
+        $nonConformes[] = ['nom' => (string) $r['name'], 'projet' => (string) $r['projet'],
+            'note' => $note, 'quand' => (string) $r['quand'], 'remise' => $r['delivery_note']];
+    }
+    return ['total' => count($rows), 'n5' => $n5, 'nonConformes' => $nonConformes];
+}
+
 function ep_dossier_pdf(): array
 {
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte panel non configuré']; }
@@ -153,6 +183,7 @@ function ep_dossier_pdf(): array
     $pnlPrec = $pp['ca'] > 0 ? $pp : null;
     $eq = dossierEquipe($sid, $m, $n);
     $prodD = dossierProduits($sid, $du, $au);
+    $tachesD = dossierTaches($sid, $du, $au);
     $reg = venteRecordReglages();
 
     // ETP du magasin et du réseau (heures venteMois du dernier mois de la fenêtre).
@@ -275,6 +306,30 @@ function ep_dossier_pdf(): array
         $h .= '<div><span class="' . $p2[0] . '" style="font-weight:bold">&#9679;</span> ' . $e($p2[1]) . '</div>';
     }
     $h .= '</div>';
+
+    // Contrôle des tâches : le compte des exemplaires (5/5), le détail des
+    // non-conformes (3, 2, 1). Les conformes (4/5) ne se listent pas.
+    $h .= '<div class="sec">Contrôle des tâches</div>';
+    if ($tachesD['total'] === 0) {
+        $h .= '<div style="font-size:9pt" class="mut">Aucune tâche validée sur la période.</div>';
+    } else {
+        $h .= '<div style="font-size:9pt;margin-bottom:1.5mm"><span class="vert" style="font-weight:bold">&#9679;</span> '
+            . $tachesD['n5'] . ' tâche(s) exemplaire(s) (5/5).</div>';
+        if ($tachesD['nonConformes'] === []) {
+            $h .= '<div style="font-size:9pt" class="vert">Aucune non-conformité sur la période.</div>';
+        } else {
+            $coulNote = [3 => '#D97706', 2 => '#C0182B', 1 => '#8D1D2C'];
+            $h .= '<table class="t"><tr><th class="l">Tâche</th><th class="l">Projet</th><th>Note</th><th class="l">Le</th></tr>';
+            foreach (array_slice($tachesD['nonConformes'], 0, 8) as $t3) {
+                $h .= '<tr><td class="l">' . $e($t3['nom']) . '</td><td class="l mut">' . $e($t3['projet']) . '</td>'
+                    . '<td style="font-weight:bold;color:' . ($coulNote[$t3['note']] ?? '#C0182B') . '">' . $t3['note'] . '/5</td>'
+                    . '<td class="l mut">' . $e(date('d/m/Y', strtotime($t3['quand']))) . '</td></tr>';
+            }
+            $h .= '</table>';
+            $reste2 = count($tachesD['nonConformes']) - 8;
+            if ($reste2 > 0) { $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">+ ' . $reste2 . ' autre(s) non-conformité(s) sur la période.</div>'; }
+        }
+    }
 
     // ============ PAGE 2 : BUDGET & P&L ============
     $h .= '<div class="saut"></div>' . $entete('budget & compte de résultat');
