@@ -632,8 +632,16 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 if ($perim !== [] && !in_array((string) $t['magasin'], $perim, true)) { continue; }
                 $note = $t['note'] ?? null;
                 if ($note !== null && (int) $note <= $seuils['tacheNote']) {
+                    // L'HEURE de la photo (24 h) et l'opérateur : un écart se
+                    // reprend avec la personne qui l'a rendu, et l'heure dit
+                    // souvent à elle seule ce qui s'est passé.
+                    $hT = strlen((string) ($t['faitLe'] ?? '')) >= 16 ? substr((string) $t['faitLe'], 11, 5) : null;
+                    $quiT = trim((string) ($t['faitePar'] ?? ''));
                     $b['lignes'][] = [$t['magasin'], '« ' . ($t['tache'] ?? ('Tâche #' . ($t['taskId'] ?? '?'))) . ' » notée ' . $note . '/5 le '
-                        . substr((string) ($t['date'] ?? ''), 5) . ($t['comment'] ? ' — ' . mb_substr((string) $t['comment'], 0, 160) : ''), (int) $note <= 2];
+                        . substr((string) ($t['date'] ?? ''), 5)
+                        . ($hT !== null ? ' à ' . $hT : '')
+                        . ($quiT !== '' ? ' · ' . mb_substr($quiT, 0, 40) : '')
+                        . ($t['comment'] ? ' — ' . mb_substr((string) $t['comment'], 0, 160) : ''), (int) $note <= 2];
                     // La FICHE : photo annotée des repères + référence attendue.
                     // TOUTES les tâches sous le seuil en portent une — un écart
                     // sans photo se conteste, avec photo il se corrige. La
