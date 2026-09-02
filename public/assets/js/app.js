@@ -9992,6 +9992,13 @@ class App {
                  + (t.revuePar ? ' · revu par ' + t.revuePar : '')
                  + (t.valideeLe ? ' · ' + t.valideeLe : ''))
               : 'Pas encore noté',
+            // Le geste en boutique, distinct du contrôle : l'heure de la photo
+            // et la personne qui l'a rendue. Une photo de comptoir à 6 h et la
+            // même à 16 h ne disent pas la même chose de la journée.
+            faitMeta: (t.faitLe || t.faitePar)
+              ? ('Photo' + (t.faitLe ? ' à ' + String(t.faitLe).slice(11, 16) : '')
+                 + (t.faitePar ? ' · ' + t.faitePar : ''))
+              : '',
             btnLabel: t.valide ? 'Renoter' : 'Noter',
             btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
             toggle: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
@@ -10055,6 +10062,12 @@ class App {
           : (d.api && d.api.configure === false ? 'Compte API non configuré — photo indisponible.'
             : (d.photoRequise === false ? 'Cette tâche n’exige pas de photo.' : 'Aucune photo de réalisation pour cette tâche.'))),
         statut: d.statut || '', obligatoire: d.obligatoire ? 'Obligatoire' : '',
+        // Qui a rendu la tâche, et à quelle heure : le contrôle se fait sur
+        // une photo, la photo a un auteur et un moment.
+        faitMeta: (d.faitLe || d.faitPar)
+          ? ('Prise' + (d.faitLe ? ' le ' + this.fDA(String(d.faitLe).slice(0, 10)) + ' à ' + String(d.faitLe).slice(11, 16) : '')
+             + (d.faitPar ? ' par ' + d.faitPar : ''))
+          : '',
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
         avisComment: a.comment || '',

@@ -134,7 +134,7 @@ function dossierTaches(int $sid, string $du, string $au): array
     $rows = []; $attendues = 0; $faites = 0;
     try {
         $rows = Db::rows(
-            'SELECT jour, id_task, nom, note, commentaire FROM ceo_tache_jour'
+            'SELECT jour, id_task, nom, note, commentaire, fait_le, fait_par FROM ceo_tache_jour'
             . ' WHERE id_shop = ? AND jour BETWEEN ? AND ? AND note IS NOT NULL'
             . ' ORDER BY note ASC, jour DESC',
             [$sid, $du, $au]);
@@ -151,7 +151,9 @@ function dossierTaches(int $sid, string $du, string $au): array
         $note = (int) $r['note'];
         if ($note === 4) { continue; }
         $l = ['nom' => (string) $r['nom'], 'note' => $note, 'taskId' => (string) $r['id_task'],
-            'jour' => (string) $r['jour'], 'commentaire' => $r['commentaire']];
+            'jour' => (string) $r['jour'], 'commentaire' => $r['commentaire'],
+            'heure' => $r['fait_le'] !== null ? substr((string) $r['fait_le'], 11, 5) : null,
+            'par' => $r['fait_par']];
         if ($note === 5) { $exemplaires[] = $l; } else { $nonConformes[] = $l; }
     }
     return ['total' => count($rows), 'n5' => count($exemplaires), 'exemplaires' => $exemplaires,
@@ -363,11 +365,14 @@ function ep_dossier_pdf(): array
             $h .= '<div style="font-size:9pt" class="vert">Aucune non-conformité sur la période.</div>';
         } else {
             $coulNote = [3 => '#D97706', 2 => '#C0182B', 1 => '#8D1D2C'];
-            $h .= '<table class="t"><tr><th class="l">Tâche</th><th class="l">Le</th><th>Note</th><th class="l">Commentaire</th></tr>';
+            $h .= '<table class="t"><tr><th class="l">Tâche</th><th class="l">Le</th><th class="l">Opérateur</th><th>Note</th><th class="l">Commentaire</th></tr>';
             foreach (array_slice($tachesD['nonConformes'], 0, 8) as $t3) {
-                $h .= '<tr><td class="l">' . $e($t3['nom']) . '</td><td class="l mut">' . $e(date('d/m/Y', strtotime($t3['jour']))) . '</td>'
+                $h .= '<tr><td class="l">' . $e($t3['nom']) . '</td>'
+                    . '<td class="l mut">' . $e(date('d/m', strtotime($t3['jour'])))
+                    . ($t3['heure'] !== null ? ' à ' . $e($t3['heure']) : '') . '</td>'
+                    . '<td class="l mut">' . $e($t3['par'] !== null ? mb_substr((string) $t3['par'], 0, 28) : '') . '</td>'
                     . '<td style="font-weight:bold;color:' . ($coulNote[$t3['note']] ?? '#C0182B') . '">' . $t3['note'] . '/5</td>'
-                    . '<td class="l mut">' . $e($t3['commentaire'] !== null ? mb_substr((string) $t3['commentaire'], 0, 90) : '') . '</td></tr>';
+                    . '<td class="l mut">' . $e($t3['commentaire'] !== null ? mb_substr((string) $t3['commentaire'], 0, 70) : '') . '</td></tr>';
             }
             $h .= '</table>';
             $reste2 = count($tachesD['nonConformes']) - 8;

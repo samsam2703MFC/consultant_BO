@@ -84,6 +84,14 @@ function tachesJourEnsureNote(): void
     if ((int) ($r2['n'] ?? 0) === 0) {
         Db::exec('ALTER TABLE ceo_tache_jour_etat ADD COLUMN notes_ok TINYINT NOT NULL DEFAULT 0');
     }
+    // L'heure du geste et la personne qui l'a rendu : le relevé ne gardait que
+    // le fait et la note, si bien qu'un écart se lisait sans savoir de quand
+    // ni de qui il venait.
+    $r4 = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour' AND column_name = 'fait_le'");
+    if ((int) ($r4['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN fait_le DATETIME NULL, ADD COLUMN fait_par VARCHAR(120) NULL');
+    }
 }
 
 /**
@@ -104,10 +112,14 @@ function tachesJourReleve(string $date): ?int
             $st = (string) ($t['statut'] ?? '');
             $fait = $st !== 'nonRendue' ? 1 : 0;
             $note = isset($t['note']) && $t['note'] !== null ? (int) $t['note'] : null;
-            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire) VALUES (?,?,?,?,?,?,?,?)
-                      ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire)',
+            $faitLe = trim((string) ($t['faitLe'] ?? '')) !== '' ? substr((string) $t['faitLe'], 0, 19) : null;
+            if ($faitLe !== null && strlen($faitLe) === 16) { $faitLe .= ':00'; }
+            $faitPar = trim((string) ($t['faitePar'] ?? '')) ?: null;
+            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire, fait_le, fait_par) VALUES (?,?,?,?,?,?,?,?,?,?)
+                      ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire), fait_le = VALUES(fait_le), fait_par = VALUES(fait_par)',
                 [$date, (int) $s['shopId'], (int) $t['taskId'], mb_substr((string) $t['tache'], 0, 200), $fait, mb_substr($st, 0, 12),
-                 $note, isset($t['comment']) && $t['comment'] !== null ? mb_substr((string) $t['comment'], 0, 500) : null]);
+                 $note, isset($t['comment']) && $t['comment'] !== null ? mb_substr((string) $t['comment'], 0, 500) : null,
+                 $faitLe, $faitPar !== null ? mb_substr($faitPar, 0, 120) : null]);
             $n++;
         }
     }

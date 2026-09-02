@@ -612,6 +612,13 @@ function ep_pwa_tasks(): array
                                           : ($valide && $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null),
                 'ctrlDir'     => $ctrlDir,
                 'majLe'       => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+                // Le geste en boutique, distinct du contrôle : quand la photo a
+                // été prise et par qui. Le panel les porte sur la tâche ; une
+                // tâche notée les perdait, et l'écran ne montrait plus que
+                // l'heure de la NOTATION.
+                'faitLe'      => !empty($apiTaches[$sid . '|' . $tid]['completed_at'])
+                    ? substr((string) $apiTaches[$sid . '|' . $tid]['completed_at'], 0, 16) : null,
+                'faitePar'    => trim((string) ($apiTaches[$sid . '|' . $tid]['completed_by'] ?? '')) ?: null,
                 'statut'      => $valide ? 'notee' : 'aControler',
             ];
             $tot['taches']++;
@@ -661,6 +668,7 @@ function ep_pwa_tasks(): array
                 'valide' => false, 'valideePar' => null, 'revuePar' => null, 'valideeLe' => null,
                 'ctrlDir' => false,
                 'majLe' => !empty($t['completed_at']) ? substr((string) $t['completed_at'], 0, 16) : null,
+                'faitLe' => !empty($t['completed_at']) ? substr((string) $t['completed_at'], 0, 16) : null,
                 // Deux états bien séparés, portés jusqu'à l'écran.
                 'statut' => $photo ? 'aControler' : ($rendue ? 'sansPhoto' : 'nonRendue'),
                 'photo' => $photo,
@@ -3875,6 +3883,10 @@ function ep_pwa_task_detail(): array
 
     $out = ['shopId' => (string) $shopId, 'taskId' => (string) $taskId, 'date' => $date,
         'tache' => null, 'checklist' => null, 'photo' => null, 'obligatoire' => null,
+        // QUAND la photo a été prise et PAR QUI : sans ces deux-là, un écart
+        // se discute sans savoir de quel service ni de quelle personne il
+        // vient — et l'heure dit souvent à elle seule ce qui s'est passé.
+        'faitLe' => null, 'faitPar' => null,
         'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
         'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
         // Référence : la photo de la fiche technique du produit contrôlé, pour
@@ -3898,6 +3910,8 @@ function ep_pwa_task_detail(): array
             $out['obligatoire']  = isset($t['is_mandatory']) ? (bool) $t['is_mandatory'] : null;
             $out['photoRequise'] = isset($t['requires_photo']) ? (bool) $t['requires_photo'] : null;
             $out['statut']       = $t['status'] ?? null;
+            $out['faitLe']       = ($t['completed_at'] ?? null) !== null ? substr((string) $t['completed_at'], 0, 16) : null;
+            $out['faitPar']      = trim((string) ($t['completed_by'] ?? '')) ?: null;
             foreach (['product_id', 'id_product', 'productId'] as $pk) {
                 if (!empty($t[$pk]) && is_numeric($t[$pk])) { $out['produitId'] = (int) $t[$pk]; break; }
             }

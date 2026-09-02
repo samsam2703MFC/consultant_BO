@@ -2394,7 +2394,10 @@ function tplControle(c, x){
                     <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">${t.hasComment ? esc(t.comment) : '<span style="opacity:0.6"></span>'}</td>
                     <td style="padding:10px 14px;text-align:right;white-space:nowrap">
                       <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
-                        <span style="font-size:11px;color:${t.valide ? '#2d7a3e' : 'var(--color-text-muted)'}">${esc(t.valideMeta)}</span>
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:${t.valide ? '#2d7a3e' : 'var(--color-text-muted)'}">${esc(t.valideMeta)}</span>
+                          ${t.faitMeta ? `<br><span style="font-size:10.5px;color:var(--color-text-muted)">${esc(t.faitMeta)}</span>` : ''}
+                        </span>
                         <button ${x.A(t.toggle)} style="${t.btnSt}">${esc(t.btnLabel)}</button>
                       </div>
                     </td>
@@ -5849,6 +5852,7 @@ function tplCtrlDetail(c, x){
           ${d.photo
             ? `<button ${x.A(d.zoomGo)} title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block">
                 <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:500;padding:3px 9px;border-radius:999px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
+               ${d.faitMeta ? `<div style="margin-top:5px;font-size:11px;color:var(--color-text)">${esc(d.faitMeta)}</div>` : ''}
                <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
         </div>

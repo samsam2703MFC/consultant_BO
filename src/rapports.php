@@ -3210,6 +3210,19 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     // La couleur de la note suit les niveaux de validation : doré pour
     // l'exemplaire, vert pour le conforme.
     $quand = $e(date('d/m', strtotime($date ?: 'today')));
+    // L'HEURE de la photo et l'OPÉRATEUR qui l'a prise : une photo de comptoir
+    // à 6 h du matin et la même à 16 h ne racontent pas la même journée, et un
+    // écart se reprend avec la personne qui l'a rendu, pas avec « la boutique ».
+    $hPhoto = ($det['faitLe'] ?? null) !== null && strlen((string) $det['faitLe']) >= 16
+        ? substr((string) $det['faitLe'], 11, 5) : null;
+    $qui = trim((string) ($det['faitPar'] ?? ''));
+    $signature = '';
+    if ($hPhoto !== null || $qui !== '') {
+        $signature = '<div style="' . $F . ';font-size:9px;color:#6b645b;text-align:center;padding:1px 0">'
+            . ($hPhoto !== null ? 'photo à ' . $e($hPhoto) : '')
+            . ($hPhoto !== null && $qui !== '' ? ' &middot; ' : '')
+            . ($qui !== '' ? $e(mb_substr($qui, 0, 40)) : '') . '</div>';
+    }
     if ($note !== null) {
         $coulN = rapCouleurNote($note);
         $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#221E1A">le ' . $quand
@@ -3249,11 +3262,11 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
                 . '<span style="color:' . rapCouleurNote($note) . ';font-size:9px;line-height:1">&#9679;</span> '
                 . '<b style="color:' . rapCouleurNote($note) . '">Note ' . $note . '/5</b> · le ' . $quand . '</div>'
             : '';
-        return $imgs . $titre . $noteL . $exp;
+        return $imgs . $titre . $noteL . $signature . $exp;
     }
     $titre = '<div style="' . $F . ';font-size:10.5px;font-weight:700;color:#221E1A;text-align:center;margin:0 0 7px;'
         . 'line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $e($nomTache) . '</div>';
-    return $titre . $imgs . $ligne . $exp;
+    return $titre . $imgs . $ligne . $signature . $exp;
 }
 
 /** Range les cartes deux par rangée — la grille qui tient sur un A4. */
