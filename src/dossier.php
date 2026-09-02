@@ -520,6 +520,33 @@ function ep_dossier_pdf(): array
             . '<div class="' . $tA[3] . '" style="font-size:6.5pt;margin-top:0.5mm">' . $e($tA[2]) . '</div></td>';
     }
     $h .= '</tr></table>';
+
+    // Le MÊME écart, mais sur la seule période analysée — l'année à date dit
+    // la trajectoire, ce bloc dit le mois qu'on vient de fermer.
+    $ecartM = $budget !== null ? $pnl['ca'] - $budget : null;
+    $ecartMPct = ($budget !== null && $budget > 0) ? $ecartM / $budget * 100 : null;
+    $panierP = $pnl['tickets'] > 0 ? $pnl['ca'] / $pnl['tickets'] : null;
+    $clientsM = ($ecartM !== null && $panierP !== null && $panierP > 0)
+        ? abs($ecartM) / $panierP / (30 * $n) : null;
+    $h .= '<div class="sec">L’écart de ' . $e($libP) . ' seul</div>';
+    $tuilesM = [
+        ['Budget ' . ($n === 1 ? 'du mois' : 'du trimestre'), $budget !== null ? $eur0($budget) : '',
+            $budget !== null ? 'visé sur la période' : 'pas de budget posé', 'mut'],
+        ['Réalisé', $eur0($pnl['ca']), number_format($pnl['tickets'], 0, ',', ' ') . ' tickets', 'acc'],
+        ['Écart CA', $ecartM !== null ? $kE($ecartM) : '',
+            $ecartMPct !== null ? (($ecartMPct >= 0 ? '+ ' : '− ') . $n1(abs($ecartMPct)) . ' % du budget') : '',
+            ($ecartM !== null && $ecartM >= 0) ? 'vert' : 'rouge'],
+        ['Écart en clients', $clientsM !== null ? (($ecartM >= 0 ? '+ ' : '− ') . number_format($clientsM, 1, ',', ' ')) : '',
+            $panierP !== null ? 'par jour · panier ' . number_format($panierP, 2, ',', ' ') . ' €' : 'panier inconnu',
+            ($ecartM !== null && $ecartM >= 0) ? 'vert' : 'rouge'],
+    ];
+    $h .= '<table width="100%" cellpadding="0" cellspacing="4"><tr>';
+    foreach ($tuilesM as $tM) {
+        $h .= '<td width="25%" class="tuile"><div class="cap">' . $e($tM[0]) . '</div>'
+            . '<div class="serif" style="font-size:12.5pt;color:#8D1D2C;margin-top:1mm">' . $e($tM[1]) . '</div>'
+            . '<div class="' . $tM[3] . '" style="font-size:6.5pt;margin-top:0.5mm">' . $e($tM[2]) . '</div></td>';
+    }
+    $h .= '</tr></table>';
     // La HEATMAP réseau : magasins × mois, colorée à l'atteinte du budget.
     $h .= '<div class="sec">La heatmap de l’année</div>';
     $h .= '<table class="t" style="table-layout:fixed"><tr><th class="l" style="width:22mm">Magasin</th>';
