@@ -426,15 +426,21 @@ function ep_dossier_pdf(): array
 
     // ============ PAGE 2bis : LE BUDGET DE L'ANNÉE + HEATMAP ============
     $annee = (int) substr($m, 0, 4);
-    $budDe = function (int $s3, int $mo) use ($annee): ?float {
+    // Le budget d'un mois, et SA NATURE : validé par le réseau (revenue_budget)
+    // ou repris du CA théorique de l'étude. Les deux se somment séparément —
+    // un budget d'année à moitié théorique ne s'annonce pas comme un budget
+    // arrêté.
+    $budDetailDe = function (int $s3, int $mo) use ($annee): array {
         try {
             $r3 = Db::row('SELECT revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ? AND year = ? AND month = ?',
                 [(string) $s3, $annee, $mo]);
-        } catch (PDOException $e3) { return null; }
-        if ($r3 === null) { return null; }
-        return (float) ($r3['revenue_budget'] ?? 0) > 0 ? (float) $r3['revenue_budget']
-            : ((float) ($r3['ca_theorique'] ?? 0) > 0 ? (float) $r3['ca_theorique'] : null);
+        } catch (PDOException $e3) { return ['v' => null, 'valide' => false]; }
+        if ($r3 === null) { return ['v' => null, 'valide' => false]; }
+        if ((float) ($r3['revenue_budget'] ?? 0) > 0) { return ['v' => (float) $r3['revenue_budget'], 'valide' => true]; }
+        if ((float) ($r3['ca_theorique'] ?? 0) > 0) { return ['v' => (float) $r3['ca_theorique'], 'valide' => false]; }
+        return ['v' => null, 'valide' => false];
     };
+    $budDe = fn (int $s3, int $mo): ?float => $budDetailDe($s3, $mo)['v'];
     // Seuls les mois CLOS comptent : le mois en cours n'a que quelques jours,
     // son atteinte partielle mentirait en rouge.
     $moisMax = $annee < (int) date('Y') ? 12 : ($annee > (int) date('Y') ? 0 : (int) date('n') - 1);
@@ -442,12 +448,18 @@ function ep_dossier_pdf(): array
     $h .= '<div class="sec" style="margin-top:0">Les douze mois face au budget</div>';
     $h .= '<table class="t"><tr><th class="l">Mois</th><th>Budget</th><th>Réalisé</th><th>Atteinte</th><th>Écart</th><th>Clients manqués/j</th><th>Moyenne/j visée</th><th>Cumul réalisé</th><th>Cumul budget</th></tr>';
     $cumR = 0.0; $cumB = 0.0;
+    $budAnnee = 0.0; $budValide = 0.0; $moisValides = 0; $cumTickets = 0;
     for ($mo = 1; $mo <= 12; $mo++) {
         $mM = sprintf('%04d-%02d', $annee, $mo);
-        $bM = $budDe($sid, $mo);
+        $bD = $budDetailDe($sid, $mo);
+        $bM = $bD['v'];
+        if ($bM !== null) {
+            $budAnnee += $bM;
+            if ($bD['valide']) { $budValide += $bM; $moisValides++; }
+        }
         $kM = $mo <= $moisMax ? pvKpisMois($sid, $mM) : null;
         $rM = $kM !== null ? $kM['ca'] : null;
-        if ($rM !== null) { $cumR += $rM; }
+        if ($rM !== null) { $cumR += $rM; $cumTickets += (int) ($kM['tickets'] ?? 0); }
         if ($bM !== null && $mo <= $moisMax) { $cumB += $bM; }
         $att = ($rM !== null && $bM !== null && $bM > 0) ? $rM / $bM * 100 : null;
         $coulA = $att === null ? '#8b8177' : ($att >= 100 ? '#2d7a3e' : ($att >= 90 ? '#D97706' : '#C0182B'));
@@ -478,6 +490,31 @@ function ep_dossier_pdf(): array
         . '<td style="font-weight:bold;color:' . ($attAn !== null && $attAn >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($attAn !== null ? $attAn . ' %' : '') . '</td>'
         . '<td colspan="5"></td></tr></table>';
     $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Clients manqués/j : le mois en écart négatif traduit en clients, écart ÷ panier moyen du mois, ÷ 30 jours. Moyenne/j visée : budget du mois ÷ panier moyen ÷ 30 jours, arrondi au client supérieur.</div>';
+
+    // La synthèse de l'année : le budget des douze mois, ce qui en est
+    // réellement arrêté, le réalisé à date, et l'écart dit trois fois — en
+    // milliers d'euros, en pourcentage, et en clients par jour, la seule
+    // unité qui se pilote en salle.
+    $ecartAn = $cumR - $cumB;
+    $ecartPct = $cumB > 0 ? $ecartAn / $cumB * 100 : null;
+    $panierAn = $cumTickets > 0 ? $cumR / $cumTickets : null;
+    $clientsAn = ($panierAn !== null && $panierAn > 0) ? abs($ecartAn) / $panierAn / 30 : null;
+    $kE = fn (float $v) => ($v >= 0 ? '+ ' : '− ') . number_format(abs($v) / 1000, 1, ',', ' ') . ' k€';
+    $tuilesAn = [
+        ['Budget de l’année', $eur0($budAnnee), $annee . ' · douze mois', 'mut'],
+        ['Dont validé', $eur0($budValide), $moisValides . ' mois arrêté(s) sur 12', $moisValides === 12 ? 'vert' : 'mut'],
+        ['Cumul de l’année', $eur0($cumR), 'réalisé sur ' . $moisMax . ' mois clos', 'acc'],
+        ['Écart au budget', $kE($ecartAn), $ecartPct !== null ? (($ecartPct >= 0 ? '+ ' : '− ') . $n1(abs($ecartPct)) . ' % du budget à date') : '', $ecartAn >= 0 ? 'vert' : 'rouge'],
+        ['Écart en clients', $clientsAn !== null ? ($ecartAn >= 0 ? '+ ' : '− ') . number_format($clientsAn, 1, ',', ' ') : '',
+            $panierAn !== null ? 'par jour · panier ' . number_format($panierAn, 2, ',', ' ') . ' €' : 'panier moyen inconnu', $ecartAn >= 0 ? 'vert' : 'rouge'],
+    ];
+    $h .= '<table width="100%" cellpadding="0" cellspacing="4" style="margin-top:3mm"><tr>';
+    foreach ($tuilesAn as $tA) {
+        $h .= '<td width="20%" class="tuile"><div class="cap">' . $e($tA[0]) . '</div>'
+            . '<div class="serif" style="font-size:12pt;color:#8D1D2C;margin-top:1mm">' . $e($tA[1]) . '</div>'
+            . '<div class="' . $tA[3] . '" style="font-size:6.5pt;margin-top:0.5mm">' . $e($tA[2]) . '</div></td>';
+    }
+    $h .= '</tr></table>';
     // La HEATMAP réseau : magasins × mois, colorée à l'atteinte du budget.
     $h .= '<div class="sec">La heatmap de l’année</div>';
     $h .= '<table class="t" style="table-layout:fixed"><tr><th class="l" style="width:22mm">Magasin</th>';
