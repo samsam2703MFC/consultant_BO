@@ -192,3 +192,73 @@ function ep_analyse_produits(): array
         'tailles' => array_map(fn ($v) => round($v, 0), $tailles),
         'muets' => $muets];
 }
+
+/**
+ * GET /analyse/prix-transfert?source=2&cible=4&m=2026-08
+ *
+ * « Si j'appliquais les prix de tel magasin à tel autre, qu'est-ce que ça
+ * changerait ? » — à volumes INCHANGÉS : chaque référence vendue par la cible
+ * est revalorisée au prix encaissé par la source, l'écart se somme.
+ *
+ * Le prix encaissé (CA ÷ pièces, remises comprises) plutôt que le tarif
+ * affiché : c'est ce que le client paie réellement, promotions et gestes
+ * commerciaux inclus. Une référence que la source ne vend pas n'a pas de prix
+ * chez elle : elle reste au prix de la cible et se compte à part, sans quoi le
+ * total mélangerait un écart de prix avec un trou d'assortiment.
+ */
+function ep_prix_transfert(): array
+{
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré']; }
+    $src = (int) ($_GET['source'] ?? 0);
+    $cib = (int) ($_GET['cible'] ?? 0);
+    $m = trim((string) ($_GET['m'] ?? date('Y-m', strtotime('first day of last month'))));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m) || $src <= 0 || $cib <= 0 || $src === $cib) {
+        http_response_code(422);
+        return ['error' => 'source, cible (deux magasins distincts) et m (YYYY-MM) sont requis'];
+    }
+    $du = $m . '-01';
+    $au = min(date('Y-m-t', strtotime($du)), date('Y-m-d', strtotime('-1 day')));
+    $lu = apTranches2([[$src, $du, $au], [$cib, $du, $au]]);
+    $pS = $lu[$src . ':' . $du] ?? null;
+    $pC = $lu[$cib . ':' . $du] ?? null;
+    if (!is_array($pS) || !is_array($pC)) {
+        return ['indispo' => true, 'motif' => 'les endpoints du panel n’ont pas répondu pour la période'];
+    }
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE id IN (?, ?)', [$src, $cib]) as $s) {
+            $noms[(int) $s['id']] = trim((string) array_reverse(explode(' - ', (string) $s['name']))[0]);
+        }
+    } catch (PDOException $e) { /* noms facultatifs */ }
+
+    $delta = 0.0; $caCible = 0.0; $lignes = []; $sansPrix = 0; $caSansPrix = 0.0;
+    foreach ($pC as $pid => $c) {
+        $qC = (float) $c[2]; $caC = (float) $c[3];
+        if ($qC <= 0) { continue; }
+        $caCible += $caC;
+        $prixC = $caC / $qC;
+        $s = $pS[$pid] ?? null;
+        $qS = $s !== null ? (float) $s[2] : 0.0;
+        if ($s === null || $qS <= 0) { $sansPrix++; $caSansPrix += $caC; continue; }
+        $prixS = (float) $s[3] / $qS;
+        $ec = ($prixS - $prixC) * $qC;
+        $delta += $ec;
+        $lignes[] = ['pid' => (int) $pid, 'nom' => (string) $c[0], 'cat' => (string) $c[1],
+            'pieces' => round($qC, 1), 'prixCible' => round($prixC, 2), 'prixSource' => round($prixS, 2),
+            'ecartPiece' => round($prixS - $prixC, 2), 'impact' => round($ec, 2)];
+    }
+    usort($lignes, fn ($a, $b) => abs($b['impact']) <=> abs($a['impact']));
+    return [
+        'm' => $m, 'du' => $du, 'au' => $au,
+        'source' => ['id' => $src, 'nom' => $noms[$src] ?? ('#' . $src)],
+        'cible' => ['id' => $cib, 'nom' => $noms[$cib] ?? ('#' . $cib)],
+        'caCible' => round($caCible, 2),
+        'delta' => round($delta, 2),
+        'deltaPct' => $caCible > 0 ? round($delta / $caCible * 100, 2) : null,
+        'refs' => count($lignes),
+        'refsSansPrixSource' => $sansPrix, 'caRefsSansPrix' => round($caSansPrix, 2),
+        'hausses' => array_values(array_filter($lignes, fn ($l) => $l['impact'] > 0)),
+        'baisses' => array_values(array_filter($lignes, fn ($l) => $l['impact'] < 0)),
+        'top' => array_slice($lignes, 0, 25),
+    ];
+}
