@@ -127,13 +127,20 @@ function dossierProduits(int $sid, string $du, string $au): array
 function dossierTaches(int $sid, string $du, string $au): array
 {
     tachesSuiviTables();
-    $rows = [];
+    $rows = []; $attendues = 0; $faites = 0;
     try {
         $rows = Db::rows(
             'SELECT jour, id_task, nom, note, commentaire FROM ceo_tache_jour'
             . ' WHERE id_shop = ? AND jour BETWEEN ? AND ? AND note IS NOT NULL'
             . ' ORDER BY note ASC, jour DESC',
             [$sid, $du, $au]);
+        // L'exécution brute, notée ou pas : un magasin qui ne fait AUCUNE tâche
+        // n'a évidemment aucune note — sans ce compte, la page laisserait
+        // croire à un défaut de relève là où il n'y a que du travail non fait.
+        $c = Db::row('SELECT COUNT(*) AS t, SUM(fait) AS f FROM ceo_tache_jour'
+            . ' WHERE id_shop = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
+        $attendues = (int) ($c['t'] ?? 0);
+        $faites = (int) ($c['f'] ?? 0);
     } catch (PDOException $e) { /* table absente : la section le dira */ }
     $n5 = 0; $nonConformes = [];
     foreach ($rows as $r) {
@@ -143,7 +150,8 @@ function dossierTaches(int $sid, string $du, string $au): array
         $nonConformes[] = ['nom' => (string) $r['nom'], 'note' => $note,
             'jour' => (string) $r['jour'], 'commentaire' => $r['commentaire']];
     }
-    return ['total' => count($rows), 'n5' => $n5, 'nonConformes' => $nonConformes];
+    return ['total' => count($rows), 'n5' => $n5, 'nonConformes' => $nonConformes,
+        'attendues' => $attendues, 'faites' => $faites];
 }
 
 function ep_dossier_pdf(): array
@@ -304,7 +312,17 @@ function ep_dossier_pdf(): array
         $partDeux = array_sum(array_map(fn ($x) => $x['ca'], $deux)) / $pnl['ca'] * 100;
         if ($partDeux > 45) { $points[] = ['mut', 'Les deux meilleures font ' . round($partDeux) . ' % du CA attribué : dépendance élevée.']; }
     }
-    foreach (array_slice($points, 0, 4) as $p2) {
+    // L'exécution des tâches quand elle décroche : à 0 %, c'est le premier
+    // sujet de la période, avant n'importe quel point de food cost.
+    if ($tachesD['attendues'] > 0) {
+        $tauxT0 = round($tachesD['faites'] / $tachesD['attendues'] * 100);
+        if ($tauxT0 < 70) {
+            array_unshift($points, ['rouge', 'Tâches quotidiennes : ' . $tauxT0 . ' % d’exécution ('
+                . number_format($tachesD['faites'], 0, ',', ' ') . ' faites sur '
+                . number_format($tachesD['attendues'], 0, ',', ' ') . ').']);
+        }
+    }
+    foreach (array_slice($points, 0, 5) as $p2) {
         $h .= '<div><span class="' . $p2[0] . '" style="font-weight:bold">&#9679;</span> ' . $e($p2[1]) . '</div>';
     }
     $h .= '</div>';
@@ -312,8 +330,18 @@ function ep_dossier_pdf(): array
     // Contrôle des tâches : le compte des exemplaires (5/5), le détail des
     // non-conformes (3, 2, 1). Les conformes (4/5) ne se listent pas.
     $h .= '<div class="sec">Contrôle des tâches</div>';
+    if ($tachesD['attendues'] === 0) {
+        $h .= '<div style="font-size:9pt" class="mut">Aucune tâche relevée sur la période.</div>';
+    } else {
+        $tauxT = round($tachesD['faites'] / $tachesD['attendues'] * 100);
+        $h .= '<div style="font-size:9pt;margin-bottom:1.5mm"><span class="' . ($tauxT >= 70 ? 'vert' : 'rouge') . '" style="font-weight:bold">&#9679;</span> '
+            . number_format($tachesD['faites'], 0, ',', ' ') . ' tâche(s) faite(s) sur '
+            . number_format($tachesD['attendues'], 0, ',', ' ') . ' demandée(s), soit <b>' . $tauxT . ' %</b> d’exécution.</div>';
+    }
     if ($tachesD['total'] === 0) {
-        $h .= '<div style="font-size:9pt" class="mut">Aucune tâche notée sur la période (relève panel en cours ou fenêtre sans passage).</div>';
+        if ($tachesD['attendues'] > 0) {
+            $h .= '<div style="font-size:9pt" class="mut">Aucune tâche notée : sans passage noté, ni exemplaire ni non-conformité à relever.</div>';
+        }
     } else {
         $h .= '<div style="font-size:9pt;margin-bottom:1.5mm"><span class="vert" style="font-weight:bold">&#9679;</span> '
             . $tachesD['n5'] . ' tâche(s) exemplaire(s) (5/5).</div>';
