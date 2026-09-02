@@ -498,7 +498,11 @@ function ep_dossier_pdf(): array
     $ecartAn = $cumR - $cumB;
     $ecartPct = $cumB > 0 ? $ecartAn / $cumB * 100 : null;
     $panierAn = $cumTickets > 0 ? $cumR / $cumTickets : null;
-    $clientsAn = ($panierAn !== null && $panierAn > 0) ? abs($ecartAn) / $panierAn / 30 : null;
+    // L'écart CUMULÉ couvre tous les mois clos : le ramener à un jour, c'est
+    // diviser par 30 jours ET par le nombre de mois écoulés — sinon un écart
+    // de huit mois s'annonce comme le manque d'une seule journée.
+    $clientsAn = ($panierAn !== null && $panierAn > 0 && $moisMax > 0)
+        ? abs($ecartAn) / $panierAn / 30 / $moisMax : null;
     $kE = fn (float $v) => ($v >= 0 ? '+ ' : '− ') . number_format(abs($v) / 1000, 1, ',', ' ') . ' k€';
     $tuilesAn = [
         ['Budget de l’année', $eur0($budAnnee), $annee . ' · douze mois', 'mut'],
@@ -506,7 +510,8 @@ function ep_dossier_pdf(): array
         ['Cumul de l’année', $eur0($cumR), 'réalisé sur ' . $moisMax . ' mois clos', 'acc'],
         ['Écart au budget', $kE($ecartAn), $ecartPct !== null ? (($ecartPct >= 0 ? '+ ' : '− ') . $n1(abs($ecartPct)) . ' % du budget à date') : '', $ecartAn >= 0 ? 'vert' : 'rouge'],
         ['Écart en clients', $clientsAn !== null ? ($ecartAn >= 0 ? '+ ' : '− ') . number_format($clientsAn, 1, ',', ' ') : '',
-            $panierAn !== null ? 'par jour · panier ' . number_format($panierAn, 2, ',', ' ') . ' €' : 'panier moyen inconnu', $ecartAn >= 0 ? 'vert' : 'rouge'],
+            $panierAn !== null ? 'par jour sur ' . $moisMax . ' mois · panier ' . number_format($panierAn, 2, ',', ' ') . ' €' : 'panier moyen inconnu',
+            $ecartAn >= 0 ? 'vert' : 'rouge'],
     ];
     $h .= '<table width="100%" cellpadding="0" cellspacing="4" style="margin-top:3mm"><tr>';
     foreach ($tuilesAn as $tA) {
