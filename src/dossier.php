@@ -34,6 +34,39 @@ function dossierJour(int $sid, string $jour): ?array
     return $d;
 }
 
+/**
+ * Les KPIs JOUR PAR JOUR d'une fenêtre : CA, tickets, panier — la seule
+ * source qui compte juste les tickets (le `transactions` du daily-summary
+ * compte autre chose). Un jour passé se grave une fois ; les jours manquants
+ * partent en un seul voyage parallèle plutôt qu'un aller-retour chacun.
+ *
+ * @return array<string, array{ca: float, tickets: int, panier: ?float}>
+ */
+function dossierJoursKpis(int $sid, string $du, string $au): array
+{
+    $out = []; $chemins = [];
+    for ($j = $du; $j <= $au; $j = date('Y-m-d', strtotime($j . ' +1 day'))) {
+        $cle = 'dK' . $sid . ':' . $j;
+        $cache = setting($cle);
+        if (is_array($cache) && isset($cache['ca'])) { $out[$j] = $cache; continue; }
+        $chemins[$j] = '/shops/' . $sid . '/statistics/sales/kpis?'
+            . http_build_query(['date_from' => $j, 'date_to' => $j]);
+    }
+    if ($chemins !== []) {
+        foreach (PanelApi::getParallele($chemins, 8) as $j => $r) {
+            if (!is_array($r) || !isset($r['ca'])) { continue; }
+            $d = ['ca' => (float) $r['ca'], 'tickets' => (int) ($r['tickets'] ?? 0),
+                'panier' => isset($r['avg_basket']) ? (float) $r['avg_basket'] : null];
+            $out[(string) $j] = $d;
+            if ((string) $j < date('Y-m-d')) {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    ['dK' . $sid . ':' . $j, json_encode($d)]);
+            }
+        }
+    }
+    return $out;
+}
+
 /** Le P&L d'un MOIS : la somme des jours, avec la série quotidienne. */
 function dossierMoisPnl(int $sid, string $m): array
 {
@@ -502,6 +535,41 @@ function ep_dossier_pdf(): array
         $h .= '</tr></table>';
     }
     $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Résultat du jour en % de son chiffre d’affaires. Vert foncé ≥ 20 · vert ≥ 15 · ambre ≥ 10 · orange ≥ 0 · rouge : jour en perte · gris : jour sans donnée. Du ' . $e(date('d/m', strtotime($du))) . ' au ' . $e(date('d/m', strtotime($au))) . '.</div>';
+
+    // LE RYTHME DE LA SEMAINE : la fréquentation moyenne d'un lundi, d'un
+    // samedi, et la part de chiffre que chaque jour porte. C'est ce qui dit
+    // où mettre les heures — une moyenne mensuelle ne le dira jamais.
+    $kJ = dossierJoursKpis($sid, $du, $au);
+    $sem = [];
+    foreach ($kJ as $jour4 => $k4) {
+        $dow4 = (int) date('N', strtotime($jour4));
+        if (!isset($sem[$dow4])) { $sem[$dow4] = ['n' => 0, 'ca' => 0.0, 'tk' => 0]; }
+        $sem[$dow4]['n']++;
+        $sem[$dow4]['ca'] += $k4['ca'];
+        $sem[$dow4]['tk'] += $k4['tickets'];
+    }
+    $caSem = array_sum(array_column($sem, 'ca'));
+    if ($sem !== [] && $caSem > 0) {
+        $h .= '<div class="sec">Le rythme de la semaine</div>';
+        $h .= '<table class="t"><tr><th class="l">Jour</th><th>Jours comptés</th><th>Clients / jour</th><th>CA moyen</th><th>Part du CA</th><th></th></tr>';
+        $maxPart = max(array_map(fn ($x4) => $x4['ca'] / $caSem, $sem));
+        for ($dow4 = 1; $dow4 <= 7; $dow4++) {
+            $x4 = $sem[$dow4] ?? null;
+            if ($x4 === null || $x4['n'] === 0) {
+                $h .= '<tr><td class="l" style="font-weight:bold">' . $joursSem[$dow4 - 1] . '</td><td colspan="5" class="mut">fermé ou sans donnée</td></tr>';
+                continue;
+            }
+            $part4 = $x4['ca'] / $caSem * 100;
+            $w4 = (int) round($part4 / max(0.01, $maxPart * 100) * 32);
+            $h .= '<tr><td class="l" style="font-weight:bold">' . $joursSem[$dow4 - 1] . '</td>'
+                . '<td class="mut">' . $x4['n'] . '</td>'
+                . '<td style="font-weight:bold">' . number_format($x4['tk'] / $x4['n'], 0, ',', ' ') . '</td>'
+                . '<td>' . $eur0($x4['ca'] / $x4['n']) . '</td>'
+                . '<td style="font-weight:bold">' . $n1($part4) . ' %</td>'
+                . '<td style="width:34mm"><div style="height:2.4mm;width:' . max(1, $w4) . 'mm;background:#8D1D2C;border-radius:1mm"></div></td></tr>';
+        }
+        $h .= '</table><div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Clients / jour : la moyenne des tickets de ce jour de semaine sur la période. Part du CA : ce que ce jour pèse dans le chiffre de la période, tous ses passages cumulés.</div>';
+    }
 
     // ============ PAGE 2bis : LE BUDGET DE L'ANNÉE + HEATMAP ============
     $annee = (int) substr($m, 0, 4);
