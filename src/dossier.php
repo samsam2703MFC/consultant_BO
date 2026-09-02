@@ -283,6 +283,12 @@ function ep_dossier_pdf(): array
       table.t td{padding:1.4mm 1.6mm;border-bottom:0.4pt solid #F0EDE7;text-align:right}
       table.t th.l,table.t td.l{text-align:left}
       .saut{page-break-before:always}
+      /* Un titre ne se separe jamais de ce quil annonce, et les petits
+         tableaux ne se coupent pas en deux : sans ces deux regles, le
+         rythme de la semaine restait seul en bas de page, ses sept lignes
+         parties sur la suivante. */
+      .sec{page-break-after:avoid}
+      table.nocut{page-break-inside:avoid}
     </style>';
     $logo = rapLogoDataUri();
     $entete = fn (string $sous) => '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:4mm"><tr>'
@@ -466,7 +472,7 @@ function ep_dossier_pdf(): array
     $h .= '</tr></table><div style="font-size:7.5pt;color:#8b8177">Bordeaux : réalisé (endpoints) · sable : budget validé (à défaut le CA théorique de l’étude).</div>';
     // Les mêmes cinq mois en chiffres : une barre se compare, elle ne se lit
     // pas — le montant du budget, celui du CA et l'écart, en clair.
-    $h .= '<table class="t" style="margin-top:2mm"><tr><th class="l">Mois</th><th>Budget</th><th>CA réalisé</th><th>Écart</th><th>Atteinte</th></tr>';
+    $h .= '<table class="t nocut" style="margin-top:2mm"><tr><th class="l">Mois</th><th>Budget</th><th>CA réalisé</th><th>Écart</th><th>Atteinte</th></tr>';
     $totB5 = 0.0; $totC5 = 0.0;
     foreach ($cinqMois as $c5) {
         $ec5 = ($c5['ca'] !== null && $c5['budget'] !== null) ? $c5['ca'] - $c5['budget'] : null;
@@ -551,7 +557,7 @@ function ep_dossier_pdf(): array
     $caSem = array_sum(array_column($sem, 'ca'));
     if ($sem !== [] && $caSem > 0) {
         $h .= '<div class="sec">Le rythme de la semaine</div>';
-        $h .= '<table class="t"><tr><th class="l">Jour</th><th>Jours comptés</th><th>Clients / jour</th><th>CA moyen</th><th>Part du CA</th><th></th></tr>';
+        $h .= '<table class="t nocut"><tr><th class="l">Jour</th><th>Jours comptés</th><th>Clients / jour</th><th>CA moyen</th><th>Part du CA</th><th></th></tr>';
         $maxPart = max(array_map(fn ($x4) => $x4['ca'] / $caSem, $sem));
         for ($dow4 = 1; $dow4 <= 7; $dow4++) {
             $x4 = $sem[$dow4] ?? null;
