@@ -75,6 +75,15 @@ function tachesJourEnsureNote(): void
     if ((int) ($r['n'] ?? 0) === 0) {
         Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN note TINYINT NULL, ADD COLUMN commentaire VARCHAR(500) NULL');
     }
+    // notes_ok sur le journal des jours : sans lui, un rattrapage forcé sur
+    // une fenêtre repart du premier jour à CHAQUE appel — aucune mémoire
+    // entre deux passes, aucune progression possible au-delà du budget d'un
+    // seul appel.
+    $r2 = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour_etat' AND column_name = 'notes_ok'");
+    if ((int) ($r2['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_tache_jour_etat ADD COLUMN notes_ok TINYINT NOT NULL DEFAULT 0');
+    }
 }
 
 /**
@@ -102,8 +111,8 @@ function tachesJourReleve(string $date): ?int
             $n++;
         }
     }
-    Db::exec('INSERT INTO ceo_tache_jour_etat (jour, releve_le, nb) VALUES (?,?,?)
-              ON DUPLICATE KEY UPDATE releve_le = VALUES(releve_le), nb = VALUES(nb)',
+    Db::exec('INSERT INTO ceo_tache_jour_etat (jour, releve_le, nb, notes_ok) VALUES (?,?,?,1)
+              ON DUPLICATE KEY UPDATE releve_le = VALUES(releve_le), nb = VALUES(nb), notes_ok = 1',
         [$date, date('Y-m-d H:i:s'), $n]);
     return $n;
 }
@@ -118,10 +127,18 @@ function tachesReleveFenetre(string $du, string $au, int $budgetS = 25): array
 {
     tachesSuiviTables();
     if (!PanelApi::configured()) { return ['releves' => 0, 'reste' => null, 'note' => 'API du panel non configurée']; }
+    // Les jours déjà rattrapés (notes_ok) se sautent : sans ça, chaque appel
+    // reprendrait au premier jour de la fenêtre et n'avancerait jamais au-delà
+    // de son propre budget.
+    $ok = [];
+    foreach (Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour BETWEEN ? AND ? AND notes_ok = 1', [$du, $au]) as $r3) {
+        $ok[(string) $r3['jour']] = true;
+    }
     $debut = microtime(true);
     $releves = 0; $reste = 0; $rate = 0;
     for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
         if ($d > date('Y-m-d')) { continue; }
+        if (isset($ok[$d])) { continue; }
         if (microtime(true) - $debut > $budgetS) { $reste++; continue; }
         if (tachesJourReleve($d) === null) {
             $reste++;
