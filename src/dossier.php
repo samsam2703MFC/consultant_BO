@@ -355,7 +355,7 @@ function ep_dossier_pdf(): array
     $moisMax = $annee < (int) date('Y') ? 12 : ($annee > (int) date('Y') ? 0 : (int) date('n') - 1);
     $h .= '<div class="saut"></div>' . $entete('le budget de l’année ' . $annee);
     $h .= '<div class="sec" style="margin-top:0">Les douze mois face au budget</div>';
-    $h .= '<table class="t"><tr><th class="l">Mois</th><th>Budget</th><th>Réalisé</th><th>Atteinte</th><th>Écart</th><th>Clients manqués/j</th><th>Cumul réalisé</th><th>Cumul budget</th></tr>';
+    $h .= '<table class="t"><tr><th class="l">Mois</th><th>Budget</th><th>Réalisé</th><th>Atteinte</th><th>Écart</th><th>Clients manqués/j</th><th>Moyenne/j visée</th><th>Cumul réalisé</th><th>Cumul budget</th></tr>';
     $cumR = 0.0; $cumB = 0.0;
     for ($mo = 1; $mo <= 12; $mo++) {
         $mM = sprintf('%04d-%02d', $annee, $mo);
@@ -372,6 +372,10 @@ function ep_dossier_pdf(): array
         $panierM = $kM['panier'] ?? null;
         $clientsJ = ($rM !== null && $bM !== null && $rM < $bM && $panierM !== null && $panierM > 0)
             ? (($bM - $rM) / $panierM) / 30 : null;
+        // La moyenne par jour VISÉE, indépendamment du réalisé : le budget du
+        // mois ÷ le panier moyen ÷ 30 jours, arrondie au client entier
+        // supérieur — le repère fixe à côté du manque constaté.
+        $cibleJ = ($bM !== null && $panierM !== null && $panierM > 0) ? (int) ceil($bM / $panierM / 30) : null;
         $h .= '<tr' . ($mM === $m ? ' style="background:#FFF9EC"' : '') . '>'
             . '<td class="l" style="font-weight:bold">' . $e(strftime_fr(strtotime($mM . '-01'), 'M')) . '</td>'
             . '<td class="mut">' . ($bM !== null ? $eur0($bM) : '') . '</td>'
@@ -379,6 +383,7 @@ function ep_dossier_pdf(): array
             . '<td style="font-weight:bold;color:' . $coulA . '">' . ($att !== null ? round($att) . ' %' : '') . '</td>'
             . '<td style="color:' . $coulA . '">' . (($rM !== null && $bM !== null) ? (($rM >= $bM ? '+ ' : '− ') . $eur0(abs($rM - $bM))) : '') . '</td>'
             . '<td class="rouge">' . ($clientsJ !== null ? number_format($clientsJ, 1, ',', ' ') : '') . '</td>'
+            . '<td class="mut">' . ($cibleJ !== null ? $cibleJ : '') . '</td>'
             . '<td>' . ($mo <= $moisMax ? $eur0($cumR) : '') . '</td>'
             . '<td class="mut">' . ($mo <= $moisMax ? $eur0($cumB) : '') . '</td></tr>';
     }
@@ -386,8 +391,8 @@ function ep_dossier_pdf(): array
     $h .= '<tr style="background:#F7F3EC"><td class="l" style="font-weight:bold">Année à date</td><td class="mut" style="font-weight:bold">' . $eur0($cumB) . '</td>'
         . '<td style="font-weight:bold">' . $eur0($cumR) . '</td>'
         . '<td style="font-weight:bold;color:' . ($attAn !== null && $attAn >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($attAn !== null ? $attAn . ' %' : '') . '</td>'
-        . '<td colspan="4"></td></tr></table>';
-    $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Clients manqués/j : le mois en écart négatif traduit en clients, écart ÷ panier moyen du mois, ÷ 30 jours.</div>';
+        . '<td colspan="5"></td></tr></table>';
+    $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Clients manqués/j : le mois en écart négatif traduit en clients, écart ÷ panier moyen du mois, ÷ 30 jours. Moyenne/j visée : budget du mois ÷ panier moyen ÷ 30 jours, arrondi au client supérieur.</div>';
     // La HEATMAP réseau : magasins × mois, colorée à l'atteinte du budget.
     $h .= '<div class="sec">La heatmap de l’année</div>';
     $h .= '<table class="t" style="table-layout:fixed"><tr><th class="l" style="width:22mm">Magasin</th>';
