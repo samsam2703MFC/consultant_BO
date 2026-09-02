@@ -31,6 +31,10 @@ function tachesSuiviTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
+    // La migration note/commentaire tourne à CHAQUE passage tant qu'elle n'a
+    // pas trouvé la colonne : le court-circuit ci-dessous saute tout le reste
+    // sur une base déjà à jour, elle doit donc s'exécuter AVANT lui.
+    tachesJourEnsureNote();
     if ((int) setting('tachesSuiviSchema', 0) >= TACHES_SUIVI_SCHEMA) { return; }
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_tache_jour ('
         . 'jour DATE NOT NULL,'
@@ -44,7 +48,6 @@ function tachesSuiviTables(): void
         . 'PRIMARY KEY (jour, id_shop, id_task),'
         . 'KEY idx_tj_shop (id_shop, jour)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    tachesJourEnsureNote();
     // Le journal des jours relevés : « zéro tâche » et « jamais relevé » sont
     // deux états différents, cette table les sépare.
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_tache_jour_etat ('
