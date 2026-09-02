@@ -142,16 +142,16 @@ function dossierTaches(int $sid, string $du, string $au): array
         $attendues = (int) ($c['t'] ?? 0);
         $faites = (int) ($c['f'] ?? 0);
     } catch (PDOException $e) { /* table absente : la section le dira */ }
-    $n5 = 0; $nonConformes = [];
+    $exemplaires = []; $nonConformes = [];
     foreach ($rows as $r) {
         $note = (int) $r['note'];
-        if ($note === 5) { $n5++; continue; }
         if ($note === 4) { continue; }
-        $nonConformes[] = ['nom' => (string) $r['nom'], 'note' => $note,
+        $l = ['nom' => (string) $r['nom'], 'note' => $note, 'taskId' => (string) $r['id_task'],
             'jour' => (string) $r['jour'], 'commentaire' => $r['commentaire']];
+        if ($note === 5) { $exemplaires[] = $l; } else { $nonConformes[] = $l; }
     }
-    return ['total' => count($rows), 'n5' => $n5, 'nonConformes' => $nonConformes,
-        'attendues' => $attendues, 'faites' => $faites];
+    return ['total' => count($rows), 'n5' => count($exemplaires), 'exemplaires' => $exemplaires,
+        'nonConformes' => $nonConformes, 'attendues' => $attendues, 'faites' => $faites];
 }
 
 function ep_dossier_pdf(): array
@@ -748,6 +748,35 @@ function ep_dossier_pdf(): array
             . '<td class="' . ($l2['euro'] >= 0 ? 'rouge' : 'vert') . '">' . ($l2['euro'] >= 0 ? '+ ' : '− ') . number_format(abs($l2['euro']), 2, ',', ' ') . ' € / pièce</td></tr>';
     }
     $h .= '</table><div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Trié par enjeu (écart × volume du magasin). Fond rosé : delta d’au moins 5 % (remise locale, prix mal encodé ou grille différente, à vérifier en caisse).</div>';
+
+    // ============ PAGES PHOTOS : LES 5/5, PUIS LES 3-2-1 ============
+    // Les mêmes fiches que le rapport hebdomadaire : la photo prise en
+    // boutique, ses repères dessinés, la date et la cote. Douze par page,
+    // ce qu'une A4 porte exactement — au-delà, on dit combien restent.
+    $fichesDe = function (array $liste) use ($sid, $nomC): array {
+        $cartes = [];
+        foreach (array_slice($liste, 0, 12) as $t4) {
+            $f = rapFicheTache((string) $sid, $t4['taskId'], $t4['jour'], $t4['nom'], $nomC,
+                (int) $t4['note'], (string) ($t4['commentaire'] ?? ''), true);
+            if ($f !== '') { $cartes[] = rapFondNote((int) $t4['note']) + ['html' => $f]; }
+        }
+        return $cartes;
+    };
+    foreach ([['exemplaires', 'les tâches exemplaires (5/5)', 'Ce qui a été bien fait sur la période, photo à l’appui.'],
+              ['nonConformes', 'les non-conformités (3, 2, 1)', 'Chaque écart avec sa photo et ses repères — de quoi le reprendre en boutique.']] as [$cle, $sousT, $chapeau]) {
+        $liste = $tachesD[$cle] ?? [];
+        if ($liste === []) { continue; }
+        $cartes = $fichesDe($liste);
+        if ($cartes === []) { continue; }
+        $h .= '<div class="saut"></div>' . $entete($sousT)
+            . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . $e($chapeau) . '</div>'
+            . rapFichesGrille($cartes, 3, 4, false, false);
+        $reste3 = count($liste) - count($cartes);
+        if ($reste3 > 0) {
+            $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:2mm">+ ' . $reste3
+                . ' autre(s) sur la période, à consulter dans le cockpit.</div>';
+        }
+    }
 
     $h .= '</div>';
 
