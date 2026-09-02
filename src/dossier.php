@@ -20,6 +20,10 @@ function dossierJour(int $sid, string $jour): ?array
     if (is_array($cache) && isset($cache['ca'])) { return $cache; }
     $r = PanelApi::get('/shops/' . $sid . '/statistics/daily-summary?date=' . $jour);
     if (!is_array($r) || !isset($r['income'])) { return null; }
+    // `transactions` n'est PAS le nombre de tickets : au 15/08 à Halle, le
+    // daily-summary en compte 473 quand l'endpoint des KPIs en compte 167
+    // pour le même CA. Le champ est gardé pour mémoire, jamais pour le
+    // panier — le compte de tickets vient de pvKpisMois.
     $d = ['ca' => (float) $r['income'], 'tickets' => (int) ($r['transactions'] ?? 0),
         'mo' => (float) ($r['employee_cost'] ?? 0), 'mat' => (float) ($r['material_cost'] ?? 0),
         'frais' => (float) ($r['shop_cost'] ?? 0), 'resultat' => (float) ($r['profit'] ?? 0)];
@@ -188,6 +192,16 @@ function ep_dossier_pdf(): array
         foreach (['ca', 'tickets', 'mo', 'mat', 'frais', 'resultat'] as $k) { $pnl[$k] += $p[$k]; }
         $pnl['serie'] = array_merge($p['serie'], $pnl['serie']);
     }
+    // Le compte de TICKETS vient des KPIs, pas du P&L quotidien : le champ
+    // `transactions` du daily-summary compte autre chose (473 contre 167 le
+    // même jour) et écraserait le panier moyen de moitié.
+    $tkP = 0; $tkOk = true;
+    for ($i = 0; $i < $n; $i++) {
+        $kP = pvKpisMois($sid, date('Y-m', strtotime($m . '-01 -' . $i . ' month')));
+        if ($kP === null) { $tkOk = false; break; }
+        $tkP += (int) $kP['tickets'];
+    }
+    if ($tkOk && $tkP > 0) { $pnl['tickets'] = $tkP; }
     $mPrec = date('Y-m', strtotime($mDeb . '-01 -1 month'));
     $pp = dossierMoisPnl($sid, $mPrec);
     $pnlPrec = $pp['ca'] > 0 ? $pp : null;
