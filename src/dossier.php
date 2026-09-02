@@ -404,6 +404,7 @@ function ep_dossier_pdf(): array
     $h .= '</table>';
     // budget 5 mois
     $h .= '<div class="sec">Budget réalisé contre visé</div>';
+    $cinqMois = [];   // les mêmes chiffres que les barres, en clair sous elles
     $h .= '<table width="100%" cellpadding="0" cellspacing="2"><tr>';
     for ($i = 4; $i >= 0; $i--) {
         $mB = date('Y-m', strtotime($m . '-01 -' . $i . ' month'));
@@ -421,6 +422,7 @@ function ep_dossier_pdf(): array
         $hR = $real !== null ? (int) round($real / 1700) : 0;
         $hB = $bB !== null ? (int) round($bB / 1700) : 0;
         $att = ($real !== null && $bB !== null && $bB > 0) ? round($real / $bB * 100) : null;
+        $cinqMois[] = ['m' => $mB, 'ca' => $real, 'budget' => $bB, 'att' => $att];
         $h .= '<td width="20%" align="center" style="vertical-align:bottom">'
             . '<table cellpadding="0" cellspacing="1"><tr>'
             . '<td style="vertical-align:bottom"><div style="width:6mm;height:' . max(2, $hR) . 'mm;background:#8D1D2C;border-radius:1mm 1mm 0 0"></div></td>'
@@ -429,19 +431,77 @@ function ep_dossier_pdf(): array
             . '<div style="font-size:8pt;font-weight:bold;color:' . ($att !== null && $att >= 100 ? '#2d7a3e' : '#C0182B') . '">' . ($att !== null ? $att . ' %' : '') . '</div></td>';
     }
     $h .= '</tr></table><div style="font-size:7.5pt;color:#8b8177">Bordeaux : réalisé (endpoints) · sable : budget validé (à défaut le CA théorique de l’étude).</div>';
+    // Les mêmes cinq mois en chiffres : une barre se compare, elle ne se lit
+    // pas — le montant du budget, celui du CA et l'écart, en clair.
+    $h .= '<table class="t" style="margin-top:2mm"><tr><th class="l">Mois</th><th>Budget</th><th>CA réalisé</th><th>Écart</th><th>Atteinte</th></tr>';
+    $totB5 = 0.0; $totC5 = 0.0;
+    foreach ($cinqMois as $c5) {
+        $ec5 = ($c5['ca'] !== null && $c5['budget'] !== null) ? $c5['ca'] - $c5['budget'] : null;
+        $coul5 = $c5['att'] === null ? '#8b8177' : ($c5['att'] >= 100 ? '#2d7a3e' : ($c5['att'] >= 90 ? '#D97706' : '#C0182B'));
+        if ($c5['ca'] !== null) { $totC5 += $c5['ca']; }
+        if ($c5['budget'] !== null) { $totB5 += $c5['budget']; }
+        $h .= '<tr' . ($c5['m'] === $m ? ' style="background:#FFF9EC"' : '') . '>'
+            . '<td class="l" style="font-weight:bold">' . $e(strftime_fr(strtotime($c5['m'] . '-01'), 'M Y')) . '</td>'
+            . '<td class="mut">' . ($c5['budget'] !== null ? $eur0($c5['budget']) : '') . '</td>'
+            . '<td style="font-weight:bold">' . ($c5['ca'] !== null ? $eur0($c5['ca']) : '') . '</td>'
+            . '<td style="color:' . $coul5 . '">' . ($ec5 !== null ? (($ec5 >= 0 ? '+ ' : '− ') . $eur0(abs($ec5))) : '') . '</td>'
+            . '<td style="font-weight:bold;color:' . $coul5 . '">' . ($c5['att'] !== null ? $c5['att'] . ' %' : '') . '</td></tr>';
+    }
+    $ecT5 = $totC5 - $totB5;
+    $attT5 = $totB5 > 0 ? round($totC5 / $totB5 * 100) : null;
+    $coulT5 = $attT5 === null ? '#8b8177' : ($attT5 >= 100 ? '#2d7a3e' : '#C0182B');
+    $h .= '<tr style="background:#F7F3EC"><td class="l" style="font-weight:bold">Cinq mois</td>'
+        . '<td class="mut" style="font-weight:bold">' . $eur0($totB5) . '</td>'
+        . '<td style="font-weight:bold">' . $eur0($totC5) . '</td>'
+        . '<td style="font-weight:bold;color:' . $coulT5 . '">' . ($ecT5 >= 0 ? '+ ' : '− ') . $eur0(abs($ecT5)) . '</td>'
+        . '<td style="font-weight:bold;color:' . $coulT5 . '">' . ($attT5 !== null ? $attT5 . ' %' : '') . '</td></tr></table>';
     // jours
     $h .= '<div class="sec">Les jours de la période</div>';
-    $h .= '<table width="100%" cellpadding="0" cellspacing="1"><tr>';
+    // Une HEATMAP de calendrier plutôt que des barres : la hauteur d'une barre
+    // dit un montant, elle ne dit pas la RENTABILITÉ du jour. Chaque case porte
+    // le résultat en % du CA du jour, et se range sous son jour de semaine —
+    // c'est là qu'on voit qu'un magasin perd tous les lundis.
     $serie = $pnl['serie'];
-    $maxJ = max(array_map(fn ($d2) => $d2 !== null ? abs($d2['resultat']) : 0, $serie) ?: [1]) ?: 1;
+    $parJourP = [];
+    $jCur = $du;
     foreach ($serie as $d2) {
-        if ($d2 === null) { $h .= '<td style="vertical-align:bottom"><div style="height:1mm;background:#EEE"></div></td>'; continue; }
-        $r2 = $d2['resultat'];
-        $hh = (int) round(abs($r2) / $maxJ * 22);
-        $coul = $r2 >= 0 ? ($d2['ca'] > 0 && $r2 / max(1, $d2['ca']) > 0.18 ? '#2d7a3e' : '#C9A227') : '#C0182B';
-        $h .= '<td style="vertical-align:bottom"><div style="height:' . max(1, $hh) . 'mm;background:' . $coul . ';border-radius:0.6mm 0.6mm 0 0"></div></td>';
+        $parJourP[$jCur] = $d2;
+        $jCur = date('Y-m-d', strtotime($jCur . ' +1 day'));
     }
-    $h .= '</tr></table><div style="font-size:7.5pt;color:#8b8177">Vert : résultat &gt; 18 % du CA du jour · jaune : positif · rouge : jour en perte. Du ' . $e(date('d/m', strtotime($du))) . ' au ' . $e(date('d/m', strtotime($au))) . '.</div>';
+    $coulPct = function (?float $p3): array {
+        if ($p3 === null) { return ['#F4F1EB', '#b8b2a8']; }
+        if ($p3 >= 20) { return ['#2d7a3e', '#fff']; }
+        if ($p3 >= 15) { return ['#5f9e5f', '#fff']; }
+        if ($p3 >= 10) { return ['#D9A73E', '#3d382f']; }
+        if ($p3 >= 0)  { return ['#CC7A4A', '#fff']; }
+        return ['#C0182B', '#fff'];
+    };
+    $joursSem = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    for ($iM = $n - 1; $iM >= 0; $iM--) {
+        $mCal = date('Y-m', strtotime($m . '-01 -' . $iM . ' month'));
+        if ($n > 1) { $h .= '<div style="font-size:8.5pt;font-weight:bold;margin:2mm 0 1mm">' . $e(strftime_fr(strtotime($mCal . '-01'), 'M Y')) . '</div>'; }
+        $h .= '<table class="t" style="table-layout:fixed"><tr>';
+        foreach ($joursSem as $js) { $h .= '<th style="text-align:center">' . $js . '</th>'; }
+        $h .= '</tr><tr>';
+        $prem = (int) date('N', strtotime($mCal . '-01'));
+        for ($v = 1; $v < $prem; $v++) { $h .= '<td style="background:#FAF8F4"></td>'; }
+        $col = $prem - 1;
+        $dernier = (int) date('t', strtotime($mCal . '-01'));
+        for ($jj = 1; $jj <= $dernier; $jj++) {
+            if ($col === 7) { $h .= '</tr><tr>'; $col = 0; }
+            $cle4 = sprintf('%s-%02d', $mCal, $jj);
+            $dJ = $parJourP[$cle4] ?? null;
+            $pctJ = ($dJ !== null && (float) $dJ['ca'] > 0) ? (float) $dJ['resultat'] / (float) $dJ['ca'] * 100 : null;
+            [$bg4, $fg4] = $coulPct($pctJ);
+            $h .= '<td style="text-align:center;background:' . $bg4 . ';color:' . $fg4 . ';border-bottom:1pt solid #fff;padding:1.1mm 0">'
+                . '<div style="font-size:6pt;opacity:0.75">' . $jj . '</div>'
+                . '<div style="font-size:8pt;font-weight:bold">' . ($pctJ !== null ? round($pctJ) . ' %' : '') . '</div></td>';
+            $col++;
+        }
+        while ($col < 7) { $h .= '<td style="background:#FAF8F4"></td>'; $col++; }
+        $h .= '</tr></table>';
+    }
+    $h .= '<div style="font-size:7.5pt;color:#8b8177;margin-top:1mm">Résultat du jour en % de son chiffre d’affaires. Vert foncé ≥ 20 · vert ≥ 15 · ambre ≥ 10 · orange ≥ 0 · rouge : jour en perte · gris : jour sans donnée. Du ' . $e(date('d/m', strtotime($du))) . ' au ' . $e(date('d/m', strtotime($au))) . '.</div>';
 
     // ============ PAGE 2bis : LE BUDGET DE L'ANNÉE + HEATMAP ============
     $annee = (int) substr($m, 0, 4);
