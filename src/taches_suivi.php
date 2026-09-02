@@ -39,9 +39,12 @@ function tachesSuiviTables(): void
         . 'nom VARCHAR(200) NOT NULL DEFAULT "",'
         . 'fait TINYINT NOT NULL DEFAULT 0,'
         . 'statut VARCHAR(12) NOT NULL DEFAULT "",'
+        . 'note TINYINT NULL,'          // 1..5, la cote posée par le panel — NULL = pas notée
+        . 'commentaire VARCHAR(500) NULL,'
         . 'PRIMARY KEY (jour, id_shop, id_task),'
         . 'KEY idx_tj_shop (id_shop, jour)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    tachesJourEnsureNote();
     // Le journal des jours relevés : « zéro tâche » et « jamais relevé » sont
     // deux états différents, cette table les sépare.
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_tache_jour_etat ('
@@ -51,6 +54,24 @@ function tachesSuiviTables(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['tachesSuiviSchema', json_encode(TACHES_SUIVI_SCHEMA)]);
+}
+
+/**
+ * Migration d'une base déjà en service : les colonnes note/commentaire
+ * n'existaient pas avant — sans elles, le contrôle des tâches du dossier
+ * d'analyse ne peut ni compter les 5/5 ni lister les non-conformes.
+ * Idempotent, appelée à chaque `tachesSuiviTables()`.
+ */
+function tachesJourEnsureNote(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour' AND column_name = 'note'");
+    if ((int) ($r['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN note TINYINT NULL, ADD COLUMN commentaire VARCHAR(500) NULL');
+    }
 }
 
 /**
@@ -70,9 +91,11 @@ function tachesJourReleve(string $date): ?int
         foreach (($s['taches'] ?? []) as $t) {
             $st = (string) ($t['statut'] ?? '');
             $fait = $st !== 'nonRendue' ? 1 : 0;
-            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut) VALUES (?,?,?,?,?,?)
-                      ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut)',
-                [$date, (int) $s['shopId'], (int) $t['taskId'], mb_substr((string) $t['tache'], 0, 200), $fait, mb_substr($st, 0, 12)]);
+            $note = isset($t['note']) && $t['note'] !== null ? (int) $t['note'] : null;
+            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire) VALUES (?,?,?,?,?,?,?,?)
+                      ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire)',
+                [$date, (int) $s['shopId'], (int) $t['taskId'], mb_substr((string) $t['tache'], 0, 200), $fait, mb_substr($st, 0, 12),
+                 $note, isset($t['comment']) && $t['comment'] !== null ? mb_substr((string) $t['comment'], 0, 500) : null]);
             $n++;
         }
     }
@@ -80,6 +103,44 @@ function tachesJourReleve(string $date): ?int
               ON DUPLICATE KEY UPDATE releve_le = VALUES(releve_le), nb = VALUES(nb)',
         [$date, date('Y-m-d H:i:s'), $n]);
     return $n;
+}
+
+/**
+ * Force la relève d'une FENÊTRE de jours, même déjà relevés — sert à
+ * rattraper note/commentaire sur des jours moissonnés avant que ces colonnes
+ * n'existent. Budgetée en secondes comme tachesSuiviLot ; POST
+ * /pwa/tasks/releve-fenetre rappelle jusqu'à ce que « reste » tombe à zéro.
+ */
+function tachesReleveFenetre(string $du, string $au, int $budgetS = 25): array
+{
+    tachesSuiviTables();
+    if (!PanelApi::configured()) { return ['releves' => 0, 'reste' => null, 'note' => 'API du panel non configurée']; }
+    $debut = microtime(true);
+    $releves = 0; $reste = 0; $rate = 0;
+    for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        if ($d > date('Y-m-d')) { continue; }
+        if (microtime(true) - $debut > $budgetS) { $reste++; continue; }
+        if (tachesJourReleve($d) === null) {
+            $reste++;
+            if (++$rate >= 2) { continue; }
+            continue;
+        }
+        $releves++;
+    }
+    return ['releves' => $releves, 'reste' => $reste, 'note' => null];
+}
+
+/** POST /pwa/tasks/releve-fenetre {du, au, budget} — rattrapage forcé note/commentaire. */
+function wr_taches_releve_fenetre(): array
+{
+    $b = body();
+    $du = (string) ($b['du'] ?? '');
+    $au = (string) ($b['au'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) || $du > $au) {
+        http_response_code(422);
+        return ['error' => 'du et au (YYYY-MM-DD) sont requis, du <= au'];
+    }
+    return ['ok' => true] + tachesReleveFenetre($du, $au, (int) ($b['budget'] ?? 25));
 }
 
 /** Les jours révolus encore à relever, du plus récent au plus ancien. */
