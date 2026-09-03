@@ -6781,9 +6781,15 @@ class App {
         projMotif: m.projection == null ? (m.projectionMotif || '') : '',
       },
       cascade: casc,
-      note: (m.overheadMois != null
-        ? 'Frais généraux : ' + fE(m.overheadMois) + ' par mois ramenés au jour d’ouverture (' + fInt(m.joursOuverts) + ' j).'
-        : 'Frais généraux mensuels indisponibles pour ce magasin.')
+      // Deux sources possibles : sur une date passée, l'allocation du panel
+      // pour CE jour (la seule qui connaisse le bon mois — le P&L mensuel de
+      // la route ignore la date) ; aujourd'hui, le mois courant réparti sur
+      // les jours d'ouverture, détectés sur quatre semaines pleines.
+      note: (m.overheadSource === 'mesure'
+        ? 'Frais généraux du jour : allocation du panel pour cette date (daily-summary), le mois de la date ÷ ses jours.'
+        : m.overheadMois != null
+          ? 'Frais généraux : ' + fE(m.overheadMois) + ' par mois ramenés au jour d’ouverture (' + fInt(m.joursOuverts) + ' j).'
+          : 'Frais généraux mensuels indisponibles pour ce magasin.')
         + (m.labourSource === 'reparti' && m.labourMois != null
           ? ' Main-d’œuvre : ' + fE(m.labourMois) + ' sur le mois, répartie de la même façon.' : ''),
       motifNet: m.motifNet || '',

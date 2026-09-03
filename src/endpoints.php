@@ -2070,6 +2070,13 @@ function ep_exploitation_jour(): array
         // Le /pnl du jour ne sert QUE pour aujourd'hui : sur une date passée il
         // rendrait la main-d'œuvre du jour courant.
         if ($estAuj) { $paths['pnlJ' . $id] = '/consultant/shops/' . $id . '/pnl'; }
+        // Les frais et la main-d'œuvre DU JOUR tels que le panel les alloue
+        // lui-même. Indispensable pour une date passée : /pnl?period=month
+        // ignore la date et rend toujours le mois courant (mesuré : demandé
+        // pour juin, il répond septembre) — les 13 043 € d'août tombaient à
+        // 10 663 €. C'est aussi la source du dossier PDF : l'écran et le papier
+        // disent enfin le même chiffre.
+        $paths['ds' . $id] = '/shops/' . $id . '/statistics/daily-summary?date=' . $date;
         // Les HEURES de la journée regardée : c'est la part déjà écoulée qui
         // permet de projeter la fin de journée. Une seule date, sinon la
         // route agrège les heures de toute la fenêtre.
@@ -2223,9 +2230,18 @@ function ep_exploitation_jour(): array
 
         $pnlJ = $estAuj ? ($res['pnlJ' . $id] ?? null) : null;
         $labourReel = is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['labour'] ?? []), ['value', 'amount']) : null;
+        // L'allocation du panel pour CE jour (daily-summary). Sur une date
+        // passée elle prime : c'est le seul chiffre qui connaisse le bon mois.
+        // Aujourd'hui, la main-d'œuvre mesurée en direct garde la main.
+        $ds = $res['ds' . $id] ?? null;
+        $dsOh  = is_array($ds) ? nombreOuNull($ds, ['shop_cost']) : null;
+        $dsLab = is_array($ds) ? nombreOuNull($ds, ['employee_cost']) : null;
+        if ($labourReel === null && !$estAuj && $dsLab !== null && $dsLab > 0) { $labourReel = $dsLab; }
         $labour = $labourReel !== null ? $labourReel : $labJ;
         $labourSource = $labourReel !== null ? 'mesure' : ($labJ !== null ? 'reparti' : null);
+        $ohSource = 'reparti';
         $oh = $ohJ;
+        if (!$estAuj && $dsOh !== null && $dsOh > 0) { $oh = $dsOh; $ohSource = 'mesure'; }
         $net = ($labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
 
         // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
@@ -2419,6 +2435,7 @@ function ep_exploitation_jour(): array
             'labourSource' => $labourSource,
             'overhead' => $oh !== null ? round($oh, 2) : null,
             'overheadPct' => ($oh !== null && $ca > 0) ? round($oh / $ca * 100, 1) : null,
+            'overheadSource' => $oh !== null ? $ohSource : null,
             'overheadMois' => $ohMois !== null ? round($ohMois, 2) : null,
             'labourMois' => $labourMois !== null ? round($labourMois, 2) : null,
             'joursOuverts' => $joursOuverts,
