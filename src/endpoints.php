@@ -7937,6 +7937,21 @@ function ep_scouting_reseau(): array
     } catch (PDOException $e) { /* réputation absente : positions à la main */ }
     $modifie = false;
     $courant = (int) date('Y') * 12 + (int) date('n') - 1;   // le mois en cours est incomplet : exclu
+    // Le CA réel vient de la même source que l'écran P&L magasins : le P&L
+    // mensuel du panel, complété par les ventes caisse pour les mois qu'il ne
+    // porte pas encore (ep_perf). Lire la seule table P&L ne donnait que deux
+    // mois d'été, annualisés — un CA moitié trop bas.
+    $cellules = [];
+    $_GET['annees'] = ((int) date('Y') - 1) . ',' . date('Y');
+    try {
+        foreach (ep_perf() as $cell) {
+            if (!is_array($cell) || ($cell['ca'] ?? null) === null || (float) $cell['ca'] <= 0) { continue; }
+            if ((int) $cell['annee'] * 12 + (int) $cell['mois'] - 1 >= $courant) { continue; }
+            $cellules[(string) $cell['storeId']][] = [(int) $cell['annee'], (int) $cell['mois'], (float) $cell['ca']];
+        }
+        foreach ($cellules as &$l) { usort($l, static fn ($a, $b) => ($b[0] * 12 + $b[1]) <=> ($a[0] * 12 + $a[1])); }
+        unset($l);
+    } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
     $out = [];
     foreach ($shops as $sh) {
         $id = (string) $sh['id'];
@@ -7945,18 +7960,14 @@ function ep_scouting_reseau(): array
             $g = GoogleApi::position($fiches[$id]);
             if ($g !== null) { $p = ['lat' => $g['lat'], 'lng' => $g['lng'], 'source' => 'google', 'le' => date('Y-m-d')]; $pos[$id] = $p; $modifie = true; }
         }
-        $ca = null; $mois = 0; $du = null; $au = null;
-        try {
-            $tot = 0.0;
-            foreach (Db::rows('SELECT year, month, ca FROM mac_shop_monthly_pnl WHERE id_shop = ? AND ca > 0 ORDER BY year DESC, month DESC LIMIT 14', [$id]) as $r) {
-                if ((int) $r['year'] * 12 + (int) $r['month'] - 1 >= $courant) { continue; }
-                if ($mois >= 12) { break; }
-                $tot += (float) $r['ca']; $mois++;
-                if ($au === null) { $au = sprintf('%04d-%02d', (int) $r['year'], (int) $r['month']); }
-                $du = sprintf('%04d-%02d', (int) $r['year'], (int) $r['month']);
-            }
-            if ($mois > 0) { $ca = $mois >= 12 ? $tot : $tot / $mois * 12; }
-        } catch (PDOException $e) { /* P&L du panel absent */ }
+        $ca = null; $mois = 0; $du = null; $au = null; $tot = 0.0;
+        foreach ($cellules[$id] ?? [] as [$y, $m, $v]) {
+            if ($mois >= 12) { break; }
+            $tot += $v; $mois++;
+            if ($au === null) { $au = sprintf('%04d-%02d', $y, $m); }
+            $du = sprintf('%04d-%02d', $y, $m);
+        }
+        if ($mois > 0) { $ca = $mois >= 12 ? $tot : $tot / $mois * 12; }
         $out[] = [
             'id' => $id, 'nom' => (string) $sh['name'],
             'ville' => (string) ($sh['city'] ?: ($sh['zone'] ?: ($sh['region'] ?: ''))),
@@ -7972,7 +7983,7 @@ function ep_scouting_reseau(): array
             ['scoutingReseau', json_encode($pos, JSON_UNESCAPED_UNICODE)]);
     }
     return ['magasins' => $out,
-        'source' => 'positions : fiche Google raccordée (réputation) ou pointée sur la carte ; CA : P&L mensuel du panel, douze derniers mois clos, annualisé s\'il y en a moins'];
+        'source' => 'positions : fiche Google raccordée (réputation) ou pointée sur la carte ; CA : même source que l\'écran P&L (P&L mensuel du panel, ventes caisse pour les mois sans P&L), douze derniers mois clos, annualisé s\'il y en a moins'];
 }
 
 /** GET /scouting/tiles/{i} — un secteur du cache OpenStreetMap partagé. */
