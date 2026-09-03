@@ -409,10 +409,15 @@ export class Scouting {
   }
 
   /* ---------- données ---------- */
-  async overpass(q, label){
+  // Un secteur part du miroir désigné par `start` : trois secteurs chargés en
+  // parallèle frappent trois miroirs différents au lieu de faire la file sur
+  // le premier. Sur échec, on passe au miroir suivant, puis on réessaie.
+  async overpass(q, label, start){
     let last;
+    const n = OVERPASS.length, first = Math.abs(start || 0) % n;
     for (let attempt = 0; attempt < 3; attempt++){
-      for (const ep of OVERPASS){
+      for (let k = 0; k < n; k++){
+        const ep = OVERPASS[(first + k) % n];
         try {
           if (attempt > 0) this.setState({ progress: label + ' — nouvelle tentative (' + (attempt + 1) + '/3)' });
           const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
@@ -470,18 +475,20 @@ export class Scouting {
     const api = this.useApi();
     if (api && !this._serverTiles){ this.setState({ progress: 'Lecture des saisies enregistrées…' }); await this.pullSaved(); }
     const bakeries = [], communes = [], places = [], seenC = {}, seenB = {}, failed = [];
+    let done = 0;
     const absorb = (tc, tb, tp) => {
+      const fresh = [];
       (tc || []).forEach(c => { if (!seenC[c.id]){ seenC[c.id] = 1; communes.push(Object.assign({}, c)); } });
-      (tb || []).forEach(b => { if (!seenB[b.id]){ seenB[b.id] = 1; bakeries.push(Object.assign({}, b)); } });
+      (tb || []).forEach(b => { if (!seenB[b.id]){ seenB[b.id] = 1; const o = Object.assign({}, b); bakeries.push(o); fresh.push(o); } });
       (tp || []).forEach(p => places.push(p));
+      return fresh;
     };
-    for (let i = 0; i < TILES.length; i++){
+    // Un secteur : cache serveur partagé, puis cache navigateur, puis Overpass.
+    const tile = async (i) => {
       const [bbox, label] = TILES[i];
       let d = null;
       if (!force){
-        // secteur en cache (serveur partagé, puis navigateur) : chargement instantané
         if (api && this._serverTiles && this._serverTiles[i]){
-          this.setState({ progress: label + ' — cache serveur ' + (i + 1) + '/' + TILES.length });
           try { d = await apiGet('/scouting/tiles/' + i, 60000); } catch (e) { d = null; }
           if (d && d.c) ls.set('t' + i, d); else d = null;
         }
@@ -492,23 +499,36 @@ export class Scouting {
         }
       }
       if (!d){
-        this.setState({ busy: true, progress: label + ' — secteur ' + (i + 1) + '/' + TILES.length });
+        this.setState({ busy: true, progress: label + ' — interrogation d\'OpenStreetMap… (' + done + '/' + TILES.length + ' secteurs reçus)' });
         let r;
         try {
           r = await this.overpass('[out:json][timeout:240];rel(' + bbox + ')["boundary"="administrative"]["admin_level"="8"];out tags center;'
             + 'node(' + bbox + ')["place"]["population"];out tags center;'
-            + '(nwr["shop"="bakery"](' + bbox + ');nwr["shop"="pastry"](' + bbox + '););out center tags;', label);
-        } catch (e) { failed.push(label); continue; }
+            + '(nwr["shop"="bakery"](' + bbox + ');nwr["shop"="pastry"](' + bbox + '););out center tags;', label, i);
+        } catch (e) { failed.push(label); return; }
         d = this.parseTile(r);
         ls.set('t' + i, d);
         if (api) apiWrite('PUT', '/scouting/tiles/' + i, d);
       }
-      absorb(d.c, d.b, d.p || []);
+      const fresh = absorb(d.c, d.b, d.p || []);
       this.index(communes);
       this.fillPop(communes, places);
+      // Rattachement provisoire des commerces du secteur aux communes déjà
+      // connues : les filtres province / arrondissement, la carte et l'onglet
+      // ceo_concurrents s'appliquent dès ce secteur — et non un quart d'heure
+      // plus tard, une fois les neuf secteurs lus.
+      this.attach(fresh, communes);
+      done++;
       this._rev++;
-      this.setState({ communes: communes.slice(), bakeries: bakeries.slice() });
-    }
+      this.setState({ communes: communes.slice(), bakeries: bakeries.filter(b => b.prov),
+        progress: done + '/' + TILES.length + ' secteurs reçus' + (done < TILES.length ? '…' : '') });
+    };
+    // Trois secteurs à la fois, chacun partant d'un miroir Overpass différent :
+    // un secteur prend une à trois minutes, et les attendre l'un après l'autre
+    // faisait de la première ouverture un quart d'heure.
+    const queue = TILES.map((_, i) => i);
+    const worker = async () => { while (queue.length){ await tile(queue.shift()); } };
+    await Promise.all([worker(), worker(), worker()]);
     this._loading = false;
     if (!communes.length){
       this.setState({ busy: false, progress: '', err: 'Overpass injoignable — réessaie avec « Recharger les données ».' });
@@ -516,23 +536,28 @@ export class Scouting {
     }
     this.index(communes);
     this.fillPop(communes, places);
-    // rattachement à la commune la plus proche ; hors Belgique = écarté
-    const kept = [];
-    bakeries.forEach(b => {
-      let best = null, bd = 1e9;
-      communes.forEach(c => {
-        const d = dist(b.lat, b.lng, c.lat, c.lng);
-        if (d < bd){ bd = d; best = c; }
-      });
-      if (!best || bd > 10) return;
-      b.commune = best.name; b.arr = best.arr; b.ins = best.ins; b.prov = best.prov;
-      kept.push(b);
-    });
+    // rattachement définitif, toutes communes connues ; hors Belgique = écarté
+    const kept = this.attach(bakeries, communes);
     this.index(communes);
     this._rev++;
     this.setState({ bakeries: kept, communes: communes, busy: false, progress: '',
       err: failed.length ? 'Secteurs incomplets : ' + failed.join(', ') + ' — relance le chargement pour les compléter.' : null });
     setTimeout(() => { try { if (this.map) this.map.invalidateSize(); this.redraw(); } catch (e) { console.error('[scouting]', e); } }, 80);
+  }
+
+  // Rattache chaque commerce à la commune la plus proche (≤ 10 km) et rend ceux
+  // qui ont trouvé la leur ; au-delà, le commerce est hors Belgique et reste
+  // sans province — donc hors de toute sélection.
+  attach(list, communes){
+    const kept = [];
+    list.forEach(b => {
+      let best = null, bd = 1e9;
+      communes.forEach(c => { const d = dist(b.lat, b.lng, c.lat, c.lng); if (d < bd){ bd = d; best = c; } });
+      if (!best || bd > 10){ b.commune = ''; b.arr = ''; b.ins = ''; b.prov = ''; return; }
+      b.commune = best.name; b.arr = best.arr; b.ins = best.ins; b.prov = best.prov;
+      kept.push(b);
+    });
+    return kept;
   }
 
   // Population : la valeur portée par la relation communale OSM fait foi ;
@@ -827,8 +852,8 @@ export class Scouting {
     const hhOk = {};
     s.communes.forEach(c => { hhOk[c.ins] = c.hh >= s.minHh; });
     return s.bakeries.filter(b => {
-      if (b.prov && !s.prov[b.prov]) return false;
-      if (s.arr !== 'all' && b.arr && b.arr !== s.arr) return false;
+      if (!b.prov || !s.prov[b.prov]) return false;          // commune inconnue = hors sélection
+      if (s.arr !== 'all' && b.arr !== s.arr) return false;
       if (s.minRating > 0){ const r = this.rating(b); if (!r || r < s.minRating) return false; }
       if (s.minHh > 0 && !hhOk[b.ins]) return false;
       return true;
