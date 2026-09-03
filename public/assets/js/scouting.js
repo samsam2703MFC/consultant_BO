@@ -124,7 +124,7 @@ const LS = 'ceo_scouting';
 const TIP_REGL = {
   minRating: 'Ne garde que les concurrents dont la note atteint ce minimum. Dès que le curseur dépasse 0, les commerces sans note sortent de la carte et des calculs.',
   minHh: 'Ne garde que les communes d\'au moins ce nombre de ménages (population ÷ taille des ménages) ; leurs commerces suivent.',
-  radius: 'Rayon autour d\'un concurrent fort où aucune implantation n\'est retenue (zone rouge). C\'est aussi le rayon d\'évaluation d\'une zone : ménages, marché et concurrents y sont comptés. 2 km ≈ 15 à 20 min en voiture.',
+  radius: 'Rayon autour d\'un concurrent fort où aucune implantation n\'est retenue (zone rouge). C\'est aussi le rayon d\'évaluation d\'une zone : ménages, marché et concurrents y sont comptés. 2 km, soit 15 à 20 min en voiture.',
   thresh: 'Note à partir de laquelle un concurrent est « fort » : zone rouge autour de lui, et poids × 1,5 dans la pression concurrentielle.\nSans note, il est fort si sa force OSM ≥ 0,75 − (5 − seuil) × 0,05.',
   minScore: 'Score d\'opportunité en dessous duquel une zone n\'est ni tracée sur la carte ni listée dans ceo_zones.\nscore = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100.',
   ca: 'CA annuel TTC = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage).'
@@ -135,7 +135,7 @@ const TIP_HYP = {
   'Part du passage (%)': 'Part du CA apportée par la clientèle de passage, en plus des ménages du rayon.\nCA = CA des ménages ÷ (1 − passage) ; à 15 %, CA des ménages ÷ 0,85.',
   'Surface nette cible (m²)': 'Surface de vente du projet. N\'entre que dans le rendement : €/m² = CA annuel ÷ surface (Halle : 1 296 881 € sur 250 m²).',
   'Emprise maximale du modèle (%)': 'Emprise d\'un point sans aucun concurrent dans le rayon. Chaque concurrent la fait baisser :\nemprise = emprise max ÷ (1 + sensibilité × pression), plancher 4 %.',
-  'Sensibilité à la concurrence': 'Vitesse à laquelle la concurrence fait baisser l\'emprise.\nemprise = emprise max ÷ (1 + sensibilité × pression concurrentielle)\nAvec 0,22 et une emprise max de 30 % : pression 0 → 30 % ; pression 1 → 24,6 % ; pression 4,5 → 15,1 % (≈ Halle). Plus la valeur est haute, plus la même concurrence pèse.',
+  'Sensibilité à la concurrence': 'Vitesse à laquelle la concurrence fait baisser l\'emprise.\nemprise = emprise max ÷ (1 + sensibilité × pression concurrentielle)\nAvec 0,22 et une emprise max de 30 % : pression 0 → 30 % ; pression 1 → 24,6 % ; pression 4,5 → 15,1 % (proche de Halle). Plus la valeur est haute, plus la même concurrence pèse.',
   'Taille moyenne des ménages': 'Personnes par ménage, pour passer de la population des communes aux ménages : ménages = population ÷ taille. Belgique 2,31 (étude : 2,34 en Flandre).'
 };
 const TIP_FICHE = {
@@ -155,7 +155,7 @@ const TIP_FICHE = {
 };
 const TIP_ZONES = {
   score: TIP_FICHE['Score d\'opportunité'],
-  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × π × rayon².',
+  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × 3,1416 × rayon² (l'aire du disque).',
   n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
   emprise: 'emprise = emprise max ÷ (1 + sensibilité × pression), entre 4 % et l\'emprise max — ou l\'emprise imposée. Pression = Σ force × (1 − 0,6 × distance ÷ rayon).',
   ca: 'CA annuel TTC = ménages × dépense par ménage × emprise ÷ (1 − passage).',
@@ -893,7 +893,7 @@ export class Scouting {
       if (!this.gRoads.getLayers().length){
         AXES.forEach(a => {
           L.polyline(a.pts, { renderer: this.vecR, color: '#78554B', weight: Math.max(2, a.w / 14000), opacity: .45, lineCap: 'round' })
-            .bindPopup('<div class="sc-pop"><b>' + esc(a.name) + '</b><br>≈ ' + fmtInt(a.w) + ' navetteurs/jour (ordre de grandeur)</div>')
+            .bindPopup('<div class="sc-pop"><b>' + esc(a.name) + '</b><br>environ ' + fmtInt(a.w) + ' navetteurs/jour (ordre de grandeur)</div>')
             .addTo(this.gRoads);
         });
       }
