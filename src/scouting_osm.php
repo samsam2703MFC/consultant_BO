@@ -50,7 +50,7 @@ final class ScoutingOsm
         31 => 'Bruges', 32 => 'Dixmude', 33 => 'Ypres', 34 => 'Courtrai', 35 => 'Ostende',
         36 => 'Roulers', 37 => 'Tielt', 38 => 'Furnes',
         41 => 'Alost', 42 => 'Termonde', 43 => 'Eeklo', 44 => 'Gand', 45 => 'Audenarde', 46 => 'Saint-Nicolas',
-        51 => 'Ath', 52 => 'Charleroi', 53 => 'Mons', 54 => 'Mouscron', 55 => 'Soignies', 56 => 'Thuin', 57 => 'Tournai',
+        51 => 'Ath', 52 => 'Charleroi', 53 => 'Mons', 54 => 'Mouscron', 55 => 'Soignies', 56 => 'Thuin', 57 => 'Tournai', 58 => 'La Louvière',
         61 => 'Huy', 62 => 'Liège', 63 => 'Verviers', 64 => 'Waremme',
         71 => 'Hasselt', 72 => 'Maaseik', 73 => 'Tongres',
         81 => 'Arlon', 82 => 'Bastogne', 83 => 'Marche-en-Famenne', 84 => 'Neufchâteau', 85 => 'Virton',
@@ -63,7 +63,7 @@ final class ScoutingOsm
         '21' => 'BRU', '23' => 'VBR', '24' => 'VBR', '25' => 'WBR',
         '31' => 'VWV', '32' => 'VWV', '33' => 'VWV', '34' => 'VWV', '35' => 'VWV', '36' => 'VWV', '37' => 'VWV', '38' => 'VWV',
         '41' => 'VOV', '42' => 'VOV', '43' => 'VOV', '44' => 'VOV', '45' => 'VOV', '46' => 'VOV',
-        '51' => 'WHT', '52' => 'WHT', '53' => 'WHT', '54' => 'WHT', '55' => 'WHT', '56' => 'WHT', '57' => 'WHT',
+        '51' => 'WHT', '52' => 'WHT', '53' => 'WHT', '54' => 'WHT', '55' => 'WHT', '56' => 'WHT', '57' => 'WHT', '58' => 'WHT',   // 58 : arrondissement de La Louvière (2019)
         '61' => 'WLG', '62' => 'WLG', '63' => 'WLG', '64' => 'WLG',
         '71' => 'VLI', '72' => 'VLI', '73' => 'VLI',
         '81' => 'WLX', '82' => 'WLX', '83' => 'WLX', '84' => 'WLX', '85' => 'WLX',

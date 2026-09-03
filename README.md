@@ -156,8 +156,14 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   magasins, jamais dans le code ni dans le navigateur ; **une note ou un
   commentaire terrain saisis à la main priment**
   et sont persistés dans `ceo_scouting_competitor`.
-- **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon (chaque
-  commune comptée pour la part de son territoire comprise dans le rayon) ×
+- **Population** : grille de 1 km² du recensement 2021 (StatBel, diffusée par
+  Eurostat/GISCO — `public/assets/data/population_grid_2021.json`, 24 267
+  cellules habitées, 11,54 M d'habitants, chaque cellule rattachée à sa commune
+  par les contours LAU 2024 de GISCO). Les ménages d'un rayon sont ceux des
+  cellules qu'il couvre, là où les gens habitent ; les totaux par commune en
+  découlent, un CSV StatBel importé (code NIS ; population) prime. Sans le
+  fichier, repli sur la part du territoire de chaque commune dans le rayon.
+- **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon ×
   dépense/ménage × emprise, majoré du passage ; l'emprise décroît avec la
   pression concurrentielle sauf si elle est imposée. Les 7 hypothèses sont
   éditables, enregistrées dans `ceo_app_setting.scoutingParams` et reprises

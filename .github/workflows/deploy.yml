@@ -181,6 +181,9 @@ jobs:
           # Le calage du modèle lit les magasins du réseau : position (fiche Google) et CA réel.
           rs=$(curl -fsS "${APP_BASE}/api/cockpit/scouting/reseau" || echo '{}')
           if ! echo "$rs" | grep -q '"magasins":\['; then echo "::error::/scouting/reseau ne rend pas les magasins du réseau"; fail=1
+          # La grille de population du recensement (statique) doit être servie avec l'écran.
+          if ! curl -fsS "${APP_BASE}/assets/data/population_grid_2021.json" | head -c 300 | grep -q '"cellules"'; then echo "::error::assets/data/population_grid_2021.json absent ou illisible"; fail=1
+          else echo "OK  la grille de population du recensement 2021 est servie"; fi
           else echo "OK  /scouting/reseau rend les magasins du réseau ($(echo "$rs" | grep -o '"caAnnuel":[0-9]' | wc -l) avec un CA réel, $(echo "$rs" | grep -o '"position":"' | wc -l) positionnés)"; fi
 
           # Les identifiants d'intervenant sont le point de jointure avec le
