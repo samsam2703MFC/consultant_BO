@@ -2077,6 +2077,12 @@ function ep_exploitation_jour(): array
         // 10 663 €. C'est aussi la source du dossier PDF : l'écran et le papier
         // disent enfin le même chiffre.
         $paths['ds' . $id] = '/shops/' . $id . '/statistics/daily-summary?date=' . $date;
+        // Le PLANNING du jour, en direct : la route filtre bien par date
+        // (mesuré : ?date= rend les seuls créneaux du jour, là où from/to
+        // sont ignorés) et porte le nom de chaque personne — plus besoin ni
+        // de la table synchronisée ni du référentiel employés, tous deux
+        // en retard sur les embauches.
+        $paths['sch' . $id] = '/shops/' . $id . '/schedule?date=' . $date;
         // Les HEURES de la journée regardée : c'est la part déjà écoulée qui
         // permet de projeter la fin de journée. Une seule date, sinon la
         // route agrège les heures de toute la fenêtre.
@@ -2112,29 +2118,52 @@ function ep_exploitation_jour(): array
     // Le PLANNING de la journée, par personne : qui est en poste, de quand à
     // quand — la face humaine des ventes par heure. Le CA attribué se calcule
     // dans la boucle, une fois les heures du magasin connues.
-    $planParShop = [];
-    try {
-        $empsJ = function_exists('venteEmployes') ? venteEmployes() : [];
-        // Le créneau porte SON magasin (id_shop) : c'est lui qui place la
-        // ligne, pas le magasin d'attache de la personne — un renfort venu
-        // d'ailleurs travaille bien ici. Et un employé absent du référentiel
-        // n'efface plus son créneau : il s'affiche sous un nom de repli
-        // plutôt que de disparaître avec 788 € de ventes « sans personne ».
-        $colsS = array_column(Db::rows('SHOW COLUMNS FROM franchisee_employee_schedule'), 'Field');
-        $selS = 'id_employee, start_hour, end_hour' . (in_array('id_shop', $colsS, true) ? ', id_shop' : '');
-        foreach (Db::rows('SELECT ' . $selS . ' FROM franchisee_employee_schedule
-                            WHERE work_date = ? ORDER BY start_hour', [$date]) as $pj) {
-            $ej = $empsJ[(int) $pj['id_employee']] ?? null;
-            $shopJ = (int) ($pj['id_shop'] ?? 0) > 0 ? (string) (int) $pj['id_shop'] : (string) ($ej['shop'] ?? '');
-            if ($shopJ === '') { continue; }
-            $dj = substr((string) $pj['start_hour'], 0, 5); $fj = substr((string) $pj['end_hour'], 0, 5);
-            $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
-            $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
-            if ($hF <= $hD) { continue; }   // un service qui passe minuit sort du cadre du jour
-            $planParShop[$shopJ][] = ['nom' => $ej['nom'] ?? ('Employé ' . (int) $pj['id_employee']),
-                'debut' => $dj, 'fin' => $fj, 'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2)];
+    // Chaque créneau, d'où qu'il vienne, devient une ligne du planning.
+    $planParShop = []; $planSrc = [];
+    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin) use (&$planParShop): void {
+        $dj = substr($debut, 0, 5); $fj = substr($fin, 0, 5);
+        $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
+        $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
+        if ($hF <= $hD) { return; }   // un service qui passe minuit sort du cadre du jour
+        $planParShop[$shopJ][] = ['nom' => $nom, 'debut' => $dj, 'fin' => $fj,
+            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2)];
+    };
+    // 1) LA SOURCE : le panel, en direct, magasin par magasin. Le créneau
+    //    porte son magasin et le nom de la personne — rien à croiser.
+    $muets = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $sch = $res['sch' . $id] ?? null;
+        if (!is_array($sch)) { $muets[(string) $id] = true; continue; }
+        $planSrc[(string) $id] = 'panel';
+        foreach (analyseListe($sch) as $r) {
+            if (($r['work_date'] ?? $date) !== $date) { continue; }
+            $shopJ = (int) ($r['id_shop'] ?? $id) > 0 ? (string) (int) ($r['id_shop'] ?? $id) : (string) $id;
+            $nom = trim((string) ($r['display_name'] ?? ''));
+            if ($nom === '') { $nom = trim(((string) ($r['name'] ?? '')) . ' ' . ((string) ($r['surname'] ?? ''))); }
+            if ($nom === '') { $nom = 'Employé ' . (int) ($r['id_employee'] ?? 0); }
+            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''));
         }
-    } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
+    }
+    // 2) LE REPLI, pour les seuls magasins que le panel n'a pas servis : la
+    //    table synchronisée, qui date au plus de l'heure. Marqué comme tel —
+    //    un planning de repli ne se fait pas passer pour du direct.
+    if ($muets !== []) {
+        try {
+            $empsJ = function_exists('venteEmployes') ? venteEmployes() : [];
+            $colsS = array_column(Db::rows('SHOW COLUMNS FROM franchisee_employee_schedule'), 'Field');
+            $selS = 'id_employee, start_hour, end_hour' . (in_array('id_shop', $colsS, true) ? ', id_shop' : '');
+            foreach (Db::rows('SELECT ' . $selS . ' FROM franchisee_employee_schedule
+                                WHERE work_date = ? ORDER BY start_hour', [$date]) as $pj) {
+                $ej = $empsJ[(int) $pj['id_employee']] ?? null;
+                $shopJ = (int) ($pj['id_shop'] ?? 0) > 0 ? (string) (int) $pj['id_shop'] : (string) ($ej['shop'] ?? '');
+                if ($shopJ === '' || !isset($muets[$shopJ])) { continue; }
+                $planSrc[$shopJ] = 'table locale';
+                $poseCreneau($shopJ, $ej['nom'] ?? ('Employé ' . (int) $pj['id_employee']),
+                    (string) $pj['start_hour'], (string) $pj['end_hour']);
+            }
+        } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
+    }
 
     $GLOBALS['_profilHRefaits'] = 0;
     $joursMois = (int) date('t', strtotime($date));
@@ -2431,6 +2460,7 @@ function ep_exploitation_jour(): array
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
             'heures' => array_map(static fn ($h9) => ['h' => $h9, 'ca' => $heuresCa[$h9]], array_keys($heuresCa)),
             'planning' => $planM,
+            'planningSource' => $planSrc[(string) $id] ?? 'aucune réponse',
             'ca' => round($ca, 2),
             'refCa' => $refCa !== null ? round($refCa, 2) : null,
             'refJours' => $refN,
