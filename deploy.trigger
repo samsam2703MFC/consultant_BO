@@ -236,3 +236,4 @@ deploy 1788461755 scouting commercial
 deploy 1788463561 notes google via parametres
 deploy 1788464692 cache osm serveur, plein ecran
 deploy 1788465229 info-bulles formules
+deploy 1788465462 info-bulles glyphes
