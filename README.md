@@ -169,6 +169,11 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   magasins du réseau. Onglets tabulaires `ceo_zones`, `ceo_concurrents`,
   `ceo_arrondissements` et « Top 5 par province » (les cinq meilleures communes
   de chaque province cochée, balayées sur toute leur emprise), avec export CSV.
+- **Calage sur le réseau** : pour chaque magasin ouvert, le CA réel (P&L du
+  panel, douze derniers mois clos) face au CA que le modèle prédit à son
+  emplacement — position lue sur la fiche Google raccordée, ou pointée sur la
+  carte. Un bouton cale la dépense par ménage sur le rapport médian réel ÷
+  modèle, pour que le classement colle au réseau.
 - Chaque saisie (note, commentaire, zone retenue, import) produit une ligne
   `Scouting` dans le Journal. Sans API (mode démo), tout reste en
   `localStorage` du navigateur.

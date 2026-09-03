@@ -283,7 +283,7 @@ export class Scouting {
       hhSize: HH_SIZE, compK: 0.22, empriseMax: 30, minScore: 55,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
       view: 'map', sortKey: 'score', sortDir: -1, q: '', stop: false, reseau: false, notes: {},
-      gconf: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
+      gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
     };
     this._h = [];
     this._scroll = {};
@@ -469,6 +469,9 @@ export class Scouting {
     let d = null;
     try { d = await apiGet('/scouting', 8000); } catch (e) { console.warn('[scouting] /scouting injoignable :', e.message); }
     this._pulled = true;
+    // Les magasins du réseau (position, CA réel) arrivent à part : la fiche
+    // Google peut prendre quelques secondes la première fois.
+    apiGet('/scouting/reseau', 30000).then(r => { this.setState({ magasins: (r && r.magasins) || [] }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
     if (!d) return;
     this._serverTiles = {};
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
@@ -520,7 +523,7 @@ export class Scouting {
     this.gExcl = L.layerGroup().addTo(map);
     this.gRoads = L.layerGroup();
     this.gSel = L.layerGroup().addTo(map);
-    map.on('click', e => this.evaluate(e.latlng.lat, e.latlng.lng));
+    map.on('click', e => { if (this.state.placing) this.placeStore(e.latlng.lat, e.latlng.lng); else this.evaluate(e.latlng.lat, e.latlng.lng); });
     map.on('zoomend moveend', () => { if (this.state.communes.length) this.scheduleRedraw(120); });
     this.scheduleRedraw(50);
   }
@@ -1124,6 +1127,57 @@ export class Scouting {
     if (x) this.evaluate(x.lat, x.lng);
   }
 
+  /* ---------- calage sur le réseau ---------- */
+  // Le CA que le modèle prédit à l'emplacement d'un magasin du réseau, avec les
+  // hypothèses courantes et TOUS les commerces connus — la sélection de
+  // provinces n'a rien à y faire. Le magasin lui-même, présent dans OSM, n'est
+  // pas son propre concurrent : rien à moins de 80 m.
+  evalStore(st){
+    const s = this.state, R = s.radius;
+    if (st.lat == null || st.lng == null || !s.communes.length) return null;
+    const near = s.bakeries.map(b => ({ b: b, d: dist(st.lat, st.lng, b.lat, b.lng) })).filter(o => o.d <= R && o.d > 0.08);
+    const hh = this.householdsIn(st.lat, st.lng, R);
+    let load = 0;
+    near.forEach(o => { load += this.strength(o.b) * (1 - o.d / R * 0.6) * (this.isStrong(o.b) ? 1.5 : 1); });
+    const eMax = (s.empriseMax || 30) / 100;
+    const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
+    const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
+    return { hh: hh, n: near.length, emprise: emprise, ca: hh * s.spend * emprise / (1 - s.passage / 100) };
+  }
+
+  // Réel ÷ modèle pour chaque magasin ouvert et positionné, et la médiane des
+  // rapports : c'est elle qui cale la dépense par ménage, à laquelle le CA du
+  // modèle est proportionnel. La médiane, pour qu'un magasin hors norme ne
+  // tire pas tout le réseau.
+  calage(){
+    const rows = (this.state.magasins || []).filter(m => m.ouvert).map(m => {
+      const ev = this.evalStore(m);
+      const ratio = ev && ev.ca > 0 && m.caAnnuel ? m.caAnnuel / ev.ca : null;
+      return { m: m, ev: ev, ratio: ratio };
+    });
+    const rs = rows.map(r => r.ratio).filter(r => r != null).sort((a, b) => a - b);
+    const med = rs.length ? (rs.length % 2 ? rs[(rs.length - 1) / 2] : (rs[rs.length / 2 - 1] + rs[rs.length / 2]) / 2) : null;
+    return { rows: rows, med: med, n: rs.length };
+  }
+
+  caler(){
+    const c = this.calage();
+    if (!c.med) return;
+    const spend = Math.max(50, Math.round(this.state.spend * c.med));
+    this.setParam({ spend: spend });
+    this.notify('Dépense par ménage calée à ' + spend + ' €/an — réel = modèle × ' + c.med.toFixed(2).replace('.', ',') + ' sur ' + c.n + ' magasin(s)');
+  }
+
+  placeStore(lat, lng){
+    const id = this.state.placing;
+    const m = (this.state.magasins || []).find(x => x.id === id);
+    if (!m){ this.setState({ placing: null }); return; }
+    const upd = this.state.magasins.map(x => x.id === id ? Object.assign({}, x, { lat: lat, lng: lng, position: 'saisie' }) : x);
+    this.setState({ placing: null, magasins: upd });
+    if (this.useApi()) apiWrite('PUT', '/scouting/reseau/' + id, { lat: lat, lng: lng });
+    this.notify(m.nom + ' placé sur la carte');
+  }
+
   /* ---------- Google Places (via le serveur) ---------- */
   // La clé est celle du connecteur Google de Paramètres ; l'écran n'en connaît
   // que l'état. Sans API (repli local), aucune note ne peut être demandée.
@@ -1514,6 +1568,23 @@ export class Scouting {
       popCoverage: fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
       importPops: e => self.importPops(e),
       tips: TIP_REGL, concTips: TIP_CONC,
+      calage: (() => {
+        const c = self.calage();
+        const rows = c.rows.map(r => ({
+          id: r.m.id, nom: String(r.m.nom || '').replace(/^L['’]?\s*Atelier by\s*-?\s*/i, '').replace(/^Atelier by\s*-?\s*/i, '') || r.m.nom,
+          pos: r.m.position, mois: r.m.mois, annualise: r.m.annualise,
+          reel: r.m.caAnnuel ? fmtEur(r.m.caAnnuel) : 'CA réel inconnu', modele: r.ev ? fmtEur(r.ev.ca) : (r.m.lat == null ? 'position inconnue' : '—'),
+          ecart: r.ratio ? (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : '—',
+          ecartColor: r.ratio ? (Math.abs(r.ratio - 1) <= 0.25 ? '#1b5e20' : '#c17a2a') : 'var(--color-text-muted)',
+          place: () => { self.setState({ placing: r.m.id, view: 'map', reseau: false, compare: false }); self.notify('Clique sur la carte à l\'emplacement de ' + r.m.nom); }
+        }));
+        return { rows: rows, med: c.med, n: c.n, placing: !!s.placing, caler: () => self.caler(),
+          intro: 'CA réel des magasins ouverts (P&L du panel, douze derniers mois clos) face au CA que le modèle prédit à leur emplacement, hypothèses courantes. L\'écart lit le réel par rapport au modèle : +30 % = le magasin fait 30 % de plus que prévu.',
+          bouton: c.med ? 'Caler la dépense/ménage (× ' + c.med.toFixed(2).replace('.', ',') + ')' : '',
+          note: c.med ? 'Le calage multiplie la dépense par ménage par le rapport médian réel ÷ modèle : le modèle retrouve le réseau, et les écarts qui restent disent ce que l\'emplacement n\'explique pas.' : 'Il faut au moins un magasin ouvert, positionné et avec un CA réel pour caler.',
+          vide: s.magasins && s.magasins.length ? 'Aucun magasin ouvert positionné.' : (self.useApi() ? 'Magasins du réseau en cours de lecture…' : 'Hors ligne : magasins du réseau indisponibles.'),
+          tip: 'Pour chaque magasin ouvert : CA réel = somme des douze derniers mois clos du P&L (annualisé s\'il y en a moins) ; CA modèle = ménages du rayon × dépense × emprise ÷ (1 − passage) à son emplacement, tous les commerces OSM comptés sauf lui-même.\nCalage : dépense ← dépense × médiane(réel ÷ modèle).' };
+      })(),
       gOk: !self.googleBlocage(),
       gLabel: !self.useApi() ? 'Hors ligne — les notes Google passent par l\'API du cockpit.'
         : self.googleOk() ? 'Connecteur Google actif · clé ' + ((s.gconf && s.gconf.empreinte) || '…') + ' (Paramètres).'

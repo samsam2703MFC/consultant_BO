@@ -78,6 +78,21 @@ final class GoogleApi
         return googleLieuNormalise($json);
     }
 
+    /**
+     * La position d'une fiche, et rien d'autre — le champ le moins cher de
+     * l'API. Le scouting place ainsi les magasins du réseau à partir de la
+     * fiche Google raccordée par la réputation, une fois, puis garde le point.
+     */
+    public static function position(string $placeId): ?array
+    {
+        if ($placeId === '') { self::$lastError = 'identifiant de fiche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        [$code, $json] = self::http('GET', self::BASE . '/places/' . rawurlencode($placeId), 'location', $c['cle'], null);
+        if ($code !== 200 || !is_array($json) || !isset($json['location']['latitude'])) { self::$lastError = self::erreur($code, $json); return null; }
+        return ['lat' => (float) $json['location']['latitude'], 'lng' => (float) $json['location']['longitude']];
+    }
+
     /** Recherche textuelle — les candidats proposés pour raccorder une fiche. */
     public static function chercher(string $texte): ?array
     {

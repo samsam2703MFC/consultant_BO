@@ -7911,6 +7911,70 @@ function ep_scouting(): array
     ];
 }
 
+/**
+ * GET /scouting/reseau — les magasins du réseau, leur position et leur CA réel.
+ *
+ * C'est la matière du calage : le CA que le modèle prédit à l'emplacement de
+ * chaque magasin ouvert se compare à son CA réel — P&L mensuel du panel
+ * (mac_shop_monthly_pnl), douze derniers mois clos, annualisé s'il y en a
+ * moins. La position vient de la fiche Google raccordée par la réputation, lue
+ * une fois puis gardée dans ceo_app_setting.scoutingReseau ; une position
+ * pointée à la main sur la carte (PUT /scouting/reseau/{id}) prime.
+ */
+function ep_scouting_reseau(): array
+{
+    try {
+        $shops = Db::rows('SELECT id, name, city, zone, region, active FROM shops ORDER BY sort_order, id');
+    } catch (PDOException $e) {
+        $shops = array_map(fn ($r) => ['id' => $r['id'], 'name' => $r['name'], 'city' => null, 'zone' => $r['zone'], 'region' => null,
+            'active' => $r['status'] === 'Ouvert' ? 1 : 0], Db::rows('SELECT id, name, zone, status FROM ceo_shop ORDER BY id'));
+    }
+    $pos = setting('scoutingReseau');
+    if (!is_array($pos)) { $pos = []; }
+    $fiches = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, place_id FROM ceo_shop_reputation') as $r) { $fiches[(string) $r['shop_id']] = (string) $r['place_id']; }
+    } catch (PDOException $e) { /* réputation absente : positions à la main */ }
+    $modifie = false;
+    $courant = (int) date('Y') * 12 + (int) date('n') - 1;   // le mois en cours est incomplet : exclu
+    $out = [];
+    foreach ($shops as $sh) {
+        $id = (string) $sh['id'];
+        $p = $pos[$id] ?? null;
+        if (!is_array($p) && ($fiches[$id] ?? '') !== '' && GoogleApi::configured()) {
+            $g = GoogleApi::position($fiches[$id]);
+            if ($g !== null) { $p = ['lat' => $g['lat'], 'lng' => $g['lng'], 'source' => 'google', 'le' => date('Y-m-d')]; $pos[$id] = $p; $modifie = true; }
+        }
+        $ca = null; $mois = 0; $du = null; $au = null;
+        try {
+            $tot = 0.0;
+            foreach (Db::rows('SELECT year, month, ca FROM mac_shop_monthly_pnl WHERE id_shop = ? AND ca > 0 ORDER BY year DESC, month DESC LIMIT 14', [$id]) as $r) {
+                if ((int) $r['year'] * 12 + (int) $r['month'] - 1 >= $courant) { continue; }
+                if ($mois >= 12) { break; }
+                $tot += (float) $r['ca']; $mois++;
+                if ($au === null) { $au = sprintf('%04d-%02d', (int) $r['year'], (int) $r['month']); }
+                $du = sprintf('%04d-%02d', (int) $r['year'], (int) $r['month']);
+            }
+            if ($mois > 0) { $ca = $mois >= 12 ? $tot : $tot / $mois * 12; }
+        } catch (PDOException $e) { /* P&L du panel absent */ }
+        $out[] = [
+            'id' => $id, 'nom' => (string) $sh['name'],
+            'ville' => (string) ($sh['city'] ?: ($sh['zone'] ?: ($sh['region'] ?: ''))),
+            'ouvert' => (int) $sh['active'] === 1,
+            'lat' => is_array($p) ? (float) $p['lat'] : null, 'lng' => is_array($p) ? (float) $p['lng'] : null,
+            'position' => is_array($p) ? (string) ($p['source'] ?? 'google') : null,
+            'caAnnuel' => $ca !== null ? (int) round($ca) : null, 'mois' => $mois, 'du' => $du, 'au' => $au,
+            'annualise' => $mois > 0 && $mois < 12,
+        ];
+    }
+    if ($modifie) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['scoutingReseau', json_encode($pos, JSON_UNESCAPED_UNICODE)]);
+    }
+    return ['magasins' => $out,
+        'source' => 'positions : fiche Google raccordée (réputation) ou pointée sur la carte ; CA : P&L mensuel du panel, douze derniers mois clos, annualisé s\'il y en a moins'];
+}
+
 /** GET /scouting/tiles/{i} — un secteur du cache OpenStreetMap partagé. */
 function ep_scouting_tile(int $sector): array
 {
