@@ -302,6 +302,12 @@ function ep_prix_transfert(): array
         'deltaPct' => $caCible > 0 ? round($delta / $caCible * 100, 2) : null,
         'refs' => count($lignes),
         'refsSansPrixSource' => $sansPrix, 'caRefsSansPrix' => round($caSansPrix, 2),
+        // Le filtre catalogue, rendu vérifiable : combien de catégories sont
+        // désactivées, et si la liste a bien été lue. « null » dirait que la
+        // route n'a pas répondu et qu'AUCUN tri n'a eu lieu.
+        'catalogue' => ($ci = apCategoriesInactives()) === null
+            ? ['filtre' => false, 'motif' => 'liste des catégories indisponible']
+            : ['filtre' => true, 'categoriesInactives' => count($ci)],
         'hausses' => array_values(array_filter($lignes, fn ($l) => $l['impact'] > 0)),
         'baisses' => array_values(array_filter($lignes, fn ($l) => $l['impact'] < 0)),
         'top' => array_slice($lignes, 0, 25),
