@@ -155,7 +155,7 @@ const TIP_FICHE = {
 };
 const TIP_ZONES = {
   score: TIP_FICHE['Score d\'opportunité'],
-  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × 3,1416 × rayon² (l'aire du disque).',
+  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × 3,1416 × rayon² (aire du disque).',
   n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
   emprise: 'emprise = emprise max ÷ (1 + sensibilité × pression), entre 4 % et l\'emprise max — ou l\'emprise imposée. Pression = Σ force × (1 − 0,6 × distance ÷ rayon).',
   ca: 'CA annuel TTC = ménages × dépense par ménage × emprise ÷ (1 − passage).',
