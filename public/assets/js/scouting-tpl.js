@@ -139,8 +139,12 @@ export function renderLeft(c, x){
   <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
 
   <div class="t-admin-label" style="margin-bottom:6px">Notes Google</div>
-  <input id="sc-gkey" type="password" placeholder="Clé Google Places" value="${esc(c.gkey)}" ${x.C(c.setGkey)} autocomplete="off" style="width:100%;box-sizing:border-box;padding:7px 8px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-size:12px;font-family:var(--font-ui);color:var(--color-text);margin-bottom:8px">
-  <button ${x.A(c.enrich)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px">${esc(c.enrichLabel)}</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 9px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary)">
+    <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.gOk ? '#1b5e20' : '#8D1D2C'}"></div>
+    <div style="flex:1;font-size:11px;line-height:1.45;color:var(--color-text)">${esc(c.gLabel)}</div>
+    ${c.gOk ? '' : `<button ${x.A(c.goParams)} class="btn-secondary" style="flex:0 0 auto;padding:4px 9px;font-size:11px">Paramètres</button>`}
+  </div>
+  <button ${x.A(c.enrich)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px${c.gOk ? '' : ';opacity:.6'}">${esc(c.enrichLabel)}</button>
   <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(c.gkeyHint)}</div>`;
 }
 

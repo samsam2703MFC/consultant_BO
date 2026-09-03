@@ -67,9 +67,11 @@ L'écran Scouting commercial n'ajoute rien côté serveur (Leaflet est embarqué
 dans `assets/vendor/leaflet/`, déployé avec `public/` ; ses tables
 `ceo_scouting_*` sont créées automatiquement, cf. § 3). Il a en revanche
 besoin que les **navigateurs** des utilisateurs atteignent
-`tile.openstreetmap.org`, les serveurs Overpass (`overpass.kumi.systems`,
-`overpass-api.de`, `overpass.private.coffee`) et, pour les notes,
-`maps.googleapis.com`. Un `PUT /scouting/tiles/{n}` pèse jusqu'à ~1 Mo :
+`tile.openstreetmap.org` et les serveurs Overpass (`overpass.kumi.systems`,
+`overpass-api.de`, `overpass.private.coffee`). Les notes Google, elles, sont
+demandées par le **serveur** à `places.googleapis.com` avec la clé du
+connecteur Google de Paramètres — même sortie réseau que la réputation des
+magasins, rien de neuf à ouvrir. Un `PUT /scouting/tiles/{n}` pèse jusqu'à ~1 Mo :
 `post_max_size` PHP et la limite de corps du proxy/Apache doivent le laisser
 passer (défaut PHP 8 Mo — suffisant).
 

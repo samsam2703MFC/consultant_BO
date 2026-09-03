@@ -11,6 +11,9 @@
  * candidates, populations StatBel, hypothèses) sont persistés via l'API
  * (tables ceo_scouting_*) quand elle est joignable, et toujours en
  * localStorage (repli démo / hors ligne).
+ * Notes Google : demandées au serveur (POST /scouting/notes), qui interroge
+ * Places avec la clé du connecteur Google de Paramètres — la clé ne transite
+ * jamais par le navigateur.
  */
 import { API_BASE } from './api.js';
 import * as T from './scouting-tpl.js';
@@ -148,6 +151,22 @@ function apiWrite(method, path, payload){
   }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .catch(e => { console.warn('[scouting] écriture ' + path + ' échouée :', e.message); return null; });
 }
+// POST /scouting/notes — un lot de commerces ; ici l'erreur du serveur est
+// rendue lisible (422 sans clé, 502 Google) au lieu d'être avalée.
+function apiNotes(rows){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 90000);
+  return fetch(API_BASE + '/scouting/notes', {
+    method: 'POST', credentials: 'same-origin', signal: ctl.signal,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ rows })
+  }).then(async r => {
+    clearTimeout(t);
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+    return j || { rows: [] };
+  }).catch(e => { clearTimeout(t); throw e; });
+}
 
 /* Leaflet est chargé à la demande (vendored, aucun CDN) : les autres écrans
  * du cockpit ne le paient pas. */
@@ -182,7 +201,7 @@ export class Scouting {
       hhSize: HH_SIZE, compK: 0.22, empriseMax: 30, minScore: 55,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
       view: 'map', sortKey: 'score', sortDir: -1, q: '', stop: false, reseau: false, notes: {},
-      gkey: '', enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
+      gconf: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
     };
     this._h = [];
     this._scroll = {};
@@ -220,7 +239,6 @@ export class Scouting {
   restoreLocal(){
     const s = this.state;
     Object.assign(s, pickParams(ls.get('params')));
-    s.gkey = ls.get('gkey') || '';
     s.ratings = ls.get('ratings') || {};
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
@@ -346,10 +364,9 @@ export class Scouting {
     const patch = { ratings, notes, candidates: d.candidates || [], pops: d.populations || {} };
     const pr = pickParams(d.params);
     Object.assign(patch, pr);
-    if (d.googleKey) patch.gkey = d.googleKey;
+    patch.gconf = d.google && typeof d.google === 'object' ? d.google : null;   // l'état du connecteur, jamais la clé
     ls.set('ratings', ratings); ls.set('notes', notes); ls.set('cand', patch.candidates); ls.set('pops', patch.pops);
     if (Object.keys(pr).length) ls.set('params', pr);
-    if (patch.gkey) ls.set('gkey', patch.gkey);
     this._rev++;
     this.setState(patch);
     this._pv = JSON.stringify(this.paramsObj());   // rien à renvoyer au serveur
@@ -879,153 +896,84 @@ export class Scouting {
     if (x) this.evaluate(x.lat, x.lng);
   }
 
-  /* ---------- Google Places ---------- */
-  loadGmaps(key){
-    if (window.google && window.google.maps && window.google.maps.importLibrary) return Promise.resolve();
-    if (this._gmapsP) return this._gmapsP;
-    this._gmapsP = new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&libraries=places&v=weekly&language=fr&region=BE';
-      s.async = true;
-      s.onload = res;
-      s.onerror = () => { this._gmapsP = null; rej(new Error('script refusé (clé ou restrictions)')); };
-      document.head.appendChild(s);
-    });
-    return this._gmapsP;
+  /* ---------- Google Places (via le serveur) ---------- */
+  // La clé est celle du connecteur Google de Paramètres ; l'écran n'en connaît
+  // que l'état. Sans API (repli local), aucune note ne peut être demandée.
+  googleOk(){ const g = this.state.gconf; return !!(g && g.configure); }
+
+  googleBlocage(){
+    if (!this.useApi()) return 'Notes Google indisponibles hors ligne — l\'API du cockpit ne répond pas.';
+    if (!this.googleOk()) return 'Aucune clé Google — renseigne-la dans Paramètres › Général (connecteur Google).';
+    return null;
   }
 
-  // deux générations d'API Places cohabitent selon les clés : on prend celle
-  // qui répond
-  async placesApi(){
-    await this.loadGmaps(this.state.gkey);
-    for (let i = 0; i < 40; i++){   // le bootstrap peuple google.maps en différé
-      const gg = window.google && window.google.maps;
-      if (gg && (typeof gg.importLibrary === 'function' || (gg.places && (gg.places.Place || gg.places.PlacesService)))) break;
-      await new Promise(r => setTimeout(r, 150));
-    }
-    const g = window.google && window.google.maps;
-    if (!g) throw new Error('Google Maps non chargé');
-    if (typeof g.importLibrary === 'function'){
-      try { const lib = await g.importLibrary('places'); if (lib && lib.Place) return { Place: lib.Place }; } catch (e) { /* on tente la suite */ }
-    }
-    if (g.places && g.places.Place) return { Place: g.places.Place };
-    if (g.places && g.places.PlacesService) return { svc: new g.places.PlacesService(document.createElement('div')) };
-    throw new Error('bibliothèque Places indisponible sur cette clé');
+  // Un lot de commerces → { rows: [{ id, rating, reviews }], erreur }
+  notesLot(list){
+    return apiNotes(list.map(b => ({ id: b.id, name: b.name, addr: b.addr || '', commune: b.commune || '', arr: b.arr || '', lat: b.lat, lng: b.lng })))
+      .then(r => ({ rows: (r && Array.isArray(r.rows)) ? r.rows : [], erreur: (r && r.erreur) || null }));
   }
 
-  lookup(api, b){
-    if (api.Place){
-      return api.Place.searchByText({
-        textQuery: b.name + ' ' + (b.addr || b.commune || '') + ' Belgique',
-        fields: ['displayName', 'rating', 'userRatingCount', 'location'],
-        locationBias: { center: { lat: b.lat, lng: b.lng }, radius: 600 },
-        maxResultCount: 1, language: 'fr', region: 'be'
-      }).then(r => {
-        const p = r && r.places && r.places[0];
-        return p && p.rating ? { rating: p.rating, n: p.userRatingCount || 0 } : { rating: null, n: 0 };
-      });
-    }
-    return new Promise(res => {
-      api.svc.findPlaceFromQuery({
-        query: b.name + ' ' + (b.addr || b.commune || '') + ' Belgique',
-        fields: ['rating', 'user_ratings_total', 'name'],
-        locationBias: { center: { lat: b.lat, lng: b.lng }, radius: 600 }
-      }, (r, st) => {
-        const p = st === 'OK' && r && r[0];
-        res(p && p.rating ? { rating: p.rating, n: p.user_ratings_total || 0 } : { rating: null, n: 0 });
-      });
-    });
-  }
-
-  lookupTimed(api, b){
-    return Promise.race([
-      this.lookup(api, b),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('délai dépassé')), 8000))
-    ]);
-  }
-
-  googleRow(b, res){ return { id: b.id, name: b.name, commune: b.commune || '', arr: b.arr || '', rating: res.rating, reviews: res.n || 0, source: 'google' }; }
+  goParams(){ if (this.app && typeof this.app.setState === 'function') this.app.setState({ screen: 'parametres', gq: '' }); }
 
   saveRatings(out){ ls.set('ratings', out); this._rev++; }
 
-  // Enrichissement de la vue courante : 40 commerces visibles par lot
+  // Enrichissement de la vue courante : 40 commerces visibles, par lots de 10
+  // demandés au serveur — chaque lot est enregistré et affiché dès sa réponse.
   async enrich(){
     const s = this.state;
-    if (!s.gkey){ this.setState({ err: 'Renseigne une clé Google Places.' }); return; }
+    const blocage = this.googleBlocage();
+    if (blocage){ this.setState({ err: blocage }); return; }
     if (!this.map || s.enriching) return;
-    this.setState({ enriching: true, enrichDone: 0, enrichTotal: 0, err: null });
+    this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: 0, err: null });
     const out = Object.assign({}, s.ratings);
-    const rows = [];
     try {
-      const api = await this.placesApi();
       const bounds = this.map.getBounds();
       const list = this.shops().filter(b => bounds.contains([b.lat, b.lng]) && !out[b.id]).slice(0, 40);
       this.setState({ enrichTotal: list.length });
       if (!list.length){ this.setState({ enriching: false, err: 'Rien à enrichir dans cette vue (déjà fait ou aucun commerce visible).' }); return; }
-      let ok = 0;
-      for (let i = 0; i < list.length; i++){
-        const b = list[i];
-        try {
-          const res = await this.lookupTimed(api, b);
-          out[b.id] = res;
-          rows.push(this.googleRow(b, res));
-          if (res.rating) ok++;
-        } catch (e) {
-          out[b.id] = { rating: null, n: 0 };
-          if (/denied|api|key|billing/i.test(String(e.message))){
-            this.saveRatings(out); this.pushCompetitors(rows);
-            this.setState({ err: 'Google Places : ' + e.message, enriching: false, ratings: out });
-            return;
-          }
-        }
-        if (i % 5 === 4 || i === list.length - 1){ this._rev++; this.setState({ ratings: Object.assign({}, out), enrichDone: i + 1 }); }
-      }
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ ratings: out, enriching: false,
-        err: ok ? null : 'Aucune note trouvée pour cette vue — vérifie que l\'API Places (New) est activée sur la clé.' });
+      const r = await this.enrichLots(list, out);
+      this.setState({ ratings: out, enriching: false, stop: false,
+        err: r.erreur ? r.erreur : (r.ok ? null : 'Aucune note trouvée pour cette vue — vérifie que l\'API Places (New) est activée sur la clé de Paramètres.') });
     } catch (e) {
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ enriching: false, ratings: out, err: 'Google Places : ' + (e.message || e) });
+      this.saveRatings(out);
+      this.setState({ enriching: false, stop: false, ratings: out, err: 'Google Places : ' + (e.message || e) });
     }
   }
 
-  // Enrichissement en masse : parcourt toute la sélection filtrée, par lots
-  // de 10 sauvegardés au fur et à mesure, interruptible.
+  // Enrichissement en masse : toute la sélection filtrée, par lots de 10,
+  // interruptible entre deux lots.
   async enrichAll(){
     const s = this.state;
-    if (!s.gkey){ this.setState({ err: 'Renseigne une clé Google Places.' }); return; }
     if (s.enriching){ this.setState({ stop: true }); return; }
+    const blocage = this.googleBlocage();
+    if (blocage){ this.setState({ err: blocage }); return; }
     const out = Object.assign({}, s.ratings);
     const list = this.shops().filter(b => !out[b.id]);
     if (!list.length){ this.setState({ err: 'Toute la sélection est déjà enrichie.' }); return; }
     this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: list.length, err: null });
-    let rows = [];
-    const flush = (i) => { this.saveRatings(out); this.pushCompetitors(rows); rows = []; this.setState({ ratings: Object.assign({}, out), enrichDone: i + 1 }); };
     try {
-      const api = await this.placesApi();
-      for (let i = 0; i < list.length; i++){
-        if (this.state.stop) break;
-        const b = list[i];
-        try {
-          const res = await this.lookupTimed(api, b);
-          out[b.id] = res;
-          rows.push(this.googleRow(b, res));
-        } catch (e) {
-          out[b.id] = { rating: null, n: 0 };
-          if (/denied|billing|quota|OVER_QUERY/i.test(String(e.message))){
-            flush(i);
-            this.setState({ err: 'Google Places interrompu : ' + e.message, enriching: false });
-            return;
-          }
-        }
-        if (i % 10 === 9 || i === list.length - 1) flush(i);
-      }
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ ratings: out, enriching: false, stop: false });
+      const r = await this.enrichLots(list, out);
+      this.setState({ ratings: out, enriching: false, stop: false, err: r.erreur || null });
     } catch (e) {
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ enriching: false, stop: false, err: 'Google Places : ' + (e.message || e) });
+      this.saveRatings(out);
+      this.setState({ enriching: false, stop: false, ratings: out, err: 'Google Places : ' + (e.message || e) });
     }
+  }
+
+  // Le cœur commun : lots de 10, résultats fusionnés dans `out` et sauvegardés
+  // au fil de l'eau ; s'arrête sur `stop` ou sur une erreur du serveur.
+  async enrichLots(list, out){
+    let ok = 0, done = 0, erreur = null;
+    for (let i = 0; i < list.length; i += 10){
+      if (this.state.stop) break;
+      const r = await this.notesLot(list.slice(i, i + 10));
+      r.rows.forEach(x => { out[x.id] = { rating: x.rating != null ? +x.rating : null, n: +(x.reviews || 0) }; if (x.rating) ok++; });
+      done += r.rows.length;
+      this.saveRatings(out);
+      this.setState({ ratings: Object.assign({}, out), enrichDone: done });
+      if (r.erreur){ erreur = r.erreur; break; }
+    }
+    return { ok, done, erreur };
   }
 
   /* ---------- notation manuelle ---------- */
@@ -1337,10 +1285,12 @@ export class Scouting {
       empriseHint: s.emprise > 0 ? 'Emprise imposée à ' + s.emprise + ' % pour toutes les zones' : 'Emprise calculée : ' + s.empriseMax + ' % divisés par la pression concurrentielle du rayon',
       popCoverage: fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
       importPops: e => self.importPops(e),
-      gkey: s.gkey,
-      setGkey: e => { const v = e.target.value.trim(); ls.set('gkey', v); if (self.useApi()) apiWrite('PUT', '/parametres/scoutingGoogleKey', { valeur: v }); self.setState({ gkey: v }); },
-      gkeyHint: 'Enrichit les boulangeries visibles à l\'écran (40 max par lot), en cache' + (self.useApi() ? ' partagé' : ' local') + '. Sans clé, la force du concurrent est estimée sur les signaux OSM (enseigne, site web, horaires, terrasse).'
-        + (self.useApi() ? ' La clé est enregistrée dans les paramètres du cockpit.' : ''),
+      gOk: !self.googleBlocage(),
+      gLabel: !self.useApi() ? 'Hors ligne — les notes Google passent par l\'API du cockpit.'
+        : self.googleOk() ? 'Connecteur Google actif · clé ' + ((s.gconf && s.gconf.empreinte) || '…') + ' (Paramètres).'
+        : 'Aucune clé Google — à renseigner dans Paramètres › Général.',
+      goParams: () => self.goParams(),
+      gkeyHint: 'Enrichit les boulangeries visibles à l\'écran (40 max par lot) : le serveur interroge Google Places avec la clé de Paramètres — elle ne transite jamais par le navigateur — et le résultat est en cache partagé. Sans clé, la force du concurrent est estimée sur les signaux OSM (enseigne, site web, horaires, terrasse).',
       enrich: () => self.enrich(),
       enrichAll: () => self.enrichAll(),
       enrichAllLabel: s.enriching ? 'Interrompre (' + (s.enrichDone || 0) + '/' + (s.enrichTotal || '?') + ')' : 'Enrichir toute la sélection',

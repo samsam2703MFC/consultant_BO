@@ -233,3 +233,4 @@ deploy 1788249929 retrait analyse shop
 2026-09-03 15:37:16
 2026-09-03 15:40:07
 deploy 1788461755 scouting commercial
+deploy 1788463561 notes google via parametres

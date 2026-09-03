@@ -151,9 +151,10 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   écrase ces estimations, table `ceo_scouting_population`.
 - **Concurrence** : force d'un concurrent d'après sa note Google, à défaut
   d'après les signaux OSM (enseigne, site, horaires). Les notes Google sont
-  chargées à la demande via l'API Places (clé saisie dans le panneau de
-  gauche, enregistrée dans `ceo_app_setting.scoutingGoogleKey` — jamais dans
-  le code) ; **une note ou un commentaire terrain saisis à la main priment**
+  chargées à la demande par le serveur (`POST /scouting/notes`), avec la clé
+  du connecteur Google de Paramètres — la même que pour la réputation des
+  magasins, jamais dans le code ni dans le navigateur ; **une note ou un
+  commentaire terrain saisis à la main priment**
   et sont persistés dans `ceo_scouting_competitor`.
 - **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon ×
   dépense/ménage × emprise, majoré du passage ; l'emprise décroît avec la
@@ -171,9 +172,10 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   `localStorage` du navigateur.
 
 Dépendances réseau **côté navigateur** : `tile.openstreetmap.org` (fond de
-carte), les serveurs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
-`overpass.private.coffee`), et `maps.googleapis.com` si une clé Places est
-renseignée. Le serveur PHP n'appelle aucun service externe.
+carte) et les serveurs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
+`overpass.private.coffee`). Côté serveur, les notes Google sortent vers
+`places.googleapis.com` (connecteur Google de Paramètres) ; sans clé, l'écran
+fonctionne avec les seuls signaux OSM.
 
 ## Notes
 

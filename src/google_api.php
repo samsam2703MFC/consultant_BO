@@ -25,6 +25,9 @@ declare(strict_types=1);
  *    nul, et l'écran n'affiche « Répondu » que lorsqu'il le sait — il ne
  *    prétend jamais « Sans réponse », ce qui serait une affirmation fausse.
  *
+ * Le scouting commercial (notes des boulangeries concurrentes) passe par le même
+ * connecteur et la même clé : le serveur interroge Places, l'écran ne saisit rien.
+ *
  * La clé ne quitte jamais le serveur (même règle que la clé Anthropic et que le
  * compte ERP) : elle vit dans `ceo_app_setting`, et l'écran n'en reçoit qu'une
  * empreinte.
@@ -38,6 +41,7 @@ final class GoogleApi
     /** Champs demandés à Google — facturés à la sélection, donc explicites. */
     private const CHAMPS_LIEU = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews';
     private const CHAMPS_RECHERCHE = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount';
+    private const CHAMPS_NOTE = 'places.displayName,places.rating,places.userRatingCount';
 
     public static function config(): array
     {
@@ -85,6 +89,33 @@ final class GoogleApi
             ['textQuery' => $texte, 'languageCode' => $c['langue'], 'maxResultCount' => 8]);
         if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
         return googleCandidats($json);
+    }
+
+    /**
+     * La note d'un commerce désigné par son nom et sa position — le scouting
+     * commercial enrichit ainsi les boulangeries OpenStreetMap. Un seul
+     * résultat, biaisé vers la position : deux enseignes homonymes dans deux
+     * villes ne se confondent pas. Note nulle = fiche trouvée sans note, ou
+     * aucune fiche ; `null` = Google n'a pas répondu (voir $lastError).
+     */
+    public static function noteProche(string $texte, float $lat, float $lng, int $rayon = 600): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '') { self::$lastError = 'recherche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        [$code, $json] = self::http('POST', self::BASE . '/places:searchText', self::CHAMPS_NOTE, $c['cle'], [
+            'textQuery' => $texte, 'languageCode' => $c['langue'], 'regionCode' => 'BE', 'maxResultCount' => 1,
+            'locationBias' => ['circle' => ['center' => ['latitude' => $lat, 'longitude' => $lng],
+                'radius' => (float) max(50, min(50000, $rayon))]],
+        ]);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        $p = (array) (($json['places'] ?? [[]])[0] ?? []);
+        return [
+            'note' => isset($p['rating']) ? round((float) $p['rating'], 1) : null,
+            'avis' => (int) ($p['userRatingCount'] ?? 0),
+            'nom'  => $p['displayName']['text'] ?? null,
+        ];
     }
 
     /** La clé part en en-tête, jamais dans l'URL : les URL se retrouvent en logs. */

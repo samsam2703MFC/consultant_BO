@@ -31,7 +31,7 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 | `reporting` | `GET /reporting` | Reporting automatisé |
 | `journal` | `GET /journal` | Journal |
 | `products` | `GET /products/scoring?periode=AAAA-MM` | Scoring produits |
-| — | `GET /scouting` | Scouting commercial : saisies, hypothèses, clé Google, inventaire du cache OSM |
+| — | `GET /scouting` | Scouting commercial : saisies, hypothèses, état du connecteur Google, inventaire du cache OSM |
 | — | `GET /scouting/tiles/{secteur}` | Scouting commercial : un secteur du cache OpenStreetMap |
 
 ### `/meta`
@@ -345,7 +345,7 @@ interroge Overpass et dépose chaque secteur dans le cache partagé.
 {
   "params": { "spend": 586, "emprise": 0, "passage": 15, "surface": 250, "empriseMax": 30,
               "compK": 0.22, "hhSize": 2.31, "minScore": 55, "radius": 2, "thresh": 4.5 },
-  "googleKey": "",
+  "google": { "configure": true, "langue": "fr", "empreinte": "AIzaSy…Qx4c" },
   "competitors": [{ "id": "n123456", "name": "Boulangerie Dupont", "commune": "Halle", "arr": "Hal-Vilvorde",
                     "rating": 4.6, "reviews": 132, "source": "google", "comment": "File le samedi" }],
   "candidates": [{ "id": 1756900000000, "name": "Halle — zone 50.733/4.237", "commune": "Halle", "arr": "Hal-Vilvorde",
@@ -357,6 +357,8 @@ interroge Overpass et dépose chaque secteur dans le cache partagé.
 ```
 
 - `params` : `null` tant qu'aucune hypothèse n'a été enregistrée (défauts de l'étude Halle côté client).
+- `google` : l'état du connecteur Google de Paramètres (`PUT /parametres/google-cle`) — jamais la clé. Les notes des
+  concurrents se demandent au serveur par `POST /scouting/notes` ; sans clé, il répond 422.
 - `competitors[].source` ∈ `google` | `manuel` ; une note `manuel` prime sur Google. `rating: null` avec
   `source: "google"` = commerce déjà interrogé sans note (pas réinterrogé).
 - `id` d'un concurrent = type + id OSM (`n`, `w`, `r`). `id` d'une zone candidate = horodatage client (ms).
@@ -558,8 +560,10 @@ CREATE TABLE ceo_scouting_population (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-Les hypothèses du modèle et la clé Google Places sont des lignes de
-`ceo_app_setting` (`scoutingParams`, `scoutingGoogleKey`).
+Les hypothèses du modèle sont une ligne de `ceo_app_setting` (`scoutingParams`).
+La clé Google est celle du connecteur Google de Paramètres (ligne `google`,
+`PUT /parametres/google-cle`) : le serveur interroge Places, la clé n'est jamais
+renvoyée à l'écran.
 
 ```sql
 ### Écran → tables
@@ -591,9 +595,10 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Changement de statut projet | `PATCH /projects/{id}` |
 | Relance d'une tâche | `POST /tasks/{id}/reminder` |
 | Modification d'un seuil ou d'un modèle d'email | `PUT /parametres/{key}` |
-| Scouting — hypothèses du modèle / clé Google Places | `PUT /parametres/scoutingParams` · `PUT /parametres/scoutingGoogleKey` (`{ "valeur": … }`) |
+| Scouting — hypothèses du modèle | `PUT /parametres/scoutingParams` (`{ "valeur": … }`) |
 | Scouting — dépôt d'un secteur OSM dans le cache partagé | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
 | Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
+| Scouting — notes Google d'un lot de commerces (≤ 40 ; clé de Paramètres, côté serveur) | `POST /scouting/notes` (`{ "rows": [{ id, name, addr?, commune?, arr?, lat, lng }] }` → `{ rows: [{ id, rating, reviews }], erreur? }` ; 422 sans clé) |
 | Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |
 | Scouting — import CSV StatBel | `PUT /scouting/populations` (`{ "populations": { "NIS": population }, "fichier"? }`) |
 
