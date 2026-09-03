@@ -55,6 +55,39 @@ function apCondense(array $r): array
 }
 
 /**
+ * Les catégories DÉSACTIVÉES du catalogue, par nom minuscule.
+ *
+ * `/product-categories` porte `is_active` : une catégorie retirée du
+ * catalogue continue de traîner dans l'historique des ventes (bases, cartons
+ * B2B, gammes arrêtées) et fausserait toute comparaison d'assortiment. On
+ * garde la liste six heures ; si la route ne répond pas, on ne filtre RIEN —
+ * mieux vaut une analyse large qu'une analyse amputée en silence.
+ *
+ * @return array<string, true>|null  null = liste indisponible, ne pas filtrer
+ */
+function apCategoriesInactives(): ?array
+{
+    static $memo = false;
+    if ($memo !== false) { return $memo; }
+    $cache = setting('apCatInactives');
+    if (is_array($cache) && isset($cache['quand'], $cache['noms'])
+        && (int) $cache['quand'] > time() - 21600) {
+        return $memo = array_fill_keys((array) $cache['noms'], true);
+    }
+    $r = PanelApi::get('/product-categories');
+    if (!is_array($r)) { return $memo = null; }
+    $noms = [];
+    foreach (analyseListe($r) as $c) {
+        $nom = mb_strtolower(trim((string) ($c['name'] ?? '')));
+        if ($nom === '') { continue; }
+        if (isset($c['is_active']) && !(int) $c['is_active']) { $noms[] = $nom; }
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['apCatInactives', json_encode(['quand' => time(), 'noms' => $noms], JSON_UNESCAPED_UNICODE)]);
+    return $memo = array_fill_keys($noms, true);
+}
+
+/**
  * Les tranches demandées, pour PLUSIEURS couples magasin × période à la fois :
  * cache d'abord, puis un seul voyage parallèle pour les manquantes. Chaque
  * tranche close se grave ; celle en cours expire à l'heure. Une tranche que
@@ -90,6 +123,18 @@ function apTranches2(array $couples): array
                 ['apB' . $sid . ':' . $du . ':' . $au,
                  json_encode(['quand' => time(), 'p' => $p], JSON_UNESCAPED_UNICODE)]);
             $out[$k] = $p;
+        }
+    }
+    // Le tri des catégories désactivées se fait à la LECTURE, pas à la mise en
+    // cache : les tranches gravées avant cette règle en profitent aussi, sans
+    // qu'il faille les rejeter.
+    $morte = apCategoriesInactives();
+    if ($morte !== null && $morte !== []) {
+        foreach ($out as $k => $p) {
+            if (!is_array($p)) { continue; }
+            foreach ($p as $pid => $x) {
+                if (isset($morte[mb_strtolower(trim((string) $x[1]))])) { unset($out[$k][$pid]); }
+            }
         }
     }
     return $out;
