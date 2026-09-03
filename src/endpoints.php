@@ -2443,18 +2443,27 @@ function ep_exploitation_jour(): array
                 static fn ($h9) => $h9 >= min($actives) && $h9 <= max($actives), ARRAY_FILTER_USE_KEY);
         }
         $planM = $planParShop[(string) $id] ?? [];
+        // Le nombre de personnes en poste, heure par heure, compté UNE fois
+        // avant de partager. Il se recomptait pour chaque personne après avoir
+        // effacé les heures des précédentes : la première partageait juste,
+        // la deuxième ne voyait plus la première, la troisième plus aucune —
+        // Corbais attribuait 10 162 € pour 4 585 € vendus.
+        $nbParH = [];
+        foreach ($heuresCa as $h9 => $ca9) {
+            $nb9 = 0;
+            foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
+            $nbParH[$h9] = $nb9;
+        }
         foreach ($planM as $i9 => $p9) {
             $att = 0.0;
             foreach ($heuresCa as $h9 => $ca9) {
                 if ($ca9 <= 0 || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
-                $nb9 = 0;
-                foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
-                $att += $ca9 / max(1, $nb9);
+                $att += $ca9 / max(1, $nbParH[$h9]);
             }
             $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
             $planM[$i9]['caH'] = ($att > 0 && $p9['h'] > 0) ? round($att / $p9['h'], 2) : null;
-            unset($planM[$i9]['hD'], $planM[$i9]['hF']);
         }
+        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF']); }
         usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
 
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
