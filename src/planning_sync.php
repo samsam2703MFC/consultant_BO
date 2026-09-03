@@ -75,6 +75,40 @@ function planningSync(bool $force = false): array
         return ['ok' => false, 'motif' => 'table locale sans work_date/id_employee — schéma inattendu'];
     }
 
+    // LE RÉFÉRENTIEL EMPLOYÉS D'ABORD. franchisee_employee est une copie de
+    // caisse morte depuis la mi-juillet : une embauche d'août n'y figure
+    // pas, et tout ce qui nomme une vendeuse (venteEmployes) l'ignorait —
+    // le 03/09, Halle affichait Nathan seul quand le panel plannifiait trois
+    // personnes. Chaque créneau du panel porte nom, prénom, display_name et
+    // magasin : de quoi tenir le référentiel à jour au passage, sans autre
+    // route. Un nom se rafraîchit ; le magasin d'attache ne s'écrit qu'à la
+    // création — un renfort dans une autre boutique ne « déménage » personne.
+    try {
+        $colsE = array_column(Db::rows('SHOW COLUMNS FROM franchisee_employee'), 'Field');
+        $ordreE = array_values(array_intersect(['id', 'id_shop', 'display_name', 'name', 'surname', 'phone', 'lang_code'], $colsE));
+        if (in_array('id', $ordreE, true)) {
+            $maj = array_values(array_intersect($ordreE, ['display_name', 'name', 'surname', 'phone', 'lang_code']));
+            $sqlE = 'INSERT INTO franchisee_employee (' . implode(', ', $ordreE) . ') VALUES ('
+                . implode(', ', array_fill(0, count($ordreE), '?')) . ')'
+                . ($maj !== [] ? ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn ($c) => $c . ' = VALUES(' . $c . ')', $maj)) : '');
+            $vus = [];
+            foreach ($lignes as $r) {
+                $ide = (int) ($r['id_employee'] ?? 0);
+                if ($ide <= 0 || isset($vus[$ide])) { continue; }
+                $vus[$ide] = true;
+                $vals = [];
+                foreach ($ordreE as $c) {
+                    $vals[] = match ($c) {
+                        'id' => $ide,
+                        'id_shop' => (int) ($r['id_shop'] ?? 0),
+                        default => $r[$c] ?? null,
+                    };
+                }
+                try { Db::exec($sqlE, $vals); } catch (PDOException $e) { /* un employé refusé ne bloque pas les autres */ }
+            }
+        }
+    } catch (PDOException $e) { /* pas de table employés : les créneaux s'écrivent quand même */ }
+
     // La fenêtre se remplace d'un bloc : l'API est la source de vérité, et
     // c'est ce qui rend le passage rejouable sans jamais doubler une ligne.
     Db::exec('DELETE FROM franchisee_employee_schedule WHERE work_date >= ? AND work_date <= ?', [$du, $au]);

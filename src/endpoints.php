@@ -2115,16 +2115,24 @@ function ep_exploitation_jour(): array
     $planParShop = [];
     try {
         $empsJ = function_exists('venteEmployes') ? venteEmployes() : [];
-        foreach (Db::rows('SELECT id_employee, start_hour, end_hour FROM franchisee_employee_schedule
+        // Le créneau porte SON magasin (id_shop) : c'est lui qui place la
+        // ligne, pas le magasin d'attache de la personne — un renfort venu
+        // d'ailleurs travaille bien ici. Et un employé absent du référentiel
+        // n'efface plus son créneau : il s'affiche sous un nom de repli
+        // plutôt que de disparaître avec 788 € de ventes « sans personne ».
+        $colsS = array_column(Db::rows('SHOW COLUMNS FROM franchisee_employee_schedule'), 'Field');
+        $selS = 'id_employee, start_hour, end_hour' . (in_array('id_shop', $colsS, true) ? ', id_shop' : '');
+        foreach (Db::rows('SELECT ' . $selS . ' FROM franchisee_employee_schedule
                             WHERE work_date = ? ORDER BY start_hour', [$date]) as $pj) {
             $ej = $empsJ[(int) $pj['id_employee']] ?? null;
-            if ($ej === null) { continue; }
+            $shopJ = (int) ($pj['id_shop'] ?? 0) > 0 ? (string) (int) $pj['id_shop'] : (string) ($ej['shop'] ?? '');
+            if ($shopJ === '') { continue; }
             $dj = substr((string) $pj['start_hour'], 0, 5); $fj = substr((string) $pj['end_hour'], 0, 5);
             $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
             $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
             if ($hF <= $hD) { continue; }   // un service qui passe minuit sort du cadre du jour
-            $planParShop[(string) $ej['shop']][] = ['nom' => $ej['nom'], 'debut' => $dj, 'fin' => $fj,
-                'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2)];
+            $planParShop[$shopJ][] = ['nom' => $ej['nom'] ?? ('Employé ' . (int) $pj['id_employee']),
+                'debut' => $dj, 'fin' => $fj, 'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2)];
         }
     } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
 
