@@ -867,7 +867,7 @@ export class Scouting {
       const k = p.commune + '|' + p.arr;
       if (!best[k] || p.score > best[k].score) best[k] = p;
     });
-    const res = Object.keys(best).map(k => best[k]).sort((x, y) => y.score - x.score).slice(0, 30);
+    const res = Object.keys(best).map(k => best[k]).sort((x, y) => (y.score - x.score) || (y.ca - x.ca)).slice(0, 30);   // ex æquo au score : le CA départage
     this._scanKey = key; this._scanVal = res;
     return res;
   }
@@ -933,7 +933,8 @@ export class Scouting {
           if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, arr: com.arr };
         }
       }
-      const zones = Object.keys(best).map(k => best[k]).sort((a, b) => b.score - a.score).slice(0, 5);
+      // Le score plafonne à 100 : à égalité, le CA estimé départage.
+      const zones = Object.keys(best).map(k => best[k]).sort((a, b) => (b.score - a.score) || (b.ca - a.ca)).slice(0, 5);
       out.push({ code: p.code, prov: p.name, communes: mine.length, shops: shops.filter(x => x.prov === p.code).length, zones: zones });
     });
     this._top5Key = key; this._top5Val = out;
