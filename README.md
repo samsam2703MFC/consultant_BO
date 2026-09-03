@@ -156,7 +156,8 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   magasins, jamais dans le code ni dans le navigateur ; **une note ou un
   commentaire terrain saisis à la main priment**
   et sont persistés dans `ceo_scouting_competitor`.
-- **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon ×
+- **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon (chaque
+  commune comptée pour la part de son territoire comprise dans le rayon) ×
   dépense/ménage × emprise, majoré du passage ; l'emprise décroît avec la
   pression concurrentielle sauf si elle est imposée. Les 7 hypothèses sont
   éditables, enregistrées dans `ceo_app_setting.scoutingParams` et reprises
