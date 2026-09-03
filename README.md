@@ -151,9 +151,10 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   écrase ces estimations, table `ceo_scouting_population`.
 - **Concurrence** : force d'un concurrent d'après sa note Google, à défaut
   d'après les signaux OSM (enseigne, site, horaires). Les notes Google sont
-  chargées à la demande via l'API Places (clé saisie dans le panneau de
-  gauche, enregistrée dans `ceo_app_setting.scoutingGoogleKey` — jamais dans
-  le code) ; **une note ou un commentaire terrain saisis à la main priment**
+  chargées à la demande par le serveur (`POST /scouting/notes`), avec la clé
+  du connecteur Google de Paramètres — la même que pour la réputation des
+  magasins, jamais dans le code ni dans le navigateur ; **une note ou un
+  commentaire terrain saisis à la main priment**
   et sont persistés dans `ceo_scouting_competitor`.
 - **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon ×
   dépense/ménage × emprise, majoré du passage ; l'emprise décroît avec la
@@ -170,10 +171,15 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   `Scouting` dans le Journal. Sans API (mode démo), tout reste en
   `localStorage` du navigateur.
 
-Dépendances réseau **côté navigateur** : `tile.openstreetmap.org` (fond de
-carte), les serveurs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
-`overpass.private.coffee`), et `maps.googleapis.com` si une clé Places est
-renseignée. Le serveur PHP n'appelle aucun service externe.
+Les données OpenStreetMap (neuf secteurs : communes, boulangeries, lieux
+peuplés) vivent dans `ceo_scouting_tile` et sont relues par le **serveur** :
+cron hebdomadaire `bin/scouting_refresh.php` (posé par `bin/deploy.sh`) et
+`POST /scouting/refresh/{secteur}` pour « Recharger les données ». L'écran
+n'attend donc jamais Overpass : il lit le cache, et affiche la date de
+relecture. Dépendances réseau côté serveur : les miroirs Overpass et, pour les
+notes Google, `places.googleapis.com` (connecteur Google de Paramètres). Côté
+navigateur : `tile.openstreetmap.org` (fond de carte) seulement — Overpass n'est
+interrogé depuis le navigateur qu'en repli, hors API.
 
 ## Notes
 

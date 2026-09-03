@@ -21,6 +21,10 @@ function opts(list, val){
 
 function live(key, esc, c){ return `<span data-sc-live="${key}">${esc(c[key])}</span>`; }
 
+/* (i) — l'explication et la formule d'un libellé, dans data-sc-tip ; la bulle
+ * est posée par Scouting.showTip() (position fixe, hors des panneaux). */
+function info(esc, t){ return t ? `<i class="sc-i" data-sc-tip="${esc(t)}" title="">i</i>` : ''; }
+
 /* --- Bandeau : état du chargement, actions, onglets ------------------------- */
 export function renderTop(c, x){
   const { esc } = x;
@@ -59,19 +63,19 @@ export function renderLeft(c, x){
   <div class="t-admin-label" style="margin-bottom:6px">Arrondissement</div>
   <select ${x.C(c.setArr)} style="${selCss};margin-bottom:20px">${opts(c.arrOptions, c.arr)}</select>
 
-  <div class="t-admin-label" style="margin-bottom:4px">Note Google minimale — ${live('minRatingLabel', esc, c)}</div>
+  <div class="t-admin-label" style="margin-bottom:4px">Note Google minimale — ${live('minRatingLabel', esc, c)}${info(esc, c.tips.minRating)}</div>
   <input type="range" min="0" max="5" step="0.1" value="${c.minRating}" ${x.I(c.slideMinRating)} ${x.C(c.setMinRating)}>
   <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 18px">${live('ratingCoverage', esc, c)}</div>
 
-  <div class="t-admin-label" style="margin-bottom:4px">Ménages minimum par commune — ${live('minHhLabel', esc, c)}</div>
+  <div class="t-admin-label" style="margin-bottom:4px">Ménages minimum par commune — ${live('minHhLabel', esc, c)}${info(esc, c.tips.minHh)}</div>
   <input type="range" min="0" max="30000" step="500" value="${c.minHh}" ${x.I(c.slideMinHh)} ${x.C(c.setMinHh)}>
   <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 18px">${live('communeCoverage', esc, c)}</div>
 
-  <div class="t-admin-label" style="margin-bottom:4px">Rayon d'exclusion — ${live('radiusLabel', esc, c)}</div>
+  <div class="t-admin-label" style="margin-bottom:4px">Rayon d'exclusion — ${live('radiusLabel', esc, c)}${info(esc, c.tips.radius)}</div>
   <input type="range" min="0.5" max="5" step="0.1" value="${c.radius}" ${x.I(c.slideRadius)} ${x.C(c.setRadius)}>
   <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 18px">Approximation de l'isochrone 15–20 min voiture</div>
 
-  <div class="t-admin-label" style="margin-bottom:4px">Seuil « concurrent fort » — ${live('threshLabel', esc, c)}</div>
+  <div class="t-admin-label" style="margin-bottom:4px">Seuil « concurrent fort » — ${live('threshLabel', esc, c)}${info(esc, c.tips.thresh)}</div>
   <input type="range" min="3.5" max="5" step="0.1" value="${c.thresh}" ${x.I(c.slideThresh)} ${x.C(c.setThresh)}>
   <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 20px">${live('threshHint', esc, c)}</div>
 
@@ -85,7 +89,7 @@ export function renderLeft(c, x){
       <span style="display:block;font-size:11px;color:var(--color-text-muted)">Masque concurrents et zones rouges · ${esc(c.prioCount)} zones retenues</span>
     </span>
   </label>
-  <div class="t-admin-label" style="margin-bottom:4px">Score minimum — ${live('minScoreLabel', esc, c)} / 100</div>
+  <div class="t-admin-label" style="margin-bottom:4px">Score minimum — ${live('minScoreLabel', esc, c)} / 100${info(esc, c.tips.minScore)}</div>
   <input type="range" min="0" max="95" step="5" value="${c.minScore}" ${x.I(c.slideMinScore)} ${x.C(c.setMinScore)}>
   <div style="height:12px"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px">
@@ -121,7 +125,7 @@ export function renderLeft(c, x){
   <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:14px">
     ${c.params.map((p, i) => `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
-      <span style="font-size:11px;color:var(--color-text-muted);line-height:1.35">${esc(p.k)}</span>
+      <span style="font-size:11px;color:var(--color-text-muted);line-height:1.35;display:inline-flex;align-items:center">${esc(p.k)}${info(esc, p.i)}</span>
       <input id="sc-p${i}" type="number" step="any" value="${esc(p.v)}" ${x.C(p.set)} style="width:68px;flex:0 0 auto;${numCss}">
     </div>`).join('')}
   </div>
@@ -139,8 +143,12 @@ export function renderLeft(c, x){
   <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
 
   <div class="t-admin-label" style="margin-bottom:6px">Notes Google</div>
-  <input id="sc-gkey" type="password" placeholder="Clé Google Places" value="${esc(c.gkey)}" ${x.C(c.setGkey)} autocomplete="off" style="width:100%;box-sizing:border-box;padding:7px 8px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-size:12px;font-family:var(--font-ui);color:var(--color-text);margin-bottom:8px">
-  <button ${x.A(c.enrich)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px">${esc(c.enrichLabel)}</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 9px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary)">
+    <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.gOk ? '#1b5e20' : '#8D1D2C'}"></div>
+    <div style="flex:1;font-size:11px;line-height:1.45;color:var(--color-text)">${esc(c.gLabel)}</div>
+    ${c.gOk ? '' : `<button ${x.A(c.goParams)} class="btn-secondary" style="flex:0 0 auto;padding:4px 9px;font-size:11px">Paramètres</button>`}
+  </div>
+  <button ${x.A(c.enrich)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px${c.gOk ? '' : ';opacity:.6'}">${esc(c.enrichLabel)}</button>
   <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(c.gkeyHint)}</div>`;
 }
 
@@ -161,7 +169,7 @@ export function renderMapUi(c, x){
 
   <div style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
 
-  ${c.busy ? `
+  ${c.veil ? `
   <div style="position:absolute;inset:0;z-index:600;background:rgba(234,228,220,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
     <div style="width:34px;height:34px;border:3px solid rgba(141,29,44,.2);border-top-color:var(--color-primary);border-radius:50%;animation:sc-spin 800ms linear infinite"></div>
     <div style="font-size:13px;color:var(--color-text)">${esc(c.progress)}</div>
@@ -184,12 +192,12 @@ export function renderRight(c, x){
 
     ${c.selRows.map(r => `
     <div style="${rowCss}">
-      <span style="font-size:12px;color:var(--color-text-muted)">${esc(r.k)}</span>
+      <span style="font-size:12px;color:var(--color-text-muted);display:inline-flex;align-items:center">${esc(r.k)}${info(esc, r.i)}</span>
       <span style="font-size:13px;font-weight:500;text-align:right">${esc(r.v)}</span>
     </div>`).join('')}
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:14px 0 4px">
-      <span style="font-size:13px;font-weight:500">CA annuel estimé TTC</span>
+      <span style="font-size:13px;font-weight:500;display:inline-flex;align-items:center">CA annuel estimé TTC${info(esc, c.tips.ca)}</span>
       <span style="font-family:var(--font-display);font-size:22px;color:var(--color-primary)">${esc(c.selCa)}</span>
     </div>
     <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.selCaDetail)}</div>
@@ -260,7 +268,7 @@ export function renderOverlays(c, x){
     </div>
     <div class="sc-scroll" style="${boxCss}">
       <div style="display:grid;grid-template-columns:${ZONES_GRID};${headCss}">
-        ${c.zonesCols.map(k => `<button ${x.A(k.sort)} class="t-admin-label" style="border:none;background:transparent;text-align:left;padding:9px 8px;cursor:pointer">${esc(k.label)}</button>`).join('')}
+        ${c.zonesCols.map(k => `<button ${x.A(k.sort)} class="t-admin-label" style="border:none;background:transparent;text-align:left;padding:9px 8px;cursor:pointer">${esc(k.label)}${info(esc, k.tip)}</button>`).join('')}
       </div>
       ${c.zonesRows.map(r => `
       <div ${x.A(r.open)} class="hv-bg" style="display:grid;grid-template-columns:${ZONES_GRID};${lineCss};cursor:pointer">
@@ -290,7 +298,7 @@ export function renderOverlays(c, x){
     <div class="sc-scroll" style="${boxCss}">
       <div style="display:grid;grid-template-columns:${CONC_GRID};${headCss}">
         <span></span>
-        ${['Enseigne', 'Commune', 'Arrondissement', 'Note / 5', 'Avis', 'Source', 'Force', 'Commentaire', 'Carte'].map(l => `<span class="t-admin-label" style="padding:9px 8px">${l}</span>`).join('')}
+        ${['Enseigne', 'Commune', 'Arrondissement', 'Note / 5', 'Avis', 'Source', 'Force', 'Commentaire', 'Carte'].map(l => `<span class="t-admin-label" style="padding:9px 8px">${l}${info(esc, c.concTips[l])}</span>`).join('')}
       </div>
       ${c.concRows.map(r => `
       <div style="display:grid;grid-template-columns:${CONC_GRID};${lineCss}">
@@ -317,7 +325,7 @@ export function renderOverlays(c, x){
     </div>
     <div class="sc-scroll" style="${boxCss}">
       <div style="display:grid;grid-template-columns:${ARR_GRID};${headCss}">
-        ${c.arrCols.map(k => `<button ${x.A(k.sort)} class="t-admin-label" style="border:none;background:transparent;text-align:left;padding:9px 8px;cursor:pointer">${esc(k.label)}</button>`).join('')}
+        ${c.arrCols.map(k => `<button ${x.A(k.sort)} class="t-admin-label" style="border:none;background:transparent;text-align:left;padding:9px 8px;cursor:pointer">${esc(k.label)}${info(esc, k.tip)}</button>`).join('')}
       </div>
       ${c.arrRows.map(r => `
       <div ${x.A(r.pick)} class="hv-bg" style="display:grid;grid-template-columns:${ARR_GRID};${lineCss};cursor:pointer">

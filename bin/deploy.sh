@@ -533,6 +533,28 @@ else
   warn "Horloge posée, mais l'essai immédiat a échoué — vérifier le jeton en base et la route /rapports/cron."
 fi
 
+# --- 6c. Cache OpenStreetMap du scouting : relu chaque semaine ----------------
+#
+# Les neuf secteurs Overpass (communes, boulangeries, lieux peuplés) vivent dans
+# ceo_scouting_tile. Interroger Overpass prend une à trois minutes par secteur :
+# personne ne doit l'attendre à l'ouverture de l'écran. Le cron relit les
+# secteurs le dimanche à 4 h 15 ; bin/scouting_refresh.php ne touche pas à un
+# secteur relu depuis moins de six jours, et refuse de tourner deux fois en
+# même temps (verrou).
+{
+  echo "# Cockpit CEO — cache OpenStreetMap du scouting (écrit par bin/deploy.sh, ne pas éditer)."
+  echo "SHELL=/bin/sh"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+  echo "15 4 * * 0 root php ${TARGET_DIR}/bin/scouting_refresh.php >>/var/log/cockpit-scouting.log 2>&1"
+} > /etc/cron.d/cockpit-scouting
+chown root:root /etc/cron.d/cockpit-scouting
+chmod 600 /etc/cron.d/cockpit-scouting
+systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
+# Les secteurs absents ou trop vieux se relisent tout de suite, en arrière-plan :
+# la livraison n'attend pas Overpass, et le premier utilisateur non plus.
+nohup php "$TARGET_DIR/bin/scouting_refresh.php" >>/var/log/cockpit-scouting.log 2>&1 </dev/null &
+log "Cache OpenStreetMap du scouting : /etc/cron.d/cockpit-scouting — dimanche 4 h 15 ; relecture des secteurs manquants lancée en arrière-plan (journal : /var/log/cockpit-scouting.log)."
+
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
 # tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre
 # faux qui a l'air juste. On mesure donc la couverture et la vraisemblance.

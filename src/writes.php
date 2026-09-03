@@ -3157,6 +3157,28 @@ function wr_scouting_tile_put(int $sector): array
     return ['ok' => true, 'communes' => count($d['c']), 'commerces' => count($d['b'])];
 }
 
+/**
+ * POST /scouting/refresh/{n} — le serveur relit un secteur chez OpenStreetMap,
+ * le dépose dans le cache partagé et le rend à l'écran. C'est « Recharger les
+ * données » : le navigateur ne parle plus à Overpass quand l'API répond, et le
+ * secteur relu profite à tout le monde. Compter une à trois minutes ; l'écran
+ * en demande trois à la fois.
+ */
+function wr_scouting_refresh(int $sector): array
+{
+    if (!isset(ScoutingOsm::SECTEURS[$sector])) { http_response_code(404); return ['error' => 'secteur inconnu (0 à 8)']; }
+    @set_time_limit(320);
+    @ini_set('memory_limit', '512M');
+    $d = ScoutingOsm::rafraichir($sector);
+    if ($d === null) {
+        http_response_code(502);
+        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
+    }
+    journalAdd('CEO', 'Scouting', ScoutingOsm::SECTEURS[$sector][1],
+        'Secteur OpenStreetMap relu — ' . count($d['c']) . ' communes, ' . count($d['b']) . ' commerces');
+    return $d;
+}
+
 /** PUT /scouting/competitors — note, avis, source et commentaire terrain par commerce (lot ≤ 500).
  *  Seules les clés présentes dans une ligne sont modifiées ; une ligne sans note,
  *  sans commentaire et hors interrogation Google disparaît. */
@@ -3204,6 +3226,70 @@ function wr_scouting_competitors_put(): array
         journalAdd('CEO', 'Scouting', 'Notes Google', 'Enrichissement Google Places — ' . $n . ' commerces traités, ' . $rated . ' notés');
     }
     return ['ok' => true, 'n' => $n];
+}
+
+/**
+ * POST /scouting/notes — les notes Google d'un lot de commerces (≤ 40).
+ *
+ * La clé est celle du connecteur Google de Paramètres, la même que pour la
+ * réputation des magasins : elle ne quitte pas le serveur, et l'écran n'a plus
+ * rien à saisir. Chaque commerce est cherché par son nom près de sa position
+ * OSM. Une clé refusée ou un quota épuisé arrête le lot : ce qui a été trouvé
+ * avant est gardé et renvoyé, et l'erreur est dite telle que Google la formule.
+ * Une note terrain (« manuel ») n'est jamais écrasée par Google.
+ */
+function wr_scouting_notes(): array
+{
+    if (!GoogleApi::configured()) {
+        http_response_code(422);
+        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
+    }
+    $b = body();
+    $rows = $b['rows'] ?? [];
+    if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
+    $out = []; $rated = 0; $erreur = null;
+    foreach (array_slice(array_values($rows), 0, 40) as $r) {
+        if (!is_array($r)) { continue; }
+        $id = trim((string) ($r['id'] ?? ''));
+        if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
+        $name    = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
+        $commune = mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120);
+        $arr     = mb_substr(trim((string) ($r['arr'] ?? '')), 0, 60);
+        $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
+        if ($name === '' || $lat === 0.0 || $lng === 0.0) { continue; }
+        $ou = trim((string) ($r['addr'] ?? ''));
+        GoogleApi::$lastError = null;
+        $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : $commune) . ' Belgique', $lat, $lng);
+        if ($res === null) {
+            $msg = GoogleApi::$lastError ?? 'réponse vide';
+            // Clé refusée, quota épuisé, facturation absente, réseau : les
+            // commerces suivants échoueraient pareil — on s'arrête et on le dit.
+            if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) {
+                $erreur = 'Google Places : ' . $msg;
+                break;
+            }
+            $res = ['note' => null, 'avis' => 0];   // fiche introuvable : retenu, pour ne pas redemander
+        }
+        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
+            . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
+            . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)),"
+            . " reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
+            . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)),"
+            . ' updated_at = VALUES(updated_at)',
+            [$id, $name, $commune, $arr, $res['note'], $res['avis'], 'google', null, date('Y-m-d H:i:s')]);
+        $out[] = ['id' => $id, 'rating' => $res['note'], 'reviews' => $res['avis']];
+        if ($res['note'] !== null) { $rated++; }
+    }
+    if ($out === [] && $erreur === null) {
+        http_response_code(400);
+        return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)'];
+    }
+    if ($out !== []) {
+        journalAdd('CEO', 'Scouting', 'Notes Google', 'Enrichissement Google Places — ' . count($out) . ' commerces traités, '
+            . $rated . ' notés' . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
+    }
+    if ($out === [] && $erreur !== null) { http_response_code(502); return ['error' => $erreur, 'rows' => []]; }
+    return ['ok' => true, 'rows' => $out, 'n' => count($out), 'notes' => $rated, 'erreur' => $erreur];
 }
 
 /** POST /scouting/candidates — zone candidate retenue depuis sa fiche. */

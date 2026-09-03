@@ -11,6 +11,9 @@
  * candidates, populations StatBel, hypothèses) sont persistés via l'API
  * (tables ceo_scouting_*) quand elle est joignable, et toujours en
  * localStorage (repli démo / hors ligne).
+ * Notes Google : demandées au serveur (POST /scouting/notes), qui interroge
+ * Places avec la clé du connecteur Google de Paramètres — la clé ne transite
+ * jamais par le navigateur.
  */
 import { API_BASE } from './api.js';
 import * as T from './scouting-tpl.js';
@@ -115,6 +118,66 @@ const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B'
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const LS = 'ceo_scouting';
 
+// Info-bulles (i) : ce que chaque réglage change, et la formule de chaque champ
+// calculé — les mêmes formules que evaluate(), scanPrio(), strength() et
+// arrStats() ci-dessous, à tenir en phase avec elles.
+const TIP_REGL = {
+  minRating: 'Ne garde que les concurrents dont la note atteint ce minimum. Dès que le curseur dépasse 0, les commerces sans note sortent de la carte et des calculs.',
+  minHh: 'Ne garde que les communes d\'au moins ce nombre de ménages (population ÷ taille des ménages) ; leurs commerces suivent.',
+  radius: 'Rayon autour d\'un concurrent fort où aucune implantation n\'est retenue (zone rouge). C\'est aussi le rayon d\'évaluation d\'une zone : ménages, marché et concurrents y sont comptés. 2 km ≈ 15 à 20 min en voiture.',
+  thresh: 'Note à partir de laquelle un concurrent est « fort » : zone rouge autour de lui, et poids × 1,5 dans la pression concurrentielle.\nSans note, il est fort si sa force OSM ≥ 0,75 − (5 − seuil) × 0,05.',
+  minScore: 'Score d\'opportunité en dessous duquel une zone n\'est ni tracée sur la carte ni listée dans ceo_zones.\nscore = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100.',
+  ca: 'CA annuel TTC = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage).'
+};
+const TIP_HYP = {
+  'Dépense boulangerie / ménage (€/an)': 'Ce qu\'un ménage dépense par an en boulangerie-pâtisserie — étude GeoConsulting (Halle, 08-2024) : 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra.\nMarché du rayon = ménages du rayon × dépense.',
+  'Emprise imposée (%, 0 = calculée)': 'Part du marché du rayon captée par le point. À 0, l\'emprise est calculée depuis la concurrence (emprise max, sensibilité, pression). Une valeur > 0 s\'applique telle quelle à toutes les zones — Halle mesurée : 15,5 %.',
+  'Part du passage (%)': 'Part du CA apportée par la clientèle de passage, en plus des ménages du rayon.\nCA = CA des ménages ÷ (1 − passage) ; à 15 %, CA des ménages ÷ 0,85.',
+  'Surface nette cible (m²)': 'Surface de vente du projet. N\'entre que dans le rendement : €/m² = CA annuel ÷ surface (Halle : 1 296 881 € sur 250 m²).',
+  'Emprise maximale du modèle (%)': 'Emprise d\'un point sans aucun concurrent dans le rayon. Chaque concurrent la fait baisser :\nemprise = emprise max ÷ (1 + sensibilité × pression), plancher 4 %.',
+  'Sensibilité à la concurrence': 'Vitesse à laquelle la concurrence fait baisser l\'emprise.\nemprise = emprise max ÷ (1 + sensibilité × pression concurrentielle)\nAvec 0,22 et une emprise max de 30 % : pression 0 → 30 % ; pression 1 → 24,6 % ; pression 4,5 → 15,1 % (≈ Halle). Plus la valeur est haute, plus la même concurrence pèse.',
+  'Taille moyenne des ménages': 'Personnes par ménage, pour passer de la population des communes aux ménages : ménages = population ÷ taille. Belgique 2,31 (étude : 2,34 en Flandre).'
+};
+const TIP_FICHE = {
+  'Score d\'opportunité': 'score = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, borné de 0 à 100.\n14 000 ménages dans le rayon valent les 60 points de potentiel ; l\'emprise — donc la concurrence — vaut les 40 points restants.',
+  'Ménages dans le rayon': 'Le disque du rayon est découpé en 26 × 26 cases ; chaque case prend la densité de ménages de la commune la plus proche (à moins de 1,9 × son rayon habité). Ménages = Σ densité × surface de case.',
+  'Population communale': 'Population de la commune la plus proche du point : relation OSM, ou CSV StatBel importé. « Estimée » = déduite de la densité médiane des communes voisines.',
+  'dont zone primaire': 'Ménages des cases à moins de 55 % du rayon : la clientèle la plus proche, celle qui vient sans détour.',
+  'Marché boulangerie': 'Marché = ménages du rayon × dépense boulangerie par ménage (hypothèse).',
+  'Dépense / ménage': 'Hypothèse du modèle : dépense annuelle d\'un ménage en boulangerie-pâtisserie.',
+  'Boulangeries dans le rayon': 'Concurrents de la sélection à moins de « rayon » km du point. « Fortes » : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
+  'Pression concurrentielle': 'Σ, sur les concurrents du rayon, de : force (0 à 1) × (1 − 0,6 × distance ÷ rayon) × 1,5 si le concurrent est fort.\nUn concurrent au centre pèse toute sa force, un concurrent en bord de rayon 40 % de sa force. Force = (note − 3) ÷ 2, ou signaux OSM sans note.',
+  'Emprise estimée': 'emprise = emprise max ÷ (1 + sensibilité × pression concurrentielle), entre 4 % et l\'emprise max.',
+  'Emprise imposée': 'Emprise fixée dans les hypothèses : la même pour toutes les zones, la concurrence ne la modifie pas.',
+  'Passage': 'Majoration par la clientèle de passage : CA = CA des ménages ÷ (1 − passage).',
+  'Rendement annuel / m²': '€/m² = CA annuel ÷ surface nette cible (hypothèse).',
+  'CA hebdomadaire': 'CA annuel ÷ 52.'
+};
+const TIP_ZONES = {
+  score: TIP_FICHE['Score d\'opportunité'],
+  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × π × rayon².',
+  n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
+  emprise: 'emprise = emprise max ÷ (1 + sensibilité × pression), entre 4 % et l\'emprise max — ou l\'emprise imposée. Pression = Σ force × (1 − 0,6 × distance ÷ rayon).',
+  ca: 'CA annuel TTC = ménages × dépense par ménage × emprise ÷ (1 − passage).',
+  m2: '€/m² = CA annuel ÷ surface nette cible.'
+};
+const TIP_ARR = {
+  communes: 'Communes OSM (admin_level 8) rattachées à l\'arrondissement.',
+  pop: 'Somme des populations communales (OSM, CSV StatBel, ou estimation par la densité des voisines).',
+  hh: 'Ménages = population ÷ taille moyenne des ménages, sommés sur les communes.',
+  market: 'Marché boulangerie = ménages × dépense par ménage.',
+  shops: 'Boulangeries et pâtisseries OSM rattachées aux communes de l\'arrondissement.',
+  strong: 'Concurrents forts : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
+  dens: 'Commerces pour 10 000 habitants = commerces ÷ (population ÷ 10 000).',
+  avg: 'Moyenne des notes (Google ou terrain) des commerces notés de l\'arrondissement.',
+  perShop: 'Ménages par point de vente = ménages ÷ commerces : plus c\'est haut, moins l\'offre est dense.'
+};
+const TIP_CONC = {
+  'Note / 5': 'Note Google (via la clé de Paramètres) ou note terrain saisie dans la case — la saisie prime.',
+  'Source': 'Google : note lue chez Google Places · saisie : note terrain · vide : pas encore interrogé.',
+  'Force': 'Force du concurrent, 0 à 100 % : (note − 3) ÷ 2 avec une note ; sinon signaux OSM : 0,40 + 0,25 enseigne ou chaîne + 0,10 site web + 0,10 horaires + 0,05 pâtisserie.'
+};
+
 const fmtInt = n => Math.round(n).toLocaleString('fr-BE');
 const fmtEur = n => Math.round(n).toLocaleString('fr-BE') + ' €';
 const dist = (a, b, c, d) => {
@@ -147,6 +210,36 @@ function apiWrite(method, path, payload){
     body: payload === undefined ? undefined : JSON.stringify(payload)
   }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .catch(e => { console.warn('[scouting] écriture ' + path + ' échouée :', e.message); return null; });
+}
+// POST /scouting/notes — un lot de commerces ; ici l'erreur du serveur est
+// rendue lisible (422 sans clé, 502 Google) au lieu d'être avalée.
+function apiNotes(rows){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 90000);
+  return fetch(API_BASE + '/scouting/notes', {
+    method: 'POST', credentials: 'same-origin', signal: ctl.signal,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ rows })
+  }).then(async r => {
+    clearTimeout(t);
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+    return j || { rows: [] };
+  }).catch(e => { clearTimeout(t); throw e; });
+}
+
+// POST /scouting/refresh/{n} — le serveur relit un secteur chez OpenStreetMap
+// (une à trois minutes) et le rend ; l'erreur du serveur est rendue lisible.
+function apiRefresh(i){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 330000);
+  return fetch(API_BASE + '/scouting/refresh/' + i, { method: 'POST', credentials: 'same-origin', signal: ctl.signal, headers: { Accept: 'application/json' } })
+    .then(async r => {
+      clearTimeout(t);
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+      return j;
+    }).catch(e => { clearTimeout(t); throw e; });
 }
 
 /* Leaflet est chargé à la demande (vendored, aucun CDN) : les autres écrans
@@ -182,7 +275,7 @@ export class Scouting {
       hhSize: HH_SIZE, compK: 0.22, empriseMax: 30, minScore: 55,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
       view: 'map', sortKey: 'score', sortDir: -1, q: '', stop: false, reseau: false, notes: {},
-      gkey: '', enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
+      gconf: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
     };
     this._h = [];
     this._scroll = {};
@@ -217,10 +310,19 @@ export class Scouting {
 
   useApi(){ return !!(this.app && this.app.source === 'api'); }
 
+  // La date du secteur le plus ancien du cache serveur : ce que l'écran montre
+  // a au plus cet âge (le cron relit chaque semaine, « Recharger » tout de suite).
+  osmDate(){
+    const t = this._serverTiles; if (!t) return '';
+    const ds = Object.keys(t).map(k => String((t[k] && t[k].fetchedAt) || '')).filter(Boolean).sort();
+    if (!ds.length) return '';
+    const d = ds[0].slice(0, 10).split('-');
+    return d.length === 3 ? d[2] + '/' + d[1] + '/' + d[0] : ds[0];
+  }
+
   restoreLocal(){
     const s = this.state;
     Object.assign(s, pickParams(ls.get('params')));
-    s.gkey = ls.get('gkey') || '';
     s.ratings = ls.get('ratings') || {};
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
@@ -237,6 +339,7 @@ export class Scouting {
 
   render(){
     if (!this.el.isConnected) return;
+    this.hideTip();
     this._h = [];
     const x = {
       A: fn => fn ? `data-sh="${this.reg(fn)}"` : '',
@@ -279,12 +382,36 @@ export class Scouting {
       const fn = this._h[+el.getAttribute(attr)];
       if (fn) fn(e);
     };
+    // Info-bulles (i) : le texte vit dans data-sc-tip ; la bulle est posée en
+    // position fixe dans le document, hors des panneaux qui défilent (un ::after
+    // CSS y serait rogné). Le clic la fige — écrans tactiles — et n'atteint pas
+    // le bouton qui porte l'icône (en-têtes triables).
+    const tipOf = e => { const el = e.target && e.target.closest ? e.target.closest('[data-sc-tip]') : null; return el && this.el.contains(el) ? el : null; };
+    this.el.addEventListener('mouseover', e => { const el = tipOf(e); if (el && el !== this._tipFor) this.showTip(el); });
+    this.el.addEventListener('mouseout', e => { const el = tipOf(e); if (el && !(e.relatedTarget && el.contains(e.relatedTarget)) && !this._tipPinned) this.hideTip(); });
+    this.el.addEventListener('click', e => { const el = tipOf(e); if (!el) return; e.preventDefault(); e.stopImmediatePropagation(); if (this._tipFor === el && this._tipPinned) this.hideTip(); else { this.showTip(el); this._tipPinned = true; } });
     this.el.addEventListener('click', e => run('data-sh', e));
     this.el.addEventListener('change', e => run('data-sc', e));
     this.el.addEventListener('input', e => run('data-si', e));
     // positions de défilement des panneaux, restaurées après chaque rendu
-    this.el.addEventListener('scroll', e => { if (e.target && e.target.id) this._scroll[e.target.id] = e.target.scrollTop; }, true);
+    this.el.addEventListener('scroll', e => { if (e.target && e.target.id) this._scroll[e.target.id] = e.target.scrollTop; this.hideTip(); }, true);
   }
+
+  showTip(el){
+    this.hideTip();
+    const tip = document.createElement('div');
+    tip.className = 'sc-tip';
+    tip.textContent = el.getAttribute('data-sc-tip') || '';
+    document.body.appendChild(tip);
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    const left = Math.min(window.innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2));
+    let top = r.top - h - 8;
+    if (top < 8) top = r.bottom + 8;
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    this._tip = tip; this._tipFor = el; this._tipPinned = false;
+  }
+
+  hideTip(){ if (this._tip) this._tip.remove(); this._tip = null; this._tipFor = null; this._tipPinned = false; }
 
   // Curseurs : pendant le glissement on ne re-rend pas (le curseur serait
   // remplacé sous la souris) — état mis à jour, libellés patchés, carte
@@ -346,10 +473,9 @@ export class Scouting {
     const patch = { ratings, notes, candidates: d.candidates || [], pops: d.populations || {} };
     const pr = pickParams(d.params);
     Object.assign(patch, pr);
-    if (d.googleKey) patch.gkey = d.googleKey;
+    patch.gconf = d.google && typeof d.google === 'object' ? d.google : null;   // l'état du connecteur, jamais la clé
     ls.set('ratings', ratings); ls.set('notes', notes); ls.set('cand', patch.candidates); ls.set('pops', patch.pops);
     if (Object.keys(pr).length) ls.set('params', pr);
-    if (patch.gkey) ls.set('gkey', patch.gkey);
     this._rev++;
     this.setState(patch);
     this._pv = JSON.stringify(this.paramsObj());   // rien à renvoyer au serveur
@@ -392,10 +518,15 @@ export class Scouting {
   }
 
   /* ---------- données ---------- */
-  async overpass(q, label){
+  // Un secteur part du miroir désigné par `start` : trois secteurs chargés en
+  // parallèle frappent trois miroirs différents au lieu de faire la file sur
+  // le premier. Sur échec, on passe au miroir suivant, puis on réessaie.
+  async overpass(q, label, start){
     let last;
+    const n = OVERPASS.length, first = Math.abs(start || 0) % n;
     for (let attempt = 0; attempt < 3; attempt++){
-      for (const ep of OVERPASS){
+      for (let k = 0; k < n; k++){
+        const ep = OVERPASS[(first + k) % n];
         try {
           if (attempt > 0) this.setState({ progress: label + ' — nouvelle tentative (' + (attempt + 1) + '/3)' });
           const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
@@ -453,18 +584,20 @@ export class Scouting {
     const api = this.useApi();
     if (api && !this._serverTiles){ this.setState({ progress: 'Lecture des saisies enregistrées…' }); await this.pullSaved(); }
     const bakeries = [], communes = [], places = [], seenC = {}, seenB = {}, failed = [];
+    let done = 0;
     const absorb = (tc, tb, tp) => {
+      const fresh = [];
       (tc || []).forEach(c => { if (!seenC[c.id]){ seenC[c.id] = 1; communes.push(Object.assign({}, c)); } });
-      (tb || []).forEach(b => { if (!seenB[b.id]){ seenB[b.id] = 1; bakeries.push(Object.assign({}, b)); } });
+      (tb || []).forEach(b => { if (!seenB[b.id]){ seenB[b.id] = 1; const o = Object.assign({}, b); bakeries.push(o); fresh.push(o); } });
       (tp || []).forEach(p => places.push(p));
+      return fresh;
     };
-    for (let i = 0; i < TILES.length; i++){
+    // Un secteur : cache serveur partagé, puis cache navigateur, puis Overpass.
+    const tile = async (i) => {
       const [bbox, label] = TILES[i];
       let d = null;
       if (!force){
-        // secteur en cache (serveur partagé, puis navigateur) : chargement instantané
         if (api && this._serverTiles && this._serverTiles[i]){
-          this.setState({ progress: label + ' — cache serveur ' + (i + 1) + '/' + TILES.length });
           try { d = await apiGet('/scouting/tiles/' + i, 60000); } catch (e) { d = null; }
           if (d && d.c) ls.set('t' + i, d); else d = null;
         }
@@ -474,24 +607,49 @@ export class Scouting {
           else d = null;
         }
       }
+      if (!d && api){
+        // Le serveur relit le secteur chez OpenStreetMap et le dépose dans le
+        // cache partagé : tout le monde en profite, et le navigateur n'a plus à
+        // atteindre Overpass. Repli navigateur si le serveur n'y arrive pas.
+        this.setState({ busy: true, progress: label + ' — le serveur relit OpenStreetMap… (' + done + '/' + TILES.length + ' secteurs reçus)' });
+        try { d = await apiRefresh(i); } catch (e) { console.warn('[scouting] relecture serveur du secteur ' + i + ' :', e.message); d = null; }
+        if (d && d.c){
+          ls.set('t' + i, d);
+          if (!this._serverTiles) this._serverTiles = {};
+          this._serverTiles[i] = { sector: i, fetchedAt: new Date(d.t || Date.now()).toISOString().slice(0, 19).replace('T', ' ') };
+        } else d = null;
+      }
       if (!d){
-        this.setState({ busy: true, progress: label + ' — secteur ' + (i + 1) + '/' + TILES.length });
+        this.setState({ busy: true, progress: label + ' — interrogation d\'OpenStreetMap… (' + done + '/' + TILES.length + ' secteurs reçus)' });
         let r;
         try {
           r = await this.overpass('[out:json][timeout:240];rel(' + bbox + ')["boundary"="administrative"]["admin_level"="8"];out tags center;'
             + 'node(' + bbox + ')["place"]["population"];out tags center;'
-            + '(nwr["shop"="bakery"](' + bbox + ');nwr["shop"="pastry"](' + bbox + '););out center tags;', label);
-        } catch (e) { failed.push(label); continue; }
+            + '(nwr["shop"="bakery"](' + bbox + ');nwr["shop"="pastry"](' + bbox + '););out center tags;', label, i);
+        } catch (e) { failed.push(label); return; }
         d = this.parseTile(r);
         ls.set('t' + i, d);
         if (api) apiWrite('PUT', '/scouting/tiles/' + i, d);
       }
-      absorb(d.c, d.b, d.p || []);
+      const fresh = absorb(d.c, d.b, d.p || []);
       this.index(communes);
       this.fillPop(communes, places);
+      // Rattachement provisoire des commerces du secteur aux communes déjà
+      // connues : les filtres province / arrondissement, la carte et l'onglet
+      // ceo_concurrents s'appliquent dès ce secteur — et non un quart d'heure
+      // plus tard, une fois les neuf secteurs lus.
+      this.attach(fresh, communes);
+      done++;
       this._rev++;
-      this.setState({ communes: communes.slice(), bakeries: bakeries.slice() });
-    }
+      this.setState({ communes: communes.slice(), bakeries: bakeries.filter(b => b.prov),
+        progress: done + '/' + TILES.length + ' secteurs reçus' + (done < TILES.length ? '…' : '') });
+    };
+    // Trois secteurs à la fois, chacun partant d'un miroir Overpass différent :
+    // un secteur prend une à trois minutes, et les attendre l'un après l'autre
+    // faisait de la première ouverture un quart d'heure.
+    const queue = TILES.map((_, i) => i);
+    const worker = async () => { while (queue.length){ await tile(queue.shift()); } };
+    await Promise.all([worker(), worker(), worker()]);
     this._loading = false;
     if (!communes.length){
       this.setState({ busy: false, progress: '', err: 'Overpass injoignable — réessaie avec « Recharger les données ».' });
@@ -499,23 +657,28 @@ export class Scouting {
     }
     this.index(communes);
     this.fillPop(communes, places);
-    // rattachement à la commune la plus proche ; hors Belgique = écarté
-    const kept = [];
-    bakeries.forEach(b => {
-      let best = null, bd = 1e9;
-      communes.forEach(c => {
-        const d = dist(b.lat, b.lng, c.lat, c.lng);
-        if (d < bd){ bd = d; best = c; }
-      });
-      if (!best || bd > 10) return;
-      b.commune = best.name; b.arr = best.arr; b.ins = best.ins; b.prov = best.prov;
-      kept.push(b);
-    });
+    // rattachement définitif, toutes communes connues ; hors Belgique = écarté
+    const kept = this.attach(bakeries, communes);
     this.index(communes);
     this._rev++;
     this.setState({ bakeries: kept, communes: communes, busy: false, progress: '',
       err: failed.length ? 'Secteurs incomplets : ' + failed.join(', ') + ' — relance le chargement pour les compléter.' : null });
     setTimeout(() => { try { if (this.map) this.map.invalidateSize(); this.redraw(); } catch (e) { console.error('[scouting]', e); } }, 80);
+  }
+
+  // Rattache chaque commerce à la commune la plus proche (≤ 10 km) et rend ceux
+  // qui ont trouvé la leur ; au-delà, le commerce est hors Belgique et reste
+  // sans province — donc hors de toute sélection.
+  attach(list, communes){
+    const kept = [];
+    list.forEach(b => {
+      let best = null, bd = 1e9;
+      communes.forEach(c => { const d = dist(b.lat, b.lng, c.lat, c.lng); if (d < bd){ bd = d; best = c; } });
+      if (!best || bd > 10){ b.commune = ''; b.arr = ''; b.ins = ''; b.prov = ''; return; }
+      b.commune = best.name; b.arr = best.arr; b.ins = best.ins; b.prov = best.prov;
+      kept.push(b);
+    });
+    return kept;
   }
 
   // Population : la valeur portée par la relation communale OSM fait foi ;
@@ -810,8 +973,8 @@ export class Scouting {
     const hhOk = {};
     s.communes.forEach(c => { hhOk[c.ins] = c.hh >= s.minHh; });
     return s.bakeries.filter(b => {
-      if (b.prov && !s.prov[b.prov]) return false;
-      if (s.arr !== 'all' && b.arr && b.arr !== s.arr) return false;
+      if (!b.prov || !s.prov[b.prov]) return false;          // commune inconnue = hors sélection
+      if (s.arr !== 'all' && b.arr !== s.arr) return false;
       if (s.minRating > 0){ const r = this.rating(b); if (!r || r < s.minRating) return false; }
       if (s.minHh > 0 && !hhOk[b.ins]) return false;
       return true;
@@ -879,153 +1042,84 @@ export class Scouting {
     if (x) this.evaluate(x.lat, x.lng);
   }
 
-  /* ---------- Google Places ---------- */
-  loadGmaps(key){
-    if (window.google && window.google.maps && window.google.maps.importLibrary) return Promise.resolve();
-    if (this._gmapsP) return this._gmapsP;
-    this._gmapsP = new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&libraries=places&v=weekly&language=fr&region=BE';
-      s.async = true;
-      s.onload = res;
-      s.onerror = () => { this._gmapsP = null; rej(new Error('script refusé (clé ou restrictions)')); };
-      document.head.appendChild(s);
-    });
-    return this._gmapsP;
+  /* ---------- Google Places (via le serveur) ---------- */
+  // La clé est celle du connecteur Google de Paramètres ; l'écran n'en connaît
+  // que l'état. Sans API (repli local), aucune note ne peut être demandée.
+  googleOk(){ const g = this.state.gconf; return !!(g && g.configure); }
+
+  googleBlocage(){
+    if (!this.useApi()) return 'Notes Google indisponibles hors ligne — l\'API du cockpit ne répond pas.';
+    if (!this.googleOk()) return 'Aucune clé Google — renseigne-la dans Paramètres › Général (connecteur Google).';
+    return null;
   }
 
-  // deux générations d'API Places cohabitent selon les clés : on prend celle
-  // qui répond
-  async placesApi(){
-    await this.loadGmaps(this.state.gkey);
-    for (let i = 0; i < 40; i++){   // le bootstrap peuple google.maps en différé
-      const gg = window.google && window.google.maps;
-      if (gg && (typeof gg.importLibrary === 'function' || (gg.places && (gg.places.Place || gg.places.PlacesService)))) break;
-      await new Promise(r => setTimeout(r, 150));
-    }
-    const g = window.google && window.google.maps;
-    if (!g) throw new Error('Google Maps non chargé');
-    if (typeof g.importLibrary === 'function'){
-      try { const lib = await g.importLibrary('places'); if (lib && lib.Place) return { Place: lib.Place }; } catch (e) { /* on tente la suite */ }
-    }
-    if (g.places && g.places.Place) return { Place: g.places.Place };
-    if (g.places && g.places.PlacesService) return { svc: new g.places.PlacesService(document.createElement('div')) };
-    throw new Error('bibliothèque Places indisponible sur cette clé');
+  // Un lot de commerces → { rows: [{ id, rating, reviews }], erreur }
+  notesLot(list){
+    return apiNotes(list.map(b => ({ id: b.id, name: b.name, addr: b.addr || '', commune: b.commune || '', arr: b.arr || '', lat: b.lat, lng: b.lng })))
+      .then(r => ({ rows: (r && Array.isArray(r.rows)) ? r.rows : [], erreur: (r && r.erreur) || null }));
   }
 
-  lookup(api, b){
-    if (api.Place){
-      return api.Place.searchByText({
-        textQuery: b.name + ' ' + (b.addr || b.commune || '') + ' Belgique',
-        fields: ['displayName', 'rating', 'userRatingCount', 'location'],
-        locationBias: { center: { lat: b.lat, lng: b.lng }, radius: 600 },
-        maxResultCount: 1, language: 'fr', region: 'be'
-      }).then(r => {
-        const p = r && r.places && r.places[0];
-        return p && p.rating ? { rating: p.rating, n: p.userRatingCount || 0 } : { rating: null, n: 0 };
-      });
-    }
-    return new Promise(res => {
-      api.svc.findPlaceFromQuery({
-        query: b.name + ' ' + (b.addr || b.commune || '') + ' Belgique',
-        fields: ['rating', 'user_ratings_total', 'name'],
-        locationBias: { center: { lat: b.lat, lng: b.lng }, radius: 600 }
-      }, (r, st) => {
-        const p = st === 'OK' && r && r[0];
-        res(p && p.rating ? { rating: p.rating, n: p.user_ratings_total || 0 } : { rating: null, n: 0 });
-      });
-    });
-  }
-
-  lookupTimed(api, b){
-    return Promise.race([
-      this.lookup(api, b),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('délai dépassé')), 8000))
-    ]);
-  }
-
-  googleRow(b, res){ return { id: b.id, name: b.name, commune: b.commune || '', arr: b.arr || '', rating: res.rating, reviews: res.n || 0, source: 'google' }; }
+  goParams(){ if (this.app && typeof this.app.setState === 'function') this.app.setState({ screen: 'parametres', gq: '' }); }
 
   saveRatings(out){ ls.set('ratings', out); this._rev++; }
 
-  // Enrichissement de la vue courante : 40 commerces visibles par lot
+  // Enrichissement de la vue courante : 40 commerces visibles, par lots de 10
+  // demandés au serveur — chaque lot est enregistré et affiché dès sa réponse.
   async enrich(){
     const s = this.state;
-    if (!s.gkey){ this.setState({ err: 'Renseigne une clé Google Places.' }); return; }
+    const blocage = this.googleBlocage();
+    if (blocage){ this.setState({ err: blocage }); return; }
     if (!this.map || s.enriching) return;
-    this.setState({ enriching: true, enrichDone: 0, enrichTotal: 0, err: null });
+    this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: 0, err: null });
     const out = Object.assign({}, s.ratings);
-    const rows = [];
     try {
-      const api = await this.placesApi();
       const bounds = this.map.getBounds();
       const list = this.shops().filter(b => bounds.contains([b.lat, b.lng]) && !out[b.id]).slice(0, 40);
       this.setState({ enrichTotal: list.length });
       if (!list.length){ this.setState({ enriching: false, err: 'Rien à enrichir dans cette vue (déjà fait ou aucun commerce visible).' }); return; }
-      let ok = 0;
-      for (let i = 0; i < list.length; i++){
-        const b = list[i];
-        try {
-          const res = await this.lookupTimed(api, b);
-          out[b.id] = res;
-          rows.push(this.googleRow(b, res));
-          if (res.rating) ok++;
-        } catch (e) {
-          out[b.id] = { rating: null, n: 0 };
-          if (/denied|api|key|billing/i.test(String(e.message))){
-            this.saveRatings(out); this.pushCompetitors(rows);
-            this.setState({ err: 'Google Places : ' + e.message, enriching: false, ratings: out });
-            return;
-          }
-        }
-        if (i % 5 === 4 || i === list.length - 1){ this._rev++; this.setState({ ratings: Object.assign({}, out), enrichDone: i + 1 }); }
-      }
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ ratings: out, enriching: false,
-        err: ok ? null : 'Aucune note trouvée pour cette vue — vérifie que l\'API Places (New) est activée sur la clé.' });
+      const r = await this.enrichLots(list, out);
+      this.setState({ ratings: out, enriching: false, stop: false,
+        err: r.erreur ? r.erreur : (r.ok ? null : 'Aucune note trouvée pour cette vue — vérifie que l\'API Places (New) est activée sur la clé de Paramètres.') });
     } catch (e) {
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ enriching: false, ratings: out, err: 'Google Places : ' + (e.message || e) });
+      this.saveRatings(out);
+      this.setState({ enriching: false, stop: false, ratings: out, err: 'Google Places : ' + (e.message || e) });
     }
   }
 
-  // Enrichissement en masse : parcourt toute la sélection filtrée, par lots
-  // de 10 sauvegardés au fur et à mesure, interruptible.
+  // Enrichissement en masse : toute la sélection filtrée, par lots de 10,
+  // interruptible entre deux lots.
   async enrichAll(){
     const s = this.state;
-    if (!s.gkey){ this.setState({ err: 'Renseigne une clé Google Places.' }); return; }
     if (s.enriching){ this.setState({ stop: true }); return; }
+    const blocage = this.googleBlocage();
+    if (blocage){ this.setState({ err: blocage }); return; }
     const out = Object.assign({}, s.ratings);
     const list = this.shops().filter(b => !out[b.id]);
     if (!list.length){ this.setState({ err: 'Toute la sélection est déjà enrichie.' }); return; }
     this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: list.length, err: null });
-    let rows = [];
-    const flush = (i) => { this.saveRatings(out); this.pushCompetitors(rows); rows = []; this.setState({ ratings: Object.assign({}, out), enrichDone: i + 1 }); };
     try {
-      const api = await this.placesApi();
-      for (let i = 0; i < list.length; i++){
-        if (this.state.stop) break;
-        const b = list[i];
-        try {
-          const res = await this.lookupTimed(api, b);
-          out[b.id] = res;
-          rows.push(this.googleRow(b, res));
-        } catch (e) {
-          out[b.id] = { rating: null, n: 0 };
-          if (/denied|billing|quota|OVER_QUERY/i.test(String(e.message))){
-            flush(i);
-            this.setState({ err: 'Google Places interrompu : ' + e.message, enriching: false });
-            return;
-          }
-        }
-        if (i % 10 === 9 || i === list.length - 1) flush(i);
-      }
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ ratings: out, enriching: false, stop: false });
+      const r = await this.enrichLots(list, out);
+      this.setState({ ratings: out, enriching: false, stop: false, err: r.erreur || null });
     } catch (e) {
-      this.saveRatings(out); this.pushCompetitors(rows);
-      this.setState({ enriching: false, stop: false, err: 'Google Places : ' + (e.message || e) });
+      this.saveRatings(out);
+      this.setState({ enriching: false, stop: false, ratings: out, err: 'Google Places : ' + (e.message || e) });
     }
+  }
+
+  // Le cœur commun : lots de 10, résultats fusionnés dans `out` et sauvegardés
+  // au fil de l'eau ; s'arrête sur `stop` ou sur une erreur du serveur.
+  async enrichLots(list, out){
+    let ok = 0, done = 0, erreur = null;
+    for (let i = 0; i < list.length; i += 10){
+      if (this.state.stop) break;
+      const r = await this.notesLot(list.slice(i, i + 10));
+      r.rows.forEach(x => { out[x.id] = { rating: x.rating != null ? +x.rating : null, n: +(x.reviews || 0) }; if (x.rating) ok++; });
+      done += r.rows.length;
+      this.saveRatings(out);
+      this.setState({ ratings: Object.assign({}, out), enrichDone: done });
+      if (r.erreur){ erreur = r.erreur; break; }
+    }
+    return { ok, done, erreur };
   }
 
   /* ---------- notation manuelle ---------- */
@@ -1293,9 +1387,9 @@ export class Scouting {
     ];
 
     return Object.assign(this.liveVals(), {
-      busy: s.busy, progress: s.progress, compare: s.compare, toast: s.toast,
+      busy: s.busy, veil: s.busy && !s.bakeries.length, progress: s.progress, compare: s.compare, toast: s.toast,
       statusColor: s.err ? '#8D1D2C' : s.busy ? '#c17a2a' : '#1b5e20',
-      statusLabel: s.err ? 'Erreur : ' + s.err : s.busy ? 'Chargement Overpass…' : fmtInt(s.bakeries.length) + ' commerces · ' + fmtInt(s.communes.length) + ' communes' + (self.useApi() ? '' : ' · saisies locales à ce navigateur'),
+      statusLabel: s.err ? 'Erreur : ' + s.err : s.busy ? (s.progress || 'Chargement…') : fmtInt(s.bakeries.length) + ' commerces · ' + fmtInt(s.communes.length) + ' communes' + (self.osmDate() ? ' · OpenStreetMap relu le ' + self.osmDate() : '') + (self.useApi() ? '' : ' · saisies locales à ce navigateur'),
       provinces: PROV.map(p => ({
         name: p.name, on: !!s.prov[p.code],
         count: s.bakeries.filter(b => b.prov === p.code).length || '—',
@@ -1333,14 +1427,17 @@ export class Scouting {
         { k: 'Emprise maximale du modèle (%)', v: s.empriseMax, set: e => self.setParam({ empriseMax: parseFloat(e.target.value) || 30 }) },
         { k: 'Sensibilité à la concurrence', v: s.compK, set: e => self.setParam({ compK: parseFloat(String(e.target.value).replace(',', '.')) || 0.22 }) },
         { k: 'Taille moyenne des ménages', v: s.hhSize, set: e => { const val = parseFloat(String(e.target.value).replace(',', '.')) || HH_SIZE; self.setState({ hhSize: val }); setTimeout(() => self.recomputePop(), 0); } }
-      ],
+      ].map(p => Object.assign(p, { i: TIP_HYP[p.k] || '' })),
       empriseHint: s.emprise > 0 ? 'Emprise imposée à ' + s.emprise + ' % pour toutes les zones' : 'Emprise calculée : ' + s.empriseMax + ' % divisés par la pression concurrentielle du rayon',
       popCoverage: fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
       importPops: e => self.importPops(e),
-      gkey: s.gkey,
-      setGkey: e => { const v = e.target.value.trim(); ls.set('gkey', v); if (self.useApi()) apiWrite('PUT', '/parametres/scoutingGoogleKey', { valeur: v }); self.setState({ gkey: v }); },
-      gkeyHint: 'Enrichit les boulangeries visibles à l\'écran (40 max par lot), en cache' + (self.useApi() ? ' partagé' : ' local') + '. Sans clé, la force du concurrent est estimée sur les signaux OSM (enseigne, site web, horaires, terrasse).'
-        + (self.useApi() ? ' La clé est enregistrée dans les paramètres du cockpit.' : ''),
+      tips: TIP_REGL, concTips: TIP_CONC,
+      gOk: !self.googleBlocage(),
+      gLabel: !self.useApi() ? 'Hors ligne — les notes Google passent par l\'API du cockpit.'
+        : self.googleOk() ? 'Connecteur Google actif · clé ' + ((s.gconf && s.gconf.empreinte) || '…') + ' (Paramètres).'
+        : 'Aucune clé Google — à renseigner dans Paramètres › Général.',
+      goParams: () => self.goParams(),
+      gkeyHint: 'Enrichit les boulangeries visibles à l\'écran (40 max par lot) : le serveur interroge Google Places avec la clé de Paramètres — elle ne transite jamais par le navigateur — et le résultat est en cache partagé. Sans clé, la force du concurrent est estimée sur les signaux OSM (enseigne, site web, horaires, terrasse).',
       enrich: () => self.enrich(),
       enrichAll: () => self.enrichAll(),
       enrichAllLabel: s.enriching ? 'Interrompre (' + (s.enrichDone || 0) + '/' + (s.enrichTotal || '?') + ')' : 'Enrichir toute la sélection',
@@ -1379,7 +1476,7 @@ export class Scouting {
         { k: 'Passage', v: s.passage + ' %' },
         { k: 'Rendement annuel / m²', v: fmtEur(x.ca / s.surface) },
         { k: 'CA hebdomadaire', v: fmtEur(x.ca / 52) }
-      ] : [],
+      ].map(r => Object.assign(r, { i: TIP_FICHE[r.k] || '' })) : [],
       selCa: x ? fmtEur(x.ca) : '',
       selCaDetail: x ? fmtInt(x.hh) + ' ménages × ' + fmtEur(s.spend) + ' × ' + (x.emprise * 100).toFixed(1) + ' % d\'emprise, majoré de ' + s.passage + ' % de passage · sur ' + s.surface + ' m²' : '',
       selCompetitors: x ? x.near.slice(0, 14).map(o => {
@@ -1451,12 +1548,12 @@ export class Scouting {
       zonesRows: zonesRows,
       zonesEmpty: s.busy ? 'Chargement en cours…' : !this.map ? 'Carte indisponible.' : 'Aucune zone ne passe le score minimum ' + s.minScore + ' dans la vue courante — dézoome la carte ou abaisse le seuil.',
       zonesCols: [['rang', 'Rang'], ['commune', 'Localité'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
-        .map(([k, label]) => ({ label: label, sort: sortBy(k) })),
+        .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ZONES[k] || '' })),
       concRows: concRows,
       concCount: concCount,
       arrRows: arrRows,
       arrCols: [['arr', 'Arrondissement'], ['communes', 'Communes'], ['pop', 'Population'], ['hh', 'Ménages'], ['market', 'Marché'], ['shops', 'Commerces'], ['strong', 'Forts'], ['dens', '/ 10.000 hab.'], ['avg', 'Note moy.'], ['perShop', 'Ménages / point']]
-        .map(([k, label]) => ({ label: label, sort: sortBy(k) })),
+        .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ARR[k] || '' })),
       exportZones: () => self.csv('ceo_zones', ['rang', 'localite', 'arrondissement', 'score', 'menages', 'concurrents', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
         'hyp_depense_menage', 'hyp_passage_pct', 'hyp_surface_m2', 'hyp_emprise_max_pct', 'hyp_sensibilite', 'hyp_taille_menages', 'hyp_rayon_km'],
         zonesRows.map(r => [r.rang, r.commune, r.arr, r.score, r.hhRaw, r.n, r.empriseRaw, r.caRaw, r.m2Raw, r.lat.toFixed(5), r.lng.toFixed(5),

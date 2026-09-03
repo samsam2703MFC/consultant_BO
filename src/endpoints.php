@@ -7880,7 +7880,7 @@ function ep_ecran_vues(): array
 
 /* --- Scouting commercial ----------------------------------------------------- */
 
-/** GET /scouting — saisies enregistrées, hypothèses, clé Google, inventaire du cache OSM. */
+/** GET /scouting — saisies enregistrées, hypothèses, état du connecteur Google, inventaire du cache OSM. */
 function ep_scouting(): array
 {
     $competitors = array_map(fn ($r) => [
@@ -7903,7 +7903,7 @@ function ep_scouting(): array
         Db::rows('SELECT sector, fetched_at, LENGTH(payload) AS bytes FROM ceo_scouting_tile ORDER BY sector'));
     return [
         'params'      => setting('scoutingParams'),
-        'googleKey'   => (string) setting('scoutingGoogleKey', ''),
+        'google'      => GoogleApi::statut(),   // l'état du connecteur de Paramètres, jamais la clé
         'competitors' => $competitors,
         'candidates'  => $candidates,
         'populations' => (object) $pops,

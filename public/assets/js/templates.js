@@ -87,8 +87,8 @@ export function render(c, x){
   </aside>
 
   <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
-    <div style="${c.isScouting ? 'padding:26px 32px 24px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
-      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
+    <div style="${c.isScouting ? 'padding:14px 18px 14px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
+      ${c.isScouting ? '' : `<header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
         <div>
           <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">${esc(c.screenTitle)}</h1>
           <p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>
@@ -97,7 +97,7 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.metaDate)}</span>
           <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-secondary);color:var(--color-on-abricot)">${esc(c.metaPeriode)}</span>
         </div>
-      </header>
+      </header>`}
 
       ${c.ready ? `
       ${(c.lacunes && c.lacunes.length) ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
@@ -5030,7 +5030,7 @@ function tplParams(c, x){
           <span style="font-size:11.5px;color:${c.gCleDefinie ? '#2d7a3e' : 'var(--color-text-muted)'};font-weight:500">${c.gCleDefinie ? 'Clé en place · ' + esc(c.gEmpreinte) : 'Aucune clé'}</span>
           ${c.gCleDefinie ? `<button ${x.A(c.gEffacer)} style="border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:999px;height:26px;padding:0 11px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Effacer</button>` : ''}
         </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Elle sert à la réputation des magasins et aux notes Google du scouting commercial. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
       </div>
       <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Courriers &amp; notifications</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Tout ce qui part du cockpit : la machine d’envoi, les modèles de messages, et le journal de ce qui est parti.</div></div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
