@@ -243,3 +243,5 @@ deploy 1788465584 info-bulles glyphes (2)
 2026-09-03 20:24:59
 deploy 1788467158 onglet top 5 par province
 deploy 1788467356 top 5 : ex aequo par CA
+deploy 1788467738 menages des communes du rayon
+deploy 1788468164 calage sur le reseau

@@ -33,6 +33,7 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 | `products` | `GET /products/scoring?periode=AAAA-MM` | Scoring produits |
 | — | `GET /scouting` | Scouting commercial : saisies, hypothèses, état du connecteur Google, inventaire du cache OSM |
 | — | `GET /scouting/tiles/{secteur}` | Scouting commercial : un secteur du cache OpenStreetMap |
+| — | `GET /scouting/reseau` | Scouting commercial : magasins du réseau, position (fiche Google ou pointée) et CA réel des douze derniers mois clos — le calage du modèle |
 
 ### `/meta`
 
@@ -604,6 +605,7 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
 | Scouting — notes Google d'un lot de commerces (≤ 40 ; clé de Paramètres, côté serveur) | `POST /scouting/notes` (`{ "rows": [{ id, name, addr?, commune?, arr?, lat, lng }] }` → `{ rows: [{ id, rating, reviews }], erreur? }` ; 422 sans clé) |
 | Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |
+| Scouting — position d'un magasin du réseau pointée sur la carte | `PUT /scouting/reseau/{id}` (`{ lat, lng }`, Belgique seulement ; prime sur la fiche Google ; ligne `ceo_app_setting.scoutingReseau`) |
 | Scouting — import CSV StatBel | `PUT /scouting/populations` (`{ "populations": { "NIS": population }, "fichier"? }`) |
 
 Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Journal en dépend).

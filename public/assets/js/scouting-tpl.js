@@ -133,6 +133,23 @@ export function renderLeft(c, x){
 
   <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
 
+  <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Calage sur le réseau${info(esc, c.calage.tip)}</div>
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.calage.intro)}</div>
+  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:8px">
+    ${c.calage.rows.map(r => `
+    <div style="padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="font-weight:500">${esc(r.nom)}</span><span style="font-weight:600;color:${r.ecartColor}">${esc(r.ecart)}</span></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:2px"><span>réel ${esc(r.reel)}${r.annualise ? ' · ' + r.mois + ' mois' : ''}</span><span>modèle ${esc(r.modele)}</span></div>
+      ${r.pos ? '' : `<div style="margin-top:5px"><button ${x.A(r.place)} class="btn-secondary" style="padding:3px 8px;font-size:11px">Placer sur la carte</button></div>`}
+    </div>`).join('')}
+    ${c.calage.rows.length ? '' : `<div style="padding:8px 9px;font-size:11px;color:var(--color-text-muted)">${esc(c.calage.vide)}</div>`}
+  </div>
+  ${c.calage.placing ? `<div style="font-size:11px;color:var(--color-primary);font-weight:500;margin-bottom:6px">Clique sur la carte pour placer le magasin.</div>` : ''}
+  ${c.calage.med ? `<button ${x.A(c.calage.caler)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px">${esc(c.calage.bouton)}</button>` : ''}
+  <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(c.calage.note)}</div>
+
+  <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
+
   <div class="t-admin-label" style="margin-bottom:6px">Population</div>
   <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.popCoverage)}</div>
   <label style="display:block;font-size:12px;color:var(--color-text);border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:10px;text-align:center;cursor:pointer">

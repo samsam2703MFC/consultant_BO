@@ -3229,6 +3229,30 @@ function wr_scouting_competitors_put(): array
 }
 
 /**
+ * PUT /scouting/reseau/{id} — la position d'un magasin, pointée sur la carte.
+ * Elle prime sur la fiche Google : c'est le geste pour un magasin sans fiche
+ * raccordée, ou dont la fiche pointe au mauvais endroit.
+ */
+function wr_scouting_reseau_put(string $shopId): array
+{
+    $b = body();
+    $lat = (float) ($b['lat'] ?? 0); $lng = (float) ($b['lng'] ?? 0);
+    if ($lat < 49.4 || $lat > 51.6 || $lng < 2.4 || $lng > 6.5) { http_response_code(400); return ['error' => 'position hors de Belgique']; }
+    $nom = magasinConnu($shopId);
+    if ($nom === null) {
+        try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$shopId]); $nom = $r['name'] ?? null; } catch (PDOException $e) { $nom = null; }
+    }
+    if ($nom === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $pos = setting('scoutingReseau');
+    if (!is_array($pos)) { $pos = []; }
+    $pos[$shopId] = ['lat' => round($lat, 6), 'lng' => round($lng, 6), 'source' => 'saisie', 'le' => date('Y-m-d')];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['scoutingReseau', json_encode($pos, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Scouting', $nom, 'Magasin positionné sur la carte du scouting (' . round($lat, 5) . ', ' . round($lng, 5) . ')');
+    return ['ok' => true, 'id' => $shopId, 'lat' => round($lat, 6), 'lng' => round($lng, 6), 'position' => 'saisie'];
+}
+
+/**
  * POST /scouting/notes — les notes Google d'un lot de commerces (≤ 40).
  *
  * La clé est celle du connecteur Google de Paramètres, la même que pour la

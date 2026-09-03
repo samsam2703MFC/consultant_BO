@@ -140,9 +140,9 @@ const TIP_HYP = {
 };
 const TIP_FICHE = {
   'Score d\'opportunité': 'score = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, borné de 0 à 100.\n14 000 ménages dans le rayon valent les 60 points de potentiel ; l\'emprise — donc la concurrence — vaut les 40 points restants.',
-  'Ménages dans le rayon': 'Le disque du rayon est découpé en 26 × 26 cases ; chaque case prend la densité de ménages de la commune la plus proche (à moins de 1,9 × son rayon habité). Ménages = Σ densité × surface de case.',
+  'Ménages dans le rayon': 'Ménages des communes comprises dans le rayon : chaque commune compte pour la part de son territoire (un disque autour de son centre, rayon estimé sur l\'écart aux communes voisines) qui tombe dans le rayon. Une commune ne compte jamais plus que ses propres ménages.',
   'Population communale': 'Population de la commune la plus proche du point : relation OSM, ou CSV StatBel importé. « Estimée » = déduite de la densité médiane des communes voisines.',
-  'dont zone primaire': 'Ménages des cases à moins de 55 % du rayon : la clientèle la plus proche, celle qui vient sans détour.',
+  'dont zone primaire': 'Même calcul sur un rayon réduit à 55 % : la clientèle la plus proche, celle qui vient sans détour.',
   'Marché boulangerie': 'Marché = ménages du rayon × dépense boulangerie par ménage (hypothèse).',
   'Dépense / ménage': 'Hypothèse du modèle : dépense annuelle d\'un ménage en boulangerie-pâtisserie.',
   'Boulangeries dans le rayon': 'Concurrents de la sélection à moins de « rayon » km du point. « Fortes » : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
@@ -155,7 +155,7 @@ const TIP_FICHE = {
 };
 const TIP_ZONES = {
   score: TIP_FICHE['Score d\'opportunité'],
-  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × 3,1416 × rayon² (aire du disque).',
+  hh: 'Ménages des communes comprises dans le rayon autour du point balayé : chaque commune compte pour la part de son territoire qui tombe dans le rayon, jamais plus que ses propres ménages — le même calcul que la fiche.',
   n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
   emprise: 'emprise = emprise max ÷ (1 + sensibilité × pression), entre 4 % et l\'emprise max — ou l\'emprise imposée. Pression = Σ force × (1 − 0,6 × distance ÷ rayon).',
   ca: 'CA annuel TTC = ménages × dépense par ménage × emprise ÷ (1 − passage).',
@@ -184,6 +184,14 @@ const dist = (a, b, c, d) => {
   const R = 6371, p = Math.PI / 180;
   const x = (c - a) * p, y = (d - b) * p * Math.cos((a + c) / 2 * p);
   return Math.sqrt(x * x + y * y) * R;
+};
+// Aire commune à deux disques de rayons r1 et r2 dont les centres sont à d km.
+const lens = (r1, r2, d) => {
+  if (d >= r1 + r2) return 0;
+  if (d <= Math.abs(r1 - r2)){ const r = Math.min(r1, r2); return Math.PI * r * r; }
+  const a = r1 * r1, b = r2 * r2;
+  return a * Math.acos((d * d + a - b) / (2 * d * r1)) + b * Math.acos((d * d + b - a) / (2 * d * r2))
+    - 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
 };
 const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const medOf = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -275,7 +283,7 @@ export class Scouting {
       hhSize: HH_SIZE, compK: 0.22, empriseMax: 30, minScore: 55,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
       view: 'map', sortKey: 'score', sortDir: -1, q: '', stop: false, reseau: false, notes: {},
-      gconf: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
+      gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
     };
     this._h = [];
     this._scroll = {};
@@ -461,6 +469,9 @@ export class Scouting {
     let d = null;
     try { d = await apiGet('/scouting', 8000); } catch (e) { console.warn('[scouting] /scouting injoignable :', e.message); }
     this._pulled = true;
+    // Les magasins du réseau (position, CA réel) arrivent à part : la fiche
+    // Google peut prendre quelques secondes la première fois.
+    apiGet('/scouting/reseau', 30000).then(r => { this.setState({ magasins: (r && r.magasins) || [] }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
     if (!d) return;
     this._serverTiles = {};
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
@@ -512,7 +523,7 @@ export class Scouting {
     this.gExcl = L.layerGroup().addTo(map);
     this.gRoads = L.layerGroup();
     this.gSel = L.layerGroup().addTo(map);
-    map.on('click', e => this.evaluate(e.latlng.lat, e.latlng.lng));
+    map.on('click', e => { if (this.state.placing) this.placeStore(e.latlng.lat, e.latlng.lng); else this.evaluate(e.latlng.lat, e.latlng.lng); });
     map.on('zoomend moveend', () => { if (this.state.communes.length) this.scheduleRedraw(120); });
     this.scheduleRedraw(50);
   }
@@ -834,6 +845,10 @@ export class Scouting {
     if (cs.length){
       const stepKm = Math.max(R * 0.9, 1.2);
       const mid = (b.getNorth() + b.getSouth()) / 2;
+      // toutes les communes à portée du rayon, sélectionnées ou non : les
+      // ménages ne disparaissent pas quand on décoche une province
+      const pLat = (R + 12) / 111, pLng = (R + 12) / (111 * Math.cos(mid * Math.PI / 180));
+      const toutes = s.communes.filter(c => c.lat >= b.getSouth() - pLat && c.lat <= b.getNorth() + pLat && c.lng >= b.getWest() - pLng && c.lng <= b.getEast() + pLng);
       let dLat = stepKm / 111, dLng = stepKm / (111 * Math.cos(mid * Math.PI / 180));
       // vue large : la maille s'élargit pour couvrir toute la vue dans le
       // budget de 2 600 points (sinon le balayage s'arrêtait au sud de la vue)
@@ -851,7 +866,7 @@ export class Scouting {
           const near = shops.filter(x => dist(lat, lng, x.lat, x.lng) <= R);
           let load = 0;
           near.forEach(x => { load += this.strength(x) * (1 - dist(lat, lng, x.lat, x.lng) / R * 0.6); });
-          const hh = com.dens * Math.PI * R * R;
+          const hh = this.householdsIn(lat, lng, R, toutes);
           const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
           const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
           const ca = hh * s.spend * emprise / (1 - s.passage / 100);
@@ -897,6 +912,8 @@ export class Scouting {
       const S = s0 - pad * kLat, N = n0 + pad * kLat, W = w0 - pad * kLng, E = e0 + pad * kLng;
       const inBox = o => o.lat >= S && o.lat <= N && o.lng >= W && o.lng <= E;
       const voisines = cs.filter(inBox);           // le point le plus proche peut être une commune d'à côté
+      const pL = (R + 12) * kLat, pG = (R + 12) * kLng;
+      const toutes = s.communes.filter(c => c.lat >= s0 - pL && c.lat <= n0 + pL && c.lng >= w0 - pG && c.lng <= e0 + pG);   // ménages : toutes les communes à portée
       const shops = shopsAll.filter(inBox);
       const bLat = Math.max(R, 0.5) * kLat, bLng = Math.max(R, 0.5) * kLng, bucket = {};
       shops.forEach(x => { const k = Math.floor(x.lat / bLat) + ',' + Math.floor(x.lng / bLng); (bucket[k] || (bucket[k] = [])).push(x); });
@@ -924,7 +941,7 @@ export class Scouting {
           if (near.some(o => this.isStrong(o.x))) continue;                        // zone rouge
           let load = 0;
           near.forEach(o => { load += this.strength(o.x) * (1 - o.d / R * 0.6); });
-          const hh = com.dens * Math.PI * R * R;
+          const hh = this.householdsIn(lat, lng, R, toutes);
           const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
           const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
           const ca = hh * s.spend * emprise / (1 - s.passage / 100);
@@ -1055,24 +1072,23 @@ export class Scouting {
     return s.communes.filter(c => s.prov[c.prov] && (s.arr === 'all' || c.arr === s.arr) && c.hh >= s.minHh);
   }
 
-  households(lat, lng, R){
-    const cs = this.state.communes.filter(c => dist(lat, lng, c.lat, c.lng) < R + 14);
-    if (!cs.length) return { hh: 0, prim: 0 };
-    const N = 26, step = R * 2 / N, cell = step * step;
-    let hh = 0, prim = 0;
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++){
-      const dx = -R + step * (i + .5), dy = -R + step * (j + .5);
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d > R) continue;
-      const plat = lat + dy / 111, plng = lng + dx / (111 * Math.cos(lat * Math.PI / 180));
-      let hit = null, bd = 1e9;
-      cs.forEach(c => { const dd = dist(plat, plng, c.lat, c.lng); if (dd < bd){ bd = dd; hit = c; } });
-      if (!hit || bd > (hit.rKm || 3) * 1.9) continue;
-      const v = hit.dens * cell;
-      hh += v;
-      if (d <= R * 0.55) prim += v;
+  // Ménages dans le rayon : chaque commune compte pour la part de son
+  // territoire — un disque de rayon rKm autour de son centre — comprise dans
+  // le rayon. Une commune ne compte donc jamais plus que ses propres ménages,
+  // et un rayon large additionne les communes qu'il couvre, au lieu d'étendre
+  // la densité de la plus proche à tout le disque (ce qui donnait 210 000
+  // ménages au port d'Anvers). Le même calcul sert à la fiche, à ceo_zones et
+  // au Top 5 : leurs chiffres concordent.
+  householdsIn(lat, lng, R, communes){
+    const cs = communes || this.state.communes;
+    let hh = 0;
+    for (let i = 0; i < cs.length; i++){
+      const c = cs[i], rc = c.rKm || 3;
+      const d = dist(lat, lng, c.lat, c.lng);
+      if (d >= R + rc || !c.hh) continue;
+      hh += c.hh * lens(R, rc, d) / (Math.PI * rc * rc);
     }
-    return { hh: hh, prim: prim };
+    return hh;
   }
 
   evaluate(lat, lng){
@@ -1081,7 +1097,7 @@ export class Scouting {
     const R = s.radius;
     const near = this.shops().map(b => ({ b: b, d: dist(lat, lng, b.lat, b.lng) })).filter(o => o.d <= R).sort((a, b) => a.d - b.d);
     const blocked = near.filter(o => this.isStrong(o.b));
-    const { hh, prim } = this.households(lat, lng, R);
+    const hh = this.householdsIn(lat, lng, R), prim = this.householdsIn(lat, lng, R * 0.55);
     let load = 0;
     near.forEach(o => { load += this.strength(o.b) * (1 - o.d / R * 0.6) * (this.isStrong(o.b) ? 1.5 : 1); });
     const eMax = (s.empriseMax || 30) / 100;
@@ -1109,6 +1125,57 @@ export class Scouting {
     this.setState(patch);
     const x = this.state.sel;
     if (x) this.evaluate(x.lat, x.lng);
+  }
+
+  /* ---------- calage sur le réseau ---------- */
+  // Le CA que le modèle prédit à l'emplacement d'un magasin du réseau, avec les
+  // hypothèses courantes et TOUS les commerces connus — la sélection de
+  // provinces n'a rien à y faire. Le magasin lui-même, présent dans OSM, n'est
+  // pas son propre concurrent : rien à moins de 80 m.
+  evalStore(st){
+    const s = this.state, R = s.radius;
+    if (st.lat == null || st.lng == null || !s.communes.length) return null;
+    const near = s.bakeries.map(b => ({ b: b, d: dist(st.lat, st.lng, b.lat, b.lng) })).filter(o => o.d <= R && o.d > 0.08);
+    const hh = this.householdsIn(st.lat, st.lng, R);
+    let load = 0;
+    near.forEach(o => { load += this.strength(o.b) * (1 - o.d / R * 0.6) * (this.isStrong(o.b) ? 1.5 : 1); });
+    const eMax = (s.empriseMax || 30) / 100;
+    const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
+    const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
+    return { hh: hh, n: near.length, emprise: emprise, ca: hh * s.spend * emprise / (1 - s.passage / 100) };
+  }
+
+  // Réel ÷ modèle pour chaque magasin ouvert et positionné, et la médiane des
+  // rapports : c'est elle qui cale la dépense par ménage, à laquelle le CA du
+  // modèle est proportionnel. La médiane, pour qu'un magasin hors norme ne
+  // tire pas tout le réseau.
+  calage(){
+    const rows = (this.state.magasins || []).filter(m => m.ouvert).map(m => {
+      const ev = this.evalStore(m);
+      const ratio = ev && ev.ca > 0 && m.caAnnuel ? m.caAnnuel / ev.ca : null;
+      return { m: m, ev: ev, ratio: ratio };
+    });
+    const rs = rows.map(r => r.ratio).filter(r => r != null).sort((a, b) => a - b);
+    const med = rs.length ? (rs.length % 2 ? rs[(rs.length - 1) / 2] : (rs[rs.length / 2 - 1] + rs[rs.length / 2]) / 2) : null;
+    return { rows: rows, med: med, n: rs.length };
+  }
+
+  caler(){
+    const c = this.calage();
+    if (!c.med) return;
+    const spend = Math.max(50, Math.round(this.state.spend * c.med));
+    this.setParam({ spend: spend });
+    this.notify('Dépense par ménage calée à ' + spend + ' €/an — réel = modèle × ' + c.med.toFixed(2).replace('.', ',') + ' sur ' + c.n + ' magasin(s)');
+  }
+
+  placeStore(lat, lng){
+    const id = this.state.placing;
+    const m = (this.state.magasins || []).find(x => x.id === id);
+    if (!m){ this.setState({ placing: null }); return; }
+    const upd = this.state.magasins.map(x => x.id === id ? Object.assign({}, x, { lat: lat, lng: lng, position: 'saisie' }) : x);
+    this.setState({ placing: null, magasins: upd });
+    if (this.useApi()) apiWrite('PUT', '/scouting/reseau/' + id, { lat: lat, lng: lng });
+    this.notify(m.nom + ' placé sur la carte');
   }
 
   /* ---------- Google Places (via le serveur) ---------- */
@@ -1501,6 +1568,23 @@ export class Scouting {
       popCoverage: fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
       importPops: e => self.importPops(e),
       tips: TIP_REGL, concTips: TIP_CONC,
+      calage: (() => {
+        const c = self.calage();
+        const rows = c.rows.map(r => ({
+          id: r.m.id, nom: String(r.m.nom || '').replace(/^L['’]?\s*Atelier by\s*-?\s*/i, '').replace(/^Atelier by\s*-?\s*/i, '') || r.m.nom,
+          pos: r.m.position, mois: r.m.mois, annualise: r.m.annualise,
+          reel: r.m.caAnnuel ? fmtEur(r.m.caAnnuel) : 'CA réel inconnu', modele: r.ev ? fmtEur(r.ev.ca) : (r.m.lat == null ? 'position inconnue' : '—'),
+          ecart: r.ratio ? (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : '—',
+          ecartColor: r.ratio ? (Math.abs(r.ratio - 1) <= 0.25 ? '#1b5e20' : '#c17a2a') : 'var(--color-text-muted)',
+          place: () => { self.setState({ placing: r.m.id, view: 'map', reseau: false, compare: false }); self.notify('Clique sur la carte à l\'emplacement de ' + r.m.nom); }
+        }));
+        return { rows: rows, med: c.med, n: c.n, placing: !!s.placing, caler: () => self.caler(),
+          intro: 'CA réel des magasins ouverts (P&L du panel, douze derniers mois clos) face au CA que le modèle prédit à leur emplacement, hypothèses courantes. L\'écart lit le réel par rapport au modèle : +30 % = le magasin fait 30 % de plus que prévu.',
+          bouton: c.med ? 'Caler la dépense/ménage (× ' + c.med.toFixed(2).replace('.', ',') + ')' : '',
+          note: c.med ? 'Le calage multiplie la dépense par ménage par le rapport médian réel ÷ modèle : le modèle retrouve le réseau, et les écarts qui restent disent ce que l\'emplacement n\'explique pas.' : 'Il faut au moins un magasin ouvert, positionné et avec un CA réel pour caler.',
+          vide: s.magasins && s.magasins.length ? 'Aucun magasin ouvert positionné.' : (self.useApi() ? 'Magasins du réseau en cours de lecture…' : 'Hors ligne : magasins du réseau indisponibles.'),
+          tip: 'Pour chaque magasin ouvert : CA réel = somme des douze derniers mois clos du P&L (annualisé s\'il y en a moins) ; CA modèle = ménages du rayon × dépense × emprise ÷ (1 − passage) à son emplacement, tous les commerces OSM comptés sauf lui-même.\nCalage : dépense ← dépense × médiane(réel ÷ modèle).' };
+      })(),
       gOk: !self.googleBlocage(),
       gLabel: !self.useApi() ? 'Hors ligne — les notes Google passent par l\'API du cockpit.'
         : self.googleOk() ? 'Connecteur Google actif · clé ' + ((s.gconf && s.gconf.empreinte) || '…') + ' (Paramètres).'
