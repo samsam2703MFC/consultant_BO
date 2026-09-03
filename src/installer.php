@@ -46,6 +46,7 @@ function ensureInstalled(): void
     ensurePlanogramme();
     ensureReputation();
     ensureReglageLarge();
+    ensureRevue();
     connecteurTable();
     ensureScouting();
 }
@@ -95,6 +96,22 @@ function ensureScouting(): void
         . 'ins CHAR(5) PRIMARY KEY,'
         . 'population INT UNSIGNED NOT NULL,'
         . 'imported_at DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * La revue franchiseur d'une référence : une note de 1 à 5, posée à la main
+ * sur l'écran Scoring, qui pèse dans le score à côté des critères mesurés.
+ * Une ligne par référence — la dernière note remplace la précédente, et on
+ * garde qui l'a posée et quand.
+ */
+function ensureRevue(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_revue ('
+        . 'id_produit VARCHAR(24) PRIMARY KEY,'
+        . 'note TINYINT NOT NULL,'
+        . 'auteur VARCHAR(80) NULL,'
+        . 'maj DATETIME NOT NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
@@ -812,8 +829,11 @@ function scoringDefaut(): array
         //   marge     — marge NETTE : prix de vente moins matière et main d'œuvre
         //   perte     — pénalise les produits jetés en fin de journée
         //   comptoir  — rôle d'image du produit, présence au comptoir
-        'poids'  => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10],
-        'seuils' => ['moteur' => 68, 'conforter' => 46],
+        //   revue     — la note du franchiseur, 1 à 5 étoiles, posée à la main
+        'poids'  => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10, 'revue' => 25],
+        // moteur/conforter : le verdict historique de l'écran. garder/modifier :
+        // la décision d'arbitrage (garder au-dessus, effacer en dessous).
+        'seuils' => ['moteur' => 68, 'conforter' => 46, 'garder' => 70, 'modifier' => 50],
         // Échelle ABSOLUE du taux de marge brute → note sur 100, définie par
         // deux bornes et linéaire entre elles (plafonnée aux extrémités).
         // Auparavant la note était relative à la gamme : la meilleure marge

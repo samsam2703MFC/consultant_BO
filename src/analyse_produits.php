@@ -313,3 +313,145 @@ function ep_prix_transfert(): array
         'top' => array_slice($lignes, 0, 25),
     ];
 }
+
+/* ---------------------------------------------------------------------------
+ * La revue franchiseur et l'arbitrage de gamme.
+ * ------------------------------------------------------------------------- */
+
+/** Les revues posées, par identifiant de référence. */
+function revuesProduits(): array
+{
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT id_produit, note, auteur, maj FROM ceo_prod_revue') as $r) {
+            $out[(string) $r['id_produit']] = ['note' => (int) $r['note'], 'auteur' => $r['auteur'], 'maj' => $r['maj']];
+        }
+    } catch (PDOException $e) { /* table absente : aucune revue */ }
+    return $out;
+}
+
+/** GET /products/scoring — les références scorées, chacune avec sa revue. */
+function ep_products_revue(): array
+{
+    $liste = ep_products();
+    $rev = revuesProduits();
+    foreach ($liste as $i => $p) {
+        $r = $rev[(string) ($p['id'] ?? '')] ?? null;
+        $liste[$i]['revue'] = $r['note'] ?? null;
+        $liste[$i]['revuePar'] = $r['auteur'] ?? null;
+        $liste[$i]['revueLe'] = isset($r['maj']) ? substr((string) $r['maj'], 0, 16) : null;
+    }
+    return $liste;
+}
+
+/**
+ * PUT /products/{id}/revue {note} — poser (1 à 5) ou retirer (null) la revue
+ * d'une référence. Elle pèse dans le score dès le prochain calcul.
+ */
+function wr_prod_revue(string $id): array
+{
+    $b = body();
+    $id = mb_substr(trim($id), 0, 24);
+    if ($id === '') { http_response_code(422); return ['error' => 'référence manquante']; }
+    $note = $b['note'] ?? null;
+    if ($note === null || $note === '' || (int) $note === 0) {
+        Db::exec('DELETE FROM ceo_prod_revue WHERE id_produit = ?', [$id]);
+        return ['ok' => true, 'id' => $id, 'note' => null];
+    }
+    $note = (int) $note;
+    if ($note < 1 || $note > 5) { http_response_code(422); return ['error' => 'la revue va de 1 à 5']; }
+    $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 80) ?: null;
+    Db::exec('INSERT INTO ceo_prod_revue (id_produit, note, auteur, maj) VALUES (?,?,?,?)
+              ON DUPLICATE KEY UPDATE note = VALUES(note), auteur = VALUES(auteur), maj = VALUES(maj)',
+        [$id, $note, $auteur, date('Y-m-d H:i:s')]);
+    return ['ok' => true, 'id' => $id, 'note' => $note];
+}
+
+/**
+ * POST /products/arbitrage.pdf — le PDF « garder / modifier / effacer ».
+ *
+ * L'écran envoie SES lignes, score compris : le score est calculé une seule
+ * fois, côté écran, et le papier ne peut pas dire autre chose que lui. Le
+ * serveur ne fait que ranger en trois listes selon les seuils reçus et
+ * mettre en page.
+ */
+function wr_prod_arbitrage_pdf(): array
+{
+    $b = body();
+    $garder = (float) ($b['seuils']['garder'] ?? 70);
+    $modifier = (float) ($b['seuils']['modifier'] ?? 50);
+    $lignes = is_array($b['lignes'] ?? null) ? $b['lignes'] : [];
+    $lib = mb_substr(trim((string) ($b['periode'] ?? '')), 0, 60) ?: strftime_fr(time(), 'M Y');
+    $pond = mb_substr(trim((string) ($b['ponderation'] ?? '')), 0, 160);
+    $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $listes = ['garder' => [], 'modifier' => [], 'effacer' => []];
+    foreach ($lignes as $l) {
+        if (!is_array($l)) { continue; }
+        $s = (float) ($l['score'] ?? 0);
+        $cle = $s > $garder ? 'garder' : ($s >= $modifier ? 'modifier' : 'effacer');
+        $listes[$cle][] = $l;
+    }
+    foreach ($listes as $k => $l) { usort($listes[$k], fn ($a, $b2) => (float) ($b2['score'] ?? 0) <=> (float) ($a['score'] ?? 0)); }
+    $etoiles = function ($n) {
+        $n = (int) $n;
+        if ($n <= 0) { return '<span style="color:#b8b2a8;letter-spacing:1px">&#9734;&#9734;&#9734;&#9734;&#9734;</span>'; }
+        return '<span style="color:#C9A227;letter-spacing:1px">' . str_repeat('&#9733;', min(5, $n)) . '</span>'
+            . '<span style="color:#d9d2c6;letter-spacing:1px">' . str_repeat('&#9734;', max(0, 5 - $n)) . '</span>';
+    };
+    $css = '<style>
+      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:10.5pt}
+      table.t{border-collapse:collapse;width:100%;font-size:8.5pt}
+      table.t th{font-size:7pt;text-transform:uppercase;letter-spacing:0.05em;color:#8b8177;text-align:right;padding:1.2mm 1.6mm;border-bottom:0.5pt solid #E5E0D8}
+      table.t td{padding:1.3mm 1.6mm;border-bottom:0.4pt solid #F0EDE7;text-align:right}
+      table.t th.l,table.t td.l{text-align:left}
+      table.t tr{page-break-inside:avoid}
+      .bande{margin-top:5mm;padding:1.8mm 3mm;border-left:4px solid;page-break-after:avoid}
+      .bloc{page-break-inside:avoid}
+    </style>';
+    $logo = rapLogoDataUri();
+    $h = $css . '<div class="doc">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:4mm"><tr>'
+        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
+        . '<td align="right" style="font-size:8.5pt;color:#7a736a;line-height:1.5"><b style="color:#221E1A;font-size:10.5pt">Arbitrage de gamme : réseau</b><br>' . $e($lib) . ' · scoring produits</td></tr></table>'
+        . '<div style="font-family:Georgia,serif;font-size:19pt;margin:1mm 0 0.5mm">La gamme en trois listes</div>'
+        . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . ($pond !== '' ? 'Score : ' . $e($pond) . '. ' : '')
+        . 'Revue : la note franchiseur de 1 à 5 étoiles, posée sur l’écran Scoring, qui pèse dans le score. La case « Validé » se coche en réunion.</div>';
+    $tuile = fn (string $cap, int $n, string $coul, string $crit) => '<td width="33%" style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2.6mm 2mm;text-align:center">'
+        . '<div style="font-size:7.5pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
+        . '<div style="font-family:Georgia,serif;font-size:14pt;color:' . $coul . '">' . $n . '</div>'
+        . '<div style="font-size:7pt;color:#5d564e">' . $e($crit) . '</div></td>';
+    $h .= '<table width="100%" cellpadding="0" cellspacing="4"><tr>'
+        . $tuile('GARDER', count($listes['garder']), '#2d7a3e', 'score > ' . $garder)
+        . $tuile('MODIFIER', count($listes['modifier']), '#b8671a', 'score de ' . $modifier . ' à ' . $garder)
+        . $tuile('EFFACER', count($listes['effacer']), '#C0182B', 'score < ' . $modifier) . '</tr></table>';
+    $sections = [
+        ['garder', 'Garder', '#2d7a3e', '#e6f2e8', 'score > ' . $garder],
+        ['modifier', 'Modifier — prix, recette ou mise en avant', '#b8671a', '#fdf2e5', 'score de ' . $modifier . ' à ' . $garder],
+        ['effacer', 'Effacer', '#C0182B', '#fbebed', 'score < ' . $modifier],
+    ];
+    foreach ($sections as [$cle, $titre, $coul, $fond, $crit]) {
+        $l = $listes[$cle];
+        $h .= '<div class="bande" style="background:' . $fond . ';border-color:' . $coul . '"><table width="100%" cellpadding="0" cellspacing="0"><tr>'
+            . '<td style="font-family:Georgia,serif;font-size:14pt;color:' . $coul . '">' . $e($titre) . '</td>'
+            . '<td align="right" style="font-size:9pt;color:#5d564e">' . $e($crit) . ' · <b>' . count($l) . ' référence(s)</b></td></tr></table></div>';
+        if ($l === []) { $h .= '<div style="font-size:9pt;color:#8b8177;margin:1mm 0 0 1mm">Aucune référence.</div>'; continue; }
+        $h .= '<table class="t"><tr><th class="l">Référence</th><th class="l">Catégorie</th><th>Volume</th><th>Marge</th><th>Taux</th><th>Perte</th><th>Score</th><th style="text-align:center">Revue</th><th style="text-align:center">Validé</th></tr>';
+        foreach ($l as $r) {
+            $h .= '<tr><td class="l" style="font-weight:bold">' . $e($r['nom'] ?? '') . '</td><td class="l" style="color:#8b8177">' . $e($r['cat'] ?? '') . '</td>'
+                . '<td>' . $e($r['vol'] ?? '') . '</td><td>' . $e($r['marge'] ?? '') . '</td><td>' . $e($r['taux'] ?? '') . '</td><td>' . $e($r['perte'] ?? '') . '</td>'
+                . '<td style="font-weight:bold;color:' . $coul . '">' . (int) round((float) ($r['score'] ?? 0)) . '</td>'
+                . '<td style="text-align:center;font-size:9pt">' . $etoiles($r['revue'] ?? 0) . '</td>'
+                . '<td style="text-align:center"><span style="display:inline-block;width:3.6mm;height:3.6mm;border:0.6pt solid #8b8177;border-radius:0.8mm"></span></td></tr>';
+        }
+        $h .= '</table>';
+    }
+    $h .= '</div>';
+    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Arbitrage de gamme</title></head><body>' . $h . '</body></html>';
+    $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => 'Arbitrage de gamme ' . $lib,
+        'genere' => date('d/m/Y à H:i'), 'envoye' => '']);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="arbitrage-gamme-' . date('Y-m-d') . '.pdf"');
+    echo $pdf;
+    exit;
+}
