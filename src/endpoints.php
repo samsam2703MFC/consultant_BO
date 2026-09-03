@@ -1683,6 +1683,13 @@ function ep_exploitation_rentabilite(): array
         if ($per === 'semaine') {
             $paths['hmM' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from=' . $mDebut . '&to=' . $auj->format('Y-m-d');
         }
+        // Les jours d'OUVERTURE se détectent sur quatre semaines pleines, pas
+        // sur le mois entamé : au 3 du mois, trois jours de semaine seulement
+        // ont des ventes et le diviseur tombe à 14 — les frais du jour
+        // doublent. Vingt-huit jours voient chaque jour de semaine quatre fois
+        // (la route refuse au-delà de 31).
+        $paths['hmW' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from='
+            . $auj->modify('-27 days')->format('Y-m-d') . '&to=' . $auj->format('Y-m-d');
         $paths['pnl' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj->format('Y-m-d');
         // Le P&L JOUR par jour : matière, main-d'œuvre, charges et résultat déjà
         // répartis par la source. Quand il répond, on ne répartit plus rien.
@@ -1706,8 +1713,11 @@ function ep_exploitation_rentabilite(): array
         // le mois courant, comptés sur tout le mois. C'est le diviseur de la
         // PWA (« mois ÷ jours ouverts »).
         $hmM = $per === 'semaine' ? ($res['hmM' . $id] ?? null) : $hm;
+        // Quatre semaines pleines d'abord ; le mois entamé ne sert qu'en repli
+        // si cette fenêtre n'a pas répondu.
+        $hmW = $res['hmW' . $id] ?? null;
         $wdActifs = [];
-        foreach ((array) ($hmM['days'] ?? []) as $d) {
+        foreach ((array) (($hmW['days'] ?? null) ?: ($hmM['days'] ?? [])) as $d) {
             if (!empty($d['has_data']) && (float) ($d['ca'] ?? 0) > 0) { $wdActifs[(int) $d['weekday']] = true; }
         }
         $joursOuverts = 0;
@@ -2141,9 +2151,14 @@ function ep_exploitation_jour(): array
 
         // Jours d'ouverture du mois : les jours de semaine vus actifs, comptés
         // sur le mois entier. Même diviseur que l'écran rentabilité.
+        // Les jours actifs se cherchent sur TOUTE la fenêtre lue (six semaines),
+        // pas sur le seul mois en cours : au 3 du mois, trois jours de semaine
+        // seulement avaient des ventes, le diviseur tombait à 14 et les frais
+        // généraux du jour doublaient (762 € au lieu de ~355 € pour 10 663 €
+        // mensuels chez un magasin ouvert 7 jours sur 7).
         $wdActifs = [];
         foreach ($parJour as $j => $d) {
-            if ($d['ouvert'] && str_starts_with($j, $moisAff)) { $wdActifs[$d['weekday']] = true; }
+            if ($d['ouvert']) { $wdActifs[$d['weekday']] = true; }
         }
         $joursOuverts = 0;
         for ($i = 0; $i < $joursMois; $i++) {
