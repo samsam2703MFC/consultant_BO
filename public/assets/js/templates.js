@@ -2307,11 +2307,16 @@ function tplProduits(c, x){
               <td style="padding:11px 8px;text-align:center;white-space:nowrap;font-size:15px;letter-spacing:1px" title="${esc(r.revueTitre)}">
                 ${r.etoiles.map(s => `<button ${x.A(s.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;line-height:1;color:${s.pleine ? '#C9A227' : 'var(--color-border-secondary)'}">${s.pleine ? '★' : '☆'}</button>`).join('')}
               </td>
-              <td style="padding:11px 12px;text-align:center;white-space:nowrap">
-                <span style="display:inline-block;background:${r.dcFond};color:${r.dcCol};border:1px solid ${r.dcBord};border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600">${esc(r.decision)}</span>
+              <!-- « Nécessaire » : cochée, la référence se garde quoi qu'en
+                   disent la marge et le score. -->
+              <td style="padding:11px 10px;text-align:center;white-space:nowrap">
+                <button ${x.A(r.basculerNecessaire)} title="${r.necessaire ? 'Nécessaire — cliquer pour décocher' : 'Cocher : à garder quoi qu’en disent la marge et le score'}" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${r.necessaire ? '#2d7a3e' : 'var(--color-border-secondary)'};background:${r.necessaire ? '#2d7a3e' : 'var(--color-surface)'};color:#fff;font-size:12px;line-height:15px;padding:0;cursor:pointer;vertical-align:middle">${r.necessaire ? '✓' : ''}</button>
+              </td>
+              <td style="padding:11px 12px;text-align:center;white-space:nowrap" title="${esc(r.dcTitre)}">
+                <span style="display:inline-block;background:${r.dcFond};color:${r.dcCol};border:${r.dcNec ? '1.5px' : '1px'} solid ${r.dcBord};border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600">${esc(r.decision)}${r.dcNec ? ' ✓' : ''}</span>
               </td>
             </tr>`).join('')}
-          ${c.pdRows.length ? '' : `<tr><td colspan="13" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
+          ${c.pdRows.length ? '' : `<tr><td colspan="14" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
         </tbody>
       </table>
       </div>

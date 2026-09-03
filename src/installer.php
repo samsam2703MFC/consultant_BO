@@ -109,10 +109,19 @@ function ensureRevue(): void
 {
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_revue ('
         . 'id_produit VARCHAR(24) PRIMARY KEY,'
-        . 'note TINYINT NOT NULL,'
+        . 'note TINYINT NULL,'                      // 1..5, NULL = pas de revue
+        . 'necessaire TINYINT NOT NULL DEFAULT 0,'  // à garder quoi qu'en dise le score
         . 'auteur VARCHAR(80) NULL,'
         . 'maj DATETIME NOT NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // « Nécessaire » est arrivé après la revue : une base qui a déjà la table
+    // sans la colonne la reçoit ici, et la note devient facultative — une
+    // référence peut être nécessaire sans avoir été notée.
+    $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_prod_revue' AND column_name = 'necessaire'");
+    if ((int) ($r['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_prod_revue MODIFY COLUMN note TINYINT NULL, ADD COLUMN necessaire TINYINT NOT NULL DEFAULT 0');
+    }
 }
 
 /**

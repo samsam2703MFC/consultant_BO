@@ -323,8 +323,9 @@ function revuesProduits(): array
 {
     $out = [];
     try {
-        foreach (Db::rows('SELECT id_produit, note, auteur, maj FROM ceo_prod_revue') as $r) {
-            $out[(string) $r['id_produit']] = ['note' => (int) $r['note'], 'auteur' => $r['auteur'], 'maj' => $r['maj']];
+        foreach (Db::rows('SELECT id_produit, note, necessaire, auteur, maj FROM ceo_prod_revue') as $r) {
+            $out[(string) $r['id_produit']] = ['note' => $r['note'] !== null ? (int) $r['note'] : null,
+                'necessaire' => (int) ($r['necessaire'] ?? 0) === 1, 'auteur' => $r['auteur'], 'maj' => $r['maj']];
         }
     } catch (PDOException $e) { /* table absente : aucune revue */ }
     return $out;
@@ -338,6 +339,7 @@ function ep_products_revue(): array
     foreach ($liste as $i => $p) {
         $r = $rev[(string) ($p['id'] ?? '')] ?? null;
         $liste[$i]['revue'] = $r['note'] ?? null;
+        $liste[$i]['necessaire'] = (bool) ($r['necessaire'] ?? false);
         $liste[$i]['revuePar'] = $r['auteur'] ?? null;
         $liste[$i]['revueLe'] = isset($r['maj']) ? substr((string) $r['maj'], 0, 16) : null;
     }
@@ -355,7 +357,10 @@ function wr_prod_revue(string $id): array
     if ($id === '') { http_response_code(422); return ['error' => 'référence manquante']; }
     $note = $b['note'] ?? null;
     if ($note === null || $note === '' || (int) $note === 0) {
-        Db::exec('DELETE FROM ceo_prod_revue WHERE id_produit = ?', [$id]);
+        // Retirer la revue sans toucher au drapeau « nécessaire » : la ligne
+        // ne disparaît que si plus rien ne la justifie.
+        Db::exec('UPDATE ceo_prod_revue SET note = NULL, maj = ? WHERE id_produit = ?', [date('Y-m-d H:i:s'), $id]);
+        Db::exec('DELETE FROM ceo_prod_revue WHERE id_produit = ? AND note IS NULL AND necessaire = 0', [$id]);
         return ['ok' => true, 'id' => $id, 'note' => null];
     }
     $note = (int) $note;
@@ -365,6 +370,25 @@ function wr_prod_revue(string $id): array
               ON DUPLICATE KEY UPDATE note = VALUES(note), auteur = VALUES(auteur), maj = VALUES(maj)',
         [$id, $note, $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'id' => $id, 'note' => $note];
+}
+
+/**
+ * PUT /products/{id}/necessaire {necessaire} — cocher ou décocher « nécessaire » :
+ * une référence à garder quoi qu'en disent la marge et le score (un produit
+ * d'appel, une pièce de gamme, une obligation d'enseigne). La revue posée
+ * reste intacte dans les deux sens.
+ */
+function wr_prod_necessaire(string $id): array
+{
+    $b = body();
+    $id = mb_substr(trim($id), 0, 24);
+    if ($id === '') { http_response_code(422); return ['error' => 'référence manquante']; }
+    $on = filter_var($b['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+    Db::exec('INSERT INTO ceo_prod_revue (id_produit, note, necessaire, auteur, maj) VALUES (?,NULL,?,?,?)
+              ON DUPLICATE KEY UPDATE necessaire = VALUES(necessaire), maj = VALUES(maj)',
+        [$id, $on, mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 80) ?: null, date('Y-m-d H:i:s')]);
+    Db::exec('DELETE FROM ceo_prod_revue WHERE id_produit = ? AND note IS NULL AND necessaire = 0', [$id]);
+    return ['ok' => true, 'id' => $id, 'necessaire' => $on === 1];
 }
 
 /**
@@ -385,10 +409,15 @@ function wr_prod_arbitrage_pdf(): array
     $pond = mb_substr(trim((string) ($b['ponderation'] ?? '')), 0, 160);
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $listes = ['garder' => [], 'modifier' => [], 'effacer' => []];
+    $nNec = 0;
     foreach ($lignes as $l) {
         if (!is_array($l)) { continue; }
         $s = (float) ($l['score'] ?? 0);
-        $cle = $s > $garder ? 'garder' : ($s >= $modifier ? 'modifier' : 'effacer');
+        // « Nécessaire » prime sur le score : la référence part dans « garder »
+        // quoi qu'en dise sa marge, et la ligne le dit.
+        $nec = filter_var($l['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($nec) { $nNec++; }
+        $cle = $nec ? 'garder' : ($s > $garder ? 'garder' : ($s >= $modifier ? 'modifier' : 'effacer'));
         $listes[$cle][] = $l;
     }
     foreach ($listes as $k => $l) { usort($listes[$k], fn ($a, $b2) => (float) ($b2['score'] ?? 0) <=> (float) ($a['score'] ?? 0)); }
@@ -415,7 +444,9 @@ function wr_prod_arbitrage_pdf(): array
         . '<td align="right" style="font-size:8.5pt;color:#7a736a;line-height:1.5"><b style="color:#221E1A;font-size:10.5pt">Arbitrage de gamme : réseau</b><br>' . $e($lib) . ' · scoring produits</td></tr></table>'
         . '<div style="font-family:Georgia,serif;font-size:19pt;margin:1mm 0 0.5mm">La gamme en trois listes</div>'
         . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . ($pond !== '' ? 'Score : ' . $e($pond) . '. ' : '')
-        . 'Revue : la note franchiseur de 1 à 5 étoiles, posée sur l’écran Scoring, qui pèse dans le score. La case « Validé » se coche en réunion.</div>';
+        . 'Revue : la note franchiseur de 1 à 5 étoiles, posée sur l’écran Scoring, qui pèse dans le score.'
+        . ($nNec > 0 ? ' <b>Nécessaire</b> (' . $nNec . ') : gardée quoi qu’en disent la marge et le score.' : '')
+        . ' La case « Validé » se coche en réunion.</div>';
     $tuile = fn (string $cap, int $n, string $coul, string $crit) => '<td width="33%" style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2.6mm 2mm;text-align:center">'
         . '<div style="font-size:7.5pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
         . '<div style="font-family:Georgia,serif;font-size:14pt;color:' . $coul . '">' . $n . '</div>'
@@ -437,7 +468,10 @@ function wr_prod_arbitrage_pdf(): array
         if ($l === []) { $h .= '<div style="font-size:9pt;color:#8b8177;margin:1mm 0 0 1mm">Aucune référence.</div>'; continue; }
         $h .= '<table class="t"><tr><th class="l">Référence</th><th class="l">Catégorie</th><th>Volume</th><th>Marge</th><th>Taux</th><th>Perte</th><th>Score</th><th style="text-align:center">Revue</th><th style="text-align:center">Validé</th></tr>';
         foreach ($l as $r) {
-            $h .= '<tr><td class="l" style="font-weight:bold">' . $e($r['nom'] ?? '') . '</td><td class="l" style="color:#8b8177">' . $e($r['cat'] ?? '') . '</td>'
+            $necL = filter_var($r['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $h .= '<tr><td class="l" style="font-weight:bold">' . $e($r['nom'] ?? '')
+                . ($necL ? ' <span style="font-size:6.5pt;font-weight:normal;color:#2d7a3e;border:0.6pt solid #bfdcc5;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">nécessaire</span>' : '')
+                . '</td><td class="l" style="color:#8b8177">' . $e($r['cat'] ?? '') . '</td>'
                 . '<td>' . $e($r['vol'] ?? '') . '</td><td>' . $e($r['marge'] ?? '') . '</td><td>' . $e($r['taux'] ?? '') . '</td><td>' . $e($r['perte'] ?? '') . '</td>'
                 . '<td style="font-weight:bold;color:' . $coul . '">' . (int) round((float) ($r['score'] ?? 0)) . '</td>'
                 . '<td style="text-align:center;font-size:9pt">' . $etoiles($r['revue'] ?? 0) . '</td>'

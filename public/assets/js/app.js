@@ -2689,6 +2689,17 @@ class App {
         this.setState({});
       });
   }
+  /* « Nécessaire » : la référence se garde quoi qu'en disent la marge et le
+     score. Un clic bascule, l'enregistrement part tout de suite. */
+  pdPoserNecessaire(id, on){
+    return this.api('PUT', '/products/' + encodeURIComponent(String(id)) + '/necessaire', { necessaire: !!on })
+      .then(r => {
+        if (r && r.ok === false) { this.notify(r.error || 'Non enregistré'); return; }
+        const p = (this.D.products || []).find(x => String(x.id) === String(id));
+        if (p) { p.necessaire = !!on; }
+        this.setState({});
+      });
+  }
   pdOpenDetail(id){
     this.setState({ pdDet: { id } });
     if (!this._pdPer) { this._pdPer = {}; }
@@ -9262,6 +9273,7 @@ class App {
         jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
         revue: p.revue != null ? +p.revue : null, revuePar: p.revuePar || '', revueLe: p.revueLe || '',
+        necessaire: !!p.necessaire,
         ca: p.volume * p.prix, mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
     const mps = base.map(p => p.mp).filter(v => v != null);
@@ -9300,9 +9312,12 @@ class App {
       // sous le seuil bas, modifier entre les deux.
       // Décidé sur le score ARRONDI — celui qu'on lit : un 49,6 affiché « 50 »
       // ne peut pas être « à effacer » à l'écran et « à modifier » sur le PDF.
-      decision: s => Math.round(s) > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5']
-        : Math.round(s) >= SC.modifier ? ['Modifier', '#b8671a', '#fdf2e5', '#f0cfa3']
-        : ['Effacer', '#C0182B', '#fbebed', '#efc3c8'],
+      // « Nécessaire » prime : la référence se garde quoi qu'en disent la
+      // marge et le score — le cinquième champ le dit pour l'affichage.
+      decision: (s, nec) => nec ? ['Garder', '#2d7a3e', '#e6f2e8', '#2d7a3e', true]
+        : Math.round(s) > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5', false]
+        : Math.round(s) >= SC.modifier ? ['Modifier', '#b8671a', '#fdf2e5', '#f0cfa3', false]
+        : ['Effacer', '#C0182B', '#fbebed', '#efc3c8', false],
       verdict: s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)']
         : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
         : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'] };
@@ -9421,7 +9436,8 @@ class App {
       ['posC',  'Pos. catégorie', 'right', 1, 'Rang par CA dans la catégorie'],
       ['score', 'Score',          'right', -1],
       ['revue', 'Revue ★',        'center', -1, 'Votre revue franchiseur, 1 à 5 étoiles — un clic pose la note, un second clic sur la même l’enlève. Elle pèse dans le score.'],
-      ['decision', 'Décision',    'center', -1, 'Garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux'],
+      ['necessaire', 'Nécessaire', 'center', -1, 'Cochée : la référence se garde quoi qu’en disent la marge et le score (produit d’appel, pièce de gamme, obligation d’enseigne)'],
+      ['decision', 'Décision',    'center', -1, 'Garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux — « nécessaire » prime'],
     ];
     common.pdCols = colDefs.map(c2 => ({
       label: c2[1], align: c2[2], titre: c2[4] || 'Trier par ' + c2[1].toLowerCase(),
@@ -9447,7 +9463,7 @@ class App {
       achat: p => (p.mu == null ? null : p.prix - p.mu),
       marge: p => p.mu, taux: p => p.mp, perte: p => p.perte,
       posG: p => p.rangGlobal, posC: p => p.rang, score: p => p.score,
-      revue: p => p.revue, decision: p => p.score,
+      revue: p => p.revue, necessaire: p => (p.necessaire ? 1 : 0), decision: p => (p.necessaire ? 1000 : p.score),
     }[sk] || (p => p.score);
     rows.sort((a, b) => {
       const va = valTri(a), vb = valTri(b);
@@ -9468,7 +9484,7 @@ class App {
     // le reste du réglage de scoring (Paramètres), sans écraser la pondération.
     const SCx = this.scoringCfg();
     const dcs = { garder: 0, modifier: 0, effacer: 0 };
-    base.forEach(p => { const s = Math.round(p.score); const k = s > SCx.garder ? 'garder' : (s >= SCx.modifier ? 'modifier' : 'effacer'); dcs[k]++; });
+    base.forEach(p => { const s = Math.round(p.score); const k = p.necessaire ? 'garder' : (s > SCx.garder ? 'garder' : (s >= SCx.modifier ? 'modifier' : 'effacer')); dcs[k]++; });
     common.pdSeuilGarder = String(Math.round(SCx.garder));
     common.pdSeuilModifier = String(Math.round(SCx.modifier));
     common.pdDecisions = 'Garder ' + dcs.garder + ' · Modifier ' + dcs.modifier + ' · Effacer ' + dcs.effacer;
@@ -9491,7 +9507,8 @@ class App {
       const lignes = base.slice().sort((a, b) => b.score - a.score).map(p => ({
         nom: p.nom, cat: p.cat || '', vol: Math.round(p.vol).toLocaleString('fr-BE'),
         marge: p.mu == null ? '' : eur(p.mu), taux: p.mp == null ? '' : Math.round(p.mp * 100) + ' %',
-        perte: p.perte == null ? '' : this.fP(p.perte, 1), score: Math.round(p.score), revue: p.revue || 0 }));
+        perte: p.perte == null ? '' : this.fP(p.perte, 1), score: Math.round(p.score), revue: p.revue || 0,
+        necessaire: !!p.necessaire }));
       const corps = JSON.stringify({ seuils: { garder: SCx.garder, modifier: SCx.modifier }, lignes,
         periode: _c.periode || '', ponderation: _c.pond || '' });
       fetch(this.apiBase() + '/products/arbitrage.pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -9500,7 +9517,7 @@ class App {
         .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
         .catch(err => this.notify('PDF indisponible : ' + err.message));
     };
-    common.pdRows = rows.map(p => { const vd = verdict(p.score); const dc = _c.decision(p.score);
+    common.pdRows = rows.map(p => { const vd = verdict(p.score); const dc = _c.decision(p.score, p.necessaire);
       return { nom: p.nom, cat: p.cat,
         ouvrirDetail: () => this.pdOpenDetail(p.id),
         vol: Math.round(p.vol).toLocaleString('fr-BE'),
@@ -9528,7 +9545,12 @@ class App {
         revue: p.revue, revueTitre: p.revue ? (p.revue + '/5' + (p.revuePar ? ' · ' + p.revuePar : '') + (p.revueLe ? ' · ' + p.revueLe : '')) : 'À noter',
         etoiles: [1, 2, 3, 4, 5].map(n => ({ n, pleine: p.revue != null && n <= p.revue,
           poser: () => this.pdPoserRevue(p.id, p.revue === n ? null : n) })),
-        decision: dc[0], dcCol: dc[1], dcFond: dc[2], dcBord: dc[3] }; });
+        // « Nécessaire » : une case, cochée = gardée quoi qu'en disent la
+        // marge et le score. Enregistrée aussitôt, comme la revue.
+        necessaire: !!p.necessaire,
+        basculerNecessaire: () => this.pdPoserNecessaire(p.id, !p.necessaire),
+        decision: dc[0], dcCol: dc[1], dcFond: dc[2], dcBord: dc[3], dcNec: !!dc[4],
+        dcTitre: dc[4] ? 'Nécessaire : gardée quoi qu’en disent la marge et le score' : 'Décision selon le score et vos seuils' }; });
     // --- détail d'une référence : le score décomposé, et les deux suites
     // possibles — l'envoyer aux projets, ou programmer son arrêt.
     const det = S.pdDet ? base.find(p2 => String(p2.id) === String(S.pdDet.id)) : null;
