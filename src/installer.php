@@ -33,6 +33,55 @@ function ensureInstalled(): void
     }
 
     ensureValidation();
+    ensureScouting();
+}
+
+/**
+ * Tables du scouting commercial, à chaque démarrage — même raison que
+ * ensureValidation() : une installation déjà en service ne rejoue pas
+ * schema.sql. Idempotent (CREATE TABLE IF NOT EXISTS).
+ */
+function ensureScouting(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_tile ('
+        . 'sector TINYINT UNSIGNED PRIMARY KEY,'
+        . 'fetched_at DATETIME NOT NULL,'
+        . 'payload MEDIUMTEXT NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_competitor ('
+        . 'osm_id VARCHAR(20) PRIMARY KEY,'
+        . "name VARCHAR(200) NOT NULL DEFAULT '',"
+        . "commune VARCHAR(120) NOT NULL DEFAULT '',"
+        . "arrondissement VARCHAR(60) NOT NULL DEFAULT '',"
+        . 'rating DECIMAL(2,1) NULL,'
+        . 'reviews INT UNSIGNED NULL,'
+        . "rating_source ENUM('google','manuel') NULL,"
+        . 'comment VARCHAR(200) NULL,'
+        . 'updated_at DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_candidate ('
+        . 'id BIGINT UNSIGNED PRIMARY KEY,'
+        . 'name VARCHAR(200) NOT NULL,'
+        . 'commune VARCHAR(120) NOT NULL,'
+        . 'arrondissement VARCHAR(60) NOT NULL,'
+        . 'province VARCHAR(60) NOT NULL,'
+        . 'lat DECIMAL(9,6) NOT NULL,'
+        . 'lng DECIMAL(9,6) NOT NULL,'
+        . 'households INT UNSIGNED NOT NULL,'
+        . 'market INT UNSIGNED NOT NULL,'
+        . 'emprise DECIMAL(5,4) NOT NULL,'
+        . 'revenue INT UNSIGNED NOT NULL,'
+        . 'score TINYINT UNSIGNED NOT NULL,'
+        . 'shops SMALLINT UNSIGNED NOT NULL,'
+        . 'strong SMALLINT UNSIGNED NOT NULL,'
+        . 'revenue_m2 INT UNSIGNED NOT NULL,'
+        . 'created_at DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_population ('
+        . 'ins CHAR(5) PRIMARY KEY,'
+        . 'population INT UNSIGNED NOT NULL,'
+        . 'imported_at DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
 /**

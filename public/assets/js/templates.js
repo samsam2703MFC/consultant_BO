@@ -37,8 +37,8 @@ export function render(c, x){
   </aside>
 
   <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
-    <div style="padding:26px 32px 60px;max-width:1460px">
-      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px">
+    <div style="${c.isScouting ? 'padding:26px 32px 24px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
+      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
         <div>
           <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">${esc(c.screenTitle)}</h1>
           <p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>
@@ -62,6 +62,7 @@ export function render(c, x){
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
       ${c.isParams ? tplParams(c, x) : ''}
+      ${c.isScouting ? '<div id="scouting-root" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>' : ''}
       ` : `<div style="padding:60px 0;color:var(--color-text-muted);font-size:13px">Chargement des données du réseau…</div>`}
     </div>
   </main>

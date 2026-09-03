@@ -17,3 +17,19 @@ button { font-family: inherit; }
 .hv-bg:hover    { background: var(--color-background-secondary) !important; }
 .hv-apr:hover   { background: var(--pkg-abricot) !important; color: #fff !important; }
 .hv-apr-line:hover { border-color: var(--pkg-abricot) !important; color: var(--pkg-abricot) !important; }
+
+/* --- Scouting commercial (carte Leaflet, vendored dans assets/vendor/leaflet) --- */
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+.sc-pop { font-family: var(--font-ui); font-size: 12px; line-height: 1.5; }
+.sc-pop b { font-weight: 600; }
+.leaflet-popup .leaflet-popup-content-wrapper { border-radius: 8px; }
+.sc-scroll::-webkit-scrollbar { width: 8px; }
+.sc-scroll::-webkit-scrollbar-thumb { background: rgba(34,34,34,.18); border-radius: 9px; }
+.sc-root input[type=range] { accent-color: var(--color-primary); width: 100%; margin: 0; }
+.sc-root select, .sc-root input, .sc-root button { font-family: var(--font-ui); }
+.sc-root .btn-secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.sc-root .btn-primary:hover { opacity: 0.88; }
+.hv-text:hover { color: var(--color-text) !important; }
+/* Un overlay ouvert (tableau, comparaison, modale) masque les contrôles
+   Leaflet : leurs panes internes sont à z-index 1000 et repassaient devant. */
+.sc-root.sc-overlay-open .leaflet-control-container { display: none; }

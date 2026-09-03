@@ -6,6 +6,7 @@
  */
 import { load, write, authStatus, authSubmit, authLogout } from './api.js';
 import { render as tplRender } from './templates.js';
+import { Scouting } from './scouting.js';
 
 function escHtml(v){
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -78,6 +79,12 @@ class App {
     const mainEl = document.getElementById('main-scroll');
     const scrollTop = mainEl ? mainEl.scrollTop : 0;
     this.root.innerHTML = tplRender(common, x);
+    // Le scouting garde sa carte Leaflet entre deux rendus : son élément
+    // racine est créé une fois et simplement ré-attaché ici.
+    if (this.state.ready && this.state.screen === 'scouting'){
+      if (!this.scouting) this.scouting = new Scouting(this);
+      this.scouting.mount(document.getElementById('scouting-root'));
+    }
     const main2 = document.getElementById('main-scroll');
     if (main2) main2.scrollTop = scrollTop;
     if (focusId){
@@ -214,7 +221,7 @@ class App {
         this.setState({ rel: null }); this.notify('Relance envoyée à ' + r.to + ' (' + r.email + ')'); },
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
-    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
+    const titles = { taches: ['Tâches consultants', 'Cochez une tâche rendue, ouvrez la ligne pour la noter de 1 à 5. Sous 4, la validation ouvre un signalement.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — juillet 2026 vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du budget annuel d’un magasin : CA mensuel, engagement panier, étude de marché et répartition des charges.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, taux de marge et position dans la catégorie : un score unique par référence pour arbitrer la gamme.'], scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -357,12 +364,13 @@ class App {
     const navDef = [['Pilotage', [['taches', 'Tâches consultants', lateTasks.length]]],
       ['Performance & marge', [['magasins', 'Tableau des magasins', 0], ['heatmap', 'Heatmap mensuelle', 0], ['objectifs', 'Objectifs de CA', 0], ['budget', 'Suivi budget magasin', 0], ['encodage', 'Encodage du budget', 0], ['marge', 'Marge & coûts', this.margeAlerts().length], ['produits', 'Scoring produits', 0]]],
       ['Projets & contrôle', [['projets', 'Projets', nLate]]],
+      ['Développement', [['scouting', 'Scouting commercial', 0]]],
       ['Administration', [['reporting', 'Reporting', 0], ['journal', 'Journal', 0], ['parametres', 'Paramètres', 0]]]];
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => ({ id: it[0], label: it[1], badge: it[2] || false, go: goTo(it[0]),
       st: 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:8px;' + (S.screen === it[0] ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text)') })) }));
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits'].forEach(k => common[k] = false);
-    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting'].forEach(k => common[k] = false);
+    const key = { budget: 'isBudget', encodage: 'isEncodage', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting' }[S.screen];
     common[key] = true;
 
     // --- magasins
@@ -1056,7 +1064,7 @@ class App {
         relance: () => { this.log('Relance', '—', 'Direct Link plan d’action relancé — ' + s.nom); this.notify('Relance envoyée au franchisé — ' + s.nom); } }; });
     const pById = id => D.people.find(p => p.id === id);
     common.repPeople = D.people.map(p => ({ val: p.id, nom: p.nom + ' — ' + p.role }));
-    const posteDefs = navDef.flatMap(g => g[1]).map((it, i) => ({ id: 'p' + (i + 1), tag: 'P' + (i + 1), sid: it[0], label: it[1] }));
+    const posteDefs = navDef.flatMap(g => g[1]).filter(it => it[0] !== 'scouting').map((it, i) => ({ id: 'p' + (i + 1), tag: 'P' + (i + 1), sid: it[0], label: it[1] }));
     const repUrl = (r, sel, email) => 'https://cockpit.latelierby.be/rapports/rapport.html?id=' + r.id + '&postes=' + sel.join(',') + '&periode={AAAA-MM}&dest=' + (email || '') + '&format=pdf';
     const isOn = r => S.alertOn['rep:' + r.id] != null ? S.alertOn['rep:' + r.id] : r.actif;
     const fFreq = S.repFFreq || 'Toutes les fréquences', fEtat = S.repFEtat || 'tous', fType = S.repFType || 'Tous les types';
