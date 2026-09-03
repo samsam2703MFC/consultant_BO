@@ -9298,8 +9298,10 @@ class App {
       pond: _pond, periode: _per,
       // La décision d'arbitrage : garder au-dessus du seuil haut, effacer
       // sous le seuil bas, modifier entre les deux.
-      decision: s => s > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5']
-        : s >= SC.modifier ? ['Modifier', '#b8671a', '#fdf2e5', '#f0cfa3']
+      // Décidé sur le score ARRONDI — celui qu'on lit : un 49,6 affiché « 50 »
+      // ne peut pas être « à effacer » à l'écran et « à modifier » sur le PDF.
+      decision: s => Math.round(s) > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5']
+        : Math.round(s) >= SC.modifier ? ['Modifier', '#b8671a', '#fdf2e5', '#f0cfa3']
         : ['Effacer', '#C0182B', '#fbebed', '#efc3c8'],
       verdict: s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)']
         : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
@@ -9466,7 +9468,7 @@ class App {
     // le reste du réglage de scoring (Paramètres), sans écraser la pondération.
     const SCx = this.scoringCfg();
     const dcs = { garder: 0, modifier: 0, effacer: 0 };
-    base.forEach(p => { const k = p.score > SCx.garder ? 'garder' : (p.score >= SCx.modifier ? 'modifier' : 'effacer'); dcs[k]++; });
+    base.forEach(p => { const s = Math.round(p.score); const k = s > SCx.garder ? 'garder' : (s >= SCx.modifier ? 'modifier' : 'effacer'); dcs[k]++; });
     common.pdSeuilGarder = String(Math.round(SCx.garder));
     common.pdSeuilModifier = String(Math.round(SCx.modifier));
     common.pdDecisions = 'Garder ' + dcs.garder + ' · Modifier ' + dcs.modifier + ' · Effacer ' + dcs.effacer;
