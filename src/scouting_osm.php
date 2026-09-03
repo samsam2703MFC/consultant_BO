@@ -73,7 +73,9 @@ final class ScoutingOsm
     /** La requête Overpass d'un secteur — identique à celle de l'écran. */
     public static function requete(string $bbox): string
     {
-        return '[out:json][timeout:240];rel(' . $bbox . ')["boundary"="administrative"]["admin_level"="8"];out tags center;'
+        // « bb » : la boîte englobante de chaque commune, dont on tire son emprise ;
+        // son centre est celui que « center » rendait.
+        return '[out:json][timeout:240];rel(' . $bbox . ')["boundary"="administrative"]["admin_level"="8"];out tags bb;'
             . 'node(' . $bbox . ')["place"]["population"];out tags center;'
             . '(nwr["shop"="bakery"](' . $bbox . ');nwr["shop"="pastry"](' . $bbox . '););out center tags;';
     }
@@ -132,13 +134,19 @@ final class ScoutingOsm
             if (($t['boundary'] ?? null) === 'administrative') {
                 $ins = preg_replace('/[^0-9]/', '', self::ou($t, ['ref:INS', 'ref']));
                 $prov = self::INS_PROV[substr($ins, 0, 2)] ?? null;
+                $bb = (array) ($e['bounds'] ?? []);
+                if (!isset($centre['lat']) && isset($bb['minlat'])) {
+                    $centre = ['lat' => ((float) $bb['minlat'] + (float) $bb['maxlat']) / 2, 'lon' => ((float) $bb['minlon'] + (float) $bb['maxlon']) / 2];
+                }
                 if ($prov === null || !isset($centre['lat'])) { continue; }
                 $pop = (int) preg_replace('/[^0-9]/', '', (string) ($t['population'] ?? ''));
-                $tc[] = [
+                $c = [
                     'id' => $e['id'], 'name' => self::ou($t, ['name:fr', 'name'], '—'), 'nl' => self::ou($t, ['name']), 'ins' => $ins,
                     'arr' => self::ARR[(int) substr($ins, 0, 2)] ?? '—', 'prov' => $prov, 'pop' => $pop,
                     'lat' => $centre['lat'], 'lng' => $centre['lon'],
                 ];
+                if (isset($bb['minlat'])) { $c['bb'] = [(float) $bb['minlat'], (float) $bb['minlon'], (float) $bb['maxlat'], (float) $bb['maxlon']]; }
+                $tc[] = $c;
                 continue;
             }
             $lat = $e['lat'] ?? ($centre['lat'] ?? null);

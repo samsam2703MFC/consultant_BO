@@ -140,7 +140,7 @@ const TIP_HYP = {
 };
 const TIP_FICHE = {
   'Score d\'opportunité': 'score = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, borné de 0 à 100.\n14 000 ménages dans le rayon valent les 60 points de potentiel ; l\'emprise — donc la concurrence — vaut les 40 points restants.',
-  'Ménages dans le rayon': 'Ménages des communes comprises dans le rayon : chaque commune compte pour la part de son territoire (un disque autour de son centre, rayon estimé sur l\'écart aux communes voisines) qui tombe dans le rayon. Une commune ne compte jamais plus que ses propres ménages.',
+  'Ménages dans le rayon': 'Ménages des communes comprises dans le rayon : chaque commune compte pour la part de son territoire (un disque autour de son centre, de la surface de sa boîte englobante OpenStreetMap × 0,6) qui tombe dans le rayon. Une commune ne compte jamais plus que ses propres ménages.',
   'Population communale': 'Population de la commune la plus proche du point : relation OSM, ou CSV StatBel importé. « Estimée » = déduite de la densité médiane des communes voisines.',
   'dont zone primaire': 'Même calcul sur un rayon réduit à 55 % : la clientèle la plus proche, celle qui vient sans détour.',
   'Marché boulangerie': 'Marché = ménages du rayon × dépense boulangerie par ménage (hypothèse).',
@@ -561,11 +561,16 @@ export class Scouting {
       if (t.boundary === 'administrative'){
         const ins = (t['ref:INS'] || t.ref || '').replace(/[^0-9]/g, '');
         const prov = INS_PROV[ins.slice(0, 2)];
-        const c = e.center || {};
+        // « bb » : la boîte englobante de la commune — son emprise réelle ; le
+        // centre est celui de la boîte, comme « center » le rendait.
+        const bb = e.bounds || null;
+        const c = e.center || (bb ? { lat: (bb.minlat + bb.maxlat) / 2, lon: (bb.minlon + bb.maxlon) / 2 } : {});
         if (!prov || !c.lat) return;
         const pop = parseInt((t.population || '').replace(/[^0-9]/g, ''), 10);
-        tc.push({ id: e.id, name: t['name:fr'] || t.name || '—', nl: t.name || '', ins: ins,
-          arr: ARR[parseInt(ins.slice(0, 2), 10)] || '—', prov: prov, pop: pop || 0, lat: c.lat, lng: c.lon });
+        const com = { id: e.id, name: t['name:fr'] || t.name || '—', nl: t.name || '', ins: ins,
+          arr: ARR[parseInt(ins.slice(0, 2), 10)] || '—', prov: prov, pop: pop || 0, lat: c.lat, lng: c.lon };
+        if (bb) com.bb = [bb.minlat, bb.minlon, bb.maxlat, bb.maxlon];
+        tc.push(com);
         return;
       }
       if (t.place && t.population){
@@ -634,7 +639,7 @@ export class Scouting {
         this.setState({ busy: true, progress: label + ' — interrogation d\'OpenStreetMap… (' + done + '/' + TILES.length + ' secteurs reçus)' });
         let r;
         try {
-          r = await this.overpass('[out:json][timeout:240];rel(' + bbox + ')["boundary"="administrative"]["admin_level"="8"];out tags center;'
+          r = await this.overpass('[out:json][timeout:240];rel(' + bbox + ')["boundary"="administrative"]["admin_level"="8"];out tags bb;'
             + 'node(' + bbox + ')["place"]["population"];out tags center;'
             + '(nwr["shop"="bakery"](' + bbox + ');nwr["shop"="pastry"](' + bbox + '););out center tags;', label, i);
         } catch (e) { failed.push(label); return; }
@@ -743,15 +748,29 @@ export class Scouting {
 
   // surface utile d'une commune estimée par les voisins les plus proches
   // (pas de polygone récupéré : rayon de Voronoï approché)
+  // Le rayon habité de chaque commune. D'abord son emprise réelle : la boîte
+  // englobante OSM, dont un territoire irrégulier remplit ~60 % — l'écart aux
+  // communes voisines, seul repère avant, donnait 3,7 km à Anvers pour 8 réels
+  // et faisait déborder toute sa population sur le port. Sans boîte (ancien
+  // cache), on retombe sur l'écart aux voisines.
   index(communes){
     const cs = communes || [];
     cs.forEach(c => {
-      const ds = [];
-      cs.forEach(o => { if (o !== c) ds.push(dist(c.lat, c.lng, o.lat, o.lng)); });
-      ds.sort((a, b) => a - b);
-      const near = ds.slice(0, 3);
-      const m = near.length ? near.reduce((a, b) => a + b, 0) / near.length : 7;
-      c.rKm = Math.max(1.3, m * 0.62);
+      let r = null;
+      if (c.bb && c.bb.length === 4){
+        const dLat = (c.bb[2] - c.bb[0]) * 111, dLng = (c.bb[3] - c.bb[1]) * 111 * Math.cos(c.lat * Math.PI / 180);
+        const area = 0.6 * dLat * dLng;
+        if (area > 0.5) r = Math.sqrt(area / Math.PI);
+      }
+      if (r === null){
+        const ds = [];
+        cs.forEach(o => { if (o !== c) ds.push(dist(c.lat, c.lng, o.lat, o.lng)); });
+        ds.sort((a, b) => a - b);
+        const near = ds.slice(0, 3);
+        const m = near.length ? near.reduce((a, b) => a + b, 0) / near.length : 7;
+        r = m * 0.62;
+      }
+      c.rKm = Math.max(1.3, r);
       c.aKm2 = Math.PI * c.rKm * c.rKm;
       c.dens = c.hh / c.aKm2;
     });
