@@ -286,6 +286,39 @@ export function renderOverlays(c, x){
     </div>
   </div>`;
 
+  if (c.isTop5) return `
+  <div id="sc-table" class="sc-scroll" style="${overlayCss}">
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
+      <div class="t-section-title" style="font-size:16px">Top 5 par province</div>
+      <div style="font-size:11px;color:var(--color-text-muted);flex:1">Balayage de chaque province cochée sur toute son emprise · une zone par commune · sans score minimum (score sous ${c.minScore} en orange) · clic sur une ligne pour ouvrir la fiche</div>
+      <button ${x.A(c.exportTop5)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
+    </div>
+    <div class="sc-scroll" style="${boxCss}">
+      <div style="display:grid;grid-template-columns:${ZONES_GRID};${headCss}">
+        ${c.top5Cols.map(k => `<span class="t-admin-label" style="padding:9px 8px;display:inline-flex;align-items:center">${esc(k.label)}${info(esc, k.tip)}</span>`).join('')}
+      </div>
+      ${c.top5.map(g => `
+      <div style="display:flex;align-items:baseline;gap:10px;padding:10px 8px 6px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        <span style="font-size:12.5px;font-weight:600">${esc(g.prov)}</span>
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.detail)}</span>
+      </div>
+      ${g.rows.map(r => `
+      <div ${x.A(r.open)} class="hv-bg" style="display:grid;grid-template-columns:${ZONES_GRID};${lineCss};cursor:pointer">
+        <span style="padding:8px;color:var(--color-text-muted)">${r.rang}</span>
+        <span style="padding:8px;font-weight:500">${esc(r.commune)}</span>
+        <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
+        <span style="padding:8px;font-weight:600;color:${r.score >= c.minScore ? '#1b5e20' : '#c17a2a'}">${r.score}</span>
+        <span style="padding:8px">${esc(r.hh)}</span>
+        <span style="padding:8px">${r.n}</span>
+        <span style="padding:8px">${esc(r.emprise)}</span>
+        <span style="padding:8px;font-weight:500">${esc(r.ca)}</span>
+        <span style="padding:8px;color:var(--color-text-muted)">${esc(r.m2)}</span>
+      </div>`).join('')}
+      ${g.rows.length ? '' : `<div style="padding:10px 12px;font-size:12px;color:var(--color-text-muted)">Aucune zone hors des rayons d'exclusion dans cette province.</div>`}`).join('')}
+      ${c.top5.length ? '' : `<div style="padding:14px 12px;font-size:12px;color:var(--color-text-muted)">${esc(c.top5Empty)}</div>`}
+    </div>
+  </div>`;
+
   if (c.isConc) return `
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">

@@ -606,9 +606,17 @@ class App {
     const p = c.poids || {}, s = c.seuils || {}, mg = c.marge || {};
     const n = (v, d) => { const x = Number(v); return isFinite(x) && x >= 0 ? x : d; };
     return { v: n(p.volume, 40), m: n(p.marge, 30), perte: n(p.perte, 20), comptoir: n(p.comptoir, 10),
+      // La revue franchiseur : cinquième critère, 25 par défaut — la note à
+      // la main pèse un quart du score, à côté de ce qui se mesure.
+      rev: n(p.revue, 25),
       moteur: n(s.moteur, 68), conforter: n(s.conforter, 46),
+      // Les seuils d'arbitrage : garder au-dessus, effacer en dessous,
+      // modifier entre les deux.
+      garder: n(s.garder, 70), modifier: n(s.modifier, 50),
       mBas: n(mg.bas, 20), mBasNote: n(mg.basNote, 20), mHaut: n(mg.haut, 80), mHautNote: n(mg.hautNote, 100) }; }
-  poids(){ const c = this.scoringCfg(); return { v: c.v, m: c.m, perte: c.perte, comptoir: c.comptoir }; }
+  poids(){ const c = this.scoringCfg(); return { v: c.v, m: c.m, perte: c.perte, comptoir: c.comptoir, rev: c.rev }; }
+  /* Revue 1..5 → note sur 100 : 1 étoile vaut 0, 5 étoiles 100, linéaire. */
+  noteRevue(r){ const n = Number(r); return (isFinite(n) && n >= 1 && n <= 5) ? (n - 1) * 25 : null; }
   /* Taux de marge (0..1) → note sur 100, échelle ABSOLUE à deux bornes :
      sous la borne basse on plafonne à sa note, au-dessus de la haute idem,
      linéaire entre les deux. Une note absolue ne bouge pas quand un AUTRE
@@ -2670,6 +2678,28 @@ class App {
    * avant : trois sommes SQL par référence n'ont rien à faire dans le
    * tableau. Mis en cache par référence — rouvrir la même fiche ne relit pas.
    */
+  /* La revue franchiseur d'une référence : 1 à 5, ou null pour l'enlever.
+     Enregistrée tout de suite ; la ligne et son score se recalculent au retour. */
+  pdPoserRevue(id, note){
+    return this.api('PUT', '/products/' + encodeURIComponent(String(id)) + '/revue', { note })
+      .then(r => {
+        if (r && r.ok === false) { this.notify(r.error || 'Revue non enregistrée'); return; }
+        const p = (this.D.products || []).find(x => String(x.id) === String(id));
+        if (p) { p.revue = note == null ? null : +note; p.revuePar = null; p.revueLe = note == null ? null : new Date().toISOString().slice(0, 16).replace('T', ' '); }
+        this.setState({});
+      });
+  }
+  /* « Nécessaire » : la référence se garde quoi qu'en disent la marge et le
+     score. Un clic bascule, l'enregistrement part tout de suite. */
+  pdPoserNecessaire(id, on){
+    return this.api('PUT', '/products/' + encodeURIComponent(String(id)) + '/necessaire', { necessaire: !!on })
+      .then(r => {
+        if (r && r.ok === false) { this.notify(r.error || 'Non enregistré'); return; }
+        const p = (this.D.products || []).find(x => String(x.id) === String(id));
+        if (p) { p.necessaire = !!on; }
+        this.setState({});
+      });
+  }
   pdOpenDetail(id){
     this.setState({ pdDet: { id } });
     if (!this._pdPer) { this._pdPer = {}; }
@@ -9226,9 +9256,9 @@ class App {
   pdCalcule(){
     const D = this.D;
     const W = this.poids();
-    const wtTot = (W.v + W.m + W.perte + W.comptoir) || 1;
+    const wtTot = (W.v + W.m + W.perte + W.comptoir + W.rev) || 1;
     const pc4 = w => Math.round(100 * w / wtTot);
-    const _pond = 'volume ' + pc4(W.v) + ' · marge nette ' + pc4(W.m) + ' · perte ' + pc4(W.perte) + ' · comptoir ' + pc4(W.comptoir);
+    const _pond = 'volume ' + pc4(W.v) + ' · marge nette ' + pc4(W.m) + ' · perte ' + pc4(W.perte) + ' · comptoir ' + pc4(W.comptoir) + ' · revue ' + pc4(W.rev);
     const _per = 'dernier mois de ventes encodé';
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
@@ -9242,6 +9272,8 @@ class App {
         perte: p.tauxPerte != null ? p.tauxPerte : null,
         jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
+        revue: p.revue != null ? +p.revue : null, revuePar: p.revuePar || '', revueLe: p.revueLe || '',
+        necessaire: !!p.necessaire,
         ca: p.volume * p.prix, mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
     const mps = base.map(p => p.mp).filter(v => v != null);
@@ -9264,14 +9296,28 @@ class App {
       // manquante par un zéro, qui pénaliserait à tort chaque produit.
       p.sPerte = p.perte == null ? null : Math.max(0, Math.min(100, 100 - p.perte * 100));
       p.sComptoir = p.comptoir == null ? null : Math.max(0, Math.min(100, p.comptoir));
+      // La revue franchiseur : sans note posée, le critère SORT du calcul
+      // comme les autres — une référence non revue garde son score mesuré.
+      p.sRev = this.noteRevue(p.revue);
       let num = W.v * p.sVol, den = W.v;
       if (p.sMg != null)       { num += W.m * p.sMg; den += W.m; }
       if (p.sPerte != null)    { num += W.perte * p.sPerte; den += W.perte; }
       if (p.sComptoir != null) { num += W.comptoir * p.sComptoir; den += W.comptoir; }
+      if (p.sRev != null)      { num += W.rev * p.sRev; den += W.rev; }
       p.score = den ? num / den : 0; });
     const SC = this.scoringCfg();
     return { base, cats, nbOuv, W, SC,
       pond: _pond, periode: _per,
+      // La décision d'arbitrage : garder au-dessus du seuil haut, effacer
+      // sous le seuil bas, modifier entre les deux.
+      // Décidé sur le score ARRONDI — celui qu'on lit : un 49,6 affiché « 50 »
+      // ne peut pas être « à effacer » à l'écran et « à modifier » sur le PDF.
+      // « Nécessaire » prime : la référence se garde quoi qu'en disent la
+      // marge et le score — le cinquième champ le dit pour l'affichage.
+      decision: (s, nec) => nec ? ['Garder', '#2d7a3e', '#e6f2e8', '#2d7a3e', true]
+        : Math.round(s) > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5', false]
+        : Math.round(s) >= SC.modifier ? ['Modifier', '#b8671a', '#fdf2e5', '#f0cfa3', false]
+        : ['Effacer', '#C0182B', '#fbebed', '#efc3c8', false],
       verdict: s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)']
         : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
         : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'] };
@@ -9325,7 +9371,7 @@ class App {
     // Le critère le PLUS FAIBLE, parmi ceux qui sont réellement mesurés. Un
     // critère absent ne peut pas être le point faible : il n'entre pas au score.
     const faible = p => {
-      const c = [['volume', p.sVol], ['marge nette', p.sMg], ['perte', p.sPerte], ['comptoir', p.sComptoir]]
+      const c = [['volume', p.sVol], ['marge nette', p.sMg], ['perte', p.sPerte], ['comptoir', p.sComptoir], ['revue', p.sRev]]
         .filter(x => x[1] != null);
       if (!c.length) { return ''; }
       c.sort((a, b) => a[1] - b[1]);
@@ -9389,6 +9435,9 @@ class App {
       ['posG',  'Pos. générale',  'right', 1, 'Rang par CA sur toutes les références'],
       ['posC',  'Pos. catégorie', 'right', 1, 'Rang par CA dans la catégorie'],
       ['score', 'Score',          'right', -1],
+      ['revue', 'Revue ★',        'center', -1, 'Votre revue franchiseur, 1 à 5 étoiles — un clic pose la note, un second clic sur la même l’enlève. Elle pèse dans le score.'],
+      ['necessaire', 'Nécessaire', 'center', -1, 'Cochée : la référence se garde quoi qu’en disent la marge et le score (produit d’appel, pièce de gamme, obligation d’enseigne)'],
+      ['decision', 'Décision',    'center', -1, 'Garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux — « nécessaire » prime'],
     ];
     common.pdCols = colDefs.map(c2 => ({
       label: c2[1], align: c2[2], titre: c2[4] || 'Trier par ' + c2[1].toLowerCase(),
@@ -9414,6 +9463,7 @@ class App {
       achat: p => (p.mu == null ? null : p.prix - p.mu),
       marge: p => p.mu, taux: p => p.mp, perte: p => p.perte,
       posG: p => p.rangGlobal, posC: p => p.rang, score: p => p.score,
+      revue: p => p.revue, necessaire: p => (p.necessaire ? 1 : 0), decision: p => (p.necessaire ? 1000 : p.score),
     }[sk] || (p => p.score);
     rows.sort((a, b) => {
       const va = valTri(a), vb = valTri(b);
@@ -9430,7 +9480,44 @@ class App {
     // couleur ne reste que sur trois signaux (taux de marge, perte, score).
     // Ce qui a quitté la ligne (tendance, pénétration, CA, marge brute,
     // profil V·M·P·C, verdict en toutes lettres) vit dans la fiche au clic.
-    common.pdRows = rows.map(p => { const vd = verdict(p.score);
+    // Les seuils d'arbitrage, modifiables ici même : ils s'enregistrent avec
+    // le reste du réglage de scoring (Paramètres), sans écraser la pondération.
+    const SCx = this.scoringCfg();
+    const dcs = { garder: 0, modifier: 0, effacer: 0 };
+    base.forEach(p => { const s = Math.round(p.score); const k = p.necessaire ? 'garder' : (s > SCx.garder ? 'garder' : (s >= SCx.modifier ? 'modifier' : 'effacer')); dcs[k]++; });
+    common.pdSeuilGarder = String(Math.round(SCx.garder));
+    common.pdSeuilModifier = String(Math.round(SCx.modifier));
+    common.pdDecisions = 'Garder ' + dcs.garder + ' · Modifier ' + dcs.modifier + ' · Effacer ' + dcs.effacer;
+    common.pdSetSeuil = cle => e => {
+      const v = Math.max(0, Math.min(100, +e.target.value || 0));
+      const cur = Object.assign({}, this.meta.scoring || {});
+      const seuils = Object.assign({}, cur.seuils || {}, { [cle]: v });
+      if (cle === 'modifier' && seuils.garder != null && v > seuils.garder) { seuils.garder = v; }
+      if (cle === 'garder' && seuils.modifier != null && v < seuils.modifier) { seuils.modifier = v; }
+      const val = Object.assign({}, cur, { seuils });
+      this.meta.scoring = val;
+      this.setState({});
+      this.api('PUT', '/parametres/scoring', { valeur: val }).then(r => {
+        if (r && r.ok === false) { this.notify(r.error || 'Seuils non enregistrés'); }
+      });
+    };
+    // Le PDF d'arbitrage : l'écran envoie SES lignes, score compris — le
+    // papier ne peut pas dire autre chose que l'écran.
+    common.pdPdf = () => {
+      const lignes = base.slice().sort((a, b) => b.score - a.score).map(p => ({
+        nom: p.nom, cat: p.cat || '', vol: Math.round(p.vol).toLocaleString('fr-BE'),
+        marge: p.mu == null ? '' : eur(p.mu), taux: p.mp == null ? '' : Math.round(p.mp * 100) + ' %',
+        perte: p.perte == null ? '' : this.fP(p.perte, 1), score: Math.round(p.score), revue: p.revue || 0,
+        necessaire: !!p.necessaire }));
+      const corps = JSON.stringify({ seuils: { garder: SCx.garder, modifier: SCx.modifier }, lignes,
+        periode: _c.periode || '', ponderation: _c.pond || '' });
+      fetch(this.apiBase() + '/products/arbitrage.pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', body: corps })
+        .then(r => { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.blob(); })
+        .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
+        .catch(err => this.notify('PDF indisponible : ' + err.message));
+    };
+    common.pdRows = rows.map(p => { const vd = verdict(p.score); const dc = _c.decision(p.score, p.necessaire);
       return { nom: p.nom, cat: p.cat,
         ouvrirDetail: () => this.pdOpenDetail(p.id),
         vol: Math.round(p.vol).toLocaleString('fr-BE'),
@@ -9451,7 +9538,19 @@ class App {
         // et dans la catégorie de la référence.
         rangGlobal: p.rangGlobal + ' / ' + base.length,
         rang: p.rang + ' / ' + p.nbCat, part: this.fP(p.partCat, 0),
-        score: String(Math.round(p.score)), scoreCol: vd[1], verdict: vd[0] }; });
+        score: String(Math.round(p.score)), scoreCol: vd[1], verdict: vd[0],
+        // La revue : cinq étoiles cliquables. Cliquer l'étoile déjà posée
+        // retire la note. L'enregistrement part tout de suite, la ligne se
+        // recalcule dès le retour.
+        revue: p.revue, revueTitre: p.revue ? (p.revue + '/5' + (p.revuePar ? ' · ' + p.revuePar : '') + (p.revueLe ? ' · ' + p.revueLe : '')) : 'À noter',
+        etoiles: [1, 2, 3, 4, 5].map(n => ({ n, pleine: p.revue != null && n <= p.revue,
+          poser: () => this.pdPoserRevue(p.id, p.revue === n ? null : n) })),
+        // « Nécessaire » : une case, cochée = gardée quoi qu'en disent la
+        // marge et le score. Enregistrée aussitôt, comme la revue.
+        necessaire: !!p.necessaire,
+        basculerNecessaire: () => this.pdPoserNecessaire(p.id, !p.necessaire),
+        decision: dc[0], dcCol: dc[1], dcFond: dc[2], dcBord: dc[3], dcNec: !!dc[4],
+        dcTitre: dc[4] ? 'Nécessaire : gardée quoi qu’en disent la marge et le score' : 'Décision selon le score et vos seuils' }; });
     // --- détail d'une référence : le score décomposé, et les deux suites
     // possibles — l'envoyer aux projets, ou programmer son arrêt.
     const det = S.pdDet ? base.find(p2 => String(p2.id) === String(S.pdDet.id)) : null;
@@ -9459,7 +9558,7 @@ class App {
       const dd = S.pdDet;
       const vd2 = verdict(det.score);
       const patchDet = pl => this.setState(s2 => ({ pdDet: Object.assign({}, s2.pdDet, pl) }));
-      const wt = k => Math.round(100 * (W[k] || 0) / ((W.v + W.m + W.perte + W.comptoir) || 1));
+      const wt = k => Math.round(100 * (W[k] || 0) / ((W.v + W.m + W.perte + W.comptoir + W.rev) || 1));
       const cat2 = (D.prodCatalogue || []).find(p2 => String(p2.ref) === String(det.id)) || {};
       const per2 = (this._pdPer || {})[det.id] || null;
       common.pdDet = {
@@ -12133,10 +12232,14 @@ class App {
     const scNum = (v, d) => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? n : d; };
     const pv = scNum(scv('volume', SCc.v), SCc.v), pm = scNum(scv('marge', SCc.m), SCc.m);
     const pp = scNum(scv('perte', SCc.perte), SCc.perte), pc = scNum(scv('comptoir', SCc.comptoir), SCc.comptoir);
-    const somme = pv + pm + pp + pc;
+    const pr = scNum(scv('revue', SCc.rev), SCc.rev);
+    const somme = pv + pm + pp + pc + pr;
     common.scVolume = scv('volume', SCc.v); common.scMarge = scv('marge', SCc.m);
     common.scPerte = scv('perte', SCc.perte); common.scComptoir = scv('comptoir', SCc.comptoir);
     common.scMoteur = scv('moteur', SCc.moteur); common.scConforter = scv('conforter', SCc.conforter);
+    common.scRevue = scv('revue', SCc.rev); common.setScRevue = scSet('revue');
+    common.scGarder = scv('garder', SCc.garder); common.setScGarder = scSet('garder');
+    common.scModifier = scv('modifier', SCc.modifier); common.setScModifier = scSet('modifier');
     common.scMBas = scv('mBas', SCc.mBas); common.scMBasNote = scv('mBasNote', SCc.mBasNote);
     common.scMHaut = scv('mHaut', SCc.mHaut); common.scMHautNote = scv('mHautNote', SCc.mHautNote);
     common.setScVolume = scSet('volume'); common.setScMarge = scSet('marge');
@@ -12152,21 +12255,25 @@ class App {
       { k: 'marge', nom: 'Marge nette', aide: 'Prix de vente moins matière et coût main d’œuvre.', val: common.scMarge, set: common.setScMarge, part: part(pm) },
       { k: 'perte', nom: 'Taux de perte', aide: 'Pénalise les produits jetés en fin de journée.', val: common.scPerte, set: common.setScPerte, part: part(pp) },
       { k: 'comptoir', nom: 'Présence au comptoir', aide: 'Poids donné au rôle d’image du produit.', val: common.scComptoir, set: common.setScComptoir, part: part(pc) },
+      { k: 'revue', nom: 'Revue franchiseur', aide: 'Votre note de 1 à 5 étoiles, posée sur l’écran Scoring (1 ★ = 0, 5 ★ = 100). Sans note, la référence garde son score mesuré.', val: common.scRevue, set: common.setScRevue, part: part(pr) },
     ];
     const sMot = scNum(scv('moteur', SCc.moteur), SCc.moteur), sCon = scNum(scv('conforter', SCc.conforter), SCc.conforter);
+    const sGar = scNum(scv('garder', SCc.garder), SCc.garder), sMod = scNum(scv('modifier', SCc.modifier), SCc.modifier);
     const mb = scNum(scv('mBas', SCc.mBas), SCc.mBas), mh = scNum(scv('mHaut', SCc.mHaut), SCc.mHaut);
     const mbn = scNum(scv('mBasNote', SCc.mBasNote), SCc.mBasNote), mhn = scNum(scv('mHautNote', SCc.mHautNote), SCc.mHautNote);
     common.scAlerte = somme <= 0 ? 'Somme des poids nulle : le score ne peut pas être calculé.'
       : (sCon >= sMot ? 'Le seuil « à conforter » doit rester sous le seuil « moteur de gamme ».'
+      : (sMod > sGar ? 'Le seuil « modifier » doit rester sous ou égal au seuil « garder ».'
+      : (sGar > 100 || sMod < 0 ? 'Les seuils d’arbitrage s’expriment sur une échelle de 0 à 100.'
       : (sMot > 100 || sCon < 0 ? 'Les seuils s’expriment sur une échelle de 0 à 100.'
-      : (mh <= mb ? 'La borne haute de marge doit être supérieure à la borne basse.' : '')));
+      : (mh <= mb ? 'La borne haute de marge doit être supérieure à la borne basse.' : '')))));
     common.scMargeApercu = 'Marge ' + mb + ' % → ' + mbn + ' pts · ' + mh + ' % → ' + mhn + ' pts (linéaire entre les deux, plafonné au-delà).';
     common.scMsg = scd.msg || '';
     common.scMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (scd.ok ? '#2d7a3e' : '#8D1D2C');
     this._scAuto = () => {
       if (common.scAlerte) { return false; }
-      const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc },
-        seuils: { moteur: sMot, conforter: sCon },
+      const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc, revue: pr },
+        seuils: { moteur: sMot, conforter: sCon, garder: sGar, modifier: sMod },
         marge: { bas: mb, basNote: mbn, haut: mh, hautNote: mhn } };
       return this.api('PUT', '/parametres/scoring', { valeur: val }).then(r => {
         if (r && r.ok === false) { return false; }
@@ -12177,8 +12284,8 @@ class App {
     common.scAuto = this.autoTxt('scoring');
     common.scSave = () => {
       if (common.scAlerte) { this.notify(common.scAlerte); return; }
-      const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc },
-        seuils: { moteur: sMot, conforter: sCon },
+      const val = { poids: { volume: pv, marge: pm, perte: pp, comptoir: pc, revue: pr },
+        seuils: { moteur: sMot, conforter: sCon, garder: sGar, modifier: sMod },
         marge: { bas: mb, basNote: mbn, haut: mh, hautNote: mhn } };
       this.api('PUT', '/parametres/scoring', { valeur: val }).then(r => {
         if (r && r.ok === false) { this.setState(s2 => ({ scDraft: Object.assign({}, s2.scDraft, { ok: false, msg: r.error || 'Échec' }) })); return; }

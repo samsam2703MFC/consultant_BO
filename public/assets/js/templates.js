@@ -2256,6 +2256,16 @@ function tplProduits(c, x){
       <select ${x.C(c.setPdCat)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdCatOptions, c.pdCat)}</select>
       <span style="font-size:12px;color:var(--color-text-muted)">Pondération du score — ${c.pdPond}</span>
     </div>
+    <!-- Les seuils d'arbitrage, modifiables ici : garder au-dessus, effacer en
+         dessous, modifier entre les deux. Ils s'enregistrent avec le réglage
+         de scoring. Le PDF envoie les lignes de l'écran, score compris. -->
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 12px;padding:10px 14px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px">
+      <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Seuils de décision</span>
+      <label style="font-size:12.5px;display:flex;align-items:center;gap:6px">Garder si score &gt; <input type="number" min="0" max="100" step="1" value="${esc(c.pdSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="width:58px;font-size:13px;font-weight:600;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 6px;background:var(--color-surface);color:var(--color-text)"></label>
+      <label style="font-size:12.5px;display:flex;align-items:center;gap:6px">Modifier si score ≥ <input type="number" min="0" max="100" step="1" value="${esc(c.pdSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="width:58px;font-size:13px;font-weight:600;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 6px;background:var(--color-surface);color:var(--color-text)"></label>
+      <span style="font-size:12px;color:var(--color-text-muted)">Effacer en dessous · ${esc(c.pdDecisions)}</span>
+      <button ${x.A(c.pdPdf)} title="Les trois listes garder / modifier / effacer, avec la revue, en A4" style="margin-left:auto;border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">⎙ PDF d’arbitrage de gamme</button>
+    </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Scoring des références — volume, marge nette, taux de perte et présence au comptoir · ${c.pdPeriode || ''}</div>
       <!-- Le tableau PLAT : une seule ligne par référence, aucun graphique.
@@ -2292,8 +2302,21 @@ function tplProduits(c, x){
               <td style="padding:11px 14px;text-align:right;white-space:nowrap" title="${esc(r.verdict)}">
                 <span style="font-size:14px;font-weight:600;color:${r.scoreCol}">${r.score}</span>
               </td>
+              <!-- La revue franchiseur : cinq étoiles cliquables, la note posée
+                   pèse dans le score. Cliquer l'étoile déjà posée la retire. -->
+              <td style="padding:11px 8px;text-align:center;white-space:nowrap;font-size:15px;letter-spacing:1px" title="${esc(r.revueTitre)}">
+                ${r.etoiles.map(s => `<button ${x.A(s.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;line-height:1;color:${s.pleine ? '#C9A227' : 'var(--color-border-secondary)'}">${s.pleine ? '★' : '☆'}</button>`).join('')}
+              </td>
+              <!-- « Nécessaire » : cochée, la référence se garde quoi qu'en
+                   disent la marge et le score. -->
+              <td style="padding:11px 10px;text-align:center;white-space:nowrap">
+                <button ${x.A(r.basculerNecessaire)} title="${r.necessaire ? 'Nécessaire — cliquer pour décocher' : 'Cocher : à garder quoi qu’en disent la marge et le score'}" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${r.necessaire ? '#2d7a3e' : 'var(--color-border-secondary)'};background:${r.necessaire ? '#2d7a3e' : 'var(--color-surface)'};color:#fff;font-size:12px;line-height:15px;padding:0;cursor:pointer;vertical-align:middle">${r.necessaire ? '✓' : ''}</button>
+              </td>
+              <td style="padding:11px 12px;text-align:center;white-space:nowrap" title="${esc(r.dcTitre)}">
+                <span style="display:inline-block;background:${r.dcFond};color:${r.dcCol};border:${r.dcNec ? '1.5px' : '1px'} solid ${r.dcBord};border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600">${esc(r.decision)}${r.dcNec ? ' ✓' : ''}</span>
+              </td>
             </tr>`).join('')}
-          ${c.pdRows.length ? '' : `<tr><td colspan="11" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
+          ${c.pdRows.length ? '' : `<tr><td colspan="14" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
         </tbody>
       </table>
       </div>
@@ -6803,6 +6826,12 @@ function tplScoring(c, x){
     </div>
 
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Seuils d’arbitrage (score sur 100)</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">La décision de l’écran Scoring et du PDF d’arbitrage : garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux. Les mêmes valeurs se règlent aussi directement sur l’écran Scoring.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;color:#2d7a3e">&gt; Garder</div><input type="number" min="0" max="100" step="1" value="${esc(c.scGarder)}" ${x.C(c.setScGarder)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;color:#b8671a">≥ Modifier · en dessous : effacer</div><input type="number" min="0" max="100" step="1" value="${esc(c.scModifier)}" ${x.C(c.setScModifier)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+      </div>
       <div style="font-size:13px;font-weight:500;margin-bottom:14px">Seuils de verdict (score sur 100)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div><div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px;color:#2d7a3e">\u2265 Moteur de gamme</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMoteur)}" ${x.C(c.setScMoteur)} style="width:100%;box-sizing:border-box;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>

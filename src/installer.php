@@ -46,6 +46,7 @@ function ensureInstalled(): void
     ensurePlanogramme();
     ensureReputation();
     ensureReglageLarge();
+    ensureRevue();
     connecteurTable();
     ensureScouting();
 }
@@ -96,6 +97,31 @@ function ensureScouting(): void
         . 'population INT UNSIGNED NOT NULL,'
         . 'imported_at DATETIME NOT NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * La revue franchiseur d'une référence : une note de 1 à 5, posée à la main
+ * sur l'écran Scoring, qui pèse dans le score à côté des critères mesurés.
+ * Une ligne par référence — la dernière note remplace la précédente, et on
+ * garde qui l'a posée et quand.
+ */
+function ensureRevue(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_prod_revue ('
+        . 'id_produit VARCHAR(24) PRIMARY KEY,'
+        . 'note TINYINT NULL,'                      // 1..5, NULL = pas de revue
+        . 'necessaire TINYINT NOT NULL DEFAULT 0,'  // à garder quoi qu'en dise le score
+        . 'auteur VARCHAR(80) NULL,'
+        . 'maj DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // « Nécessaire » est arrivé après la revue : une base qui a déjà la table
+    // sans la colonne la reçoit ici, et la note devient facultative — une
+    // référence peut être nécessaire sans avoir été notée.
+    $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
+        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_prod_revue' AND column_name = 'necessaire'");
+    if ((int) ($r['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_prod_revue MODIFY COLUMN note TINYINT NULL, ADD COLUMN necessaire TINYINT NOT NULL DEFAULT 0');
+    }
 }
 
 /**
@@ -812,8 +838,11 @@ function scoringDefaut(): array
         //   marge     — marge NETTE : prix de vente moins matière et main d'œuvre
         //   perte     — pénalise les produits jetés en fin de journée
         //   comptoir  — rôle d'image du produit, présence au comptoir
-        'poids'  => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10],
-        'seuils' => ['moteur' => 68, 'conforter' => 46],
+        //   revue     — la note du franchiseur, 1 à 5 étoiles, posée à la main
+        'poids'  => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10, 'revue' => 25],
+        // moteur/conforter : le verdict historique de l'écran. garder/modifier :
+        // la décision d'arbitrage (garder au-dessus, effacer en dessous).
+        'seuils' => ['moteur' => 68, 'conforter' => 46, 'garder' => 70, 'modifier' => 50],
         // Échelle ABSOLUE du taux de marge brute → note sur 100, définie par
         // deux bornes et linéaire entre elles (plafonnée aux extrémités).
         // Auparavant la note était relative à la gamme : la meilleure marge

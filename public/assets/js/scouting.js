@@ -872,6 +872,74 @@ export class Scouting {
     return res;
   }
 
+  // Top 5 par province : le même balayage que ceo_zones, mais sur l'emprise
+  // entière de chaque province cochée — indépendant du cadrage de la carte —
+  // et sans score minimum : ce sont les cinq meilleures communes disponibles,
+  // le score dit ce qu'elles valent. Les commerces sont rangés par cases d'un
+  // rayon de côté : un point ne regarde que ses neuf cases voisines, et onze
+  // provinces se balaient en une fraction de seconde.
+  scanTop5(){
+    const s = this.state, R = s.radius;
+    const key = [R, s.thresh, s.arr, JSON.stringify(s.prov), s.minRating, s.minHh, this._rev,
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK].join('|');
+    if (key === this._top5Key) return this._top5Val;
+    const shopsAll = this.shops();
+    const cs = this.filteredCommunes();
+    const eMax = (s.empriseMax || 30) / 100;
+    const pad = R + 2;   // km : communes et concurrents juste hors province comptent aussi
+    const out = [];
+    PROV.filter(p => s.prov[p.code]).forEach(p => {
+      const mine = cs.filter(c => c.prov === p.code);
+      if (!mine.length) return;
+      let s0 = 90, n0 = -90, w0 = 180, e0 = -180;
+      mine.forEach(c => { s0 = Math.min(s0, c.lat); n0 = Math.max(n0, c.lat); w0 = Math.min(w0, c.lng); e0 = Math.max(e0, c.lng); });
+      const kLat = 1 / 111, kLng = 1 / (111 * Math.cos((s0 + n0) / 2 * Math.PI / 180));
+      const S = s0 - pad * kLat, N = n0 + pad * kLat, W = w0 - pad * kLng, E = e0 + pad * kLng;
+      const inBox = o => o.lat >= S && o.lat <= N && o.lng >= W && o.lng <= E;
+      const voisines = cs.filter(inBox);           // le point le plus proche peut être une commune d'à côté
+      const shops = shopsAll.filter(inBox);
+      const bLat = Math.max(R, 0.5) * kLat, bLng = Math.max(R, 0.5) * kLng, bucket = {};
+      shops.forEach(x => { const k = Math.floor(x.lat / bLat) + ',' + Math.floor(x.lng / bLng); (bucket[k] || (bucket[k] = [])).push(x); });
+      const around = (lat, lng) => {
+        const i = Math.floor(lat / bLat), j = Math.floor(lng / bLng), res = [];
+        for (let a = i - 1; a <= i + 1; a++) for (let b = j - 1; b <= j + 1; b++){
+          const l = bucket[a + ',' + b]; if (!l) continue;
+          for (let q = 0; q < l.length; q++){ const d = dist(lat, lng, l[q].lat, l[q].lng); if (d <= R) res.push({ x: l[q], d: d }); }
+        }
+        return res;
+      };
+      const stepKm = Math.max(R * 0.9, 1.2);
+      let dLat = stepKm * kLat, dLng = stepKm * kLng;
+      const cells = ((n0 - s0) / dLat) * ((e0 - w0) / dLng);
+      if (cells > 2600){ const f = Math.sqrt(cells / 2600); dLat *= f; dLng *= f; }
+      const best = {};
+      let guard = 0;
+      for (let lat = s0; lat <= n0 && guard < 2600; lat += dLat){
+        for (let lng = w0; lng <= e0 && guard < 2600; lng += dLng){
+          guard++;
+          let com = null, cd = 1e9;
+          voisines.forEach(c => { const d = dist(lat, lng, c.lat, c.lng); if (d < cd){ cd = d; com = c; } });
+          if (!com || com.prov !== p.code || cd > (com.rKm || 3) * 1.4) continue;   // hors province, ou hors zone habitée connue
+          const near = around(lat, lng);
+          if (near.some(o => this.isStrong(o.x))) continue;                        // zone rouge
+          let load = 0;
+          near.forEach(o => { load += this.strength(o.x) * (1 - o.d / R * 0.6); });
+          const hh = com.dens * Math.PI * R * R;
+          const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
+          const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
+          const ca = hh * s.spend * emprise / (1 - s.passage / 100);
+          const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
+          const k = com.name + '|' + com.arr;
+          if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, arr: com.arr };
+        }
+      }
+      const zones = Object.keys(best).map(k => best[k]).sort((a, b) => b.score - a.score).slice(0, 5);
+      out.push({ code: p.code, prov: p.name, communes: mine.length, shops: shops.filter(x => x.prov === p.code).length, zones: zones });
+    });
+    this._top5Key = key; this._top5Val = out;
+    return out;
+  }
+
   redraw(){
     if (!this.map || !this.el.isConnected) return;
     const s = this.state, shops = this.shops();
@@ -1534,7 +1602,7 @@ export class Scouting {
       hasZoneCol: !!x,
 
       /* ----- vues tabulaires ceo_ ----- */
-      views: [['map', 'Carte'], ['zones', 'ceo_zones'], ['concurrents', 'ceo_concurrents'], ['arrondissements', 'ceo_arrondissements']]
+      views: [['map', 'Carte'], ['zones', 'ceo_zones'], ['concurrents', 'ceo_concurrents'], ['arrondissements', 'ceo_arrondissements'], ['top5', 'Top 5 par province']]
         .map(([k, label]) => ({
           label: label,
           color: s.view === k ? 'var(--color-primary)' : 'var(--color-text-muted)',
@@ -1544,6 +1612,7 @@ export class Scouting {
       isZones: s.view === 'zones',
       isConc: s.view === 'concurrents',
       isArr: s.view === 'arrondissements',
+      isTop5: s.view === 'top5',
       q: s.q, setQ: e => self.setState({ q: e.target.value }),
       zonesRows: zonesRows,
       zonesEmpty: s.busy ? 'Chargement en cours…' : !this.map ? 'Carte indisponible.' : 'Aucune zone ne passe le score minimum ' + s.minScore + ' dans la vue courante — dézoome la carte ou abaisse le seuil.',
@@ -1552,6 +1621,21 @@ export class Scouting {
       concRows: concRows,
       concCount: concCount,
       arrRows: arrRows,
+      top5: s.view === 'top5' ? self.scanTop5().map(g => ({
+        prov: g.prov, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection',
+        rows: g.zones.map((p, i) => ({ rang: i + 1, commune: p.commune, arr: p.arr, score: p.score, hh: fmtInt(p.hh), n: p.n,
+          emprise: (p.emprise * 100).toFixed(1) + ' %', ca: fmtEur(p.ca), m2: fmtEur(p.ca / s.surface), open: () => goMap(p.lat, p.lng, 13, true) }))
+      })) : [],
+      top5Cols: [['rang', 'Rang'], ['commune', 'Commune'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
+        .map(([k, label]) => ({ label: label, tip: TIP_ZONES[k] || '' })),
+      top5Empty: s.busy ? 'Chargement en cours…' : 'Aucune commune dans la sélection — coche au moins une province.',
+      exportTop5: () => {
+        const g = self.scanTop5();
+        self.csv('ceo_top5_provinces', ['province', 'rang', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
+          'hyp_rayon_km', 'hyp_depense_menage', 'hyp_emprise_max_pct', 'hyp_sensibilite', 'hyp_passage_pct', 'hyp_surface_m2'],
+          [].concat.apply([], g.map(x => x.zones.map((p, i) => [x.prov, i + 1, p.commune, p.arr, p.score, Math.round(p.hh), p.n, (p.emprise * 100).toFixed(1), Math.round(p.ca), Math.round(p.ca / s.surface),
+            p.lat.toFixed(5), p.lng.toFixed(5), s.radius.toFixed(1), s.spend, s.empriseMax, s.compK, s.passage, s.surface]))));
+      },
       arrCols: [['arr', 'Arrondissement'], ['communes', 'Communes'], ['pop', 'Population'], ['hh', 'Ménages'], ['market', 'Marché'], ['shops', 'Commerces'], ['strong', 'Forts'], ['dens', '/ 10.000 hab.'], ['avg', 'Note moy.'], ['perShop', 'Ménages / point']]
         .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ARR[k] || '' })),
       exportZones: () => self.csv('ceo_zones', ['rang', 'localite', 'arrondissement', 'score', 'menages', 'concurrents', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
