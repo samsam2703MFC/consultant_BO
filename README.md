@@ -166,7 +166,8 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   zones rouges), fiche d'implantation au clic, zones candidates retenues
   (`ceo_scouting_candidate`), comparaison de deux arrondissements, modale des
   magasins du réseau. Onglets tabulaires `ceo_zones`, `ceo_concurrents`,
-  `ceo_arrondissements` avec export CSV.
+  `ceo_arrondissements` et « Top 5 par province » (les cinq meilleures communes
+  de chaque province cochée, balayées sur toute leur emprise), avec export CSV.
 - Chaque saisie (note, commentaire, zone retenue, import) produit une ligne
   `Scouting` dans le Journal. Sans API (mode démo), tout reste en
   `localStorage` du navigateur.
