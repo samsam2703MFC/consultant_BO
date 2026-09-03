@@ -2083,6 +2083,13 @@ function ep_exploitation_jour(): array
         // de la table synchronisée ni du référentiel employés, tous deux
         // en retard sur les embauches.
         $paths['sch' . $id] = '/shops/' . $id . '/schedule?date=' . $date;
+        // Le TAUX HORAIRE de chacun (money_per_hour) et son statut : c'est ce
+        // qui relie le planning à la main-d'œuvre du P&L. Un franchisé est à
+        // 0 €/h chez le panel — ses heures ne coûtent rien dans le résultat,
+        // et il faut le dire plutôt que de laisser croire à une équipe bon
+        // marché. La route rend aussi des secrets (hachages, jetons) : on ne
+        // garde que le taux et le rôle, rien d'autre ne sort de la mémoire.
+        $paths['emp' . $id] = '/shops/' . $id . '/employees';
         // Les HEURES de la journée regardée : c'est la part déjà écoulée qui
         // permet de projeter la fin de journée. Une seule date, sinon la
         // route agrège les heures de toute la fenêtre.
@@ -2120,14 +2127,30 @@ function ep_exploitation_jour(): array
     // dans la boucle, une fois les heures du magasin connues.
     // Chaque créneau, d'où qu'il vienne, devient une ligne du planning.
     $planParShop = []; $planSrc = [];
-    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin) use (&$planParShop): void {
+    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin, int $idEmp = 0) use (&$planParShop): void {
         $dj = substr($debut, 0, 5); $fj = substr($fin, 0, 5);
         $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
         $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
         if ($hF <= $hD) { return; }   // un service qui passe minuit sort du cadre du jour
         $planParShop[$shopJ][] = ['nom' => $nom, 'debut' => $dj, 'fin' => $fj,
-            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2)];
+            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2), 'idEmp' => $idEmp];
     };
+    // Le taux horaire et le statut de chaque personne, par magasin — rien
+    // d'autre de la route employés n'est conservé.
+    $tauxDe = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $emps = $res['emp' . $id] ?? null;
+        if (!is_array($emps)) { continue; }
+        foreach (analyseListe($emps) as $em) {
+            $ide = (int) ($em['id'] ?? 0);
+            if ($ide <= 0) { continue; }
+            $tauxDe[(string) $id][$ide] = [
+                'taux' => isset($em['money_per_hour']) && $em['money_per_hour'] !== null ? (float) $em['money_per_hour'] : null,
+                'franchise' => (string) ($em['franchise_role'] ?? '') === 'franchisee',
+            ];
+        }
+    }
     // 1) LA SOURCE : le panel, en direct, magasin par magasin. Le créneau
     //    porte son magasin et le nom de la personne — rien à croiser.
     $muets = [];
@@ -2142,7 +2165,7 @@ function ep_exploitation_jour(): array
             $nom = trim((string) ($r['display_name'] ?? ''));
             if ($nom === '') { $nom = trim(((string) ($r['name'] ?? '')) . ' ' . ((string) ($r['surname'] ?? ''))); }
             if ($nom === '') { $nom = 'Employé ' . (int) ($r['id_employee'] ?? 0); }
-            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''));
+            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''), (int) ($r['id_employee'] ?? 0));
         }
     }
     // 2) LE REPLI, pour les seuls magasins que le panel n'a pas servis : la
@@ -2160,7 +2183,7 @@ function ep_exploitation_jour(): array
                 if ($shopJ === '' || !isset($muets[$shopJ])) { continue; }
                 $planSrc[$shopJ] = 'table locale';
                 $poseCreneau($shopJ, $ej['nom'] ?? ('Employé ' . (int) $pj['id_employee']),
-                    (string) $pj['start_hour'], (string) $pj['end_hour']);
+                    (string) $pj['start_hour'], (string) $pj['end_hour'], (int) $pj['id_employee']);
             }
         } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
     }
@@ -2454,6 +2477,11 @@ function ep_exploitation_jour(): array
             foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
             $nbParH[$h9] = $nb9;
         }
+        // Le COÛT de chaque service au taux du panel, et ce qu'il laisse dans
+        // l'ombre : les heures à 0 €/h (le franchisé) n'entrent pas dans la
+        // main-d'œuvre du P&L — 9 h de travail qui ne coûtent rien au
+        // résultat, ça se lit sur la ligne, pas entre les lignes.
+        $labPlan = 0.0; $hPlan = 0.0; $hZero = 0.0; $zeroNoms = [];
         foreach ($planM as $i9 => $p9) {
             $att = 0.0;
             foreach ($heuresCa as $h9 => $ca9) {
@@ -2462,14 +2490,30 @@ function ep_exploitation_jour(): array
             }
             $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
             $planM[$i9]['caH'] = ($att > 0 && $p9['h'] > 0) ? round($att / $p9['h'], 2) : null;
+            $tx = $tauxDe[(string) $id][(int) $p9['idEmp']] ?? null;
+            $planM[$i9]['tauxH'] = $tx['taux'] ?? null;
+            $planM[$i9]['franchise'] = (bool) ($tx['franchise'] ?? false);
+            $planM[$i9]['cout'] = ($tx !== null && $tx['taux'] !== null) ? round($p9['h'] * $tx['taux'], 2) : null;
+            $hPlan += $p9['h'];
+            if ($tx !== null && $tx['taux'] !== null) { $labPlan += $p9['h'] * $tx['taux']; }
+            if ($tx !== null && ($tx['taux'] === null || $tx['taux'] <= 0)) {
+                $hZero += $p9['h'];
+                if (!in_array($p9['nom'], $zeroNoms, true)) { $zeroNoms[] = $p9['nom']; }
+            }
         }
-        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF']); }
+        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp']); }
         usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
 
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
             'heures' => array_map(static fn ($h9) => ['h' => $h9, 'ca' => $heuresCa[$h9]], array_keys($heuresCa)),
             'planning' => $planM,
             'planningSource' => $planSrc[(string) $id] ?? 'aucune réponse',
+            // Le planning en euros : ce que coûtent les services au taux du
+            // panel, et les heures qui n'y coûtent rien.
+            'planningHeures' => round($hPlan, 2),
+            'planningCout' => isset($tauxDe[(string) $id]) ? round($labPlan, 2) : null,
+            'planningHeuresZero' => round($hZero, 2),
+            'planningZeroNoms' => $zeroNoms,
             'ca' => round($ca, 2),
             'refCa' => $refCa !== null ? round($refCa, 2) : null,
             'refJours' => $refN,

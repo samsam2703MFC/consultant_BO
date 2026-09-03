@@ -3540,13 +3540,14 @@ function tplResultatJour(c, x){
         <table style="width:100%;border-collapse:separate;border-spacing:0 5px;font-size:12px">
           ${c.rjDetail.planning.lignes.map(p => `
           <tr>
-            <td style="padding:0 10px 0 0;white-space:nowrap;width:170px"><span style="font-weight:500">${esc(p.nom)}</span>
-              <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(p.creneau)} · ${esc(p.h)} h</div></td>
+            <td style="padding:0 10px 0 0;white-space:nowrap;width:170px"><span style="font-weight:500">${esc(p.nom)}</span>${p.franchise ? ` <span style="font-size:9.5px;color:#C17A2A;border:1px solid #E5C9A4;border-radius:999px;padding:0 6px;vertical-align:1px">franchisé</span>` : ''}
+              <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(p.creneau)} · ${esc(p.h)} h${p.tauxTxt ? ` · ${esc(p.tauxTxt)}` : ''}</div></td>
             <td style="padding:0"><div style="position:relative;height:22px;background:var(--color-surface);border-radius:6px">
               <div style="position:absolute;left:${p.g}%;width:${p.w}%;top:0;height:22px;background:#E8C9A0;border:1px solid #D9B489;border-radius:6px"></div></div></td>
-            <td style="padding:0 0 0 12px;text-align:right;white-space:nowrap;${num};width:110px">${p.ca
+            <td style="padding:0 0 0 12px;text-align:right;white-space:nowrap;${num};width:130px">${p.ca
               ? `<span style="font-weight:600">${esc(p.ca)}</span><div style="font-size:9.5px;color:var(--color-text-muted)">${esc(p.caH)} attribués</div>`
-              : `<span style="font-size:10px;color:var(--color-text-muted)">sans vente lisible</span>`}</td>
+              : `<span style="font-size:10px;color:var(--color-text-muted)">sans vente lisible</span>`}${p.coutTxt
+              ? `<div style="font-size:9.5px;color:${p.coutZero ? '#C17A2A' : 'var(--color-text-muted)'}">${esc(p.coutTxt)}</div>` : ''}</td>
           </tr>`).join('')}
         </table>
         <div style="font-size:10px;color:var(--color-text-muted);margin-top:4px">${esc(c.rjDetail.planning.note)}</div>
