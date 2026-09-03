@@ -338,8 +338,11 @@ ALTER TABLE ceo_project_task ADD CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) R
 ### `/scouting` — saisies du scouting commercial
 
 Chargé à l'ouverture de l'écran (pas au démarrage du cockpit). Les données
-OpenStreetMap elles-mêmes ne transitent pas par ce endpoint : le navigateur
-interroge Overpass et dépose chaque secteur dans le cache partagé.
+OpenStreetMap elles-mêmes ne transitent pas par ce endpoint : elles vivent dans
+`ceo_scouting_tile`, relues par le serveur — chaque semaine par cron
+(`bin/scouting_refresh.php`), ou à la demande par `POST /scouting/refresh/{secteur}`
+(« Recharger les données »). Le navigateur n'interroge Overpass lui-même qu'en
+repli, sans API ou si le serveur n'atteint pas Overpass.
 
 ```json
 {
@@ -596,7 +599,8 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Relance d'une tâche | `POST /tasks/{id}/reminder` |
 | Modification d'un seuil ou d'un modèle d'email | `PUT /parametres/{key}` |
 | Scouting — hypothèses du modèle | `PUT /parametres/scoutingParams` (`{ "valeur": … }`) |
-| Scouting — dépôt d'un secteur OSM dans le cache partagé | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
+| Scouting — dépôt d'un secteur OSM dans le cache partagé (repli navigateur) | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
+| Scouting — relecture d'un secteur OpenStreetMap par le serveur | `POST /scouting/refresh/{secteur}` (0 à 8 ; une à trois minutes ; rend le secteur `{ t, c, b, p }` et le dépose dans le cache ; 502 si Overpass ne répond pas, le cache est alors conservé) |
 | Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
 | Scouting — notes Google d'un lot de commerces (≤ 40 ; clé de Paramètres, côté serveur) | `POST /scouting/notes` (`{ "rows": [{ id, name, addr?, commune?, arr?, lat, lng }] }` → `{ rows: [{ id, rating, reviews }], erreur? }` ; 422 sans clé) |
 | Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |

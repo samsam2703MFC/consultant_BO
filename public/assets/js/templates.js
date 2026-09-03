@@ -87,8 +87,8 @@ export function render(c, x){
   </aside>
 
   <main style="flex:1;overflow-y:auto;min-width:0" id="main-scroll">
-    <div style="${c.isScouting ? 'padding:26px 32px 24px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
-      <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
+    <div style="${c.isScouting ? 'padding:14px 18px 14px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;min-height:0' : 'padding:26px 32px 60px;max-width:1460px'}">
+      ${c.isScouting ? '' : `<header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
         <div>
           <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">${esc(c.screenTitle)}</h1>
           <p style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>
@@ -97,7 +97,7 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.metaDate)}</span>
           <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-secondary);color:var(--color-on-abricot)">${esc(c.metaPeriode)}</span>
         </div>
-      </header>
+      </header>`}
 
       ${c.ready ? `
       ${(c.lacunes && c.lacunes.length) ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">

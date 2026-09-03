@@ -171,11 +171,15 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   `Scouting` dans le Journal. Sans API (mode démo), tout reste en
   `localStorage` du navigateur.
 
-Dépendances réseau **côté navigateur** : `tile.openstreetmap.org` (fond de
-carte) et les serveurs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
-`overpass.private.coffee`). Côté serveur, les notes Google sortent vers
-`places.googleapis.com` (connecteur Google de Paramètres) ; sans clé, l'écran
-fonctionne avec les seuls signaux OSM.
+Les données OpenStreetMap (neuf secteurs : communes, boulangeries, lieux
+peuplés) vivent dans `ceo_scouting_tile` et sont relues par le **serveur** :
+cron hebdomadaire `bin/scouting_refresh.php` (posé par `bin/deploy.sh`) et
+`POST /scouting/refresh/{secteur}` pour « Recharger les données ». L'écran
+n'attend donc jamais Overpass : il lit le cache, et affiche la date de
+relecture. Dépendances réseau côté serveur : les miroirs Overpass et, pour les
+notes Google, `places.googleapis.com` (connecteur Google de Paramètres). Côté
+navigateur : `tile.openstreetmap.org` (fond de carte) seulement — Overpass n'est
+interrogé depuis le navigateur qu'en repli, hors API.
 
 ## Notes
 

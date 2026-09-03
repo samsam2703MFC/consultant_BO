@@ -16,6 +16,7 @@ require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
+require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
@@ -353,6 +354,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/scouting/tiles/(\d{1,2})$#', $path, $m)) { return wr_scouting_tile_put((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/competitors') { return wr_scouting_competitors_put(); }
     if ($method === 'POST' && $path === '/scouting/notes') { return wr_scouting_notes(); }
+    if ($method === 'POST' && preg_match('#^/scouting/refresh/(\d{1,2})$#', $path, $m)) { return wr_scouting_refresh((int) $m[1]); }
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }

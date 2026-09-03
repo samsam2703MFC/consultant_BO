@@ -3157,6 +3157,28 @@ function wr_scouting_tile_put(int $sector): array
     return ['ok' => true, 'communes' => count($d['c']), 'commerces' => count($d['b'])];
 }
 
+/**
+ * POST /scouting/refresh/{n} — le serveur relit un secteur chez OpenStreetMap,
+ * le dépose dans le cache partagé et le rend à l'écran. C'est « Recharger les
+ * données » : le navigateur ne parle plus à Overpass quand l'API répond, et le
+ * secteur relu profite à tout le monde. Compter une à trois minutes ; l'écran
+ * en demande trois à la fois.
+ */
+function wr_scouting_refresh(int $sector): array
+{
+    if (!isset(ScoutingOsm::SECTEURS[$sector])) { http_response_code(404); return ['error' => 'secteur inconnu (0 à 8)']; }
+    @set_time_limit(320);
+    @ini_set('memory_limit', '512M');
+    $d = ScoutingOsm::rafraichir($sector);
+    if ($d === null) {
+        http_response_code(502);
+        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
+    }
+    journalAdd('CEO', 'Scouting', ScoutingOsm::SECTEURS[$sector][1],
+        'Secteur OpenStreetMap relu — ' . count($d['c']) . ' communes, ' . count($d['b']) . ' commerces');
+    return $d;
+}
+
 /** PUT /scouting/competitors — note, avis, source et commentaire terrain par commerce (lot ≤ 500).
  *  Seules les clés présentes dans une ligne sont modifiées ; une ligne sans note,
  *  sans commentaire et hors interrogation Google disparaît. */

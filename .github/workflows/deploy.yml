@@ -173,6 +173,11 @@ jobs:
           elif echo "$sc" | grep -q '"googleKey"'; then
             echo "::error::/scouting renvoie encore une clé Google au navigateur"; fail=1
           else echo "OK  /scouting porte l'état du connecteur Google, jamais la clé"; fi
+          # La relecture OpenStreetMap se fait côté serveur : la route doit répondre
+          # (404 sur un secteur inconnu — sans déclencher une vraie relecture).
+          rc=$(curl -s -o /dev/null -w '%{http_code}' -X POST "${APP_BASE}/api/cockpit/scouting/refresh/99")
+          if [ "$rc" != "404" ]; then echo "::error::POST /scouting/refresh/{n} répond HTTP $rc (404 attendu sur un secteur inconnu)"; fail=1
+          else echo "OK  POST /scouting/refresh/{n} est câblé"; fi
 
           # Les identifiants d'intervenant sont le point de jointure avec le
           # panel : `owner_id` doit s'écrire « u<membership> » pour que le

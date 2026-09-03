@@ -165,7 +165,7 @@ export function renderMapUi(c, x){
 
   <div style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
 
-  ${c.busy ? `
+  ${c.veil ? `
   <div style="position:absolute;inset:0;z-index:600;background:rgba(234,228,220,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
     <div style="width:34px;height:34px;border:3px solid rgba(141,29,44,.2);border-top-color:var(--color-primary);border-radius:50%;animation:sc-spin 800ms linear infinite"></div>
     <div style="font-size:13px;color:var(--color-text)">${esc(c.progress)}</div>

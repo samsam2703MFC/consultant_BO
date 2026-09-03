@@ -168,6 +168,20 @@ function apiNotes(rows){
   }).catch(e => { clearTimeout(t); throw e; });
 }
 
+// POST /scouting/refresh/{n} — le serveur relit un secteur chez OpenStreetMap
+// (une à trois minutes) et le rend ; l'erreur du serveur est rendue lisible.
+function apiRefresh(i){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 330000);
+  return fetch(API_BASE + '/scouting/refresh/' + i, { method: 'POST', credentials: 'same-origin', signal: ctl.signal, headers: { Accept: 'application/json' } })
+    .then(async r => {
+      clearTimeout(t);
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+      return j;
+    }).catch(e => { clearTimeout(t); throw e; });
+}
+
 /* Leaflet est chargé à la demande (vendored, aucun CDN) : les autres écrans
  * du cockpit ne le paient pas. */
 let leafletP = null;
@@ -235,6 +249,16 @@ export class Scouting {
   }
 
   useApi(){ return !!(this.app && this.app.source === 'api'); }
+
+  // La date du secteur le plus ancien du cache serveur : ce que l'écran montre
+  // a au plus cet âge (le cron relit chaque semaine, « Recharger » tout de suite).
+  osmDate(){
+    const t = this._serverTiles; if (!t) return '';
+    const ds = Object.keys(t).map(k => String((t[k] && t[k].fetchedAt) || '')).filter(Boolean).sort();
+    if (!ds.length) return '';
+    const d = ds[0].slice(0, 10).split('-');
+    return d.length === 3 ? d[2] + '/' + d[1] + '/' + d[0] : ds[0];
+  }
 
   restoreLocal(){
     const s = this.state;
@@ -497,6 +521,18 @@ export class Scouting {
           if (d && d.c){ if (api) apiWrite('PUT', '/scouting/tiles/' + i, d); }
           else d = null;
         }
+      }
+      if (!d && api){
+        // Le serveur relit le secteur chez OpenStreetMap et le dépose dans le
+        // cache partagé : tout le monde en profite, et le navigateur n'a plus à
+        // atteindre Overpass. Repli navigateur si le serveur n'y arrive pas.
+        this.setState({ busy: true, progress: label + ' — le serveur relit OpenStreetMap… (' + done + '/' + TILES.length + ' secteurs reçus)' });
+        try { d = await apiRefresh(i); } catch (e) { console.warn('[scouting] relecture serveur du secteur ' + i + ' :', e.message); d = null; }
+        if (d && d.c){
+          ls.set('t' + i, d);
+          if (!this._serverTiles) this._serverTiles = {};
+          this._serverTiles[i] = { sector: i, fetchedAt: new Date(d.t || Date.now()).toISOString().slice(0, 19).replace('T', ' ') };
+        } else d = null;
       }
       if (!d){
         this.setState({ busy: true, progress: label + ' — interrogation d\'OpenStreetMap… (' + done + '/' + TILES.length + ' secteurs reçus)' });
@@ -1266,9 +1302,9 @@ export class Scouting {
     ];
 
     return Object.assign(this.liveVals(), {
-      busy: s.busy, progress: s.progress, compare: s.compare, toast: s.toast,
+      busy: s.busy, veil: s.busy && !s.bakeries.length, progress: s.progress, compare: s.compare, toast: s.toast,
       statusColor: s.err ? '#8D1D2C' : s.busy ? '#c17a2a' : '#1b5e20',
-      statusLabel: s.err ? 'Erreur : ' + s.err : s.busy ? 'Chargement Overpass…' : fmtInt(s.bakeries.length) + ' commerces · ' + fmtInt(s.communes.length) + ' communes' + (self.useApi() ? '' : ' · saisies locales à ce navigateur'),
+      statusLabel: s.err ? 'Erreur : ' + s.err : s.busy ? (s.progress || 'Chargement…') : fmtInt(s.bakeries.length) + ' commerces · ' + fmtInt(s.communes.length) + ' communes' + (self.osmDate() ? ' · OpenStreetMap relu le ' + self.osmDate() : '') + (self.useApi() ? '' : ' · saisies locales à ce navigateur'),
       provinces: PROV.map(p => ({
         name: p.name, on: !!s.prov[p.code],
         count: s.bakeries.filter(b => b.prov === p.code).length || '—',
