@@ -2239,9 +2239,14 @@ function ep_exploitation_jour(): array
         if ($labourReel === null && !$estAuj && $dsLab !== null && $dsLab > 0) { $labourReel = $dsLab; }
         $labour = $labourReel !== null ? $labourReel : $labJ;
         $labourSource = $labourReel !== null ? 'mesure' : ($labJ !== null ? 'reparti' : null);
+        // Aujourd'hui compris : le panel alloue 378,92 €/jour en septembre là
+        // où sa route mensuelle divisée par nos jours donnait 355,42 € — deux
+        // chiffres pour un même mois selon qu'on regarde hier ou aujourd'hui.
+        // Une seule source, la sienne ; notre répartition ne sert plus qu'en
+        // repli quand elle ne répond pas.
         $ohSource = 'reparti';
         $oh = $ohJ;
-        if (!$estAuj && $dsOh !== null && $dsOh > 0) { $oh = $dsOh; $ohSource = 'mesure'; }
+        if ($dsOh !== null && $dsOh > 0) { $oh = $dsOh; $ohSource = 'mesure'; }
         $net = ($labour !== null && $oh !== null) ? $ca - $fc - $labour - $oh : null;
 
         // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
