@@ -6696,11 +6696,13 @@ class App {
       // ligne, sinon l'équipe passe pour bon marché.
       { l: 'Main-d’œuvre', v: fE(m.labour == null ? null : -m.labour), p: fPct(m.labourPct), w: barre(m.labourPct),
         coul: feu(m.labourPct, seuils.labour), fort: false,
-        d: (m.planningHeuresZero > 0)
-          ? 'hors ' + String(m.planningHeuresZero).replace('.', ',') + ' h à 0 €/h'
-            + ((m.planningZeroNoms || []).length ? ' (' + (m.planningZeroNoms || []).join(', ') + ')' : '')
-          : '',
-        dCoul: (m.planningHeuresZero > 0) ? '#C17A2A' : '',
+        d: (m.planningHeuresFranchise > 0)
+          ? 'hors ' + String(m.planningHeuresFranchise).replace('.', ',') + ' h de franchisé'
+            + ((m.planningFranchiseNoms || []).length ? ' (' + (m.planningFranchiseNoms || []).join(', ') + ')' : '')
+          : (m.planningHeuresZero > 0
+            ? String(m.planningHeuresZero).replace('.', ',') + ' h sans taux (' + (m.planningZeroNoms || []).join(', ') + ')'
+            : ''),
+        dCoul: (m.planningHeuresFranchise > 0 || m.planningHeuresZero > 0) ? '#C17A2A' : '',
         seuil: 'seuil ' + fPct(seuils.labour, 0) + (m.labourSource === 'reparti' ? ' · réparti' : '') },
       { l: 'Frais généraux', v: fE(m.overhead == null ? null : -m.overhead), p: fPct(m.overheadPct),
         w: barre(m.overheadPct), coul: feu(m.overheadPct, seuils.overhead), fort: false, d: '', dCoul: '',
@@ -6729,11 +6731,15 @@ class App {
         // Le planning en euros, au taux du panel : ce qu'il coûte, et ce
         // qu'il ne coûte pas — les heures du franchisé sont à 0 €/h chez le
         // panel, elles n'entrent pas dans la main-d'œuvre du P&L.
-        const zero = m.planningHeuresZero > 0;
+        const fr = m.planningHeuresFranchise > 0;
         const coutNote = m.planningCout != null
-          ? ' Coût au taux du panel : ' + fE(m.planningCout) + ' pour ' + String(m.planningHeures).replace('.', ',') + ' h'
-            + (zero ? ', dont ' + String(m.planningHeuresZero).replace('.', ',') + ' h à 0 €/h ('
-              + (m.planningZeroNoms || []).join(', ') + ') qui ne pèsent pas dans le P&L.' : '.')
+          ? ' Main-d’œuvre comptée au P&L : ' + fE(m.planningCout) + ' pour '
+            + String(Math.round((m.planningHeures - (m.planningHeuresFranchise || 0)) * 10) / 10).replace('.', ',') + ' h de salariés.'
+            + (fr ? ' Franchisé' + ((m.planningFranchiseNoms || []).length > 1 ? 's' : '') + ' : '
+              + String(m.planningHeuresFranchise).replace('.', ',') + ' h (' + (m.planningFranchiseNoms || []).join(', ') + '), '
+              + fE(m.planningCoutFranchise) + ' au taux du panel, hors P&L.' : '')
+            + (m.planningHeuresZero > 0 ? ' ' + String(m.planningHeuresZero).replace('.', ',') + ' h de salarié sans taux ('
+              + (m.planningZeroNoms || []).join(', ') + ') : fiche à compléter dans le panel.' : '')
           : '';
         return {
           note: 'Axe de ' + h0 + ' h à ' + h1 + ' h · CA attribué = le CA de chaque heure partagé entre les personnes en poste — pas les ventes encaissées à son nom.' + coutNote,
@@ -6743,8 +6749,10 @@ class App {
             creneau: p2.debut.replace(':', 'h') + ' – ' + p2.fin.replace(':', 'h'),
             h: String(p2.h).replace('.', ','),
             tauxTxt: p2.tauxH != null ? String(p2.tauxH).replace('.', ',') + ' €/h' : '',
-            coutTxt: p2.cout != null ? (p2.cout > 0 ? 'coûte ' + fE(p2.cout) : 'coûte 0 € au P&L') : '',
-            coutZero: p2.cout != null && p2.cout <= 0,
+            coutTxt: p2.horsPnl
+              ? (p2.cout > 0 ? fE(p2.cout) + ' hors P&L' : '0 € · hors P&L')
+              : (p2.cout != null ? (p2.cout > 0 ? 'coûte ' + fE(p2.cout) : 'sans taux au panel') : ''),
+            coutZero: !!p2.horsPnl || (p2.cout != null && p2.cout <= 0),
             g: ((hNum(p2.debut) - h0) / span * 100).toFixed(1),
             w: Math.max(2, (hNum(p2.fin) - hNum(p2.debut)) / span * 100).toFixed(1),
             ca: p2.ca != null ? fE(p2.ca) : '',

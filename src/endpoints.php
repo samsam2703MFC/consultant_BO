@@ -2481,7 +2481,12 @@ function ep_exploitation_jour(): array
         // l'ombre : les heures à 0 €/h (le franchisé) n'entrent pas dans la
         // main-d'œuvre du P&L — 9 h de travail qui ne coûtent rien au
         // résultat, ça se lit sur la ligne, pas entre les lignes.
-        $labPlan = 0.0; $hPlan = 0.0; $hZero = 0.0; $zeroNoms = [];
+        // La règle du panel, mesurée sur les quatre magasins : la main-d'œuvre
+        // du P&L = les heures des SALARIÉS × leur taux. Les franchisés en sont
+        // exclus même avec un taux (Gosselies : Max D. et Sandra C. à 18 €/h,
+        // 369 € hors P&L). On compte donc à part ce qui entre au résultat et
+        // ce que le franchisé donne sans y peser.
+        $labPlan = 0.0; $hPlan = 0.0; $hFr = 0.0; $coutFr = 0.0; $frNoms = []; $hZero = 0.0; $zeroNoms = [];
         foreach ($planM as $i9 => $p9) {
             $att = 0.0;
             foreach ($heuresCa as $h9 => $ca9) {
@@ -2491,14 +2496,22 @@ function ep_exploitation_jour(): array
             $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
             $planM[$i9]['caH'] = ($att > 0 && $p9['h'] > 0) ? round($att / $p9['h'], 2) : null;
             $tx = $tauxDe[(string) $id][(int) $p9['idEmp']] ?? null;
+            $fr = (bool) ($tx['franchise'] ?? false);
+            $cout = ($tx !== null && $tx['taux'] !== null) ? round($p9['h'] * $tx['taux'], 2) : null;
             $planM[$i9]['tauxH'] = $tx['taux'] ?? null;
-            $planM[$i9]['franchise'] = (bool) ($tx['franchise'] ?? false);
-            $planM[$i9]['cout'] = ($tx !== null && $tx['taux'] !== null) ? round($p9['h'] * $tx['taux'], 2) : null;
+            $planM[$i9]['franchise'] = $fr;
+            $planM[$i9]['cout'] = $cout;
+            $planM[$i9]['horsPnl'] = $fr;
             $hPlan += $p9['h'];
-            if ($tx !== null && $tx['taux'] !== null) { $labPlan += $p9['h'] * $tx['taux']; }
-            if ($tx !== null && ($tx['taux'] === null || $tx['taux'] <= 0)) {
-                $hZero += $p9['h'];
-                if (!in_array($p9['nom'], $zeroNoms, true)) { $zeroNoms[] = $p9['nom']; }
+            if ($fr) {
+                $hFr += $p9['h']; $coutFr += $cout ?? 0.0;
+                if (!in_array($p9['nom'], $frNoms, true)) { $frNoms[] = $p9['nom']; }
+            } elseif ($cout !== null) {
+                $labPlan += $cout;
+                if ($cout <= 0) {
+                    $hZero += $p9['h'];
+                    if (!in_array($p9['nom'], $zeroNoms, true)) { $zeroNoms[] = $p9['nom']; }
+                }
             }
         }
         foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp']); }
@@ -2511,8 +2524,11 @@ function ep_exploitation_jour(): array
             // Le planning en euros : ce que coûtent les services au taux du
             // panel, et les heures qui n'y coûtent rien.
             'planningHeures' => round($hPlan, 2),
-            'planningCout' => isset($tauxDe[(string) $id]) ? round($labPlan, 2) : null,
-            'planningHeuresZero' => round($hZero, 2),
+            'planningCout' => isset($tauxDe[(string) $id]) ? round($labPlan, 2) : null,   // ce qui entre au P&L
+            'planningHeuresFranchise' => round($hFr, 2),
+            'planningCoutFranchise' => round($coutFr, 2),   // au taux du panel, hors P&L
+            'planningFranchiseNoms' => $frNoms,
+            'planningHeuresZero' => round($hZero, 2),        // salariés sans taux : une anomalie de fiche
             'planningZeroNoms' => $zeroNoms,
             'ca' => round($ca, 2),
             'refCa' => $refCa !== null ? round($refCa, 2) : null,
