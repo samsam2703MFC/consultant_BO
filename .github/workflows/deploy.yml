@@ -143,7 +143,7 @@ jobs:
           # donc elle doit couvrir ce qui vient d'être livré — sinon elle
           # certifie une mise en ligne qu'elle n'a pas vérifiée.
           fail=0
-          for ep in meta stores consultants people 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
+          for ep in meta stores consultants people scouting 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
             echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
             if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
               echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1

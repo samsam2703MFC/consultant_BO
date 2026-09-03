@@ -3138,3 +3138,122 @@ function wr_task_delete(string $projectId, string $taskId): array
     }
     return ['ok' => true, 'signalements' => $sig, 'panel' => $panel];
 }
+
+/* --- Scouting commercial ----------------------------------------------------- */
+
+/** PUT /scouting/tiles/{i} — dépose un secteur du cache OpenStreetMap (partagé entre navigateurs). */
+function wr_scouting_tile_put(int $sector): array
+{
+    $raw = file_get_contents('php://input') ?: '';
+    if (strlen($raw) > 12 * 1024 * 1024) { http_response_code(413); return ['error' => 'secteur trop volumineux']; }
+    $d = json_decode($raw, true);
+    if (!is_array($d) || !isset($d['c'], $d['b']) || !is_array($d['c']) || !is_array($d['b'])) {
+        http_response_code(400); return ['error' => 'secteur attendu : { t, c, b, p }'];
+    }
+    $ts = (int) round(((float) ($d['t'] ?? 0)) / 1000);
+    Db::exec('INSERT INTO ceo_scouting_tile (sector, fetched_at, payload) VALUES (?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE fetched_at = VALUES(fetched_at), payload = VALUES(payload)',
+        [$sector, date('Y-m-d H:i:s', $ts > 0 ? $ts : time()), $raw]);
+    return ['ok' => true, 'communes' => count($d['c']), 'commerces' => count($d['b'])];
+}
+
+/** PUT /scouting/competitors — note, avis, source et commentaire terrain par commerce (lot ≤ 500).
+ *  Seules les clés présentes dans une ligne sont modifiées ; une ligne sans note,
+ *  sans commentaire et hors interrogation Google disparaît. */
+function wr_scouting_competitors_put(): array
+{
+    $b = body();
+    $rows = $b['rows'] ?? [];
+    if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
+    $n = 0; $rated = 0;
+    $id = ''; $name = ''; $commune = ''; $rating = null; $comment = null;
+    foreach (array_slice(array_values($rows), 0, 500) as $r) {
+        if (!is_array($r)) { continue; }
+        $id = trim((string) ($r['id'] ?? ''));
+        if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
+        $cur = Db::row('SELECT * FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+        $rating  = array_key_exists('rating', $r)  ? ($r['rating'] === null ? null : max(0, min(5, round((float) $r['rating'], 1)))) : ($cur['rating'] ?? null);
+        $reviews = array_key_exists('reviews', $r) ? ($r['reviews'] === null ? null : max(0, (int) $r['reviews'])) : ($cur['reviews'] ?? null);
+        $source  = array_key_exists('source', $r)  ? (in_array($r['source'], ['google', 'manuel'], true) ? $r['source'] : null) : ($cur['rating_source'] ?? null);
+        $comment = array_key_exists('comment', $r) ? ($r['comment'] === null || $r['comment'] === '' ? null : mb_substr((string) $r['comment'], 0, 200)) : ($cur['comment'] ?? null);
+        $name    = ($r['name'] ?? '') !== ''    ? mb_substr((string) $r['name'], 0, 200)    : ($cur['name'] ?? '');
+        $commune = ($r['commune'] ?? '') !== '' ? mb_substr((string) $r['commune'], 0, 120) : ($cur['commune'] ?? '');
+        $arr     = ($r['arr'] ?? '') !== ''     ? mb_substr((string) $r['arr'], 0, 60)      : ($cur['arrondissement'] ?? '');
+        if ($rating === null && $comment === null && $source !== 'google') {
+            Db::exec('DELETE FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+        } else {
+            Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
+                . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
+                . ' rating = VALUES(rating), reviews = VALUES(reviews), rating_source = VALUES(rating_source), comment = VALUES(comment), updated_at = VALUES(updated_at)',
+                [$id, $name, $commune, $arr, $rating, $reviews, $source, $comment, date('Y-m-d H:i:s')]);
+        }
+        $n++;
+        if ($rating !== null) { $rated++; }
+    }
+    if ($n === 0) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM attendu : n123, w456, r789)']; }
+    $who = ($name !== '' ? $name : $id) . ($commune !== '' ? ' (' . $commune . ')' : '');
+    $first = array_values($rows)[0];
+    if (!is_array($first)) { $first = []; }
+    if (count($rows) === 1 && array_key_exists('rating', $first)) {
+        journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id,
+            ($rating === null ? 'Note terrain retirée' : 'Note terrain ' . str_replace('.', ',', (string) $rating) . '/5 saisie') . ' — ' . $who);
+    } elseif (count($rows) === 1 && array_key_exists('comment', $first)) {
+        journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id,
+            ($comment === null ? 'Commentaire terrain retiré' : 'Commentaire terrain : « ' . $comment . ' »') . ' — ' . $who);
+    } else {
+        journalAdd('CEO', 'Scouting', 'Notes Google', 'Enrichissement Google Places — ' . $n . ' commerces traités, ' . $rated . ' notés');
+    }
+    return ['ok' => true, 'n' => $n];
+}
+
+/** POST /scouting/candidates — zone candidate retenue depuis sa fiche. */
+function wr_scouting_candidate_post(): array
+{
+    $b = body();
+    $id = (int) ($b['id'] ?? 0);
+    if ($id <= 0) { $id = (int) round(microtime(true) * 1000); }
+    $name = mb_substr((string) ($b['name'] ?? ''), 0, 200);
+    $commune = mb_substr((string) ($b['commune'] ?? ''), 0, 120);
+    Db::exec('INSERT INTO ceo_scouting_candidate (id, name, commune, arrondissement, province, lat, lng, households, market, emprise, revenue, score, shops, strong, revenue_m2, created_at)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name = VALUES(name)', [
+        $id, $name, $commune, mb_substr((string) ($b['arr'] ?? ''), 0, 60), mb_substr((string) ($b['prov'] ?? ''), 0, 60),
+        (float) ($b['lat'] ?? 0), (float) ($b['lng'] ?? 0),
+        max(0, (int) round((float) ($b['hh'] ?? 0))), max(0, (int) round((float) ($b['market'] ?? 0))),
+        max(0.0, min(1.0, (float) ($b['emprise'] ?? 0))), max(0, (int) round((float) ($b['ca'] ?? 0))),
+        max(0, min(100, (int) ($b['score'] ?? 0))), max(0, (int) ($b['n'] ?? 0)), max(0, (int) ($b['strong'] ?? 0)),
+        max(0, (int) round((float) ($b['m2'] ?? 0))), date('Y-m-d H:i:s'),
+    ]);
+    journalAdd('CEO', 'Scouting', $commune !== '' ? $commune : '—',
+        'Zone candidate retenue — ' . $name . ' · CA estimé ' . number_format((float) ($b['ca'] ?? 0), 0, ',', '.') . ' € · score ' . (int) ($b['score'] ?? 0) . '/100');
+    return ['ok' => true, 'id' => $id];
+}
+
+/** DELETE /scouting/candidates/{id} */
+function wr_scouting_candidate_delete(int $id): array
+{
+    $c = Db::row('SELECT name, commune FROM ceo_scouting_candidate WHERE id = ?', [$id]);
+    if ($c === null) { http_response_code(404); return ['error' => 'zone inconnue']; }
+    Db::exec('DELETE FROM ceo_scouting_candidate WHERE id = ?', [$id]);
+    journalAdd('CEO', 'Scouting', $c['commune'], 'Zone candidate retirée — ' . $c['name']);
+    return ['ok' => true];
+}
+
+/** PUT /scouting/populations — import CSV StatBel : { "populations": { "NIS": population } }. */
+function wr_scouting_populations_put(): array
+{
+    $b = body();
+    $pops = $b['populations'] ?? [];
+    if (!is_array($pops) || $pops === []) { http_response_code(400); return ['error' => 'populations attendu : { "NIS": population }']; }
+    $n = 0;
+    foreach ($pops as $ins => $pop) {
+        $ins = (string) $ins; $pop = (int) $pop;
+        if (!preg_match('/^\d{5}$/', $ins) || $pop <= 0) { continue; }
+        Db::exec('INSERT INTO ceo_scouting_population (ins, population, imported_at) VALUES (?,?,?)'
+            . ' ON DUPLICATE KEY UPDATE population = VALUES(population), imported_at = VALUES(imported_at)',
+            [$ins, $pop, date('Y-m-d H:i:s')]);
+        $n++;
+    }
+    $fichier = isset($b['fichier']) ? ' (' . mb_substr((string) $b['fichier'], 0, 80) . ')' : '';
+    journalAdd('CEO', 'Scouting', 'Population', 'Import StatBel — ' . $n . ' communes mises à jour' . $fichier);
+    return ['ok' => true, 'n' => $n];
+}

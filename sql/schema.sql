@@ -554,3 +554,53 @@ CREATE TABLE IF NOT EXISTS ceo_connecteur (
   items         INT          NOT NULL DEFAULT 0,   -- éléments traités au dernier passage
   detail        VARCHAR(400) NULL                  -- résumé lisible du dernier passage
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Scouting commercial (écran « Scouting commercial ») : cache OpenStreetMap
+-- partagé et saisies — notes/commentaires sur les concurrents, zones
+-- candidates retenues, populations StatBel importées. Les hypothèses du
+-- modèle CA et la clé Google Places vivent dans ceo_app_setting
+-- (clés scoutingParams et scoutingGoogleKey).
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_scouting_tile (
+  sector      TINYINT UNSIGNED PRIMARY KEY,   -- secteur Overpass (0–8, voir scouting.js)
+  fetched_at  DATETIME NOT NULL,
+  payload     MEDIUMTEXT NOT NULL             -- JSON { t, c: communes, b: commerces, p: nœuds place }
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scouting_competitor (
+  osm_id         VARCHAR(20) PRIMARY KEY,     -- type + id OSM : n123, w456, r789
+  name           VARCHAR(200) NOT NULL DEFAULT '',
+  commune        VARCHAR(120) NOT NULL DEFAULT '',
+  arrondissement VARCHAR(60)  NOT NULL DEFAULT '',
+  rating         DECIMAL(2,1) NULL,           -- note / 5 (Google ou saisie terrain)
+  reviews        INT UNSIGNED NULL,           -- nombre d'avis Google
+  rating_source  ENUM('google','manuel') NULL,
+  comment        VARCHAR(200) NULL,           -- commentaire terrain
+  updated_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scouting_candidate (
+  id             BIGINT UNSIGNED PRIMARY KEY, -- horodatage client (ms)
+  name           VARCHAR(200) NOT NULL,
+  commune        VARCHAR(120) NOT NULL,
+  arrondissement VARCHAR(60)  NOT NULL,
+  province       VARCHAR(60)  NOT NULL,
+  lat            DECIMAL(9,6) NOT NULL,
+  lng            DECIMAL(9,6) NOT NULL,
+  households     INT UNSIGNED NOT NULL,       -- ménages dans le rayon
+  market         INT UNSIGNED NOT NULL,       -- marché boulangerie (€)
+  emprise        DECIMAL(5,4) NOT NULL,       -- ratio 0–1
+  revenue        INT UNSIGNED NOT NULL,       -- CA annuel TTC estimé (€)
+  score          TINYINT UNSIGNED NOT NULL,   -- score d'opportunité 0–100
+  shops          SMALLINT UNSIGNED NOT NULL,  -- boulangeries dans le rayon
+  strong         SMALLINT UNSIGNED NOT NULL,  -- dont concurrents forts
+  revenue_m2     INT UNSIGNED NOT NULL,       -- CA / m² sur la surface cible
+  created_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scouting_population (
+  ins         CHAR(5) PRIMARY KEY,            -- code NIS de la commune
+  population  INT UNSIGNED NOT NULL,
+  imported_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

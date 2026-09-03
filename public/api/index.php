@@ -212,6 +212,8 @@ function route(string $method, string $path): mixed
             $path === '/ia/statut'                     => ep_ia_statut(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),
+            $path === '/scouting'                      => ep_scouting(),
+            preg_match('#^/scouting/tiles/(\d{1,2})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
         };
     }
@@ -347,6 +349,12 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/fonds/royalties/generer') { return wr_fonds_royalties_generer(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
+    // --- scouting commercial
+    if ($method === 'PUT' && preg_match('#^/scouting/tiles/(\d{1,2})$#', $path, $m)) { return wr_scouting_tile_put((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/scouting/competitors') { return wr_scouting_competitors_put(); }
+    if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
+    if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }
 
     return notFound();
 }

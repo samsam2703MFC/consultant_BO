@@ -7877,3 +7877,46 @@ function ep_ecran_vues(): array
     return ['depuis' => $depuis, 'joursListe' => $joursListe, 'ecrans' => $out, 'acteurs' => $acteurs,
         'total' => array_sum($parEcran)];
 }
+
+/* --- Scouting commercial ----------------------------------------------------- */
+
+/** GET /scouting — saisies enregistrées, hypothèses, clé Google, inventaire du cache OSM. */
+function ep_scouting(): array
+{
+    $competitors = array_map(fn ($r) => [
+        'id' => $r['osm_id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'],
+        'rating' => $r['rating'] !== null ? (float) $r['rating'] : null,
+        'reviews' => $r['reviews'] !== null ? (int) $r['reviews'] : null,
+        'source' => $r['rating_source'], 'comment' => $r['comment'],
+    ], Db::rows('SELECT * FROM ceo_scouting_competitor'));
+    $candidates = array_map(fn ($r) => [
+        'id' => (int) $r['id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'], 'prov' => $r['province'],
+        'lat' => (float) $r['lat'], 'lng' => (float) $r['lng'], 'hh' => (int) $r['households'], 'market' => (int) $r['market'],
+        'emprise' => (float) $r['emprise'], 'ca' => (int) $r['revenue'], 'score' => (int) $r['score'], 'n' => (int) $r['shops'],
+        'strong' => (int) $r['strong'], 'm2' => (int) $r['revenue_m2'],
+    ], Db::rows('SELECT * FROM ceo_scouting_candidate ORDER BY created_at, id'));
+    $pops = [];
+    foreach (Db::rows('SELECT ins, population FROM ceo_scouting_population') as $r) {
+        $pops[$r['ins']] = (int) $r['population'];
+    }
+    $tiles = array_map(fn ($r) => ['sector' => (int) $r['sector'], 'fetchedAt' => $r['fetched_at'], 'bytes' => (int) $r['bytes']],
+        Db::rows('SELECT sector, fetched_at, LENGTH(payload) AS bytes FROM ceo_scouting_tile ORDER BY sector'));
+    return [
+        'params'      => setting('scoutingParams'),
+        'googleKey'   => (string) setting('scoutingGoogleKey', ''),
+        'competitors' => $competitors,
+        'candidates'  => $candidates,
+        'populations' => (object) $pops,
+        'tiles'       => $tiles,
+    ];
+}
+
+/** GET /scouting/tiles/{i} — un secteur du cache OpenStreetMap partagé. */
+function ep_scouting_tile(int $sector): array
+{
+    $r = Db::row('SELECT payload FROM ceo_scouting_tile WHERE sector = ?', [$sector]);
+    if ($r === null) { http_response_code(404); return ['error' => 'secteur absent du cache']; }
+    $d = json_decode($r['payload'], true);
+    if (!is_array($d)) { http_response_code(500); return ['error' => 'cache illisible']; }
+    return $d;
+}

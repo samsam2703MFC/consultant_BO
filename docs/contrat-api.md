@@ -31,6 +31,8 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 | `reporting` | `GET /reporting` | Reporting automatisé |
 | `journal` | `GET /journal` | Journal |
 | `products` | `GET /products/scoring?periode=AAAA-MM` | Scoring produits |
+| — | `GET /scouting` | Scouting commercial : saisies, hypothèses, clé Google, inventaire du cache OSM |
+| — | `GET /scouting/tiles/{secteur}` | Scouting commercial : un secteur du cache OpenStreetMap |
 
 ### `/meta`
 
@@ -333,6 +335,34 @@ ALTER TABLE ceo_project_task ADD CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) R
 
 ---
 
+### `/scouting` — saisies du scouting commercial
+
+Chargé à l'ouverture de l'écran (pas au démarrage du cockpit). Les données
+OpenStreetMap elles-mêmes ne transitent pas par ce endpoint : le navigateur
+interroge Overpass et dépose chaque secteur dans le cache partagé.
+
+```json
+{
+  "params": { "spend": 586, "emprise": 0, "passage": 15, "surface": 250, "empriseMax": 30,
+              "compK": 0.22, "hhSize": 2.31, "minScore": 55, "radius": 2, "thresh": 4.5 },
+  "googleKey": "",
+  "competitors": [{ "id": "n123456", "name": "Boulangerie Dupont", "commune": "Halle", "arr": "Hal-Vilvorde",
+                    "rating": 4.6, "reviews": 132, "source": "google", "comment": "File le samedi" }],
+  "candidates": [{ "id": 1756900000000, "name": "Halle — zone 50.733/4.237", "commune": "Halle", "arr": "Hal-Vilvorde",
+                   "prov": "Brabant flamand", "lat": 50.7336, "lng": 4.2372, "hh": 9800, "market": 5742800,
+                   "emprise": 0.155, "ca": 1047000, "score": 72, "n": 6, "strong": 2, "m2": 4188 }],
+  "populations": { "23027": 42608 },
+  "tiles": [{ "sector": 0, "fetchedAt": "2026-09-03 17:12:40", "bytes": 91234 }]
+}
+```
+
+- `params` : `null` tant qu'aucune hypothèse n'a été enregistrée (défauts de l'étude Halle côté client).
+- `competitors[].source` ∈ `google` | `manuel` ; une note `manuel` prime sur Google. `rating: null` avec
+  `source: "google"` = commerce déjà interrogé sans note (pas réinterrogé).
+- `id` d'un concurrent = type + id OSM (`n`, `w`, `r`). `id` d'une zone candidate = horodatage client (ms).
+- `tiles` : inventaire seulement ; `GET /scouting/tiles/{secteur}` renvoie le JSON `{ t, c, b, p }` déposé
+  par le navigateur (communes, commerces, nœuds `place`). 404 si le secteur n'est pas en cache.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)
@@ -483,6 +513,55 @@ CREATE TABLE ceo_product_month_sales (
 
 `tendVol` est calculé côté API : `volume(annee, mois) / volume(annee-1, mois)`.
 
+-- Scouting commercial
+CREATE TABLE ceo_scouting_tile (
+  sector      TINYINT UNSIGNED PRIMARY KEY,    -- secteur Overpass 0–8
+  fetched_at  DATETIME NOT NULL,
+  payload     MEDIUMTEXT NOT NULL              -- JSON { t, c, b, p } déposé par le navigateur
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ceo_scouting_competitor (
+  osm_id         VARCHAR(20) PRIMARY KEY,      -- n123 / w456 / r789
+  name           VARCHAR(200) NOT NULL DEFAULT '',
+  commune        VARCHAR(120) NOT NULL DEFAULT '',
+  arrondissement VARCHAR(60)  NOT NULL DEFAULT '',
+  rating         DECIMAL(2,1) NULL,
+  reviews        INT UNSIGNED NULL,
+  rating_source  ENUM('google','manuel') NULL,
+  comment        VARCHAR(200) NULL,
+  updated_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ceo_scouting_candidate (
+  id             BIGINT UNSIGNED PRIMARY KEY,  -- horodatage client (ms)
+  name           VARCHAR(200) NOT NULL,
+  commune        VARCHAR(120) NOT NULL,
+  arrondissement VARCHAR(60)  NOT NULL,
+  province       VARCHAR(60)  NOT NULL,
+  lat            DECIMAL(9,6) NOT NULL,
+  lng            DECIMAL(9,6) NOT NULL,
+  households     INT UNSIGNED NOT NULL,
+  market         INT UNSIGNED NOT NULL,
+  emprise        DECIMAL(5,4) NOT NULL,        -- ratio 0–1
+  revenue        INT UNSIGNED NOT NULL,        -- CA annuel TTC estimé
+  score          TINYINT UNSIGNED NOT NULL,
+  shops          SMALLINT UNSIGNED NOT NULL,
+  strong         SMALLINT UNSIGNED NOT NULL,
+  revenue_m2     INT UNSIGNED NOT NULL,
+  created_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ceo_scouting_population (
+  ins         CHAR(5) PRIMARY KEY,             -- code NIS
+  population  INT UNSIGNED NOT NULL,
+  imported_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+Les hypothèses du modèle et la clé Google Places sont des lignes de
+`ceo_app_setting` (`scoutingParams`, `scoutingGoogleKey`).
+
+```sql
 ### Écran → tables
 
 | Écran | Tables |
@@ -512,5 +591,10 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Changement de statut projet | `PATCH /projects/{id}` |
 | Relance d'une tâche | `POST /tasks/{id}/reminder` |
 | Modification d'un seuil ou d'un modèle d'email | `PUT /parametres/{key}` |
+| Scouting — hypothèses du modèle / clé Google Places | `PUT /parametres/scoutingParams` · `PUT /parametres/scoutingGoogleKey` (`{ "valeur": … }`) |
+| Scouting — dépôt d'un secteur OSM dans le cache partagé | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
+| Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
+| Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |
+| Scouting — import CSV StatBel | `PUT /scouting/populations` (`{ "populations": { "NIS": population }, "fichier"? }`) |
 
 Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Journal en dépend).

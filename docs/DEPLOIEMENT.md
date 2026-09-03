@@ -63,6 +63,16 @@ Alias /consulant_bo /var/www/consulant_bo/public
 
 Prérequis : Apache `mod_rewrite`, PHP ≥ 8.1 avec `pdo_mysql`.
 
+L'écran Scouting commercial n'ajoute rien côté serveur (Leaflet est embarqué
+dans `assets/vendor/leaflet/`, déployé avec `public/` ; ses tables
+`ceo_scouting_*` sont créées automatiquement, cf. § 3). Il a en revanche
+besoin que les **navigateurs** des utilisateurs atteignent
+`tile.openstreetmap.org`, les serveurs Overpass (`overpass.kumi.systems`,
+`overpass-api.de`, `overpass.private.coffee`) et, pour les notes,
+`maps.googleapis.com`. Un `PUT /scouting/tiles/{n}` pèse jusqu'à ~1 Mo :
+`post_max_size` PHP et la limite de corps du proxy/Apache doivent le laisser
+passer (défaut PHP 8 Mo — suffisant).
+
 ---
 
 ## 3. Base de données — création AUTOMATIQUE des tables
