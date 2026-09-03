@@ -150,7 +150,7 @@ export function renderLeft(c, x){
 
   <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
 
-  <div class="t-admin-label" style="margin-bottom:6px">Population</div>
+  <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Population${info(esc, c.popTip)}</div>
   <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.popCoverage)}</div>
   <label style="display:block;font-size:12px;color:var(--color-text);border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
     Importer un CSV StatBel (code NIS ; population)

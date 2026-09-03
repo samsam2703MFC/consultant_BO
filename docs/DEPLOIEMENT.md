@@ -72,7 +72,8 @@ une première relecture des secteurs manquants en arrière-plan. Le serveur doit
 donc atteindre les miroirs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
 `overpass.private.coffee`) et, pour les notes Google, `places.googleapis.com`
 (clé du connecteur Google de Paramètres, même sortie que la réputation des
-magasins). Les **navigateurs** n'ont besoin que de `tile.openstreetmap.org`
+magasins). La grille de population du recensement 2021 est un fichier statique livré avec
+`public/` (`assets/data/population_grid_2021.json`, 673 Ko). Les **navigateurs** n'ont besoin que de `tile.openstreetmap.org`
 (fond de carte) ; ils ne retombent sur Overpass que si le serveur n'y arrive
 pas. Un `PUT /scouting/tiles/{n}` pèse jusqu'à ~1 Mo :
 `post_max_size` PHP et la limite de corps du proxy/Apache doivent le laisser

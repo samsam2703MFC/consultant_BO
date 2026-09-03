@@ -38,7 +38,7 @@ const ARR = {
   31: 'Bruges', 32: 'Dixmude', 33: 'Ypres', 34: 'Courtrai', 35: 'Ostende',
   36: 'Roulers', 37: 'Tielt', 38: 'Furnes',
   41: 'Alost', 42: 'Termonde', 43: 'Eeklo', 44: 'Gand', 45: 'Audenarde', 46: 'Saint-Nicolas',
-  51: 'Ath', 52: 'Charleroi', 53: 'Mons', 54: 'Mouscron', 55: 'Soignies', 56: 'Thuin', 57: 'Tournai',
+  51: 'Ath', 52: 'Charleroi', 53: 'Mons', 54: 'Mouscron', 55: 'Soignies', 56: 'Thuin', 57: 'Tournai', 58: 'La Louvière',
   61: 'Huy', 62: 'Liège', 63: 'Verviers', 64: 'Waremme',
   71: 'Hasselt', 72: 'Maaseik', 73: 'Tongres',
   81: 'Arlon', 82: 'Bastogne', 83: 'Marche-en-Famenne', 84: 'Neufchâteau', 85: 'Virton',
@@ -72,7 +72,7 @@ const INS_PROV = {
   '21': 'BRU', '23': 'VBR', '24': 'VBR', '25': 'WBR',
   '31': 'VWV', '32': 'VWV', '33': 'VWV', '34': 'VWV', '35': 'VWV', '36': 'VWV', '37': 'VWV', '38': 'VWV',
   '41': 'VOV', '42': 'VOV', '43': 'VOV', '44': 'VOV', '45': 'VOV', '46': 'VOV',
-  '51': 'WHT', '52': 'WHT', '53': 'WHT', '54': 'WHT', '55': 'WHT', '56': 'WHT', '57': 'WHT',
+  '51': 'WHT', '52': 'WHT', '53': 'WHT', '54': 'WHT', '55': 'WHT', '56': 'WHT', '57': 'WHT', '58': 'WHT',   // 58 : arrondissement de La Louvière (2019)
   '61': 'WLG', '62': 'WLG', '63': 'WLG', '64': 'WLG',
   '71': 'VLI', '72': 'VLI', '73': 'VLI',
   '81': 'WLX', '82': 'WLX', '83': 'WLX', '84': 'WLX', '85': 'WLX',
@@ -116,6 +116,7 @@ const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat:
 const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false };
 const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
+const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
 const LS = 'ceo_scouting';
 
 // Info-bulles (i) : ce que chaque réglage change, et la formule de chaque champ
@@ -140,7 +141,7 @@ const TIP_HYP = {
 };
 const TIP_FICHE = {
   'Score d\'opportunité': 'score = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, borné de 0 à 100.\n14 000 ménages dans le rayon valent les 60 points de potentiel ; l\'emprise — donc la concurrence — vaut les 40 points restants.',
-  'Ménages dans le rayon': 'Ménages des communes comprises dans le rayon : chaque commune compte pour la part de son territoire (un disque autour de son centre, de la surface de sa boîte englobante OpenStreetMap × 0,6) qui tombe dans le rayon. Une commune ne compte jamais plus que ses propres ménages.',
+  'Ménages dans le rayon': 'Population des cellules de 1 km² du recensement 2021 (StatBel, grille Eurostat) dont le centre est dans le rayon — les cellules de bord comptent au prorata — divisée par la taille moyenne des ménages. Sans grille : part du territoire de chaque commune comprise dans le rayon.',
   'Population communale': 'Population de la commune la plus proche du point : relation OSM, ou CSV StatBel importé. « Estimée » = déduite de la densité médiane des communes voisines.',
   'dont zone primaire': 'Même calcul sur un rayon réduit à 55 % : la clientèle la plus proche, celle qui vient sans détour.',
   'Marché boulangerie': 'Marché = ménages du rayon × dépense boulangerie par ménage (hypothèse).',
@@ -155,7 +156,7 @@ const TIP_FICHE = {
 };
 const TIP_ZONES = {
   score: TIP_FICHE['Score d\'opportunité'],
-  hh: 'Ménages des communes comprises dans le rayon autour du point balayé : chaque commune compte pour la part de son territoire qui tombe dans le rayon, jamais plus que ses propres ménages — le même calcul que la fiche.',
+  hh: 'Population des cellules de 1 km² du recensement 2021 dans le rayon autour du point balayé (cellules de bord au prorata), divisée par la taille des ménages — le même calcul que la fiche.',
   n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
   emprise: 'emprise = emprise max ÷ (1 + sensibilité × pression), entre 4 % et l\'emprise max — ou l\'emprise imposée. Pression = Σ force × (1 − 0,6 × distance ÷ rayon).',
   ca: 'CA annuel TTC = ménages × dépense par ménage × emprise ÷ (1 − passage).',
@@ -163,7 +164,7 @@ const TIP_ZONES = {
 };
 const TIP_ARR = {
   communes: 'Communes OSM (admin_level 8) rattachées à l\'arrondissement.',
-  pop: 'Somme des populations communales (OSM, CSV StatBel, ou estimation par la densité des voisines).',
+  pop: 'Somme des populations communales : grille du recensement 2021 par commune, CSV StatBel importé s\'il existe, sinon OSM ou estimation.',
   hh: 'Ménages = population ÷ taille moyenne des ménages, sommés sur les communes.',
   market: 'Marché boulangerie = ménages × dépense par ménage.',
   shops: 'Boulangeries et pâtisseries OSM rattachées aux communes de l\'arrondissement.',
@@ -598,6 +599,7 @@ export class Scouting {
     this._loading = true;
     this.setState({ err: null, busy: true, progress: 'Interrogation d\'OpenStreetMap…' });
     const api = this.useApi();
+    const gridP = this.loadGrid();   // la grille de population, en parallèle des secteurs
     if (api && !this._serverTiles){ this.setState({ progress: 'Lecture des saisies enregistrées…' }); await this.pullSaved(); }
     const bakeries = [], communes = [], places = [], seenC = {}, seenB = {}, failed = [];
     let done = 0;
@@ -666,6 +668,12 @@ export class Scouting {
     const queue = TILES.map((_, i) => i);
     const worker = async () => { while (queue.length){ await tile(queue.shift()); } };
     await Promise.all([worker(), worker(), worker()]);
+    // la grille manque encore ? on lui laisse huit secondes, puis on affiche sans
+    // elle et on la reprend dès qu'elle arrive
+    if (!this._grid){
+      await Promise.race([gridP, new Promise(res => setTimeout(res, 8000))]);
+      if (!this._grid) gridP.then(g => { if (g && !this._loading){ this.fillPop(this.state.communes, null); this._rev++; this.setState({}); } });
+    }
     this._loading = false;
     if (!communes.length){
       this.setState({ busy: false, progress: '', err: 'Overpass injoignable — réessaie avec « Recharger les données ».' });
@@ -714,6 +722,15 @@ export class Scouting {
       else { c.pop = c.popOsm; c.est = false; c.official = false; }
       c.hh = c.pop ? Math.round(c.pop / hs) : 0;
     });
+    const g = this._grid;
+    if (g){
+      // la grille du recensement fait foi pour la commune, sauf CSV importé
+      cs.forEach(c => {
+        if (off[c.ins]) return;
+        const p = g.byNis[c.ins];
+        if (p){ c.pop = p; c.est = false; c.official = true; c.grille = true; c.hh = Math.round(p / hs); }
+      });
+    }
     if (pl.length){
       const idx = {};
       pl.forEach(p => {
@@ -755,9 +772,12 @@ export class Scouting {
   // cache), on retombe sur l'écart aux voisines.
   index(communes){
     const cs = communes || [];
+    const areas = this._grid && this._grid.areas;
     cs.forEach(c => {
       let r = null;
-      if (c.bb && c.bb.length === 4){
+      // la surface exacte de la commune (contours LAU livrés avec la grille) prime
+      if (areas && areas[c.ins] > 0.5) r = Math.sqrt(areas[c.ins] / Math.PI);
+      if (r === null && c.bb && c.bb.length === 4){
         const dLat = (c.bb[2] - c.bb[0]) * 111, dLng = (c.bb[3] - c.bb[1]) * 111 * Math.cos(c.lat * Math.PI / 180);
         const area = 0.6 * dLat * dLng;
         if (area > 0.5) r = Math.sqrt(area / Math.PI);
@@ -1091,7 +1111,37 @@ export class Scouting {
     return s.communes.filter(c => s.prov[c.prov] && (s.arr === 'all' || c.arr === s.arr) && c.hh >= s.minHh);
   }
 
-  // Ménages dans le rayon : chaque commune compte pour la part de son
+  /* ---------- population : grille 1 km² du recensement 2021 ---------- */
+  // Les cellules de 1 km² du recensement 2021 (StatBel, diffusion Eurostat) :
+  // la population là où elle vit, et non répartie sur toute la commune. Servie
+  // en statique avec l'écran ; rangée par cases de 0,02° pour les sommes dans
+  // un rayon ; ses totaux par commune corrigent les populations communales.
+  loadGrid(){
+    if (this._grid) return Promise.resolve(this._grid);
+    if (this._gridP) return this._gridP;
+    this._gridP = fetch(GRID_URL, { credentials: 'same-origin' })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(d => {
+        const cells = (d && d.cellules) || [];
+        const buckets = {}, byNis = {};
+        let pop = 0;
+        cells.forEach(c => {
+          const k = Math.floor(c[0] / 0.02) + ',' + Math.floor(c[1] / 0.02);
+          (buckets[k] || (buckets[k] = [])).push(c);
+          if (c[3]) byNis[c[3]] = (byNis[c[3]] || 0) + c[2];
+          pop += c[2];
+        });
+        this._grid = { buckets: buckets, byNis: byNis, areas: (d && d.communes) || {}, n: cells.length, pop: pop, source: (d && d.source) || 'recensement 2021', annee: (d && d.annee) || 2021 };
+        return this._grid;
+      })
+      .catch(e => { console.warn('[scouting] grille de population indisponible :', e.message); this._gridP = null; return null; });
+    return this._gridP;
+  }
+
+  // Ménages dans le rayon. Avec la grille : population des cellules de 1 km²
+  // dont le centre est dans le rayon — les cellules de bord comptent au prorata
+  // sur 1 km de transition — divisée par la taille moyenne des ménages.
+  // Sans grille (fichier absent) : chaque commune compte pour la part de son
   // territoire — un disque de rayon rKm autour de son centre — comprise dans
   // le rayon. Une commune ne compte donc jamais plus que ses propres ménages,
   // et un rayon large additionne les communes qu'il couvre, au lieu d'étendre
@@ -1099,6 +1149,22 @@ export class Scouting {
   // ménages au port d'Anvers). Le même calcul sert à la fiche, à ceo_zones et
   // au Top 5 : leurs chiffres concordent.
   householdsIn(lat, lng, R, communes){
+    const g = this._grid;
+    if (g){
+      const step = 0.02, m = R + 0.8, kl = 111 * Math.cos(lat * Math.PI / 180);
+      const i0 = Math.floor((lat - m / 111) / step), i1 = Math.floor((lat + m / 111) / step);
+      const j0 = Math.floor((lng - m / kl) / step), j1 = Math.floor((lng + m / kl) / step);
+      let pop = 0;
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++){
+        const l = g.buckets[i + ',' + j]; if (!l) continue;
+        for (let q = 0; q < l.length; q++){
+          const c = l[q], d = dist(lat, lng, c[0], c[1]);
+          if (d <= R - 0.5) pop += c[2];
+          else if (d < R + 0.5) pop += c[2] * (R + 0.5 - d);
+        }
+      }
+      return pop / (this.state.hhSize || HH_SIZE);
+    }
     const cs = communes || this.state.communes;
     let hh = 0;
     for (let i = 0; i < cs.length; i++){
@@ -1584,7 +1650,10 @@ export class Scouting {
         { k: 'Taille moyenne des ménages', v: s.hhSize, set: e => { const val = parseFloat(String(e.target.value).replace(',', '.')) || HH_SIZE; self.setState({ hhSize: val }); setTimeout(() => self.recomputePop(), 0); } }
       ].map(p => Object.assign(p, { i: TIP_HYP[p.k] || '' })),
       empriseHint: s.emprise > 0 ? 'Emprise imposée à ' + s.emprise + ' % pour toutes les zones' : 'Emprise calculée : ' + s.empriseMax + ' % divisés par la pression concurrentielle du rayon',
-      popCoverage: fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
+      popCoverage: self._grid
+        ? 'Grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat) : ' + fmtInt(self._grid.n) + ' cellules, ' + fmtInt(self._grid.pop) + ' habitants · ' + fmtInt(s.communes.filter(c => c.grille).length) + ' communes sur la grille, ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées'
+        : fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
+      popTip: 'La population vit sur la grille de 1 km² du recensement 2021 (StatBel, diffusée par Eurostat/GISCO) : chaque zone compte les habitants des cellules de son rayon, là où ils habitent — et non la population communale étalée sur toute la commune. Les totaux par commune en découlent ; un CSV StatBel importé (code NIS ; population) prime pour la commune.',
       importPops: e => self.importPops(e),
       tips: TIP_REGL, concTips: TIP_CONC,
       calage: (() => {
