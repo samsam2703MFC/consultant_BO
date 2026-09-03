@@ -118,6 +118,66 @@ const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B'
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const LS = 'ceo_scouting';
 
+// Info-bulles (i) : ce que chaque réglage change, et la formule de chaque champ
+// calculé — les mêmes formules que evaluate(), scanPrio(), strength() et
+// arrStats() ci-dessous, à tenir en phase avec elles.
+const TIP_REGL = {
+  minRating: 'Ne garde que les concurrents dont la note atteint ce minimum. Dès que le curseur dépasse 0, les commerces sans note sortent de la carte et des calculs.',
+  minHh: 'Ne garde que les communes d\'au moins ce nombre de ménages (population ÷ taille des ménages) ; leurs commerces suivent.',
+  radius: 'Rayon autour d\'un concurrent fort où aucune implantation n\'est retenue (zone rouge). C\'est aussi le rayon d\'évaluation d\'une zone : ménages, marché et concurrents y sont comptés. 2 km ≈ 15 à 20 min en voiture.',
+  thresh: 'Note à partir de laquelle un concurrent est « fort » : zone rouge autour de lui, et poids × 1,5 dans la pression concurrentielle.\nSans note, il est fort si sa force OSM ≥ 0,75 − (5 − seuil) × 0,05.',
+  minScore: 'Score d\'opportunité en dessous duquel une zone n\'est ni tracée sur la carte ni listée dans ceo_zones.\nscore = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100.',
+  ca: 'CA annuel TTC = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage).'
+};
+const TIP_HYP = {
+  'Dépense boulangerie / ménage (€/an)': 'Ce qu\'un ménage dépense par an en boulangerie-pâtisserie — étude GeoConsulting (Halle, 08-2024) : 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra.\nMarché du rayon = ménages du rayon × dépense.',
+  'Emprise imposée (%, 0 = calculée)': 'Part du marché du rayon captée par le point. À 0, l\'emprise est calculée depuis la concurrence (emprise max, sensibilité, pression). Une valeur > 0 s\'applique telle quelle à toutes les zones — Halle mesurée : 15,5 %.',
+  'Part du passage (%)': 'Part du CA apportée par la clientèle de passage, en plus des ménages du rayon.\nCA = CA des ménages ÷ (1 − passage) ; à 15 %, CA des ménages ÷ 0,85.',
+  'Surface nette cible (m²)': 'Surface de vente du projet. N\'entre que dans le rendement : €/m² = CA annuel ÷ surface (Halle : 1 296 881 € sur 250 m²).',
+  'Emprise maximale du modèle (%)': 'Emprise d\'un point sans aucun concurrent dans le rayon. Chaque concurrent la fait baisser :\nemprise = emprise max ÷ (1 + sensibilité × pression), plancher 4 %.',
+  'Sensibilité à la concurrence': 'Vitesse à laquelle la concurrence fait baisser l\'emprise.\nemprise = emprise max ÷ (1 + sensibilité × pression concurrentielle)\nAvec 0,22 et une emprise max de 30 % : pression 0 → 30 % ; pression 1 → 24,6 % ; pression 4,5 → 15,1 % (≈ Halle). Plus la valeur est haute, plus la même concurrence pèse.',
+  'Taille moyenne des ménages': 'Personnes par ménage, pour passer de la population des communes aux ménages : ménages = population ÷ taille. Belgique 2,31 (étude : 2,34 en Flandre).'
+};
+const TIP_FICHE = {
+  'Score d\'opportunité': 'score = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, borné de 0 à 100.\n14 000 ménages dans le rayon valent les 60 points de potentiel ; l\'emprise — donc la concurrence — vaut les 40 points restants.',
+  'Ménages dans le rayon': 'Le disque du rayon est découpé en 26 × 26 cases ; chaque case prend la densité de ménages de la commune la plus proche (à moins de 1,9 × son rayon habité). Ménages = Σ densité × surface de case.',
+  'Population communale': 'Population de la commune la plus proche du point : relation OSM, ou CSV StatBel importé. « Estimée » = déduite de la densité médiane des communes voisines.',
+  'dont zone primaire': 'Ménages des cases à moins de 55 % du rayon : la clientèle la plus proche, celle qui vient sans détour.',
+  'Marché boulangerie': 'Marché = ménages du rayon × dépense boulangerie par ménage (hypothèse).',
+  'Dépense / ménage': 'Hypothèse du modèle : dépense annuelle d\'un ménage en boulangerie-pâtisserie.',
+  'Boulangeries dans le rayon': 'Concurrents de la sélection à moins de « rayon » km du point. « Fortes » : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
+  'Pression concurrentielle': 'Σ, sur les concurrents du rayon, de : force (0 à 1) × (1 − 0,6 × distance ÷ rayon) × 1,5 si le concurrent est fort.\nUn concurrent au centre pèse toute sa force, un concurrent en bord de rayon 40 % de sa force. Force = (note − 3) ÷ 2, ou signaux OSM sans note.',
+  'Emprise estimée': 'emprise = emprise max ÷ (1 + sensibilité × pression concurrentielle), entre 4 % et l\'emprise max.',
+  'Emprise imposée': 'Emprise fixée dans les hypothèses : la même pour toutes les zones, la concurrence ne la modifie pas.',
+  'Passage': 'Majoration par la clientèle de passage : CA = CA des ménages ÷ (1 − passage).',
+  'Rendement annuel / m²': '€/m² = CA annuel ÷ surface nette cible (hypothèse).',
+  'CA hebdomadaire': 'CA annuel ÷ 52.'
+};
+const TIP_ZONES = {
+  score: TIP_FICHE['Score d\'opportunité'],
+  hh: 'Ménages du rayon autour du point balayé = densité de ménages de la commune la plus proche × π × rayon².',
+  n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
+  emprise: 'emprise = emprise max ÷ (1 + sensibilité × pression), entre 4 % et l\'emprise max — ou l\'emprise imposée. Pression = Σ force × (1 − 0,6 × distance ÷ rayon).',
+  ca: 'CA annuel TTC = ménages × dépense par ménage × emprise ÷ (1 − passage).',
+  m2: '€/m² = CA annuel ÷ surface nette cible.'
+};
+const TIP_ARR = {
+  communes: 'Communes OSM (admin_level 8) rattachées à l\'arrondissement.',
+  pop: 'Somme des populations communales (OSM, CSV StatBel, ou estimation par la densité des voisines).',
+  hh: 'Ménages = population ÷ taille moyenne des ménages, sommés sur les communes.',
+  market: 'Marché boulangerie = ménages × dépense par ménage.',
+  shops: 'Boulangeries et pâtisseries OSM rattachées aux communes de l\'arrondissement.',
+  strong: 'Concurrents forts : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
+  dens: 'Commerces pour 10 000 habitants = commerces ÷ (population ÷ 10 000).',
+  avg: 'Moyenne des notes (Google ou terrain) des commerces notés de l\'arrondissement.',
+  perShop: 'Ménages par point de vente = ménages ÷ commerces : plus c\'est haut, moins l\'offre est dense.'
+};
+const TIP_CONC = {
+  'Note / 5': 'Note Google (via la clé de Paramètres) ou note terrain saisie dans la case — la saisie prime.',
+  'Source': 'Google : note lue chez Google Places · saisie : note terrain · vide : pas encore interrogé.',
+  'Force': 'Force du concurrent, 0 à 100 % : (note − 3) ÷ 2 avec une note ; sinon signaux OSM : 0,40 + 0,25 enseigne ou chaîne + 0,10 site web + 0,10 horaires + 0,05 pâtisserie.'
+};
+
 const fmtInt = n => Math.round(n).toLocaleString('fr-BE');
 const fmtEur = n => Math.round(n).toLocaleString('fr-BE') + ' €';
 const dist = (a, b, c, d) => {
@@ -279,6 +339,7 @@ export class Scouting {
 
   render(){
     if (!this.el.isConnected) return;
+    this.hideTip();
     this._h = [];
     const x = {
       A: fn => fn ? `data-sh="${this.reg(fn)}"` : '',
@@ -321,12 +382,36 @@ export class Scouting {
       const fn = this._h[+el.getAttribute(attr)];
       if (fn) fn(e);
     };
+    // Info-bulles (i) : le texte vit dans data-sc-tip ; la bulle est posée en
+    // position fixe dans le document, hors des panneaux qui défilent (un ::after
+    // CSS y serait rogné). Le clic la fige — écrans tactiles — et n'atteint pas
+    // le bouton qui porte l'icône (en-têtes triables).
+    const tipOf = e => { const el = e.target && e.target.closest ? e.target.closest('[data-sc-tip]') : null; return el && this.el.contains(el) ? el : null; };
+    this.el.addEventListener('mouseover', e => { const el = tipOf(e); if (el && el !== this._tipFor) this.showTip(el); });
+    this.el.addEventListener('mouseout', e => { const el = tipOf(e); if (el && !(e.relatedTarget && el.contains(e.relatedTarget)) && !this._tipPinned) this.hideTip(); });
+    this.el.addEventListener('click', e => { const el = tipOf(e); if (!el) return; e.preventDefault(); e.stopImmediatePropagation(); if (this._tipFor === el && this._tipPinned) this.hideTip(); else { this.showTip(el); this._tipPinned = true; } });
     this.el.addEventListener('click', e => run('data-sh', e));
     this.el.addEventListener('change', e => run('data-sc', e));
     this.el.addEventListener('input', e => run('data-si', e));
     // positions de défilement des panneaux, restaurées après chaque rendu
-    this.el.addEventListener('scroll', e => { if (e.target && e.target.id) this._scroll[e.target.id] = e.target.scrollTop; }, true);
+    this.el.addEventListener('scroll', e => { if (e.target && e.target.id) this._scroll[e.target.id] = e.target.scrollTop; this.hideTip(); }, true);
   }
+
+  showTip(el){
+    this.hideTip();
+    const tip = document.createElement('div');
+    tip.className = 'sc-tip';
+    tip.textContent = el.getAttribute('data-sc-tip') || '';
+    document.body.appendChild(tip);
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    const left = Math.min(window.innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2));
+    let top = r.top - h - 8;
+    if (top < 8) top = r.bottom + 8;
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    this._tip = tip; this._tipFor = el; this._tipPinned = false;
+  }
+
+  hideTip(){ if (this._tip) this._tip.remove(); this._tip = null; this._tipFor = null; this._tipPinned = false; }
 
   // Curseurs : pendant le glissement on ne re-rend pas (le curseur serait
   // remplacé sous la souris) — état mis à jour, libellés patchés, carte
@@ -1342,10 +1427,11 @@ export class Scouting {
         { k: 'Emprise maximale du modèle (%)', v: s.empriseMax, set: e => self.setParam({ empriseMax: parseFloat(e.target.value) || 30 }) },
         { k: 'Sensibilité à la concurrence', v: s.compK, set: e => self.setParam({ compK: parseFloat(String(e.target.value).replace(',', '.')) || 0.22 }) },
         { k: 'Taille moyenne des ménages', v: s.hhSize, set: e => { const val = parseFloat(String(e.target.value).replace(',', '.')) || HH_SIZE; self.setState({ hhSize: val }); setTimeout(() => self.recomputePop(), 0); } }
-      ],
+      ].map(p => Object.assign(p, { i: TIP_HYP[p.k] || '' })),
       empriseHint: s.emprise > 0 ? 'Emprise imposée à ' + s.emprise + ' % pour toutes les zones' : 'Emprise calculée : ' + s.empriseMax + ' % divisés par la pression concurrentielle du rayon',
       popCoverage: fmtInt(s.communes.filter(c => !c.est).length) + ' communes avec population source · ' + fmtInt(s.communes.filter(c => c.est).length) + ' estimées par densité des communes voisines',
       importPops: e => self.importPops(e),
+      tips: TIP_REGL, concTips: TIP_CONC,
       gOk: !self.googleBlocage(),
       gLabel: !self.useApi() ? 'Hors ligne — les notes Google passent par l\'API du cockpit.'
         : self.googleOk() ? 'Connecteur Google actif · clé ' + ((s.gconf && s.gconf.empreinte) || '…') + ' (Paramètres).'
@@ -1390,7 +1476,7 @@ export class Scouting {
         { k: 'Passage', v: s.passage + ' %' },
         { k: 'Rendement annuel / m²', v: fmtEur(x.ca / s.surface) },
         { k: 'CA hebdomadaire', v: fmtEur(x.ca / 52) }
-      ] : [],
+      ].map(r => Object.assign(r, { i: TIP_FICHE[r.k] || '' })) : [],
       selCa: x ? fmtEur(x.ca) : '',
       selCaDetail: x ? fmtInt(x.hh) + ' ménages × ' + fmtEur(s.spend) + ' × ' + (x.emprise * 100).toFixed(1) + ' % d\'emprise, majoré de ' + s.passage + ' % de passage · sur ' + s.surface + ' m²' : '',
       selCompetitors: x ? x.near.slice(0, 14).map(o => {
@@ -1462,12 +1548,12 @@ export class Scouting {
       zonesRows: zonesRows,
       zonesEmpty: s.busy ? 'Chargement en cours…' : !this.map ? 'Carte indisponible.' : 'Aucune zone ne passe le score minimum ' + s.minScore + ' dans la vue courante — dézoome la carte ou abaisse le seuil.',
       zonesCols: [['rang', 'Rang'], ['commune', 'Localité'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
-        .map(([k, label]) => ({ label: label, sort: sortBy(k) })),
+        .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ZONES[k] || '' })),
       concRows: concRows,
       concCount: concCount,
       arrRows: arrRows,
       arrCols: [['arr', 'Arrondissement'], ['communes', 'Communes'], ['pop', 'Population'], ['hh', 'Ménages'], ['market', 'Marché'], ['shops', 'Commerces'], ['strong', 'Forts'], ['dens', '/ 10.000 hab.'], ['avg', 'Note moy.'], ['perShop', 'Ménages / point']]
-        .map(([k, label]) => ({ label: label, sort: sortBy(k) })),
+        .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ARR[k] || '' })),
       exportZones: () => self.csv('ceo_zones', ['rang', 'localite', 'arrondissement', 'score', 'menages', 'concurrents', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
         'hyp_depense_menage', 'hyp_passage_pct', 'hyp_surface_m2', 'hyp_emprise_max_pct', 'hyp_sensibilite', 'hyp_taille_menages', 'hyp_rayon_km'],
         zonesRows.map(r => [r.rang, r.commune, r.arr, r.score, r.hhRaw, r.n, r.empriseRaw, r.caRaw, r.m2Raw, r.lat.toFixed(5), r.lng.toFixed(5),
