@@ -31,6 +31,8 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 | `reporting` | `GET /reporting` | Reporting automatisé |
 | `journal` | `GET /journal` | Journal |
 | `products` | `GET /products/scoring?periode=AAAA-MM` | Scoring produits |
+| — | `GET /scouting` | Scouting commercial : saisies, hypothèses, clé Google, inventaire du cache OSM |
+| — | `GET /scouting/tiles/{secteur}` | Scouting commercial : un secteur du cache OpenStreetMap |
 
 ### `/meta`
 
@@ -180,6 +182,100 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
+### Qui fait autorité sur quoi
+
+Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la
+plupart non — et pour celles-là, la table `ceo_*` n'est qu'un **repli
+d'installation autonome**, vide sur une base réelle.
+
+| Donnée | Source d'autorité | Repli local |
+|---|---|---|
+| Magasins | `shops` | `ceo_shop` (miroir, rempli à la volée pour les clés étrangères) |
+| Consultants | `user_membership` ⨝ `user_profile` (`app = 'CONSULTANT'`, actifs) | `ceo_consultant` |
+| Destinataires des rapports | `user_membership` ⨝ `user_profile` (actifs, avec e-mail) | `ceo_person` |
+| CA / marge mensuels | `mac_shop_monthly_pnl` | `ceo_shop_month_perf` |
+| Tickets, panier moyen | `transaction` | — |
+| Catalogue produits | `sig_products`, `transaction_product` | `ceo_product` |
+| Leviers, KPI, positions | `of_tag`, `kpi`, `position` | créées si absentes |
+| **Budget encodé** | **`ceo_shop_month_perf`** | — (donnée propre au cockpit) |
+| **Validation des tâches** | **`ceo_project_task`, `ceo_task_issue`** | — (donnée propre au cockpit) |
+| Projets, jalons, coûts | `ceo_project*` | — (données propres au cockpit) |
+| Fournisseurs | `ceo_supplier` | — (aucune table partagée équivalente) |
+
+**Le jeu de démonstration ne se charge jamais tout seul.** `sql/seed.sql` est
+gardé derrière `seed: true` (config) ou `COCKPIT_SEED=1` ; par défaut une base
+neuve reste vide, prête pour les vraies données.
+
+**Rien n'est écrit en dur côté écran.** Les échéances proposées par les
+assistants sont relatives à la date du jour, l'intervenant proposé est le
+premier intervenant réel, et les liens de rapport partent de l'adresse d'où
+l'application est servie.
+
+### `GET /stores/perf` — d'où vient chaque colonne
+
+Trois sources, fusionnées par (magasin, année, mois) :
+
+| Champ | Source | Remarque |
+|---|---|---|
+| `ca`, `margeNette`, `margePct`, `labourCostPct`, `overheadPct` | `mac_shop_monthly_pnl` | table partagée avec le panel |
+| `tickets`, `panierMoyen`, et `ca` de repli | `transaction` | ventes caisse de l'exercice courant |
+| **`caBudget`, `caTheorique`** | **`ceo_shop_month_perf`** | **le budget encodé — aucune autre table ne le porte** |
+
+La troisième passe n'est pas facultative : ni `mac_shop_monthly_pnl` ni
+`transaction` ne connaissent le budget. Sans elle, l'encodage était écrit en
+base et jamais relu, et tous les écrans qui comparent au budget — suivi budget,
+heatmap, objectifs de CA — affichaient un objectif vide **sans lever la moindre
+erreur**. Le défaut ne se voyait qu'en présence des tables partagées : sans
+elles, l'endpoint tombait dans son repli, qui lisait le budget correctement.
+C'est-à-dire qu'il marchait partout sauf en production.
+
+Un mois **budgété sans réel** est rendu, avec `ca: null` : « budget 80 k, rien
+encaissé » est une information, pas une ligne à masquer.
+
+### Suivi des tâches — traitement et reporting semaine / mois
+
+`GET /taches/suivi?periode=semaine|mois` (défaut `mois` ; 7 ou 30 jours glissants) :
+
+```json
+{ "periode": "semaine", "depuis": "2026-08-08",
+  "validees": 12, "moyenne": 4.08,
+  "repartition": { "5": 3, "4": 6, "3": 2, "2": 1, "1": 0 },
+  "ouverts": 2, "traites": 4,
+  "signalements": [ { "id": 7, "tacheId": "t12", "tache": "…", "projet": "…",
+                      "owner": {"t":"c","id":"c1"}, "note": 2,
+                      "famille": "Délai", "type": "Rendu hors délai",
+                      "statut": "vu", "ouvert": true,
+                      "creeLe": "…", "vuLe": "…", "closLe": null } ],
+  "parIntervenant": [ { "owner": {"t":"c","id":"c1"}, "validees": 5, "moyenne": 4.2, "ouverts": 1 } ] }
+```
+
+Deux règles de lecture qui ne se devinent pas :
+
+1. **La période porte sur la date de VALIDATION** (`ceo_project_task.validated_at`),
+   pas sur `done_on` qui est la livraison. Une tâche rendue en mars et jugée en
+   août appartient au suivi d'août — la borner sur la livraison la ferait
+   disparaître de tout suivi utile.
+2. **Les signalements ouverts remontent tous**, quelle que soit leur date. Un
+   signalement de trois semaines qui traîne doit apparaître dans le suivi de la
+   semaine : c'est même le premier à devoir sauter aux yeux, et une borne de
+   date l'aurait masqué.
+
+`PATCH /task-issues/{id}` avec `{ statut, commentaire, par }` — cycle
+`nouveau` → `vu` → `traite`, et retour possible à `nouveau`.
+
+| Statut | Effet |
+|---|---|
+| `vu` | pose `seen_at` — **ne clôt pas**. Voir n'est pas régler. |
+| `traite` | pose `closed_at` et `closed_by`, et **exige un commentaire** (`422` sinon) : clore sans dire ce qui a été fait, c'est perdre l'information que le suivi cherchait à produire. |
+| `nouveau` | rouvre, et laisse une trace au journal. |
+
+Un statut hors de ces trois valeurs est refusé en `422`. Chaque transition
+écrit une ligne dans `ceo_journal_entry`.
+
+```sql
+ALTER TABLE ceo_project_task ADD COLUMN validated_at DATETIME NULL;
+```
+
 **Aucune migration à lancer à la main.** `ensureValidation()` (`src/installer.php`) pose les deux
 colonnes, la table `ceo_task_issue` et le réglage `signalement` au démarrage, sur une base neuve
 comme sur une base déjà en service — `schema.sql` et `seed.sql`, eux, ne repassent jamais sur une
@@ -238,6 +334,34 @@ ALTER TABLE ceo_project_task ADD CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) R
 `owner.t` : `c` = consultant, `s` = fournisseur ; `owner.id` référence `/consultants` ou `/fournisseurs`.
 
 ---
+
+### `/scouting` — saisies du scouting commercial
+
+Chargé à l'ouverture de l'écran (pas au démarrage du cockpit). Les données
+OpenStreetMap elles-mêmes ne transitent pas par ce endpoint : le navigateur
+interroge Overpass et dépose chaque secteur dans le cache partagé.
+
+```json
+{
+  "params": { "spend": 586, "emprise": 0, "passage": 15, "surface": 250, "empriseMax": 30,
+              "compK": 0.22, "hhSize": 2.31, "minScore": 55, "radius": 2, "thresh": 4.5 },
+  "googleKey": "",
+  "competitors": [{ "id": "n123456", "name": "Boulangerie Dupont", "commune": "Halle", "arr": "Hal-Vilvorde",
+                    "rating": 4.6, "reviews": 132, "source": "google", "comment": "File le samedi" }],
+  "candidates": [{ "id": 1756900000000, "name": "Halle — zone 50.733/4.237", "commune": "Halle", "arr": "Hal-Vilvorde",
+                   "prov": "Brabant flamand", "lat": 50.7336, "lng": 4.2372, "hh": 9800, "market": 5742800,
+                   "emprise": 0.155, "ca": 1047000, "score": 72, "n": 6, "strong": 2, "m2": 4188 }],
+  "populations": { "23027": 42608 },
+  "tiles": [{ "sector": 0, "fetchedAt": "2026-09-03 17:12:40", "bytes": 91234 }]
+}
+```
+
+- `params` : `null` tant qu'aucune hypothèse n'a été enregistrée (défauts de l'étude Halle côté client).
+- `competitors[].source` ∈ `google` | `manuel` ; une note `manuel` prime sur Google. `rating: null` avec
+  `source: "google"` = commerce déjà interrogé sans note (pas réinterrogé).
+- `id` d'un concurrent = type + id OSM (`n`, `w`, `r`). `id` d'une zone candidate = horodatage client (ms).
+- `tiles` : inventaire seulement ; `GET /scouting/tiles/{secteur}` renvoie le JSON `{ t, c, b, p }` déposé
+  par le navigateur (communes, commerces, nœuds `place`). 404 si le secteur n'est pas en cache.
 
 ## 2. Mapping base de données → écran → champ
 
@@ -389,6 +513,55 @@ CREATE TABLE ceo_product_month_sales (
 
 `tendVol` est calculé côté API : `volume(annee, mois) / volume(annee-1, mois)`.
 
+-- Scouting commercial
+CREATE TABLE ceo_scouting_tile (
+  sector      TINYINT UNSIGNED PRIMARY KEY,    -- secteur Overpass 0–8
+  fetched_at  DATETIME NOT NULL,
+  payload     MEDIUMTEXT NOT NULL              -- JSON { t, c, b, p } déposé par le navigateur
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ceo_scouting_competitor (
+  osm_id         VARCHAR(20) PRIMARY KEY,      -- n123 / w456 / r789
+  name           VARCHAR(200) NOT NULL DEFAULT '',
+  commune        VARCHAR(120) NOT NULL DEFAULT '',
+  arrondissement VARCHAR(60)  NOT NULL DEFAULT '',
+  rating         DECIMAL(2,1) NULL,
+  reviews        INT UNSIGNED NULL,
+  rating_source  ENUM('google','manuel') NULL,
+  comment        VARCHAR(200) NULL,
+  updated_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ceo_scouting_candidate (
+  id             BIGINT UNSIGNED PRIMARY KEY,  -- horodatage client (ms)
+  name           VARCHAR(200) NOT NULL,
+  commune        VARCHAR(120) NOT NULL,
+  arrondissement VARCHAR(60)  NOT NULL,
+  province       VARCHAR(60)  NOT NULL,
+  lat            DECIMAL(9,6) NOT NULL,
+  lng            DECIMAL(9,6) NOT NULL,
+  households     INT UNSIGNED NOT NULL,
+  market         INT UNSIGNED NOT NULL,
+  emprise        DECIMAL(5,4) NOT NULL,        -- ratio 0–1
+  revenue        INT UNSIGNED NOT NULL,        -- CA annuel TTC estimé
+  score          TINYINT UNSIGNED NOT NULL,
+  shops          SMALLINT UNSIGNED NOT NULL,
+  strong         SMALLINT UNSIGNED NOT NULL,
+  revenue_m2     INT UNSIGNED NOT NULL,
+  created_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ceo_scouting_population (
+  ins         CHAR(5) PRIMARY KEY,             -- code NIS
+  population  INT UNSIGNED NOT NULL,
+  imported_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+Les hypothèses du modèle et la clé Google Places sont des lignes de
+`ceo_app_setting` (`scoutingParams`, `scoutingGoogleKey`).
+
+```sql
 ### Écran → tables
 
 | Écran | Tables |
@@ -418,5 +591,10 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Changement de statut projet | `PATCH /projects/{id}` |
 | Relance d'une tâche | `POST /tasks/{id}/reminder` |
 | Modification d'un seuil ou d'un modèle d'email | `PUT /parametres/{key}` |
+| Scouting — hypothèses du modèle / clé Google Places | `PUT /parametres/scoutingParams` · `PUT /parametres/scoutingGoogleKey` (`{ "valeur": … }`) |
+| Scouting — dépôt d'un secteur OSM dans le cache partagé | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
+| Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
+| Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |
+| Scouting — import CSV StatBel | `PUT /scouting/populations` (`{ "populations": { "NIS": population }, "fichier"? }`) |
 
 Toute écriture doit aussi produire une ligne `ceo_journal_entry` (l'écran Journal en dépend).

@@ -184,6 +184,15 @@ CREATE TABLE IF NOT EXISTS ceo_project_task (
   budget      DECIMAL(10,2) NULL,
   note        TINYINT NULL,              -- 1..5, NULL = rendue mais pas encore validée
   validated_by VARCHAR(80) NULL,
+  -- Distincte de done_on : une tâche rendue en mars peut être validée en août.
+  -- C'est cette date, pas la livraison, qui situe une validation dans la semaine
+  -- ou le mois du suivi.
+  validated_at DATETIME NULL,
+  -- Qui a déclaré la remise. Jusqu'ici seul le CEO cochait, au nom du
+  -- consultant : on ne savait pas si le livrable était réellement annoncé par
+  -- celui qui l'a produit. NULL = coché par la direction.
+  delivered_by VARCHAR(80) NULL,
+  delivery_note TEXT NULL,
   CONSTRAINT fk_task_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -295,7 +304,7 @@ CREATE TABLE IF NOT EXISTS ceo_journal_entry (
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ceo_app_setting (
   `key` VARCHAR(60) PRIMARY KEY,
-  value TEXT NOT NULL
+  value MEDIUMTEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------
@@ -382,4 +391,216 @@ CREATE TABLE IF NOT EXISTS ceo_task_issue (
   KEY idx_task (task_id),
   KEY idx_status (status, created_at),
   CONSTRAINT fk_issue_task FOREIGN KEY (task_id) REFERENCES ceo_project_task(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Production & recuissons — référentiel RÉSEAU (partie franchiseur).
+--
+-- Porté par le cockpit : ni la base partagée ni l'API du panel ne connaissent
+-- les temps de production, les batchs, la capacité four ou la durée de vie.
+-- Le coût matière (`mat`) vit ici aussi — c'est la seule source dont dispose
+-- le réseau, et il alimente le critère « marge nette » du scoring produit.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_prod_product (
+  ref        VARCHAR(24) PRIMARY KEY,
+  nom        VARCHAR(160) NOT NULL,
+  categorie  VARCHAR(60)  NOT NULL DEFAULT '',
+  prep       INT UNSIGNED NOT NULL DEFAULT 0,   -- secondes / pièce
+  cuisson    INT UNSIGNED NOT NULL DEFAULT 0,   -- secondes / fournée
+  fin        INT UNSIGNED NOT NULL DEFAULT 0,   -- secondes / pièce (finitions)
+  bmin       SMALLINT UNSIGNED NOT NULL DEFAULT 0,  -- batch minimum
+  bmult      SMALLINT UNSIGNED NOT NULL DEFAULT 1,  -- multiple de batch
+  four       SMALLINT UNSIGNED NOT NULL DEFAULT 0,  -- capacité four (pièces)
+  dlv        SMALLINT UNSIGNED NOT NULL DEFAULT 0,  -- durée de vie (heures)
+  mat        DECIMAL(8,3) NULL,                 -- coût matière / pièce
+  prix       DECIMAL(8,2) NULL,                 -- prix de vente conseillé
+  must       TINYINT(1)  NOT NULL DEFAULT 0,    -- obligatoire réseau
+  qmin       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  periods    VARCHAR(120) NOT NULL DEFAULT '',
+  profil     VARCHAR(120) NOT NULL DEFAULT '',  -- profil de cuisson
+  pwa_id     BIGINT UNSIGNED NULL,              -- rapprochement id_product du panel
+  actif      TINYINT(1)  NOT NULL DEFAULT 1,
+  KEY idx_pwa (pwa_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Planogramme (préfixe pla_) : la structure du comptoir et ce qui l'occupe.
+-- Quatre niveaux avec identité propre — renommer « Vitrine 1 » ne doit pas
+-- déplacer ce qu'elle porte, ce qu'un rattachement par libellé aurait fait.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pla_zone (
+  id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nom  VARCHAR(80) NOT NULL,
+  rang SMALLINT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pla_meuble (
+  id      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  zone_id INT UNSIGNED NOT NULL,
+  nom     VARCHAR(80) NOT NULL,
+  rang    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_zone (zone_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pla_niveau (
+  id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  meuble_id INT UNSIGNED NOT NULL,
+  nom       VARCHAR(80) NOT NULL,
+  rang      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_meuble (meuble_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pla_slot (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  niveau_id  INT UNSIGNED NOT NULL,
+  position   SMALLINT UNSIGNED NOT NULL,
+  largeur_mm SMALLINT UNSIGNED NULL,
+  capacite   SMALLINT UNSIGNED NULL,
+  UNIQUE KEY uniq_pos (niveau_id, position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Placement : slot_id est la vérité ; zone / meuble / niveau / slot sont
+-- recopiés en clair pour que le référentiel produit les lise sans recharger
+-- tout l'arbre.
+CREATE TABLE IF NOT EXISTS pla_placement (
+  ref     VARCHAR(24) PRIMARY KEY,
+  slot_id INT UNSIGNED NULL,
+  zone    VARCHAR(160) NOT NULL DEFAULT '',
+  meuble  VARCHAR(80)  NOT NULL DEFAULT '',
+  niveau  VARCHAR(80)  NOT NULL DEFAULT '',
+  slot    SMALLINT UNSIGNED NULL,
+  fronts  SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  ordre   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  KEY idx_slot (slot_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Consigne de présentation, sur une référence, une zone ou un meuble.
+CREATE TABLE IF NOT EXISTS pla_note (
+  cible    VARCHAR(12) NOT NULL,
+  cible_id VARCHAR(24) NOT NULL,
+  texte    TEXT NULL,
+  epinglee TINYINT(1) NOT NULL DEFAULT 0,
+  gravite  TINYINT NOT NULL DEFAULT 3,
+  du       DATE NULL,
+  au       DATE NULL,
+  auteur   VARCHAR(190) NOT NULL DEFAULT '',
+  maj_le   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (cible, cible_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Réputation digitale — avis Google par magasin
+--
+-- Deux tables, parce que ce sont deux faits différents :
+--
+--  - `ceo_shop_reputation` porte ce que Google affiche sur la fiche : la note
+--    moyenne et le NOMBRE TOTAL d'avis. C'est la seule base de calcul valable
+--    pour « combien d'avis 5 étoiles pour atteindre la cible » — le compter sur
+--    les avis rapatriés donnerait un chiffre faux d'un ordre de grandeur.
+--  - `ceo_shop_review` porte les avis eux-mêmes, dont on n'affiche que les cinq
+--    derniers. C'est un échantillon de lecture, pas la source des moyennes.
+--
+-- L'import (API Google Business Profile) n'est pas branché : ces tables sont
+-- alimentées par le connecteur le jour où il existera. Vides, l'écran le dit.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_shop_reputation (
+  shop_id      VARCHAR(8)   PRIMARY KEY,
+  place_id     VARCHAR(120) NULL,           -- identifiant Google de la fiche
+  profile_url  VARCHAR(400) NULL,           -- lien public, pour ouvrir la fiche
+  rating_avg   DECIMAL(3,2) NULL,           -- note moyenne affichée par Google
+  rating_count INT          NOT NULL DEFAULT 0,
+  synced_at    DATETIME     NULL,
+  CONSTRAINT fk_reput_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_shop_review (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  shop_id     VARCHAR(8)   NOT NULL,
+  source      VARCHAR(20)  NOT NULL DEFAULT 'google',
+  external_id VARCHAR(160) NULL,            -- id de l'avis chez la source
+  author      VARCHAR(120) NULL,
+  rating      TINYINT      NOT NULL,        -- 1..5
+  comment     TEXT         NULL,
+  reviewed_at DATETIME     NOT NULL,
+  replied_at  DATETIME     NULL,            -- réponse du magasin, si elle existe
+  UNIQUE KEY uq_review_source (source, external_id),
+  KEY idx_review_shop (shop_id, reviewed_at),
+  CONSTRAINT fk_review_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Connecteurs — l'état des systèmes extérieurs dont le cockpit dépend
+--
+-- Les SECRETS ne sont pas ici : chaque client lit le sien dans
+-- `ceo_app_setting`, avec ses règles propres. Cette table porte ce qu'aucun
+-- réglage ne dit — quand le connecteur a tourné, et ce qu'il a répondu.
+--
+-- Écrite sur les GESTES seulement (synchronisation, test de compte, appel au
+-- modèle), jamais sur les lectures : le panel fait des dizaines d'appels en
+-- parallèle pour un seul écran, une ligne par appel n'apprendrait rien et
+-- coûterait une écriture à chaque fois.
+--
+-- `last_ok_at` survit à un échec : savoir que ça marchait encore hier distingue
+-- une panne d'une configuration jamais faite.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_connecteur (
+  code          VARCHAR(40)  PRIMARY KEY,   -- panel | erp | google | anthropic
+  label         VARCHAR(80)  NOT NULL,
+  last_run_at   DATETIME     NULL,          -- dernier geste, réussi ou non
+  last_ok_at    DATETIME     NULL,          -- dernier geste réussi
+  last_error    VARCHAR(400) NULL,          -- message du dernier échec, effacé au succès suivant
+  last_error_at DATETIME     NULL,
+  runs          INT          NOT NULL DEFAULT 0,
+  items         INT          NOT NULL DEFAULT 0,   -- éléments traités au dernier passage
+  detail        VARCHAR(400) NULL                  -- résumé lisible du dernier passage
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Scouting commercial (écran « Scouting commercial ») : cache OpenStreetMap
+-- partagé et saisies — notes/commentaires sur les concurrents, zones
+-- candidates retenues, populations StatBel importées. Les hypothèses du
+-- modèle CA et la clé Google Places vivent dans ceo_app_setting
+-- (clés scoutingParams et scoutingGoogleKey).
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ceo_scouting_tile (
+  sector      TINYINT UNSIGNED PRIMARY KEY,   -- secteur Overpass (0–8, voir scouting.js)
+  fetched_at  DATETIME NOT NULL,
+  payload     MEDIUMTEXT NOT NULL             -- JSON { t, c: communes, b: commerces, p: nœuds place }
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scouting_competitor (
+  osm_id         VARCHAR(20) PRIMARY KEY,     -- type + id OSM : n123, w456, r789
+  name           VARCHAR(200) NOT NULL DEFAULT '',
+  commune        VARCHAR(120) NOT NULL DEFAULT '',
+  arrondissement VARCHAR(60)  NOT NULL DEFAULT '',
+  rating         DECIMAL(2,1) NULL,           -- note / 5 (Google ou saisie terrain)
+  reviews        INT UNSIGNED NULL,           -- nombre d'avis Google
+  rating_source  ENUM('google','manuel') NULL,
+  comment        VARCHAR(200) NULL,           -- commentaire terrain
+  updated_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scouting_candidate (
+  id             BIGINT UNSIGNED PRIMARY KEY, -- horodatage client (ms)
+  name           VARCHAR(200) NOT NULL,
+  commune        VARCHAR(120) NOT NULL,
+  arrondissement VARCHAR(60)  NOT NULL,
+  province       VARCHAR(60)  NOT NULL,
+  lat            DECIMAL(9,6) NOT NULL,
+  lng            DECIMAL(9,6) NOT NULL,
+  households     INT UNSIGNED NOT NULL,       -- ménages dans le rayon
+  market         INT UNSIGNED NOT NULL,       -- marché boulangerie (€)
+  emprise        DECIMAL(5,4) NOT NULL,       -- ratio 0–1
+  revenue        INT UNSIGNED NOT NULL,       -- CA annuel TTC estimé (€)
+  score          TINYINT UNSIGNED NOT NULL,   -- score d'opportunité 0–100
+  shops          SMALLINT UNSIGNED NOT NULL,  -- boulangeries dans le rayon
+  strong         SMALLINT UNSIGNED NOT NULL,  -- dont concurrents forts
+  revenue_m2     INT UNSIGNED NOT NULL,       -- CA / m² sur la surface cible
+  created_at     DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_scouting_population (
+  ins         CHAR(5) PRIMARY KEY,            -- code NIS de la commune
+  population  INT UNSIGNED NOT NULL,
+  imported_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

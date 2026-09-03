@@ -63,6 +63,16 @@ Alias /consulant_bo /var/www/consulant_bo/public
 
 Prérequis : Apache `mod_rewrite`, PHP ≥ 8.1 avec `pdo_mysql`.
 
+L'écran Scouting commercial n'ajoute rien côté serveur (Leaflet est embarqué
+dans `assets/vendor/leaflet/`, déployé avec `public/` ; ses tables
+`ceo_scouting_*` sont créées automatiquement, cf. § 3). Il a en revanche
+besoin que les **navigateurs** des utilisateurs atteignent
+`tile.openstreetmap.org`, les serveurs Overpass (`overpass.kumi.systems`,
+`overpass-api.de`, `overpass.private.coffee`) et, pour les notes,
+`maps.googleapis.com`. Un `PUT /scouting/tiles/{n}` pèse jusqu'à ~1 Mo :
+`post_max_size` PHP et la limite de corps du proxy/Apache doivent le laisser
+passer (défaut PHP 8 Mo — suffisant).
+
 ---
 
 ## 3. Base de données — création AUTOMATIQUE des tables
@@ -106,6 +116,42 @@ chmod 640 config/config.php && chown www-data:www-data config/config.php
 
 `config/config.php` n'est pas suivi par Git (`.gitignore`), comme le
 `config/db.local.php` du panel.
+
+---
+
+### Moteur PDF des rapports
+
+Le déploiement installe `wkhtmltopdf` **corrigé** (paquet officiel
+`wkhtmltox`, dans `/usr/local/bin`) à côté de celui des dépôts. Le build
+Ubuntu tourne sur un Qt non corrigé : il annonce lui-même ignorer
+`--print-media-type` et tous les `--footer-*`, si bien que les PDF sortaient
+sans pied de page ni pagination. Aucune astuce HTML n'y supplée — un élément
+en position fixe n'est peint que sur la dernière page, un `<thead>` que sur la
+première (mesuré sur les deux builds).
+
+L'installation est idempotente et non bloquante : si le téléchargement ou
+l'installation échoue, le déploiement continue et les PDF sortent sans pied de
+page. `src/rapports.php` appelle `/usr/local/bin/wkhtmltopdf` en chemin
+complet — le PATH d'Apache ne contient pas toujours `/usr/local/bin`.
+
+## Horloge des rapports (posée par `bin/deploy.sh`)
+
+Un rapport porte sa planification en base — « tous les lundis à 10 h » est un
+réglage de l'écran Reporting. Quelqu'un doit néanmoins réveiller le cockpit :
+le script de déploiement écrit `/etc/cron.d/cockpit-rapports`, qui appelle
+l'horloge **toutes les heures à :05** en loopback. À chaque passage, le
+cockpit décide seul quels rapports sont dus, et n'envoie rien deux fois le
+même jour.
+
+```bash
+cat /etc/cron.d/cockpit-rapports        # root, 0600 — le jeton y figure
+# 5 * * * * root curl -fsS … /api/cockpit/rapports/cron?jeton=…
+```
+
+Le jeton (`ceo_app_setting.rapportsJeton`) naît au premier chargement ; le
+script le relit sur l'API et ne l'imprime jamais dans le journal de livraison.
+Un rapport GÉNÉRÉ à la main dans la journée n'est plus envoyé automatiquement
+le même jour — c'est la garde qui évite les doublons.
 
 ---
 

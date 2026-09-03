@@ -1,3 +1,5 @@
 config/config.php
 node_modules/
 .DS_Store
+tools/assistant-src/tsconfig.tsbuildinfo
+tools/assistant-src/dist-assistant/

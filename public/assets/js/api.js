@@ -5,8 +5,8 @@
  * la forme normalisée. Contrat JSON + mapping base de données : contrat-api.md
  *
  * Base d'URL : window.COCKPIT_API_BASE (sinon /api/cockpit).
- * Si l'API est injoignable, le jeu de démonstration (data.js) est chargé pour
- * que la maquette reste consultable — la source est indiquée dans p.source.
+ * Si l'API est injoignable, un repli VIDE est affiché (aucune donnée de
+ * démonstration embarquée) — la source est indiquée dans p.source ('offline').
  */
 
 /* Base d'URL de l'API : surcharge via window.COCKPIT_API_BASE, sinon déduite
@@ -16,15 +16,25 @@
 export const API_BASE = (typeof window !== 'undefined' && window.COCKPIT_API_BASE)
   || (typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') + 'api/cockpit' : '/api/cockpit');
 
+/* Périodes dérivées de l'année civile courante — jamais figées sur l'exercice
+ * de démonstration. L'exercice = année en cours, N-1 = l'année précédente ;
+ * le scoring produit part du mois courant (le backend replie sur le dernier
+ * mois de caisse réellement encodé si ce mois est encore vide). */
+const NOW = (typeof Date !== 'undefined') ? new Date() : { getFullYear: () => 2026, getMonth: () => 0 };
+const Y = NOW.getFullYear();
+const YM = Y + '-' + String(NOW.getMonth() + 1).padStart(2, '0');
+
 export const ENDPOINTS = {
   meta:           '/meta',
   leviers:        '/referentiels/leviers',
   kpis:           '/referentiels/kpis',
+  roles:          '/referentiels/roles',
   emailTemplates: '/referentiels/email-templates',
   projTemplates:  '/referentiels/project-templates',
   stores:         '/stores?statut=tous',
-  perf:           '/stores/perf?granularite=mois&annees=2025,2026',
-  budgets:        '/stores/budgets?exercice=2026',
+  perf:           '/stores/perf?granularite=mois&annees=' + (Y - 1) + ',' + Y,
+  budgets:        '/stores/budgets?exercice=' + Y,
+  etp:            '/stores/etp?annees=' + (Y - 1) + ',' + Y,
   targets:        '/targets',
   consultants:    '/consultants',
   suppliers:      '/fournisseurs',
@@ -33,14 +43,65 @@ export const ENDPOINTS = {
   people:         '/people',
   reporting:      '/reporting',
   journal:        '/journal',
-  products:       '/products/scoring?periode=2026-07',
-  pwaReports:     '/pwa/reports'
+  products:       '/products/scoring?periode=' + YM,
+  pwaReports:     '/pwa/reports',
+  pwaTasks:       '/pwa/tasks',
+  pwaCompte:      '/pwa/compte',
+  erpCompte:      '/erp/compte',
+  exploitation:   '/exploitation',
+  prodCatalogue:  '/production/catalogue',
+  prodGroupes:    '/production/groupes',
+  prodCategories: '/production/categories',
+  prodPeriodes:   '/production/periodes'
 };
 
+/* --- Chronométrage des appels ---------------------------------------------
+ * Toute réponse est mesurée, et les lentes sont conservées. Ce n'est pas de la
+ * curiosité : au-delà de deux secondes l'écran attend visiblement, et la seule
+ * façon de faire améliorer une API amont est de pouvoir dire LAQUELLE, sur
+ * quel chemin, et combien de temps elle a pris. Sans trace, la conversation
+ * se réduit à « c'est lent ».
+ * Mémoire bornée : on ne garde que les cent derniers appels lents.
+ */
+const SEUIL_LENT_MS = 2000;
+const MAX_TRACES = 100;
+const traces = [];
+let nAppels = 0;
+export function apiTraces(){ return { lentes: traces.slice(), total: nAppels, seuil: SEUIL_LENT_MS }; }
+export function apiTracesRaz(){ traces.length = 0; nAppels = 0; }
+function noteAppel(path, ms, ok){
+  nAppels++;
+  if (ms < SEUIL_LENT_MS && ok) { return; }
+  // Un appel en ERREUR est retenu quelle que soit sa durée : un 500 rapide est
+  // un problème, pas une bonne nouvelle.
+  traces.push({ path: String(path).split('?')[0], full: String(path), ms: Math.round(ms), ok,
+    at: new Date().toISOString().slice(11, 19) });
+  if (traces.length > MAX_TRACES) { traces.shift(); }
+}
+
 async function get(path, signal){
-  const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal, credentials: 'same-origin' });
-  if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
-  return r.json();
+  const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  let ok = false;
+  try {
+    const r = await fetch(API_BASE + path, { headers: { Accept: 'application/json' }, signal, credentials: 'same-origin' });
+    ok = r.ok;
+    if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
+    return await r.json();
+  } finally {
+    noteAppel(path, (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0, ok);
+  }
+}
+
+/**
+ * Lecture ponctuelle d'un endpoint, hors du chargement initial.
+ *
+ * Le suivi des tâches se recharge quand on change de période ou qu'on traite
+ * un signalement : le refaire passer par `load()` rechargerait tout le cockpit
+ * pour un seul écran. Rend `null` si l'API est injoignable — l'écran affiche
+ * alors son message, il ne casse pas.
+ */
+export async function readOne(path){
+  try { return await get(path); } catch (e) { console.warn('[cockpit] lecture ' + path + ' : ' + e.message); return null; }
 }
 
 /* --- Authentification intégrée ------------------------------------------- */
@@ -75,31 +136,83 @@ export function authLogout(){
 }
 
 export async function load(opts){
-  const timeoutMs = (opts && opts.timeoutMs) || 4000;
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), timeoutMs);
-  try {
-    const keys = Object.keys(ENDPOINTS);
-    const res = await Promise.all(keys.map(k => get(ENDPOINTS[k], ctl.signal)));
-    clearTimeout(t);
-    const p = {}; keys.forEach((k, i) => { p[k] = res[i]; });
-    return shape(p, 'api');
-  } catch (e) {
-    clearTimeout(t);
-    console.info('[cockpit] API indisponible (' + e.message + ') — jeu de démonstration chargé.');
-    const mod = await import('./data.js');
-    return shape(demoPayload(mod), 'demo');
+  // Chaque lecture a SON délai et SON échec.
+  //
+  // Un seul signal d'abandon partagé et un `Promise.all` faisaient tout perdre
+  // pour un seul endpoint lent : mesuré en production, `products/scoring` et
+  // `pwa/tasks` dépassaient les 9 s parce que trente appels partent ensemble
+  // et se disputent le serveur — les vingt-huit réponses déjà arrivées étaient
+  // jetées avec elles, et l'application basculait « hors-ligne » : catalogue
+  // vide, comptoir vide, compte API annoncé non configuré. Un écran sans
+  // données est bien pire qu'un écran auquel il manque une donnée.
+  //
+  // Désormais : ce qui répond est gardé, ce qui échoue vaut `null`, et l'écran
+  // concerné dit ce qui lui manque. Seul `meta` est indispensable — sans lui,
+  // il n'y a ni mois, ni exercice, ni barème, donc rien à afficher.
+  const timeoutMs = (opts && opts.timeoutMs) || 20000;
+  const keys = Object.keys(ENDPOINTS);
+  const un = async (k) => {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    try { return await get(ENDPOINTS[k], ctl.signal); }
+    catch (e) { console.warn('[cockpit] ' + ENDPOINTS[k] + ' : ' + e.message + ' — cet écran dira ce qui lui manque.');
+      return null; }
+    finally { clearTimeout(t); }
+  };
+  const res = await Promise.all(keys.map(un));
+  const p = {}; keys.forEach((k, i) => { p[k] = res[i]; });
+  const manquants = keys.filter(k => p[k] == null);
+  if (p.meta == null) {
+    console.info('[cockpit] API indisponible — affichage vide (aucune donnée de démonstration).');
+    return shape(emptyPayload(), 'offline');
+  }
+  if (manquants.length) { console.warn('[cockpit] chargement partiel — sans réponse : ' + manquants.join(', ')); }
+  try { return shape(p, 'api'); }
+  catch (e) {
+    console.warn('[cockpit] mise en forme impossible (' + e.message + ') — affichage vide.');
+    return shape(emptyPayload(), 'offline');
   }
 }
 
 /** Écriture non bloquante : ignorée en mode démo, best-effort en mode API. */
+/**
+ * Écriture vers l'API. Rend { ok, status, error } — jamais une exception.
+ *
+ * Le statut HTTP était ignoré : un 404 ou un 422 se résout normalement côté
+ * fetch, donc aucun `catch` ne se déclenchait et l'écran annonçait
+ * « enregistré » alors que le serveur avait refusé. C'est ainsi qu'un budget
+ * encodé pouvait disparaître sans un mot.
+ */
 export function write(source, method, path, payload){
-  if (source !== 'api') return Promise.resolve(null);
+  if (source !== 'api') return Promise.resolve({ ok: true, status: 0 });
   return fetch(API_BASE + path, {
     method, credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: payload === undefined ? undefined : JSON.stringify(payload)
-  }).catch(e => console.warn('[cockpit] écriture ' + path + ' échouée :', e.message));
+  }).then(async r => {
+    if (r.ok) {
+      // Le CORPS de la réponse revient à l'appelant. Il était jeté, et une
+      // création ne pouvait donc pas rendre l'identifiant de ce qu'elle venait
+      // de créer : impossible d'enchaîner sans recharger et deviner. `ok` et
+      // `status` restent maîtres — un corps qui dirait le contraire du statut
+      // HTTP ne doit pas transformer un succès en échec.
+      let corps = {};
+      try { const j = await r.json(); if (j && typeof j === 'object' && !Array.isArray(j)) { corps = j; } }
+      catch (e) { /* corps vide ou non JSON : le statut suffit */ }
+      return Object.assign({}, corps, { ok: true, status: r.status });
+    }
+    let msg = 'HTTP ' + r.status;
+    let corps = {};
+    try {
+      const j = await r.json();
+      if (j && typeof j === 'object' && !Array.isArray(j)) { corps = j; if (j.error) { msg = j.error; } }
+    } catch (e) { /* corps non JSON */ }
+    console.warn('[cockpit] écriture ' + path + ' refusée : ' + msg);
+    return Object.assign({}, corps, { ok: false, status: r.status, error: msg });
+  }).catch(e => {
+    console.warn('[cockpit] écriture ' + path + ' échouée : ' + e.message);
+    return { ok: false, status: 0, error: e.message };
+  });
 }
 
 /* Normalisation : une seule forme consommée par le composant. */
@@ -107,13 +220,24 @@ function shape(p, source){
   const meta = p.meta;
   return {
     source, meta,
-    M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers, KPI_LIST: p.kpis.map(k => k.nom || k),
+    // Un référentiel sans réponse vaut une liste vide, jamais une exception :
+    // le chargement est désormais partiel par construction.
+    M: { MOIS: meta.moisLabels, TODAY: meta.aujourdhui, LEVIERS: p.leviers || [],
+      KPI_LIST: (p.kpis || []).map(k => k.nom || k),
       FAMILLES: p.familles || meta.familles, REPORT_TYPES: p.reportTypes || meta.reportTypes,
       // Niveaux, seuil et référentiel du signalement — réglage serveur,
-      // jamais une constante d'écran.
+      // jamais une constante d'écran. `ensureValidation()` garantit qu'il
+      // existe : le repli ne sert qu'à un serveur injoignable.
       SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
     D: Object.assign({}, p.raw || {}, {
-      stores: joinPerf(p.stores, p.perf),
+      stores: joinPerf(p.stores, p.perf, meta && meta.exercice, p.etp),
+      // Les lignes PLATES telles que la base les rend, gardées à côté des
+      // magasins déjà assemblés. Sans elles, une relecture après encodage
+      // n'avait rien à quoi se raccrocher : le tableau de suivi continuait
+      // d'afficher l'instantané du chargement, et il fallait recharger la page
+      // pour voir ce qui venait d'être écrit.
+      perfRaw: p.perf || [],
+      etpRaw: p.etp || [],
       budgets: p.budgets,
       targets: p.targets,
       consultants: p.consultants,
@@ -127,81 +251,83 @@ function shape(p, source){
       alertRules: (p.reporting || {}).alertRules,
       logs: p.journal,
       products: p.products,
-      pwaReports: p.pwaReports
+      pwaReports: p.pwaReports,
+      pwaTasks: p.pwaTasks,
+      pwaCompte: p.pwaCompte,
+      erpCompte: p.erpCompte,
+      exploitation: p.exploitation,
+      prodCatalogue: p.prodCatalogue,
+      prodGroupes: (p.prodGroupes || {}).groupes || [],
+      prodCategories: (p.prodCategories || {}).categories || [],
+      prodPeriodes: (p.prodPeriodes || {}).periodes || [],
+      roles: (p.roles || {}).roles || []
     })
   };
 }
 
-/* /stores/perf renvoie des lignes plates (storeId, annee, mois, …) —
-   le composant lit store.perf[annee][mois]. */
-function joinPerf(stores, perf){
-  if (!perf || !perf.length) return stores;
+/* /stores/perf renvoie des lignes plates (storeId, annee, mois, …) — le
+   composant lit store.perf[annee][mois][champ]. Les vraies données du panel
+   sont CREUSES (tous les magasins/mois ne sont pas encodés) ; on densifie donc
+   en tableaux de 12 mois par année affichée, chaque cellule étant un objet aux
+   champs à null. Sans ça, `perf[annee]` ou `perf[annee][mois]` est indéfini et
+   les écrans Tableau/Heatmap/Marge plantent. */
+export function joinPerf(stores, perf, exercice, etp){
+  stores = stores || [];
+  perf = perf || [];
+  const yEx = exercice || new Date().getFullYear();
+  const years = new Set(perf.map(r => r.annee));
+  years.add(yEx); years.add(yEx - 1);
+  const cell = () => ({ ca: null, caT: null, theo: null, marge: null, mp: null, tickets: null,
+    panier: null, food: null, labour: null, overhead: null, val: null, etp: null, heures: null });
   const by = {};
   for (const r of perf){
     const s = (by[r.storeId] = by[r.storeId] || {});
-    const y = (s[r.annee] = s[r.annee] || new Array(12).fill(null));
-    y[r.mois - 1] = { ca: r.ca, caT: r.caBudget, marge: r.margeNette, mp: r.margePct, tickets: r.tickets,
+    const y = (s[r.annee] = s[r.annee] || Array.from({ length: 12 }, cell));
+    // `theo` = le CA THÉORIQUE encodé (étude de marché), distinct du budget
+    // négocié : sans lui, l'écran d'encodage devait le redéduire et affichait
+    // zéro pour un magasin dont seul le théorique est posé.
+    y[r.mois - 1] = { ca: r.ca, caT: r.caBudget, theo: r.caTheorique, marge: r.margeNette, mp: r.margePct, tickets: r.tickets,
       panier: r.panierMoyen, food: r.foodCostPct, labour: r.labourCostPct, overhead: r.overheadPct, val: r.valorisation };
   }
-  return stores.map(s => Object.assign({}, s, { perf: by[s.id] || {} }));
+  // ETP réel (planning du panel) : posé sur la cellule du mois. Absent = null,
+  // jamais 0 — « pas de planning connu » n'est pas « personne ne travaille ».
+  for (const e of (etp || [])){
+    const s = (by[e.storeId] = by[e.storeId] || {});
+    const y = (s[e.annee] = s[e.annee] || Array.from({ length: 12 }, cell));
+    const c = y[e.mois - 1]; if (c){ c.etp = e.etp; c.heures = e.heures; }
+  }
+  return stores.map(s => {
+    const per = by[s.id] || {};
+    for (const y of years) if (!per[y]) per[y] = Array.from({ length: 12 }, cell);
+    return Object.assign({}, s, { perf: per });
+  });
 }
 
-/* --- Jeu de démonstration : même forme que les endpoints ------------------ */
-function demoPayload(m){
-  const D = m.buildData();
-  const seuils = { food: 32, labour: 33, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 };
+/* --- Repli hors-ligne : structure vide (aucune donnée fictive) ------------
+   Affiché uniquement si l'API est injoignable. Aucune donnée de démonstration
+   n'est embarquée : le cockpit ne montre que les vraies données (ou rien). */
+function emptyPayload(){
+  const MOIS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
   const meta = {
-    reseau: { nom: "L'Atelier by", sousTitre: 'Cockpit CEO — Réseau' },
-    utilisateur: { initiales: 'GB', nom: 'G. Baert', role: 'CEO · admin' },
-    aujourdhui: m.TODAY,
-    dateLabel: 'Vendredi 31 juillet 2026',
-    periodeLabel: 'Données : juillet 2026',
-    exercice: 2026,
-    moisLabels: m.MOIS,
-    seuils: seuils,
-    contribOuverture: 210000,
-    signalement: m.SIGNALEMENT,
-    notes: { objectifsOuverture: "Dont contribution attendue de l'ouverture de Knokke (oct.–déc.) : env. 210 k€." }
-  };
-  const budgets = D.stores.filter(s => s.status === 'Ouvert').map(s => {
-    const budAn = (s.perf && s.perf[2026] || []).reduce((t, r) => t + (r.caT || 0), 0);
-    const seed = s.id.split('').reduce((t, ch) => t + ch.charCodeAt(0), 0);
-    const coef = 0.92 + ((seed % 21) / 100);   // 0,92 → 1,12 du budget validé
-    return {
-    storeId: s.id, exercice: 2026, moisEncodes: 7, moisTotal: 12, dernierEncodage: '2026-08-04',
-    panierEngagement: +(s.panier * 1.08).toFixed(2),
-    caTheoriqueAn: Math.round(budAn * coef / 1000) * 1000,
-    etudeMarche: { date: '2025-09-15', source: 'Étude de marché — zone de chalandise 10 min', potentielMenages: 4200 + (seed % 17) * 130 },
-    charges: [
-      { poste: 'Matières premières', levier: 'food-cost', pctBudget: seuils.food, champReel: 'food' },
-      { poste: 'Rémunérations & charges sociales', levier: 'labour-cost', pctBudget: seuils.labour, champReel: 'labour' },
-      { poste: 'Services & biens divers', levier: 'overhead-cost', pctBudget: seuils.overhead, champReel: 'overhead' },
-      { poste: 'Royalties', levier: '', pctBudget: seuils.royalties, champReel: null },
-      { poste: 'Charges financières', levier: '', pctBudget: seuils.financieres, champReel: null }
-    ]
-  }; });
-  // Rapports du panel consultant (pwa_consultant) — même forme que /pwa/reports.
-  const pwaBase = 'https://panel.atelierby.be';
-  const ouverts = D.stores.filter(s => s.status === 'Ouvert');
-  const pwaReports = {
-    base: pwaBase,
-    magasins: ouverts.map((s, i) => ({ id: s.id, nom: s.nom, pwaId: i + 1 })),
-    partages: [
-      { label: 'Rapport mensuel — Bruxelles Châtelain — juin 2026', ym: '2026-06', magasin: 'Bruxelles — Châtelain', consultant: 'Marc Janssens',
-        url: pwaBase + '/r/tok_demo_cha_2026-06_aK3xW9pQvR7mZsL0dF2gH4jN8bYcE6tU1', cree: '2026-07-03', expire: '2026-07-17', etat: 'Expiré', opens: 7, derniereOuverture: '2026-07-15' },
-      { label: 'Rapport mensuel — Liège Le Carré — juin 2026', ym: '2026-06', magasin: 'Liège — Le Carré', consultant: 'Marc Janssens',
-        url: pwaBase + '/r/tok_demo_lie_2026-06_bT5yV2nM8cX4kP0qW7rZ1sD9fG3hJ6lA2', cree: '2026-07-04', expire: '2026-07-18', etat: 'Expiré', opens: 12, derniereOuverture: '2026-07-16' },
-      { label: 'Rapport mensuel — Gand Korenmarkt — juillet 2026', ym: '2026-07', magasin: 'Gand — Korenmarkt', consultant: 'Sofia Ricci',
-        url: pwaBase + '/r/tok_demo_gnd_2026-07_cU8wQ4rN1mY6zT3vK9xB5dH0jF7gL2pS3', cree: '2026-08-02', expire: '2026-08-16', etat: 'Actif', opens: 3, derniereOuverture: '2026-08-05' },
-      { label: 'Rapport mensuel — Namur Marché — mai 2026', ym: '2026-05', magasin: 'Namur — Marché', consultant: 'Élise Dupont',
-        url: pwaBase + '/r/tok_demo_nam_2026-05_dV1zX7sP4nW2qM9rT5yK8cB3fJ6hG0lD4', cree: '2026-06-05', expire: '2026-06-19', etat: 'Révoqué', opens: 1, derniereOuverture: '2026-06-06' }
-    ]
+    reseau: { nom: '', sousTitre: '' },
+    utilisateur: { initiales: '', nom: '', role: '' },
+    aujourdhui: null, dateLabel: '', periodeLabel: '',
+    exercice: new Date().getFullYear(), moisLabels: MOIS,
+    seuils: { food: 32, labour: 33, overhead: 13.5, royalties: 3, financieres: 2.2, caEtp: 13000 },
+    contribOuverture: 0, notes: {}, familles: [], reportTypes: []
   };
   return {
-    raw: D, meta, leviers: m.LEVIERS, kpis: m.KPI_LIST, familles: m.FAMILLES, reportTypes: m.REPORT_TYPES, emailTemplates: D.emailTemplates, projTemplates: D.projTemplates,
-    stores: D.stores, perf: null, budgets, targets: D.targets, consultants: D.consultants, suppliers: D.suppliers,
-    projects: D.projects, crm: D.crm, people: D.people,
-    reporting: { reports: D.reports, alertRules: D.alertRules }, journal: D.logs, products: D.products,
-    pwaReports
+    raw: {}, meta, leviers: [], kpis: [], familles: [], reportTypes: [],
+    emailTemplates: [], projTemplates: [], stores: [], perf: null, budgets: [],
+    targets: [], consultants: [], suppliers: [], projects: [], crm: [], people: [],
+    reporting: { reports: [], alertRules: [] }, journal: [], products: [], etp: [],
+    pwaReports: { base: '', magasins: [], partages: [] },
+    pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
+    pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false },
+    erpCompte: { base: '', phone: '', motDePasseDefini: false, configure: false, jetonValide: false },
+    exploitation: { jour: null, semaine: null, mois: null, magasins: [], reseau: {}, avertissement: null },
+    prodCatalogue: [], prodGroupes: { groupes: [] }, prodCategories: { categories: [] },
+    prodPeriodes: { periodes: [] },
+    roles: { source: null, roles: [] }
   };
 }

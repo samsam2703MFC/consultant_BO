@@ -77,6 +77,9 @@ public/
     js/templates.js     gabarits HTML des 12 écrans + modales + assistants
     js/api.js           couche d'accès (17 endpoints, repli démo)
     js/data.js          jeu de démonstration (génération déterministe)
+    js/scouting.js      écran Scouting commercial (Overpass, carte, modèle CA)
+    js/scouting-tpl.js  gabarits HTML de l'écran Scouting
+    vendor/leaflet/     Leaflet 1.9.4 (carte), embarqué
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran
@@ -128,6 +131,49 @@ Configuration : `pwaBase` dans `ceo_app_setting` (base d'URL du panel) et
 du seed sont des ids de démo à remplacer). Si le panel vit sur une autre base
 MySQL que le cockpit, pointez la connexion du cockpit sur la base commune ou
 répliquez `mac_report_share`.
+
+## Scouting commercial
+
+Écran « Scouting commercial » (rail, groupe *Développement*) — implémentation
+du design Claude Design « Scouting Belgique » : carte Leaflet / OpenStreetMap
+centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
+
+- **Données** : boulangeries et pâtisseries (`shop=bakery|pastry`) et
+  communes (`admin_level=8`, population OSM) interrogées **depuis le
+  navigateur** sur Overpass, en 9 secteurs avec reprise et bascule
+  d'endpoint. Chaque secteur est mis en cache dans `ceo_scouting_tile`
+  (partagé entre tous les utilisateurs — le premier chargement seul est long)
+  et en `localStorage`. « Recharger les données » force une nouvelle
+  interrogation.
+- **Population** : valeur OSM de la commune quand elle existe, sinon nœud
+  `place` homonyme, sinon densité médiane des communes sourcées voisines
+  (signalée « estimée »). L'import d'un CSV StatBel (code NIS ; population)
+  écrase ces estimations, table `ceo_scouting_population`.
+- **Concurrence** : force d'un concurrent d'après sa note Google, à défaut
+  d'après les signaux OSM (enseigne, site, horaires). Les notes Google sont
+  chargées à la demande via l'API Places (clé saisie dans le panneau de
+  gauche, enregistrée dans `ceo_app_setting.scoutingGoogleKey` — jamais dans
+  le code) ; **une note ou un commentaire terrain saisis à la main priment**
+  et sont persistés dans `ceo_scouting_competitor`.
+- **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon ×
+  dépense/ménage × emprise, majoré du passage ; l'emprise décroît avec la
+  pression concurrentielle sauf si elle est imposée. Les 7 hypothèses sont
+  éditables, enregistrées dans `ceo_app_setting.scoutingParams` et reprises
+  dans les exports.
+- **Zones** : zones d'exclusion (rayon paramétrable autour des concurrents
+  forts), zones prioritaires (balayage de la vue, 30 meilleurs scores hors
+  zones rouges), fiche d'implantation au clic, zones candidates retenues
+  (`ceo_scouting_candidate`), comparaison de deux arrondissements, modale des
+  magasins du réseau. Onglets tabulaires `ceo_zones`, `ceo_concurrents`,
+  `ceo_arrondissements` avec export CSV.
+- Chaque saisie (note, commentaire, zone retenue, import) produit une ligne
+  `Scouting` dans le Journal. Sans API (mode démo), tout reste en
+  `localStorage` du navigateur.
+
+Dépendances réseau **côté navigateur** : `tile.openstreetmap.org` (fond de
+carte), les serveurs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
+`overpass.private.coffee`), et `maps.googleapis.com` si une clé Places est
+renseignée. Le serveur PHP n'appelle aucun service externe.
 
 ## Notes
 

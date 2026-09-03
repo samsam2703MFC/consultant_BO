@@ -1,0 +1,231 @@
+name: Deploy — Cockpit CEO
+
+# Déploie le cockpit sur le serveur via SSH depuis un runner GitHub
+# (les runners ont un accès sortant ouvert, contrairement à l'environnement
+# de développement). Reproduit docs/DEPLOIEMENT.md via bin/deploy.sh.
+#
+# Secret REQUIS :  DEPLOY_SSH_PASSWORD  (mot de passe SSH root du serveur)
+# Secrets OPTIONNELS (sinon lus depuis le config du panel sur le serveur) :
+#   COCKPIT_DB_USER, COCKPIT_DB_PASSWORD
+#
+# Déclenchement : pousser un changement sur le fichier `deploy.trigger`
+# (ou "Run workflow" si le workflow est présent sur la branche par défaut).
+
+on:
+  push:
+    branches: [claude/deploiement-application-serveur-lmz1bm]
+    paths: ['deploy.trigger']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cockpit
+  # La dernière livraison gagne. Avec `false`, une exécution bloquée (mesuré :
+  # `apt-get install sshpass` resté en cours 40 minutes) retenait la file, et
+  # les livraisons suivantes n'ont jamais démarré — le serveur restait sur une
+  # version ancienne sans qu'aucune erreur ne le dise.
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  SRC_DIR: "/opt/consulant_bo_src"
+  PWA_BASE: "http://185.180.206.46/pwa_consultant"
+  APP_BASE: "http://185.180.206.46/consulant_bo"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Un script de déploiement mal quoté part sur le serveur sans que rien
+      # ne l'arrête : le transfert réussit, et c'est l'exécution distante qui
+      # casse. Une apostrophe française dans un bloc `php -r '…'` a suffi.
+      # On refuse donc de livrer du code qui ne s'analyse pas.
+      - name: Contrôler la syntaxe avant de livrer
+        run: |
+          fail=0
+          bash -n bin/deploy.sh || { echo "::error title=deploy.sh::syntaxe shell invalide"; fail=1; }
+          for f in $(find src public -name '*.php'); do
+            php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP invalide"; fail=1; }
+          done
+          # public/assistant : bundle Vite minifié (modules ES), déjà validé
+          # par sa compilation — `node --check` le lirait comme un script
+          # CommonJS et le refuserait à tort.
+          for f in $(find public -name '*.js' -not -path 'public/assistant/*'); do
+            node --check "$f" >/dev/null 2>&1 || { echo "::error file=$f::syntaxe JS invalide"; fail=1; }
+          done
+          [ "$fail" = "0" ] && echo "Syntaxe vérifiée : shell, PHP, JavaScript"
+          exit $fail
+
+      # `apt-get` peut rester pendu sur un miroir qui ne répond pas : sans
+      # borne, le job occupe la file jusqu'au délai du workflow entier. On
+      # borne, on réessaie, et on retombe sur le paquet téléchargé directement
+      # si le dépôt reste injoignable.
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          set -u
+          for essai in 1 2 3; do
+            if sudo timeout 90 apt-get update -qq -o Acquire::Retries=2 \
+               && sudo timeout 90 apt-get install -y -qq sshpass; then
+              sshpass -V | head -1; exit 0
+            fi
+            echo "::warning title=apt::tentative $essai en échec, nouvelle tentative"
+            sleep 5
+          done
+          echo "::warning title=apt::dépôt injoignable — repli sur le paquet direct"
+          deb="$(mktemp -d)/sshpass.deb"
+          curl -fsSL --retry 3 --max-time 60 \
+            "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+          sudo dpkg -i "$deb"
+          sshpass -V | head -1
+
+      - name: Vérifier le secret SSH
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          if [ -z "${SSHPASS}" ]; then
+            echo "::error title=Secret manquant::Ajoutez le secret DEPLOY_SSH_PASSWORD (Settings → Secrets and variables → Actions), puis relancez ce workflow (Re-run jobs)."
+            exit 1
+          fi
+
+      - name: Transférer le code vers le serveur
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          tar -czf - --exclude='.git' --exclude='node_modules' --exclude='.deployenv' . \
+            | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+                "rm -rf ${SRC_DIR} && mkdir -p ${SRC_DIR} && tar -xzf - -C ${SRC_DIR}"
+
+      - name: Passer les identifiants MySQL (optionnels)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          DBU: ${{ secrets.COCKPIT_DB_USER }}
+          DBP: ${{ secrets.COCKPIT_DB_PASSWORD }}
+        run: |
+          printf 'COCKPIT_DB_USER=%s\nCOCKPIT_DB_PASSWORD=%s\n' "${DBU:-}" "${DBP:-}" \
+            | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+                "cat > ${SRC_DIR}/.deployenv && chmod 600 ${SRC_DIR}/.deployenv"
+
+      - name: Déployer (install + config + auto-install + recette locale)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          # Opération base pilotée par des mots-clés dans deploy.trigger :
+          #   « wipe »  → remise à zéro (base vide, aucune démo) — prioritaire ;
+          #   « reset » → réinstallation avec jeu de démonstration.
+          RESET=0; WIPE=0; DBINSPECT=0; APIINSPECT=0
+          if grep -qiw 'reset'     deploy.trigger 2>/dev/null; then RESET=1; fi
+          if grep -qiw 'wipe'      deploy.trigger 2>/dev/null; then WIPE=1; RESET=0; fi
+          if grep -qiw 'dbinspect' deploy.trigger 2>/dev/null; then DBINSPECT=1; fi
+          if grep -qiw 'apiinspect' deploy.trigger 2>/dev/null; then APIINSPECT=1; fi
+          echo "COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT} COCKPIT_APIINSPECT=${APIINSPECT}"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "cd ${SRC_DIR} && chmod +x bin/deploy.sh && COCKPIT_PWA_BASE='${PWA_BASE}' COCKPIT_RESET=${RESET} COCKPIT_WIPE=${WIPE} COCKPIT_DBINSPECT=${DBINSPECT} COCKPIT_APIINSPECT=${APIINSPECT} bash bin/deploy.sh"
+
+      - name: Nettoyer le fichier d'identifiants
+        if: always()
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "rm -f ${SRC_DIR}/.deployenv" || true
+
+      - name: Recette publique (endpoints depuis le runner)
+        run: |
+          # Un déploiement « réussi » ne prouve que le transfert de fichiers.
+          # Cette recette est le seul endroit qui dit si l'application RÉPOND,
+          # donc elle doit couvrir ce qui vient d'être livré — sinon elle
+          # certifie une mise en ligne qu'elle n'a pas vérifiée.
+          fail=0
+          for ep in meta stores consultants people scouting 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
+            echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
+            if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
+              echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1
+            fi
+            echo
+          done
+
+          # Les contrats que les écrans supposent, vérifiés sur la vraie base :
+          # sans eux, l'écran s'affiche vide et personne ne sait pourquoi.
+          echo "== contrats attendus =="
+          meta=$(curl -fsS "${APP_BASE}/api/cockpit/meta" || echo '{}')
+          if ! echo "$meta" | grep -q '"niveaux":\[{'; then
+            echo "::error::/meta ne porte pas les niveaux de validation (réglage signalement absent)"; fail=1
+          else echo "OK  /meta porte les cinq niveaux de validation"; fi
+          su=$(curl -fsS "${APP_BASE}/api/cockpit/taches/suivi?periode=semaine" || echo '{}')
+          for k in validees moyenne repartition ouverts signalements parIntervenant; do
+            if ! echo "$su" | grep -q "\"$k\""; then
+              echo "::error::/taches/suivi ne porte pas « $k »"; fail=1
+            fi
+          done
+          [ "$fail" = "0" ] && echo "OK  /taches/suivi porte les six champs de l'écran de suivi"
+
+          # Les identifiants d'intervenant sont le point de jointure avec le
+          # panel : `owner_id` doit s'écrire « u<membership> » pour que le
+          # consultant connecté y retrouve ses tâches. Une divergence ici ne
+          # lève aucune erreur — elle vide simplement son écran.
+          echo "== identifiants d'intervenant =="
+          cons=$(curl -fsS "${APP_BASE}/api/cockpit/consultants" || echo '[]')
+          echo "$cons" | head -c 400; echo
+          if echo "$cons" | grep -q '"id":"u'; then
+            echo "OK  les consultants portent un identifiant « u<membership> »"
+          else
+            echo "::warning::les consultants ne portent PAS d'identifiant u<membership> — le panel ne retrouvera pas leurs tâches"
+          fi
+
+          # Personne ne doit disparaître entre les deux listes : un filtre trop
+          # zélé sur /people cachait trois consultants sur cinq, sans rien dire.
+          nc=$(echo "$cons" | grep -o '"id":"u' | wc -l)
+          np=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"id":"u' | wc -l)
+          echo "consultants : $nc · destinataires : $np"
+          if [ "$np" -lt "$nc" ]; then
+            echo "::warning::$((nc - np)) intervenant(s) absent(s) de la liste des destinataires"
+          else
+            echo "OK  aucun intervenant ne disparaît de la liste des destinataires"
+          fi
+          sans=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"joignable":false' | wc -l)
+          [ "$sans" -gt 0 ] && echo "::notice::$sans compte(s) sans adresse e-mail — un rapport ne peut pas leur être envoyé"
+          true
+
+          [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
+          exit $fail
+
+  # SONDE ROUTES API (lecture seule) : lister les routes de l'API tfb depuis
+  # son code sur le serveur — le contrat définitif pour le passage « full
+  # endpoints » du cockpit (transactions, lignes produits, planning).
+  routes-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Lister les routes de l'API tfb
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" '
+            echo "=== fichiers de routes ==="
+            find /var/www/html/tfb/api -maxdepth 3 -iname "*route*" -o -maxdepth 3 -iname "*Router*" 2>/dev/null | grep -v vendor | head -20
+            echo; echo "=== routes déclarées (transaction / product / schedule / sales) ==="
+            grep -rhoE "(get|post|put|delete)\([\"'\''][^\"'\'']+" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
+              | grep -v vendor | sort -u | grep -iE "transaction|product|schedule|sales|statistic" | head -60
+            echo; echo "=== toutes les routes GET ==="
+            grep -rhoE "get\([\"'\''][^\"'\'']+" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
+              | grep -v vendor | sort -u | head -100
+          '

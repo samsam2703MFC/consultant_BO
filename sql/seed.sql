@@ -661,7 +661,7 @@ INSERT INTO mac_report_share (token, id_shop, ym, label, html, id_consultant, co
 INSERT INTO mac_report_share (token, id_shop, ym, label, html, id_consultant, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at) VALUES ('tok_demo_lie_2026-06_bT5yV2nM8cX4kP0qW7rZ1sD9fG3hJ6lA2', 7, '2026-06', 'Rapport mensuel — Liège Le Carré — juin 2026', NULL, 1, 'Marc Janssens', '2026-07-04 14:30:00', '2026-07-18 14:30:00', NULL, 12, '2026-07-16 19:05:00');
 INSERT INTO mac_report_share (token, id_shop, ym, label, html, id_consultant, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at) VALUES ('tok_demo_gnd_2026-07_cU8wQ4rN1mY6zT3vK9xB5dH0jF7gL2pS3', 8, '2026-07', 'Rapport mensuel — Gand Korenmarkt — juillet 2026', NULL, 4, 'Sofia Ricci', '2026-08-02 10:05:00', '2026-08-16 10:05:00', NULL, 3, '2026-08-05 11:22:00');
 INSERT INTO mac_report_share (token, id_shop, ym, label, html, id_consultant, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at) VALUES ('tok_demo_nam_2026-05_dV1zX7sP4nW2qM9rT5yK8cB3fJ6hG0lD4', 6, '2026-05', 'Rapport mensuel — Namur Marché — mai 2026', NULL, 2, 'Élise Dupont', '2026-06-05 16:45:00', '2026-06-19 16:45:00', '2026-06-12 09:00:00', 1, '2026-06-06 12:10:00');
-INSERT INTO ceo_app_setting VALUES ('reseau', '{"nom":"L\'Atelier by","sousTitre":"Cockpit CEO — Réseau"}');
+INSERT INTO ceo_app_setting VALUES ('reseau', '{"nom":"L\'Atelier by","sousTitre":"Pilotage Réseau"}');
 INSERT INTO ceo_app_setting VALUES ('utilisateur', '{"initiales":"GB","nom":"G. Baert","role":"CEO · admin"}');
 INSERT INTO ceo_app_setting VALUES ('aujourdhui', '"2026-07-31"');
 INSERT INTO ceo_app_setting VALUES ('dateLabel', '"Vendredi 31 juillet 2026"');
