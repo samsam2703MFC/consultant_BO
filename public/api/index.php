@@ -236,6 +236,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
+    if ($method === 'POST' && $path === '/products/categorie.pdf') { return wr_prod_categorie_pdf(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }

@@ -9608,6 +9608,33 @@ class App {
         .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
         .catch(err => this.notify('PDF indisponible : ' + err.message));
     };
+    // Le PDF d'UNE catégorie, complète : toutes ses références, quel que
+    // soit le reste des filtres, avec tout ce que l'écran en sait — volume
+    // par magasin, marge, perte, positions, score, revue, nécessaire, décision.
+    const catChoisie = S.pdCat && S.pdCat !== 'Toutes les catégories' ? S.pdCat : '';
+    common.pdCatChoisie = catChoisie;
+    common.pdPdfCategorie = () => {
+      if (!catChoisie) { this.notify('Choisissez d’abord une catégorie dans le menu déroulant.'); return; }
+      const lc = base.filter(p => p.cat === catChoisie);
+      const ref = lc.find(p => p.parMagasin && p.parMagasin.length) || {};
+      const magasins = (ref.parMagasin || []).map(m => m.nom);
+      const lignes = lc.map(p => {
+        const dc = _c.decision(p.score, p.necessaire);
+        return { id: String(p.id), nom: p.nom, fourn: (p.fourn || []).join(' + '),
+          vol: Math.round(p.vol), parMagasin: magasins.map(n => { const m = (p.parMagasin || []).find(x2 => x2.nom === n); return m ? Math.round(m.vol) : null; }),
+          ca: p.ca, pv: p.prix, achat: p.mu == null ? null : p.prix - p.mu, marge: p.mu, mg: p.mg, taux: p.mp,
+          perte: p.perte, jete: p.jete, motifPerte: p.motifPerte || '',
+          posG: p.rangGlobal + ' / ' + base.length, posC: p.rang + ' / ' + p.nbCat,
+          score: Math.round(p.score), revue: p.revue || 0, necessaire: !!p.necessaire, sansVente: !!p.sansVente, decision: dc[0] };
+      });
+      const corps = JSON.stringify({ categorie: catChoisie, magasins, lignes, seuils: { garder: SCx.garder, modifier: SCx.modifier },
+        periode: _c.periode || '', ponderation: _c.pond || '' });
+      fetch(this.apiBase() + '/products/categorie.pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', body: corps })
+        .then(r => { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.blob(); })
+        .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
+        .catch(err => this.notify('PDF indisponible : ' + err.message));
+    };
     common.pdRows = rows.map(p => { const vd = verdict(p.score); const dc = _c.decision(p.score, p.necessaire);
       return { nom: p.nom, cat: p.cat,
         fourn: p.fournTxt, fournTitre: p.fournTitre, fournInconnu: p.fourn == null,
