@@ -866,8 +866,49 @@ function ep_product_periodes(): array
             'marge' => $cout !== null ? round($ca - $vol * $cout, 2) : null];
     };
 
+    // SOURCE PREMIÈRE : le panel, les mêmes tranches mensuelles par magasin
+    // que le tableau (gravées dès qu'un mois est clos) — dernier mois clos,
+    // dernier trimestre, douze derniers mois. La caisse locale, arrêtée à la
+    // mi-juillet, ne sert plus que de repli.
+    if (PanelApi::configured() && function_exists('apTranches2')) {
+        try {
+            $shopIds = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+        } catch (PDOException $eS) { $shopIds = []; }
+        if ($shopIds !== []) {
+            $finTs = strtotime(date('Y-m-01') . ' -1 day');
+            $mois12 = [];
+            for ($i = 11; $i >= 0; $i--) { $mois12[] = strtotime(date('Y-m-01', $finTs) . " -$i month"); }
+            $couples = [];
+            foreach ($mois12 as $t) { foreach ($shopIds as $sid) { $couples[] = [$sid, date('Y-m-01', $t), date('Y-m-t', $t)]; } }
+            $lu = apTranches2($couples);
+            $somme = function (int $nb) use ($mois12, $shopIds, $lu, $pid, $cout): array {
+                $vol = 0.0; $ca = 0.0; $servis = 0;
+                foreach (array_slice($mois12, -$nb) as $t) {
+                    foreach ($shopIds as $sid) {
+                        $pr = $lu[$sid . ':' . date('Y-m-01', $t)] ?? null;
+                        if (!is_array($pr)) { continue; }
+                        $servis++;
+                        $vol += (float) ($pr[$pid][2] ?? 0); $ca += (float) ($pr[$pid][3] ?? 0);
+                    }
+                }
+                return ['volume' => (int) round($vol), 'ca' => round($ca, 2),
+                    'marge' => $cout !== null ? round($ca - $vol * $cout, 2) : null, 'servis' => $servis];
+            };
+            $m1 = $somme(1);
+            if ($m1['servis'] > 0) {
+                $lib = fn (int $i) => strftime_fr($mois12[$i], 'M Y');
+                return ['produit' => $pid, 'periode' => date('Y-m', $finTs), 'cout' => $cout, 'source' => 'panel',
+                    'fenetres' => [
+                        ['cle' => 'mois', 'label' => $lib(11)] + $m1,
+                        ['cle' => 'trimestre', 'label' => $lib(9) . ' → ' . $lib(11)] + $somme(3),
+                        ['cle' => 'annee', 'label' => '12 mois : ' . $lib(0) . ' → ' . $lib(11)] + $somme(12),
+                    ]];
+            }
+        }
+    }
+
     try {
-        return ['produit' => $pid, 'periode' => $per, 'cout' => $cout,
+        return ['produit' => $pid, 'periode' => $per, 'cout' => $cout, 'source' => 'caisse locale',
             'fenetres' => [
                 ['cle' => 'mois', 'label' => 'Mois ' . $per] + $fenetre($moisDeb, $moisFin),
                 ['cle' => 'trimestre', 'label' => 'Trimestre ' . substr($triDeb, 0, 7) . ' → ' . $per] + $fenetre($triDeb, $moisFin),
