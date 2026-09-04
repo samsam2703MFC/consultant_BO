@@ -853,15 +853,15 @@ export class Scouting {
       // carte reste lisible dessous. Le blanc opaque d'avant faisait un mur
       // de ronds qui cachait les zones et les communes. Le liseré rouge ne
       // reste que là où la moitié des commerces sont des concurrents forts.
-      const d = 18 + Math.min(10, Math.round(Math.log(arr.length) * 3.6));
+      const d = 16 + Math.min(8, Math.round(Math.log(arr.length) * 3));
       const fort = strong / arr.length >= 0.5;
       const m = L.marker([lat, lng], {
         icon: L.divIcon({
           className: '', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
           html: '<div style="width:' + d + 'px;height:' + d + 'px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
-            + 'background:rgba(40,34,30,.55);border:1px solid ' + (fort ? 'rgba(141,29,44,.9)' : 'rgba(255,255,255,.55)') + ';color:#fff;'
-            + 'font-family:Gotham,sans-serif;font-size:' + (arr.length >= 100 ? 8.5 : 9.5) + 'px;font-weight:600;letter-spacing:-0.02em;'
-            + 'text-shadow:0 0 2px rgba(0,0,0,.5);box-shadow:0 1px 2px rgba(0,0,0,.25)">' + arr.length + '</div>'
+            + 'background:rgba(40,34,30,.3);border:' + (fort ? '1px solid rgba(141,29,44,.8)' : 'none') + ';color:#fff;'
+            + 'font-family:Gotham,sans-serif;font-size:' + (arr.length >= 100 ? 8 : 9) + 'px;font-weight:500;letter-spacing:-0.02em;'
+            + 'text-shadow:0 0 3px rgba(0,0,0,.7)">' + arr.length + '</div>'
         })
       });
       m.bindPopup('<div class="sc-pop"><b>' + arr.length + ' commerces</b><br>'
