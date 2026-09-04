@@ -794,7 +794,8 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         }
     }
     if ($servis === 0) { return ''; }
-    $libM = fn ($t) => strftime_fr($t, 'M');
+    $MOIS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    $libM = fn ($t) => $MOIS[(int) date('n', $t) - 1];
     $court = fn (string $n) => trim(preg_replace('/^Atelier by\s*-?\s*/u', '', $n));
 
     // --- le graphique : barres empilées par magasin, SVG en ligne ----------
