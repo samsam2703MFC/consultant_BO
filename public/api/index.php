@@ -199,6 +199,8 @@ function route(string $method, string $path): mixed
             $path === '/centrale/stock'                => ep_ca_stock(),
             $path === '/centrale/facturation'          => ep_ca_facturation(),
             $path === '/products/scoring'              => ep_products_revue(),
+            $path === '/products/fournisseurs'         => ep_products_fournisseurs(),
+            $path === '/products/couverture'           => ep_products_couverture(),
             $path === '/products/waste'                => ep_product_waste(),
             $path === '/products/periodes'             => ep_product_periodes(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),

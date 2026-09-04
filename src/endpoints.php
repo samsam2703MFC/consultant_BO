@@ -5743,9 +5743,13 @@ function ep_products(): array
                              JOIN transaction_product tp ON tp.id_transaction = t.id
                              WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
                              GROUP BY tp.id_product
-                             ORDER BY volume DESC
-                             LIMIT 200", [$from, $to]);
+                             ORDER BY volume DESC", [$from, $to]);
         };
+        // Plus de plafond à 200 lignes : il cachait toute la traîne de la
+        // gamme (les glaces, à 8 pots par mois, n'y entraient jamais alors
+        // que la 200e référence en vendait 12). Le catalogue entier se note,
+        // y compris ce qui ne s'est pas vendu sur la période : ces lignes
+        // sont marquées, elles ne sont pas tues.
         $from = sprintf('%04d-%02d-01 00:00:00', $annee, $mois);
         $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
         $rows = $venteMois($from, $to);
@@ -5833,7 +5837,39 @@ function ep_products(): array
             } catch (PDOException $eCat) { /* catalogue absent : catégorie vide */ }
         }
 
-        return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout) {
+        // TOUT le catalogue actif, pas seulement ce qui s'est vendu : une
+        // référence sans vente sur la période entre à volume zéro, marquée
+        // « sans vente ». Elle se note (score de volume nul), elle se filtre,
+        // elle ne disparaît plus en silence.
+        $vus = [];
+        foreach ($rows as $r) { $vus[(int) $r['id_product']] = true; }
+        try {
+            foreach (Db::rows('SELECT id, name FROM product WHERE is_active = 1') as $c) {
+                $pid = (int) $c['id'];
+                if ($pid <= 0 || isset($vus[$pid])) { continue; }
+                $rows[] = ['id_product' => $pid, 'nom' => (string) $c['name'], 'volume' => 0, 'ca' => 0,
+                    'magasins' => 0, 'sansVente' => true];
+            }
+        } catch (PDOException $eAll) { /* catalogue absent : les ventes seules */ }
+
+        // Les catégories désactivées au panel (bases, cartons B2B, gammes
+        // arrêtées) sortent du scoring : on ne note pas ce qui n'est plus
+        // au catalogue. Sans liste, on ne filtre rien.
+        $inactives = function_exists('apCategoriesInactives') ? apCategoriesInactives() : null;
+        if (is_array($inactives) && $inactives !== []) {
+            $rows = array_values(array_filter($rows, function ($r) use ($cat, $catApi, $inactives) {
+                $pid = (int) $r['id_product'];
+                $nom = mb_strtolower(trim((string) ($catApi[$pid] ?? $cat[$pid] ?? '')));
+                return $nom === '' || !isset($inactives[$nom]);
+            }));
+        }
+
+        // Le fournisseur de chaque référence, tel que la carte des recettes
+        // le connaît (cf. fournisseursProduits) : lu ici depuis le cache,
+        // jamais construit ici — l'écran le complète en tâche de fond.
+        $fourn = function_exists('fournisseursCarte') ? fournisseursCarte() : [];
+
+        return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout, $fourn) {
             $vol  = (float) $r['volume'];
             $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
             $pid  = (int) $r['id_product'];
@@ -5862,6 +5898,10 @@ function ep_products(): array
                 'tauxPerte' => $tp,
                 'jete'      => isset($perteVol[$pid]) ? (int) round($perteVol[$pid]) : null,
                 'motifPerte' => $motif[$pid] ?? null,
+                'sansVente' => !empty($r['sansVente']),
+                // null = pas encore connu (carte en construction) ; [] = aucune
+                // recette, donc aucun fournisseur rattachable.
+                'fournisseurs' => array_key_exists($pid, $fourn) ? $fourn[$pid] : null,
             ];
         }, $rows);
     } catch (PDOException $e) {

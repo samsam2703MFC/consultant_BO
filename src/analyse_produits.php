@@ -409,7 +409,7 @@ function wr_prod_arbitrage_pdf(): array
     $pond = mb_substr(trim((string) ($b['ponderation'] ?? '')), 0, 160);
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $listes = ['garder' => [], 'modifier' => [], 'effacer' => []];
-    $nNec = 0;
+    $nNec = 0; $nSans = 0;
     foreach ($lignes as $l) {
         if (!is_array($l)) { continue; }
         $s = (float) ($l['score'] ?? 0);
@@ -417,6 +417,7 @@ function wr_prod_arbitrage_pdf(): array
         // quoi qu'en dise sa marge, et la ligne le dit.
         $nec = filter_var($l['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN);
         if ($nec) { $nNec++; }
+        if (filter_var($l['sansVente'] ?? false, FILTER_VALIDATE_BOOLEAN)) { $nSans++; }
         $cle = $nec ? 'garder' : ($s > $garder ? 'garder' : ($s >= $modifier ? 'modifier' : 'effacer'));
         $listes[$cle][] = $l;
     }
@@ -445,6 +446,7 @@ function wr_prod_arbitrage_pdf(): array
         . '<div style="font-family:Georgia,serif;font-size:19pt;margin:1mm 0 0.5mm">La gamme en trois listes</div>'
         . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . ($pond !== '' ? 'Score : ' . $e($pond) . '. ' : '')
         . 'Revue : la note franchiseur de 1 à 5 étoiles, posée sur l’écran Scoring, qui pèse dans le score.'
+        . ($nSans > 0 ? ' <b>Sans vente</b> (' . $nSans . ') : au catalogue, mais rien de vendu sur la période.' : '')
         . ($nNec > 0 ? ' <b>Nécessaire</b> (' . $nNec . ') : gardée quoi qu’en disent la marge et le score.' : '')
         . ' La case « Validé » se coche en réunion.</div>';
     $tuile = fn (string $cap, int $n, string $coul, string $crit) => '<td width="33%" style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2.6mm 2mm;text-align:center">'
@@ -466,12 +468,15 @@ function wr_prod_arbitrage_pdf(): array
             . '<td style="font-family:Georgia,serif;font-size:14pt;color:' . $coul . '">' . $e($titre) . '</td>'
             . '<td align="right" style="font-size:9pt;color:#5d564e">' . $e($crit) . ' · <b>' . count($l) . ' référence(s)</b></td></tr></table></div>';
         if ($l === []) { $h .= '<div style="font-size:9pt;color:#8b8177;margin:1mm 0 0 1mm">Aucune référence.</div>'; continue; }
-        $h .= '<table class="t"><tr><th class="l">Référence</th><th class="l">Catégorie</th><th>Volume</th><th>Marge</th><th>Taux</th><th>Perte</th><th>Score</th><th style="text-align:center">Revue</th><th style="text-align:center">Validé</th></tr>';
+        $h .= '<table class="t"><tr><th class="l">Référence</th><th class="l">Catégorie</th><th class="l">Fournisseur</th><th>Volume</th><th>Marge</th><th>Taux</th><th>Perte</th><th>Score</th><th style="text-align:center">Revue</th><th style="text-align:center">Validé</th></tr>';
         foreach ($l as $r) {
             $necL = filter_var($r['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $sansV = filter_var($r['sansVente'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $h .= '<tr><td class="l" style="font-weight:bold">' . $e($r['nom'] ?? '')
                 . ($necL ? ' <span style="font-size:6.5pt;font-weight:normal;color:#2d7a3e;border:0.6pt solid #bfdcc5;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">nécessaire</span>' : '')
+                . ($sansV ? ' <span style="font-size:6.5pt;font-weight:normal;color:#8b8177;border:0.6pt solid #d9d2c6;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">sans vente</span>' : '')
                 . '</td><td class="l" style="color:#8b8177">' . $e($r['cat'] ?? '') . '</td>'
+                . '<td class="l" style="color:#8b8177">' . $e($r['fourn'] ?? '') . '</td>'
                 . '<td>' . $e($r['vol'] ?? '') . '</td><td>' . $e($r['marge'] ?? '') . '</td><td>' . $e($r['taux'] ?? '') . '</td><td>' . $e($r['perte'] ?? '') . '</td>'
                 . '<td style="font-weight:bold;color:' . $coul . '">' . (int) round((float) ($r['score'] ?? 0)) . '</td>'
                 . '<td style="text-align:center;font-size:9pt">' . $etoiles($r['revue'] ?? 0) . '</td>'
@@ -488,4 +493,137 @@ function wr_prod_arbitrage_pdf(): array
     header('Content-Disposition: attachment; filename="arbitrage-gamme-' . date('Y-m-d') . '.pdf"');
     echo $pdf;
     exit;
+}
+
+/* ---------------------------------------------------------------------------
+ * Le fournisseur de chaque référence.
+ *
+ * Le panel ne porte aucun fournisseur sur le produit. La chaîne existe
+ * pourtant : produit → recette (id_recipe) → matières (/recipes/{id}) →
+ * fournisseur (/material-suppliers/{id}/materials). On la remonte une fois,
+ * par passes bornées dans le temps (l'écran rappelle tant que ce n'est pas
+ * fini), et on grave le résultat sept jours. Une référence peut tenir de
+ * plusieurs fournisseurs (le pain d'un sandwich et sa garniture) : on garde
+ * la liste, dans l'ordre de la recette.
+ * ------------------------------------------------------------------------- */
+
+/** La carte gravée : pid → [fournisseurs]. Vide tant que rien n'est construit. */
+function fournisseursCarte(): array
+{
+    $c = setting('apFournMap');
+    if (!is_array($c) || !isset($c['produits']) || !is_array($c['produits'])) { return []; }
+    $out = [];
+    foreach ($c['produits'] as $pid => $l) { $out[(int) $pid] = array_values((array) $l); }
+    return $out;
+}
+
+/**
+ * GET /products/fournisseurs — construit (ou poursuit) la carte, dans un
+ * budget de temps, et la rend. `pret` dit si tout le catalogue est couvert ;
+ * sinon l'écran rappelle. `?refaire=1` repart de zéro.
+ */
+function ep_products_fournisseurs(): array
+{
+    $budget = max(3, min(40, (int) ($_GET['budget'] ?? 18)));
+    $debut = microtime(true);
+    $c = setting('apFournMap');
+    $frais = is_array($c) && isset($c['quand'], $c['produits'], $c['restants'], $c['matieres'])
+        && (int) $c['quand'] > time() - 7 * 86400 && empty($_GET['refaire']);
+    $grave = function (array $c): void {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['apFournMap', json_encode($c, JSON_UNESCAPED_UNICODE)]);
+    };
+
+    if (!$frais) {
+        if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+        // 1. Les fournisseurs, puis les matières de chacun : matière → noms.
+        $fours = [];
+        foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+            $id = (int) ($f['id'] ?? 0); $nom = trim((string) ($f['name'] ?? ''));
+            if ($id > 0 && $nom !== '') { $fours[$id] = $nom; }
+        }
+        if ($fours === []) { http_response_code(502); return ['error' => 'liste des fournisseurs indisponible', 'detail' => PanelApi::$lastError]; }
+        $req = [];
+        foreach ($fours as $id => $nom) { $req[$id] = '/material-suppliers/' . $id . '/materials'; }
+        $matieres = [];
+        foreach (PanelApi::getParallele($req) as $id => $r) {
+            foreach (analyseListe($r ?? []) as $m) {
+                $mid = (int) ($m['id'] ?? 0);
+                if ($mid <= 0) { continue; }
+                $matieres[$mid][] = $fours[$id];
+            }
+        }
+        // 2. Les références et leur recette : le catalogue local d'abord
+        //    (product.id_recipe), le panel sinon.
+        $recettes = [];
+        try {
+            foreach (Db::rows('SELECT id, id_recipe FROM product WHERE is_active = 1') as $p) {
+                $recettes[(int) $p['id']] = $p['id_recipe'] !== null ? (int) $p['id_recipe'] : 0;
+            }
+        } catch (PDOException $e) { /* catalogue local absent */ }
+        if ($recettes === []) {
+            foreach (analyseListe(PanelApi::get('/products') ?? []) as $p) {
+                if ((int) ($p['is_active'] ?? 1) !== 1) { continue; }
+                $recettes[(int) ($p['id'] ?? 0)] = (int) ($p['id_recipe'] ?? 0);
+            }
+            unset($recettes[0]);
+        }
+        $produits = [];
+        $restants = [];
+        foreach ($recettes as $pid => $rid) {
+            if ($rid > 0) { $restants[] = $pid; } else { $produits[$pid] = []; }
+        }
+        $c = ['quand' => time(), 'fournisseurs' => count($fours), 'matieres' => $matieres,
+            'recettes' => $recettes, 'produits' => $produits, 'restants' => $restants, 'total' => count($recettes)];
+        $grave($c);
+    }
+
+    // 3. Les recettes restantes, par paquets, tant que le budget le permet.
+    $matieres = $c['matieres'];
+    while ($c['restants'] !== [] && microtime(true) - $debut < $budget) {
+        $lot = array_splice($c['restants'], 0, 24);
+        $req = [];
+        foreach ($lot as $pid) { $req[$pid] = '/recipes/' . (int) $c['recettes'][$pid]; }
+        foreach (PanelApi::getParallele($req) as $pid => $r) {
+            if (!is_array($r)) {
+                // Réponse manquante : la référence repasse en fin de file, une
+                // seule fois — au second échec elle est notée sans fournisseur.
+                if (empty($c['echecs'][$pid])) { $c['echecs'][$pid] = 1; $c['restants'][] = $pid; }
+                else { $c['produits'][$pid] = []; }
+                continue;
+            }
+            $noms = [];
+            foreach ((array) ($r['materials'] ?? []) as $m) {
+                foreach ($matieres[(int) ($m['id'] ?? 0)] ?? [] as $n) {
+                    if (!in_array($n, $noms, true)) { $noms[] = $n; }
+                }
+            }
+            $c['produits'][$pid] = $noms;
+        }
+        $grave($c);
+    }
+
+    $parProduit = [];
+    foreach ($c['produits'] as $pid => $l) { $parProduit[(string) $pid] = array_values((array) $l); }
+    return ['pret' => $c['restants'] === [], 'restant' => count($c['restants']), 'total' => (int) ($c['total'] ?? 0),
+        'fournisseurs' => (int) ($c['fournisseurs'] ?? 0), 'quand' => date('Y-m-d H:i', (int) $c['quand']),
+        'parProduit' => $parProduit];
+}
+
+/**
+ * GET /products/couverture — jusqu'où va la caisse locale. Le scoring se
+ * calcule sur le dernier mois qu'elle porte : il faut pouvoir le lire.
+ */
+function ep_products_couverture(): array
+{
+    try {
+        $d = Db::row('SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(insert_timestamp) AS dernier, MIN(insert_timestamp) AS premier FROM transaction');
+        $mois = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */ DATE_FORMAT(insert_timestamp, '%Y-%m') m, COUNT(*) n, COUNT(DISTINCT DATE(insert_timestamp)) jours
+                            FROM transaction WHERE insert_timestamp >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+                        GROUP BY DATE_FORMAT(insert_timestamp, '%Y-%m') ORDER BY m");
+    } catch (PDOException $e) { return ['error' => 'caisse locale indisponible']; }
+    $ref = setting('periodeProduits');
+    return ['dernierTicket' => $d['dernier'] ?? null, 'premierTicket' => $d['premier'] ?? null,
+        'periodeServie' => is_string($ref) ? $ref : null,
+        'mois' => array_map(fn ($r) => ['mois' => $r['m'], 'tickets' => (int) $r['n'], 'jours' => (int) $r['jours']], $mois)];
 }

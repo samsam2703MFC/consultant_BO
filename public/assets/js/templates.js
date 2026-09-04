@@ -2254,7 +2254,12 @@ function tplProduits(c, x){
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <input id="pd-q" type="search" value="${esc(c.pdQ)}" ${x.I(c.setPdQ)} placeholder="Rechercher une référence…" style="${selCss};font-family:var(--font-ui);width:230px">
       <select ${x.C(c.setPdCat)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdCatOptions, c.pdCat)}</select>
-      <span style="font-size:12px;color:var(--color-text-muted)">Pondération du score — ${c.pdPond}</span>
+      <!-- Le fournisseur, lu sur la recette de chaque référence : un filtre
+           comme la catégorie. Tant que la carte se construit, l'état le dit. -->
+      <select ${x.C(c.setPdFourn)} title="Filtrer par fournisseur (celui de la recette)" style="${selCss};font-family:var(--font-ui)">${opts(c.pdFournOptions, c.pdFourn)}</select>
+      ${c.pdFournEtat ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.pdFournEtat)}</span>` : ''}
+      <button ${x.A(c.pdBasculerSansVente)} title="${c.pdSansVente} référence(s) au catalogue sans aucune vente sur la période" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:${c.pdMasquerSansVente ? 'var(--color-text)' : 'var(--color-surface)'};color:${c.pdMasquerSansVente ? 'var(--color-surface)' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12px;cursor:pointer">${c.pdMasquerSansVente ? 'Sans vente masquées' : 'Masquer les sans vente'} (${c.pdSansVente})</button>
+      <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.pdAffichees)} références · pondération ${c.pdPond}</span>
     </div>
     <!-- Les seuils d'arbitrage, modifiables ici : garder au-dessus, effacer en
          dessous, modifier entre les deux. Ils s'enregistrent avec le réglage
@@ -2263,7 +2268,10 @@ function tplProduits(c, x){
       <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Seuils de décision</span>
       <label style="font-size:12.5px;display:flex;align-items:center;gap:6px">Garder si score &gt; <input type="number" min="0" max="100" step="1" value="${esc(c.pdSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="width:58px;font-size:13px;font-weight:600;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 6px;background:var(--color-surface);color:var(--color-text)"></label>
       <label style="font-size:12.5px;display:flex;align-items:center;gap:6px">Modifier si score ≥ <input type="number" min="0" max="100" step="1" value="${esc(c.pdSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="width:58px;font-size:13px;font-weight:600;text-align:center;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 6px;background:var(--color-surface);color:var(--color-text)"></label>
-      <span style="font-size:12px;color:var(--color-text-muted)">Effacer en dessous · ${esc(c.pdDecisions)}</span>
+      <span style="font-size:12px;color:var(--color-text-muted)">Effacer en dessous ·</span>
+      <!-- Les badges de décision, cliquables : chacun filtre le tableau sur
+           sa liste, un second clic rend tout. -->
+      ${c.pdChips.map(ch => `<button ${x.A(ch.cliquer)} title="${ch.actif ? 'Cliquer pour tout afficher' : 'Ne montrer que les références à ' + ch.nom.toLowerCase()}" style="border:${ch.actif ? '2px' : '1px'} solid ${ch.col};border-radius:999px;padding:3px 11px;background:${ch.fond};color:${ch.col};font-family:var(--font-ui);font-size:11.5px;font-weight:600;cursor:pointer;${ch.actif ? 'box-shadow:0 0 0 2px ' + ch.fond : ''}">${esc(ch.nom)} ${ch.n}</button>`).join('')}
       <button ${x.A(c.pdPdf)} title="Les trois listes garder / modifier / effacer, avec la revue, en A4" style="margin-left:auto;border:none;border-radius:999px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">⎙ PDF d’arbitrage de gamme</button>
     </div>
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
@@ -2286,7 +2294,9 @@ function tplProduits(c, x){
               <td style="padding:11px 6px 11px 14px;white-space:nowrap;font-size:11.5px;color:var(--color-text-muted)">${esc(r.cat)}</td>
               <td style="padding:11px 12px;white-space:nowrap">
                 <button ${x.A(r.ouvrirDetail)} title="La fiche : score décomposé, CA et marge par période, suites possibles" style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;color:var(--color-text);text-align:left" class="hv-line">${esc(r.nom)}</button>
+                ${r.sansVente ? '<span title="Au catalogue, mais aucune vente sur la période" style="margin-left:6px;font-size:9.5px;color:var(--color-text-muted);border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:1px 6px;vertical-align:1px">sans vente</span>' : ''}
               </td>
+              <td style="padding:11px 10px;white-space:nowrap;font-size:11.5px;color:var(--color-text-muted)" title="${esc(r.fournTitre)}">${r.fournInconnu ? '<span style="opacity:.5">…</span>' : esc(r.fourn || '')}</td>
               <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500">${r.vol}</td>
               <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${r.prix}</td>
               <td style="padding:11px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${r.achat}</td>
@@ -2316,7 +2326,7 @@ function tplProduits(c, x){
                 <span style="display:inline-block;background:${r.dcFond};color:${r.dcCol};border:${r.dcNec ? '1.5px' : '1px'} solid ${r.dcBord};border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600">${esc(r.decision)}${r.dcNec ? ' ✓' : ''}</span>
               </td>
             </tr>`).join('')}
-          ${c.pdRows.length ? '' : `<tr><td colspan="14" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
+          ${c.pdRows.length ? '' : `<tr><td colspan="15" style="padding:20px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucune référence ne correspond${c.pdQ ? ' à « ' + esc(c.pdQ) + ' »' : ''}.</td></tr>`}
         </tbody>
       </table>
       </div>

@@ -9259,22 +9259,37 @@ class App {
     const wtTot = (W.v + W.m + W.perte + W.comptoir + W.rev) || 1;
     const pc4 = w => Math.round(100 * w / wtTot);
     const _pond = 'volume ' + pc4(W.v) + ' · marge nette ' + pc4(W.m) + ' · perte ' + pc4(W.perte) + ' · comptoir ' + pc4(W.comptoir) + ' · revue ' + pc4(W.rev);
-    const _per = 'dernier mois de ventes encodé';
+    // La période : le mois réellement servi par la caisse locale, et
+    // jusqu'où elle va — lus sur /products/couverture, en tâche de fond.
+    const cv = this._pdCouv;
+    const libYM = ym => { const M2 = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      const m2 = +String(ym).slice(5, 7); return (M2[m2 - 1] || ym) + ' ' + String(ym).slice(0, 4); };
+    const _per = cv && cv.periodeServie ? 'ventes de ' + libYM(cv.periodeServie)
+      + (cv.dernierTicket ? ' · caisse locale jusqu’au ' + this.fD(String(cv.dernierTicket).slice(0, 10)) + '/' + String(cv.dernierTicket).slice(0, 4) : '')
+      : 'dernier mois de ventes encodé';
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
     // restent à null et n'entrent pas dans le score (recalculé sur volume + position).
     const base = (D.products || []).map(p => {
       const _id = p.id;
-      const mu = p.coutUnit == null ? null : p.prix - p.coutUnit;
+      // Sans prix (référence au catalogue mais sans vente sur la période), pas
+      // de marge calculable : null, jamais un « prix zéro moins le coût ».
+      const mu = (p.coutUnit == null || p.prix == null) ? null : p.prix - p.coutUnit;
       const mp = (mu == null || !p.prix) ? null : mu / p.prix;
+      const fourn = Array.isArray(p.fournisseurs) ? p.fournisseurs.filter(Boolean) : null;
       return { id: _id, nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
+        sansVente: !!p.sansVente,
+        // Le fournisseur : la liste de la recette (null = pas encore connu),
+        // et son texte — le premier, puis « + n » s'ils sont plusieurs.
+        fourn, fournTxt: fourn == null ? '' : (fourn.length ? fourn[0] + (fourn.length > 1 ? ' + ' + (fourn.length - 1) : '') : ''),
+        fournTitre: fourn == null ? 'Fournisseur : carte en cours de construction' : (fourn.length ? fourn.join(' + ') : 'Aucune recette rattachée : fournisseur inconnu'),
         perte: p.tauxPerte != null ? p.tauxPerte : null,
         jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
         revue: p.revue != null ? +p.revue : null, revuePar: p.revuePar || '', revueLe: p.revueLe || '',
         necessaire: !!p.necessaire,
-        ca: p.volume * p.prix, mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
+        ca: (p.volume || 0) * (p.prix || 0), mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
     const mps = base.map(p => p.mp).filter(v => v != null);
     const maxMp = mps.length ? Math.max.apply(null, mps) : null, minMp = mps.length ? Math.min.apply(null, mps) : null;
@@ -9409,8 +9424,35 @@ class App {
     };
     return common;
   }
+  /**
+   * Ce que le tableau des produits va chercher en tâche de fond, une fois :
+   * la couverture de la caisse locale (quel mois est servi, jusqu'où elle
+   * va) et la carte des fournisseurs — construite par passes côté serveur,
+   * rappelée tant qu'elle n'est pas complète, fondue dans les lignes au fur
+   * et à mesure. L'écran ne bloque jamais dessus.
+   */
+  pdComplements(){
+    if (this._pdCompl) { return; }
+    this._pdCompl = true;
+    readOne('/products/couverture').then(d => { if (d && !d.error) { this._pdCouv = d; this.setState({}); } }).catch(() => null);
+    const fondre = carte => {
+      let n = 0;
+      (this.D.products || []).forEach(p => { const l = carte[String(p.id)]; if (l) { p.fournisseurs = l; n++; } });
+      return n;
+    };
+    const passe = (reste) => readOne('/products/fournisseurs').then(d => {
+      if (!d || d.error) { this._pdFournEtat = d && d.error ? d.error : 'carte indisponible'; this.setState({}); return; }
+      fondre(d.parProduit || {});
+      this._pdFournEtat = d.pret ? '' : 'carte des fournisseurs : ' + (d.total - d.restant) + ' / ' + d.total;
+      this.setState({});
+      if (!d.pret && reste > 0) { passe(reste - 1); }
+    }).catch(() => { this._pdFournEtat = 'carte indisponible'; this.setState({}); });
+    passe(40);
+  }
   valsProduits(common){
     const S = this.state, D = this.D;
+    this.pdComplements();
+    common.pdFournEtat = this._pdFournEtat || '';
     const _c = this.pdCalcule();
     const { base, cats, nbOuv, W, SC } = _c;
     common.pdPond = _c.pond; common.pdPeriode = _c.periode;
@@ -9424,6 +9466,7 @@ class App {
     const colDefs = [
       ['cat',   'Catégorie',      'left',  1],
       ['nom',   'Produit',        'left',  1],
+      ['fourn', 'Fournisseur',    'left',  1, 'Le fournisseur de la recette (le premier, puis « + n » s’ils sont plusieurs). Trier regroupe par fournisseur.'],
       ['vol',   'Volume',         'right', -1],
       ['pv',    'PV',             'right', -1],
       ['achat', 'Achat',          'right', -1],
@@ -9452,14 +9495,34 @@ class App {
     common.pdQ = S.pdQ || '';
     common.setPdQ = e => this.setState({ pdQ: e.target.value });
     const q = norm(S.pdQ).trim();
+    // Le fournisseur se filtre comme la catégorie ; « Inconnu » rassemble
+    // les références sans recette rattachée.
+    const fournTous = 'Tous les fournisseurs';
+    const fournNoms = [...new Set(base.flatMap(p => p.fourn || []))].sort((a, b) => a.localeCompare(b, 'fr'));
+    common.pdFourn = S.pdFourn || fournTous;
+    common.pdFournOptions = [fournTous].concat(fournNoms, base.some(p => p.fourn && !p.fourn.length) ? ['Inconnu'] : []);
+    common.setPdFourn = e => this.setState({ pdFourn: e.target.value });
+    const fOk = p => common.pdFourn === fournTous
+      || (common.pdFourn === 'Inconnu' ? (p.fourn != null && !p.fourn.length) : (p.fourn || []).includes(common.pdFourn));
+    // Les badges de décision FILTRENT : cliquer « Garder » ne montre que
+    // les références à garder, recliquer rend tout. Et les références sans
+    // vente sur la période se masquent d'un clic — elles restent comptées.
+    const decCle = p => p.necessaire ? 'garder' : (Math.round(p.score) > this.scoringCfg().garder ? 'garder'
+      : (Math.round(p.score) >= this.scoringCfg().modifier ? 'modifier' : 'effacer'));
+    common.pdDec = S.pdDec || '';
+    common.pdMasquerSansVente = !!S.pdMasquerSansVente;
+    common.pdBasculerSansVente = () => this.setState({ pdMasquerSansVente: !S.pdMasquerSansVente });
     const rows = base.filter(p => (S.pdCat === 'Toutes les catégories' || p.cat === S.pdCat)
-      && (!q || norm(p.nom).includes(q) || norm(p.cat).includes(q) || String(p.id).includes(q)));
+      && fOk(p)
+      && (!S.pdDec || decCle(p) === S.pdDec)
+      && (!S.pdMasquerSansVente || !p.sansVente)
+      && (!q || norm(p.nom).includes(q) || norm(p.cat).includes(q) || norm(p.fournTxt).includes(q) || String(p.id).includes(q)));
     // La valeur de tri de chaque colonne, prise sur la donnée BRUTE — jamais
     // sur le texte affiché, qui trierait « 12 » avant « 3 ». Une valeur
     // absente va toujours en FIN de liste, quel que soit le sens : une
     // donnée manquante n'est ni la meilleure ni la pire, elle est absente.
     const valTri = {
-      cat: p => p.cat, nom: p => p.nom, vol: p => p.vol, pv: p => p.prix,
+      cat: p => p.cat, nom: p => p.nom, fourn: p => (p.fournTxt || null), vol: p => p.vol, pv: p => p.prix,
       achat: p => (p.mu == null ? null : p.prix - p.mu),
       marge: p => p.mu, taux: p => p.mp, perte: p => p.perte,
       posG: p => p.rangGlobal, posC: p => p.rang, score: p => p.score,
@@ -9488,6 +9551,11 @@ class App {
     common.pdSeuilGarder = String(Math.round(SCx.garder));
     common.pdSeuilModifier = String(Math.round(SCx.modifier));
     common.pdDecisions = 'Garder ' + dcs.garder + ' · Modifier ' + dcs.modifier + ' · Effacer ' + dcs.effacer;
+    common.pdChips = [['garder', 'Garder', '#2d7a3e', '#e6f2e8'], ['modifier', 'Modifier', '#b8671a', '#fdf2e5'], ['effacer', 'Effacer', '#C0182B', '#fbebed']]
+      .map(c2 => ({ nom: c2[1], n: dcs[c2[0]], col: c2[2], fond: c2[3], actif: S.pdDec === c2[0],
+        cliquer: () => this.setState({ pdDec: S.pdDec === c2[0] ? '' : c2[0] }) }));
+    common.pdSansVente = base.filter(p => p.sansVente).length;
+    common.pdAffichees = rows.length + ' / ' + base.length;
     common.pdSetSeuil = cle => e => {
       const v = Math.max(0, Math.min(100, +e.target.value || 0));
       const cur = Object.assign({}, this.meta.scoring || {});
@@ -9508,7 +9576,7 @@ class App {
         nom: p.nom, cat: p.cat || '', vol: Math.round(p.vol).toLocaleString('fr-BE'),
         marge: p.mu == null ? '' : eur(p.mu), taux: p.mp == null ? '' : Math.round(p.mp * 100) + ' %',
         perte: p.perte == null ? '' : this.fP(p.perte, 1), score: Math.round(p.score), revue: p.revue || 0,
-        necessaire: !!p.necessaire }));
+        necessaire: !!p.necessaire, sansVente: !!p.sansVente, fourn: (p.fourn || []).join(' + ') }));
       const corps = JSON.stringify({ seuils: { garder: SCx.garder, modifier: SCx.modifier }, lignes,
         periode: _c.periode || '', ponderation: _c.pond || '' });
       fetch(this.apiBase() + '/products/arbitrage.pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -9519,8 +9587,10 @@ class App {
     };
     common.pdRows = rows.map(p => { const vd = verdict(p.score); const dc = _c.decision(p.score, p.necessaire);
       return { nom: p.nom, cat: p.cat,
+        fourn: p.fournTxt, fournTitre: p.fournTitre, fournInconnu: p.fourn == null,
+        sansVente: p.sansVente,
         ouvrirDetail: () => this.pdOpenDetail(p.id),
-        vol: Math.round(p.vol).toLocaleString('fr-BE'),
+        vol: p.sansVente ? '0' : Math.round(p.vol).toLocaleString('fr-BE'),
         prix: eur(p.prix), mu: eur(p.mu),
         // Le prix d'achat (coût matière) se déduit : la marge unitaire est
         // prix − coût, donc coût = prix − marge. Sans coût, un tiret.
@@ -9642,7 +9712,8 @@ class App {
     const caTot = caProd, mgTot = mgVals.length ? mgVals.reduce((a, v) => a + v, 0) : null;
     const penMoy = base.reduce((a, p) => a + p.pen, 0) / (base.length || 1);
     const nPart = base.filter(p => p.pen < 0.5).length;
-    common.pdKpis = [{ k: 'Références notées', v: String(base.length), s: Object.keys(cats).length + ' catégories — ' + nbOuv + ' magasins ouverts' },
+    const nSansV = base.filter(p => p.sansVente).length;
+    common.pdKpis = [{ k: 'Références notées', v: String(base.length), s: Object.keys(cats).length + ' catégories — ' + nbOuv + ' magasins ouverts' + (nSansV ? ' — ' + nSansV + ' sans vente sur la période' : '') },
       { k: 'CA produit réseau', v: this.fK(caTot), s: 'Ventes du mois, tous magasins ouverts' },
       { k: 'Marge brute produits', v: this.fK(mgTot), s: mgTot == null ? 'Coût produit non exposé par la base partagée — marge indisponible' : this.fP(mgTot / caTot, 1) + ' de taux de marge sur le CA produit' },
       { k: 'Pénétration moyenne', v: this.fP(penMoy, 0), s: nPart + ' références vendues dans moins de la moitié du réseau' },
