@@ -5755,11 +5755,15 @@ function ep_products(): array
         $rows = $venteMois($from, $to);
         // Période demandée sans vente (mois courant partiel, ou installation
         // fraîche) : replier sur le dernier mois de caisse réellement encodé.
+        // Le repli vise le dernier mois COMPLET : si la caisse locale s'arrête
+        // en cours de mois (mesuré : le 14 juillet), noter la gamme sur deux
+        // semaines classerait tout de travers. On recule d'un mois dès que le
+        // dernier ticket tombe avant le 25.
         if (!$rows) {
-            $last = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */
-                                    DATE_FORMAT(MAX(insert_timestamp), '%Y-%m-01 00:00:00') d FROM transaction");
+            $last = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(insert_timestamp) d FROM transaction");
             if ($last !== null && $last['d'] !== null) {
-                $from = $last['d'];
+                $ts = strtotime((string) $last['d']);
+                $from = date('Y-m-01 00:00:00', (int) date('d', $ts) < 25 ? strtotime(date('Y-m-01', $ts) . ' -1 month') : $ts);
                 $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
                 $rows = $venteMois($from, $to);
             }
