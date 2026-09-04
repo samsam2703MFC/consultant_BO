@@ -739,8 +739,9 @@ function wr_prod_categorie_pdf(): array
     $h .= '</tbody><tfoot><tr><td class="l">Total catégorie</td><td></td><td>' . $num($volTot) . '</td>';
     foreach ($mags as $i => $m) { $h .= '<td class="mag">' . $num($volMag[$i]) . '</td>'; }
     $h .= '<td>' . $eur($caTot) . '</td><td></td><td></td><td>' . ($mgOk ? $eur($mgTot) : '') . '</td><td>' . ($mgOk && $caTot > 0 ? $pct($mgTot / $caTot) : '') . '</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tfoot></table>'
-        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Volume, CA et ventilation par magasin : ventes du panel sur la période. Achat = coût matière (recettes du réseau, panel, ou saisie du cockpit). Perte = jeté / (vendu + jeté), le nombre jeté entre parenthèses. Positions par CA, sur la gamme entière et dans la catégorie.</div>'
-        . '</div>';
+        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Volume, CA et ventilation par magasin : ventes du panel sur la période. Achat = coût matière (recettes du réseau, panel, ou saisie du cockpit). Perte = jeté / (vendu + jeté), le nombre jeté entre parenthèses. Positions par CA, sur la gamme entière et dans la catégorie.</div>';
+    $h .= apCategorieDouzeMois($cat, $lignes, $e, $num, $eur);
+    $h .= '</div>';
     $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' . $e($cat) . '</title></head><body>' . $h . '</body></html>';
     $pdf = rapPdfRendu($doc, ['magasin' => 'Réseau', 'rapport' => 'Catégorie ' . $cat . ' · ' . $lib,
         'genere' => date('d/m/Y à H:i'), 'envoye' => '', 'paysage' => true]);
@@ -749,4 +750,125 @@ function wr_prod_categorie_pdf(): array
     header('Content-Disposition: attachment; filename="categorie-' . preg_replace('/[^a-z0-9]+/i', '-', mb_strtolower($cat)) . '-' . date('Y-m-d') . '.pdf"');
     echo $pdf;
     exit;
+}
+
+/**
+ * La deuxième page de la fiche de catégorie : les douze derniers mois clos,
+ * une colonne par mois. D'abord le graphique (barres empilées par magasin,
+ * total au-dessus), puis le tableau : chaque référence, mois par mois, le
+ * total de la catégorie, son CA, et la ventilation par magasin. Source :
+ * les mêmes tranches mensuelles du panel que le scoring, gravées.
+ */
+function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable $num, callable $eur): string
+{
+    if (!PanelApi::configured()) { return ''; }
+    try {
+        $shops = [];
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $sh) { $shops[(int) $sh['id']] = (string) $sh['name']; }
+    } catch (PDOException $eS) { return ''; }
+    if ($shops === []) { return ''; }
+    $finTs = strtotime(date('Y-m-01') . ' -1 day');
+    $mois = [];
+    for ($i = 11; $i >= 0; $i--) { $mois[] = strtotime(date('Y-m-01', $finTs) . " -$i month"); }
+    $couples = [];
+    foreach ($mois as $t) { foreach (array_keys($shops) as $sid) { $couples[] = [$sid, date('Y-m-01', $t), date('Y-m-t', $t)]; } }
+    $lu = apTranches2($couples);
+    $ids = [];
+    foreach ($lignes as $l) { $pid = (int) ($l['id'] ?? 0); if ($pid > 0) { $ids[$pid] = (string) ($l['nom'] ?? $pid); } }
+    if ($ids === []) { return ''; }
+    // volRef[pid][m], volMois[m], caMois[m], volMag[sid][m]
+    $volRef = []; $volMois = array_fill(0, 12, 0.0); $caMois = array_fill(0, 12, 0.0); $volMag = [];
+    foreach ($shops as $sid => $nom) { $volMag[$sid] = array_fill(0, 12, 0.0); }
+    $servis = 0;
+    foreach ($mois as $m => $t) {
+        foreach (array_keys($shops) as $sid) {
+            $pr = $lu[$sid . ':' . date('Y-m-01', $t)] ?? null;
+            if (!is_array($pr)) { continue; }
+            $servis++;
+            foreach ($ids as $pid => $nomP) {
+                $q = (float) ($pr[$pid][2] ?? 0); $c = (float) ($pr[$pid][3] ?? 0);
+                if ($q == 0.0 && $c == 0.0) { continue; }
+                $volRef[$pid][$m] = ($volRef[$pid][$m] ?? 0.0) + $q;
+                $volMois[$m] += $q; $caMois[$m] += $c; $volMag[$sid][$m] += $q;
+            }
+        }
+    }
+    if ($servis === 0) { return ''; }
+    $libM = fn ($t) => strftime_fr($t, 'M');
+    $court = fn (string $n) => trim(preg_replace('/^Atelier by\s*-?\s*/u', '', $n));
+
+    // --- le graphique : barres empilées par magasin, SVG en ligne ----------
+    $coulMag = ['#8D1D2C', '#C17A2A', '#2d7a3e', '#6b7fa8', '#C9A227', '#5d564e'];
+    $W = 760; $H = 200; $mL = 34; $mB = 24; $mT = 18; $gW = $W - $mL - 8; $gH = $H - $mT - $mB;
+    $max = max(1.0, max($volMois));
+    $pas = $gW / 12; $bw = $pas * 0.62;
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+    // grille : quatre lignes
+    for ($g = 0; $g <= 4; $g++) {
+        $y = $mT + $gH - $gH * $g / 4;
+        $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
+            . '<text x="' . ($mL - 4) . '" y="' . round($y + 3, 1) . '" font-size="7" fill="#8b8177" text-anchor="end">' . $num($max * $g / 4) . '</text>';
+    }
+    $iMag = 0; $legende = '';
+    foreach ($shops as $sid => $nom) {
+        $col = $coulMag[$iMag % count($coulMag)];
+        $legende .= '<span style="display:inline-block;width:2.4mm;height:2.4mm;background:' . $col . ';border-radius:0.5mm;vertical-align:-0.3mm;margin:0 1mm 0 3mm"></span>' . $e($court($nom));
+        $iMag++;
+    }
+    foreach ($mois as $m => $t) {
+        $x = $mL + $pas * $m + ($pas - $bw) / 2;
+        $yCur = $mT + $gH; $iMag = 0;
+        foreach ($shops as $sid => $nom) {
+            $v = $volMag[$sid][$m];
+            $hh = $gH * $v / $max;
+            if ($hh > 0) {
+                $yCur -= $hh;
+                $svg .= '<rect x="' . round($x, 1) . '" y="' . round($yCur, 1) . '" width="' . round($bw, 1) . '" height="' . round($hh, 1) . '" fill="' . $coulMag[$iMag % count($coulMag)] . '"/>';
+            }
+            $iMag++;
+        }
+        if ($volMois[$m] > 0) {
+            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 3, 1) . '" font-size="7.5" font-weight="bold" fill="#221E1A" text-anchor="middle">' . $num($volMois[$m]) . '</text>';
+        }
+        $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 8) . '" font-size="7.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
+    }
+    $svg .= '</svg>';
+
+    // --- le tableau : une colonne par mois --------------------------------
+    $th = '<th class="l">Référence</th>';
+    foreach ($mois as $t) { $th .= '<th>' . $e($libM($t)) . '<br><span style="font-weight:normal">' . date('Y', $t) . '</span></th>'; }
+    $th .= '<th style="color:#221E1A">Total</th>';
+    $tb = '';
+    $ordre = array_keys($ids);
+    usort($ordre, fn ($a, $b2) => array_sum($volRef[$b2] ?? []) <=> array_sum($volRef[$a] ?? []));
+    foreach ($ordre as $pid) {
+        $tot = array_sum($volRef[$pid] ?? []);
+        $tb .= '<tr><td class="l" style="font-weight:bold">' . $e($ids[$pid]) . '</td>';
+        foreach ($mois as $m => $t) {
+            $v = $volRef[$pid][$m] ?? 0.0;
+            $tb .= '<td' . ($v == 0.0 ? ' style="color:#c9c3b8"' : '') . '>' . ($v == 0.0 ? '·' : $num($v)) . '</td>';
+        }
+        $tb .= '<td style="font-weight:bold">' . $num($tot) . '</td></tr>';
+    }
+    $tf = '<tr><td class="l">Total catégorie</td>';
+    foreach ($volMois as $v) { $tf .= '<td>' . $num($v) . '</td>'; }
+    $tf .= '<td>' . $num(array_sum($volMois)) . '</td></tr>';
+    $tf .= '<tr><td class="l" style="font-weight:normal;color:#5d564e">Chiffre d’affaires</td>';
+    foreach ($caMois as $v) { $tf .= '<td style="font-weight:normal;color:#5d564e">' . ($v == 0.0 ? '' : $eur($v)) . '</td>'; }
+    $tf .= '<td style="font-weight:normal;color:#5d564e">' . $eur(array_sum($caMois)) . '</td></tr>';
+    $iMag = 0;
+    foreach ($shops as $sid => $nom) {
+        $col = $coulMag[$iMag % count($coulMag)]; $iMag++;
+        $tf .= '<tr><td class="l" style="font-weight:normal"><span style="display:inline-block;width:2mm;height:2mm;background:' . $col . ';border-radius:0.4mm;margin-right:1.2mm"></span>' . $e($court($nom)) . '</td>';
+        foreach ($volMag[$sid] as $v) { $tf .= '<td style="font-weight:normal">' . ($v == 0.0 ? '<span style="color:#c9c3b8">·</span>' : $num($v)) . '</td>'; }
+        $tf .= '<td style="font-weight:normal">' . $num(array_sum($volMag[$sid])) . '</td></tr>';
+    }
+
+    return '<div style="page-break-before:always"></div>'
+        . '<div style="font-family:Georgia,serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les douze derniers mois</div>'
+        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2mm">Pièces vendues par mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . ', tous magasins. Les barres s’empilent par magasin, le total est écrit au-dessus.</div>'
+        . '<div style="border:0.6pt solid #E5E0D8;border-radius:2mm;padding:2mm 2mm 1mm">' . $svg
+        . '<div style="font-size:7pt;color:#5d564e;margin-top:1mm">' . $legende . '</div></div>'
+        . '<table class="t" style="margin-top:3mm"><thead><tr>' . $th . '</tr></thead><tbody>' . $tb . '</tbody><tfoot>' . $tf . '</tfoot></table>'
+        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Un point marque un mois sans vente. Le CA est celui du panel, TVA comprise selon sa règle.</div>';
 }
