@@ -9264,9 +9264,10 @@ class App {
     const cv = this._pdCouv;
     const libYM = ym => { const M2 = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
       const m2 = +String(ym).slice(5, 7); return (M2[m2 - 1] || ym) + ' ' + String(ym).slice(0, 4); };
-    const _per = cv && cv.periodeServie ? 'ventes de ' + libYM(cv.periodeServie)
-      + (cv.dernierTicket ? ' · caisse locale jusqu’au ' + this.fD(String(cv.dernierTicket).slice(0, 10)) + '/' + String(cv.dernierTicket).slice(0, 4) : '')
-      : 'dernier mois de ventes encodé';
+    const fen = cv && cv.fenetre;
+    const _per = fen && fen.libelle ? 'ventes : ' + fen.libelle
+      + (fen.source === 'panel' ? ' · source panel, par magasin' : (cv.dernierTicket ? ' · caisse locale jusqu’au ' + this.fD(String(cv.dernierTicket).slice(0, 10)) + '/' + String(cv.dernierTicket).slice(0, 4) : ''))
+      : (cv && cv.periodeServie ? 'ventes de ' + libYM(cv.periodeServie) : 'dernier mois de ventes clos');
     const nbOuv = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
@@ -9280,6 +9281,7 @@ class App {
       const fourn = Array.isArray(p.fournisseurs) ? p.fournisseurs.filter(Boolean) : null;
       return { id: _id, nom: p.nom, cat: p.categorie, vol: p.volume, prix: p.prix, tend: p.tendVol, mu, mp,
         sansVente: !!p.sansVente,
+        parMagasin: Array.isArray(p.parMagasin) ? p.parMagasin : null,
         // Le fournisseur : la liste de la recette (null = pas encore connu),
         // et son texte — le premier, puis « + n » s'ils sont plusieurs.
         fourn, fournTxt: fourn == null ? '' : (fourn.length ? fourn[0] + (fourn.length > 1 ? ' + ' + (fourn.length - 1) : '') : ''),
@@ -9449,10 +9451,31 @@ class App {
     }).catch(() => { this._pdFournEtat = 'carte indisponible'; this.setState({}); });
     passe(40);
   }
+  /**
+   * Changer de fenêtre — dernier mois clos, dernier trimestre, douze
+   * derniers mois : le tableau se recharge depuis le panel (mois clos
+   * gravés : seul le premier passage sur une fenêtre paie).
+   */
+  pdChoisirFenetre(f){
+    if (this._pdChargement) { return; }
+    this._pdChargement = f;
+    this.setState({ pdFenetre: f });
+    readOne('/products/scoring?fenetre=' + encodeURIComponent(f)).then(d => {
+      this._pdChargement = '';
+      if (!Array.isArray(d)) { this.notify('Ventes indisponibles pour cette fenêtre'); this.setState({}); return; }
+      this.D.products = d;
+      this._pdCompl = false; this.pdComplements();
+      this.setState({});
+    }).catch(() => { this._pdChargement = ''; this.notify('Ventes indisponibles pour cette fenêtre'); this.setState({}); });
+  }
   valsProduits(common){
     const S = this.state, D = this.D;
     this.pdComplements();
     common.pdFournEtat = this._pdFournEtat || '';
+    common.pdFenetre = S.pdFenetre || 'mois';
+    common.pdFenetres = [['mois', 'Dernier mois clos'], ['trimestre', 'Dernier trimestre'], ['annee', '12 derniers mois']]
+      .map(f => ({ val: f[0], nom: f[1], actif: common.pdFenetre === f[0], cliquer: () => this.pdChoisirFenetre(f[0]) }));
+    common.pdChargement = this._pdChargement || '';
     const _c = this.pdCalcule();
     const { base, cats, nbOuv, W, SC } = _c;
     common.pdPond = _c.pond; common.pdPeriode = _c.periode;
@@ -9635,6 +9658,13 @@ class App {
         nom: det.nom, ref: String(det.id), cat: det.cat,
         score: String(Math.round(det.score)), verdict: vd2[0], col: vd2[1], fond: vd2[2],
         periode: _c.periode,
+        // Le volume par magasin sur la fenêtre affichée : chaque magasin, sa
+        // part, et la moyenne réseau — de quoi voir où une référence vit.
+        parMagasin: (det.parMagasin || []).slice().sort((a, b2) => b2.vol - a.vol).map(m => ({
+          nom: m.nom, vol: Math.round(m.vol).toLocaleString('fr-BE'),
+          part: det.vol > 0 ? this.fP(m.vol / det.vol, 0) : '',
+          barre: det.vol > 0 ? Math.max(1, Math.round(100 * m.vol / Math.max.apply(null, (det.parMagasin || []).map(x2 => x2.vol).concat([1])))) : 0 })),
+        parMagasinTotal: Math.round(det.vol).toLocaleString('fr-BE'),
         // CA réseau et marge brute par fenêtre — mois affiché, trimestre,
         // année dernière. Sortis de la ligne du tableau, ils vivent ici.
         perChargement: !per2 || !!per2.chargement,

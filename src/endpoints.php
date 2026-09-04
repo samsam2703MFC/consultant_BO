@@ -5721,59 +5721,102 @@ function ep_journal_mails(): array
 
 function ep_products(): array
 {
-    $periode = $_GET['periode'] ?? '2026-07';
-    if (!preg_match('/^(\d{4})-(\d{2})$/', $periode, $m)) { $m = [null, '2026', '07']; }
-    $annee = (int) $m[1]; $mois = (int) $m[2];
+    // La FENÊTRE : le dernier mois clos, le dernier trimestre clos (trois
+    // mois) ou les douze derniers mois clos. Des mois entiers, jamais un
+    // mois en cours : on ne note pas une gamme sur une semaine.
+    $fenetre = (string) ($_GET['fenetre'] ?? 'mois');
+    if (!in_array($fenetre, ['mois', 'trimestre', 'annee'], true)) { $fenetre = 'mois'; }
+    $nbMois = ['mois' => 1, 'trimestre' => 3, 'annee' => 12][$fenetre];
+    $finTs = strtotime(date('Y-m-01') . ' -1 day');                  // dernier jour du mois clos
+    $debTs = strtotime(date('Y-m-01', $finTs) . ' -' . ($nbMois - 1) . ' month');
+    $from = date('Y-m-01 00:00:00', $debTs);
+    $to   = date('Y-m-01 00:00:00', strtotime(date('Y-m-01', $finTs) . ' +1 month'));
+    $lib = $nbMois === 1 ? strftime_fr($finTs, 'M Y')
+        : strftime_fr($debTs, 'M Y') . ' à ' . strftime_fr($finTs, 'M Y') . ' (' . $nbMois . ' mois)';
 
-    // Vraies ventes par produit sur le mois (lignes de caisse `transaction_product`
-    // ⨝ `transaction` pour la période et le magasin). Mêmes bornes que la perf.
-    // coutUnit = null : le COÛT matière n'est PAS dans la base partagée (il vient
-    // de l'API amont, cf. panel) → marge non calculable ici. Requête bornée à un
-    // mois, plafonnée MySQL et encapsulée. Repli sur ceo_product si les tables POS
-    // sont absentes (installation autonome).
+    // Les magasins actifs, pour la ventilation par magasin.
+    $shopNoms = [];
     try {
-        $venteMois = static function (string $from, string $to): array {
-            return Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
-                                    tp.id_product,
-                                    MAX(tp.product_name) nom,
-                                    SUM(tp.quantity) volume,
-                                    SUM(tp.total_gross_value_after_discount) ca,
-                                    COUNT(DISTINCT t.id_shop) magasins
-                             FROM transaction t
-                             JOIN transaction_product tp ON tp.id_transaction = t.id
-                             WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
-                             GROUP BY tp.id_product
-                             ORDER BY volume DESC", [$from, $to]);
-        };
-        // Plus de plafond à 200 lignes : il cachait toute la traîne de la
-        // gamme (les glaces, à 8 pots par mois, n'y entraient jamais alors
-        // que la 200e référence en vendait 12). Le catalogue entier se note,
-        // y compris ce qui ne s'est pas vendu sur la période : ces lignes
-        // sont marquées, elles ne sont pas tues.
-        $from = sprintf('%04d-%02d-01 00:00:00', $annee, $mois);
-        $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
-        $rows = $venteMois($from, $to);
-        // Période demandée sans vente (mois courant partiel, ou installation
-        // fraîche) : replier sur le dernier mois de caisse réellement encodé.
-        // Le repli vise le dernier mois COMPLET : si la caisse locale s'arrête
-        // en cours de mois (mesuré : le 14 juillet), noter la gamme sur deux
-        // semaines classerait tout de travers. On recule d'un mois dès que le
-        // dernier ticket tombe avant le 25.
-        if (!$rows) {
-            $last = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(insert_timestamp) d FROM transaction");
-            if ($last !== null && $last['d'] !== null) {
-                $ts = strtotime((string) $last['d']);
-                $from = date('Y-m-01 00:00:00', (int) date('d', $ts) < 25 ? strtotime(date('Y-m-01', $ts) . ' -1 month') : $ts);
-                $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
-                $rows = $venteMois($from, $to);
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $sh) { $shopNoms[(int) $sh['id']] = (string) $sh['name']; }
+    } catch (PDOException $eS) { /* pas de table shops */ }
+
+    try {
+        $rows = []; $catApi = []; $parMag = []; $source = '';
+        // SOURCE PREMIÈRE : les ventes du panel, magasin par magasin, mois par
+        // mois (product-category-groups, les mêmes tranches que l'analyse des
+        // prix, gravées dès qu'un mois est clos). La caisse locale, elle,
+        // s'est arrêtée le 14 juillet : elle ne sert plus que de repli.
+        if (PanelApi::configured() && function_exists('apTranches2') && $shopNoms !== []) {
+            $couples = [];
+            for ($i = 0; $i < $nbMois; $i++) {
+                $t = strtotime(date('Y-m-01', $debTs) . " +$i month");
+                foreach (array_keys($shopNoms) as $sid) { $couples[] = [$sid, date('Y-m-01', $t), date('Y-m-t', $t)]; }
+            }
+            $lu = apTranches2($couples);
+            $agg = []; $servis = 0;
+            foreach ($couples as [$sid, $du, $au]) {
+                $pr = $lu[$sid . ':' . $du] ?? null;
+                if (!is_array($pr)) { continue; }
+                $servis++;
+                foreach ($pr as $pid => $x) {
+                    $pid = (int) $pid;
+                    if (!isset($agg[$pid])) { $agg[$pid] = ['nom' => $x[0], 'cat' => $x[1], 'vol' => 0.0, 'ca' => 0.0, 'mag' => []]; }
+                    $agg[$pid]['vol'] += (float) $x[2];
+                    $agg[$pid]['ca'] += (float) $x[3];
+                    $agg[$pid]['mag'][$sid] = ($agg[$pid]['mag'][$sid] ?? 0.0) + (float) $x[2];
+                }
+            }
+            if ($servis > 0) {
+                $source = 'panel';
+                foreach ($agg as $pid => $x) {
+                    $nMag = count(array_filter($x['mag'], fn ($v) => $v > 0));
+                    $rows[] = ['id_product' => $pid, 'nom' => $x['nom'], 'volume' => $x['vol'], 'ca' => $x['ca'], 'magasins' => $nMag];
+                    if ($x['cat'] !== '') { $catApi[$pid] = $x['cat']; }
+                    $parMag[$pid] = $x['mag'];
+                }
+                usort($rows, fn ($u, $v) => $v['volume'] <=> $u['volume']);
             }
         }
 
-        // Mémoriser la période réellement servie : la modale de détail doit
-        // interroger la même fenêtre que le tableau.
+        // REPLI : la caisse locale (transaction ⨝ transaction_product), sur
+        // la même fenêtre ; si elle est vide, sur son dernier mois complet.
+        if ($rows === []) {
+            $venteMois = static function (string $from, string $to): array {
+                return Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
+                                        tp.id_product,
+                                        MAX(tp.product_name) nom,
+                                        SUM(tp.quantity) volume,
+                                        SUM(tp.total_gross_value_after_discount) ca,
+                                        COUNT(DISTINCT t.id_shop) magasins
+                                 FROM transaction t
+                                 JOIN transaction_product tp ON tp.id_transaction = t.id
+                                 WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                                 GROUP BY tp.id_product
+                                 ORDER BY volume DESC", [$from, $to]);
+            };
+            $rows = $venteMois($from, $to);
+            if (!$rows) {
+                $last = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(insert_timestamp) d FROM transaction");
+                if ($last !== null && $last['d'] !== null) {
+                    $ts = strtotime((string) $last['d']);
+                    $from = date('Y-m-01 00:00:00', (int) date('d', $ts) < 25 ? strtotime(date('Y-m-01', $ts) . ' -1 month') : $ts);
+                    $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
+                    $rows = $venteMois($from, $to);
+                    $lib = strftime_fr(strtotime($from), 'M Y');
+                }
+            }
+            $source = 'caisse locale';
+        }
+
+        // Mémoriser la fenêtre réellement servie : la fiche et la perte
+        // interrogent la même. `periodeProduits` garde le dernier mois (les
+        // lecteurs existants attendent un « AAAA-MM »).
         try {
             Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                ['periodeProduits', json_encode(substr($from, 0, 7))]);
+                ['periodeProduits', json_encode(date('Y-m', strtotime($to . ' -1 day')))]);
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['periodeProduitsFenetre', json_encode(['fenetre' => $fenetre, 'du' => substr($from, 0, 10),
+                    'au' => date('Y-m-d', strtotime($to . ' -1 day')), 'libelle' => $lib, 'source' => $source, 'mois' => $nbMois], JSON_UNESCAPED_UNICODE)]);
         } catch (PDOException $eP) { /* sans importance */ }
 
         // PERTES par référence — API du panel (/shops/{id}/products/waste), la
@@ -5781,7 +5824,7 @@ function ep_products(): array
         // les quantités jetées et vendues sur TOUTES les boutiques pour la même
         // période que le volume, puis on en tire un taux réseau. Le volet
         // rapporte aussi la catégorie réelle et le motif principal de rebut.
-        $perteVol = []; $catApi = []; $motif = [];
+        $perteVol = []; $motif = [];
         if (PanelApi::configured()) {
             $dFrom = substr($from, 0, 10);
             $dTo   = date('Y-m-d', strtotime($to . ' -1 day'));
@@ -5873,7 +5916,7 @@ function ep_products(): array
         // jamais construit ici — l'écran le complète en tâche de fond.
         $fourn = function_exists('fournisseursCarte') ? fournisseursCarte() : [];
 
-        return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout, $fourn) {
+        return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout, $fourn, $parMag, $shopNoms) {
             $vol  = (float) $r['volume'];
             $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
             $pid  = (int) $r['id_product'];
@@ -5903,6 +5946,10 @@ function ep_products(): array
                 'jete'      => isset($perteVol[$pid]) ? (int) round($perteVol[$pid]) : null,
                 'motifPerte' => $motif[$pid] ?? null,
                 'sansVente' => !empty($r['sansVente']),
+                // Le volume par magasin sur la fenêtre (source panel) : la
+                // fiche le déroule au clic. Vide en repli caisse locale.
+                'parMagasin' => isset($parMag[$pid]) ? array_values(array_map(fn ($sid) => ['sid' => $sid,
+                    'nom' => $shopNoms[$sid] ?? ('Magasin ' . $sid), 'vol' => (int) round($parMag[$pid][$sid] ?? 0)], array_keys($shopNoms))) : null,
                 // null = pas encore connu (carte en construction) ; [] = aucune
                 // recette, donc aucun fournisseur rattachable.
                 'fournisseurs' => array_key_exists($pid, $fourn) ? $fourn[$pid] : null,

@@ -623,7 +623,9 @@ function ep_products_couverture(): array
                         GROUP BY DATE_FORMAT(insert_timestamp, '%Y-%m') ORDER BY m");
     } catch (PDOException $e) { return ['error' => 'caisse locale indisponible']; }
     $ref = setting('periodeProduits');
+    $fen = setting('periodeProduitsFenetre');
     return ['dernierTicket' => $d['dernier'] ?? null, 'premierTicket' => $d['premier'] ?? null,
         'periodeServie' => is_string($ref) ? $ref : null,
+        'fenetre' => is_array($fen) ? $fen : null,
         'mois' => array_map(fn ($r) => ['mois' => $r['m'], 'tickets' => (int) $r['n'], 'jours' => (int) $r['jours']], $mois)];
 }

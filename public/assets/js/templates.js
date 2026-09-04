@@ -2252,6 +2252,9 @@ function tplProduits(c, x){
         </div>`).join('')}
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <!-- La fenêtre des ventes : trois boutons, le tableau se recharge. -->
+      <span style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">${c.pdFenetres.map(f => `<button ${x.A(f.cliquer)} style="border:none;padding:6px 12px;font-family:var(--font-ui);font-size:12px;cursor:pointer;background:${f.actif ? 'var(--color-text)' : 'var(--color-surface)'};color:${f.actif ? 'var(--color-surface)' : 'var(--color-text)'}">${esc(f.nom)}</button>`).join('')}</span>
+      ${c.pdChargement ? `<span style="font-size:11.5px;color:var(--color-text-muted)">Lecture des ventes…</span>` : ''}
       <input id="pd-q" type="search" value="${esc(c.pdQ)}" ${x.I(c.setPdQ)} placeholder="Rechercher une référence…" style="${selCss};font-family:var(--font-ui);width:230px">
       <select ${x.C(c.setPdCat)} style="${selCss};font-family:var(--font-ui)">${opts(c.pdCatOptions, c.pdCat)}</select>
       <!-- Le fournisseur, lu sur la recette de chaque référence : un filtre
@@ -2875,6 +2878,17 @@ function tplScoringDetail(c, x){
         </div>`).join('')}
       </div>
 
+      <!-- Le volume par magasin sur la fenêtre affichée. -->
+      ${d.parMagasin.length ? `
+      <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;font-weight:600">Volume par magasin</span><span style="font-size:11px;color:var(--color-text-muted)">${esc(d.periode)} · ${esc(d.parMagasinTotal)} pièces au total</span></div>
+        ${d.parMagasin.map(m => `<div style="display:flex;align-items:center;gap:11px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)">
+          <span style="width:230px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.nom)}</span>
+          <div style="flex:1;height:8px;border-radius:999px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:999px;width:${m.barre}%;background:#8D1D2C"></i></div>
+          <span style="width:70px;text-align:right;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">${esc(m.vol)}</span>
+          <span style="width:46px;text-align:right;font-size:11px;color:var(--color-text-muted)">${esc(m.part)}</span>
+        </div>`).join('')}
+      </div>` : ''}
       <!-- CA réseau et marge brute par période : sortis de la ligne du
            tableau, ils vivent ici — mois affiché, trimestre, année dernière. -->
       <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px;margin-top:16px">
