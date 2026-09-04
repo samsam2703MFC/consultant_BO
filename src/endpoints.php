@@ -5920,7 +5920,9 @@ function ep_products(): array
             try {
                 foreach (Db::rows('SELECT id, id_category FROM product WHERE is_active = 1') as $c) {
                     $k = (int) $c['id_category'];
-                    if (isset($refCat[$k])) { $cat[(int) $c['id']] = $refCat[$k]['nom']; }
+                    // Le nom se nettoie : « Viennoiserie réduction » suivi d'une
+                    // espace fabriquait une seconde catégorie d'une référence.
+                    if (isset($refCat[$k])) { $cat[(int) $c['id']] = trim((string) $refCat[$k]['nom']); }
                 }
             } catch (PDOException $eCat) { /* catalogue absent : catégorie vide */ }
         }
