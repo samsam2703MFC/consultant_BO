@@ -798,42 +798,101 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
     $libM = fn ($t) => $MOIS[(int) date('n', $t) - 1];
     $court = fn (string $n) => trim(preg_replace('/^Atelier by\s*-?\s*/u', '', $n));
 
-    // --- le graphique : barres empilées par magasin, SVG en ligne ----------
+    // --- les graphiques : une page entière, quatre vues -------------------
     $coulMag = ['#8D1D2C', '#C17A2A', '#2d7a3e', '#6b7fa8', '#C9A227', '#5d564e'];
-    $W = 760; $H = 200; $mL = 34; $mB = 24; $mT = 18; $gW = $W - $mL - 8; $gH = $H - $mT - $mB;
-    $max = max(1.0, max($volMois));
-    $pas = $gW / 12; $bw = $pas * 0.62;
-    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
-    // grille : quatre lignes
-    for ($g = 0; $g <= 4; $g++) {
-        $y = $mT + $gH - $gH * $g / 4;
-        $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
-            . '<text x="' . ($mL - 4) . '" y="' . round($y + 3, 1) . '" font-size="7" fill="#8b8177" text-anchor="end">' . $num($max * $g / 4) . '</text>';
-    }
-    $iMag = 0; $legende = '';
+    $sids = array_keys($shops);
+    $colDe = fn (int $sid) => $coulMag[array_search($sid, $sids, true) % count($coulMag)];
+    $legende = '';
     foreach ($shops as $sid => $nom) {
-        $col = $coulMag[$iMag % count($coulMag)];
-        $legende .= '<span style="display:inline-block;width:2.4mm;height:2.4mm;background:' . $col . ';border-radius:0.5mm;vertical-align:-0.3mm;margin:0 1mm 0 3mm"></span>' . $e($court($nom));
-        $iMag++;
+        $legende .= '<span style="display:inline-block;width:2.4mm;height:2.4mm;background:' . $colDe($sid) . ';border-radius:0.5mm;vertical-align:-0.3mm;margin:0 1mm 0 3mm"></span>' . $e($court($nom));
     }
-    foreach ($mois as $m => $t) {
-        $x = $mL + $pas * $m + ($pas - $bw) / 2;
-        $yCur = $mT + $gH; $iMag = 0;
-        foreach ($shops as $sid => $nom) {
-            $v = $volMag[$sid][$m];
-            $hh = $gH * $v / $max;
-            if ($hh > 0) {
-                $yCur -= $hh;
-                $svg .= '<rect x="' . round($x, 1) . '" y="' . round($yCur, 1) . '" width="' . round($bw, 1) . '" height="' . round($hh, 1) . '" fill="' . $coulMag[$iMag % count($coulMag)] . '"/>';
+    // Un graphique en barres (empilées si plusieurs séries), axe et grille.
+    $barres = function (array $series, array $coul, string $fmt, bool $etiquette = true) use ($mois, $libM, $num, $e): string {
+        $W = 370; $H = 190; $mL = 38; $mB = 22; $mT = 16; $gW = $W - $mL - 6; $gH = $H - $mT - $mB;
+        $tot = array_fill(0, 12, 0.0);
+        foreach ($series as $sv) { foreach ($sv as $m => $v) { $tot[$m] += (float) $v; } }
+        $max = max(1.0, max($tot));
+        $pas = $gW / 12; $bw = $pas * 0.64;
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+        for ($g = 0; $g <= 4; $g++) {
+            $y = $mT + $gH - $gH * $g / 4;
+            $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
+                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="6.5" fill="#8b8177" text-anchor="end">' . ($fmt === 'eur' ? $num($max * $g / 4 / 1000, 1) . ' k€' : $num($max * $g / 4)) . '</text>';
+        }
+        foreach ($mois as $m => $t) {
+            $x = $mL + $pas * $m + ($pas - $bw) / 2; $yCur = $mT + $gH;
+            foreach ($series as $i => $sv) {
+                $hh = $gH * (float) ($sv[$m] ?? 0) / $max;
+                if ($hh > 0) { $yCur -= $hh; $svg .= '<rect x="' . round($x, 1) . '" y="' . round($yCur, 1) . '" width="' . round($bw, 1) . '" height="' . round($hh, 1) . '" fill="' . $coul[$i] . '"/>'; }
             }
-            $iMag++;
+            if ($etiquette && $tot[$m] > 0) {
+                $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 2.5, 1) . '" font-size="6.5" font-weight="bold" fill="#221E1A" text-anchor="middle">' . ($fmt === 'eur' ? $num($tot[$m]) : $num($tot[$m])) . '</text>';
+            }
+            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 7) . '" font-size="6.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
         }
-        if ($volMois[$m] > 0) {
-            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 3, 1) . '" font-size="7.5" font-weight="bold" fill="#221E1A" text-anchor="middle">' . $num($volMois[$m]) . '</text>';
+        return $svg . '</svg>';
+    };
+    // Un graphique en courbes : une ligne par magasin, points marqués.
+    $courbes = function (array $series, array $coul) use ($mois, $libM, $num, $e): string {
+        $W = 370; $H = 190; $mL = 38; $mB = 22; $mT = 14; $gW = $W - $mL - 8; $gH = $H - $mT - $mB;
+        $max = 1.0;
+        foreach ($series as $sv) { $max = max($max, max($sv)); }
+        $pas = $gW / 12;
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+        for ($g = 0; $g <= 4; $g++) {
+            $y = $mT + $gH - $gH * $g / 4;
+            $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
+                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="6.5" fill="#8b8177" text-anchor="end">' . $num($max * $g / 4) . '</text>';
         }
-        $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 8) . '" font-size="7.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
-    }
-    $svg .= '</svg>';
+        foreach ($mois as $m => $t) {
+            $svg .= '<text x="' . round($mL + $pas * $m + $pas / 2, 1) . '" y="' . ($H - 7) . '" font-size="6.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
+        }
+        foreach ($series as $i => $sv) {
+            $pts = [];
+            foreach ($mois as $m => $t) {
+                $pts[] = round($mL + $pas * $m + $pas / 2, 1) . ',' . round($mT + $gH - $gH * (float) ($sv[$m] ?? 0) / $max, 1);
+            }
+            $svg .= '<polyline points="' . implode(' ', $pts) . '" fill="none" stroke="' . $coul[$i] . '" stroke-width="1.8" stroke-linejoin="round"/>';
+            foreach ($pts as $m => $pt) {
+                [$px, $py] = explode(',', $pt);
+                if ((float) ($sv[$m] ?? 0) > 0) { $svg .= '<circle cx="' . $px . '" cy="' . $py . '" r="2.2" fill="' . $coul[$i] . '"/>'; }
+            }
+        }
+        return $svg . '</svg>';
+    };
+    // Les parts : barres horizontales par magasin sur les douze mois.
+    $parts = function () use ($shops, $volMag, $colDe, $court, $num, $e): string {
+        $tot = 0.0; $parMag = [];
+        foreach ($shops as $sid => $nom) { $parMag[$sid] = array_sum($volMag[$sid]); $tot += $parMag[$sid]; }
+        arsort($parMag);
+        $W = 370; $rowH = 26; $H = 16 + $rowH * count($parMag); $mL = 120; $gW = $W - $mL - 60;
+        $max = max(1.0, max($parMag));
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+        $i = 0;
+        foreach ($parMag as $sid => $v) {
+            $y = 10 + $rowH * $i; $w = $gW * $v / $max;
+            $svg .= '<text x="' . ($mL - 6) . '" y="' . ($y + 13) . '" font-size="7.5" fill="#221E1A" text-anchor="end">' . $e($court($shops[$sid])) . '</text>'
+                . '<rect x="' . $mL . '" y="' . $y . '" width="' . $gW . '" height="18" fill="#F0EDE7" rx="2"/>'
+                . '<rect x="' . $mL . '" y="' . $y . '" width="' . round($w, 1) . '" height="18" fill="' . $colDe($sid) . '" rx="2"/>'
+                . '<text x="' . round($mL + $gW + 6, 1) . '" y="' . ($y + 13) . '" font-size="7.5" font-weight="bold" fill="#221E1A">' . $num($v) . ' <tspan font-weight="normal" fill="#5d564e">· ' . ($tot > 0 ? $num($v / $tot * 100) : '0') . ' %</tspan></text>';
+            $i++;
+        }
+        return $svg . '</svg>';
+    };
+    $cadre = fn (string $titre, string $sous, string $svg) => '<td width="50%" style="vertical-align:top;padding:1mm"><div style="border:0.6pt solid #E5E0D8;border-radius:2mm;padding:2mm 2mm 1mm">'
+        . '<div style="font-size:9pt;font-weight:bold">' . $titre . '</div><div style="font-size:6.8pt;color:#8b8177;margin-bottom:1mm">' . $sous . '</div>' . $svg . '</div></td>';
+    $serieMag = []; $coulSer = [];
+    foreach ($shops as $sid => $nom) { $serieMag[] = $volMag[$sid]; $coulSer[] = $colDe($sid); }
+    $pageGraph = '<div style="page-break-before:always"></div>'
+        . '<div style="font-family:Georgia,serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les graphiques</div>'
+        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:1.5mm">Douze derniers mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . '. ' . $legende . '</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . $cadre('Volume réseau par mois', 'pièces vendues, empilées par magasin, total au-dessus', $barres($serieMag, $coulSer, 'n'))
+        . $cadre('Chiffre d’affaires réseau par mois', 'ventes du panel, en euros', $barres([$caMois], ['#221E1A'], 'eur'))
+        . '</tr><tr>'
+        . $cadre('Volume par magasin, mois par mois', 'une courbe par magasin', $courbes($serieMag, $coulSer))
+        . $cadre('Part de chaque magasin sur douze mois', 'pièces vendues et part du réseau', $parts())
+        . '</tr></table>';
 
     // --- le tableau : une colonne par mois --------------------------------
     $th = '<th class="l">Référence</th>';
@@ -857,9 +916,8 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
     $tf .= '<tr><td class="l" style="font-weight:normal;color:#5d564e">Chiffre d’affaires</td>';
     foreach ($caMois as $v) { $tf .= '<td style="font-weight:normal;color:#5d564e">' . ($v == 0.0 ? '' : $eur($v)) . '</td>'; }
     $tf .= '<td style="font-weight:normal;color:#5d564e">' . $eur(array_sum($caMois)) . '</td></tr>';
-    $iMag = 0;
     foreach ($shops as $sid => $nom) {
-        $col = $coulMag[$iMag % count($coulMag)]; $iMag++;
+        $col = $colDe($sid);
         $tf .= '<tr><td class="l" style="font-weight:normal"><span style="display:inline-block;width:2mm;height:2mm;background:' . $col . ';border-radius:0.4mm;margin-right:1.2mm"></span>' . $e($court($nom)) . '</td>';
         foreach ($volMag[$sid] as $v) { $tf .= '<td style="font-weight:normal">' . ($v == 0.0 ? '<span style="color:#c9c3b8">·</span>' : $num($v)) . '</td>'; }
         $tf .= '<td style="font-weight:normal">' . $num(array_sum($volMag[$sid])) . '</td></tr>';
@@ -867,9 +925,8 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
 
     return '<div style="page-break-before:always"></div>'
         . '<div style="font-family:Georgia,serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les douze derniers mois</div>'
-        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2mm">Pièces vendues par mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . ', tous magasins. Les barres s’empilent par magasin, le total est écrit au-dessus.</div>'
-        . '<div style="border:0.6pt solid #E5E0D8;border-radius:2mm;padding:2mm 2mm 1mm">' . $svg
-        . '<div style="font-size:7pt;color:#5d564e;margin-top:1mm">' . $legende . '</div></div>'
-        . '<table class="t" style="margin-top:3mm"><thead><tr>' . $th . '</tr></thead><tbody>' . $tb . '</tbody><tfoot>' . $tf . '</tfoot></table>'
-        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Un point marque un mois sans vente. Le CA est celui du panel, TVA comprise selon sa règle.</div>';
+        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2mm">Pièces vendues par mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . ', tous magasins, puis le total de la catégorie, son chiffre d’affaires et la ventilation par magasin.</div>'
+        . '<table class="t"><thead><tr>' . $th . '</tr></thead><tbody>' . $tb . '</tbody><tfoot>' . $tf . '</tfoot></table>'
+        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Un point marque un mois sans vente. Le CA est celui du panel, TVA comprise selon sa règle. Les graphiques sont en page suivante.</div>'
+        . $pageGraph;
 }
