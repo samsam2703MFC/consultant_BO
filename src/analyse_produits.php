@@ -808,7 +808,7 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
     }
     // Un graphique en barres (empilées si plusieurs séries), axe et grille.
     $barres = function (array $series, array $coul, string $fmt, bool $etiquette = true) use ($mois, $libM, $num, $e): string {
-        $W = 370; $H = 190; $mL = 38; $mB = 22; $mT = 16; $gW = $W - $mL - 6; $gH = $H - $mT - $mB;
+        $W = 520; $H = 260; $mL = 44; $mB = 24; $mT = 18; $gW = $W - $mL - 6; $gH = $H - $mT - $mB;
         $tot = array_fill(0, 12, 0.0);
         foreach ($series as $sv) { foreach ($sv as $m => $v) { $tot[$m] += (float) $v; } }
         $max = max(1.0, max($tot));
@@ -817,7 +817,7 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         for ($g = 0; $g <= 4; $g++) {
             $y = $mT + $gH - $gH * $g / 4;
             $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
-                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="6.5" fill="#8b8177" text-anchor="end">' . ($fmt === 'eur' ? $num($max * $g / 4 / 1000, 1) . ' k€' : $num($max * $g / 4)) . '</text>';
+                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="7.5" fill="#8b8177" text-anchor="end">' . ($fmt === 'eur' ? $num($max * $g / 4 / 1000, 1) . ' k€' : $num($max * $g / 4)) . '</text>';
         }
         foreach ($mois as $m => $t) {
             $x = $mL + $pas * $m + ($pas - $bw) / 2; $yCur = $mT + $gH;
@@ -826,15 +826,15 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
                 if ($hh > 0) { $yCur -= $hh; $svg .= '<rect x="' . round($x, 1) . '" y="' . round($yCur, 1) . '" width="' . round($bw, 1) . '" height="' . round($hh, 1) . '" fill="' . $coul[$i] . '"/>'; }
             }
             if ($etiquette && $tot[$m] > 0) {
-                $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 2.5, 1) . '" font-size="6.5" font-weight="bold" fill="#221E1A" text-anchor="middle">' . ($fmt === 'eur' ? $num($tot[$m]) : $num($tot[$m])) . '</text>';
+                $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 2.5, 1) . '" font-size="7.5" font-weight="bold" fill="#221E1A" text-anchor="middle">' . ($fmt === 'eur' ? $num($tot[$m]) : $num($tot[$m])) . '</text>';
             }
-            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 7) . '" font-size="6.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
+            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 7) . '" font-size="7.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
         }
         return $svg . '</svg>';
     };
     // Un graphique en courbes : une ligne par magasin, points marqués.
     $courbes = function (array $series, array $coul) use ($mois, $libM, $num, $e): string {
-        $W = 370; $H = 190; $mL = 38; $mB = 22; $mT = 14; $gW = $W - $mL - 8; $gH = $H - $mT - $mB;
+        $W = 520; $H = 260; $mL = 44; $mB = 24; $mT = 16; $gW = $W - $mL - 8; $gH = $H - $mT - $mB;
         $max = 1.0;
         foreach ($series as $sv) { $max = max($max, max($sv)); }
         $pas = $gW / 12;
@@ -842,20 +842,20 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         for ($g = 0; $g <= 4; $g++) {
             $y = $mT + $gH - $gH * $g / 4;
             $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
-                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="6.5" fill="#8b8177" text-anchor="end">' . $num($max * $g / 4) . '</text>';
+                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="7.5" fill="#8b8177" text-anchor="end">' . $num($max * $g / 4) . '</text>';
         }
         foreach ($mois as $m => $t) {
-            $svg .= '<text x="' . round($mL + $pas * $m + $pas / 2, 1) . '" y="' . ($H - 7) . '" font-size="6.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
+            $svg .= '<text x="' . round($mL + $pas * $m + $pas / 2, 1) . '" y="' . ($H - 7) . '" font-size="7.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
         }
         foreach ($series as $i => $sv) {
             $pts = [];
             foreach ($mois as $m => $t) {
                 $pts[] = round($mL + $pas * $m + $pas / 2, 1) . ',' . round($mT + $gH - $gH * (float) ($sv[$m] ?? 0) / $max, 1);
             }
-            $svg .= '<polyline points="' . implode(' ', $pts) . '" fill="none" stroke="' . $coul[$i] . '" stroke-width="1.8" stroke-linejoin="round"/>';
+            $svg .= '<polyline points="' . implode(' ', $pts) . '" fill="none" stroke="' . $coul[$i] . '" stroke-width="2.2" stroke-linejoin="round"/>';
             foreach ($pts as $m => $pt) {
                 [$px, $py] = explode(',', $pt);
-                if ((float) ($sv[$m] ?? 0) > 0) { $svg .= '<circle cx="' . $px . '" cy="' . $py . '" r="2.2" fill="' . $coul[$i] . '"/>'; }
+                if ((float) ($sv[$m] ?? 0) > 0) { $svg .= '<circle cx="' . $px . '" cy="' . $py . '" r="2.8" fill="' . $coul[$i] . '"/>'; }
             }
         }
         return $svg . '</svg>';
@@ -865,16 +865,16 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         $tot = 0.0; $parMag = [];
         foreach ($shops as $sid => $nom) { $parMag[$sid] = array_sum($volMag[$sid]); $tot += $parMag[$sid]; }
         arsort($parMag);
-        $W = 370; $rowH = 26; $H = 16 + $rowH * count($parMag); $mL = 120; $gW = $W - $mL - 60;
+        $W = 520; $rowH = 40; $H = 20 + $rowH * count($parMag); $mL = 150; $gW = $W - $mL - 90;
         $max = max(1.0, max($parMag));
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
         $i = 0;
         foreach ($parMag as $sid => $v) {
             $y = 10 + $rowH * $i; $w = $gW * $v / $max;
-            $svg .= '<text x="' . ($mL - 6) . '" y="' . ($y + 13) . '" font-size="7.5" fill="#221E1A" text-anchor="end">' . $e($court($shops[$sid])) . '</text>'
-                . '<rect x="' . $mL . '" y="' . $y . '" width="' . $gW . '" height="18" fill="#F0EDE7" rx="2"/>'
+            $svg .= '<text x="' . ($mL - 6) . '" y="' . ($y + 17) . '" font-size="9" fill="#221E1A" text-anchor="end">' . $e($court($shops[$sid])) . '</text>'
+                . '<rect x="' . $mL . '" y="' . $y . '" width="' . $gW . '" height="26" fill="#F0EDE7" rx="3"/>'
                 . '<rect x="' . $mL . '" y="' . $y . '" width="' . round($w, 1) . '" height="18" fill="' . $colDe($sid) . '" rx="2"/>'
-                . '<text x="' . round($mL + $gW + 6, 1) . '" y="' . ($y + 13) . '" font-size="7.5" font-weight="bold" fill="#221E1A">' . $num($v) . ' <tspan font-weight="normal" fill="#5d564e">· ' . ($tot > 0 ? $num($v / $tot * 100) : '0') . ' %</tspan></text>';
+                . '<text x="' . round($mL + $gW + 6, 1) . '" y="' . ($y + 17) . '" font-size="9" font-weight="bold" fill="#221E1A">' . $num($v) . ' <tspan font-weight="normal" fill="#5d564e">· ' . ($tot > 0 ? $num($v / $tot * 100) : '0') . ' %</tspan></text>';
             $i++;
         }
         return $svg . '</svg>';
