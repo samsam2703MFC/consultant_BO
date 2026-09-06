@@ -453,6 +453,8 @@ export interface CampaignDraft {
   budget_amount?: number
   image_url?: string | null
   create_crm_leads?: boolean
+  /** Ne viser que les comptes marqués « bureau à livrer ». */
+  b2b_offices_only?: boolean
   tone?: string | null
   /** Objectif exprimé en écart au N-1 : « N-1 + 12 % ». */
   objective_coef_pct?: number | null
@@ -989,6 +991,8 @@ export interface Prospect {
   shop_id: number | null
   shop_name: string | null
   sector_label: string | null
+  /** La fiche client de l'ERP porte la livraison au bureau. */
+  is_office: boolean
 }
 
 /**
@@ -1010,17 +1014,40 @@ export interface ProspectCount {
   total: number
   network: number
   without_shop: number
+  /**
+   * Bureaux à livrer dans ce périmètre — comptés SANS le filtre, sinon le
+   * chiffre vaudrait toujours le total et n'apprendrait rien avant le clic.
+   * `null` : le vivier ne sait pas encore le dire (rejeu des référentiels ou
+   * reprise ERP en attente), et le bouton reste éteint plutôt que menteur.
+   */
+  offices: number | null
 }
 
-export function countProspects(sectorIds: number[], shopIds: number[] = []): Promise<ProspectCount> {
+export function countProspects(
+  sectorIds: number[],
+  shopIds: number[] = [],
+  officesOnly = false,
+): Promise<ProspectCount> {
   return request<ProspectCount>(`${BASE}/b2b/prospects/count`, {
-    query: { sector_ids: sectorIds.join(','), shop_ids: shopIds.join(',') },
+    query: {
+      sector_ids: sectorIds.join(','),
+      shop_ids: shopIds.join(','),
+      offices_only: officesOnly ? '1' : '',
+    },
   })
 }
 
-export function listProspects(sectorIds: number[], shopIds: number[] = []): Promise<Prospect[]> {
+export function listProspects(
+  sectorIds: number[],
+  shopIds: number[] = [],
+  officesOnly = false,
+): Promise<Prospect[]> {
   return request<Prospect[]>(`${BASE}/b2b/prospects`, {
-    query: { sector_ids: sectorIds.join(','), shop_ids: shopIds.join(',') },
+    query: {
+      sector_ids: sectorIds.join(','),
+      shop_ids: shopIds.join(','),
+      offices_only: officesOnly ? '1' : '',
+    },
   })
 }
 
