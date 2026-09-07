@@ -94,6 +94,7 @@ function route(string $method, string $path): mixed
             $path === '/stores'                        => ep_stores(),
             $path === '/stores/perf'                   => ep_perf(),
             $path === '/stores/budgets'                => ep_budgets(),
+            $path === '/stores/budget-notes'           => ep_budget_notes(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
@@ -222,6 +223,7 @@ function route(string $method, string $path): mixed
 
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
+    if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
     if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }
