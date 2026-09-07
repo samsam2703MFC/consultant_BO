@@ -7779,6 +7779,70 @@ function ensureCampagneObjectifs(): void
 }
 
 /**
+ * Les trois auteurs d'une annotation mensuelle, dans l'ordre où on les lit.
+ *
+ * Le franchisé d'abord : c'est lui qui a tenu le magasin ce mois-là.
+ */
+const BUDGET_NOTE_AUTEURS = ['franchise', 'consultant', 'marque'];
+
+/**
+ * Table des annotations, posée à la première lecture.
+ *
+ * Elle vit à côté de `ceo_shop_month_perf` et suit sa clé : magasin, année,
+ * mois. Rien n'y est écrit tant que personne n'a rédigé — un mois sans note
+ * n'a pas de ligne, et c'est ce qui rend le vide lisible à l'impression.
+ */
+function ensureBudgetNotes(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_month_note ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'year SMALLINT NOT NULL,'
+        . 'month TINYINT NOT NULL,'
+        . 'auteur VARCHAR(12) NOT NULL,'
+        . 'texte TEXT NULL,'
+        . 'maj_par VARCHAR(120) NULL,'
+        . 'maj_le DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, year, month, auteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * GET /stores/budget-notes — les annotations d'un magasin pour un exercice.
+ *
+ * Rendues par mois puis par auteur, avec qui a écrit et quand : une note sans
+ * signature ni date ne se relit pas en février de l'année suivante.
+ */
+function ep_budget_notes(): array
+{
+    ensureBudgetNotes();
+    $shop = (string) ($_GET['shop'] ?? '');
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    // Même forme sans magasin qu'avec : l'appelant lit `mois` de la même façon.
+    if ($shop === '') {
+        return ['shop' => '', 'exercice' => $exercice, 'auteurs' => BUDGET_NOTE_AUTEURS,
+            'mois' => (object) []];
+    }
+
+    $mois = [];
+    foreach (Db::rows('SELECT month, auteur, texte, maj_par, maj_le FROM ceo_shop_month_note
+                        WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
+        $texte = trim((string) ($r['texte'] ?? ''));
+        if ($texte === '') { continue; }
+        $mois[(string) (int) $r['month']][(string) $r['auteur']] = [
+            'texte' => $texte,
+            'par'   => $r['maj_par'] !== null ? (string) $r['maj_par'] : null,
+            'le'    => $r['maj_le'] !== null ? (string) $r['maj_le'] : null,
+        ];
+    }
+
+    // (object) : un mois vide doit rendre {} et non [], sinon le contrat change
+    // de forme selon le contenu — et l'appelant qui écrit `mois["6"]` reçoit
+    // un tableau JSON là où il attend un objet.
+    return ['shop' => $shop, 'exercice' => $exercice, 'auteurs' => BUDGET_NOTE_AUTEURS,
+        'mois' => (object) $mois];
+}
+
+/**
  * Le budget d'un magasin sur une FENÊTRE de dates, au prorata des jours.
  *
  * Une campagne du 4 au 17 août prend 14 jours sur 31 : elle vaut 14/31 du

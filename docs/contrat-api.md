@@ -98,6 +98,33 @@ rafraîchir.
 `champReel` désigne le champ de `/stores/perf` qui porte le réel du poste ; `null` = le poste
 suit le CA au pourcentage budgété. L'ordre du tableau `charges` est l'ordre affiché.
 
+### `/stores/budget-notes` — les annotations mensuelles d'un exercice
+
+`GET /stores/budget-notes?shop=cha&exercice=2026`
+
+```json
+{ "shop": "cha", "exercice": 2026,
+  "auteurs": ["franchise", "consultant", "marque"],
+  "mois": { "6": { "franchise":  { "texte": "Chantier de voirie devant la boutique tout le mois.",
+                                   "par": "M. Dupuis", "le": "2026-07-02 09:14:00" },
+                   "consultant": { "texte": "…", "par": "S. Verhoeven", "le": "2026-07-08 16:40:00" } } } }
+```
+
+Le tableau du suivi budget dit CE QUI s'est passé, jamais POURQUOI : un mois à −24 % se lit
+autrement selon qu'on tenait la caisse, qu'on est passé en visite ou qu'on a lancé la campagne.
+D'où **trois voix par mois**, une par intervenant, et une impression qui les emporte.
+
+`mois` est un objet indexé par numéro de mois (`"1"` … `"12"`) ; **les mois sans annotation sont
+absents**, et une annotation vide n'est jamais rendue — un texte vide est une annotation effacée,
+pas une annotation blanche. `par` et `le` peuvent valoir `null` sur une ligne écrite avant que
+l'auteur ne soit connu.
+
+Écriture : `POST /stores/budget-note` avec `{ shop, exercice, mois, auteur, texte, par }`.
+`auteur` ∈ `franchise | consultant | marque`, `mois` ∈ 1–12, `texte` plafonné à 2 000 caractères ;
+**un texte vide SUPPRIME la ligne**. Rend `{ ok: true, texte, par, le }`. Le serveur écrit
+`ceo_shop_month_note` (clé `shop_id, year, month, auteur`) et crée la table au premier appel si
+elle manque — une installation qui n'a pas repassé `schema.sql` répond donc normalement.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json
@@ -300,6 +327,14 @@ ALTER TABLE ceo_shop_budget ADD COLUMN annee_exploitation TINYINT NULL;
 ALTER TABLE ceo_shop_budget ADD COLUMN montee_regime JSON NULL;   -- {"a1":70,"a2":80,"a3":90}
 ALTER TABLE ceo_shop_budget ADD COLUMN saisonnalite JSON NULL;     -- 12 pourcentages
 ALTER TABLE ceo_shop_budget ADD COLUMN etude_annexe JSON NULL;     -- {"nom","url","taille","date"}
+
+-- Annotations mensuelles du suivi budget (créée aussi au vol par ensureBudgetNotes()) :
+CREATE TABLE IF NOT EXISTS ceo_shop_month_note (
+  shop_id VARCHAR(8) NOT NULL, year SMALLINT NOT NULL, month TINYINT NOT NULL,
+  auteur VARCHAR(12) NOT NULL,          -- franchise | consultant | marque
+  texte TEXT NULL, maj_par VARCHAR(120) NULL, maj_le DATETIME NULL,
+  PRIMARY KEY (shop_id, year, month, auteur)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE ceo_project ADD COLUMN famille VARCHAR(40) NOT NULL;
 ALTER TABLE ceo_project_task ADD COLUMN description TEXT NULL;

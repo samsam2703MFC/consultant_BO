@@ -100,7 +100,7 @@ export function render(c, x){
       </header>`}
 
       ${c.ready ? `
-      ${(c.lacunes && c.lacunes.length) ? `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      ${(c.lacunes && c.lacunes.length) ? `<div class="no-print" style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Ce que cet écran ne peut pas afficher</div>
         ${c.lacunes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;flex-wrap:wrap">
           <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;${l.api
@@ -1204,7 +1204,8 @@ function tplBudget(c, x){
   const { esc } = x;
   const thB = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
   return `
-  <div data-screen="budget" style="display:flex;flex-direction:column;gap:16px">
+  <div data-screen="budget">
+   <div class="no-print" style="display:flex;flex-direction:column;gap:16px">
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
@@ -1217,6 +1218,10 @@ function tplBudget(c, x){
         <div><div style="${thB}">Budget validé ${c.bExercice}</div><div style="font-size:15px;font-weight:500;margin-top:2px">${c.bBudgetAn}</div></div>
         <div><div style="${thB}">Mois encodés</div><div style="font-size:15px;font-weight:500;margin-top:2px">${c.bEncodes}</div></div>
         <div><div style="${thB}">Dernier encodage</div><div style="font-size:15px;font-weight:500;margin-top:2px">${c.bDernier}</div></div>
+        <button ${x.A(c.bImprOuvrir)} class="hv-line" title="Imprimer l’exercice — vous choisissez ce qui part sur le papier"
+          style="align-self:flex-end;display:inline-flex;align-items:center;gap:7px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap">
+          <span style="font-size:13px">⎙</span>Imprimer l’exercice
+        </button>
       </div>
     </div>
 
@@ -1270,6 +1275,18 @@ function tplBudget(c, x){
             ${c.bLigneReel.map(v => `<td style="padding:9px 6px;text-align:right;white-space:nowrap">${v}</td>`).join('')}
             <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:500;padding-left:14px;border-left:0.5px solid var(--color-border-tertiary)">${c.bTotReel}</td>
           </tr>
+          ${!c.bNoteVue ? '' : `
+          <!-- Une pastille par voix, sous chaque mois : le tableau dit ce qui
+               s'est passé, l'annotation dit pourquoi. Le clic ouvre le mois. -->
+          <tr style="border-top:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:500">Annotations
+              <div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted);line-height:1.35">franchisé · consultant · marque</div></td>
+            ${c.bNoteCols.map(m => `<td style="padding:9px 6px;text-align:right;white-space:nowrap">
+              <button ${x.A(m.ouvrir)} class="hv-bg" title="${esc(m.titre)}" style="border:none;background:none;cursor:pointer;padding:5px 6px;border-radius:6px;display:inline-flex;gap:3px;align-items:center">
+                ${m.points.map(p => `<span title="${esc(p.titre)}" style="${p.st}"></span>`).join('')}
+              </button></td>`).join('')}
+            <td style="padding:9px 6px 9px 14px;border-left:0.5px solid var(--color-border-tertiary)"></td>
+          </tr>`}
           <!-- Replié par défaut : le total et la marge sont ce qu'on vient lire ;
                le détail des groupes s'ouvre quand on cherche d'où vient un
                écart. -->
@@ -1363,6 +1380,170 @@ function tplBudget(c, x){
       </div>
       <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:11px;font-size:11.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.bMagNote)}</div>
     </div>
+
+    ${c.bNotesErr ? `<div style="background:#FBEFE0;border:1px solid #E8C9A0;color:var(--color-on-abricot);border-radius:10px;padding:11px 14px;font-size:12.5px;display:flex;gap:12px;align-items:baseline;justify-content:space-between">
+      <span>${esc(c.bNotesErr)}</span>
+      <button ${x.A(c.bNotesErrFermer)} class="hv-line" style="border:0.5px solid #E8C9A0;background:transparent;color:inherit;border-radius:7px;padding:4px 11px;font-size:11.5px;cursor:pointer;white-space:nowrap">Réessayer</button></div>` : ''}
+    ${c.bNoteOuvert ? tplBudgetNote(c, x) : ''}
+    ${c.bImprOuvert ? tplBudgetImprModale(c, x) : ''}
+   </div>
+   ${tplBudgetDoc(c, x)}
+  </div>`;
+}
+
+/* --- Le mois annoté : trois voix, une par intervenant -------------------------
+   Un écart de −24 % en juin ne se lit pas pareil selon qui parle. Les trois
+   champs sont côte à côte pour qu'on voie la version du franchisé À CÔTÉ de
+   celle du consultant, pas à sa place. */
+function tplBudgetNote(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  return `
+  <div ${x.A(c.bNoteFermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div data-scroll="bnote" style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:820px;max-width:100%;max-height:100%;overflow-y:auto;padding:18px 22px 20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="${lbl}">Annotation du mois</div>
+          <div style="font-size:17px;font-weight:500;margin-top:3px">${esc(c.bNoteTitre)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(c.bNoteSous)}</div>
+        </div>
+        <button ${x.A(c.bNoteFermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px">
+        ${c.bNoteChamps.map(f => `<label style="display:block">
+          <span style="${lbl};display:flex;align-items:center"><span style="${f.pastille}"></span>${esc(f.label)}</span>
+          <textarea id="bnote-${f.cle}" rows="7" ${x.I(f.set)} placeholder="Ce qui explique le mois — événement, météo, travaux, campagne, effectif…"
+            style="width:100%;box-sizing:border-box;margin-top:6px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5;font-family:var(--font-ui);color:var(--color-text);background:var(--color-background-secondary);resize:vertical">${esc(f.val)}</textarea>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px;min-height:14px">${esc(f.signe)}</div>
+        </label>`).join('')}
+      </div>
+      ${c.bNoteErr ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary)">${esc(c.bNoteErr)}</div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px">
+        <span style="font-size:11px;color:var(--color-text-muted)">Vider un champ efface l’annotation de cette voix.</span>
+        <span style="display:flex;gap:9px">
+          <button ${x.A(c.bNoteFermer)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 15px;font-size:12.5px;cursor:pointer">Annuler</button>
+          <button ${x.A(c.bNoteSave)} class="hv-fade" ${c.bNoteBusy ? 'disabled' : ''} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:8px 17px;font-size:12.5px;font-weight:500;cursor:${c.bNoteBusy ? 'default' : 'pointer'};opacity:${c.bNoteBusy ? '0.6' : '1'}">${esc(c.bNoteSaveTxt)}</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Ce qui part sur le papier ------------------------------------------------
+   Trois cases, et le document suit : une case décochée RETIRE la colonne, elle
+   ne la laisse pas vide. Un tableau à colonnes blanches se lit comme une
+   donnée manquante — ce n'en est pas une, c'est un choix d'impression. */
+function tplBudgetImprModale(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  return `
+  <div ${x.A(c.bImprFermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3);width:470px;max-width:100%;max-height:100%;overflow-y:auto;padding:18px 22px 20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="${lbl}">Imprimer</div>
+          <div style="font-size:17px;font-weight:500;margin-top:3px">${esc(c.bImprTitre)}</div>
+        </div>
+        <button ${x.A(c.bImprFermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:999px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:15px">
+        ${c.bImprCases.map(k => `<div ${x.A(k.bascule)} style="${k.labelSt}">
+          <span style="${k.st}"><span style="color:#fff;font-size:11px;line-height:1">${k.coche}</span></span>
+          <span style="min-width:0">
+            <span style="display:block;font-size:13px;font-weight:500">${esc(k.titre)}</span>
+            <span style="display:block;font-size:11.5px;color:var(--color-text-muted);line-height:1.45;margin-top:2px">${esc(k.aide)}</span>
+          </span>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:17px">
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(c.bImprPages)}</span>
+        <span style="display:flex;gap:9px">
+          <button ${x.A(c.bImprFermer)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 15px;font-size:12.5px;cursor:pointer">Annuler</button>
+          <button ${x.A(c.bImprimer)} class="hv-fade" style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:8px 17px;font-size:12.5px;font-weight:500;cursor:pointer">Imprimer</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Le document ---------------------------------------------------------------
+   Absent de l'écran (`.impr-doc` est `display:none`), il n'existe qu'au papier.
+   Page 1 : le tableau de l'exercice, réduit aux lignes cochées. Page 2 : le
+   cahier des douze mois, une carte par mois, les trois voix dedans. */
+function tplBudgetDoc(c, x){
+  const { esc } = x;
+  const th = 'font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#777;padding:0 4px 5px;text-align:right';
+  const td = 'padding:5px 4px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums';
+  const lib = 'padding:5px 8px 5px 0;text-align:left;font-weight:600;white-space:nowrap';
+  return `
+  <div class="impr-doc">
+    <div class="impr-page">
+      <div class="impr-tete">
+        <div>
+          <div class="impr-titre">${esc(c.bImprTitre)}</div>
+          <div class="impr-sous">${esc(c.bImprSous)}</div>
+        </div>
+        <div class="impr-date">${esc(c.bImprDate)}</div>
+      </div>
+      <table class="impr-tbl">
+        <tr>
+          <th style="${th};text-align:left">Mois</th>
+          ${c.bMoisCols.map(m => `<th style="${th}">${esc(m.nom)}</th>`).join('')}
+          <th style="${th};border-left:0.5px solid #bbb;padding-left:8px">Total</th>
+        </tr>
+        ${!c.bImprTheo ? '' : `<tr>
+          <td style="${lib};color:#C97B32">CA théorique</td>
+          ${c.bLigneTheo.map(v => `<td style="${td};color:#C97B32">${v}</td>`).join('')}
+          <td style="${td};color:#C97B32;border-left:0.5px solid #bbb;padding-left:8px;font-weight:600">${c.bTotTheo}</td>
+        </tr>`}
+        ${!c.bImprBud ? '' : `<tr>
+          <td style="${lib}">Budget validé</td>
+          ${c.bLigneBud.map(v => `<td style="${td}">${v}</td>`).join('')}
+          <td style="${td};border-left:0.5px solid #bbb;padding-left:8px;font-weight:600">${c.bTotBud}</td>
+        </tr>`}
+        <tr>
+          <td style="${lib};color:#8D1D2C">Réel encodé</td>
+          ${c.bLigneReel.map(v => `<td style="${td};color:#8D1D2C">${v}</td>`).join('')}
+          <td style="${td};color:#8D1D2C;border-left:0.5px solid #bbb;padding-left:8px;font-weight:600">${c.bTotReel}</td>
+        </tr>
+        ${!c.bImprBud ? '' : `<tr class="impr-ec">
+          <td style="${lib}">Réel − budget</td>
+          ${c.bLigneEc.map(v => `<td style="${td}">${v.txt}<span class="impr-pct">${v.pct}</span></td>`).join('')}
+          <td style="${td};border-left:0.5px solid #bbb;padding-left:8px;font-weight:600">${c.bTotEcPair.txt}<span class="impr-pct">${c.bTotEcPair.pct}</span></td>
+        </tr>`}
+        ${!c.bImprTheo ? '' : `<tr class="impr-ec">
+          <td style="${lib}">Réel − théorique</td>
+          ${c.bEcTheo.map(v => `<td style="${td}">${v.txt}<span class="impr-pct">${v.pct}</span></td>`).join('')}
+          <td style="${td};border-left:0.5px solid #bbb;padding-left:8px;font-weight:600">${c.bTotEcTheo.txt}<span class="impr-pct">${c.bTotEcTheo.pct}</span></td>
+        </tr>`}
+        ${!(c.bImprTheo && c.bImprBud) ? '' : `<tr class="impr-ec">
+          <td style="${lib}">Budget − théorique</td>
+          ${c.bEcBudTheo.map(v => `<td style="${td}">${v.txt}<span class="impr-pct">${v.pct}</span></td>`).join('')}
+          <td style="${td};border-left:0.5px solid #bbb;padding-left:8px;font-weight:600">${c.bTotEcBudTheo.txt}<span class="impr-pct">${c.bTotEcBudTheo.pct}</span></td>
+        </tr>`}
+      </table>
+      <div class="impr-pied">Budget validé encodé une fois par le consultant · réel encodé chaque mois par le franchisé${c.bImprTheo ? ' · CA théorique issu de l’étude de marché' : ''}</div>
+    </div>
+    ${!c.bImprNotes ? '' : `<div class="impr-page impr-saut">
+      <div class="impr-tete">
+        <div>
+          <div class="impr-titre">Annotations ${c.bExercice} — ${esc(c.bImprMag)}</div>
+          <div class="impr-sous">${esc(c.bImprSous)} · ce que chaque mois a eu de particulier, par le franchisé, le consultant et la marque</div>
+        </div>
+        <div class="impr-date">${esc(c.bImprDate)}</div>
+      </div>
+      <div class="impr-cahier">
+        ${c.bImprCahier.map(m => `<div class="impr-mois">
+          <div class="impr-mois-t"><span>${esc(m.nom)}</span><span class="impr-mois-c">${esc(m.chiffres)}</span></div>
+          ${m.voix.length ? m.voix.map(v => `<div class="impr-voix">
+            <span style="${v.barre}"></span>
+            <span><b>${esc(v.label)}</b> — ${esc(v.texte)}</span>
+          </div>`).join('') : `<div class="impr-vide">${esc(m.vide)}</div>`}
+        </div>`).join('')}
+      </div>
+    </div>`}
   </div>`;
 }
 
