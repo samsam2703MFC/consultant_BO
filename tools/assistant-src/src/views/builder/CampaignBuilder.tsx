@@ -238,6 +238,11 @@ export interface Draft {
   // 6 / 7
   status_code: string
   create_crm_leads: boolean
+  /**
+   * Ne viser que les comptes livrés au bureau. Ce n'est pas un filtre
+   * d'affichage : la génération des leads applique le même choix.
+   */
+  b2b_offices_only: boolean
 }
 
 /** `AAAA-MM-JJ` local — les bornes de la période d'analyse des objectifs. */
@@ -333,6 +338,7 @@ function emptyDraft(refs: References, role: Role): Draft {
     // deux campagnes finies restaient « Brouillon » côte à côte.
     status_code: 'planned',
     create_crm_leads: false,
+    b2b_offices_only: false,
   }
 }
 
@@ -858,6 +864,7 @@ function fromState(state: api.CampaignDraftState, refs: References, role: Role):
 
     status_code: state.status_code ?? 'draft',
     create_crm_leads: state.create_crm_leads ?? false,
+    b2b_offices_only: state.b2b_offices_only ?? false,
   }
 }
 
@@ -944,6 +951,9 @@ function toPayload(draft: Draft, brandId: number | 'all', stepKey?: string): Cam
     focal_point_y: draft.image_url.trim() === '' ? null : draft.focal_point_y,
     image_fit: draft.image_fit,
     create_crm_leads: draft.create_crm_leads,
+    // Le filtre part avec la campagne : c'est lui que la génération relira,
+    // pas l'état de l'écran au moment du clic.
+    b2b_offices_only: draft.b2b_offices_only,
     margin_pct_default: draft.margin_pct_default.trim() === ''
       ? null
       : Number(draft.margin_pct_default.trim()),
@@ -1649,6 +1659,7 @@ function FramingStep({
                 client_target: target.value,
                 sector_ids: target.value === 'b2c' ? [] : draft.sector_ids,
                 create_crm_leads: target.value === 'b2c' ? false : draft.create_crm_leads,
+                b2b_offices_only: target.value === 'b2c' ? false : draft.b2b_offices_only,
               })
             }
           >
@@ -1714,7 +1725,12 @@ function FramingStep({
               </span>
             )}
           </h3>
-          <ProspectList sectorIds={draft.sector_ids} shopIds={perimetre} />
+          <ProspectList
+            sectorIds={draft.sector_ids}
+            shopIds={perimetre}
+            officesOnly={draft.b2b_offices_only}
+            onOfficesOnly={(value) => patch({ b2b_offices_only: value })}
+          />
         </>
       ) : null}
 
@@ -2962,7 +2978,7 @@ function LeadsStep({ draft, patch }: StepProps) {
           {/* Les comptes eux-mêmes, comme à l'étape 1 : on décide de générer en
               voyant qui sera appelé, et par quelle boutique. */}
           <h3 className="section-label">Comptes concernés</h3>
-          <ProspectList sectorIds={draft.sector_ids} />
+          <ProspectList sectorIds={draft.sector_ids} officesOnly={draft.b2b_offices_only} />
         </>
       )}
     </>

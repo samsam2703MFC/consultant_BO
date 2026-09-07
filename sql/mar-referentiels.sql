@@ -389,6 +389,30 @@ ALTER TABLE mar_campaign_offer_item
     COMMENT 'Photo propre à cette campagne ; NULL = celle du catalogue'
     AFTER show_photo;
 
+-- Filtre « bureaux à livrer » de l'assistant de campagne.
+--
+-- `is_office` est repris de l'ERP à chaque synchronisation du vivier : c'est la
+-- fiche client qui dit si elle se fait livrer au bureau (`client.office_delivery`),
+-- le module ne le devine pas. Un vivier importé par fichier, lui, ne porte pas
+-- l'information : ces comptes restent à 0 et le filtre les écarte — ce qui est
+-- la bonne réponse, on ne les sait pas bureaux.
+--
+-- `b2b_offices_only` est le choix de la campagne : il ne filtre pas seulement
+-- l'écran, il commande la génération des leads. Sans lui, l'assistant montrerait
+-- douze comptes et en créerait huit cents.
+--
+-- Rejouées à blanc si elles existent déjà (l'ALTER échoue et se fait ignorer),
+-- comme les migrations du module au-dessus.
+ALTER TABLE mar_b2b_prospect
+  ADD COLUMN is_office TINYINT(1) NOT NULL DEFAULT 0
+    COMMENT '1 = la fiche client ERP porte la livraison au bureau'
+    AFTER shop_id;
+
+ALTER TABLE mar_campaign
+  ADD COLUMN b2b_offices_only TINYINT(1) NOT NULL DEFAULT 0
+    COMMENT '1 = ne viser que les comptes marqués « bureau à livrer »'
+    AFTER client_target;
+
 INSERT INTO mar_client_target (code, label, sort_order) VALUES
   ('b2c',   'B2C — particuliers',    1),
   ('b2b',   'B2B — professionnels',  2),
