@@ -1670,6 +1670,187 @@ class App {
     common.bMagTotMq = mgTotRes ? this.fK(mgTotRes) : '';
     common.bMagTotMqPct = mgTotRes && resTheo ? this.fP(mgTotRes / resTheo, 1) + ' du théorique' : '';
     common.bMagNote = 'Manque à gagner = part du CA théorique de l’étude de marché non réalisée sur les 7 mois encodés, magasin par magasin. Total réseau : ' + this.fK(mgTotRes) + '.';
+
+    this.valsBudgetNotes(common, st, Pc, theoC2, scope);
+  }
+
+  /* --- Annotations mensuelles, et l'impression de l'exercice --------------------
+     Le tableau dit CE QUI s'est passé, jamais POURQUOI : « −24 % en juin » se
+     lit autrement selon qu'on tenait la caisse, qu'on est passé en visite ou
+     qu'on a lancé la campagne du mois. D'où trois annotations par mois, une par
+     voix, et une impression qui les emporte — sans quoi elles resteraient dans
+     un écran que le franchisé n'ouvre pas en réunion. */
+  valsBudgetNotes(common, st, Pc, theoC2, scope){
+    const S = this.state, M = this.M;
+    const ex = this.meta.exercice, cle = st.id + '|' + ex;
+    const magasin = scope !== 'reseau';
+
+    // Lecture unique par magasin et par exercice : revenir sur l'écran ne
+    // relit pas, changer de magasin relit. L'échec, lui, s'inscrit AUSSI sous
+    // la clé : sans quoi chaque rendu relancerait la lecture ratée — un
+    // endpoint en panne serait interrogé cent fois par minute.
+    if (S.bNotesCle !== cle && !this._bNotesEnCours){
+      this._bNotesEnCours = cle;
+      this.api('GET', '/stores/budget-notes?shop=' + encodeURIComponent(st.id) + '&exercice=' + ex)
+        .then(r => {
+          this._bNotesEnCours = null;
+          // `write` ne rejette jamais : un serveur qui refuse revient ici avec
+          // ok:false. Sans ce test, une lecture ratée se serait affichée comme
+          // « aucune annotation » — le pire des deux, parce qu'on aurait cru
+          // le mois muet alors qu'il était illisible.
+          if (!r || r.ok === false) {
+            this.setState({ bNotesCle: cle, bNotes: {},
+              bNotesErr: { cle, msg: 'Annotations illisibles — ' + ((r && r.error) || 'pas de réponse du serveur') + '. Elles ne sont ni affichées ni imprimées tant que la lecture échoue.' } });
+            return;
+          }
+          this.setState({ bNotesCle: cle, bNotes: r.mois || {}, bNotesErr: null });
+        });
+    }
+    const lu = S.bNotesCle === cle;
+    const err = (S.bNotesErr && S.bNotesErr.cle === cle) ? S.bNotesErr.msg : '';
+    const notes = (lu && !err) ? (S.bNotes || {}) : {};
+    const AUT = [['franchise', 'Franchisé', 'var(--color-primary)'],
+                 ['consultant', 'Consultant', '#2a5a9e'],
+                 ['marque', 'Marque', 'var(--pkg-abricot)']];
+    const moisNote = m => notes[String(m)] || {};
+
+    common.bNotesErr = err;
+    // Réessayer, c'est oublier la clé : le prochain rendu relit.
+    common.bNotesErrFermer = () => this.setState({ bNotesCle: null, bNotesErr: null });
+    // Les annotations appartiennent au MAGASIN : en vue réseau, montrer celles
+    // du magasin sélectionné sous un tableau consolidé ferait lire « le réseau
+    // a écrit ça ». On les retire, et on le dit.
+    common.bNoteVue = magasin && !err;
+    // Une pastille par voix sous chaque mois : qui a parlé, d'un coup d'œil.
+    common.bNoteCols = M.MOIS.map((nom, i) => {
+      const n = moisNote(i + 1);
+      const dits = AUT.filter(a => n[a[0]]).length;
+      return { nom, mois: i + 1,
+        titre: dits ? dits + (dits > 1 ? ' annotations' : ' annotation') + ' — ' + nom : nom + ' — rien d’écrit',
+        points: AUT.map(([k, lab, coul]) => ({
+          st: 'display:inline-block;width:6px;height:6px;border-radius:999px;background:'
+            + (n[k] ? coul : 'var(--color-border-secondary)'),
+          titre: n[k] ? lab + ' : ' + String(n[k].texte).slice(0, 120) : lab + ' — rien d’écrit' })),
+        ouvrir: () => this.setState({ bNoteMois: i + 1,
+          bNoteDraft: { franchise: (n.franchise || {}).texte || '',
+                        consultant: (n.consultant || {}).texte || '',
+                        marque: (n.marque || {}).texte || '' }, bNoteErr: '' }) };
+    });
+
+    // ── L'éditeur d'un mois : les trois voix côte à côte ──
+    const mois = magasin ? (S.bNoteMois || 0) : 0;
+    const draft = S.bNoteDraft || {};
+    common.bNoteOuvert = mois > 0;
+    common.bNoteFermer = () => this.setState({ bNoteMois: 0, bNoteErr: '' });
+    common.bNoteTitre = mois > 0 ? M.MOIS[mois - 1] + ' ' + ex + ' — ' + st.nom : '';
+    const ligne = mois > 0 ? (Pc[mois - 1] || {}) : {};
+    common.bNoteSous = mois > 0
+      ? 'Réel encodé ' + (ligne.ca != null ? this.fE(ligne.ca) : '—')
+        + ' · budget ' + (ligne.caT ? this.fE(ligne.caT) : '—')
+      : '';
+    common.bNoteErr = S.bNoteErr || '';
+    common.bNoteBusy = !!S.bNoteBusy;
+    common.bNoteSaveTxt = S.bNoteBusy ? 'Enregistrement…' : 'Enregistrer';
+    common.bNoteChamps = AUT.map(([k, lab, coul]) => {
+      const dit = moisNote(mois)[k] || null;
+      return { cle: k, label: lab,
+        pastille: 'display:inline-block;width:8px;height:8px;border-radius:999px;background:' + coul + ';margin-right:7px',
+        val: draft[k] != null ? draft[k] : '',
+        set: e => { const v = e.target.value;
+          this.setState(st2 => ({ bNoteDraft: Object.assign({}, st2.bNoteDraft, { [k]: v }) })); },
+        // Qui a écrit, et quand : une note anonyme ne se relit pas en février.
+        signe: dit && dit.le ? (dit.par ? dit.par + ' · ' : '') + this.fD(dit.le) : '' };
+    });
+    common.bNoteSave = () => {
+      if (this.state.bNoteBusy || !mois) return;
+      const avant = moisNote(mois);
+      const dr = this.state.bNoteDraft || {};
+      const aEcrire = AUT.map(a => a[0])
+        .filter(k => String(dr[k] || '').trim() !== ((avant[k] || {}).texte || ''));
+      if (!aEcrire.length) { this.setState({ bNoteMois: 0 }); return; }
+      const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
+      this.setState({ bNoteBusy: true, bNoteErr: '' });
+      // Une écriture par voix, à la file : le serveur reçoit trois lignes
+      // distinctes, jamais un bloc où l'une écraserait l'autre.
+      aEcrire.reduce((p, k) => p.then(() => {
+        const txt = String(dr[k] || '').trim();
+        return this.api('POST', '/stores/budget-note',
+          { shop: st.id, exercice: ex, mois, auteur: k, texte: txt, par: qui })
+          .then(r => {
+            if (!r || r.ok === false) throw new Error((r && r.error) || 'refus du serveur');
+            const n = Object.assign({}, this.state.bNotes || {});
+            const mm = Object.assign({}, n[String(mois)] || {});
+            if (txt === '') { delete mm[k]; }
+            else { mm[k] = { texte: txt, par: r.par || qui || null, le: r.le || null }; }
+            if (Object.keys(mm).length) { n[String(mois)] = mm; } else { delete n[String(mois)]; }
+            this.setState({ bNotes: n });
+          });
+      }), Promise.resolve())
+        .then(() => this.setState({ bNoteBusy: false, bNoteMois: 0 }))
+        .catch(e => this.setState({ bNoteBusy: false, bNoteErr: 'Enregistrement refusé — ' + (e && e.message ? e.message : e) }));
+    };
+
+    // ── La modale d'impression : trois cases, et rien d'autre ──
+    const opt = k => S['bImpr' + k] !== false;            // coché par défaut
+    const dispo = { Theo: !!theoC2, Bud: true, Notes: magasin && !err };
+    const actif = k => opt(k) && dispo[k];
+    common.bImprOuvert = !!S.bImprOuvert;
+    common.bImprOuvrir = () => this.setState({ bImprOuvert: true });
+    common.bImprFermer = () => this.setState({ bImprOuvert: false });
+    const cases = [
+      ['Theo', 'CA théorique', 'La colonne orange de l’étude de marché, et les écarts qui en dépendent.',
+        'Aucun théorique encodé pour ce périmètre.'],
+      ['Bud', 'Budget validé', 'Le budget de début d’exercice, et l’écart au réel.', ''],
+      ['Notes', 'Annotations mensuelles', 'Une page de plus : franchisé, consultant et marque, mois par mois.',
+        err ? 'Illisibles pour l’instant — voir le bandeau sous le tableau.'
+            : 'Propres à un magasin — repassez en vue magasin.']];
+    common.bImprCases = cases.map(([k, titre, aide, absent]) => ({
+      titre, on: actif(k), off: !dispo[k],
+      // Une case qu'on ne peut pas honorer dit POURQUOI, au lieu de promettre
+      // une colonne qui sortirait vide.
+      aide: dispo[k] ? aide : absent,
+      st: 'flex:none;width:18px;height:18px;border-radius:5px;border:1.5px solid '
+        + (actif(k) ? 'var(--color-primary)' : 'var(--color-border-secondary)')
+        + ';background:' + (actif(k) ? 'var(--color-primary)' : 'transparent')
+        + ';display:flex;align-items:center;justify-content:center;margin-top:1px;'
+        + (dispo[k] ? 'cursor:pointer' : 'opacity:0.45'),
+      labelSt: 'display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:9px;border:0.5px solid var(--color-border-tertiary);'
+        + (dispo[k] ? 'cursor:pointer;background:var(--color-bg2)' : 'background:transparent;color:var(--color-text-muted)'),
+      coche: actif(k) ? '✓' : '',
+      bascule: () => { if (!dispo[k]) return; this.setState({ ['bImpr' + k]: !opt(k) }); } }));
+    // Ces trois drapeaux commandent le document : une case décochée retire la
+    // colonne, elle ne la vide pas.
+    common.bImprTheo = actif('Theo');
+    common.bImprBud = actif('Bud');
+    common.bImprNotes = actif('Notes');
+    common.bImprPages = actif('Notes') ? '2 pages A4 paysage' : '1 page A4 paysage';
+    // L'impression sort du navigateur : on ferme la modale AVANT, sinon elle
+    // se retrouverait sur le papier par-dessus le document.
+    common.bImprimer = () => { this.setState({ bImprOuvert: false });
+      setTimeout(() => window.print(), 80); };
+
+    // ── Le document imprimé : page 1 le tableau, page 2 le cahier des mois ──
+    common.bImprTitre = 'Suivi budget ' + ex + ' — ' + common.bScopeNom;
+    common.bImprMag = st.nom;
+    common.bImprSous = st.code + ' · ' + st.zone + ' · franchisé ' + st.fr;
+    common.bImprDate = 'Édité le ' + this.fDA(this.M && this.M.TODAY ? this.M.TODAY : new Date().toISOString().slice(0, 10));
+    // Les colonnes du document suivent les cases : le tableau imprimé n'a que
+    // les lignes demandées, et les écarts qui n'ont plus de référence tombent
+    // avec elles.
+    common.bImprLignes = [];
+    if (actif('Theo')) { common.bImprLignes.push({ titre: 'CA théorique', cls: 'theo' }); }
+    if (actif('Bud')) { common.bImprLignes.push({ titre: 'Budget validé', cls: 'bud' }); }
+    common.bImprCahier = M.MOIS.map((nom, i) => {
+      const n = moisNote(i + 1), l = Pc[i] || {};
+      const voix = AUT.map(([k, lab, coul]) => ({ label: lab,
+        barre: 'flex:none;width:3px;border-radius:2px;background:' + coul,
+        texte: (n[k] || {}).texte || '' })).filter(v => v.texte);
+      return { nom: nom + ' ' + ex,
+        chiffres: (l.ca != null ? 'réel ' + this.fK(l.ca) : 'réel —')
+          + (actif('Bud') && l.caT ? ' · budget ' + this.fK(l.caT) : '')
+          + (actif('Theo') && theoC2 && theoC2[i] != null ? ' · théorique ' + this.fK(theoC2[i]) : ''),
+        voix, vide: voix.length ? '' : 'Rien d’écrit ce mois-ci.' };
+    });
   }
 
   /* --- Budget × Campagnes ------------------------------------------------------

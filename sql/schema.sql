@@ -74,6 +74,27 @@ CREATE TABLE IF NOT EXISTS ceo_shop_month_perf (
   FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Annotations du suivi budget, un mois à la fois, trois voix.
+--
+-- Le tableau du budget dit CE QUI s'est passé ; il ne dit jamais POURQUOI.
+-- « −24 % en juin » se lit de trois façons selon qu'on tenait la caisse, qu'on
+-- est passé en visite ou qu'on a lancé la campagne du mois : d'où trois lignes
+-- distinctes plutôt qu'un champ « commentaire » où la dernière écriture
+-- écraserait les deux autres.
+--
+-- Une note vide n'est pas une ligne : le mois où personne n'a rien écrit
+-- reste vide à l'impression, et ce vide se voit — c'est une information.
+CREATE TABLE IF NOT EXISTS ceo_shop_month_note (
+  shop_id   VARCHAR(8)  NOT NULL,
+  year      SMALLINT    NOT NULL,
+  month     TINYINT     NOT NULL,
+  auteur    VARCHAR(12) NOT NULL,   -- franchise | consultant | marque
+  texte     TEXT        NULL,
+  maj_par   VARCHAR(120) NULL,
+  maj_le    DATETIME    NULL,
+  PRIMARY KEY (shop_id, year, month, auteur)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Budget validé une fois par exercice avec le consultant
 CREATE TABLE IF NOT EXISTS ceo_shop_budget (
   shop_id                  VARCHAR(8) NOT NULL,
