@@ -2580,6 +2580,9 @@ function rapPdfRendu(string $html, array $meta = []): ?string
     $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
         . ' --margin-top 14mm --margin-bottom 20mm --margin-left 15mm --margin-right 15mm'
         . ' --footer-spacing 4';
+    // Paysage sur demande : les tableaux larges (une colonne par magasin)
+    // ne tiennent pas en portrait.
+    if (!empty($meta['paysage'])) { $wk .= ' --orientation Landscape'; }
     if ($meta !== []) {
         $tmpF = tempnam(sys_get_temp_dir(), 'rap') . '.html';
         file_put_contents($tmpF, rapPdfPiedHtml($meta));

@@ -200,6 +200,8 @@ function route(string $method, string $path): mixed
             $path === '/centrale/stock'                => ep_ca_stock(),
             $path === '/centrale/facturation'          => ep_ca_facturation(),
             $path === '/products/scoring'              => ep_products_revue(),
+            $path === '/products/fournisseurs'         => ep_products_fournisseurs(),
+            $path === '/products/couverture'           => ep_products_couverture(),
             $path === '/products/waste'                => ep_product_waste(),
             $path === '/products/periodes'             => ep_product_periodes(),
             $path === '/pwa/reports'                   => ep_pwa_reports(),
@@ -236,6 +238,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
+    if ($method === 'POST' && $path === '/products/categorie.pdf') { return wr_prod_categorie_pdf(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
