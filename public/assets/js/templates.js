@@ -5148,7 +5148,7 @@ function tplUsageConsole(c, x){
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div>
           <div style="${titre}">Boutons & fonctions — ${esc(c.ucSelNom || (c.ucBoutonsLu ? 'aucun écran mesuré' : 'mesure non lue'))}</div>
-          <div style="${sub}">« Vu » = le bouton était à l’écran lors d’une ouverture. « Taux » = clics par affichage. Les lignes grises n’ont jamais été cliquées.</div>
+          <div style="${sub}">« Vu » = le bouton était à l’écran lors d’une ouverture. « Par affich. » = nombre de clics pour un affichage — il peut dépasser 1, on clique parfois plusieurs fois sans changer d’écran. Les lignes grises n’ont jamais été cliquées.</div>
         </div>
         ${c.ucSelOpts.length ? `<select ${x.C(c.setUcSel)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
           ${c.ucSelOpts.map(o => `<option value="${esc(o.v)}"${o.v === c.ucSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
@@ -5162,7 +5162,7 @@ function tplUsageConsole(c, x){
             <th style="${th}">Bouton</th>
             <th style="${th};text-align:right;width:60px">Vu</th>
             <th style="${th};text-align:right;width:60px">Clics</th>
-            <th style="${th};text-align:right;width:60px">Taux</th>
+            <th style="${th};text-align:right;width:74px">Par affich.</th>
             <th style="${th};text-align:right;width:70px">Dernier</th>
             ${jourCols}
           </tr></thead>

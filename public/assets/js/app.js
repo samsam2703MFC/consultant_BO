@@ -1594,7 +1594,7 @@ class App {
     // --- suivi des tâches
     if (common.isSuivi) this.valsSuivi(common);
     // --- journal
-    if (common.isUsageC) { this.ucCharge(false); this.valsUsageConsole(common); }
+    if (common.isUsageC) { this.ucCharge(false); this.valsUsageConsole(common, titles); }
     if (common.isJournal) this.valsJournal(common);
     // --- paramètres
     if (common.isParams) this.valsParams(common);
@@ -12392,7 +12392,7 @@ class App {
    * Ce qui n'est PAS mesuré est dit comme tel. Un bouton jamais affiché n'est
    * pas un bouton mort : il est inconnu, et l'écran l'écrit.
    */
-  valsUsageConsole(common){
+  valsUsageConsole(common, titres){
     const S = this.state, U = S.ucData || {};
     const A = U.actions || {}, V = U.vues || {};
     const jours = U.jours || S.ucJours || 30;
@@ -12406,13 +12406,22 @@ class App {
 
     // Le nom lisible de chaque écran vient du RAIL : sans lui, la mesure ne
     // rendrait que des identifiants, et un identifiant ne se retire pas de
-    // sang-froid. Le rail est aussi l'INVENTAIRE — ce qui existe et n'a jamais
-    // été ouvert ne se déduit d'aucune mesure, seulement de cette liste.
+    // sang-froid. Le rail donne aussi le début de l'INVENTAIRE — ce qui existe
+    // et n'a jamais été ouvert ne se déduit d'aucune mesure, seulement d'une
+    // liste de ce qui existe. Il ne suffit pas : voir HORS_RAIL juste après.
     const noms = {}, famille = {};
     (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
       if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = g[0] + ' › ' + it.sub; }); }
       else if (it) { noms[it[0]] = it[1]; famille[it[0]] = g[0]; }
     }));
+    /* Le rail n'est pas l'inventaire complet. Des écrans gardent une ADRESSE
+       sans avoir d'entrée de menu — retirés du rail au fil du temps, atteints
+       par un signet ou la recherche. Absents d'ici, ils n'étaient candidats à
+       rien : ni au retrait, ni à la fusion. Or un écran sans entrée de rail ET
+       jamais ouvert est le plus fort candidat au retrait qui soit. */
+    const HORS_RAIL = 'Sans entrée de rail (adresse ou recherche)';
+    Object.keys(App.ADRESSES).forEach(id => { if (noms[id]) return;
+      noms[id] = ((titres || {})[id] || [])[0] || id; famille[id] = HORS_RAIL; });
     const nomEcran = id => id === '_chrome' ? 'Rail & entête (hors écran)' : (noms[id] || id);
 
     const joursListe = V.joursListe || A.joursListe || [];
@@ -12500,9 +12509,16 @@ class App {
     const maxC = Math.max(1, ...lignes.flatMap(a2 => a2.jours || []));
     common.ucActions = lignes.map(a2 => ({
       action: a2.action, clics: a2.clics, vus: a2.vus,
-      // Combien de fois cliqué par affichage : c'est ce rapport, et non le
-      // nombre brut, qui distingue un bouton peu utile d'un bouton peu vu.
-      taux: a2.vus ? Math.round(100 * a2.clics / a2.vus) + ' %' : '—',
+      /* Combien de fois cliqué PAR AFFICHAGE : c'est ce rapport, et non le
+         nombre brut, qui distingue un bouton peu utile d'un bouton peu vu.
+         Exprimé en « × » et non en pourcentage : « vu » compte les OUVERTURES
+         d'écran où le bouton était là, et on peut cliquer plusieurs fois
+         pendant une même ouverture — le pourcentage passait alors 100 %, et un
+         taux impossible fait douter de toute la mesure. Deux décimales sous 1 :
+         un bouton cliqué une fois sur quarante affichages n'est pas zéro. */
+      taux: !a2.vus ? '—' : (a2.clics === 0 ? '0'
+        : ((a2.clics / a2.vus >= 1 ? (a2.clics / a2.vus).toFixed(1) : (a2.clics / a2.vus).toFixed(2))
+            .replace('.', ',') + ' ×')),
       mort: a2.clics === 0,
       dernier: a2.dernier ? a2.dernier.slice(8) + '/' + a2.dernier.slice(5, 7) : '—',
       qui: (a2.qui || []).join(', '),
