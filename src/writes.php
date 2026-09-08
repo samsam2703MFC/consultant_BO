@@ -3155,6 +3155,42 @@ function wr_ecran_vue(): array
 }
 
 /**
+ * POST /actions/usage — un paquet de compteurs de boutons.
+ *
+ * Le navigateur regroupe : ce qu'il a vu et cliqué part toutes les quinze
+ * secondes, et une dernière fois quand la page se ferme. Un envoi par clic
+ * ferait, sur un écran de saisie, plus de requêtes que la saisie elle-même.
+ *
+ * Compté, jamais journalisé : cliquer n'est pas décider, et ce qui découle du
+ * clic — un enregistrement, une validation — s'écrit déjà au journal. Un
+ * paquet perdu (onglet fermé net, réseau coupé) est perdu : la mesure sert à
+ * arbitrer sur un mois, pas à auditer.
+ */
+function wr_action_usage(): array
+{
+    ensureActionUsage();
+    $b = body();
+    $lignes = is_array($b['lignes'] ?? null) ? $b['lignes'] : [];
+    if (!$lignes) { http_response_code(422); return ['error' => 'aucune ligne']; }
+    $acteur = mb_substr(trim((string) ($b['qui'] ?? '')), 0, 80);
+    $jour = date('Y-m-d');
+    $ecrits = 0;
+    foreach (array_slice($lignes, 0, 500) as $l) {
+        $ecran = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($l['ecran'] ?? ''));
+        $action = mb_substr(trim((string) preg_replace('/\s+/u', ' ', (string) ($l['action'] ?? ''))), 0, 120);
+        if ($ecran === '' || $action === '') { continue; }
+        $vus = max(0, min(9999, (int) ($l['vus'] ?? 0)));
+        $clics = max(0, min(9999, (int) ($l['clics'] ?? 0)));
+        if ($vus === 0 && $clics === 0) { continue; }
+        Db::exec('INSERT INTO ceo_action_usage (ecran, action, jour, acteur, vus, clics) VALUES (?,?,?,?,?,?)
+                  ON DUPLICATE KEY UPDATE vus = vus + VALUES(vus), clics = clics + VALUES(clics)',
+            [$ecran, $action, $jour, $acteur, $vus, $clics]);
+        $ecrits++;
+    }
+    return ['ok' => true, 'ecrits' => $ecrits];
+}
+
+/**
  * DELETE /projects/{projet}/tasks/{tache} — supprimer une tâche.
  *
  * Supprimer efface aussi ses SIGNALEMENTS : un signalement orphelin resterait

@@ -243,7 +243,12 @@ class App {
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
       // l'affichage tombait — « rendu impossible », page blanche.
-      diagnostic: 'diagnostic', parametres: 'parametres',
+      diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'usage-console',
+      // Ces trois-là n'avaient PAS d'adresse, et le défaut « garde son
+      // identifiant » ne suffisait pas : `ecranDeAdresse` n'accepte un
+      // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
+      // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
+      journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
     };
   }
   /**
@@ -329,6 +334,11 @@ class App {
   vueEcran(id){
     if (!id || this._ecranVu === id) { return; }
     this._ecranVu = id;
+    // Nouvel écran : ses boutons sont à inventorier de nouveau, et tout de
+    // suite — un écran ouvert puis quitté en une seconde a bien AFFICHÉ ses
+    // boutons. « Vu » compte les ouvertures pendant lesquelles le bouton était
+    // là, pas les rendus.
+    this._mesVus = null; this._mesInvT = 0;
     const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
     try { this.api('POST', '/ecrans/vue', { ecran: id, qui }); } catch (e) { /* la mesure ne casse rien */ }
   }
@@ -342,6 +352,136 @@ class App {
     readOne('/ecrans/vues?jours=30').then(d => { this._vuesEnCours = false;
       this.setState({ vues: { chargement: false, d: d || null } }); })
       .catch(() => { this._vuesEnCours = false; this.setState({ vues: { chargement: false, d: null } }); });
+  }
+
+  /* --- Boutons & fonctions : ce qui s'affiche, ce qui se clique -------------
+   *
+   * Compter les écrans ouverts ne suffit pas pour alléger la console : un écran
+   * qu'on garde porte souvent dix boutons dont trois servent. On tient donc
+   * DEUX compteurs par bouton — VU (il était à l'écran, lors d'une ouverture)
+   * et CLIQUÉ — et c'est leur rapport qui tranche. Affiché deux cents fois et
+   * jamais cliqué : il part. Jamais affiché : on ne sait rien de lui, et
+   * l'écran « Usage » le dit au lieu de le compter pour mort.
+   *
+   * Rien ne part au clic : les compteurs s'empilent en mémoire et un paquet
+   * unique s'envoie toutes les quinze secondes. Sur un écran de saisie, un
+   * appel par clic ferait plus de requêtes que la saisie elle-même.
+   */
+
+  /** La clé d'un élément cliquable : son écran, puis son libellé visible. */
+  mesureCle(el){
+    if (!el || !el.closest) { return null; }
+    const zone = el.closest('[data-screen]');
+    // Hors écran : le rail, l'entête, la recherche. Ils comptent à part sous
+    // `_chrome` — ils n'appartiennent à aucun écran et ne partiront avec aucun.
+    const ecran = zone ? (zone.getAttribute('data-screen') || '') : '_chrome';
+    if (!ecran) { return null; }
+    const tag = (el.tagName || '').toLowerCase();
+    let nom = (el.getAttribute('title') || el.getAttribute('aria-label') || '').trim();
+    // Le libellé tel qu'il se LIT à l'écran : c'est sur lui qu'on arbitrera.
+    // Sur une ligne de tableau ou une carte, ce texte est une DONNÉE (un nom de
+    // magasin, un montant) : le retenir ferait une ligne par magasin. Ces zones
+    // comptent donc ensemble.
+    if (!nom) {
+      nom = ['button', 'a', 'summary', 'label', 'option'].indexOf(tag) >= 0
+        ? (el.textContent || '').replace(/\s+/g, ' ').trim()
+        : '(zone cliquable)';
+    }
+    if (!nom) { nom = '(sans libellé)'; }
+    // Les chiffres deviennent « # » : « Semaine 36 » et « Semaine 37 » sont le
+    // même bouton, et trente semaines feraient trente lignes illisibles. Le
+    // chevron d'un sous-menu part de même : « ▸Budget » et « ▾Budget » sont la
+    // même entrée, repliée ou dépliée.
+    nom = nom.replace(/^[▸▾▴▿►▼◂◃‣]\s*/, '').replace(/\d+/g, '#');
+    if (nom.length > 60) { nom = nom.slice(0, 59) + '…'; }
+    return ecran + '\n' + nom;
+  }
+
+  /** Un compteur de plus dans le paquet en attente. */
+  mesureNote(cle, champ){
+    if (!cle || this.source !== 'api') { return; }
+    if (!this._mes) { this._mes = new Map(); }
+    const c = this._mes.get(cle) || { vus: 0, clics: 0 };
+    c[champ]++;
+    this._mes.set(cle, c);
+    if (!this._mesTimer) {
+      this._mesTimer = setTimeout(() => { this._mesTimer = null; this.mesureEnvoi(false); }, 15000);
+    }
+  }
+
+  /** Le paquet part : toutes les quinze secondes, et une dernière fois en partant. */
+  mesureEnvoi(fin){
+    if (!this._mes || !this._mes.size || this.source !== 'api') { return; }
+    const lignes = [];
+    this._mes.forEach((c, cle) => {
+      const i = cle.indexOf('\n');
+      lignes.push({ ecran: cle.slice(0, i), action: cle.slice(i + 1), vus: c.vus, clics: c.clics });
+    });
+    this._mes.clear();
+    const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
+    if (fin && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      // L'onglet se ferme : un `fetch` serait coupé net. Le beacon part quand
+      // même, avec le cookie de session — même origine.
+      try {
+        // `sendBeacon` rend false quand la file est pleine ou le corps trop
+        // gros : on ne s'en remet pas à lui sans le vérifier, sinon le dernier
+        // paquet — celui d'une séance entière — disparaîtrait en silence.
+        if (navigator.sendBeacon(API_BASE + '/actions/usage',
+          new Blob([JSON.stringify({ qui, lignes })], { type: 'application/json' }))) { return; }
+      } catch (e) { /* pas de beacon ici : envoi normal */ }
+    }
+    // `write` et non `this.api` : un paquet de mesure perdu ne doit pas poser
+    // de bandeau d'erreur. Ce qui compte est à l'écran, pas dans le compteur.
+    try { write(this.source, 'POST', '/actions/usage', { qui, lignes }); }
+    catch (e) { /* la mesure ne casse rien */ }
+  }
+
+  /** L'inventaire de ce qui est AFFICHÉ, une fois par ouverture d'écran. */
+  mesureInventaire(){
+    if (!this.root || this.source !== 'api') { return; }
+    // Le rendu se refait à chaque frappe au clavier : relire le DOM autant de
+    // fois coûterait plus que la mesure ne rapporte. Une fois et demie par
+    // seconde suffit — un bouton qui apparaît reste affiché bien plus longtemps.
+    const t = Date.now();
+    if (this._mesInvT && t - this._mesInvT < 1500) { return; }
+    this._mesInvT = t;
+    if (!this._mesVus) { this._mesVus = new Set(); }
+    const els = this.root.querySelectorAll('[data-h],[data-sb]');
+    for (let i = 0; i < els.length; i++) {
+      const cle = this.mesureCle(els[i]);
+      if (!cle || this._mesVus.has(cle)) { continue; }
+      this._mesVus.add(cle);
+      this.mesureNote(cle, 'vus');
+    }
+  }
+
+  /**
+   * Les deux mesures de l'écran « Usage de la console », lues ensemble.
+   *
+   * Écrans ouverts ET boutons cliqués sur LA MÊME fenêtre : deux périodes
+   * différentes côte à côte se compareraient de travers. Un des deux appels
+   * peut échouer sans emporter l'autre — l'écran dira lequel manque plutôt que
+   * d'afficher une moitié de tableau sans le dire.
+   */
+  ucCharge(force, jours){
+    const n = jours || this.state.ucJours || 30;
+    if (this._ucEnCours) { return; }
+    if (!force && this.state.ucData && this.state.ucData.jours === n) { return; }
+    this._ucEnCours = true;
+    this.setState({ ucData: { chargement: true, jours: n, actions: null, vues: null, err: null } });
+    const echec = e => ({ _err: (e && e.message) || 'pas de réponse du serveur' });
+    Promise.all([
+      readOne('/actions/usage?jours=' + n).catch(echec),
+      readOne('/ecrans/vues?jours=' + n).catch(echec),
+    ]).then(([a2, v]) => {
+      this._ucEnCours = false;
+      const err = [];
+      if (!a2 || a2._err) { err.push('boutons (' + ((a2 && a2._err) || 'réponse vide') + ')'); }
+      if (!v || v._err) { err.push('écrans (' + ((v && v._err) || 'réponse vide') + ')'); }
+      this.setState({ ucData: { chargement: false, jours: n,
+        actions: (a2 && !a2._err) ? a2 : null, vues: (v && !v._err) ? v : null,
+        err: err.length ? 'Mesure illisible — ' + err.join(', ') : null } });
+    });
   }
 
   rendreMaintenant(){
@@ -413,6 +553,11 @@ class App {
       if (!this.scouting) this.scouting = new Scouting(this);
       this.scouting.mount(document.getElementById('scouting-root'));
     }
+
+    // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
+    // `usageInventaire`). Après la fusion, jamais avant : c'est le DOM vivant
+    // qu'on inventorie, pas la chaîne rendue.
+    try { this.mesureInventaire(); } catch (e) { /* la mesure ne casse rien */ }
   }
   /**
    * Un rendu qui échoue le DIT, au lieu de laisser un écran muet.
@@ -440,6 +585,18 @@ class App {
   }
 
   bindEvents(){
+    // La mesure écoute À PART, et en premier : ce qu'elle compte ne doit rien
+    // changer à ce qui s'exécute, ni pouvoir l'empêcher si elle échoue.
+    this.root.addEventListener('click', e => {
+      const el = e.target && e.target.closest ? e.target.closest('[data-h]') : null;
+      if (el) { try { this.mesureNote(this.mesureCle(el), 'clics'); } catch (e2) { /* la mesure ne casse rien */ } }
+    });
+    // Ce qui reste en attente part avant que la page ne disparaisse. Les deux
+    // écoutes sont nécessaires : sur mobile, une page masquée n'est pas
+    // toujours « déchargée », et `pagehide` seul manquerait la moitié des fins.
+    const adieu = () => { try { this.mesureEnvoi(true); } catch (e) { /* la mesure ne casse rien */ } };
+    window.addEventListener('pagehide', adieu);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { adieu(); } });
     const run = (attr, e) => {
       let el = e.target && e.target.closest ? e.target.closest(`[${attr}]`) : null;
       if (!el) return false;
@@ -700,7 +857,7 @@ class App {
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -1079,6 +1236,7 @@ class App {
         ['diagnostic', 'Diagnostic API', 0],
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
           ['caReglages', 'Centrale d’achat', 0],
+          ['usageConsole', 'Usage de la console', 0],
           ['journal', 'Journal', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
@@ -1099,11 +1257,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1436,6 +1594,7 @@ class App {
     // --- suivi des tâches
     if (common.isSuivi) this.valsSuivi(common);
     // --- journal
+    if (common.isUsageC) { this.ucCharge(false); this.valsUsageConsole(common); }
     if (common.isJournal) this.valsJournal(common);
     // --- paramètres
     if (common.isParams) this.valsParams(common);
@@ -12221,6 +12380,169 @@ class App {
     // Les cartes héritées (liste démo, alertes, panels PWA, district, Direct
     // Link) ont quitté l'écran à la demande — leurs valeurs avec elles.
 
+  }
+
+  /* --- usage de la console : ce qui sert, ce qui ne sert pas -------------------------- */
+  /*
+   * L'écran d'arbitrage. Il ne décide rien tout seul — il pose côte à côte les
+   * deux mesures (écrans ouverts, boutons vus/cliqués) et sort la liste de ce
+   * qui n'a jamais servi sur la fenêtre choisie. Cette liste EST le livrable :
+   * c'est elle qu'on relit avant de retirer un écran ou d'en fusionner deux.
+   *
+   * Ce qui n'est PAS mesuré est dit comme tel. Un bouton jamais affiché n'est
+   * pas un bouton mort : il est inconnu, et l'écran l'écrit.
+   */
+  valsUsageConsole(common){
+    const S = this.state, U = S.ucData || {};
+    const A = U.actions || {}, V = U.vues || {};
+    const jours = U.jours || S.ucJours || 30;
+    common.ucChargement = !!U.chargement;
+    common.ucErr = U.err || '';
+    common.ucJours = jours;
+    common.ucJoursOpts = [7, 30, 90].map(n => ({ nom: n + ' jours', on: n === jours,
+      choisir: () => { this.setState({ ucJours: n }); this.ucCharge(true, n); } }));
+    common.ucRecharge = () => this.ucCharge(true, jours);
+    common.ucDepuis = V.depuis || A.depuis || '';
+
+    // Le nom lisible de chaque écran vient du RAIL : sans lui, la mesure ne
+    // rendrait que des identifiants, et un identifiant ne se retire pas de
+    // sang-froid. Le rail est aussi l'INVENTAIRE — ce qui existe et n'a jamais
+    // été ouvert ne se déduit d'aucune mesure, seulement de cette liste.
+    const noms = {}, famille = {};
+    (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
+      if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = g[0] + ' › ' + it.sub; }); }
+      else if (it) { noms[it[0]] = it[1]; famille[it[0]] = g[0]; }
+    }));
+    const nomEcran = id => id === '_chrome' ? 'Rail & entête (hors écran)' : (noms[id] || id);
+
+    const joursListe = V.joursListe || A.joursListe || [];
+    common.ucJoursCols = joursListe.map((j, i) => ({ court: j.slice(8) + '/' + j.slice(5, 7), montre: i % 5 === 0 }));
+
+    /* --- écrans : la heatmap des ouvertures --- */
+    const tousEcrans = V.ecrans || [];
+    const maxV = Math.max(1, ...tousEcrans.flatMap(e => e.jours || []));
+    const TOP = 12;
+    const choisiE = S.ucEcranAutre || '';
+    const retenus = tousEcrans.slice(0, TOP)
+      .concat(tousEcrans.filter(e => e.ecran === choisiE && tousEcrans.indexOf(e) >= TOP));
+    common.ucEcrans = retenus.map(e => ({
+      nom: nomEcran(e.ecran), total: e.total,
+      horsTop: tousEcrans.indexOf(e) >= TOP,
+      qui: Object.keys((V.acteurs || {})[e.ecran] || {}).filter(Boolean).join(', '),
+      cases: (e.jours || []).map((n, i) => ({ n, jour: joursListe[i] || '',
+        st: 'display:block;width:100%;height:14px;border-radius:3px;background:' + (n === 0
+          ? 'var(--color-background-secondary)' : this.mix('#F1E7D6', '#8D1D2C', Math.min(1, n / maxV))) })),
+    }));
+    common.ucEcransReste = Math.max(0, tousEcrans.length - TOP);
+    common.ucEcransAutres = [{ v: '', nom: 'Voir un autre écran…' }].concat(
+      tousEcrans.slice(TOP).map(e => ({ v: e.ecran, nom: nomEcran(e.ecran) + ' · ' + e.total })));
+    common.ucEcransAutreSel = choisiE;
+    common.setUcEcranAutre = e2 => this.setState({ ucEcranAutre: e2.target.value });
+    // LU et VIDE ne se disent pas pareil. Une mesure qui n'a pas répondu ne
+    // prouve pas qu'un écran dort : conclure « jamais ouvert » sur une lecture
+    // ratée ferait retirer un écran qui sert.
+    common.ucEcransLu = !!V.joursListe;
+    common.ucBoutonsLu = !!A.joursListe;
+    common.ucEcransVide = common.ucEcransLu && !tousEcrans.length;
+
+    /* --- le verdict : ce qui n'a jamais servi --- */
+    // Écrans : l'inventaire du rail moins ce qui a été ouvert. C'est la seule
+    // liste des deux qui soit COMPLÈTE — le rail connaît tous ses écrans.
+    const ouverts = new Set(tousEcrans.map(e => e.ecran));
+    const morts = V.joursListe ? Object.keys(noms).filter(k => !ouverts.has(k)) : [];
+    common.ucEcransMorts = morts.map(k => ({ nom: noms[k], famille: famille[k] || '' }));
+    common.ucEcransMortsN = morts.length;
+    common.ucEcransN = Object.keys(noms).length;
+
+    // Boutons : affichés au moins une fois, jamais cliqués. Un bouton jamais
+    // AFFICHÉ n'entre pas ici — on ne sait rien de lui, et le dire compte
+    // autant que le reste (voir `ucInconnus` plus bas).
+    const actions = A.actions || [];
+    // Le RAIL est écarté d'ici. Une entrée de rail jamais cliquée est un écran
+    // jamais ouvert : elle est déjà dans la liste d'à côté, et la répéter ici
+    // noierait les vrais boutons sous la navigation.
+    const bMorts = actions.filter(a2 => a2.clics === 0 && a2.vus > 0 && a2.ecran !== '_chrome')
+      .sort((a2, b2) => b2.vus - a2.vus);
+    const LIM = 40;
+    common.ucBoutonsMorts = bMorts.slice(0, LIM).map(a2 => ({
+      action: a2.action, ecran: nomEcran(a2.ecran), vus: a2.vus }));
+    common.ucBoutonsMortsReste = Math.max(0, bMorts.length - LIM);
+    common.ucBoutonsMortsN = bMorts.length;
+    common.ucBoutonsN = actions.length;
+    common.ucRailNote = 'Le rail n’est pas listé ici : une entrée jamais cliquée est un écran jamais ouvert — il est dans la liste de gauche.';
+    common.ucInconnus = A.joursListe
+      ? 'Seuls les boutons AFFICHÉS au moins une fois sont comptés : ' + actions.length
+        + ' à ce jour. Un bouton qui n’apparaît que dans un cas rare (une fenêtre, un onglet jamais ouvert) '
+        + 'reste inconnu — il n’est pas dans cette liste, et son absence ne le condamne pas.'
+      : '';
+
+    common.ucResume = (V.joursListe || A.joursListe)
+      ? [V.joursListe ? (V.total || 0) + ' ouverture(s) d’écran' : '',
+         A.joursListe ? (A.clics || 0) + ' clic(s) sur ' + actions.length + ' bouton(s) vus' : '']
+        .filter(Boolean).join(' · ')
+      : '';
+
+    /* --- boutons de l'écran choisi --- */
+    const parEcran = {};
+    actions.forEach(a2 => { parEcran[a2.ecran] = (parEcran[a2.ecran] || 0) + a2.clics; });
+    const ecransMesures = Object.keys(parEcran).sort((a2, b2) => parEcran[b2] - parEcran[a2]);
+    // Par défaut, le premier VRAI écran. Le rail est presque toujours le plus
+    // cliqué — c'est par lui qu'on passe — et l'ouvrir d'office montrerait la
+    // navigation à la place des boutons qu'on vient juger. Il reste dans la liste.
+    const sel = (S.ucSel && parEcran[S.ucSel] !== undefined) ? S.ucSel
+      : (ecransMesures.find(k => k !== '_chrome') || ecransMesures[0] || '');
+    common.ucSel = sel;
+    common.ucSelOpts = ecransMesures.map(k => ({ v: k,
+      nom: nomEcran(k) + ' · ' + parEcran[k] + ' clic' + (parEcran[k] > 1 ? 's' : '') }));
+    common.setUcSel = e2 => this.setState({ ucSel: e2.target.value });
+    common.ucSelNom = sel ? nomEcran(sel) : '';
+    const lignes = actions.filter(a2 => a2.ecran === sel);
+    const maxC = Math.max(1, ...lignes.flatMap(a2 => a2.jours || []));
+    common.ucActions = lignes.map(a2 => ({
+      action: a2.action, clics: a2.clics, vus: a2.vus,
+      // Combien de fois cliqué par affichage : c'est ce rapport, et non le
+      // nombre brut, qui distingue un bouton peu utile d'un bouton peu vu.
+      taux: a2.vus ? Math.round(100 * a2.clics / a2.vus) + ' %' : '—',
+      mort: a2.clics === 0,
+      dernier: a2.dernier ? a2.dernier.slice(8) + '/' + a2.dernier.slice(5, 7) : '—',
+      qui: (a2.qui || []).join(', '),
+      cases: (a2.jours || []).map((n, i) => ({ n, jour: joursListe[i] || '',
+        st: 'display:block;width:100%;height:14px;border-radius:3px;background:' + (n === 0
+          ? 'var(--color-background-secondary)' : this.mix('#F1E7D6', '#8D1D2C', Math.min(1, n / maxC))) })),
+    }));
+    common.ucActionsVide = common.ucBoutonsLu && !lignes.length;
+
+    /* --- familles du rail : où fusionner --- */
+    // Deux écrans peu ouverts dans la MÊME entrée du rail sont les candidats
+    // naturels à la fusion. L'écran ne décide pas à la place : il range et
+    // compte, la décision se prend en regardant les deux écrans.
+    const fam = {};
+    Object.keys(noms).forEach(k => {
+      const f = famille[k] || '—';
+      const e = tousEcrans.find(x2 => x2.ecran === k);
+      fam[f] = fam[f] || { titre: f, n: 0, ouverts: 0, total: 0, morts: [] };
+      fam[f].n++;
+      if (e) { fam[f].ouverts++; fam[f].total += e.total; } else { fam[f].morts.push(noms[k]); }
+    });
+    common.ucFamilles = V.joursListe ? Object.values(fam)
+      .sort((a2, b2) => (b2.morts.length - a2.morts.length) || (a2.total - b2.total))
+      .map(f => ({ titre: f.titre, n: f.n, ouverts: f.ouverts, total: f.total,
+        morts: f.morts.join(' · '), mortsN: f.morts.length })) : [];
+
+    /* --- l'export : la liste qu'on relit hors de l'écran --- */
+    common.ucExport = () => {
+      const t = [['type', 'ecran', 'element', 'vus', 'clics', 'dernier_clic']];
+      morts.forEach(k => t.push(['ecran jamais ouvert', noms[k], '', '', '0', '']));
+      bMorts.forEach(a2 => t.push(['bouton jamais cliqué', nomEcran(a2.ecran), a2.action, String(a2.vus), '0', '']));
+      actions.filter(a2 => a2.clics > 0).forEach(a2 => t.push(['bouton utilisé', nomEcran(a2.ecran), a2.action,
+        String(a2.vus), String(a2.clics), a2.dernier || '']));
+      const csv = t.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+      const a3 = document.createElement('a');
+      a3.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+      a3.download = 'usage-console-' + jours + 'j-' + new Date().toISOString().slice(0, 10) + '.csv';
+      a3.click();
+      this.notify('Usage exporté — ' + (t.length - 1) + ' ligne(s)');
+    };
   }
 
   /* --- journal ------------------------------------------------------------------------ */

@@ -148,6 +148,7 @@ export function render(c, x){
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
       ${c.isParams ? tplParams(c, x) : ''}
+      ${c.isUsageC ? tplUsageConsole(c, x) : ''}
       ${c.isScoring ? tplScoring(c, x) : ''}
       ${c.isScouting ? '<div id="scouting-root" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>' : ''}
       ` : `<div style="padding:60px 0;color:var(--color-text-muted);font-size:13px">Chargement des données du réseau…</div>`}
@@ -5045,6 +5046,164 @@ function tplSuivi(c, x){
 
       <div style="font-size:12px;color:var(--color-text-muted)">Voir n'est pas régler : « Marquer vu » dit qu'on a lu, « Traiter » ferme et demande ce qui a été fait. Tout passe au journal.</div>
     `}
+  </div>`;
+}
+
+/* Usage de la console — l'écran d'arbitrage : ce qui sert, ce qui ne sert pas.
+ *
+ * L'ordre des cartes est l'ordre de la décision. Le VERDICT d'abord (ce qui n'a
+ * jamais servi sur la fenêtre), parce que c'est lui qu'on vient chercher ; les
+ * heatmaps ensuite, pour vérifier avant de retirer ; les familles du rail en
+ * dernier, pour voir où deux écrans peuvent n'en faire qu'un.
+ */
+function tplUsageConsole(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px';
+  const titre = 'font-family:var(--font-display);font-size:16px;line-height:1.3';
+  const sub = 'font-size:11.5px;color:var(--color-text-muted);margin-top:2px';
+  const th = 'text-align:left;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 8px 6px 0';
+  const jourCols = c.ucJoursCols.map(j => `<th style="padding:0 1px 6px;font-size:8px;font-weight:500;color:var(--color-text-muted);text-align:center">${j.montre ? esc(j.court) : ''}</th>`).join('');
+  const cellules = l => l.cases.map(k => `<td style="padding:2px 1px" title="${esc(k.jour)} — ${k.n}"><i style="${k.st}"></i></td>`).join('');
+  return `
+  <div data-screen="usageConsole" style="display:flex;flex-direction:column;gap:14px">
+
+    <div style="${carte}">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="${titre}">Ce qui sert, ce qui ne sert pas</div>
+          <div style="${sub}">Deux mesures, la même fenêtre : les écrans OUVERTS, et les boutons AFFICHÉS puis CLIQUÉS. Un bouton affiché deux cents fois et jamais cliqué peut partir ; un bouton jamais affiché n’est pas mort, il est inconnu — et c’est dit.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:2px;background:var(--color-background-secondary);border-radius:8px;padding:2px">
+            ${c.ucJoursOpts.map(o => `<button ${x.A(o.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:${o.on ? '600' : '400'};padding:6px 12px;border-radius:7px;background:${o.on ? 'var(--color-surface)' : 'transparent'};color:${o.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}
+          </div>
+          <button ${x.A(c.ucRecharge)} title="Relire la mesure" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">Relire</button>
+          <button ${x.A(c.ucExport)} title="Exporter la liste en CSV" style="border:none;border-radius:8px;padding:7px 13px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Exporter (CSV)</button>
+        </div>
+      </div>
+      ${c.ucErr ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary);background:rgba(141,29,44,0.06);border-radius:8px;padding:9px 12px">${esc(c.ucErr)}</div>` : ''}
+      ${c.ucChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture de la mesure…</div>'
+        : (c.ucResume ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">${esc(c.ucResume)}${c.ucDepuis ? ' · depuis le ' + esc(c.ucDepuis) : ''}</div>` : '')}
+    </div>
+
+    <!-- LE VERDICT. Les deux listes ne se valent pas et ne se lisent pas
+         pareil : celle des écrans est complète (le rail les connaît tous),
+         celle des boutons ne porte que ce qui a été vu au moins une fois. -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+      <div style="${carte}">
+        <div style="${titre}">Écrans jamais ouverts</div>
+        <div style="${sub}">${c.ucEcransLu ? `${c.ucEcransMortsN} sur ${c.ucEcransN} écrans du rail, sur ${c.ucJours} jours. Cette liste est complète : le rail connaît tous ses écrans.` : 'Le compteur d’ouvertures n’a pas répondu — rien ne peut être conclu.'}</div>
+        ${c.ucEcransMortsN ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+          ${c.ucEcransMorts.map(e => `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <span style="font-size:12.5px">${esc(e.nom)}</span>
+            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${esc(e.famille)}</span>
+          </div>`).join('')}
+        </div>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucChargement ? 'Lecture…' : (!c.ucEcransLu ? 'Mesure non lue.' : (c.ucEcransVide ? 'Aucune ouverture enregistrée sur la période — la mesure ne dit encore rien.' : 'Tous les écrans du rail ont été ouverts au moins une fois.'))}</div>`}
+      </div>
+
+      <div style="${carte}">
+        <div style="${titre}">Boutons jamais cliqués</div>
+        <div style="${sub}">${c.ucBoutonsLu ? `${c.ucBoutonsMortsN} bouton(s) affichés au moins une fois et jamais cliqués, du plus vu au moins vu.` : 'Le compteur de boutons n’a pas répondu — rien ne peut être conclu.'}</div>
+        ${c.ucBoutonsMortsN ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+          ${c.ucBoutonsMorts.map(b => `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <span style="font-size:12.5px">${esc(b.action)}<span style="font-size:10.5px;color:var(--color-text-muted)"> — ${esc(b.ecran)}</span></span>
+            <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap">vu ${b.vus}×</span>
+          </div>`).join('')}
+          ${c.ucBoutonsMortsReste ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">+ ${c.ucBoutonsMortsReste} autre(s) — la liste complète est dans l’export.</div>` : ''}
+        </div>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucChargement ? 'Lecture…' : (!c.ucBoutonsLu ? 'Mesure non lue.' : 'Aucun bouton mort : tout ce qui a été affiché a été cliqué au moins une fois.')}</div>`}
+        ${c.ucInconnus ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">${esc(c.ucRailNote)}<br>${esc(c.ucInconnus)}</div>` : ''}
+      </div>
+    </div>
+
+    <div style="${carte}">
+      <div style="${titre}">Écrans ouverts — ${c.ucJours} derniers jours</div>
+      <div style="${sub}">Une ligne par écran, une case par jour. Le rail se juge ici : ce qui est pâle sur toute la ligne ne mérite pas une entrée à lui seul.</div>
+      ${c.ucChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture…</div>' : ((c.ucEcransVide || !c.ucEcransLu)
+        ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucEcransLu ? 'Aucune ouverture enregistrée sur la période.' : 'Mesure non lue — le compteur d’ouvertures n’a pas répondu.'}</div>`
+        : `<div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th}">Écran</th>
+            <th style="${th};text-align:right;width:80px">Ouvertures</th>
+            ${jourCols}
+          </tr></thead>
+          <tbody>
+            ${c.ucEcrans.map(l => `<tr${l.horsTop ? ' style="background:var(--color-background-secondary)"' : ''}>
+              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${l.total}</td>
+              ${cellules(l)}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${c.ucEcransReste ? `<div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">Top 12 affiché · ${c.ucEcransReste} autre(s) écran(s) ouvert(s) sur la période</span>
+        <select ${x.C(c.setUcEcranAutre)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
+          ${c.ucEcransAutres.map(o => `<option value="${esc(o.v)}"${o.v === c.ucEcransAutreSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>
+      </div>` : ''}`)}
+    </div>
+
+    <div style="${carte}">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="${titre}">Boutons & fonctions — ${esc(c.ucSelNom || (c.ucBoutonsLu ? 'aucun écran mesuré' : 'mesure non lue'))}</div>
+          <div style="${sub}">« Vu » = le bouton était à l’écran lors d’une ouverture. « Taux » = clics par affichage. Les lignes grises n’ont jamais été cliquées.</div>
+        </div>
+        ${c.ucSelOpts.length ? `<select ${x.C(c.setUcSel)} style="font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
+          ${c.ucSelOpts.map(o => `<option value="${esc(o.v)}"${o.v === c.ucSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>` : ''}
+      </div>
+      ${c.ucChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture…</div>' : ((c.ucActionsVide || !c.ucBoutonsLu)
+        ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucBoutonsLu ? 'Aucun clic mesuré pour l’instant — la mesure des boutons commence à cette livraison.' : 'Mesure non lue — le compteur de boutons n’a pas répondu.'}</div>`
+        : `<div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th}">Bouton</th>
+            <th style="${th};text-align:right;width:60px">Vu</th>
+            <th style="${th};text-align:right;width:60px">Clics</th>
+            <th style="${th};text-align:right;width:60px">Taux</th>
+            <th style="${th};text-align:right;width:70px">Dernier</th>
+            ${jourCols}
+          </tr></thead>
+          <tbody>
+            ${c.ucActions.map(l => `<tr${l.mort ? ' style="background:var(--color-background-secondary);color:var(--color-text-muted)"' : ''}>
+              <td style="padding:3px 8px 3px 0">${esc(l.action)}${l.qui ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums">${l.vus}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${l.clics}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(l.taux)}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(l.dernier)}</td>
+              ${cellules(l)}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`)}
+    </div>
+
+    <div style="${carte}">
+      <div style="${titre}">Par famille du rail — où fusionner</div>
+      <div style="${sub}">Deux écrans peu ouverts sous la même entrée sont les candidats naturels à la fusion. Rangé par poids mort, puis par ouvertures.</div>
+      ${c.ucFamilles.length ? `<div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th}">Famille</th>
+            <th style="${th};text-align:right;width:80px">Écrans</th>
+            <th style="${th};text-align:right;width:90px">Ouverts</th>
+            <th style="${th};text-align:right;width:100px">Ouvertures</th>
+            <th style="${th}">Jamais ouverts</th>
+          </tr></thead>
+          <tbody>
+            ${c.ucFamilles.map(f => `<tr>
+              <td style="padding:5px 8px 5px 0;white-space:nowrap">${esc(f.titre)}</td>
+              <td style="padding:5px 10px 5px 0;text-align:right;font-variant-numeric:tabular-nums">${f.n}</td>
+              <td style="padding:5px 10px 5px 0;text-align:right;font-variant-numeric:tabular-nums">${f.ouverts}</td>
+              <td style="padding:5px 10px 5px 0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${f.total}</td>
+              <td style="padding:5px 0;font-size:11.5px;color:var(--color-text-muted)">${esc(f.morts) || '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucChargement ? 'Lecture…' : (c.ucEcransLu ? 'Aucune ouverture enregistrée sur la période.' : 'Mesure non lue — le compteur d’ouvertures n’a pas répondu.')}</div>`}
+    </div>
   </div>`;
 }
 

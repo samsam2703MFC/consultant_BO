@@ -8076,6 +8076,83 @@ function ep_ecran_vues(): array
         'total' => array_sum($parEcran)];
 }
 
+/* --- Boutons & fonctions : ce qui est affiché, ce qui est cliqué -------------- */
+
+/*
+ * Compter les écrans ouverts ne suffit pas pour alléger la console. Un écran
+ * qu'on garde peut porter douze boutons dont trois servent : le retirer serait
+ * une perte, le laisser tel quel une charge. On mesure donc le bouton, et on
+ * mesure DEUX choses — combien de fois il a été AFFICHÉ, combien de fois il a
+ * été CLIQUÉ.
+ *
+ * C'est le rapport des deux qui décide, et l'un sans l'autre ne décide rien :
+ * zéro clic sur un bouton affiché deux cents fois est un bouton mort ; zéro
+ * clic sur un bouton jamais affiché ne dit rien du tout — l'écran l'annonce
+ * ainsi plutôt que de le compter pour mort.
+ *
+ * Le bouton est identifié par son ÉCRAN et son LIBELLÉ visible : c'est ce que
+ * la personne qui arbitrera lit à l'écran. Les index de gestionnaires (data-h)
+ * changent à chaque rendu et ne survivraient pas à la première modification.
+ */
+
+/** Le compteur d'usage : une ligne par bouton, par écran, par jour, par personne. */
+function ensureActionUsage(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_action_usage ('
+        . 'ecran VARCHAR(40) NOT NULL,'
+        . 'action VARCHAR(120) NOT NULL,'
+        . 'jour DATE NOT NULL,'
+        . 'acteur VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'vus INT NOT NULL DEFAULT 0,'
+        . 'clics INT NOT NULL DEFAULT 0,'
+        . 'PRIMARY KEY (ecran, action, jour, acteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** GET /actions/usage?jours=30 — de quoi dessiner la heatmap des boutons. */
+function ep_actions_usage(): array
+{
+    ensureActionUsage();
+    $jours = max(7, min(90, (int) ($_GET['jours'] ?? 30)));
+    $depuis = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $joursListe = [];
+    for ($i = $jours - 1; $i >= 0; $i--) { $joursListe[] = date('Y-m-d', strtotime('-' . $i . ' days')); }
+
+    $tot = []; $parJour = []; $dernier = [];
+    $lignes = Db::rows('SELECT ecran, action, jour, SUM(vus) vus, SUM(clics) clics
+                        FROM ceo_action_usage WHERE jour >= ? GROUP BY ecran, action, jour', [$depuis]);
+    foreach ($lignes as $l) {
+        $k = $l['ecran'] . "\n" . $l['action'];
+        $j = substr((string) $l['jour'], 0, 10);
+        $tot[$k]['vus'] = ($tot[$k]['vus'] ?? 0) + (int) $l['vus'];
+        $tot[$k]['clics'] = ($tot[$k]['clics'] ?? 0) + (int) $l['clics'];
+        $parJour[$k][$j] = (int) $l['clics'];
+        // Le dernier jour où le bouton a servi : « plus rien depuis six
+        // semaines » se décide autrement qu'« utilisé hier ».
+        if ((int) $l['clics'] > 0 && $j > ($dernier[$k] ?? '')) { $dernier[$k] = $j; }
+    }
+    // Qui clique : un bouton qu'une seule personne utilise ne se retire pas
+    // comme un bouton que personne n'utilise — celui-là, on le lui demande.
+    $acteurs = [];
+    foreach (Db::rows('SELECT ecran, action, acteur, SUM(clics) clics FROM ceo_action_usage
+                       WHERE jour >= ? AND clics > 0 GROUP BY ecran, action, acteur', [$depuis]) as $l) {
+        $q = trim((string) $l['acteur']);
+        if ($q !== '') { $acteurs[$l['ecran'] . "\n" . $l['action']][$q] = (int) $l['clics']; }
+    }
+    uasort($tot, fn ($a, $b) => ($b['clics'] <=> $a['clics']) ?: ($b['vus'] <=> $a['vus']));
+    $out = [];
+    foreach ($tot as $k => $v) {
+        [$e, $a] = explode("\n", $k, 2);
+        $out[] = ['ecran' => $e, 'action' => $a, 'clics' => $v['clics'], 'vus' => $v['vus'],
+            'dernier' => $dernier[$k] ?? null,
+            'qui' => array_keys($acteurs[$k] ?? []),
+            'jours' => array_map(fn ($j) => (int) ($parJour[$k][$j] ?? 0), $joursListe)];
+    }
+    return ['depuis' => $depuis, 'joursListe' => $joursListe, 'actions' => $out,
+        'clics' => array_sum(array_column($out, 'clics')),
+        'vus' => array_sum(array_column($out, 'vus'))];
+}
+
 /* --- Scouting commercial ----------------------------------------------------- */
 
 /** GET /scouting — saisies enregistrées, hypothèses, état du connecteur Google, inventaire du cache OSM. */
