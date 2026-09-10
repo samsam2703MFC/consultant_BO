@@ -7779,6 +7779,70 @@ function ensureCampagneObjectifs(): void
 }
 
 /**
+ * Les trois auteurs d'une annotation mensuelle, dans l'ordre où on les lit.
+ *
+ * Le franchisé d'abord : c'est lui qui a tenu le magasin ce mois-là.
+ */
+const BUDGET_NOTE_AUTEURS = ['franchise', 'consultant', 'marque'];
+
+/**
+ * Table des annotations, posée à la première lecture.
+ *
+ * Elle vit à côté de `ceo_shop_month_perf` et suit sa clé : magasin, année,
+ * mois. Rien n'y est écrit tant que personne n'a rédigé — un mois sans note
+ * n'a pas de ligne, et c'est ce qui rend le vide lisible à l'impression.
+ */
+function ensureBudgetNotes(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_month_note ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'year SMALLINT NOT NULL,'
+        . 'month TINYINT NOT NULL,'
+        . 'auteur VARCHAR(12) NOT NULL,'
+        . 'texte TEXT NULL,'
+        . 'maj_par VARCHAR(120) NULL,'
+        . 'maj_le DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, year, month, auteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * GET /stores/budget-notes — les annotations d'un magasin pour un exercice.
+ *
+ * Rendues par mois puis par auteur, avec qui a écrit et quand : une note sans
+ * signature ni date ne se relit pas en février de l'année suivante.
+ */
+function ep_budget_notes(): array
+{
+    ensureBudgetNotes();
+    $shop = (string) ($_GET['shop'] ?? '');
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    // Même forme sans magasin qu'avec : l'appelant lit `mois` de la même façon.
+    if ($shop === '') {
+        return ['shop' => '', 'exercice' => $exercice, 'auteurs' => BUDGET_NOTE_AUTEURS,
+            'mois' => (object) []];
+    }
+
+    $mois = [];
+    foreach (Db::rows('SELECT month, auteur, texte, maj_par, maj_le FROM ceo_shop_month_note
+                        WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
+        $texte = trim((string) ($r['texte'] ?? ''));
+        if ($texte === '') { continue; }
+        $mois[(string) (int) $r['month']][(string) $r['auteur']] = [
+            'texte' => $texte,
+            'par'   => $r['maj_par'] !== null ? (string) $r['maj_par'] : null,
+            'le'    => $r['maj_le'] !== null ? (string) $r['maj_le'] : null,
+        ];
+    }
+
+    // (object) : un mois vide doit rendre {} et non [], sinon le contrat change
+    // de forme selon le contenu — et l'appelant qui écrit `mois["6"]` reçoit
+    // un tableau JSON là où il attend un objet.
+    return ['shop' => $shop, 'exercice' => $exercice, 'auteurs' => BUDGET_NOTE_AUTEURS,
+        'mois' => (object) $mois];
+}
+
+/**
  * Le budget d'un magasin sur une FENÊTRE de dates, au prorata des jours.
  *
  * Une campagne du 4 au 17 août prend 14 jours sur 31 : elle vaut 14/31 du
@@ -8010,6 +8074,83 @@ function ep_ecran_vues(): array
     }
     return ['depuis' => $depuis, 'joursListe' => $joursListe, 'ecrans' => $out, 'acteurs' => $acteurs,
         'total' => array_sum($parEcran)];
+}
+
+/* --- Boutons & fonctions : ce qui est affiché, ce qui est cliqué -------------- */
+
+/*
+ * Compter les écrans ouverts ne suffit pas pour alléger la console. Un écran
+ * qu'on garde peut porter douze boutons dont trois servent : le retirer serait
+ * une perte, le laisser tel quel une charge. On mesure donc le bouton, et on
+ * mesure DEUX choses — combien de fois il a été AFFICHÉ, combien de fois il a
+ * été CLIQUÉ.
+ *
+ * C'est le rapport des deux qui décide, et l'un sans l'autre ne décide rien :
+ * zéro clic sur un bouton affiché deux cents fois est un bouton mort ; zéro
+ * clic sur un bouton jamais affiché ne dit rien du tout — l'écran l'annonce
+ * ainsi plutôt que de le compter pour mort.
+ *
+ * Le bouton est identifié par son ÉCRAN et son LIBELLÉ visible : c'est ce que
+ * la personne qui arbitrera lit à l'écran. Les index de gestionnaires (data-h)
+ * changent à chaque rendu et ne survivraient pas à la première modification.
+ */
+
+/** Le compteur d'usage : une ligne par bouton, par écran, par jour, par personne. */
+function ensureActionUsage(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_action_usage ('
+        . 'ecran VARCHAR(40) NOT NULL,'
+        . 'action VARCHAR(120) NOT NULL,'
+        . 'jour DATE NOT NULL,'
+        . 'acteur VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'vus INT NOT NULL DEFAULT 0,'
+        . 'clics INT NOT NULL DEFAULT 0,'
+        . 'PRIMARY KEY (ecran, action, jour, acteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** GET /actions/usage?jours=30 — de quoi dessiner la heatmap des boutons. */
+function ep_actions_usage(): array
+{
+    ensureActionUsage();
+    $jours = max(7, min(90, (int) ($_GET['jours'] ?? 30)));
+    $depuis = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $joursListe = [];
+    for ($i = $jours - 1; $i >= 0; $i--) { $joursListe[] = date('Y-m-d', strtotime('-' . $i . ' days')); }
+
+    $tot = []; $parJour = []; $dernier = [];
+    $lignes = Db::rows('SELECT ecran, action, jour, SUM(vus) vus, SUM(clics) clics
+                        FROM ceo_action_usage WHERE jour >= ? GROUP BY ecran, action, jour', [$depuis]);
+    foreach ($lignes as $l) {
+        $k = $l['ecran'] . "\n" . $l['action'];
+        $j = substr((string) $l['jour'], 0, 10);
+        $tot[$k]['vus'] = ($tot[$k]['vus'] ?? 0) + (int) $l['vus'];
+        $tot[$k]['clics'] = ($tot[$k]['clics'] ?? 0) + (int) $l['clics'];
+        $parJour[$k][$j] = (int) $l['clics'];
+        // Le dernier jour où le bouton a servi : « plus rien depuis six
+        // semaines » se décide autrement qu'« utilisé hier ».
+        if ((int) $l['clics'] > 0 && $j > ($dernier[$k] ?? '')) { $dernier[$k] = $j; }
+    }
+    // Qui clique : un bouton qu'une seule personne utilise ne se retire pas
+    // comme un bouton que personne n'utilise — celui-là, on le lui demande.
+    $acteurs = [];
+    foreach (Db::rows('SELECT ecran, action, acteur, SUM(clics) clics FROM ceo_action_usage
+                       WHERE jour >= ? AND clics > 0 GROUP BY ecran, action, acteur', [$depuis]) as $l) {
+        $q = trim((string) $l['acteur']);
+        if ($q !== '') { $acteurs[$l['ecran'] . "\n" . $l['action']][$q] = (int) $l['clics']; }
+    }
+    uasort($tot, fn ($a, $b) => ($b['clics'] <=> $a['clics']) ?: ($b['vus'] <=> $a['vus']));
+    $out = [];
+    foreach ($tot as $k => $v) {
+        [$e, $a] = explode("\n", $k, 2);
+        $out[] = ['ecran' => $e, 'action' => $a, 'clics' => $v['clics'], 'vus' => $v['vus'],
+            'dernier' => $dernier[$k] ?? null,
+            'qui' => array_keys($acteurs[$k] ?? []),
+            'jours' => array_map(fn ($j) => (int) ($parJour[$k][$j] ?? 0), $joursListe)];
+    }
+    return ['depuis' => $depuis, 'joursListe' => $joursListe, 'actions' => $out,
+        'clics' => array_sum(array_column($out, 'clics')),
+        'vus' => array_sum(array_column($out, 'vus'))];
 }
 
 /* --- Scouting commercial ----------------------------------------------------- */

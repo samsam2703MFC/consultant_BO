@@ -8,6 +8,46 @@ chemins (assets, API) sont relatifs à l'URL de la page.
 
 ---
 
+## 0. Les branches — d'où part une livraison
+
+`claude/deploiement-application-serveur-lmz1bm` est **la** branche livrée : le
+workflow `deploy.yml` ne se déclenche que sur un push qui touche
+`deploy.trigger` **sur elle** (ou par « Run workflow »). `claude/new-session-deedox`
+est la branche par défaut, celle où les PR sont fusionnées.
+
+Les deux ont partagé une histoire à partir du 07/09/2026 seulement. Avant, elles
+n'avaient **aucun ancêtre commun** — et c'était un piège, parce qu'aucun écran
+ne le montrait :
+
+- fusionner une PR ne mettait rien en ligne ; le changement dormait sur la
+  branche par défaut, et on le croyait livré ;
+- livrer la branche par défaut aurait **retiré du serveur** ce qu'elle ne
+  portait pas — la fiche catégorie d'`analyse_produits.php`, le scouting, les
+  rapports. Une livraison lancée par erreur depuis cette branche a été annulée
+  48 secondes après son départ, le transfert de fichiers déjà passé.
+
+Depuis la réunion des deux lignes, une PR va en ligne ainsi :
+
+```bash
+git checkout claude/deploiement-application-serveur-lmz1bm
+git merge claude/new-session-deedox          # plus de report à la main
+echo "deploy $(date +%s) ce que la livraison apporte" >> deploy.trigger
+git commit -am "…" && git push               # le push déclenche la livraison
+```
+
+Avant de pousser sur la branche livrée, vérifiez toujours que rien de ce qui
+est en ligne ne disparaît :
+
+```bash
+git diff --stat claude/deploiement-application-serveur-lmz1bm HEAD
+```
+
+Deux mots-clés de `deploy.trigger` commandent la base et ne se posent jamais
+par distraction : `reset` réinstalle les tables avec le jeu de démonstration,
+`wipe` remet la base à zéro. Sans eux, la livraison ne touche pas aux données.
+
+---
+
 ## 1. Variables & secrets nécessaires
 
 **Un seul jeu de secrets : les identifiants MySQL déjà utilisés par le panel**

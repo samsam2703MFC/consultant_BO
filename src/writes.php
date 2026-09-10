@@ -27,6 +27,67 @@ function wr_journal(): array
     return ['ok' => true];
 }
 
+/**
+ * POST /stores/budget-note — l'annotation d'un mois, pour une voix.
+ *
+ * Trois voix cohabitent sur le même mois (franchisé, consultant, marque) et
+ * chacune n'écrit que la sienne : une clé primaire à quatre colonnes suffit à
+ * l'empêcher d'écraser celle du voisin, sans verrou ni fusion de texte.
+ *
+ * Une note vidée est SUPPRIMÉE plutôt qu'enregistrée vide : sans cela, un mois
+ * « annoté » sans texte s'imprimerait comme une ligne blanche, et on se
+ * demanderait ce qu'on a perdu.
+ */
+function wr_budget_note(): array
+{
+    ensureBudgetNotes();
+    $b = body();
+    $shop  = trim((string) ($b['shop'] ?? ''));
+    $annee = (int) ($b['exercice'] ?? 0);
+    $mois  = (int) ($b['mois'] ?? 0);
+    $qui   = (string) ($b['auteur'] ?? '');
+    $texte = trim((string) ($b['texte'] ?? ''));
+
+    // Un refus se dit par le STATUT HTTP : le client force `ok: true` sur toute
+    // réponse 2xx (le statut fait foi, pas le corps). Un `ok:false` rendu en 200
+    // aurait donc été lu comme un enregistrement réussi — l'annotation perdue
+    // sans un mot, ce que cette API s'interdit.
+    if ($shop === '' || $annee < 2000 || $mois < 1 || $mois > 12) {
+        http_response_code(400);
+        return ['error' => 'magasin, exercice ou mois manquant'];
+    }
+    if (!in_array($qui, BUDGET_NOTE_AUTEURS, true)) {
+        http_response_code(422);
+        return ['error' => 'auteur inconnu : ' . ($qui !== '' ? $qui : '—')];
+    }
+
+    if ($texte === '') {
+        Db::exec('DELETE FROM ceo_shop_month_note WHERE shop_id = ? AND year = ? AND month = ? AND auteur = ?',
+            [$shop, $annee, $mois, $qui]);
+        return ['ok' => true, 'vide' => true];
+    }
+
+    // 2 000 caractères : de quoi expliquer un mois, pas d'y coller un rapport.
+    // La borne est dite ici plutôt que laissée à MySQL, qui tronquerait sans
+    // prévenir et rendrait une note amputée à la relecture.
+    if (mb_strlen($texte) > 2000) {
+        http_response_code(422);
+        return ['error' => 'annotation trop longue (' . mb_strlen($texte) . ' caractères, maximum 2 000)'];
+    }
+
+    $par = trim((string) ($b['par'] ?? '')) ?: null;
+    Db::exec('INSERT INTO ceo_shop_month_note (shop_id, year, month, auteur, texte, maj_par, maj_le)
+              VALUES (?,?,?,?,?,?,NOW())
+              ON DUPLICATE KEY UPDATE texte = VALUES(texte), maj_par = VALUES(maj_par), maj_le = NOW()',
+        [$shop, $annee, $mois, $qui, $texte, $par]);
+
+    $r = Db::row('SELECT maj_par, maj_le FROM ceo_shop_month_note
+                   WHERE shop_id = ? AND year = ? AND month = ? AND auteur = ?', [$shop, $annee, $mois, $qui]);
+
+    return ['ok' => true, 'texte' => $texte,
+            'par' => $r['maj_par'] ?? null, 'le' => $r['maj_le'] ?? null];
+}
+
 /** POST /projects — assistant « Nouveau projet » (4 étapes). */
 function wr_project_create(): array
 {
@@ -3091,6 +3152,42 @@ function wr_ecran_vue(): array
     Db::exec('INSERT INTO ceo_ecran_vue (ecran, jour, acteur, n) VALUES (?,?,?,1)
               ON DUPLICATE KEY UPDATE n = n + 1', [$ecran, date('Y-m-d'), $acteur]);
     return ['ok' => true];
+}
+
+/**
+ * POST /actions/usage — un paquet de compteurs de boutons.
+ *
+ * Le navigateur regroupe : ce qu'il a vu et cliqué part toutes les quinze
+ * secondes, et une dernière fois quand la page se ferme. Un envoi par clic
+ * ferait, sur un écran de saisie, plus de requêtes que la saisie elle-même.
+ *
+ * Compté, jamais journalisé : cliquer n'est pas décider, et ce qui découle du
+ * clic — un enregistrement, une validation — s'écrit déjà au journal. Un
+ * paquet perdu (onglet fermé net, réseau coupé) est perdu : la mesure sert à
+ * arbitrer sur un mois, pas à auditer.
+ */
+function wr_action_usage(): array
+{
+    ensureActionUsage();
+    $b = body();
+    $lignes = is_array($b['lignes'] ?? null) ? $b['lignes'] : [];
+    if (!$lignes) { http_response_code(422); return ['error' => 'aucune ligne']; }
+    $acteur = mb_substr(trim((string) ($b['qui'] ?? '')), 0, 80);
+    $jour = date('Y-m-d');
+    $ecrits = 0;
+    foreach (array_slice($lignes, 0, 500) as $l) {
+        $ecran = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($l['ecran'] ?? ''));
+        $action = mb_substr(trim((string) preg_replace('/\s+/u', ' ', (string) ($l['action'] ?? ''))), 0, 120);
+        if ($ecran === '' || $action === '') { continue; }
+        $vus = max(0, min(9999, (int) ($l['vus'] ?? 0)));
+        $clics = max(0, min(9999, (int) ($l['clics'] ?? 0)));
+        if ($vus === 0 && $clics === 0) { continue; }
+        Db::exec('INSERT INTO ceo_action_usage (ecran, action, jour, acteur, vus, clics) VALUES (?,?,?,?,?,?)
+                  ON DUPLICATE KEY UPDATE vus = vus + VALUES(vus), clics = clics + VALUES(clics)',
+            [$ecran, $action, $jour, $acteur, $vus, $clics]);
+        $ecrits++;
+    }
+    return ['ok' => true, 'ecrits' => $ecrits];
 }
 
 /**

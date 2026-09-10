@@ -95,6 +95,7 @@ function route(string $method, string $path): mixed
             $path === '/stores'                        => ep_stores(),
             $path === '/stores/perf'                   => ep_perf(),
             $path === '/stores/budgets'                => ep_budgets(),
+            $path === '/stores/budget-notes'           => ep_budget_notes(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
@@ -142,6 +143,8 @@ function route(string $method, string $path): mixed
             $path === '/diagnostic/panel-consultant'   => ep_panel_sonde_consultant(),
             // Ce qui est ouvert, et à quelle fréquence : de quoi affiner le rail.
             $path === '/ecrans/vues'                   => ep_ecran_vues(),
+            // Et, dans chaque écran gardé, quels boutons servent vraiment.
+            $path === '/actions/usage'                 => ep_actions_usage(),
             $path === '/admin/marketing-nettoyage'     => ep_mar_nettoyage(),
             $path === '/admin/erp-essai'               => ep_erp_essai(),
             $path === '/projects'                      => ep_projects(),
@@ -226,6 +229,7 @@ function route(string $method, string $path): mixed
 
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
+    if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
@@ -271,6 +275,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/marketing/mesure/(\d+)/releve$#', $path, $m)) { return wr_mesure_releve((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/marketing/mesure/(\d+)/gel$#', $path, $m)) { return wr_mesure_gel((int) $m[1]); }
     if ($method === 'POST' && $path === '/ecrans/vue') { return wr_ecran_vue(); }
+    if ($method === 'POST' && $path === '/actions/usage') { return wr_action_usage(); }
     if ($method === 'PUT' && preg_match('#^/production/fin/([\w-]+)$#', $path, $m)) { return wr_prod_fin($m[1]); }
     // Retirer une référence du catalogue : le SEUL geste du cockpit sur une
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
