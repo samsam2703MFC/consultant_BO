@@ -7125,7 +7125,8 @@ class App {
           : (vue === 'semaine' ? 'budget mensuel réparti sur ' + res.magasinsAvecObjectif + ' magasin(s)' : res.magasinsAvecObjectif + ' magasin(s) avec budget') },
       { l: 'Réalisé', v: fE(res.realise), col: 'var(--color-text)',
         s: res.attendu != null ? 'attendu ' + fE(res.attendu) + ' à ce stade' : fInt(res.tickets) + ' tickets · panier ' + fU(res.panier) },
-      { l: 'Écart', v: sansObj ? '—' : fS(res.ecart), col: coulEcart(res.ecart), s: clientsTxt(res.clientsManquants) },
+      { l: 'Écart', v: sansObj ? '—' : fS(res.ecart), col: coulEcart(res.ecart),
+        s: clientsTxt(res.clientsManquants) + ((res.ecart != null && res.panier) ? ' (' + fE(Math.abs(res.ecart)) + ' ÷ ' + fU(res.panier) + ')' : '') },
       { l: 'Reste à faire', v: sansObj ? '—' : fE(res.reste), col: 'var(--color-text)',
         s: (res.objectif ? 'soit ' + Math.round(100 * res.reste / res.objectif) + ' % ' + (vue === 'semaine' ? 'de la semaine' : 'du mois') : '') },
     ];
@@ -7166,6 +7167,9 @@ class App {
         realise: fE(m.realise), attendu: sansO ? '' : fE(m.attendu),
         ecart: sansO ? '' : fS(m.ecart), ecartCol: coulEcart(m.ecart),
         clients: sansO ? '' : fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart),
+        // Le calcul sous le chiffre : « 7 625 € ÷ 16,65 € » — un nombre de
+        // clients qui ne montre pas d'où il sort se discute, celui-ci se vérifie.
+        clientsSous: (sansO || !m.panier || m.ecart == null) ? '' : fE(Math.abs(m.ecart)) + ' ÷ ' + fU(m.panier),
         clientsTitre: m.panier ? 'écart ÷ panier moyen de ' + fU(m.panier) : '',
         fc: fPct(m.coutMatierePct), fcCol: feu(m.coutMatierePct, seuils.food),
         lab: fPct(m.labourPct), labCol: feu(m.labourPct, seuils.labour),
@@ -7440,6 +7444,7 @@ class App {
         manque: (() => { const n = (m.objectifJour != null && m.panier > 0) ? Math.round((m.ca - m.objectifJour) / m.panier) : null;
           return n == null ? '' : (n >= 0 ? '+' : '−') + fInt(Math.abs(n)); })(),
         manqueCoul: (m.objectifJour == null) ? 'var(--color-text-muted)' : (m.ca >= m.objectifJour ? '#2d7a3e' : '#C0182B'),
+        manqueSous: (m.objectifJour != null && m.panier > 0) ? fE(Math.abs(m.ca - m.objectifJour)) + ' ÷ ' + fU(m.panier) : '',
         manqueTitre: m.panier > 0 ? 'écart à l’objectif ÷ panier moyen de ' + fU(m.panier) : '',
         mb: fE(m.margeBrute), mbPct: fPct(m.margeBrutePct),
         labour: fE(m.labour), labourPct: fPct(m.labourPct), labourCoul: feu(m.labourPct, seuils.labour),

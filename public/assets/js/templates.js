@@ -3714,7 +3714,7 @@ function tplResultatPeriode(c, x){
         ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:${l.reseau ? 0 : 14}px">${esc(l.sousTitre)}</div>` : ''}
       </td>
       ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true) + cel(l.attendu, 'var(--color-text-muted)')
-          + cel(l.ecart, l.ecartCol, '', true) + cel(l.clients, l.clientsCol, '', true, l.clientsTitre)
+          + cel(l.ecart, l.ecartCol, '', true) + cel(l.clients, l.clientsCol, l.clientsSous, true, l.clientsTitre)
           + (c.rpMois ? cel(l.mois.ecart, l.mois.ecartCol, l.mois.n1 ? 'N-1 ' + l.mois.n1 : '', false, 'même période un an plus tôt — source API') : '')
           + `<td style="padding:9px 10px;${bord};text-align:right;${num};color:${l.fcCol};${sep}">${esc(l.fc)}</td>`
           + cel(l.lab, l.labCol) + cel(l.oh, l.ohCol)
@@ -3950,7 +3950,7 @@ function tplResultatJour(c, x){
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
                 + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
-                + cel(l.manque, l.manqueCoul, '', true, l.manqueTitre)
+                + cel(l.manque, l.manqueCoul, l.manqueSous, true, l.manqueTitre)
                 + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
                 + cel(l.ppc, '', '', false)
                 + cel(l.net, l.netCoul, l.netPct, true)
