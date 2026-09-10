@@ -293,45 +293,7 @@ function tplExploitation(c, x){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px">
       ${c.exMagasins.map(carte).join('')}
     </div>
-    <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:13px;font-weight:500">Analyse rentabilité — résultat net par jour</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.exRent.periode)}</div>
-        </div>
-        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
-          ${c.exRent.btns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
-        </div>
-      </div>
-      ${c.exRent.chargement ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel…</div>`
-        : (c.exRent.indispo ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">${esc(c.exRent.indispo)}</div>` : `
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${c.exRent.lignes.map(l => `
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <div style="width:210px;flex:none">
-              <div style="font-weight:500;font-size:12.5px">${esc(l.nom)}</div>
-              ${l.total ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(l.total)}</div>` : ''}
-            </div>
-            ${l.motif ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.motif)}</div>` : `
-            <div style="display:flex;gap:5px;flex-wrap:wrap">
-              ${l.chips.map(ch => ch.go ? `
-                <button ${x.A(ch.go)} title="${esc(ch.title)}" style="border:none;cursor:pointer;font-family:var(--font-ui);border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
-                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
-                  <span style="display:block;font-size:${ch.semaine ? '12px' : '10px'};font-weight:600;margin-top:1px">${esc(ch.pct)}</span>
-                </button>` : `
-                <span title="${esc(ch.title)}" style="display:inline-block;border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
-                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
-                  <span style="display:block;font-size:${ch.semaine ? '11px' : '10px'};margin-top:1px">${esc(ch.pct)}</span>
-                </span>`).join('')}
-            </div>`}
-          </div>`).join('')}
-      </div>
-      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--color-text-muted)">
-        <span style="font-weight:500">Résultat net :</span>
-        ${c.exRent.legende.map(g => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;${g.st}"></i> ${esc(g.lib)}</span>`).join('')}
-        ${c.exRent.source ? `<span style="margin-left:auto">${esc(c.exRent.source)}</span>` : ''}
-      </div>`)}
-    </div>
+    ${tplRentabilite(c, x)}
     <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
         <div>
@@ -3641,6 +3603,51 @@ function tplMktTypes(c, x){
    dessous la cascade du magasin, sa ventilation par catégorie et la place du
    jour dans son mois. Sans sélection, la page garde les petites ventilations :
    elles montrent où cliquer. */
+/** La heatmap de rentabilité — résultat net par jour. Sert P&L magasins et Résultat › Mois. */
+function tplRentabilite(c, x){
+  const { esc } = x;
+  return `
+    <div style="margin-top:16px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:500">Analyse rentabilité — résultat net par jour</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.exRent.periode)}</div>
+        </div>
+        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:9px">
+          ${c.exRent.btns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+        </div>
+      </div>
+      ${c.exRent.chargement ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel…</div>`
+        : (c.exRent.indispo ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">${esc(c.exRent.indispo)}</div>` : `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${c.exRent.lignes.map(l => `
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="width:210px;flex:none">
+              <div style="font-weight:500;font-size:12.5px">${esc(l.nom)}</div>
+              ${l.total ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(l.total)}</div>` : ''}
+            </div>
+            ${l.motif ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.motif)}</div>` : `
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              ${l.chips.map(ch => ch.go ? `
+                <button ${x.A(ch.go)} title="${esc(ch.title)}" style="border:none;cursor:pointer;font-family:var(--font-ui);border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
+                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:${ch.semaine ? '12px' : '10px'};font-weight:600;margin-top:1px">${esc(ch.pct)}</span>
+                </button>` : `
+                <span title="${esc(ch.title)}" style="display:inline-block;border-radius:8px;text-align:center;${ch.semaine ? 'width:62px;padding:6px 0' : 'min-width:34px;padding:5px 3px'};${ch.st}">
+                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:${ch.semaine ? '11px' : '10px'};margin-top:1px">${esc(ch.pct)}</span>
+                </span>`).join('')}
+            </div>`}
+          </div>`).join('')}
+      </div>
+      <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:12px;padding-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--color-text-muted)">
+        <span style="font-weight:500">Résultat net :</span>
+        ${c.exRent.legende.map(g => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;${g.st}"></i> ${esc(g.lib)}</span>`).join('')}
+        ${c.exRent.source ? `<span style="margin-left:auto">${esc(c.exRent.source)}</span>` : ''}
+      </div>`)}
+    </div>`;
+}
+
 /** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
 function tplResultat(c, x){
   const { esc } = x;
@@ -3786,6 +3793,7 @@ function tplResultatPeriode(c, x){
         <div style="display:flex;align-items:center;gap:10px">
           ${c.rpPjTxt ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpPjTxt)}</span>` : ''}
           <button ${x.A(c.rpRegler)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Régler la pondération des jours</button>
+          ${c.rpPdfHref ? `<a href="${esc(c.rpPdfHref)}" target="_blank" rel="noopener" title="Une page réseau, puis une page par magasin : budget, écart en clients, compte de résultat, jour par jour" style="display:inline-flex;align-items:center;height:29px;padding:0 14px;border-radius:999px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:500;text-decoration:none">PDF du mois</a>` : ''}
         </div>
       </div>
       ${c.rpPjMotif ? `<div style="font-size:12px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:8px 12px;border-radius:8px;margin-bottom:12px">${esc(c.rpPjMotif)}</div>` : ''}
@@ -3829,6 +3837,7 @@ function tplResultatPeriode(c, x){
       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>
     </div>
 
+    ${c.rpRentab ? tplRentabilite(c, x).replace('margin-top:16px;', '') + (c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : '') : ''}
     ${c.rpMois ? `
     <div style="${carte};padding:17px 19px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">

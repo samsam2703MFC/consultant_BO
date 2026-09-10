@@ -6905,6 +6905,92 @@ class App {
    * et l'objectif de chacune vient du budget mensuel réparti par la
    * pondération réseau des jours (Paramètres du budget).
    */
+  /**
+   * La heatmap de rentabilité — le résultat net par jour et par magasin.
+   * Elle sert deux écrans : P&L magasins (semaine pleine par défaut) et
+   * Résultat › Mois (le mois en cours).
+   */
+  valsRentabilite(common, defaut){
+    // --- rentabilité par jour, comme l'« Analyse rentabilité » de la PWA :
+    // résultat net = marge brute − labour/j − overhead/j (mois ÷ jours ouverts)
+    const hp = this.state.exRentPer || defaut;
+    const hz = this.state.exRent;
+    if (!hz || hz.per !== hp) { setTimeout(() => this.exRentCharge(hp), 0); }
+    const JR = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
+    const JRL = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    // Les paliers de la PWA : rouge sous zéro, orange 0–5, verts 5–25, doré au-delà.
+    const teinte = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
+      : p < 0 ? 'background:#8D1D2C;color:#fff' : p < 5 ? 'background:#C17A2A;color:#fff'
+      : p < 10 ? 'background:#A8B545;color:#fff' : p < 15 ? 'background:#7CB342;color:#fff'
+      : p < 25 ? 'background:#3D8B44;color:#fff' : 'background:#C9A227;color:#fff';
+    const fp1 = v => v == null ? '' : v.toFixed(1).replace('.', ',') + ' %';
+    const hd = hz && hz.d;
+    const ongR = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
+      + 'padding:4px 11px;border-radius:7px;'
+      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
+            : 'background:transparent;color:var(--color-text-muted)');
+    common.exRent = {
+      chargement: !hz || hz.chargement,
+      mode: hp,
+      indispo: hd && hd.indispo ? (hd.motif || 'API indisponible') : (hz && !hz.chargement && !hd ? 'La lecture de /exploitation/rentabilite a échoué — voir Diagnostic API.' : ''),
+      periode: hd && hd.du ? (hp === 'mois' ? 'mois en cours — ' : 'semaine ') + this.fDA(hd.du) + ' → ' + this.fDA(hd.au) : '',
+      btns: [['semaine', 'Semaine'], ['mois', 'Mois']].map(b => ({ label: b[1], st: ongR(hp === b[0]),
+        go: () => { this.setState({ exRentPer: b[0], exRentDet: null }); this.exRentCharge(b[0]); } })),
+      lignes: ((hd && hd.magasins) || []).map(m => ({
+        nom: m.nom,
+        motif: m.indispo ? (m.motif || 'sans réponse') : '',
+        total: m.total && m.total.netPct != null ? fp1(m.total.netPct) + ' · ' + this.fE(m.total.net) : '',
+        chips: (m.jours || []).map(j => ({
+          semaine: hp === 'semaine',
+          lib: hp === 'semaine' ? (JR[j.wd - 1] || '') : String(+j.date.slice(8, 10)),
+          pct: !j.ouvert ? (hp === 'semaine' ? 'fermé' : '·')
+            : (j.netPct == null ? '' : (hp === 'semaine' ? fp1(j.netPct) : Math.round(j.netPct) + '%')),
+          title: j.date + (j.ouvert && j.netPct != null ? ' — résultat net ' + fp1(j.netPct) : ''),
+          st: teinte(j.ouvert ? j.netPct : null),
+          go: j.ouvert ? () => this.setState({ exRentDet: { id: m.id, date: j.date } }) : null,
+        })),
+      })),
+      legende: [['< 0 %', teinte(-1)], ['0–5', teinte(2)], ['5–10', teinte(7)], ['10–15', teinte(12)], ['15–25', teinte(20)], ['> 25 %', teinte(30)]]
+        .map(l => ({ lib: l[0], st: l[1] })),
+      source: hd ? (hd.source || '') : '',
+    };
+    // La modale d'un jour — les lignes de l'addition, comme la PWA.
+    common.exRentDet = null;
+    const rd = this.state.exRentDet;
+    if (rd && hd && hd.magasins) {
+      const mg = hd.magasins.find(m => m.id === rd.id);
+      const j = mg && (mg.jours || []).find(x => x.date === rd.date);
+      if (mg && j) {
+        const pc = v => (v != null && j.ca > 0) ? (v / j.ca * 100).toFixed(1).replace('.', ',') + ' %' : null;
+        const jourExact = /quotidien/.test(mg.sourceJour || '');
+        common.exRentDet = {
+          titre: (JRL[j.wd - 1] || '') + ' ' + this.fDA(j.date),
+          magasin: mg.nom,
+          close: () => this.setState({ exRentDet: null }),
+          // Montants au centime, comme la PWA : l'addition doit tomber juste.
+          lignes: [
+            { op: '', lib: 'Chiffre d’affaires', pct: null, v: this.fU(j.ca), fort: false },
+            { op: '−', lib: 'Coût matière', pct: null, v: this.fU(j.coutMatiere), fort: false },
+            { op: '=', lib: 'Marge brute', pct: fp1(j.margePct), v: this.fU(j.margeBrute), fort: true },
+            // Le libellé dit d'où vient le montant : le jour même quand le
+            // panel sert son P&L quotidien, une moyenne du mois sinon. Lire
+            // « mois ÷ jours ouverts » sur un chiffre réellement journalier
+            // ferait douter du bon chiffre.
+            { op: '−', lib: 'Labour' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.labourJour), v: j.labourJour != null ? this.fU(j.labourJour) : 'manque API', fort: false },
+            { op: '−', lib: 'Overhead' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fU(j.overheadJour) : 'manque API', fort: false },
+            { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fU(j.net) : '', fort: true,
+              col: j.net == null ? 'var(--color-text-muted)' : (j.net >= 0 ? '#2d7a3e' : '#8D1D2C') },
+          ],
+          sous: j.tickets != null ? (j.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + this.fU(j.panier)) : '',
+          motif: j.motifNet || '',
+          note: jourExact
+            ? 'Chiffres du jour, servis par le P&L quotidien du panel — rien n’est réparti.'
+            : 'Labour et overhead du mois répartis par jour d’ouverture'
+              + (mg.joursOuverts ? ' (' + mg.joursOuverts + ' jours ce mois-ci)' : ''),
+        };
+      }
+    }
+  }
   valsResultatOnglets(common){
     const S = this.state, D = this.D;
     const on = S.rjOnglet || 'jour';
@@ -7097,6 +7183,12 @@ class App {
       ? ['Magasin', 'Objectif', 'Réalisé', 'Attendu à ce jour', 'Écart', 'Clients manquants']
       : ['Magasin', 'Budget', 'Ventes', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
     common.rpInvite = !sel ? 'Ouvrez une ligne : ce qu’il manque et en combien de clients, ce qu’il faut pour tenir l’objectif, le compte de résultat, et le mois du magasin.' : '';
+    // Sous le mois : la rentabilité jour par jour (le panel ne la sert que
+    // pour le mois en cours) et le PDF du mois — une page réseau, une page
+    // par magasin.
+    common.rpRentab = vue === 'mois' && !S.rpDate;
+    if (common.rpRentab) { this.valsRentabilite(common, 'mois'); }
+    common.rpPdfHref = vue === 'mois' ? API_BASE + '/exploitation/mois.pdf' + (S.rpDate ? '?date=' + encodeURIComponent(S.rpDate) : '') : '';
 
     // --- le détail du magasin ouvert
     const m = (r.magasins || []).find(m2 => m2.shopId === sel && m2.ouvert) || null;
@@ -9569,85 +9661,7 @@ class App {
         col: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
         pt: m.ecart == null ? 'transparent' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)') }))
     };
-    // --- rentabilité par jour, comme l'« Analyse rentabilité » de la PWA :
-    // résultat net = marge brute − labour/j − overhead/j (mois ÷ jours ouverts)
-    const hp = this.state.exRentPer || 'semaine';
-    const hz = this.state.exRent;
-    if (!hz || hz.per !== hp) { setTimeout(() => this.exRentCharge(hp), 0); }
-    const JR = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
-    const JRL = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-    // Les paliers de la PWA : rouge sous zéro, orange 0–5, verts 5–25, doré au-delà.
-    const teinte = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
-      : p < 0 ? 'background:#8D1D2C;color:#fff' : p < 5 ? 'background:#C17A2A;color:#fff'
-      : p < 10 ? 'background:#A8B545;color:#fff' : p < 15 ? 'background:#7CB342;color:#fff'
-      : p < 25 ? 'background:#3D8B44;color:#fff' : 'background:#C9A227;color:#fff';
-    const fp1 = v => v == null ? '' : v.toFixed(1).replace('.', ',') + ' %';
-    const hd = hz && hz.d;
-    const ongR = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
-      + 'padding:4px 11px;border-radius:7px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exRent = {
-      chargement: !hz || hz.chargement,
-      mode: hp,
-      indispo: hd && hd.indispo ? (hd.motif || 'API indisponible') : (hz && !hz.chargement && !hd ? 'La lecture de /exploitation/rentabilite a échoué — voir Diagnostic API.' : ''),
-      periode: hd && hd.du ? (hp === 'mois' ? 'mois en cours — ' : 'semaine ') + this.fDA(hd.du) + ' → ' + this.fDA(hd.au) : '',
-      btns: [['semaine', 'Semaine'], ['mois', 'Mois']].map(b => ({ label: b[1], st: ongR(hp === b[0]),
-        go: () => { this.setState({ exRentPer: b[0], exRentDet: null }); this.exRentCharge(b[0]); } })),
-      lignes: ((hd && hd.magasins) || []).map(m => ({
-        nom: m.nom,
-        motif: m.indispo ? (m.motif || 'sans réponse') : '',
-        total: m.total && m.total.netPct != null ? fp1(m.total.netPct) + ' · ' + this.fE(m.total.net) : '',
-        chips: (m.jours || []).map(j => ({
-          semaine: hp === 'semaine',
-          lib: hp === 'semaine' ? (JR[j.wd - 1] || '') : String(+j.date.slice(8, 10)),
-          pct: !j.ouvert ? (hp === 'semaine' ? 'fermé' : '·')
-            : (j.netPct == null ? '' : (hp === 'semaine' ? fp1(j.netPct) : Math.round(j.netPct) + '%')),
-          title: j.date + (j.ouvert && j.netPct != null ? ' — résultat net ' + fp1(j.netPct) : ''),
-          st: teinte(j.ouvert ? j.netPct : null),
-          go: j.ouvert ? () => this.setState({ exRentDet: { id: m.id, date: j.date } }) : null,
-        })),
-      })),
-      legende: [['< 0 %', teinte(-1)], ['0–5', teinte(2)], ['5–10', teinte(7)], ['10–15', teinte(12)], ['15–25', teinte(20)], ['> 25 %', teinte(30)]]
-        .map(l => ({ lib: l[0], st: l[1] })),
-      source: hd ? (hd.source || '') : '',
-    };
-    // La modale d'un jour — les lignes de l'addition, comme la PWA.
-    common.exRentDet = null;
-    const rd = this.state.exRentDet;
-    if (rd && hd && hd.magasins) {
-      const mg = hd.magasins.find(m => m.id === rd.id);
-      const j = mg && (mg.jours || []).find(x => x.date === rd.date);
-      if (mg && j) {
-        const pc = v => (v != null && j.ca > 0) ? (v / j.ca * 100).toFixed(1).replace('.', ',') + ' %' : null;
-        const jourExact = /quotidien/.test(mg.sourceJour || '');
-        common.exRentDet = {
-          titre: (JRL[j.wd - 1] || '') + ' ' + this.fDA(j.date),
-          magasin: mg.nom,
-          close: () => this.setState({ exRentDet: null }),
-          // Montants au centime, comme la PWA : l'addition doit tomber juste.
-          lignes: [
-            { op: '', lib: 'Chiffre d’affaires', pct: null, v: this.fU(j.ca), fort: false },
-            { op: '−', lib: 'Coût matière', pct: null, v: this.fU(j.coutMatiere), fort: false },
-            { op: '=', lib: 'Marge brute', pct: fp1(j.margePct), v: this.fU(j.margeBrute), fort: true },
-            // Le libellé dit d'où vient le montant : le jour même quand le
-            // panel sert son P&L quotidien, une moyenne du mois sinon. Lire
-            // « mois ÷ jours ouverts » sur un chiffre réellement journalier
-            // ferait douter du bon chiffre.
-            { op: '−', lib: 'Labour' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.labourJour), v: j.labourJour != null ? this.fU(j.labourJour) : 'manque API', fort: false },
-            { op: '−', lib: 'Overhead' + (jourExact ? ' (du jour)' : ' (mois ÷ jours ouverts)'), pct: pc(j.overheadJour), v: j.overheadJour != null ? this.fU(j.overheadJour) : 'manque API', fort: false },
-            { op: '=', lib: 'Résultat net', pct: fp1(j.netPct), v: j.net != null ? this.fU(j.net) : '', fort: true,
-              col: j.net == null ? 'var(--color-text-muted)' : (j.net >= 0 ? '#2d7a3e' : '#8D1D2C') },
-          ],
-          sous: j.tickets != null ? (j.tickets.toLocaleString('fr-BE') + ' tickets · panier ' + this.fU(j.panier)) : '',
-          motif: j.motifNet || '',
-          note: jourExact
-            ? 'Chiffres du jour, servis par le P&L quotidien du panel — rien n’est réparti.'
-            : 'Labour et overhead du mois répartis par jour d’ouverture'
-              + (mg.joursOuverts ? ' (' + mg.joursOuverts + ' jours ce mois-ci)' : ''),
-        };
-      }
-    }
+    this.valsRentabilite(common, 'semaine');
     // Détail d'un magasin. Chaque bloc porte son état : « ok » quand l'API a
     // répondu, « attente » sinon. Aucun chiffre n'est fabriqué pour combler —
     // un écran qui annonce ce qui lui manque vaut mieux qu'un écran rempli

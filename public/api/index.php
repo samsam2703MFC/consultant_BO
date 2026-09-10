@@ -20,6 +20,7 @@ require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/resultat.php';
+require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -106,6 +107,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/jour'             => ep_exploitation_jour(),
             $path === '/exploitation/ponderation-jours' => ep_ponderation_jours(),
             $path === '/exploitation/periode'          => ep_exploitation_periode(),
+            $path === '/exploitation/mois.pdf'         => ep_exploitation_mois_pdf(),
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
