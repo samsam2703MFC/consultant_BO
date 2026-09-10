@@ -2229,6 +2229,50 @@ function tplBudgetParam(c, x){
         </tbody>
       </table>
       </div>`}
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-top:3px solid var(--color-primary);border-radius:12px;padding:20px 22px">
+        <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px">
+            <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Pondération des jours</div>
+            <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">Part de chaque jour de la semaine dans le chiffre d'affaires, calculée sur l'historique réel du réseau. Elle répartit le budget mensuel en objectifs du jour et de la semaine — identique pour tous les magasins.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button ${x.A(c.pjRecalculer)} ${c.pjEtat === 'chargement' ? 'disabled' : ''} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">${c.pjEtat === 'chargement' ? 'Calcul en cours…' : 'Recalculer'}</button>
+            ${c.pjAdoptable ? `<button ${x.A(c.pjAdopter)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Adopter cette pondération</button>` : ''}
+          </div>
+        </div>
+        ${c.pjMotif ? `<div style="margin-top:14px;font-size:12.5px;color:var(--color-text-muted);padding:10px 12px;border:0.5px dashed var(--color-border-secondary);border-radius:8px">${esc(c.pjMotif)}</div>` : ''}
+        ${c.pjFaible ? `<div style="margin-top:14px;font-size:12px;color:var(--pkg-abricot);padding:8px 12px;border:0.5px solid var(--pkg-abricot);border-radius:8px">Couverture faible : une partie des jours-magasins manque dans l'historique. La forme de la semaine reste indicative — à adopter en connaissance de cause.</div>` : ''}
+        ${c.pjLignes.length ? `
+        <div style="overflow-x:auto;margin-top:14px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="${lbl}">
+            <th style="text-align:left;padding:6px 10px 8px 0;font-weight:500">Jour</th>
+            <th style="text-align:right;padding:6px 6px 8px;font-weight:500">Poids proposé</th>
+            <th style="text-align:left;padding:6px 6px 8px;font-weight:500;width:32%"></th>
+            <th style="text-align:right;padding:6px 6px 8px;font-weight:500" title="CA moyen par magasin et par occurrence de ce jour">CA moyen / jour</th>
+            <th style="text-align:right;padding:6px 6px 8px;font-weight:500" title="Nombre de jours-magasins servis pour ce jour de la semaine">Occurrences</th>
+            <th style="text-align:right;padding:6px 6px 8px;font-weight:500">Actuel</th>
+            <th style="text-align:right;padding:6px 0 8px 6px;font-weight:500">Écart</th>
+          </tr></thead>
+          <tbody>
+            ${c.pjLignes.map(l => `
+            <tr style="border-top:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:8px 10px 8px 0;font-weight:500">${esc(l.nom)}</td>
+              <td style="padding:8px 6px;text-align:right;white-space:nowrap;font-weight:500">${l.poids}</td>
+              <td style="padding:8px 6px"><div style="height:8px;border-radius:4px;background:var(--color-primary);opacity:.85;width:${l.barre}%"></div></td>
+              <td style="padding:8px 6px;text-align:right;white-space:nowrap">${l.moyenne}</td>
+              <td style="padding:8px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${l.occ}</td>
+              <td style="padding:8px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${l.actuel || '—'}</td>
+              <td style="padding:8px 0 8px 6px;text-align:right;white-space:nowrap;color:${l.ecartCol}">${l.ecart || '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--color-text-muted)">
+          <span>${esc(c.pjBase)}</span>
+          <span>${c.pjAdopteLe ? 'Pondération en vigueur adoptée le ' + esc(c.pjAdopteLe) : 'Aucune pondération adoptée : les objectifs du jour et de la semaine ne se calculent pas encore.'}</span>
+        </div>` : (c.pjRien && !c.pjMotif ? '' : (c.pjLignes.length ? '' : `<div style="margin-top:12px;font-size:11px;color:var(--color-text-muted)">${c.pjAdopteLe ? 'Pondération en vigueur adoptée le ' + esc(c.pjAdopteLe) : 'Aucune pondération adoptée pour l’instant.'}</div>`))}
+      </div>
     </div>
     </div>
   </div>`;

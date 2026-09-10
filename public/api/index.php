@@ -18,6 +18,7 @@ require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/smtp.php';
+require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -101,6 +102,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/reseau'           => ep_exploitation_reseau(),
             $path === '/exploitation/rentabilite'      => ep_exploitation_rentabilite(),
             $path === '/exploitation/jour'             => ep_exploitation_jour(),
+            $path === '/exploitation/ponderation-jours' => ep_ponderation_jours(),
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
@@ -224,6 +226,7 @@ function route(string $method, string $path): mixed
 
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
+    if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
     if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }

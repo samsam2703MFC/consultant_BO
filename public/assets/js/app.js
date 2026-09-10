@@ -1407,6 +1407,7 @@ class App {
     // et les réglages annuels lisent le même magasin, le même exercice et le
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
+    if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
@@ -6486,6 +6487,71 @@ class App {
     }
   }
 
+  /* ── POIDS DES JOURS DE LA SEMAINE ───────────────────────────────────
+     L'objectif d'un magasin est posé au MOIS. Pour en tirer un objectif du
+     JOUR il faut savoir ce que ce jour pèse : un jeudi ne vaut pas un samedi.
+     Ces poids ne s'inventent pas — ils se calculent sur l'historique réel du
+     réseau (moyenne par occurrence, ramenée à 100), puis s'adoptent à la
+     main. Tant que rien n'est adopté, aucun objectif du jour n'est affiché
+     ailleurs : mieux vaut ne rien dire que de mesurer contre une invention. */
+  pjCharge(force){
+    if (this._pjEnCours) { return; }
+    if (this.D.pj && !force) { return; }
+    this._pjEnCours = true;
+    if (force) { this.setState({ pjEtat: 'calcul' }); }
+    readOne('/exploitation/ponderation-jours').then(d => {
+      this._pjEnCours = false;
+      this.D.pj = d || { erreur: true };
+      this.setState({ pjEtat: '' });
+    }).catch(() => { this._pjEnCours = false; this.D.pj = { erreur: true }; this.setState({ pjEtat: '' }); });
+  }
+  valsPonderation(common){
+    const S = this.state, P = this.D.pj || null;
+    const fP = v => (v == null) ? '' : String(Number(v).toFixed(2)).replace('.', ',') + ' %';
+    common.pjEtat = S.pjEtat || (P ? '' : 'chargement');
+    common.pjRecalculer = () => this.pjCharge(true);
+    common.pjLignes = []; common.pjAdopte = []; common.pjBase = ''; common.pjMotif = '';
+    common.pjAdoptable = false; common.pjAdopteLe = '';
+    if (!P) { common.pjMotif = 'Lecture de l’historique…'; return; }
+    if (P.erreur) { common.pjMotif = 'La lecture de /exploitation/ponderation-jours a échoué — voir Diagnostic API.'; return; }
+
+    const cal = P.calcul || {};
+    if (cal.ok) {
+      common.pjBase = 'Calculé sur ' + cal.mois + ' mois — du ' + this.fD(cal.du) + ' au ' + this.fD(cal.au)
+        + ' · ' + cal.magasins + ' magasin(s) · ' + cal.servi + ' jours-magasins servis'
+        + (cal.couverture != null ? ' (' + String(cal.couverture).replace('.', ',') + ' % de couverture)' : '');
+      // La couverture DIT ce sur quoi le calcul repose : sous 80 %, la forme
+      // de la semaine tient à trop peu de jours pour qu'on l'adopte les yeux
+      // fermés — on le signale sans interdire.
+      common.pjFaible = cal.couverture != null && cal.couverture < 80;
+      common.pjAdoptable = true;
+      const adopte = {};
+      (P.adopte || []).forEach(a => { adopte[a.jour] = a.poids; });
+      common.pjLignes = (cal.lignes || []).map(l => {
+        const av = adopte[l.jour];
+        const ec = (av == null) ? null : l.poids - av;
+        return { nom: l.nom, court: l.court, poids: fP(l.poids), poidsNu: l.poids,
+          moyenne: this.fE(l.moyenne), occ: String(l.occ),
+          barre: Math.max(2, Math.round(100 * l.poids / Math.max(...cal.lignes.map(z => z.poids)))),
+          actuel: av == null ? '' : fP(av),
+          ecart: ec == null ? '' : (ec > 0 ? '+' : '') + String(ec.toFixed(2)).replace('.', ',') + ' pt',
+          ecartCol: (ec == null || Math.abs(ec) < 0.5) ? 'var(--color-text-muted)'
+            : (ec > 0 ? '#2d7a3e' : 'var(--color-primary)') };
+      });
+      common.pjAdopter = () => {
+        const poids = {};
+        (cal.lignes || []).forEach(l => { poids[l.jour] = l.poids; });
+        this.api('POST', '/exploitation/ponderation-jours', { poids, base: common.pjBase }).then(r => {
+          if (r && r.ok) { this.notify('Pondération des jours adoptée'); this.D.pj = null; this.pjCharge(true); }
+        });
+      };
+    } else {
+      common.pjMotif = cal.motif || 'Le calcul n’a rien rendu.';
+      if (Array.isArray(cal.motifs) && cal.motifs.length) { common.pjMotif += ' — ' + cal.motifs.join(' · '); }
+    }
+    common.pjAdopteLe = P.adopteLe ? this.fD(String(P.adopteLe).slice(0, 10)) : '';
+    common.pjRien = !(P.adopte || []).length;
+  }
   valsResultatJour(common){
     const S = this.state, D = this.D;
     const r = (D.rjour || {})[this.rjCle()];
