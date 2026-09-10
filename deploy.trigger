@@ -271,3 +271,4 @@ deploy 1788885259 usage : taux par affichage + ecrans hors rail
 2026-09-10T08:44:40Z rentabilite-pdf-mois
 2026-09-10T08:52:18Z rentabilite-drop
 2026-09-10T08:56:39Z clients-calcul
+2026-09-10T13:43:46Z performance-onglets
