@@ -3765,6 +3765,24 @@ function tplResultatPeriode(c, x){
               </tr>`).join('')}
             </table>
             ${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
+          ${d.rentab ? bloc('Le résultat net, jour par jour' + (d.rentab.total ? ' — ' + d.rentab.total : ''), d.rentab.chargement
+            ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la rentabilité…</div>`
+            : (d.rentab.motif ? `<div style="font-size:12px;color:var(--color-text-muted)">${esc(d.rentab.motif)}</div>` : `
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              ${d.rentab.chips.map(ch => ch.go ? `
+                <button ${x.A(ch.go)} title="${esc(ch.title)}" style="border:none;cursor:pointer;font-family:var(--font-ui);border-radius:8px;text-align:center;min-width:34px;padding:5px 3px;${ch.st}">
+                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:10px;font-weight:600;margin-top:1px">${esc(ch.pct)}</span>
+                </button>` : `
+                <span title="${esc(ch.title)}" style="display:inline-block;border-radius:8px;text-align:center;min-width:34px;padding:5px 3px;${ch.st}">
+                  <span style="display:block;font-size:9.5px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:10px;margin-top:1px">${esc(ch.pct)}</span>
+                </span>`).join('')}
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:10.5px;color:var(--color-text-muted)">
+              ${d.rentab.legende.map(g => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;vertical-align:-1px;${g.st}"></i> ${esc(g.lib)}</span>`).join('')}
+              <span style="margin-left:auto">cliquez un jour pour l’addition</span>
+            </div>`)) : ''}
           ${bloc('Le mois de ce magasin', d.moisMag.etat === 'chargement' ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du mois…</div>` : `
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
               ${[['CA du mois', d.moisMag.ca, ''], ['N-1', d.moisMag.n1, 'var(--color-text-muted)'], ['Écart', d.moisMag.ecart, d.moisMag.ecartCol], ['Tickets', d.moisMag.tickets, ''], ['Panier', d.moisMag.panier, '']].map(k => `
@@ -3837,7 +3855,7 @@ function tplResultatPeriode(c, x){
       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>
     </div>
 
-    ${c.rpRentab ? tplRentabilite(c, x).replace('margin-top:16px;', '') + (c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : '') : ''}
+    ${c.rpRentab && c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}
     ${c.rpMois ? `
     <div style="${carte};padding:17px 19px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">

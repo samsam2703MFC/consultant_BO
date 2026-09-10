@@ -6937,7 +6937,7 @@ class App {
       btns: [['semaine', 'Semaine'], ['mois', 'Mois']].map(b => ({ label: b[1], st: ongR(hp === b[0]),
         go: () => { this.setState({ exRentPer: b[0], exRentDet: null }); this.exRentCharge(b[0]); } })),
       lignes: ((hd && hd.magasins) || []).map(m => ({
-        nom: m.nom,
+        id: String(m.id), nom: m.nom,
         motif: m.indispo ? (m.motif || 'sans réponse') : '',
         total: m.total && m.total.netPct != null ? fp1(m.total.netPct) + ' · ' + this.fE(m.total.net) : '',
         chips: (m.jours || []).map(j => ({
@@ -7183,9 +7183,10 @@ class App {
       ? ['Magasin', 'Objectif', 'Réalisé', 'Attendu à ce jour', 'Écart', 'Clients manquants']
       : ['Magasin', 'Budget', 'Ventes', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
     common.rpInvite = !sel ? 'Ouvrez une ligne : ce qu’il manque et en combien de clients, ce qu’il faut pour tenir l’objectif, le compte de résultat, et le mois du magasin.' : '';
-    // Sous le mois : la rentabilité jour par jour (le panel ne la sert que
-    // pour le mois en cours) et le PDF du mois — une page réseau, une page
-    // par magasin.
+    // Le résultat net jour par jour (le panel ne le sert que pour le mois en
+    // cours) se lit ici, mais ne s'affiche que dans le drop du magasin : la
+    // page reste une table, le détail vit dans la ligne qu'on ouvre. Et le
+    // PDF du mois — une page réseau, une page par magasin.
     common.rpRentab = vue === 'mois' && !S.rpDate;
     if (common.rpRentab) { this.valsRentabilite(common, 'mois'); }
     common.rpPdfHref = vue === 'mois' ? API_BASE + '/exploitation/mois.pdf' + (S.rpDate ? '?date=' + encodeURIComponent(S.rpDate) : '') : '';
@@ -7213,6 +7214,16 @@ class App {
         effort: fS(eff), effortCol: eff == null ? 'var(--color-text-muted)' : (eff > 0 ? '#C0182B' : '#2d7a3e'),
         effortClients: effClients == null ? '' : ((effClients > 0 ? '+' : '') + fInt(effClients) + ' clients'),
         clos: !restants.length },
+      // Le résultat net jour par jour de CE magasin — les mêmes cases que
+      // l'analyse rentabilité de P&L magasins, avec l'addition au clic.
+      rentab: !common.rpRentab ? null : (() => {
+        const R2 = common.exRent || {};
+        if (R2.chargement) { return { chargement: true }; }
+        if (R2.indispo) { return { motif: R2.indispo }; }
+        const l = (R2.lignes || []).find(l2 => l2.id === String(m.shopId));
+        return l ? { chips: l.chips, total: l.total, motif: l.motif, legende: R2.legende || [], periode: R2.periode || '' }
+          : { motif: 'pas de résultat net jour par jour pour ce magasin' };
+      })(),
       cascade: [
         { l: 'Ventes TTC', v: fE(m.realise), p: '', coul: 'var(--color-text)', fort: true, w: 100 },
         { l: '− Coût matière', v: fE(-m.coutMatiere), p: fPct(m.coutMatierePct), coul: feu(m.coutMatierePct, seuils.food), w: barre(m.coutMatierePct), seuil: 'seuil ' + fPct(seuils.food, 0) },
