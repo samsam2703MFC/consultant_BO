@@ -105,6 +105,12 @@ function ep_exploitation_periode(): array
         // date transmise est ignorée). Il ne sert qu'aux jours de ce mois-là.
         if (isset($moisTouches[$moisCourant])) {
             $paths['pnlM' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj;
+            // Les frais généraux DU JOUR tels que le panel les alloue lui-même
+            // (daily-summary.shop_cost) : la même source que Résultat du jour.
+            // Mesuré : /pnl?period=month rend overhead = 0 sur deux magasins
+            // là où l'allocation quotidienne est bien là — sans elle, le
+            // résultat de la semaine se lisait sans frais généraux.
+            $paths['ds' . $id] = '/shops/' . $id . '/statistics/daily-summary?date=' . $auj;
         }
     }
     $res = PanelApi::getParallele($paths, 6);
@@ -164,7 +170,10 @@ function ep_exploitation_periode(): array
             if ($v !== null && $v > 0) { $ohMois = $v; }
         }
         $labJ = ($labourMois !== null && $joursOuvertsC > 0) ? $labourMois / $joursOuvertsC : null;
-        $ohJ  = ($ohMois !== null && $joursOuvertsC > 0) ? $ohMois / $joursOuvertsC : null;
+        $ohJ  = ($ohMois !== null && $ohMois > 0 && $joursOuvertsC > 0) ? $ohMois / $joursOuvertsC : null;
+        $ds = $res['ds' . $id] ?? null;
+        $dsOh = is_array($ds) ? nombreOuNull($ds, ['shop_cost']) : null;
+        if ($dsOh !== null && $dsOh > 0) { $ohJ = $dsOh; }
 
         $jours = []; $objectif = 0.0; $attendu = 0.0; $prevu = 0.0; $realise = 0.0; $tickets = 0; $mb = 0.0;
         $labour = 0.0; $oh = 0.0; $joursOuvertsPasses = 0; $joursHorsMoisC = 0; $sansBudget = [];
