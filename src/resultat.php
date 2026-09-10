@@ -174,6 +174,12 @@ function ep_exploitation_periode(): array
         $ds = $res['ds' . $id] ?? null;
         $dsOh = is_array($ds) ? nombreOuNull($ds, ['shop_cost']) : null;
         if ($dsOh !== null && $dsOh > 0) { $ohJ = $dsOh; }
+        // Deux magasins n'ont AUCUN frais général encodé au panel (mesuré :
+        // /pnl et daily-summary rendent 0). Résultat du jour les compte à
+        // zéro et le dit ; on fait pareil ici, sinon la semaine afficherait
+        // « sans réponse » là où la journée affiche un résultat.
+        $ohManque = $ohJ === null && $labJ !== null;
+        if ($ohManque) { $ohJ = 0.0; }
 
         $jours = []; $objectif = 0.0; $attendu = 0.0; $prevu = 0.0; $realise = 0.0; $tickets = 0; $mb = 0.0;
         $labour = 0.0; $oh = 0.0; $joursOuvertsPasses = 0; $joursHorsMoisC = 0; $sansBudget = [];
@@ -240,7 +246,7 @@ function ep_exploitation_periode(): array
             'labour' => $netOk ? round($labour, 2) : null, 'labourPct' => $netOk ? $pct($labour) : null,
             'overhead' => $netOk ? round($oh, 2) : null, 'overheadPct' => $netOk ? $pct($oh) : null,
             'net' => $net !== null ? round($net, 2) : null, 'netPct' => $pct($net),
-            'motifNet' => $netOk ? null : ($joursHorsMoisC > 0
+            'motifNet' => $netOk ? ($ohManque ? 'frais généraux absents du panel pour ce magasin — résultat avant frais généraux' : null) : ($joursHorsMoisC > 0
                 ? 'main-d’œuvre et frais généraux connus pour le mois courant seulement'
                 : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles'),
             'joursOuverts' => array_keys($wdOuverts),
