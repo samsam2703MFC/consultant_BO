@@ -1548,7 +1548,7 @@ class App {
         const nOuv = (exp.cible || 1) - 1; const contrib = nOuv * ((D.targets || {}).caMoyenOuverture || 0);
         const lfl = cfg.cible - run - contrib;
         common.hzAn = String(cfg.an); common.hzCible = this.fM(cfg.cible); common.hzRunrate = this.fM(run);
-        common.hzGap = '+' + this.fM(cfg.cible - run); common.hzOuv = nOuv + ' points de vente'; common.hzContrib = 'env. ' + this.fM(contrib);
+        common.hzGap = (cfg.cible - run >= 0 ? '+' : '−') + this.fM(Math.abs(cfg.cible - run)); common.hzOuv = nOuv + ' points de vente'; common.hzContrib = 'env. ' + this.fM(contrib);
         common.hzLfl = '+' + this.fM(Math.max(0, lfl)) + ' à trouver';
         const mkBar = (v, cl) => 'height:100%;border-radius:5px;background:' + cl + ';width:' + Math.min(100, v / cfg.cible * 100).toFixed(1) + '%';
         common.hzBars = [{ label: 'CA actuel (run-rate ' + this.open().length + ' magasins)', val: this.fM(run), st: mkBar(run, 'var(--color-primary)') },
@@ -1601,8 +1601,18 @@ class App {
         common.hzEcartCibleSt = ecartC == null ? '' : (ecartC >= 0 ? 'color:#2d7a3e' : 'color:#8D1D2C');
         // Sans cible encodée, la cible réseau affichée EST ce total — et le dit.
         if (!(cfg.cible > 0)) {
-          common.hzCible = this.fM(sommeObj + contrib);
+          const cibleEff = sommeObj + contrib;
+          common.hzCible = this.fM(cibleEff);
           common.hzCibleSrc = 'études de marché des ' + (this.open().length - nSans) + ' magasins + ' + nOuv + ' ouverture(s) — aucune cible réseau encodée';
+          // La carte raisonnait sur une cible à zéro : « écart à combler
+          // +-3,3 M€ ». Elle raisonne sur la somme des études.
+          const gap = cibleEff - run, lfl2 = Math.max(0, cibleEff - run - contrib);
+          common.hzGap = (gap >= 0 ? '+' : '−') + this.fM(Math.abs(gap));
+          common.hzLfl = '+' + this.fM(lfl2) + ' à trouver';
+          const mk2 = (v, cl) => 'height:100%;border-radius:5px;background:' + cl + ';width:' + (cibleEff > 0 ? Math.min(100, v / cibleEff * 100) : 0).toFixed(1) + '%';
+          common.hzBars = [{ label: 'CA actuel (run-rate ' + this.open().length + ' magasins)', val: this.fM(run), st: mk2(run, 'var(--color-primary)') },
+            { label: '+ Contribution des ' + nOuv + ' ouvertures prévues', val: this.fM(contrib), st: mk2(contrib, 'var(--color-secondary)') },
+            { label: '+ Croissance à périmètre constant requise', val: this.fM(lfl2), st: mk2(lfl2, '#c9a06a') }];
         } else { common.hzCibleSrc = 'cible réseau encodée (Paramètres)'; }
       }
     }
