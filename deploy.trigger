@@ -268,3 +268,4 @@ deploy 1788885259 usage : taux par affichage + ecrans hors rail
 2026-09-10T08:16:46Z frais-generaux-periode
 2026-09-10T08:24:18Z fg-absents
 2026-09-10T08:32:41Z chargement-resultat
+2026-09-10T08:44:40Z rentabilite-pdf-mois
