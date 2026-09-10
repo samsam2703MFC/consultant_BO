@@ -273,3 +273,4 @@ deploy 1788885259 usage : taux par affichage + ecrans hors rail
 2026-09-10T08:56:39Z clients-calcul
 2026-09-10T13:43:46Z performance-onglets
 2026-09-10T13:54:43Z objectifs-trimestres
+2026-09-10T13:56:45Z carte-objectifs
