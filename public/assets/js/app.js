@@ -1541,7 +1541,8 @@ class App {
         const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= MI; m++){ r += s.perf[E][m].ca; p += s.perf[E][m].caT; } return r < p; }).length;
         common.cumSous = sous + ' / ' + this.open().length;
       } else {
-        const cfg = (((D.targets || {}).ca) || {})[hz] || { an: this.meta.exercice, cible: 0 };
+        // Sans cible réseau encodée, l'horizon reste 3 ou 5 ans — pas l'exercice.
+        const cfg = (((D.targets || {}).ca) || {})[hz] || { an: E + (hz === 'h3' ? 2 : 4), cible: 0 };
         const exp = (((D.targets || {}).expansion) || {})[hz] || { an: this.meta.exercice, cible: 1, reel: 0 };
         let run = 0; for (let m = 0; m <= MI; m++) run += this.sum(E, m, 'ca'); run = run / NM * 12;
         const nOuv = (exp.cible || 1) - 1; const contrib = nOuv * ((D.targets || {}).caMoyenOuverture || 0);
@@ -1554,6 +1555,55 @@ class App {
           { label: '+ Contribution des ' + nOuv + ' ouvertures prévues', val: this.fM(contrib), st: mkBar(contrib, 'var(--color-secondary)') },
           { label: '+ Croissance à périmètre constant requise', val: this.fM(Math.max(0, lfl)), st: mkBar(Math.max(0, lfl), '#c9a06a') }];
         common.hzNote = (cfg.note || '').replace('{ouvertures}', nOuv).replace('{caMoyen}', this.fK((D.targets || {}).caMoyenOuverture || 0));
+        // ── L'OBJECTIF À 3 ET 5 ANS, MAGASIN PAR MAGASIN — d'après l'étude
+        //    de marché de Paramètres du budget : le potentiel à maturité et
+        //    la montée en régime (année 1, 2, 3, puis 100 %). C'est la même
+        //    règle que le CA théorique de l'exercice, prolongée : un magasin
+        //    en année 1 en 2026 est en année 3 en 2028 et à maturité en 2030.
+        //    Le réseau = la somme des magasins ouverts + les ouvertures
+        //    prévues ; la cible encodée, si elle existe, se compare à ce total.
+        const anH = +cfg.an || (E + (hz === 'h3' ? 2 : 4));
+        const annees = Array.from({ length: anH - E + 1 }, (_, k) => E + k);
+        common.hzAnnees = annees.map(a => ({ an: String(a), cible: a === anH }));
+        const budgets = D.budgets || [];
+        let sommeObj = 0, sommeRun = 0, nSans = 0;
+        const coefDe = (ramp, an) => an <= 1 ? +(ramp.a1 != null ? ramp.a1 : 70) : an === 2 ? +(ramp.a2 != null ? ramp.a2 : 80) : an === 3 ? +(ramp.a3 != null ? ramp.a3 : 90) : 100;
+        common.hzRows = this.open().map(st => {
+          const b = budgets.find(x => String(x.storeId) === String(st.id)) || null;
+          const em = (b && b.etudeMarche) || {};
+          const pot = +em.potentielMaturite || 0, anEx = +em.anneeExploitation || 1, ramp = em.monteeEnRegime || {};
+          let runS = 0; for (let m = 0; m <= MI; m++) { runS += (st.perf[E] && st.perf[E][m] && st.perf[E][m].ca) || 0; }
+          const run = runS / NM * 12;
+          if (pot <= 0) { nSans++; return { nom: st.nom, sansEtude: true, run: this.fK(run),
+            goEtude: () => this.setState({ screen: 'budgetparam', encStore: st.id }) }; }
+          const serie = annees.map((a, k) => { const anX = Math.min(4, anEx + k); const coef = coefDe(ramp, anX);
+            return { an: a, ca: pot * coef / 100, coef, anX, cible: a === anH }; });
+          const obj = serie[serie.length - 1].ca;
+          sommeObj += obj; sommeRun += run;
+          const cr = run > 0 ? obj / run - 1 : null;
+          return { nom: st.nom, sansEtude: false,
+            potentiel: this.fK(pot), anEx: 'année ' + anEx + (anEx >= 4 ? ' — à maturité' : ''),
+            annees: serie.map(x => ({ ca: this.fK(x.ca), coef: x.coef + ' %', anX: 'année ' + x.anX, cible: x.cible })),
+            objectif: this.fK(obj), run: this.fK(run),
+            croissance: cr == null ? '' : ((cr >= 0 ? '+' : '−') + this.fP(Math.abs(cr), 0)),
+            croissanceSt: cr == null ? 'color:var(--color-text-muted)' : (cr > 0.25 ? 'color:#8D1D2C;font-weight:600' : (cr > 0 ? 'color:#8a5a13;font-weight:500' : 'color:#2d7a3e;font-weight:500')),
+            goEtude: () => this.setState({ screen: 'budgetparam', encStore: st.id }) };
+        });
+        common.hzSans = nSans;
+        common.hzSommeObj = this.fM(sommeObj);
+        common.hzSommeRun = this.fM(sommeRun);
+        common.hzOuvContrib = this.fM(contrib);
+        common.hzTotal = this.fM(sommeObj + contrib);
+        // La cible ENCODÉE (Paramètres) contre ce que les études promettent.
+        common.hzCibleEncodee = cfg.cible > 0 ? this.fM(cfg.cible) : '';
+        const ecartC = cfg.cible > 0 ? (sommeObj + contrib) - cfg.cible : null;
+        common.hzEcartCible = ecartC == null ? '' : ((ecartC >= 0 ? '+' : '−') + this.fM(Math.abs(ecartC)) + ' (' + (ecartC >= 0 ? '+' : '−') + this.fP(Math.abs(ecartC / cfg.cible)) + ')');
+        common.hzEcartCibleSt = ecartC == null ? '' : (ecartC >= 0 ? 'color:#2d7a3e' : 'color:#8D1D2C');
+        // Sans cible encodée, la cible réseau affichée EST ce total — et le dit.
+        if (!(cfg.cible > 0)) {
+          common.hzCible = this.fM(sommeObj + contrib);
+          common.hzCibleSrc = 'études de marché des ' + (this.open().length - nSans) + ' magasins + ' + nOuv + ' ouverture(s) — aucune cible réseau encodée';
+        } else { common.hzCibleSrc = 'cible réseau encodée (Paramètres)'; }
       }
     }
 
@@ -10575,6 +10625,101 @@ class App {
         statut: nAl === 0 ? 'OK' : nAl + (nAl > 1 ? ' leviers à traiter' : ' levier à traiter') + (st.risk ? ' · sous-perf. 3 mois consécutifs' : '') }; });
     rows.sort((a, b) => b._mp - a._mp);
     common.mgRows = rows;
+    this.valsMargeTrimestres(common);
+  }
+
+  /**
+   * LES RATIOS PAR TRIMESTRE — un ratio à la fois, magasin par magasin, sur
+   * les trimestres des deux exercices lus. Un ratio trimestriel est la
+   * moyenne des mois PONDÉRÉE PAR LE CA (un petit mois ne pèse pas comme un
+   * gros) ; la marge nette est la somme des résultats sur la somme des ventes.
+   * Un trimestre entamé est marqué : on ne le compare pas à un trimestre plein
+   * sans le savoir.
+   */
+  valsMargeTrimestres(common){
+    const S = this.state, E = this.exo(), sx = this.seuils();
+    const sel = S.mgRatio || 'marge';
+    const RATIOS = [
+      ['marge', 'Marge nette', null, true],
+      ['food', 'Food cost', sx.f, false],
+      ['labour', 'Labour cost', sx.l, false],
+      ['overhead', 'Overhead', sx.o, false],
+    ];
+    const def = RATIOS.find(r => r[0] === sel) || RATIOS[0];
+    const seuil = def[2], hautBon = def[3];   // marge : plus c'est haut, mieux c'est ; coûts : l'inverse
+    common.mgtRatios = RATIOS.map(r => ({ cle: r[0], nom: r[1], on: r[0] === sel, go: () => this.setState({ mgRatio: r[0] }) }));
+    common.mgtNom = def[1];
+    common.mgtSeuil = seuil == null ? '' : 'seuil ' + String(seuil).replace('.', ',') + ' %';
+    // Les trimestres, de l'exercice précédent à aujourd'hui, ne gardant que
+    // ceux qui ont au moins un mois de chiffre.
+    const trims = [];
+    for (const y of [E - 1, E]) { for (let q = 0; q < 4; q++) { trims.push({ y, q, label: 'T' + (q + 1) + ' ' + String(y).slice(2), mois: [q * 3, q * 3 + 1, q * 3 + 2] }); } }
+    const valeur = (st, t) => {
+      let ca = 0, num = 0, n = 0, nMois = 0;
+      for (const m of t.mois) {
+        const c = st.perf[t.y] && st.perf[t.y][m];
+        if (!c || !(c.ca > 0)) { continue; }
+        nMois++;
+        if (sel === 'marge') { if (c.marge == null) { continue; } num += c.marge; ca += c.ca; n++; }
+        else { const v = c[sel]; if (v == null || !isFinite(v)) { continue; } num += v * c.ca; ca += c.ca; n++; }
+      }
+      if (!n || ca <= 0) { return { v: null, nMois }; }
+      return { v: sel === 'marge' ? 100 * num / ca : num / ca, nMois };
+    };
+    const shops = this.open();
+    const cellules = shops.map(st => trims.map(t => valeur(st, t)));
+    const garde = trims.map((t, i) => cellules.some(row => row[i].v != null));
+    const T = trims.filter((t, i) => garde[i]);
+    const pal = ['#8D1D2C', '#C17A2A', '#2d7a3e', '#3B6EA5', '#7E57C2', '#C9A227', '#5F8D8A', '#B45F8A'];
+    const fP1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %';
+    const coulV = v => { if (v == null) { return 'var(--color-text-muted)'; }
+      if (seuil == null) { return v < 0 ? '#8D1D2C' : (v < 5 ? '#8a5a13' : '#2d7a3e'); }
+      return hautBon ? (v >= seuil ? '#2d7a3e' : '#8D1D2C') : (v <= seuil ? '#2d7a3e' : (v <= seuil * 1.3 ? '#8a5a13' : '#8D1D2C')); };
+    // Les lignes du tableau, avec le pas d'un trimestre à l'autre.
+    common.mgtTrimestres = T.map(t => ({ label: t.label, encours: t.y === E && t.mois.includes(this.moisIdx()) && this.moisPartiel() }));
+    common.mgtLignes = shops.map((st, i) => {
+      const vals = trims.map((t, k) => cellules[i][k]).filter((c, k) => garde[k]);
+      let prev = null;
+      return { nom: st.nom, coul: pal[i % pal.length],
+        cells: vals.map(c => { const d = (c.v != null && prev != null) ? c.v - prev : null; if (c.v != null) { prev = c.v; }
+          return { txt: fP1(c.v), st: 'color:' + coulV(c.v) + (c.v != null ? ';font-weight:500' : ''),
+            partiel: c.v != null && c.nMois < 3 ? c.nMois + ' mois' : '',
+            delta: d == null ? '' : ((d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ',')),
+            deltaSt: d == null ? '' : ('color:' + ((hautBon ? d >= 0 : d <= 0) ? '#2d7a3e' : '#8D1D2C')) }; }) };
+    });
+    // Le réseau : la même pondération, tous magasins confondus.
+    common.mgtReseau = { nom: 'Réseau', cells: T.map(t => {
+      let ca = 0, num = 0, n = 0;
+      for (const st of shops) { for (const m of t.mois) { const c = st.perf[t.y] && st.perf[t.y][m]; if (!c || !(c.ca > 0)) { continue; }
+        if (sel === 'marge') { if (c.marge == null) { continue; } num += c.marge; ca += c.ca; n++; } else { const v = c[sel]; if (v == null) { continue; } num += v * c.ca; ca += c.ca; n++; } } }
+      const v = (!n || ca <= 0) ? null : (sel === 'marge' ? 100 * num / ca : num / ca);
+      return { txt: fP1(v), st: 'color:' + coulV(v) + ';font-weight:600' }; }) };
+    // ── Le graphique : une ligne par magasin, le seuil en pointillé.
+    const W = 920, H = 250, L = 48, R = 16, TOP = 16, B = 34;
+    const tous = [].concat(...common.mgtLignes.map((l, i) => T.map((t, k) => cellules[i][trims.indexOf(t)].v))).filter(v => v != null);
+    if (seuil != null) { tous.push(seuil); }
+    if (sel === 'marge') { tous.push(0); }
+    let mn = Math.min(...tous, 0), mx = Math.max(...tous, 1);
+    const marge = (mx - mn) * 0.12 || 1; mn -= marge; mx += marge;
+    const px = k => T.length < 2 ? (L + (W - L - R) / 2) : L + k * (W - L - R) / (T.length - 1);
+    const py = v => TOP + (H - TOP - B) * (1 - (v - mn) / (mx - mn));
+    const pas = (mx - mn) > 40 ? 10 : ((mx - mn) > 16 ? 5 : ((mx - mn) > 8 ? 2 : 1));
+    const ticks = []; for (let v = Math.ceil(mn / pas) * pas; v <= mx; v += pas) { ticks.push({ y: py(v).toFixed(1), label: String(Math.round(v)) + ' %' }); }
+    common.mgtSvg = { w: W, h: H,
+      axes: T.map((t, k) => ({ x: px(k).toFixed(1), y: H - 12, label: t.label })),
+      ticks,
+      seuil: seuil == null ? null : { y: py(seuil).toFixed(1), x1: L, x2: W - R, label: String(seuil).replace('.', ',') + ' %' },
+      zero: sel === 'marge' ? { y: py(0).toFixed(1), x1: L, x2: W - R } : null,
+      lignes: common.mgtLignes.map((l, i) => {
+        const pts = T.map((t, k) => ({ v: cellules[i][trims.indexOf(t)].v, k }));
+        return { nom: l.nom, coul: l.coul,
+          pts: pts.filter(q => q.v != null).map(q => px(q.k).toFixed(1) + ',' + py(q.v).toFixed(1)).join(' '),
+          points: pts.filter(q => q.v != null).map(q => ({ x: px(q.k).toFixed(1), y: py(q.v).toFixed(1), titre: l.nom + ' · ' + T[q.k].label + ' : ' + fP1(q.v) })) };
+      }),
+    };
+    common.mgtVide = !T.length;
+    common.mgtNote = (sel === 'marge' ? 'Marge nette = résultat net du trimestre ÷ ventes du trimestre.' : def[1] + ' du trimestre = moyenne des mois pondérée par le chiffre d’affaires.')
+      + ' Source : P&L mensuel du panel et caisse — la marge nette n’y est connue que depuis juillet 2026, les ratios de coûts depuis janvier. Un trimestre marqué « 1 mois » ou « 2 mois » est entamé.';
   }
 
   /* --- contrôle des tâches (checklists consultants du panel) --------------------- */

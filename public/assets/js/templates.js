@@ -1143,6 +1143,7 @@ function tplObjectifs(c, x){
         <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
           <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Cible réseau ${c.hzAn}</div>
           <div style="font-size:32px;font-weight:500;margin-top:6px">${c.hzCible}</div>
+          ${c.hzCibleSrc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(c.hzCibleSrc)}</div>` : ''}
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:13px">
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Run-rate annuel actuel</span><span style="font-weight:500">${c.hzRunrate}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Écart à combler</span><span style="color:var(--color-primary);font-weight:500">${c.hzGap}</span></div>
@@ -1162,6 +1163,59 @@ function tplObjectifs(c, x){
           </div>
           <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:16px;padding-top:12px;font-size:12.5px;color:var(--color-text-muted);line-height:1.6">${esc(c.hzNote)}</div>
         </div>
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <div style="font-size:13px;font-weight:500">Objectif ${c.hzAn}, magasin par magasin — d’après les études de marché</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted)">Potentiel à maturité × montée en régime (année 1, 2, 3, puis 100 %), telle qu’encodée dans Paramètres du budget. Le réseau = la somme des magasins ouverts + les ouvertures prévues.</div>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+          <thead><tr>
+            <th style="text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 7px">Magasin</th>
+            <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px">Potentiel à maturité</th>
+            ${c.hzAnnees.map(a => `<th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;padding:0 10px 7px;color:${a.cible ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(a.an)}${a.cible ? ' · objectif' : ''}</th>`).join('')}
+            <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px;border-left:0.5px solid var(--color-border-secondary)">Run-rate ${c.objExo}</th>
+            <th style="text-align:right;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 7px">Croissance requise</th>
+          </tr></thead>
+          <tbody>
+            ${c.hzRows.map(r => r.sansEtude ? `
+            <tr>
+              <td style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);font-weight:500">${esc(r.nom)}</td>
+              <td colspan="${c.hzAnnees.length + 1}" style="padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-text-muted)">étude de marché non encodée — <button ${x.A(r.goEtude)} style="border:none;background:none;padding:0;color:var(--color-primary);font-family:var(--font-ui);font-size:11.5px;cursor:pointer;text-decoration:underline">l’encoder dans Paramètres du budget</button></td>
+              <td style="padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;border-left:0.5px solid var(--color-border-secondary)">${esc(r.run)}</td>
+              <td style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)"></td>
+            </tr>` : `
+            <tr>
+              <td style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)"><div style="font-weight:500">${esc(r.nom)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.anEx)} en ${c.objExo}</div></td>
+              <td style="padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(r.potentiel)}</td>
+              ${r.annees.map(a => `<td title="${esc(a.anX)} · ${esc(a.coef)} du potentiel" style="padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;${a.cible ? 'font-weight:600;color:var(--color-primary);background:rgba(141,29,44,0.05)' : 'color:var(--color-text-muted)'}">${esc(a.ca)}<div style="font-size:9.5px;font-weight:400;color:var(--color-text-muted)">${esc(a.coef)}</div></td>`).join('')}
+              <td style="padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;border-left:0.5px solid var(--color-border-secondary)">${esc(r.run)}</td>
+              <td style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;${r.croissanceSt}">${esc(r.croissance)}</td>
+            </tr>`).join('')}
+            <tr style="background:var(--color-background-secondary)">
+              <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary);font-weight:600">Magasins ouverts</td>
+              <td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary)"></td>
+              <td colspan="${c.hzAnnees.length}" style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-weight:600">${esc(c.hzSommeObj)} en ${c.hzAn}</td>
+              <td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-weight:600;border-left:0.5px solid var(--color-border-secondary)">${esc(c.hzSommeRun)}</td>
+              <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary)"></td>
+            </tr>
+            <tr>
+              <td style="padding:7px 0;color:var(--color-text-muted)">+ ${esc(c.hzOuv)} prévu(s) d’ici ${c.hzAn}</td>
+              <td></td><td colspan="${c.hzAnnees.length}" style="padding:7px 10px;text-align:right;color:var(--color-text-muted)">${esc(c.hzOuvContrib)}</td><td style="border-left:0.5px solid var(--color-border-secondary)"></td><td></td>
+            </tr>
+            <tr style="background:var(--color-background-secondary)">
+              <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary);font-weight:700">= Réseau ${c.hzAn}</td>
+              <td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary)"></td>
+              <td colspan="${c.hzAnnees.length}" style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-weight:700;color:var(--color-primary)">${esc(c.hzTotal)}</td>
+              <td colspan="2" style="padding:9px 0 9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-size:11.5px;border-left:0.5px solid var(--color-border-secondary)">${c.hzCibleEncodee ? `cible encodée ${esc(c.hzCibleEncodee)} · <span style="${c.hzEcartCibleSt}">${esc(c.hzEcartCible)}</span>` : `<span style="color:var(--color-text-muted)">aucune cible réseau encodée</span>`}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        ${c.hzSans ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:7px 10px;border-radius:8px;margin-top:10px">${c.hzSans} magasin(s) sans étude de marché : leur objectif manque au total du réseau.</div>` : ''}
       </div>` : ''}
   </div>`;
 }
@@ -1553,8 +1607,64 @@ function tplRatiosCouts(c, x){
 function tplMarge(c, x){
   return `
   <div data-screen="marge" style="display:flex;flex-direction:column;gap:16px">
+    ${tplMargeTrimestres(c, x)}
     ${tplRatiosCouts(c, x)}
   </div>`;
+}
+
+/* Les ratios par trimestre : un ratio à la fois, une ligne par magasin sur
+   le graphique, le seuil en pointillé — et le tableau des mêmes valeurs, avec
+   le pas d'un trimestre à l'autre. */
+function tplMargeTrimestres(c, x){
+  const { esc } = x;
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const sv = c.mgtSvg;
+  const pill = r => `<button ${x.A(r.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;${r.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(r.nom)}</button>`;
+  return `
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="font-size:13px;font-weight:500">${esc(c.mgtNom)} par trimestre, magasin par magasin${c.mgtSeuil ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-text-muted)">· ${esc(c.mgtSeuil)}</span>` : ''}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">L’évolution sur les trimestres des deux exercices, et le pas d’un trimestre à l’autre.</div>
+        </div>
+        <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.mgtRatios.map(pill).join('')}</div>
+      </div>
+      ${c.mgtVide ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Aucun trimestre avec un P&L mensuel encodé.</div>` : `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:16px;align-items:start">
+        <svg viewBox="0 0 ${sv.w} ${sv.h}" style="width:100%;height:auto;display:block;font-family:var(--font-ui)">
+          ${sv.ticks.map(t => `<line x1="44" x2="${sv.w - 16}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,0.08)" stroke-width="1"/><text x="40" y="${t.y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#8a8378">${esc(t.label)}</text>`).join('')}
+          ${sv.zero ? `<line x1="${sv.zero.x1}" x2="${sv.zero.x2}" y1="${sv.zero.y}" y2="${sv.zero.y}" stroke="rgba(34,34,34,0.35)" stroke-width="1"/>` : ''}
+          ${sv.seuil ? `<line x1="${sv.seuil.x1}" x2="${sv.seuil.x2}" y1="${sv.seuil.y}" y2="${sv.seuil.y}" stroke="#8D1D2C" stroke-width="1.2" stroke-dasharray="5 4"/><text x="${sv.seuil.x2}" y="${sv.seuil.y - 4}" text-anchor="end" font-size="10" fill="#8D1D2C">seuil ${esc(sv.seuil.label)}</text>` : ''}
+          ${sv.lignes.map(l => `${l.pts ? `<polyline points="${l.pts}" fill="none" stroke="${l.coul}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+            ${l.points.map(p2 => `<circle cx="${p2.x}" cy="${p2.y}" r="3.6" fill="${l.coul}" stroke="#fff" stroke-width="1.4"><title>${esc(p2.titre)}</title></circle>`).join('')}`).join('')}
+          ${sv.axes.map(a => `<text x="${a.x}" y="${a.y}" text-anchor="middle" font-size="10.5" fill="#6b655c">${esc(a.label)}</text>`).join('')}
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:7px;padding-top:6px">
+          ${c.mgtLignes.map(l => `<div style="display:flex;align-items:center;gap:8px;font-size:12px"><i style="display:inline-block;width:14px;height:3px;border-radius:2px;background:${l.coul}"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nom)}</span></div>`).join('')}
+          ${c.mgtSeuil ? `<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--color-text-muted)"><i style="display:inline-block;width:14px;height:0;border-top:1.5px dashed #8D1D2C"></i>${esc(c.mgtSeuil)}</div>` : ''}
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="text-align:left;padding:0 0 7px;${cap}">Magasin</th>
+          ${c.mgtTrimestres.map(t => `<th style="text-align:right;padding:0 10px 7px;${cap}">${esc(t.label)}${t.encours ? '<div style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0">en cours</div>' : ''}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${c.mgtLignes.map(l => `
+          <tr>
+            <td style="padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);font-weight:500"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${l.coul};vertical-align:-1px;margin-right:7px"></i>${esc(l.nom)}</td>
+            ${l.cells.map(ce => `<td style="padding:8px 10px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="${ce.st}">${esc(ce.txt)}</span>${ce.delta ? `<span style="font-size:10px;margin-left:5px;${ce.deltaSt}">${esc(ce.delta)}</span>` : ''}${ce.partiel ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(ce.partiel)}</div>` : ''}</td>`).join('')}
+          </tr>`).join('')}
+          <tr style="background:var(--color-background-secondary)">
+            <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary);font-weight:700">Réseau</td>
+            ${c.mgtReseau.cells.map(ce => `<td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums"><span style="${ce.st}">${esc(ce.txt)}</span></td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">${esc(c.mgtNote)}</div>`}
+    </div>`;
 }
 
 /* --- Encodage du budget ------------------------------------------------------ */
