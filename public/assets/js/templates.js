@@ -3644,15 +3644,46 @@ function tplMktTypes(c, x){
 /** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
 function tplResultat(c, x){
   const { esc } = x;
-  const ong = o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
+  // Chaque onglet dit où en est sa lecture : anneau qui tourne, puis coche.
+  const ong = o => `<button ${x.A(o.go)} class="${o.on ? 'rj-on' : ''}" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.etat === 'lecture' ? '<i class="rj-ring"></i>' : '<i class="rj-ok">✓</i>'}${esc(o.nom)}</button>`;
   return `
   <div data-screen="resultat" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjOngletTxt)}</div>
       <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.rjOnglets.map(ong).join('')}</div>
     </div>
+    ${c.rjChargeEnCours ? `
+    <div style="margin:-6px 0 -4px">
+      <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted);margin-top:5px"><i class="rj-ring"></i><span style="font-weight:500;color:var(--color-text)">Lecture du panel</span><span>${esc(c.rjChargeTxt)}</span><span style="margin-left:auto;font-variant-numeric:tabular-nums">${esc(c.rjChargeSec)}</span></div>
+    </div>` : ''}
     ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : tplResultatPeriode(c, x)}
   </div>`;
+}
+
+/**
+ * Le SQUELETTE d'un onglet pendant sa lecture : la forme finale, en gris qui
+ * reflète. La page ne saute pas quand les chiffres arrivent.
+ */
+function tplResultatSquelette(vue){
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const sk = (w, h, extra) => `<span class="rj-sk" style="width:${w};height:${h}px;${extra || ''}"></span>`;
+  const rang = (w, h) => `<div style="display:grid;grid-template-columns:1.6fr repeat(9,1fr);gap:14px;padding:12px 10px;border-top:0.5px solid var(--color-border-tertiary);align-items:center">
+      ${sk(w, h)}${Array.from({ length: 9 }, () => sk('100%', h)).join('')}</div>`;
+  const tuile = (a, b2) => `<div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">${sk(a, 9)}${sk('60%', 22, 'margin:8px 0 6px')}${sk(b2, 8)}</div>`;
+  const hauteurs = [100, 60, 75, 85, 100, 40, 55];
+  return `
+    <div style="${carte};padding:17px 19px" aria-busy="true">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">${sk('31px', 31, 'border-radius:8px')}${sk('230px', 15)}${sk('31px', 31, 'border-radius:8px')}${sk('96px', 31, 'border-radius:999px')}${sk('260px', 9, 'margin-left:8px')}</div>
+      ${vue === 'jour' ? '' : `
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(240px,1.4fr);gap:10px;margin-bottom:14px">
+        ${tuile('55%', '80%')}${tuile('35%', '70%')}${tuile('30%', '60%')}${tuile('50%', '65%')}
+        <div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">${sk('70%', 9)}
+          <div style="display:flex;gap:5px;align-items:flex-end;height:44px;margin-top:8px">${hauteurs.map(h => sk('auto', 0, 'flex:1;height:' + h + '%')).join('')}</div></div>
+      </div>`}
+      ${rang('60px', 8)}${rang('150px', 11)}${rang('190px', 11)}${rang('120px', 11)}${rang('170px', 11)}
+      <div style="background:var(--color-background-secondary);border-radius:0 0 8px 8px">${rang('70px', 13)}</div>
+    </div>`;
 }
 
 /** La semaine ou le mois, face à l'objectif et au compte de résultat. */
@@ -3662,9 +3693,7 @@ function tplResultatPeriode(c, x){
   const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
   const num = 'font-variant-numeric:tabular-nums';
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
-  if (c.rpChargement) {
-    return `<div style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">${esc(c.rpChargementTxt)}</div>`;
-  }
+  if (c.rpChargement) { return tplResultatSquelette(c.rpMois ? 'mois' : 'semaine'); }
   if (c.rpErreur) {
     return `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rpErreurTxt)}</div>`;
   }
@@ -3817,9 +3846,7 @@ function tplResultatJour(c, x){
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
   const num = 'font-variant-numeric:tabular-nums';
-  if (c.rjChargement) {
-    return `<div data-screen="resultatJour" style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture du compte de résultat de la journée…</div>`;
-  }
+  if (c.rjChargement) { return `<div data-screen="resultatJour">${tplResultatSquelette('jour')}</div>`; }
   if (c.rjErreur) {
     return `<div data-screen="resultatJour" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjErreurTxt)}</div>`;
   }

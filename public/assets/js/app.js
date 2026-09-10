@@ -6602,6 +6602,7 @@ class App {
       // La réponse porte la date RETENUE : elle sert aussi de clé, sinon
       // revenir sur « aujourd'hui » par la flèche rechargerait tout.
       if (v.date) { this.D.rjour[v.date] = v; }
+      this._rjLuA = Date.now();
       this.setState({ rjMaj: new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
     });
   }
@@ -6905,30 +6906,57 @@ class App {
    * pondération réseau des jours (Paramètres du budget).
    */
   valsResultatOnglets(common){
-    const S = this.state;
+    const S = this.state, D = this.D;
     const on = S.rjOnglet || 'jour';
     common.rjOnglet = on;
+    // Les TROIS étendues se lisent dès l'ouverture, en parallèle : quinze
+    // secondes une fois, au lieu de quinze à chaque changement d'onglet.
+    this.rjCharge(false); this.rpCharge(false, 'semaine'); this.rpCharge(false, 'mois');
+    const pret = { jour: !!(D.rjour || {})[this.rjCle()],
+      semaine: !!(D.rper || {})[this.rpCle('semaine')], mois: !!(D.rper || {})[this.rpCle('mois')] };
     common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']].map(o => ({
-      cle: o[0], nom: o[1], on: on === o[0],
+      cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
     common.rjOngletTxt = {
       jour: 'La journée, magasin par magasin, face à l’objectif du jour et au compte de résultat.',
       semaine: 'La semaine : l’objectif, ce qui est fait, ce qui reste — et en combien de clients.',
       mois: 'Le mois : le budget, le compte de résultat, et douze mois d’histoire.' }[on];
+    // Le fil de progression : une lecture = un tiers. Le chrono tourne tant
+    // qu'une lecture est en cours — une attente muette paraît deux fois plus
+    // longue qu'une attente qui compte.
+    const nPret = ['jour', 'semaine', 'mois'].filter(k => pret[k]).length;
+    common.rjChargeEnCours = nPret < 3;
+    common.rjChargePct = Math.round(100 * nPret / 3);
+    if (common.rjChargeEnCours) {
+      if (!this._rjT0) { this._rjT0 = Date.now(); }
+      if (!this._rjTick) { this._rjTick = setInterval(() => { if (this.state.screen === 'resultatJour') { this.setState({}); } }, 1000); }
+      common.rjChargeSec = Math.round((Date.now() - this._rjT0) / 1000) + ' s';
+    } else {
+      this._rjT0 = null;
+      if (this._rjTick) { clearInterval(this._rjTick); this._rjTick = null; }
+      common.rjChargeSec = '';
+    }
+    common.rjChargeTxt = ['jour', 'semaine', 'mois'].map(k => k + (pret[k] ? ' ✓' : ' …')).join(' · ');
+    // La journée en cours BOUGE : tant que l'écran est ouvert, elle se relit
+    // toute seule toutes les dix minutes.
+    const rj = (D.rjour || {})[this.rjCle()];
+    if (rj && rj.estAujourdhui && this._rjLuA && Date.now() - this._rjLuA > 600000 && !this._rjEnCours) { this.rjCharge(true); }
+    if (!this._rjTick60) { this._rjTick60 = setInterval(() => { if (this.state.screen === 'resultatJour') { this.setState({}); } }, 60000); }
   }
-  rpCle(){ return (this.state.rjOnglet || 'semaine') + '|' + (this.state.rpDate || ''); }
+  rpCle(vue){ return (vue || this.state.rjOnglet || 'semaine') + '|' + (this.state.rpDate || ''); }
   /** La période lue une fois puis gardée — même règle que la journée : on ne
    *  vide pas le cache avant la réponse, l'ancienne étendue reste lisible. */
-  rpCharge(force){
-    const cle = this.rpCle(), vue = this.state.rjOnglet || 'semaine';
+  rpCharge(force, vueDemandee){
+    const vue = vueDemandee || this.state.rjOnglet || 'semaine', cle = this.rpCle(vue);
     if (!this.D.rper) { this.D.rper = {}; }
-    if (this._rpEnCours === cle) { return; }
+    if (!this._rpEnCours) { this._rpEnCours = {}; }
+    if (this._rpEnCours[cle]) { return; }
     if (this.D.rper[cle] && !force) { return; }
-    this._rpEnCours = cle;
+    this._rpEnCours[cle] = true;
     if (force) { this.setState({ rpMaj: 'en-cours' }); }
     readOne('/exploitation/periode?vue=' + vue
       + (this.state.rpDate ? '&date=' + encodeURIComponent(this.state.rpDate) : '')).then(d => {
-      this._rpEnCours = null;
+      this._rpEnCours[cle] = false;
       const v = d || { erreur: true };
       this.D.rper[cle] = v;
       if (v.date) { this.D.rper[vue + '|' + v.date] = v; }
