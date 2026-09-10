@@ -3755,7 +3755,7 @@ function tplResultatPeriode(c, x){
             </table>`)}
         </div>
         <div style="display:flex;flex-direction:column;gap:16px">
-          ${bloc('La cascade de ' + (c.rpSemaine ? 'la semaine' : 'du mois'), `
+          ${bloc('La cascade ' + (c.rpSemaine ? 'de la semaine' : 'du mois'), `
             <table style="width:100%;border-collapse:collapse;font-size:12.5px">
               ${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
                 <td style="padding:6px 0;${bord};width:140px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>

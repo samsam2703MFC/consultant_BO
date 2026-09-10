@@ -7209,7 +7209,7 @@ class App {
         ecartLib: 'Écart à l’attendu ' + (r.enCours ? 'à ce jour' : 'de la période'),
         panier: fU(m.panier), clients: fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart) },
       tenir: sansO ? null : {
-        reste: fE(m.reste), resteLib: 'Reste à faire' + (restants.length ? ' (' + restants.join(' + ') + ')' : ''),
+        reste: fE(m.reste), resteLib: 'Reste à faire' + (restants.length ? (vue === 'semaine' ? ' (' + restants.join(' + ') + ')' : ' (' + restants.length + ' jours)') : ''),
         prevu: fE(m.prevu), prevuPct: m.objectif ? Math.round(100 * m.prevu / m.objectif) + ' %' : '',
         effort: fS(eff), effortCol: eff == null ? 'var(--color-text-muted)' : (eff > 0 ? '#C0182B' : '#2d7a3e'),
         effortClients: effClients == null ? '' : ((effClients > 0 ? '+' : '') + fInt(effClients) + ' clients'),
