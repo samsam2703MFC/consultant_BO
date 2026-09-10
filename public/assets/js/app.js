@@ -172,7 +172,10 @@ class App {
     // planogramme, pas l'accueil.
     const depart = this.ecranDeAdresse();
     if (depart) {
-      this.state.screen = depart;
+      // Tableau des magasins, Objectifs de CA et Marge & coûts sont devenus
+      // les trois onglets de Performance : leur adresse ouvre l'onglet.
+      if (App.PERF_ONGLETS[depart]) { this.state.pfOnglet = depart; this.state.screen = 'performance'; }
+      else { this.state.screen = depart; }
       // Arrivé par une adresse retirée, l'URL se remet d'aplomb : on ne laisse
       // pas « #/stock » dans la barre d'un écran qui n'est plus le stock.
       const juste = this.adresseDe(depart);
@@ -184,6 +187,7 @@ class App {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
       if (!id) { return; }
+      if (App.PERF_ONGLETS[id]) { this.setState({ screen: 'performance', pfOnglet: id, hmHover: null }); return; }
       if (id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); return; }
       // Même écran, mais adresse retirée (« #/stock » alors qu'on est déjà sur
       // les commandes) : la barre d'adresse se remet d'aplomb, sans quoi elle
@@ -225,7 +229,7 @@ class App {
   static get ADRESSES(){
     return {
       taches: 'taches-consultants', resultatJour: 'resultat', exploitation: 'pl-magasins',
-      magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
+      performance: 'performance', magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
@@ -256,6 +260,10 @@ class App {
    * survit à une réorganisation : il mène là où le contenu a déménagé, plutôt
    * que de rouvrir l'accueil sans rien dire.
    */
+  /** Les trois onglets de Performance, et le drapeau de chacun. */
+  static get PERF_ONGLETS(){
+    return { magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge' };
+  }
   static get ADRESSES_RETIREES(){
     return { stock: 'caAchats', 'commandes-franchises': 'caAchats', 'resultat-du-jour': 'resultatJour' };
   }
@@ -857,7 +865,7 @@ class App {
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], performance: ['Performance', 'Comment évoluent les magasins, sur le temps long : le dernier mois clos (marge, CA contre cible, tickets, panier, douze mois de clients par jour et de ticket moyen), l\u2019année et les horizons à 3 et 5 ans, puis la marge et la maîtrise des coûts avec les leviers à traiter. Pour la journée, la semaine et le mois en cours : Résultat.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
@@ -1176,20 +1184,20 @@ class App {
       // Un seul écran de pilotage : Résultat — jour, semaine, mois. Les
       // tâches consultants et le P&L magasins restent accessibles par leur
       // adresse, mais ce qu'on y lisait chaque matin vit désormais ici.
+      // Deux entrées, deux cycles : Résultat répond à « où en est-on ce
+      // mois-ci ? », Performance à « comment évolue-t-on ? » — le mois clos,
+      // l'année, la marge.
       ['Pilotage', [
-        ['resultatJour', 'Résultat', 0]]],
+        ['resultatJour', 'Résultat', 0],
+        ['performance', 'Performance', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
       ['Magasins', [
-        { sub: 'Performance', children: [
-          ['magasins', 'Tableau des magasins', 0],
-          ['objectifs', 'Objectifs de CA', 0],
-          ['marge', 'Marge & coûts', 0],
-          ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]] },
         { sub: 'Analyse & leviers', children: [
           ['analysemag', 'Analyse magasin', 0],
           ['ventes', 'Target de vente & classement', 0],
-          ['croisements', 'Croisements', 0]] },
+          ['croisements', 'Croisements', 0],
+          ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]] },
         { sub: 'Budget', children: [
           ['budget', 'Suivi du budget', 0],
           ['encodage', 'Encodage du budget', 0],
@@ -1257,7 +1265,7 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
@@ -1265,6 +1273,20 @@ class App {
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
+    // Performance : un écran, trois onglets — chacun garde ses valeurs et son
+    // gabarit d'origine, l'écran ne fait que les réunir.
+    common.isPerf = S.screen === 'performance';
+    if (common.isPerf) {
+      const on = App.PERF_ONGLETS[S.pfOnglet] ? S.pfOnglet : 'magasins';
+      common[App.PERF_ONGLETS[on]] = true;
+      common.pfOnglet = on;
+      common.pfOnglets = [['magasins', 'Mois clos'], ['objectifs', 'Année · 3 ans · 5 ans'], ['marge', 'Marge & coûts']].map(o => ({
+        cle: o[0], nom: o[1], on: on === o[0], go: () => this.setState({ pfOnglet: o[0] }) }));
+      common.pfOngletTxt = {
+        magasins: 'Le dernier mois clos de chaque magasin : marge, CA contre cible, tickets, panier — puis clients par jour et ticket moyen, mois par mois.',
+        objectifs: 'La trajectoire : cible annuelle, réel cumulé, projection de fin d’année, et les horizons à 3 et 5 ans.',
+        marge: 'Où se gagne et se perd la marge, sur le dernier mois complet : matière, main-d’œuvre, frais généraux, CA par ETP — et les leviers à traiter.' }[on];
+    }
     else if (key) { common[key] = true; }
     // Quitter un écran arme sa prochaine relecture : y revenir doit relire la
     // base, pas réafficher ce qui avait été lu la première fois.
@@ -4397,7 +4419,7 @@ class App {
     this.lacunes();
     const ecr = { magasins: 'magasins', marge: 'marge', exploitation: 'exploitation',
       parametres: 'parametres', assortiment: 'assortiment', catalogue: 'catalogue',
-      produits: 'produits', analyse: 'analyse', controle: 'controle' }[this.state.screen];
+      produits: 'produits', analyse: 'analyse', controle: 'controle' }[this.state.screen === 'performance' ? (this.state.pfOnglet || 'magasins') : this.state.screen];
     const l = ((this.D.lacunes || {})[ecr] || []);
     common.lacunes = l.map(o => ({ champ: o.champ, quoi: o.quoi, source: o.source,
       // « manque API » quand il faut réclamer, « à renseigner » quand il faut
@@ -6447,7 +6469,7 @@ class App {
     // 4. Magasins.
     const mags = (D.stores || []).filter(s => trouve(colle(s.nom, s.ville, s.zone, s.id))).map(s => ({
       titre: s.nom, detail: [s.ville, s.zone].filter(Boolean).join(' · '),
-      aller: () => this.setState({ screen: 'magasins', gq: '' }) }));
+      aller: () => this.setState({ screen: 'performance', pfOnglet: 'magasins', gq: '' }) }));
     ajoute('Magasins', coupe(mags));
 
     // 5. Projets et leurs tâches.

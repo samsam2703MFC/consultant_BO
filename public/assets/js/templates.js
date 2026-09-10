@@ -129,11 +129,12 @@ export function render(c, x){
       ${c.isReput ? tplReputation(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
-      ${c.isMagasins ? tplMagasins(c, x) : ''}
+      ${c.isPerf ? tplPerformance(c, x) : ''}
+      ${c.isMagasins && !c.isPerf ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
-      ${c.isObjectifs ? tplObjectifs(c, x) : ''}
+      ${c.isObjectifs && !c.isPerf ? tplObjectifs(c, x) : ''}
       ${c.isBudget ? tplBudget(c, x) : ''}
-      ${c.isMarge ? tplMarge(c, x) : ''}
+      ${c.isMarge && !c.isPerf ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
@@ -3646,6 +3647,20 @@ function tplRentabilite(c, x){
         ${c.exRent.source ? `<span style="margin-left:auto">${esc(c.exRent.source)}</span>` : ''}
       </div>`)}
     </div>`;
+}
+
+/** Performance : un seul écran, trois onglets — le mois clos, l'année, la marge. */
+function tplPerformance(c, x){
+  const { esc } = x;
+  const ong = o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
+  return `
+  <div data-screen="performance" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.pfOngletTxt)}</div>
+      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.pfOnglets.map(ong).join('')}</div>
+    </div>
+    ${c.pfOnglet === 'magasins' ? tplMagasins(c, x) : (c.pfOnglet === 'objectifs' ? tplObjectifs(c, x) : tplMarge(c, x))}
+  </div>`;
 }
 
 /** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
