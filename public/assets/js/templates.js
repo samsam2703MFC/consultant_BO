@@ -127,7 +127,7 @@ export function render(c, x){
       ${c.isMktCamp ? tplMktCampagnes(c, x) : ''}
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
-      ${c.isRJour ? tplResultatJour(c, x) : ''}
+      ${c.isRJour ? tplResultat(c, x) : ''}
       ${c.isExploit ? tplExploitation(c, x) : ''}
       ${c.isMagasins ? tplMagasins(c, x) : ''}
       ${c.isHeatmap ? tplHeatmap(c, x) : ''}
@@ -1027,10 +1027,14 @@ function tplMagasins(c, x){
 
 /* --- Heatmap mensuelle ------------------------------------------------------ */
 function tplHeatmap(c, x){
+  return `
+  <div data-screen="heatmap" style="display:flex;flex-direction:column;gap:14px">${tplHeatmapCorps(c, x)}</div>`;
+}
+/** Le corps de la heatmap : sert à l'écran Heatmap comme à Résultat › Mois. */
+function tplHeatmapCorps(c, x){
   const { esc } = x;
   const cell = cc => `<div ${x.EN(cc.enter)} ${x.A(cc.clic)} style="${cc.st};cursor:pointer">${cc.txt}</div>`;
   return `
-  <div data-screen="heatmap" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden">
         <button ${x.A(c.hmMetricCa)} style="${c.hmBtnCaSt}">CA du mois</button>
@@ -1054,8 +1058,7 @@ function tplHeatmap(c, x){
       </div>
       <div style="margin-top:14px;min-height:20px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.hmDetail)} <span style="opacity:.7">— cliquez une case pour le détail.</span></div>
     </div>
-    ${c.hmDet ? tplHeatDetail(c.hmDet, x) : ''}
-  </div>`;
+    ${c.hmDet ? tplHeatDetail(c.hmDet, x) : ''}`;
 }
 
 /* Le détail d'une case de la heatmap : les trois séries côte à côte — budget
@@ -3638,6 +3641,177 @@ function tplMktTypes(c, x){
    dessous la cascade du magasin, sa ventilation par catégorie et la place du
    jour dans son mois. Sans sélection, la page garde les petites ventilations :
    elles montrent où cliquer. */
+/** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
+function tplResultat(c, x){
+  const { esc } = x;
+  const ong = o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
+  return `
+  <div data-screen="resultat" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjOngletTxt)}</div>
+      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.rjOnglets.map(ong).join('')}</div>
+    </div>
+    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : tplResultatPeriode(c, x)}
+  </div>`;
+}
+
+/** La semaine ou le mois, face à l'objectif et au compte de résultat. */
+function tplResultatPeriode(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
+  if (c.rpChargement) {
+    return `<div style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">${esc(c.rpChargementTxt)}</div>`;
+  }
+  if (c.rpErreur) {
+    return `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rpErreurTxt)}</div>`;
+  }
+  const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;white-space:nowrap;${num}${fort ? ';font-weight:500' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  const sep = 'border-left:0.5px solid var(--color-border-secondary)';
+  const nbCol = 10 + (c.rpMois ? 1 : 0);
+  const rang = l => `
+    <tr ${l.ouvrir ? x.A(l.ouvrir) : ''} class="${l.reseau ? '' : 'hv-bg'}" style="${l.st}">
+      <td style="padding:9px 10px;${l.reseau ? 'border-top:1px solid var(--color-border-secondary)' : bord}">
+        <div style="font-weight:500">${l.chevron ? `<span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>` : ''}${esc(l.nom)}</div>
+        ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:${l.reseau ? 0 : 14}px">${esc(l.sousTitre)}</div>` : ''}
+      </td>
+      ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true) + cel(l.attendu, 'var(--color-text-muted)')
+          + cel(l.ecart, l.ecartCol, '', true) + cel(l.clients, l.clientsCol, '', true, l.clientsTitre)
+          + (c.rpMois ? cel(l.mois.ecart, l.mois.ecartCol, l.mois.n1 ? 'N-1 ' + l.mois.n1 : '', false, 'même période un an plus tôt — source API') : '')
+          + `<td style="padding:9px 10px;${bord};text-align:right;${num};color:${l.fcCol};${sep}">${esc(l.fc)}</td>`
+          + cel(l.lab, l.labCol) + cel(l.oh, l.ohCol)
+          + cel(l.net, l.netCol, l.netPct, true, l.netTitre)
+        : `<td colspan="${nbCol - 1}" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">${esc(l.sousTitre || 'aucun chiffre')}</td>`}
+    </tr>`;
+  const bloc = (titre, corps) => `<div><div style="${cap};margin-bottom:8px">${esc(titre)}</div>${corps}</div>`;
+  const kv = (l, v, coul, fort) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;${bord};font-size:12.5px${fort ? ';font-weight:600' : ''}"><span>${esc(l)}</span><span style="${num};white-space:nowrap${coul ? ';color:' + coul : ''}">${esc(v)}</span></div>`;
+  const d = c.rpDetail;
+  const detail = !d ? '' : `
+    <tr><td colspan="${nbCol}" style="padding:4px 10px 18px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:6px 0 12px">
+        <div style="font-family:var(--font-display);font-size:17px">${esc(d.nom)}</div>
+        <button ${x.A(d.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px 34px">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${d.manque ? bloc('Ce qu’il manque, et en quoi', `
+            <div style="border:1px solid ${d.manque.titreCol};border-radius:9px;padding:8px 12px 4px;background:var(--color-surface)">
+              <div style="font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:${d.manque.titreCol};margin-bottom:4px">${esc(d.manque.titre)}</div>
+              ${kv(d.manque.ecartLib, d.manque.ecart, d.manque.ecartCol)}
+              ${kv('Panier moyen du magasin', d.manque.panier)}
+              ${kv('Clients manquants', d.manque.clients, d.manque.clientsCol, true)}
+            </div>`) : `<div style="font-size:12px;color:var(--color-text-muted)">Pas d’objectif pour ce magasin sur cette période : budget non encodé, ou pondération des jours non adoptée.</div>`}
+          ${d.tenir ? bloc('Pour tenir l’objectif', `
+            <div style="border:0.5px solid var(--color-border-secondary);border-radius:9px;padding:4px 12px;background:var(--color-surface)">
+              ${kv(d.tenir.resteLib, d.tenir.reste, '', true)}
+              ${d.tenir.clos ? '' : kv('Ce que la pondération prévoyait', d.tenir.prevu + (d.tenir.prevuPct ? ' · ' + d.tenir.prevuPct : ''))}
+              ${d.tenir.clos ? '' : kv('Effort supplémentaire', d.tenir.effort + (d.tenir.effortClients ? ' · ' + d.tenir.effortClients : ''), d.tenir.effortCol, true)}
+            </div>`) : ''}
+          ${bloc('Le jour par jour du magasin', `
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              ${d.jours.map(j => `<tr style="${j.auj ? 'font-weight:600' : ''}">
+                <td style="padding:4px 0;${bord};width:80px">${esc(j.court)}</td>
+                <td style="padding:4px 0;${bord};text-align:right;${num}">${esc(j.ca)}${j.obj ? ` <span style="color:var(--color-text-muted);font-weight:400">/ ${esc(j.obj)}</span>` : ''}</td>
+                <td style="padding:4px 0 4px 10px;${bord};text-align:right;${num};width:70px;color:${j.col}">${j.clients ? esc(j.clients) + ' cli' : ''}</td>
+              </tr>`).join('')}
+            </table>`)}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${bloc('La cascade de ' + (c.rpSemaine ? 'la semaine' : 'du mois'), `
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              ${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
+                <td style="padding:6px 0;${bord};width:140px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
+                <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:999px;background:var(--color-surface);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;border-radius:999px;background:${l.coul}"></i></span></td>
+                <td style="padding:6px 0;${bord};text-align:right;${num};width:96px">${esc(l.v)}</td>
+                <td style="padding:6px 0 6px 12px;${bord};text-align:right;${num};width:64px;color:${l.coul}">${esc(l.p)}</td>
+              </tr>`).join('')}
+            </table>
+            ${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
+          ${bloc('Le mois de ce magasin', d.moisMag.etat === 'chargement' ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du mois…</div>` : `
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+              ${[['CA du mois', d.moisMag.ca, ''], ['N-1', d.moisMag.n1, 'var(--color-text-muted)'], ['Écart', d.moisMag.ecart, d.moisMag.ecartCol], ['Tickets', d.moisMag.tickets, ''], ['Panier', d.moisMag.panier, '']].map(k => `
+              <div style="background:var(--color-surface);border-radius:8px;padding:8px 10px">
+                <div style="${cap}">${esc(k[0])}</div>
+                <div style="font-family:var(--font-display);font-size:16px;margin-top:3px;${num}${k[2] ? ';color:' + k[2] : ''}">${esc(k[1] || '—')}</div>
+              </div>`).join('')}
+            </div>
+            <div style="font-size:10px;color:var(--color-text-muted);margin-top:6px">${esc(d.moisMag.periode)} — source API, du 1er du mois à aujourd’hui.</div>`)}
+        </div>
+      </div>
+    </td></tr>`;
+  const lignes = c.rpLignes.map(l => rang(l) + (l.actif ? detail : '')).join('');
+  return `
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <button ${x.A(c.rpPrec)} title="Période précédente" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text)">◂</button>
+          <span style="font-family:var(--font-display);font-size:17px">${esc(c.rpTitre)}</span>
+          <button ${x.A(c.rpSuiv)} title="Période suivante" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rpSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rpSuiv ? '1' : '.35'}">▸</button>
+          ${c.rpAuj ? `<button ${x.A(c.rpAuj)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(c.rpAujTxt)}</button>` : ''}
+          <button ${x.A(c.rpRefresh)} title="Relire la période" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">⟳</button>
+          ${c.rpMaj ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpMaj)}</span>` : ''}
+          <span style="font-size:11.5px;color:var(--color-text-muted);margin-left:6px">${esc(c.rpSousTitre)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${c.rpPjTxt ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpPjTxt)}</span>` : ''}
+          <button ${x.A(c.rpRegler)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Régler la pondération des jours</button>
+        </div>
+      </div>
+      ${c.rpPjMotif ? `<div style="font-size:12px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:8px 12px;border-radius:8px;margin-bottom:12px">${esc(c.rpPjMotif)}</div>` : ''}
+
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(240px,1.4fr);gap:10px;margin-bottom:14px">
+        ${c.rpTuiles.map(t => `<div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">
+          <div style="${cap}">${esc(t.l)}</div>
+          <div style="font-family:var(--font-display);font-size:23px;line-height:1.1;margin-top:4px;color:${t.col};${num}">${esc(t.v)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(t.s)}</div>
+        </div>`).join('')}
+        <div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">
+          <div style="${cap}">Jour par jour <span style="text-transform:none;letter-spacing:0;font-weight:400">— réalisé plein, objectif en creux</span></div>
+          <div style="display:flex;align-items:flex-end;gap:${c.rpMois ? 2 : 5}px;height:44px;margin-top:8px">
+            ${c.rpJours.map(j => `<div title="${esc(j.titre)}" style="flex:1;position:relative;height:100%;${j.auj ? 'outline:1.5px solid var(--color-text);outline-offset:1px;border-radius:3px' : ''}">
+              <i style="position:absolute;left:0;right:0;bottom:0;height:${j.hObj}%;border:1px solid var(--color-border-secondary);border-bottom:none;border-radius:3px 3px 0 0;background:var(--color-surface)"></i>
+              <i style="position:absolute;left:0;right:0;bottom:0;height:${j.hCa}%;background:${j.coul};border-radius:3px 3px 0 0;opacity:.9"></i>
+            </div>`).join('')}
+          </div>
+          ${c.rpSemaine ? `<div style="display:flex;gap:5px;margin-top:4px;font-size:9.5px;color:var(--color-text-muted)">${c.rpJours.map(j => `<span style="flex:1;text-align:center;white-space:nowrap;overflow:hidden">${esc(j.court)}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>
+
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
+        <tr>
+          <th colspan="6" style="text-align:left;padding:0 10px 4px;${cap};font-size:9.5px">Face à l’objectif ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
+          <th colspan="${c.rpMois ? 5 : 4}" style="text-align:left;padding:0 10px 4px;${cap};font-size:9.5px;${sep}">Le compte de résultat ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
+        </tr>
+        <tr>
+          ${c.rpEntetes.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}</th>`).join('')}
+          ${c.rpMois ? `<th style="text-align:right;padding:0 10px 7px;${cap}">vs N-1</th>` : ''}
+          <th style="text-align:right;padding:0 10px 7px;${cap};${sep}">Coût matière</th>
+          <th style="text-align:right;padding:0 10px 7px;${cap}">Main-d’œuvre</th>
+          <th style="text-align:right;padding:0 10px 7px;${cap}">Frais généraux</th>
+          <th style="text-align:right;padding:0 10px 7px;${cap}">Résultat</th>
+        </tr>
+        ${lignes}
+        ${c.rpReseau ? rang(c.rpReseau) : ''}
+      </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>
+    </div>
+
+    ${c.rpMois ? `
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="${cap}">Heatmap mensuelle</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Une ligne par magasin, une colonne par mois : la même chose que le tableau ci-dessus, sur douze mois.</div>
+        </div>
+      </div>
+      ${tplHeatmapCorps(c, x)}
+    </div>` : ''}`;
+}
+
 function tplResultatJour(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -3653,7 +3827,7 @@ function tplResultatJour(c, x){
   // puis l'activité qui l'explique (tickets → panier → produits par client),
   // et la ligne finale. Marge, main-d'œuvre et frais vivent dans le détail
   // qu'on ouvre — comme le coût matière avant eux.
-  const ent = ['Magasin', 'Ventes par heure', 'CA du jour', c.rjRefEntete, 'Objectif du jour', 'Tickets', 'Panier',
+  const ent = ['Magasin', 'Ventes par heure', 'CA du jour', c.rjRefEntete, 'Objectif du jour', 'Clients manquants', 'Tickets', 'Panier',
     'Produits / client', 'Résultat'];
   const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
   // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
@@ -3722,10 +3896,11 @@ function tplResultatJour(c, x){
             ${l.ouvert
               ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
                 + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
+                + cel(l.manque, l.manqueCoul, '', true, l.manqueTitre)
                 + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
                 + cel(l.ppc, '', '', false)
                 + cel(l.net, l.netCoul, l.netPct, true)
-              : `<td colspan="7" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
+              : `<td colspan="8" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
           </tr>`).join('')}
         <tr style="background:var(--color-background-secondary)">
           <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:500">Réseau
@@ -3733,6 +3908,7 @@ function tplResultatJour(c, x){
           <td style="border-top:1px solid var(--color-border-secondary)"></td>
           ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
           ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
+          ${cel(c.rjReseau.manque, c.rjReseau.manqueCoul, '', true, 'somme des clients manquants de chaque magasin')}
           ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
           ${cel(c.rjReseau.ppc, '', '', false)}
           ${cel(c.rjReseau.net, c.rjReseau.netCoul, c.rjReseau.netPct, true)}

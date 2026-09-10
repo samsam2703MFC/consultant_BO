@@ -147,7 +147,7 @@ function fusionne(v, n){
 class App {
   constructor(root){
     this.root = root;
-    this.state = { ready: false, screen: 'taches', bStore: 'cha', tkStore: 'tous', openProjId: null,
+    this.state = { ready: false, screen: 'resultatJour', bStore: 'cha', tkStore: 'tous', openProjId: null,
       sortKey: 'caPct', sortDir: -1, zoneF: 'Toutes les zones', hmMetric: 'pct', hmYear: null, hmHover: null,
       horizon: 'h1', logType: 'Tous les types', logQui: 'Tous les auteurs', logQ: '', rel: null, toast: null,
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
@@ -224,7 +224,7 @@ class App {
    */
   static get ADRESSES(){
     return {
-      taches: 'taches-consultants', resultatJour: 'resultat-du-jour', exploitation: 'pl-magasins',
+      taches: 'taches-consultants', resultatJour: 'resultat', exploitation: 'pl-magasins',
       magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
       budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
@@ -257,7 +257,7 @@ class App {
    * que de rouvrir l'accueil sans rien dire.
    */
   static get ADRESSES_RETIREES(){
-    return { stock: 'caAchats', 'commandes-franchises': 'caAchats' };
+    return { stock: 'caAchats', 'commandes-franchises': 'caAchats', 'resultat-du-jour': 'resultatJour' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -850,7 +850,7 @@ class App {
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
-      resultatJour: ['Résultat du jour', 'Le compte de résultat d\u2019une journée, magasin par magasin : ventes, coût matière, main-d\u2019œuvre, frais généraux et résultat. Ouvrez une ligne pour la cascade du magasin, sa ventilation par catégorie et la place du jour dans le mois.'],
+      resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
@@ -1173,16 +1173,16 @@ class App {
     // trois sections (performance, analyse, budget), retrouvent un seul toit.
     const navDef = [
       // Le matin : ce qui s'est passé, ce qui presse.
+      // Un seul écran de pilotage : Résultat — jour, semaine, mois. Les
+      // tâches consultants et le P&L magasins restent accessibles par leur
+      // adresse, mais ce qu'on y lisait chaque matin vit désormais ici.
       ['Pilotage', [
-        ['taches', 'Tâches consultants', lateTasks.length],
-        ['resultatJour', 'Résultat du jour', 0],
-        ['exploitation', 'P&L magasins', 0]]],
+        ['resultatJour', 'Résultat', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
       ['Magasins', [
         { sub: 'Performance', children: [
           ['magasins', 'Tableau des magasins', 0],
-          ['heatmap', 'Heatmap mensuelle', 0],
           ['objectifs', 'Objectifs de CA', 0],
           ['marge', 'Marge & coûts', 0],
           ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]] },
@@ -1346,7 +1346,8 @@ class App {
     }
 
     // --- heatmap
-    if (common.isHeatmap){
+    // La heatmap vit aussi sous Résultat › Mois : douze mois sous le tableau du mois.
+    if (common.isHeatmap || (common.isRJour && (S.rjOnglet || 'jour') === 'mois')){
       const E = this.exo();
       const year = (S.hmYear === E - 1) ? E - 1 : E;
       // Le mode « % d'atteinte » suppose des objectifs encodés. Tant qu'il n'y
@@ -1554,7 +1555,11 @@ class App {
     // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
     if (common.isReput) { this.repCharge(); this.valsReputation(common); }
     // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
-    if (common.isRJour) { this.rjCharge(false); this.valsResultatJour(common); }
+    if (common.isRJour) {
+      this.valsResultatOnglets(common);
+      if (common.rjOnglet === 'jour') { this.rjCharge(false); this.valsResultatJour(common); }
+      else { this.rpCharge(false); this.valsResultatPeriode(common); }
+    }
     // --- suivi budget magasin
     // Relu à CHAQUE ouverture de l'écran : ce tableau est la lecture du budget,
     // et l'instantané pris au chargement de la page vieillit dès qu'un mois est
@@ -6892,6 +6897,219 @@ class App {
     common.pjAdopteLe = P.adopteLe ? this.fD(String(P.adopteLe).slice(0, 10)) : '';
     common.pjRien = !(P.adopte || []).length;
   }
+  /* --- Résultat : un écran, trois étendues ------------------------------------ */
+  /**
+   * Jour, semaine, mois : la MÊME mesure sur trois étendues, pas trois écrans.
+   * La somme des jours fait la semaine, la somme des semaines fait le mois —
+   * et l'objectif de chacune vient du budget mensuel réparti par la
+   * pondération réseau des jours (Paramètres du budget).
+   */
+  valsResultatOnglets(common){
+    const S = this.state;
+    const on = S.rjOnglet || 'jour';
+    common.rjOnglet = on;
+    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']].map(o => ({
+      cle: o[0], nom: o[1], on: on === o[0],
+      go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
+    common.rjOngletTxt = {
+      jour: 'La journée, magasin par magasin, face à l’objectif du jour et au compte de résultat.',
+      semaine: 'La semaine : l’objectif, ce qui est fait, ce qui reste — et en combien de clients.',
+      mois: 'Le mois : le budget, le compte de résultat, et douze mois d’histoire.' }[on];
+  }
+  rpCle(){ return (this.state.rjOnglet || 'semaine') + '|' + (this.state.rpDate || ''); }
+  /** La période lue une fois puis gardée — même règle que la journée : on ne
+   *  vide pas le cache avant la réponse, l'ancienne étendue reste lisible. */
+  rpCharge(force){
+    const cle = this.rpCle(), vue = this.state.rjOnglet || 'semaine';
+    if (!this.D.rper) { this.D.rper = {}; }
+    if (this._rpEnCours === cle) { return; }
+    if (this.D.rper[cle] && !force) { return; }
+    this._rpEnCours = cle;
+    if (force) { this.setState({ rpMaj: 'en-cours' }); }
+    readOne('/exploitation/periode?vue=' + vue
+      + (this.state.rpDate ? '&date=' + encodeURIComponent(this.state.rpDate) : '')).then(d => {
+      this._rpEnCours = null;
+      const v = d || { erreur: true };
+      this.D.rper[cle] = v;
+      if (v.date) { this.D.rper[vue + '|' + v.date] = v; }
+      this.setState({ rpMaj: new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
+    });
+  }
+  valsResultatPeriode(common){
+    const S = this.state, D = this.D;
+    const vue = S.rjOnglet || 'semaine';
+    const r = (D.rper || {})[this.rpCle()];
+    common.rpChargement = !r;
+    common.rpErreur = !!(r && (r.erreur || r.indispo));
+    common.rpErreurTxt = r && r.indispo ? r.motif
+      : 'La lecture de /exploitation/periode a échoué — voir Diagnostic API.';
+    common.rpMois = vue === 'mois'; common.rpSemaine = vue === 'semaine';
+    common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null;
+    common.rpMaj = S.rpMaj === 'en-cours' ? 'lecture…' : (S.rpMaj ? 'lu à ' + S.rpMaj : '');
+    common.rpRefresh = () => this.rpCharge(true);
+    common.rpRegler = () => this.setState({ screen: 'budgetparam' });
+    common.rpChargementTxt = vue === 'semaine' ? 'Lecture de la semaine…' : 'Lecture du mois…';
+    if (!r || common.rpErreur) { return; }
+
+    const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
+    const fE = n => this.fE(n);
+    const fPct = (n, d) => (n == null) ? '' : n.toFixed(d == null ? 1 : d).replace('.', ',') + ' %';
+    const fInt = n => (n == null) ? '' : Math.round(n).toLocaleString('fr-BE');
+    const fU = n => (n == null) ? '' : n.toFixed(2).replace('.', ',') + ' €';
+    // Un écart signé, en euros : « +267 € », « −484 € ».
+    const fS = n => (n == null) ? '' : (n >= 0 ? '+' : '−') + fE(Math.abs(n));
+    const fCl = n => (n == null) ? '' : (n > 0 ? '−' : '+') + fInt(Math.abs(n));
+    const coulEcart = n => (n == null) ? 'var(--color-text-muted)' : (n >= 0 ? '#2d7a3e' : '#C0182B');
+    const feu = (v, s) => (v == null) ? 'var(--color-text-muted)'
+      : (v <= s ? '#2d7a3e' : (v <= s * 1.3 ? '#D97706' : '#C0182B'));
+    const feuRes = p => (p == null) ? 'var(--color-text-muted)'
+      : (p >= 15 ? '#2d7a3e' : (p >= 5 ? '#D97706' : '#C0182B'));
+
+    // --- le titre et la navigation dans le temps
+    const dLong = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' });
+    let titre;
+    if (vue === 'semaine') {
+      const d1 = new Date(r.du + 'T12:00:00'), d2 = new Date(r.au + 'T12:00:00');
+      titre = 'semaine du ' + (d1.getMonth() === d2.getMonth() ? d1.getDate()
+        : d1.toLocaleDateString('fr-BE', { day: 'numeric', month: 'long' })) + ' au ' + dLong(r.au);
+    } else {
+      titre = new Date(r.du + 'T12:00:00').toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' });
+    }
+    common.rpTitre = titre.charAt(0).toUpperCase() + titre.slice(1);
+    const decale = n => {
+      const d2 = new Date(r.du + 'T12:00:00');
+      if (vue === 'semaine') { d2.setDate(d2.getDate() + 7 * n); } else { d2.setMonth(d2.getMonth() + n); }
+      return d2.toISOString().slice(0, 10);
+    };
+    common.rpPrec = () => this.setState({ rpDate: decale(-1), rpSel: null });
+    const suivante = decale(1);
+    common.rpSuiv = suivante <= r.aujourdhui ? () => this.setState({ rpDate: suivante, rpSel: null }) : null;
+    common.rpAuj = S.rpDate ? () => this.setState({ rpDate: null, rpSel: null }) : null;
+    common.rpAujTxt = vue === 'semaine' ? 'Cette semaine' : 'Ce mois';
+
+    const res = r.reseau || {};
+    const jours = res.jours || [];
+    const passes = jours.filter(j => j.passe).length;
+    const restants = jours.filter(j => !j.passe).map(j => j.court.split(' ')[0]);
+    // Ce qui est écoulé se dit en OBJECTIF, pas en jours : au jeudi soir,
+    // 52 % de la semaine sont attendus — quatre jours sur sept en feraient 57.
+    common.rpSousTitre = (res.objectif != null && res.objectif > 0)
+      ? Math.round(100 * res.attendu / res.objectif) + ' % de l’objectif écoulés'
+        + (restants.length ? (vue === 'semaine' ? ' — reste ' + restants.join(', ') : ' — ' + restants.length + ' jour(s) à venir') : ' — période close')
+      : passes + ' jour(s) sur ' + jours.length;
+    common.rpPjMotif = (r.ponderation && !r.ponderation.ok) ? (r.ponderation.motif || '') : '';
+    common.rpPjTxt = r.ponderation && r.ponderation.ok
+      ? 'Objectif = budget du mois réparti par la pondération réseau des jours' + (r.ponderation.adopteLe ? ' (adoptée le ' + this.fD(String(r.ponderation.adopteLe).slice(0, 10)) + ')' : '')
+      : '';
+
+    // --- les quatre tuiles du réseau
+    const clientsTxt = n => n == null ? '' : (n > 0 ? 'il manque ' + fInt(n) + ' clients' : (n < 0 ? fInt(-n) + ' clients d’avance' : 'dans la cible'));
+    const sansObj = res.objectif == null;
+    common.rpTuiles = [
+      { l: vue === 'semaine' ? 'Objectif de la semaine' : 'Budget du mois', v: sansObj ? '—' : fE(res.objectif), col: 'var(--color-text)',
+        s: sansObj ? (r.ponderation && r.ponderation.ok ? 'aucun budget encodé pour ce mois' : 'pondération des jours à adopter')
+          : (vue === 'semaine' ? 'budget mensuel réparti sur ' + res.magasinsAvecObjectif + ' magasin(s)' : res.magasinsAvecObjectif + ' magasin(s) avec budget') },
+      { l: 'Réalisé', v: fE(res.realise), col: 'var(--color-text)',
+        s: res.attendu != null ? 'attendu ' + fE(res.attendu) + ' à ce stade' : fInt(res.tickets) + ' tickets · panier ' + fU(res.panier) },
+      { l: 'Écart', v: sansObj ? '—' : fS(res.ecart), col: coulEcart(res.ecart), s: clientsTxt(res.clientsManquants) },
+      { l: 'Reste à faire', v: sansObj ? '—' : fE(res.reste), col: 'var(--color-text)',
+        s: (res.objectif ? 'soit ' + Math.round(100 * res.reste / res.objectif) + ' % ' + (vue === 'semaine' ? 'de la semaine' : 'du mois') : '') },
+    ];
+    // --- le jour par jour du réseau : réalisé plein, objectif en creux
+    const max = Math.max(1, ...jours.map(j => Math.max(j.objectif || 0, j.ca || 0)));
+    common.rpJours = jours.map(j => ({
+      court: vue === 'semaine' ? j.court : j.court.split(' ')[1], auj: !!j.aujourdhui, passe: !!j.passe,
+      hObj: Math.round(100 * (j.objectif || 0) / max), hCa: Math.round(100 * (j.ca || 0) / max),
+      coul: j.passe ? ((j.objectif != null && j.ca != null) ? (j.ca >= j.objectif ? '#2d7a3e' : 'var(--color-primary)') : 'var(--color-primary)') : 'transparent',
+      titre: j.court + (j.ca != null ? ' — réalisé ' + fE(j.ca) : '') + (j.objectif != null ? ' · objectif ' + fE(j.objectif) : ''),
+    }));
+
+    // --- le mois de chaque magasin, tel que « Tâches consultants » le lisait :
+    //     CA du mois, N-1, écart, tickets, panier — la même source API.
+    this.tkReseau();
+    const RM = this.D.tkReseau || null;
+    const moisDe = id => ((RM && RM.magasins) || []).find(m2 => String(m2.shopId) === String(id)) || null;
+    const moisTxt = id => { const m2 = moisDe(id);
+      return { ca: m2 ? this.fE(m2.n) : '', n1: m2 && m2.n1 ? this.fE(m2.n1) : '',
+        ecart: m2 && m2.ecart != null ? (m2.ecart >= 0 ? '+' : '') + String(m2.ecart).replace('.', ',') + ' %' : '',
+        ecartCol: m2 && m2.ecart != null ? (m2.ecart >= 0 ? '#2d7a3e' : '#C0182B') : 'var(--color-text-muted)',
+        tickets: m2 && m2.tickets ? fInt(m2.tickets) : '', panier: m2 && m2.panier ? fU(m2.panier) : '',
+        periode: RM && RM.du ? this.fD(RM.du) + ' → ' + this.fD(RM.au) : '',
+        etat: RM ? (RM.etat || '') : 'chargement' }; };
+
+    const sel = S.rpSel;
+    const ligne = (m, reseau) => {
+      const sansO = m.objectif == null;
+      return {
+        id: m.shopId, nom: reseau ? 'Réseau' : m.magasin, ouvert: reseau ? (m.magasins || 0) > 0 : !!m.ouvert, reseau: !!reseau,
+        sousTitre: reseau ? m.magasins + ' magasin(s)' + (m.magasinsAvecObjectif < m.magasins ? ' · ' + (m.magasins - m.magasinsAvecObjectif) + ' sans budget' : '')
+          : (m.ouvert ? ((m.sansBudget || []).length ? 'sans budget ' + m.sansBudget.join(', ') : '') : (m.motif || 'sans réponse')),
+        actif: !reseau && m.shopId === sel, chevron: reseau ? '' : (m.shopId === sel ? '▾' : '▸'),
+        ouvrir: reseau ? null : () => this.setState({ rpSel: m.shopId === sel ? null : m.shopId }),
+        objectif: sansO ? '' : fE(m.objectif),
+        objectifTitre: sansO ? 'aucun budget encodé, ou pondération non adoptée'
+          : (m.objectifSource === 'theorique' ? 'CA théorique de l’étude, faute de budget validé' : 'budget validé du mois, réparti par jour'),
+        realise: fE(m.realise), attendu: sansO ? '' : fE(m.attendu),
+        ecart: sansO ? '' : fS(m.ecart), ecartCol: coulEcart(m.ecart),
+        clients: sansO ? '' : fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart),
+        clientsTitre: m.panier ? 'écart ÷ panier moyen de ' + fU(m.panier) : '',
+        fc: fPct(m.coutMatierePct), fcCol: feu(m.coutMatierePct, seuils.food),
+        lab: fPct(m.labourPct), labCol: feu(m.labourPct, seuils.labour),
+        oh: fPct(m.overheadPct), ohCol: feu(m.overheadPct, seuils.overhead),
+        net: m.net == null ? '' : fE(m.net), netPct: fPct(m.netPct), netCol: feuRes(m.netPct),
+        netTitre: m.motifNet || '',
+        mois: vue === 'mois' ? moisTxt(m.shopId) : null,
+        st: reseau ? 'background:var(--color-background-secondary)' : ('cursor:pointer;background:' + (m.shopId === sel ? 'var(--color-background-secondary)' : 'transparent')),
+      };
+    };
+    common.rpLignes = (r.magasins || []).map(m => ligne(m, false));
+    common.rpReseau = ligne(res, true);
+    common.rpNote = r.source || '';
+    common.rpEntetes = vue === 'semaine'
+      ? ['Magasin', 'Objectif', 'Réalisé', 'Attendu à ce jour', 'Écart', 'Clients manquants']
+      : ['Magasin', 'Budget', 'Ventes', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
+    common.rpInvite = !sel ? 'Ouvrez une ligne : ce qu’il manque et en combien de clients, ce qu’il faut pour tenir l’objectif, le compte de résultat, et le mois du magasin.' : '';
+
+    // --- le détail du magasin ouvert
+    const m = (r.magasins || []).find(m2 => m2.shopId === sel && m2.ouvert) || null;
+    if (!m) { return; }
+    const barre = p => Math.min(Math.abs(p || 0), 100);
+    const sansO = m.objectif == null;
+    const eff = sansO ? null : (m.reste - m.prevu);   // = −écart : ce qu'il faut faire EN PLUS de ce que la pondération prévoyait
+    const effClients = (eff != null && m.panier > 0) ? Math.round(eff / m.panier) : null;
+    common.rpDetail = {
+      nom: m.magasin, fermer: () => this.setState({ rpSel: null }),
+      sansObjectif: sansO,
+      manque: sansO ? null : {
+        titre: m.clientsManquants > 0 ? 'Il manque ' + fInt(m.clientsManquants) + ' clients sur ' + (vue === 'semaine' ? 'la semaine' : 'le mois')
+          : (m.clientsManquants < 0 ? fInt(-m.clientsManquants) + ' clients d’avance sur ' + (vue === 'semaine' ? 'la semaine' : 'le mois') : 'Dans la cible'),
+        titreCol: m.clientsManquants > 0 ? '#C0182B' : '#2d7a3e',
+        ecart: fS(m.ecart), ecartCol: coulEcart(m.ecart),
+        ecartLib: 'Écart à l’attendu ' + (r.enCours ? 'à ce jour' : 'de la période'),
+        panier: fU(m.panier), clients: fCl(m.clientsManquants), clientsCol: coulEcart(m.ecart) },
+      tenir: sansO ? null : {
+        reste: fE(m.reste), resteLib: 'Reste à faire' + (restants.length ? ' (' + restants.join(' + ') + ')' : ''),
+        prevu: fE(m.prevu), prevuPct: m.objectif ? Math.round(100 * m.prevu / m.objectif) + ' %' : '',
+        effort: fS(eff), effortCol: eff == null ? 'var(--color-text-muted)' : (eff > 0 ? '#C0182B' : '#2d7a3e'),
+        effortClients: effClients == null ? '' : ((effClients > 0 ? '+' : '') + fInt(effClients) + ' clients'),
+        clos: !restants.length },
+      cascade: [
+        { l: 'Ventes TTC', v: fE(m.realise), p: '', coul: 'var(--color-text)', fort: true, w: 100 },
+        { l: '− Coût matière', v: fE(-m.coutMatiere), p: fPct(m.coutMatierePct), coul: feu(m.coutMatierePct, seuils.food), w: barre(m.coutMatierePct), seuil: 'seuil ' + fPct(seuils.food, 0) },
+        { l: '− Main-d’œuvre', v: m.labour == null ? '' : fE(-m.labour), p: fPct(m.labourPct), coul: feu(m.labourPct, seuils.labour), w: barre(m.labourPct), seuil: 'seuil ' + fPct(seuils.labour, 0) + ' · réparti' },
+        { l: '− Frais généraux', v: m.overhead == null ? '' : fE(-m.overhead), p: fPct(m.overheadPct), coul: feu(m.overheadPct, seuils.overhead), w: barre(m.overheadPct), seuil: 'seuil ' + fPct(seuils.overhead) + ' · réparti' },
+        { l: 'Résultat', v: m.net == null ? '' : fE(m.net), p: fPct(m.netPct), coul: feuRes(m.netPct), fort: true, w: barre(m.netPct) },
+      ],
+      motifNet: m.motifNet || '',
+      moisMag: moisTxt(m.shopId),
+      jours: (m.jours || []).filter(j => j.passe).map(j => {
+        const ec = (j.objectif != null && j.ca != null) ? j.ca - j.objectif : null;
+        const cl = (ec != null && m.panier > 0) ? Math.round(-ec / m.panier) : null;
+        return { court: j.court, ferme: !!j.ferme, ca: j.ca == null ? (j.ferme ? 'fermé' : '—') : fE(j.ca),
+          obj: j.objectif == null ? '' : fE(j.objectif), clients: fCl(cl), col: coulEcart(ec), auj: !!j.aujourdhui };
+      }),
+    };
+  }
   valsResultatJour(common){
     const S = this.state, D = this.D;
     const r = (D.rjour || {})[this.rjCle()];
@@ -7010,6 +7228,15 @@ class App {
         return t == null ? 'var(--color-text-muted)' : (t >= 1 ? '#2d7a3e' : (t >= 0.9 ? '#C17A2A' : 'var(--color-primary)')); })(),
       fcTitre: (() => { const n = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour == null).length;
         return n ? n + ' magasin(s) sans objectif encodé, exclu(s) du total' : 'somme des objectifs du jour'; })(),
+      // Les clients manquants du réseau : la somme de ceux de chaque magasin,
+      // chacun à son panier — pas l'écart réseau divisé par un panier moyen.
+      manque: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null && m2.panier > 0);
+        if (!l.length) { return ''; }
+        const n = l.reduce((a, m2) => a + Math.round((m2.ca - m2.objectifJour) / m2.panier), 0);
+        return (n >= 0 ? '+' : '−') + fInt(Math.abs(n)); })(),
+      manqueCoul: (() => { const l = (r.magasins || []).filter(m2 => m2.ouvert && m2.objectifJour != null && m2.panier > 0);
+        if (!l.length) { return 'var(--color-text-muted)'; }
+        return l.reduce((a, m2) => a + Math.round((m2.ca - m2.objectifJour) / m2.panier), 0) >= 0 ? '#2d7a3e' : '#C0182B'; })(),
       mb: fE(res.margeBrute), mbPct: fPct(res.margeBrutePct),
       labour: fE(res.labour), labourPct: fPct(res.labourPct), labourCoul: feu(res.labourPct, seuils.labour),
       oh: fE(res.overhead), ohPct: fPct(res.overheadPct), ohCoul: feu(res.overheadPct, seuils.overhead),
@@ -7074,8 +7301,15 @@ class App {
           : (m.objectifAtteinte >= 1 ? '#2d7a3e' : (m.objectifAtteinte >= 0.9 ? '#C17A2A' : 'var(--color-primary)')),
         fcTitre: m.objectifJour == null ? 'aucun budget ni théorique pour ce mois'
           : ((m.objectifSource === 'budget' ? 'budget validé' : 'CA théorique de l’étude')
-             + (m.objectifBase === 'profil' ? ' · réparti au poids du ' + (m.objectifJourNom || 'jour') : ' · réparti à parts égales')
+             + (m.objectifBase === 'reseau' ? ' · pondération réseau : le ' + (m.objectifJourNom || 'jour') + ' porte ' + String(m.objectifPart).replace('.', ',') + ' % du mois'
+               : (m.objectifBase === 'profil' ? ' · réparti au poids du ' + (m.objectifJourNom || 'jour') : ' · réparti à parts égales'))
              + (m.projection != null ? ' · projection ' + fE(m.projection) : '')),
+        // L'écart à l'objectif, traduit en CLIENTS : la différence divisée par
+        // le panier moyen du magasin. « −71 » = il en manque 71.
+        manque: (() => { const n = (m.objectifJour != null && m.panier > 0) ? Math.round((m.ca - m.objectifJour) / m.panier) : null;
+          return n == null ? '' : (n >= 0 ? '+' : '−') + fInt(Math.abs(n)); })(),
+        manqueCoul: (m.objectifJour == null) ? 'var(--color-text-muted)' : (m.ca >= m.objectifJour ? '#2d7a3e' : '#C0182B'),
+        manqueTitre: m.panier > 0 ? 'écart à l’objectif ÷ panier moyen de ' + fU(m.panier) : '',
         mb: fE(m.margeBrute), mbPct: fPct(m.margeBrutePct),
         labour: fE(m.labour), labourPct: fPct(m.labourPct), labourCoul: feu(m.labourPct, seuils.labour),
         labourTitre: m.labourSource === 'reparti' ? 'masse salariale du mois répartie sur les jours d’ouverture' : 'mesurée sur la journée',
@@ -7222,7 +7456,10 @@ class App {
         source: m.objectifSource === 'budget' ? 'budget validé' : 'CA théorique de l’étude',
         // Dire COMMENT la cible du jour est tirée du mois : c'est là que se
         // joue l'honnêteté du chiffre.
-        base: m.objectifBase === 'profil'
+        base: m.objectifBase === 'reseau'
+          ? (fE(m.objectifMois) + ' / mois × ' + String(m.objectifPart).replace('.', ',') + ' % — pondération réseau du '
+             + (m.objectifJourNom || 'jour') + ', sur les jours d’ouverture du magasin')
+          : m.objectifBase === 'profil'
           ? (fE(m.objectifMois) + ' / mois × ' + String(m.objectifPart).replace('.', ',') + ' % — poids du '
              + (m.objectifJourNom || 'jour') + ' mesuré sur ' + fInt(m.objectifJoursVus) + ' '
              + (m.objectifJourNom || 'jour') + (m.objectifJoursVus > 1 ? 's' : '') + ' de ce magasin'

@@ -2428,6 +2428,22 @@ function ep_exploitation_jour(): array
             }
         }
         $part = ($attMois > 0 && $vus >= 2 && isset($moyWd[$wdJour])) ? $moyWd[$wdJour] / $attMois : null;
+        // La PONDÉRATION RÉSEAU adoptée (Paramètres du budget) prime sur le
+        // profil du magasin : décision produit, les mêmes poids pour tous —
+        // un magasin faible le samedi doit se mesurer à la courbe du réseau,
+        // pas à sa propre faiblesse. Seuls ses jours d'ouverture entrent au
+        // dénominateur : un lundi jamais ouvert ne prend rien aux autres.
+        $pjR = pjPoids();
+        if ($pjR !== null) {
+            $denR = 0.0;
+            for ($i5 = 0; $i5 < $joursMois; $i5++) {
+                $wd5 = (int) $premier->modify('+' . $i5 . ' days')->format('N');
+                if (isset($wdActifs[$wd5])) { $denR += $pjR['poids'][$wd5]; }
+            }
+            if ($denR > 0 && isset($wdActifs[$wdJour])) {
+                $part = $pjR['poids'][$wdJour] / $denR; $profilSrc = 'reseau';
+            }
+        }
 
         // ── PROJECTION DE FIN DE JOURNÉE.
         //
@@ -2482,7 +2498,7 @@ function ep_exploitation_jour(): array
         $bm = $budMois[(string) $id] ?? null;
         $objMois = $bm !== null ? round($bm['montant'], 2) : null;
         $objSrc  = $bm !== null ? $bm['source'] : null;
-        $objBase = $part !== null ? 'profil' : 'plat';
+        $objBase = $part !== null ? ($profilSrc === 'reseau' ? 'reseau' : 'profil') : 'plat';
         $objJour = null;
         if ($bm !== null) {
             $objJour = $part !== null ? round($bm['montant'] * $part, 2)
