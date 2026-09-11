@@ -21,6 +21,8 @@ require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/resultat.php';
 require __DIR__ . '/../../src/resultat_pdf.php';
+require __DIR__ . '/../../src/plan.php';
+require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -108,6 +110,8 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/ponderation-jours' => ep_ponderation_jours(),
             $path === '/exploitation/periode'          => ep_exploitation_periode(),
             $path === '/exploitation/mois.pdf'         => ep_exploitation_mois_pdf(),
+            $path === '/plan'                          => ep_plan(),
+            $path === '/plan.pdf'                      => ep_plan_pdf(),
             $path === '/targets'                       => ep_targets(),
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
@@ -235,6 +239,10 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
+    if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
+    if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
+    if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }
+    if ($method === 'POST' && $path === '/plan/revue') { return wr_plan_revue(); }
     if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
     if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }

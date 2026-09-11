@@ -137,6 +137,7 @@ export function render(c, x){
       ${c.isMarge && !c.isPerf ? tplMarge(c, x) : ''}
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
+      ${c.isPlan ? tplPlan(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
@@ -3760,6 +3761,253 @@ function tplRentabilite(c, x){
 }
 
 /** Performance : un seul écran, trois onglets — le mois clos, l'année, la marge. */
+/** Plan de développement : la rampe à gauche, l'année à droite, le rituel en modale. */
+function tplPlan(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const btnP = 'border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  const opts = (arr, v, t) => arr.map(o => `<option value="${esc(v(o))}"${o.on ? ' selected' : ''}>${esc(t(o))}</option>`).join('');
+  const entete = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
+      <select ${x.C(c.setPlStore)} style="font-size:13px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+        ${c.pdvStoreOpts.map(o => `<option value="${esc(o.id)}"${o.id === c.pdvStore ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+      </select>
+      <select ${x.C(c.setPlAn)} style="font-size:13px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+        ${c.pdvAnOpts.map(o => `<option value="${esc(o.v)}"${o.v === c.pdvAn ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+      </select>
+      <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.pdvMeta)}</span>
+      <span style="flex:1"></span>
+      ${c.pdvPdfHref ? `<a href="${esc(c.pdvPdfHref)}" target="_blank" rel="noopener" style="${btnS};text-decoration:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:13px">⎙</span>PDF du plan</a>` : ''}
+    </div>`;
+  if (c.pdvChargement) { return `<div data-screen="plan" style="display:flex;flex-direction:column;gap:16px">${entete}<div style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture du plan…</div></div>`; }
+  if (c.pdvErreur) { return `<div data-screen="plan" style="display:flex;flex-direction:column;gap:16px">${entete}<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.pdvErreurTxt)}</div></div>`; }
+  const E = c.pdvEng, A = c.pdvAnnee, AC = c.pdvActions;
+  const actLigne = a => `
+    <div ${x.A(a.editer)} class="hv-bg" title="Modifier l’action" style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:0.5px dashed var(--color-border-tertiary);font-size:12px;cursor:pointer">
+      ${a.trimestre ? `<span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${esc(a.trimestre)}</span>` : ''}
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(a.libelle)}${a.responsable ? ` <span style="font-size:10.5px;color:var(--color-text-muted)">· ${esc(a.responsable)}</span>` : ''}</span>
+      <span style="font-weight:600;white-space:nowrap;${num}">${esc(a.effet)}</span>
+    </div>`;
+  const colonne = (titre, lst, fond, coulT) => `
+    <div style="background:${fond};border-radius:9px;padding:8px 10px;min-height:60px">
+      <div style="${cap};color:${coulT};margin-bottom:4px">${esc(titre)} · ${lst.length}</div>
+      ${lst.map(actLigne).join('') || `<div style="font-size:11px;color:var(--color-text-muted);padding:4px">—</div>`}
+    </div>`;
+  const voix = (v, plein) => `
+    <div style="display:flex;gap:7px;align-items:flex-start;margin-top:7px;font-size:11.5px;line-height:1.4">
+      <b style="flex:none;width:64px;font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding-top:3px;color:${v.coul}">${esc(v.nom)}</b>
+      ${v.texte ? `<span style="flex:1;background:var(--color-background-secondary);border-radius:6px;padding:5px 8px">${esc(v.texte)}${v.signe ? ` <span style="font-size:10px;color:var(--color-text-muted)">— ${esc(v.signe)}</span>` : ''}</span>`
+        : `<span style="flex:1;border:0.5px dashed var(--color-border-secondary);border-radius:6px;padding:5px 8px;color:var(--color-text-muted)">${plein ? 'non annoté' : 'à annoter'}</span>`}
+    </div>`;
+  return `
+  <div data-screen="plan" style="display:flex;flex-direction:column;gap:14px">
+    ${entete}
+    ${c.pdvErr ? `<div style="font-size:12px;color:var(--color-primary);background:#F6E4E7;border:1px solid #e8b4bb;padding:8px 12px;border-radius:8px">${esc(c.pdvErr)}</div>` : ''}
+    ${c.pdvSansEtude ? `<div style="font-size:12px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:8px 12px;border-radius:8px">Ce magasin n’a pas d’étude de marché : la rampe à 5 ans ne se calcule pas. <button ${x.A(c.pdvGoEtude)} style="border:none;background:none;padding:0;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;cursor:pointer;text-decoration:underline">L’encoder dans Paramètres du budget</button>.</div>` : ''}
+    <div style="display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="${cap};margin-bottom:2px">La rampe — 5 ans${c.pdvRampe.length ? '' : ' (sans étude)'}</div>
+        ${c.pdvRampe.map(r => `
+        <div ${x.A(r.go)} class="hv-bg" style="${carte};padding:10px 12px;cursor:pointer;${r.cur ? 'border-color:var(--color-primary);background:#fdf7f8' : ''}">
+          <div style="font-size:12px;font-weight:600">${esc(r.an)} <span style="font-weight:400;color:var(--color-text-muted)">· ${esc(r.lib)}</span></div>
+          <div style="font-family:var(--font-display);font-size:18px;margin-top:2px;${num}">${esc(r.ca)}</div>
+          ${r.eng ? `<div style="font-size:11px;${num}">${esc(r.eng)}</div>` : ''}
+          ${r.sous ? `<div style="font-size:10.5px;color:var(--color-text-muted);${num}">${esc(r.sous)}</div>` : ''}
+          ${r.signe ? `<div style="font-size:10px;font-weight:600;color:${r.signeCol};margin-top:4px">${esc(r.signe)}</div>` : ''}
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="${carte};padding:16px 18px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+            <div>
+              <div style="font-family:var(--font-display);font-size:17px">Engagement ${esc(c.pdvAn)} — ${esc(c.pdvMagasin)}</div>
+              <div style="font-size:11.5px;color:${E.statutCol};margin-top:2px">${esc(E.statutTxt)}${E.signes ? ' · ' + esc(E.signes) : ''}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${E.statut !== 'valide' || E.modifie ? `<button ${x.A(E.brouillon)} style="${btnS}">${E.statut === 'brouillon' ? 'Enregistrer le brouillon' : 'Enregistrer la modification'}</button>` : ''}
+              ${E.statut === 'brouillon' ? `<button ${x.A(E.peutDeposer ? E.deposer : null)} style="${btnP};opacity:${E.peutDeposer ? 1 : .45}">Déposer l’engagement (franchisé)</button>` : ''}
+              ${E.statut === 'engage' ? `<button ${x.A(E.valider)} style="${btnP}">Valider l’engagement (consultant)</button>` : ''}
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
+            <div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <label style="display:flex;flex-direction:column;gap:4px"><span style="${cap}">Objectif engagé (€)</span><input type="number" step="1000" value="${esc(E.objectif)}" ${x.I(E.setObjectif)} style="${inp};${num}" /></label>
+                <label style="display:flex;flex-direction:column;gap:4px"><span style="${cap}">Rampe de l’étude</span><input value="${esc(E.rampe)}" readonly style="${inp};color:var(--color-text-muted);${num}" /></label>
+              </div>
+              ${E.ecartRampe ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">${esc(E.ecartRampe)}</div>` : ''}
+              <label style="display:flex;flex-direction:column;gap:4px;margin-top:10px"><span style="${cap}">Pourquoi cet objectif — et comment j’y arrive, en deux lignes</span>
+                <textarea rows="3" ${x.I(E.setMotif)} style="${inp};resize:vertical;line-height:1.45">${esc(E.motif)}</textarea></label>
+            </div>
+            <div>
+              <div style="${cap}">Où en est l’engagement</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">
+                <div style="background:var(--color-background-secondary);border-radius:9px;padding:9px 11px"><div style="${cap}">Objectif</div><div style="font-family:var(--font-display);font-size:19px;${num}">${esc(A.objectif)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(A.attendu)}</div></div>
+                <div style="background:var(--color-background-secondary);border-radius:9px;padding:9px 11px"><div style="${cap}">Réalisé</div><div style="font-family:var(--font-display);font-size:19px;${num}">${esc(A.realise)}</div><div style="font-size:10.5px;color:${A.ecartCol}">${esc(A.ecart)}${A.partEcoulee ? ' · ' + esc(A.partEcoulee) : ''}</div></div>
+                <div style="background:var(--color-background-secondary);border-radius:9px;padding:9px 11px;border:1px solid ${A.projCol}"><div style="${cap}">Projection fin d’année</div><div style="font-family:var(--font-display);font-size:19px;color:${A.projCol};${num}">${esc(A.projection)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(A.projSous)}</div></div>
+              </div>
+              <div style="position:relative;height:10px;border-radius:999px;background:var(--color-background-secondary);margin-top:12px;overflow:hidden">
+                <i style="position:absolute;left:0;top:0;height:100%;width:${A.wReel}%;background:var(--color-primary);border-radius:999px"></i>
+                <b style="position:absolute;top:-2px;bottom:-2px;left:${A.wAtt}%;width:2px;background:var(--color-text)"></b>
+              </div>
+              <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">${esc(A.wReel)} % réalisé · le repère noir est l’attendu à ce jour (${esc(A.wAtt)} %)</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="${carte};padding:16px 18px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+            <div style="font-family:var(--font-display);font-size:16px">Les actions pour y arriver <span style="font-size:12px;font-family:var(--font-ui);color:var(--color-text-muted)">· effet attendu ${esc(AC.effetTotal)}/an</span></div>
+            <button ${x.A(AC.ajouter)} style="${btnS}">+ Ajouter une action</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            ${colonne('À lancer', AC.alancer, 'var(--color-background-secondary)', 'var(--color-text-muted)')}
+            ${colonne('En cours', AC.encours, '#FBEFE0', '#8a5a1c')}
+            ${colonne('Fait', AC.fait, '#E3EFE6', '#2d7a3e')}
+          </div>
+          ${AC.abandonne.length ? `<div style="margin-top:8px;opacity:.7">${colonne('Abandonné', AC.abandonne, '#F6E4E7', 'var(--color-primary)')}</div>` : ''}
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Cliquez une action pour la modifier. Chaque action porte un effet attendu en €/an, un trimestre de lancement, un responsable et la façon de la mesurer.</div>
+        </div>
+
+        <div style="${carte};padding:16px 18px">
+          <div style="font-family:var(--font-display);font-size:16px;margin-bottom:10px">Les trimestres — constat, annotations, suite</div>
+          ${c.pdvTrims.map(t => `
+          <div style="border:0.5px solid ${t.ouvert ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:10px;padding:10px 12px;margin-bottom:8px;${t.futur ? 'opacity:.7' : ''}">
+            <div ${x.A(t.ouvrir)} style="display:flex;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap">
+              <span style="font-size:9px;color:var(--color-text-muted)">${t.ouvert ? '▾' : '▸'}</span>
+              <span style="font-weight:600;font-size:12.5px;width:120px">${esc(t.label)} <span style="font-weight:400;color:var(--color-text-muted)">· ${esc(t.periode)}</span></span>
+              <span style="font-size:13px;font-weight:600;color:${t.kpiCol};${num}">${esc(t.kpi)}</span>
+              <span style="font-size:11px;color:var(--color-text-muted);${num}">${esc(t.sous)}</span>
+              <span style="flex:1"></span>
+              <span style="font-size:10.5px;color:${t.revueCol};font-weight:500">${esc(t.revueTxt || t.etat)}</span>
+              ${t.rituel ? `<button ${x.A(t.rituel)} style="${btnP};padding:5px 12px;font-size:11px">${t.revueTxt && /validée/.test(t.revueTxt) ? 'Revoir' : 'Faire la revue'}</button>` : ''}
+            </div>
+            ${t.ouvert ? `
+            <div style="margin-top:8px;padding-top:8px;border-top:0.5px dashed var(--color-border-tertiary)">
+              ${t.ratios ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(t.ratios)}</div>` : ''}
+              ${t.voix.map(v => voix(v, t.etat === 'clos')).join('')}
+              <div style="${cap};margin-top:10px">Prochain trimestre — ce qui est mis en route</div>
+              <div style="font-size:11.5px;line-height:1.45;margin-top:4px;${t.suite ? '' : 'color:var(--color-text-muted)'}">${esc(t.suite || 'pas encore écrit — étape 4 de la revue')}</div>
+              <div style="margin-top:8px"><a href="${esc(t.pdf)}" target="_blank" rel="noopener" style="font-size:11px;color:var(--color-primary)">⎙ PDF de la revue ${esc(t.label)}</a></div>
+            </div>` : ''}
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    ${c.pdvActEdit ? tplPlanAction(c.pdvActEdit, x, c.pdvBusy) : ''}
+    ${c.pdvRituel ? tplPlanRituel(c.pdvRituel, x, c.pdvBusy, c.pdvErr) : ''}
+  </div>`;
+}
+
+/* La fiche d'une action, en modale. */
+function tplPlanAction(a, x, busy){
+  const { esc } = x;
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const champ = (l, inner) => `<label style="display:flex;flex-direction:column;gap:4px"><span style="${cap}">${esc(l)}</span>${inner}</label>`;
+  return `
+  <div ${x.A(a.fermer)} style="position:fixed;inset:0;background:rgba(34,30,26,.45);z-index:120;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div ${x.A(a.rien)} style="background:var(--color-surface);border-radius:14px;width:560px;max-width:94vw;max-height:88vh;overflow:auto;padding:18px 20px;cursor:default;box-shadow:0 18px 50px rgba(34,30,26,.35)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-family:var(--font-display);font-size:17px">${esc(a.titre)}</div><button ${x.A(a.fermer)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px">×</button></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${champ('Action', `<input value="${esc(a.libelle)}" ${x.I(a.setLibelle)} placeholder="Ex. : offre petit-déjeuner bureaux, ouverture du dimanche matin…" style="${inp}" />`)}
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          ${champ('Effet attendu (€ / an)', `<input type="number" step="1000" value="${esc(a.effetAn)}" ${x.I(a.setEffet)} style="${inp}" />`)}
+          ${champ('Trimestre de lancement', `<select ${x.C(a.setTrimestre)} style="${inp}">${a.trimestres.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`)}
+          ${champ('Statut', `<select ${x.C(a.setStatut)} style="${inp}">${a.statuts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`)}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${champ('Responsable', `<input value="${esc(a.responsable)}" ${x.I(a.setResponsable)} placeholder="franchisé, consultant, marque…" style="${inp}" />`)}
+          ${champ('Date de lancement', `<input type="date" value="${esc(a.dateLancement)}" ${x.I(a.setDate)} style="${inp}" />`)}
+        </div>
+        ${champ('Comment on le mesure', `<input value="${esc(a.mesure)}" ${x.I(a.setMesure)} placeholder="Ex. : CA du dimanche dans Résultat › Jour" style="${inp}" />`)}
+        ${champ('Effet constaté (à remplir au fil des trimestres)', `<input value="${esc(a.effetConstate)}" ${x.I(a.setConstate)} placeholder="Ex. : + 14 k€ sur T3" style="${inp}" />`)}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;align-items:center">
+        ${a.supprimer ? `<button ${x.A(a.supprimer)} style="border:none;background:none;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;cursor:pointer;text-decoration:underline">Supprimer</button>` : ''}
+        <span style="flex:1"></span>
+        <button ${x.A(a.fermer)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;cursor:pointer">Annuler</button>
+        <button ${x.A(a.peut && !busy ? a.enregistrer : null)} style="border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;opacity:${a.peut && !busy ? 1 : .45}">${busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Le rituel trimestriel, en cinq étapes. */
+function tplPlanRituel(r, x, busy, err){
+  const { esc } = x;
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const btnP = 'border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  let corps = '';
+  if (r.etape === 1) {
+    corps = `<div style="${cap};margin-bottom:8px">Étape 1 — le constat, automatique</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        ${r.constat.map(k => `<div style="background:var(--color-background-secondary);border-radius:9px;padding:10px 12px;${k.vif ? 'border:1px solid var(--color-primary)' : ''}"><div style="${cap}">${esc(k.l)}</div><div style="font-family:var(--font-display);font-size:20px;margin-top:3px;${num};color:${k.col || 'var(--color-text)'}">${esc(k.v)}</div><div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(k.s)}</div></div>`).join('')}
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">Ces chiffres viennent du suivi (budget mensuel réparti, réel encodé, ratios du P&L) — rien à ressaisir. Le détail jour par jour est dans Résultat, la comparaison réseau dans Performance.</div>`;
+  } else if (r.etape === 2) {
+    corps = `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><div style="${cap}">Étape 2 — les actions du trimestre : où en est chacune, et ce qu’elle a rapporté</div><button ${x.A(r.ajouterAction)} style="${btnS};padding:5px 12px;font-size:11px">+ Ajouter</button></div>
+      ${r.actions.length ? `<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px">
+        <tr><th style="text-align:left;padding:0 0 6px;${cap}">Action</th><th style="text-align:left;padding:0 8px 6px;${cap}">Lancement</th><th style="text-align:right;padding:0 8px 6px;${cap}">Effet attendu</th><th style="text-align:left;padding:0 8px 6px;${cap}">Statut</th><th style="text-align:left;padding:0 0 6px;${cap}">Effet constaté</th></tr>
+        ${r.actions.map(a => `<tr>
+          <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary);font-weight:500">${esc(a.libelle)}</td>
+          <td style="padding:7px 8px;border-top:0.5px solid var(--color-border-tertiary);color:var(--color-text-muted)">${esc(a.trimestre)}</td>
+          <td style="padding:7px 8px;border-top:0.5px solid var(--color-border-tertiary);text-align:right;${num}">${esc(a.effet)}</td>
+          <td style="padding:7px 8px;border-top:0.5px solid var(--color-border-tertiary)"><select ${x.C(a.setStatut)} style="${inp};padding:5px 8px;width:auto;${a.statutSt}">${a.statuts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></td>
+          <td style="padding:7px 0;border-top:0.5px solid var(--color-border-tertiary)"><input value="${esc(a.constate)}" ${x.C(a.setConstate)} placeholder="ex. : + 14 k€ sur le trimestre" style="${inp};padding:5px 8px" /></td>
+        </tr>`).join('')}
+      </table>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:10px">Aucune action dans le plan : ajoutez celles de l’engagement.</div>`}`;
+  } else if (r.etape === 3) {
+    corps = `<div style="${cap};margin-bottom:4px">Étape 3 — les trois voix</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:8px">Chacun écrit la sienne. Une voix vide bloque la validation — on peut écrire « rien à signaler ».</div>
+      ${r.voix.map(v => `<label style="display:flex;flex-direction:column;gap:4px;margin-top:8px"><span style="${cap};color:${v.coul}">${esc(v.nom)}${v.signe ? ` <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--color-text-muted)">— ${esc(v.signe)}</span>` : ''}</span>
+        <textarea rows="3" ${x.I(v.set)} placeholder="${esc({ franchise: 'Ce qui s’est passé, ce que je change, ce que je maintiens…', consultant: 'Votre lecture du trimestre, et ce que vous demandez au franchisé…', marque: 'Ce que la marque a apporté, et apportera au prochain trimestre…' }[v.cle] || '')}" style="${inp};resize:vertical;line-height:1.45">${esc(v.val)}</textarea></label>`).join('')}`;
+  } else if (r.etape === 4) {
+    corps = `<div style="${cap};margin-bottom:4px">Étape 4 — le prochain trimestre : ${esc(r.suivantLabel)}</div>
+      <label style="display:flex;flex-direction:column;gap:4px;margin-top:6px"><span style="${cap}">Ce qui est mis en route, et l’objectif qu’on se donne</span>
+        <textarea rows="4" ${x.I(r.setSuite)} placeholder="Ex. : dimanche matin en régime (+21 k€ sur T4), carte fidélité lancée le 15/10, bûches sur commande dès le 20/11. Objectif T4 : 600 k€." style="${inp};resize:vertical;line-height:1.45">${esc(r.suite)}</textarea></label>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px"><div style="${cap}">Les actions à lancer ou en cours — elles seront constatées au trimestre suivant</div><button ${x.A(r.ajouterAction)} style="${btnS};padding:5px 12px;font-size:11px">+ Ajouter</button></div>
+      ${r.suivantes.length ? r.suivantes.map(a => `<div ${x.A(a.editer)} class="hv-bg" style="display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:0.5px dashed var(--color-border-tertiary);font-size:12px;cursor:pointer"><span style="font-size:9.5px;font-weight:600;border-radius:999px;padding:2px 8px;${a.statutSt}">${esc(a.statutTxt)}</span><span style="flex:1">${esc(a.libelle)}${a.mesure ? ` <span style="font-size:10.5px;color:var(--color-text-muted)">· ${esc(a.mesure)}</span>` : ''}</span><span style="font-weight:600;${num}">${esc(a.effet)}</span></div>`).join('') : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:6px">Rien à lancer — ajoutez une action.</div>`}`;
+  } else {
+    corps = `<div style="${cap};margin-bottom:8px">Étape 5 — validation et PDF</div>
+      ${r.valide ? `<div style="font-size:12.5px;color:#2d7a3e;background:#E3EFE6;border:1px solid #bfdcc6;padding:9px 12px;border-radius:8px">✓ ${esc(r.valideTxt)}</div>`
+        : (r.manque.length ? `<div style="font-size:12px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:9px 12px;border-radius:8px">Il manque encore : ${esc(r.manque.join(', '))}. Revenez aux étapes 3 et 4.</div>`
+          : `<div style="font-size:12.5px;color:var(--color-text-muted)">Tout y est : les trois voix et le prochain trimestre. La validation date et signe la revue ; le PDF reprend la rampe, tous les trimestres et le prochain.</div>`)}
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        ${!r.valide ? `<button ${x.A(r.manque.length || busy ? null : r.valider)} style="${btnP};opacity:${r.manque.length || busy ? .45 : 1}">${busy ? 'Validation…' : 'Valider la revue'}</button>` : ''}
+        <a href="${esc(r.pdf)}" target="_blank" rel="noopener" style="${btnS};text-decoration:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:13px">⎙</span>PDF du plan — revue ${esc(r.label.split(' · ')[0])}</a>
+      </div>`;
+  }
+  return `
+  <div ${x.A(r.fermer)} style="position:fixed;inset:0;background:rgba(34,30,26,.45);z-index:120;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div ${x.A(r.rien)} style="background:var(--color-surface);border-radius:14px;width:900px;max-width:96vw;max-height:90vh;overflow:auto;padding:18px 22px;cursor:default;box-shadow:0 18px 50px rgba(34,30,26,.35)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div><div style="font-family:var(--font-display);font-size:18px">Revue du trimestre — ${esc(r.label)}</div><div style="font-size:11.5px;color:var(--color-text-muted)">rituel trimestriel · ${esc(r.brouillon || 'chaque étape s’enregistre en passant à la suivante')}</div></div>
+        <button ${x.A(r.fermer)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px">×</button>
+      </div>
+      <div style="display:flex;margin:12px 0 16px">
+        ${r.etapes.map(e2 => `<div style="flex:1;text-align:center;font-size:11px;font-weight:600;padding:8px 4px;border-bottom:3px solid ${e2.on ? 'var(--color-primary)' : (e2.ok ? '#2d7a3e' : 'var(--color-border-tertiary)')};color:${e2.on ? 'var(--color-primary)' : (e2.ok ? '#2d7a3e' : 'var(--color-text-muted)')}">${e2.n} · ${esc(e2.nom)}</div>`).join('')}
+      </div>
+      ${err ? `<div style="font-size:12px;color:var(--color-primary);background:#F6E4E7;border:1px solid #e8b4bb;padding:8px 12px;border-radius:8px;margin-bottom:10px">${esc(err)}</div>` : ''}
+      ${corps}
+      <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
+        ${r.precedent ? `<button ${x.A(busy ? null : r.precedent)} style="${btnS}">‹ Étape ${r.etape - 1}</button>` : ''}
+        <span style="flex:1"></span>
+        ${r.suivant ? `<button ${x.A(busy ? null : r.suivant)} style="${btnP};opacity:${busy ? .6 : 1}">${busy ? 'Enregistrement…' : esc(r.suivantTxt)}</button>` : `<button ${x.A(r.fermer)} style="${btnS}">Fermer</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplPerformance(c, x){
   const { esc } = x;
   const ong = o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`;
