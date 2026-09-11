@@ -154,7 +154,12 @@ function ep_plan(): array
 
     // L'année : réalisé, attendu, projection — pour lire l'engagement.
     $engAn = $engagements[(string) $exercice] ?? null;
-    $objAn = $engAn && $engAn['objectif'] ? (float) $engAn['objectif'] : null;
+    $rampeAn = null;
+    foreach ($rampe['annees'] as $a) { if ($a['an'] === $exercice) { $rampeAn = $a['ca']; } }
+    // Tant que rien n'est déposé, l'année se lit contre la rampe de l'étude —
+    // et le dit (objectifSource = 'rampe') : l'écran et le PDF restent lisibles.
+    $objAn = $engAn && $engAn['objectif'] ? (float) $engAn['objectif'] : ($rampeAn !== null && $rampeAn > 0 ? (float) $rampeAn : null);
+    $objSrc = $engAn && $engAn['objectif'] ? 'engagement' : ($objAn !== null ? 'rampe' : null);
     $realiseAn = 0.0; $attenduAn = 0.0; $objMoisAn = 0.0;
     foreach ($trimestres as $t) { $realiseAn += (float) ($t['realise'] ?? 0); $attenduAn += (float) ($t['attendu'] ?? 0); $objMoisAn += (float) ($t['objectif'] ?? 0); }
     // L'attendu se lit contre l'ENGAGEMENT : la part de l'année déjà écoulée
@@ -162,13 +167,12 @@ function ep_plan(): array
     $partEcoulee = $objMoisAn > 0 ? $attenduAn / $objMoisAn : null;
     $attenduEng = ($objAn !== null && $partEcoulee !== null) ? $objAn * $partEcoulee : null;
     $projection = ($attenduEng !== null && $attenduEng > 0 && $objAn !== null) ? $realiseAn / $attenduEng * $objAn : null;
-    $annee = ['objectif' => $objAn, 'rampe' => null, 'realise' => round($realiseAn, 2),
+    $annee = ['objectif' => $objAn, 'objectifSource' => $objSrc, 'rampe' => $rampeAn, 'realise' => round($realiseAn, 2),
         'attendu' => $attenduEng !== null ? round($attenduEng, 2) : null,
         'partEcoulee' => $partEcoulee !== null ? round($partEcoulee * 100, 1) : null,
         'ecart' => $attenduEng !== null ? round($realiseAn - $attenduEng, 2) : null,
         'projection' => $projection !== null ? round($projection, 2) : null,
         'budgetMensuelTotal' => round($objMoisAn, 2)];
-    foreach ($rampe['annees'] as $a) { if ($a['an'] === $exercice) { $annee['rampe'] = $a['ca']; } }
 
     // Le trimestre « courant » du rituel : celui en cours, sinon le dernier clos.
     $courant = 1;

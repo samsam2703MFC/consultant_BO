@@ -137,7 +137,7 @@ function planPdfHtml(array $d, int $q): string
         $statut = $en === null || $en['statut'] === 'brouillon' ? ($a['an'] > $ex ? 'à engager en janvier ' . $a['an'] : ($en ? 'brouillon' : '—'))
             : ($en['statut'] === 'valide' ? 'engagé le ' . $dt($en['engageLe']) . ', validé le ' . $dt($en['valideLe']) : 'engagé le ' . $dt($en['engageLe']) . ' — à valider');
         $h .= '<tr' . ($cur ? ' class="cur"' : '') . '><td class="l">' . ($cur ? '<b>' : '') . $a['an'] . ($cur ? '</b>' : '') . ($a['anneeExploitation'] ? ' · ' . ($a['maturite'] ? 'maturité' : 'année ' . $a['anneeExploitation']) : '') . '</td>'
-            . '<td>' . $k($a['ca']) . '</td><td>' . ($en && $en['objectif'] ? '<b>' . $k($en['objectif']) . '</b>' : '<span class="mut">—</span>') . '</td>'
+            . '<td>' . $k($a['ca']) . '</td><td>' . ($en && $en['objectif'] ? '<b>' . $k($en['objectif']) . '</b>' : ($cur && ($A['objectifSource'] ?? null) === 'rampe' ? '<span class="mut">rampe, à engager</span>' : '<span class="mut">—</span>')) . '</td>'
             . '<td>' . ($cur ? '<b>' . $k($A['realise']) . '</b> <span class="mut">au ' . $dt($d['aujourdhui']) . '</span>' : '<span class="mut">—</span>') . '</td>'
             . '<td class="' . ($cur ? $cls($A['ecart']) : 'mut') . '">' . ($cur && $A['ecart'] !== null ? $sigK($A['ecart']) . ($A['projection'] ? ' · proj. ' . $k($A['projection']) : '') : '—') . '</td>'
             . '<td class="l mut">' . $e($statut) . '</td></tr>';
@@ -166,7 +166,8 @@ function planPdfHtml(array $d, int $q): string
             . '<td>Le consultant' . ($eng['validePar'] ? ' — ' . $e($eng['validePar']) : '') . '<br>' . ($eng['valideLe'] ? 'validé le ' . $dt($eng['valideLe']) : '') . '</td>'
             . '<td>La marque — L’Atelier by<br></td></tr></table>';
     } else {
-        $h .= '<div class="methode">Aucun engagement déposé pour ' . $ex . ' : le franchisé pose son objectif de l’année et les actions pour l’atteindre dans Plan de développement.</div>';
+        $h .= '<div class="methode">Aucun engagement déposé pour ' . $ex . ' : le franchisé pose son objectif de l’année et les actions pour l’atteindre dans Plan de développement.'
+            . (($A['objectifSource'] ?? null) === 'rampe' ? ' En attendant, l’année se lit contre la rampe de l’étude (' . $k($A['objectif']) . ').' : '') . '</div>';
     }
 
     // ── Page 2 : tous les trimestres, puis les quatre derniers annotés.
@@ -221,8 +222,8 @@ function planPdfHtml(array $d, int $q): string
     $actSuiv = array_values(array_filter($actions, static fn ($a) => $a['statut'] !== 'abandonne' && $a['statut'] !== 'fait'));
     $effetSuiv = 0.0; foreach ($actSuiv as $a) { if ($a['effetAn']) { $effetSuiv += $a['effetAn'] / 4; } }
     $h .= '<table class="grille" cellpadding="0" cellspacing="0"><tr>'
-        . $tuile('Objectif T' . $qSuiv, $k($objSuiv), $objSuiv !== null && $A['objectif'] ? 'budget réparti · ' . (int) round(100 * $objSuiv / $A['objectif']) . ' % de l’engagement annuel' : 'budget mensuel réparti')
-        . $tuile('Pour tenir ' . $k($A['objectif']), $k($reste), 'reste à faire sur l’année')
+        . $tuile('Objectif T' . $qSuiv, $k($objSuiv), $objSuiv !== null && $A['objectif'] ? 'budget réparti · ' . (int) round(100 * $objSuiv / $A['objectif']) . ' % de ' . (($A['objectifSource'] ?? null) === 'rampe' ? 'la rampe' : 'l’engagement annuel') : 'budget mensuel réparti')
+        . $tuile('Pour tenir ' . $k($A['objectif']), $k($reste), 'reste à faire sur l’année' . (($A['objectifSource'] ?? null) === 'rampe' ? ' · rampe de l’étude, à engager' : ''))
         . $tuile('Effort au-delà des budgets', $effort === null ? '—' : $sigK($effort), $effort !== null && $panierT ? 'soit ' . number_format(abs($effort) / $panierT, 0, ',', ' ') . ' clients ' . ($effort > 0 ? 'de plus' : 'de marge') . ' d’ici la fin de l’année' : '', $effort === null ? '' : ($effort > 0 ? 'acc' : 'ok'))
         . $tuile('Effet attendu des actions', '+ ' . $k($effetSuiv), count($actSuiv) . ' action(s) en cours ou à lancer · effet annuel ÷ 4', 'ok')
         . '</tr></table>';

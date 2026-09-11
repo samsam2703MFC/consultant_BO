@@ -7179,10 +7179,10 @@ class App {
     const objA = A.objectif;
     common.pdvAnnee = {
       objectif: objA != null ? fK(objA) : '—', realise: fK(A.realise),
-      attendu: A.attendu != null ? fK(A.attendu) + ' attendus à ce jour' : (A.budgetMensuelTotal ? 'budgets mensuels : ' + fK(A.budgetMensuelTotal) : ''),
+      attendu: (A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : '') + (A.attendu != null ? (A.objectifSource === 'rampe' ? ' · ' : '') + fK(A.attendu) + ' attendus à ce jour' : (A.budgetMensuelTotal ? 'budgets mensuels : ' + fK(A.budgetMensuelTotal) : '')),
       ecart: A.ecart != null ? fS(A.ecart) : '—', ecartCol: coul(A.ecart),
       projection: A.projection != null ? fK(A.projection) : '—',
-      projSous: (A.projection != null && objA != null) ? fS(A.projection - objA) + ' sur l’engagement' : 'au rythme actuel',
+      projSous: (A.projection != null && objA != null) ? fS(A.projection - objA) + (A.objectifSource === 'rampe' ? ' sur la rampe' : ' sur l’engagement') : 'au rythme actuel',
       projCol: (A.projection != null && objA != null) ? coul(A.projection - objA) : 'var(--color-text-muted)',
       wReel: objA ? Math.max(0, Math.min(100, 100 * A.realise / objA)).toFixed(1) : '0',
       wAtt: (objA && A.attendu != null) ? Math.max(0, Math.min(100, 100 * A.attendu / objA)).toFixed(1) : '0',
