@@ -306,3 +306,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-13T17:35:48Z stats catégories groupe
 2026-09-13T17:39:18Z tiroir famille catégorie
 2026-09-13T17:50:15Z treemap pleine largeur, marge 60
+2026-09-13T17:58:25Z tiroir marge brute seule

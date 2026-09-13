@@ -296,12 +296,12 @@
     const rows = fams.map(f => {
       f.cats.sort((a, b) => b.ca - a.ca);
       const taux = f.caConnu > 0 ? 100 * f.m / f.caConnu : null; if (f.inconnu && taux != null) { etoile = true; }
-      return `<tr class="fam"><td class="l"><i class="sq" style="background:${coulM(taux)}"></i>${esc(f.nom)}<span class="mu"> · ${f.cats.length} catégorie${f.cats.length > 1 ? 's' : ''}</span></td><td>${fE(f.ca)}</td><td>${fP(100 * f.ca / tot.ca)}</td><td>${f.caConnu > 0 ? fE(f.mat) : '—'}</td><td>${f.caConnu > 0 ? fE(f.m) : '—'}</td><td style="color:${taux == null ? '#999' : coulM(taux)}">${taux == null ? '—' : fP(taux)}${f.inconnu && taux != null ? ' *' : ''}</td></tr>`
-        + f.cats.map(c => `<tr class="sub"><td class="l"><i class="sq s" style="background:${coulM(c.taux)}"></i>${esc(c.categorie)}</td><td>${fE(c.ca)}</td><td>${c.part != null ? fP(100 * c.part) : '—'}</td><td>${c.mat == null ? '—' : fE(c.mat)}</td><td>${c.m == null ? '—' : fE(c.m)}</td><td style="color:${c.taux == null ? '#999' : coulM(c.taux)};font-weight:600">${c.taux == null ? '—' : fP(c.taux)}</td></tr>`).join('');
+      return `<tr class="fam"><td class="l"><i class="sq" style="background:${coulM(taux)}"></i>${esc(f.nom)}<span class="mu"> · ${f.cats.length} catégorie${f.cats.length > 1 ? 's' : ''}</span></td><td>${fE(f.ca)}</td><td>${fP(100 * f.ca / tot.ca)}</td><td style="color:${taux == null ? '#999' : coulM(taux)}">${taux == null ? '—' : fP(taux)}${f.inconnu && taux != null ? ' *' : ''}</td></tr>`
+        + f.cats.map(c => `<tr class="sub"><td class="l"><i class="sq s" style="background:${coulM(c.taux)}"></i>${esc(c.categorie)}</td><td>${fE(c.ca)}</td><td>${c.part != null ? fP(100 * c.part) : '—'}</td><td style="color:${c.taux == null ? '#999' : coulM(c.taux)};font-weight:600">${c.taux == null ? '—' : fP(c.taux)}</td></tr>`).join('');
     }).join('');
-    return `<div class="db-cdt"><table class="db-tf"><tr><th class="l">Famille › catégorie</th><th>CA</th><th>% CA</th><th>Matière</th><th>Marge</th><th>Taux</th></tr>${rows}
-      <tr class="tot"><td class="l">Total · ${fams.length} famille${fams.length > 1 ? 's' : ''} · ${cats.length} catégories</td><td>${fE(tot.ca)}</td><td>100 %</td><td>${fE(tot.mat)}</td><td>${fE(tot.m)}</td><td>${tot.ca > 0 ? fP(100 * tot.m / tot.ca) : '—'}</td></tr></table>
-      <div class="db-note" style="padding:6px 0 0">Coût matière : la fiche recette du catalogue. ${etoile ? '* taux calculé sur les catégories dont le coût matière est connu. ' : ''}Une marge très négative signale une fiche recette au coût d’une fournée, pas d’une part.</div></div>`;
+    return `<div class="db-cdt"><table class="db-tf"><tr><th class="l">Famille › catégorie</th><th>CA</th><th>% CA</th><th title="(CA − coût matière) ÷ CA">Marge brute (%)</th></tr>${rows}
+      <tr class="tot"><td class="l">Total · ${fams.length} famille${fams.length > 1 ? 's' : ''} · ${cats.length} catégories</td><td>${fE(tot.ca)}</td><td>100 %</td><td>${tot.ca > 0 ? fP(100 * tot.m / tot.ca) : '—'}</td></tr></table>
+      <div class="db-note" style="padding:6px 0 0">Marge brute (%) = (CA − coût matière) ÷ CA ; le coût matière vient de la fiche recette du catalogue. ${etoile ? '* taux calculé sur les catégories dont le coût matière est connu. ' : ''}Une marge très négative signale une fiche recette au coût d’une fournée, pas d’une part.</div></div>`;
   }
   function hDe(t) { const p = String(t || '0:0').split(':'); return (+p[0] || 0) + (+p[1] || 0) / 60; }
 
