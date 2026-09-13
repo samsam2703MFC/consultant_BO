@@ -152,7 +152,30 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-bt .leg{font-size:10px;color:var(--color-text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
 .db-bt .leg i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
 .db-bt .leg b{display:inline-block;width:2px;height:10px;background:var(--color-text);vertical-align:-1px;margin-right:3px}
+/* Le bandeau des tâches : compteurs, fil en miniature, détail déplié. */
+.db-taches{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr 2.4fr;gap:10px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px;margin:6px 0 0}
+.db-taches .db-bt{min-height:92px}
+.db-taches .db-bt .v{font-size:24px;margin:4px 0 2px}
+.db-taches .db-bt .v small{font-size:11px}
+.db-taches .db-bt.ok{background:#f0f7f2;border:1px solid #bfdcc6}.db-taches .db-bt.ok .v{color:#2d7a3e}
+.db-taches .db-bt.wa{background:#FBEFE0;border:1px solid #E8C9A0}.db-taches .db-bt.wa .v{color:#B26A00}
+.db-taches .db-bt.ko{background:#fdf4f5;border:1px solid #e8b4bb}.db-taches .db-bt.ko .v{color:var(--color-primary)}
+.db-taches .fil{cursor:pointer}
+.db-taches .fil:hover{background:#ece6dd}
+.db-taches .fil .dr{float:right;text-transform:none;letter-spacing:0;font-weight:500;color:var(--color-primary)}
+.db-taches .mini{display:flex;gap:3px;align-items:center;margin:8px 0 4px;min-height:14px}
+.db-taches .mini i{flex:1;height:14px;border-radius:3px;background:var(--color-background-secondary);min-width:4px}
+.db-taches .mini i.f{background:#2d7a3e}.db-taches .mini i.m{background:#A8B545}.db-taches .mini i.n{background:#e5b6bc}.db-taches .mini i.b{background:var(--color-primary)}
+.db-taches .mini .sep{flex:0 0 1px;height:18px;background:var(--color-text);opacity:.35;margin:0 2px}
+.db-tdrop{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-top:none;border-radius:0 0 12px 12px;padding:10px 14px 8px;margin:-6px 0 6px;display:flex;flex-direction:column;gap:6px}
+.db-tdrop .r{display:grid;grid-template-columns:260px 1fr 80px;gap:10px;align-items:center;font-size:11.5px;padding:3px 0;border-bottom:.5px dashed var(--color-border-tertiary)}
+.db-tdrop .r:last-child{border-bottom:none}
+.db-tdrop .r .n{font-weight:600}.db-tdrop .r .n small{display:block;font-weight:400;color:var(--color-text-muted);font-size:10px;line-height:1.3}
+.db-tdrop .dots{display:flex;gap:4px;flex-wrap:wrap}
+.db-tdrop .dots i{width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font:700 9px var(--font-ui);color:#fff;font-style:normal}
+.db-tdrop .dots i.f{background:#2d7a3e}.db-tdrop .dots i.n{background:#e5b6bc;color:#8D1D2C}.db-tdrop .dots i.b{background:var(--color-primary)}
+.db-tdrop .r .c{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
 @media (max-width:1150px){.db-tuiles,.db-bench{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}.db-tuiles{grid-template-columns:1fr 1fr}.db-cl{grid-template-columns:120px 1fr 80px 56px}.db-cl .n{display:none}}
+@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}.db-taches{grid-template-columns:1fr 1fr}.db-tuiles{grid-template-columns:1fr 1fr}.db-cl{grid-template-columns:120px 1fr 80px 56px}.db-cl .n{display:none}}
 @media (max-width:900px){.db-g2{grid-template-columns:1fr}.db-casc{grid-template-columns:repeat(3,1fr)}}
 @media print{body{background:#fff}#dash{padding:0}.db-nav,.db-btn{display:none}}

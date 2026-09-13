@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -43,6 +43,11 @@
   function cleRes() { return S.vue + '|' + S.date; }
   function cleSt() { return S.shop + '|' + S.vue + '|' + S.date; }
   function annee() { return +S.date.slice(0, 4); }
+  function bornes() {
+    const t = new Date(S.date + 'T12:00:00');
+    if (S.vue === 'semaine') { const j = (t.getDay() + 6) % 7; const du = new Date(t); du.setDate(t.getDate() - j); const au = new Date(du); au.setDate(du.getDate() + 6); return [du.toISOString().slice(0, 10), au.toISOString().slice(0, 10)]; }
+    const du = S.date.slice(0, 8) + '01'; const fin = new Date(t.getFullYear(), t.getMonth() + 1, 0); return [du, fin.toISOString().slice(0, 10)];
+  }
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
       S.enCours[cle] = true; delete S.err[cle];
@@ -57,6 +62,8 @@
       rendre(); return;
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); }
+    else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
       S.enCours[kr] = true; delete S.err[kr];
       const p = S.vue === 'jour' ? '/exploitation/jour?date=' + S.date : '/exploitation/periode?vue=' + S.vue + '&date=' + S.date;
@@ -117,6 +124,7 @@
     if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
     // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
     if (m) { h += rendBench(m, d); }
+    h += rendTaches();
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
@@ -329,6 +337,66 @@
     return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
   }
 
+  /* Les tâches du jour (ou de la période) : faites, non faites, bloquantes,
+   * le fil en miniature, et le détail qui se déplie. Bloquante = tâche
+   * d'exploitation (ouverture, fermeture, contrôle opérationnel : checklists
+   * CO-…) non rendue ; un contrôle qualité non rendu est « non fait ». */
+  function rendTaches() {
+    const jour = S.vue === 'jour';
+    const cle = jour ? 'taches|' + S.date : (function () { const [du, au] = bornes(); return 'tachesP|' + du + '|' + au; })();
+    const d = S.aux[cle];
+    const tuileT = (k, v, s, cls) => `<div class="db-bt ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
+    let corps = '', drop = '', titre = '', sous = '';
+    if (S.err[cle]) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches ${jour ? 'du jour' : 'de la période'}</div><div class="s">${esc(S.err[cle])}</div></div></div>`; }
+    if (!d) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches ${jour ? 'du jour' : 'de la période'}</div><div class="s">lecture du panel…</div></div>${tuileT('Faites', '<span class="db-sk" style="display:block;width:40px;height:22px"></span>')}${tuileT('Non faites', '<span class="db-sk" style="display:block;width:40px;height:22px"></span>')}${tuileT('Bloquantes', '<span class="db-sk" style="display:block;width:40px;height:22px"></span>')}<div class="db-bt fil"><div class="k">Le fil</div><div class="db-sk"></div></div></div>`; }
+    if (jour) {
+      const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
+      const T = sh ? (sh.taches || []) : [];
+      if (!T.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">${d.indispo ? 'panel injoignable' : 'aucune tâche pour ce magasin ce jour'}</div></div></div>`; }
+      const faite = t => t.statut !== 'nonRendue';
+      const bloq = t => !faite(t) && /^CO-/i.test(String(t.checklist || ''));
+      const nF = T.filter(faite).length, nN = T.length - nF, nB = T.filter(bloq).length;
+      const nCtrl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider').length, nSans = T.filter(t => t.statut === 'sansPhoto').length;
+      const nQ = T.filter(t => !faite(t) && !bloq(t)).length;
+      // Les checklists, dans l'ordre de la journée.
+      const cls = []; const par = {};
+      T.forEach(t => { const c = String(t.checklist || 'Sans checklist'); if (!par[c]) { par[c] = []; cls.push(c); } par[c].push(t); });
+      // L'ordre de la journée : l'ouverture d'abord, la fermeture en dernier, entre les deux par heure de première tâche rendue.
+      const rang = c => /^CO-01/i.test(c) ? '0' : (/^CO-02/i.test(c) ? '9' : '5' + (par[c].filter(t => t.faitLe).map(t => String(t.faitLe)).sort()[0] || '9999') + c);
+      cls.sort((a, b) => rang(a).localeCompare(rang(b)));
+      const hDe = t => t.faitLe ? String(t.faitLe).slice(11, 16) : '';
+      const mini = cls.map((c, i) => (i ? '<span class="sep"></span>' : '') + par[c].map(t => `<i class="${faite(t) ? 'f' : (bloq(t) ? 'b' : 'n')}" title="${esc(t.tache)}${faite(t) ? ' · ' + hDe(t) + (t.faitePar ? ' · ' + esc(t.faitePar) : '') : ' · non rendue'}"></i>`).join('')).join('');
+      const dern = T.filter(t => t.faitLe).sort((a, b) => String(b.faitLe).localeCompare(String(a.faitLe)))[0];
+      const court = c => c.replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '').replace(/\.$/, '');
+      corps = `<div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">${T.length} obligatoire(s) · ${T.length ? Math.round(100 * nF / T.length) : 0} % faites${dern ? ' · dernière rendue à ' + hDe(dern) + (dern.faitePar ? ' par ' + esc(dern.faitePar) : '') : ''}</div></div>
+        ${tuileT('Faites', nF + '<small>/ ' + T.length + '</small>', (nCtrl ? nCtrl + ' à contrôler' : '') + (nSans ? (nCtrl ? ' · ' : '') + nSans + ' sans photo' : ''), 'ok')}
+        ${tuileT('Non faites', nN + '<small>/ ' + T.length + '</small>', (nQ ? nQ + ' contrôle(s) qualité' : '') + (nB ? (nQ ? ' · ' : '') + nB + ' d’exploitation' : ''), 'wa')}
+        ${tuileT('Bloquantes', String(nB), nB ? 'exploitation non rendue' : 'rien ne bloque', nB ? 'ko' : '')}
+        <div class="db-bt fil" data-tdrop="1"><div class="k">Le fil de la journée <span class="dr">${S.tOuvert ? 'replier ▴' : 'détail ▾'}</span></div><div class="mini">${mini}</div><div class="s">${cls.map(court).map(esc).join(' · ')}</div></div>`;
+      if (S.tOuvert) {
+        drop = `<div class="db-tdrop">${cls.map(c => { const L = par[c]; const f = L.filter(faite).length, b = L.filter(bloq).length; const hs = L.filter(t => t.faitLe).map(hDe).sort();
+          const nonR = L.filter(t => !faite(t)).map(t => esc(t.tache));
+          return `<div class="r"><span class="n">${esc(c)}<small>${hs.length ? hs[0] + (hs.length > 1 ? ' → ' + hs[hs.length - 1] : '') + (L.find(t => t.faitePar) ? ' · ' + esc(L.find(t => t.faitePar).faitePar) : '') : ''}${nonR.length ? (hs.length ? ' · ' : '') + 'non rendue(s) : ' + nonR.join(', ') : ''}</small></span><span class="dots">${L.map(t => `<i class="${faite(t) ? 'f' : (bloq(t) ? 'b' : 'n')}" title="${esc(t.tache)}${faite(t) ? ' · ' + hDe(t) : ''}">${faite(t) ? '✓' : (bloq(t) ? '!' : '·')}</i>`).join('')}</span><span class="c ${f === L.length ? 'ok' : (b ? 'ko' : 'wa')}">${f} / ${L.length}</span></div>`; }).join('')}</div>`;
+      }
+    } else {
+      const li = (d.lignes || []).find(x => String(x.shopId) === String(S.shop));
+      const J = li ? (li.jours || []).filter(j => j.releve && j.j <= AUJ) : [];
+      if (!J.length) { return `<div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches de la période</div><div class="s">pas de relevé pour ce magasin sur la période</div></div></div>`; }
+      const nF = J.reduce((a, j) => a + (j.faites || 0), 0), nN = J.reduce((a, j) => a + (j.pasFaites || 0), 0), tot = nF + nN;
+      const teinte = p => p == null ? '' : (p >= 80 ? 'f' : (p >= 40 ? 'm' : (p > 0 ? 'n' : 'b')));
+      const mauvais = J.filter(j => (j.part || 0) < 40).length;
+      corps = `<div class="db-bt tit"><div class="k">Les tâches ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</div><div class="s">${J.length} jour(s) relevé(s) · ${tot ? Math.round(100 * nF / tot) : 0} % faites · bloquantes : voir le jour</div></div>
+        ${tuileT('Faites', nF + '<small>/ ' + tot + '</small>', Math.round(nF / Math.max(1, J.length)) + ' par jour en moyenne', 'ok')}
+        ${tuileT('Non faites', nN + '<small>/ ' + tot + '</small>', Math.round(nN / Math.max(1, J.length)) + ' par jour en moyenne', 'wa')}
+        ${tuileT('Jours sous 40 %', String(mauvais), mauvais ? 'jour(s) où moins de 40 % des tâches sont faites' : 'aucun jour en dessous', mauvais ? 'ko' : '')}
+        <div class="db-bt fil" data-tdrop="1"><div class="k">Le fil des jours <span class="dr">${S.tOuvert ? 'replier ▴' : 'détail ▾'}</span></div><div class="mini">${J.map(j => `<i class="${teinte(j.part)}" title="${esc(j.j)} · ${j.faites} faites / ${j.faites + j.pasFaites} · ${j.part} %"></i>`).join('')}</div><div class="s">une case par jour · vert ≥ 80 % · vert clair ≥ 40 % · rose &lt; 40 % · rouge : rien de fait</div></div>`;
+      if (S.tOuvert) {
+        drop = `<div class="db-tdrop">${J.map(j => `<div class="r"><span class="n">${fDL(j.j)}</span><span class="db-bar" style="margin:0"><i style="width:${Math.min(100, j.part || 0)}%;background:${(j.part || 0) >= 80 ? '#2d7a3e' : ((j.part || 0) >= 40 ? '#A8B545' : '#C0182B')}"></i></span><span class="c ${(j.part || 0) >= 80 ? 'ok' : ((j.part || 0) >= 40 ? 'wa' : 'ko')}">${j.faites} / ${j.faites + j.pasFaites}</span></div>`).join('')}</div>`;
+      }
+    }
+    return `<div class="db-taches">${corps}</div>${drop}`;
+  }
+
   /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
   function rendAnnee() {
     const Y = annee();
@@ -483,6 +551,7 @@
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
+    $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
   }
 
