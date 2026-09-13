@@ -302,3 +302,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-13T17:10:55Z treemap même palette
 2026-09-13T17:16:06Z treemap seuils d'origine, couleurs palette
 2026-09-13T17:23:19Z stats catégories période
+2026-09-13T17:29:44Z échelle 5 sections + treemap par marge

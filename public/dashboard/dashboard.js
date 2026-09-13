@@ -129,7 +129,7 @@
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
-    else if (m) { h += S.vue === 'jour' ? rendJour(m, d) : rendPeriode(m, d); }
+    else if (m) { h += S.vue === 'jour' ? rendJour(m, d, st) : rendPeriode(m, d); }
     h += `<div class="db-sec">Les heures — ventes, matière, rémunération, marge nette<small>${S.vue === 'jour' ? 'heure par heure' : 'moyenne par jour ouvert de la période, ou total'}</small></div>`;
     if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? " — nouvelle lecture dans quelques secondes" : ""}</div>`; }
     if (st && st.produits && st.produits.aSuivre) { h += `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>`; }
@@ -174,7 +174,7 @@
   }
 
   /* Résultat › Jour, déplié pour le magasin. */
-  function rendJour(m, d) {
+  function rendJour(m, d, st) {
     const ref = d.reference || {};
     const att = m.objectifJour ? Math.min(100, 100 * m.ca / m.objectifJour) : 0;
     let h = `<div class="db-tuiles">
@@ -211,8 +211,13 @@
     const cats = Array.isArray(m.categories) ? m.categories : [];
     const plan = Array.isArray(m.planning) ? m.planning : [];
     h += `<div class="db-g2" style="margin-bottom:12px">`;
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">surface : poids dans le CA · couleur : écart à la référence</span></div>
-      ${cats.length ? `<div class="db-tm">${treemap(cats)}</div><div class="db-leg">${ECARTS.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>sans référence</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+    // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
+    // c'est elle qui colore le treemap. Sans tickets lus, repli sur l'écart à la référence du panel.
+    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs })) : [];
+    const parMarge = catsM.length > 0;
+    const lc = parMarge ? MARGES : ECARTS;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">surface : poids dans le CA · couleur : ${parMarge ? 'marge brute, CA − coût matière' : 'écart à la référence'}</span></div>
+      ${(parMarge ? catsM : cats).length ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div><div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">${m.planningHeures != null ? nf(m.planningHeures, 1) + ' h · ' + fE(m.planningCout) : ''}${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
       <div style="padding:8px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div></div>`;
@@ -226,10 +231,10 @@
       const cumNet = serie.reduce((a, x) => a + (x.net || 0), 0), cumCa = serie.reduce((a, x) => a + (x.ca || 0), 0);
       const lo = -10, hi = Math.max(50, Math.ceil(Math.max(...serie.map(x => x.netPct || 0)) / 5) * 5 + 5);
       const y = v => 100 * (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo);
-      const bornes = [lo, 0, 5, 10, 15, 25, 35, hi];
+      const bornes = [lo, 0, 10, 20, 40, hi];
       const bandes = bornes.slice(0, -1).map((bo, i) => { const p = palier(bo); const o = p.c === 'or'; return `<div style="flex:0 0 ${(100 * (bornes[i + 1] - bo) / (hi - lo)).toFixed(2)}%;background:${o ? '#E2B93B' : p.c}22"></div>`; }).join('');
       const y0 = y(0);
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">marge nette en % des ventes, un jour = une barre, du noir (perte) au vert puis à l’or (≥ 35 %) — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">marge nette en % des ventes, un jour = une barre, du noir (perte) à l’or (≥ 40 %) — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
         <div class="db-jm"><div class="bandes">${bandes}</div><div class="g" style="grid-template-columns:repeat(${serie.length},1fr)">${serie.map(x => {
           const pct = x.netPct == null ? null : x.netPct, p = palier(pct == null ? 0 : pct), o = p.c === 'or', neg = pct != null && pct < 0, yy = y(pct == null ? 0 : pct);
           return `<div title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)}${pct == null ? '' : ' (' + fP(pct) + ')'}"><div class="bb">${pct == null ? '' : `<i class="${o ? 'o' : ''}${neg ? ' neg' : ''}" style="${neg ? `top:${(100 - y0).toFixed(2)}%;height:${(y0 - yy).toFixed(2)}%` : `bottom:${y0.toFixed(2)}%;height:${(yy - y0).toFixed(2)}%`};${o ? '' : 'background:' + p.c};${x.date === S.date ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i>`}</div><span>${fD(x.date)}</span></div>`; }).join('')}</div></div>
@@ -239,10 +244,11 @@
   }
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
-  /** L'échelle de la marge nette en % des ventes : un palier = une couleur, l'or à partir de 35 %. */
-  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 5 %' }, { s: 5, c: '#F08A2C', l: '5 – 10 %' }, { s: 10, c: '#F2D34B', l: '10 – 15 %' }, { s: 15, c: '#2d7a3e', l: '15 – 25 %' }, { s: 25, c: '#7CC26A', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
-  /** Le treemap garde ses seuils d'écart à la référence, avec les couleurs de la palette : rouge, orange, jaune, vert, or. */
-  const ECARTS = [{ s: -Infinity, c: '#C0182B', l: '≤ −15 %' }, { s: -15, c: '#F08A2C', l: '−15 à −3 %' }, { s: -3, c: '#F2D34B', l: 'stable' }, { s: 3, c: '#2d7a3e', l: '+3 à +15 %' }, { s: 15, c: 'or', l: '≥ +15 %' }];
+  /** L'échelle commune, 5 sections du noir à l'or, de 0 à +40 % : marge nette en % des ventes (le jour dans le mois) et écart à la référence (catégories). */
+  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 10 %' }, { s: 10, c: '#F08A2C', l: '10 – 20 %' }, { s: 20, c: '#2d7a3e', l: '20 – 40 %' }, { s: 40, c: 'or', l: '≥ 40 % or' }];
+  const ECARTS = PALIERS;
+  /** La marge brute d'une catégorie (CA − coût matière, en % du CA) : 5 sections, l'or au-delà de 75 %. Le seuil matière du cockpit (32 %) fait 68 % de marge. */
+  const MARGES = [{ s: -Infinity, c: '#222', l: '< 50 %' }, { s: 50, c: '#C0182B', l: '50 – 60 %' }, { s: 60, c: '#F08A2C', l: '60 – 68 %' }, { s: 68, c: '#2d7a3e', l: '68 – 75 %' }, { s: 75, c: 'or', l: '≥ 75 % or' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
@@ -272,9 +278,14 @@
     let garde = 0;
     while (items.length && garde++ < 400) { const horiz = w <= h, l = horiz ? w : h, it = items[0]; if (!row.length || pire(row, l) >= pire(row.concat([it]), l)) { row.push(items.shift()); } else { poser(row, horiz); row = []; } }
     if (row.length) { poser(row, w <= h); }
-    const coulD = dl => { if (dl == null) { return '#B9B2A8'; } let r = ECARTS[0]; for (const e of ECARTS) { if (dl >= e.s) { r = e; } } return r.c === 'or' ? '#E2B93B' : r.c; };
+    const coulE = (v, ech) => { if (v == null) { return '#B9B2A8'; } let r = ech[0]; for (const e of ech) { if (v >= e.s) { r = e; } } return r.c === 'or' ? '#E2B93B' : r.c; };
+    const coulD = c => 'taux' in c ? coulE(c.taux, MARGES) : coulE(c.delta, ECARTS);
+    const CLAIRS = ['#F2D34B', '#7CC26A', '#E2B93B', '#F08A2C'];
+    const detail = (c, court) => 'taux' in c
+      ? (c.taux == null ? (court ? 'matière ?' : 'coût matière inconnu') : (court ? 'marge ' + Math.round(c.taux) + ' %' : 'marge ' + fP(c.taux) + (c.m != null ? ' · ' + fE(c.m) : '')))
+      : (c.delta != null ? (c.delta >= 0 ? '+' : '') + (court ? Math.round(c.delta) + ' %' : fP(c.delta) + ' vs réf.') : (court ? '' : 'sans référence'));
     return out.map(t => { const c = t.c; const gros = t.w > 150 && t.h > 90, moyen = t.w > 90 && t.h > 40;
-      return `<div title="${esc(c.categorie)} · ${fE(c.ca)} · ${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf. ' + fE(c.ref) : ' · sans référence'}" style="position:absolute;left:${(t.x / W * 100).toFixed(3)}%;top:${(t.y / H * 100).toFixed(3)}%;width:${Math.max(t.w / W * 100 - 0.35, 0).toFixed(3)}%;height:${Math.max(t.h / H * 100 - 0.8, 0).toFixed(3)}%;background:${coulD(c.delta)};color:${['#F2D34B', '#7CC26A', '#E2B93B', '#F08A2C'].includes(coulD(c.delta)) ? '#222' : '#fff'};border-radius:5px;padding:${gros ? '8px 10px' : '4px 6px'};overflow:hidden;font-size:${gros ? 12 : 10.5}px;line-height:1.3">${moyen ? `<b>${esc(c.categorie)}</b>${gros ? `<br><span style="font-family:var(--font-display);font-size:16px">${fE(c.ca)}</span><br><span style="opacity:.9;font-size:10.5px">${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf.' : ''}</span>` : `<br><span style="font-size:10px;opacity:.9">${c.part != null ? Math.round(100 * c.part) + ' %' : ''}${c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + Math.round(c.delta) + ' %' : ''}</span>`}` : ''}</div>`; }).join('');
+      return `<div title="${esc(c.categorie)} · ${fE(c.ca)} · ${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${'taux' in c ? (c.mat != null ? ' · matière ' + fE(c.mat) + ' · marge ' + fE(c.m) + ' (' + fP(c.taux) + ')' : ' · coût matière inconnu') + (c.refs ? ' · ' + c.refs + ' réf.' : '') : (c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf. ' + fE(c.ref) : ' · sans référence')}" style="position:absolute;left:${(t.x / W * 100).toFixed(3)}%;top:${(t.y / H * 100).toFixed(3)}%;width:${Math.max(t.w / W * 100 - 0.35, 0).toFixed(3)}%;height:${Math.max(t.h / H * 100 - 0.8, 0).toFixed(3)}%;background:${coulD(c)};color:${CLAIRS.includes(coulD(c)) ? '#222' : '#fff'};border-radius:5px;padding:${gros ? '8px 10px' : '4px 6px'};overflow:hidden;font-size:${gros ? 12 : 10.5}px;line-height:1.3">${moyen ? `<b>${esc(c.categorie)}</b>${gros ? `<br><span style="font-family:var(--font-display);font-size:16px">${fE(c.ca)}</span><br><span style="opacity:.95;font-size:10.5px;font-weight:300">${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${detail(c, false) ? ' · ' + detail(c, false) : ''}</span>` : `<br><span style="font-size:10px;opacity:.95;font-weight:300">${c.part != null ? Math.round(100 * c.part) + ' %' : ''}${detail(c, true) ? ' · ' + detail(c, true) : ''}</span>`}` : ''}</div>`; }).join('');
   }
   function hDe(t) { const p = String(t || '0:0').split(':'); return (+p[0] || 0) + (+p[1] || 0) / 60; }
 
