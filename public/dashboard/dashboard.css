@@ -208,6 +208,21 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-ndrop .m .act span{font:400 10px var(--font-ui);color:var(--color-text-muted)}
 .db-ndrop .m .act a{font:600 11px var(--font-ui);color:var(--color-primary);text-decoration:none;border:.5px solid #e8b4bb;border-radius:999px;padding:3px 10px;background:var(--color-surface)}
 .db-ndrop .m .act em{font:500 10.5px var(--font-ui);color:var(--color-text-muted);font-style:normal}
+/* Le tiroir du treemap : famille › catégorie. */
+.db-cdr{display:flex;align-items:center;justify-content:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;padding:6px 0 8px;border-top:.5px solid var(--color-border-tertiary);margin:0 16px}
+.db-cdt{padding:0 16px 12px}
+.db-tf{width:100%;border-collapse:collapse;font:400 11px var(--font-ui)}
+.db-tf th{font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:6px 8px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.db-tf th.l,.db-tf td.l{text-align:left}
+.db-tf td{padding:5px 8px;text-align:right;border-bottom:.5px solid rgba(34,34,34,.06);font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-tf tr.fam td{font-weight:600;background:var(--color-background-secondary);border-bottom:none;padding:7px 8px}
+.db-tf tr.fam td .mu{font-weight:400;color:var(--color-text-muted)}
+.db-tf tr.sub td.l{padding-left:30px;color:var(--color-text)}
+.db-tf tr.sub td{color:var(--color-text-muted)}
+.db-tf tr.tot td{font-weight:600;border-top:1px solid var(--color-text);border-bottom:none}
+.db-tf .sq{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:7px;vertical-align:-1px}
+.db-tf .sq.s{width:8px;height:8px;margin-right:6px}
+.db-g2>.db-card:has(.db-cdt){overflow:visible}
 /* Le bandeau des tâches : compteurs, fil en miniature, détail déplié. */
 .db-taches{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr 2.4fr;gap:10px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px;margin:6px 0 0}
 .db-taches .db-bt{min-height:92px}

@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -213,11 +213,11 @@
     h += `<div class="db-g2" style="margin-bottom:12px">`;
     // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
     // c'est elle qui colore le treemap. Sans tickets lus, repli sur l'écart à la référence du panel.
-    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs })) : [];
+    const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs })) : [];
     const parMarge = catsM.length > 0;
     const lc = parMarge ? MARGES : ECARTS;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">surface : poids dans le CA · couleur : ${parMarge ? 'marge brute, CA − coût matière' : 'écart à la référence'}</span></div>
-      ${(parMarge ? catsM : cats).length ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div><div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      ${(parMarge ? catsM : cats).length ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div><div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>${parMarge ? `<div class="db-cdr" data-cdrop="1">${S.cOuvert ? 'replier le détail ▴' : 'le détail par famille et catégorie ▾'}</div>${S.cOuvert ? tableauFamilles(catsM) : ''}` : ''}` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">${m.planningHeures != null ? nf(m.planningHeures, 1) + ' h · ' + fE(m.planningCout) : ''}${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
       <div style="padding:8px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div></div>`;
@@ -286,6 +286,24 @@
       : (c.delta != null ? (c.delta >= 0 ? '+' : '') + (court ? Math.round(c.delta) + ' %' : fP(c.delta) + ' vs réf.') : (court ? '' : 'sans référence'));
     return out.map(t => { const c = t.c; const gros = t.w > 150 && t.h > 90, moyen = t.w > 90 && t.h > 40;
       return `<div title="${esc(c.categorie)} · ${fE(c.ca)} · ${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${'taux' in c ? (c.mat != null ? ' · matière ' + fE(c.mat) + ' · marge ' + fE(c.m) + ' (' + fP(c.taux) + ')' : ' · coût matière inconnu') + (c.refs ? ' · ' + c.refs + ' réf.' : '') : (c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf. ' + fE(c.ref) : ' · sans référence')}" style="position:absolute;left:${(t.x / W * 100).toFixed(3)}%;top:${(t.y / H * 100).toFixed(3)}%;width:${Math.max(t.w / W * 100 - 0.35, 0).toFixed(3)}%;height:${Math.max(t.h / H * 100 - 0.8, 0).toFixed(3)}%;background:${coulD(c)};color:${CLAIRS.includes(coulD(c)) ? '#222' : '#fff'};border-radius:5px;padding:${gros ? '8px 10px' : '4px 6px'};overflow:hidden;font-size:${gros ? 12 : 10.5}px;line-height:1.3">${moyen ? `<b>${esc(c.categorie)}</b>${gros ? `<br><span style="font-family:var(--font-display);font-size:16px">${fE(c.ca)}</span><br><span style="opacity:.95;font-size:10.5px;font-weight:300">${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${detail(c, false) ? ' · ' + detail(c, false) : ''}</span>` : `<br><span style="font-size:10px;opacity:.95;font-weight:300">${c.part != null ? Math.round(100 * c.part) + ' %' : ''}${detail(c, true) ? ' · ' + detail(c, true) : ''}</span>`}` : ''}</div>`; }).join('');
+  }
+  /** Le tiroir du treemap : famille › catégorie, carré de la couleur de la marge, CA, part, matière, marge, taux ; total en pied. */
+  function tableauFamilles(cats) {
+    const coulM = t => { if (t == null) { return '#B9B2A8'; } let r = MARGES[0]; for (const e of MARGES) { if (t >= e.s) { r = e; } } return r.c === 'or' ? '#E2B93B' : r.c; };
+    const F = {};
+    cats.forEach(c => { const g = (c.groupe || 'Autres').split(' · ')[0]; const f = F[g] || (F[g] = { nom: g, ca: 0, mat: 0, m: 0, caConnu: 0, inconnu: false, cats: [] }); f.ca += c.ca; f.cats.push(c); if (c.mat == null) { f.inconnu = true; } else { f.mat += c.mat; f.m += c.m; f.caConnu += c.ca; } });
+    const fams = Object.values(F).sort((a, b) => b.ca - a.ca);
+    const tot = { ca: 0, mat: 0, m: 0 }; cats.forEach(c => { tot.ca += c.ca; if (c.mat != null) { tot.mat += c.mat; tot.m += c.m; } });
+    let etoile = false;
+    const rows = fams.map(f => {
+      f.cats.sort((a, b) => b.ca - a.ca);
+      const taux = f.caConnu > 0 ? 100 * f.m / f.caConnu : null; if (f.inconnu && taux != null) { etoile = true; }
+      return `<tr class="fam"><td class="l"><i class="sq" style="background:${coulM(taux)}"></i>${esc(f.nom)}<span class="mu"> · ${f.cats.length} catégorie${f.cats.length > 1 ? 's' : ''}</span></td><td>${fE(f.ca)}</td><td>${fP(100 * f.ca / tot.ca)}</td><td>${f.caConnu > 0 ? fE(f.mat) : '—'}</td><td>${f.caConnu > 0 ? fE(f.m) : '—'}</td><td style="color:${taux == null ? '#999' : coulM(taux)}">${taux == null ? '—' : fP(taux)}${f.inconnu && taux != null ? ' *' : ''}</td></tr>`
+        + f.cats.map(c => `<tr class="sub"><td class="l"><i class="sq s" style="background:${coulM(c.taux)}"></i>${esc(c.categorie)}</td><td>${fE(c.ca)}</td><td>${c.part != null ? fP(100 * c.part) : '—'}</td><td>${c.mat == null ? '—' : fE(c.mat)}</td><td>${c.m == null ? '—' : fE(c.m)}</td><td style="color:${c.taux == null ? '#999' : coulM(c.taux)};font-weight:600">${c.taux == null ? '—' : fP(c.taux)}</td></tr>`).join('');
+    }).join('');
+    return `<div class="db-cdt"><table class="db-tf"><tr><th class="l">Famille › catégorie</th><th>CA</th><th>% CA</th><th>Matière</th><th>Marge</th><th>Taux</th></tr>${rows}
+      <tr class="tot"><td class="l">Total · ${fams.length} famille${fams.length > 1 ? 's' : ''} · ${cats.length} catégories</td><td>${fE(tot.ca)}</td><td>100 %</td><td>${fE(tot.mat)}</td><td>${fE(tot.m)}</td><td>${tot.ca > 0 ? fP(100 * tot.m / tot.ca) : '—'}</td></tr></table>
+      <div class="db-note" style="padding:6px 0 0">Coût matière : la fiche recette du catalogue. ${etoile ? '* taux calculé sur les catégories dont le coût matière est connu. ' : ''}Une marge très négative signale une fiche recette au coût d’une fournée, pas d’une part.</div></div>`;
   }
   function hDe(t) { const p = String(t || '0:0').split(':'); return (+p[0] || 0) + (+p[1] || 0) / 60; }
 
@@ -657,6 +675,7 @@
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
+    $.querySelectorAll('[data-cdrop]').forEach(b => b.addEventListener('click', () => { S.cOuvert = !S.cOuvert; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
   }
 
