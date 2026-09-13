@@ -28,6 +28,7 @@ const SV_BUDGET_DEMANDE = 500;        // tickets lus au plus dans une requête
 const SV_TEMPS_DEMANDE = 35;          // secondes de lecture de tickets au plus par requête
 const SV_BUDGET_CRON = 900;           // tickets lus au plus par battement du cron
 const SV_TOP = 5;
+const SV_TOP_CATS = 3;
 
 /** GET /ventes/stats/sonde?shop=2&date=2026-09-06 — les routes, telles qu'elles répondent. */
 function ep_stats_ventes_sonde(): array
@@ -155,6 +156,22 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
     return $p;
 }
 
+/** La catégorie de chaque produit du panel — [pid => nom de catégorie], lue une fois. */
+function svCategories(): array
+{
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $cache = [];
+    $cats = function_exists('catalogueCategories') ? (catalogueCategories() ?? []) : [];
+    try {
+        foreach (Db::rows('SELECT id, id_category FROM product') as $r) {
+            $c = $cats[(int) ($r['id_category'] ?? 0)] ?? null;
+            if ($c !== null) { $cache[(int) $r['id']] = (string) $c['nom']; }
+        }
+    } catch (PDOException $e) { /* sans catégories : le top reste par produit */ }
+    return $cache;
+}
+
 /** Les jours d'une vue : jour, semaine (lundi → aujourd'hui), mois (1er → aujourd'hui). */
 function svJours(string $vue, string $date): array
 {
@@ -226,6 +243,7 @@ function ep_stats_ventes(): array
     $actives = array_keys(array_filter($agg, static fn ($a) => $a['ca'] > 0));
     $hMin = $actives === [] ? 0 : min($actives); $hMax = $actives === [] ? 23 : max($actives);
     $nJ = max(1, count($joursOuverts));
+    $catDe = svCategories();
     $lignes = [];
     foreach ($agg as $h => $a) {
         if ((int) $h < $hMin || (int) $h > $hMax) { continue; }
@@ -238,14 +256,29 @@ function ep_stats_ventes(): array
                 if ($x[3] === null) { $pp[$pid]['cInconnu'] = true; } else { $pp[$pid]['c'] += $x[3]; }
             }
         }
-        $top = [];
+        $top = []; $cc = [];
         foreach ($pp as $x) {
             $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
             $top[] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2),
                 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
                 'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null];
+            // La même somme par catégorie : ce qui fait la marge de l'heure, famille par famille.
+            $cn = $catDe[$x['id']] ?? 'Sans catégorie';
+            if (!isset($cc[$cn])) { $cc[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => 0]; }
+            $cc[$cn]['q'] += $x['q']; $cc[$cn]['v'] += $x['v']; $cc[$cn]['refs']++;
+            if ($x['cInconnu']) { $cc[$cn]['cInconnu'] = true; } else { $cc[$cn]['c'] += $x['c']; }
         }
-        usort($top, static fn ($a2, $b2) => ($b2['m'] ?? -INF) <=> ($a2['m'] ?? -INF) ?: $b2['v'] <=> $a2['v']);
+        $tri = static fn ($a2, $b2) => ($b2['m'] ?? -INF) <=> ($a2['m'] ?? -INF) ?: $b2['v'] <=> $a2['v'];
+        usort($top, $tri);
+        $cats = [];
+        $vH = array_sum(array_column($pp, 'v'));
+        foreach ($cc as $x) {
+            $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+            $cats[] = ['nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2),
+                'm' => $m, 'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null,
+                'part' => $vH > 0 ? round(100 * $x['v'] / $vH, 1) : null, 'refs' => $x['refs']];
+        }
+        usort($cats, $tri);
         $nRef = count($top);
         $mbH = round($a['ca'] - $a['mat'], 2);
         $lignes[] = ['h' => (int) $h, 'tickets' => $a['tickets'], 'ca' => round($a['ca'], 2), 'mat' => round($a['mat'], 2),
@@ -256,7 +289,7 @@ function ep_stats_ventes(): array
             // La moyenne par jour ouvert, pour lire une semaine ou un mois comme une journée.
             'moy' => ['tickets' => round($a['tickets'] / $nJ, 1), 'ca' => round($a['ca'] / $nJ, 2), 'mat' => round($a['mat'] / $nJ, 2),
                 'mb' => round($mbH / $nJ, 2), 'trav' => round($a['trav'] / $nJ, 2), 'res' => round($a['marge'] / $nJ, 2)],
-            'top' => array_slice($top, 0, SV_TOP), 'references' => $nRef,
+            'top' => array_slice($top, 0, SV_TOP), 'cats' => array_slice($cats, 0, SV_TOP_CATS), 'categories' => count($cats), 'references' => $nRef,
             'topSur' => count(array_filter($prod, static fn ($ph) => isset($ph[(string) $h])))];
     }
     $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
