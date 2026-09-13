@@ -66,7 +66,7 @@
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
       S.enCours[kr] = true; delete S.err[kr];
@@ -149,6 +149,17 @@
       <div class="db-card"><div class="ct"><div class="db-sk" style="width:220px"></div></div><div style="padding:14px 16px">${Array.from({ length: n }, () => `<div class="db-sk" style="margin-bottom:10px"></div>`).join('')}</div></div>`;
   }
   function tuile(k, v, s, cls) { return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
+  /** La tuile avec sa tendance : la mini-courbe des 7 derniers mêmes jours (+ aujourd'hui) et l'écart avec le dernier. */
+  function tuileTend(k, v, s, cls, serie, auj, fmt, inverse) {
+    const pts = serie.filter(x => x != null);
+    if (!pts.length || auj == null) { return tuile(k, v, s, cls); }
+    const all = pts.concat([auj]), mn = Math.min(...all), mx = Math.max(...all), n = all.length;
+    const xy = all.map((x, i) => [(i * 70 / Math.max(1, n - 1)), 24 - 22 * (x - mn) / ((mx - mn) || 1) + 1]);
+    const dern = pts[pts.length - 1], d = dern ? 100 * (auj - dern) / dern : null;
+    const sens = d == null ? 'eq' : (Math.abs(d) < 1 ? 'eq' : ((d > 0) !== !!inverse ? 'up' : 'dn'));
+    const last = xy[n - 1];
+    return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><svg class="db-spk" viewBox="0 0 70 26" title="${pts.length} derniers mêmes jours"><polyline points="${xy.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" stroke="${sens === 'dn' ? '#C0182B' : (sens === 'eq' ? '#B9B2A8' : '#2d7a3e')}"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.2"/></svg><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="dernier même jour : ${fmt(dern)}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} vs ${esc(fD(S.aux['tend|' + S.shop + '|' + S.date].jours.slice(-1)[0].date))}</span>`}</div>`;
+  }
   function cascade(m, d) {
     const se = (d && d.seuils) || {};
     const ca = m.ca != null ? m.ca : m.realise;
@@ -181,13 +192,14 @@
 
   /* Résultat › Jour, déplié pour le magasin. */
   function rendJour(m, d, st) {
+    const TT = S.aux['tend|' + S.shop + '|' + S.date], TJ = TT && Array.isArray(TT.jours) ? TT.jours : [];
     const ref = d.reference || {};
     const att = m.objectifJour ? Math.min(100, 100 * m.ca / m.objectifJour) : 0;
     let h = `<div class="db-tuiles">
-      ${tuile('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + (m.panier > 0 && m.objectifJour - m.ca > 0 ? ' · <b class="ko">−' + fN((m.objectifJour - m.ca) / m.panier) + ' clients</b> (' + fE(m.objectifJour - m.ca) + ' ÷ ' + fU(m.panier) + ')' : (m.objectifJour && m.panier > 0 ? ' · <b class="ok">+' + fN((m.ca - m.objectifJour) / m.panier) + ' clients</b> d’avance' : '')) : 'pas d’objectif du jour')}
-      ${tuile('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere))}
-      ${tuile('Clients', fN(m.tickets), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : '') + (m.produits ? ' · ' + fN(m.produits) + ' produits vendus' : ''))}
-      ${tuile('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''))}
+      ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + (m.panier > 0 && m.objectifJour - m.ca > 0 ? ' · <b class="ko">−' + fN((m.objectifJour - m.ca) / m.panier) + ' clients</b> (' + fE(m.objectifJour - m.ca) + ' ÷ ' + fU(m.panier) + ')' : (m.objectifJour && m.panier > 0 ? ' · <b class="ok">+' + fN((m.ca - m.objectifJour) / m.panier) + ' clients</b> d’avance' : '')) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK)}
+      ${tuileTend('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere), '', TJ.map(j => j.mb), m.margeBrute, fK)}
+      ${tuileTend('Clients', fN(m.tickets), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : '') + (m.produits ? ' · ' + fN(m.produits) + ' produits vendus' : ''), '', TJ.map(j => j.tickets), m.tickets, fN)}
+      ${tuileTend('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''), '', TJ.map(j => j.panier), m.panier, fU)}
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;

@@ -243,6 +243,13 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-tq tr[data-trimq]{cursor:pointer}.db-tq tr[data-trimq]:hover td{background:rgba(34,34,34,.03)}
 .db-tq tr.tot td{font-weight:600;border-top:1px solid var(--color-text);border-bottom:none}
 .db-tq .mu{color:var(--color-text-muted);font-weight:400}
+/* La tendance dans les tuiles : mini-courbe des 7 derniers mêmes jours, écart avec le dernier. */
+.db-tui{position:relative}
+.db-spk{position:absolute;right:10px;top:10px;width:70px;height:26px}
+.db-spk polyline{fill:none;stroke-width:1.6;stroke-linejoin:round}
+.db-spk circle{fill:var(--color-primary)}
+.db-dl{display:inline-block;font:600 10px var(--font-ui);border-radius:999px;padding:1px 7px;margin-top:5px}
+.db-dl.up{background:#dfeee0;color:#2d7a3e}.db-dl.dn{background:#fbeff0;color:#C0182B}.db-dl.eq{background:var(--color-background-secondary);color:var(--color-text-muted)}
 /* Le tiroir du treemap : famille › catégorie. */
 .db-cdr{display:flex;align-items:center;justify-content:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;padding:6px 0 8px;border-top:.5px solid var(--color-border-tertiary);margin:0 16px}
 .db-cdt{padding:0 16px 12px}

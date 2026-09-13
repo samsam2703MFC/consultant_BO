@@ -189,6 +189,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
+            $path === '/ventes/tendance'              => ep_stats_tendance(),
             $path === '/ventes/classement'            => ep_ventes_classement(),
             $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),

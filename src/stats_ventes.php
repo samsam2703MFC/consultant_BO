@@ -164,6 +164,49 @@ function ep_stats_record(): array
     return $out;
 }
 
+/**
+ * GET /ventes/tendance?shop=4&date=2026-09-13 — les 7 derniers mêmes jours de
+ * semaine AVANT la date (CA, marge brute, clients, panier), relus dans le
+ * margin-heatmap du panel sur huit semaines. Gravé pour la journée. Le front
+ * dessine la mini-courbe des tuiles et l'écart avec le dernier même jour.
+ */
+function ep_stats_tendance(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop ou date manquant']; }
+    $cle = 'svTend|' . $sid . '|' . $date;
+    if (empty($_GET['force'])) {
+        $v = setting($cle);
+        if (is_string($v)) { $v = json_decode($v, true); }
+        if (is_array($v) && isset($v['jours'])) { return $v + ['cache' => true]; }
+    }
+    $jd = new DateTimeImmutable($date);
+    $wd = (int) $jd->format('N');
+    if (!PanelApi::configured()) { return ['shop' => $sid, 'date' => $date, 'jours' => [], 'indispo' => true]; }
+    $au = $jd->modify('-1 day'); $du = $jd->modify('-56 days');
+    $mid = $du->modify('+30 days');
+    $res = PanelApi::getParallele([
+        'a' => '/consultant/shops/' . $sid . '/margin-heatmap?from=' . $du->format('Y-m-d') . '&to=' . $mid->format('Y-m-d'),
+        'b' => '/consultant/shops/' . $sid . '/margin-heatmap?from=' . $mid->modify('+1 day')->format('Y-m-d') . '&to=' . $au->format('Y-m-d')], 2);
+    $jours = [];
+    foreach (['a', 'b'] as $k) {
+        foreach ((array) (is_array($res[$k] ?? null) ? ($res[$k]['days'] ?? []) : []) as $d) {
+            $dt = (string) ($d['date'] ?? ''); $ca = (float) ($d['ca'] ?? 0);
+            if ($dt === '' || $dt >= $date || empty($d['has_data']) || $ca <= 0) { continue; }
+            if ((int) (new DateTimeImmutable($dt))->format('N') !== $wd) { continue; }
+            $tk = (int) ($d['tickets'] ?? 0); $mb = isset($d['margin_value']) ? (float) $d['margin_value'] : null;
+            $jours[$dt] = ['date' => $dt, 'ca' => round($ca, 2), 'mb' => $mb !== null ? round($mb, 2) : null, 'mbPct' => ($mb !== null && $ca > 0) ? round(100 * $mb / $ca, 1) : null,
+                'tickets' => $tk ?: null, 'panier' => $tk > 0 ? round($ca / $tk, 2) : null];
+        }
+    }
+    ksort($jours);
+    $jours = array_values(array_slice($jours, -7));
+    $out = ['shop' => $sid, 'date' => $date, 'jourSemaine' => $wd, 'jours' => $jours, 'quand' => date('c')];
+    if ($jours !== []) { try { svGrave($cle, $out); } catch (Throwable $e) { /* sans cache */ } }
+    return $out;
+}
+
 /** Grave une valeur dans ceo_app_setting. */
 function svGrave(string $cle, array $v): void
 {
