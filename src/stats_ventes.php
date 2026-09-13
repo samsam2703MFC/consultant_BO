@@ -271,6 +271,18 @@ function svCategories(): array
     return $cache;
 }
 
+/** La famille de chaque catégorie (nom de catégorie → groupe du catalogue), quand le catalogue en connaît. */
+function svGroupes(): array
+{
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $cache = [];
+    foreach ((function_exists('catalogueCategories') ? (catalogueCategories() ?? []) : []) as $c) {
+        if (!empty($c['groupe'])) { $cache[(string) $c['nom']] = (string) $c['groupe']; }
+    }
+    return $cache;
+}
+
 /** Les jours d'une vue : jour, semaine (lundi → aujourd'hui), mois (1er → aujourd'hui). */
 function svJours(string $vue, string $date): array
 {
@@ -396,10 +408,12 @@ function ep_stats_ventes(): array
             'topSur' => count(array_filter($prod, static fn ($ph) => isset($ph[(string) $h])))];
     }
     // Les catégories sur la période : CA, coût matière, marge brute et son taux — pour colorer le treemap par la marge.
+    // Chaque catégorie porte sa famille (le groupe de catégories du catalogue) pour la liste famille › catégorie.
     $catsT = []; $vT = array_sum(array_map(static fn ($x) => $x['v'], $ccT));
+    $grpDe = svGroupes();
     foreach ($ccT as $x) {
         $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
-        $catsT[] = ['nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
+        $catsT[] = ['nom' => $x['nom'], 'groupe' => $grpDe[$x['nom']] ?? null, 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
             'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs'])];
     }
     usort($catsT, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
