@@ -22,11 +22,11 @@ select.db-sel,input.db-sel{border:.5px solid var(--color-border-secondary);borde
 .db-card>.ct{padding:11px 16px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .db-card>.ct .db-mini{margin-left:auto}
 .db-mini{font-size:10.5px;color:var(--color-text-muted)}
-.db-tuiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
-.db-tui{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:11px;padding:11px 13px;min-width:0}
-.db-tui .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
-.db-tui .v{font-family:var(--font-display);font-size:24px;margin:3px 0 1px;font-variant-numeric:tabular-nums;line-height:1.1}
-.db-tui .s{font-size:10.5px;line-height:1.35;color:var(--color-text-muted)}
+.db-tuiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.db-tui{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:11px;padding:11px 13px;min-width:0;min-height:104px;display:flex;flex-direction:column}
+.db-tui .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-tui .v{font-family:var(--font-display);font-size:24px;margin:3px 0 2px;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-tui .s{font-size:10.5px;line-height:1.35;color:var(--color-text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em;margin-top:auto}
 .db-tui.vif{border-color:var(--color-primary);background:#fdf4f5}.db-tui.vif .v{color:var(--color-primary)}
 .db-tui.bon{border-color:#bfdcc6;background:#f0f7f2}.db-tui.bon .v{color:#2d7a3e}
 .ok{color:#2d7a3e}.ko{color:#C0182B}.wa{color:#B26A00}.mu{color:var(--color-text-muted)}
@@ -114,15 +114,16 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-leg{display:flex;gap:12px;flex-wrap:wrap;padding:4px 16px 12px;font-size:10.5px;color:var(--color-text-muted)}
 .db-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 /* Le bandeau du réseau : la place du magasin, sans nommer les autres. */
-.db-bench{display:grid;grid-template-columns:1.2fr repeat(4,1fr);gap:8px;background:var(--color-text);border-radius:12px;padding:10px 12px;margin-bottom:6px}
-.db-bt{background:rgba(255,255,255,.07);border-radius:9px;padding:8px 11px;min-width:0;color:#fff}
-.db-bt .k{font:600 9px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.65)}
+.db-bench{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;background:var(--color-text);border-radius:12px;padding:10px 10px;margin-bottom:6px}
+.db-bt{background:rgba(255,255,255,.07);border-radius:9px;padding:8px 11px;min-width:0;min-height:74px;color:#fff;display:flex;flex-direction:column}
+.db-bt .k{font:600 9px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-bt .v{font-family:var(--font-display);font-size:22px;line-height:1.1;margin:2px 0}
 .db-bt .v small{font-size:12px;font-family:var(--font-ui);color:rgba(255,255,255,.65)}
-.db-bt .s{font-size:10px;line-height:1.35;color:rgba(255,255,255,.7)}
+.db-bt .s{font-size:10px;line-height:1.35;color:rgba(255,255,255,.7);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:auto}
 .db-bt.tit{background:transparent;display:flex;flex-direction:column;justify-content:center}
 .db-bt.tit .k{color:var(--color-secondary);font-size:10px}
 .db-bt.bon{background:rgba(45,122,62,.55)}.db-bt.vif{background:rgba(141,29,44,.7)}
-@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}.db-cl{grid-template-columns:120px 1fr 80px 56px}.db-cl .n{display:none}}
+@media (max-width:1150px){.db-tuiles,.db-bench{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}.db-tuiles{grid-template-columns:1fr 1fr}.db-cl{grid-template-columns:120px 1fr 80px 56px}.db-cl .n{display:none}}
 @media (max-width:900px){.db-g2{grid-template-columns:1fr}.db-casc{grid-template-columns:repeat(3,1fr)}}
 @media print{body{background:#fff}#dash{padding:0}.db-nav,.db-btn{display:none}}

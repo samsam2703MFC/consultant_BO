@@ -303,8 +303,8 @@
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     const jour = S.vue === 'jour';
     const defs = jour
-      ? [['Chiffre d’affaires', 'ca', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v)), 1]]
-      : [['Chiffre d’affaires', 'realise', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), 1]];
+      ? [['Chiffre d’affaires', 'ca', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v)), 1], ['Résultat net', 'netPct', v => fP(v), 1]]
+      : [['Chiffre d’affaires', 'realise', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), 1], ['Résultat net', 'netPct', v => fP(v), 1]];
     const ord = n => n === 1 ? '1er' : n + 'e';
     const tuiles = defs.map(([lib, k, f]) => {
       const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
@@ -338,6 +338,7 @@
         ${tuile('Attendu à ce jour', fK(A.attendu), 'au rythme des budgets mensuels')}
         ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
         ${tuile('Projection fin d’année', fK(A.projection), A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel', A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '')}
+        ${tuile('Rampe à 5 ans', plan.rampe && plan.rampe.potentiel ? fK(plan.rampe.potentiel) : '—', plan.rampe && plan.rampe.potentiel ? 'potentiel à maturité · ' + (function () { const n = (plan.rampe.annees || []).find(a => a.an === Y + 1); return n ? 'l’an prochain ' + fK(n.ca) : ''; })() : 'sans étude de marché')}
       </div>
       ${A.objectif ? `<div class="db-card"><div style="padding:12px 16px"><div class="db-lab">Objectif ${Y} — ${fK(A.objectif)}</div><div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${wAtt != null ? `<b style="left:${wAtt.toFixed(1)}%"></b>` : ''}</div><div class="db-mini" style="margin-top:5px">${fP(att)} réalisé${wAtt != null ? ' · le repère noir est l’attendu à ce jour (' + fP(wAtt) + ')' : ''}</div></div></div>` : ''}`;
       const R = (plan.rampe && plan.rampe.annees) || [];
@@ -398,7 +399,8 @@
     const sel = L.find(l => l.h === S.heure) || L[0];
     let h = `<div class="db-tuiles">
       ${tuile(S.vue === 'jour' ? 'Clients' : 'Clients / jour ouvert', fN(tot.tickets / (S.vue === 'jour' ? 1 : nJ)), 'panier ' + fU(tot.panier) + (S.vue !== 'jour' ? ' · ' + nJ + ' jour(s) ouvert(s)' : ''))}
-      ${tuile('Ventes', fK(tot.ca), 'matière ' + fP(tot.ca ? 100 * tot.mat / tot.ca : null) + ' · marge brute ' + fP(tot.mbPct))}
+      ${tuile('Ventes', fK(tot.ca), 'matière ' + fP(tot.ca ? 100 * tot.mat / tot.ca : null) + ' · ' + fK(tot.mat))}
+      ${tuile('Marge brute', fK(tot.mb), fP(tot.mbPct) + ' des ventes')}
       ${tuile('Résultat des heures', fSK(tot.res), fP(tot.resPct) + ' des ventes · travail ' + fK(tot.trav), tot.res >= 0 ? 'bon' : 'vif')}
       ${st.meilleure ? tuile('Heure la plus rentable', st.meilleure.h + ' – ' + (st.meilleure.h + 1) + ' h', fSK(moy ? st.meilleure.moy : st.meilleure.res) + (moy ? ' par jour ouvert' : ''), 'bon') : ''}
       ${st.pire ? tuile('Heure la moins rentable', st.pire.h + ' – ' + (st.pire.h + 1) + ' h', fSK(moy ? st.pire.moy : st.pire.res) + (moy ? ' par jour ouvert' : ''), (moy ? st.pire.moy : st.pire.res) < 0 ? 'vif' : '') : ''}
