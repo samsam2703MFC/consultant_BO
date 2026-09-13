@@ -343,7 +343,7 @@ function ep_stats_ventes(): array
     $hMin = $actives === [] ? 0 : min($actives); $hMax = $actives === [] ? 23 : max($actives);
     $nJ = max(1, count($joursOuverts));
     $catDe = svCategories();
-    $lignes = [];
+    $lignes = []; $ccT = [];
     foreach ($agg as $h => $a) {
         if ((int) $h < $hMin || (int) $h > $hMax) { continue; }
         // Le top 5 de l'heure, par marge — sur les jours dont les tickets sont lus.
@@ -366,6 +366,10 @@ function ep_stats_ventes(): array
             if (!isset($cc[$cn])) { $cc[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => 0]; }
             $cc[$cn]['q'] += $x['q']; $cc[$cn]['v'] += $x['v']; $cc[$cn]['refs']++;
             if ($x['cInconnu']) { $cc[$cn]['cInconnu'] = true; } else { $cc[$cn]['c'] += $x['c']; }
+            // Et la même somme sur toute la période : la marge de chaque catégorie, CA − coût matière.
+            if (!isset($ccT[$cn])) { $ccT[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => []]; }
+            $ccT[$cn]['q'] += $x['q']; $ccT[$cn]['v'] += $x['v']; $ccT[$cn]['refs'][$x['id']] = true;
+            if ($x['cInconnu']) { $ccT[$cn]['cInconnu'] = true; } else { $ccT[$cn]['c'] += $x['c']; }
         }
         $tri = static fn ($a2, $b2) => ($b2['m'] ?? -INF) <=> ($a2['m'] ?? -INF) ?: $b2['v'] <=> $a2['v'];
         usort($top, $tri);
@@ -391,6 +395,14 @@ function ep_stats_ventes(): array
             'top' => array_slice($top, 0, SV_TOP), 'cats' => array_slice($cats, 0, SV_TOP_CATS), 'categories' => count($cats), 'references' => $nRef,
             'topSur' => count(array_filter($prod, static fn ($ph) => isset($ph[(string) $h])))];
     }
+    // Les catégories sur la période : CA, coût matière, marge brute et son taux — pour colorer le treemap par la marge.
+    $catsT = []; $vT = array_sum(array_map(static fn ($x) => $x['v'], $ccT));
+    foreach ($ccT as $x) {
+        $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+        $catsT[] = ['nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs'])];
+    }
+    usort($catsT, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
     $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
     foreach ($lignes as $l) { $tot['tickets'] += $l['tickets']; $tot['ca'] += $l['ca']; $tot['mat'] += $l['mat']; $tot['trav'] += $l['trav']; $tot['res'] += $l['res']; }
     $tot['mb'] = round($tot['ca'] - $tot['mat'], 2);
@@ -409,7 +421,7 @@ function ep_stats_ventes(): array
         'produits' => ['jours' => $joursProd, 'total' => count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
-        'heures' => $lignes, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'heures' => $lignes, 'categories' => $catsT, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
         'meilleure' => $meilleure ? ['h' => $meilleure['h'], 'res' => $meilleure['res'], 'moy' => $meilleure['moy']['res']] : null,
         'pire' => $pire ? ['h' => $pire['h'], 'res' => $pire['res'], 'moy' => $pire['moy']['res']] : null,
         'source' => ['heures' => 'panel hourly-distribution (ventes, matière, personnel, marge de l’heure)',
