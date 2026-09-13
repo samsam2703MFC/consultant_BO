@@ -298,25 +298,28 @@
     return h;
   }
 
-  /* La place du magasin dans le réseau — un rang, jamais un nom. */
+  /* La place du magasin dans le réseau — le podium : une case par magasin, la
+   * tienne allumée, un trophée quand tu es premier. Jamais un nom. */
   function rendBench(m, d) {
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     const jour = S.vue === 'jour';
     const defs = jour
-      ? [['Chiffre d’affaires', 'ca', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v)), 1], ['Résultat net', 'netPct', v => fP(v), 1]]
-      : [['Chiffre d’affaires', 'realise', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), 1], ['Résultat net', 'netPct', v => fP(v), 1]];
+      ? [['Chiffre d’affaires', 'ca', fK], ['Clients', 'tickets', fN], ['Panier moyen', 'panier', fU], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v))], ['Résultat net', 'netPct', v => fP(v)]]
+      : [['Chiffre d’affaires', 'realise', fK], ['Clients', 'tickets', fN], ['Panier moyen', 'panier', fU], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v)], ['Résultat net', 'netPct', v => fP(v)]];
     const ord = n => n === 1 ? '1er' : n + 'e';
+    let premiers = 0;
     const tuiles = defs.map(([lib, k, f]) => {
       const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
       const v = m[k];
-      if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><div class="v mu">—</div></div>`; }
-      const rang = vals.findIndex(x => x <= v) + 1;
-      const med = vals[Math.floor((vals.length - 1) / 2)];
-      const meilleur = vals[0];
-      const cls = rang === 1 ? 'bon' : (rang === vals.length && vals.length > 1 ? 'vif' : '');
-      return `<div class="db-bt ${cls}"><div class="k">${lib}</div><div class="v">${ord(rang)} <small>/ ${vals.length}</small></div><div class="s">${f(v)} · médiane réseau ${f(med)}${rang > 1 ? ' · le 1er : ' + f(meilleur) : ''}</div></div>`;
+      if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><div class="v mu">—</div><div class="s">pas de valeur</div></div>`; }
+      const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
+      const med = vals[Math.floor((n - 1) / 2)], meilleur = vals[0], second = vals[1];
+      const top = rang === 1, bas = rang === n && n > 1;
+      if (top) { premiers++; }
+      const cases = Array.from({ length: n }, (_, i) => i + 1 === rang ? `<i class="moi${top ? ' top' : (bas ? ' bas' : '')}">${top ? '🏆 ' : ''}${ord(rang)}</i>` : `<i>${i + 1}</i>`).join('');
+      return `<div class="db-bt"><div class="k">${lib}</div><div class="slots">${cases}</div><div class="v">${f(v)}<small>médiane ${f(med)}</small></div><div class="s">${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · classement anonyme</div></div>${tuiles}</div>`;
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · classement anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div></div>${tuiles}</div>`;
   }
 
   /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
