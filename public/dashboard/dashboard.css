@@ -58,8 +58,9 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-jours>div .bb i.ferme{background:var(--color-background-secondary)}
 .db-jours>div .bb b{position:absolute;left:12%;right:12%;height:2px;background:var(--color-text)}
 .db-jours>div span{white-space:nowrap}
-.db-g2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}
-.db-g2 .db-card{min-width:0;overflow:hidden;margin-bottom:0}
+.db-g2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.db-g2>.db-card{min-width:0;overflow:hidden;margin-bottom:0;display:flex;flex-direction:column}
+.db-g2>.db-card>.db-tm{flex:1;min-height:300px}
 .db-chart{position:relative;height:200px;margin:8px 16px 2px;border-bottom:1px solid var(--color-border-secondary)}
 .db-chart .col{position:absolute;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer}
 .db-chart .col i{display:block;width:68%;background:var(--color-primary);border-radius:4px 4px 0 0}
