@@ -586,9 +586,11 @@
     const tot = st.totaux || {};
     if (S.heure === null || !L.some(l => l.h === S.heure)) { S.heure = st.meilleure ? st.meilleure.h : L[0].h; }
     const sel = L.find(l => l.h === S.heure) || L[0];
+    const LH = Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0) : [];
+    const hCli = LH.length ? LH.reduce((m, x) => x.tickets > m.tickets ? x : m) : null, hCa = LH.length ? LH.reduce((m, x) => x.ca > m.ca ? x : m) : null;
     let h = `<div class="db-tuiles">
-      ${tuile(S.vue === 'jour' ? 'Clients' : 'Clients / jour ouvert', fN(tot.tickets / (S.vue === 'jour' ? 1 : nJ)), 'panier ' + fU(tot.panier) + (S.vue !== 'jour' ? ' · ' + nJ + ' jour(s) ouvert(s)' : ''))}
-      ${tuile('Ventes', fK(tot.ca), 'matière ' + fP(tot.ca ? 100 * tot.mat / tot.ca : null) + ' · ' + fK(tot.mat))}
+      ${hCli ? tuile('Heure avec le plus de clients', hCli.h + ' – ' + (hCli.h + 1) + ' h', fN(moy ? hCli.moy.tickets : hCli.tickets) + ' clients' + (moy ? ' par jour ouvert' : '') + ' · panier ' + fU(hCli.panier) + ' · ' + fP(tot.tickets ? 100 * hCli.tickets / tot.tickets : null) + ' des clients') : tuile('Heure avec le plus de clients', '—', '')}
+      ${hCa ? tuile('Heure avec le plus de CA', hCa.h + ' – ' + (hCa.h + 1) + ' h', fK(moy ? hCa.moy.ca : hCa.ca) + (moy ? ' par jour ouvert' : '') + ' · ' + fP(tot.ca ? 100 * hCa.ca / tot.ca : null) + ' des ventes · matière ' + fP(hCa.mbPct == null ? null : 100 - hCa.mbPct)) : tuile('Heure avec le plus de CA', '—', '')}
       ${tuile('Marge brute', fK(tot.mb), fP(tot.mbPct) + ' des ventes')}
       ${tuile('Marge nette des heures', fSK(tot.res), fP(tot.resPct) + ' des ventes · rémunération ' + fK(tot.trav), tot.res >= 0 ? 'bon' : 'vif')}
       ${st.meilleure ? tuile('Heure la plus rentable', st.meilleure.h + ' – ' + (st.meilleure.h + 1) + ' h', fSK(moy ? st.meilleure.moy : st.meilleure.res) + (moy ? ' par jour ouvert' : ''), 'bon') : ''}
