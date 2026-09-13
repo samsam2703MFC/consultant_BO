@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -41,7 +41,9 @@
       .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error((j && j.error) || ('HTTP ' + r.status))), () => Promise.reject(new Error('HTTP ' + r.status))));
   }
   function cleRes() { return S.vue + '|' + S.date; }
-  function cleSt() { return S.shop + '|' + S.vue + '|' + S.date; }
+  /** Le jour dont on lit les heures : en vue Jour, un jour cliqué dans « le jour dans le mois », sinon la date. */
+  function dateH() { return S.vue === 'jour' && S.jourH ? S.jourH : S.date; }
+  function cleSt() { return S.shop + '|' + S.vue + '|' + dateH(); }
   function annee() { return +S.date.slice(0, 4); }
   function bornes() {
     const t = new Date(S.date + 'T12:00:00');
@@ -72,7 +74,7 @@
     }
     if ((force || !S.st[ks]) && !S.enCours[ks]) {
       S.enCours[ks] = true; delete S.err[ks];
-      lire('/ventes/stats?shop=' + encodeURIComponent(S.shop) + '&vue=' + S.vue + '&date=' + S.date)
+      lire('/ventes/stats?shop=' + encodeURIComponent(S.shop) + '&vue=' + S.vue + '&date=' + dateH())
         .then(d => { S.st[ks] = d; if (S.heure === null && d.meilleure) { S.heure = d.meilleure.h; }
           // Une lecture partielle (tickets à suivre) se complète toute seule.
           if (d.produits && d.produits.aSuivre && (S.relances[ks] || 0) < 6) { S.relances[ks] = (S.relances[ks] || 0) + 1; setTimeout(() => { if (cleSt() === ks) { charger(true); } }, 4000); } })
@@ -130,7 +132,8 @@
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
     else if (m) { h += S.vue === 'jour' ? rendJour(m, d, st) : rendPeriode(m, d); }
-    h += `<div class="db-sec">Les heures — ventes, matière, rémunération, marge nette<small>${S.vue === 'jour' ? 'heure par heure' : 'moyenne par jour ouvert de la période, ou total'}</small></div>`;
+    const autreJ = S.vue === 'jour' && S.jourH && S.jourH !== S.date;
+    h += `<div class="db-sec">Les heures — ${S.vue === 'jour' ? esc(fDL(dateH())) : 'ventes, matière, rémunération, marge nette'}<small>${S.vue === 'jour' ? 'heure par heure · cliquer un jour dans « le jour dans le mois » pour le lire' : 'moyenne par jour ouvert de la période, ou total'}</small>${autreJ ? `<button class="db-btn" data-jh="" style="margin-left:auto">↩ revenir au ${esc(fD(S.date))}</button>` : ''}</div>`;
     if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? " — nouvelle lecture dans quelques secondes" : ""}</div>`; }
     if (st && st.produits && st.produits.aSuivre) { h += `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>`; }
     if (!st && !S.err[ks]) { h += squelette(4); }
@@ -235,8 +238,8 @@
       h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">marge nette en % des ventes, un jour = une barre, du noir (perte) à l’or (≥ 40 %) — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
         <div class="db-jm"><div class="bandes">${bandes}</div><div class="g" style="grid-template-columns:repeat(${serie.length},1fr)">${serie.map(x => {
           const pct = x.netPct == null ? null : x.netPct, p = palier(pct == null ? 0 : pct), o = p.c === 'or', neg = pct != null && pct < 0, yy = y(pct == null ? 0 : pct);
-          return `<div title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)}${pct == null ? '' : ' (' + fP(pct) + ')'}"><div class="bb">${pct == null ? '' : `<i class="${o ? 'o' : ''}${neg ? ' neg' : ''}" style="${neg ? `top:${(100 - y0).toFixed(2)}%;height:${(y0 - yy).toFixed(2)}%` : `bottom:${y0.toFixed(2)}%;height:${(yy - y0).toFixed(2)}%`};${o ? '' : 'background:' + p.c};${x.date === S.date ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i>`}</div><span>${fD(x.date)}</span></div>`; }).join('')}</div></div>
-        <div class="db-leg">${PALIERS.map(p => `<span><i class="${p.c === 'or' ? 'or' : ''}" style="${p.c === 'or' ? '' : 'background:' + p.c}"></i>${p.l}</span>`).join('')}<span style="margin-left:auto"><i style="background:#fff;outline:2px solid #222;outline-offset:-1px"></i>aujourd’hui</span></div></div>`;
+          return `<div class="jh${x.date === dateH() ? ' sel' : ''}" data-jh="${esc(x.date)}" title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)}${pct == null ? '' : ' (' + fP(pct) + ')'} · cliquer pour lire ses heures"><div class="bb">${pct == null ? '' : `<i class="${o ? 'o' : ''}${neg ? ' neg' : ''}" style="${neg ? `top:${(100 - y0).toFixed(2)}%;height:${(y0 - yy).toFixed(2)}%` : `bottom:${y0.toFixed(2)}%;height:${(yy - y0).toFixed(2)}%`};${o ? '' : 'background:' + p.c};${x.date === dateH() ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i>`}</div><span>${fD(x.date)}</span></div>`; }).join('')}</div></div>
+        <div class="db-leg">${PALIERS.map(p => `<span><i class="${p.c === 'or' ? 'or' : ''}" style="${p.c === 'or' ? '' : 'background:' + p.c}"></i>${p.l}</span>`).join('')}<span style="margin-left:auto"><i style="background:#fff;outline:2px solid #222;outline-offset:-1px"></i>jour lu dans « les heures »</span></div></div>`;
     }
     return h;
   }
@@ -407,7 +410,7 @@
     let premiers = 0;
     const N = S.aux['notif|' + S.shop];
     const msgs = N && Array.isArray(N.messages) ? N.messages : [];
-    if (msgs.length) { defs.pop(); }
+    if (N) { defs.pop(); }
     const tuiles = defs.map(([lib, k, f, fd]) => {
       const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
       const v = m[k];
@@ -426,7 +429,9 @@
         <div class="s">${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
     let msgT = '', msgD = '';
-    if (msgs.length) {
+    if (N && !msgs.length) {
+      msgT = `<div class="db-bt msg vide"><div class="k">Messages du panel</div><div class="n"><span class="bell">🔔</span>0</div><div class="last">Pas de message pour l’instant</div></div>`;
+    } else if (msgs.length) {
       const nb = p => msgs.filter(x => x.priorite === p).length;
       const nU = nb('urgent'), nA = nb('attention'), nI = nb('info');
       const hh = q => q ? q.slice(11, 16) : '';
@@ -676,14 +681,14 @@
 
   function brancher() {
     $.querySelectorAll('canvas.db-feux').forEach(feux);
-    $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; urlMaj(); charger(false); }));
-    const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; urlMaj(); charger(false); } }); }
+    $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
       if (S.vue === 'jour') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
       const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
-      S.date = d; S.heure = null; urlMaj(); charger(false); }));
-    $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; urlMaj(); charger(false); }));
+      S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
@@ -692,6 +697,7 @@
     $.querySelectorAll('[data-cdrop]').forEach(b => b.addEventListener('click', () => { S.cOuvert = !S.cOuvert; rendre(); }));
     $.querySelectorAll('[data-ctri]').forEach(b => b.addEventListener('click', () => { S.cTri = b.dataset.ctri; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
+    $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
   }
 
   /* --- départ ------------------------------------------------------------- */

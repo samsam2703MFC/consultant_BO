@@ -81,6 +81,9 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-jm .g>div .bb i.o{background:#E2B93B}
 .db-jm .g>div .bb i.neg{border-radius:0 0 4px 4px}
 .db-jm .g>div span{white-space:nowrap}
+.db-jm .g>div.jh{cursor:pointer;border-radius:6px}
+.db-jm .g>div.jh:hover{background:rgba(34,34,34,.05)}
+.db-jm .g>div.jh.sel span{font-weight:600;color:var(--color-text)}
 .db-jours{display:grid;gap:6px;padding:12px 16px 14px;align-items:end;height:170px}
 .db-jours>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;font:500 9.5px var(--font-ui);color:var(--color-text-muted);min-width:0}
 .db-jours>div em{font:600 10px var(--font-ui);color:var(--color-text);font-style:normal;white-space:nowrap}
@@ -189,6 +192,8 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 /* La tuile des messages du panel, et son tiroir. */
 .db-bt.msg{background:var(--color-surface);border:1.5px solid var(--color-primary);cursor:pointer;position:relative}
 .db-bt.msg.urg{background:#fdf4f5}
+.db-bt.msg.vide{cursor:default;border-color:var(--color-border-tertiary);background:var(--color-background-secondary)}
+.db-bt.msg.vide .k,.db-bt.msg.vide .last{color:var(--color-text-muted)}
 .db-bt.msg .k{color:var(--color-primary)}
 .db-bt.msg .n{font-family:var(--font-display);font-size:26px;line-height:1;margin:4px 0 2px;display:flex;align-items:baseline;gap:8px}
 .db-bt.msg .n .bell{font-size:17px}
