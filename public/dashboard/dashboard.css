@@ -113,21 +113,28 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-tm{position:relative;height:300px;margin:12px 16px 6px}
 .db-leg{display:flex;gap:12px;flex-wrap:wrap;padding:4px 16px 12px;font-size:10.5px;color:var(--color-text-muted)}
 .db-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
-/* Le bandeau du réseau : le podium en clair — une case par magasin, la tienne allumée. */
+/* Le bandeau du réseau : le badge de rang sur la jauge, en clair. */
 .db-bench{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px;margin-bottom:6px}
-.db-bt{background:var(--color-background-secondary);border-radius:9px;padding:9px 11px;min-width:0;min-height:98px;display:flex;flex-direction:column}
+.db-bt{background:var(--color-background-secondary);border-radius:9px;padding:9px 11px;min-width:0;min-height:112px;display:flex;flex-direction:column}
 .db-bt .k{font:600 9px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.db-bt .slots{display:flex;gap:4px;margin:7px 0 6px}
-.db-bt .slots i{flex:1;height:22px;border-radius:5px;background:#fff;border:.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;font:700 10.5px var(--font-ui);color:#b9b2a8;font-style:normal;white-space:nowrap}
-.db-bt .slots i.moi{background:var(--color-text);color:#fff;border-color:var(--color-text)}
-.db-bt .slots i.moi.top{background:#2d7a3e;border-color:#2d7a3e}
-.db-bt .slots i.moi.bas{background:var(--color-primary);border-color:var(--color-primary)}
-.db-bt .v{font-family:var(--font-display);font-size:17px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-bt .rg{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;background:var(--color-text);color:#fff;border-radius:6px;padding:2px 8px;font:700 11px var(--font-ui);margin:6px 0 4px;white-space:nowrap}
+.db-bt .rg small{font-weight:400;opacity:.75;font-size:10px}
+.db-bt .rg.top{background:#2d7a3e}.db-bt .rg.bas{background:var(--color-primary)}.db-bt .rg.mu{background:#c9c2b8}
+.db-bt .jg{position:relative;height:18px;margin:2px 6px 4px}
+.db-bt .jg .l{position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;background:linear-gradient(90deg,#e5b6bc,#e9e2d8 50%,#bfdcc6)}
+.db-bt .jg .pt{position:absolute;top:5px;width:9px;height:9px;border-radius:50%;background:#c9c2b8;border:2px solid #fff;transform:translateX(-50%)}
+.db-bt .jg .md{position:absolute;top:2px;width:2px;height:15px;background:var(--color-text);transform:translateX(-50%)}
+.db-bt .jg .mo{position:absolute;top:1px;width:17px;height:17px;border-radius:50%;background:var(--color-primary);transform:translateX(-50%);box-shadow:0 0 0 2px #fff;z-index:1}
+.db-bt .jg .mo.top{background:#2d7a3e}
+.db-bt .v{font-family:var(--font-display);font-size:17px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:auto}
 .db-bt .v small{font:500 10px var(--font-ui);color:var(--color-text-muted);margin-left:5px}
-.db-bt .s{font-size:10px;line-height:1.35;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:auto}
+.db-bt .s{font-size:10px;line-height:1.35;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-bt.tit{background:transparent;display:flex;flex-direction:column;justify-content:center;gap:4px}
 .db-bt.tit .k{color:var(--color-primary);font-size:10.5px}
 .db-bt.tit .s{white-space:normal;margin-top:0}
+.db-bt .leg{font-size:10px;color:var(--color-text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+.db-bt .leg i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
+.db-bt .leg b{display:inline-block;width:2px;height:10px;background:var(--color-text);vertical-align:-1px;margin-right:3px}
 @media (max-width:1150px){.db-tuiles,.db-bench{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}.db-tuiles{grid-template-columns:1fr 1fr}.db-cl{grid-template-columns:120px 1fr 80px 56px}.db-cl .n{display:none}}
 @media (max-width:900px){.db-g2{grid-template-columns:1fr}.db-casc{grid-template-columns:repeat(3,1fr)}}

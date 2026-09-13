@@ -298,28 +298,35 @@
     return h;
   }
 
-  /* La place du magasin dans le réseau — le podium : une case par magasin, la
-   * tienne allumée, un trophée quand tu es premier. Jamais un nom. */
+  /* La place du magasin dans le réseau — le badge de rang sur la jauge : du
+   * dernier (à gauche) au premier (à droite), toi en rouge, les autres en
+   * points gris, la médiane un trait. Un trophée au premier. Jamais un nom. */
   function rendBench(m, d) {
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     const jour = S.vue === 'jour';
     const defs = jour
-      ? [['Chiffre d’affaires', 'ca', fK], ['Clients', 'tickets', fN], ['Panier moyen', 'panier', fU], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v))], ['Résultat net', 'netPct', v => fP(v)]]
-      : [['Chiffre d’affaires', 'realise', fK], ['Clients', 'tickets', fN], ['Panier moyen', 'panier', fU], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v)], ['Résultat net', 'netPct', v => fP(v)]];
+      ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v)), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
+      : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
-    const tuiles = defs.map(([lib, k, f]) => {
+    const tuiles = defs.map(([lib, k, f, fd]) => {
       const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
       const v = m[k];
-      if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><div class="v mu">—</div><div class="s">pas de valeur</div></div>`; }
+      if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><span class="rg mu">—</span><div class="v mu">—</div><div class="s">pas de valeur</div></div>`; }
       const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
       const med = vals[Math.floor((n - 1) / 2)], meilleur = vals[0], second = vals[1];
       const top = rang === 1, bas = rang === n && n > 1;
       if (top) { premiers++; }
-      const cases = Array.from({ length: n }, (_, i) => i + 1 === rang ? `<i class="moi${top ? ' top' : (bas ? ' bas' : '')}">${top ? '🏆 ' : ''}${ord(rang)}</i>` : `<i>${i + 1}</i>`).join('');
-      return `<div class="db-bt"><div class="k">${lib}</div><div class="slots">${cases}</div><div class="v">${f(v)}<small>médiane ${f(med)}</small></div><div class="s">${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
+      // La jauge : du minimum au maximum du réseau, en pourcentage de la largeur.
+      const mn = vals[n - 1], mx = vals[0], ecart = mx - mn;
+      const pos = x => ecart > 0 ? Math.max(0, Math.min(100, 100 * (x - mn) / ecart)) : 50;
+      const autres = vals.filter((x, i) => i !== rang - 1).map(x => `<span class="pt" style="left:${pos(x).toFixed(1)}%"></span>`).join('');
+      return `<div class="db-bt"><div class="k">${lib}</div><span class="rg${top ? ' top' : (bas ? ' bas' : '')}">${top ? '🏆 ' : ''}${ord(rang)} <small>/ ${n}</small></span>
+        <div class="jg"><i class="l"></i>${autres}<span class="md" style="left:${pos(med).toFixed(1)}%"></span><span class="mo${top ? ' top' : ''}" style="left:${pos(v).toFixed(1)}%"></span></div>
+        <div class="v">${f(v)}<small>médiane ${f(med)}</small></div>
+        <div class="s">${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · classement anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div></div>${tuiles}</div>`;
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
   }
 
   /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
