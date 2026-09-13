@@ -299,3 +299,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-13T16:48:26Z orange plus clair
 2026-09-13T16:52:16Z paliers dégradé noir → or
 2026-09-13T17:08:29Z paliers pleins via le vert
+2026-09-13T17:10:55Z treemap même palette
