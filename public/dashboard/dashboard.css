@@ -214,6 +214,35 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-ndrop .m .act span{font:400 10px var(--font-ui);color:var(--color-text-muted)}
 .db-ndrop .m .act a{font:600 11px var(--font-ui);color:var(--color-primary);text-decoration:none;border:.5px solid #e8b4bb;border-radius:999px;padding:3px 10px;background:var(--color-surface)}
 .db-ndrop .m .act em{font:500 10.5px var(--font-ui);color:var(--color-text-muted);font-style:normal}
+/* Trimestre : les 3 mois, les annotations, le rituel ; Année : le tableau des trimestres. */
+.db-mo{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:14px 16px}
+.db-mo>div{text-align:center;min-width:0}
+.db-mo .bars{height:150px;display:flex;align-items:flex-end;justify-content:center;gap:8px;border-bottom:1px solid var(--color-border-tertiary)}
+.db-mo .bars i{display:block;width:44px;border-radius:5px 5px 0 0;min-height:2px}
+.db-mo .bars i.b{background:#e9e2d8}.db-mo .bars i.r{background:var(--color-primary)}.db-mo .bars i.r.ok{background:#2d7a3e}.db-mo .bars i.r.enc{background:#D97706}
+.db-mo .n{font:600 12px var(--font-ui);margin-top:6px}.db-mo .d{font:400 10.5px var(--font-ui);color:var(--color-text-muted)}
+.db-nv{border-left:4px solid #ccc;background:var(--color-background-secondary);border-radius:0 9px 9px 0;padding:8px 12px;margin:0 0 8px}
+.db-nv .q{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);display:flex;justify-content:space-between;gap:8px}
+.db-nv .q span:last-child{text-transform:none;letter-spacing:0;font-weight:500}
+.db-nv p{margin:4px 0 0;font:400 11.5px/1.45 var(--font-ui);white-space:pre-line}
+.db-nv.fr{border-color:var(--color-primary)}.db-nv.co{border-color:#1f4e8c}.db-nv.ma{border-color:#C9A227}
+.db-nv.vide p{color:var(--color-text-muted);font-style:italic}
+.db-act{font:400 11px var(--font-ui);padding:5px 0;border-top:.5px solid rgba(34,34,34,.06);display:flex;justify-content:space-between;gap:10px}
+.db-act .st{font:600 9.5px var(--font-ui);border-radius:999px;padding:1px 7px;background:#eee;color:#555;white-space:nowrap;align-self:center}
+.db-act .st.ok{background:#dfeee0;color:#2d7a3e}.db-act .st.enc{background:#FBEFE0;color:#B26A00}
+.db-rit{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font:500 10px var(--font-ui);color:var(--color-text-muted);padding:10px 0 0}
+.db-rit i{width:22px;height:6px;border-radius:3px;background:#e9e2d8;display:inline-block}.db-rit i.on{background:var(--color-primary)}
+.db-tg{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:var(--color-background-secondary);color:var(--color-text-muted);margin-left:6px;vertical-align:1px}
+.db-tg.enc{background:#FBEFE0;color:#B26A00}.db-tg.fut{background:var(--color-surface);border:.5px solid var(--color-border-tertiary)}
+.db-pill{display:inline-block;border-radius:999px;padding:1px 7px;font:600 10px var(--font-ui);color:#fff}
+.db-tq td{vertical-align:top}
+.db-tq td.l{text-align:left}.db-tq th.l{text-align:left}
+.db-tq td.an{text-align:left;white-space:normal;min-width:320px;max-width:560px;font-size:10.5px;line-height:1.4}
+.db-tq td.an .v{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:#ccc}
+.db-tq td.an .v.fr{background:var(--color-primary)}.db-tq td.an .v.co{background:#1f4e8c}.db-tq td.an .v.ma{background:#C9A227}
+.db-tq tr[data-trimq]{cursor:pointer}.db-tq tr[data-trimq]:hover td{background:rgba(34,34,34,.03)}
+.db-tq tr.tot td{font-weight:600;border-top:1px solid var(--color-text);border-bottom:none}
+.db-tq .mu{color:var(--color-text-muted);font-weight:400}
 /* Le tiroir du treemap : famille › catégorie. */
 .db-cdr{display:flex;align-items:center;justify-content:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;padding:6px 0 8px;border-top:.5px solid var(--color-border-tertiary);margin:0 16px}
 .db-cdt{padding:0 16px 12px}
