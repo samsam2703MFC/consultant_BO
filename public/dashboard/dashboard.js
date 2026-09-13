@@ -229,7 +229,7 @@
       const bornes = [lo, 0, 5, 10, 15, 25, 35, hi];
       const bandes = bornes.slice(0, -1).map((bo, i) => { const p = palier(bo); const o = p.c === 'or'; return `<div style="flex:0 0 ${(100 * (bornes[i + 1] - bo) / (hi - lo)).toFixed(2)}%;background:${o ? 'linear-gradient(180deg,rgba(226,185,59,.35),rgba(226,185,59,.12))' : p.c + '1a'}"></div>`; }).join('');
       const y0 = y(0);
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">marge nette en % des ventes, un jour = une barre — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">marge nette en % des ventes, un jour = une barre, du noir (perte) à l’or (≥ 35 %) — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
         <div class="db-jm"><div class="bandes">${bandes}</div><div class="g" style="grid-template-columns:repeat(${serie.length},1fr)">${serie.map(x => {
           const pct = x.netPct == null ? null : x.netPct, p = palier(pct == null ? 0 : pct), o = p.c === 'or', neg = pct != null && pct < 0, yy = y(pct == null ? 0 : pct);
           return `<div title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)}${pct == null ? '' : ' (' + fP(pct) + ')'}"><div class="bb">${pct == null ? '' : `<i class="${o ? 'o' : ''}${neg ? ' neg' : ''}" style="${neg ? `top:${(100 - y0).toFixed(2)}%;height:${(y0 - yy).toFixed(2)}%` : `bottom:${y0.toFixed(2)}%;height:${(yy - y0).toFixed(2)}%`};${o ? '' : 'background:' + p.c};${x.date === S.date ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i>`}</div><span>${fD(x.date)}</span></div>`; }).join('')}</div></div>
@@ -240,7 +240,7 @@
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
   /** L'échelle de la marge nette en % des ventes : un palier = une couleur, l'or à partir de 35 %. */
-  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 5 %' }, { s: 5, c: '#F59E42', l: '5 – 10 %' }, { s: 10, c: '#C9A227', l: '10 – 15 %' }, { s: 15, c: '#2d7a3e', l: '15 – 25 %' }, { s: 25, c: '#5f9e5f', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
+  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#6E1B1B', l: '0 – 5 %' }, { s: 5, c: '#B3261E', l: '5 – 10 %' }, { s: 10, c: '#DE5A1F', l: '10 – 15 %' }, { s: 15, c: '#F08A2C', l: '15 – 25 %' }, { s: 25, c: '#F3B13C', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
