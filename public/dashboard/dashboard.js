@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', stores: [], res: {}, st: {}, enCours: {}, err: {} };
+    heure: null, mode: 'moy', stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -52,8 +52,13 @@
     if ((force || !S.st[ks]) && !S.enCours[ks]) {
       S.enCours[ks] = true; delete S.err[ks];
       lire('/ventes/stats?shop=' + encodeURIComponent(S.shop) + '&vue=' + S.vue + '&date=' + S.date)
-        .then(d => { S.st[ks] = d; if (S.heure === null && d.meilleure) { S.heure = d.meilleure.h; } })
-        .catch(e => { S.err[ks] = e.message; }).finally(() => { S.enCours[ks] = false; rendre(); });
+        .then(d => { S.st[ks] = d; if (S.heure === null && d.meilleure) { S.heure = d.meilleure.h; }
+          // Une lecture partielle (tickets à suivre) se complète toute seule.
+          if (d.produits && d.produits.aSuivre && (S.relances[ks] || 0) < 6) { S.relances[ks] = (S.relances[ks] || 0) + 1; setTimeout(() => { if (cleSt() === ks) { charger(true); } }, 4000); } })
+        .catch(e => { S.err[ks] = e.message;
+          // Un échec (temps dépassé côté serveur) se retente : ce qui a été lu est gravé.
+          if ((S.relances[ks] || 0) < 3) { S.relances[ks] = (S.relances[ks] || 0) + 1; setTimeout(() => { if (cleSt() === ks) { charger(true); } }, 5000); } })
+        .finally(() => { S.enCours[ks] = false; rendre(); });
     }
     rendre();
   }
@@ -101,7 +106,8 @@
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
     else if (m) { h += S.vue === 'jour' ? rendJour(m, d) : rendPeriode(m, d); }
     h += `<div class="db-sec">Les heures — ventes, matière, travail, résultat<small>${S.vue === 'jour' ? 'heure par heure' : 'moyenne par jour ouvert de la période, ou total'}</small></div>`;
-    if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}</div>`; }
+    if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? " — nouvelle lecture dans quelques secondes" : ""}</div>`; }
+    if (st && st.produits && st.produits.aSuivre) { h += `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>`; }
     if (!st && !S.err[ks]) { h += squelette(4); }
     else if (st) { h += rendHeures(st); }
     $.innerHTML = h;

@@ -24,7 +24,8 @@ declare(strict_types=1);
 
 const SV_DEBUT = '2026-08-01';        // premier jour moissonné pour les produits
 const SV_TTL_JOUR = 600;              // la journée en cours : dix minutes
-const SV_BUDGET_DEMANDE = 700;        // tickets lus au plus dans une requête
+const SV_BUDGET_DEMANDE = 500;        // tickets lus au plus dans une requête
+const SV_TEMPS_DEMANDE = 35;          // secondes de lecture de tickets au plus par requête
 const SV_BUDGET_CRON = 900;           // tickets lus au plus par battement du cron
 const SV_TOP = 5;
 
@@ -188,13 +189,20 @@ function ep_stats_ventes(): array
     $nom = magasinConnu((string) $sid);
     [$du, $au, $jours] = svJours($vue, $date);
 
+    @set_time_limit(180);
+    $t0 = microtime(true);
     $heures = svHeuresJours($sid, $jours);
     $cout = 0; $budget = SV_BUDGET_DEMANDE;
-    $prod = []; $joursProd = [];
+    $prod = []; $joursProd = []; $tempsEpuise = false;
     // Les tickets : d'abord les jours déjà gravés (gratuits), puis les autres
-    // du plus récent au plus ancien, jusqu'au budget de la requête.
+    // du plus récent au plus ancien, jusqu'au budget de la requête — en
+    // tickets ET en secondes : une réponse partielle vaut mieux qu'un 500,
+    // le reste se grave à la relecture suivante et au cron.
     foreach (array_reverse($jours) as $j) {
         if ($j < SV_DEBUT) { continue; }
+        $grave = setting('svP' . $sid . ':' . $j);
+        $dejaLu = is_array($grave) && isset($grave['p']) && ($j < $auj || (int) ($grave['quand'] ?? 0) > time() - SV_TTL_JOUR);
+        if (!$dejaLu && microtime(true) - $t0 > SV_TEMPS_DEMANDE) { $tempsEpuise = true; continue; }
         $p = svProduitsJour($sid, $j, $cout, $budget);
         if ($p !== null) { $prod[$j] = $p; $joursProd[] = $j; }
     }
@@ -267,7 +275,8 @@ function ep_stats_ventes(): array
     return ['shop' => $sid, 'magasin' => $nom, 'vue' => $vue, 'date' => $date, 'du' => $du, 'au' => $au, 'aujourdhui' => $auj,
         'jours' => $jours, 'joursOuverts' => $joursOuverts, 'joursServis' => array_keys($heures),
         'produits' => ['jours' => $joursProd, 'total' => count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
-            'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT))],
+            'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
+            'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
         'heures' => $lignes, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
         'meilleure' => $meilleure ? ['h' => $meilleure['h'], 'res' => $meilleure['res'], 'moy' => $meilleure['moy']['res']] : null,
         'pire' => $pire ? ['h' => $pire['h'], 'res' => $pire['res'], 'moy' => $pire['moy']['res']] : null,
