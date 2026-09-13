@@ -109,11 +109,10 @@
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      <span class="db-lab">Magasin</span><select class="db-sel" id="db-shop">${S.stores.map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('') || `<option value="${esc(S.shop)}">Magasin ${esc(S.shop)}</option>`}</select>
       <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : 'Année de'))}</span>
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
-      <span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button><button class="db-btn" onclick="window.print()">⎙ Imprimer</button></div>`;
+      <span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
     // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
@@ -453,7 +452,6 @@
   /* --- gestes -------------------------------------------------------------- */
   function brancher() {
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; urlMaj(); charger(false); }));
-    const sh = document.getElementById('db-shop'); if (sh) { sh.addEventListener('change', () => { S.shop = sh.value; S.heure = null; urlMaj(); charger(false); }); }
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;

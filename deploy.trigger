@@ -282,3 +282,4 @@ dashboard-temps 2026-09-13T09:18:09Z
 dashboard-annee-bench 2026-09-13T09:35:20Z
 dashboard-top3-categories 2026-09-13T09:41:14Z
 dashboard-jour-integre 2026-09-13T09:56:35Z
+dashboard-nav-sans-magasin 2026-09-13T10:00:17Z
