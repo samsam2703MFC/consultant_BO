@@ -291,3 +291,4 @@ dashboard-bandeau-sans-ref 2026-09-13T10:47:00Z
 dashboard-tuile-sans-ref 2026-09-13T10:48:21Z
 dashboard-sections-egales 2026-09-13T10:48:42Z
 dashboard-taches 2026-09-13T10:55:44Z
+dashboard-taches-pastilles 2026-09-13T11:08:08Z

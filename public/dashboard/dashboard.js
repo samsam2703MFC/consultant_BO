@@ -374,9 +374,15 @@
         ${tuileT('Bloquantes', String(nB), nB ? 'exploitation non rendue' : 'rien ne bloque', nB ? 'ko' : '')}
         <div class="db-bt fil" data-tdrop="1"><div class="k">Le fil de la journée <span class="dr">${S.tOuvert ? 'replier ▴' : 'détail ▾'}</span></div><div class="mini">${mini}</div><div class="s">${cls.map(court).map(esc).join(' · ')}</div></div>`;
       if (S.tOuvert) {
-        drop = `<div class="db-tdrop">${cls.map(c => { const L = par[c]; const f = L.filter(faite).length, b = L.filter(bloq).length; const hs = L.filter(t => t.faitLe).map(hDe).sort();
-          const nonR = L.filter(t => !faite(t)).map(t => esc(t.tache));
-          return `<div class="r"><span class="n">${esc(c)}<small>${hs.length ? hs[0] + (hs.length > 1 ? ' → ' + hs[hs.length - 1] : '') + (L.find(t => t.faitePar) ? ' · ' + esc(L.find(t => t.faitePar).faitePar) : '') : ''}${nonR.length ? (hs.length ? ' · ' : '') + 'non rendue(s) : ' + nonR.join(', ') : ''}</small></span><span class="dots">${L.map(t => `<i class="${faite(t) ? 'f' : (bloq(t) ? 'b' : 'n')}" title="${esc(t.tache)}${faite(t) ? ' · ' + hDe(t) : ''}">${faite(t) ? '✓' : (bloq(t) ? '!' : '·')}</i>`).join('')}</span><span class="c ${f === L.length ? 'ok' : (b ? 'ko' : 'wa')}">${f} / ${L.length}</span></div>`; }).join('')}</div>`;
+        // Le détail : une ligne par checklist — le compte, les heures, puis
+        // chaque tâche en pastille (état, nom court, heure et personne au survol).
+        const nomCourt = t => { let n = String(t.tache || ''); n = n.replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · '); return n.length > 34 ? n.slice(0, 33) + '…' : n; };
+        const etat = t => faite(t) ? 'f' : (bloq(t) ? 'b' : 'n');
+        const ico = t => faite(t) ? '✓' : (bloq(t) ? '!' : '·');
+        drop = `<div class="db-tdrop">${cls.map(c => { const L = par[c]; const f = L.filter(faite).length, b = L.filter(bloq).length; const hs = L.filter(t => t.faitLe).map(hDe).sort(); const qui = [...new Set(L.filter(t => t.faitePar).map(t => t.faitePar))];
+          const meta = hs.length ? hs[0] + (hs.length > 1 ? ' → ' + hs[hs.length - 1] : '') + (qui.length ? ' · ' + esc(qui.join(', ')) : '') : (b ? b + ' bloquante(s)' : 'rien de rendu');
+          return `<div class="r"><span class="n">${esc(c)}<small>${meta}</small></span><span class="pills">${L.map(t => `<span class="pl ${etat(t)}" title="${esc(t.tache)}${faite(t) ? ' · ' + hDe(t) + (t.faitePar ? ' · ' + esc(t.faitePar) : '') + (t.statut === 'aControler' || t.statut === 'aValider' ? ' · à contrôler' : '') : (bloq(t) ? ' · non rendue · bloquante' : ' · non rendue')}"><i>${ico(t)}</i>${esc(nomCourt(t))}${faite(t) ? `<em>${hDe(t)}</em>` : ''}</span>`).join('')}</span><span class="c ${f === L.length ? 'ok' : (b ? 'ko' : 'wa')}">${f} / ${L.length}</span></div>`; }).join('')}
+          <div class="db-note" style="padding:6px 0 0">✓ rendue · ! bloquante (exploitation non rendue) · · non rendue. Survolez une pastille pour l’heure, la personne et l’état du contrôle.</div></div>`;
       }
     } else {
       const li = (d.lignes || []).find(x => String(x.shopId) === String(S.shop));
