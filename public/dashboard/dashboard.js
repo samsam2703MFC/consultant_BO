@@ -23,7 +23,7 @@
   /* --- formats ------------------------------------------------------------ */
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const fE = n => n == null ? '—' : nf(Math.round(n), 0) + ' €';
+  const fE = n => n == null ? '—' : nf(Math.round(n) || 0, 0) + ' €';
   const fK = n => n == null ? '—' : (Math.abs(n) >= 10000 ? Number(n / 1000).toLocaleString('fr-BE', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' k€' : fE(n));
   const fU = n => n == null ? '—' : nf(n, 2) + ' €';
   const fP = n => n == null ? '—' : nf(n, 1) + ' %';
@@ -135,7 +135,25 @@
       <div class="db-card"><div class="ct"><div class="db-sk" style="width:220px"></div></div><div style="padding:14px 16px">${Array.from({ length: n }, () => `<div class="db-sk" style="margin-bottom:10px"></div>`).join('')}</div></div>`;
   }
   function tuile(k, v, s, cls) { return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
-  function cascade(m) {
+  function cascade(m, d) {
+    const se = (d && d.seuils) || {};
+    const ca = m.ca != null ? m.ca : m.realise;
+    const feu = (v, s) => v == null || s == null ? 'var(--color-text-muted)' : (v <= s ? '#2d7a3e' : (v <= s * 1.3 ? '#D97706' : '#C0182B'));
+    const feuRes = p => p == null ? 'var(--color-text-muted)' : (p >= 15 ? '#2d7a3e' : (p >= 5 ? '#D97706' : '#C0182B'));
+    const mbPct = m.margeBrutePct != null ? m.margeBrutePct : (ca ? 100 * m.margeBrute / ca : null);
+    const barre = p => Math.min(Math.abs(p || 0), 100).toFixed(1);
+    const ligne = (lib, sous, v, pct, coul, w, fort, note) => `<div class="db-cl${fort ? ' fort' : ''}"><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
+    const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
+    return `<div class="db-cascade">
+      ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
+      ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues', fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
+      ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
+      ${ligne('− Main-d’œuvre', (se.labour != null ? 'seuil ' + fP(se.labour) : '') + (m.labourSource ? ' · ' + esc(m.labourSource) : ''), m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
+      ${ligne('− Frais généraux', (se.overhead != null ? 'seuil ' + fP(se.overhead) : '') + (m.overheadSource ? ' · ' + esc(m.overheadSource) : ''), m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
+      ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
+    </div>`;
+  }
+  function cascadeVieille(m) {
     const ov = m.overhead == null ? null : m.overhead;
     return `<div class="db-casc">
       <div><div class="k">Chiffre d’affaires</div><div class="v">${fK(m.ca != null ? m.ca : m.realise)}</div><div class="s">${m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : ''}</div></div>
@@ -152,10 +170,10 @@
     const ref = d.reference || {};
     const att = m.objectifJour ? Math.min(100, 100 * m.ca / m.objectifJour) : 0;
     let h = `<div class="db-tuiles">
-      ${tuile('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + (m.objectifSource ? ' · ' + esc(m.objectifSource) : '') : 'pas d’objectif du jour')}
+      ${tuile('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + (m.panier > 0 && m.objectifJour - m.ca > 0 ? ' · <b class="ko">−' + fN((m.objectifJour - m.ca) / m.panier) + ' clients</b> (' + fE(m.objectifJour - m.ca) + ' ÷ ' + fU(m.panier) + ')' : (m.objectifJour && m.panier > 0 ? ' · <b class="ok">+' + fN((m.ca - m.objectifJour) / m.panier) + ' clients</b> d’avance' : '')) : 'pas d’objectif du jour')}
       ${tuile('vs référence', m.caDelta == null ? '—' : (m.caDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.caDelta)), (ref.libelle ? esc(ref.libelle) : 'référence') + ' · ' + fK(m.refCa), m.caDelta == null ? '' : (m.caDelta >= 0 ? 'bon' : 'vif'))}
-      ${tuile('Clients', fN(m.tickets), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : ''))}
-      ${tuile('Panier moyen', fU(m.panier), m.produitsParClient ? nf(m.produitsParClient, 1) + ' produits / client' : '')}
+      ${tuile('Clients', fN(m.tickets), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : '') + (m.produits ? ' · ' + fN(m.produits) + ' produits vendus' : ''))}
+      ${tuile('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''))}
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
@@ -164,24 +182,45 @@
         <div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${m.projectionPart != null ? `<b style="left:${Math.min(100, m.projectionPart).toFixed(1)}%"></b>` : ''}</div>
         <div class="db-mini" style="margin-top:5px">${fP(att)} réalisé${m.projectionPart != null ? ' · le repère noir est la part de journée normalement écoulée (' + fP(m.projectionPart) + ')' : ''}</div></div></div>`;
     }
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}</span></div>${cascade(m)}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
     // Catégories et planning côte à côte.
     const cats = Array.isArray(m.categories) ? m.categories : [];
     const plan = Array.isArray(m.planning) ? m.planning : [];
     h += `<div class="db-g2" style="margin-bottom:12px">`;
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Par catégorie</span><span class="db-mini">CA du jour, référence, écart</span></div>
-      ${cats.length ? `<table class="db-t"><tr><th>Catégorie</th><th>CA</th><th>Référence</th><th>Écart</th><th>Part</th></tr>${cats.map(c => `<tr><td>${esc(c.categorie)}</td><td>${fE(c.ca)}</td><td class="mu">${fE(c.ref)}</td><td class="${coul(c.delta)}">${c.delta == null ? '—' : (c.delta >= 0 ? '+ ' : '− ') + fP(Math.abs(c.delta))}</td><td class="mu">${c.part != null ? fP(100 * c.part) : '—'}</td></tr>`).join('')}</table>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">surface : poids dans le CA · couleur : écart à la référence</span></div>
+      ${cats.length ? `<div class="db-tm">${treemap(cats)}</div><div class="db-leg">${[['#C0182B', '≤ −15 %'], ['#D97706', '−15 à −3 %'], ['#C9A227', 'stable'], ['#5f9e5f', '+3 à +15 %'], ['#2d7a3e', '≥ +15 %'], ['#B9B2A8', 'sans référence']].map(l => `<span><i style="background:${l[0]}"></i>${l[1]}</span>`).join('')}</div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">${m.planningHeures != null ? nf(m.planningHeures, 1) + ' h · ' + fE(m.planningCout) : ''}${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
       <div style="padding:8px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div></div>`;
     h += `</div>`;
     const serie = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert) : [];
     if (serie.length) {
-      const mx = Math.max(...serie.map(x => x.ca || 0), 1);
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">Les derniers jours</span><span class="db-mini">CA et résultat net par jour ouvert</span></div>
-        <div class="db-jours" style="grid-template-columns:repeat(${serie.length},1fr)">${serie.map(x => `<div><em>${fK(x.ca)}</em><div class="bb"><i class="${x.date === S.date ? 'auj' : ''}" style="height:${(100 * x.ca / mx).toFixed(1)}%"></i></div><span>${fD(x.date)}</span><span class="${coul(x.net)}">${x.net == null ? '' : fP(x.netPct)}</span></div>`).join('')}</div></div>`;
+      const mx = Math.max(...serie.map(x => Math.abs(x.net || 0)), 1);
+      const cumNet = serie.reduce((a, x) => a + (x.net || 0), 0), cumCa = serie.reduce((a, x) => a + (x.ca || 0), 0);
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">résultat net par jour — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
+        <div class="db-jours" style="grid-template-columns:repeat(${serie.length},1fr);height:150px">${serie.map(x => `<div title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)} (${fP(x.netPct)})"><em class="${coul(x.net)}">${x.net == null ? '' : fE(x.net)}</em><div class="bb"><i style="height:${(100 * Math.abs(x.net || 0) / mx).toFixed(1)}%;background:${x.net == null ? 'var(--color-background-secondary)' : (x.net < 0 ? '#C0182B' : '#2d7a3e')};${x.date === S.date ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i></div><span>${fD(x.date)}</span><span class="mu">${x.netPct == null ? '' : fP(x.netPct)}</span></div>`).join('')}</div></div>`;
     }
     return h;
+  }
+
+  /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
+  function treemap(cats) {
+    const vals = cats.filter(c => (c.ca || 0) > 0).sort((a, b) => b.ca - a.ca);
+    if (!vals.length) { return ''; }
+    const W = 1000, H = 440;
+    const tot = vals.reduce((t, c) => t + c.ca, 0), ech = (W * H) / tot;
+    const items = vals.map(c => ({ c, a: c.ca * ech }));
+    const out = []; let x = 0, y = 0, w = W, h = H, row = [];
+    const pire = (rw, l) => { const sm = rw.reduce((t, r) => t + r.a, 0); if (sm <= 0 || l <= 0) { return Infinity; } const mx = Math.max(...rw.map(r => r.a)), mn = Math.min(...rw.map(r => r.a)); return Math.max((l * l * mx) / (sm * sm), (sm * sm) / (l * l * mn)); };
+    const poser = (rw, horiz) => { const sm = rw.reduce((t, r) => t + r.a, 0); if (sm <= 0) { return; }
+      if (horiz) { const rh = sm / w; let cx = x; rw.forEach(r => { const rl = r.a / rh; out.push({ c: r.c, x: cx, y, w: rl, h: rh }); cx += rl; }); y += rh; h -= rh; }
+      else { const rl = sm / h; let cy = y; rw.forEach(r => { const rh = r.a / rl; out.push({ c: r.c, x, y: cy, w: rl, h: rh }); cy += rh; }); x += rl; w -= rl; } };
+    let garde = 0;
+    while (items.length && garde++ < 400) { const horiz = w <= h, l = horiz ? w : h, it = items[0]; if (!row.length || pire(row, l) >= pire(row.concat([it]), l)) { row.push(items.shift()); } else { poser(row, horiz); row = []; } }
+    if (row.length) { poser(row, w <= h); }
+    const coulD = dl => dl == null ? '#B9B2A8' : (dl > 15 ? '#2d7a3e' : (dl > 3 ? '#5f9e5f' : (dl > -3 ? '#C9A227' : (dl > -15 ? '#D97706' : '#C0182B'))));
+    return out.map(t => { const c = t.c; const gros = t.w > 150 && t.h > 90, moyen = t.w > 90 && t.h > 40;
+      return `<div title="${esc(c.categorie)} · ${fE(c.ca)} · ${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf. ' + fE(c.ref) : ' · sans référence'}" style="position:absolute;left:${(t.x / W * 100).toFixed(3)}%;top:${(t.y / H * 100).toFixed(3)}%;width:${Math.max(t.w / W * 100 - 0.35, 0).toFixed(3)}%;height:${Math.max(t.h / H * 100 - 0.8, 0).toFixed(3)}%;background:${coulD(c.delta)};color:#fff;border-radius:5px;padding:${gros ? '8px 10px' : '4px 6px'};overflow:hidden;font-size:${gros ? 12 : 10.5}px;line-height:1.3">${moyen ? `<b>${esc(c.categorie)}</b>${gros ? `<br><span style="font-family:var(--font-display);font-size:16px">${fE(c.ca)}</span><br><span style="opacity:.9;font-size:10.5px">${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf.' : ''}</span>` : `<br><span style="font-size:10px;opacity:.9">${c.part != null ? Math.round(100 * c.part) + ' %' : ''}${c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + Math.round(c.delta) + ' %' : ''}</span>`}` : ''}</div>`; }).join('');
   }
   function hDe(t) { const p = String(t || '0:0').split(':'); return (+p[0] || 0) + (+p[1] || 0) / 60; }
 
@@ -216,7 +255,7 @@
         ${S.vue === 'mois' ? '<div class="db-note">Montants en k€.</div>' : ''}</div>`;
     }
     h += rendTenir(m, d);
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m)}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
     if (S.vue === 'mois') { h += rendRentab(); }
     return h;
   }

@@ -98,6 +98,21 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-plan .g i.fr{background:#D97706}
 .db-sk{background:linear-gradient(90deg,var(--color-background-secondary) 25%,#fff 50%,var(--color-background-secondary) 75%);background-size:400% 100%;animation:db-sk 1.4s ease infinite;border-radius:8px;height:14px}
 @keyframes db-sk{0%{background-position:100% 0}100%{background-position:0 0}}
+/* La cascade du P&L à barres et seuils. */
+.db-cascade{padding:6px 16px 10px}
+.db-cl{display:grid;grid-template-columns:190px 1fr 90px 64px minmax(0,150px);gap:12px;align-items:center;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12px}
+.db-cl:last-child{border-bottom:none}
+.db-cl.fort{font-weight:600}
+.db-cl .b{height:8px;background:var(--color-background-secondary);border-radius:4px;position:relative;overflow:hidden}
+.db-cl .b i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.db-cl .v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-cl .p{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.db-cl .n{font-size:10.5px;line-height:1.3}
+.db-cl .mu{font-size:10.5px;font-weight:400}
+/* Le treemap des catégories. */
+.db-tm{position:relative;height:300px;margin:12px 16px 6px}
+.db-leg{display:flex;gap:12px;flex-wrap:wrap;padding:4px 16px 12px;font-size:10.5px;color:var(--color-text-muted)}
+.db-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 /* Le bandeau du réseau : la place du magasin, sans nommer les autres. */
 .db-bench{display:grid;grid-template-columns:1.2fr repeat(4,1fr);gap:8px;background:var(--color-text);border-radius:12px;padding:10px 12px;margin-bottom:6px}
 .db-bt{background:rgba(255,255,255,.07);border-radius:9px;padding:8px 11px;min-width:0;color:#fff}
@@ -108,6 +123,6 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-bt.tit{background:transparent;display:flex;flex-direction:column;justify-content:center}
 .db-bt.tit .k{color:var(--color-secondary);font-size:10px}
 .db-bt.bon{background:rgba(45,122,62,.55)}.db-bt.vif{background:rgba(141,29,44,.7)}
-@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}}
+@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}.db-cl{grid-template-columns:120px 1fr 80px 56px}.db-cl .n{display:none}}
 @media (max-width:900px){.db-g2{grid-template-columns:1fr}.db-casc{grid-template-columns:repeat(3,1fr)}}
 @media print{body{background:#fff}#dash{padding:0}.db-nav,.db-btn{display:none}}
