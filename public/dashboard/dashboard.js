@@ -219,15 +219,30 @@
     h += `</div>`;
     const serie = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert) : [];
     if (serie.length) {
-      const mx = Math.max(...serie.map(x => Math.abs(x.net || 0)), 1);
+      // Le jour dans le mois : la marge nette en % des ventes, une barre par
+      // jour sur des bandes de paliers (noir < 0, rouge, orange, ambre, vert,
+      // vert clair, or ≥ 35 %). Pas de chiffre sur les barres : le détail est
+      // dans l'info-bulle, l'échelle en légende.
       const cumNet = serie.reduce((a, x) => a + (x.net || 0), 0), cumCa = serie.reduce((a, x) => a + (x.ca || 0), 0);
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">résultat net par jour — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
-        <div class="db-jours" style="grid-template-columns:repeat(${serie.length},1fr);height:150px">${serie.map(x => `<div title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)} (${fP(x.netPct)})"><em class="${coul(x.net)}">${x.net == null ? '' : fE(x.net)}</em><div class="bb"><i style="height:${(100 * Math.abs(x.net || 0) / mx).toFixed(1)}%;background:${x.net == null ? 'var(--color-background-secondary)' : (x.net < 0 ? '#C0182B' : '#2d7a3e')};${x.date === S.date ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i></div><span>${fD(x.date)}</span><span class="mu">${x.netPct == null ? '' : fP(x.netPct)}</span></div>`).join('')}</div></div>`;
+      const lo = -10, hi = Math.max(50, Math.ceil(Math.max(...serie.map(x => x.netPct || 0)) / 5) * 5 + 5);
+      const y = v => 100 * (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo);
+      const bornes = [lo, 0, 5, 10, 15, 25, 35, hi];
+      const bandes = bornes.slice(0, -1).map((bo, i) => { const p = palier(bo); const o = p.c === 'or'; return `<div style="flex:0 0 ${(100 * (bornes[i + 1] - bo) / (hi - lo)).toFixed(2)}%;background:${o ? 'linear-gradient(180deg,rgba(226,185,59,.35),rgba(226,185,59,.12))' : p.c + '1a'}"></div>`; }).join('');
+      const y0 = y(0);
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Le jour dans le mois</span><span class="db-mini">marge nette en % des ventes, un jour = une barre — <b>${fE(cumNet)}</b> cumulés sur ${fE(cumCa)} de ventes · main-d’œuvre et frais généraux répartis</span></div>
+        <div class="db-jm"><div class="bandes">${bandes}</div><div class="g" style="grid-template-columns:repeat(${serie.length},1fr)">${serie.map(x => {
+          const pct = x.netPct == null ? null : x.netPct, p = palier(pct == null ? 0 : pct), o = p.c === 'or', neg = pct != null && pct < 0, yy = y(pct == null ? 0 : pct);
+          return `<div title="${esc(x.date)} · CA ${fE(x.ca)} · net ${fE(x.net)}${pct == null ? '' : ' (' + fP(pct) + ')'}"><div class="bb">${pct == null ? '' : `<i class="${o ? 'o' : ''}${neg ? ' neg' : ''}" style="${neg ? `top:${(100 - y0).toFixed(2)}%;height:${(y0 - yy).toFixed(2)}%` : `bottom:${y0.toFixed(2)}%;height:${(yy - y0).toFixed(2)}%`};${o ? '' : 'background:' + p.c};${x.date === S.date ? 'outline:2px solid #222;outline-offset:1px' : ''}"></i>`}</div><span>${fD(x.date)}</span></div>`; }).join('')}</div></div>
+        <div class="db-leg">${PALIERS.map(p => `<span><i class="${p.c === 'or' ? 'or' : ''}" style="${p.c === 'or' ? '' : 'background:' + p.c}"></i>${p.l}</span>`).join('')}<span style="margin-left:auto"><i style="background:#fff;outline:2px solid #222;outline-offset:-1px"></i>aujourd’hui</span></div></div>`;
     }
     return h;
   }
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
+  /** L'échelle de la marge nette en % des ventes : un palier = une couleur, l'or à partir de 35 %. */
+  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 5 %' }, { s: 5, c: '#D97706', l: '5 – 10 %' }, { s: 10, c: '#C9A227', l: '10 – 15 %' }, { s: 15, c: '#2d7a3e', l: '15 – 25 %' }, { s: 25, c: '#5f9e5f', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
+  function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
+
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
   function confettis(n) {
     const cols = ['#e2b93b', '#8D1D2C', '#2d7a3e', '#1f4e8c', '#f7e7a1', '#D97706', '#fff'];
