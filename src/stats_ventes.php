@@ -100,6 +100,70 @@ function ep_stats_notifications(): array
     return ['shop' => $sid, 'messages' => $out, 'panel' => $base, 'quand' => date('c')];
 }
 
+/**
+ * GET /ventes/record?shop=4&date=2026-09-13 — le record du magasin POUR CE
+ * JOUR DE SEMAINE avant la date (le meilleur dimanche à battre, le meilleur
+ * lundi…), sur trois ans au plus, relu dans le margin-heatmap du panel par
+ * fenêtres de 31 jours (six en parallèle) jusqu'à trois mois sans vente.
+ * Le résultat est gravé pour la journée : le passé ne bouge pas, et l'on
+ * ne relit pas trois ans de ventes à chaque rendu. Le front compare le CA
+ * du jour au record de son jour de semaine.
+ */
+function ep_stats_record(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop ou date manquant']; }
+    $cle = 'svRecord|' . $sid . '|' . $date;
+    if (empty($_GET['force'])) {
+        $v = setting($cle);
+        if (is_string($v)) { $v = json_decode($v, true); }
+        if (is_array($v) && isset($v['parJour'])) { return $v + ['cache' => true]; }
+    }
+    $jd = new DateTimeImmutable($date);
+    $wd = (int) $jd->format('N');
+    $noms = [1 => 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    $vide = ['shop' => $sid, 'date' => $date, 'jourSemaine' => $wd, 'nom' => $noms[$wd], 'meilleur' => null, 'parJour' => [], 'jours' => 0];
+    if (!PanelApi::configured()) { return $vide + ['indispo' => true, 'motif' => 'compte panel non configuré']; }
+    @set_time_limit(150);
+    $au = $jd->modify('-1 day');
+    $limite = $jd->modify('-3 years');
+    $parJour = []; $jours = 0; $fenetres = 0; $videsSuite = 0; $depuis = null;
+    while ($fenetres < 37 && $videsSuite < 3 && $au >= $limite) {
+        $paths = []; $cur = $au;
+        for ($k = 0; $k < 6 && $fenetres + $k < 37 && $cur >= $limite; $k++) {
+            $du = $cur->modify('-30 days');
+            $paths['w' . $k] = '/consultant/shops/' . $sid . '/margin-heatmap?from=' . $du->format('Y-m-d') . '&to=' . $cur->format('Y-m-d');
+            $cur = $du->modify('-1 day');
+        }
+        if (!$paths) { break; }
+        $res = PanelApi::getParallele($paths, 6);
+        foreach (array_keys($paths) as $k) {
+            $fenetres++;
+            $r = $res[$k] ?? null; $n = 0;
+            foreach ((array) (is_array($r) ? ($r['days'] ?? []) : []) as $d) {
+                $ca = (float) ($d['ca'] ?? 0);
+                $dt = (string) ($d['date'] ?? '');
+                if (empty($d['has_data']) || $ca <= 0 || $dt === '' || $dt >= $date) { continue; }
+                $n++; $jours++;
+                if ($depuis === null || $dt < $depuis) { $depuis = $dt; }
+                $w = (int) (new DateTimeImmutable($dt))->format('N');
+                $m = $parJour[$w] ?? null;
+                if ($m === null || $ca > $m['ca']) {
+                    $parJour[$w] = ['date' => $dt, 'ca' => round($ca, 2), 'margeBrute' => isset($d['margin_value']) ? round((float) $d['margin_value'], 2) : null];
+                }
+            }
+            $videsSuite = $n === 0 ? $videsSuite + 1 : 0;
+        }
+        $au = $cur;
+    }
+    ksort($parJour);
+    $out = ['shop' => $sid, 'date' => $date, 'jourSemaine' => $wd, 'nom' => $noms[$wd], 'meilleur' => $parJour[$wd] ?? null,
+        'parJour' => $parJour, 'jours' => $jours, 'depuis' => $depuis, 'fenetres' => $fenetres, 'quand' => date('c')];
+    if ($jours > 0) { try { svGrave($cle, $out); } catch (Throwable $e) { /* sans cache */ } }
+    return $out;
+}
+
 /** Grave une valeur dans ceo_app_setting. */
 function svGrave(string $cle, array $v): void
 {

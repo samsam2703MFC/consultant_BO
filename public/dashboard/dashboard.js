@@ -63,7 +63,7 @@
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
       S.enCours[kr] = true; delete S.err[kr];
@@ -186,9 +186,25 @@
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
     if (m.objectifJour) {
-      h += `<div class="db-card"><div style="padding:12px 16px"><div class="db-lab">Objectif du jour — ${fK(m.objectifJour)}${m.objectifJourNom ? ' · profil des ' + esc(m.objectifJourNom) + 's' : ''}</div>
-        <div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${m.projectionPart != null ? `<b style="left:${Math.min(100, m.projectionPart).toFixed(1)}%"></b>` : ''}</div>
-        <div class="db-mini" style="margin-top:5px">${fP(att)} réalisé${m.projectionPart != null ? ' · le repère noir est la part de journée normalement écoulée (' + fP(m.projectionPart) + ')' : ''}</div></div></div>`;
+      // Objectif atteint : la ligne passe en or, badge trophée et pluie de
+      // confettis (V1). Record de jour du magasin : bandeau plein or, feux
+      // d'artifice et le record en gros à droite (V3).
+      const or = m.ca >= m.objectifJour, attReel = 100 * m.ca / m.objectifJour;
+      const R = S.aux['record|' + S.shop + '|' + S.date];
+      const rec = R && R.jours > 0 && R.meilleur && m.ca > R.meilleur.ca;
+      const nomJ = R && R.nom ? R.nom : (m.objectifJourNom || 'jour');
+      const lab = `Objectif du jour — ${fK(m.objectifJour)}${m.objectifJourNom ? ' · profil des ' + esc(m.objectifJourNom) + 's' : ''}`;
+      const bar = `<div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${m.projectionPart != null ? `<b style="left:${Math.min(100, m.projectionPart).toFixed(1)}%"></b>` : ''}</div>`;
+      const repere = m.projectionPart != null ? ' · le repère noir est la part de journée normalement écoulée (' + fP(m.projectionPart) + ')' : '';
+      if (rec) {
+        h += `<div class="db-card db-or db-rec"><div class="db-conf">${confettis(80)}</div><canvas class="db-feux"></canvas>
+          <div class="big">🏆 <span>${fK(m.ca)}<br><small>record des ${esc(nomJ)}s<br>précédent ${fK(R.meilleur.ca)} le ${fD(R.meilleur.date)}</small></span></div>
+          <div class="in"><div class="db-lab">${lab}${or ? `<span class="db-badge-or"><span>🎆</span>Objectif atteint</span>` : ''}</div>${bar}
+          <div class="db-mini" style="margin-top:5px"><b>${fP(attReel)} réalisé</b>${or ? ' · dépassé de ' + fK(m.ca - m.objectifJour) : ''} · meilleur ${esc(nomJ)} du magasin${R.depuis ? ' depuis le ' + fD(R.depuis) : ''} (${fN(R.jours)} jours de ventes relus)${repere}</div></div></div>`;
+      } else {
+        h += `<div class="db-card${or ? ' db-or' : ''}">${or ? '<div class="db-conf">' + confettis(60) + '</div>' : ''}<div class="in"><div class="db-lab">${lab}${or ? `<span class="db-badge-or"><span>🏆</span>Objectif atteint · ${fK(m.ca)}</span>` : ''}</div>${bar}
+          <div class="db-mini" style="margin-top:5px">${or ? '<b>' + fP(attReel) + ' réalisé</b> · dépassé de ' + fK(m.ca - m.objectifJour) : fP(att) + ' réalisé'}${R && R.meilleur ? ' · record des ' + esc(nomJ) + 's : ' + fK(R.meilleur.ca) + ' le ' + fD(R.meilleur.date) : ''}${repere}</div></div></div>`;
+      }
     }
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
     // Catégories et planning côte à côte.
@@ -212,6 +228,19 @@
   }
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
+  /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
+  function confettis(n) {
+    const cols = ['#e2b93b', '#8D1D2C', '#2d7a3e', '#1f4e8c', '#f7e7a1', '#D97706', '#fff'];
+    let out = '', g = 7;
+    for (let i = 0; i < n; i++) {
+      g = (g * 16807) % 2147483647; const a = g / 2147483647;
+      g = (g * 16807) % 2147483647; const b = g / 2147483647;
+      g = (g * 16807) % 2147483647; const c = g / 2147483647;
+      out += `<s style="left:${(a * 100).toFixed(1)}%;background:${cols[i % cols.length]};animation-duration:${(3 + b * 3).toFixed(2)}s;animation-delay:${(-c * 6).toFixed(2)}s;width:${(5 + a * 4).toFixed(0)}px;height:${(8 + b * 6).toFixed(0)}px"></s>`;
+    }
+    return out;
+  }
+
   function treemap(cats) {
     const vals = cats.filter(c => (c.ca || 0) > 0).sort((a, b) => b.ca - a.ca);
     if (!vals.length) { return ''; }
@@ -563,7 +592,30 @@
   }
 
   /* --- gestes -------------------------------------------------------------- */
+  /** Feux d'artifice sur le canvas du record : des fusées éclatent pendant ~20 s puis le ciel se calme. Relancés à chaque rendu. */
+  function feux(cv) {
+    if (!cv || cv.dataset.on) { return; }
+    cv.dataset.on = '1';
+    const r = cv.getBoundingClientRect(); if (!r.width) { return; }
+    cv.width = r.width * 2; cv.height = r.height * 2;
+    const x = cv.getContext('2d'); x.scale(2, 2);
+    const W = r.width, H = r.height, cols = ['#e2b93b', '#8D1D2C', '#2d7a3e', '#1f4e8c', '#fff', '#D97706', '#f7e7a1'];
+    let P = [], t = 0;
+    const tir = (cx, cy) => { const c = cols[Math.floor(Math.random() * cols.length)]; for (let i = 0; i < 44; i++) { const a = Math.PI * 2 * i / 44, v = 1.2 + Math.random() * 2.2; P.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1, c, r: 1.3 + Math.random() * 1.4 }); } };
+    const step = () => {
+      if (!cv.isConnected) { return; }
+      x.clearRect(0, 0, W, H);
+      P.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.vx *= .985; p.l -= .011; x.globalAlpha = Math.max(0, p.l); x.fillStyle = p.c; x.beginPath(); x.arc(p.x, p.y, p.r, 0, 7); x.fill(); });
+      x.globalAlpha = 1; P = P.filter(p => p.l > 0); t++;
+      if (t % 45 === 1 && t < 1200) { tir(W * (0.1 + Math.random() * 0.65), H * (0.15 + Math.random() * 0.5)); }
+      if (t < 1320 || P.length) { requestAnimationFrame(step); }
+    };
+    for (let i = 0; i < 3; i++) { tir(W * (0.15 + i * 0.25 + Math.random() * .08), H * (0.2 + Math.random() * .4)); }
+    step();
+  }
+
   function brancher() {
+    $.querySelectorAll('canvas.db-feux').forEach(feux);
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
