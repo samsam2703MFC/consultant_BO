@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -293,13 +293,23 @@
     const fams = Object.values(F).sort((a, b) => b.ca - a.ca);
     const tot = { ca: 0, mat: 0, m: 0 }; cats.forEach(c => { tot.ca += c.ca; if (c.mat != null) { tot.mat += c.mat; tot.m += c.m; } });
     let etoile = false;
+    const parMarge = S.cTri === 'marge';
+    const tog = `<div class="db-ong db-ctri"><button data-ctri="famille" class="${parMarge ? '' : 'on'}">Par famille et catégorie</button><button data-ctri="marge" class="${parMarge ? 'on' : ''}">Par marge brute</button></div>`;
+    if (parMarge) {
+      // La liste à plat, de la meilleure marge à la pire ; les coûts inconnus en queue.
+      const L = cats.slice().sort((a, b) => (b.taux == null ? -Infinity : b.taux) - (a.taux == null ? -Infinity : a.taux) || b.ca - a.ca);
+      const rows2 = L.map((c, i) => `<tr class="sub plat"><td class="l"><span class="rg">${i + 1}</span><i class="sq s" style="background:${coulM(c.taux)}"></i>${esc(c.categorie)}<span class="mu"> · ${esc((c.groupe || 'Autres').split(' · ')[0])}</span></td><td>${fE(c.ca)}</td><td>${c.part != null ? fP(100 * c.part) : '—'}</td><td style="color:${c.taux == null ? '#999' : coulM(c.taux)};font-weight:600">${c.taux == null ? '—' : fP(c.taux)}</td></tr>`).join('');
+      return `<div class="db-cdt">${tog}<table class="db-tf"><tr><th class="l">Catégorie · famille</th><th>CA</th><th>% CA</th><th title="(CA − coût matière) ÷ CA">Marge brute (%)</th></tr>${rows2}
+        <tr class="tot"><td class="l">Total · ${cats.length} catégories</td><td>${fE(tot.ca)}</td><td>100 %</td><td>${tot.ca > 0 ? fP(100 * tot.m / tot.ca) : '—'}</td></tr></table>
+        <div class="db-note" style="padding:6px 0 0">Marge brute (%) = (CA − coût matière) ÷ CA ; le coût matière vient de la fiche recette du catalogue. Une marge très négative signale une fiche recette au coût d’une fournée, pas d’une part.</div></div>`;
+    }
     const rows = fams.map(f => {
       f.cats.sort((a, b) => b.ca - a.ca);
       const taux = f.caConnu > 0 ? 100 * f.m / f.caConnu : null; if (f.inconnu && taux != null) { etoile = true; }
       return `<tr class="fam"><td class="l"><i class="sq" style="background:${coulM(taux)}"></i>${esc(f.nom)}<span class="mu"> · ${f.cats.length} catégorie${f.cats.length > 1 ? 's' : ''}</span></td><td>${fE(f.ca)}</td><td>${fP(100 * f.ca / tot.ca)}</td><td style="color:${taux == null ? '#999' : coulM(taux)}">${taux == null ? '—' : fP(taux)}${f.inconnu && taux != null ? ' *' : ''}</td></tr>`
         + f.cats.map(c => `<tr class="sub"><td class="l"><i class="sq s" style="background:${coulM(c.taux)}"></i>${esc(c.categorie)}</td><td>${fE(c.ca)}</td><td>${c.part != null ? fP(100 * c.part) : '—'}</td><td style="color:${c.taux == null ? '#999' : coulM(c.taux)};font-weight:600">${c.taux == null ? '—' : fP(c.taux)}</td></tr>`).join('');
     }).join('');
-    return `<div class="db-cdt"><table class="db-tf"><tr><th class="l">Famille › catégorie</th><th>CA</th><th>% CA</th><th title="(CA − coût matière) ÷ CA">Marge brute (%)</th></tr>${rows}
+    return `<div class="db-cdt">${tog}<table class="db-tf"><tr><th class="l">Famille › catégorie</th><th>CA</th><th>% CA</th><th title="(CA − coût matière) ÷ CA">Marge brute (%)</th></tr>${rows}
       <tr class="tot"><td class="l">Total · ${fams.length} famille${fams.length > 1 ? 's' : ''} · ${cats.length} catégories</td><td>${fE(tot.ca)}</td><td>100 %</td><td>${tot.ca > 0 ? fP(100 * tot.m / tot.ca) : '—'}</td></tr></table>
       <div class="db-note" style="padding:6px 0 0">Marge brute (%) = (CA − coût matière) ÷ CA ; le coût matière vient de la fiche recette du catalogue. ${etoile ? '* taux calculé sur les catégories dont le coût matière est connu. ' : ''}Une marge très négative signale une fiche recette au coût d’une fournée, pas d’une part.</div></div>`;
   }
@@ -674,6 +684,7 @@
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
     $.querySelectorAll('[data-cdrop]').forEach(b => b.addEventListener('click', () => { S.cOuvert = !S.cOuvert; rendre(); }));
+    $.querySelectorAll('[data-ctri]').forEach(b => b.addEventListener('click', () => { S.cTri = b.dataset.ctri; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
   }
 

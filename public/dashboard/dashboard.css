@@ -211,6 +211,9 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 /* Le tiroir du treemap : famille › catégorie. */
 .db-cdr{display:flex;align-items:center;justify-content:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;padding:6px 0 8px;border-top:.5px solid var(--color-border-tertiary);margin:0 16px}
 .db-cdt{padding:0 16px 12px}
+.db-ctri{display:inline-flex;margin:2px 0 10px}
+.db-tf tr.plat td.l{padding-left:8px}
+.db-tf .rg{display:inline-block;min-width:18px;font:600 9.5px var(--font-ui);color:var(--color-text-muted);margin-right:4px}
 .db-tf{width:100%;border-collapse:collapse;font:400 11px var(--font-ui)}
 .db-tf th{font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:6px 8px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
 .db-tf th.l,.db-tf td.l{text-align:left}
