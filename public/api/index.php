@@ -23,6 +23,7 @@ require __DIR__ . '/../../src/resultat.php';
 require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
+require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -184,6 +185,7 @@ function route(string $method, string $path): mixed
             $path === '/magasin/analyse'              => ep_mag_analyse(),
             $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
+            $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/classement'            => ep_ventes_classement(),
             $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),
