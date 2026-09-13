@@ -3,14 +3,30 @@
 declare(strict_types=1);
 
 /**
- * Statistiques de vente — par semaine, par jour, par heure : clients, panier,
- * ventes, coût matière, marge brute, coût du travail, résultat de l'heure, et
- * le top 5 des produits de chaque heure avec leur marge.
+ * Statistiques de vente par heure — le cœur du dashboard magasin.
  *
- * Tout vient des endpoints du panel ; rien n'est supposé. La sonde ci-dessous
- * dit ce que chaque route rend réellement (clés et un échantillon), c'est
- * elle qui a fixé les champs lus plus bas.
+ * Deux sources du panel, mesurées par la sonde ci-dessous (ep_stats_ventes_sonde) :
+ *  · /shops/{id}/statistics/sales/hourly-distribution/{date} — heure par
+ *    heure : tickets (transactions_qty), ventes (income), coût matière
+ *    (material_cost), coût du personnel (employee_cost), personnes en poste
+ *    (employee_qty), marge (total_margin). C'est la cascade de l'heure :
+ *    ventes − matière = marge brute ; marge brute − travail = résultat.
+ *  · /shops/{id}/transactions?date= puis /transactions/{id}?include=products —
+ *    l'heure du ticket (insert_timestamp, heure locale) et ses lignes :
+ *    id_product, product_name, quantity, total_gross_value_after_discount.
+ *    Le coût matière d'une ligne vient des recettes (catalogueCouts) : la
+ *    marge d'un produit à une heure = ventes − quantité × coût recette.
+ *
+ * Un jour clos se lit une fois et se grave (ceo_app_setting svH…/svP…) ; la
+ * journée en cours se relit toutes les dix minutes. Les tickets se
+ * moissonnent par lots bornés (budget), à la demande puis au cron horaire.
  */
+
+const SV_DEBUT = '2026-08-01';        // premier jour moissonné pour les produits
+const SV_TTL_JOUR = 600;              // la journée en cours : dix minutes
+const SV_BUDGET_DEMANDE = 700;        // tickets lus au plus dans une requête
+const SV_BUDGET_CRON = 900;           // tickets lus au plus par battement du cron
+const SV_TOP = 5;
 
 /** GET /ventes/stats/sonde?shop=2&date=2026-09-06 — les routes, telles qu'elles répondent. */
 function ep_stats_ventes_sonde(): array
@@ -35,7 +51,6 @@ function ep_stats_ventes_sonde(): array
     };
     $out = ['shop' => $sid, 'date' => $date];
     foreach ($chemins as $k => $p) { $out[$k] = ['route' => $p, 'reponse' => $coupe($res[$k] ?? null)]; }
-    // Un ticket avec ses produits : l'heure du ticket et les champs d'une ligne.
     $lt = analyseListe($res['trans'] ?? null);
     if ($lt !== []) {
         $id = (int) ($lt[0]['id'] ?? 0);
@@ -46,4 +61,254 @@ function ep_stats_ventes_sonde(): array
             'produit0' => is_array($t) && isset($t['products'][0]) ? $t['products'][0] : null];
     }
     return $out;
+}
+
+/** Grave une valeur dans ceo_app_setting. */
+function svGrave(string $cle, array $v): void
+{
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        [$cle, json_encode($v, JSON_UNESCAPED_UNICODE)]);
+}
+
+/** Une ligne d'heure normalisée depuis hourly-distribution. */
+function svLigneHeure(array $r): ?array
+{
+    $h = (int) substr((string) ($r['hour_from'] ?? ''), 0, 2);
+    if ($h < 0 || $h > 23) { return null; }
+    $ca = round((float) ($r['income'] ?? 0), 2);
+    $mat = round((float) ($r['material_cost'] ?? 0), 2);
+    $trav = round((float) ($r['employee_cost'] ?? 0), 2);
+    return ['h' => $h, 'tickets' => (int) ($r['transactions_qty'] ?? 0), 'ca' => $ca, 'mat' => $mat,
+        'trav' => $trav, 'poste' => (int) ($r['employee_qty'] ?? 0),
+        'marge' => isset($r['total_margin']) ? round((float) $r['total_margin'], 2) : round($ca - $mat - $trav, 2)];
+}
+
+/**
+ * Les heures de plusieurs jours d'un magasin — [date => [h => ligne]] ; un jour
+ * muet est absent. Les jours clos gravés ne se relisent pas.
+ */
+function svHeuresJours(int $sid, array $jours): array
+{
+    $auj = date('Y-m-d');
+    $out = []; $chemins = [];
+    foreach ($jours as $j) {
+        $c = setting('svH' . $sid . ':' . $j);
+        if (is_array($c) && isset($c['h']) && ($j < $auj || (int) ($c['quand'] ?? 0) > time() - SV_TTL_JOUR)) { $out[$j] = $c['h']; continue; }
+        $chemins[$j] = '/shops/' . $sid . '/statistics/sales/hourly-distribution/' . $j;
+    }
+    if ($chemins !== []) {
+        foreach (PanelApi::getParallele($chemins, 6) as $j => $r) {
+            if (!is_array($r)) { continue; }
+            $hs = [];
+            foreach (analyseListe($r) as $x) { $l = svLigneHeure((array) $x); if ($l !== null) { $hs[(string) $l['h']] = $l; } }
+            $out[$j] = $hs;
+            svGrave('svH' . $sid . ':' . $j, ['quand' => time(), 'h' => $hs]);
+        }
+    }
+    return $out;
+}
+
+/**
+ * Les produits d'un jour, heure par heure — {h: {pid: [nom, q, ventes, coût|null]}}.
+ * Lit les tickets du jour si le jour n'est pas gravé ; null si le budget est
+ * épuisé ou le panel muet (un jour à moitié lu ne se grave pas).
+ */
+function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
+{
+    $auj = date('Y-m-d');
+    $cle = 'svP' . $sid . ':' . $j;
+    $c = setting($cle);
+    if (is_array($c) && isset($c['p']) && ($j < $auj || (int) ($c['quand'] ?? 0) > time() - SV_TTL_JOUR)) { return $c['p']; }
+    if ($cout >= $budget) { return null; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
+    if (!is_array($liste)) { return null; }
+    $ids = [];
+    foreach (analyseListe($liste) as $t) { if ((int) ($t['id'] ?? 0) > 0) { $ids[] = (int) $t['id']; } }
+    if ($cout + count($ids) > $budget && $cout > 0) { return null; }   // ce jour attendra le prochain lot
+    $couts = catalogueCouts();
+    $p = [];
+    foreach (array_chunk($ids, 40) as $lot) {
+        $chemins = [];
+        foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        $res = PanelApi::getParallele($chemins, 8);
+        foreach ($lot as $id) {
+            $t = $res[$id] ?? null;
+            if (!is_array($t)) { return null; }
+            $h = (string) (int) substr((string) ($t['insert_timestamp'] ?? '00'), 11, 2);
+            foreach ((array) ($t['products'] ?? []) as $l) {
+                $pid = (int) ($l['id_product'] ?? 0);
+                if ($pid <= 0) { continue; }
+                $q = (float) ($l['quantity'] ?? 0);
+                $v = (float) ($l['total_gross_value_after_discount'] ?? 0);
+                $cu = isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] : null;
+                if (!isset($p[$h][$pid])) { $p[$h][$pid] = [trim((string) ($l['product_name'] ?? ('Produit ' . $pid))), 0.0, 0.0, $cu === null ? null : 0.0]; }
+                $p[$h][$pid][1] += $q;
+                $p[$h][$pid][2] += $v;
+                if ($cu !== null && $p[$h][$pid][3] !== null) { $p[$h][$pid][3] += $q * $cu; }
+            }
+        }
+    }
+    $cout += count($ids);
+    foreach ($p as $h => $lst) { foreach ($lst as $pid => $x) { $p[$h][$pid] = [$x[0], round($x[1], 3), round($x[2], 2), $x[3] === null ? null : round($x[3], 2)]; } }
+    svGrave($cle, ['quand' => time(), 'n' => count($ids), 'p' => $p]);
+    return $p;
+}
+
+/** Les jours d'une vue : jour, semaine (lundi → aujourd'hui), mois (1er → aujourd'hui). */
+function svJours(string $vue, string $date): array
+{
+    $auj = date('Y-m-d');
+    if ($vue === 'jour') { return [$date, $date, [$date]]; }
+    $ts = strtotime($date);
+    if ($vue === 'semaine') { $du = date('Y-m-d', strtotime('monday this week', $ts)); $au = date('Y-m-d', strtotime($du . ' +6 days')); }
+    else { $du = date('Y-m-01', $ts); $au = date('Y-m-t', $ts); }
+    $fin = min($au, $auj);
+    $jours = [];
+    for ($j = $du; $j <= $fin; $j = date('Y-m-d', strtotime($j . ' +1 day'))) { $jours[] = $j; }
+    return [$du, $au, $jours];
+}
+
+/**
+ * GET /ventes/stats?shop=4&vue=jour|semaine|mois&date=YYYY-MM-DD
+ *
+ * Les heures de la période (somme et moyenne par jour ouvert), la cascade de
+ * chaque heure, le top 5 des produits par marge de chaque heure, et la
+ * couverture : combien de jours portent leurs heures, combien leurs tickets.
+ */
+function ep_stats_ventes(): array
+{
+    $auj = date('Y-m-d');
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $vue = (string) ($_GET['vue'] ?? 'jour');
+    if (!in_array($vue, ['jour', 'semaine', 'mois'], true)) { $vue = 'jour'; }
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $nom = magasinConnu((string) $sid);
+    [$du, $au, $jours] = svJours($vue, $date);
+
+    $heures = svHeuresJours($sid, $jours);
+    $cout = 0; $budget = SV_BUDGET_DEMANDE;
+    $prod = []; $joursProd = [];
+    // Les tickets : d'abord les jours déjà gravés (gratuits), puis les autres
+    // du plus récent au plus ancien, jusqu'au budget de la requête.
+    foreach (array_reverse($jours) as $j) {
+        if ($j < SV_DEBUT) { continue; }
+        $p = svProduitsJour($sid, $j, $cout, $budget);
+        if ($p !== null) { $prod[$j] = $p; $joursProd[] = $j; }
+    }
+
+    // Agrégat par heure : somme sur les jours ouverts (CA > 0 dans l'heure ou le jour).
+    $agg = []; $joursOuverts = [];
+    foreach ($heures as $j => $hs) {
+        $tot = 0.0; foreach ($hs as $l) { $tot += $l['ca']; }
+        if ($tot <= 0) { continue; }
+        $joursOuverts[] = $j;
+        foreach ($hs as $h => $l) {
+            if (!isset($agg[$h])) { $agg[$h] = ['h' => (int) $h, 'tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'poste' => 0.0, 'marge' => 0.0, 'jours' => 0]; }
+            $a =& $agg[$h];
+            $a['tickets'] += $l['tickets']; $a['ca'] += $l['ca']; $a['mat'] += $l['mat']; $a['trav'] += $l['trav']; $a['marge'] += $l['marge'];
+            if ($l['ca'] > 0 || $l['poste'] > 0) { $a['poste'] += $l['poste']; $a['jours']++; }
+            unset($a);
+        }
+    }
+    ksort($agg, SORT_NUMERIC);
+    // La nuit ne se dessine pas : de la première à la dernière heure vendue.
+    $actives = array_keys(array_filter($agg, static fn ($a) => $a['ca'] > 0));
+    $hMin = $actives === [] ? 0 : min($actives); $hMax = $actives === [] ? 23 : max($actives);
+    $nJ = max(1, count($joursOuverts));
+    $lignes = [];
+    foreach ($agg as $h => $a) {
+        if ((int) $h < $hMin || (int) $h > $hMax) { continue; }
+        // Le top 5 de l'heure, par marge — sur les jours dont les tickets sont lus.
+        $pp = [];
+        foreach ($prod as $j => $ph) {
+            foreach ((array) ($ph[(string) $h] ?? []) as $pid => $x) {
+                if (!isset($pp[$pid])) { $pp[$pid] = ['id' => (int) $pid, 'nom' => $x[0], 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false]; }
+                $pp[$pid]['q'] += $x[1]; $pp[$pid]['v'] += $x[2];
+                if ($x[3] === null) { $pp[$pid]['cInconnu'] = true; } else { $pp[$pid]['c'] += $x[3]; }
+            }
+        }
+        $top = [];
+        foreach ($pp as $x) {
+            $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+            $top[] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2),
+                'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
+                'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null];
+        }
+        usort($top, static fn ($a2, $b2) => ($b2['m'] ?? -INF) <=> ($a2['m'] ?? -INF) ?: $b2['v'] <=> $a2['v']);
+        $nRef = count($top);
+        $mbH = round($a['ca'] - $a['mat'], 2);
+        $lignes[] = ['h' => (int) $h, 'tickets' => $a['tickets'], 'ca' => round($a['ca'], 2), 'mat' => round($a['mat'], 2),
+            'mb' => $mbH, 'mbPct' => $a['ca'] > 0 ? round(100 * $mbH / $a['ca'], 1) : null,
+            'trav' => round($a['trav'], 2), 'poste' => $a['jours'] > 0 ? round($a['poste'] / $a['jours'], 1) : 0,
+            'res' => round($a['marge'], 2), 'resPct' => $a['ca'] > 0 ? round(100 * $a['marge'] / $a['ca'], 1) : null,
+            'panier' => $a['tickets'] > 0 ? round($a['ca'] / $a['tickets'], 2) : null,
+            // La moyenne par jour ouvert, pour lire une semaine ou un mois comme une journée.
+            'moy' => ['tickets' => round($a['tickets'] / $nJ, 1), 'ca' => round($a['ca'] / $nJ, 2), 'mat' => round($a['mat'] / $nJ, 2),
+                'mb' => round($mbH / $nJ, 2), 'trav' => round($a['trav'] / $nJ, 2), 'res' => round($a['marge'] / $nJ, 2)],
+            'top' => array_slice($top, 0, SV_TOP), 'references' => $nRef,
+            'topSur' => count(array_filter($prod, static fn ($ph) => isset($ph[(string) $h])))];
+    }
+    $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
+    foreach ($lignes as $l) { $tot['tickets'] += $l['tickets']; $tot['ca'] += $l['ca']; $tot['mat'] += $l['mat']; $tot['trav'] += $l['trav']; $tot['res'] += $l['res']; }
+    $tot['mb'] = round($tot['ca'] - $tot['mat'], 2);
+    $tot['panier'] = $tot['tickets'] > 0 ? round($tot['ca'] / $tot['tickets'], 2) : null;
+    $tot['mbPct'] = $tot['ca'] > 0 ? round(100 * $tot['mb'] / $tot['ca'], 1) : null;
+    $tot['resPct'] = $tot['ca'] > 0 ? round(100 * $tot['res'] / $tot['ca'], 1) : null;
+    foreach (['ca', 'mat', 'trav', 'res'] as $k) { $tot[$k] = round($tot[$k], 2); }
+    $meilleure = null; $pire = null;
+    foreach ($lignes as $l) {
+        if ($meilleure === null || $l['res'] > $meilleure['res']) { $meilleure = $l; }
+        if ($pire === null || $l['res'] < $pire['res']) { $pire = $l; }
+    }
+    sort($joursProd);
+    return ['shop' => $sid, 'magasin' => $nom, 'vue' => $vue, 'date' => $date, 'du' => $du, 'au' => $au, 'aujourdhui' => $auj,
+        'jours' => $jours, 'joursOuverts' => $joursOuverts, 'joursServis' => array_keys($heures),
+        'produits' => ['jours' => $joursProd, 'total' => count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
+            'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT))],
+        'heures' => $lignes, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'meilleure' => $meilleure ? ['h' => $meilleure['h'], 'res' => $meilleure['res'], 'moy' => $meilleure['moy']['res']] : null,
+        'pire' => $pire ? ['h' => $pire['h'], 'res' => $pire['res'], 'moy' => $pire['moy']['res']] : null,
+        'source' => ['heures' => 'panel hourly-distribution (ventes, matière, personnel, marge de l’heure)',
+            'produits' => 'tickets du panel avec leurs lignes, coût matière des recettes']];
+}
+
+/**
+ * La moisson des tickets au cron : du premier jour moissonné jusqu'à hier,
+ * tous les magasins, un lot borné par battement. Dit où elle en est.
+ */
+function svMoisson(int $budget = SV_BUDGET_CRON): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
+    try { $shops = array_map(static fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
+    $cout = 0; $faits = 0; $restants = 0;
+    $hier = date('Y-m-d', strtotime('-1 day'));
+    // Du plus récent au plus ancien : le dashboard regarde d'abord la semaine.
+    for ($j = $hier; $j >= SV_DEBUT; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
+        foreach ($shops as $sid) {
+            $c = setting('svP' . $sid . ':' . $j);
+            if (is_array($c) && isset($c['p'])) { continue; }
+            if ($cout >= $budget) { $restants++; continue; }
+            $r = svProduitsJour($sid, $j, $cout, $budget);
+            if ($r !== null) { $faits++; } else { $restants++; }
+        }
+    }
+    return ['ok' => true, 'joursFaits' => $faits, 'tickets' => $cout, 'joursRestants' => $restants,
+        'etat' => $restants === 0 ? 'à jour' : $restants . ' jour(s)-magasin restants'];
+}
+
+/** Le battement horaire, accroché au cron des rapports. */
+function svCron(): string
+{
+    $r = svMoisson();
+    return $r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'));
+}
+
+/** POST /ventes/stats-moisson — forcer une passe, voir l'état. */
+function wr_stats_ventes_moisson(): array
+{
+    return svMoisson((int) (body()['budget'] ?? SV_BUDGET_CRON));
 }

@@ -186,6 +186,7 @@ function route(string $method, string $path): mixed
             $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
+            $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/classement'            => ep_ventes_classement(),
             $path === '/ventes/classement.pdf'        => ep_ventes_pdf(),
             $path === '/ventes/fiche'                 => ep_ventes_fiche(),
@@ -253,6 +254,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/pwa/tasks/releve-fenetre') { return wr_taches_releve_fenetre(); }
     if ($method === 'POST' && $path === '/planning/sync') { return wr_planning_sync(); }
     if ($method === 'POST' && $path === '/ventes/lignes-moisson') { return wr_pv_lignes_moisson(); }
+    if ($method === 'POST' && $path === '/ventes/stats-moisson') { return wr_stats_ventes_moisson(); }
     if ($method === 'POST' && $path === '/ventes/crois-moisson') { return wr_pv_crois_moisson(); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }

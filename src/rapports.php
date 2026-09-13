@@ -2340,7 +2340,11 @@ function ep_rapports_cron(): array
     $moisson = 'module absent';
     try { if (function_exists('pvLignesCron')) { $moisson = pvLignesCron(); } }
     catch (Throwable $eM) { $moisson = 'échec — ' . $eM->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson];
+    // Les tickets par heure du dashboard magasin avancent au même battement.
+    $moissonH = 'module absent';
+    try { if (function_exists('svCron')) { $moissonH = svCron(); } }
+    catch (Throwable $eH) { $moissonH = 'échec — ' . $eH->getMessage(); }
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH];
 }
 
 /**
