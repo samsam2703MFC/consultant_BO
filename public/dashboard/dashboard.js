@@ -240,7 +240,7 @@
 
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
   /** L'échelle de la marge nette en % des ventes : un palier = une couleur, l'or à partir de 35 %. */
-  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 5 %' }, { s: 5, c: '#D97706', l: '5 – 10 %' }, { s: 10, c: '#C9A227', l: '10 – 15 %' }, { s: 15, c: '#2d7a3e', l: '15 – 25 %' }, { s: 25, c: '#5f9e5f', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
+  const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 5 %' }, { s: 5, c: '#F59E42', l: '5 – 10 %' }, { s: 10, c: '#C9A227', l: '10 – 15 %' }, { s: 15, c: '#2d7a3e', l: '15 – 25 %' }, { s: 25, c: '#5f9e5f', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
