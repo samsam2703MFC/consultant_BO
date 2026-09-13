@@ -14,9 +14,9 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -24,7 +24,7 @@
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
   const fE = n => n == null ? '—' : nf(Math.round(n), 0) + ' €';
-  const fK = n => n == null ? '—' : (Math.abs(n) >= 10000 ? nf(n / 1000, 1) + ' k€' : fE(n));
+  const fK = n => n == null ? '—' : (Math.abs(n) >= 10000 ? Number(n / 1000).toLocaleString('fr-BE', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' k€' : fE(n));
   const fU = n => n == null ? '—' : nf(n, 2) + ' €';
   const fP = n => n == null ? '—' : nf(n, 1) + ' %';
   const fS = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + fE(Math.abs(n));
@@ -42,8 +42,21 @@
   }
   function cleRes() { return S.vue + '|' + S.date; }
   function cleSt() { return S.shop + '|' + S.vue + '|' + S.date; }
+  function annee() { return +S.date.slice(0, 4); }
+  function lireAux(cle, path, force) {
+    if ((force || !S.aux[cle]) && !S.enCours[cle]) {
+      S.enCours[cle] = true; delete S.err[cle];
+      lire(path).then(d => { S.aux[cle] = d; }).catch(e => { S.err[cle] = e.message; }).finally(() => { S.enCours[cle] = false; rendre(); });
+    }
+  }
   function charger(force) {
     const kr = cleRes(), ks = cleSt();
+    if (S.vue === 'annee') {
+      lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
+      lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
+      rendre(); return;
+    }
+    if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
       S.enCours[kr] = true; delete S.err[kr];
       const p = S.vue === 'jour' ? '/exploitation/jour?date=' + S.date : '/exploitation/periode?vue=' + S.vue + '&date=' + S.date;
@@ -79,6 +92,7 @@
   }
   function libPeriode() {
     if (S.vue === 'jour') { return fDL(S.date); }
+    if (S.vue === 'annee') { return 'année ' + annee(); }
     const d = S.res[cleRes()];
     if (S.vue === 'semaine') { return d && d.du ? 'semaine du ' + fD(d.du) + ' au ' + fD(d.au) : 'semaine'; }
     const t = new Date(S.date + 'T12:00:00');
@@ -94,13 +108,16 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       <span class="db-lab">Magasin</span><select class="db-sel" id="db-shop">${S.stores.map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('') || `<option value="${esc(S.shop)}">Magasin ${esc(S.shop)}</option>`}</select>
-      <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : 'Mois de')}</span>
+      <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : 'Année de'))}</span>
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
       <span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button><button class="db-btn" onclick="window.print()">⎙ Imprimer</button></div>`;
+    if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
+    // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
+    if (m) { h += rendBench(m, d); }
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
@@ -198,7 +215,136 @@
           return `<div title="${esc(x.date)}${x.objectif ? ' · objectif ' + fE(x.objectif) : ''}"><em>${x.ferme ? '' : (x.passe || x.aujourdhui ? (S.vue === 'mois' ? nf(ca / 1000, 1) : fK(ca)) : '')}</em><div class="bb"><i class="${cls}" style="height:${x.ferme ? 4 : (100 * ca / mx).toFixed(1)}%"></i>${x.objectif ? `<b style="bottom:${(100 * x.objectif / mx).toFixed(1)}%"></b>` : ''}</div><span>${esc(x.court)}</span></div>`; }).join('')}</div>
         ${S.vue === 'mois' ? '<div class="db-note">Montants en k€.</div>' : ''}</div>`;
     }
+    h += rendTenir(m, d);
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m)}</div>`;
+    if (S.vue === 'mois') { h += rendRentab(); }
+    return h;
+  }
+
+  /* Ce qu'il manque, et ce qu'il faut pour tenir l'objectif — comme le drop de Résultat. */
+  function rendTenir(m, d) {
+    if (m.objectif == null) { return ''; }
+    const jours = Array.isArray(m.jours) ? m.jours : [];
+    const restants = jours.filter(j => !j.passe && !j.ferme && !j.aujourdhui);
+    const eff = m.reste - m.prevu;   // ce qu'il faut faire EN PLUS de ce que la pondération prévoyait
+    const effCl = m.panier > 0 ? Math.round(eff / m.panier) : null;
+    const parJour = restants.length ? m.reste / restants.length : null;
+    const cl = m.clientsManquants;
+    return `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
+      <div class="db-card"><div class="ct"><span class="db-lab">Ce qu’il manque</span><span class="db-mini">écart à l’attendu ${d.enCours ? 'à ce jour' : 'de la période'}</span></div>
+        <div style="padding:12px 16px"><div style="font-family:var(--font-display);font-size:20px;color:${cl > 0 ? '#C0182B' : '#2d7a3e'}">${cl > 0 ? 'Il manque ' + fN(cl) + ' clients' : (cl < 0 ? fN(-cl) + ' clients d’avance' : 'Dans la cible')}</div>
+        <div class="db-mini" style="margin-top:4px">${fS(m.ecart)} d’écart · ${fE(Math.abs(m.ecart))} ÷ panier ${fU(m.panier)} = ${fN(Math.abs(cl))} clients</div></div></div>
+      <div class="db-card"><div class="ct"><span class="db-lab">Tenir l’objectif</span><span class="db-mini">${restants.length ? restants.length + ' jour(s) restant(s)' : 'période close'}</span></div>
+        <div class="db-casc" style="grid-template-columns:repeat(3,1fr);padding:10px 16px">
+          <div><div class="k">Reste à faire</div><div class="v">${fK(m.reste)}</div><div class="s">${parJour != null ? fE(parJour) + ' par jour ouvert restant' : ''}</div></div>
+          <div><div class="k">Prévu par la pondération</div><div class="v">${fK(m.prevu)}</div><div class="s">${m.objectif ? Math.round(100 * m.prevu / m.objectif) + ' % de l’objectif' : ''}</div></div>
+          <div><div class="k">Effort en plus</div><div class="v ${eff > 0 ? 'ko' : 'ok'}">${fSK(eff)}</div><div class="s">${effCl != null ? (effCl > 0 ? '+' : '') + fN(effCl) + ' clients sur la période' : ''}</div></div>
+        </div></div></div>`;
+  }
+
+  /* Le résultat net jour par jour du mois en cours — les cases de l'analyse rentabilité. */
+  function rendRentab() {
+    if (S.date.slice(0, 7) !== AUJ.slice(0, 7)) { return `<div class="db-note" style="padding:0 0 12px">La heatmap de rentabilité ne se lit que sur le mois en cours (P&amp;L quotidien du panel).</div>`; }
+    const r = S.aux['rentab'];
+    const teinte = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
+      : p < 0 ? 'background:#8D1D2C;color:#fff' : p < 5 ? 'background:#C17A2A;color:#fff'
+      : p < 10 ? 'background:#A8B545;color:#fff' : p < 15 ? 'background:#7CB342;color:#fff'
+      : p < 25 ? 'background:#3D8B44;color:#fff' : 'background:#C9A227;color:#fff';
+    let h = `<div class="db-card"><div class="ct"><span class="db-lab">Rentabilité — le résultat net, jour par jour</span><span class="db-mini">${r && r.du ? 'mois en cours · ' + fD(r.du) + ' → ' + fD(r.au) : ''}</span></div>`;
+    if (S.err['rentab']) { h += `<div class="db-note" style="padding-top:10px">Lecture impossible : ${esc(S.err['rentab'])}</div></div>`; return h; }
+    if (!r) { h += `<div style="padding:14px 16px"><div class="db-sk"></div></div></div>`; return h; }
+    const mg = (r.magasins || []).find(x => String(x.id) === String(S.shop));
+    if (!mg || mg.indispo) { h += `<div class="db-note" style="padding-top:10px">${esc((mg && mg.motif) || r.motif || 'pas de résultat net jour par jour pour ce magasin')}</div></div>`; return h; }
+    h += `<div style="display:flex;gap:4px;flex-wrap:wrap;padding:12px 16px 6px">${(mg.jours || []).map(j => `<div title="${esc(j.date)}${j.ouvert && j.net != null ? ' — net ' + fE(j.net) + ' · ' + fP(j.netPct) : ''}" style="${teinte(j.ouvert ? j.netPct : null)};border-radius:6px;min-width:44px;padding:5px 4px;text-align:center;font-size:10.5px;line-height:1.25"><b>${+j.date.slice(8, 10)}</b><br>${j.ouvert ? (j.netPct == null ? '' : Math.round(j.netPct) + ' %') : '·'}</div>`).join('')}</div>
+      <div class="db-note">${mg.total && mg.total.netPct != null ? '<b>' + fP(mg.total.netPct) + ' · ' + fE(mg.total.net) + '</b> sur le mois · ' : ''}palette : rouge &lt; 0 % · orange 0–5 · verts 5–25 · doré &gt; 25 % · ${esc(mg.sourceJour || '')}${mg.labourMois != null ? ' · personnel du mois ' + fE(mg.labourMois) + ', frais généraux ' + fE(mg.overheadMois) + ', répartis par jour ouvert' : ''}</div></div>`;
+    return h;
+  }
+
+  /* La place du magasin dans le réseau — un rang, jamais un nom. */
+  function rendBench(m, d) {
+    const L = (d.magasins || []).filter(x => x.ouvert !== false);
+    const jour = S.vue === 'jour';
+    const defs = jour
+      ? [['Chiffre d’affaires', 'ca', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['vs référence', 'caDelta', v => (v >= 0 ? '+ ' : '− ') + fP(Math.abs(v)), 1]]
+      : [['Chiffre d’affaires', 'realise', fK, 1], ['Clients', 'tickets', fN, 1], ['Panier moyen', 'panier', fU, 1], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), 1]];
+    const ord = n => n === 1 ? '1er' : n + 'e';
+    const tuiles = defs.map(([lib, k, f]) => {
+      const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
+      const v = m[k];
+      if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><div class="v mu">—</div></div>`; }
+      const rang = vals.findIndex(x => x <= v) + 1;
+      const med = vals[Math.floor((vals.length - 1) / 2)];
+      const meilleur = vals[0];
+      const cls = rang === 1 ? 'bon' : (rang === vals.length && vals.length > 1 ? 'vif' : '');
+      return `<div class="db-bt ${cls}"><div class="k">${lib}</div><div class="v">${ord(rang)} <small>/ ${vals.length}</small></div><div class="s">${f(v)} · médiane réseau ${f(med)}${rang > 1 ? ' · le 1er : ' + f(meilleur) : ''}</div></div>`;
+    }).join('');
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · classement anonyme</div></div>${tuiles}</div>`;
+  }
+
+  /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
+  function rendAnnee() {
+    const Y = annee();
+    const perf = S.aux['perf|' + Y], plan = S.aux['plan|' + S.shop + '|' + Y];
+    let h = '';
+    if (S.err['perf|' + Y]) { h += `<div class="db-err">Mois : ${esc(S.err['perf|' + Y])}</div>`; }
+    if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Objectif : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
+    // --- l'objectif de l'année, et la rampe
+    h += `<div class="db-sec">L’objectif — ${Y}, 3 ans, 5 ans<small>engagement du franchisé, sinon la rampe de l’étude de marché</small></div>`;
+    if (!plan && !S.err['plan|' + S.shop + '|' + Y]) { h += squelette(2); }
+    else if (plan && plan.annee) {
+      const A = plan.annee, src = A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : 'engagement du franchisé';
+      const att = A.objectif ? Math.min(100, 100 * A.realise / A.objectif) : 0, wAtt = A.objectif && A.attendu != null ? Math.min(100, 100 * A.attendu / A.objectif) : null;
+      h += `<div class="db-tuiles">
+        ${tuile('Objectif ' + Y, fK(A.objectif), src)}
+        ${tuile('Réalisé', fK(A.realise), A.partEcoulee != null ? fP(A.partEcoulee) + ' de l’année écoulée' : '')}
+        ${tuile('Attendu à ce jour', fK(A.attendu), 'au rythme des budgets mensuels')}
+        ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
+        ${tuile('Projection fin d’année', fK(A.projection), A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel', A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '')}
+      </div>
+      ${A.objectif ? `<div class="db-card"><div style="padding:12px 16px"><div class="db-lab">Objectif ${Y} — ${fK(A.objectif)}</div><div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${wAtt != null ? `<b style="left:${wAtt.toFixed(1)}%"></b>` : ''}</div><div class="db-mini" style="margin-top:5px">${fP(att)} réalisé${wAtt != null ? ' · le repère noir est l’attendu à ce jour (' + fP(wAtt) + ')' : ''}</div></div></div>` : ''}`;
+      const R = (plan.rampe && plan.rampe.annees) || [];
+      if (R.length) {
+        const mx = Math.max(...R.map(a => a.ca || 0), 1);
+        const engs = plan.engagements || {};
+        h += `<div class="db-card"><div class="ct"><span class="db-lab">La rampe à 5 ans</span><span class="db-mini">${plan.rampe.potentiel ? 'potentiel à maturité ' + fK(plan.rampe.potentiel) + ' · année ' + plan.rampe.anneeExploitation + ' d’exploitation en ' + Y : 'sans étude de marché'}</span></div>
+          <div class="db-jours" style="grid-template-columns:repeat(${R.length},1fr);height:190px">${R.map(a => { const en = engs[String(a.an)]; const cur = a.an === Y;
+            return `<div><em>${fK(a.ca)}${en && en.objectif ? '<br><span class="mu" style="font-weight:500">engagé ' + fK(en.objectif) + '</span>' : ''}</em><div class="bb"><i class="${cur ? '' : 'ferme'}" style="height:${(100 * (a.ca || 0) / mx).toFixed(1)}%;${cur ? '' : 'background:#e5d9cc'}"></i>${cur && A.realise ? `<b style="bottom:${(100 * A.realise / mx).toFixed(1)}%;background:#D97706"></b>` : ''}</div><span>${a.an} · ${a.maturite ? 'maturité' : 'année ' + a.anneeExploitation + ' · ' + a.coef + ' %'}</span></div>`; }).join('')}</div>
+          <div class="db-note">Barres : la rampe de l’étude (potentiel × montée en régime) ; trait orange sur ${Y} : le réalisé à ce jour. L’engagement se dépose dans Cockpit › Plan de développement.</div></div>`;
+      }
+    } else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
+    // --- la heatmap des mois
+    h += `<div class="db-sec">Les mois — ${Y - 1} et ${Y}<small>CA du mois et atteinte du budget, magasin seul</small></div>`;
+    if (!perf && !S.err['perf|' + Y]) { h += squelette(2); }
+    else if (perf) {
+      const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop));
+      const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
+      const tPct = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
+        : p < 80 ? 'background:#8D1D2C;color:#fff' : p < 95 ? 'background:#C17A2A;color:#fff' : p < 105 ? 'background:#7CB342;color:#fff' : 'background:#C9A227;color:#fff';
+      const mxCa = Math.max(...cells.map(c => c.ca || 0), 1);
+      const tCa = ca => ca == null || !ca ? 'background:var(--color-background-secondary);color:var(--color-text-muted)' : `background:rgba(141,29,44,${(0.15 + 0.75 * ca / mxCa).toFixed(2)});color:${ca / mxCa > 0.45 ? '#fff' : '#222'}`;
+      const auj = new Date();
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Heatmap mensuelle</span>
+        <div class="db-ong" style="margin-left:8px"><button data-hm="pct" class="${S.hmMetric === 'pct' ? 'on' : ''}">% d’atteinte du budget</button><button data-hm="ca" class="${S.hmMetric === 'ca' ? 'on' : ''}">CA du mois</button></div>
+        <span class="db-mini">budget validé, sinon CA théorique de l’étude · le mois en cours est en cours</span></div>
+        <div style="padding:12px 16px;overflow-x:auto"><div style="display:grid;grid-template-columns:70px repeat(12,minmax(64px,1fr));gap:4px;min-width:900px">
+          <div></div>${MO.map(x => `<div class="db-lab" style="text-align:center">${x}</div>`).join('')}
+          ${[Y - 1, Y].map(an => `<div style="font-weight:600;font-size:12px;display:flex;align-items:center">${an}</div>` + MO.map((x, i) => {
+            const c = cells.find(z => +z.annee === an && +z.mois === i + 1); const bud = c ? (c.caBudget || c.caTheorique) : null;
+            const pct = c && bud ? 100 * c.ca / bud : null; const futur = an > auj.getFullYear() || (an === auj.getFullYear() && i > auj.getMonth());
+            const enCours = an === auj.getFullYear() && i === auj.getMonth();
+            if (!c || futur || !c.ca) { return `<div style="${tPct(null)};border-radius:6px;min-height:46px;display:flex;align-items:center;justify-content:center;font-size:10.5px">${futur ? '' : '—'}</div>`; }
+            return `<div title="${an}-${String(i + 1).padStart(2, '0')} · CA ${fE(c.ca)}${bud ? ' · budget ' + fE(bud) + ' · ' + fP(pct) : ''} · ${fN(c.tickets)} tickets · panier ${fU(c.panierMoyen)}" style="${S.hmMetric === 'pct' ? tPct(pct) : tCa(c.ca)};border-radius:6px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;${enCours ? 'outline:2px dashed #222;outline-offset:-2px' : ''}"><b>${S.hmMetric === 'pct' ? (pct == null ? '—' : Math.round(pct) + ' %') : fK(c.ca)}</b><span style="font-size:9.5px;opacity:.85">${S.hmMetric === 'pct' ? fK(c.ca) : (pct == null ? '' : Math.round(pct) + ' %')}</span></div>`; }).join('')).join('')}
+        </div></div>
+        <div class="db-note">Atteinte : rouge &lt; 80 % · orange 80–95 · vert 95–105 · doré &gt; 105 %. Survolez une case : CA, budget, tickets, panier.</div></div>`;
+      // Le tableau des mois de l'année : tickets, panier, marge, ratios.
+      const an = cells.filter(c => +c.annee === Y && c.ca).sort((a, b) => a.mois - b.mois);
+      if (an.length) {
+        h += `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span><span class="db-mini">marge, labour et overhead connus depuis juillet 2026, food cost depuis janvier</span></div>
+          <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th>Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
+          ${an.map(c => { const bud = c.caBudget || c.caTheorique; const pct = bud ? 100 * c.ca / bud : null;
+            return `<tr><td>${MO[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td><td>${fU(c.panierMoyen)}</td><td>${fP(c.foodCostPct)}</td><td>${fP(c.labourCostPct)}</td><td>${fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
+      }
+    }
     return h;
   }
 
@@ -270,12 +416,13 @@
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
-      if (S.vue === 'jour') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else { t.setMonth(t.getMonth() + n, 1); }
+      if (S.vue === 'jour') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
       const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
       S.date = d; S.heure = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
+    $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
   }
 

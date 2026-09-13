@@ -279,3 +279,4 @@ plan-rampe-avant-depot 2026-09-11T14:07:11Z
 sonde-stats-ventes 2026-09-13T08:53:18Z
 dashboard-magasin 2026-09-13T09:03:15Z
 dashboard-temps 2026-09-13T09:18:09Z
+dashboard-annee-bench 2026-09-13T09:35:20Z

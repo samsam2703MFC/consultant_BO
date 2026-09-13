@@ -98,5 +98,16 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-plan .g i.fr{background:#D97706}
 .db-sk{background:linear-gradient(90deg,var(--color-background-secondary) 25%,#fff 50%,var(--color-background-secondary) 75%);background-size:400% 100%;animation:db-sk 1.4s ease infinite;border-radius:8px;height:14px}
 @keyframes db-sk{0%{background-position:100% 0}100%{background-position:0 0}}
+/* Le bandeau du réseau : la place du magasin, sans nommer les autres. */
+.db-bench{display:grid;grid-template-columns:1.2fr repeat(4,1fr);gap:8px;background:var(--color-text);border-radius:12px;padding:10px 12px;margin-bottom:6px}
+.db-bt{background:rgba(255,255,255,.07);border-radius:9px;padding:8px 11px;min-width:0;color:#fff}
+.db-bt .k{font:600 9px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.65)}
+.db-bt .v{font-family:var(--font-display);font-size:22px;line-height:1.1;margin:2px 0}
+.db-bt .v small{font-size:12px;font-family:var(--font-ui);color:rgba(255,255,255,.65)}
+.db-bt .s{font-size:10px;line-height:1.35;color:rgba(255,255,255,.7)}
+.db-bt.tit{background:transparent;display:flex;flex-direction:column;justify-content:center}
+.db-bt.tit .k{color:var(--color-secondary);font-size:10px}
+.db-bt.bon{background:rgba(45,122,62,.55)}.db-bt.vif{background:rgba(141,29,44,.7)}
+@media (max-width:900px){.db-bench{grid-template-columns:1fr 1fr}}
 @media (max-width:900px){.db-g2{grid-template-columns:1fr}.db-casc{grid-template-columns:repeat(3,1fr)}}
 @media print{body{background:#fff}#dash{padding:0}.db-nav,.db-btn{display:none}}
