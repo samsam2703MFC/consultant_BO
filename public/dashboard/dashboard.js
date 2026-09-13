@@ -121,7 +121,7 @@
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
     else if (m) { h += S.vue === 'jour' ? rendJour(m, d) : rendPeriode(m, d); }
-    h += `<div class="db-sec">Les heures — ventes, matière, travail, résultat<small>${S.vue === 'jour' ? 'heure par heure' : 'moyenne par jour ouvert de la période, ou total'}</small></div>`;
+    h += `<div class="db-sec">Les heures — ventes, matière, rémunération, marge nette<small>${S.vue === 'jour' ? 'heure par heure' : 'moyenne par jour ouvert de la période, ou total'}</small></div>`;
     if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? " — nouvelle lecture dans quelques secondes" : ""}</div>`; }
     if (st && st.produits && st.produits.aSuivre) { h += `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>`; }
     if (!st && !S.err[ks]) { h += squelette(4); }
@@ -411,33 +411,42 @@
       ${tuile(S.vue === 'jour' ? 'Clients' : 'Clients / jour ouvert', fN(tot.tickets / (S.vue === 'jour' ? 1 : nJ)), 'panier ' + fU(tot.panier) + (S.vue !== 'jour' ? ' · ' + nJ + ' jour(s) ouvert(s)' : ''))}
       ${tuile('Ventes', fK(tot.ca), 'matière ' + fP(tot.ca ? 100 * tot.mat / tot.ca : null) + ' · ' + fK(tot.mat))}
       ${tuile('Marge brute', fK(tot.mb), fP(tot.mbPct) + ' des ventes')}
-      ${tuile('Résultat des heures', fSK(tot.res), fP(tot.resPct) + ' des ventes · travail ' + fK(tot.trav), tot.res >= 0 ? 'bon' : 'vif')}
+      ${tuile('Marge nette des heures', fSK(tot.res), fP(tot.resPct) + ' des ventes · rémunération ' + fK(tot.trav), tot.res >= 0 ? 'bon' : 'vif')}
       ${st.meilleure ? tuile('Heure la plus rentable', st.meilleure.h + ' – ' + (st.meilleure.h + 1) + ' h', fSK(moy ? st.meilleure.moy : st.meilleure.res) + (moy ? ' par jour ouvert' : ''), 'bon') : ''}
       ${st.pire ? tuile('Heure la moins rentable', st.pire.h + ' – ' + (st.pire.h + 1) + ' h', fSK(moy ? st.pire.moy : st.pire.res) + (moy ? ' par jour ouvert' : ''), (moy ? st.pire.moy : st.pire.res) < 0 ? 'vif' : '') : ''}
     </div>`;
-    // La courbe.
-    const max = Math.max(...L.map(l => val(l, 'ca')), 1) * 1.1;
-    const w = 100 / L.length;
-    const pts = [], pts2 = [];
-    let cols = '';
-    L.forEach((l, i) => {
-      const x = (i + 0.5) * w;
-      pts.push([x, 100 - 100 * val(l, 'trav') / max]); pts2.push([x, 100 - 100 * (val(l, 'trav') + val(l, 'mat')) / max]);
-      cols += `<div class="col" data-h="${l.h}" style="left:${(x - w / 2).toFixed(2)}%;width:${w.toFixed(2)}%;height:${(100 * val(l, 'ca') / max).toFixed(1)}%"><em>${fE(val(l, 'ca'))}</em><i class="${val(l, 'res') < 0 ? 'perte' : ''}${l.h === sel.h ? ' sel' : ''}" style="height:100%"></i><span>${l.h} h</span></div>`;
+    // Le graphique : une grille commune, une colonne par heure — la barre
+    // empilée (matière, rémunération, marge nette ; une perte hachurée) et,
+    // exactement dessous, la case de la marge nette en euros.
+    const max = Math.max(...L.map(l => val(l, 'ca')), 1) * 1.04;
+    const teinteMn = pct => pct == null ? 'var(--color-background-secondary)' : (pct < 0 ? '#C0182B' : (pct < 20 ? '#D97706' : (pct < 40 ? '#A8B545' : '#2d7a3e')));
+    const HB = 210;
+    let barres = '', heures = '', cases = '';
+    L.forEach(l => {
+      const ca = val(l, 'ca'), mat = val(l, 'mat'), trav = val(l, 'trav'), mn = val(l, 'res');
+      const pm = ca > 0 ? 100 * mat / ca : 0, pt = ca > 0 ? 100 * Math.max(0, Math.min(trav, ca - mat)) / ca : 0, pr = ca > 0 ? 100 * Math.max(mn, 0) / ca : 0;
+      const pct = ca > 0 ? 100 * mn / ca : null;
+      const on = l.h === sel.h;
+      barres += `<div class="bh${on ? ' sel' : ''}" data-h="${l.h}"><em>${fE(ca)}</em><div class="st" style="height:${Math.max(2, (HB - 20) * ca / max).toFixed(0)}px"><i style="height:${pm.toFixed(1)}%;background:#e5c9a0"></i><i style="height:${pt.toFixed(1)}%;background:#D97706"></i><i style="height:${pr.toFixed(1)}%;background:#2d7a3e"></i>${mn < 0 && ca > 0 ? `<i style="height:${Math.min(100, 100 * Math.abs(mn) / ca).toFixed(1)}%;background:repeating-linear-gradient(45deg,#C0182B,#C0182B 3px,#f2c9cf 3px,#f2c9cf 6px)"></i>` : ''}</div></div>`;
+      heures += `<div class="hh${on ? ' sel' : ''}" data-h="${l.h}">${l.h} h</div>`;
+      cases += `<div class="cell${on ? ' sel' : ''}" data-h="${l.h}" style="background:${teinteMn(pct)}" title="${l.h} – ${l.h + 1} h · marge nette ${fS(mn)}${pct != null ? ' · ' + fP(pct) + ' des ventes' : ''}">${fS(mn)}</div>`;
     });
-    const path = a => a.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join(' ');
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">${S.vue === 'jour' ? 'La journée' : (moy ? 'La journée type — moyenne par jour ouvert' : 'La période — total des heures')}</span>
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">${S.vue === 'jour' ? 'Ce que chaque heure rapporte' : (moy ? 'La journée type — moyenne par jour ouvert' : 'La période — total des heures')}</span>
       ${S.vue !== 'jour' ? `<div class="db-ong" style="margin-left:8px"><button data-mode="moy" class="${moy ? 'on' : ''}">Moyenne / jour ouvert</button><button data-mode="tot" class="${moy ? '' : 'on'}">Total</button></div>` : ''}
-      <span class="db-mini">cliquez une heure</span></div>
-      <div class="db-chart">${cols}<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${path(pts)}" fill="none" stroke="#222" stroke-width=".7" vector-effect="non-scaling-stroke"/><path d="${path(pts2)}" fill="none" stroke="#D97706" stroke-width=".9" stroke-dasharray="2 1.5" vector-effect="non-scaling-stroke"/></svg></div>
-      <div class="db-axe"><span><i class="p"></i>Ventes de l’heure &nbsp; <i></i>coût du travail &nbsp; <i class="t"></i>travail + matière</span><span>barre claire : l’heure ne paie pas ses coûts</span></div></div>`;
+      <span class="db-mini">le chiffre au-dessus : les ventes de l’heure · la case : la marge nette · cliquez une heure</span></div>
+      <div class="db-gr" style="grid-template-columns:104px repeat(${L.length},minmax(0,1fr))">
+        <div class="lab">Ventes de l’heure</div>${barres}
+        <div class="axe"></div><div></div>${heures}
+        <div class="lab">Marge nette<br><span>marge brute − rémunération</span></div>${cases}
+      </div>
+      <div class="db-axe" style="padding-top:8px"><span><i class="c" style="background:#e5c9a0"></i>coût matière &nbsp; <i class="c" style="background:#D97706"></i>rémunération &nbsp; <i class="c" style="background:#2d7a3e"></i>marge nette de l’heure &nbsp; <i class="c" style="background:#C0182B"></i>perte</span><span>hauteur de la barre = ventes · case : rouge &lt; 0 · orange &lt; 20 % des ventes · vert clair &lt; 40 % · vert ≥ 40 %</span></div></div>`;
     // Tableau + panneau.
     h += `<div class="db-g2">`;
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Heure par heure — ventes − matière = marge brute · marge brute − travail = résultat</span></div>
-      <table class="db-t"><tr><th>Heure</th><th>Clients</th><th>Panier</th><th>Ventes</th><th>− Matière</th><th>= Marge brute</th><th>En poste</th><th>− Travail</th><th>= Résultat</th></tr>
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Heure par heure — ventes − matière = marge brute · marge brute − rémunération = marge nette</span></div>
+      <table class="db-t"><tr><th>Heure</th><th>Clients</th><th>Panier</th><th>Ventes</th><th>− Matière</th><th>= Marge brute</th><th>En poste</th><th>− Rémunération</th><th>= Marge nette</th></tr>
       ${L.map(l => `<tr class="hv${l.h === sel.h ? ' sel' : ''}${val(l, 'res') < 0 ? ' perte' : ''}" data-h="${l.h}"><td>${l.h === sel.h ? '▾' : '▸'} ${l.h} – ${l.h + 1} h</td><td>${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)}</td><td>${fU(l.panier)}</td><td>${fE(val(l, 'ca'))}</td><td class="mu">${fE(val(l, 'mat'))}</td><td><b>${fE(val(l, 'mb'))}</b> <span class="mu" style="font-weight:400">${fP(l.mbPct)}</span></td><td>${l.poste}</td><td class="mu">${fE(val(l, 'trav'))}</td><td class="${coul(val(l, 'res'))}"><b>${fS(val(l, 'res'))}</b></td></tr>`).join('')}
       <tr class="tot"><td>${S.vue === 'jour' ? 'Journée' : (moy ? 'Jour type' : 'Période')}</td><td>${fN(tot.tickets / (moy ? nJ : 1))}</td><td>${fU(tot.panier)}</td><td>${fE(tot.ca / (moy ? nJ : 1))}</td><td>${fE(tot.mat / (moy ? nJ : 1))}</td><td>${fE(tot.mb / (moy ? nJ : 1))} <span class="mu" style="font-weight:400">${fP(tot.mbPct)}</span></td><td>—</td><td>${fE(tot.trav / (moy ? nJ : 1))}</td><td class="${coul(tot.res)}">${fS(tot.res / (moy ? nJ : 1))}</td></tr></table>
-      <div class="db-note" style="padding-top:10px">Ventes, matière, personnel et marge de l’heure viennent du panel (répartition horaire). Le personnel en poste est la moyenne des jours ouverts.</div></div>`;
+      <div class="db-note" style="padding-top:10px">Ventes, matière, rémunération et marge de l’heure viennent du panel (répartition horaire). Le personnel en poste est la moyenne des jours ouverts.</div></div>`;
     h += rendPanneau(st, sel, moy, nJ);
     h += `</div>`;
     return h;
@@ -445,7 +454,7 @@
   function rendPanneau(st, l, moy, nJ) {
     const V = moy ? l.moy.ca : l.ca, M = moy ? l.moy.mat : l.mat, MB = V - M, T = moy ? l.moy.trav : l.trav, R = MB - T;
     const base = Math.max(V, 1);
-    const rows = [['Ventes', V, 0, V, '#8D1D2C'], ['− Coût matière', M, V - M, V, '#e5c9a0'], ['= Marge brute', MB, 0, MB, '#8D1D2C'], ['− Coût du travail', T, MB - T, MB, '#D97706'], ['= Résultat de l’heure', R, 0, Math.max(R, 0), R >= 0 ? '#2d7a3e' : '#C0182B']];
+    const rows = [['Ventes', V, 0, V, '#8D1D2C'], ['− Coût matière', M, V - M, V, '#e5c9a0'], ['= Marge brute', MB, 0, MB, '#8D1D2C'], ['− Rémunération', T, MB - T, MB, '#D97706'], ['= Marge nette', R, 0, Math.max(R, 0), R >= 0 ? '#2d7a3e' : '#C0182B']];
     const top = l.top || [];
     const mx = Math.max(...top.map(x => x.v), 1);
     const pr = st.produits || {};

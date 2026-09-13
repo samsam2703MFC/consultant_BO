@@ -286,3 +286,4 @@ dashboard-nav-sans-magasin 2026-09-13T10:00:17Z
 dashboard-tuiles-egales 2026-09-13T10:04:10Z
 dashboard-podium-clair 2026-09-13T10:24:49Z
 dashboard-bandeau-mix2 2026-09-13T10:32:38Z
+dashboard-graphique-marge-nette 2026-09-13T10:42:30Z
