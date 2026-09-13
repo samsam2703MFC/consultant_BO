@@ -210,7 +210,6 @@
     // Catégories et planning côte à côte.
     const cats = Array.isArray(m.categories) ? m.categories : [];
     const plan = Array.isArray(m.planning) ? m.planning : [];
-    h += `<div class="db-g2" style="margin-bottom:12px">`;
     // Les catégories lues dans les tickets portent la marge brute (CA − coût matière) :
     // c'est elle qui colore le treemap. Sans tickets lus, repli sur l'écart à la référence du panel.
     const catsM = st && Array.isArray(st.categories) ? st.categories.filter(c => c.v > 0).map(c => ({ categorie: c.nom, groupe: c.groupe, ca: c.v, part: c.part != null ? c.part / 100 : null, mat: c.c, m: c.m, taux: c.taux, refs: c.refs })) : [];
@@ -221,7 +220,6 @@
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">${m.planningHeures != null ? nf(m.planningHeures, 1) + ' h · ' + fE(m.planningCout) : ''}${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
       <div style="padding:8px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div></div>`;
-    h += `</div>`;
     const serie = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert) : [];
     if (serie.length) {
       // Le jour dans le mois : la marge nette en % des ventes, une barre par
@@ -247,8 +245,8 @@
   /** L'échelle commune, 5 sections du noir à l'or, de 0 à +40 % : marge nette en % des ventes (le jour dans le mois) et écart à la référence (catégories). */
   const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 10 %' }, { s: 10, c: '#F08A2C', l: '10 – 20 %' }, { s: 20, c: '#2d7a3e', l: '20 – 40 %' }, { s: 40, c: 'or', l: '≥ 40 % or' }];
   const ECARTS = PALIERS;
-  /** La marge brute d'une catégorie (CA − coût matière, en % du CA) : 5 sections, l'or au-delà de 75 %. Le seuil matière du cockpit (32 %) fait 68 % de marge. */
-  const MARGES = [{ s: -Infinity, c: '#222', l: '< 50 %' }, { s: 50, c: '#C0182B', l: '50 – 60 %' }, { s: 60, c: '#F08A2C', l: '60 – 68 %' }, { s: 68, c: '#2d7a3e', l: '68 – 75 %' }, { s: 75, c: 'or', l: '≥ 75 % or' }];
+  /** La marge brute d'une catégorie (CA − coût matière, en % du CA) : 5 sections, l'or au-delà de 75 %. Une bonne marge commence à 60 %. */
+  const MARGES = [{ s: -Infinity, c: '#222', l: '< 40 %' }, { s: 40, c: '#C0182B', l: '40 – 50 %' }, { s: 50, c: '#F08A2C', l: '50 – 60 %' }, { s: 60, c: '#2d7a3e', l: '60 – 70 %' }, { s: 70, c: 'or', l: '≥ 70 % or' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
