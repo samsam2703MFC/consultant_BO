@@ -241,8 +241,8 @@
   /* Treemap « squarified » des catégories : surface = CA, couleur = écart à la référence. */
   /** L'échelle de la marge nette en % des ventes : un palier = une couleur, l'or à partir de 35 %. */
   const PALIERS = [{ s: -Infinity, c: '#222', l: '< 0 %' }, { s: 0, c: '#C0182B', l: '0 – 5 %' }, { s: 5, c: '#F08A2C', l: '5 – 10 %' }, { s: 10, c: '#F2D34B', l: '10 – 15 %' }, { s: 15, c: '#2d7a3e', l: '15 – 25 %' }, { s: 25, c: '#7CC26A', l: '25 – 35 %' }, { s: 35, c: 'or', l: '≥ 35 % or' }];
-  /** La même palette pour l'écart à la référence (treemap des catégories) : noir ≤ −15, rouge −15 à −8, orange −8 à −3, jaune stable ±3, vert +3 à +8, vert clair +8 à +15, or ≥ +15 %. */
-  const ECARTS = [{ s: -Infinity, c: '#222', l: '≤ −15 %' }, { s: -15, c: '#C0182B', l: '−15 à −8 %' }, { s: -8, c: '#F08A2C', l: '−8 à −3 %' }, { s: -3, c: '#F2D34B', l: 'stable −3 à +3 %' }, { s: 3, c: '#2d7a3e', l: '+3 à +8 %' }, { s: 8, c: '#7CC26A', l: '+8 à +15 %' }, { s: 15, c: 'or', l: '≥ +15 % or' }];
+  /** Le treemap garde ses seuils d'écart à la référence, avec les couleurs de la palette : rouge, orange, jaune, vert, or. */
+  const ECARTS = [{ s: -Infinity, c: '#C0182B', l: '≤ −15 %' }, { s: -15, c: '#F08A2C', l: '−15 à −3 %' }, { s: -3, c: '#F2D34B', l: 'stable' }, { s: 3, c: '#2d7a3e', l: '+3 à +15 %' }, { s: 15, c: 'or', l: '≥ +15 %' }];
   function palier(pct) { let r = PALIERS[0]; for (const p of PALIERS) { if (pct >= p.s) { r = p; } } return r; }
 
   /** Confettis en CSS : n rectangles colorés qui tombent en boucle, positions stables d'un rendu à l'autre. */
