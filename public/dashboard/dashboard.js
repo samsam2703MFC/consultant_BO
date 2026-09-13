@@ -133,7 +133,7 @@
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
     else if (m) { h += S.vue === 'jour' ? rendJour(m, d, st) : rendPeriode(m, d); }
     const autreJ = S.vue === 'jour' && S.jourH && S.jourH !== S.date;
-    h += `<div class="db-sec">Les heures — ${S.vue === 'jour' ? esc(fDL(dateH())) : 'ventes, matière, rémunération, marge nette'}<small>${S.vue === 'jour' ? 'heure par heure · cliquer un jour dans « le jour dans le mois » pour le lire' : 'moyenne par jour ouvert de la période, ou total'}</small>${autreJ ? `<button class="db-btn" data-jh="" style="margin-left:auto">↩ revenir au ${esc(fD(S.date))}</button>` : ''}</div>`;
+    h += `<div class="db-sec">Les heures — ${S.vue === 'jour' ? esc(fDL(dateH())) : 'ventes, matière, rémunération, marge nette'}<small>${S.vue === 'jour' ? 'heure par heure · cliquer un jour dans « le jour dans le mois » pour le lire' : 'moyenne par jour ouvert de la période, ou total'}</small>${autreJ ? `<button class="db-btn" data-jh="">↩ revenir au ${esc(fD(S.date))}</button>` : ''}</div>`;
     if (S.err[ks]) { h += `<div class="db-err">Heures : ${esc(S.err[ks])}${(S.relances[ks] || 0) < 3 ? " — nouvelle lecture dans quelques secondes" : ""}</div>`; }
     if (st && st.produits && st.produits.aSuivre) { h += `<div class="db-alerte">Tickets lus sur ${st.produits.jours.length} jour(s) sur ${st.produits.total} — la lecture continue, la page se complète toute seule.</div>`; }
     if (!st && !S.err[ks]) { h += squelette(4); }
