@@ -67,6 +67,39 @@ function ep_stats_ventes_sonde(): array
     return $out;
 }
 
+/**
+ * GET /ventes/notifications?shop=4 — les messages du panel pour un magasin,
+ * tels que la route /shops/{id}/notifications les rend (titre, message,
+ * priorité, type, statut, visibilité, date, action). Les messages publiés et
+ * visibles aujourd'hui, du plus récent au plus ancien.
+ */
+function ep_stats_notifications(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!PanelApi::configured()) { return ['shop' => $sid, 'messages' => [], 'indispo' => true, 'motif' => 'compte panel non configuré']; }
+    $r = PanelApi::get('/shops/' . $sid . '/notifications');
+    if (!is_array($r)) { return ['shop' => $sid, 'messages' => [], 'indispo' => true, 'motif' => 'le panel n’a pas répondu']; }
+    $auj = date('Y-m-d');
+    $out = [];
+    foreach (analyseListe($r) as $n) {
+        if ((string) ($n['status'] ?? 'published') !== 'published') { continue; }
+        $du = isset($n['visible_from']) && $n['visible_from'] ? substr((string) $n['visible_from'], 0, 10) : null;
+        $au = isset($n['visible_to']) && $n['visible_to'] ? substr((string) $n['visible_to'], 0, 10) : null;
+        if (($du !== null && $du > $auj) || ($au !== null && $au < $auj)) { continue; }
+        $pri = strtolower((string) ($n['priority'] ?? 'info'));
+        $out[] = ['id' => (int) ($n['id'] ?? 0), 'titre' => trim((string) ($n['title'] ?? '')), 'message' => trim((string) ($n['message'] ?? '')),
+            'priorite' => in_array($pri, ['urgent', 'high', 'critical'], true) ? 'urgent' : (in_array($pri, ['warning', 'attention', 'medium'], true) ? 'attention' : 'info'),
+            'type' => (string) ($n['type'] ?? 'once'), 'jour' => $n['day_of_week'] ?? null, 'du' => $du, 'au' => $au,
+            'quand' => (string) ($n['created_at'] ?? ''), 'global' => !empty($n['is_global']),
+            'source' => (string) ($n['source_type'] ?? ''), 'action' => (string) ($n['action_url'] ?? ''), 'actionLib' => (string) ($n['action_label'] ?? '')];
+    }
+    usort($out, static fn ($a, $b) => strcmp($b['quand'], $a['quand']));
+    $cfgBase = Db::config()['pwaBase'] ?? null;
+    $base = rtrim((string) ($cfgBase ?: setting('pwaBase', '')), '/');
+    return ['shop' => $sid, 'messages' => $out, 'panel' => $base, 'quand' => date('c')];
+}
+
 /** Grave une valeur dans ceo_app_setting. */
 function svGrave(string $cle, array $v): void
 {

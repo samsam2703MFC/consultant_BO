@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -62,6 +62,7 @@
       rendre(); return;
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
+    lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
     if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
@@ -317,6 +318,9 @@
       : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
+    const N = S.aux['notif|' + S.shop];
+    const msgs = N && Array.isArray(N.messages) ? N.messages : [];
+    if (msgs.length) { defs.pop(); }
     const tuiles = defs.map(([lib, k, f, fd]) => {
       const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
       const v = m[k];
@@ -334,7 +338,21 @@
         <div class="v">${f(v)}<small>médiane ${f(med)}</small></div>
         <div class="s">${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
+    let msgT = '', msgD = '';
+    if (msgs.length) {
+      const nb = p => msgs.filter(x => x.priorite === p).length;
+      const nU = nb('urgent'), nA = nb('attention'), nI = nb('info');
+      const hh = q => q ? q.slice(11, 16) : '';
+      const dj = q => q ? fD(q.slice(0, 10)) + ' à ' + hh(q) : '';
+      const dern = msgs[0];
+      msgT = `<div class="db-bt msg${nU ? ' urg' : ''}" data-ndrop="1"><span class="dr">${S.nOuvert ? 'replier ▴' : 'détail ▾'}</span><div class="k">Messages du panel</div><div class="n"><span class="bell">🔔</span>${msgs.length}</div><div class="pri">${nU ? `<i class="urg">${nU} urgent</i>` : ''}${nA ? `<i class="warn">${nA} attention</i>` : ''}${nI ? `<i class="info">${nI} info</i>` : ''}</div><div class="last">${esc(dern.titre)}${dern.quand ? ' · ' + hh(dern.quand) : ''}</div></div>`;
+      if (S.nOuvert) {
+        const lib = { urgent: 'urgent', attention: 'attention', info: 'info' };
+        msgD = `<div class="db-ndrop">${msgs.map(x => `<div class="m"><i class="${x.priorite === 'urgent' ? 'urg' : (x.priorite === 'attention' ? 'warn' : 'info')}"></i><div><b>${esc(x.titre || '(sans titre)')}</b>${x.message ? `<p>${esc(x.message)}</p>` : ''}<div class="meta">${lib[x.priorite]} · ${x.type === 'once' ? 'une fois' : 'récurrent'}${x.quand ? ' · publié le ' + dj(x.quand) : ''}${x.au ? ' · visible jusqu’au ' + fD(x.au) : ''}${x.global ? ' · tout le réseau' : ''}</div></div><div class="act"><span>${x.quand ? fD(x.quand.slice(0, 10)) + ' · ' + hh(x.quand) : ''}</span>${x.actionLib ? (N.panel ? `<a href="${esc(N.panel)}" target="_blank" rel="noopener">${esc(x.actionLib)} ›</a>` : `<em>${esc(x.actionLib)}</em>`) : ''}</div></div>`).join('')}
+          <div class="db-note" style="padding:4px 0 0">Les messages viennent du panel${N.panel ? ' ; l’action ouvre le panel dans un nouvel onglet' : ''}. Relus avec la page.</div></div>`;
+      }
+    }
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}${msgT}</div>${msgD}`;
   }
 
   /* Les tâches du jour (ou de la période) : faites, non faites, bloquantes,
@@ -558,6 +576,7 @@
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
+    $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
   }
 

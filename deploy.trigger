@@ -293,3 +293,4 @@ dashboard-sections-egales 2026-09-13T10:48:42Z
 dashboard-taches 2026-09-13T10:55:44Z
 dashboard-taches-pastilles 2026-09-13T11:08:08Z
 sonde-notifications 2026-09-13T16:08:10Z
+2026-09-13T16:17:05Z dashboard messages panel M1

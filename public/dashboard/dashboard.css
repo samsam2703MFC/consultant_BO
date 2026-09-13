@@ -152,6 +152,28 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-bt .leg{font-size:10px;color:var(--color-text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
 .db-bt .leg i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
 .db-bt .leg b{display:inline-block;width:2px;height:10px;background:var(--color-text);vertical-align:-1px;margin-right:3px}
+/* La tuile des messages du panel, et son tiroir. */
+.db-bt.msg{background:var(--color-surface);border:1.5px solid var(--color-primary);cursor:pointer;position:relative}
+.db-bt.msg.urg{background:#fdf4f5}
+.db-bt.msg .k{color:var(--color-primary)}
+.db-bt.msg .n{font-family:var(--font-display);font-size:26px;line-height:1;margin:4px 0 2px;display:flex;align-items:baseline;gap:8px}
+.db-bt.msg .n .bell{font-size:17px}
+.db-bt.msg .pri{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 4px}
+.db-bt.msg .pri i{font:600 9px var(--font-ui);border-radius:999px;padding:1px 7px;font-style:normal;white-space:nowrap}
+.db-bt.msg .pri i.info{background:#e8eef8;color:#1f4e8c}.db-bt.msg .pri i.warn{background:#FBEFE0;color:#B26A00}.db-bt.msg .pri i.urg{background:var(--color-primary);color:#fff}
+.db-bt.msg .last{font:500 10.5px/1.3 var(--font-ui);color:var(--color-text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:auto}
+.db-bt.msg .dr{position:absolute;right:9px;top:8px;font:500 10px var(--font-ui);color:var(--color-primary)}
+.db-ndrop{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-top:none;border-radius:0 0 12px 12px;padding:10px 14px 8px;margin:-6px 0 6px;display:flex;flex-direction:column;gap:6px}
+.db-ndrop .m{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:start;padding:8px 10px;border-radius:9px;background:var(--color-background-secondary)}
+.db-ndrop .m i{width:10px;height:10px;border-radius:50%;margin-top:4px;display:block}
+.db-ndrop .m i.info{background:#1f4e8c}.db-ndrop .m i.warn{background:#D97706}.db-ndrop .m i.urg{background:var(--color-primary)}
+.db-ndrop .m b{font:600 12px var(--font-ui);display:block}
+.db-ndrop .m p{margin:2px 0 0;font:400 11.5px/1.4 var(--font-ui);color:var(--color-text)}
+.db-ndrop .m .meta{font:400 10px var(--font-ui);color:var(--color-text-muted);margin-top:3px}
+.db-ndrop .m .act{display:flex;flex-direction:column;align-items:flex-end;gap:5px;white-space:nowrap}
+.db-ndrop .m .act span{font:400 10px var(--font-ui);color:var(--color-text-muted)}
+.db-ndrop .m .act a{font:600 11px var(--font-ui);color:var(--color-primary);text-decoration:none;border:.5px solid #e8b4bb;border-radius:999px;padding:3px 10px;background:var(--color-surface)}
+.db-ndrop .m .act em{font:500 10.5px var(--font-ui);color:var(--color-text-muted);font-style:normal}
 /* Le bandeau des tâches : compteurs, fil en miniature, détail déplié. */
 .db-taches{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr 2.4fr;gap:10px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px;margin:6px 0 0}
 .db-taches .db-bt{min-height:92px}
