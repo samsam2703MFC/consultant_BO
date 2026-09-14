@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — le tableau nu, rien à déplier</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="compact.css">
+<style>
+body{padding:0}
+.mq{max-width:1440px;margin:0 auto;padding:16px 22px 30px}
+.mq h1{font:400 20px var(--font-display);margin:0 0 4px}
+.mq p.s{margin:0;font-size:12px;line-height:1.5;color:var(--color-text-muted);max-width:1000px}
+.mq .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.mq hr{border:none;border-top:.5px solid var(--color-border-secondary);margin:14px 0 2px}
+</style></head>
+<body><div class="mq"><span class="u">maquette · dashboard magasin · vue Mois · septembre 2026 · 8 écarts</span>
+<h1>C — le tableau nu, rien à déplier</h1><p class="s">Zéro niveau : tout est visible en colonnes, en petit. Aucun clic pour lire, la vignette s’agrandit au survol. Plus haut que A et B à l’ouverture, mais c’est le seul où l’œil compare huit écarts d’un coup, sans mémoire ni allers-retours.</p><hr>
+
+<div class="cp-t2">1 · Replié — une ligne, comme les autres</div>
+<span class="cp-mes">env. 53 px</span>
+<div class="db-ncbar"><span class="ic">⚠️</span>
+    <span class="t">8 non-conformités ce mois<small>septembre 2026 · 214 tâches notées</small></span>
+    <span class="chips">
+      <span class="ch ko"><i class="g2"></i>majeure · propreté cuisson <em class="ko">encore non conforme ↻ 3e fois</em></span>
+      <span class="ch ko"><i class="g3"></i>mineure · étiquettes prix <em class="ko">jamais renotée</em></span>
+      <span class="ch ko"><i class="g2"></i>majeure · hotte et filtres <em class="ko">jamais renotée ↻ 2e fois</em></span>
+      <span class="ch"><i class="g3"></i>5 reprises <em class="v">notées ≥ 4/5</em></span>
+    </span>
+    <span class="act"><span class="dr">détail ▾</span></span></div>
+<div class="cp-t2">2 · Ouvert — tout est là, en colonnes. Aucun clic pour lire, la photo s’agrandit au survol</div>
+<span class="cp-mes">env. 53 + 290 px · rien de caché</span>
+<div class="db-ncbar ouv"><span class="ic">⚠️</span>
+    <span class="t">8 non-conformités ce mois<small>septembre 2026 · 214 tâches notées</small></span>
+    <span class="chips">
+      <span class="ch ko"><i class="g2"></i>majeure · propreté cuisson <em class="ko">encore non conforme ↻ 3e fois</em></span>
+      <span class="ch ko"><i class="g3"></i>mineure · étiquettes prix <em class="ko">jamais renotée</em></span>
+      <span class="ch ko"><i class="g2"></i>majeure · hotte et filtres <em class="ko">jamais renotée ↻ 2e fois</em></span>
+      <span class="ch"><i class="g3"></i>5 reprises <em class="v">notées ≥ 4/5</em></span>
+    </span>
+    <span class="act"><span class="dr">replier ▴</span></span></div>
+<div class="db-ncdl"><div class="ct"><span class="db-lab">8 non-conformités sur 214 tâches notées</span><span class="db-mini">relevées par K. Moreau, S. Peeters · seuil 4/5 · survoler une vignette pour l’agrandir</span><a class="db-lien" href="#">Contrôle des tâches ›</a></div>
+<div style="padding:2px 16px 10px"><table class="cp-t">
+<tr><th style="width:78px">Gravité</th><th style="width:44px">Jour</th><th>La tâche</th><th>Le constat</th><th style="width:40px">Photo</th><th style="width:160px">Depuis</th><th style="width:118px">Relevée par</th></tr>
+<tr>
+  <td><span class="cp-g g1">Critique 1/5</span></td>
+  <td class="d">12/09</td>
+  <td class="n">CQ · Températures frigo vitrine<br><span class="q">CQ-03 — Contrôle qualité après-midi</span></td>
+  <td class="c">Frigo vitrine relevé à 9 °C à 16 h, produits frais laissés en place.</td>
+  <td><span class="mini frigo"><i style="left:55%;top:20%;width:30%;height:35%"></i><i style="left:20%;top:50%;width:25%;height:30%"></i></span></td>
+  <td><span class="cp-s ok">✓ Reprise 4/5 le 13/09</span></td>
+  <td class="q">K. Moreau<br>16:20</td></tr><tr>
+  <td><span class="cp-g g2">Majeure 2/5</span></td>
+  <td class="d">11/09 <span class="rc">↻</span></td>
+  <td class="n">CQ · Propreté zone cuisson<br><span class="q">CQ-05 — Fermeture</span></td>
+  <td class="c">Plan de travail et sol du four non nettoyés en fin de service.</td>
+  <td><span class="mini four"><i style="left:35%;top:25%;width:30%;height:40%"></i></span></td>
+  <td><span class="cp-s rec">↻ Renotée 2/5 le 12/09</span></td>
+  <td class="q">K. Moreau<br>19:42 · <b class="ko">↻ 3e fois en 7 jours</b></td></tr><tr>
+  <td><span class="cp-g g3">Mineure 3/5</span></td>
+  <td class="d">09/09</td>
+  <td class="n">Comptoir · Étiquettes prix<br><span class="q">CO-03 — Photo du comptoir</span></td>
+  <td class="c">Deux étiquettes prix manquantes sur les tartes.</td>
+  <td><span class="mini comptoir"><i style="left:30%;top:35%;width:25%;height:30%"></i></span></td>
+  <td><span class="cp-s ko">✗ Jamais renotée</span></td>
+  <td class="q">K. Moreau<br>11:15</td></tr><tr>
+  <td><span class="cp-g g2">Majeure 2/5</span></td>
+  <td class="d">08/09</td>
+  <td class="n">Comptoir · Vitrine viennoiseries 15 h<br><span class="q">CO-04 — Photo du comptoir</span></td>
+  <td class="c">Trois emplacements vides depuis 15 h, ni recharge ni regroupement.</td>
+  <td><span class="mini vitrine"><i style="left:12%;top:35%;width:22%;height:40%"></i><i style="left:42%;top:30%;width:20%;height:35%"></i></span></td>
+  <td><span class="cp-s ok">✓ Reprise 5/5 le 09/09</span></td>
+  <td class="q">K. Moreau<br>15:08</td></tr><tr>
+  <td><span class="cp-g g3">Mineure 3/5</span></td>
+  <td class="d">05/09</td>
+  <td class="n">CQ · Tenue et badge<br><span class="q">CQ-01 — Ouverture</span></td>
+  <td class="c">Badge nominatif absent sur un équipier.</td>
+  <td><span class="mini comptoir"><i style="left:45%;top:30%;width:22%;height:35%"></i></span></td>
+  <td><span class="cp-s ok">✓ Reprise 4/5 le 06/09</span></td>
+  <td class="q">S. Peeters<br>07:30</td></tr><tr>
+  <td><span class="cp-g g1">Critique 1/5</span></td>
+  <td class="d">04/09</td>
+  <td class="n">CQ · Chaîne du froid à la livraison<br><span class="q">CQ-02 — Réception</span></td>
+  <td class="c">Livraison acceptée à 11 °C, sans relevé consigné.</td>
+  <td><span class="mini frigo"><i style="left:40%;top:28%;width:28%;height:34%"></i></span></td>
+  <td><span class="cp-s ok">✓ Reprise 4/5 le 05/09</span></td>
+  <td class="q">S. Peeters<br>08:05</td></tr><tr>
+  <td><span class="cp-g g3">Mineure 3/5</span></td>
+  <td class="d">03/09</td>
+  <td class="n">CQ · Affichage allergènes<br><span class="q">CQ-01 — Ouverture</span></td>
+  <td class="c">Fiche allergènes absente du comptoir.</td>
+  <td><span class="mini comptoir"><i style="left:50%;top:40%;width:20%;height:26%"></i></span></td>
+  <td><span class="cp-s ok">✓ Reprise 4/5 le 04/09</span></td>
+  <td class="q">S. Peeters<br>07:22</td></tr><tr>
+  <td><span class="cp-g g2">Majeure 2/5</span></td>
+  <td class="d">02/09 <span class="rc">↻</span></td>
+  <td class="n">CQ · Hotte et filtres<br><span class="q">CQ-05 — Fermeture</span></td>
+  <td class="c">Filtres encrassés, non changés depuis six semaines.</td>
+  <td><span class="mini four"><i style="left:30%;top:30%;width:35%;height:35%"></i></span></td>
+  <td><span class="cp-s ko">✗ Jamais renotée</span></td>
+  <td class="q">K. Moreau<br>19:10 · <b class="ko">↻ 2e fois en 7 jours</b></td></tr>
+</table></div></div></div></body></html>

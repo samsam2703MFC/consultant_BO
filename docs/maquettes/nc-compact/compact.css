@@ -1,0 +1,84 @@
+/* Maquettes « repli compact » — styles candidats, par-dessus dashboard.css. */
+
+/* --------------------------------------------------------------------------
+ * Commun aux trois propositions : la ligne dense.
+ * ------------------------------------------------------------------------ */
+.cp-l{display:grid;grid-template-columns:78px 46px minmax(0,1.15fr) minmax(0,1.5fr) 152px 18px;gap:10px;align-items:center;
+  padding:5px 0;border-bottom:.5px solid rgba(34,34,34,.07);font-size:11.5px;cursor:pointer;line-height:1.3}
+.cp-l:last-of-type{border-bottom:none}
+.cp-l:hover{background:rgba(34,34,34,.03)}
+.cp-l.on{background:#FCFAF7}
+.cp-l .d{font:600 10.5px var(--font-ui);color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cp-l .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-l .c{color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic}
+.cp-l .v{text-align:right}
+.cp-l .ch{color:var(--color-primary);font-size:11px;text-align:center}
+.cp-l .rc{font:700 9px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+
+/* La pastille de gravité, en version courte. */
+.cp-g{display:inline-flex;align-items:center;justify-content:center;gap:4px;font:700 9px var(--font-ui);letter-spacing:.03em;
+  text-transform:uppercase;border-radius:4px;padding:2px 0;white-space:nowrap;width:100%}
+.cp-g.g1{background:#8D1D2C;color:#fff}
+.cp-g.g2{background:#FBE3E6;color:#C0182B;box-shadow:inset 0 0 0 1px #E8B4BB}
+.cp-g.g3{background:#FBEFE0;color:#B26A00;box-shadow:inset 0 0 0 1px #E8C9A0}
+.cp-s{display:inline-flex;align-items:center;gap:5px;font:600 10px var(--font-ui);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.cp-s.ok{background:#dfeee0;color:#2d7a3e}
+.cp-s.rec{background:#fdf4f5;color:var(--color-primary);box-shadow:inset 0 0 0 1px #e8b4bb}
+.cp-s.ko{background:var(--color-primary);color:#fff}
+.cp-s.ctl{background:#e8eef8;color:#1f4e8c}
+
+/* Le détail d'une ligne, déplié sous elle. */
+.cp-d{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;padding:10px 0 12px;background:#FCFAF7;
+  border-bottom:.5px solid rgba(34,34,34,.07);font-size:11.5px;line-height:1.45}
+.cp-d .ph{width:132px;height:99px;border-radius:6px;position:relative;overflow:hidden;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.cp-d .ph.frigo{background:linear-gradient(160deg,#dfe6ea,#b7c4cb 55%,#eef2f4)}
+.cp-d .ph.four{background:linear-gradient(160deg,#5a4a3e,#2e2622 55%,#6b5646)}
+.cp-d .ph.comptoir{background:linear-gradient(160deg,#d9b98a,#b48a55 55%,#e6cfa6)}
+.cp-d .ph.vitrine{background:linear-gradient(160deg,#e9dfd2,#c9b8a3 50%,#f2ebe1)}
+.cp-d .ph i{position:absolute;border:2px solid var(--color-primary);border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.cp-d .ph i u{position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:15px;height:15px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font:700 9px var(--font-ui);color:#fff;background:var(--color-primary);text-decoration:none}
+.cp-d q{display:block;font-style:italic;quotes:'« ' ' »';margin-bottom:6px}
+.cp-d dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:10.5px}
+.cp-d dt{color:var(--color-text-muted);white-space:nowrap}
+.cp-d dd{margin:0}
+.cp-d .a{margin-top:7px;font:600 11px var(--font-ui)}
+.cp-d .a a{color:var(--color-primary);text-decoration:none}
+
+/* --------------------------------------------------------------------------
+ * B — le repli par gravité.
+ * ------------------------------------------------------------------------ */
+.cp-grp{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:.5px solid rgba(34,34,34,.07);cursor:pointer;font-size:11.5px}
+.cp-grp:hover{background:rgba(34,34,34,.03)}
+.cp-grp .k{font:700 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase}
+.cp-grp .mu{color:var(--color-text-muted);font-size:10.5px}
+.cp-grp .sp{flex:1}
+.cp-grp .ch{color:var(--color-primary);font-size:11px}
+.cp-grp .pt{display:inline-flex;gap:3px}
+.cp-grp .pt i{width:8px;height:8px;border-radius:2px;display:block}
+.cp-grp .pt i.ok{background:#2d7a3e}.cp-grp .pt i.ko{background:var(--color-primary)}.cp-grp .pt i.rec{background:#e5b6bc}
+.cp-sous{padding-left:22px}
+
+/* --------------------------------------------------------------------------
+ * C — le tableau nu : tout en colonnes, rien à déplier.
+ * ------------------------------------------------------------------------ */
+.cp-t{width:100%;border-collapse:collapse;font-size:11px;line-height:1.35}
+.cp-t th{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);
+  text-align:left;padding:4px 8px 5px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.cp-t td{padding:4px 8px;border-bottom:.5px solid rgba(34,34,34,.06);vertical-align:middle}
+.cp-t tr:last-child td{border-bottom:none}
+.cp-t tr:hover td{background:rgba(34,34,34,.03)}
+.cp-t .n{font-weight:600;white-space:nowrap}
+.cp-t .c{color:var(--color-text);font-style:italic}
+.cp-t .d{color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.cp-t .q{color:var(--color-text-muted);white-space:nowrap;font-size:10px}
+.cp-t .mini{width:34px;height:26px;border-radius:4px;display:block;position:relative;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.cp-t .mini i{position:absolute;border:1.5px solid var(--color-primary);border-radius:2px}
+.cp-t .mini.frigo{background:linear-gradient(160deg,#dfe6ea,#b7c4cb)}
+.cp-t .mini.four{background:linear-gradient(160deg,#5a4a3e,#2e2622)}
+.cp-t .mini.comptoir{background:linear-gradient(160deg,#d9b98a,#b48a55)}
+.cp-t .mini.vitrine{background:linear-gradient(160deg,#e9dfd2,#c9b8a3)}
+
+/* L'annotation de mesure, hors application. */
+.cp-mes{display:inline-block;font:600 10px var(--font-ui);color:#1f4e8c;background:#e8eef8;border-radius:999px;padding:2px 9px;margin:0 0 6px}
+.cp-t2{font:600 11px var(--font-ui);color:var(--color-text-muted);margin:16px 0 5px}
