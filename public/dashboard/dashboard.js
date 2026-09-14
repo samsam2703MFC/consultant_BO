@@ -150,7 +150,7 @@
   }
   const fSE = v => v == null ? '—' : (v < 0 ? '− ' + fE(-v) : fE(v));
   function tuile(k, v, s, cls) { return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
-  /** La tuile avec sa tendance : la mini-courbe des 7 derniers mêmes jours (+ aujourd'hui) et l'écart avec le dernier. */
+  /** La tuile avec sa tendance : l'écart avec le dernier même jour de semaine. */
   function tuileTend(k, v, s, cls, serie, auj, fmt, inverse) {
     const pts = serie.filter(x => x != null);
     if (!pts.length || auj == null) { return tuile(k, v, s, cls); }
@@ -159,7 +159,7 @@
     const dern = pts[pts.length - 1], d = dern ? 100 * (auj - dern) / dern : null;
     const sens = d == null ? 'eq' : (Math.abs(d) < 1 ? 'eq' : ((d > 0) !== !!inverse ? 'up' : 'dn'));
     const last = xy[n - 1];
-    return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><svg class="db-spk" viewBox="0 0 70 26" title="${pts.length} derniers mêmes jours"><polyline points="${xy.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" stroke="${sens === 'dn' ? '#C0182B' : (sens === 'eq' ? '#B9B2A8' : '#2d7a3e')}"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.2"/></svg><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="dernier même jour : ${fmt(dern)}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} vs ${esc(fD(S.aux['tend|' + S.shop + '|' + S.date].jours.slice(-1)[0].date))}</span>`}</div>`;
+    return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div>${d == null ? '' : `<span class="db-dl ${sens}" title="dernier même jour : ${fmt(dern)}">${d >= 0 ? '+ ' : '− '}${fP(Math.abs(d))} vs ${esc(fD(S.aux['tend|' + S.shop + '|' + S.date].jours.slice(-1)[0].date))}</span>`}</div>`;
   }
   function cascade(m, d) {
     const se = (d && d.seuils) || {};
