@@ -316,3 +316,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-13T18:44:37Z onglet trimestre + tableau trimestres
 2026-09-13T18:58:50Z tendance dans les tuiles
 2026-09-14T07:00:38Z qui est en poste replié, frise budget de l'heure
+2026-09-14T07:13:22Z frise personnel / CA en %
