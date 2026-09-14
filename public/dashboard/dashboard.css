@@ -372,9 +372,13 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-ncst.mu{background:var(--color-background-secondary);color:var(--color-text-muted)}
 
 /* La photo de la tâche, avec les repères posés au contrôle. */
-.db-ncph{width:96px;height:72px;border-radius:6px;position:relative;overflow:hidden;display:block;flex:none;text-decoration:none;background:var(--color-background-secondary);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.db-ncph{border-radius:6px;position:relative;overflow:hidden;display:block;flex:none;text-decoration:none;background:var(--color-background-secondary);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.db-ncph.mini{width:34px;height:26px;border-radius:4px;transition:transform .12s ease}
+.db-ncph.mini:hover{transform:scale(3.4);transform-origin:center right;z-index:6;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+.db-ncph.max{width:132px;height:99px}
 .db-ncph img{width:100%;height:100%;object-fit:cover;display:block}
 .db-ncph i{position:absolute;border:2px solid var(--color-primary);border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.25);display:block}
+.db-ncph.mini i{border-width:1.5px;box-shadow:none}
 .db-ncph i u{position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 9px var(--font-ui);color:#fff;text-decoration:none}
 .db-ncph.att{background:linear-gradient(90deg,var(--color-background-secondary) 25%,#fff 50%,var(--color-background-secondary) 75%);background-size:400% 100%;animation:db-sk 1.4s ease infinite}
 .db-ncph.vide{display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);font-size:11px}
@@ -383,18 +387,68 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-ncph.perdue{display:flex;align-items:center;justify-content:center;background:var(--color-background-secondary)}
 .db-ncph.perdue i{display:none}
 .db-ncph.perdue::after{content:'photo expirée';font:500 9px/1.25 var(--font-ui);color:var(--color-text-muted);text-align:center;padding:0 4px}
+.db-ncph.mini.perdue{transform:none}
+.db-ncph.mini.perdue:hover{transform:none;box-shadow:none}
+.db-ncph.mini.perdue::after{content:'\2715';font-size:10px}
 
-/* Une ligne : gravité · tâche et constat · photo · aujourd'hui · validation. */
 .db-nclist{padding:4px 16px 10px}
-.db-ncr{display:grid;grid-template-columns:146px minmax(0,1.7fr) 96px minmax(0,1fr);gap:14px;align-items:start;padding:10px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:11.5px}
-.db-ncr:last-child{border-bottom:none}
-.db-ncr.hd{padding:4px 0 6px;border-bottom:.5px solid var(--color-border-tertiary)}
-.db-ncr.hd span{font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
-.db-ncr.val{background:#f6faf7}
-.db-ncr .g small{display:block;color:var(--color-text-muted);font-size:10px;margin-top:4px;line-height:1.35}
-.db-ncr .t b{font-weight:600;display:block;line-height:1.3}
-.db-ncr .t small{display:block;color:var(--color-text-muted);font-size:10px;line-height:1.35;margin-top:2px}
-.db-ncr .t q{display:block;margin-top:5px;font-style:italic;color:var(--color-text);font-size:11px;line-height:1.45;quotes:'« ' ' »'}
-.db-ncr .a small{display:block;color:var(--color-text-muted);font-size:10px;margin-top:5px;line-height:1.35}
 
-@media (max-width:900px){.db-ncr{grid-template-columns:120px minmax(0,1fr) 96px;gap:10px}.db-ncr .a{grid-column:1 / -1}.db-ncr.hd{display:none}}
+
+/* --------------------------------------------------------------------------
+ * Le tiroir prend trois formes : tableau nu (Jour), ligne dense (Semaine),
+ * repli par gravité (Mois). Elles partagent la ligne et le détail.
+ * ------------------------------------------------------------------------ */
+.db-ncl{display:grid;grid-template-columns:86px 48px minmax(0,1.15fr) minmax(0,1.5fr) 168px 18px;gap:10px;align-items:center;
+  padding:5px 0;border-bottom:.5px solid rgba(34,34,34,.07);font-size:11.5px;cursor:pointer;line-height:1.3}
+.db-ncl:hover{background:rgba(34,34,34,.03)}
+.db-ncl.on{background:#FCFAF7}
+.db-ncl .d{font:600 10.5px var(--font-ui);color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-ncl .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-ncl .c{color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic}
+.db-ncl .v{text-align:right}
+.db-ncl .ch{color:var(--color-primary);font-size:11px;text-align:center}
+.db-ncl .rc{font:700 9px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+.db-ncl .db-ncg{width:100%;justify-content:center;padding:2px 0}
+
+/* Le détail d'un écart, sous sa ligne. */
+.db-ncd{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;padding:10px 0 12px;background:#FCFAF7;
+  border-bottom:.5px solid rgba(34,34,34,.07);font-size:11.5px;line-height:1.45}
+.db-ncd q{display:block;font-style:italic;quotes:'« ' ' »';margin-bottom:6px}
+.db-ncd q.mu{color:var(--color-text-muted)}
+.db-ncd dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:10.5px}
+.db-ncd dt{color:var(--color-text-muted);white-space:nowrap}
+.db-ncd dd{margin:0}
+.db-ncd .a{margin-top:7px;font:600 11px var(--font-ui)}
+.db-ncd .a a{color:var(--color-primary);text-decoration:none}
+
+/* Le repli par gravité, sous la vue Mois. */
+.db-ncgr{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:.5px solid rgba(34,34,34,.07);cursor:pointer;font-size:11.5px}
+.db-ncgr:hover{background:rgba(34,34,34,.03)}
+.db-ncgr .db-ncg{width:86px;justify-content:center;padding:2px 0}
+.db-ncgr .k{font:700 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase}
+.db-ncgr .mu{color:var(--color-text-muted);font-size:10.5px}
+.db-ncgr .mu b.ko{color:var(--color-primary)}
+.db-ncgr .sp{flex:1}
+.db-ncgr .ch{color:var(--color-primary);font-size:11px;white-space:nowrap}
+.db-ncgr .pt{display:inline-flex;gap:3px}
+.db-ncgr .pt i{width:8px;height:8px;border-radius:2px;display:block;background:#c9c2b8}
+.db-ncgr .pt i.ok{background:#2d7a3e}
+.db-ncgr .pt i.ko{background:var(--color-primary)}
+.db-ncgr .pt i.rec{background:#e5b6bc}
+.db-ncgr .pt i.ctl{background:#1f4e8c}
+.db-ncsous{padding-left:22px}
+
+/* Le tableau nu, sous la vue Jour. */
+.db-nct{width:100%;border-collapse:collapse;font-size:11px;line-height:1.35}
+.db-nct th{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);
+  text-align:left;padding:4px 8px 5px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.db-nct td{padding:4px 8px;border-bottom:.5px solid rgba(34,34,34,.06);vertical-align:middle}
+.db-nct tr:last-child td{border-bottom:none}
+.db-nct tr:hover td{background:rgba(34,34,34,.03)}
+.db-nct .n{font-weight:600}
+.db-nct .c{font-style:italic}
+.db-nct .d{color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.db-nct .q{color:var(--color-text-muted);font-size:10px}
+.db-nct .db-ncst{white-space:normal}
+@media (max-width:1150px){.db-ncl{grid-template-columns:86px 48px minmax(0,1fr) 150px 18px}.db-ncl .c{display:none}}
+@media (max-width:900px){.db-ncd{grid-template-columns:1fr}.db-nct .c,.db-nct .q{display:none}}
