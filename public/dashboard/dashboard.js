@@ -17,7 +17,7 @@
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
-    ncOuvert: false, ncSel: null, ncEnvoi: false, ncErr: null, ncPhotos: {} };
+    ncOuvert: false, ncPhotos: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -40,13 +40,6 @@
   function lire(path) {
     return fetch(API + path, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
       .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error((j && j.error) || ('HTTP ' + r.status))), () => Promise.reject(new Error('HTTP ' + r.status))));
-  }
-  /** Une écriture. Le refus du serveur est rendu tel quel : c'est lui qui valide. */
-  function ecrire(path, corps) {
-    return fetch(API + path, { method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(corps) })
-      .then(r => r.json().then(j => r.ok ? j : Promise.reject(new Error((j && j.error) || ('HTTP ' + r.status))),
-                              () => Promise.reject(new Error('HTTP ' + r.status))));
   }
   function cleRes() { return S.vue + '|' + S.date; }
   /** Le jour dont on lit les heures : en vue Jour, un jour cliqué dans « le jour dans le mois », sinon la date. */
@@ -557,10 +550,6 @@
     const seuil = D.seuil || 4;
     return D.nc.map(x => Object.assign({}, x, { niv: ncNiveau(D, x.note), etat: ncEtat(x.taskId, seuil) }));
   }
-  /** Ne se valide que ce qui a été refait ET noté aujourd'hui : l'API contresigne un avis, elle n'en crée pas. */
-  function ncValidables() { return ncLignes().filter(x => x.etat.c === 'ok' && !x.etat.deja); }
-  function ncCoche(id) { return S.ncSel === null ? true : !!S.ncSel[id]; }
-
   /** La photo de la tâche, lue à la demande — un aller-retour au panel par ligne. */
   function ncPhoto(id) {
     const k = 'ph|' + S.shop + '|' + id + '|' + veille();
@@ -582,26 +571,6 @@
     return `<a class="db-ncph" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(x.tache)} — ${p.reperes.length} repère(s) posé(s) au contrôle"><img src="${esc(p.url)}" alt="">${rep}</a>`;
   }
 
-  /** Le bouton : contresigne l'avis du JOUR (la reprise), pas celui de la veille. */
-  function ncValider(on) {
-    // Poser la validation ne vise que les reprises cochées ; la retirer vise
-    // celles qui la portent — sans quoi le bouton « Retirer » ne trouve
-    // personne, puisqu'une ligne déjà validée n'est plus validable.
-    const ids = on
-      ? ncValidables().filter(x => ncCoche(x.taskId)).map(x => x.taskId)
-      : ncLignes().filter(x => x.etat.c === 'ok' && x.etat.deja).map(x => x.taskId);
-    if (!ids.length || S.ncEnvoi) { return; }
-    S.ncEnvoi = true; S.ncErr = null; rendre();
-    Promise.all(ids.map(id => ecrire('/pwa/tasks/validate',
-      { shopId: +S.shop, taskId: +id, date: S.date, validated: !!on })))
-      .then(() => { S.ncSel = null;
-        // La validation revient du serveur, jamais d'un état local : on relit
-        // la journée, et `ctrlDir` dit alors qui a contresigné, et quand.
-        lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, true); })
-      .catch(e => { S.ncErr = e.message; })
-      .finally(() => { S.ncEnvoi = false; rendre(); });
-  }
-
   function rendNC() {
     if (S.vue !== 'jour') { return ''; }
     const cle = cleNC(), D = S.aux[cle];
@@ -620,7 +589,11 @@
     const valides = repris.filter(x => x.etat.deja).length;
     const chip = x => `<span class="ch${x.etat.c === 'ko' || x.etat.c === 'rec' ? ' ko' : ''}"><i class="${ncCls(x.note)}"></i>${esc(x.niv.court)} · ${esc(ncCourt(x.tache))} <em class="${x.etat.c === 'ok' ? 'v' : (x.etat.c === 'ctl' ? 'ctl' : 'ko')}">${esc(x.etat.court)}${x.recidive ? ' ↻ ' + x.recidive + 'e fois' : ''}</em></span>`;
     const reste = ouverts.length > 3 ? `<span class="ch">+ ${ouverts.length - 3} autre${ouverts.length - 3 > 1 ? 's' : ''}</span>` : '';
-    const chipR = repris.length ? `<span class="ch"><i class="g3"></i>${repris.length} reprise${repris.length > 1 ? 's' : ''} <em class="v">${valides === repris.length ? 'validée' + (repris.length > 1 ? 's' : '') : (valides ? valides + ' validée' + (valides > 1 ? 's' : '') : 'à valider')}</em></span>` : '';
+    // « à valider » serait un appel à l'action : ici on constate, on ne demande
+    // rien. Sans contresignature, la pastille dit le nombre et se tait.
+    const etatR = valides === repris.length ? 'validée' + (repris.length > 1 ? 's' : '')
+      : (valides ? valides + ' validée' + (valides > 1 ? 's' : '') : '');
+    const chipR = repris.length ? `<span class="ch"><i class="g3"></i>${repris.length} reprise${repris.length > 1 ? 's' : ''}${etatR ? ' <em class="v">' + etatR + '</em>' : ''}</span>` : '';
     const tout = repris.length && valides === repris.length && !ouverts.length;
     const bandeau = `<div class="db-ncbar${S.ncOuvert ? ' ouv' : ''}${tout ? ' fini' : ''}" data-ncdrop="1"><span class="ic">${tout ? '✅' : '⚠️'}</span>
       <span class="t">${L.length} non-conformité${L.length > 1 ? 's' : ''} hier<small>${esc(jourV)} · ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}${valides ? ' · ' + valides + ' reprise' + (valides > 1 ? 's' : '') + ' validée' + (valides > 1 ? 's' : '') : ''}</small></span>
@@ -653,41 +626,31 @@
     </div>`;
 
     const ligne = x => {
-      const v = x.etat.c === 'ok' && !x.etat.deja;
-      const dejaV = x.etat.c === 'ok' && x.etat.deja;
-      const act = dejaV
-        ? `<span class="k"><span class="vd">✓ Reprise validée</span><small class="np">${x.etat.t && x.etat.t.revuePar ? 'par ' + esc(x.etat.t.revuePar) : ''}${x.etat.t && x.etat.t.valideeLe ? ' à ' + hhmm(x.etat.t.valideeLe) : ''}</small></span>`
-        : v
-          ? `<span class="k"><label><input type="checkbox" data-nccoche="${esc(x.taskId)}"${ncCoche(x.taskId) ? ' checked' : ''}><span>Valider la reprise</span></label><small>contresigne l’avis du ${esc(fD(S.date))}</small></span>`
-          : (x.etat.c === 'ctl'
-            ? `<span class="k"><a href="../#/taches" title="ouvrir Contrôle des tâches">Noter la photo ›</a><small class="np">à noter avant de pouvoir valider</small></span>`
-            : `<span class="k"><a href="../#/taches" title="ouvrir Contrôle des tâches">Relancer la boutique ›</a><small class="np">aucun avis à contresigner</small></span>`);
-      return `<div class="db-ncr${dejaV ? ' val' : ''}">
-        <span class="g"><span class="db-ncg ${ncCls(x.note)}">${esc(x.niv.court)} <small>${x.note}/5</small></span>${x.recidive ? `<small class="ko"><b>↻ récidive</b><br>${x.recidive}e fois en 7 jours</small>` : ''}<small>${x.releveeLe ? 'relevée à ' + hhmm(x.releveeLe) : ''}${x.consultant ? '<br>par ' + esc(x.consultant) : ''}</small></span>
-        <span class="t"><b>${esc(x.tache)}</b>${x.etat.t && x.etat.t.checklist ? `<small>${esc(x.etat.t.checklist)}</small>` : ''}${x.comment ? `<q>${esc(x.comment)}</q>` : '<small>sans motif consigné</small>'}</span>
+      const t = x.etat.t;
+      // La contresignature de la direction, quand elle existe, est une
+      // INFORMATION — pas un bouton. Le dashboard regarde la journée, il ne la
+      // corrige pas : noter, valider et relancer se font dans Contrôle des
+      // tâches, l'écran qui a la responsabilité de l'avis.
+      const vu = t && t.ctrlDir
+        ? ' · <b class="ok">\u2713 validée' + (t.revuePar ? ' par ' + esc(t.revuePar) : '')
+          + (t.valideeLe ? ' à ' + hhmm(t.valideeLe) : '') + '</b>'
+        : '';
+      return `<div class="db-ncr${t && t.ctrlDir ? ' val' : ''}">
+        <span class="g"><span class="db-ncg ${ncCls(x.note)}">${esc(x.niv.court)} <small>${x.note}/5</small></span>${x.recidive ? `<small class="ko"><b>\u21bb récidive</b><br>${x.recidive}e fois en 7 jours</small>` : ''}<small>${x.releveeLe ? 'relevée à ' + hhmm(x.releveeLe) : ''}${x.consultant ? '<br>par ' + esc(x.consultant) : ''}</small></span>
+        <span class="t"><b>${esc(x.tache)}</b>${t && t.checklist ? `<small>${esc(t.checklist)}</small>` : ''}${x.comment ? `<q>${esc(x.comment)}</q>` : '<small>sans motif consigné</small>'}</span>
         ${ncVignette(x)}
-        <span class="a"><span class="db-ncst ${x.etat.c}">${x.etat.lib}</span><small>${x.etat.sous}</small></span>
-        ${act}</div>`;
+        <span class="a"><span class="db-ncst ${x.etat.c}">${x.etat.lib}</span><small>${x.etat.sous}${vu}</small></span></div>`;
     };
 
-    const validables = ncValidables(), coches = validables.filter(x => ncCoche(x.taskId));
     const dejaN = L.filter(x => x.etat.c === 'ok' && x.etat.deja).length;
-    const pied = validables.length
-      ? `<div class="db-ncfoot"><span class="t">${coches.length} reprise${coches.length > 1 ? 's' : ''} cochée${coches.length > 1 ? 's' : ''} sur ${validables.length} validable${validables.length > 1 ? 's' : ''}
-          <small>une reprise se valide quand la tâche a été refaite ET notée ; les autres lignes renvoient à la notation ou à la relance</small></span><span class="sp"></span>
-          ${S.ncErr ? `<span class="db-err" style="margin:0">${esc(S.ncErr)}</span>` : ''}
-          <button class="db-btn" data-nctout="${coches.length === validables.length ? '0' : '1'}">${coches.length === validables.length ? 'Tout décocher' : 'Tout cocher'}</button>
-          <button class="db-btn pri" data-ncvalider="1"${coches.length && !S.ncEnvoi ? '' : ' disabled'}>${S.ncEnvoi ? 'Validation…' : 'Valider ' + (coches.length > 1 ? 'les ' + coches.length + ' reprises' : 'la reprise')}</button></div>`
-      : `<div class="db-ncfoot${dejaN ? ' fait' : ''}"><span class="t">${dejaN ? '✓ ' + dejaN + ' reprise' + (dejaN > 1 ? 's' : '') + ' validée' + (dejaN > 1 ? 's' : '') : 'Rien à valider pour l’instant'}
-          <small>${dejaN ? 'contresignées dans le panel · une ligne au Journal du cockpit' : 'une reprise se valide quand la tâche a été refaite ET notée au-dessus du seuil'}</small></span><span class="sp"></span>
-          ${S.ncErr ? `<span class="db-err" style="margin:0">${esc(S.ncErr)}</span>` : ''}
-          ${dejaN ? `<button class="db-btn" data-ncvalider="0"${S.ncEnvoi ? ' disabled' : ''}>${S.ncEnvoi ? 'Retrait…' : 'Retirer la validation'}</button>` : ''}
-          <a class="db-lien" href="../#/taches">Ouvrir Contrôle des tâches ›</a></div>`;
+    const pied = `<div class="db-ncfoot"><span class="t">Une non-conformité reste ouverte tant que la même tâche n\u2019a pas été refaite et notée au-dessus du seuil.
+        <small>${dejaN ? dejaN + ' reprise' + (dejaN > 1 ? 's' : '') + ' déjà contresignée' + (dejaN > 1 ? 's' : '') + ' par la direction \u00b7 ' : ''}noter, valider et relancer se font dans Contrôle des tâches</small></span><span class="sp"></span>
+        <a class="db-lien" href="../#/taches">Ouvrir Contrôle des tâches \u203a</a></div>`;
 
     return `<div class="db-ncdl">
       <div class="ct"><span class="db-lab">${L.length} non-conformité${L.length > 1 ? 's' : ''} sur ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span><span class="db-mini">${relev ? 'relevées par ' + esc(relev) + ' · ' : ''}seuil de conformité ${D.seuil || 4}/5</span></div>
       ${somm}
-      <div class="db-nclist"><div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d’hier</span><span>Photo</span><span>Aujourd’hui</span><span>Validation</span></div>${L.map(ligne).join('')}</div>
+      <div class="db-nclist"><div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d’hier</span><span>Photo</span><span>Aujourd’hui</span></div>${L.map(ligne).join('')}</div>
       ${pied}</div>`;
   }
 
@@ -1012,13 +975,6 @@
     $.querySelectorAll('[data-ctri]').forEach(b => b.addEventListener('click', () => { S.cTri = b.dataset.ctri; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; S.ncErr = null; rendre(); }));
-    $.querySelectorAll('[data-nccoche]').forEach(c => c.addEventListener('change', () => {
-      if (S.ncSel === null) { S.ncSel = {}; ncValidables().forEach(x => { S.ncSel[x.taskId] = true; }); }
-      S.ncSel[c.dataset.nccoche] = c.checked; rendre(); }));
-    $.querySelectorAll('[data-nctout]').forEach(b => b.addEventListener('click', () => {
-      const on = b.dataset.nctout === '1'; S.ncSel = {};
-      ncValidables().forEach(x => { S.ncSel[x.taskId] = on; }); rendre(); }));
-    $.querySelectorAll('[data-ncvalider]').forEach(b => b.addEventListener('click', () => ncValider(b.dataset.ncvalider === '1')));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
   }
 

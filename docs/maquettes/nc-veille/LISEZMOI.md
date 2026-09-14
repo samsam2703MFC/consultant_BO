@@ -7,7 +7,13 @@ tâches du jour −1*. Quatre partis pris, mêmes données, même charte
 > **La V4 est en service** depuis le commit « Dashboard › Jour : les
 > non-conformités de la veille ». Ces pages restent la trace de l'arbitrage ;
 > l'écran vivant, lui, est `public/dashboard/dashboard.js` (`rendNC`,
-> `ncTiroir`, `ncValider`) et l'endpoint `GET /pwa/tasks/nc`.
+> `ncTiroir`) et l'endpoint `GET /pwa/tasks/nc`.
+>
+> **Sans la validation.** Les maquettes portent des cases et un bouton
+> « Valider les reprises » ; ils ont été retirés à la demande : sur les tâches,
+> le dashboard est en lecture seule. Noter, valider et relancer se font dans
+> Contrôle des tâches. Une contresignature déjà posée s'affiche dans la colonne
+> « Aujourd'hui », comme un fait.
 
 - `v1-tuile-bandeau.html` — une 6ᵉ tuile dans le bandeau des tâches, tiroir au clic.
 - `v2-carte-dediee.html` — une carte à part sous le bandeau : compte, semaine, liste.
@@ -42,9 +48,14 @@ relevé d'avant-travaux ; la colonne de droite dit où chaque donnée est allée
 | La photo et ses repères | `/pwa/tasks/detail?shop=&task=&date=` (`photo`, `reperes`) — au clic seulement |
 | Les 7 derniers jours (V2) | `/pwa/tasks/heatmap/mois?du=&au=` — déjà lu par les vues Semaine et Mois |
 
-## La validation (V4)
+## La validation (V4) — **non retenue**
 
-Le bouton ne fait rien de neuf : il appelle `POST /pwa/tasks/validate`
+> Ce chapitre décrit le bouton des maquettes, retiré de l'écran livré : sur les
+> tâches, le dashboard montre et ne modifie pas. Il reste ici parce qu'il dit
+> ce que coûterait la validation le jour où on la voudrait, et surtout la règle
+> qui la contraint.
+
+Le bouton ne ferait rien de neuf : il appelle `POST /pwa/tasks/validate`
 (`wr_pwa_task_validate`), une fois par tâche cochée, avec `shopId`, `taskId`,
 `date` et `validated: true`. Cela pose `owner_validated_at`, `id_owner` et
 `owner_name` sur l'avis dans `mac_task_review`, la table partagée avec le

@@ -239,9 +239,12 @@ pour nommer une gravité.
 - **`indispo`** : `mac_task_review` absente. L'écran se tait alors, il n'invente pas un zéro.
 
 Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le lit dans
-`/pwa/tasks?date=<aujourd'hui>`, qu'il charge déjà. Et la validation d'une reprise est un
-`POST /pwa/tasks/validate` sur l'avis **du jour**, pas sur celui de la veille — on contresigne
-la reprise, jamais la non-conformité, qui est un fait acquis.
+`/pwa/tasks?date=<aujourd'hui>`, qu'il charge déjà.
+
+**Le dashboard ne fait que regarder.** Il n'écrit rien sur les tâches : noter (`POST
+/pwa/tasks/review`), contresigner (`POST /pwa/tasks/validate`) et relancer se font dans
+**Contrôle des tâches**, l'écran qui porte la responsabilité de l'avis. Une contresignature
+déjà posée s'affiche ici — c'est un fait à connaître, pas une commande à actionner.
 
 ### Qui fait autorité sur quoi
 
