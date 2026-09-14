@@ -325,3 +325,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-14T18:33:54Z rail produits regroupé
 2026-09-14T18:48:12Z fix D avant init
 2026-09-14T19:03:20Z rail magasins regroupé
+2026-09-14T19:12:24Z non-conformites de la veille sur le jour
