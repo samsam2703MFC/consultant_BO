@@ -869,6 +869,10 @@ class App {
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
+      analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
+        [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
+      budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
+        [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
       catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
         [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
       produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
@@ -881,8 +885,8 @@ class App {
       common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => p.must).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
-      common.ongletsProduits = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
-      if (!common.ongletsProduits.length) { common.ongletsProduits = null; }
+      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
     // Les limites API se replient en une puce : les chiffres passent devant.
     common.lacOuvert = !!S.lacOuvert;
@@ -1212,17 +1216,12 @@ class App {
         ['performance', 'Performance', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
+      // Trois questions : comment va ce magasin (leviers, équipe, panier,
+      // réputation), quel budget il tient, où il va sur trois ans.
       ['Magasins', [
-        { sub: 'Analyse & leviers', children: [
-          ['analysemag', 'Analyse magasin', 0],
-          ['ventes', 'Target de vente & classement', 0],
-          ['croisements', 'Croisements', 0],
-          ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]] },
-        { sub: 'Budget', children: [
-          ['budget', 'Suivi du budget', 0],
-          ['encodage', 'Encodage du budget', 0],
-          ['budgetparam', 'Paramètres du budget', 0],
-          ['plan', 'Plan de développement', 0]] }]],
+        ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements', 'reputation']],
+        ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
+        ['plan', 'Plan de développement', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
       // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
       // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
