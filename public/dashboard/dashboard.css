@@ -389,6 +389,11 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-ncph i u{position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 9px var(--font-ui);color:#fff;text-decoration:none}
 .db-ncph.att{background:linear-gradient(90deg,var(--color-background-secondary) 25%,#fff 50%,var(--color-background-secondary) 75%);background-size:400% 100%;animation:db-sk 1.4s ease infinite}
 .db-ncph.vide{display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);font-size:11px}
+/* Lien signé expiré : la vignette le dit, et retire des repères qui ne
+   montreraient plus rien. Le constat écrit, lui, reste lisible. */
+.db-ncph.perdue{display:flex;align-items:center;justify-content:center;background:var(--color-background-secondary)}
+.db-ncph.perdue i{display:none}
+.db-ncph.perdue::after{content:'photo expirée';font:500 9px/1.25 var(--font-ui);color:var(--color-text-muted);text-align:center;padding:0 4px}
 
 /* Une ligne : gravité · tâche et constat · photo · aujourd'hui · validation. */
 .db-nclist{padding:4px 16px 6px}

@@ -571,7 +571,10 @@
     if (p === undefined) { return `<span class="db-ncph att"></span>`; }
     if (!p.url) { return `<span class="db-ncph vide" title="photo indisponible">—</span>`; }
     const rep = p.reperes.map((r, i) => `<i style="left:${(r.x * 100).toFixed(1)}%;top:${(r.y * 100).toFixed(1)}%;width:${(r.l * 100).toFixed(1)}%;height:${(r.h * 100).toFixed(1)}%;border-color:${esc(x.niv.couleur)}"><u style="background:${esc(x.niv.couleur)}">${i + 1}</u></i>`).join('');
-    return `<a class="db-ncph" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(x.tache)} — ${p.reperes.length} repère(s) posé(s) au contrôle"><img src="${esc(p.url)}" alt="">${rep}</a>`;
+    // Le lien de la photo est SIGNÉ et expire. Sans ce garde-fou, la vignette
+    // restait une image cassée surmontée de repères qui ne montraient plus
+    // rien — le constat écrit, lui, se lit toujours.
+    return `<a class="db-ncph" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(x.tache)} — ${p.reperes.length} repère(s) posé(s) au contrôle"><img src="${esc(p.url)}" alt="" onerror="var b=this.parentNode;this.remove();b.classList.add('perdue')">${rep}</a>`;
   }
 
   function rendNC() {
