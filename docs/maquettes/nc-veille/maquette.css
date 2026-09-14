@@ -1,0 +1,90 @@
+/* Maquettes « non-conformités de la veille » — styles candidats pour dashboard.css. */
+
+/* Gravité d'une non-conformité, d'après le barème (3 mineure · 2 majeure · 1 critique). */
+.db-ncg{display:inline-flex;align-items:center;gap:5px;font:700 9.5px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.db-ncg.g1{background:#8D1D2C;color:#fff}
+.db-ncg.g2{background:#FBE3E6;color:#C0182B;box-shadow:inset 0 0 0 1px #E8B4BB}
+.db-ncg.g3{background:#FBEFE0;color:#B26A00;box-shadow:inset 0 0 0 1px #E8C9A0}
+.db-ncg small{font-weight:600;opacity:.92;text-transform:none;letter-spacing:0;font-size:9.5px}
+
+/* L'état de la même tâche aujourd'hui. */
+.db-ncst{display:inline-flex;align-items:center;gap:6px;font:600 10.5px var(--font-ui);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.db-ncst.ok{background:#dfeee0;color:#2d7a3e}
+.db-ncst.ctl{background:#e8eef8;color:#1f4e8c}
+.db-ncst.ko{background:var(--color-primary);color:#fff}
+.db-ncst.rec{background:#fdf4f5;color:var(--color-primary);border:1px solid #e8b4bb}
+.db-ncst.mu{background:var(--color-background-secondary);color:var(--color-text-muted)}
+
+/* La photo de la tâche, avec ses repères. */
+.db-ncph{width:64px;height:48px;border-radius:6px;position:relative;overflow:hidden;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18);flex:none}
+.db-ncph.four{background:linear-gradient(160deg,#5a4a3e,#2e2622 55%,#6b5646)}
+.db-ncph.vitrine{background:linear-gradient(160deg,#e9dfd2,#c9b8a3 50%,#f2ebe1)}
+.db-ncph.comptoir{background:linear-gradient(160deg,#d9b98a,#b48a55 55%,#e6cfa6)}
+.db-ncph.frigo{background:linear-gradient(160deg,#dfe6ea,#b7c4cb 55%,#eef2f4)}
+.db-ncph i{position:absolute;width:15px;height:15px;border:2px solid #fff;border-radius:50%;background:var(--color-primary);color:#fff;font:700 8px/11px var(--font-ui);text-align:center;font-style:normal;box-shadow:0 0 0 1px var(--color-primary)}
+
+/* Une ligne de non-conformité : gravité · tâche et constat · photo · aujourd'hui. */
+.db-ncr{display:grid;grid-template-columns:146px minmax(0,1.5fr) 64px minmax(0,1fr);gap:14px;align-items:start;padding:10px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:11.5px}
+.db-ncr:last-child{border-bottom:none}
+.db-ncr.hd{padding:4px 0 6px;border-bottom:.5px solid var(--color-border-tertiary)}
+.db-ncr.hd span{font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.db-ncr .g small{display:block;color:var(--color-text-muted);font-size:10px;margin-top:4px;line-height:1.35}
+.db-ncr .t b{font-weight:600;display:block;line-height:1.3}
+.db-ncr .t small{display:block;color:var(--color-text-muted);font-size:10px;line-height:1.35;margin-top:1px}
+.db-ncr .t q{display:block;margin-top:5px;font-style:italic;color:var(--color-text);font-size:11px;line-height:1.45;quotes:'« ' ' »'}
+.db-ncr .a small{display:block;color:var(--color-text-muted);font-size:10px;margin-top:5px;line-height:1.35}
+.db-ncr .a a{font:600 10.5px var(--font-ui);color:var(--color-primary);text-decoration:none}
+
+/* V1 — la tuile dans le bandeau des tâches, et son tiroir. */
+.db-taches.nc6{grid-template-columns:1.1fr 1fr 1fr 1fr 1.25fr 1.9fr}
+.db-taches .db-bt.ncv{background:#fdf4f5;border:1.5px solid var(--color-primary);cursor:pointer;position:relative}
+.db-taches .db-bt.ncv .k,.db-taches .db-bt.ncv .v{color:var(--color-primary)}
+.db-taches .db-bt.ncv .dr{position:absolute;right:9px;top:8px;font:500 10px var(--font-ui);color:var(--color-primary)}
+.db-taches .db-bt.ncv .gs{display:flex;gap:4px;flex-wrap:wrap;margin:1px 0 4px}
+.db-taches .db-bt.ncv.vide{background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);cursor:default}
+.db-taches .db-bt.ncv.vide .k,.db-taches .db-bt.ncv.vide .v{color:var(--color-text-muted)}
+.db-ncdrop{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-top:none;border-radius:0 0 12px 12px;padding:8px 14px 8px;margin:-6px 0 6px}
+.db-ncdrop .db-note{padding:8px 0 0}
+
+/* V2 — la carte dédiée : résumé, liste, note. */
+.db-nccard>.ct .db-ncg{margin-left:2px}
+.db-ncsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 1.7fr;gap:10px;padding:12px 16px 6px}
+.db-ncsum .db-bt{min-height:88px}
+.db-ncsum .db-bt .v{font-size:24px;margin:4px 0 2px}
+.db-ncsum .db-bt .v small{font-size:11px}
+.db-ncsum .db-bt.ok{background:#f0f7f2;border:1px solid #bfdcc6}.db-ncsum .db-bt.ok .v{color:#2d7a3e}
+.db-ncsum .db-bt.ko{background:#fdf4f5;border:1px solid #e8b4bb}.db-ncsum .db-bt.ko .v{color:var(--color-primary)}
+.db-ncsum .db-bt.wa{background:#FBEFE0;border:1px solid #E8C9A0}.db-ncsum .db-bt.wa .v{color:#B26A00}
+.db-nc7{display:grid;gap:6px;align-items:end;height:46px;margin:7px 0 4px}
+.db-nc7>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px;font:500 8.5px var(--font-ui);color:var(--color-text-muted)}
+.db-nc7>div i{display:block;width:48%;border-radius:3px 3px 0 0;background:#e5b6bc;min-height:2px}
+.db-nc7>div i.z{background:#dfeee0}
+.db-nc7>div i.h{background:var(--color-primary)}
+.db-nc7>div em{font-style:normal;font-weight:700;color:var(--color-text)}
+.db-nclist{padding:4px 16px 6px}
+.db-nccard .db-note a{color:var(--color-primary);font-weight:600;text-decoration:none}
+
+/* V3 — le bandeau d'alerte en tête de la journée. */
+.db-ncbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fdf4f5;border:1px solid #e8b4bb;border-left:4px solid var(--color-primary);border-radius:10px;padding:9px 14px;margin:0 0 12px;font-size:12px}
+.db-ncbar .ic{font-size:18px;line-height:1}
+.db-ncbar .t{font-weight:700;color:var(--color-primary);white-space:nowrap}
+.db-ncbar .t small{display:block;font-weight:400;color:var(--color-text-muted);font-size:10.5px}
+.db-ncbar .chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.db-ncbar .ch{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px 3px 6px;font:500 10.5px var(--font-ui);background:var(--color-surface);border:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.db-ncbar .ch i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.db-ncbar .ch i.g1{background:#8D1D2C}.db-ncbar .ch i.g2{background:#C0182B}.db-ncbar .ch i.g3{background:#D97706}
+.db-ncbar .ch em{font-style:normal;font-weight:700;color:#2d7a3e}
+.db-ncbar .ch em.ctl{color:#1f4e8c}.db-ncbar .ch em.ko{color:var(--color-primary)}
+.db-ncbar .ch.ko{border-color:#e8b4bb;background:#fff}
+.db-ncbar .act{display:flex;gap:8px;align-items:center;margin-left:auto}
+.db-ncbar .act a{font:600 11px var(--font-ui);color:var(--color-primary);text-decoration:none}
+
+/* V3 — dans le fil du jour, les tâches notées non conformes hier sont marquées. */
+.db-tdrop .pl.h{box-shadow:0 0 0 1.5px var(--color-primary) inset}
+.db-tdrop .pl u{text-decoration:none;font:700 8.5px var(--font-ui);color:#fff;background:var(--color-primary);border-radius:4px;padding:1px 5px;margin-left:2px;letter-spacing:.02em}
+.db-tdrop .pl u.ok{background:#2d7a3e}
+.db-tdrop .pl u.ctl{background:#1f4e8c}
+.db-taches .fil .s b.h{color:var(--color-primary);font-weight:600}
+.db-tdrop .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);padding:6px 0 2px}
+.db-tdrop .leg u{text-decoration:none;font:700 8.5px var(--font-ui);color:#fff;background:var(--color-primary);border-radius:4px;padding:1px 5px}
+.db-tdrop .leg u.ok{background:#2d7a3e}.db-tdrop .leg u.ctl{background:#1f4e8c}
