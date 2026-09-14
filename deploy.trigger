@@ -321,3 +321,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-14T07:37:23Z sonde n + sans secrets
 2026-09-14T11:04:38Z planning par secteur
 2026-09-14T11:17:30Z sans mini-courbes
+2026-09-14T17:22:21Z planogramme vue tablette

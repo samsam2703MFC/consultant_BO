@@ -8354,6 +8354,8 @@ class App {
     // imprimer la vitrine qu'on a sous les yeux. La feuille est construite ici,
     // en HTML simple, et le navigateur s'occupe de la pagination.
     common.plImprimer = (pl.zones || []).length ? () => this.plImprimer() : null;
+    // Le magasin de la vue tablette : celui de l'écran s'il en a un, sinon le premier ouvert.
+    common.plShopTablette = String(this.state.shop || this.state.shopId || (this.D.stores && this.D.stores[0] && this.D.stores[0].id) || '4');
     common.plExporter = (pl.slots || []).length ? () => this.plExporter() : null;
 
     common.plCible = cible;

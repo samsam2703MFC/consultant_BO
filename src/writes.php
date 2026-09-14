@@ -3464,3 +3464,71 @@ function wr_scouting_populations_put(): array
     journalAdd('CEO', 'Scouting', 'Population', 'Import StatBel — ' . $n . ' communes mises à jour' . $fichier);
     return ['ok' => true, 'n' => $n];
 }
+
+/**
+ * La photo du comptoir monté : une par magasin, zone et jour, prise sur la
+ * tablette une fois le comptoir dressé. C'est la trace du montage, à côté de
+ * la tâche « Photo du comptoir » du panel, que le cockpit ne peut pas rendre
+ * à sa place (aucune route de dépôt côté panel).
+ */
+function plaMontageTable(): void
+{
+    static $ok = false;
+    if ($ok) { return; }
+    Db::exec('CREATE TABLE IF NOT EXISTS pla_montage ('
+        . 'shop_id INT NOT NULL, zone_id INT NOT NULL, jour DATE NOT NULL,'
+        . 'photo VARCHAR(255) NOT NULL, auteur VARCHAR(190) NOT NULL DEFAULT \'\','
+        . 'quand DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'
+        . 'PRIMARY KEY (shop_id, zone_id, jour)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $ok = true;
+}
+
+/** GET /planogramme/montage?shop=4&date=YYYY-MM-DD — les photos de montage du jour, par zone. */
+function ep_plano_montage(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $jour = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) { http_response_code(400); return ['error' => 'shop ou date manquant']; }
+    plaMontageTable();
+    $out = [];
+    foreach (Db::rows('SELECT zone_id, photo, auteur, quand FROM pla_montage WHERE shop_id = ? AND jour = ?', [$sid, $jour]) as $r) {
+        $out[(string) (int) $r['zone_id']] = ['photo' => (string) $r['photo'], 'auteur' => (string) $r['auteur'], 'quand' => (string) $r['quand']];
+    }
+    return ['shop' => $sid, 'date' => $jour, 'zones' => $out];
+}
+
+/** POST /planogramme/montage — {shop, zoneId, date?, data (data-URL), auteur?} ; data vide = on retire. */
+function wr_plano_montage(): array
+{
+    $b = body();
+    $sid = (int) ($b['shop'] ?? 0); $zid = (int) ($b['zoneId'] ?? 0);
+    $jour = (string) ($b['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || $zid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour)) { http_response_code(422); return ['error' => 'magasin, zone et date sont requis']; }
+    plaMontageTable();
+    $dossier = __DIR__ . '/../public/uploads/plano';
+    $rel = 'uploads/plano/montage-' . $sid . '-' . $zid . '-' . $jour;
+    $data = (string) ($b['data'] ?? '');
+    if (trim($data) === '') {
+        $anc = Db::row('SELECT photo FROM pla_montage WHERE shop_id = ? AND zone_id = ? AND jour = ?', [$sid, $zid, $jour]);
+        if ($anc !== null && !empty($anc['photo'])) { $f = __DIR__ . '/../public/' . $anc['photo']; if (is_file($f)) { @unlink($f); } }
+        Db::exec('DELETE FROM pla_montage WHERE shop_id = ? AND zone_id = ? AND jour = ?', [$sid, $zid, $jour]);
+        return ['ok' => true, 'retiree' => true];
+    }
+    if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $data, $m)) { http_response_code(422); return ['error' => 'image illisible (data-URL attendue)']; }
+    $bin = base64_decode($m[2], true);
+    if ($bin === false || strlen($bin) < 64) { http_response_code(422); return ['error' => 'image illisible']; }
+    if (strlen($bin) > 6 * 1024 * 1024) { http_response_code(413); return ['error' => 'image trop lourde — 6 Mo au maximum']; }
+    $info = @getimagesizefromstring($bin);
+    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime'] ?? ''] ?? null;
+    if ($ext === null) { http_response_code(415); return ['error' => 'format non accepté — JPEG, PNG ou WebP']; }
+    if (!is_dir($dossier) && !@mkdir($dossier, 0775, true) && !is_dir($dossier)) { http_response_code(500); return ['error' => 'dossier des photos impossible à créer']; }
+    foreach (['jpg', 'png', 'webp'] as $e) { $f = __DIR__ . '/../public/' . $rel . '.' . $e; if (is_file($f)) { @unlink($f); } }
+    $chemin = $rel . '.' . $ext;
+    if (@file_put_contents(__DIR__ . '/../public/' . $chemin, $bin) === false) { http_response_code(500); return ['error' => 'écriture de la photo impossible']; }
+    $auteur = mb_substr(trim((string) ($b['auteur'] ?? '')), 0, 190);
+    if ($auteur === '') { $u = setting('utilisateur', []); $auteur = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'Tablette'; }
+    Db::exec('INSERT INTO pla_montage (shop_id, zone_id, jour, photo, auteur, quand) VALUES (?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE photo = VALUES(photo), auteur = VALUES(auteur), quand = VALUES(quand)',
+        [$sid, $zid, $jour, $chemin, $auteur, date('Y-m-d H:i:s')]);
+    return ['ok' => true, 'photo' => $chemin, 'auteur' => $auteur, 'quand' => date('Y-m-d H:i:s')];
+}

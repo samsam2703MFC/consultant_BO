@@ -173,6 +173,7 @@ function route(string $method, string $path): mixed
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             $path === '/planogramme'                   => ep_planogramme(),
             $path === '/planogramme/photos'            => ep_plano_photos(),
+            $path === '/planogramme/montage'           => ep_plano_montage(),
             $path === '/fonds'                         => ep_fonds(),
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
@@ -373,6 +374,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/planogramme/placement/([\w-]+)$#', $path, $m)) { return wr_plano_placer($m[1]); }
     if ($method === 'PUT' && $path === '/planogramme/note') { return wr_plano_note(); }
     if ($method === 'POST' && $path === '/planogramme/photo') { return wr_plano_photo(); }
+    if ($method === 'POST' && $path === '/planogramme/montage') { return wr_plano_montage(); }
     // --- fonds & redevances : le cockpit ÉCRIT dans le module marketing, qui
     //     reste le seul tenant du grand livre. Aucune écriture locale.
     if ($method === 'POST' && $path === '/fonds/mouvement') { return wr_fonds_mouvement(null); }

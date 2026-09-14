@@ -7087,7 +7087,7 @@ function tplPlanoComptoir(c, x){
           ${c.plPeriodesOpts.map(pr => `<button ${x.A(pr.go)} title="${esc(pr.aide)}" style="${btn(pr.on)}">${esc(pr.nom)}</button>`).join('')}` : ''}` : ''}
       <div style="flex:1"></div>
       <span style="font-size:11.5px;color:var(--color-text-muted)">${c.plTot.slots} emplacement(s) · ${c.plTot.libres} libre(s) · ${c.plTot.places} placée(s)</span>
-      <button ${x.A(c.plImprimer)} title="Imprimer tout le comptoir, zones comprises — la feuille sort aussi en PDF par le navigateur" style="${btn(false, !!c.plImprimer)}">⎙ Imprimer</button>
+      <a href="planogramme/?shop=${esc(c.plShopTablette || '4')}" target="_blank" rel="noopener" title="Le comptoir en vue tablette : comptoir par comptoir, meuble par meuble, la fiche de chaque produit et son pourquoi, la photo du comptoir monté" style="${btn(false, !!c.plImprimer)};text-decoration:none;display:inline-flex;align-items:center">📱 Tablette</a>
       <button ${x.A(c.plExporter)} title="Le comptoir en CSV : quoi, où, combien, à quel moment — pour la centrale et les boutiques" style="${btn(false, !!c.plExporter)}">⇩ Exporter</button>
       <button ${x.A(c.plOrgGo)} style="${btn(c.plOrg)}">${c.plOrg ? 'Masquer l’organisation' : 'Organiser le comptoir'}</button>
     </div>
