@@ -869,6 +869,16 @@ class App {
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
+      caAchats: ['Achats', 'Ce que les magasins commandent, ce qu’on négocie et ce que la centrale met en avant : les commandes de l’envoi à la livraison, les demandes de prix aux fournisseurs, et les campagnes commerciales.',
+        [['caAchats', 'Commandes'], ['caDemande', 'Demande de prix'], ['caCampagnes', 'Campagnes commerciales']]],
+      mktCampagnes: ['Campagnes', 'Les campagnes du réseau : qui occupe quel mois, la liste et leurs statuts, ce qu’elles devraient rapporter, et ce qu’elles ont changé.',
+        [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mesure', 'Mesure']]],
+      suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
+        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
+      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne et la table des KPI.',
+        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['caReglages', 'Centrale d’achat'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI']]],
+      journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
+        [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
       analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
         [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
@@ -1213,7 +1223,10 @@ class App {
       // l'année, la marge.
       ['Pilotage', [
         ['resultatJour', 'Résultat', 0],
-        ['performance', 'Performance', 0]]],
+        ['performance', 'Performance', 0],
+        // La page la plus regardée du réseau n'avait pas d'entrée : on
+        // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
+        ['ext:dashboard/', 'Dashboard magasin ↗', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
       // Trois questions : comment va ce magasin (leviers, équipe, panier,
@@ -1221,7 +1234,8 @@ class App {
       ['Magasins', [
         ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements', 'reputation']],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
-        ['plan', 'Plan de développement', 0]]],
+        ['plan', 'Plan de développement', 0],
+        ['scouting', 'Scouting — où ouvrir', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
       // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
       // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
@@ -1234,40 +1248,32 @@ class App {
         ['anaprod', 'Où ça se vend', 0, ['usage', 'manque']],
         ['analyse', 'Dans le temps', 0]]],
       ['Centrale d’achat', [
-        ['caAchats', 'Commandes', 0],
+        ['caAchats', 'Achats', 0, ['caDemande', 'caCampagnes']],
         ['caFacturation', 'Facturation magasins', 0]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
       ['Marque & marketing', [
+        ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
         ['projets', 'Projets de développement', nLate],
-        ['fonds', 'Fonds & Royalties', 0],
-        { sub: 'Campagnes', children: [
-          ['mktCalendrier', 'Calendrier marketing', 0],
-          ['mktCampagnes', 'Campagnes', 0],
-          ['bxcampagnes', 'Budget × Campagnes', 0],
-          ['mesure', 'Mesure des campagnes', 0],
-          ['mktTypes', 'Types de campagne', 0]] }]],
+        ['fonds', 'Fonds & Royalties', 0]]],
       ['Contrôle', [
-        { sub: 'Checklists consultants', children: [
-          ['suivi', 'Suivi des tâches', S.suiviData ? S.suiviData.ouverts : 0],
-          ['controle', 'Contrôle des tâches', ((D.pwaTasks || {}).totals || {}).aValider || 0],
-          ['suiviMensuel', 'Suivi mensuel', 0]] },
+        ['suivi', 'Tâches', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
         ['reporting', 'Reporting automatisé', 0]]],
-      // Où ouvrir le prochain magasin : marché, concurrence, CA estimé.
-      ['Développement', [
-        ['scouting', 'Scouting commercial', 0]]],
       ['Administration', [
-        ['kpiTable', 'Table KPI', 0],
-        ['diagnostic', 'Diagnostic API', 0],
-        { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
-          ['caReglages', 'Centrale d’achat', 0],
-          ['usageConsole', 'Usage de la console', 0],
-          ['journal', 'Journal', 0]] }]]];
+        ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable']],
+        ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
-      if (Array.isArray(it)) return { type: 'leaf', label: it[1], badge: it[2] || false, go: goTo(it[0]), st: navSt(S.screen === it[0] || (it[3] || []).indexOf(S.screen) >= 0, false) };
+      if (Array.isArray(it)) {
+        // « ext: » mène hors du cockpit, dans un onglet à part — la page
+        // tablette n'est pas un écran de la console, elle vit à côté.
+        const ext = it[0].indexOf('ext:') === 0;
+        return { type: 'leaf', label: it[1], badge: it[2] || false,
+          go: ext ? () => window.open(it[0].slice(4), '_blank', 'noopener') : goTo(it[0]),
+          st: navSt(!ext && (S.screen === it[0] || (it[3] || []).indexOf(S.screen) >= 0), false) };
+      }
       const childActive = it.children.some(c => S.screen === c[0]);
       const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
       return { type: 'sub', label: it.sub, open, chevron: open ? '▾' : '▸',
