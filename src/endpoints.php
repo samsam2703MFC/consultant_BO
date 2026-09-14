@@ -4123,6 +4123,29 @@ function ep_pwa_tasks_nc(): array
         }
     } catch (PDOException $e) { /* relevé absent : on garde le référentiel */ }
 
+    // Ce qui manque encore : le relevé quotidien ne couvre que les journées
+    // RÉVOLUES, donc jamais aujourd'hui. Une non-conformité du jour même —
+    // courante sous Semaine et Mois — s'affichait « Tâche #1209 ». Le nom d'une
+    // tâche ne change pas : on va chercher le plus récent connu, quel que soit
+    // le jour et quelle que soit la boutique. Une requête, bornée aux
+    // identifiants qui manquent.
+    $manquants = [];
+    foreach ($rows as $r) {
+        $t = (int) $r['id_task'];
+        if (!isset($noms[$t])) { $manquants[$t] = true; }
+    }
+    if ($manquants !== []) {
+        try {
+            $ids = array_keys($manquants);
+            $in  = implode(',', array_fill(0, count($ids), '?'));
+            foreach (Db::rows('SELECT id_task, nom FROM ceo_tache_jour WHERE id_task IN (' . $in . ')'
+                . " AND nom <> '' ORDER BY jour DESC", $ids) as $r) {
+                $t = (int) $r['id_task'];
+                if (!isset($noms[$t])) { $noms[$t] = trim((string) $r['nom']); }
+            }
+        } catch (PDOException $e) { /* tant pis : l'identifiant, jamais un nom inventé */ }
+    }
+
     $estNC = static fn ($r) => ($r['rating'] !== null && (int) $r['rating'] < $seuil)
         || ($r['is_accepted'] !== null && (int) $r['is_accepted'] === 0);
 
