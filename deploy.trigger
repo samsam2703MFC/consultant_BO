@@ -327,3 +327,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-14T19:03:20Z rail magasins regroupé
 2026-09-14T19:12:58Z rail complet regroupé
 2026-09-14T19:13:51Z non-conformites de la veille sur le jour
+2026-09-14T19:21:22Z tâches en lecture seule sur le jour
