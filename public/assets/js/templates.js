@@ -6,6 +6,13 @@
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
+/* Les onglets des écrans produits regroupés : une même question, plusieurs lectures. */
+function tplOngletsProduits(c, x){
+  const { esc } = x;
+  return `<div class="no-print" style="display:inline-flex;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-bottom:14px;gap:2px">
+    ${c.ongletsProduits.map(o => `<button ${x.A(o.go)} style="font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text)'}">${esc(o.nom)}${o.badge ? `<span style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 6px;background:${o.on ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.08)'}">${o.badge}</span>` : ''}</button>`).join('')}
+  </div>`;
+}
 function navBtn(n, x){
   const { esc } = x;
   const badge = b => b ? `<span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--color-primary);color:#fff;font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center">${b}</span>` : '';
@@ -96,11 +103,13 @@ export function render(c, x){
         <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.metaDate)}</span>
           <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--color-secondary);color:var(--color-on-abricot)">${esc(c.metaPeriode)}</span>
+          ${(c.lacunes && c.lacunes.length) ? `<button ${x.A(c.lacToggle)} title="${c.lacOuvert ? 'Replier' : 'Ce que cet écran ne peut pas afficher, et pourquoi'}" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;cursor:pointer">⚠ ${c.lacunes.length} limite${c.lacunes.length > 1 ? 's' : ''} API ${c.lacOuvert ? '▴' : '▾'}</button>` : ''}
         </div>
       </header>`}
 
       ${c.ready ? `
-      ${(c.lacunes && c.lacunes.length) ? `<div class="no-print" style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      ${c.ongletsProduits ? tplOngletsProduits(c, x) : ''}
+      ${(c.lacunes && c.lacunes.length && c.lacOuvert) ? `<div class="no-print" style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Ce que cet écran ne peut pas afficher</div>
         ${c.lacunes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;flex-wrap:wrap">
           <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;${l.api
@@ -486,6 +495,7 @@ function tplReferentiel(c, x){
         ${c.isCat ? `<th style="${TH};${num}" title="Même calcul que l’écran Scoring produits — volume, marge nette, perte, présence au comptoir">Score</th><th style="${TH};${num}">Prix</th><th style="${TH};${num}">Coût</th><th style="${TH};${num}">Marge brute</th><th style="${TH};${num}" title="Commission de marque, au taux des réglages de la centrale d’achat">Commission</th><th style="${TH};${num}" title="Marge après commission de marque — celle que pilote la centrale d’achat">Marge nette</th><th style="${TH};${num}">DLV</th>` : ''}
         ${c.isAsso ? `<th style="${TH};text-align:center">Obligatoire</th><th style="${TH};${num}" title="Quantité minimale à tenir. Le bouton « batch » reprend la fournée minimale de la fiche produit.">Qté min. · batch</th><th style="${TH}" title="Où la référence est présentée au comptoir. « Attribuer » ouvre le planogramme sur le plan actuel.">Emplacement au comptoir</th>` : ''}
         ${c.isPlano ? `<th style="${TH}">Zone</th><th style="${TH}">Meuble</th><th style="${TH}">Niveau</th><th style="${TH};${num}">Emplac.</th>` : ''}
+        ${c.isCat ? `<th style="${TH}">Voir aussi</th>` : ''}
         <th style="${TH};text-align:right">Fiche</th>
       </tr></thead>
       <tbody>
@@ -532,6 +542,7 @@ function tplReferentiel(c, x){
             <td style="${TD};color:var(--color-text-muted)">${esc(l.meuble) || ''}</td>
             <td style="${TD};color:var(--color-text-muted)">${esc(l.niveau) || ''}</td>
             <td style="${TD};${num}">${esc(l.slot) || ''}</td>` : ''}
+          ${c.isCat ? `<td style="${TD};white-space:nowrap"><span style="display:inline-flex;gap:4px">${(l.voir || []).map(v => `<button ${x.A(v.go)} title="${esc(v.titre)}" style="font-family:var(--font-ui);font-size:10px;font-weight:600;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:2px 7px;background:var(--color-surface);color:var(--color-text);cursor:pointer">${esc(v.nom)}</button>`).join('')}</span></td>` : ''}
           <td style="${TD};text-align:right">${l.parametre ? '<span style="font-size:11px;color:#2d7a3e">remplie</span>' : '<span style="font-size:11px;color:var(--color-text-muted)">vide</span>'}</td>
         </tr>`).join('')}
       </tbody>
