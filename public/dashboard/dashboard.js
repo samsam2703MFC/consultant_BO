@@ -518,7 +518,10 @@
   /** Ce que la MÊME tâche est devenue aujourd'hui. Le cœur du bloc. */
   function ncEtat(taskId, seuil) {
     const d = S.aux['taches|' + S.date];
-    if (!d) { return { c: 'mu', lib: 'lecture du jour…', sous: '', court: '…' }; }
+    // La journée en cours se lit sur le panel : c'est long. Tant qu'elle n'est
+    // pas là, on le dit — et la pastille du bandeau se tait plutôt que
+    // d'afficher trois points qui passeraient pour un état de la tâche.
+    if (!d) { return { c: 'mu', lib: 'lecture de la journée en cours…', sous: 'le devenir de la tâche s’affichera ici', court: '' }; }
     const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
     const t = sh && (sh.taches || []).find(x => String(x.taskId) === String(taskId));
     if (!t) { return { c: 'mu', lib: 'Pas attendue aujourd’hui', sous: 'la tâche n’est pas au programme du jour', court: 'pas au programme' }; }
@@ -587,7 +590,7 @@
     }
     const ouverts = L.filter(x => x.etat.c !== 'ok'), repris = L.filter(x => x.etat.c === 'ok');
     const valides = repris.filter(x => x.etat.deja).length;
-    const chip = x => `<span class="ch${x.etat.c === 'ko' || x.etat.c === 'rec' ? ' ko' : ''}"><i class="${ncCls(x.note)}"></i>${esc(x.niv.court)} · ${esc(ncCourt(x.tache))} <em class="${x.etat.c === 'ok' ? 'v' : (x.etat.c === 'ctl' ? 'ctl' : 'ko')}">${esc(x.etat.court)}${x.recidive ? ' ↻ ' + x.recidive + 'e fois' : ''}</em></span>`;
+    const chip = x => `<span class="ch${x.etat.c === 'ko' || x.etat.c === 'rec' ? ' ko' : ''}"><i class="${ncCls(x.note)}"></i>${esc(x.niv.court)} · ${esc(ncCourt(x.tache))} ${x.etat.court || x.recidive ? `<em class="${x.etat.c === 'ok' ? 'v' : (x.etat.c === 'ctl' ? 'ctl' : 'ko')}">${esc(x.etat.court)}${x.recidive ? (x.etat.court ? ' ' : '') + '↻ ' + x.recidive + 'e fois' : ''}</em>` : ''}</span>`;
     const reste = ouverts.length > 3 ? `<span class="ch">+ ${ouverts.length - 3} autre${ouverts.length - 3 > 1 ? 's' : ''}</span>` : '';
     // « à valider » serait un appel à l'action : ici on constate, on ne demande
     // rien. Sans contresignature, la pastille dit le nombre et se tait.
