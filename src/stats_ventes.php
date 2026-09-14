@@ -43,6 +43,8 @@ function ep_stats_ventes_sonde(): array
         'sched'  => '/shops/' . $sid . '/schedule?date=' . $date,
         'kpis'   => '/shops/' . $sid . '/statistics/sales/kpis?date_from=' . $date . '&date_to=' . $date,
         'daily'  => '/shops/' . $sid . '/statistics/daily-summary?date=' . $date,
+        'emp'    => '/shops/' . $sid . '/employees',
+        'emp2'   => '/employees?shop_id=' . $sid,
         'notif'  => '/shops/' . $sid . '/notifications',
         'notif2' => '/shops/' . $sid . '/notifications?date=' . $date,
     ];
