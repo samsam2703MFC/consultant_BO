@@ -210,10 +210,13 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
-### `GET /pwa/tasks/nc?shop=4&date=2026-09-13` — les non-conformités d'une journée
+### `GET /pwa/tasks/nc` — les non-conformités d'une journée ou d'une période
 
-Ce que le **dashboard magasin** lit sur la veille : les tâches d'une boutique notées sous le
-seuil ce jour-là, avec leur motif. Tout vient de `mac_task_review` — aucun appel au panel, la
+    ?shop=4&date=2026-09-13        une journée (la veille, sous la vue Jour)
+    ?shop=4&du=2026-09-07&au=…     une période (sous les vues Semaine et Mois)
+
+Ce que le **dashboard magasin** lit : les tâches d'une boutique notées sous le
+seuil sur la fenêtre demandée, avec leur motif. Tout vient de `mac_task_review` — aucun appel au panel, la
 journée est révolue donc figée. Le barème part avec la réponse : la page n'a pas à lire `/meta`
 pour nommer une gravité.
 
@@ -221,10 +224,13 @@ pour nommer une gravité.
 { "shopId": "4", "date": "2026-09-13", "seuil": 4,
   "niveaux": [{ "n": 1, "nom": "Non conforme — critique", "couleur": "#8D1D2C" }],
   "notees": 18,
-  "nc": [{ "taskId": "101", "tache": "Contrôle Qualité – Températures frigo vitrine",
+  "nc": [{ "taskId": "101", "jour": "2026-09-13",
+           "tache": "Contrôle Qualité – Températures frigo vitrine",
            "note": 1, "comment": "Frigo vitrine relevé à 9 °C à 16 h.",
            "consultant": "K. Moreau", "releveeLe": "2026-09-13 16:20",
-           "recidive": 3, "valideeLe": null, "valideePar": null }],
+           "recidive": 3,
+           "suite": { "jour": "2026-09-14", "note": 4, "conforme": true },
+           "valideeLe": null, "valideePar": null }],
   "semaine": [{ "jour": "2026-09-07", "nc": 1, "notees": 16, "releve": true }],
   "indispo": false }
 ```
@@ -236,6 +242,13 @@ pour nommer une gravité.
   jours précédents, bornes comprises. `null` en dessous de deux.
 - **`tache`** : le référentiel `todo_task`, à défaut le relevé quotidien `ceo_tache_jour`, à
   défaut l'identifiant — jamais un nom inventé.
+- **`suite`** : la PREMIÈRE note posée sur la même tâche après ce jour-là, `null` s'il n'y en a
+  pas eu. C'est elle qui dit si l'écart a été repris, et quand — sans elle, la liste des
+  non-conformités d'un mois ne serait qu'un palmarès des reproches. La vue Jour ne s'en sert pas :
+  elle lit le devenir de la tâche dans la journée en cours, plus riche (rendue sans note, pas
+  rendue du tout).
+- **`semaine`** : la série des sept derniers jours, renseignée **seulement** pour une journée.
+  Sur une période, le compte de la période est déjà l'échelle.
 - **`indispo`** : `mac_task_review` absente. L'écran se tait alors, il n'invente pas un zéro.
 
 Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le lit dans

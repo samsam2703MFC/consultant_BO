@@ -67,8 +67,11 @@
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux(cleNC(), '/pwa/tasks/nc?shop=' + encodeURIComponent(S.shop) + '&date=' + veille(), force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
+    // Les non-conformités se lisent sous les trois vues : la veille en Jour,
+    // la période affichée en Semaine et en Mois.
+    lireAux(cleNC(), urlNC(ncFenetre()), force);
     if ((force || !S.res[kr]) && !S.enCours[kr]) {
       S.enCours[kr] = true; delete S.err[kr];
       const p = S.vue === 'jour' ? '/exploitation/jour?date=' + S.date : '/exploitation/periode?vue=' + S.vue + '&date=' + S.date;
@@ -502,7 +505,17 @@
    * dépliage — elle coûte un aller-retour au panel par ligne.
    */
   function veille() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() - 1); return t.toISOString().slice(0, 10); }
-  function cleNC() { return 'nc|' + S.shop + '|' + veille(); }
+  /** La fenêtre lue : la veille en vue Jour, la période affichée sinon — jamais le futur. */
+  function ncFenetre() {
+    if (S.vue === 'jour') { return { du: veille(), au: veille(), jour: true }; }
+    const [d, a] = bornes();
+    return { du: d, au: a > AUJ ? AUJ : a, jour: false };
+  }
+  function cleNC() { const f = ncFenetre(); return 'nc|' + S.shop + '|' + f.du + '|' + f.au; }
+  function urlNC(f) {
+    return '/pwa/tasks/nc?shop=' + encodeURIComponent(S.shop)
+      + (f.jour ? '&date=' + f.du : '&du=' + f.du + '&au=' + f.au);
+  }
   const hhmm = v => v ? String(v).slice(11, 16) : '';
   /** Le nom du niveau vient du barème partagé ; « majeur » s'accorde à « non-conformité ». */
   function ncNiveau(D, n) {
@@ -546,19 +559,30 @@
       sous: 'photo déposée, sans note de consultant', court: 'à contrôler' };
   }
 
-  /** Les lignes de la veille, chacune avec son devenir du jour. */
+  /** Sur une période, le devenir ne se lit pas dans la journée en cours mais
+   * dans la SUITE de la tâche : la première note posée après l'écart. */
+  function ncDepuis(x) {
+    const s2 = x.suite;
+    if (!s2) { return { c: 'ko', lib: '\u2717 Pas de reprise notée', sous: 'la tâche n\u2019a pas été renotée depuis', court: 'sans reprise' }; }
+    if (s2.conforme) { return { c: 'ok', lib: '\u2713 Reprise notée ' + s2.note + '/5', sous: 'le ' + fDL(s2.jour), court: 'reprise le ' + fD(s2.jour) }; }
+    return { c: 'rec', lib: '\u21bb Renotée ' + s2.note + '/5', sous: 'le ' + fDL(s2.jour) + ' \u2014 encore non conforme', court: 'encore non conforme' };
+  }
+
+  /** Les lignes de la fenêtre, chacune avec son devenir. */
   function ncLignes() {
     const D = S.aux[cleNC()];
     if (!D || !Array.isArray(D.nc)) { return []; }
     const seuil = D.seuil || 4;
-    return D.nc.map(x => Object.assign({}, x, { niv: ncNiveau(D, x.note), etat: ncEtat(x.taskId, seuil) }));
+    const jour = ncFenetre().jour;
+    return D.nc.map(x => Object.assign({}, x,
+      { niv: ncNiveau(D, x.note), etat: jour ? ncEtat(x.taskId, seuil) : ncDepuis(x) }));
   }
   /** La photo de la tâche, lue à la demande — un aller-retour au panel par ligne. */
-  function ncPhoto(id) {
-    const k = 'ph|' + S.shop + '|' + id + '|' + veille();
+  function ncPhoto(id, jour) {
+    const k = 'ph|' + S.shop + '|' + id + '|' + jour;
     if (S.ncPhotos[k] === undefined && !S.enCours[k]) {
       S.enCours[k] = true;
-      lire('/pwa/tasks/detail?shop=' + encodeURIComponent(S.shop) + '&task=' + encodeURIComponent(id) + '&date=' + veille())
+      lire('/pwa/tasks/detail?shop=' + encodeURIComponent(S.shop) + '&task=' + encodeURIComponent(id) + '&date=' + jour)
         .then(d => { S.ncPhotos[k] = { url: d.photo || null,
           reperes: (d.reperes && Array.isArray(d.reperes.liste)) ? d.reperes.liste : [] }; })
         .catch(() => { S.ncPhotos[k] = { url: null, reperes: [] }; })
@@ -567,7 +591,7 @@
     return S.ncPhotos[k];
   }
   function ncVignette(x) {
-    const p = S.ncOuvert ? ncPhoto(x.taskId) : undefined;
+    const p = S.ncOuvert ? ncPhoto(x.taskId, x.jour || veille()) : undefined;
     if (p === undefined) { return `<span class="db-ncph att"></span>`; }
     if (!p.url) { return `<span class="db-ncph vide" title="photo indisponible">—</span>`; }
     const rep = p.reperes.map((r, i) => `<i style="left:${(r.x * 100).toFixed(1)}%;top:${(r.y * 100).toFixed(1)}%;width:${(r.l * 100).toFixed(1)}%;height:${(r.h * 100).toFixed(1)}%;border-color:${esc(x.niv.couleur)}"><u style="background:${esc(x.niv.couleur)}">${i + 1}</u></i>`).join('');
@@ -578,18 +602,21 @@
   }
 
   function rendNC() {
-    if (S.vue !== 'jour') { return ''; }
-    const cle = cleNC(), D = S.aux[cle];
-    const jourV = fDL(veille());
-    if (S.err[cle]) { return `<div class="db-ncbar mu"><span class="ic">·</span><span class="t">Les non-conformités d’hier<small>${esc(S.err[cle])}</small></span></div>`; }
-    if (!D) { return `<div class="db-ncbar mu"><span class="ic">·</span><span class="t">Les non-conformités d’hier<small>lecture du ${esc(jourV)}…</small></span></div>`; }
+    if (S.vue === 'annee' || S.vue === 'trimestre') { return ''; }
+    const cle = cleNC(), D = S.aux[cle], f = ncFenetre();
+    // « hier », « cette semaine », « ce mois » : le bandeau nomme la fenêtre
+    // qu'il résume, sinon on ne sait pas de quoi il parle.
+    const quand = f.jour ? 'hier' : (S.vue === 'semaine' ? 'cette semaine' : 'ce mois');
+    const jourV = f.jour ? fDL(f.du) : (S.vue === 'semaine' ? 'du ' + fD(f.du) + ' au ' + fD(f.au) : libPeriode());
+    if (S.err[cle]) { return `<div class="db-ncbar mu"><span class="ic">·</span><span class="t">Les non-conformités ${esc(f.jour ? 'd’hier' : quand)}<small>${esc(S.err[cle])}</small></span></div>`; }
+    if (!D) { return `<div class="db-ncbar mu"><span class="ic">·</span><span class="t">Les non-conformités ${esc(f.jour ? 'd’hier' : quand)}<small>lecture ${f.jour ? 'du ' : ''}${esc(jourV)}…</small></span></div>`; }
     // Table des avis absente : le cockpit n'a rien à dire, il se tait.
     if (D.indispo) { return ''; }
     const L = ncLignes();
     if (!L.length) {
       const rien = !D.notees;
       return `<div class="db-ncbar ${rien ? 'mu' : 'ok'}"><span class="ic">${rien ? '·' : '✓'}</span>
-        <span class="t">${rien ? 'Aucune tâche notée hier' : 'Aucune non-conformité hier'}<small>${esc(jourV)}${D.notees ? ' · ' + D.notees + ' tâche' + (D.notees > 1 ? 's' : '') + ' notée' + (D.notees > 1 ? 's' : '') + ', rien à reprendre' : ' · aucun contrôle consigné ce jour-là'}</small></span></div>`;
+        <span class="t">${rien ? 'Aucune tâche notée ' + quand : 'Aucune non-conformité ' + quand}<small>${esc(jourV)}${D.notees ? ' · ' + D.notees + ' tâche' + (D.notees > 1 ? 's' : '') + ' notée' + (D.notees > 1 ? 's' : '') + ', rien à reprendre' : ' · aucun contrôle consigné ' + (f.jour ? 'ce jour-là' : 'sur cette période')}</small></span></div>`;
     }
     const ouverts = L.filter(x => x.etat.c !== 'ok'), repris = L.filter(x => x.etat.c === 'ok');
     const valides = repris.filter(x => x.etat.deja).length;
@@ -602,7 +629,7 @@
     const chipR = repris.length ? `<span class="ch"><i class="g3"></i>${repris.length} reprise${repris.length > 1 ? 's' : ''}${etatR ? ' <em class="v">' + etatR + '</em>' : ''}</span>` : '';
     const tout = repris.length && valides === repris.length && !ouverts.length;
     const bandeau = `<div class="db-ncbar${S.ncOuvert ? ' ouv' : ''}${tout ? ' fini' : ''}" data-ncdrop="1"><span class="ic">${tout ? '✅' : '⚠️'}</span>
-      <span class="t">${L.length} non-conformité${L.length > 1 ? 's' : ''} hier<small>${esc(jourV)} · ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}${valides ? ' · ' + valides + ' reprise' + (valides > 1 ? 's' : '') + ' validée' + (valides > 1 ? 's' : '') : ''}</small></span>
+      <span class="t">${L.length} non-conformité${L.length > 1 ? 's' : ''} ${quand}<small>${esc(jourV)} · ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}${valides ? ' · ' + valides + ' reprise' + (valides > 1 ? 's' : '') + ' validée' + (valides > 1 ? 's' : '') : ''}</small></span>
       <span class="chips">${ouverts.slice(0, 3).map(chip).join('')}${reste}${chipR}</span>
       <span class="act"><span class="dr">${S.ncOuvert ? 'replier ▴' : 'détail ▾'}</span></span></div>`;
     return bandeau + (S.ncOuvert ? ncTiroir(D, L) : '');
@@ -617,6 +644,9 @@
     const relev = [...new Set(L.map(x => x.consultant).filter(Boolean))].join(', ');
     const sem = Array.isArray(D.semaine) ? D.semaine : [];
     const totSem = sem.reduce((a, x) => a + (x.nc || 0), 0);
+    // Sur une période, chaque ligne doit dire QUEL jour, et la dernière colonne
+    // ne parle plus d'aujourd'hui mais de ce qui a suivi l'écart.
+    const jour = ncFenetre().jour;
 
     const ligne = x => {
       const t = x.etat.t;
@@ -629,15 +659,15 @@
           + (t.valideeLe ? ' à ' + hhmm(t.valideeLe) : '') + '</b>'
         : '';
       return `<div class="db-ncr${t && t.ctrlDir ? ' val' : ''}">
-        <span class="g"><span class="db-ncg ${ncCls(x.note)}">${esc(x.niv.court)} <small>${x.note}/5</small></span>${x.recidive ? `<small class="ko"><b>\u21bb récidive</b><br>${x.recidive}e fois en 7 jours</small>` : ''}<small>${x.releveeLe ? 'relevée à ' + hhmm(x.releveeLe) : ''}${x.consultant ? '<br>par ' + esc(x.consultant) : ''}</small></span>
+        <span class="g"><span class="db-ncg ${ncCls(x.note)}">${esc(x.niv.court)} <small>${x.note}/5</small></span>${x.recidive ? `<small class="ko"><b>\u21bb récidive</b><br>${x.recidive}e fois en 7 jours</small>` : ''}<small>${jour ? (x.releveeLe ? 'relevée à ' + hhmm(x.releveeLe) : '') : ('<b>' + esc(fD(x.jour)) + '</b>' + (x.releveeLe ? ' à ' + hhmm(x.releveeLe) : ''))}${x.consultant ? '<br>par ' + esc(x.consultant) : ''}</small></span>
         <span class="t"><b>${esc(x.tache)}</b>${t && t.checklist ? `<small>${esc(t.checklist)}</small>` : ''}${x.comment ? `<q>${esc(x.comment)}</q>` : '<small>sans motif consigné</small>'}</span>
         ${ncVignette(x)}
         <span class="a"><span class="db-ncst ${x.etat.c}">${x.etat.lib}</span><small>${x.etat.sous}${vu}</small></span></div>`;
     };
 
     return `<div class="db-ncdl">
-      <div class="ct"><span class="db-lab">${L.length} non-conformité${L.length > 1 ? 's' : ''} sur ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span><span class="db-mini">${totSem > L.length ? totSem + ' sur les 7 derniers jours \u00b7 ' : ''}${relev ? 'relevée' + (L.length > 1 ? 's' : '') + ' par ' + esc(relev) + ' \u00b7 ' : ''}seuil de conformité ${D.seuil || 4}/5</span><a class="db-lien" href="../#/taches">Contrôle des tâches \u203a</a></div>
-      <div class="db-nclist"><div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d\u2019hier</span><span>Photo</span><span>Aujourd\u2019hui</span></div>${L.map(ligne).join('')}</div></div>`;
+      <div class="ct"><span class="db-lab">${L.length} non-conformité${L.length > 1 ? 's' : ''} sur ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span><span class="db-mini">${jour && totSem > L.length ? totSem + ' sur les 7 derniers jours \u00b7 ' : ''}${relev ? 'relevée' + (L.length > 1 ? 's' : '') + ' par ' + esc(relev) + ' \u00b7 ' : ''}seuil de conformité ${D.seuil || 4}/5</span><a class="db-lien" href="../#/taches">Contrôle des tâches \u203a</a></div>
+      <div class="db-nclist"><div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat${jour ? ' d\u2019hier' : ''}</span><span>Photo</span><span>${jour ? 'Aujourd\u2019hui' : 'Depuis'}</span></div>${L.map(ligne).join('')}</div></div>`;
   }
 
   /* Les tâches du jour (ou de la période) : faites, non faites, bloquantes,
