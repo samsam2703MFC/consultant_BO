@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {} };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -148,6 +148,7 @@
     return `<div class="db-tuiles">${Array.from({ length: 5 }, () => `<div class="db-tui"><div class="db-sk" style="width:60%"></div><div class="db-sk" style="height:24px;margin:8px 0 6px"></div><div class="db-sk" style="width:80%"></div></div>`).join('')}</div>
       <div class="db-card"><div class="ct"><div class="db-sk" style="width:220px"></div></div><div style="padding:14px 16px">${Array.from({ length: n }, () => `<div class="db-sk" style="margin-bottom:10px"></div>`).join('')}</div></div>`;
   }
+  const fSE = v => v == null ? '—' : (v < 0 ? '− ' + fE(-v) : fE(v));
   function tuile(k, v, s, cls) { return `<div class="db-tui ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   /** La tuile avec sa tendance : la mini-courbe des 7 derniers mêmes jours (+ aujourd'hui) et l'écart avec le dernier. */
   function tuileTend(k, v, s, cls, serie, auj, fmt, inverse) {
@@ -236,8 +237,20 @@
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">surface : poids dans le CA · couleur : ${parMarge ? 'marge brute, CA − coût matière' : 'écart à la référence'}</span></div>
       ${(parMarge ? catsM : cats).length ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div><div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>${parMarge ? `<div class="db-cdr" data-cdrop="1">${S.cOuvert ? 'replier le détail ▴' : 'le détail par famille et catégorie ▾'}</div>${S.cOuvert ? tableauFamilles(catsM) : ''}` : ''}` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">${m.planningHeures != null ? nf(m.planningHeures, 1) + ' h · ' + fE(m.planningCout) : ''}${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
-      <div style="padding:8px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div></div>`;
+    // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
+    const seuilLab = (d.seuils && d.seuils.labour) || 33;
+    const LH2 = st && Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0 || x.poste > 0) : [];
+    const budgetJour = m.ca ? m.ca * seuilLab / 100 : null;
+    const hRouges = LH2.filter(x => x.trav > x.ca * seuilLab / 100).map(x => x.h + ' h');
+    const caParH = m.planningHeures ? m.ca / m.planningHeures : null;
+    const frise = LH2.length ? `<div class="db-fz"><div class="row"><div class="n">Heure</div><div class="hs" style="grid-template-columns:repeat(${LH2.length},1fr)">${LH2.map(x => `<span class="lb">${x.h} h</span>`).join('')}</div></div>
+      <div class="row"><div class="n">En poste</div><div class="hs" style="grid-template-columns:repeat(${LH2.length},1fr)">${LH2.map(x => `<i class="p${Math.min(4, Math.max(0, Math.round(x.poste)))}" title="${x.h} – ${x.h + 1} h · ${nf(x.poste, 1)} en poste · ${fE(x.trav)} de rémunération">${nf(x.poste, x.poste % 1 ? 1 : 0)}</i>`).join('')}</div></div>
+      <div class="row"><div class="n">Budget de l’heure</div><div class="hs" style="grid-template-columns:repeat(${LH2.length},1fr)">${LH2.map(x => { const bud = x.ca * seuilLab / 100, ok = x.trav <= bud, vide = !x.ca; return `<i class="c ${vide ? 'vide' : (ok ? 'ok' : 'ko')}" title="${x.h} – ${x.h + 1} h · rémunération ${fE(x.trav)} · budget ${fE(bud)} (${seuilLab} % de ${fE(x.ca)} de ventes)">${fE(x.trav)}<small>/ ${fE(bud)}</small></i>`; }).join('')}</div></div>
+      <div class="sum"><span><b>${plan.length}</b> personne${plan.length > 1 ? 's' : ''} · <b>${m.planningHeures != null ? nf(m.planningHeures, 1) + ' h' : '—'}</b>${m.planningHeuresFranchise ? ' dont ' + nf(m.planningHeuresFranchise, 1) + ' h franchisé' : ''}</span><span>coût <b>${fE(m.planningCout)}</b>${m.labourPct != null ? ' · <b>' + fP(m.labourPct) + '</b> du CA (seuil ' + seuilLab + ' %)' : ''}</span>${budgetJour != null ? `<span>budget du jour <b>${fE(budgetJour)}</b> · reste ${fSE(budgetJour - (m.planningCout || 0))}</span>` : ''}${caParH != null ? `<span><b>${fE(caParH)}</b> de CA / h travaillée</span>` : ''}<span>${hRouges.length ? 'heures au-dessus du budget : <b>' + hRouges.join(', ') + '</b>' : 'aucune heure au-dessus du budget'}</span></div></div>` : `<div class="db-note" style="padding:10px 16px 4px">${st ? 'Pas d’heure vendue pour ce jour.' : 'Lecture des heures en cours…'}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">planning du panel · effectif en poste et rémunération face au budget de l’heure (${seuilLab} % des ventes)${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
+      ${frise}
+      <div class="db-cdr" data-pdrop="1">${S.pOuvert ? 'replier le planning ▴' : 'voir le planning ▾'}</div>
+      ${S.pOuvert ? `<div style="padding:4px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div>` : ''}</div>`;
     const serie = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert) : [];
     if (serie.length) {
       // Le jour dans le mois : la marge nette en % des ventes, une barre par
@@ -304,7 +317,6 @@
       return `<div title="${esc(c.categorie)} · ${fE(c.ca)} · ${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${'taux' in c ? (c.mat != null ? ' · matière ' + fE(c.mat) + ' · marge ' + fE(c.m) + ' (' + fP(c.taux) + ')' : ' · coût matière inconnu') + (c.refs ? ' · ' + c.refs + ' réf.' : '') : (c.delta != null ? ' · ' + (c.delta >= 0 ? '+' : '') + fP(c.delta) + ' vs réf. ' + fE(c.ref) : ' · sans référence')}" style="position:absolute;left:${(t.x / W * 100).toFixed(3)}%;top:${(t.y / H * 100).toFixed(3)}%;width:${Math.max(t.w / W * 100 - 0.35, 0).toFixed(3)}%;height:${Math.max(t.h / H * 100 - 0.8, 0).toFixed(3)}%;background:${coulD(c)};color:${CLAIRS.includes(coulD(c)) ? '#222' : '#fff'};border-radius:5px;padding:${gros ? '8px 10px' : '4px 6px'};overflow:hidden;font-size:${gros ? 12 : 10.5}px;line-height:1.3">${moyen ? `<b>${esc(c.categorie)}</b>${gros ? `<br><span style="font-family:var(--font-display);font-size:16px">${fE(c.ca)}</span><br><span style="opacity:.95;font-size:10.5px;font-weight:300">${c.part != null ? fP(100 * c.part) + ' du CA' : ''}${detail(c, false) ? ' · ' + detail(c, false) : ''}</span>` : `<br><span style="font-size:10px;opacity:.95;font-weight:300">${c.part != null ? Math.round(100 * c.part) + ' %' : ''}${detail(c, true) ? ' · ' + detail(c, true) : ''}</span>`}` : ''}</div>`; }).join('');
   }
   /** Le tiroir du treemap : famille › catégorie, carré de la couleur de la marge, CA, part, matière, marge, taux ; total en pied. */
-  const fSE = v => v == null ? '—' : (v < 0 ? '− ' + fE(-v) : fE(v));
   function tableauFamilles(cats) {
     const coulM = t => { if (t == null) { return '#B9B2A8'; } let r = MARGES[0]; for (const e of MARGES) { if (t >= e.s) { r = e; } } return r.c === 'or' ? '#E2B93B' : r.c; };
     const F = {};
@@ -779,6 +791,7 @@
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-ndrop]').forEach(b => b.addEventListener('click', () => { S.nOuvert = !S.nOuvert; rendre(); }));
     $.querySelectorAll('[data-cdrop]').forEach(b => b.addEventListener('click', () => { S.cOuvert = !S.cOuvert; rendre(); }));
+    $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
     $.querySelectorAll('[data-ctri]').forEach(b => b.addEventListener('click', () => { S.cTri = b.dataset.ctri; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));

@@ -250,6 +250,19 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-spk circle{fill:var(--color-primary)}
 .db-dl{display:inline-block;font:600 10px var(--font-ui);border-radius:999px;padding:1px 7px;margin-top:5px}
 .db-dl.up{background:#dfeee0;color:#2d7a3e}.db-dl.dn{background:#fbeff0;color:#C0182B}.db-dl.eq{background:var(--color-background-secondary);color:var(--color-text-muted)}
+/* Qui est en poste, replié : la frise effectif / budget de l'heure. */
+.db-fz{padding:10px 16px 2px}
+.db-fz .row{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;margin-bottom:4px}
+.db-fz .row .n{font:600 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.db-fz .hs{display:grid;gap:3px}
+.db-fz .hs i{display:block;height:20px;border-radius:3px;background:var(--color-background-secondary);font:600 9.5px var(--font-ui);color:#fff;text-align:center;line-height:20px;font-style:normal;white-space:nowrap;overflow:hidden}
+.db-fz .hs i.p0{background:var(--color-background-secondary);color:var(--color-text-muted)}.db-fz .hs i.p1{background:#e5b6bc;color:#5a1a24}.db-fz .hs i.p2{background:#c9707a}.db-fz .hs i.p3{background:#a83b48}.db-fz .hs i.p4{background:var(--color-primary)}
+.db-fz .hs i.c{background:var(--color-surface);color:var(--color-text);border:.5px solid var(--color-border-tertiary);font-weight:600}
+.db-fz .hs i.c small{font:400 8.5px var(--font-ui);color:var(--color-text-muted);margin-left:2px}
+.db-fz .hs i.c.ok{background:#dfeee0;color:#2d7a3e;border-color:#cfe3d2}.db-fz .hs i.c.ko{background:#fbeff0;color:#C0182B;border-color:#e8c1c6}
+.db-fz .hs i.c.vide{color:var(--color-text-muted)}
+.db-fz .hs .lb{font:400 9px var(--font-ui);color:var(--color-text-muted);text-align:center}
+.db-fz .sum{display:flex;gap:18px;font:400 11px var(--font-ui);color:var(--color-text-muted);padding:8px 0 4px 130px;flex-wrap:wrap}.db-fz .sum b{color:var(--color-text);font-weight:600}
 /* Le tiroir du treemap : famille › catégorie. */
 .db-cdr{display:flex;align-items:center;justify-content:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;padding:6px 0 8px;border-top:.5px solid var(--color-border-tertiary);margin:0 16px}
 .db-cdt{padding:0 16px 12px}
