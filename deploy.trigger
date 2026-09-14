@@ -323,3 +323,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-14T11:17:30Z sans mini-courbes
 2026-09-14T17:22:21Z planogramme vue tablette
 2026-09-14T18:33:54Z rail produits regroupé
+2026-09-14T18:48:12Z fix D avant init

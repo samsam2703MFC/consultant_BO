@@ -879,7 +879,8 @@ class App {
     const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
     if (grp) {
       common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
-      const badges = { assortiment: (D.prodCatalogue || []).filter(p => p.must).length || 0, planogramme: (D.prodCatalogue || []).filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
+      const cat0 = this.D.prodCatalogue || [];
+      const badges = { assortiment: cat0.filter(p => p.must).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
       common.ongletsProduits = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsProduits.length) { common.ongletsProduits = null; }
     }
@@ -1229,7 +1230,7 @@ class App {
       // par magasin, en euros), et comment il évolue. Les anciens écrans
       // restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
       ['Produits', [
-        ['catalogue', 'Catalogue', (D.prodCatalogue || []).filter(p => p.must && !p.zone).length, ['assortiment', 'planogramme']],
+        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => p.must && !p.zone).length, ['assortiment', 'planogramme']],
         ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
         ['anaprod', 'Où ça se vend', 0, ['usage', 'manque']],
         ['analyse', 'Dans le temps', 0]]],
