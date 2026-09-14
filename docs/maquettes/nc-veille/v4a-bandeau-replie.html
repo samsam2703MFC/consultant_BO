@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>V4 · replié — le bandeau seul, en tête de page — Dashboard magasin</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="maquette.css">
+<style>
+.mq{max-width:1440px;margin:0 auto;padding:16px 22px 0}
+.mq h1{font:400 20px var(--font-display);margin:0 0 4px;color:var(--color-text)}
+.mq p{margin:0;font-size:12px;line-height:1.5;color:var(--color-text-muted);max-width:980px}
+.mq .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.mq hr{border:none;border-top:.5px solid var(--color-border-secondary);margin:14px 0 0}
+</style></head>
+<body><div class="mq"><span class="u">maquette · /consulant_bo/dashboard/?shop=4&amp;vue=jour&amp;date=2026-09-14</span><h1>V4 · replié — le bandeau seul, en tête de page</h1><p>Au chargement, la journée tient en trois lignes : combien de non-conformités hier, lesquelles restent ouvertes. Le bandeau est cliquable, rien d’autre n’a bougé dans la page.</p><hr></div>
+<div id="dash"><div class="db-hd"><img src="/public/assets/img/logo.png" alt=""><div><div class="db-titre">Waterloo — Centre</div><div class="db-sous">Dashboard magasin · lundi 14 septembre 2026 · en direct, relu toutes les 10 min</div></div><span style="flex:1"></span><a class="db-lien" href="#">Cockpit › Résultat ›</a></div>
+<div class="db-nav"><div class="db-ong"><button class="on">Jour</button><button>Semaine</button><button>Mois</button><button>Trimestre</button><button>Année</button></div>
+<span class="db-lab">Date</span><button class="db-btn">‹</button><input class="db-sel" type="date" value="2026-09-14"><button class="db-btn">›</button>
+<span style="flex:1"></span><button class="db-btn">↻ Relire</button></div><div class="db-ncbar"><span class="ic">⚠️</span>
+    <span class="t">5 non-conformités hier<small>dimanche 13 septembre · 18 tâches notées</small></span>
+    <span class="chips">
+      <span class="ch"><i class="g1"></i>1 critique · frigo vitrine <em class="">reprise 07:12</em></span>
+      <span class="ch"><i class="g2"></i>1 majeure · viennoiseries <em class="ctl">à contrôler</em></span>
+      <span class="ch ko"><i class="g2"></i>1 majeure · propreté cuisson <em class="ko">non rendue ↻ 3e fois</em></span>
+      <span class="ch"><i class="g3"></i>2 mineures <em class="">reprises</em></span>
+    </span>
+    <span class="act"><span class="dr">détail ▾</span></span></div><div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">9 magasins ouverts · la journée · anonyme · <b>1 × 🏆</b></div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>
+<div class="db-bt"><div class="k">Chiffre d’affaires</div><span class="rg">3e <small>/ 9</small></span>
+    <div class="jg"><i class="l"></i><span class="pt" style="left:12%"></span><span class="pt" style="left:28%"></span><span class="pt" style="left:41%"></span><span class="pt" style="left:62%"></span><span class="pt" style="left:79%"></span><span class="pt" style="left:91%"></span><span class="md" style="left:50%"></span><span class="mo" style="left:72%"></span></div>
+    <div class="v">4,1 k€<small>médiane 3,8 k€</small></div><div class="s">+ 312 € vs médiane · le 1er : 5,2 k€</div></div>
+<div class="db-bt"><div class="k">Clients</div><span class="rg">5e <small>/ 9</small></span>
+    <div class="jg"><i class="l"></i><span class="pt" style="left:18%"></span><span class="pt" style="left:33%"></span><span class="pt" style="left:47%"></span><span class="pt" style="left:58%"></span><span class="pt" style="left:74%"></span><span class="pt" style="left:88%"></span><span class="md" style="left:50%"></span><span class="mo" style="left:40%"></span></div>
+    <div class="v">341<small>médiane 358</small></div><div class="s">−17 vs médiane · le 1er : 468</div></div>
+<div class="db-bt"><div class="k">Panier moyen</div><span class="rg top">🏆 1er <small>/ 9</small></span>
+    <div class="jg"><i class="l"></i><span class="pt" style="left:9%"></span><span class="pt" style="left:26%"></span><span class="pt" style="left:44%"></span><span class="pt" style="left:61%"></span><span class="pt" style="left:77%"></span><span class="pt" style="left:93%"></span><span class="md" style="left:50%"></span><span class="mo top" style="left:86%"></span></div>
+    <div class="v">12,03 €<small>médiane 10,84 €</small></div><div class="s">+ 1,19 € vs médiane · le 2e : 11,70 €</div></div>
+<div class="db-bt"><div class="k">Marge brute</div><span class="rg">4e <small>/ 9</small></span>
+    <div class="jg"><i class="l"></i><span class="pt" style="left:14%"></span><span class="pt" style="left:31%"></span><span class="pt" style="left:45%"></span><span class="pt" style="left:63%"></span><span class="pt" style="left:81%"></span><span class="pt" style="left:95%"></span><span class="md" style="left:50%"></span><span class="mo" style="left:55%"></span></div>
+    <div class="v">68,4 %<small>médiane 67,1 %</small></div><div class="s">+1,3 pts vs médiane · le 1er : 71,9 %</div></div>
+<div class="db-bt msg" ><span class="dr">détail ▾</span><div class="k">Messages du panel</div><div class="n"><span class="bell">🔔</span>3</div><div class="pri"><i class="warn">1 attention</i><i class="info">2 info</i></div><div class="last">Rappel : nouvelle gamme rentrée · 08:10</div></div></div><div class="db-taches"><div class="db-bt tit"><div class="k">Les tâches du jour</div><div class="s">22 obligatoire(s) · 64 % faites · dernière rendue à 15:05 par L. Simon</div></div>
+    <div class="db-bt ok"><div class="k">Faites</div><div class="v">14<small>/ 22</small></div><div class="s">4 à contrôler · 1 sans photo</div></div>
+    <div class="db-bt wa"><div class="k">Non faites</div><div class="v">8<small>/ 22</small></div><div class="s">5 contrôle(s) qualité · 1 d’exploitation</div></div>
+    <div class="db-bt ko"><div class="k">Bloquantes</div><div class="v">1</div><div class="s">exploitation non rendue</div></div>
+    
+    <div class="db-bt fil"><div class="k">Le fil de la journée <span class="dr">détail ▾</span></div><div class="mini"><i class="f" title="CO-01 — Ouverture"></i><i class="f" title="CO-01 — Ouverture"></i><i class="f" title="CO-01 — Ouverture"></i><i class="f" title="CO-01 — Ouverture"></i><i class="f" title="CO-01 — Ouverture"></i><i class="f" title="CO-01 — Ouverture"></i><span class="sep"></span><i class="f" title="CQ-01 — Ouverture"></i><i class="f" title="CQ-01 — Ouverture"></i><i class="f" title="CQ-01 — Ouverture"></i><i class="f" title="CQ-01 — Ouverture"></i><i class="n" title="CQ-01 — Ouverture"></i><span class="sep"></span><i class="f" title="CO-03 — Photo du comptoir"></i><i class="f" title="CO-03 — Photo du comptoir"></i><i class="n" title="CO-03 — Photo du comptoir"></i><i class="n" title="CO-03 — Photo du comptoir"></i><span class="sep"></span><i class="f" title="CQ-03 — Contrôle qualité après-midi"></i><i class="n" title="CQ-03 — Contrôle qualité après-midi"></i><i class="n" title="CQ-03 — Contrôle qualité après-midi"></i><i class="n" title="CQ-03 — Contrôle qualité après-midi"></i><span class="sep"></span><i class="n" title="CO-02 — Fermeture"></i><i class="n" title="CO-02 — Fermeture"></i><i class="b" title="CO-02 — Fermeture"></i></div><div class="s">Ouverture · Ouverture · Photo du comptoir · Contrôle qualité après-midi · Fermeture</div></div></div><div class="db-sec">Résultat — la journée<small>budget du jour, référence des mêmes jours, P&amp;L court</small></div>
+<div class="db-tuiles">
+<div class="db-tui "><div class="k">CA du jour</div><div class="v">4,1 k€</div><div class="s">objectif 4,4 k€ · 93,2 % atteint · <b class="ko">−25 clients</b> (301 € ÷ 12,03 €)</div></div>
+<div class="db-tui "><div class="k">Marge brute</div><div class="v">2,8 k€</div><div class="s">68,4 % des ventes · matière 1,3 k€</div></div>
+<div class="db-tui "><div class="k">Clients</div><div class="v">341</div><div class="s">référence 358 · − 4,7 % · 612 produits vendus</div></div>
+<div class="db-tui "><div class="k">Panier moyen</div><div class="v">12,03 €</div><div class="s">réseau 10,84 € · 1,79 produits / client</div></div>
+<div class="db-tui "><div class="k">Projection fin de journée</div><div class="v">5,0 k€</div><div class="s">82,0 % de la journée écoulée · au rythme : 5,1 k€</div></div>
+<div class="db-tui bon"><div class="k">Résultat net du jour</div><div class="v">+ 402 €</div><div class="s">9,8 % des ventes</div></div>
+</div></div></body></html>

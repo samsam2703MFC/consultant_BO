@@ -88,3 +88,40 @@
 .db-tdrop .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);padding:6px 0 2px}
 .db-tdrop .leg u{text-decoration:none;font:700 8.5px var(--font-ui);color:#fff;background:var(--color-primary);border-radius:4px;padding:1px 5px}
 .db-tdrop .leg u.ok{background:#2d7a3e}.db-tdrop .leg u.ctl{background:#1f4e8c}
+
+/* ---------------------------------------------------------------------------
+ * V4 — le bandeau de la V3 qui déplie le contenu de la V2, et la validation.
+ * ------------------------------------------------------------------------- */
+.db-ncbar{cursor:pointer;position:relative}
+.db-ncbar.ouv{border-radius:10px 10px 0 0;margin-bottom:0}
+.db-ncbar .dr{font:600 11px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+.db-ncbar .ch em.v{color:#2d7a3e}
+.db-ncbar .ch em.v::before{content:'✓ '}
+
+/* Le tiroir accroché au bandeau : le corps de la V2. */
+.db-ncdl{background:var(--color-surface);border:1px solid #e8b4bb;border-top:none;border-left:4px solid var(--color-primary);border-radius:0 0 10px 10px;margin:0 0 12px}
+.db-ncdl>.ct{padding:10px 16px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.db-ncdl>.ct .db-mini{margin-left:auto}
+
+/* La colonne de validation, à droite de chaque ligne. */
+.db-ncdl .db-ncr{grid-template-columns:146px minmax(0,1.35fr) 64px minmax(0,0.95fr) 168px}
+.db-ncdl .db-ncr .k{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.db-ncdl .db-ncr .k label{display:inline-flex;align-items:center;gap:7px;font:600 11px var(--font-ui);cursor:pointer;line-height:1.25}
+.db-ncdl .db-ncr .k input{accent-color:var(--color-primary);width:15px;height:15px;margin:0;flex:none;cursor:pointer}
+.db-ncdl .db-ncr .k small{color:var(--color-text-muted);font-size:10px;line-height:1.35;padding-left:22px;display:block}
+.db-ncdl .db-ncr .k small.np{padding-left:0}
+.db-ncdl .db-ncr .k a{font:600 11px var(--font-ui);color:var(--color-primary);text-decoration:none;border:.5px solid #e8b4bb;border-radius:999px;padding:3px 11px;background:var(--color-surface)}
+.db-ncdl .db-ncr.val{background:#f6faf7}
+.db-ncdl .db-ncr .k .vd{display:inline-flex;align-items:center;gap:5px;font:600 10.5px var(--font-ui);border-radius:999px;padding:3px 10px;background:#dfeee0;color:#2d7a3e}
+
+/* La barre de validation, au pied du tiroir. */
+.db-ncfoot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 16px;border-top:.5px solid var(--color-border-tertiary);background:#FCFAF7;border-radius:0 0 8px 8px}
+.db-ncfoot .t{font-size:11.5px;line-height:1.45;color:var(--color-text)}
+.db-ncfoot .t small{display:block;color:var(--color-text-muted);font-size:10.5px}
+.db-ncfoot .sp{flex:1}
+.db-btn.pri{background:var(--color-primary);color:#fff;border-color:var(--color-primary);font-weight:600;padding:8px 16px}
+.db-btn.pri:hover{background:#7a1826}
+.db-btn.pri[disabled]{background:var(--color-background-secondary);color:var(--color-text-muted);border-color:var(--color-border-secondary);font-weight:500;cursor:not-allowed}
+.db-ncfoot.fait{background:#f0f7f2;border-top-color:#bfdcc6}
+.db-ncfoot.fait .t{color:#2d7a3e;font-weight:600}
+.db-ncfoot.fait .t small{color:#4a6b52;font-weight:400}

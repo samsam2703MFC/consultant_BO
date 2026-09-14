@@ -8,6 +8,10 @@ tâches du jour −1*. Trois partis pris, mêmes données, même charte
 - `v2-carte-dediee.html` — une carte à part sous le bandeau : compte, semaine, liste.
 - `v3-bandeau-alerte.html` — un bandeau d'alerte en tête de page, et des marques
   dans le fil de la journée existant.
+- `v4a-bandeau-replie.html` / `v4b-droplist-ouverte.html` /
+  `v4c-apres-validation.html` — **la retenue** : le bandeau de la V3 déplie le
+  contenu de la V2, et le tiroir porte le bouton de validation. Trois états :
+  replié, ouvert, validé.
 
 Les PNG du même nom sont les captures (Chromium, 1560 px, ×2).
 `generer.js` régénère les trois pages ; `maquette.css` porte les styles
@@ -33,6 +37,28 @@ sur la veille.
 | La photo et ses repères | `/pwa/tasks/detail?shop=&task=&date=` (`photo`, `reperes`) — au clic seulement |
 | Les 7 derniers jours (V2) | `/pwa/tasks/heatmap/mois?du=&au=` — déjà lu par les vues Semaine et Mois |
 
+## La validation (V4)
+
+Le bouton ne fait rien de neuf : il appelle `POST /pwa/tasks/validate`
+(`wr_pwa_task_validate`), une fois par tâche cochée, avec `shopId`, `taskId`,
+`date` et `validated: true`. Cela pose `owner_validated_at`, `id_owner` et
+`owner_name` sur l'avis dans `mac_task_review`, la table partagée avec le
+panel, et écrit une ligne au Journal du cockpit.
+
+Une règle en découle, et c'est elle qui dessine la colonne de droite : **on ne
+valide que ce qui a été noté**. L'endpoint ne crée jamais de ligne, il met à
+jour un avis existant ; sans note, il répond 422. D'où les trois cas :
+
+| La ligne | Ce que la colonne propose |
+| --- | --- |
+| Reprise refaite **et notée** aujourd'hui | une case cochée, prise dans le bouton « Valider les N reprises » |
+| Photo rendue, **pas encore notée** | « Noter la photo › », qui ouvre la notation (`POST /pwa/tasks/review`) — la validation n'est pas possible avant |
+| Rien de rendu | « Relancer la boutique › » — il n'y a aucun avis à contresigner |
+
+La date envoyée est celle de l'avis que l'on contresigne, donc **le jour en
+cours** pour une reprise, pas la veille. Retirer la validation, c'est le même
+appel avec `validated: false`.
+
 Points ouverts, à trancher avant de coder :
 
 1. **La veille d'un jour fermé.** Si le magasin n'a pas ouvert la veille, faut-il
@@ -42,3 +68,6 @@ Points ouverts, à trancher avant de coder :
    d'`accepte`, qui est déjà calculé côté serveur (mais sans le nom du niveau).
 3. **La récidive** (« 3ᵉ fois en 7 jours ») demande une lecture de 7 jours, pas
    d'un seul. Utile, mais c'est ce qui coûte le plus cher ici.
+4. **Qui valide.** `owner_name` prend le nom du réglage `utilisateur` du
+   cockpit, à défaut « CEO ». À vérifier avant de mettre le bouton entre
+   d'autres mains que les vôtres.

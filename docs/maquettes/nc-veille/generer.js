@@ -31,15 +31,30 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const photo = x => `<span class="db-ncph ${x.photo}" title="photo de la tâche, repères du consultant">${x.pts.map((p, i) => `<i style="left:${p[0]}%;top:${p[1]}%">${i + 1}</i>`).join('')}</span>`;
 const grav = x => `<span class="db-ncg ${NIV[x.n][1]}">${NIV[x.n][0]} <small>${x.n}/5</small></span>`;
 
-/* La liste commune aux trois variantes. */
-function liste(avecEntete) {
-  return (avecEntete ? `<div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d’hier</span><span>Photo</span><span>Aujourd’hui</span></div>` : '')
-    + NC.map(x => `<div class="db-ncr">
+/* La liste commune aux variantes. `action` ajoute la colonne de validation (V4). */
+function liste(avecEntete, action) {
+  return (avecEntete ? `<div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d’hier</span><span>Photo</span><span>Aujourd’hui</span>${action ? '<span>Validation</span>' : ''}</div>` : '')
+    + NC.map(x => `<div class="db-ncr${action && x.etat === 'ok' && action === 'fait' ? ' val' : ''}">
       <span class="g">${grav(x)}${x.recid ? `<small class="ko"><b>↻ récidive</b><br>${esc(x.recid)}</small>` : ''}<small>relevée à ${x.h}<br>par ${esc(x.par)}</small></span>
       <span class="t"><b>${esc(x.tache)}</b><small>${esc(x.cl)}</small><q>${esc(x.txt)}</q></span>
       ${photo(x)}
       <span class="a"><span class="db-ncst ${x.etat}">${esc(x.etatLib)}</span><small>${esc(x.etatSous)}</small></span>
+      ${action ? valider(x, action) : ''}
     </div>`).join('');
+}
+
+/* La colonne de validation : on ne valide QUE ce qui a été noté aujourd'hui.
+ * Sans note du jour, il n'y a pas d'avis à contresigner — le bouton mentirait. */
+function valider(x, etat) {
+  if (x.etat === 'ok') {
+    return etat === 'fait'
+      ? `<span class="k"><span class="vd">✓ Reprise validée</span><small class="np">par S. Verhoeven à 16:42</small></span>`
+      : `<span class="k"><label><input type="checkbox" checked><span>Valider la reprise</span></label><small>contresigne l’avis du ${esc(x.noteJour || '14/09')}</small></span>`;
+  }
+  if (x.etat === 'ctl') {
+    return `<span class="k"><a href="#">Noter la photo ›</a><small class="np">à noter avant de pouvoir valider</small></span>`;
+  }
+  return `<span class="k"><a href="#">Relancer la boutique ›</a><small class="np">rien à valider : pas de rendu</small></span>`;
 }
 
 /* --- le décor : ce que la page montre déjà aujourd'hui -------------------- */
@@ -97,17 +112,9 @@ ${TUI('Projection fin de journée', '5,0 k€', '82,0 % de la journée écoulée
 ${TUI('Résultat net du jour', '+ 402 €', '9,8 % des ventes', 'bon')}
 </div>`;
 
-/* --- les trois variantes -------------------------------------------------- */
-const V1 = `${HEAD}${BENCH}${taches(true)}
-<div class="db-ncdrop">${liste(true)}
-  <div class="db-note">Les cinq non-conformités du <b>dimanche 13 septembre</b> — note sous le seuil de conformité (4/5). « Aujourd’hui » suit la MÊME tâche sur la journée en cours : reprise et notée, rendue en attente de contrôle, ou toujours pas rendue.</div></div>
-${RESULTAT}`;
 
-const V2 = `${HEAD}${BENCH}${taches(false)}
-<div class="db-sec">Les non-conformités d’hier — dimanche 13 septembre<small>notées sous le seuil de conformité (4/5), et ce que la journée en cours en a fait</small></div>
-<div class="db-card db-nccard">
-  <div class="ct"><span class="db-lab">5 non-conformités sur 18 tâches notées</span><span class="db-mini">relevées par K. Moreau · barème : 3 mineure · 2 majeure · 1 critique</span></div>
-  <div class="db-ncsum">
+/* Le sommaire — commun à la carte V2 et au tiroir V4. */
+const SOMMAIRE = `  <div class="db-ncsum">
     <div class="db-bt ko"><div class="k">Non-conformités</div><div class="v">5<small>/ 18 notées</small></div><div class="s">1 critique · 2 majeures · 2 mineures</div></div>
     <div class="db-bt ok"><div class="k">Reprises aujourd’hui</div><div class="v">3<small>/ 5</small></div><div class="s">refaites et notées ≥ 4/5</div></div>
     <div class="db-bt ko"><div class="k">Encore ouvertes</div><div class="v">2</div><div class="s">1 à contrôler · <b>1 non rendue (bloquante)</b></div></div>
@@ -117,7 +124,49 @@ const V2 = `${HEAD}${BENCH}${taches(false)}
         <div><i style="height:30%"></i><span>je</span></div><div><i class="z" style="height:6%"></i><span>ve</span></div><div><i style="height:60%"></i><span>sa</span></div>
         <div><i class="h" style="height:100%"></i><em>5</em><span>di</span></div></div>
       <div class="s">16 sur la semaine · <b class="ko">hier, le pire jour</b></div></div>
-  </div>
+  </div>`;
+
+/* Le bandeau de la V3, rendu dépliable. etat : 'ferme' · 'ouvert' · 'fait'. */
+function NCBAR(etat) {
+  const fait = etat === 'fait';
+  const ch = (g, t, em, cls, ko) => `<span class="ch${ko ? ' ko' : ''}"><i class="${g}"></i>${t} <em class="${cls || ''}">${em}</em></span>`;
+  return `<div class="db-ncbar${etat === 'ferme' ? '' : ' ouv'}"><span class="ic">${fait ? '✅' : '⚠️'}</span>
+    <span class="t">5 non-conformités hier<small>dimanche 13 septembre · 18 tâches notées${fait ? ' · 3 reprises validées' : ''}</small></span>
+    <span class="chips">
+      ${ch('g1', '1 critique · frigo vitrine', fait ? 'validée 16:42' : 'reprise 07:12', fait ? 'v' : '')}
+      ${ch('g2', '1 majeure · viennoiseries', 'à contrôler', 'ctl')}
+      ${ch('g2', '1 majeure · propreté cuisson', 'non rendue ↻ 3e fois', 'ko', true)}
+      ${ch('g3', '2 mineures', fait ? 'validées' : 'reprises', fait ? 'v' : '')}
+    </span>
+    <span class="act"><span class="dr">${etat === 'ferme' ? 'détail ▾' : 'replier ▴'}</span></span></div>`;
+}
+
+/* Le tiroir : le corps de la V2, plus la barre de validation. */
+function NCDL(etat) {
+  const fait = etat === 'fait';
+  const foot = fait
+    ? `<div class="db-ncfoot fait"><span class="t">✓ 3 reprises validées par S. Verhoeven à 16:42<small>contresignées dans le panel (mac_task_review) · une ligne au Journal du cockpit</small></span><span class="sp"></span>
+        <button class="db-btn">Retirer la validation</button><a class="db-lien" href="#">Ouvrir Contrôle des tâches ›</a></div>`
+    : `<div class="db-ncfoot"><span class="t">3 reprises cochées sur 3 validables<small>les deux autres ne sont pas validables : une photo rendue mais pas encore notée, une tâche pas rendue</small></span><span class="sp"></span>
+        <button class="db-btn">Tout décocher</button><button class="db-btn pri">Valider les 3 reprises</button></div>`;
+  return `<div class="db-ncdl">
+    <div class="ct"><span class="db-lab">5 non-conformités sur 18 tâches notées</span><span class="db-mini">relevées par K. Moreau · barème : 3 mineure · 2 majeure · 1 critique</span></div>
+    ${SOMMAIRE}
+    <div class="db-nclist">${liste(true, fait ? 'fait' : 'ouvert')}</div>
+    ${foot}</div>`;
+}
+
+/* --- les variantes -------------------------------------------------- */
+const V1 = `${HEAD}${BENCH}${taches(true)}
+<div class="db-ncdrop">${liste(true)}
+  <div class="db-note">Les cinq non-conformités du <b>dimanche 13 septembre</b> — note sous le seuil de conformité (4/5). « Aujourd’hui » suit la MÊME tâche sur la journée en cours : reprise et notée, rendue en attente de contrôle, ou toujours pas rendue.</div></div>
+${RESULTAT}`;
+
+const V2 = `${HEAD}${BENCH}${taches(false)}
+<div class="db-sec">Les non-conformités d’hier — dimanche 13 septembre<small>notées sous le seuil de conformité (4/5), et ce que la journée en cours en a fait</small></div>
+<div class="db-card db-nccard">
+  <div class="ct"><span class="db-lab">5 non-conformités sur 18 tâches notées</span><span class="db-mini">relevées par K. Moreau · barème : 3 mineure · 2 majeure · 1 critique</span></div>
+${SOMMAIRE}
   <div class="db-nclist">${liste(true)}</div>
   <div class="db-note">Une non-conformité reste ouverte tant que la même tâche n’a pas été refaite et notée au-dessus du seuil. <a href="#">Ouvrir Contrôle des tâches ›</a></div>
 </div>
@@ -156,6 +205,11 @@ ${BENCH}${taches(false)}
 </div>
 ${RESULTAT}`;
 
+
+const V4A = `${HEAD}${NCBAR('ferme')}${BENCH}${taches(false)}${RESULTAT}`;
+const V4B = `${HEAD}${NCBAR('ouvert')}${NCDL('ouvert')}${BENCH}${taches(false)}${RESULTAT}`;
+const V4C = `${HEAD}${NCBAR('fait')}${NCDL('fait')}${BENCH}${taches(false)}${RESULTAT}`;
+
 /* --- écriture ------------------------------------------------------------- */
 const PAGES = [
   ['v1-tuile-bandeau.html', 'V1 — une tuile de plus dans le bandeau des tâches',
@@ -164,6 +218,12 @@ const PAGES = [
     'La veille a sa propre carte : le compte par gravité, ce que la journée en cours a repris, la semaine en sept barres, puis les cinq lignes avec photo et repères. Le plus lisible, le plus haut dans la page.', V2],
   ['v3-bandeau-alerte.html', 'V3 — un bandeau d’alerte en tête, et des marques dans le fil',
     'Trois lignes en haut de page, avant même le réseau : ce qui reste ouvert saute aux yeux. Le détail ne fait pas de bloc à part — chaque tâche concernée est marquée dans le fil de la journée qui existe déjà.', V3],
+  ['v4a-bandeau-replie.html', 'V4 · replié — le bandeau seul, en tête de page',
+    'Au chargement, la journée tient en trois lignes : combien de non-conformités hier, lesquelles restent ouvertes. Le bandeau est cliquable, rien d’autre n’a bougé dans la page.', V4A],
+  ['v4b-droplist-ouverte.html', 'V4 · déplié — la liste de la veille sort du bandeau',
+    'Le clic déroule le contenu de la V2 sous le bandeau : le compte par gravité, la semaine, les cinq lignes avec photo et repères. La colonne de droite porte la validation, et le pied de tiroir le bouton qui la pose.', V4B],
+  ['v4c-apres-validation.html', 'V4 · validé — après le bouton',
+    'Les trois reprises sont contresignées : les lignes passent au vert, le bandeau le dit sans être déplié, et le pied de tiroir rappelle qui a validé et quand. Ce qui reste ouvert ne bouge pas.', V4C],
 ];
 for (const [f, titre, sous, corps] of PAGES) {
   const html = `<!DOCTYPE html>
