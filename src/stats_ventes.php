@@ -49,10 +49,13 @@ function ep_stats_ventes_sonde(): array
         'notif2' => '/shops/' . $sid . '/notifications?date=' . $date,
     ];
     $res = PanelApi::getParallele($chemins, 6);
-    $coupe = static function ($v, int $n = 3) {
+    $nEx = max(1, min(100, (int) ($_GET['n'] ?? 3)));
+    // Jamais de secret dans une sonde : mots de passe, jetons et codes PIN sont retirés.
+    $propre = static function ($x) { if (is_array($x)) { unset($x['password'], $x['refresh_token'], $x['pin']); } return $x; };
+    $coupe = static function ($v, int $n = 3) use ($nEx, $propre) {
         if (!is_array($v)) { return $v; }
         $l = analyseListe($v);
-        if ($l !== []) { return ['n' => count($l), 'cles' => array_keys((array) $l[0]), 'exemples' => array_slice($l, 0, $n)]; }
+        if ($l !== []) { return ['n' => count($l), 'cles' => array_keys((array) $l[0]), 'exemples' => array_map($propre, array_slice($l, 0, max($n, $nEx)))]; }
         return ['cles' => array_keys($v), 'valeur' => array_map(static fn ($x) => is_array($x) ? ['n' => count($x), 'premier' => array_slice($x, 0, 2)] : $x, $v)];
     };
     $out = ['shop' => $sid, 'date' => $date];

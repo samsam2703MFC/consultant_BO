@@ -318,3 +318,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-14T07:00:38Z qui est en poste replié, frise budget de l'heure
 2026-09-14T07:13:22Z frise personnel / CA en %
 2026-09-14T07:35:44Z sonde employees
+2026-09-14T07:37:23Z sonde n + sans secrets
