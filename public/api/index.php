@@ -229,6 +229,7 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/heatmap/mois'        => ep_taches_heatmap_mois(),
             $path === '/pwa/tasks/heatmap/detail'      => ep_taches_heatmap_detail(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
+            $path === '/pwa/tasks/nc'                  => ep_pwa_tasks_nc(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
             $path === '/ia/note'                       => ep_ia_note(),

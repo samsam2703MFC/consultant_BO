@@ -4053,6 +4053,118 @@ function ep_prod_groupes(): array
     return $out;
 }
 
+/**
+ * GET /pwa/tasks/nc?shop=4&date=2026-09-13 — les non-conformités d'UNE journée
+ * pour UNE boutique. Ce que le dashboard magasin lit sur la veille.
+ *
+ * Tout vient de `mac_task_review`, la table partagée avec le panel : la note,
+ * le motif, qui a relevé. AUCUN appel au panel — l'écran du jour en fait déjà
+ * assez, et la veille est révolue, donc figée. Le prix est une requête SQL.
+ *
+ * Une non-conformité, c'est une tâche NOTÉE sous le seuil du barème
+ * (réglage `signalement`, défaut 4) ; `is_accepted = 0` vaut aussi, pour un
+ * avis posé par un panel qui aurait un autre seuil. Le barème part avec la
+ * réponse : le dashboard n'a pas à lire /meta pour nommer une gravité.
+ *
+ * `recidive` compte les journées où la MÊME tâche était déjà non conforme sur
+ * les sept jours qui précèdent, bornes comprises — un écart qui revient ne se
+ * traite pas comme un écart isolé.
+ */
+function ep_pwa_tasks_nc(): array
+{
+    $sid  = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? '');
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(422);
+        return ['error' => 'shop et date (YYYY-MM-DD) sont requis'];
+    }
+
+    $sig     = setting('signalement', []);
+    $seuil   = (is_array($sig) && isset($sig['seuil'])) ? (int) $sig['seuil'] : 4;
+    $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : [];
+
+    $out = ['shopId' => (string) $sid, 'date' => $date, 'seuil' => $seuil, 'niveaux' => $niveaux,
+        'notees' => 0, 'nc' => [], 'semaine' => [], 'indispo' => false];
+
+    $du7 = date('Y-m-d', strtotime($date . ' -6 days'));
+    try {
+        // `SELECT *` à dessein : les colonnes de validation (owner_*) sont
+        // ajoutées à chaud par la première validation. Les nommer ferait
+        // échouer la lecture entière sur une base qui n'a jamais validé, et le
+        // bandeau disparaîtrait au lieu d'afficher les non-conformités.
+        $rows = Db::rows('SELECT * FROM mac_task_review'
+            . ' WHERE id_shop = ? AND review_date = ? ORDER BY rating ASC, id_task ASC', [$sid, $date]);
+    } catch (PDOException $e) {
+        $out['indispo'] = true;
+        return $out;
+    }
+
+    // Le nom de la tâche : le référentiel local d'abord, le relevé quotidien
+    // ensuite. Sans l'un ni l'autre, l'identifiant — jamais un nom inventé.
+    $noms = todoTaskNames();
+    try {
+        foreach (Db::rows('SELECT id_task, nom FROM ceo_tache_jour WHERE id_shop = ? AND jour = ?',
+                          [$sid, $date]) as $r) {
+            $n = trim((string) $r['nom']);
+            if ($n !== '') { $noms[(int) $r['id_task']] = $n; }
+        }
+    } catch (PDOException $e) { /* relevé absent : on garde le référentiel */ }
+
+    $estNC = fn ($r) => ($r['rating'] !== null && (int) $r['rating'] < $seuil)
+        || ($r['is_accepted'] !== null && (int) $r['is_accepted'] === 0);
+
+    // Récidive : les journées non conformes de la même tâche sur sept jours.
+    $recid = [];
+    try {
+        foreach (Db::rows('SELECT id_task, COUNT(DISTINCT review_date) n FROM mac_task_review'
+            . ' WHERE id_shop = ? AND review_date BETWEEN ? AND ?'
+            . ' AND ((rating IS NOT NULL AND rating < ?) OR is_accepted = 0)'
+            . ' GROUP BY id_task', [$sid, $du7, $date, $seuil]) as $r) {
+            $recid[(int) $r['id_task']] = (int) $r['n'];
+        }
+    } catch (PDOException $e) { /* sans récidive, la liste reste juste */ }
+
+    foreach ($rows as $r) {
+        if ($r['rating'] !== null) { $out['notees']++; }
+        if (!$estNC($r)) { continue; }
+        $tid = (int) $r['id_task'];
+        $n = $recid[$tid] ?? 1;
+        $out['nc'][] = [
+            'taskId'     => (string) $tid,
+            'tache'      => $noms[$tid] ?? ('Tâche #' . $tid),
+            'note'       => $r['rating'] !== null ? (int) $r['rating'] : null,
+            'comment'    => ($r['comment'] !== null && $r['comment'] !== '') ? (string) $r['comment'] : null,
+            'consultant' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+            'releveeLe'  => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+            'recidive'   => $n > 1 ? $n : null,
+            // La veille a-t-elle DÉJÀ été contresignée ? Sans ça, une
+            // non-conformité validée hier soir reviendrait à l'écran ce matin
+            // comme si personne ne l'avait regardée.
+            'valideeLe'  => ($r['owner_validated_at'] ?? null) !== null ? substr((string) $r['owner_validated_at'], 0, 16) : null,
+            'valideePar' => ($r['owner_name'] ?? null) !== null ? (string) $r['owner_name'] : null,
+        ];
+    }
+
+    // Les sept derniers jours : une barre par jour, pour situer la veille.
+    try {
+        $par = [];
+        foreach (Db::rows('SELECT review_date, rating, is_accepted FROM mac_task_review'
+            . ' WHERE id_shop = ? AND review_date BETWEEN ? AND ?', [$sid, $du7, $date]) as $r) {
+            $j = (string) $r['review_date'];
+            if (!isset($par[$j])) { $par[$j] = ['nc' => 0, 'notees' => 0]; }
+            if ($r['rating'] !== null) { $par[$j]['notees']++; }
+            if ($estNC($r)) { $par[$j]['nc']++; }
+        }
+        for ($i = 6; $i >= 0; $i--) {
+            $j = date('Y-m-d', strtotime($date . ' -' . $i . ' days'));
+            $out['semaine'][] = ['jour' => $j, 'nc' => $par[$j]['nc'] ?? 0,
+                'notees' => $par[$j]['notees'] ?? 0, 'releve' => isset($par[$j])];
+        }
+    } catch (PDOException $e) { $out['semaine'] = []; }
+
+    return $out;
+}
+
 /** GET /production/params — réglages du moteur de production. */
 function ep_prod_params(): array
 {

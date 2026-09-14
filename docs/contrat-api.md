@@ -210,6 +210,39 @@ consultant (`pwa_consultant`) pour les tâches boutique — un « majeur » doit
 chose des deux côtés, sinon les chiffres ne s'additionnent pas. Le référentiel famille/type, lui,
 est propre à chaque application.
 
+### `GET /pwa/tasks/nc?shop=4&date=2026-09-13` — les non-conformités d'une journée
+
+Ce que le **dashboard magasin** lit sur la veille : les tâches d'une boutique notées sous le
+seuil ce jour-là, avec leur motif. Tout vient de `mac_task_review` — aucun appel au panel, la
+journée est révolue donc figée. Le barème part avec la réponse : la page n'a pas à lire `/meta`
+pour nommer une gravité.
+
+```json
+{ "shopId": "4", "date": "2026-09-13", "seuil": 4,
+  "niveaux": [{ "n": 1, "nom": "Non conforme — critique", "couleur": "#8D1D2C" }],
+  "notees": 18,
+  "nc": [{ "taskId": "101", "tache": "Contrôle Qualité – Températures frigo vitrine",
+           "note": 1, "comment": "Frigo vitrine relevé à 9 °C à 16 h.",
+           "consultant": "K. Moreau", "releveeLe": "2026-09-13 16:20",
+           "recidive": 3, "valideeLe": null, "valideePar": null }],
+  "semaine": [{ "jour": "2026-09-07", "nc": 1, "notees": 16, "releve": true }],
+  "indispo": false }
+```
+
+- **non-conformité** = `rating < seuil`, ou `is_accepted = 0` pour un avis venu d'un panel qui
+  aurait un autre seuil. `notees` compte toutes les tâches notées, conformes comprises : sans le
+  dénominateur, « cinq écarts » ne veut rien dire.
+- **`recidive`** : le nombre de journées où la MÊME tâche était déjà non conforme sur les sept
+  jours précédents, bornes comprises. `null` en dessous de deux.
+- **`tache`** : le référentiel `todo_task`, à défaut le relevé quotidien `ceo_tache_jour`, à
+  défaut l'identifiant — jamais un nom inventé.
+- **`indispo`** : `mac_task_review` absente. L'écran se tait alors, il n'invente pas un zéro.
+
+Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le lit dans
+`/pwa/tasks?date=<aujourd'hui>`, qu'il charge déjà. Et la validation d'une reprise est un
+`POST /pwa/tasks/validate` sur l'avis **du jour**, pas sur celui de la veille — on contresigne
+la reprise, jamais la non-conformité, qui est un fait acquis.
+
 ### Qui fait autorité sur quoi
 
 Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la

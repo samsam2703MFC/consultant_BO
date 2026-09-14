@@ -102,7 +102,7 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 `/referentiels/project-templates`, `/stores`, `/stores/perf`,
 `/stores/budgets`, `/targets`, `/consultants`, `/fournisseurs`, `/projects`,
 `/projects/crm`, `/people`, `/reporting`, `/journal`, `/products/scoring`,
-`/pwa/reports`.
+`/pwa/reports`, `/pwa/tasks/nc`.
 
 Écritures : `POST /projects`, `PATCH /projects/{id}`,
 `POST /projects/{id}/tasks`, `PATCH /projects/{id}/tasks/{taskId}`,

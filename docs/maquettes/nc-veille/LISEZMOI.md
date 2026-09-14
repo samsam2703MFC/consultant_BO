@@ -1,8 +1,13 @@
 # Les non-conformités de la veille, dans le Dashboard › Jour
 
 Maquettes pour la demande : *dans la vue Jour, ajouter les non-conformités des
-tâches du jour −1*. Trois partis pris, mêmes données, même charte
+tâches du jour −1*. Quatre partis pris, mêmes données, même charte
 (`public/assets/ds/global.css` + `public/dashboard/dashboard.css`).
+
+> **La V4 est en service** depuis le commit « Dashboard › Jour : les
+> non-conformités de la veille ». Ces pages restent la trace de l'arbitrage ;
+> l'écran vivant, lui, est `public/dashboard/dashboard.js` (`rendNC`,
+> `ncTiroir`, `ncValider`) et l'endpoint `GET /pwa/tasks/nc`.
 
 - `v1-tuile-bandeau.html` — une 6ᵉ tuile dans le bandeau des tâches, tiroir au clic.
 - `v2-carte-dediee.html` — une carte à part sous le bandeau : compte, semaine, liste.
@@ -20,11 +25,11 @@ candidats à verser dans `dashboard.css`.
 Les chiffres et les cinq non-conformités sont **fictifs** : magasin 4
 (Waterloo — Centre), lundi 14 septembre 2026, veille au dimanche 13.
 
-## Ce que ça coûte à brancher
+## Ce qui a été branché
 
-Aucun endpoint nouveau. La page lit déjà `/pwa/tasks?date=` pour la journée en
-cours (`charger()`, clé `taches|<date>`) ; il suffit de la lire une seconde fois
-sur la veille.
+Un endpoint, `GET /pwa/tasks/nc?shop=&date=` : les avis de la veille pour UNE
+boutique, lus en base, sans appel au panel. Le tableau ci-dessous était le
+relevé d'avant-travaux ; la colonne de droite dit où chaque donnée est allée.
 
 | Donnée de la maquette | Source |
 | --- | --- |
@@ -33,7 +38,7 @@ sur la veille.
 | Le constat | `comment` de la tâche — obligatoire sous le seuil, donc toujours présent |
 | Qui a relevé, à quelle heure | `consultant`, `valideeLe` / `majLe` |
 | La checklist | `checklist` |
-| La colonne « Aujourd'hui » | la lecture **déjà faite** du jour : même `taskId`, statut `aControler` / `sansPhoto` / `nonRendue`, et `note` si elle est retombée |
+| La colonne « Aujourd'hui » | la lecture **déjà faite** du jour : même `taskId`, statut `aControler` / `sansPhoto` / `nonRendue`, et `note` si elle est retombée (`ncEtat`) |
 | La photo et ses repères | `/pwa/tasks/detail?shop=&task=&date=` (`photo`, `reperes`) — au clic seulement |
 | Les 7 derniers jours (V2) | `/pwa/tasks/heatmap/mois?du=&au=` — déjà lu par les vues Semaine et Mois |
 
@@ -61,13 +66,14 @@ appel avec `validated: false`.
 
 Points ouverts, à trancher avant de coder :
 
-1. **La veille d'un jour fermé.** Si le magasin n'a pas ouvert la veille, faut-il
-   remonter au dernier jour ouvert plutôt que d'afficher un bloc vide ?
-2. **Le seuil.** Il vit dans le réglage `signalement` (défaut 4) ; la page
-   dashboard ne lit pas encore `/meta`. Soit un appel de plus, soit se contenter
-   d'`accepte`, qui est déjà calculé côté serveur (mais sans le nom du niveau).
-3. **La récidive** (« 3ᵉ fois en 7 jours ») demande une lecture de 7 jours, pas
-   d'un seul. Utile, mais c'est ce qui coûte le plus cher ici.
+1. **La veille d'un jour fermé.** Tranché par le silence : sans tâche notée la
+   veille, le bandeau le dit (« aucun contrôle consigné ce jour-là ») au lieu de
+   remonter au dernier jour ouvert. Remonter reste à faire si vous le voulez.
+2. **Le seuil.** Tranché : l'endpoint renvoie `seuil` et `niveaux` avec les
+   données, donc pas d'appel à `/meta`, et aucun libellé recopié dans le
+   JavaScript — seul un repli de secours y vit, si le barème était vide.
+3. **La récidive.** Faite, et elle ne coûte rien : une seule requête groupée sur
+   sept jours de `mac_task_review`.
 4. **Qui valide.** `owner_name` prend le nom du réglage `utilisateur` du
-   cockpit, à défaut « CEO ». À vérifier avant de mettre le bouton entre
+   cockpit, à défaut « CEO ». **À vérifier** avant de mettre le bouton entre
    d'autres mains que les vôtres.
