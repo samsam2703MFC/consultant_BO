@@ -867,6 +867,30 @@ class App {
       production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
       exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], plan: ['Plan de développement', 'Comment chaque franchisé va développer son chiffre : la rampe à 5 ans de l’étude, l’engagement de l’année déposé par le franchisé et validé par le consultant, les actions pour y arriver, puis le rituel trimestriel — constat, annotations du franchisé, du consultant et de la marque, et ce qui est mis en route. Le PDF reprend l’ensemble.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], performance: ['Performance', 'Comment évoluent les magasins, sur le temps long : le dernier mois clos (marge, CA contre cible, tickets, panier, douze mois de clients par jour et de ticket moyen), l\u2019année et les horizons à 3 et 5 ans, puis la marge et la maîtrise des coûts avec les leviers à traiter. Pour la journée, la semaine et le mois en cours : Résultat.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
+    // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
+    const GROUPES = {
+      analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
+        [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
+      budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
+        [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
+      catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
+        [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
+      produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
+        [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
+      anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte.',
+        [['anaprod', 'Par référence'], ['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner']]],
+      analyse: ['Dans le temps', titles.analyse[1], null] };
+    const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
+    if (grp) {
+      common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
+      const cat0 = this.D.prodCatalogue || [];
+      const badges = { assortiment: cat0.filter(p => p.must).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
+      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
+    }
+    // Les limites API se replient en une puce : les chiffres passent devant.
+    common.lacOuvert = !!S.lacOuvert;
+    common.lacToggle = () => this.setState({ lacOuvert: !S.lacOuvert });
     const mt = this.meta || {};
     common.metaDate = mt.dateLabel || ''; common.metaPeriode = mt.periodeLabel || '';
     common.brandNom = (mt.reseau || {}).nom || ''; common.brandSub = (mt.reseau || {}).sousTitre || '';
@@ -1192,30 +1216,23 @@ class App {
         ['performance', 'Performance', 0]]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
+      // Trois questions : comment va ce magasin (leviers, équipe, panier,
+      // réputation), quel budget il tient, où il va sur trois ans.
       ['Magasins', [
-        { sub: 'Analyse & leviers', children: [
-          ['analysemag', 'Analyse magasin', 0],
-          ['ventes', 'Target de vente & classement', 0],
-          ['croisements', 'Croisements', 0],
-          ['reputation', 'Réputation digitale', ((this.D.reput || {}).reseau || {}).sousCible || 0]] },
-        { sub: 'Budget', children: [
-          ['budget', 'Suivi du budget', 0],
-          ['encodage', 'Encodage du budget', 0],
-          ['budgetparam', 'Paramètres du budget', 0],
-          ['plan', 'Plan de développement', 0]] }]],
+        ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements', 'reputation']],
+        ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
+        ['plan', 'Plan de développement', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
+      // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
+      // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
+      // (scoring, dont le seuil est un filtre), où il se vend (par référence,
+      // par magasin, en euros), et comment il évolue. Les anciens écrans
+      // restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
       ['Produits', [
-        { sub: 'Catalogue & comptoir', children: [
-          ['catalogue', 'Catalogue produit', 0],
-          ['assortiment', 'Assortiment obligatoire', 0],
-          ['planogramme', 'Planogramme comptoir', 0]] },
-        { sub: 'Scoring & analyse', children: [
-          ['produits', 'Scoring des références', 0],
-          ['seuil', 'Références sous seuil', 0],
-          ['analyse', 'Analyse dans le temps', 0],
-          ['anaprod', 'Produits × magasins', 0],
-          ['usage', 'Usage du catalogue', 0],
-          ['manque', 'Manque à gagner', 0]] }]],
+        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => p.must && !p.zone).length, ['assortiment', 'planogramme']],
+        ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
+        ['anaprod', 'Où ça se vend', 0, ['usage', 'manque']],
+        ['analyse', 'Dans le temps', 0]]],
       ['Centrale d’achat', [
         ['caAchats', 'Commandes', 0],
         ['caFacturation', 'Facturation magasins', 0]]],
@@ -1250,7 +1267,7 @@ class App {
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
-      if (Array.isArray(it)) return { type: 'leaf', label: it[1], badge: it[2] || false, go: goTo(it[0]), st: navSt(S.screen === it[0], false) };
+      if (Array.isArray(it)) return { type: 'leaf', label: it[1], badge: it[2] || false, go: goTo(it[0]), st: navSt(S.screen === it[0] || (it[3] || []).indexOf(S.screen) >= 0, false) };
       const childActive = it.children.some(c => S.screen === c[0]);
       const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
       return { type: 'sub', label: it.sub, open, chevron: open ? '▾' : '▸',
@@ -3766,6 +3783,11 @@ class App {
 
     common.refLignes = lignes.slice(0, 400).map(p => ({
       ref: String(p.ref), nom: p.nom, categorie: p.categorie || '',
+      // Voir aussi : la même référence dans le scoring, dans « où ça se vend », au comptoir.
+      voir: [
+        { nom: 'gamme', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
+        { nom: 'où ça se vend', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
+        { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : l’attribuer au comptoir', go: () => this.setState({ screen: 'planogramme', refQ: String(p.nom || p.ref), refToutes: !p.zone }) }],
       groupe: p.groupe || '',
       gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
       prix: this.fEd(p.prix), cout: this.fEd(p.mat),
@@ -10590,6 +10612,7 @@ class App {
     common.pdSeuilGarder = String(Math.round(SCx.garder));
     common.pdSeuilModifier = String(Math.round(SCx.modifier));
     common.pdDecisions = 'Garder ' + dcs.garder + ' · Modifier ' + dcs.modifier + ' · Effacer ' + dcs.effacer;
+    this._pdDcs = dcs;
     common.pdChips = [['garder', 'Garder', '#2d7a3e', '#e6f2e8'], ['modifier', 'Modifier', '#b8671a', '#fdf2e5'], ['effacer', 'Effacer', '#C0182B', '#fbebed']]
       .map(c2 => ({ nom: c2[1], n: dcs[c2[0]], col: c2[2], fond: c2[3], actif: S.pdDec === c2[0],
         cliquer: () => this.setState({ pdDec: S.pdDec === c2[0] ? '' : c2[0] }) }));
