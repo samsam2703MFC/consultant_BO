@@ -263,6 +263,15 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-fz .hs i.c.vide{color:var(--color-text-muted)}
 .db-fz .hs .lb{font:400 9px var(--font-ui);color:var(--color-text-muted);text-align:center}
 .db-fz .sum{display:flex;gap:18px;font:400 11px var(--font-ui);color:var(--color-text-muted);padding:8px 0 4px 130px;flex-wrap:wrap}.db-fz .sum b{color:var(--color-text);font-weight:600}
+/* Le planning déplié, par secteur. */
+.db-sect{display:grid;grid-template-columns:200px 1fr 120px;gap:12px;align-items:center;padding:8px 16px;background:var(--color-background-secondary);font:600 11px var(--font-ui);margin-top:6px}
+.db-sect .mu{font-weight:400;color:var(--color-text-muted)}.db-sect .r{text-align:right}
+.db-sect i.sq{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.db-plans{padding:0 16px}
+.db-plan.sec{grid-template-columns:184px 1fr 104px;gap:12px;padding:6px 0}
+.db-axe2{display:grid;grid-template-columns:200px 1fr 120px;gap:12px;padding:6px 16px 0}
+.db-axe2>div:nth-child(2){position:relative;height:12px}
+.db-axe2 span{position:absolute;top:0;transform:translateX(-50%);font:400 9px var(--font-ui);color:var(--color-text-muted)}
 /* Le tiroir du treemap : famille › catégorie. */
 .db-cdr{display:flex;align-items:center;justify-content:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;padding:6px 0 8px;border-top:.5px solid var(--color-border-tertiary);margin:0 16px}
 .db-cdt{padding:0 16px 12px}

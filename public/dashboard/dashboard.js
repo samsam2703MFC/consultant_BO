@@ -250,7 +250,7 @@
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Qui est en poste</span><span class="db-mini">planning du panel · effectif en poste et coût du personnel en % des ventes de l’heure (seuil ${seuilLab} %)${m.planningHeuresZero ? ' · ' + nf(m.planningHeuresZero, 1) + ' h à 0 €/h (' + esc((m.planningZeroNoms || []).join(', ')) + ')' : ''}</span></div>
       ${frise}
       <div class="db-cdr" data-pdrop="1">${S.pOuvert ? 'replier le planning ▴' : 'voir le planning ▾'}</div>
-      ${S.pOuvert ? `<div style="padding:4px 16px 12px">${plan.length ? plan.map(p => `<div class="db-plan"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}</span></span><span class="g"><i class="${p.franchise ? 'fr' : ''}" style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') : '<div class="db-note">Pas de planning lu pour ce jour.</div>'}</div>` : ''}</div>`;
+      ${S.pOuvert ? planningSecteurs(plan, hMin, hMax) : ''}</div>`;
     const serie = Array.isArray(m.serie) ? m.serie.filter(x => x.ouvert) : [];
     if (serie.length) {
       // Le jour dans le mois : la marge nette en % des ventes, une barre par
@@ -346,6 +346,18 @@
     return `<div class="db-cdt">${tog}<table class="db-tf"><tr><th class="l">Famille › catégorie</th>${entete}</tr>${rows}
       <tr class="tot"><td class="l">Total · ${fams.length} famille${fams.length > 1 ? 's' : ''} · ${cats.length} catégories</td>${pied}</tr></table>
       <div class="db-note" style="padding:6px 0 0">Marge brute (%) = (CA − coût matière) ÷ CA ; le coût matière vient de la fiche recette du catalogue. ${etoile ? '* taux calculé sur les catégories dont le coût matière est connu. ' : ''}Une marge très négative signale une fiche recette au coût d’une fournée, pas d’une part.</div></div>`;
+  }
+  /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
+  function planningSecteurs(plan, hMin, hMax) {
+    if (!plan.length) { return '<div class="db-note" style="padding:8px 16px 12px">Pas de planning lu pour ce jour.</div>'; }
+    const COUL = { 'vente': '#1f4e8c', 'production patisserie': '#8D1D2C', 'production pâtisserie': '#8D1D2C', 'production boulangerie': '#b8860b', 'production traiteur': '#2d7a3e', 'nettoyage': '#7a7a7a' };
+    const coulS = n => COUL[String(n || '').toLowerCase()] || (n ? '#5f5a55' : '#B9B2A8');
+    const G = {};
+    plan.forEach(p => { const sec = (p.postes && p.postes[0]) || ''; (G[sec] = G[sec] || { nom: sec, h: 0, cout: 0, pers: [] }); G[sec].h += p.h || 0; G[sec].cout += p.cout || 0; G[sec].pers.push(p); });
+    const secteurs = Object.values(G).sort((a, b) => (a.nom === '') - (b.nom === '') || b.h - a.h);
+    const axe = `<div class="db-axe2"><div></div><div>${(function () { const o = []; for (let h = Math.ceil(hMin); h <= hMax; h += 2) { o.push(`<span style="left:${(100 * (h - hMin) / (hMax - hMin)).toFixed(1)}%">${h} h</span>`); } return o.join(''); })()}</div><div></div></div>`;
+    return `<div style="padding:4px 0 12px">${axe}${secteurs.map(g => `<div class="db-sect"><div><i class="sq" style="background:${coulS(g.nom)}"></i>${g.nom ? esc(g.nom) : 'Sans secteur'}<span class="mu"> · ${g.pers.length} personne${g.pers.length > 1 ? 's' : ''}${g.pers.some(p => (p.postes || []).length > 1) ? ' · polyvalent' + (g.pers.filter(p => (p.postes || []).length > 1).length > 1 ? 'es' : 'e') : ''}${g.nom ? '' : ' · poste à renseigner dans le panel'}</span></div><div></div><div class="r">${nf(g.h, 1)} h · ${fE(g.cout)}</div></div>`
+      + `<div class="db-plans">` + g.pers.map(p => `<div class="db-plan sec" title="${(p.postes || []).length ? 'postes : ' + esc(p.postes.join(', ')) : 'aucun poste dans le panel'}"><span><b>${esc(p.nom)}</b><br><span class="mu">${esc(p.debut)} – ${esc(p.fin)} · ${nf(p.h, 1)} h${p.franchise ? ' · franchisé' : ''}${(p.postes || []).length > 1 ? ' · polyvalent' : ''}</span></span><span class="g"><i style="left:${(100 * (hDe(p.debut) - hMin) / (hMax - hMin)).toFixed(1)}%;width:${(100 * (hDe(p.fin) - hDe(p.debut)) / (hMax - hMin)).toFixed(1)}%;background:${p.franchise ? '#D97706' : coulS(g.nom)}"></i></span><span style="text-align:right"><b>${fE(p.cout)}</b><br><span class="mu">${p.caH != null ? fE(p.caH) + '/h vendu' : ''}</span></span></div>`).join('') + `</div>`).join('')}</div>`;
   }
   function hDe(t) { const p = String(t || '0:0').split(':'); return (+p[0] || 0) + (+p[1] || 0) / 60; }
 

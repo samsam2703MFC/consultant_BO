@@ -2186,9 +2186,13 @@ function ep_exploitation_jour(): array
         foreach (analyseListe($emps) as $em) {
             $ide = (int) ($em['id'] ?? 0);
             if ($ide <= 0) { continue; }
+            // Les postes de travail (workstations) de la personne, dans l'ordre du panel : le premier fait son secteur.
+            $postes = [];
+            foreach ((array) ($em['workstations'] ?? []) as $w) { $nw = trim((string) (is_array($w) ? ($w['name'] ?? '') : $w)); if ($nw !== '') { $postes[] = $nw; } }
             $tauxDe[(string) $id][$ide] = [
                 'taux' => isset($em['money_per_hour']) && $em['money_per_hour'] !== null ? (float) $em['money_per_hour'] : null,
                 'franchise' => (string) ($em['franchise_role'] ?? '') === 'franchisee',
+                'postes' => $postes,
             ];
         }
     }
@@ -2559,6 +2563,7 @@ function ep_exploitation_jour(): array
             $planM[$i9]['franchise'] = $fr;
             $planM[$i9]['cout'] = $cout;
             $planM[$i9]['horsPnl'] = $fr;
+            $planM[$i9]['postes'] = $tx['postes'] ?? [];
             $hPlan += $p9['h'];
             if ($fr) {
                 $hFr += $p9['h']; $coutFr += $cout ?? 0.0;
