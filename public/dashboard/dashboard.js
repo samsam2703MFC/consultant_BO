@@ -574,7 +574,7 @@
     // Le lien de la photo est SIGNÉ et expire. Sans ce garde-fou, la vignette
     // restait une image cassée surmontée de repères qui ne montraient plus
     // rien — le constat écrit, lui, se lit toujours.
-    return `<a class="db-ncph" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(x.tache)} — ${p.reperes.length} repère(s) posé(s) au contrôle"><img src="${esc(p.url)}" alt="" onerror="var b=this.parentNode;this.remove();b.classList.add('perdue')">${rep}</a>`;
+    return `<a class="db-ncph" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(x.tache)} — ${p.reperes.length} repère(s) posé(s) au contrôle"><img src="${esc(p.url)}" alt="" onerror="var b=this.parentNode;this.remove();b.classList.add('perdue');b.removeAttribute('href')">${rep}</a>`;
   }
 
   function rendNC() {
