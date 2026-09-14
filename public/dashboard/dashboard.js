@@ -609,27 +609,14 @@
   }
 
   function ncTiroir(D, L) {
-    const par = n => L.filter(x => x.note === n).length;
-    const grav = [[1, 'critique'], [2, 'majeure'], [3, 'mineure']]
-      .filter(g => par(g[0])).map(g => par(g[0]) + ' ' + ncNiveau(D, g[0]).court + (par(g[0]) > 1 ? 's' : '')).join(' · ');
-    const repris = L.filter(x => x.etat.c === 'ok'), ouverts = L.filter(x => x.etat.c !== 'ok');
-    const nCtl = L.filter(x => x.etat.c === 'ctl').length, nKo = L.filter(x => x.etat.c === 'ko' || x.etat.c === 'rec').length;
+    // Le tiroir ne redit pas le bandeau. Les tuiles de compte (combien, combien
+    // de reprises, combien d'ouvertes, la semaine en barres) répétaient ce que
+    // la ligne du dessus annonce déjà : elles sont parties, et la semaine tient
+    // en cinq mots dans l'en-tête. Ce qui reste, c'est ce qu'on ne peut lire
+    // nulle part ailleurs — la tâche, le constat, la photo, le devenir du jour.
     const relev = [...new Set(L.map(x => x.consultant).filter(Boolean))].join(', ');
     const sem = Array.isArray(D.semaine) ? D.semaine : [];
-    const mx = Math.max(1, ...sem.map(x => x.nc || 0));
-    const JS = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
-    const barres = sem.map(x => { const der = x.jour === D.date, h = Math.round(100 * (x.nc || 0) / mx);
-      return `<div title="${esc(fDL(x.jour))} · ${x.nc} non-conformité(s) sur ${x.notees} notée(s)"><i class="${der ? 'h' : (x.nc ? '' : 'z')}" style="height:${x.nc ? Math.max(8, h) : 6}%"></i>${der ? '<em>' + x.nc + '</em>' : ''}<span>${JS[new Date(x.jour + 'T12:00:00').getDay()]}</span></div>`; }).join('');
     const totSem = sem.reduce((a, x) => a + (x.nc || 0), 0);
-    const tuile = (k, v, s2, cls) => `<div class="db-bt ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s2}</div></div>`;
-    const somm = `<div class="db-ncsum">
-      ${tuile('Non-conformités', L.length + '<small>/ ' + D.notees + ' notées</small>', grav, 'ko')}
-      ${tuile('Reprises aujourd’hui', repris.length + '<small>/ ' + L.length + '</small>', repris.length ? 'refaites et notées ≥ ' + (D.seuil || 4) + '/5' : 'aucune reprise notée pour l’instant', repris.length ? 'ok' : '')}
-      ${tuile('Encore ouvertes', String(ouverts.length), ouverts.length ? [nCtl ? nCtl + ' à contrôler' : '', nKo ? '<b>' + nKo + ' sans reprise</b>' : ''].filter(Boolean).join(' · ') : 'tout a été repris', ouverts.length ? 'ko' : 'ok')}
-      <div class="db-bt"><div class="k">Les 7 derniers jours</div>
-        <div class="db-nc7" style="grid-template-columns:repeat(${Math.max(1, sem.length)},1fr)">${barres}</div>
-        <div class="s">${totSem} sur la semaine${totSem && L.length >= mx ? ' · <b class="ko">hier, le pire jour</b>' : ''}</div></div>
-    </div>`;
 
     const ligne = x => {
       const t = x.etat.t;
@@ -648,16 +635,9 @@
         <span class="a"><span class="db-ncst ${x.etat.c}">${x.etat.lib}</span><small>${x.etat.sous}${vu}</small></span></div>`;
     };
 
-    const dejaN = L.filter(x => x.etat.c === 'ok' && x.etat.deja).length;
-    const pied = `<div class="db-ncfoot"><span class="t">Une non-conformité reste ouverte tant que la même tâche n\u2019a pas été refaite et notée au-dessus du seuil.
-        <small>${dejaN ? dejaN + ' reprise' + (dejaN > 1 ? 's' : '') + ' déjà contresignée' + (dejaN > 1 ? 's' : '') + ' par la direction \u00b7 ' : ''}noter, valider et relancer se font dans Contrôle des tâches</small></span><span class="sp"></span>
-        <a class="db-lien" href="../#/taches">Ouvrir Contrôle des tâches \u203a</a></div>`;
-
     return `<div class="db-ncdl">
-      <div class="ct"><span class="db-lab">${L.length} non-conformité${L.length > 1 ? 's' : ''} sur ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span><span class="db-mini">${relev ? 'relevées par ' + esc(relev) + ' · ' : ''}seuil de conformité ${D.seuil || 4}/5</span></div>
-      ${somm}
-      <div class="db-nclist"><div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d’hier</span><span>Photo</span><span>Aujourd’hui</span></div>${L.map(ligne).join('')}</div>
-      ${pied}</div>`;
+      <div class="ct"><span class="db-lab">${L.length} non-conformité${L.length > 1 ? 's' : ''} sur ${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span><span class="db-mini">${totSem > L.length ? totSem + ' sur les 7 derniers jours \u00b7 ' : ''}${relev ? 'relevée' + (L.length > 1 ? 's' : '') + ' par ' + esc(relev) + ' \u00b7 ' : ''}seuil de conformité ${D.seuil || 4}/5</span><a class="db-lien" href="../#/taches">Contrôle des tâches \u203a</a></div>
+      <div class="db-nclist"><div class="db-ncr hd"><span>Gravité</span><span>La tâche et le constat d\u2019hier</span><span>Photo</span><span>Aujourd\u2019hui</span></div>${L.map(ligne).join('')}</div></div>`;
   }
 
   /* Les tâches du jour (ou de la période) : faites, non faites, bloquantes,
