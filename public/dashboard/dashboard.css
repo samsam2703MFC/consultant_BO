@@ -552,3 +552,45 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 #dash.mob .db-nct,#dash.mob .db-ncl{display:block}
 #dash.mob .db-nct>div,#dash.mob .db-ncl{padding:7px 0;border-bottom:.5px solid var(--color-border-tertiary)}
 #dash.mob .db-ncdl{border-radius:14px;padding:10px 13px;margin-bottom:8px}
+
+/* --- Le stock, vivant -----------------------------------------------------
+   Même forme que le bandeau des non-conformités : un état d'un coup d'œil,
+   le détail au déplié. Rouge quand une référence est sous son minimum. */
+.db-stbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:var(--color-surface);
+  border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 14px;margin-bottom:12px}
+.db-stbar.ko{border-color:rgba(192,24,43,.35);background:#fdf4f5}
+.db-stbar.ok{border-color:#bfdcc6;background:#f4f9f5}
+.db-stbar.ouv{border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0}
+.db-stbar .ic{font-size:15px;cursor:pointer}
+.db-stbar .t{font:600 13px var(--font-ui);cursor:pointer;min-width:0}
+.db-stbar .t small{display:block;font:400 11px var(--font-ui);color:var(--color-text-muted);margin-top:1px}
+.db-stbar.ko .t{color:#C0182B}
+.db-stbar .chips{display:flex;gap:6px;flex-wrap:wrap;cursor:pointer}
+.db-stbar .ch{font:600 10px var(--font-ui);border-radius:999px;padding:3px 9px;background:var(--color-background-secondary);color:var(--color-text-muted);white-space:nowrap}
+.db-stbar .ch.ko{background:#fbeff0;color:#C0182B}
+.db-stbar .sp{flex:1}
+.db-stbar .dr{font:600 10.5px var(--font-ui);color:var(--color-primary);cursor:pointer;white-space:nowrap}
+.db-stav{font-size:11px;white-space:nowrap}
+.db-stav.on{border-color:#2d7a3e;color:#2d7a3e;font-weight:600}
+.db-stdl{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-top:none;
+  border-radius:0 0 12px 12px;padding:8px 14px 12px;margin-bottom:12px}
+.db-stvide{font-size:11.5px;color:var(--color-text-muted);padding:6px 0}
+.db-stt .th,.db-stt .tr{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 92px 92px 92px 82px;
+  gap:10px;align-items:center;padding:5px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:11.5px}
+.db-stt .th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.db-stt .tr:last-child{border-bottom:none}
+.db-stt .tr.neg{background:#fdf4f5}
+.db-stt .r{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-stt .c{color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-stt .v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-stt .v.ko{color:#C0182B;font-weight:600}
+.db-stt .v.wa{color:#B26A00;font-weight:600}
+.db-stt .v.mu{color:var(--color-text-muted)}
+@media (max-width:1150px){.db-stt .th,.db-stt .tr{grid-template-columns:minmax(0,1.6fr) 84px 84px 84px}
+  .db-stt .c:first-of-type,.db-stt .th span:nth-child(2),.db-stt .th span:nth-child(6),.db-stt .tr .c:last-child{display:none}}
+/* Au téléphone, le tableau devient une liste. */
+#dash.mob .db-stdl{border-radius:14px;border-top:.5px solid var(--color-border-tertiary);margin-bottom:8px;padding:8px 13px 10px}
+#dash.mob .db-stt .th{display:none}
+#dash.mob .db-stt .tr{grid-template-columns:minmax(0,1fr) 74px 74px;gap:6px;font-size:11px}
+#dash.mob .db-stt .tr .c{display:none}
+#dash.mob .db-stt .tr .v:nth-of-type(2){display:none}

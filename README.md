@@ -172,6 +172,17 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   trimestre en cours est écarté comme le mois en cours — à mi-parcours il
   vaudrait la moitié de lui-même. Un trimestre sans CA relevé coupe le trait
   au lieu d'être relié : le trou se voit.
+- **Stock vivant** : l'inventaire matière du magasin, relu avec la page — donc
+  toutes les dix minutes en vue Jour sur aujourd'hui. Une référence est en
+  alerte quand son stock est **négatif** (écart de caisse ou de comptage) ou
+  **sous le minimum journalier**. Le bandeau dit le nombre, le tiroir dit
+  lesquelles et de combien il manque. Source : `GET /ventes/stock?shop=`.
+  Un bouton **« M'avertir »** demande la permission du navigateur et fait
+  paraître un avertissement quand une référence PASSE sous son minimum entre
+  deux lectures — jamais à la première, qui n'a rien à comparer. Sans service
+  worker, ces avertissements ne partent que **tant que la page est ouverte** ;
+  l'écran le dit plutôt que de laisser croire à une alerte qui suivrait le
+  gérant.
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.

@@ -12,6 +12,34 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 
 ---
 
+## `GET /ventes/stock`
+
+L'inventaire matière d'**un** magasin. `/centrale/stock` fait la même lecture
+pour tout le réseau et tronque à 600 lignes : sur 2 100 références, un magasin
+peut y passer entier à la trappe. Le dashboard d'un magasin a besoin du sien,
+complet.
+
+Source : `/shops/{id}/material-inventory` (API panel). Une référence jamais
+comptée n'est **pas** « à zéro », elle est **absente** — elle n'est pas rendue.
+
+Une référence est **en alerte** quand son stock est négatif (écart de caisse ou
+de comptage) ou sous le minimum journalier : les deux appellent un geste.
+`manque` dit de combien il faut recharger pour repasser au minimum. Les alertes
+sortent en tête, les plus creuses d'abord.
+
+```json
+{
+  "shop": "2", "references": 128,
+  "alertes": 3, "ruptures": 2, "negatifs": 1,
+  "dernierComptage": "2026-09-14 18:22:00", "quand": "2026-09-15T14:02:11+02:00",
+  "lignes": [
+    { "ref": "Beurre doux 82 %", "categorie": "Matières premières",
+      "stock": -2.5, "mini": 12, "unite": "kg", "modif": "2026-09-14 18:22:00",
+      "alerte": true, "manque": 14.5 }
+  ]
+}
+```
+
 ## `GET /ventes/mensuel`
 
 Le CA mois par mois d'un magasin. Sert la **valeur du magasin** du dashboard.
