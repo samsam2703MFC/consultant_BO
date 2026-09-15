@@ -350,3 +350,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-15T14:44:15Z valeur du magasin dashboard
 2026-09-15T14:51:34Z valeur compacte + six trimestres
 2026-09-15T16:13:22Z retrait micro courbe
+2026-09-15T16:57:48Z valeur sur les ventes de caisse
