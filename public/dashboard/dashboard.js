@@ -64,10 +64,10 @@
   function charger(force) {
     const kr = cleRes(), ks = cleSt();
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
-    // toujours à partir d'aujourd'hui. Trois exercices couvrent les 18 mois
-    // même quand on est en début d'année.
-    const yA = +AUJ.slice(0, 4);
-    lireAux('valo', '/stores/perf?granularite=mois&annees=' + (yA - 2) + ',' + (yA - 1) + ',' + yA, force);
+    // toujours à partir d'aujourd'hui. Vingt-quatre mois demandés pour deux
+    // usages : les 18 derniers pour la valeur, et six trimestres entiers pour
+    // le tiroir — le premier d'entre eux commence avant le 18e mois.
+    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=24', force);
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
@@ -132,36 +132,41 @@
    * calcule sur ce qu'on a et on le dit : mieux vaut un chiffre daté qu'un
    * tiret. */
   const VALO_MOIS = 18, VALO_DIV = 6;
+  /** Les mois rendus par /ventes/mensuel — le mois en cours en est déjà exclu. */
+  function valoMois() {
+    const d = S.aux['valo|' + S.shop];
+    return d && Array.isArray(d.mois) ? d.mois : null;
+  }
+  const libMois = m => MOIS_C[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
   function valeurMagasin() {
-    const d = S.aux['valo'];
-    if (!Array.isArray(d)) return null;
-    const enCours = AUJ.slice(0, 7);
-    const cle = c => c.annee + '-' + String(c.mois).padStart(2, '0');
-    const serie = d
-      .filter(c => String(c.storeId) === String(S.shop) && c.ca != null && cle(c) < enCours)
-      .sort((a, b) => cle(a) < cle(b) ? -1 : 1)
-      .slice(-VALO_MOIS);
+    const l = valoMois();
+    if (!l) return null;
+    // La fenêtre est les 18 derniers mois, trous compris : ce sont bien les
+    // 18 derniers. Un mois sans vente ne compte pas dans la moyenne, mais on
+    // dit combien de mois l'ont nourrie.
+    const fen = l.slice(-VALO_MOIS);
+    const serie = fen.filter(c => c.ca != null);
     if (!serie.length) return { n: 0 };
     const moy = serie.reduce((a, c) => a + c.ca, 0) / serie.length;
-    const lib = c => MOIS_C[c.mois - 1] + ' ' + c.annee;
     return {
-      n: serie.length, moyenne: moy, annuel: moy * 12, valeur: moy * 12 / VALO_DIV,
-      du: lib(serie[0]), au: lib(serie[serie.length - 1]),
-      serie: serie.map(c => c.ca)
+      n: serie.length, creux: fen.length - serie.length,
+      moyenne: moy, annuel: moy * 12, valeur: moy * 12 / VALO_DIV,
+      du: libMois(fen[0].mois), au: libMois(fen[fen.length - 1].mois),
+      duVendu: libMois(serie[0].mois), auVendu: libMois(serie[serie.length - 1].mois)
     };
   }
   /* Les six derniers trimestres CLOS — le trimestre en cours est écarté comme
    * le mois en cours : à mi-parcours il vaudrait la moitié de lui-même. Chaque
    * trimestre porte la valeur que le magasin aurait eue à ce rythme-là. */
   function valoTrimestres() {
-    const d = S.aux['valo'];
-    if (!Array.isArray(d)) return null;
+    const l = valoMois();
+    if (!l) return null;
     let y = +AUJ.slice(0, 4), q = Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1;
     const cles = [];
     for (let i = 0; i < 6; i++) { q--; if (q < 1) { q = 4; y--; } cles.unshift(y + 'T' + q); }
     const par = {};
-    d.filter(c => String(c.storeId) === String(S.shop) && c.ca != null).forEach(c => {
-      const k = c.annee + 'T' + (Math.floor((c.mois - 1) / 3) + 1);
+    l.filter(c => c.ca != null).forEach(c => {
+      const k = c.mois.slice(0, 4) + 'T' + (Math.floor((+c.mois.slice(5, 7) - 1) / 3) + 1);
       (par[k] = par[k] || []).push(c.ca);
     });
     const out = cles.map(k => {
@@ -228,11 +233,10 @@
     if (!v || !v.n) {
       return `<div class="db-vdl seul"><div class="vide">${v ? 'Aucun mois complet de chiffre d’affaires relevé pour ce magasin.' : 'Lecture du chiffre d’affaires des 18 derniers mois…'}</div></div>`;
     }
-    const complet = v.n >= VALO_MOIS;
     return `<div class="db-vdl seul">
       <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.moyenne)} de CA mensuel moyen × 12 ÷ ${VALO_DIV}, soit deux mois de chiffre d’affaires.
-        ${complet ? 'Sur les 18 derniers mois clos' : 'Sur les ' + v.n + ' mois clos disponibles'}, de ${esc(v.du)} à ${esc(v.au)} —
-        ${fE(v.annuel)} de CA annualisé.${complet ? '' : ' La règle en demande 18 : le chiffre se stabilisera avec l’historique.'}</div>
+        Sur les 18 derniers mois clos, de ${esc(v.du)} à ${esc(v.au)} — ${fE(v.annuel)} de CA annualisé.
+        ${v.creux ? v.creux + ' mois sans vente dans la fenêtre : la moyenne est faite sur les ' + v.n + ' qui en ont, de ' + esc(v.duVendu) + ' à ' + esc(v.auVendu) + '.' : ''}</div>
       ${valoTiroir()}
     </div>`;
   }

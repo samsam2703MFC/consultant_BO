@@ -143,16 +143,18 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 `rendre()` / `brancher()`, et des lectures asynchrones par clé (`lireAux`).
 
 - **Valeur du magasin** : sur la barre du haut, en un mot et un chiffre ; tout
-  le détail attend dans le tiroir qu'on déplie. Le calcul : le CA mensuel moyen des **18 derniers mois clos**,
-  ramené à l'année (× 12) puis divisé par **6** — soit deux mois de chiffre
-  d'affaires. Le **mois en cours est écarté** : incomplet, il tirerait la
-  moyenne vers le bas jusqu'à son dernier jour. Quand l'historique est plus
-  court, le calcul se fait sur les mois disponibles et le bloc le dit : un
-  chiffre daté vaut mieux qu'un tiret. La mini-courbe montre le CA mensuel qui
-  porte la valeur. Source : `GET /stores/perf?granularite=mois&annees=…` sur
-  trois exercices (18 mois débordent sur trois années civiles en début
-  d'année), lu à partir d'aujourd'hui et non de la période regardée — la valeur
-  du magasin est un fait présent. Constantes `VALO_MOIS` et `VALO_DIV`.
+  le détail attend dans le tiroir qu'on déplie. Le calcul : le CA mensuel moyen
+  des **18 derniers mois clos**, ramené à l'année (× 12) puis divisé par **6**
+  — soit deux mois de chiffre d'affaires. Le **mois en cours est écarté** :
+  incomplet, il tirerait la moyenne vers le bas jusqu'à son dernier jour. Un
+  mois sans vente dans la fenêtre ne compte pas dans la moyenne, et le bloc dit
+  combien il y en a. Source : `GET /ventes/mensuel?shop=…&mois=24`, les
+  **ventes de caisse** et non le P&L mensuel du panel — celui-ci n'a aucune
+  ligne en 2025, et la fenêtre de 18 mois s'y réduisait à sept. Vingt-quatre
+  mois sont demandés pour deux usages : les 18 derniers pour la valeur, six
+  trimestres entiers pour le tiroir (le premier commence avant le 18e mois).
+  Lu à partir d'aujourd'hui et non de la période regardée — la valeur du
+  magasin est un fait présent. Constantes `VALO_MOIS` et `VALO_DIV`.
   Le tiroir montre en plus **les six derniers trimestres clos** : la valeur que
   le magasin aurait eue au rythme de chacun, en courbe et en chiffres. Le
   trimestre en cours est écarté comme le mois en cours — à mi-parcours il
