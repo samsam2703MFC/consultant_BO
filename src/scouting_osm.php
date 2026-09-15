@@ -207,7 +207,10 @@ final class ScoutingOsm
         // `out tags bb` : la boîte englobante donne le centre ET la taille, dont
         // on tire un rayon. Les nœuds seuls sont ignorés — sans emprise, on ne
         // saurait pas si c'est un parc d'activité ou un atelier.
-        return '[out:json][timeout:180];'
+        // Même budget de temps que la requête des commerces : le secteur d'Anvers
+        // et de Bruxelles dépassait 180 s, et l'appel HTTP rendait la main avant
+        // Overpass — on relevait alors un secteur sur deux.
+        return '[out:json][timeout:240];'
             . '(way(' . $bbox . ')["landuse"~"^(industrial|commercial|retail)$"];'
             . 'rel(' . $bbox . ')["landuse"~"^(industrial|commercial|retail)$"];);out tags bb;';
     }
@@ -244,7 +247,7 @@ final class ScoutingOsm
     public static function interrogerZoning(int $secteur): ?array
     {
         if (!isset(self::SECTEURS[$secteur])) { self::$lastError = 'secteur inconnu'; return null; }
-        return self::appel(self::requeteZoning(self::SECTEURS[$secteur][0]), $secteur, 200);
+        return self::appel(self::requeteZoning(self::SECTEURS[$secteur][0]), $secteur, 250);
     }
 
     /** Relit le zoning d'un secteur et le dépose sous 100 + n. */

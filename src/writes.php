@@ -3268,7 +3268,7 @@ function wr_scouting_refresh(int $sector): array
     if ($sector >= ScoutingOsm::ZONING_BASE) {
         $n = $sector - ScoutingOsm::ZONING_BASE;
         if (!isset(ScoutingOsm::SECTEURS[$n])) { http_response_code(404); return ['error' => 'secteur de zoning inconnu (100 à 108)']; }
-        @set_time_limit(260);
+        @set_time_limit(320);
         @ini_set('memory_limit', '512M');
         $z = ScoutingOsm::rafraichirZoning($n);
         if ($z === null) {
