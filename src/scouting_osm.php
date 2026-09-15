@@ -84,7 +84,12 @@ final class ScoutingOsm
     public static function interroger(int $secteur): ?array
     {
         if (!isset(self::SECTEURS[$secteur])) { self::$lastError = 'secteur inconnu'; return null; }
-        $q = self::requete(self::SECTEURS[$secteur][0]);
+        return self::appel(self::requete(self::SECTEURS[$secteur][0]), $secteur, 250);
+    }
+
+    /** Un appel Overpass : les miroirs à tour de rôle, deux passes. */
+    private static function appel(string $q, int $secteur, int $timeout): ?array
+    {
         $n = count(self::MIROIRS);
         for ($essai = 0; $essai < 2; $essai++) {
             for ($k = 0; $k < $n; $k++) {
@@ -96,7 +101,7 @@ final class ScoutingOsm
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => 'data=' . rawurlencode($q),
                     CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded', 'User-Agent: cockpit-ceo-scouting/1.0'],
-                    CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 250, CURLOPT_CONNECTTIMEOUT => 15,
+                    CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 15,
                 ]);
                 $raw = curl_exec($ch);
                 $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -176,6 +181,85 @@ final class ScoutingOsm
             ];
         }
         return ['t' => (int) round(microtime(true) * 1000), 'c' => $tc, 'b' => $tb, 'p' => $tp];
+    }
+
+    /* ---------------------------------------------------------------------
+     * Le zoning industriel — une requête À PART, et des secteurs à part.
+     *
+     * Les zones d'activité sont utiles au scouting : elles portent des
+     * travailleurs qui déjeunent, et du passage en semaine. Mais elles ne
+     * doivent RIEN coûter au relevé des boulangeries : une requête alourdie
+     * qui dépasse son temps chez Overpass cesserait de rafraîchir tout le
+     * reste. Elles ont donc leur propre requête, et se rangent dans la même
+     * table sous les secteurs 100 à 108 — aucun DDL, et un échec du zoning
+     * laisse les secteurs 0 à 8 intacts.
+     * ------------------------------------------------------------------- */
+
+    /** Décalage des secteurs de zoning dans `ceo_scouting_tile`. */
+    public const ZONING_BASE = 100;
+
+    /** Une zone plus petite que cela n'est pas un zoning : c'est une parcelle. */
+    private const ZONING_MIN_M = 260.0;
+
+    /** La requête du zoning : surfaces d'activité, avec leur emprise. */
+    public static function requeteZoning(string $bbox): string
+    {
+        // `out tags bb` : la boîte englobante donne le centre ET la taille, dont
+        // on tire un rayon. Les nœuds seuls sont ignorés — sans emprise, on ne
+        // saurait pas si c'est un parc d'activité ou un atelier.
+        return '[out:json][timeout:180];'
+            . '(way(' . $bbox . ')["landuse"~"^(industrial|commercial|retail)$"];'
+            . 'rel(' . $bbox . ')["landuse"~"^(industrial|commercial|retail)$"];);out tags bb;';
+    }
+
+    /** Réponse Overpass → { t, z: [ {lat,lng,rKm,nom,genre} ] }. */
+    public static function analyserZoning(array $r): array
+    {
+        $tz = [];
+        foreach ((array) ($r['elements'] ?? []) as $e) {
+            if (!is_array($e)) { continue; }
+            $bb = (array) ($e['bounds'] ?? []);
+            if (!isset($bb['minlat'], $bb['maxlat'], $bb['minlon'], $bb['maxlon'])) { continue; }
+            $t = (array) ($e['tags'] ?? []);
+            $genre = (string) ($t['landuse'] ?? '');
+            if ($genre === '') { continue; }
+            $lat = ((float) $bb['minlat'] + (float) $bb['maxlat']) / 2;
+            $lng = ((float) $bb['minlon'] + (float) $bb['maxlon']) / 2;
+            // Demi-diagonale de la boîte, en mètres : le « rayon » de la zone.
+            $dLat = ((float) $bb['maxlat'] - (float) $bb['minlat']) * 111000.0;
+            $dLng = ((float) $bb['maxlon'] - (float) $bb['minlon']) * 111000.0 * cos($lat * M_PI / 180);
+            $r2 = sqrt($dLat * $dLat + $dLng * $dLng) / 2;
+            if ($r2 < self::ZONING_MIN_M) { continue; }   // parcelle isolée : pas un zoning
+            $tz[] = [
+                'nom'   => self::ou($t, ['name:fr', 'name']),
+                'genre' => $genre,
+                'lat'   => round($lat, 5), 'lng' => round($lng, 5),
+                'rKm'   => round($r2 / 1000, 3),
+            ];
+        }
+        return ['t' => (int) round(microtime(true) * 1000), 'z' => $tz];
+    }
+
+    /** Interroge Overpass pour le zoning d'un secteur. */
+    public static function interrogerZoning(int $secteur): ?array
+    {
+        if (!isset(self::SECTEURS[$secteur])) { self::$lastError = 'secteur inconnu'; return null; }
+        return self::appel(self::requeteZoning(self::SECTEURS[$secteur][0]), $secteur, 200);
+    }
+
+    /** Relit le zoning d'un secteur et le dépose sous 100 + n. */
+    public static function rafraichirZoning(int $secteur): ?array
+    {
+        self::$lastError = null;
+        $r = self::interrogerZoning($secteur);
+        if ($r === null) { return null; }
+        $d = self::analyserZoning($r);
+        unset($r);
+        // Un secteur sans aucune zone est une réponse tronquée : on garde ce
+        // qu'on avait plutôt que d'écrire un vide.
+        if ($d['z'] === []) { self::$lastError = 'réponse sans zone — secteur tronqué, cache conservé'; return null; }
+        self::stocker(self::ZONING_BASE + $secteur, $d);
+        return $d;
     }
 
     /** Dépose un secteur dans le cache partagé — même écriture que PUT /scouting/tiles/{n}. */

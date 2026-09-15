@@ -3263,6 +3263,22 @@ function wr_scouting_tile_put(int $sector): array
  */
 function wr_scouting_refresh(int $sector): array
 {
+    // 100 à 108 : le zoning industriel, sa propre requête et son propre cache.
+    // Un échec de zoning ne doit jamais toucher au relevé des commerces.
+    if ($sector >= ScoutingOsm::ZONING_BASE) {
+        $n = $sector - ScoutingOsm::ZONING_BASE;
+        if (!isset(ScoutingOsm::SECTEURS[$n])) { http_response_code(404); return ['error' => 'secteur de zoning inconnu (100 à 108)']; }
+        @set_time_limit(260);
+        @ini_set('memory_limit', '512M');
+        $z = ScoutingOsm::rafraichirZoning($n);
+        if ($z === null) {
+            http_response_code(502);
+            return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
+        }
+        journalAdd('CEO', 'Scouting', ScoutingOsm::SECTEURS[$n][1],
+            'Zoning relu — ' . count($z['z']) . ' zones d\'activité');
+        return $z;
+    }
     if (!isset(ScoutingOsm::SECTEURS[$sector])) { http_response_code(404); return ['error' => 'secteur inconnu (0 à 8)']; }
     @set_time_limit(320);
     @ini_set('memory_limit', '512M');

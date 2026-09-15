@@ -6,6 +6,10 @@ declare(strict_types=1);
  *   php bin/scouting_refresh.php            secteurs absents ou relus il y a plus de six jours
  *   php bin/scouting_refresh.php --force    les neuf secteurs, quel que soit leur âge
  *   php bin/scouting_refresh.php 2 5        seulement ces secteurs (0 à 8), quel que soit leur âge
+ *   php bin/scouting_refresh.php --zoning   le zoning industriel (secteurs 100 à 108)
+ *
+ * Le zoning a sa propre requête et ses propres secteurs : il se relit après les
+ * commerces, et son échec ne touche à rien d'autre.
  *
  * Posé en cron hebdomadaire par bin/deploy.sh (/etc/cron.d/cockpit-scouting),
  * et lancé en arrière-plan à chaque livraison pour les secteurs manquants :
@@ -21,6 +25,7 @@ set_time_limit(0);
 
 $args  = array_slice($argv, 1);
 $force = in_array('--force', $args, true);
+$zoning = in_array('--zoning', $args, true);
 $only  = array_values(array_map('intval', array_filter($args, static fn ($a) => ctype_digit((string) $a))));
 
 $dire = static function (string $m): void { fwrite(STDOUT, '[' . date('Y-m-d H:i:s') . '] ' . $m . "\n"); };
@@ -33,6 +38,36 @@ if ($verrou === false || !flock($verrou, LOCK_EX | LOCK_NB)) {
 
 $ages = ScoutingOsm::ages();
 $maintenant = time();
+
+// --- le zoning : sa propre passe, après les commerces et sans les gêner -----
+if ($zoning) {
+    $cz = [];
+    foreach (ScoutingOsm::SECTEURS as $i => [$bbox, $label]) {
+        if ($only !== [] && !in_array($i, $only, true)) { continue; }
+        $age = $ages[ScoutingOsm::ZONING_BASE + $i] ?? 0;
+        if (!$force && $only === [] && $age > 0 && ($maintenant - $age) < ScoutingOsm::FRAICHEUR_S) { continue; }
+        $cz[] = $i;
+    }
+    if ($cz === []) { $dire('zoning complet et récent — rien à relire'); exit(0); }
+    $dire('zoning : relecture de ' . count($cz) . ' secteur(s) : ' . implode(', ', $cz));
+    $ez = 0;
+    foreach ($cz as $i) {
+        $label = ScoutingOsm::SECTEURS[$i][1];
+        $t0 = microtime(true);
+        $z = ScoutingOsm::rafraichirZoning($i);
+        $duree = round(microtime(true) - $t0);
+        if ($z === null) {
+            $ez++;
+            $dire(sprintf('  zoning %d (%s) : ÉCHEC après %d s — %s', $i, $label, $duree, ScoutingOsm::$lastError ?? 'sans détail'));
+            continue;
+        }
+        $dire(sprintf('  zoning %d (%s) : %d zones d\'activité — %d s', $i, $label, count($z['z']), $duree));
+        unset($z);
+    }
+    $dire($ez === 0 ? 'zoning terminé, tout est en cache' : 'zoning terminé avec ' . $ez . ' échec(s)');
+    exit($ez === 0 ? 0 : 1);
+}
+
 $cibles = [];
 foreach (ScoutingOsm::SECTEURS as $i => [$bbox, $label]) {
     if ($only !== [] && !in_array($i, $only, true)) { continue; }

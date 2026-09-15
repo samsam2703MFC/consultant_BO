@@ -178,8 +178,17 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   valait `(note − 3) ÷ 2`, le 3 était en dur) et `caVise` (plancher de CA, à
   côté du score minimum), plus deux conditions de terrain : `nMax` (concurrents
   au plus dans le rayon, 0 = aucune boulangerie) et `hhMin` (ménages minimum
-  dans le rayon, la densité là où elle compte). Quand rien ne sort, l'écran dit
-  lequel des filtres vide la liste et combien d'emplacements il retient.
+  dans le rayon, la densité là où elle compte) et `zoneMax` (à tant de km d'un
+  **zoning d'activité**, distance mesurée au bord de la zone). Quand rien ne
+  sort, l'écran dit lequel des filtres vide la liste et combien d'emplacements
+  il retient.
+- **Zoning d'activité** : les surfaces `landuse=industrial|commercial|retail`
+  d'OpenStreetMap, d'au moins 260 m de rayon. Elles ont leur **propre requête
+  Overpass et leurs propres secteurs** (100 à 108 de `ceo_scouting_tile`) :
+  un échec du zoning ne peut pas empêcher le relevé des commerces, qui est la
+  donnée vitale de l'écran. Cron du dimanche 6 h 15,
+  `bin/scouting_refresh.php --zoning`. Tant que le cache est vide, le filtre le
+  dit et reste éteint.
   Son balayage est par **arrondissement**, jamais par la vue : à l'échelle du
   pays, la maille de la carte s'élargit et ne rendait que deux points.
 - **Zones** : zones d'exclusion (rayon paramétrable autour des concurrents

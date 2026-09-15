@@ -546,6 +546,10 @@ fi
   echo "SHELL=/bin/sh"
   echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
   echo "15 4 * * 0 root php ${TARGET_DIR}/bin/scouting_refresh.php >>/var/log/cockpit-scouting.log 2>&1"
+  # Le zoning industriel a sa propre requête et ses propres secteurs (100 à
+  # 108) : il passe deux heures après les commerces, pour ne jamais leur
+  # disputer Overpass ni leur fenêtre de temps.
+  echo "15 6 * * 0 root php ${TARGET_DIR}/bin/scouting_refresh.php --zoning >>/var/log/cockpit-scouting.log 2>&1"
 } > /etc/cron.d/cockpit-scouting
 chown root:root /etc/cron.d/cockpit-scouting
 chmod 600 /etc/cron.d/cockpit-scouting
@@ -553,6 +557,9 @@ systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || servi
 # Les secteurs absents ou trop vieux se relisent tout de suite, en arrière-plan :
 # la livraison n'attend pas Overpass, et le premier utilisateur non plus.
 nohup php "$TARGET_DIR/bin/scouting_refresh.php" >>/var/log/cockpit-scouting.log 2>&1 </dev/null &
+# Puis le zoning, en file derrière : deux passes qui ne se marchent pas dessus
+# (le verrou de scouting_refresh.php les sérialise de toute façon).
+nohup sh -c "sleep 900; php '$TARGET_DIR/bin/scouting_refresh.php' --zoning" >>/var/log/cockpit-scouting.log 2>&1 </dev/null &
 log "Cache OpenStreetMap du scouting : /etc/cron.d/cockpit-scouting — dimanche 4 h 15 ; relecture des secteurs manquants lancée en arrière-plan (journal : /var/log/cockpit-scouting.log)."
 
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies

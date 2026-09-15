@@ -548,6 +548,14 @@ export function renderWizard(c, x){
       <div class="wz-s"><div class="k">Ménages minimum dans le rayon</div>
         <div class="v"><input id="wz-hhmin" value="${esc(w.hhMinTxt)}" placeholder="0" ${x.C(w.setHhMin)} style="width:104px;font-size:15px"><em>ménages</em></div>
         <div class="s">La densité, là où elle compte : les ménages du rayon de ${w.radius.toFixed(1).replace('.', ',')} km, pas ceux de la commune. À 0, aucun minimum.</div></div>
+    </div>
+    <div class="wz-seuil" style="grid-template-columns:1fr">
+      <div class="wz-s"><div class="k">Près d’un zoning d’activité</div>
+        <div class="v"><input id="wz-zone" value="${esc(w.zoneMaxTxt)}" placeholder="sans condition" ${x.C(w.setZoneMax)} style="width:134px;font-size:15px"${w.zoningPret ? '' : ' disabled'}><em>km au plus</em>
+          ${w.zoningPret ? `<button ${x.A(w.toggleZoning)} class="btn-secondary" style="padding:4px 10px;font-size:10.5px;margin-left:6px;${w.zoneMax != null ? 'border-color:var(--color-primary);color:var(--color-primary);font-weight:600' : ''}">${w.zoneMax != null ? '✓ à 2 km d’un zoning' : 'à 2 km d’un zoning'}</button>` : ''}</div>
+        <div class="s">${w.zoningPret
+          ? 'Zones d’activité, de commerce et de vente relevées sur OpenStreetMap — <b>' + w.zoning.toLocaleString('fr-BE') + '</b> en Belgique. La distance se mesure au <b>bord</b> de la zone, pas à son centre. Les travailleurs d’un parc déjeunent à côté ; le passage y est en semaine, pas le dimanche.'
+          : 'Le relevé du zoning n’est pas encore en cache. Il se fait le dimanche, séparément des commerces — le filtre s’allumera tout seul quand les zones seront là.'}</div></div>
     </div>`;
 
   const corps4 = `

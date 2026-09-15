@@ -112,6 +112,7 @@ const OVERPASS = [
 const HH_SIZE = 2.31;       // taille moyenne des ménages, Belgique (étude : 2,34 en Flandre)
 const CHAINS = ['panos', 'paul', 'délifrance', 'delifrance', 'zucchero', 'bakkerij aernoudt', 'le pain quotidien', 'jacqmotte'];
 const PARAM_KEYS = ['spend', 'emprise', 'passage', 'surface', 'empriseMax', 'compK', 'hhSize', 'minScore', 'radius', 'thresh', 'weak', 'caVise', 'hhMin'];
+const ZONING_BASE = 100;   // décalage des secteurs de zoning dans le cache partagé
 const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat: false, roads: false };
 const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false };
 const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
@@ -202,6 +203,7 @@ const pickParams = v => { const o = {}; PARAM_KEYS.forEach(k => { if (v && typeo
   // `nMax` est nul quand le filtre est éteint : il ne passe pas le test des
   // nombres, et se relit donc à part.
   if (v && (v.nMax === null || (typeof v.nMax === 'number' && isFinite(v.nMax)))) o.nMax = v.nMax;
+  if (v && (v.zoneMax === null || (typeof v.zoneMax === 'number' && isFinite(v.zoneMax)))) o.zoneMax = v.zoneMax;
   return o; };
 
 /* --- stockage local : cache Overpass et repli hors API ----------------------- */
@@ -294,6 +296,9 @@ export class Scouting {
       // Le terrain : nombre maximum de concurrents dans le rayon (null = sans
       // limite, 0 = aucune boulangerie) et ménages minimum dans le rayon.
       nMax: null, hhMin: 0,
+      // Zoning industriel : distance maximale à une zone d'activité (km),
+      // null = filtre éteint. Les zones vivent dans `zoning`.
+      zoneMax: null, zoning: [],
       // L'assistant : 0 fermé, 1..4 l'étape ouverte ; wizFait = le bandeau de résultat.
       wiz: 0, wizFait: false,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
@@ -457,7 +462,7 @@ export class Scouting {
     return [s.bakeries.length, s.communes.length, this._rev, JSON.stringify(s.prov), s.arr, s.minRating,
       s.minHh, s.radius, s.thresh, JSON.stringify(s.layers), s.sel ? s.sel.lat + ',' + s.sel.lng : '',
       s.candidates.length, s.minScore, s.view, s.reseau ? 1 : 0,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.nMax, s.hhMin, s.wizFait ? 1 : 0].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.nMax, s.hhMin, s.zoneMax, s.zoning.length, s.wizFait ? 1 : 0].join('|');
   }
 
   scheduleRedraw(ms){
@@ -465,8 +470,31 @@ export class Scouting {
     this._rd = setTimeout(() => { try { this.redraw(); } catch (e) { console.error('[scouting] redraw', e); } }, ms);
   }
 
+  /* Le zoning industriel : neuf secteurs, cache serveur puis cache navigateur.
+   * Jamais Overpass depuis le navigateur — c'est une donnée de confort, pas de
+   * quoi faire attendre l'écran. Absente, le filtre le dit et reste éteint. */
+  async chargerZoning(api){
+    if (this._zLoading) return;
+    this._zLoading = true;
+    const vues = {}, out = [];
+    for (let i = 0; i < TILES.length; i++){
+      let d = ls.get('z' + i);
+      if ((!d || !d.z) && api){
+        try { d = await apiGet('/scouting/tiles/' + (ZONING_BASE + i), 30000); } catch (e) { d = null; }
+        if (d && d.z) ls.set('z' + i, d); else d = null;
+      }
+      if (!d || !d.z) continue;
+      d.z.forEach(z => {
+        const k = z.lat.toFixed(4) + ',' + z.lng.toFixed(4);
+        if (!vues[k]){ vues[k] = 1; out.push(z); }
+      });
+    }
+    this._zLoading = false;
+    if (out.length){ this.setState({ zoning: out }); }
+  }
+
   /* --- persistance des saisies ---------------------------------------------- */
-  paramsObj(){ const o = {}; PARAM_KEYS.forEach(k => { o[k] = this.state[k]; }); o.nMax = this.state.nMax; return o; }
+  paramsObj(){ const o = {}; PARAM_KEYS.forEach(k => { o[k] = this.state[k]; }); o.nMax = this.state.nMax; o.zoneMax = this.state.zoneMax; return o; }
 
   // les hypothèses du modèle survivent au rechargement (et sont partagées
   // via ceo_app_setting quand l'API répond)
@@ -696,6 +724,9 @@ export class Scouting {
       if (!this._grid) gridP.then(g => { if (g && !this._loading){ this.fillPop(this.state.communes, null); this._rev++; this.setState({}); } });
     }
     this._loading = false;
+    // Le zoning industriel se lit APRÈS, et sans bloquer : il n'est utile qu'à
+    // un filtre facultatif, et son absence ne doit rien empêcher.
+    this.chargerZoning(api);
     if (!communes.length){
       this.setState({ busy: false, progress: '', err: 'Overpass injoignable — réessaie avec « Recharger les données ».' });
       return;
@@ -906,7 +937,7 @@ export class Scouting {
     const s = this.state, R = s.radius;
     const b = this.map.getBounds();
     const key = [b.toBBoxString(), R, s.thresh, s.minScore, s.arr, JSON.stringify(s.prov), s.minRating, s.minHh, this._rev,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.weak, s.caVise, s.nMax, s.hhMin].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.weak, s.caVise, s.nMax, s.hhMin, s.zoneMax, s.zoning.length].join('|');
     if (key === this._scanKey) return this._scanVal;
     const shops = this.shops();
     const strong = shops.filter(x => this.isStrong(x));
@@ -1011,6 +1042,20 @@ export class Scouting {
     return out;
   }
 
+  /* Un point est-il à portée d'une zone d'activité ? La distance se mesure au
+   * BORD de la zone, pas à son centre : un parc de deux kilomètres de large
+   * commence à son entrée, pas au milieu. */
+  prochedeZoning(lat, lng){
+    const s = this.state, max = s.zoneMax;
+    if (max == null) return true;
+    const Z = s.zoning;
+    for (let i = 0; i < Z.length; i++){
+      if (Math.abs(Z[i].lat - lat) > (max + 6) / 111) continue;    // rejet rapide
+      if (dist(lat, lng, Z[i].lat, Z[i].lng) - (Z[i].rKm || 0) <= max) return true;
+    }
+    return false;
+  }
+
   /* Ce qu'une zone doit tenir pour être retenue. Une seule règle, lue par le
    * balayage de la vue comme par celui des arrondissements — sinon la carte et
    * la liste finissent par ne plus montrer les mêmes points. */
@@ -1020,6 +1065,7 @@ export class Scouting {
     if (s.caVise && p.ca < s.caVise) return false;
     if (s.nMax != null && p.n > s.nMax) return false;      // 0 = aucune boulangerie dans le rayon
     if (s.hhMin && p.hh < s.hhMin) return false;           // densité : ménages du rayon
+    if (s.zoneMax != null && !this.prochedeZoning(p.lat, p.lng)) return false;
     return true;
   }
 
@@ -1068,7 +1114,7 @@ export class Scouting {
       ? Array.from(new Set(s.communes.filter(c => s.prov[c.prov]).map(c => c.arr))).filter(a => a && a !== '—')
       : [s.arr];
     const key = [noms.join(','), R, s.thresh, s.weak, s.minRating, s.minHh, this._rev,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.minScore, s.caVise, s.nMax, s.hhMin].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.minScore, s.caVise, s.nMax, s.hhMin, s.zoneMax, s.zoning.length].join('|');
     if (key === this._arrKey) return this._arrVal;
     const shopsAll = this.shops(), cs = this.filteredCommunes();
     const pad = R + 2;
@@ -1688,13 +1734,15 @@ export class Scouting {
       ['le score minimum de ' + (s.minScore || 0), p => p.score >= (s.minScore || 0)],
       ['le plancher de CA', p => !s.caVise || p.ca >= s.caVise],
       [s.nMax === 0 ? 'la condition « aucune boulangerie »' : 'la limite de concurrents', p => s.nMax == null || p.n <= s.nMax],
-      ['le minimum de ménages', p => !s.hhMin || p.hh >= s.hhMin]
+      ['le minimum de ménages', p => !s.hhMin || p.hh >= s.hhMin],
+      ['la proximité d’un zoning', p => s.zoneMax == null || this.prochedeZoning(p.lat, p.lng)]
     ];
     let best = null;
     tests.forEach((t, i) => {
       if (i === 1 && !s.caVise) return;
       if (i === 2 && s.nMax == null) return;
       if (i === 3 && !s.hhMin) return;
+      if (i === 4 && s.zoneMax == null) return;
       const n = brut.filter(p => tests.every((u, j) => j === i || u[1](p))).length;
       if (n > 0 && (!best || n > best.n)) best = { nom: t[0], n: n };
     });
@@ -1906,6 +1954,13 @@ export class Scouting {
           setHhMin: e => { const v = parseInt(String(e.target.value).replace(/[^0-9]/g, ''), 10); self.setParam({ hhMin: isNaN(v) ? 0 : Math.max(0, v) }); },
           hhMinTxt: s.hhMin ? fmtInt(s.hhMin) : '',
           nMaxTxt: s.nMax == null ? '' : String(s.nMax),
+          // Le zoning : la donnée peut manquer (relevé hebdomadaire séparé).
+          // Le filtre le dit alors, plutôt que de vider la liste en silence.
+          zoneMax: s.zoneMax, zoneMaxTxt: s.zoneMax == null ? '' : String(s.zoneMax).replace('.', ','),
+          zoning: s.zoning.length,
+          zoningPret: s.zoning.length > 0,
+          setZoneMax: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); self.setParam({ zoneMax: isNaN(v) ? null : Math.max(0, Math.min(30, v)) }); },
+          toggleZoning: () => self.setParam({ zoneMax: s.zoneMax == null ? 2 : null }),
           // 4 — le chiffre visé
           caVise: s.caVise, caViseTxt: s.caVise ? fmtInt(s.caVise) : '',
           setCaVise: e => { const v = parseFloat(String(e.target.value).replace(/[^0-9.,]/g, '').replace(',', '.')); self.setParam({ caVise: isNaN(v) ? 0 : Math.max(0, v) }); },
@@ -1941,6 +1996,7 @@ export class Scouting {
             s.caVise ? 'CA ≥ ' + fmtEur(s.caVise) : 'sans plancher de CA'
           ].concat(s.nMax != null ? [s.nMax === 0 ? 'aucune boulangerie dans le rayon' : 'au plus ' + s.nMax + ' concurrent' + (s.nMax > 1 ? 's' : '')] : [])
            .concat(s.hhMin ? ['≥ ' + fmtInt(s.hhMin) + ' ménages dans le rayon'] : [])
+           .concat(s.zoneMax != null ? ['à ' + String(s.zoneMax).replace('.', ',') + ' km d’un zoning'] : [])
         };
       })(),
       ouvrirWiz: () => self.wizOuvrir(),
