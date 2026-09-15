@@ -17,7 +17,7 @@
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
-    ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {} };
+    ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -154,40 +154,100 @@
   function courbeValo(v) {
     const n = v.serie.length;
     if (n < 2) return '';
-    const mn = Math.min(...v.serie), mx = Math.max(...v.serie), W = 168, H = 40;
+    const mn = Math.min(...v.serie), mx = Math.max(...v.serie), W = 62, H = 18;
     const x = i => (i * W / (n - 1)).toFixed(1);
-    const y = c => (H - 3 - (H - 8) * (c - mn) / ((mx - mn) || 1)).toFixed(1);
+    const y = c => (H - 2 - (H - 4) * (c - mn) / ((mx - mn) || 1)).toFixed(1);
     const pts = v.serie.map((c, i) => x(i) + ',' + y(c)).join(' ');
     return `<svg class="db-vspk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
       <polygon points="0,${H} ${pts} ${W},${H}"></polygon>
       <polyline points="${pts}"></polyline>
-      <circle cx="${x(n - 1)}" cy="${y(v.serie[n - 1])}" r="2.6"></circle>
+      <circle cx="${x(n - 1)}" cy="${y(v.serie[n - 1])}" r="1.6"></circle>
     </svg>`;
   }
-  function rendValeur() {
+  /* Les six derniers trimestres CLOS — le trimestre en cours est écarté comme
+   * le mois en cours : à mi-parcours il vaudrait la moitié de lui-même. Chaque
+   * trimestre porte la valeur que le magasin aurait eue à ce rythme-là. */
+  function valoTrimestres() {
+    const d = S.aux['valo'];
+    if (!Array.isArray(d)) return null;
+    let y = +AUJ.slice(0, 4), q = Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1;
+    const cles = [];
+    for (let i = 0; i < 6; i++) { q--; if (q < 1) { q = 4; y--; } cles.unshift(y + 'T' + q); }
+    const par = {};
+    d.filter(c => String(c.storeId) === String(S.shop) && c.ca != null).forEach(c => {
+      const k = c.annee + 'T' + (Math.floor((c.mois - 1) / 3) + 1);
+      (par[k] = par[k] || []).push(c.ca);
+    });
+    const out = cles.map(k => {
+      const l = par[k] || [], ca = l.reduce((a, b) => a + b, 0);
+      const moy = l.length ? ca / l.length : null;
+      return { lib: 'T' + k.slice(5) + ' ' + k.slice(0, 4), n: l.length, ca: l.length ? ca : null,
+        moyenne: moy, valeur: moy == null ? null : moy * 12 / VALO_DIV };
+    });
+    return out.some(o => o.n) ? out : null;
+  }
+  /** La courbe des six trimestres : les trous ne sont pas reliés, ils se voient. */
+  function courbeTrim(T) {
+    const vs = T.map(o => o.valeur).filter(v => v != null);
+    // La boîte est à la largeur réelle du bloc : étirée, un cercle deviendrait
+    // une ellipse. Les abscisses tombent au centre des six colonnes de dessous,
+    // pour que chaque point soit au-dessus de son trimestre.
+    const mn = Math.min(...vs), mx = Math.max(...vs), W = 1360, H = 150;
+    const x = i => ((i + 0.5) * W / T.length).toFixed(1);
+    const y = v => (H - 14 - (H - 32) * (v - mn) / ((mx - mn) || 1)).toFixed(1);
+    // Un trou coupe le trait : on dessine des segments, pas une seule ligne.
+    const traits = []; let run = [];
+    T.forEach((o, i) => {
+      if (o.valeur == null) { if (run.length > 1) traits.push(run); run = []; return; }
+      run.push(x(i) + ',' + y(o.valeur));
+    });
+    if (run.length > 1) traits.push(run);
+    return `<svg class="db-vtr" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      ${T.map((o, i) => `<line class="gr" x1="${x(i)}" y1="6" x2="${x(i)}" y2="${H - 4}"></line>`).join('')}
+      ${traits.map(r => `<polyline points="${r.join(' ')}"></polyline>`).join('')}
+      ${T.map((o, i) => o.valeur == null ? '' : `<circle cx="${x(i)}" cy="${y(o.valeur)}" r="3.4"></circle>`).join('')}
+    </svg>`;
+  }
+  function valoTiroir() {
+    const T = valoTrimestres();
+    if (!T) return '<div class="vide">Pas encore de trimestre clos pour ce magasin.</div>';
+    const connus = T.filter(o => o.n).length;
+    return `<div class="db-vtri">
+      <div class="hd">La valeur trimestre par trimestre — ce que le magasin aurait valu au rythme de chaque trimestre.
+        ${connus < 6 ? '<b>' + connus + ' trimestre' + (connus > 1 ? 's' : '') + ' clos sur six</b> dans le relevé ; les autres sont vides.' : 'Six trimestres clos, le trimestre en cours écarté.'}</div>
+      ${courbeTrim(T)}
+      <div class="gr6">${T.map(o => `<div class="${o.n ? '' : 'vide'}">
+        <span class="q">${esc(o.lib)}</span>
+        <span class="v">${o.valeur == null ? '—' : fE(o.valeur)}</span>
+        <span class="s">${o.ca == null ? 'pas de CA relevé' : fE(o.ca) + ' de CA' + (o.n < 3 ? ' · ' + o.n + ' mois sur 3' : '')}</span>
+      </div>`).join('')}</div>
+    </div>`;
+  }
+
+  /* La valeur tient sur la barre du haut : un mot, un chiffre, la courbe des
+   * 18 mois en miniature. Tout le reste — la formule, la fenêtre, les six
+   * trimestres — attend dans le tiroir. */
+  function valoPastille() {
     const v = valeurMagasin();
-    if (!v) {
-      return `<div class="db-valo"><div class="t"><div class="k">Valeur du magasin</div><div class="v">…</div>
-        <div class="s">lecture du chiffre d’affaires des 18 derniers mois</div></div></div>`;
-    }
-    if (!v.n) {
-      return `<div class="db-valo"><div class="t"><div class="k">Valeur du magasin</div><div class="v">—</div>
-        <div class="s">aucun mois complet de chiffre d’affaires relevé pour ce magasin</div></div></div>`;
+    if (!v) return '<span class="db-valoc att">Valeur du magasin…</span>';
+    const dr = S.valoOuvert ? '\u25b4' : '\u25be';
+    if (!v.n) return `<button class="db-valoc" data-vdrop="1"><span class="k">Valeur</span><span class="v">—</span><span class="dr">${dr}</span></button>`;
+    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA mensuel moyen des 18 derniers mois clos × 12 ÷ ${VALO_DIV}">
+      <span class="k">Valeur</span><span class="v">${fE(v.valeur)}</span>${courbeValo(v)}<span class="dr">${dr}</span></button>`;
+  }
+  /* Le tiroir : la formule en toutes lettres, puis les six trimestres. */
+  function rendValeur() {
+    if (!S.valoOuvert) return '';
+    const v = valeurMagasin();
+    if (!v || !v.n) {
+      return `<div class="db-vdl seul"><div class="vide">${v ? 'Aucun mois complet de chiffre d’affaires relevé pour ce magasin.' : 'Lecture du chiffre d’affaires des 18 derniers mois…'}</div></div>`;
     }
     const complet = v.n >= VALO_MOIS;
-    return `<div class="db-valo">
-      <div class="t">
-        <div class="k">Valeur du magasin</div>
-        <div class="v">${fE(v.valeur)}</div>
-        <div class="s">${fE(v.moyenne)} de CA mensuel moyen × 12 ÷ ${VALO_DIV} — soit deux mois de chiffre d’affaires.
-          ${complet ? 'Sur les 18 derniers mois clos' : 'Sur les ' + v.n + ' mois clos disponibles'},
-          de ${esc(v.du)} à ${esc(v.au)}.${complet ? '' : ' La règle en demande 18 : le chiffre se stabilisera avec l’historique.'}</div>
-      </div>
-      <div class="c">
-        ${courbeValo(v)}
-        <div class="lg"><span>${esc(v.du)}</span><span>${esc(v.au)}</span></div>
-        <div class="an">${fE(v.annuel)} de CA annualisé</div>
-      </div>
+    return `<div class="db-vdl seul">
+      <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.moyenne)} de CA mensuel moyen × 12 ÷ ${VALO_DIV}, soit deux mois de chiffre d’affaires.
+        ${complet ? 'Sur les 18 derniers mois clos' : 'Sur les ' + v.n + ' mois clos disponibles'}, de ${esc(v.du)} à ${esc(v.au)} —
+        ${fE(v.annuel)} de CA annualisé.${complet ? '' : ' La règle en demande 18 : le chiffre se stabilisera avec l’historique.'}</div>
+      ${valoTiroir()}
     </div>`;
   }
 
@@ -203,7 +263,7 @@
       <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
-      <span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
+      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -1114,6 +1174,7 @@
     $.querySelectorAll('[data-ctri]').forEach(b => b.addEventListener('click', () => { S.cTri = b.dataset.ctri; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
+    $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
     $.querySelectorAll('[data-ncrow]').forEach(b => b.addEventListener('click', () => {
       S.ncLigne = S.ncLigne === b.dataset.ncrow ? null : b.dataset.ncrow; rendre(); }));
     $.querySelectorAll('[data-ncgrp]').forEach(b => b.addEventListener('click', () => {
