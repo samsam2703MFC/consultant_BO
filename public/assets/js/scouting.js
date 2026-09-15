@@ -113,8 +113,13 @@ const HH_SIZE = 2.31;       // taille moyenne des ménages, Belgique (étude : 2
 const CHAINS = ['panos', 'paul', 'délifrance', 'delifrance', 'zucchero', 'bakkerij aernoudt', 'le pain quotidien', 'jacqmotte'];
 const PARAM_KEYS = ['spend', 'emprise', 'passage', 'surface', 'empriseMax', 'compK', 'hhSize', 'minScore', 'radius', 'thresh', 'weak', 'caVise', 'hhMin'];
 const ZONING_BASE = 100;   // décalage des secteurs de zoning dans le cache partagé
-const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat: false, roads: false };
-const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false };
+// Le zoning est un fond de plan, pas une couche qu'on allume pour une question
+// précise : il est coché d'origine dans les deux jeux, et se décoche comme les
+// autres.
+const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat: false, roads: false, zoning: true };
+const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false, zoning: true };
+const ZONE_MAX = 1200;     // au-delà, la vue est illisible : on garde les plus grandes
+const ZONE_GENRE = { industrial: 'Zone industrielle', commercial: 'Zone d\'activité commerciale', retail: 'Zone de vente' };
 const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
@@ -566,6 +571,9 @@ export class Scouting {
     this.vecR = L.svg({ padding: 0.4 }).addTo(map);
     this.gHeat = L.layerGroup();
     this.gPrio = L.layerGroup();
+    // Ajouté avant les autres : ses tracés se posent sous les points, les
+    // zones rouges et les zones prioritaires, jamais par-dessus.
+    this.gZone = L.layerGroup().addTo(map);
     this.gShops = L.layerGroup().addTo(map);
     this.gExcl = L.layerGroup().addTo(map);
     this.gRoads = L.layerGroup();
@@ -1163,6 +1171,26 @@ export class Scouting {
     if (!this.map || !this.el.isConnected) return;
     const s = this.state, shops = this.shops();
     this.gExcl.clearLayers(); this.gSel.clearLayers();
+    this.gZone.clearLayers();
+    if (s.layers.zoning && s.zoning.length) try {
+      if (!this.gZone._map) this.map.addLayer(this.gZone);
+      const vbz = this.map.getBounds().pad(0.25);
+      const vues = s.zoning.filter(z => vbz.contains([z.lat, z.lng]));
+      // Toute la Belgique dans la vue, c'est plus de trois mille pastilles :
+      // on peint les plus grandes, celles qui portent des emplois.
+      const liste = vues.length > ZONE_MAX
+        ? vues.slice().sort((a, b) => b.rKm - a.rKm).slice(0, ZONE_MAX) : vues;
+      liste.forEach(z => {
+        L.circle([z.lat, z.lng], {
+          renderer: this.vecR, radius: Math.max(120, z.rKm * 1000), stroke: false,
+          fillColor: '#6B7A8F', fillOpacity: 0.22
+        }).bindPopup('<div class="sc-pop"><b style="color:#4C5A6B">' + esc(z.nom || 'Zone d\'activité') + '</b><br>'
+          + (ZONE_GENRE[z.genre] || 'Zone d\'activité')
+          + '<br>Rayon ' + (z.rKm < 1 ? Math.round(z.rKm * 1000) + ' m' : z.rKm.toFixed(1) + ' km')
+          + '</div>').addTo(this.gZone);
+      });
+    } catch (e) { console.error('[scouting] zoning', e); }
+    else if (this.gZone._map){ try { this.map.removeLayer(this.gZone); } catch (e) { /* déjà retiré */ } }
     try { this.drawShops(); } catch (e) { console.error('[scouting] points', e); }
     if (s.layers.excl) try {
       const vb = this.map.getBounds().pad(0.35);
@@ -1799,6 +1827,12 @@ export class Scouting {
     const goMap = (lat, lng, zoom, evaluate) => { self._scroll['sc-table'] = 0; self.setState({ view: 'map' }); setTimeout(() => { if (self.map) self.map.setView([lat, lng], zoom); if (evaluate) self.evaluate(lat, lng); }, 60); };
     const layerToggle = k => () => self.setState({ layers: Object.assign({}, s.layers, { [k]: !s.layers[k] }) });
     const onlyPrio = !!(s.layers.prio && !s.layers.excl && !s.layers.shops);
+    // Les points chauds de la carte, tels quels : la liste de droite montre les
+    // mêmes cercles verts, dans le même ordre. Un clic sur un repère évalue le
+    // point, donc surligne sa ligne — c'est la même sélection des deux côtés.
+    const chauds = (s.layers.prio && s.communes.length) ? this.scanPrio() : [];
+    const memePoint = p => !!(x && Math.abs(x.lat - p.lat) < 1e-9 && Math.abs(x.lng - p.lng) < 1e-9);
+    const unArr = chauds.length > 0 && chauds.every(p => p.arr === chauds[0].arr);
 
     // ----- lignes des tableaux -----
     const scan = (s.view === 'zones' && s.communes.length) ? this.scanPrio() : [];
@@ -2015,7 +2049,7 @@ export class Scouting {
       minHh: s.minHh, slideMinHh: this.slide('minHh', v => parseInt(v, 10)), setMinHh: e => self.setState({ minHh: parseInt(e.target.value, 10) }),
       radius: s.radius, slideRadius: this.slide('radius', parseFloat), setRadius: e => self.setParam({ radius: parseFloat(e.target.value) }),
       thresh: s.thresh, slideThresh: this.slide('thresh', parseFloat), setThresh: e => self.setParam({ thresh: parseFloat(e.target.value) }),
-      layersPlus: [['prio', 'Zones prioritaires'], ['heat', 'Densité de ménages'], ['roads', 'Axes pendulaires']]
+      layersPlus: [['prio', 'Zones prioritaires'], ['zoning', 'Zoning d\'activité'], ['heat', 'Densité de ménages'], ['roads', 'Axes pendulaires']]
         .map(([k, name]) => ({ name: name, on: !!s.layers[k], toggle: layerToggle(k) })),
       layersMinus: [['excl', 'Zones d\'exclusion'], ['shops', 'Boulangeries concurrentes'], ['cluster', 'Regrouper les points au dézoom']]
         .map(([k, name]) => ({ name: name, on: !!s.layers[k], toggle: layerToggle(k) })),
@@ -2023,8 +2057,8 @@ export class Scouting {
       toggleOnlyPrio: () => self.setState({ layers: Object.assign({}, onlyPrio ? LAYERS_CONC : LAYERS_PRIO), sel: null }),
       minScore: s.minScore, slideMinScore: this.slide('minScore', v => parseInt(v, 10)),
       setMinScore: e => self.setState({ minScore: parseInt(e.target.value, 10) }),
-      prioCount: s.layers.prio && s.communes.length ? String(self.scanPrio().length) : '—',
-      presetPrio: () => self.setState({ layers: { shops: false, cluster: true, excl: false, prio: true, heat: true, roads: false }, sel: null }),
+      prioCount: s.layers.prio && s.communes.length ? String(chauds.length) : '—',
+      presetPrio: () => self.setState({ layers: { shops: false, cluster: true, excl: false, prio: true, heat: true, roads: false, zoning: true }, sel: null }),
       presetConc: () => self.setState({ layers: Object.assign({}, LAYERS_CONC), sel: null }),
       exportParams: () => self.csv('ceo_parametres', ['parametre', 'valeur'], [
         ['depense_menage_eur', s.spend], ['emprise_imposee_pct', s.emprise], ['part_passage_pct', s.passage],
@@ -2087,9 +2121,30 @@ export class Scouting {
         { color: R_COL.none, label: 'Note non renseignée' },
         { color: 'rgba(141,29,44,.35)', label: 'Zone d\'exclusion — concurrence forte' },
         { color: '#1b5e20', label: 'Zone prioritaire — score élevé' },
-        { color: '#FAC775', label: 'Zone candidate retenue' }
+        { color: '#FAC775', label: 'Zone candidate retenue' },
+        { color: 'rgba(107,122,143,.5)', label: 'Zoning d\'activité, de commerce, de vente' }
       ],
+      pointsChauds: chauds.map((p, i) => ({
+        rang: i + 1, commune: p.commune, score: p.score, ca: fmtEur(p.ca),
+        // L'arrondissement ne se répète que s'il y en a plusieurs : sur un seul
+        // il repoussait « concurrents » à la ligne pour ne rien apprendre.
+        meta: (unArr ? '' : 'arr. ' + p.arr + ' · ') + fmtInt(p.hh) + ' ménages · '
+          + p.n + ' concurrent' + (p.n > 1 ? 's' : ''),
+        on: memePoint(p),
+        voir: () => {
+          if (self.map) self.map.setView([p.lat, p.lng], Math.max(self.map.getZoom(), 12));
+          self.evaluate(p.lat, p.lng);
+        }
+      })),
+      chaudsNote: !s.layers.prio
+        ? 'Coche « Zones prioritaires » ci-contre, ou lance l’assistant, pour les faire sortir.'
+        : chauds.length
+          ? chauds.length + ' emplacement' + (chauds.length > 1 ? 's' : '') + ' au-dessus du score '
+            + s.minScore + (unArr ? ', arr. ' + chauds[0].arr + '.' : s.wizFait ? ', sur les arrondissements balayés.' : ', dans la vue courante.')
+            + ' Clique une ligne ou un repère : c’est la même sélection.'
+          : 'Aucun emplacement ne passe les filtres dans cette vue.',
       hasSel: !!x,
+      selRang: (chauds.findIndex(memePoint) + 1) || 0,
       selCommune: x ? x.commune : '',
       selGeo: x ? 'arr. ' + x.arr + ' · ' + x.prov + ' · ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) : '',
       selVerdict: x ? (x.blocked.length ? 'Zone exclue — concurrence forte' : x.score >= 55 ? 'Zone candidate prioritaire' : 'Zone candidate secondaire') : '',

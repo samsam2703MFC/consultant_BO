@@ -188,9 +188,17 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   un échec du zoning ne peut pas empêcher le relevé des commerces, qui est la
   donnée vitale de l'écran. Cron du dimanche 6 h 15,
   `bin/scouting_refresh.php --zoning`. Tant que le cache est vide, le filtre le
-  dit et reste éteint.
+  dit et reste éteint. Les zones sont aussi une **couche de la carte**, cochée
+  d'origine : au-delà de 1 200 dans la vue, seules les plus grandes sont
+  peintes, sans quoi la Belgique entière devient illisible.
   Son balayage est par **arrondissement**, jamais par la vue : à l'échelle du
   pays, la maille de la carte s'élargit et ne rendait que deux points.
+- **Points chauds** : les zones prioritaires de la carte sont aussi **listées
+  dans le panneau de droite**, dans le même ordre — rang, commune, ménages,
+  concurrents, CA estimé, score. Cliquer une ligne cadre la carte et ouvre la
+  fiche ; cliquer un repère surligne la ligne et titre la fiche « Point chaud
+  nº N ». Une seule sélection des deux côtés, un seul balayage (`scanPrio()`)
+  pour la carte, le compteur et la liste.
 - **Zones** : zones d'exclusion (rayon paramétrable autour des concurrents
   forts), zones prioritaires (balayage de la vue, 30 meilleurs scores hors
   zones rouges), fiche d'implantation au clic, zones candidates retenues

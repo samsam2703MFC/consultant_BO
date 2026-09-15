@@ -210,7 +210,7 @@ export function renderRight(c, x){
   const { esc } = x;
   const sel = c.hasSel ? `
   <div>
-    <div class="t-admin-label" style="margin-bottom:4px">Zone candidate</div>
+    <div class="t-admin-label" style="margin-bottom:4px">${c.selRang ? 'Point chaud nº' + c.selRang : 'Zone candidate'}</div>
     <div class="t-section-title" style="font-size:18px;margin-bottom:2px">${esc(c.selCommune)}</div>
     <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.selGeo)}</div>
 
@@ -263,7 +263,23 @@ export function renderRight(c, x){
     <div style="font-size:12px;color:var(--color-text-muted);line-height:1.6">Clique un point blanc de la carte pour évaluer une implantation : ménages accessibles, concurrence, emprise et CA estimé selon le modèle de l'étude Halle.</div>
   </div>`;
 
-  return `${sel}
+  const chauds = `
+  <div class="t-admin-label" style="margin:22px 0 6px">Points chauds</div>
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.chaudsNote)}</div>
+  ${c.pointsChauds.map(p => `
+  <div id="sc-hot-${p.rang}" ${x.A(p.voir)} class="sc-hot${p.on ? ' on' : ''}" title="Voir sur la carte">
+    <span class="r">${p.rang}</span>
+    <div style="flex:1;min-width:0">
+      <div class="n">${esc(p.commune)}</div>
+      <div class="m">${esc(p.meta)}</div>
+    </div>
+    <div style="flex:0 0 auto;text-align:right">
+      <div class="ca">${esc(p.ca)}</div>
+      <div class="m">score ${p.score}</div>
+    </div>
+  </div>`).join('')}`;
+
+  return `${sel}${chauds}
   <div class="t-admin-label" style="margin:22px 0 8px">Zones candidates retenues</div>
   ${c.candidates.map(k => `
   <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)">

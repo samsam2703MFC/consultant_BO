@@ -198,3 +198,18 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .wz-rappel .ch { font: 500 10.5px var(--font-ui); border-radius: 999px; padding: 3px 9px; background: var(--color-background-secondary); white-space: nowrap; }
 .wz-rappel .sp { flex: 1; }
 .wz-rappel .ok { background: #eef5ef; color: #1b5e20; }
+
+/* --- Scouting : les points chauds, listés à droite ------------------------- */
+/* La même sélection des deux côtés : la ligne surlignée est le repère cliqué
+   sur la carte, et cliquer la ligne y ramène. */
+.sc-hot { display: flex; align-items: center; gap: 9px; padding: 7px 8px; margin: 0 -8px; border-radius: 8px; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+.sc-hot:hover { background: var(--color-background-secondary); }
+.sc-hot.on { background: rgba(27,94,32,.10); box-shadow: inset 2px 0 0 #1b5e20; }
+.sc-hot .r { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; background: #1b5e20; color: #fff; font: 700 10.5px var(--font-ui); display: flex; align-items: center; justify-content: center; }
+.sc-hot .n { font: 500 12px var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-hot .m { font: 400 10.5px var(--font-ui); color: var(--color-text-muted); line-height: 1.35; }
+/* La ligne de contexte se replie plutôt que de se faire couper : « 6 c... »
+   ne dit pas s'il s'agit de six concurrents ou de six communes. */
+.sc-hot > div:first-of-type .m { white-space: normal; }
+.sc-hot .ca + .m { white-space: nowrap; }
+.sc-hot .ca { font: 600 12px var(--font-ui); color: var(--color-primary); white-space: nowrap; }
