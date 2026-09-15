@@ -225,3 +225,9 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .sc-ville .res .n { display: block; font: 500 12px var(--font-ui); color: var(--color-text); }
 .sc-ville .res .m { display: block; font: 400 10.5px var(--font-ui); color: var(--color-text-muted); }
 .sc-ville .vide { margin-top: 5px; font: 400 11px var(--font-ui); color: var(--color-text-muted); }
+/* Dans l'assistant, la recherche tient sur une demi-largeur : le tableau des
+   arrondissements est la réponse principale, elle n'est qu'un raccourci. */
+.wz-ville { max-width: 380px; margin: 2px 0 12px; }
+/* Le détail des marques sous le compte : « 3 » ne dit pas si c'est Paul ou le
+   boulanger du coin qui s'est déclaré une enseigne. */
+.wz-t .mq { display: block; font: 400 9.5px var(--font-ui); color: var(--color-text-muted); font-style: normal; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
