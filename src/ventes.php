@@ -104,6 +104,61 @@ function ep_ventes_sonde(): array
     return $out;
 }
 
+/**
+ * GET /ventes/mensuel?shop=4&mois=24 — le CA mois par mois d'un magasin.
+ *
+ * Les ventes de caisse, pas le P&L mensuel du panel : celui-ci a des trous
+ * (aucune ligne en 2025), et une valeur de fonds calculée sur une fenêtre
+ * trouée ne vaut rien. Le mois EN COURS est écarté — incomplet, il tirerait
+ * toute moyenne vers le bas jusqu'à son dernier jour. Les mois sans vente
+ * sont rendus quand même, `ca` à null : un trou doit se voir, pas se combler
+ * tout seul.
+ */
+function ep_ventes_mensuel(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    $n    = max(1, min(60, (int) ($_GET['mois'] ?? 24)));
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'paramètre shop requis']; }
+
+    $finExclu = new DateTimeImmutable(date('Y-m-01') . ' 00:00:00');   // 1er du mois courant
+    $debut    = $finExclu->modify('-' . $n . ' month');
+
+    $par = [];
+    try {
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */
+                                  DATE_FORMAT(insert_timestamp, '%Y-%m') mois,
+                                  SUM(total_gross_amount_after_discount) ca,
+                                  COUNT(DISTINCT ticket_key) tickets,
+                                  COUNT(DISTINCT DATE(insert_timestamp)) jours
+                           FROM transaction
+                           WHERE id_shop = ? AND insert_timestamp >= ? AND insert_timestamp < ?
+                           GROUP BY mois", [$shop, $debut->format('Y-m-d H:i:s'), $finExclu->format('Y-m-d H:i:s')]) as $r) {
+            $par[(string) $r['mois']] = [
+                'mois'    => (string) $r['mois'],
+                'ca'      => $r['ca'] !== null ? round((float) $r['ca'], 2) : null,
+                'tickets' => (int) $r['tickets'],
+                'jours'   => (int) $r['jours'],
+            ];
+        }
+    } catch (Throwable $e) {
+        http_response_code(503);
+        return ['error' => 'ventes illisibles : ' . $e->getMessage()];
+    }
+
+    $mois = [];
+    for ($i = 0; $i < $n; $i++) {
+        $k = $debut->modify('+' . $i . ' month')->format('Y-m');
+        $mois[] = $par[$k] ?? ['mois' => $k, 'ca' => null, 'tickets' => 0, 'jours' => 0];
+    }
+    return [
+        'shop'    => (string) $shop,
+        'du'      => $debut->format('Y-m'),
+        'au'      => $finExclu->modify('-1 month')->format('Y-m'),
+        'source'  => 'ventes de caisse (transaction), mois en cours exclu',
+        'mois'    => $mois,
+    ];
+}
+
 /** `2026-07` → bornes SQL du mois. */
 function venteBornes(string $m): array
 {

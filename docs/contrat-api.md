@@ -12,6 +12,34 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 
 ---
 
+## `GET /ventes/mensuel`
+
+Le CA mois par mois d'un magasin, lu dans les **ventes de caisse**
+(`transaction`) et non dans le P&L mensuel du panel — celui-ci a des trous
+(aucune ligne en 2025), et une moyenne calculée sur une fenêtre trouée ne vaut
+rien. Sert la **valeur du magasin** du dashboard.
+
+Paramètres : `shop` (requis), `mois` (1 à 60, 24 par défaut).
+
+Le **mois en cours est exclu** : incomplet, il tirerait toute moyenne vers le
+bas jusqu'à son dernier jour. Les mois sans vente sont rendus quand même, `ca`
+à `null` — un trou doit se voir, pas se combler tout seul.
+
+```json
+{
+  "shop": "4",
+  "du": "2024-10", "au": "2026-08",
+  "source": "ventes de caisse (transaction), mois en cours exclu",
+  "mois": [
+    { "mois": "2024-10", "ca": null, "tickets": 0, "jours": 0 },
+    { "mois": "2026-02", "ca": 6506.85, "tickets": 512, "jours": 9 }
+  ]
+}
+```
+
+`jours` compte les jours distincts où au moins un ticket a été passé : il dit
+qu'un mois à 6 507 € est un mois d'ouverture et non un mois raté.
+
 ## 1. Endpoints
 
 | Clé | Endpoint | Alimente |
