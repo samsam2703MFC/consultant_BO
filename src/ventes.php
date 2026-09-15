@@ -107,12 +107,17 @@ function ep_ventes_sonde(): array
 /**
  * GET /ventes/mensuel?shop=4&mois=24 — le CA mois par mois d'un magasin.
  *
- * Les ventes de caisse, pas le P&L mensuel du panel : celui-ci a des trous
- * (aucune ligne en 2025), et une valeur de fonds calculée sur une fenêtre
- * trouée ne vaut rien. Le mois EN COURS est écarté — incomplet, il tirerait
- * toute moyenne vers le bas jusqu'à son dernier jour. Les mois sans vente
- * sont rendus quand même, `ca` à null : un trou doit se voir, pas se combler
- * tout seul.
+ * DEUX sources, parce qu'aucune n'est complète à elle seule :
+ *  - `mac_shop_monthly_pnl`, le P&L mensuel du panel : il porte les mois clos
+ *    jusqu'au dernier, mais n'a aucune ligne en 2025 ;
+ *  - `transaction`, les ventes de caisse : elles couvrent 2025, mais s'arrêtent
+ *    au 14 juillet 2026 (mesuré sur les quatre magasins).
+ * Le P&L fait foi quand il a le mois — c'est un chiffre arrêté ; la caisse
+ * comble le reste. Chaque mois dit d'où il vient.
+ *
+ * Le mois EN COURS est écarté : incomplet, il tirerait toute moyenne vers le
+ * bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même,
+ * `ca` à null : un trou doit se voir, pas se combler tout seul.
  */
 function ep_ventes_mensuel(): array
 {
@@ -123,7 +128,8 @@ function ep_ventes_mensuel(): array
     $finExclu = new DateTimeImmutable(date('Y-m-01') . ' 00:00:00');   // 1er du mois courant
     $debut    = $finExclu->modify('-' . $n . ' month');
 
-    $par = [];
+    // 1) la caisse : CA, tickets et jours ouverts réels
+    $caisse = [];
     try {
         foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */
                                   DATE_FORMAT(insert_timestamp, '%Y-%m') mois,
@@ -133,29 +139,50 @@ function ep_ventes_mensuel(): array
                            FROM transaction
                            WHERE id_shop = ? AND insert_timestamp >= ? AND insert_timestamp < ?
                            GROUP BY mois", [$shop, $debut->format('Y-m-d H:i:s'), $finExclu->format('Y-m-d H:i:s')]) as $r) {
-            $par[(string) $r['mois']] = [
-                'mois'    => (string) $r['mois'],
+            $caisse[(string) $r['mois']] = [
                 'ca'      => $r['ca'] !== null ? round((float) $r['ca'], 2) : null,
                 'tickets' => (int) $r['tickets'],
                 'jours'   => (int) $r['jours'],
             ];
         }
-    } catch (Throwable $e) {
-        http_response_code(503);
-        return ['error' => 'ventes illisibles : ' . $e->getMessage()];
-    }
+    } catch (Throwable $e) { /* pas de caisse : le P&L seul */ }
 
-    $mois = [];
+    // 2) le P&L mensuel du panel, sur les exercices touchés
+    $annees = [];
+    for ($i = 0; $i < $n; $i++) { $annees[(int) $debut->modify('+' . $i . ' month')->format('Y')] = true; }
+    $annees = array_keys($annees);
+    $pnl = [];
+    try {
+        $in = implode(',', array_fill(0, count($annees), '?'));
+        foreach (Db::rows("SELECT year, month, ca FROM mac_shop_monthly_pnl
+                           WHERE id_shop = ? AND year IN ($in)", array_merge([$shop], $annees)) as $r) {
+            if ($r['ca'] === null || (float) $r['ca'] <= 0) { continue; }
+            $pnl[sprintf('%04d-%02d', (int) $r['year'], (int) $r['month'])] = round((float) $r['ca'], 2);
+        }
+    } catch (Throwable $e) { /* pas de P&L : la caisse seule */ }
+
+    $mois = []; $nPnl = 0; $nCaisse = 0;
     for ($i = 0; $i < $n; $i++) {
         $k = $debut->modify('+' . $i . ' month')->format('Y-m');
-        $mois[] = $par[$k] ?? ['mois' => $k, 'ca' => null, 'tickets' => 0, 'jours' => 0];
+        $c = $caisse[$k] ?? ['ca' => null, 'tickets' => 0, 'jours' => 0];
+        if (isset($pnl[$k])) {
+            $nPnl++;
+            $mois[] = ['mois' => $k, 'ca' => $pnl[$k], 'source' => 'pnl',
+                'tickets' => $c['tickets'], 'jours' => $c['jours']];
+        } elseif ($c['ca'] !== null) {
+            $nCaisse++;
+            $mois[] = ['mois' => $k, 'ca' => $c['ca'], 'source' => 'caisse',
+                'tickets' => $c['tickets'], 'jours' => $c['jours']];
+        } else {
+            $mois[] = ['mois' => $k, 'ca' => null, 'source' => null, 'tickets' => 0, 'jours' => 0];
+        }
     }
     return [
-        'shop'    => (string) $shop,
-        'du'      => $debut->format('Y-m'),
-        'au'      => $finExclu->modify('-1 month')->format('Y-m'),
-        'source'  => 'ventes de caisse (transaction), mois en cours exclu',
-        'mois'    => $mois,
+        'shop'   => (string) $shop,
+        'du'     => $debut->format('Y-m'),
+        'au'     => $finExclu->modify('-1 month')->format('Y-m'),
+        'source' => 'P&L mensuel du panel quand il a le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
+        'mois'   => $mois,
     ];
 }
 
