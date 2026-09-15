@@ -478,11 +478,15 @@ export class Scouting {
     this._zLoading = true;
     const vues = {}, out = [];
     for (let i = 0; i < TILES.length; i++){
-      let d = ls.get('z' + i);
-      if ((!d || !d.z) && api){
+      // Le serveur d'abord, comme pour les commerces : le relevé du dimanche
+      // ajoute des secteurs, et un navigateur qui se contenterait de sa copie
+      // resterait sur le cache partiel du jour où il est passé.
+      let d = null;
+      if (api){
         try { d = await apiGet('/scouting/tiles/' + (ZONING_BASE + i), 30000); } catch (e) { d = null; }
         if (d && d.z) ls.set('z' + i, d); else d = null;
       }
+      if (!d) d = ls.get('z' + i);
       if (!d || !d.z) continue;
       d.z.forEach(z => {
         const k = z.lat.toFixed(4) + ',' + z.lng.toFixed(4);
