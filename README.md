@@ -168,6 +168,15 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   pression concurrentielle sauf si elle est imposée. Les 7 hypothèses sont
   éditables, enregistrées dans `ceo_app_setting.scoutingParams` et reprises
   dans les exports.
+- **Assistant « où puis-je ouvrir, et pour combien »** : quatre questions dans
+  l'ordre — les provinces, l'arrondissement (classé par ménages par point de
+  vente), les deux bornes de la concurrence, le chiffre d'affaires visé — puis
+  la carte cadrée sur la zone choisie, avec les seuls emplacements qui tiennent
+  les conditions et un bandeau qui rappelle les réponses. Il n'a pas de calcul
+  à lui : il écrit dans les réglages de l'écran. Deux d'entre eux sont nés avec
+  lui, `weak` (en dessous de cette note, ce n'est pas un concurrent — la force
+  valait `(note − 3) ÷ 2`, le 3 était en dur) et `caVise` (plancher de CA, à
+  côté du score minimum).
 - **Zones** : zones d'exclusion (rayon paramétrable autour des concurrents
   forts), zones prioritaires (balayage de la vue, 30 meilleurs scores hors
   zones rouges), fiche d'implantation au clic, zones candidates retenues

@@ -35,6 +35,7 @@ export function renderTop(c, x){
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.statusLabel)}</span>
     </div>
     <div style="flex:1"></div>
+    <button ${x.A(c.ouvrirWiz)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap;border-color:var(--color-primary);color:var(--color-primary);font-weight:600">Où puis-je ouvrir ?</button>
     <button ${x.A(c.openReseau)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Magasins du réseau</button>
     <button ${x.A(c.toggleCompare)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">${c.compare ? 'Retour à la carte' : 'Comparer 2 arrondissements'}</button>
     <button ${x.A(c.reload)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Recharger les données</button>
@@ -185,6 +186,16 @@ export function renderMapUi(c, x){
   </div>
 
   <div style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
+
+  ${c.wiz.fait && !c.wiz.etape ? `
+  <div class="wz-rappel">
+    <span class="t">${c.wiz.nChauds} point${c.wiz.nChauds > 1 ? 's' : ''} chaud${c.wiz.nChauds > 1 ? 's' : ''}</span>
+    ${c.wiz.resume.map(r => `<span class="ch">${esc(r)}</span>`).join('')}
+    <span class="sp"></span>
+    ${c.wiz.caRange ? `<span class="ch ok">${esc(c.wiz.caRange)}</span>` : ''}
+    <button ${x.A(c.wiz.rouvrir)} class="btn-secondary" style="padding:4px 11px;font-size:11px">Modifier</button>
+    <button ${x.A(c.wiz.cacher)} class="btn-secondary" style="padding:4px 9px;font-size:11px">✕</button>
+  </div>` : ''}
 
   ${c.veil ? `
   <div style="position:absolute;inset:0;z-index:600;background:rgba(234,228,220,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
@@ -463,6 +474,102 @@ export function renderModal(c, x){
     </div>
   </div>` : '';
 
+  const wizard = renderWizard(c, x);
+
   const toast = c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:1300;background:#222222;color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 10px 30px rgba(34,34,34,0.3);animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : '';
-  return modal + toast;
+  return modal + wizard + toast;
+}
+
+/* --- L'assistant : quatre questions, puis les points chauds ----------------
+ * Il n'invente aucun calcul : il écrit dans les réglages que l'écran utilise
+ * déjà, et montre en même temps ce que chaque réponse change. */
+export function renderWizard(c, x){
+  const { esc } = x;
+  const w = c.wiz;
+  if (!w || !w.etape) return '';
+  const e = w.etape;
+
+  const pas = `<div class="wz-pas">${w.pas.map((p, i) => `
+    <button ${x.A(w.aller(i + 1))} class="${i + 1 === e ? 'on' : (i + 1 < e ? 'fait' : '')}"><b>${i + 1 < e ? '✓' : i + 1}</b>${esc(p[0])}<small>${esc(p[1])}</small></button>`).join('')}</div>`;
+
+  const corps1 = `
+    <div class="wz-q">Dans quelles provinces cherchez-vous ?</div>
+    <p class="wz-a">Le chiffre est le nombre de boulangeries et pâtisseries relevées. Vous resserrerez sur un arrondissement à l’étape suivante.</p>
+    ${['Bruxelles', 'Flandre', 'Wallonie'].map(reg => {
+      const L = w.provinces.filter(p => p.reg === reg);
+      return L.length ? `<div class="wz-reg">${esc(reg)}</div><div class="wz-prov">${L.map(p => `
+        <button ${x.A(p.toggle)} class="wz-p${p.on ? ' on' : ''}"><span class="ck"></span>
+          <div class="n">${esc(p.nom)}</div>
+          <div class="s">${p.shops ? p.shops.toLocaleString('fr-BE') + ' commerces' : '—'}<br>${p.hh ? Math.round(p.hh).toLocaleString('fr-BE') + ' ménages' : ''}</div></button>`).join('')}</div>` : '';
+    }).join('')}`;
+
+  const corps2 = `
+    <div class="wz-q">Quel arrondissement ?</div>
+    <p class="wz-a">« Ménages par point de vente » dit où l’offre est la moins dense : plus le chiffre est haut, plus il reste de la place. C’est la colonne qui trie.</p>
+    <table class="wz-t">
+      <tr><th style="width:26px"></th><th>Arrondissement</th><th>Communes</th><th>Ménages</th><th>Commerces</th><th>dont forts</th><th>Ménages / point de vente</th><th>Note moy.</th></tr>
+      <tr ${x.A(w.choisirTous)} class="${w.arrTous ? 'on' : ''}"><td><span class="rad"></span></td><td>Tous les arrondissements</td>
+        <td colspan="6" style="text-align:left;color:var(--color-text-muted)">toute la sélection de provinces</td></tr>
+      ${w.arrs.map(a => `<tr ${x.A(a.choisir)} class="${a.on ? 'on' : ''}">
+        <td><span class="rad"></span></td><td>${esc(a.nom)}</td><td>${a.communes}</td><td>${esc(a.hhTxt)}</td>
+        <td>${a.shops}</td><td>${a.strong}</td>
+        <td><span class="bar" style="width:${a.barre}px"></span>${esc(a.perTxt)}</td><td>${esc(a.avgTxt)}</td></tr>`).join('')}
+    </table>
+    ${w.arrs.length ? '' : '<p class="wz-a" style="margin-top:10px">Aucun arrondissement dans les provinces cochées — revenez à l’étape 1.</p>'}`;
+
+  const n = w.notes;
+  const corps3 = `
+    <div class="wz-q">Qu’est-ce qu’un vrai concurrent, pour vous ?</div>
+    <p class="wz-a">Deux notes suffisent à le dire. En dessous de la première, le commerce est ignoré ; au-dessus de la seconde, il interdit une implantation autour de lui. Entre les deux, il pèse à proportion de sa note.</p>
+    <div class="wz-seuil">
+      <div class="wz-s"><div class="k">En dessous, ce n’est pas un concurrent</div>
+        <div class="v"><input id="wz-weak" value="${w.weak.toFixed(1).replace('.', ',')}" ${x.C(w.setWeak)}><em>★ sur 5</em></div>
+        <div class="s">Un commerce noté sous cette barre ne pèse rien dans la pression concurrentielle. <b>${n.ignores}</b> commerce${n.ignores > 1 ? 's sortent' : ' sort'} ainsi du calcul.</div></div>
+      <div class="wz-s fort"><div class="k">Au-dessus, c’est un concurrent fort</div>
+        <div class="v"><input id="wz-thresh" value="${w.thresh.toFixed(1).replace('.', ',')}" ${x.C(w.setThresh)}><em>★ sur 5</em></div>
+        <div class="s">Zone rouge de <input id="wz-radius" value="${w.radius.toFixed(1).replace('.', ',')}" ${x.C(w.setRadius)} style="width:44px;border:1px solid var(--color-border-secondary);border-radius:5px;padding:1px 4px;font:700 11px var(--font-ui);text-align:center"> km autour de lui, et poids majoré de moitié. <b>${n.forts}</b> commerce${n.forts > 1 ? 's sont' : ' est'} dans ce cas.</div></div>
+    </div>
+    <div class="wz-q" style="margin-top:4px">Où ces deux barres coupent</div>
+    <p class="wz-a">${n.notes ? 'Les ' + n.notes + ' commerces notés de la sélection, par tranche de note.' : 'Aucun commerce noté dans cette sélection : les deux barres ne coupent rien pour l’instant. La force vient alors des signaux OpenStreetMap (enseigne, site, horaires), et les notes Google se chargent depuis l’écran.'}</p>
+    ${n.notes ? `<div class="wz-dist">
+      ${n.bars.map(b => `<div><em>${b.n}</em><i class="${b.cls}" style="height:${Math.round(58 * b.h / 100)}px"></i><span>${esc(b.label)}</span></div>`).join('')}
+      <div class="wz-coupe" style="left:${n.xWeak.toFixed(1)}%"><span>${w.weak.toFixed(1).replace('.', ',')} ★</span></div>
+      <div class="wz-coupe f" style="left:${n.xFort.toFixed(1)}%"><span>${w.thresh.toFixed(1).replace('.', ',')} ★ — fort</span></div>
+    </div>` : ''}
+    <div class="wz-cnt"><span class="ign">${n.ignores} ignoré${n.ignores > 1 ? 's' : ''}</span><span>${n.comptes} compté${n.comptes > 1 ? 's' : ''} à proportion</span><span class="fort">${n.forts} fort${n.forts > 1 ? 's' : ''} → autant de zones rouges</span><span class="ign">${n.sans} sans note</span></div>`;
+
+  const corps4 = `
+    <div class="wz-q">Quel chiffre d’affaires visez-vous ?</div>
+    <p class="wz-a">L’assistant ne retiendra que les emplacements dont le CA théorique atteint ce montant, au modèle de l’étude Halle. Laissez à 0 pour ne pas filtrer.</p>
+    <div class="wz-ca">
+      <div class="big"><div class="k">CA annuel TTC visé</div><input id="wz-ca" value="${esc(w.caViseTxt)}" placeholder="0" ${x.C(w.setCaVise)}></div>
+      <div class="eq">CA = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage)<br>
+        À ce montant et à une emprise de <b>${esc(w.empriseVise)}</b>, il faut environ <b>${esc(w.hhVises)} ménages</b> dans le rayon de ${w.radius.toFixed(1).replace('.', ',')} km.</div>
+    </div>
+    <div class="wz-q" style="margin-top:6px">Les hypothèses du modèle</div>
+    <p class="wz-a">Elles viennent de l’étude GeoConsulting (Halle, août 2024) et sont les mêmes que dans le panneau de gauche.</p>
+    <div class="wz-hyp">
+      ${w.hyp.map((h, i) => `<label><span class="k">${esc(h.k)} (${esc(h.u)})</span><input id="wz-hyp-${i}" value="${esc(h.v)}" ${x.C(h.set)}></label>`).join('')}
+    </div>`;
+
+  const corps = e === 1 ? corps1 : e === 2 ? corps2 : e === 3 ? corps3 : corps4;
+  const resume = e === 1 ? w.provResume : e === 2 ? w.arrResume
+    : e === 3 ? 'Les deux barres sont enregistrées dans les hypothèses : elles servent aussi à l’écran hors assistant.'
+    : (w.caVise ? 'Le balayage ne gardera que les emplacements à ' + w.resume[4].replace('CA ≥ ', '') + ' ou plus.' : 'Sans plancher, tous les emplacements au-dessus du score minimum sont gardés.');
+
+  return `
+  <div class="wz-ov">
+    <div class="wz">
+      <button ${x.A(w.fermer)} class="wz-x">✕</button>
+      <div class="wz-hd"><h2>Où puis-je ouvrir, et pour combien ?</h2>
+        <p>Quatre questions. À la fin, la carte ne montre plus que les emplacements qui tiennent vos conditions.</p></div>
+      ${pas}
+      <div id="sc-wiz" class="wz-corps sc-scroll">${corps}</div>
+      <div class="wz-pd"><span class="t">${esc(resume)}</span><span class="sp"></span>
+        ${e > 1 ? `<button ${x.A(w.aller(e - 1))} class="btn-secondary" style="padding:7px 14px;font-size:12px">← Retour</button>` : `<button ${x.A(w.fermer)} class="btn-secondary" style="padding:7px 14px;font-size:12px">Annuler</button>`}
+        ${e < 4 ? `<button ${x.A(w.aller(e + 1))} class="btn-primary" style="padding:8px 18px;font-size:12px"${e === 1 && w.provVide ? ' disabled' : ''}>Continuer →</button>`
+                : `<button ${x.A(w.terminer)} class="btn-primary" style="padding:8px 18px;font-size:12px">Voir les points chauds →</button>`}
+      </div>
+    </div>
+  </div>`;
 }

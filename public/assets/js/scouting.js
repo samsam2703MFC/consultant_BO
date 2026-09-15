@@ -111,7 +111,7 @@ const OVERPASS = [
 ];
 const HH_SIZE = 2.31;       // taille moyenne des ménages, Belgique (étude : 2,34 en Flandre)
 const CHAINS = ['panos', 'paul', 'délifrance', 'delifrance', 'zucchero', 'bakkerij aernoudt', 'le pain quotidien', 'jacqmotte'];
-const PARAM_KEYS = ['spend', 'emprise', 'passage', 'surface', 'empriseMax', 'compK', 'hhSize', 'minScore', 'radius', 'thresh'];
+const PARAM_KEYS = ['spend', 'emprise', 'passage', 'surface', 'empriseMax', 'compK', 'hhSize', 'minScore', 'radius', 'thresh', 'weak', 'caVise'];
 const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat: false, roads: false };
 const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false };
 const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
@@ -126,6 +126,8 @@ const TIP_REGL = {
   minRating: 'Ne garde que les concurrents dont la note atteint ce minimum. Dès que le curseur dépasse 0, les commerces sans note sortent de la carte et des calculs.',
   minHh: 'Ne garde que les communes d\'au moins ce nombre de ménages (population ÷ taille des ménages) ; leurs commerces suivent.',
   radius: 'Rayon autour d\'un concurrent fort où aucune implantation n\'est retenue (zone rouge). C\'est aussi le rayon d\'évaluation d\'une zone : ménages, marché et concurrents y sont comptés. 2 km, soit 15 à 20 min en voiture.',
+  weak: 'Note en dessous de laquelle un commerce n\'est pas tenu pour un concurrent : sa force tombe à zéro, il ne pèse ni dans la pression ni dans les zones rouges.\nforce = (note − ce seuil) ÷ (5 − ce seuil).',
+  caVise: 'Chiffre d\'affaires annuel TTC en dessous duquel une zone n\'est ni tracée ni listée. À 0, aucun plancher — seul le score minimum filtre.',
   thresh: 'Note à partir de laquelle un concurrent est « fort » : zone rouge autour de lui, et poids × 1,5 dans la pression concurrentielle.\nSans note, il est fort si sa force OSM ≥ 0,75 − (5 − seuil) × 0,05.',
   minScore: 'Score d\'opportunité en dessous duquel une zone n\'est ni tracée sur la carte ni listée dans ceo_zones.\nscore = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100.',
   ca: 'CA annuel TTC = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage).'
@@ -282,6 +284,11 @@ export class Scouting {
       layers: Object.assign({}, LAYERS_CONC),
       spend: 586, surface: 250, passage: 15, emprise: 0,   // emprise 0 = calculée depuis la concurrence
       hhSize: HH_SIZE, compK: 0.22, empriseMax: 30, minScore: 55,
+      // Les deux bornes de la concurrence, et le chiffre visé. `weak` était
+      // écrit en dur dans strength() ; `caVise` à 0 = pas de filtre par CA.
+      weak: 3, caVise: 0,
+      // L'assistant : 0 fermé, 1..4 l'étape ouverte ; wizFait = le bandeau de résultat.
+      wiz: 0, wizFait: false,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
       view: 'map', sortKey: 'score', sortDir: -1, q: '', stop: false, reseau: false, notes: {},
       gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
@@ -443,7 +450,7 @@ export class Scouting {
     return [s.bakeries.length, s.communes.length, this._rev, JSON.stringify(s.prov), s.arr, s.minRating,
       s.minHh, s.radius, s.thresh, JSON.stringify(s.layers), s.sel ? s.sel.lat + ',' + s.sel.lng : '',
       s.candidates.length, s.minScore, s.view, s.reseau ? 1 : 0,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.wizFait ? 1 : 0].join('|');
   }
 
   scheduleRedraw(ms){
@@ -525,7 +532,14 @@ export class Scouting {
     this.gRoads = L.layerGroup();
     this.gSel = L.layerGroup().addTo(map);
     map.on('click', e => { if (this.state.placing) this.placeStore(e.latlng.lat, e.latlng.lng); else this.evaluate(e.latlng.lat, e.latlng.lng); });
-    map.on('zoomend moveend', () => { if (this.state.communes.length) this.scheduleRedraw(120); });
+    map.on('zoomend moveend', () => {
+      if (!this.state.communes.length) return;
+      this.scheduleRedraw(120);
+      // Le balayage dépend de la vue : le bandeau de l'assistant compte des
+      // points chauds qui changent quand la carte bouge. Sans ce rendu, il
+      // affichait le compte d'avant le déplacement.
+      if (this.state.wizFait){ clearTimeout(this._wizR); this._wizR = setTimeout(() => this.render(), 260); }
+    });
     this.scheduleRedraw(50);
   }
 
@@ -881,7 +895,7 @@ export class Scouting {
     const s = this.state, R = s.radius;
     const b = this.map.getBounds();
     const key = [b.toBBoxString(), R, s.thresh, s.minScore, s.arr, JSON.stringify(s.prov), s.minRating, s.minHh, this._rev,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.weak, s.caVise].join('|');
     if (key === this._scanKey) return this._scanVal;
     const shops = this.shops();
     const strong = shops.filter(x => this.isStrong(x));
@@ -922,8 +936,10 @@ export class Scouting {
     }
     // une seule zone par commune : les points voisins d'une même maille
     // donnent des lignes identiques et noient le tableau
+    // Le CA visé filtre AVANT le regroupement par commune : une commune dont
+    // le meilleur point n'atteint pas le montant ne doit pas apparaître.
     const best = {};
-    out.filter(p => p.score >= (s.minScore || 0)).forEach(p => {
+    out.filter(p => p.score >= (s.minScore || 0) && (!s.caVise || p.ca >= s.caVise)).forEach(p => {
       const k = p.commune + '|' + p.arr;
       if (!best[k] || p.score > best[k].score) best[k] = p;
     });
@@ -1083,7 +1099,11 @@ export class Scouting {
 
   strength(b){  // force du concurrent, 0–1
     const r = this.rating(b);
-    if (r) return Math.max(0, Math.min(1, (r - 3) / 2));
+    // La borne basse est un RÉGLAGE : en dessous, le commerce ne pèse rien.
+    // Elle valait 3 en dur, ce qui interdisait de dire « ici, un 3,5 n'est pas
+    // un concurrent ». Le haut de l'échelle reste 5.
+    const w = Math.max(0, Math.min(4.9, this.state.weak != null ? this.state.weak : 3));
+    if (r) return Math.max(0, Math.min(1, (r - w) / (5 - w)));
     let s = 0.4;
     const n = (b.name || '').toLowerCase();
     if (CHAINS.some(c => n.includes(c)) || b.brand) s += 0.25;
@@ -1503,6 +1523,85 @@ export class Scouting {
     };
   }
 
+  /* --- L'assistant « où puis-je ouvrir, et pour combien » --------------------
+   *
+   * Quatre questions posées dans l'ordre, et rien de neuf sous le capot : il
+   * écrit dans les réglages que l'écran utilise déjà (provinces, arrondissement,
+   * bornes de la concurrence, rayon, hypothèses), puis allume la couche des
+   * zones prioritaires et cadre la carte. Ce qu'il apporte, c'est l'ordre des
+   * questions et ce qu'on voit en y répondant.
+   */
+  wizOuvrir(){ this.setState({ wiz: 1, reseau: false, compare: false, view: 'map' }); }
+  wizFermer(){ this.setState({ wiz: 0 }); }
+  wizAller(n){ this.setState({ wiz: Math.max(1, Math.min(4, n)) }); }
+
+  // Les arrondissements des provinces cochées, classés par ménages par point
+  // de vente : c'est la question de l'étape, donc l'ordre du tableau.
+  wizArrs(){
+    const s = this.state;
+    const noms = Array.from(new Set(s.communes.filter(c => s.prov[c.prov]).map(c => c.arr))).filter(a => a && a !== '—');
+    return noms.map(n => {
+      const st = this.arrStats(n);
+      return { nom: n, communes: st.communes, hh: st.hh, shops: st.shops, strong: st.strong,
+        perShop: st.shops ? st.hh / st.shops : 0, avg: st.avg };
+    }).sort((a, b) => b.perShop - a.perShop);
+  }
+
+  // La distribution des notes de la sélection, découpée par les deux bornes.
+  wizNotes(){
+    const s = this.state, w = s.weak, t = s.thresh;
+    const notes = this.shops().map(b => this.rating(b)).filter(Boolean);
+    const bins = [[0, 2.5], [2.5, 3], [3, 3.5], [3.5, 4], [4, 4.3], [4.3, 4.5], [4.5, 4.7], [4.7, 5.01]];
+    const cnt = bins.map(b => notes.filter(r => r >= b[0] && r < b[1]).length);
+    const max = Math.max(1, ...cnt);
+    return {
+      notes: notes.length, sans: this.shops().length - notes.length,
+      ignores: notes.filter(r => r < w).length,
+      comptes: notes.filter(r => r >= w && r < t).length,
+      forts: this.shops().filter(b => this.isStrong(b)).length,
+      bars: bins.map((b, i) => ({
+        label: b[0].toFixed(1).replace('.', ',') + ' – ' + (b[1] > 5 ? '5' : b[1].toFixed(1).replace('.', ',')),
+        n: cnt[i], h: Math.round(cnt[i] / max * 100),
+        cls: b[1] <= w ? 'ign' : (b[0] >= t ? 'fort' : (b[0] >= 4 ? 'mid' : ''))
+      })),
+      // position des deux traits, en % de la largeur (échelle 0 → 5)
+      xWeak: Math.max(0, Math.min(100, w / 5 * 100)),
+      xFort: Math.max(0, Math.min(100, t / 5 * 100))
+    };
+  }
+
+  // Ce qu'il faut de ménages pour atteindre le CA visé, à emprise courante.
+  wizMenages(){
+    const s = this.state;
+    const eMax = (s.empriseMax || 30) / 100;
+    const em = s.emprise > 0 ? s.emprise / 100 : eMax / (1 + (s.compK || 0.22) * 1.2);   // 1,2 = pression d'un secteur ordinaire
+    const d = s.spend * em / (1 - s.passage / 100);
+    return { emprise: em, hh: d > 0 ? s.caVise / d : 0 };
+  }
+
+  // Les points chauds : le balayage déjà en place, sous les conditions posées.
+  wizChauds(){ return this.state.communes.length ? this.scanPrio() : []; }
+
+  // Fin de l'assistant : la couche des zones prioritaires s'allume, la carte se
+  // cadre sur l'arrondissement choisi, et le bandeau rappelle les réponses.
+  wizTerminer(){
+    const s = this.state;
+    this.setState({ wiz: 0, wizFait: true, sel: null, view: 'map',
+      layers: Object.assign({}, s.layers, { prio: true, excl: true, shops: true }) });
+    this.wizCadrer();
+  }
+
+  wizCadrer(){
+    const s = this.state;
+    if (!this.map || !window.L) return;
+    const cs = s.communes.filter(c => s.prov[c.prov] && (s.arr === 'all' || c.arr === s.arr));
+    if (!cs.length) return;
+    const b = window.L.latLngBounds(cs.map(c => [c.lat, c.lng]));
+    try { this.map.fitBounds(b.pad(0.12)); } catch (e) { /* carte non prête */ }
+    this.scheduleRedraw(120);
+    setTimeout(() => { if (this.state.wizFait) this.render(); }, 420);
+  }
+
   /* --- valeurs de rendu (port de renderVals) --------------------------------- */
   renderVals(){
     const s = this.state, self = this;
@@ -1617,6 +1716,83 @@ export class Scouting {
       busy: s.busy, veil: s.busy && !s.bakeries.length, progress: s.progress, compare: s.compare, toast: s.toast,
       statusColor: s.err ? '#8D1D2C' : s.busy ? '#c17a2a' : '#1b5e20',
       statusLabel: s.err ? 'Erreur : ' + s.err : s.busy ? (s.progress || 'Chargement…') : fmtInt(s.bakeries.length) + ' commerces · ' + fmtInt(s.communes.length) + ' communes' + (self.osmDate() ? ' · OpenStreetMap relu le ' + self.osmDate() : '') + (self.useApi() ? '' : ' · saisies locales à ce navigateur'),
+      // --- l'assistant ---------------------------------------------------
+      wiz: (() => {
+        if (!s.wiz && !s.wizFait) return { etape: 0, fait: false };
+        const chauds = s.wizFait ? self.wizChauds() : [];
+        const nd = self.wizNotes(), men = self.wizMenages();
+        const arrs = s.wiz === 2 ? self.wizArrs() : [];
+        const provOn = PROV.filter(p => s.prov[p.code]);
+        const csSel = s.communes.filter(c => s.prov[c.prov]);
+        return {
+          etape: s.wiz, fait: s.wizFait,
+          fermer: () => self.wizFermer(),
+          aller: n => () => self.wizAller(n),
+          terminer: () => self.wizTerminer(),
+          rouvrir: () => self.wizOuvrir(),
+          cacher: () => self.setState({ wizFait: false }),
+          pas: [['La zone', 'province'], ['L\u2019arrondissement', 'où précisément'],
+            ['La concurrence', 'qui compte, qui non'], ['Le chiffre visé', 'CA et hypothèses']],
+          // 1 — les provinces
+          provinces: PROV.map(p => ({
+            code: p.code, reg: p.reg, nom: p.name, on: !!s.prov[p.code],
+            shops: s.bakeries.filter(b => b.prov === p.code).length,
+            hh: s.communes.filter(c => c.prov === p.code).reduce((a, c) => a + c.hh, 0),
+            toggle: () => self.setState({ prov: Object.assign({}, s.prov, { [p.code]: !s.prov[p.code] }), sel: null })
+          })),
+          provResume: provOn.length
+            ? provOn.length + ' province' + (provOn.length > 1 ? 's' : '') + ' retenue' + (provOn.length > 1 ? 's' : '')
+              + ' · ' + fmtInt(self.shops().length) + ' commerces · ' + fmtInt(csSel.reduce((a, c) => a + c.hh, 0)) + ' ménages'
+            : 'Aucune province retenue',
+          provVide: !provOn.length,
+          // 2 — les arrondissements
+          arrs: arrs.map(a => Object.assign({}, a, {
+            on: s.arr === a.nom,
+            hhTxt: fmtInt(a.hh), perTxt: fmtInt(a.perShop),
+            barre: Math.round(Math.max(4, Math.min(100, a.perShop / (arrs[0] ? arrs[0].perShop : 1) * 100))),
+            avgTxt: a.avg ? a.avg.toFixed(1).replace('.', ',') : '—',
+            choisir: () => self.setState({ arr: a.nom, sel: null })
+          })),
+          arrTous: s.arr === 'all', choisirTous: () => self.setState({ arr: 'all', sel: null }),
+          arrResume: s.arr === 'all' ? 'Toute la sélection · ' + fmtInt(self.shops().length) + ' commerces'
+            : (() => { const st = self.arrStats(s.arr); return s.arr + ' · ' + fmtInt(st.communes) + ' communes · '
+                + fmtInt(st.hh) + ' ménages · ' + fmtInt(st.shops) + ' commerce' + (st.shops > 1 ? 's' : '')
+                + ', dont ' + fmtInt(st.strong) + ' fort' + (st.strong > 1 ? 's' : ''); })(),
+          // 3 — la concurrence
+          weak: s.weak, thresh: s.thresh, radius: s.radius,
+          setWeak: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) self.setParam({ weak: Math.max(0, Math.min(s.thresh - 0.1, v)) }); },
+          setThresh: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) self.setParam({ thresh: Math.max(s.weak + 0.1, Math.min(5, v)) }); },
+          setRadius: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) self.setParam({ radius: Math.max(0.5, Math.min(15, v)) }); },
+          notes: nd,
+          // 4 — le chiffre visé
+          caVise: s.caVise, caViseTxt: s.caVise ? fmtInt(s.caVise) : '',
+          setCaVise: e => { const v = parseFloat(String(e.target.value).replace(/[^0-9.,]/g, '').replace(',', '.')); self.setParam({ caVise: isNaN(v) ? 0 : Math.max(0, v) }); },
+          hhVises: men.hh ? fmtInt(men.hh) : '—',
+          empriseVise: (men.emprise * 100).toFixed(1).replace('.', ',') + ' %',
+          hyp: [
+            { k: 'Dépense par ménage', u: '€/an', v: s.spend, set: e => self.setParam({ spend: parseFloat(e.target.value) || 0 }) },
+            { k: 'Part du passage', u: '%', v: s.passage, set: e => self.setParam({ passage: Math.min(95, parseFloat(e.target.value) || 0) }) },
+            { k: 'Emprise maximale', u: '%', v: s.empriseMax, set: e => self.setParam({ empriseMax: parseFloat(e.target.value) || 30 }) },
+            { k: 'Surface nette cible', u: 'm²', v: s.surface, set: e => self.setParam({ surface: parseFloat(e.target.value) || 1 }) }
+          ],
+          // le résultat
+          chauds: chauds.map((p, i) => ({
+            rang: i + 1, commune: p.commune, arr: p.arr, ca: fmtEur(p.ca), score: p.score,
+            hh: fmtInt(p.hh) + ' ménages', n: p.n + ' concurrent' + (p.n > 1 ? 's' : ''),
+            voir: () => { if (self.map) self.map.setView([p.lat, p.lng], 12); self.evaluate(p.lat, p.lng); }
+          })),
+          nChauds: chauds.length,
+          caRange: chauds.length ? fmtEur(Math.min(...chauds.map(c => c.ca))) + ' → ' + fmtEur(Math.max(...chauds.map(c => c.ca))) : '',
+          resume: [
+            s.arr === 'all' ? (provOn.length === PROV.length ? 'toute la Belgique' : provOn.map(p => p.name).join(', ')) : s.arr,
+            'concurrent dès ' + s.weak.toFixed(1).replace('.', ',') + ' ★',
+            'fort à ' + s.thresh.toFixed(1).replace('.', ',') + ' ★',
+            'rayon ' + s.radius.toFixed(1).replace('.', ',') + ' km',
+            s.caVise ? 'CA ≥ ' + fmtEur(s.caVise) : 'sans plancher de CA'
+          ]
+        };
+      })(),
+      ouvrirWiz: () => self.wizOuvrir(),
       provinces: PROV.map(p => ({
         name: p.name, on: !!s.prov[p.code],
         count: s.bakeries.filter(b => b.prov === p.code).length || '—',
@@ -1643,6 +1819,7 @@ export class Scouting {
         ['depense_menage_eur', s.spend], ['emprise_imposee_pct', s.emprise], ['part_passage_pct', s.passage],
         ['surface_nette_m2', s.surface], ['emprise_max_pct', s.empriseMax], ['sensibilite_concurrence', s.compK],
         ['taille_menages', s.hhSize], ['rayon_exclusion_km', s.radius], ['seuil_concurrent_fort', s.thresh],
+        ['seuil_pas_un_concurrent', s.weak], ['ca_annuel_vise_eur', s.caVise],
         ['score_minimum', s.minScore], ['provinces_actives', PROV.filter(p => s.prov[p.code]).map(p => p.name).join(' / ')],
         ['arrondissement', s.arr], ['date_export', new Date().toISOString().slice(0, 16).replace('T', ' ')]
       ]),
