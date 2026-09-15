@@ -186,6 +186,69 @@ function ep_ventes_mensuel(): array
     ];
 }
 
+/**
+ * GET /ventes/stock?shop=2 — l'inventaire matière d'UN magasin, tel qu'il est.
+ *
+ * `/centrale/stock` fait la même lecture pour tout le réseau et tronque à 600
+ * lignes : sur 2 100 références, un magasin peut y passer entier à la trappe.
+ * Le dashboard d'un magasin a besoin du sien, complet.
+ *
+ * Source : `/shops/{id}/material-inventory` (API panel). Une référence jamais
+ * comptée n'est PAS « à zéro », elle est absente — on ne la rend pas.
+ * L'alerte est un calcul local : stock négatif (écart de caisse ou de
+ * comptage) ou sous le minimum journalier. Les deux appellent un geste.
+ */
+function ep_ventes_stock(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'paramètre shop requis']; }
+    if (!PanelApi::configured()) {
+        return ['shop' => (string) $sid, 'indispo' => true, 'motif' => 'compte panel non configuré', 'lignes' => []];
+    }
+    $inv = PanelApi::get('/shops/' . $sid . '/material-inventory');
+    if (!is_array($inv)) {
+        return ['shop' => (string) $sid, 'indispo' => true, 'motif' => 'le panel n’a pas répondu', 'lignes' => []];
+    }
+    $lignes = []; $alertes = 0; $rupture = 0; $negatif = 0; $dernier = '';
+    foreach (analyseListe($inv) as $m) {
+        if ((int) ($m['exist_in_inventory'] ?? 0) !== 1) { continue; }
+        $stock = (float) ($m['current_quantity'] ?? 0);
+        $mini  = (float) ($m['minimum_quantity_per_day'] ?? 0);
+        $al    = $stock < 0 || ($mini > 0 && $stock < $mini);
+        $modif = substr((string) ($m['last_modified'] ?? ''), 0, 19);
+        if ($modif > $dernier) { $dernier = $modif; }
+        if ($al) { $alertes++; }
+        if ($stock <= 0 && $mini > 0) { $rupture++; }
+        if ($stock < 0) { $negatif++; }
+        $lignes[] = [
+            'ref' => trim((string) ($m['material_name'] ?? '')),
+            'categorie' => (string) ($m['category_name'] ?? ''),
+            'stock' => round($stock, 3), 'mini' => round($mini, 3),
+            'unite' => (string) ($m['unit_name'] ?? ''),
+            'modif' => $modif,
+            'alerte' => $al,
+            // De combien il manque : ce qu'il faut commander pour repasser au
+            // minimum. Sans minimum, la question ne se pose pas.
+            'manque' => ($mini > 0 && $stock < $mini) ? round($mini - $stock, 3) : 0.0,
+        ];
+    }
+    // Les alertes d'abord, les plus creuses en tête : c'est l'ordre dans lequel
+    // on va les traiter.
+    usort($lignes, static function ($a, $b) {
+        if ($a['alerte'] !== $b['alerte']) { return $a['alerte'] ? -1 : 1; }
+        if ($a['alerte']) { return $b['manque'] <=> $a['manque']; }
+        return [$a['categorie'], $a['ref']] <=> [$b['categorie'], $b['ref']];
+    });
+    return [
+        'shop' => (string) $sid,
+        'references' => count($lignes),
+        'alertes' => $alertes, 'ruptures' => $rupture, 'negatifs' => $negatif,
+        'dernierComptage' => $dernier,
+        'quand' => date('c'),
+        'lignes' => $lignes,
+    ];
+}
+
 /** `2026-07` → bornes SQL du mois. */
 function venteBornes(string $m): array
 {

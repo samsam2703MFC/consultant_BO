@@ -17,7 +17,8 @@
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
-    ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false };
+    ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
+    stockOuvert: false, stockAvertir: false, stockVues: null };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -58,7 +59,12 @@
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
       S.enCours[cle] = true; delete S.err[cle];
-      lire(path).then(d => { S.aux[cle] = d; }).catch(e => { S.err[cle] = e.message; }).finally(() => { S.enCours[cle] = false; rendre(); });
+      lire(path).then(d => {
+        S.aux[cle] = d;
+        // Le stock vient d'être relu : si une référence est passée sous son
+        // minimum depuis la lecture précédente, on le dit.
+        if (cle === 'stock|' + S.shop) { stockAvertirSiNouveau(stockEtat()); }
+      }).catch(e => { S.err[cle] = e.message; }).finally(() => { S.enCours[cle] = false; rendre(); });
     }
   }
   function charger(force) {
@@ -75,6 +81,9 @@
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
+    // Le stock est vivant : il se relit avec la page, et la page se relit
+    // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
+    lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
     if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     // Les non-conformités se lisent sous les trois vues : la veille en Jour,
@@ -241,6 +250,94 @@
     </div>`;
   }
 
+  /** Le bloc du bureau : un bandeau qui se déplie sur les alertes. */
+  function rendStock() {
+    const E = stockEtat();
+    if (E && !E.indispo && !E.n) { return ''; }        // pas d'inventaire : on se tait
+    const al = E && !E.indispo ? E.alertes : 0;
+    const av = S.stockAvertir;
+    const bouton = ('Notification' in window)
+      ? `<button class="db-btn db-stav${av ? ' on' : ''}" data-stav="1">${av ? '🔔 averti' : 'M’avertir'}</button>` : '';
+    return `<div class="db-stbar${al ? ' ko' : (E && !E.indispo ? ' ok' : ' mu')}${S.stockOuvert ? ' ouv' : ''}">
+      <span class="ic" data-stdrop="1">${al ? '📦' : (E && !E.indispo ? '✓' : '·')}</span>
+      <span class="t" data-stdrop="1">${al ? al + ' référence' + (al > 1 ? 's' : '') + ' sous le minimum'
+        : (E && !E.indispo ? 'Stock au complet' : 'Stock')}<small>${stockSous(E)}</small></span>
+      ${al ? `<span class="chips" data-stdrop="1">${E.ruptures ? `<span class="ch ko">${E.ruptures} à zéro</span>` : ''}${E.negatifs ? `<span class="ch ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}</span>` : ''}
+      <span class="sp"></span>${bouton}
+      ${E && !E.indispo && al ? `<span class="dr" data-stdrop="1">${S.stockOuvert ? 'replier ▴' : 'détail ▾'}</span>` : ''}
+    </div>${S.stockOuvert && E && !E.indispo ? `<div class="db-stdl">${stockTiroir(E)}</div>` : ''}`;
+  }
+
+  /* --- Le stock, vivant ----------------------------------------------------
+   * L'inventaire matière du magasin, relu avec la page. Une référence est en
+   * alerte quand son stock est NÉGATIF (écart de caisse ou de comptage) ou
+   * sous le minimum journalier : les deux appellent un geste. Une référence
+   * jamais comptée n'est pas « à zéro », elle est absente — le serveur ne la
+   * rend pas, l'écran ne l'invente pas. */
+  function stockEtat() {
+    const d = S.aux['stock|' + S.shop];
+    if (!d) { return null; }
+    if (d.indispo) { return { indispo: true, motif: d.motif || 'panel injoignable' }; }
+    const L = Array.isArray(d.lignes) ? d.lignes : [];
+    return { n: d.references || L.length, alertes: d.alertes || 0, ruptures: d.ruptures || 0,
+      negatifs: d.negatifs || 0, dernier: d.dernierComptage || '', quand: d.quand || '', lignes: L };
+  }
+
+  const fQ = (v, u) => (Math.abs(v) >= 100 ? nf(v, 0) : nf(v, v % 1 ? 2 : 0)) + (u ? ' ' + u : '');
+
+  /** Le tableau des alertes : ce qui manque, et de combien. */
+  function stockTiroir(E) {
+    const A = E.lignes.filter(x => x.alerte);
+    if (!A.length) { return '<div class="db-stvide">Aucune référence sous son minimum.</div>'; }
+    return `<div class="db-stt"><div class="th"><span>Référence</span><span>Catégorie</span><span>Stock</span><span>Minimum</span><span>Manque</span><span>Compté le</span></div>
+      ${A.slice(0, 80).map(x => `<div class="tr${x.stock < 0 ? ' neg' : ''}">
+        <span class="r">${esc(x.ref)}</span><span class="c">${esc(x.categorie)}</span>
+        <span class="v ${x.stock <= 0 ? 'ko' : 'wa'}">${fQ(x.stock, x.unite)}</span>
+        <span class="v mu">${fQ(x.mini, x.unite)}</span>
+        <span class="v">${x.manque ? '− ' + fQ(x.manque, x.unite) : '—'}</span>
+        <span class="c mu">${esc(x.modif ? fD(x.modif.slice(0, 10)) : '—')}</span></div>`).join('')}
+      ${A.length > 80 ? `<div class="db-stvide">+ ${A.length - 80} autre(s) référence(s) en alerte.</div>` : ''}</div>`;
+  }
+
+  /* Les avertissements du navigateur : ils ne partent QUE tant que la page est
+   * ouverte — sans service worker, rien ne tourne en arrière-plan. On le dit
+   * plutôt que de laisser croire à une alerte qui suivrait le gérant. */
+  function stockAvertirBascule() {
+    if (S.stockAvertir) { S.stockAvertir = false; rendre(); return; }
+    if (!('Notification' in window)) { S.stockAvertir = false; rendre(); return; }
+    const suite = p => { S.stockAvertir = (p === 'granted'); rendre(); };
+    if (Notification.permission === 'granted') { suite('granted'); return; }
+    if (Notification.permission === 'denied') { suite('denied'); return; }
+    try { Notification.requestPermission().then(suite); } catch (e) { suite('denied'); }
+  }
+
+  /** Après chaque relecture : ce qui vient de passer sous le minimum. */
+  function stockAvertirSiNouveau(E) {
+    if (!E || E.indispo) { return; }
+    const set = {};
+    E.lignes.forEach(x => { if (x.alerte) { set[x.ref] = 1; } });
+    const avant = S.stockVues;
+    S.stockVues = set;
+    if (!avant || !S.stockAvertir) { return; }          // première lecture : rien à annoncer
+    const neufs = Object.keys(set).filter(r => !avant[r]);
+    if (!neufs.length || !('Notification' in window) || Notification.permission !== 'granted') { return; }
+    try {
+      new Notification(nomShop() + ' — stock', {
+        body: neufs.length === 1 ? neufs[0] + ' vient de passer sous son minimum.'
+          : neufs.length + ' références viennent de passer sous leur minimum : ' + neufs.slice(0, 3).join(', ')
+            + (neufs.length > 3 ? '…' : ''),
+        tag: 'stock-' + S.shop, icon: '../assets/img/logo.png'
+      });
+    } catch (e) { /* le navigateur refuse : tant pis, l'écran le dit déjà */ }
+  }
+
+  function stockSous(E) {
+    if (!E) { return 'lecture de l’inventaire…'; }
+    if (E.indispo) { return esc(E.motif); }
+    return E.n + ' référence' + (E.n > 1 ? 's' : '') + ' à l’inventaire'
+      + (E.dernier ? ' · dernier comptage le ' + fD(E.dernier.slice(0, 10)) : '');
+  }
+
   /* --- Le dashboard au téléphone -------------------------------------------
    * La même page et les mêmes lectures : seul le rendu change sous 560 px.
    * Deux vues seulement, le jour et la semaine — le mois, le trimestre et
@@ -375,6 +472,17 @@
           ${lg('= Résultat', m.netPct, m.net >= 0 ? '#2d7a3e' : '#C0182B', m.net == null ? '—' : fE(m.net))}
         </div>`);
     }
+    const E = stockEtat();
+    if (E && !E.indispo && E.n) {
+      h += `<div class="mb-c" data-stdrop="1"><div class="hd">
+        <span class="k">Stock<em>${stockSous(E)}</em></span>
+        <span class="v ${E.alertes ? 'ko' : 'ok'}">${E.alertes || '✓'}</span><span class="ch">${S.stockOuvert ? '⌄' : '›'}</span></div>
+        ${E.alertes ? `<div class="cp"><div class="mb-pills">${E.ruptures ? `<span class="ko">${E.ruptures} à zéro</span>` : ''}
+          ${E.negatifs ? `<span class="ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}
+          <span>${E.alertes} sous le minimum</span></div>
+          ${('Notification' in window) ? `<button class="db-btn db-stav${S.stockAvertir ? ' on' : ''}" data-stav="1" style="margin-top:8px">${S.stockAvertir ? '🔔 averti des nouvelles ruptures' : 'M’avertir des nouvelles ruptures'}</button>` : ''}</div>` : ''}
+      </div>${S.stockOuvert ? `<div class="db-stdl">${stockTiroir(E)}</div>` : ''}`;
+    }
     h += `<div class="mb-c or" data-vdrop="1"><div class="hd"><span class="k">Ce que vaut le magasin<em>${v && v.n ? '18 mois clos · × 12 ÷ ' + VALO_DIV : 'lecture des ventes…'}</em></span>
       <span class="v">${v && v.n ? fE(v.valeur) : '…'}</span><span class="ch">${S.valoOuvert ? '⌄' : '›'}</span></div></div>`;
     if (S.valoOuvert) { h += rendValeur(); }
@@ -415,6 +523,7 @@
     // Le bandeau : la place du magasin dans le réseau, sans nommer les autres.
     if (m) { h += rendBench(m, d); }
     h += rendTaches();
+    h += rendStock();
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
     else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
@@ -1318,6 +1427,8 @@
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
+    $.querySelectorAll('[data-stdrop]').forEach(b => b.addEventListener('click', () => { S.stockOuvert = !S.stockOuvert; rendre(); }));
+    $.querySelectorAll('[data-stav]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); stockAvertirBascule(); }));
     $.querySelectorAll('[data-ncrow]').forEach(b => b.addEventListener('click', () => {
       S.ncLigne = S.ncLigne === b.dataset.ncrow ? null : b.dataset.ncrow; rendre(); }));
     $.querySelectorAll('[data-ncgrp]').forEach(b => b.addEventListener('click', () => {
