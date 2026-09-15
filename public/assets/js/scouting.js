@@ -111,7 +111,7 @@ const OVERPASS = [
 ];
 const HH_SIZE = 2.31;       // taille moyenne des ménages, Belgique (étude : 2,34 en Flandre)
 const CHAINS = ['panos', 'paul', 'délifrance', 'delifrance', 'zucchero', 'bakkerij aernoudt', 'le pain quotidien', 'jacqmotte'];
-const PARAM_KEYS = ['spend', 'emprise', 'passage', 'surface', 'empriseMax', 'compK', 'hhSize', 'minScore', 'radius', 'thresh', 'weak', 'caVise'];
+const PARAM_KEYS = ['spend', 'emprise', 'passage', 'surface', 'empriseMax', 'compK', 'hhSize', 'minScore', 'radius', 'thresh', 'weak', 'caVise', 'hhMin'];
 const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat: false, roads: false };
 const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false };
 const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
@@ -198,7 +198,11 @@ const lens = (r1, r2, d) => {
 };
 const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const medOf = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
-const pickParams = v => { const o = {}; PARAM_KEYS.forEach(k => { if (v && typeof v[k] === 'number' && isFinite(v[k])) o[k] = v[k]; }); return o; };
+const pickParams = v => { const o = {}; PARAM_KEYS.forEach(k => { if (v && typeof v[k] === 'number' && isFinite(v[k])) o[k] = v[k]; });
+  // `nMax` est nul quand le filtre est éteint : il ne passe pas le test des
+  // nombres, et se relit donc à part.
+  if (v && (v.nMax === null || (typeof v.nMax === 'number' && isFinite(v.nMax)))) o.nMax = v.nMax;
+  return o; };
 
 /* --- stockage local : cache Overpass et repli hors API ----------------------- */
 const ls = {
@@ -287,6 +291,9 @@ export class Scouting {
       // Les deux bornes de la concurrence, et le chiffre visé. `weak` était
       // écrit en dur dans strength() ; `caVise` à 0 = pas de filtre par CA.
       weak: 3, caVise: 0,
+      // Le terrain : nombre maximum de concurrents dans le rayon (null = sans
+      // limite, 0 = aucune boulangerie) et ménages minimum dans le rayon.
+      nMax: null, hhMin: 0,
       // L'assistant : 0 fermé, 1..4 l'étape ouverte ; wizFait = le bandeau de résultat.
       wiz: 0, wizFait: false,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
@@ -450,7 +457,7 @@ export class Scouting {
     return [s.bakeries.length, s.communes.length, this._rev, JSON.stringify(s.prov), s.arr, s.minRating,
       s.minHh, s.radius, s.thresh, JSON.stringify(s.layers), s.sel ? s.sel.lat + ',' + s.sel.lng : '',
       s.candidates.length, s.minScore, s.view, s.reseau ? 1 : 0,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.wizFait ? 1 : 0].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.nMax, s.hhMin, s.wizFait ? 1 : 0].join('|');
   }
 
   scheduleRedraw(ms){
@@ -459,7 +466,7 @@ export class Scouting {
   }
 
   /* --- persistance des saisies ---------------------------------------------- */
-  paramsObj(){ const o = {}; PARAM_KEYS.forEach(k => { o[k] = this.state[k]; }); return o; }
+  paramsObj(){ const o = {}; PARAM_KEYS.forEach(k => { o[k] = this.state[k]; }); o.nMax = this.state.nMax; return o; }
 
   // les hypothèses du modèle survivent au rechargement (et sont partagées
   // via ceo_app_setting quand l'API répond)
@@ -891,11 +898,15 @@ export class Scouting {
   // Mémorisé par vue et par état : appelé par la carte, le compteur et
   // l'onglet ceo_zones dans le même cycle.
   scanPrio(){
+    // Assistant en cours : le balayage ne suit plus la vue mais les
+    // arrondissements retenus — sinon la carte, le bandeau et ceo_zones
+    // montreraient trois comptes différents du même territoire.
+    if (this.state.wizFait) return this.scanArrs();
     if (!this.map) return [];
     const s = this.state, R = s.radius;
     const b = this.map.getBounds();
     const key = [b.toBBoxString(), R, s.thresh, s.minScore, s.arr, JSON.stringify(s.prov), s.minRating, s.minHh, this._rev,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.weak, s.caVise].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.weak, s.caVise, s.nMax, s.hhMin].join('|');
     if (key === this._scanKey) return this._scanVal;
     const shops = this.shops();
     const strong = shops.filter(x => this.isStrong(x));
@@ -939,7 +950,7 @@ export class Scouting {
     // Le CA visé filtre AVANT le regroupement par commune : une commune dont
     // le meilleur point n'atteint pas le montant ne doit pas apparaître.
     const best = {};
-    out.filter(p => p.score >= (s.minScore || 0) && (!s.caVise || p.ca >= s.caVise)).forEach(p => {
+    out.filter(p => this.zoneRetenue(p)).forEach(p => {
       const k = p.commune + '|' + p.arr;
       if (!best[k] || p.score > best[k].score) best[k] = p;
     });
@@ -990,33 +1001,112 @@ export class Scouting {
       let dLat = stepKm * kLat, dLng = stepKm * kLng;
       const cells = ((n0 - s0) / dLat) * ((e0 - w0) / dLng);
       if (cells > 2600){ const f = Math.sqrt(cells / 2600); dLat *= f; dLng *= f; }
-      const best = {};
-      let guard = 0;
-      for (let lat = s0; lat <= n0 && guard < 2600; lat += dLat){
-        for (let lng = w0; lng <= e0 && guard < 2600; lng += dLng){
-          guard++;
-          let com = null, cd = 1e9;
-          voisines.forEach(c => { const d = dist(lat, lng, c.lat, c.lng); if (d < cd){ cd = d; com = c; } });
-          if (!com || com.prov !== p.code || cd > (com.rKm || 3) * 1.4) continue;   // hors province, ou hors zone habitée connue
-          const near = around(lat, lng);
-          if (near.some(o => this.isStrong(o.x))) continue;                        // zone rouge
-          let load = 0;
-          near.forEach(o => { load += this.strength(o.x) * (1 - o.d / R * 0.6); });
-          const hh = this.householdsIn(lat, lng, R, toutes);
-          const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
-          const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
-          const ca = hh * s.spend * emprise / (1 - s.passage / 100);
-          const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
-          const k = com.name + '|' + com.arr;
-          if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, arr: com.arr };
-        }
-      }
-      // Le score plafonne à 100 : à égalité, le CA estimé départage.
-      const zones = Object.keys(best).map(k => best[k]).sort((a, b) => (b.score - a.score) || (b.ca - a.ca)).slice(0, 5);
+      const zones = this.balayerEmprise({ s0: s0, n0: n0, w0: w0, e0: e0, dLat: dLat, dLng: dLng },
+        voisines, toutes, around, c => c.prov === p.code)
+        // Le score plafonne à 100 : à égalité, le CA estimé départage.
+        .sort((a, b) => (b.score - a.score) || (b.ca - a.ca)).slice(0, 5);
       out.push({ code: p.code, prov: p.name, communes: mine.length, shops: shops.filter(x => x.prov === p.code).length, zones: zones });
     });
     this._top5Key = key; this._top5Val = out;
     return out;
+  }
+
+  /* Ce qu'une zone doit tenir pour être retenue. Une seule règle, lue par le
+   * balayage de la vue comme par celui des arrondissements — sinon la carte et
+   * la liste finissent par ne plus montrer les mêmes points. */
+  zoneRetenue(p){
+    const s = this.state;
+    if (p.score < (s.minScore || 0)) return false;
+    if (s.caVise && p.ca < s.caVise) return false;
+    if (s.nMax != null && p.n > s.nMax) return false;      // 0 = aucune boulangerie dans le rayon
+    if (s.hhMin && p.hh < s.hhMin) return false;           // densité : ménages du rayon
+    return true;
+  }
+
+  /* Le cœur du balayage d'une emprise : une maille, et pour chaque point la
+   * commune la plus proche, la concurrence du rayon, les ménages, l'emprise,
+   * le CA et le score. Partagé par le Top 5 par province et par l'assistant —
+   * une seule formule, donc un seul endroit où elle peut se tromper. */
+  balayerEmprise(b, voisines, toutes, around, appartient){
+    const s = this.state, R = s.radius, eMax = (s.empriseMax || 30) / 100;
+    const best = {};
+    let guard = 0;
+    for (let lat = b.s0; lat <= b.n0 && guard < 2600; lat += b.dLat){
+      for (let lng = b.w0; lng <= b.e0 && guard < 2600; lng += b.dLng){
+        guard++;
+        let com = null, cd = 1e9;
+        voisines.forEach(c => { const d = dist(lat, lng, c.lat, c.lng); if (d < cd){ cd = d; com = c; } });
+        if (!com || !appartient(com) || cd > (com.rKm || 3) * 1.4) continue;   // hors emprise, ou hors zone habitée connue
+        const near = around(lat, lng);
+        if (near.some(o => this.isStrong(o.x))) continue;                      // zone rouge
+        let load = 0;
+        near.forEach(o => { load += this.strength(o.x) * (1 - o.d / R * 0.6); });
+        const hh = this.householdsIn(lat, lng, R, toutes);
+        const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
+        const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
+        const ca = hh * s.spend * emprise / (1 - s.passage / 100);
+        const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
+        const k = com.name + '|' + com.arr;
+        if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, arr: com.arr };
+      }
+    }
+    return Object.keys(best).map(k => best[k]);
+  }
+
+  /* Le balayage de l'assistant : par ARRONDISSEMENT, jamais par la vue.
+   *
+   * Le balayage de la carte travaille sur ce qu'on voit, et sa maille s'élargit
+   * quand la vue s'élargit : à l'échelle du pays, deux points chauds seulement
+   * sortaient d'un territoire qui en compte des dizaines. L'assistant balaie
+   * donc chaque arrondissement retenu sur sa propre emprise, à maille fine, et
+   * réunit les résultats. Le prix est une poignée de millisecondes par
+   * arrondissement, les commerces étant rangés par cases.
+   */
+  scanArrs(){
+    const s = this.state, R = s.radius;
+    const noms = s.arr === 'all'
+      ? Array.from(new Set(s.communes.filter(c => s.prov[c.prov]).map(c => c.arr))).filter(a => a && a !== '—')
+      : [s.arr];
+    const key = [noms.join(','), R, s.thresh, s.weak, s.minRating, s.minHh, this._rev,
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.minScore, s.caVise, s.nMax, s.hhMin].join('|');
+    if (key === this._arrKey) return this._arrVal;
+    const shopsAll = this.shops(), cs = this.filteredCommunes();
+    const pad = R + 2;
+    let out = [], nCom = 0;
+    noms.forEach(nom => {
+      const mine = cs.filter(c => c.arr === nom);
+      if (!mine.length) return;
+      nCom += mine.length;
+      let s0 = 90, n0 = -90, w0 = 180, e0 = -180;
+      mine.forEach(c => { s0 = Math.min(s0, c.lat); n0 = Math.max(n0, c.lat); w0 = Math.min(w0, c.lng); e0 = Math.max(e0, c.lng); });
+      const kLat = 1 / 111, kLng = 1 / (111 * Math.cos((s0 + n0) / 2 * Math.PI / 180));
+      const S = s0 - pad * kLat, N = n0 + pad * kLat, W = w0 - pad * kLng, E = e0 + pad * kLng;
+      const inBox = o => o.lat >= S && o.lat <= N && o.lng >= W && o.lng <= E;
+      const voisines = cs.filter(inBox);
+      const pL = (R + 12) * kLat, pG = (R + 12) * kLng;
+      const toutes = s.communes.filter(c => c.lat >= s0 - pL && c.lat <= n0 + pL && c.lng >= w0 - pG && c.lng <= e0 + pG);
+      const shops = shopsAll.filter(inBox);
+      const bLat = Math.max(R, 0.5) * kLat, bLng = Math.max(R, 0.5) * kLng, bucket = {};
+      shops.forEach(x => { const k2 = Math.floor(x.lat / bLat) + ',' + Math.floor(x.lng / bLng); (bucket[k2] || (bucket[k2] = [])).push(x); });
+      const around = (lat, lng) => {
+        const i = Math.floor(lat / bLat), j = Math.floor(lng / bLng), res = [];
+        for (let a = i - 1; a <= i + 1; a++) for (let b2 = j - 1; b2 <= j + 1; b2++){
+          const l = bucket[a + ',' + b2]; if (!l) continue;
+          for (let q = 0; q < l.length; q++){ const d = dist(lat, lng, l[q].lat, l[q].lng); if (d <= R) res.push({ x: l[q], d: d }); }
+        }
+        return res;
+      };
+      const stepKm = Math.max(R * 0.9, 1.2);
+      let dLat = stepKm * kLat, dLng = stepKm * kLng;
+      const cells = ((n0 - s0) / dLat) * ((e0 - w0) / dLng);
+      if (cells > 2600){ const f = Math.sqrt(cells / 2600); dLat *= f; dLng *= f; }
+      out = out.concat(this.balayerEmprise({ s0: s0, n0: n0, w0: w0, e0: e0, dLat: dLat, dLng: dLng },
+        voisines, toutes, around, c => c.arr === nom));
+    });
+    const res = out.filter(p => this.zoneRetenue(p))
+      .sort((a, b) => (b.score - a.score) || (b.ca - a.ca)).slice(0, 30);
+    this._arrKey = key; this._arrVal = res; this._arrBrut = out; this._arrCom = nCom;
+    return res;
   }
 
   redraw(){
@@ -1580,7 +1670,38 @@ export class Scouting {
   }
 
   // Les points chauds : le balayage déjà en place, sous les conditions posées.
-  wizChauds(){ return this.state.communes.length ? this.scanPrio() : []; }
+  wizChauds(){ return this.state.communes.length ? this.scanArrs() : []; }
+
+  /* Quand rien ne sort, dire lequel des filtres est responsable. Sans ça, on
+   * relâche au hasard quatre réglages pour retrouver une liste. */
+  wizObstacle(){
+    const s = this.state, brut = this._arrBrut || [];
+    if (!brut.length){
+      // Deux vides bien différents : rien à balayer, ou tout balayé et tout
+      // écarté parce que chaque point tombe dans le rayon d'un concurrent fort.
+      return this._arrCom
+        ? 'Les ' + fmtInt(this._arrCom) + ' communes ont été balayées, mais chaque point tombe à moins de '
+          + s.radius.toFixed(1).replace('.', ',') + ' km d’un concurrent fort. Relevez le seuil « concurrent fort » ou réduisez le rayon.'
+        : 'Aucune zone habitée n’a été balayée : élargissez les provinces ou l’arrondissement.';
+    }
+    const tests = [
+      ['le score minimum de ' + (s.minScore || 0), p => p.score >= (s.minScore || 0)],
+      ['le plancher de CA', p => !s.caVise || p.ca >= s.caVise],
+      [s.nMax === 0 ? 'la condition « aucune boulangerie »' : 'la limite de concurrents', p => s.nMax == null || p.n <= s.nMax],
+      ['le minimum de ménages', p => !s.hhMin || p.hh >= s.hhMin]
+    ];
+    let best = null;
+    tests.forEach((t, i) => {
+      if (i === 1 && !s.caVise) return;
+      if (i === 2 && s.nMax == null) return;
+      if (i === 3 && !s.hhMin) return;
+      const n = brut.filter(p => tests.every((u, j) => j === i || u[1](p))).length;
+      if (n > 0 && (!best || n > best.n)) best = { nom: t[0], n: n };
+    });
+    return best
+      ? 'Sans ' + best.nom + ', ' + best.n + ' emplacement' + (best.n > 1 ? 's resteraient' : ' resterait') + '.'
+      : 'Aucun emplacement ne tient ces conditions, même en relâchant un seul filtre.';
+  }
 
   // Fin de l'assistant : la couche des zones prioritaires s'allume, la carte se
   // cadre sur l'arrondissement choisi, et le bandeau rappelle les réponses.
@@ -1591,12 +1712,23 @@ export class Scouting {
     this.wizCadrer();
   }
 
+  // Le cadrage ne décide plus du résultat — le balayage est par arrondissement —
+  // mais il décide de ce qu'on voit. Un arrondissement choisi : on montre tout
+  // son territoire. « Tous » : on cadre sur les points trouvés, pour ne pas
+  // ouvrir sur un pays où trois pastilles se perdent.
   wizCadrer(){
     const s = this.state;
     if (!this.map || !window.L) return;
-    const cs = s.communes.filter(c => s.prov[c.prov] && (s.arr === 'all' || c.arr === s.arr));
-    if (!cs.length) return;
-    const b = window.L.latLngBounds(cs.map(c => [c.lat, c.lng]));
+    let pts;
+    if (s.arr !== 'all'){
+      pts = s.communes.filter(c => c.arr === s.arr).map(c => [c.lat, c.lng]);
+    } else {
+      const chauds = this.scanArrs();
+      pts = chauds.length ? chauds.map(p => [p.lat, p.lng])
+        : s.communes.filter(c => s.prov[c.prov]).map(c => [c.lat, c.lng]);
+    }
+    if (!pts.length) return;
+    const b = window.L.latLngBounds(pts);
     try { this.map.fitBounds(b.pad(0.12)); } catch (e) { /* carte non prête */ }
     this.scheduleRedraw(120);
     setTimeout(() => { if (this.state.wizFait) this.render(); }, 420);
@@ -1764,6 +1896,16 @@ export class Scouting {
           setThresh: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) self.setParam({ thresh: Math.max(s.weak + 0.1, Math.min(5, v)) }); },
           setRadius: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) self.setParam({ radius: Math.max(0.5, Math.min(15, v)) }); },
           notes: nd,
+          // Le terrain : « aucune boulangerie » et la densité. Le compte dit ce
+          // que chaque filtre retire, sinon on tâtonne sans savoir pourquoi la
+          // liste est vide.
+          nMax: s.nMax, hhMin: s.hhMin,
+          sansBoul: s.nMax === 0,
+          toggleSansBoul: () => self.setParam({ nMax: s.nMax === 0 ? null : 0 }),
+          setNMax: e => { const v = parseInt(String(e.target.value).replace(/[^0-9]/g, ''), 10); self.setParam({ nMax: isNaN(v) ? null : Math.max(0, v) }); },
+          setHhMin: e => { const v = parseInt(String(e.target.value).replace(/[^0-9]/g, ''), 10); self.setParam({ hhMin: isNaN(v) ? 0 : Math.max(0, v) }); },
+          hhMinTxt: s.hhMin ? fmtInt(s.hhMin) : '',
+          nMaxTxt: s.nMax == null ? '' : String(s.nMax),
           // 4 — le chiffre visé
           caVise: s.caVise, caViseTxt: s.caVise ? fmtInt(s.caVise) : '',
           setCaVise: e => { const v = parseFloat(String(e.target.value).replace(/[^0-9.,]/g, '').replace(',', '.')); self.setParam({ caVise: isNaN(v) ? 0 : Math.max(0, v) }); },
@@ -1782,14 +1924,23 @@ export class Scouting {
             voir: () => { if (self.map) self.map.setView([p.lat, p.lng], 12); self.evaluate(p.lat, p.lng); }
           })),
           nChauds: chauds.length,
+          // Le diagnostic n'a de sens qu'après un balayage : avant, il lirait
+          // une liste brute qui n'existe pas encore.
+          obstacle: s.wizFait && !chauds.length ? self.wizObstacle() : '',
+          nArrs: s.arr === 'all' ? new Set(chauds.map(p => p.arr)).size : 0,
           caRange: chauds.length ? fmtEur(Math.min(...chauds.map(c => c.ca))) + ' → ' + fmtEur(Math.max(...chauds.map(c => c.ca))) : '',
           resume: [
-            s.arr === 'all' ? (provOn.length === PROV.length ? 'toute la Belgique' : provOn.map(p => p.name).join(', ')) : s.arr,
+            s.arr === 'all'
+              ? (provOn.length === PROV.length ? 'toute la Belgique' : provOn.map(p => p.name).join(', '))
+                + (chauds.length ? ' · ' + new Set(chauds.map(p => p.arr)).size + ' arrondissement'
+                   + (new Set(chauds.map(p => p.arr)).size > 1 ? 's' : '') : '')
+              : s.arr,
             'concurrent dès ' + s.weak.toFixed(1).replace('.', ',') + ' ★',
             'fort à ' + s.thresh.toFixed(1).replace('.', ',') + ' ★',
             'rayon ' + s.radius.toFixed(1).replace('.', ',') + ' km',
             s.caVise ? 'CA ≥ ' + fmtEur(s.caVise) : 'sans plancher de CA'
-          ]
+          ].concat(s.nMax != null ? [s.nMax === 0 ? 'aucune boulangerie dans le rayon' : 'au plus ' + s.nMax + ' concurrent' + (s.nMax > 1 ? 's' : '')] : [])
+           .concat(s.hhMin ? ['≥ ' + fmtInt(s.hhMin) + ' ménages dans le rayon'] : [])
         };
       })(),
       ouvrirWiz: () => self.wizOuvrir(),

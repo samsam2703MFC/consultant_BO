@@ -189,9 +189,10 @@ export function renderMapUi(c, x){
 
   ${c.wiz.fait && !c.wiz.etape ? `
   <div class="wz-rappel">
-    <span class="t">${c.wiz.nChauds} point${c.wiz.nChauds > 1 ? 's' : ''} chaud${c.wiz.nChauds > 1 ? 's' : ''}</span>
+    <span class="t">${c.wiz.nChauds ? c.wiz.nChauds + ' point' + (c.wiz.nChauds > 1 ? 's' : '') + ' chaud' + (c.wiz.nChauds > 1 ? 's' : '') : 'Aucun emplacement'}</span>
     ${c.wiz.resume.map(r => `<span class="ch">${esc(r)}</span>`).join('')}
     <span class="sp"></span>
+    ${c.wiz.obstacle ? `<span class="ch" style="background:#FBEFE0;color:#B26A00">${esc(c.wiz.obstacle)}</span>` : ''}
     ${c.wiz.caRange ? `<span class="ch ok">${esc(c.wiz.caRange)}</span>` : ''}
     <button ${x.A(c.wiz.rouvrir)} class="btn-secondary" style="padding:4px 11px;font-size:11px">Modifier</button>
     <button ${x.A(c.wiz.cacher)} class="btn-secondary" style="padding:4px 9px;font-size:11px">✕</button>
@@ -291,7 +292,7 @@ export function renderOverlays(c, x){
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
       <div class="t-section-title" style="font-size:16px">ceo_zones</div>
-      <div style="font-size:11px;color:var(--color-text-muted);flex:1">Balayage de la vue carte courante · score minimum ${c.minScore} · clic sur une ligne pour ouvrir la fiche</div>
+      <div style="font-size:11px;color:var(--color-text-muted);flex:1">${c.wiz.fait ? 'Balayage des arrondissements retenus par l’assistant — indépendant du cadrage de la carte' : 'Balayage de la vue carte courante'} · score minimum ${c.minScore} · clic sur une ligne pour ouvrir la fiche</div>
       <button ${x.A(c.exportZones)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
@@ -536,7 +537,18 @@ export function renderWizard(c, x){
       <div class="wz-coupe" style="left:${n.xWeak.toFixed(1)}%"><span>${w.weak.toFixed(1).replace('.', ',')} ★</span></div>
       <div class="wz-coupe f" style="left:${n.xFort.toFixed(1)}%"><span>${w.thresh.toFixed(1).replace('.', ',')} ★ — fort</span></div>
     </div>` : ''}
-    <div class="wz-cnt"><span class="ign">${n.ignores} ignoré${n.ignores > 1 ? 's' : ''}</span><span>${n.comptes} compté${n.comptes > 1 ? 's' : ''} à proportion</span><span class="fort">${n.forts} fort${n.forts > 1 ? 's' : ''} → autant de zones rouges</span><span class="ign">${n.sans} sans note</span></div>`;
+    <div class="wz-cnt"><span class="ign">${n.ignores} ignoré${n.ignores > 1 ? 's' : ''}</span><span>${n.comptes} compté${n.comptes > 1 ? 's' : ''} à proportion</span><span class="fort">${n.forts} fort${n.forts > 1 ? 's' : ''} → autant de zones rouges</span><span class="ign">${n.sans} sans note</span></div>
+
+    <div class="wz-q" style="margin-top:14px">Le terrain que vous cherchez</div>
+    <p class="wz-a">Deux conditions de plus, facultatives. La première cherche le vide : un emplacement où personne n’est installé dans le rayon. La seconde écarte les campagnes : il faut du monde autour.</p>
+    <div class="wz-seuil">
+      <div class="wz-s"><div class="k">Concurrents dans le rayon</div>
+        <div class="v"><input id="wz-nmax" value="${esc(w.nMaxTxt)}" placeholder="sans limite" ${x.C(w.setNMax)} style="width:104px;font-size:15px"><em>au plus</em></div>
+        <div class="s"><button ${x.A(w.toggleSansBoul)} class="btn-secondary" style="padding:3px 9px;font-size:10.5px;${w.sansBoul ? 'border-color:var(--color-primary);color:var(--color-primary);font-weight:600' : ''}">${w.sansBoul ? '✓ aucune boulangerie' : 'aucune boulangerie'}</button> — laissez vide pour ne pas filtrer.</div></div>
+      <div class="wz-s"><div class="k">Ménages minimum dans le rayon</div>
+        <div class="v"><input id="wz-hhmin" value="${esc(w.hhMinTxt)}" placeholder="0" ${x.C(w.setHhMin)} style="width:104px;font-size:15px"><em>ménages</em></div>
+        <div class="s">La densité, là où elle compte : les ménages du rayon de ${w.radius.toFixed(1).replace('.', ',')} km, pas ceux de la commune. À 0, aucun minimum.</div></div>
+    </div>`;
 
   const corps4 = `
     <div class="wz-q">Quel chiffre d’affaires visez-vous ?</div>
@@ -553,7 +565,8 @@ export function renderWizard(c, x){
     </div>`;
 
   const corps = e === 1 ? corps1 : e === 2 ? corps2 : e === 3 ? corps3 : corps4;
-  const resume = e === 1 ? w.provResume : e === 2 ? w.arrResume
+  const resume = e === 4 && w.obstacle ? w.obstacle
+    : e === 1 ? w.provResume : e === 2 ? w.arrResume
     : e === 3 ? 'Les deux barres sont enregistrées dans les hypothèses : elles servent aussi à l’écran hors assistant.'
     : (w.caVise ? 'Le balayage ne gardera que les emplacements à ' + w.resume[4].replace('CA ≥ ', '') + ' ou plus.' : 'Sans plancher, tous les emplacements au-dessus du score minimum sont gardés.');
 

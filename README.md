@@ -176,7 +176,12 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   à lui : il écrit dans les réglages de l'écran. Deux d'entre eux sont nés avec
   lui, `weak` (en dessous de cette note, ce n'est pas un concurrent — la force
   valait `(note − 3) ÷ 2`, le 3 était en dur) et `caVise` (plancher de CA, à
-  côté du score minimum).
+  côté du score minimum), plus deux conditions de terrain : `nMax` (concurrents
+  au plus dans le rayon, 0 = aucune boulangerie) et `hhMin` (ménages minimum
+  dans le rayon, la densité là où elle compte). Quand rien ne sort, l'écran dit
+  lequel des filtres vide la liste et combien d'emplacements il retient.
+  Son balayage est par **arrondissement**, jamais par la vue : à l'échelle du
+  pays, la maille de la carte s'élargit et ne rendait que deux points.
 - **Zones** : zones d'exclusion (rayon paramétrable autour des concurrents
   forts), zones prioritaires (balayage de la vue, 30 meilleurs scores hors
   zones rouges), fiche d'implantation au clic, zones candidates retenues
