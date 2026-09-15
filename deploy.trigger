@@ -345,3 +345,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-15T12:49:05Z zoning journal livraison
 2026-09-15T13:18:24Z zoning carte + points chauds liste
 2026-09-15T13:48:34Z zoning virgule decimale
+2026-09-15T14:17:25Z recherche par ville fiche scoring
