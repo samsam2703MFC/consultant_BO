@@ -147,22 +147,8 @@
     return {
       n: serie.length, moyenne: moy, annuel: moy * 12, valeur: moy * 12 / VALO_DIV,
       du: lib(serie[0]), au: lib(serie[serie.length - 1]),
-      serie: serie.map(c => c.ca), mois: serie.map(lib)
+      serie: serie.map(c => c.ca)
     };
-  }
-  /** La mini-courbe du CA mensuel qui porte la valeur. */
-  function courbeValo(v) {
-    const n = v.serie.length;
-    if (n < 2) return '';
-    const mn = Math.min(...v.serie), mx = Math.max(...v.serie), W = 62, H = 18;
-    const x = i => (i * W / (n - 1)).toFixed(1);
-    const y = c => (H - 2 - (H - 4) * (c - mn) / ((mx - mn) || 1)).toFixed(1);
-    const pts = v.serie.map((c, i) => x(i) + ',' + y(c)).join(' ');
-    return `<svg class="db-vspk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-      <polygon points="0,${H} ${pts} ${W},${H}"></polygon>
-      <polyline points="${pts}"></polyline>
-      <circle cx="${x(n - 1)}" cy="${y(v.serie[n - 1])}" r="1.6"></circle>
-    </svg>`;
   }
   /* Les six derniers trimestres CLOS — le trimestre en cours est écarté comme
    * le mois en cours : à mi-parcours il vaudrait la moitié de lui-même. Chaque
@@ -233,7 +219,7 @@
     const dr = S.valoOuvert ? '\u25b4' : '\u25be';
     if (!v.n) return `<button class="db-valoc" data-vdrop="1"><span class="k">Valeur</span><span class="v">—</span><span class="dr">${dr}</span></button>`;
     return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA mensuel moyen des 18 derniers mois clos × 12 ÷ ${VALO_DIV}">
-      <span class="k">Valeur</span><span class="v">${fE(v.valeur)}</span>${courbeValo(v)}<span class="dr">${dr}</span></button>`;
+      <span class="k">Valeur</span><span class="v">${fE(v.valeur)}</span><span class="dr">${dr}</span></button>`;
   }
   /* Le tiroir : la formule en toutes lettres, puis les six trimestres. */
   function rendValeur() {
