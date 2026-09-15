@@ -142,7 +142,9 @@ Une page à part, `public/dashboard/?shop=4&vue=mois&date=…`, hors SPA : cinq
 vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 `rendre()` / `brancher()`, et des lectures asynchrones par clé (`lireAux`).
 
-- **Valeur du magasin** : le CA mensuel moyen des **18 derniers mois clos**,
+- **Valeur du magasin** : sur la barre du haut, en un mot, un chiffre et la
+  courbe des 18 mois en miniature ; tout le détail attend dans le tiroir qu'on
+  déplie. Le calcul : le CA mensuel moyen des **18 derniers mois clos**,
   ramené à l'année (× 12) puis divisé par **6** — soit deux mois de chiffre
   d'affaires. Le **mois en cours est écarté** : incomplet, il tirerait la
   moyenne vers le bas jusqu'à son dernier jour. Quand l'historique est plus
@@ -152,6 +154,11 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   trois exercices (18 mois débordent sur trois années civiles en début
   d'année), lu à partir d'aujourd'hui et non de la période regardée — la valeur
   du magasin est un fait présent. Constantes `VALO_MOIS` et `VALO_DIV`.
+  Le tiroir montre en plus **les six derniers trimestres clos** : la valeur que
+  le magasin aurait eue au rythme de chacun, en courbe et en chiffres. Le
+  trimestre en cours est écarté comme le mois en cours — à mi-parcours il
+  vaudrait la moitié de lui-même. Un trimestre sans CA relevé coupe le trait
+  au lieu d'être relié : le trou se voit.
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.
