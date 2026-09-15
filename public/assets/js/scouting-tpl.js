@@ -51,6 +51,14 @@ export function renderLeft(c, x){
   const { esc } = x;
   const check = (on, fn, extra) => `<input type="checkbox"${on ? ' checked' : ''} ${x.C(fn)} style="accent-color:var(--color-primary);${extra || ''}">`;
   return `
+  <div class="t-admin-label" style="margin-bottom:6px">Chercher une ville</div>
+  <div class="sc-ville">
+    <input id="sc-ville" type="text" autocomplete="off" spellcheck="false" placeholder="Nom de commune" value="${esc(c.ville)}" ${x.I(c.setVille)} ${x.K(c.villeEntree)}>
+    ${c.villes.length ? `<div class="res">${c.villes.map(v => `
+      <button ${x.A(v.aller)}><span class="n">${esc(v.nom)}</span><span class="m">${esc(v.meta)}</span></button>`).join('')}</div>` : ''}
+    ${c.villeVide ? `<div class="vide">${esc(c.villeVide)}</div>` : ''}
+  </div>
+
   <div class="t-admin-label" style="margin-bottom:8px">Provinces &amp; régions</div>
   <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">
     ${c.provinces.map(p => `

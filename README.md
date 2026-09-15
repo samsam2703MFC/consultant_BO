@@ -193,6 +193,17 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   peintes, sans quoi la Belgique entière devient illisible.
   Son balayage est par **arrondissement**, jamais par la vue : à l'échelle du
   pays, la maille de la carte s'élargit et ne rendait que deux points.
+- **Chercher une ville** : en haut du panneau de gauche. La saisie se compare
+  sans casse ni accents, et **sur les deux noms** que le relevé garde de chaque
+  commune (`name:fr` et `name`) : « Ieper » trouve Ypres, « Brugge » trouve
+  Bruges. Elle porte sur toutes les communes relevées, pas seulement celles des
+  provinces cochées — on ne peut pas chercher ce qu'on a masqué ; aller à une
+  ville hors sélection recoche sa province (sinon la fiche s'ouvrirait sans un
+  seul concurrent, la carte ne les chargeant pas) et resserre l'arrondissement
+  s'il en était fixé un autre. Le clic, ou Entrée sur la première trouvée, cadre
+  la carte et ouvre **la fiche de scoring complète** de l'endroit : score,
+  ménages du rayon, zone primaire, marché, concurrents, pression, emprise,
+  rendement au m², CA hebdomadaire et CA annuel estimé.
 - **Points chauds** : les zones prioritaires de la carte sont aussi **listées
   dans le panneau de droite**, dans le même ordre — rang, commune, ménages,
   concurrents, CA estimé, score. Cliquer une ligne cadre la carte et ouvre la
