@@ -1,0 +1,146 @@
+/* Assistant « où puis-je ouvrir, et pour combien » — styles candidats. */
+.wz-scene{position:relative;width:1600px;height:950px;background:url('fond-scouting.png') no-repeat 0 0;background-size:1600px 950px;
+  border:.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden}
+.wz-voile{position:absolute;inset:0;background:rgba(34,28,24,.52)}
+
+/* La carte de l'assistant. */
+.wz{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:900px;background:var(--color-surface);
+  border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.34);overflow:hidden;font-family:var(--font-ui);color:var(--color-text)}
+.wz-hd{padding:14px 20px 0}
+.wz-hd h2{font:400 21px var(--font-display);margin:0 0 2px}
+.wz-hd p{margin:0;font-size:12px;color:var(--color-text-muted)}
+.wz-x{position:absolute;right:14px;top:12px;font-size:16px;color:var(--color-text-muted);cursor:pointer;line-height:1}
+
+/* Le fil des étapes. */
+.wz-pas{display:flex;gap:0;margin:14px 0 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.wz-pas div{flex:1;padding:8px 10px 9px;border-bottom:2px solid transparent;font:600 11px var(--font-ui);color:var(--color-text-muted);white-space:nowrap}
+.wz-pas div b{display:inline-flex;width:17px;height:17px;border-radius:50%;background:var(--color-background-secondary);color:var(--color-text-muted);
+  align-items:center;justify-content:center;font:700 9.5px var(--font-ui);margin-right:7px;vertical-align:-3px}
+.wz-pas div.on{color:var(--color-primary);border-bottom-color:var(--color-primary)}
+.wz-pas div.on b{background:var(--color-primary);color:#fff}
+.wz-pas div.fait{color:#2d7a3e}
+.wz-pas div.fait b{background:#2d7a3e;color:#fff}
+.wz-pas div small{display:block;font-weight:400;font-size:10px;color:var(--color-text-muted);margin:2px 0 0 24px;text-transform:none;letter-spacing:0}
+
+.wz-corps{padding:16px 20px 4px;max-height:560px;overflow:auto}
+.wz-q{font:600 13px var(--font-ui);margin:0 0 3px}
+.wz-a{font-size:11.5px;color:var(--color-text-muted);margin:0 0 12px;line-height:1.45}
+
+/* Étape 1 — les provinces en cartes. */
+.wz-reg{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:10px 0 6px}
+.wz-prov{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.wz-p{border:1px solid var(--color-border-tertiary);border-radius:9px;padding:8px 10px;cursor:pointer;background:var(--color-surface);position:relative}
+.wz-p:hover{border-color:var(--color-border-secondary)}
+.wz-p.on{border-color:var(--color-primary);background:#fdf4f5;box-shadow:inset 0 0 0 1px var(--color-primary)}
+.wz-p .n{font:600 12px var(--font-ui);line-height:1.25}
+.wz-p .s{font-size:10px;color:var(--color-text-muted);margin-top:3px}
+.wz-p .ck{position:absolute;right:8px;top:8px;width:14px;height:14px;border-radius:4px;border:1px solid var(--color-border-secondary);background:#fff}
+.wz-p.on .ck{background:var(--color-primary);border-color:var(--color-primary)}
+.wz-p.on .ck::after{content:'✓';color:#fff;font:700 9px var(--font-ui);display:block;text-align:center;line-height:13px}
+
+/* Étape 2 — les arrondissements en tableau choisissable. */
+.wz-t{width:100%;border-collapse:collapse;font-size:11.5px}
+.wz-t th{font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:5px 8px;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.wz-t th:first-child,.wz-t th:nth-child(2){text-align:left}
+.wz-t td{padding:6px 8px;text-align:right;border-bottom:.5px solid rgba(34,34,34,.06);font-variant-numeric:tabular-nums;white-space:nowrap}
+.wz-t td:first-child,.wz-t td:nth-child(2){text-align:left}
+.wz-t tr{cursor:pointer}
+.wz-t tr:hover td{background:rgba(34,34,34,.03)}
+.wz-t tr.on td{background:#fdf4f5}
+.wz-t tr.on td:nth-child(2){font-weight:700;color:var(--color-primary)}
+.wz-t .rad{width:13px;height:13px;border-radius:50%;border:1px solid var(--color-border-secondary);display:inline-block;background:#fff;vertical-align:-2px}
+.wz-t tr.on .rad{border:4px solid var(--color-primary)}
+.wz-t .bar{display:inline-block;height:6px;border-radius:3px;background:var(--color-primary);vertical-align:1px;margin-right:6px}
+
+/* Étape 3 — les deux seuils, et où ils coupent. */
+.wz-seuil{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.wz-s{border:1px solid var(--color-border-tertiary);border-radius:10px;padding:11px 13px}
+.wz-s .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.wz-s .v{display:flex;align-items:baseline;gap:8px;margin:5px 0 3px}
+.wz-s .v input{width:72px;border:1px solid var(--color-border-secondary);border-radius:7px;padding:5px 8px;font:700 19px var(--font-display);
+  text-align:center;background:var(--color-surface);color:var(--color-text)}
+.wz-s .v em{font-style:normal;font:600 15px var(--font-display);color:var(--color-text-muted)}
+.wz-s .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.4}
+.wz-s.faible input{border-color:#c9c2b8}
+.wz-s.fort input{border-color:var(--color-primary);color:var(--color-primary)}
+
+/* La distribution des notes, avec les deux coupes. */
+.wz-dist{position:relative;height:88px;margin:4px 0 6px;display:grid;grid-template-columns:repeat(8,1fr);gap:5px;align-items:end}
+.wz-dist>div{display:flex;flex-direction:column;align-items:center;gap:3px;font:500 9px var(--font-ui);color:var(--color-text-muted)}
+.wz-dist>div i{display:block;width:74%;border-radius:3px 3px 0 0;background:#c9c2b8}
+.wz-dist>div i.ign{background:#e0dad2}
+.wz-dist>div i.mid{background:#D99A2B}
+.wz-dist>div i.fort{background:#2d7a3e}
+.wz-dist>div em{font-style:normal;font-weight:700;color:var(--color-text)}
+.wz-coupe{position:absolute;top:-4px;bottom:16px;width:2px;background:var(--color-text)}
+.wz-coupe span{position:absolute;top:-6px;left:50%;transform:translateX(-50%);white-space:nowrap;font:700 9px var(--font-ui);
+  background:var(--color-text);color:#fff;border-radius:4px;padding:1px 6px}
+.wz-coupe.f{background:var(--color-primary)}.wz-coupe.f span{background:var(--color-primary)}
+.wz-cnt{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.wz-cnt span{font:600 10.5px var(--font-ui);border-radius:999px;padding:3px 10px;background:var(--color-background-secondary);color:var(--color-text)}
+.wz-cnt span.ign{color:var(--color-text-muted)}
+.wz-cnt span.fort{background:#fdf4f5;color:var(--color-primary);box-shadow:inset 0 0 0 1px #e8b4bb}
+.wz-cnt span.ok{background:#f0f7f2;color:#2d7a3e;box-shadow:inset 0 0 0 1px #bfdcc6}
+
+/* Étape 4 — le chiffre visé et les hypothèses. */
+.wz-ca{display:flex;align-items:flex-end;gap:16px;margin-bottom:12px}
+.wz-ca .big input{width:190px;border:1px solid var(--color-primary);border-radius:9px;padding:8px 12px;font:400 26px var(--font-display);
+  text-align:right;color:var(--color-primary);background:var(--color-surface)}
+.wz-ca .big .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:5px}
+.wz-ca .eq{font-size:11.5px;line-height:1.5;color:var(--color-text-muted);padding-bottom:4px}
+.wz-ca .eq b{color:var(--color-text)}
+.wz-hyp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.wz-hyp label{border:1px solid var(--color-border-tertiary);border-radius:8px;padding:7px 9px;display:block}
+.wz-hyp .k{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);display:block;line-height:1.3;min-height:22px}
+.wz-hyp input{width:100%;border:none;border-bottom:1px solid var(--color-border-secondary);padding:3px 0 2px;font:700 14px var(--font-display);
+  background:transparent;color:var(--color-text)}
+
+/* Le pied de l'assistant. */
+.wz-pd{display:flex;align-items:center;gap:12px;padding:11px 20px;border-top:.5px solid var(--color-border-tertiary);background:#FCFAF7}
+.wz-pd .t{font-size:11.5px;color:var(--color-text-muted);line-height:1.45}
+.wz-pd .t b{color:var(--color-text)}
+.wz-pd .sp{flex:1}
+.wz-b{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:7px 14px;font:500 12px var(--font-ui);cursor:pointer;color:var(--color-text)}
+.wz-b.pri{background:var(--color-primary);color:#fff;border-color:var(--color-primary);font-weight:600;padding:8px 18px}
+
+/* L'écran de résultat : le bandeau de rappel et les points chauds. */
+.wz-rappel{position:absolute;left:557px;right:344px;top:106px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;
+  background:var(--color-surface);border:1px solid var(--color-primary);border-radius:10px;padding:8px 14px;box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:12px}
+.wz-rappel .t{font:700 12.5px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+.wz-rappel .ch{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font:500 10.5px var(--font-ui);
+  background:var(--color-background-secondary);white-space:nowrap}
+.wz-rappel .ch b{font-weight:700}
+.wz-rappel .sp{flex:1}
+
+/* Les points chauds posés sur la carte. */
+.wz-hot{position:absolute;transform:translate(-50%,-50%);z-index:5}
+.wz-hot i{display:block;width:var(--d);height:var(--d);border-radius:50%;background:radial-gradient(circle,rgba(45,122,62,.85) 0%,rgba(45,122,62,.42) 55%,rgba(45,122,62,0) 72%)}
+.wz-hot b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:#2d7a3e;color:#fff;
+  display:flex;align-items:center;justify-content:center;font:700 12px var(--font-ui);box-shadow:0 2px 8px rgba(0,0,0,.35);border:2px solid #fff}
+.wz-hot u{position:absolute;left:50%;top:calc(50% + 21px);transform:translateX(-50%);white-space:nowrap;text-decoration:none;
+  font:700 10.5px var(--font-ui);background:#fff;border-radius:6px;padding:2px 7px;box-shadow:0 2px 8px rgba(0,0,0,.25);color:#1b5e20}
+.wz-hot u.haut{top:auto;bottom:calc(50% + 21px)}
+.wz-hot u small{font-weight:500;color:var(--color-text-muted)}
+
+/* Le panneau de droite, réécrit par le résultat. */
+.wz-res{position:absolute;right:18px;top:152px;width:318px;background:var(--color-surface);border:1px solid var(--color-border-tertiary);
+  border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);overflow:hidden}
+.wz-res .h{padding:9px 13px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:8px}
+.wz-res .h .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.wz-res .h .sp{flex:1}
+.wz-res .h a{font:600 10.5px var(--font-ui);color:var(--color-primary);text-decoration:none}
+.wz-res .r{display:grid;grid-template-columns:22px 1fr auto;gap:9px;align-items:center;padding:7px 13px;border-bottom:.5px solid rgba(34,34,34,.06);font-size:11.5px}
+.wz-res .r:last-child{border-bottom:none}
+.wz-res .r .n{width:22px;height:22px;border-radius:50%;background:#2d7a3e;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px var(--font-ui)}
+.wz-res .r .t b{display:block;font-weight:600}
+.wz-res .r .t small{color:var(--color-text-muted);font-size:10px}
+.wz-res .r .v{text-align:right;font-variant-numeric:tabular-nums}
+.wz-res .r .v b{display:block;font:400 14px var(--font-display);color:#1b5e20}
+.wz-res .r .v small{color:var(--color-text-muted);font-size:10px}
+.wz-res .f{padding:8px 13px;background:#FCFAF7;font-size:10.5px;color:var(--color-text-muted);line-height:1.45}
+
+/* L'annotation hors application. */
+.mq{max-width:1640px;margin:0 auto;padding:16px 20px 26px}
+.mq h1{font:400 20px var(--font-display);margin:0 0 4px}
+.mq p.s{margin:0 0 14px;font-size:12px;line-height:1.5;color:var(--color-text-muted);max-width:1100px}
+.mq .u{display:inline-block;font:500 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:999px;padding:3px 10px;margin-bottom:8px}

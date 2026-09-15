@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assistant · 3 et 4 — qui compte, et pour combien</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="wizard.css">
+</head><body><div class="mq">
+<span class="u">maquette · Scouting commercial · /consulant_bo/#/scouting</span>
+<h1>Assistant · 3 et 4 — qui compte, et pour combien</h1><p class="s">Deux notes définissent la concurrence : en dessous de la première le commerce est ignoré, au-dessus de la seconde il interdit une implantation autour de lui. Les deux sont modifiables et la distribution montre où elles coupent. Ensuite, le CA visé, avec les hypothèses qui le produisent.</p>
+<div class="wz-scene" style="margin-bottom:16px"><div class="wz-voile"></div><div class="wz">
+  <span class="wz-x">✕</span>
+  <div class="wz-hd"><h2>Où puis-je ouvrir, et pour combien ?</h2><p>Nivelles · 118 commerces, 41 notés</p></div>
+  <div class="wz-pas"><div class="fait"><b>✓</b>La zone<small>province</small></div><div class="fait"><b>✓</b>L’arrondissement<small>où précisément</small></div><div class="on"><b>3</b>La concurrence<small>qui compte, qui non</small></div><div class=""><b>4</b>Le chiffre visé<small>CA et hypothèses</small></div></div>
+  <div class="wz-corps">
+    <div class="wz-q">Qu’est-ce qu’un vrai concurrent, pour vous ?</div>
+    <p class="wz-a">Deux notes suffisent à le dire. En dessous de la première, le commerce est ignoré ; au-dessus de la seconde, il interdit une implantation autour de lui. Entre les deux, il pèse à proportion de sa note.</p>
+    <div class="wz-seuil">
+      <div class="wz-s faible"><div class="k">En dessous, ce n’est pas un concurrent</div>
+        <div class="v"><input value="3,0"><em>★ sur 5</em></div>
+        <div class="s">Un commerce noté sous cette barre ne compte ni dans la pression concurrentielle ni dans les zones rouges. <b>6 commerces</b> sortent ainsi du calcul.</div></div>
+      <div class="wz-s fort"><div class="k">Au-dessus, c’est un concurrent fort</div>
+        <div class="v"><input value="4,3"><em>★ sur 5</em></div>
+        <div class="s">Zone rouge de <b>3,0 km</b> autour de lui : aucune implantation n’y est proposée, et son poids est majoré de moitié. <b>10 commerces</b> sont dans ce cas.</div></div>
+    </div>
+    <div class="wz-q" style="margin-top:4px">Où ces deux barres coupent</div>
+    <p class="wz-a">Les 41 commerces notés de Nivelles, par tranche de note.</p>
+    <div class="wz-dist">
+      <div><em>2</em><i class="ign" style="height:11px"></i><span>0 – 2,5</span></div><div><em>4</em><i class="ign" style="height:21px"></i><span>2,5 – 3,0</span></div><div><em>5</em><i class="" style="height:26px"></i><span>3,0 – 3,5</span></div><div><em>9</em><i class="" style="height:47px"></i><span>3,5 – 4,0</span></div><div><em>11</em><i class="mid" style="height:58px"></i><span>4,0 – 4,3</span></div><div><em>4</em><i class="fort" style="height:21px"></i><span>4,3 – 4,5</span></div><div><em>3</em><i class="fort" style="height:16px"></i><span>4,5 – 4,7</span></div><div><em>3</em><i class="fort" style="height:16px"></i><span>4,7 – 5</span></div>
+      <div class="wz-coupe" style="left:24.2%"><span>3,0 ★</span></div>
+      <div class="wz-coupe f" style="left:61.8%"><span>4,3 ★ — fort</span></div>
+    </div>
+    <div class="wz-cnt"><span class="ign">6 ignorés</span><span>25 comptés à proportion</span><span class="fort">10 forts → 10 zones rouges</span><span>77 sans note</span><span class="ok">reste 19 % du territoire libre</span></div>
+  </div>
+  <div class="wz-pd"><span class="t">Les deux barres sont enregistrées dans les hypothèses : <b>elles servent aussi à l’écran Scouting</b> hors assistant.</span><span class="sp"></span>
+    <button class="wz-b">← Retour</button><button class="wz-b pri">Continuer →</button></div></div></div><div class="wz-scene" style="margin-bottom:16px"><div class="wz-voile"></div><div class="wz">
+  <span class="wz-x">✕</span>
+  <div class="wz-hd"><h2>Où puis-je ouvrir, et pour combien ?</h2><p>Nivelles · concurrent dès 3,0 ★, fort à partir de 4,3 ★</p></div>
+  <div class="wz-pas"><div class="fait"><b>✓</b>La zone<small>province</small></div><div class="fait"><b>✓</b>L’arrondissement<small>où précisément</small></div><div class="fait"><b>✓</b>La concurrence<small>qui compte, qui non</small></div><div class="on"><b>4</b>Le chiffre visé<small>CA et hypothèses</small></div></div>
+  <div class="wz-corps">
+    <div class="wz-q">Quel chiffre d’affaires visez-vous ?</div>
+    <p class="wz-a">L’assistant ne retiendra que les emplacements dont le CA théorique atteint ce montant, au modèle de l’étude Halle.</p>
+    <div class="wz-ca">
+      <div class="big"><div class="k">CA annuel TTC visé</div><input value="900 000 €"></div>
+      <div class="eq">CA = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage)<br>
+        À ce montant et à une emprise de 15 %, il faut environ <b>8 700 ménages</b> dans un rayon de 3 km,<br>
+        soit une commune de <b>20 000 habitants</b> ou deux communes voisines.</div>
+    </div>
+    <div class="wz-q" style="margin-top:6px">Les hypothèses du modèle</div>
+    <p class="wz-a">Elles viennent de l’étude GeoConsulting (Halle, août 2024) et restent modifiables ici comme dans l’écran.</p>
+    <div class="wz-hyp">
+      <label><span class="k">Dépense boulangerie par ménage</span><input value="586 €/an"></label>
+      <label><span class="k">Part du passage</span><input value="15 %"></label>
+      <label><span class="k">Emprise maximale</span><input value="30 %"></label>
+      <label><span class="k">Surface nette cible</span><input value="250 m²"></label>
+    </div>
+  </div>
+  <div class="wz-pd"><span class="t">Sur Nivelles, <b>7 emplacements</b> atteignent 900 000 € — le meilleur à 1 128 000 €.</span><span class="sp"></span>
+    <button class="wz-b">← Retour</button><button class="wz-b pri">Voir les points chauds →</button></div></div></div></div></body></html>
