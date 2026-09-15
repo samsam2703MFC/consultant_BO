@@ -352,3 +352,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-15T16:13:22Z retrait micro courbe
 2026-09-15T16:57:48Z valeur sur les ventes de caisse
 2026-09-15T17:00:12Z ventes mensuel croise pnl et caisse
+2026-09-15T17:26:17Z dashboard telephone
