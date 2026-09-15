@@ -14,31 +14,40 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 
 ## `GET /ventes/mensuel`
 
-Le CA mois par mois d'un magasin, lu dans les **ventes de caisse**
-(`transaction`) et non dans le P&L mensuel du panel — celui-ci a des trous
-(aucune ligne en 2025), et une moyenne calculée sur une fenêtre trouée ne vaut
-rien. Sert la **valeur du magasin** du dashboard.
+Le CA mois par mois d'un magasin. Sert la **valeur du magasin** du dashboard.
+
+**Deux sources**, parce qu'aucune n'est complète à elle seule :
+
+| source | ce qu'elle a | ce qui lui manque |
+|---|---|---|
+| `mac_shop_monthly_pnl` (P&L du panel) | les mois clos jusqu'au dernier | aucune ligne en 2025 |
+| `transaction` (ventes de caisse) | 2025 | s'arrête au 14 juillet 2026 |
+
+Le P&L fait foi quand il a le mois — c'est un chiffre arrêté ; la caisse comble
+le reste. Chaque mois dit d'où il vient (`source`), et `tickets` / `jours`
+viennent toujours de la caisse quand elle a le mois, même si le CA vient du
+P&L.
 
 Paramètres : `shop` (requis), `mois` (1 à 60, 24 par défaut).
 
 Le **mois en cours est exclu** : incomplet, il tirerait toute moyenne vers le
-bas jusqu'à son dernier jour. Les mois sans vente sont rendus quand même, `ca`
+bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même, `ca`
 à `null` — un trou doit se voir, pas se combler tout seul.
 
 ```json
 {
   "shop": "4",
-  "du": "2024-10", "au": "2026-08",
-  "source": "ventes de caisse (transaction), mois en cours exclu",
+  "du": "2024-09", "au": "2026-08",
+  "source": "P&L mensuel du panel quand il a le mois (7), ventes de caisse sinon (0) — mois en cours exclu",
   "mois": [
-    { "mois": "2024-10", "ca": null, "tickets": 0, "jours": 0 },
-    { "mois": "2026-02", "ca": 6506.85, "tickets": 512, "jours": 9 }
+    { "mois": "2024-09", "ca": null, "source": null, "tickets": 0, "jours": 0 },
+    { "mois": "2026-02", "ca": 6506.85, "source": "pnl", "tickets": 612, "jours": 7 }
   ]
 }
 ```
 
 `jours` compte les jours distincts où au moins un ticket a été passé : il dit
-qu'un mois à 6 507 € est un mois d'ouverture et non un mois raté.
+qu'un mois à 6 507 € sur 7 jours est un mois d'ouverture et non un mois raté.
 
 ## 1. Endpoints
 
