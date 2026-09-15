@@ -452,3 +452,20 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-nct .db-ncst{white-space:normal}
 @media (max-width:1150px){.db-ncl{grid-template-columns:86px 48px minmax(0,1fr) 150px 18px}.db-ncl .c{display:none}}
 @media (max-width:900px){.db-ncd{grid-template-columns:1fr}.db-nct .c,.db-nct .q{display:none}}
+
+/* --- La valeur du magasin -------------------------------------------------
+   Le CA moyen des 18 derniers mois × 12 ÷ 6. Un seul chiffre, sa formule en
+   toutes lettres, et la courbe du CA mensuel qui le porte. */
+.db-valo{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:linear-gradient(180deg,#fffbe9,var(--color-surface));border:.5px solid var(--color-border-tertiary);border-left:4px solid #e2b93b;border-radius:12px;padding:13px 18px;margin-bottom:14px}
+.db-valo .t{flex:1 1 320px;min-width:0}
+.db-valo .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#8a6508}
+.db-valo .v{font-family:var(--font-display);font-size:34px;line-height:1.1;margin:2px 0 4px;color:#8a6508;font-variant-numeric:tabular-nums}
+.db-valo .s{font-size:11px;line-height:1.45;color:var(--color-text-muted);max-width:640px}
+.db-valo .c{flex:0 0 auto;width:196px}
+.db-vspk{display:block;width:196px;height:40px}
+.db-vspk polyline{fill:none;stroke:#b8901f;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.db-vspk polygon{fill:rgba(226,185,59,.22);stroke:none}
+.db-vspk circle{fill:#8a6508}
+.db-valo .lg{display:flex;justify-content:space-between;font:400 9.5px var(--font-ui);color:var(--color-text-muted);margin-top:2px}
+.db-valo .an{font:500 10.5px var(--font-ui);color:var(--color-text-muted);margin-top:4px;text-align:right}
+@media (max-width:760px){.db-valo .v{font-size:28px}}

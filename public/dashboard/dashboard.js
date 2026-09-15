@@ -35,6 +35,9 @@
   const fD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
   const fDL = d => { if (!d) { return ''; } const t = new Date(d + 'T12:00:00'); return t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  // Les abréviations d'usage : « mai » et « août » ne se coupent pas, donc
+  // pas de point — « août. » n'existe pas.
+  const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
   /* --- lecture ------------------------------------------------------------ */
   function lire(path) {
@@ -60,6 +63,11 @@
   }
   function charger(force) {
     const kr = cleRes(), ks = cleSt();
+    // La valeur du magasin ne dépend pas de la période regardée : elle se lit
+    // toujours à partir d'aujourd'hui. Trois exercices couvrent les 18 mois
+    // même quand on est en début d'année.
+    const yA = +AUJ.slice(0, 4);
+    lireAux('valo', '/stores/perf?granularite=mois&annees=' + (yA - 2) + ',' + (yA - 1) + ',' + yA, force);
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
@@ -116,6 +124,73 @@
   }
 
   /* --- rendu -------------------------------------------------------------- */
+  /* --- La valeur du magasin ------------------------------------------------
+   * La règle du réseau : le CA mensuel moyen des 18 derniers mois, ramené à
+   * l'année (× 12), divisé par 6 — soit deux mois de chiffre d'affaires. Le
+   * mois en cours est écarté : il est incomplet et tirerait la moyenne vers
+   * le bas jusqu'à son dernier jour. Quand l'historique est plus court, on
+   * calcule sur ce qu'on a et on le dit : mieux vaut un chiffre daté qu'un
+   * tiret. */
+  const VALO_MOIS = 18, VALO_DIV = 6;
+  function valeurMagasin() {
+    const d = S.aux['valo'];
+    if (!Array.isArray(d)) return null;
+    const enCours = AUJ.slice(0, 7);
+    const cle = c => c.annee + '-' + String(c.mois).padStart(2, '0');
+    const serie = d
+      .filter(c => String(c.storeId) === String(S.shop) && c.ca != null && cle(c) < enCours)
+      .sort((a, b) => cle(a) < cle(b) ? -1 : 1)
+      .slice(-VALO_MOIS);
+    if (!serie.length) return { n: 0 };
+    const moy = serie.reduce((a, c) => a + c.ca, 0) / serie.length;
+    const lib = c => MOIS_C[c.mois - 1] + ' ' + c.annee;
+    return {
+      n: serie.length, moyenne: moy, annuel: moy * 12, valeur: moy * 12 / VALO_DIV,
+      du: lib(serie[0]), au: lib(serie[serie.length - 1]),
+      serie: serie.map(c => c.ca), mois: serie.map(lib)
+    };
+  }
+  /** La mini-courbe du CA mensuel qui porte la valeur. */
+  function courbeValo(v) {
+    const n = v.serie.length;
+    if (n < 2) return '';
+    const mn = Math.min(...v.serie), mx = Math.max(...v.serie), W = 168, H = 40;
+    const x = i => (i * W / (n - 1)).toFixed(1);
+    const y = c => (H - 3 - (H - 8) * (c - mn) / ((mx - mn) || 1)).toFixed(1);
+    const pts = v.serie.map((c, i) => x(i) + ',' + y(c)).join(' ');
+    return `<svg class="db-vspk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,${H} ${pts} ${W},${H}"></polygon>
+      <polyline points="${pts}"></polyline>
+      <circle cx="${x(n - 1)}" cy="${y(v.serie[n - 1])}" r="2.6"></circle>
+    </svg>`;
+  }
+  function rendValeur() {
+    const v = valeurMagasin();
+    if (!v) {
+      return `<div class="db-valo"><div class="t"><div class="k">Valeur du magasin</div><div class="v">…</div>
+        <div class="s">lecture du chiffre d’affaires des 18 derniers mois</div></div></div>`;
+    }
+    if (!v.n) {
+      return `<div class="db-valo"><div class="t"><div class="k">Valeur du magasin</div><div class="v">—</div>
+        <div class="s">aucun mois complet de chiffre d’affaires relevé pour ce magasin</div></div></div>`;
+    }
+    const complet = v.n >= VALO_MOIS;
+    return `<div class="db-valo">
+      <div class="t">
+        <div class="k">Valeur du magasin</div>
+        <div class="v">${fE(v.valeur)}</div>
+        <div class="s">${fE(v.moyenne)} de CA mensuel moyen × 12 ÷ ${VALO_DIV} — soit deux mois de chiffre d’affaires.
+          ${complet ? 'Sur les 18 derniers mois clos' : 'Sur les ' + v.n + ' mois clos disponibles'},
+          de ${esc(v.du)} à ${esc(v.au)}.${complet ? '' : ' La règle en demande 18 : le chiffre se stabilisera avec l’historique.'}</div>
+      </div>
+      <div class="c">
+        ${courbeValo(v)}
+        <div class="lg"><span>${esc(v.du)}</span><span>${esc(v.au)}</span></div>
+        <div class="an">${fE(v.annuel)} de CA annualisé</div>
+      </div>
+    </div>`;
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -129,6 +204,7 @@
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
       <span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
+    h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
     h += rendNC();

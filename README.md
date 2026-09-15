@@ -80,6 +80,10 @@ public/
     js/scouting.js      écran Scouting commercial (Overpass, carte, modèle CA)
     js/scouting-tpl.js  gabarits HTML de l'écran Scouting
     vendor/leaflet/     Leaflet 1.9.4 (carte), embarqué
+  dashboard/            dashboard magasin — page à part, hors SPA
+    index.html          coquille
+    dashboard.js        état S, rendre()/brancher(), lectures lireAux()
+    dashboard.css       styles de la page
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran
@@ -131,6 +135,26 @@ Configuration : `pwaBase` dans `ceo_app_setting` (base d'URL du panel) et
 du seed sont des ids de démo à remplacer). Si le panel vit sur une autre base
 MySQL que le cockpit, pointez la connexion du cockpit sur la base commune ou
 répliquez `mac_report_share`.
+
+## Dashboard magasin
+
+Une page à part, `public/dashboard/?shop=4&vue=mois&date=…`, hors SPA : cinq
+vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
+`rendre()` / `brancher()`, et des lectures asynchrones par clé (`lireAux`).
+
+- **Valeur du magasin** : le CA mensuel moyen des **18 derniers mois clos**,
+  ramené à l'année (× 12) puis divisé par **6** — soit deux mois de chiffre
+  d'affaires. Le **mois en cours est écarté** : incomplet, il tirerait la
+  moyenne vers le bas jusqu'à son dernier jour. Quand l'historique est plus
+  court, le calcul se fait sur les mois disponibles et le bloc le dit : un
+  chiffre daté vaut mieux qu'un tiret. La mini-courbe montre le CA mensuel qui
+  porte la valeur. Source : `GET /stores/perf?granularite=mois&annees=…` sur
+  trois exercices (18 mois débordent sur trois années civiles en début
+  d'année), lu à partir d'aujourd'hui et non de la période regardée — la valeur
+  du magasin est un fait présent. Constantes `VALO_MOIS` et `VALO_DIV`.
+- **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
+  la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
+  rien sur les tâches.
 
 ## Scouting commercial
 
