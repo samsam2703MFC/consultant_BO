@@ -347,3 +347,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-15T13:48:34Z zoning virgule decimale
 2026-09-15T14:17:25Z recherche par ville fiche scoring
 2026-09-15T14:37:57Z ville dans assistant + chaines
+2026-09-15T14:44:15Z valeur du magasin dashboard
