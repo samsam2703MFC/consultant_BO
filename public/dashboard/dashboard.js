@@ -241,10 +241,163 @@
     </div>`;
   }
 
+  /* --- Le dashboard au téléphone -------------------------------------------
+   * La même page et les mêmes lectures : seul le rendu change sous 560 px.
+   * Deux vues seulement, le jour et la semaine — le mois, le trimestre et
+   * l'année restent au bureau, ils ne se lisent pas au pouce.
+   * La forme : le chiffre de la période en grand, ce qui bloque juste en
+   * dessous, puis des cartes ouvertes qu'un seul défilement parcourt. */
+  const MOB_MAX = 560;
+  function estMobile() {
+    const f = new URLSearchParams(location.search).get('mobile');
+    if (f === '1') { return true; }
+    if (f === '0') { return false; }
+    return window.innerWidth <= MOB_MAX;
+  }
+
+  /** Les tâches de la vue, comptées comme dans le bloc du bureau. */
+  function mobTaches() {
+    if (S.vue !== 'jour') {
+      const [du, au] = bornes();
+      const p = S.aux['tachesP|' + du + '|' + au];
+      if (!p) { return null; }
+      // La heatmap rend des LIGNES par magasin : faites / pasFaites, pas un
+      // total. Le compte des bloquantes n'y est pas — il ne vaut qu'au jour.
+      const sh = (p.lignes || []).find(x => String(x.shopId) === String(S.shop));
+      if (!sh) { return { total: 0 }; }
+      const f = sh.faites || 0, nf = sh.pasFaites || 0;
+      const jours = (sh.jours || []).filter(j => j.releve).length;
+      return { total: f + nf, faites: f, nonFaites: nf, bloquantes: null, jours: jours };
+    }
+    const d = S.aux['taches|' + S.date];
+    if (!d) { return null; }
+    const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
+    const T = sh ? (sh.taches || []) : [];
+    if (!T.length) { return { total: 0 }; }
+    const faite = t => t.statut !== 'nonRendue';
+    const bloq = t => !faite(t) && /^CO-/i.test(String(t.checklist || ''));
+    const nF = T.filter(faite).length;
+    return { total: T.length, faites: nF, nonFaites: T.length - nF, bloquantes: T.filter(bloq).length };
+  }
+
+  function mobHero(m) {
+    if (S.vue === 'jour') {
+      const obj = m && m.objectifJour;
+      const att = obj ? Math.min(100, 100 * m.ca / obj) : 0;
+      const ecart = obj ? obj - m.ca : null;
+      const cl = (ecart != null && m.panier > 0) ? Math.round(Math.abs(ecart) / m.panier) : null;
+      return `<div class="mb-hero">
+        <div class="k">Chiffre d’affaires du jour</div>
+        <div class="v">${fE(m ? m.ca : null)}</div>
+        <div class="o">${obj ? 'objectif ' + fE(obj) + ' · ' + fP(att) : 'pas d’objectif du jour'}</div>
+        ${obj ? `<div class="mb-bar"><i style="width:${att.toFixed(1)}%"></i></div>
+        <div class="dl">${ecart > 0
+            ? `<span><b class="ko">− ${fE(ecart)}</b> sur l’objectif</span>${cl != null ? `<span>${fN(cl)} clients de moins</span>` : ''}`
+            : `<span><b class="ok">+ ${fE(-ecart)}</b> au-dessus</span>${cl != null ? `<span>${fN(cl)} clients d’avance</span>` : ''}`}</div>` : ''}
+      </div>`;
+    }
+    const av = m && m.ecart != null && m.ecart >= 0;
+    const att = m && m.attendu ? Math.min(100, 100 * (m.realise || 0) / m.attendu) : 0;
+    return `<div class="mb-hero">
+      <div class="k">La semaine · ${esc(fD(bornes()[0]))} → ${esc(fD(bornes()[1]))}</div>
+      <div class="v">${fE(m ? (m.realise != null ? m.realise : m.ca) : null)}</div>
+      <div class="o">${m && m.attendu != null ? 'attendu à ce jour ' + fE(m.attendu) : ''}${m && m.objectif ? ' · objectif ' + fE(m.objectif) : ''}</div>
+      ${m && m.attendu ? `<div class="mb-bar"><i class="${av ? 'ok' : ''}" style="width:${att.toFixed(1)}%"></i></div>
+      <div class="dl"><span><b class="${av ? 'ok' : 'ko'}">${av ? '+ ' : '− '}${fE(Math.abs(m.ecart))}</b> sur l’attendu</span>
+        ${m.clientsManquants != null ? `<span>${fN(Math.abs(m.clientsManquants))} clients ${m.clientsManquants > 0 ? 'de moins' : 'd’avance'}</span>` : ''}</div>` : ''}
+    </div>`;
+  }
+
+  /* Les non-conformités au téléphone : le bandeau du bureau porte trois
+   * pastilles sur une ligne, il ne tient pas dans 390 px. Même donnée, forme
+   * de carte — et le tiroir du bureau en dessous quand on l'ouvre. */
+  function mobNC() {
+    const cle = cleNC(), D = S.aux[cle], f = ncFenetre();
+    const quand = f.jour ? 'hier' : (S.vue === 'semaine' ? 'cette semaine' : 'ce mois');
+    if (S.err[cle]) { return mobCarte('Non-conformités', esc(S.err[cle]), '—'); }
+    if (!D) { return mobCarte('Non-conformités', 'lecture en cours…', '…'); }
+    if (D.indispo) { return ''; }
+    const L = ncLignes();
+    if (!L.length) {
+      return mobCarte('Non-conformités',
+        D.notees ? D.notees + ' tâche' + (D.notees > 1 ? 's' : '') + ' notée' + (D.notees > 1 ? 's' : '') + ' ' + quand + ', rien à reprendre'
+                 : 'aucun contrôle consigné ' + (f.jour ? 'ce jour-là' : 'sur cette période'),
+        D.notees ? '✓' : '—');
+    }
+    const ouverts = L.filter(x => x.etat.c !== 'ok'), repris = L.filter(x => x.etat.c === 'ok');
+    const pills = `<div class="mb-pills">${ouverts.length ? `<span class="ko">${ouverts.length} à reprendre</span>` : ''}
+      ${repris.length ? `<span class="ok">${repris.length} reprise${repris.length > 1 ? 's' : ''}</span>` : ''}
+      <span>${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span></div>`;
+    return `<div class="mb-c" data-ncdrop="1"><div class="hd">
+      <span class="k">Non-conformités<em>${esc(quand)} · ${esc(f.jour ? fDL(f.du) : libPeriode())}</em></span>
+      <span class="v ${ouverts.length ? 'ko' : 'ok'}">${L.length}</span><span class="ch">${S.ncOuvert ? '⌄' : '›'}</span></div>
+      <div class="cp">${pills}</div></div>${S.ncOuvert ? ncTiroir(D, L) : ''}`;
+  }
+
+  function mobCarte(titre, sous, val, cls, corps) {
+    return `<div class="mb-c ${cls || ''}"><div class="hd"><span class="k">${titre}${sous ? `<em>${sous}</em>` : ''}</span>
+      <span class="v">${val}</span><span class="ch">›</span></div>${corps ? `<div class="cp">${corps}</div>` : ''}</div>`;
+  }
+
+  function rendMobile(m, d) {
+    const T = mobTaches();
+    const v = valeurMagasin();
+    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d">${esc(libPeriode())}</div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
+      <div class="mb-sc">`;
+    if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
+    h += m ? mobHero(m) : `<div class="mb-hero"><div class="k">Chiffre d’affaires</div><div class="v">…</div><div class="o">lecture en cours</div></div>`;
+    if (T && T.bloquantes) {
+      h += `<div class="mb-alerte" data-mobsec="taches"><span class="n">${T.bloquantes}</span>
+        <span class="t"><b>tâche${T.bloquantes > 1 ? 's' : ''} bloquante${T.bloquantes > 1 ? 's' : ''}</b>exploitation non rendue · ${T.faites} / ${T.total} faites</span>
+        <span class="ch">›</span></div>`;
+    }
+    h += mobNC();
+    h += mobCarte('Les tâches ' + (S.vue === 'jour' ? 'du jour' : 'de la semaine'),
+      T && T.total ? (S.vue === 'jour' ? T.total + ' relevée' + (T.total > 1 ? 's' : '')
+        : T.total + ' sur ' + T.jours + ' jour' + (T.jours > 1 ? 's' : '') + ' relevé' + (T.jours > 1 ? 's' : ''))
+        : (T ? 'aucune tâche relevée' : 'lecture du panel…'),
+      T && T.total ? T.faites + ' / ' + T.total : '—', '',
+      T && T.total ? `<div class="mb-pills">${T.bloquantes ? `<span class="ko">${T.bloquantes} bloquante${T.bloquantes > 1 ? 's' : ''}</span>` : ''}
+        <span>${T.nonFaites} non faite${T.nonFaites > 1 ? 's' : ''}</span>
+        <span class="ok">${T.faites} faite${T.faites > 1 ? 's' : ''}</span></div>` : '');
+    if (m) {
+      const ca = m.ca != null ? m.ca : m.realise;
+      const lg = (lib, larg, coul, val) => `<div><span class="l">${lib}</span><span class="m"><i style="width:${Math.min(100, Math.abs(larg || 0)).toFixed(1)}%;background:${coul}"></i></span><span class="n">${val}</span></div>`;
+      h += mobCarte('Le compte ' + (S.vue === 'jour' ? 'du jour' : 'de la semaine'),
+        (m.tickets != null ? fN(m.tickets) + ' clients' : '') + (m.panier ? ' · panier ' + fU(m.panier) : ''),
+        m.net == null ? '—' : fE(m.net), '',
+        `<div class="mb-casc">
+          ${lg('Chiffre d’affaires', 100, '#78554B', fE(ca))}
+          ${lg('− Coût matière', m.coutMatierePct, '#C0182B', fP(m.coutMatierePct))}
+          ${lg('− Main-d’œuvre', m.labourPct, '#B26A00', fP(m.labourPct))}
+          ${lg('= Résultat', m.netPct, m.net >= 0 ? '#2d7a3e' : '#C0182B', m.net == null ? '—' : fE(m.net))}
+        </div>`);
+    }
+    h += `<div class="mb-c or" data-vdrop="1"><div class="hd"><span class="k">Ce que vaut le magasin<em>${v && v.n ? '18 mois clos · × 12 ÷ ' + VALO_DIV : 'lecture des ventes…'}</em></span>
+      <span class="v">${v && v.n ? fE(v.valeur) : '…'}</span><span class="ch">${S.valoOuvert ? '⌄' : '›'}</span></div></div>`;
+    if (S.valoOuvert) { h += rendValeur(); }
+    h += '</div>';
+    h += `<div class="mb-tabs">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤']]
+      .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
+    return h;
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
     const m = magasin(d);
+    if (estMobile()) {
+      // Le mois, le trimestre et l'année n'existent pas au téléphone : on
+      // retombe sur le jour plutôt que d'afficher un écran vide.
+      if (S.vue !== 'jour' && S.vue !== 'semaine') { S.vue = 'jour'; urlMaj(); charger(false); }
+      $.innerHTML = rendMobile(m, d);
+      $.classList.add('mob');
+      brancher();
+      return;
+    }
+    $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
@@ -1170,7 +1323,19 @@
     $.querySelectorAll('[data-ncgrp]').forEach(b => b.addEventListener('click', () => {
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
+    $.querySelectorAll('[data-mobsec]').forEach(b => b.addEventListener('click', () => {
+      const c = $.querySelector('.mb-c');
+      if (c) { try { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { c.scrollIntoView(); } }
+    }));
   }
+
+  // Tourner le téléphone, ou ouvrir la page sur un écran étroit, change de
+  // rendu : on ne recharge rien, on redessine.
+  let _mob = estMobile(), _rt = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_rt);
+    _rt = setTimeout(() => { const n = estMobile(); if (n !== _mob) { _mob = n; rendre(); } }, 160);
+  });
 
   /* --- départ ------------------------------------------------------------- */
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});

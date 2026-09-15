@@ -1,0 +1,172 @@
+/* Maquettes « dashboard magasin sur téléphone » — trois formes.
+ * Écran de référence : 390 × 844 (iPhone 15), la charte du cockpit. */
+
+.ph{width:390px;height:844px;overflow:hidden;position:relative;background:var(--color-bg);
+  border-radius:38px;box-shadow:0 10px 40px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.08);
+  font-family:var(--font-ui);color:var(--color-text);display:flex;flex-direction:column}
+.ph .sc{flex:1;overflow:hidden;padding:0 14px 14px}
+.ph .enc{height:26px;flex:0 0 auto}
+
+/* --- l'en-tête, commun ---------------------------------------------------- */
+.mh{display:flex;align-items:center;gap:9px;padding:6px 14px 8px;flex:0 0 auto}
+.mh img{height:22px}
+.mh .t{font-family:var(--font-display);font-size:16px;line-height:1.1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mh .d{font-size:10.5px;color:var(--color-text-muted)}
+.mh .sp{flex:1}
+.mh .ic{width:30px;height:30px;border-radius:50%;border:.5px solid var(--color-border-secondary);
+  background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--color-text-muted)}
+
+/* --- A : l'app à onglets -------------------------------------------------- */
+.a-hero{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:16px;padding:14px 16px 13px;margin-bottom:10px}
+.a-hero .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.a-hero .v{font-family:var(--font-display);font-size:44px;line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.a-hero .o{font-size:11.5px;color:var(--color-text-muted)}
+.a-hero .bar{height:10px;border-radius:6px;background:var(--color-background-secondary);position:relative;overflow:hidden;margin:11px 0 7px}
+.a-hero .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--color-primary)}
+.a-hero .dl{display:flex;align-items:baseline;justify-content:space-between;font-size:11.5px}
+.a-hero .dl b{color:#C0182B;font-weight:600}
+.a-tui{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.a-tui>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:13px;padding:9px 10px;min-width:0}
+.a-tui .k{font:600 8.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.a-tui .v{font-family:var(--font-display);font-size:19px;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
+.a-alerte{display:flex;align-items:center;gap:10px;background:#fbeff0;border:1px solid rgba(192,24,43,.35);border-radius:13px;padding:10px 13px;margin-bottom:10px}
+.a-alerte .n{font-family:var(--font-display);font-size:22px;color:#C0182B;line-height:1}
+.a-alerte .t{font-size:11.5px;line-height:1.35;flex:1;min-width:0}
+.a-alerte .t b{display:block;font-size:12.5px;font-weight:600}
+.a-alerte .ch{color:#C0182B;font-size:15px}
+.a-sec{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:13px;margin-bottom:8px}
+.a-sec>div{display:flex;align-items:center;gap:10px;padding:11px 13px}
+.a-sec .t{font-size:12.5px;font-weight:600;flex:1;min-width:0}
+.a-sec .t em{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.a-sec .v{font-family:var(--font-display);font-size:17px;font-variant-numeric:tabular-nums}
+.a-sec .ch{color:var(--color-text-muted);font-size:13px}
+.a-tabs{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);border-top:.5px solid var(--color-border-tertiary);
+  background:var(--color-surface);padding:7px 0 16px}
+.a-tabs>div{text-align:center;font:600 9.5px var(--font-ui);color:var(--color-text-muted);letter-spacing:.03em}
+.a-tabs>div i{display:block;font-style:normal;font-size:17px;margin-bottom:2px;opacity:.55}
+.a-tabs>div.on{color:var(--color-primary)}
+.a-tabs>div.on i{opacity:1}
+
+/* --- B : les cartes ------------------------------------------------------- */
+.b-seg{display:flex;background:var(--color-background-secondary);border-radius:11px;padding:3px;margin:0 0 11px}
+.b-seg>div{flex:1;text-align:center;font:600 11.5px var(--font-ui);color:var(--color-text-muted);padding:6px 0;border-radius:9px}
+.b-seg>div.on{background:var(--color-primary);color:#fff}
+.b-c{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:16px;padding:13px 15px;margin-bottom:10px;position:relative}
+.b-c .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.b-c .v{font-family:var(--font-display);font-size:30px;line-height:1.08;margin:3px 0 1px;font-variant-numeric:tabular-nums}
+.b-c .s{font-size:11px;line-height:1.4;color:var(--color-text-muted)}
+.b-c .ch{position:absolute;right:13px;top:13px;color:var(--color-text-muted);font-size:14px}
+.b-c.or{border-left:4px solid #e2b93b;background:linear-gradient(180deg,#fffbe9,var(--color-surface))}
+.b-c.or .v,.b-c.or .k{color:#8a6508}
+.b-spk{display:block;width:100%;height:42px;margin-top:8px}
+.b-spk polyline{fill:none;stroke:#b8901f;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.b-spk polygon{fill:rgba(226,185,59,.20)}
+.b-spk circle{fill:#8a6508}
+.b-lg{display:flex;justify-content:space-between;font:400 9px var(--font-ui);color:var(--color-text-muted);margin-top:1px}
+.b-ring{position:absolute;right:13px;bottom:13px;width:62px;height:62px}
+.b-ring text{font:600 13px var(--font-ui);fill:var(--color-primary)}
+.b-casc{margin-top:9px}
+.b-casc>div{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:4px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.b-casc>div:last-child{border-bottom:none}
+.b-casc .l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-casc .m{width:56px;height:6px;border-radius:4px;background:var(--color-background-secondary);position:relative;overflow:hidden;flex:0 0 auto}
+.b-casc .m i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.b-casc .n{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.b-pills{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.b-pills span{font:600 10px var(--font-ui);border-radius:999px;padding:3px 9px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.b-pills .ko{background:#fbeff0;color:#C0182B}
+.b-pills .ok{background:#eef5ef;color:#2d7a3e}
+
+/* --- C : le fil ----------------------------------------------------------- */
+.c-fil{padding-top:2px}
+.c-b{padding:15px 0;border-bottom:.5px solid rgba(34,34,34,.13)}
+.c-b:last-child{border-bottom:none}
+.c-b .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.c-b .v{font-family:var(--font-display);font-size:40px;line-height:1.02;margin:4px 0 3px;font-variant-numeric:tabular-nums}
+.c-b .v.m{font-size:27px}
+.c-b .s{font-size:11.5px;line-height:1.45;color:var(--color-text-muted)}
+.c-b .s b{color:var(--color-text);font-weight:600}
+.c-b .s .ko{color:#C0182B;font-weight:600}
+.c-b .s .ok{color:#2d7a3e;font-weight:600}
+.c-jauge{display:flex;height:4px;border-radius:3px;overflow:hidden;margin:9px 0 3px;background:var(--color-background-secondary)}
+.c-jauge i{display:block;height:100%}
+.c-nav{display:flex;align-items:center;gap:8px;padding:8px 14px 12px;flex:0 0 auto;border-top:.5px solid var(--color-border-tertiary);background:var(--color-surface)}
+.c-nav .b{width:34px;height:34px;border-radius:50%;border:.5px solid var(--color-border-secondary);display:flex;
+  align-items:center;justify-content:center;font-size:14px;color:var(--color-text-muted);background:var(--color-bg)}
+.c-nav .j{flex:1;text-align:center;font:600 12px var(--font-ui)}
+.c-nav .j em{display:block;font-style:normal;font-weight:400;font-size:10px;color:var(--color-text-muted)}
+
+/* --- la planche de comparaison -------------------------------------------- */
+.planche{display:flex;gap:26px;justify-content:center;padding:26px 20px 30px;background:#F5F1EB}
+.planche .col{width:390px}
+.planche .lg{margin:0 0 10px;font:400 15px var(--font-display)}
+.planche .lg em{display:block;font:400 11px var(--font-ui);font-style:normal;color:var(--color-text-muted);line-height:1.45;margin-top:3px}
+
+/* Deux onglets seulement : le jour et la semaine. */
+.a-tabs.deux{grid-template-columns:repeat(2,1fr)}
+/* La semaine en sept barres : ce qui est fait, ce qui reste à faire. */
+.b-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;align-items:end;margin-top:10px;height:50px}
+.b-sem>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.b-sem i{display:block;width:100%;border-radius:3px 3px 0 0}
+.b-sem i.ok{background:#2d7a3e}
+.b-sem i.ko{background:var(--color-primary)}
+.b-sem i.att{background:var(--color-border-secondary)}
+.b-sem span{font:600 8.5px var(--font-ui);color:var(--color-text-muted);margin-top:3px;white-space:nowrap}
+.a-sec .v.ok{color:#2d7a3e}
+.a-sec.or{border-left:3px solid #e2b93b;background:linear-gradient(180deg,#fffbe9,var(--color-surface))}
+.a-sec.or .v{color:#8a6508}
+
+/* ==========================================================================
+ * Le mélange A + B : le héros et les onglets de A, les cartes de B.
+ * ========================================================================== */
+.x-alerte{display:flex;align-items:center;gap:10px;background:#fbeff0;border:1px solid rgba(192,24,43,.35);
+  border-radius:13px;padding:9px 13px;margin-bottom:10px}
+.x-alerte .n{font-family:var(--font-display);font-size:21px;color:#C0182B;line-height:1}
+.x-alerte .t{font-size:11.5px;line-height:1.3;flex:1;min-width:0}
+.x-alerte .t b{display:block;font-size:12.5px;font-weight:600}
+.x-alerte .ch{color:#C0182B;font-size:15px}
+
+/* Le héros, avec ou sans anneau */
+.x-hero{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:16px;
+  padding:13px 15px 12px;margin-bottom:10px;position:relative}
+.x-hero .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.x-hero .v{font-family:var(--font-display);font-size:42px;line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.x-hero .o{font-size:11.5px;color:var(--color-text-muted)}
+.x-hero .bar{height:9px;border-radius:5px;background:var(--color-background-secondary);position:relative;overflow:hidden;margin:10px 0 6px}
+.x-hero .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--color-primary)}
+.x-hero .dl{display:flex;align-items:baseline;justify-content:space-between;font-size:11.5px}
+.x-hero .dl b{color:#C0182B;font-weight:600}
+.x-hero .ring{position:absolute;right:13px;top:11px;width:66px;height:66px}
+.x-hero .ring text{font:600 13px var(--font-ui);fill:var(--color-primary)}
+.x-hero.anneau .v{font-size:36px}
+.x-hero.anneau .o{max-width:225px}
+
+/* La grille de petites cartes */
+.x-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.x-grid>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:13px;padding:9px 11px;min-width:0}
+.x-grid .k{font:600 8.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x-grid .v{font-family:var(--font-display);font-size:21px;line-height:1.1;margin:2px 0 1px;font-variant-numeric:tabular-nums}
+.x-grid .s{font-size:10px;line-height:1.3;color:var(--color-text-muted)}
+.x-grid .s .ko{color:#C0182B;font-weight:600}
+.x-grid .s .ok{color:#2d7a3e;font-weight:600}
+
+/* La carte, reprise de B, en version repliable */
+.x-c{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;
+  padding:11px 14px;margin-bottom:8px;position:relative}
+.x-c .hd{display:flex;align-items:center;gap:10px}
+.x-c .hd .k{font-size:12.5px;font-weight:600;flex:1;min-width:0}
+.x-c .hd .k em{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.x-c .hd .v{font-family:var(--font-display);font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.x-c .hd .v.ok{color:#2d7a3e}
+.x-c .hd .ch{color:var(--color-text-muted);font-size:13px}
+.x-c .cp{margin-top:9px;padding-top:9px;border-top:.5px solid var(--color-border-tertiary)}
+.x-c.or{border-left:3px solid #e2b93b;background:linear-gradient(180deg,#fffbe9,var(--color-surface))}
+.x-c.or .hd .v{color:#8a6508}
+.x-spk{display:block;width:100%;height:34px;margin-top:8px}
+.x-spk polyline{fill:none;stroke:#b8901f;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.x-spk polygon{fill:rgba(226,185,59,.20)}
+.x-spk circle{fill:#8a6508}
+/* Quand le contenu dépasse l'écran, le dire : un fondu au-dessus des onglets
+   plutôt qu'une carte coupée net, qui ferait croire à un défaut. */
+.ph.deborde::after{content:'';position:absolute;left:0;right:0;bottom:54px;height:30px;pointer-events:none;
+  background:linear-gradient(rgba(234,228,220,0),var(--color-bg))}
