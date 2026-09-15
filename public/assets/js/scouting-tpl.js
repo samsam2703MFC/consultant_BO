@@ -530,14 +530,21 @@ export function renderWizard(c, x){
 
   const corps2 = `
     <div class="wz-q">Quel arrondissement ?</div>
-    <p class="wz-a">« Ménages par point de vente » dit où l’offre est la moins dense : plus le chiffre est haut, plus il reste de la place. C’est la colonne qui trie.</p>
+    <p class="wz-a">« Ménages par point de vente » dit où l’offre est la moins dense : plus le chiffre est haut, plus il reste de la place. C’est la colonne qui trie. « Dont chaînes » compte les enseignes déjà implantées — elles ne s’installent pas au hasard, leur présence valide la zone de chalandise autant qu’elle la dispute.</p>
+    <div class="sc-ville wz-ville">
+      <input id="wz-ville" type="text" autocomplete="off" spellcheck="false" placeholder="Vous connaissez la ville ? Tapez son nom" value="${esc(w.wville)}" ${x.I(w.setWville)} ${x.K(w.wvilleEntree)}>
+      ${w.wvilles.length ? `<div class="res">${w.wvilles.map(v => `
+        <button ${x.A(v.aller)}><span class="n">${esc(v.nom)}</span><span class="m">${esc(v.meta)}</span></button>`).join('')}</div>` : ''}
+      ${w.wvilleVide ? `<div class="vide">${esc(w.wvilleVide)}</div>` : ''}
+    </div>
     <table class="wz-t">
-      <tr><th style="width:26px"></th><th>Arrondissement</th><th>Communes</th><th>Ménages</th><th>Commerces</th><th>dont forts</th><th>Ménages / point de vente</th><th>Note moy.</th></tr>
+      <tr><th style="width:26px"></th><th>Arrondissement</th><th>Communes</th><th>Ménages</th><th>Commerces</th><th>dont forts</th><th>dont chaînes</th><th>Ménages / point de vente</th><th>Note moy.</th></tr>
       <tr ${x.A(w.choisirTous)} class="${w.arrTous ? 'on' : ''}"><td><span class="rad"></span></td><td>Tous les arrondissements</td>
-        <td colspan="6" style="text-align:left;color:var(--color-text-muted)">toute la sélection de provinces</td></tr>
+        <td colspan="7" style="text-align:left;color:var(--color-text-muted)">toute la sélection de provinces</td></tr>
       ${w.arrs.map(a => `<tr ${x.A(a.choisir)} class="${a.on ? 'on' : ''}">
         <td><span class="rad"></span></td><td>${esc(a.nom)}</td><td>${a.communes}</td><td>${esc(a.hhTxt)}</td>
         <td>${a.shops}</td><td>${a.strong}</td>
+        <td${a.marquesTxt ? ` title="${esc(a.marquesTxt)}"` : ''}>${a.chains}${a.marquesTxt ? `<em class="mq">${esc(a.marquesTxt)}</em>` : ''}</td>
         <td><span class="bar" style="width:${a.barre}px"></span>${esc(a.perTxt)}</td><td>${esc(a.avgTxt)}</td></tr>`).join('')}
     </table>
     ${w.arrs.length ? '' : '<p class="wz-a" style="margin-top:10px">Aucun arrondissement dans les provinces cochées — revenez à l’étape 1.</p>'}`;

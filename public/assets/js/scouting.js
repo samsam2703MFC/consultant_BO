@@ -310,7 +310,7 @@ export class Scouting {
       // L'assistant : 0 fermé, 1..4 l'étape ouverte ; wizFait = le bandeau de résultat.
       wiz: 0, wizFait: false,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
-      view: 'map', sortKey: 'score', sortDir: -1, q: '', ville: '', stop: false, reseau: false, notes: {},
+      view: 'map', sortKey: 'score', sortDir: -1, q: '', ville: '', wville: '', stop: false, reseau: false, notes: {},
       gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
     };
     this._h = [];
@@ -404,6 +404,14 @@ export class Scouting {
 
   afterRender(){
     const s = this.state;
+    // L'arrondissement trouvé par la recherche peut être n'importe où dans le
+    // tableau de l'étape 2 : on l'amène sous les yeux, une fois, au changement.
+    const tr = this.el.querySelector('.wz-t tr.on');
+    if (!tr) this._arrVu = null;
+    else if (this._arrVu !== s.wiz + '|' + s.arr){
+      this._arrVu = s.wiz + '|' + s.arr;
+      try { tr.scrollIntoView({ block: 'nearest' }); } catch (e) { /* navigateur sans options */ }
+    }
     this.el.classList.toggle('sc-overlay-open', !!(s.reseau || s.compare || s.view !== 'map'));
     this.saveParams();
     const fp = this.fingerprint();
@@ -1279,11 +1287,31 @@ export class Scouting {
     if (r) return Math.max(0, Math.min(1, (r - w) / (5 - w)));
     let s = 0.4;
     const n = (b.name || '').toLowerCase();
-    if (CHAINS.some(c => n.includes(c)) || b.brand) s += 0.25;
+    if (this.estChaine(b)) s += 0.25;
     if (b.web) s += 0.1;
     if (b.hours) s += 0.1;
     if (b.pastry) s += 0.05;
     return Math.min(1, s);
+  }
+
+  /* Une enseigne de chaîne : la marque relevée par OpenStreetMap (`brand`)
+   * d'abord — c'est de la donnée, pas une liste écrite à la main — sinon le nom,
+   * pour les quelques enseignes connues que la marque ne porte pas. Un point
+   * chaud déjà pris par une chaîne dit que la zone de chalandise tient : elles
+   * ne s'installent pas au hasard. */
+  estChaine(b){
+    if (b.brand) return true;
+    const n = (b.name || '').toLowerCase();
+    return CHAINS.some(c => n.includes(c));
+  }
+
+  marqueDe(b){
+    if (b.brand) return b.brand;
+    const n = (b.name || '').toLowerCase();
+    const c = CHAINS.find(k => n.includes(k));
+    // « le pain quotidien » s'écrit Le Pain Quotidien, pas Le pain quotidien :
+    // la liste est en minuscules pour la comparaison, pas pour l'affichage.
+    return c ? c.replace(/(^|[\s-])(\S)/g, (m, a, l) => a + l.toUpperCase()) : '';
   }
 
   isStrong(b){
@@ -1638,6 +1666,13 @@ export class Scouting {
   }
 
   /* ---------- agrégats ---------- */
+  /* Les marques d'une liste de commerces, la plus implantée d'abord. */
+  marquesDe(bs){
+    const n = {};
+    bs.forEach(b => { const m = this.marqueDe(b); if (m) n[m] = (n[m] || 0) + 1; });
+    return Object.keys(n).sort((a, b) => n[b] - n[a]).map(m => ({ nom: m, n: n[m] }));
+  }
+
   arrStats(name){
     const cs = this.state.communes.filter(c => c.arr === name);
     const bs = this.state.bakeries.filter(b => b.arr === name);
@@ -1646,6 +1681,8 @@ export class Scouting {
     return {
       communes: cs.length, pop: pop, hh: hh, market: hh * this.state.spend, shops: bs.length,
       strong: bs.filter(b => this.isStrong(b)).length,
+      chains: bs.filter(b => this.estChaine(b)).length,
+      marques: this.marquesDe(bs),
       dens: pop ? bs.length / (pop / 10000) : 0,
       avg: rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null,
       list: cs
@@ -1704,7 +1741,7 @@ export class Scouting {
    * zones prioritaires et cadre la carte. Ce qu'il apporte, c'est l'ordre des
    * questions et ce qu'on voit en y répondant.
    */
-  wizOuvrir(){ this.setState({ wiz: 1, reseau: false, compare: false, view: 'map' }); }
+  wizOuvrir(){ this.setState({ wiz: 1, wville: '', reseau: false, compare: false, view: 'map' }); }
   wizFermer(){ this.setState({ wiz: 0 }); }
   wizAller(n){ this.setState({ wiz: Math.max(1, Math.min(4, n)) }); }
 
@@ -1716,6 +1753,7 @@ export class Scouting {
     return noms.map(n => {
       const st = this.arrStats(n);
       return { nom: n, communes: st.communes, hh: st.hh, shops: st.shops, strong: st.strong,
+        chains: st.chains, marques: st.marques,
         perShop: st.shops ? st.hh / st.shops : 0, avg: st.avg };
     }).sort((a, b) => b.perShop - a.perShop);
   }
@@ -1844,9 +1882,11 @@ export class Scouting {
     // provinces cochées : on ne peut pas trouver ce qu'on a masqué. Aller à une
     // ville hors sélection recoche sa province, sinon la fiche s'ouvrirait sans
     // un seul concurrent — la carte ne les charge pas.
-    const vq = sansAccent(s.ville).trim();
     const nParCom = {};
-    if (vq.length >= 2) s.bakeries.forEach(b => { nParCom[b.ins] = (nParCom[b.ins] || 0) + 1; });
+    if (sansAccent(s.ville).trim().length >= 2 || sansAccent(s.wville).trim().length >= 2){
+      s.bakeries.forEach(b => { nParCom[b.ins] = (nParCom[b.ins] || 0) + 1; });
+    }
+    const vq = sansAccent(s.ville).trim();
     const aller = c => () => {
       const patch = { ville: '' };
       if (!s.prov[c.prov]) patch.prov = Object.assign({}, s.prov, { [c.prov]: true });
@@ -1860,15 +1900,21 @@ export class Scouting {
     // Le relevé garde les deux noms : « Ypres » côté français, « Ieper » côté
     // néerlandais. Chercher l'un doit trouver l'autre — le pays est bilingue,
     // et OpenStreetMap ne tranche pas toujours dans le même sens.
-    const trouvees = vq.length < 2 ? [] : s.communes
+    const chercherVille = q => q.length < 2 ? [] : s.communes
       .map(c => {
-        const a = sansAccent(c.name).indexOf(vq);
-        const b = c.nl ? sansAccent(c.nl).indexOf(vq) : -1;
+        const a = sansAccent(c.name).indexOf(q);
+        const b = c.nl ? sansAccent(c.nl).indexOf(q) : -1;
         return { c: c, i: a < 0 ? b : (b < 0 ? a : Math.min(a, b)) };
       })
       .filter(o => o.i >= 0)
       .sort((a, b) => (a.i - b.i) || (b.c.hh - a.c.hh))   // le nom qui commence par la saisie d'abord
       .slice(0, 8);
+    const ligneVille = o => ({
+      nom: o.c.name + (o.c.nl && sansAccent(o.c.nl) !== sansAccent(o.c.name) ? ' (' + o.c.nl + ')' : ''),
+      meta: 'arr. ' + o.c.arr + ' · ' + fmtInt(o.c.hh) + ' ménages · '
+        + (nParCom[o.c.ins] || 0) + ' commerce' + ((nParCom[o.c.ins] || 0) > 1 ? 's' : '')
+    });
+    const trouvees = chercherVille(vq);
 
     // ----- lignes des tableaux -----
     const scan = (s.view === 'zones' && s.communes.length) ? this.scanPrio() : [];
@@ -1976,6 +2022,16 @@ export class Scouting {
         const chauds = s.wizFait ? self.wizChauds() : [];
         const nd = self.wizNotes(), men = self.wizMenages();
         const arrs = s.wiz === 2 ? self.wizArrs() : [];
+        const wq = sansAccent(s.wville).trim();
+        const wtrouvees = s.wiz === 2 ? chercherVille(wq) : [];
+        // Choisir une ville, ici, c'est choisir son arrondissement : c'est la
+        // question de l'étape. La province se recoche au besoin, sans quoi
+        // l'arrondissement ne serait même pas dans le tableau.
+        const allerArr = c => () => {
+          const patch = { wville: '', arr: c.arr, sel: null };
+          if (!s.prov[c.prov]) patch.prov = Object.assign({}, s.prov, { [c.prov]: true });
+          self.setState(patch);
+        };
         const provOn = PROV.filter(p => s.prov[p.code]);
         const csSel = s.communes.filter(c => s.prov[c.prov]);
         return {
@@ -2005,13 +2061,30 @@ export class Scouting {
             hhTxt: fmtInt(a.hh), perTxt: fmtInt(a.perShop),
             barre: Math.round(Math.max(4, Math.min(100, a.perShop / (arrs[0] ? arrs[0].perShop : 1) * 100))),
             avgTxt: a.avg ? a.avg.toFixed(1).replace('.', ',') : '—',
+            chains: a.chains,
+            // Les marques en toutes lettres : « 3 » ne dit pas si c'est Paul ou
+            // le boulanger du coin qui s'est déclaré une enseigne.
+            marquesTxt: a.marques.slice(0, 3).map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', ')
+              + (a.marques.length > 3 ? ', +' + (a.marques.length - 3) : ''),
             choisir: () => self.setState({ arr: a.nom, sel: null })
           })),
           arrTous: s.arr === 'all', choisirTous: () => self.setState({ arr: 'all', sel: null }),
+          // La même recherche qu'à gauche, mais ici elle répond à la question de
+          // l'étape : on connaît sa ville, rarement son arrondissement.
+          wville: s.wville,
+          setWville: e => self.setState({ wville: e.target.value }),
+          wvilleEntree: e => { if (e.key === 'Enter' && wtrouvees.length){ e.preventDefault(); allerArr(wtrouvees[0].c)(); } },
+          wvilles: wtrouvees.map(o => Object.assign(ligneVille(o), {
+            meta: ligneVille(o).meta + (s.prov[o.c.prov] ? '' : ' · province à recocher'),
+            aller: allerArr(o.c)
+          })),
+          wvilleVide: wq.length >= 2 && !wtrouvees.length ? 'Aucune commune de ce nom dans le relevé.' : '',
           arrResume: s.arr === 'all' ? 'Toute la sélection · ' + fmtInt(self.shops().length) + ' commerces'
             : (() => { const st = self.arrStats(s.arr); return s.arr + ' · ' + fmtInt(st.communes) + ' communes · '
                 + fmtInt(st.hh) + ' ménages · ' + fmtInt(st.shops) + ' commerce' + (st.shops > 1 ? 's' : '')
-                + ', dont ' + fmtInt(st.strong) + ' fort' + (st.strong > 1 ? 's' : ''); })(),
+                + ', dont ' + fmtInt(st.strong) + ' fort' + (st.strong > 1 ? 's' : '')
+                + ' et ' + fmtInt(st.chains) + ' de chaîne'
+                + (st.marques.length ? ' (' + st.marques.slice(0, 3).map(m => m.nom).join(', ') + ')' : ''); })(),
           // 3 — la concurrence
           weak: s.weak, thresh: s.thresh, radius: s.radius,
           setWeak: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) self.setParam({ weak: Math.max(0, Math.min(s.thresh - 0.1, v)) }); },
@@ -2165,11 +2238,8 @@ export class Scouting {
       // Entrée ouvre la première trouvée : la liste est juste dessous, mais on
       // ne tape pas un nom pour attraper la souris ensuite.
       villeEntree: e => { if (e.key === 'Enter' && trouvees.length){ e.preventDefault(); aller(trouvees[0].c)(); } },
-      villes: trouvees.map(o => ({
-        nom: o.c.name + (o.c.nl && sansAccent(o.c.nl) !== sansAccent(o.c.name) ? ' (' + o.c.nl + ')' : ''),
-        meta: 'arr. ' + o.c.arr + ' · ' + fmtInt(o.c.hh) + ' ménages · '
-          + (nParCom[o.c.ins] || 0) + ' commerce' + ((nParCom[o.c.ins] || 0) > 1 ? 's' : '')
-          + (s.prov[o.c.prov] ? '' : ' · province décochée'),
+      villes: trouvees.map(o => Object.assign(ligneVille(o), {
+        meta: ligneVille(o).meta + (s.prov[o.c.prov] ? '' : ' · province décochée'),
         aller: aller(o.c)
       })),
       villeVide: vq.length >= 2 && !trouvees.length ? 'Aucune commune de ce nom dans le relevé.' : '',
@@ -2210,6 +2280,13 @@ export class Scouting {
         { k: 'Marché boulangerie', v: fmtEur(x.market) },
         { k: 'Dépense / ménage', v: fmtEur(s.spend) },
         { k: 'Boulangeries dans le rayon', v: fmtInt(x.near.length) + (x.blocked.length ? ' (dont ' + x.blocked.length + ' fortes)' : '') },
+        { k: 'Chaînes dans le rayon', v: (() => {
+          const ch = x.near.filter(o => self.estChaine(o.b));
+          if (!ch.length) return 'aucune';
+          const m = self.marquesDe(ch.map(o => o.b));
+          return ch.length + ' — ' + m.slice(0, 3).map(k => k.nom + (k.n > 1 ? ' ×' + k.n : '')).join(', ')
+            + (m.length > 3 ? ', +' + (m.length - 3) : '');
+        })() },
         { k: 'Pression concurrentielle', v: x.load.toFixed(2) },
         { k: 'Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), v: (x.emprise * 100).toFixed(1) + ' %' },
         { k: 'Passage', v: s.passage + ' %' },
@@ -2229,6 +2306,7 @@ export class Scouting {
           setComment: e => self.setComment(o.b.id, e.target.value),
           meta: (r ? r.toFixed(1) + '/5' + (rv && rv.manual ? ' saisie' : rv && rv.n ? ' · ' + rv.n + ' avis' : '') : 'non notée')
             + ' · force ' + Math.round(self.strength(o.b) * 100) + ' %'
+            + (self.estChaine(o.b) ? ' · chaîne ' + self.marqueDe(o.b) : '')
         };
       }) : [],
       addCandidate: () => self.addCandidate(),

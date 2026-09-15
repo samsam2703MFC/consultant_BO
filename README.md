@@ -193,7 +193,11 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   peintes, sans quoi la Belgique entière devient illisible.
   Son balayage est par **arrondissement**, jamais par la vue : à l'échelle du
   pays, la maille de la carte s'élargit et ne rendait que deux points.
-- **Chercher une ville** : en haut du panneau de gauche. La saisie se compare
+- **Chercher une ville** : en haut du panneau de gauche, et à l'étape 2 de
+  l'assistant — là elle répond à la question posée : choisir une ville, c'est
+  choisir son arrondissement (on connaît sa ville, rarement son
+  arrondissement), et la ligne choisie est ramenée sous les yeux dans le
+  tableau. La saisie se compare
   sans casse ni accents, et **sur les deux noms** que le relevé garde de chaque
   commune (`name:fr` et `name`) : « Ieper » trouve Ypres, « Brugge » trouve
   Bruges. Elle porte sur toutes les communes relevées, pas seulement celles des
@@ -204,6 +208,16 @@ centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
   la carte et ouvre **la fiche de scoring complète** de l'endroit : score,
   ménages du rayon, zone primaire, marché, concurrents, pression, emprise,
   rendement au m², CA hebdomadaire et CA annuel estimé.
+- **Chaînes** : une enseigne est reconnue à la **marque relevée par
+  OpenStreetMap** (`brand`, 392 commerces sur le relevé) — de la donnée, pas une
+  liste écrite à la main — et à défaut au nom, pour les quelques enseignes
+  connues que la marque ne porte pas (`CHAINS`). `estChaine()` et `marqueDe()`
+  en sont l'unique définition ; `strength()` s'en sert aussi. Le compte paraît
+  en colonne « dont chaînes » du tableau de l'assistant (avec les marques en
+  toutes lettres), dans le résumé de l'étape, en ligne « Chaînes dans le rayon »
+  de la fiche de scoring, et en marque sur chaque concurrent de la liste. Une
+  chaîne déjà installée ne s'est pas installée au hasard : sa présence valide la
+  zone de chalandise autant qu'elle la dispute.
 - **Points chauds** : les zones prioritaires de la carte sont aussi **listées
   dans le panneau de droite**, dans le même ordre — rang, commune, ménages,
   concurrents, CA estimé, score. Cliquer une ligne cadre la carte et ouvre la
