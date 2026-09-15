@@ -1186,7 +1186,7 @@ export class Scouting {
           fillColor: '#6B7A8F', fillOpacity: 0.22
         }).bindPopup('<div class="sc-pop"><b style="color:#4C5A6B">' + esc(z.nom || 'Zone d\'activité') + '</b><br>'
           + (ZONE_GENRE[z.genre] || 'Zone d\'activité')
-          + '<br>Rayon ' + (z.rKm < 1 ? Math.round(z.rKm * 1000) + ' m' : z.rKm.toFixed(1) + ' km')
+          + '<br>Rayon ' + (z.rKm < 1 ? Math.round(z.rKm * 1000) + ' m' : z.rKm.toFixed(1).replace('.', ',') + ' km')
           + '</div>').addTo(this.gZone);
       });
     } catch (e) { console.error('[scouting] zoning', e); }
