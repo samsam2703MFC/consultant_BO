@@ -115,3 +115,58 @@
 .a-sec .v.ok{color:#2d7a3e}
 .a-sec.or{border-left:3px solid #e2b93b;background:linear-gradient(180deg,#fffbe9,var(--color-surface))}
 .a-sec.or .v{color:#8a6508}
+
+/* ==========================================================================
+ * Le mélange A + B : le héros et les onglets de A, les cartes de B.
+ * ========================================================================== */
+.x-alerte{display:flex;align-items:center;gap:10px;background:#fbeff0;border:1px solid rgba(192,24,43,.35);
+  border-radius:13px;padding:9px 13px;margin-bottom:10px}
+.x-alerte .n{font-family:var(--font-display);font-size:21px;color:#C0182B;line-height:1}
+.x-alerte .t{font-size:11.5px;line-height:1.3;flex:1;min-width:0}
+.x-alerte .t b{display:block;font-size:12.5px;font-weight:600}
+.x-alerte .ch{color:#C0182B;font-size:15px}
+
+/* Le héros, avec ou sans anneau */
+.x-hero{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:16px;
+  padding:13px 15px 12px;margin-bottom:10px;position:relative}
+.x-hero .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.x-hero .v{font-family:var(--font-display);font-size:42px;line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.x-hero .o{font-size:11.5px;color:var(--color-text-muted)}
+.x-hero .bar{height:9px;border-radius:5px;background:var(--color-background-secondary);position:relative;overflow:hidden;margin:10px 0 6px}
+.x-hero .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--color-primary)}
+.x-hero .dl{display:flex;align-items:baseline;justify-content:space-between;font-size:11.5px}
+.x-hero .dl b{color:#C0182B;font-weight:600}
+.x-hero .ring{position:absolute;right:13px;top:11px;width:66px;height:66px}
+.x-hero .ring text{font:600 13px var(--font-ui);fill:var(--color-primary)}
+.x-hero.anneau .v{font-size:36px}
+.x-hero.anneau .o{max-width:225px}
+
+/* La grille de petites cartes */
+.x-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.x-grid>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:13px;padding:9px 11px;min-width:0}
+.x-grid .k{font:600 8.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x-grid .v{font-family:var(--font-display);font-size:21px;line-height:1.1;margin:2px 0 1px;font-variant-numeric:tabular-nums}
+.x-grid .s{font-size:10px;line-height:1.3;color:var(--color-text-muted)}
+.x-grid .s .ko{color:#C0182B;font-weight:600}
+.x-grid .s .ok{color:#2d7a3e;font-weight:600}
+
+/* La carte, reprise de B, en version repliable */
+.x-c{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;
+  padding:11px 14px;margin-bottom:8px;position:relative}
+.x-c .hd{display:flex;align-items:center;gap:10px}
+.x-c .hd .k{font-size:12.5px;font-weight:600;flex:1;min-width:0}
+.x-c .hd .k em{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.x-c .hd .v{font-family:var(--font-display);font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.x-c .hd .v.ok{color:#2d7a3e}
+.x-c .hd .ch{color:var(--color-text-muted);font-size:13px}
+.x-c .cp{margin-top:9px;padding-top:9px;border-top:.5px solid var(--color-border-tertiary)}
+.x-c.or{border-left:3px solid #e2b93b;background:linear-gradient(180deg,#fffbe9,var(--color-surface))}
+.x-c.or .hd .v{color:#8a6508}
+.x-spk{display:block;width:100%;height:34px;margin-top:8px}
+.x-spk polyline{fill:none;stroke:#b8901f;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.x-spk polygon{fill:rgba(226,185,59,.20)}
+.x-spk circle{fill:#8a6508}
+/* Quand le contenu dépasse l'écran, le dire : un fondu au-dessus des onglets
+   plutôt qu'une carte coupée net, qui ferait croire à un défaut. */
+.ph.deborde::after{content:'';position:absolute;left:0;right:0;bottom:54px;height:30px;pointer-events:none;
+  background:linear-gradient(rgba(234,228,220,0),var(--color-bg))}

@@ -10,11 +10,16 @@ arrêtée au 15 (`/exploitation/periode?vue=semaine`), et la valeur du magasin
 (`/ventes/mensuel`). Une maquette qui ment sur ses ordres de grandeur ne dit
 rien de ce qui tiendra à l'écran.
 
+Après une première série (l'app à onglets, les cartes, le fil), la forme
+retenue est un **mélange des deux premières** : le héros du jour et les deux
+onglets de l'une, les cartes qui portent leur contenu de l'autre. Trois
+variantes du mélange :
+
 | | forme | ce qu'elle coûte |
 |---|---|---|
-| **A** | `a-app-onglets.html` — le chiffre du jour en grand, l'alerte juste dessous, six lignes repliées qui portent chacune leur chiffre, deux onglets en bas | la plus proche d'une app ; c'est aussi celle qui demande le plus de gestes pour tout lire |
-| **B** | `b-cartes.html` — une carte par sujet, complète, qu'on fait défiler ; anneau du jour, sept barres de la semaine, cascade du compte | rien n'est caché, mais la page est longue |
-| **C** | `c-fil.html` — ni carte ni onglet, une suite de chiffres séparés par des filets, dans l'ordre des questions qu'on se pose | la plus dense et la plus rapide à lire ; la moins « app », et rien n'y est cliquable en évidence |
+| **1** | `ab1-heros-cartes.html` — le héros et son alerte, puis les cartes toutes ouvertes : sept barres pour la semaine, pastilles des tâches, cascade du compte, courbe de la valeur | un seul défilement descend tout, rien ne demande de clic ; mais l'écran déborde de moitié |
+| **2** | `ab2-heros-grille.html` — le héros reprend l'anneau, puis quatre petites cartes en grille (tâches, non-conformités, heure de pointe, panier), la semaine et la valeur en pleine largeur | **tout le jour tient sur un écran, sans défiler** ; en contrepartie chaque chiffre est plus petit et le compte du jour passe au second plan |
+| **3** | `ab3-heros-repli.html` — les cartes repliées, chacune sur une ligne avec son chiffre, la semaine montrée ouverte pour l'exemple | la plus courte à l'arrivée et celle qui laisse le plus de place au chiffre du jour ; il faut un geste par carte |
 
 `planche.html` met les trois côte à côte.
 
