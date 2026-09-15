@@ -177,6 +177,11 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   alerte quand son stock est **négatif** (écart de caisse ou de comptage) ou
   **sous le minimum journalier**. Le bandeau dit le nombre, le tiroir dit
   lesquelles et de combien il manque. Source : `GET /ventes/stock?shop=`.
+  **Zéro alerte n'est pas forcément une bonne nouvelle** : sur un inventaire
+  non recompté depuis plus de sept jours (`STOCK_VIEUX`), le bandeau ne dit pas
+  « stock au complet » mais « inventaire non recompté depuis N jours », en
+  orange. Mesuré : Corbais affichait un stock parfait avec un comptage vieux de
+  trois semaines.
   Un bouton **« M'avertir »** demande la permission du navigateur et fait
   paraître un avertissement quand une référence PASSE sous son minimum entre
   deux lectures — jamais à la première, qui n'a rien à comparer. Sans service
