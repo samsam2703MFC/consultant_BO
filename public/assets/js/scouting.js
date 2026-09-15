@@ -121,6 +121,9 @@ const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat
 const ZONE_MAX = 1200;     // au-delà, la vue est illisible : on garde les plus grandes
 const ZONE_GENRE = { industrial: 'Zone industrielle', commercial: 'Zone d\'activité commerciale', retail: 'Zone de vente' };
 const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
+// « Ath » doit trouver Ath, « chatelet » Châtelet et « SAINT-GHISLAIN »
+// Saint-Ghislain : on compare sans casse ni accents.
+const sansAccent = v => String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
 const LS = 'ceo_scouting';
@@ -307,7 +310,7 @@ export class Scouting {
       // L'assistant : 0 fermé, 1..4 l'étape ouverte ; wizFait = le bandeau de résultat.
       wiz: 0, wizFait: false,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
-      view: 'map', sortKey: 'score', sortDir: -1, q: '', stop: false, reseau: false, notes: {},
+      view: 'map', sortKey: 'score', sortDir: -1, q: '', ville: '', stop: false, reseau: false, notes: {},
       gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
     };
     this._h = [];
@@ -378,6 +381,7 @@ export class Scouting {
       A: fn => fn ? `data-sh="${this.reg(fn)}"` : '',
       C: fn => fn ? `data-sc="${this.reg(fn)}"` : '',
       I: fn => fn ? `data-si="${this.reg(fn)}"` : '',
+      K: fn => fn ? `data-sk="${this.reg(fn)}"` : '',
       esc
     };
     const c = this.renderVals();
@@ -426,6 +430,7 @@ export class Scouting {
     this.el.addEventListener('click', e => run('data-sh', e));
     this.el.addEventListener('change', e => run('data-sc', e));
     this.el.addEventListener('input', e => run('data-si', e));
+    this.el.addEventListener('keydown', e => run('data-sk', e));
     // positions de défilement des panneaux, restaurées après chaque rendu
     this.el.addEventListener('scroll', e => { if (e.target && e.target.id) this._scroll[e.target.id] = e.target.scrollTop; this.hideTip(); }, true);
   }
@@ -1834,6 +1839,37 @@ export class Scouting {
     const memePoint = p => !!(x && Math.abs(x.lat - p.lat) < 1e-9 && Math.abs(x.lng - p.lng) < 1e-9);
     const unArr = chauds.length > 0 && chauds.every(p => p.arr === chauds[0].arr);
 
+    // ----- recherche par ville -----
+    // Elle cherche dans TOUTES les communes relevées, pas seulement celles des
+    // provinces cochées : on ne peut pas trouver ce qu'on a masqué. Aller à une
+    // ville hors sélection recoche sa province, sinon la fiche s'ouvrirait sans
+    // un seul concurrent — la carte ne les charge pas.
+    const vq = sansAccent(s.ville).trim();
+    const nParCom = {};
+    if (vq.length >= 2) s.bakeries.forEach(b => { nParCom[b.ins] = (nParCom[b.ins] || 0) + 1; });
+    const aller = c => () => {
+      const patch = { ville: '' };
+      if (!s.prov[c.prov]) patch.prov = Object.assign({}, s.prov, { [c.prov]: true });
+      if (s.arr !== 'all' && s.arr !== c.arr) patch.arr = c.arr;
+      self.setState(patch);
+      setTimeout(() => {
+        if (self.map) self.map.setView([c.lat, c.lng], 12);
+        self.evaluate(c.lat, c.lng);
+      }, 60);
+    };
+    // Le relevé garde les deux noms : « Ypres » côté français, « Ieper » côté
+    // néerlandais. Chercher l'un doit trouver l'autre — le pays est bilingue,
+    // et OpenStreetMap ne tranche pas toujours dans le même sens.
+    const trouvees = vq.length < 2 ? [] : s.communes
+      .map(c => {
+        const a = sansAccent(c.name).indexOf(vq);
+        const b = c.nl ? sansAccent(c.nl).indexOf(vq) : -1;
+        return { c: c, i: a < 0 ? b : (b < 0 ? a : Math.min(a, b)) };
+      })
+      .filter(o => o.i >= 0)
+      .sort((a, b) => (a.i - b.i) || (b.c.hh - a.c.hh))   // le nom qui commence par la saisie d'abord
+      .slice(0, 8);
+
     // ----- lignes des tableaux -----
     const scan = (s.view === 'zones' && s.communes.length) ? this.scanPrio() : [];
     let zonesRows = scan.map((p, i) => {
@@ -2124,6 +2160,19 @@ export class Scouting {
         { color: '#FAC775', label: 'Zone candidate retenue' },
         { color: 'rgba(107,122,143,.5)', label: 'Zoning d\'activité, de commerce, de vente' }
       ],
+      ville: s.ville,
+      setVille: e => self.setState({ ville: e.target.value }),
+      // Entrée ouvre la première trouvée : la liste est juste dessous, mais on
+      // ne tape pas un nom pour attraper la souris ensuite.
+      villeEntree: e => { if (e.key === 'Enter' && trouvees.length){ e.preventDefault(); aller(trouvees[0].c)(); } },
+      villes: trouvees.map(o => ({
+        nom: o.c.name + (o.c.nl && sansAccent(o.c.nl) !== sansAccent(o.c.name) ? ' (' + o.c.nl + ')' : ''),
+        meta: 'arr. ' + o.c.arr + ' · ' + fmtInt(o.c.hh) + ' ménages · '
+          + (nParCom[o.c.ins] || 0) + ' commerce' + ((nParCom[o.c.ins] || 0) > 1 ? 's' : '')
+          + (s.prov[o.c.prov] ? '' : ' · province décochée'),
+        aller: aller(o.c)
+      })),
+      villeVide: vq.length >= 2 && !trouvees.length ? 'Aucune commune de ce nom dans le relevé.' : '',
       pointsChauds: chauds.map((p, i) => ({
         rang: i + 1, commune: p.commune, score: p.score, ca: fmtEur(p.ca),
         // L'arrondissement ne se répète que s'il y en a plusieurs : sur un seul

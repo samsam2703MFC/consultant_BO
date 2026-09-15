@@ -213,3 +213,15 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .sc-hot > div:first-of-type .m { white-space: normal; }
 .sc-hot .ca + .m { white-space: nowrap; }
 .sc-hot .ca { font: 600 12px var(--font-ui); color: var(--color-primary); white-space: nowrap; }
+
+/* --- Scouting : chercher une ville ---------------------------------------- */
+.sc-ville { margin-bottom: 20px; }
+.sc-ville input { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 0.5px solid var(--color-border-secondary); border-radius: 6px; background: var(--color-surface); font: 400 12.5px var(--font-ui); color: var(--color-text); }
+.sc-ville input:focus { outline: none; border-color: var(--color-primary); }
+.sc-ville .res { margin-top: 5px; border: 0.5px solid var(--color-border-tertiary); border-radius: 8px; overflow: hidden; }
+.sc-ville .res button { display: block; width: 100%; text-align: left; border: none; border-bottom: 0.5px solid var(--color-border-tertiary); background: var(--color-surface); padding: 6px 9px; cursor: pointer; font-family: var(--font-ui); }
+.sc-ville .res button:last-child { border-bottom: none; }
+.sc-ville .res button:hover { background: var(--color-background-secondary); }
+.sc-ville .res .n { display: block; font: 500 12px var(--font-ui); color: var(--color-text); }
+.sc-ville .res .m { display: block; font: 400 10.5px var(--font-ui); color: var(--color-text-muted); }
+.sc-ville .vide { margin-top: 5px; font: 400 11px var(--font-ui); color: var(--color-text-muted); }
