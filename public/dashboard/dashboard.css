@@ -594,3 +594,6 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 #dash.mob .db-stt .tr{grid-template-columns:minmax(0,1fr) 74px 74px;gap:6px;font-size:11px}
 #dash.mob .db-stt .tr .c{display:none}
 #dash.mob .db-stt .tr .v:nth-of-type(2){display:none}
+.db-stbar.wa{border-color:rgba(178,106,0,.35);background:#fdf8f0}
+.db-stbar.wa .t{color:#B26A00}
+.mb-c .hd .v.wa{color:#B26A00}

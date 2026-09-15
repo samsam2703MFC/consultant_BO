@@ -258,10 +258,14 @@
     const av = S.stockAvertir;
     const bouton = ('Notification' in window)
       ? `<button class="db-btn db-stav${av ? ' on' : ''}" data-stav="1">${av ? '🔔 averti' : 'M’avertir'}</button>` : '';
-    return `<div class="db-stbar${al ? ' ko' : (E && !E.indispo ? ' ok' : ' mu')}${S.stockOuvert ? ' ouv' : ''}">
-      <span class="ic" data-stdrop="1">${al ? '📦' : (E && !E.indispo ? '✓' : '·')}</span>
-      <span class="t" data-stdrop="1">${al ? al + ' référence' + (al > 1 ? 's' : '') + ' sous le minimum'
-        : (E && !E.indispo ? 'Stock au complet' : 'Stock')}<small>${stockSous(E)}</small></span>
+    const vieux = E && !E.indispo && E.vieux;
+    const cls = al ? ' ko' : (vieux ? ' wa' : (E && !E.indispo ? ' ok' : ' mu'));
+    const titre = al ? al + ' référence' + (al > 1 ? 's' : '') + ' sous le minimum'
+      : (vieux ? 'Inventaire non recompté depuis ' + E.jours + ' jours'
+        : (E && !E.indispo ? 'Stock au complet' : 'Stock'));
+    return `<div class="db-stbar${cls}${S.stockOuvert ? ' ouv' : ''}">
+      <span class="ic" data-stdrop="1">${al ? '📦' : (vieux ? '⏳' : (E && !E.indispo ? '✓' : '·'))}</span>
+      <span class="t" data-stdrop="1">${titre}<small>${stockSous(E)}</small></span>
       ${al ? `<span class="chips" data-stdrop="1">${E.ruptures ? `<span class="ch ko">${E.ruptures} à zéro</span>` : ''}${E.negatifs ? `<span class="ch ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}</span>` : ''}
       <span class="sp"></span>${bouton}
       ${E && !E.indispo && al ? `<span class="dr" data-stdrop="1">${S.stockOuvert ? 'replier ▴' : 'détail ▾'}</span>` : ''}
@@ -274,13 +278,20 @@
    * sous le minimum journalier : les deux appellent un geste. Une référence
    * jamais comptée n'est pas « à zéro », elle est absente — le serveur ne la
    * rend pas, l'écran ne l'invente pas. */
+  const STOCK_VIEUX = 7;          // au-delà, l'inventaire n'est plus un état, c'est un souvenir
   function stockEtat() {
     const d = S.aux['stock|' + S.shop];
     if (!d) { return null; }
     if (d.indispo) { return { indispo: true, motif: d.motif || 'panel injoignable' }; }
     const L = Array.isArray(d.lignes) ? d.lignes : [];
+    // « Zéro alerte » sur un inventaire non recompté depuis trois semaines
+    // n'est pas une bonne nouvelle, c'est une inconnue : on compte les jours
+    // et l'écran ne dit « au complet » que si le comptage est frais.
+    const der = d.dernierComptage || '';
+    const jours = der ? Math.floor((Date.now() - new Date(der.replace(' ', 'T')).getTime()) / 86400000) : null;
     return { n: d.references || L.length, alertes: d.alertes || 0, ruptures: d.ruptures || 0,
-      negatifs: d.negatifs || 0, dernier: d.dernierComptage || '', quand: d.quand || '', lignes: L };
+      negatifs: d.negatifs || 0, dernier: der, jours: jours, vieux: jours != null && jours > STOCK_VIEUX,
+      quand: d.quand || '', lignes: L };
   }
 
   const fQ = (v, u) => (Math.abs(v) >= 100 ? nf(v, 0) : nf(v, v % 1 ? 2 : 0)) + (u ? ' ' + u : '');
@@ -335,7 +346,8 @@
     if (!E) { return 'lecture de l’inventaire…'; }
     if (E.indispo) { return esc(E.motif); }
     return E.n + ' référence' + (E.n > 1 ? 's' : '') + ' à l’inventaire'
-      + (E.dernier ? ' · dernier comptage le ' + fD(E.dernier.slice(0, 10)) : '');
+      + (E.dernier ? ' · dernier comptage le ' + fD(E.dernier.slice(0, 10))
+          + (E.jours != null ? ', il y a ' + (E.jours === 0 ? 'moins d’un jour' : E.jours + ' jour' + (E.jours > 1 ? 's' : '')) : '') : '');
   }
 
   /* --- Le dashboard au téléphone -------------------------------------------
@@ -475,8 +487,8 @@
     const E = stockEtat();
     if (E && !E.indispo && E.n) {
       h += `<div class="mb-c" data-stdrop="1"><div class="hd">
-        <span class="k">Stock<em>${stockSous(E)}</em></span>
-        <span class="v ${E.alertes ? 'ko' : 'ok'}">${E.alertes || '✓'}</span><span class="ch">${S.stockOuvert ? '⌄' : '›'}</span></div>
+        <span class="k">Stock${E.vieux && !E.alertes ? ' — non recompté depuis ' + E.jours + ' jours' : ''}<em>${stockSous(E)}</em></span>
+        <span class="v ${E.alertes ? 'ko' : (E.vieux ? 'wa' : 'ok')}">${E.alertes || (E.vieux ? '⏳' : '✓')}</span><span class="ch">${S.stockOuvert ? '⌄' : '›'}</span></div>
         ${E.alertes ? `<div class="cp"><div class="mb-pills">${E.ruptures ? `<span class="ko">${E.ruptures} à zéro</span>` : ''}
           ${E.negatifs ? `<span class="ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}
           <span>${E.alertes} sous le minimum</span></div>
