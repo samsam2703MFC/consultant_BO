@@ -142,6 +142,18 @@ Une page à part, `public/dashboard/?shop=4&vue=mois&date=…`, hors SPA : cinq
 vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 `rendre()` / `brancher()`, et des lectures asynchrones par clé (`lireAux`).
 
+- **Au téléphone** : la même page et les mêmes lectures, un autre rendu sous
+  **560 px** (`estMobile()`, forçable par `?mobile=1` ou `?mobile=0`). Deux
+  vues seulement, **le jour et la semaine** — le mois, le trimestre et l'année
+  ne se lisent pas au pouce ; une URL qui les demande retombe sur le jour. La
+  forme : le chiffre de la période en grand avec sa barre et son écart, l'alerte
+  des tâches bloquantes juste dessous, puis des cartes ouvertes qu'un seul
+  défilement parcourt — non-conformités, tâches, compte de la période en
+  cascade, valeur du magasin — et deux onglets en bas. Tourner l'appareil
+  redessine sans recharger. Le bandeau des non-conformités du bureau porte trois
+  pastilles sur une ligne : il ne tient pas dans 390 px, le téléphone en montre
+  la même donnée en carte (`mobNC()`).
+
 - **Valeur du magasin** : sur la barre du haut, en un mot et un chiffre ; tout
   le détail attend dans le tiroir qu'on déplie. Le calcul : le CA mensuel moyen
   des **18 derniers mois clos**, ramené à l'année (× 12) puis divisé par **6**

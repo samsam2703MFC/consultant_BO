@@ -480,3 +480,75 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-vtri .gr6 .s{display:block;font:400 10px var(--font-ui);color:var(--color-text-muted);line-height:1.3}
 .db-vtri .gr6 .vide .v{color:var(--color-text-muted)}
 @media (max-width:760px){.db-vtri .gr6{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:10px}}
+
+/* ==========================================================================
+ * LE TÉLÉPHONE — sous 560 px, la même page dans une autre forme.
+ * Le chiffre de la période en grand, ce qui bloque juste dessous, puis des
+ * cartes ouvertes qu'un seul défilement parcourt. Deux vues : jour, semaine.
+ * ========================================================================== */
+#dash.mob{padding:0;height:100dvh;display:flex;flex-direction:column;max-width:none}
+.mb-hd{display:flex;align-items:center;gap:9px;padding:10px 14px 8px;flex:0 0 auto}
+.mb-hd img{height:22px}
+.mb-hd .t{font-family:var(--font-display);font-size:16px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-hd .d{font-size:10.5px;color:var(--color-text-muted)}
+.mb-hd .sp{flex:1}
+.mb-ic{width:32px;height:32px;border-radius:50%;border:.5px solid var(--color-border-secondary);background:var(--color-surface);
+  font-size:13px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
+.mb-sc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 16px}
+
+.mb-hero{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:16px;padding:13px 15px 12px;margin-bottom:10px}
+.mb-hero .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.mb-hero .v{font-family:var(--font-display);font-size:42px;line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.mb-hero .o{font-size:11.5px;color:var(--color-text-muted)}
+.mb-hero .dl{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:11.5px}
+.mb-bar{height:9px;border-radius:5px;background:var(--color-background-secondary);position:relative;overflow:hidden;margin:10px 0 6px}
+.mb-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--color-primary)}
+.mb-bar i.ok{background:#2d7a3e}
+
+.mb-alerte{display:flex;align-items:center;gap:10px;background:#fbeff0;border:1px solid rgba(192,24,43,.35);
+  border-radius:13px;padding:9px 13px;margin-bottom:10px;cursor:pointer}
+.mb-alerte .n{font-family:var(--font-display);font-size:21px;color:#C0182B;line-height:1}
+.mb-alerte .t{font-size:11.5px;line-height:1.3;flex:1;min-width:0}
+.mb-alerte .t b{display:block;font-size:12.5px;font-weight:600}
+.mb-alerte .ch{color:#C0182B;font-size:15px}
+
+.mb-c{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;padding:11px 14px;margin-bottom:8px}
+.mb-c .hd{display:flex;align-items:center;gap:10px}
+.mb-c .hd .k{font-size:12.5px;font-weight:600;flex:1;min-width:0}
+.mb-c .hd .k em{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.mb-c .hd .v{font-family:var(--font-display);font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mb-c .hd .ch{color:var(--color-text-muted);font-size:13px}
+.mb-c .cp{margin-top:9px;padding-top:9px;border-top:.5px solid var(--color-border-tertiary)}
+.mb-c.or{border-left:3px solid #e2b93b;background:linear-gradient(180deg,#fffbe9,var(--color-surface));cursor:pointer}
+.mb-c.or .hd .v{color:#8a6508}
+.mb-pills{display:flex;gap:6px;flex-wrap:wrap}
+.mb-pills span{font:600 10px var(--font-ui);border-radius:999px;padding:3px 9px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.mb-pills .ko{background:#fbeff0;color:#C0182B}
+.mb-pills .ok{background:#eef5ef;color:#2d7a3e}
+.mb-casc>div{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:4px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.mb-casc>div:last-child{border-bottom:none}
+.mb-casc .l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-casc .m{width:56px;height:6px;border-radius:4px;background:var(--color-background-secondary);position:relative;overflow:hidden;flex:0 0 auto}
+.mb-casc .m i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.mb-casc .n{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+
+.mb-tabs{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;border-top:.5px solid var(--color-border-tertiary);
+  background:var(--color-surface);padding:7px 0 calc(10px + env(safe-area-inset-bottom,0px))}
+.mb-tabs button{border:none;background:none;text-align:center;font:600 10.5px var(--font-ui);color:var(--color-text-muted);
+  letter-spacing:.03em;cursor:pointer;padding:2px 0}
+.mb-tabs button i{display:block;font-style:normal;font-size:17px;margin-bottom:2px;opacity:.55}
+.mb-tabs button.on{color:var(--color-primary)}
+.mb-tabs button.on i{opacity:1}
+
+/* Le bandeau des non-conformités et le tiroir de la valeur, au téléphone. */
+#dash.mob .db-ncbar{flex-wrap:wrap;padding:9px 12px;margin-bottom:10px;border-radius:13px}
+#dash.mob .db-ncbar .ch{display:none}
+#dash.mob .db-vdl{border-radius:14px;padding:11px 14px;margin-bottom:8px}
+#dash.mob .db-vtr{height:110px}
+#dash.mob .db-vtri .gr6{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:9px}
+.mb-c .hd .v.ko{color:#C0182B}
+.mb-c .hd .v.ok{color:#2d7a3e}
+/* Le tiroir des non-conformités au téléphone : une colonne, pas un tableau. */
+#dash.mob .db-nct,#dash.mob .db-ncl{display:block}
+#dash.mob .db-nct>div,#dash.mob .db-ncl{padding:7px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+#dash.mob .db-ncdl{border-radius:14px;padding:10px 13px;margin-bottom:8px}
