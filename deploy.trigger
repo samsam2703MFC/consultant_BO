@@ -354,3 +354,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-15T17:00:12Z ventes mensuel croise pnl et caisse
 2026-09-15T17:26:17Z dashboard telephone
 2026-09-15T17:31:37Z stock vivant et avertissement
+2026-09-15T17:34:51Z stock inventaire non recompte
