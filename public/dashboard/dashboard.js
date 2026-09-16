@@ -84,7 +84,7 @@
     const kr = cleRes(), ks = cleSt();
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
-    // fenêtre de 720 jours s'arrête au dernier mois qui a des ventes, pas à
+    // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
     lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'annee' || S.vue === 'trimestre') {
@@ -153,12 +153,17 @@
 
   /* --- rendu -------------------------------------------------------------- */
   /* --- La valeur du magasin ------------------------------------------------
-   * La règle du réseau : le CA des 720 derniers jours, ramené au jour
-   * (÷ 720), puis à l'année (× 365), divisé par 6 — soit deux mois de chiffre
-   * d'affaires. Deux ans de recul plutôt que dix-huit mois, et un compte en
-   * JOURS plutôt qu'en mois : un mois de 28 jours ne pèse pas comme un mois
-   * de 31, et une fenêtre en jours ne se déforme pas selon le mois où on la
-   * pose.
+   * La règle du réseau : le CA des 730 derniers jours, ramené au jour, puis à
+   * l'année (× 365), divisé par 6 — soit deux mois de chiffre d'affaires.
+   * Deux ans de recul, et un compte en JOURS plutôt qu'en mois : un mois de
+   * 28 jours ne pèse pas comme un mois de 31, et une fenêtre en jours ne se
+   * déforme pas selon le mois où on la pose.
+   *
+   * Le diviseur est le nombre de jours d'ACTIVITÉ, plafonné à 730 : un magasin
+   * ouvert il y a quinze mois est ramené au jour sur ses quinze mois, pas sur
+   * deux ans qu'il n'a pas vécus — sans quoi il serait amputé d'un tiers pour
+   * la seule raison qu'il est jeune. Dès qu'il a ses 730 jours, le diviseur
+   * est 730 et ne bouge plus.
    *
    * La fenêtre s'arrête au dernier mois qui a des ventes, pas à aujourd'hui :
    * le mois en cours est incomplet, et le compter reviendrait à diviser un
@@ -166,10 +171,8 @@
    *
    * Les ventes arrivent par mois ; chaque mois est donc réparti sur ses jours
    * et seuls les jours qui tombent dans la fenêtre comptent — c'est ce qui
-   * permet de couper à 720 jours au milieu d'un mois sans le fausser. Quand
-   * l'historique est plus court, la moyenne porte sur les jours réellement
-   * couverts et l'écran le dit : mieux vaut un chiffre daté qu'un tiret. */
-  const VALO_JOURS = 720, VALO_DIV = 6, VALO_AN = 365;
+   * permet de couper à 730 jours au milieu d'un mois sans le fausser. */
+  const VALO_JOURS = 730, VALO_DIV = 6, VALO_AN = 365;
   /** Les mois rendus par /ventes/mensuel — le mois en cours en est déjà exclu. */
   function valoMois() {
     const d = S.aux['valo|' + S.shop];
@@ -206,7 +209,9 @@
     if (!jours) return { n: 0 };
     const quotidien = total / jours;
     return {
-      n: mois, jours: jours, creux: creux, complet: jours + creux >= VALO_JOURS,
+      // `jours` EST le diviseur : les jours d'activité de la fenêtre, donc au
+      // plus 730. `creux` dit ce qui manque, pour qui veut la différence.
+      n: mois, jours: jours, creux: creux,
       total: total, quotidien: quotidien,
       annuel: quotidien * VALO_AN, valeur: quotidien * VALO_AN / VALO_DIV,
       du: fD(iso(deb)) + '/' + iso(deb).slice(0, 4), au: fD(iso(fin)) + '/' + iso(fin).slice(0, 4),
@@ -298,8 +303,7 @@
       <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.total)} de chiffre d’affaires sur ${fN(v.jours)} jours,
         soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année, ÷ ${VALO_DIV} : deux mois de chiffre d’affaires.
         La fenêtre va du ${esc(v.du)} au ${esc(v.au)} — ${esc(v.duMois)} à ${esc(v.auMois)}.
-        ${v.creux ? '<em class="att">' + fN(v.creux) + ' jours sans vente relevée</em> dans la fenêtre : la moyenne porte sur les ' + fN(v.jours) + ' jours couverts, pas sur ' + VALO_JOURS + '.'
-          : (v.jours < VALO_JOURS ? '<em class="att">le magasin n’a que ' + fN(v.jours) + ' jours d’historique</em> : la moyenne porte sur eux, pas sur ' + VALO_JOURS + '.' : '')}</div>
+        ${v.jours < VALO_JOURS ? '<em class="att">' + fN(v.jours) + ' jours d’activité</em> dans la fenêtre — le diviseur est le nombre de jours vécus, pas ' + VALO_JOURS + ' : il le deviendra quand le magasin les aura.' : ''}</div>
       ${valoTiroir()}
     </div>`;
   }
