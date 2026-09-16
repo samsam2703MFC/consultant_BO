@@ -592,3 +592,15 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 /* Les tiroirs gardent leur forme de carte : ils sont la seule chose qui
    flotte au-dessus du mur, donc la seule qui a droit à un cadre. */
 #dash.mob .mb-tir{margin:10px 0 2px}
+/* Commandes et livraisons : trois colonnes, un libellé et deux nombres.
+   Sa propre grille, et non celle du stock, qui en cache une au téléphone. */
+.db-cmdt .th,.db-cmdt .tr{display:grid;grid-template-columns:minmax(0,1fr) 62px 82px;gap:8px;
+  align-items:center;padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:11.5px}
+.db-cmdt .th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.db-cmdt .th span+span,.db-cmdt .n{text-align:right}
+.db-cmdt .tr:last-child{border-bottom:none}
+.db-cmdt .tr.neg{background:#fdf4f5}
+.db-cmdt .r{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-cmdt .n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-cmdt .n.ko{color:#C0182B;font-weight:600}
+.db-cmdt .n.mu{color:var(--color-text-muted)}
