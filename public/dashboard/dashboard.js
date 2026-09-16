@@ -579,7 +579,10 @@
       const att = obj ? 100 * m.ca / obj : 0;
       const ecart = obj ? m.ca - obj : null;
       const cl = (ecart != null && m.panier > 0) ? Math.round(Math.abs(ecart) / m.panier) : null;
-      return murC('Chiffre d’affaires du jour', fE(m ? m.ca : null),
+      // L'animation dure trois secondes ; la nouvelle, elle, doit tenir toute
+      // la journée — sinon qui ouvre l'écran à 18 h ne sait pas que c'est fait.
+      return murC('Chiffre d’affaires du jour' + (obj && m.ca >= obj ? ' <em class="ok">· objectif atteint</em>' : ''),
+        fE(m ? m.ca : null),
         obj ? `objectif ${fE(obj)} · ${fP(att)} · <span class="${ecart >= 0 ? 'ok' : 'ko'}">${fS(ecart)}</span>`
               + (cl ? ` · ${fN(cl)} client${cl > 1 ? 's' : ''} ${ecart >= 0 ? 'd’avance' : 'de moins'}` : '')
             : 'pas d’objectif du jour',
@@ -591,7 +594,8 @@
     const J = m && Array.isArray(m.jours) ? m.jours : null;
     // L'en-tête de la page porte déjà « semaine du 14/09 au 20/09 » : le
     // répéter ici ne dirait rien de plus.
-    return murC('Chiffre d’affaires de la semaine', fE(realise),
+    return murC('Chiffre d’affaires de la semaine' + (m && m.objectif > 0 && realise >= m.objectif ? ' <em class="ok">· objectif atteint</em>' : ''),
+      fE(realise),
       m && m.attendu != null
         ? `attendu à ce jour ${fE(m.attendu)} · <span class="${av ? 'ok' : 'ko'}">${fS(m.ecart)}</span>`
           + (m.clientsManquants ? ` · ${fN(Math.abs(m.clientsManquants))} clients ${m.clientsManquants > 0 ? 'manquants' : 'd’avance'}` : '')
@@ -747,20 +751,22 @@
     const fait = m.realise != null ? m.realise : m.ca;
     return m.objectif > 0 && fait != null && fait >= m.objectif;
   }
-  /* Une fois par magasin, par vue et par date : la page se relit toute seule
-   * toutes les dix minutes, et des confettis toutes les dix minutes ne sont
-   * plus une fête, c'est une alarme.
+  /* Une fois par ouverture de la page, pour un magasin, une vue et une date
+   * donnés : la page se relit toute seule toutes les dix minutes, et des
+   * confettis toutes les dix minutes ne sont plus une fête, c'est une alarme.
+   * Mais rouvrir l'écran refête — c'est le moment où l'on veut la voir, et
+   * une mémoire qui traverse la journée ne montrerait la nouvelle qu'à celui
+   * qui a ouvert l'application au bon instant.
    *
    * Le nom ne dit pas « confettis » : `confettis(n)` existe déjà plus bas et
    * rend une chaîne de papiers pour la carte du bureau. Deux fonctions de
    * même nom, et JavaScript garde la dernière — celle-ci n'aurait jamais
    * tourné. */
+  let _fete = '';
   function feteFaite() {
-    const cle = 'dbConfetti|' + S.shop + '|' + S.vue + '|' + S.date;
-    try {
-      if (localStorage.getItem(cle) === '1') { return true; }
-      localStorage.setItem(cle, '1');
-    } catch (e) { /* navigation privée : on fête, et tant pis pour la mémoire */ }
+    const cle = S.shop + '|' + S.vue + '|' + S.date;
+    if (_fete === cle) { return true; }
+    _fete = cle;
     return false;
   }
   /** `?fete=1` force la fête une fois, pour la voir sans attendre un bon jour. */
