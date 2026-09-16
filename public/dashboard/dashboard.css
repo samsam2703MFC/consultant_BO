@@ -494,7 +494,7 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .mb-hd .sp{flex:1}
 .mb-ic{width:32px;height:32px;border-radius:50%;border:.5px solid var(--color-border-secondary);background:var(--color-surface);
   font-size:13px;color:var(--color-text-muted);cursor:pointer;flex:0 0 auto}
-.mb-sc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 16px}
+.mb-sc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 16px;display:flex;flex-direction:column}
 
 .mb-tabs{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;border-top:.5px solid var(--color-border-tertiary);
   background:var(--color-surface);padding:7px 0 calc(10px + env(safe-area-inset-bottom,0px))}
@@ -505,8 +505,6 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .mb-tabs button.on i{opacity:1}
 
 /* Le bandeau des non-conformités et le tiroir de la valeur, au téléphone. */
-#dash.mob .db-ncbar{flex-wrap:wrap;padding:9px 12px;margin-bottom:10px;border-radius:13px}
-#dash.mob .db-ncbar .ch{display:none}
 #dash.mob .db-vdl{border-radius:14px;padding:11px 14px;margin-bottom:8px}
 #dash.mob .db-vtr{height:110px}
 #dash.mob .db-vtri .gr6{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:9px}
@@ -567,8 +565,11 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
    des chiffres, et la typographie pour toute hiérarchie. Douze mesures sur
    un écran, sans défiler ni toucher — ce qui demande un geste s'ouvre
    quand même, sous le mur, pour qui veut le détail. */
-.mb-mur{border-top:.5px solid rgba(34,34,34,.14)}
-.mb-r{display:grid;grid-template-columns:1fr 1fr;border-bottom:.5px solid rgba(34,34,34,.14)}
+/* Le mur occupe l'écran : l'espace qui reste se répartit entre les filets
+   plutôt que de s'accumuler en bas. C'est ce qui fait qu'il se lit comme une
+   page et non comme une liste qui s'arrête. */
+.mb-mur{border-top:.5px solid rgba(34,34,34,.14);flex:1 0 auto;display:flex;flex-direction:column}
+.mb-r{display:grid;grid-template-columns:1fr 1fr;border-bottom:.5px solid rgba(34,34,34,.14);flex:1 1 auto}
 .mb-r>div{padding:9px 2px 8px;min-width:0}
 .mb-r>div+div{border-left:.5px solid rgba(34,34,34,.14);padding-left:12px}
 .mb-r .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
