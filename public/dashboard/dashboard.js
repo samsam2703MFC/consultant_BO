@@ -83,10 +83,10 @@
   function charger(force) {
     const kr = cleRes(), ks = cleSt();
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
-    // toujours à partir d'aujourd'hui. Vingt-quatre mois demandés pour deux
-    // usages : les 18 derniers pour la valeur, et six trimestres entiers pour
-    // le tiroir — le premier d'entre eux commence avant le 18e mois.
-    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=24', force);
+    // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
+    // fenêtre de 720 jours s'arrête au dernier mois qui a des ventes, pas à
+    // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
+    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
@@ -153,34 +153,64 @@
 
   /* --- rendu -------------------------------------------------------------- */
   /* --- La valeur du magasin ------------------------------------------------
-   * La règle du réseau : le CA mensuel moyen des 18 derniers mois, ramené à
-   * l'année (× 12), divisé par 6 — soit deux mois de chiffre d'affaires. Le
-   * mois en cours est écarté : il est incomplet et tirerait la moyenne vers
-   * le bas jusqu'à son dernier jour. Quand l'historique est plus court, on
-   * calcule sur ce qu'on a et on le dit : mieux vaut un chiffre daté qu'un
-   * tiret. */
-  const VALO_MOIS = 18, VALO_DIV = 6;
+   * La règle du réseau : le CA des 720 derniers jours, ramené au jour
+   * (÷ 720), puis à l'année (× 365), divisé par 6 — soit deux mois de chiffre
+   * d'affaires. Deux ans de recul plutôt que dix-huit mois, et un compte en
+   * JOURS plutôt qu'en mois : un mois de 28 jours ne pèse pas comme un mois
+   * de 31, et une fenêtre en jours ne se déforme pas selon le mois où on la
+   * pose.
+   *
+   * La fenêtre s'arrête au dernier mois qui a des ventes, pas à aujourd'hui :
+   * le mois en cours est incomplet, et le compter reviendrait à diviser un
+   * demi-mois par un mois entier.
+   *
+   * Les ventes arrivent par mois ; chaque mois est donc réparti sur ses jours
+   * et seuls les jours qui tombent dans la fenêtre comptent — c'est ce qui
+   * permet de couper à 720 jours au milieu d'un mois sans le fausser. Quand
+   * l'historique est plus court, la moyenne porte sur les jours réellement
+   * couverts et l'écran le dit : mieux vaut un chiffre daté qu'un tiret. */
+  const VALO_JOURS = 720, VALO_DIV = 6, VALO_AN = 365;
   /** Les mois rendus par /ventes/mensuel — le mois en cours en est déjà exclu. */
   function valoMois() {
     const d = S.aux['valo|' + S.shop];
     return d && Array.isArray(d.mois) ? d.mois : null;
   }
   const libMois = m => MOIS_C[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+  /** Le nombre de jours du mois « YYYY-MM ». */
+  const joursDuMois = m => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+  const iso = d => d.toISOString().slice(0, 10);
+
   function valeurMagasin() {
     const l = valoMois();
     if (!l) return null;
-    // La fenêtre est les 18 derniers mois, trous compris : ce sont bien les
-    // 18 derniers. Un mois sans vente ne compte pas dans la moyenne, mais on
-    // dit combien de mois l'ont nourrie.
-    const fen = l.slice(-VALO_MOIS);
-    const serie = fen.filter(c => c.ca != null);
-    if (!serie.length) return { n: 0 };
-    const moy = serie.reduce((a, c) => a + c.ca, 0) / serie.length;
+    const avec = l.filter(c => c.ca != null);
+    if (!avec.length) return { n: 0 };
+    // Fin de fenêtre : le dernier jour du dernier mois qui a des ventes.
+    const dernier = avec[avec.length - 1].mois;
+    const fin = new Date(Date.UTC(+dernier.slice(0, 4), +dernier.slice(5, 7) - 1, joursDuMois(dernier)));
+    const deb = new Date(fin.getTime() - (VALO_JOURS - 1) * 86400000);
+    let total = 0, jours = 0, mois = 0, creux = 0, premier = null;
+    l.forEach(c => {
+      const n = joursDuMois(c.mois);
+      const m0 = new Date(Date.UTC(+c.mois.slice(0, 4), +c.mois.slice(5, 7) - 1, 1));
+      const m1 = new Date(Date.UTC(+c.mois.slice(0, 4), +c.mois.slice(5, 7) - 1, n));
+      // Le chevauchement du mois avec la fenêtre, en jours.
+      const d0 = m0 > deb ? m0 : deb, d1 = m1 < fin ? m1 : fin;
+      const cv = Math.round((d1 - d0) / 86400000) + 1;
+      if (cv <= 0) { return; }
+      if (c.ca == null) { creux += cv; return; }
+      total += c.ca * cv / n;
+      jours += cv; mois++;
+      if (premier === null) { premier = c.mois; }
+    });
+    if (!jours) return { n: 0 };
+    const quotidien = total / jours;
     return {
-      n: serie.length, creux: fen.length - serie.length,
-      moyenne: moy, annuel: moy * 12, valeur: moy * 12 / VALO_DIV,
-      du: libMois(fen[0].mois), au: libMois(fen[fen.length - 1].mois),
-      duVendu: libMois(serie[0].mois), auVendu: libMois(serie[serie.length - 1].mois)
+      n: mois, jours: jours, creux: creux, complet: jours + creux >= VALO_JOURS,
+      total: total, quotidien: quotidien,
+      annuel: quotidien * VALO_AN, valeur: quotidien * VALO_AN / VALO_DIV,
+      du: fD(iso(deb)) + '/' + iso(deb).slice(0, 4), au: fD(iso(fin)) + '/' + iso(fin).slice(0, 4),
+      duMois: premier ? libMois(premier) : '', auMois: libMois(dernier)
     };
   }
   /* Les six derniers trimestres CLOS — le trimestre en cours est écarté comme
@@ -195,13 +225,16 @@
     const par = {};
     l.filter(c => c.ca != null).forEach(c => {
       const k = c.mois.slice(0, 4) + 'T' + (Math.floor((+c.mois.slice(5, 7) - 1) / 3) + 1);
-      (par[k] = par[k] || []).push(c.ca);
+      (par[k] = par[k] || []).push(c);
     });
     const out = cles.map(k => {
-      const l = par[k] || [], ca = l.reduce((a, b) => a + b, 0);
-      const moy = l.length ? ca / l.length : null;
+      const l = par[k] || [], ca = l.reduce((a, b) => a + b.ca, 0);
+      const jours = l.reduce((a, b) => a + joursDuMois(b.mois), 0);
+      // Même règle qu'au-dessus, à l'échelle du trimestre : le CA ramené au
+      // jour, puis à l'année, puis divisé par six.
+      const quot = jours ? ca / jours : null;
       return { lib: 'T' + k.slice(5) + ' ' + k.slice(0, 4), n: l.length, ca: l.length ? ca : null,
-        moyenne: moy, valeur: moy == null ? null : moy * 12 / VALO_DIV };
+        quotidien: quot, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
     });
     return out.some(o => o.n) ? out : null;
   }
@@ -244,14 +277,14 @@
   }
 
   /* La valeur tient sur la barre du haut : un mot, un chiffre, la courbe des
-   * 18 mois en miniature. Tout le reste — la formule, la fenêtre, les six
-   * trimestres — attend dans le tiroir. */
+   * Tout le reste — la formule, la fenêtre, les six trimestres — attend dans
+   * le tiroir. */
   function valoPastille() {
     const v = valeurMagasin();
     if (!v) return '<span class="db-valoc att">Valeur du magasin…</span>';
     const dr = S.valoOuvert ? '\u25b4' : '\u25be';
     if (!v.n) return `<button class="db-valoc" data-vdrop="1"><span class="k">Valeur</span><span class="v">—</span><span class="dr">${dr}</span></button>`;
-    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA mensuel moyen des 18 derniers mois clos × 12 ÷ ${VALO_DIV}">
+    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}">
       <span class="k">Valeur</span><span class="v">${fE(v.valeur)}</span><span class="dr">${dr}</span></button>`;
   }
   /* Le tiroir : la formule en toutes lettres, puis les six trimestres. */
@@ -259,12 +292,14 @@
     if (!S.valoOuvert) return '';
     const v = valeurMagasin();
     if (!v || !v.n) {
-      return `<div class="db-vdl seul"><div class="vide">${v ? 'Aucun mois complet de chiffre d’affaires relevé pour ce magasin.' : 'Lecture du chiffre d’affaires des 18 derniers mois…'}</div></div>`;
+      return `<div class="db-vdl seul"><div class="vide">${v ? 'Aucun mois complet de chiffre d’affaires relevé pour ce magasin.' : 'Lecture du chiffre d’affaires des ' + VALO_JOURS + ' derniers jours…'}</div></div>`;
     }
     return `<div class="db-vdl seul">
-      <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.moyenne)} de CA mensuel moyen × 12 ÷ ${VALO_DIV}, soit deux mois de chiffre d’affaires.
-        Sur les 18 derniers mois clos, de ${esc(v.du)} à ${esc(v.au)} — ${fE(v.annuel)} de CA annualisé.
-        ${v.creux ? v.creux + ' mois sans vente dans la fenêtre : la moyenne est faite sur les ' + v.n + ' qui en ont, de ' + esc(v.duVendu) + ' à ' + esc(v.auVendu) + '.' : ''}</div>
+      <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.total)} de chiffre d’affaires sur ${fN(v.jours)} jours,
+        soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année, ÷ ${VALO_DIV} : deux mois de chiffre d’affaires.
+        La fenêtre va du ${esc(v.du)} au ${esc(v.au)} — ${esc(v.duMois)} à ${esc(v.auMois)}.
+        ${v.creux ? '<b>' + fN(v.creux) + ' jours sans vente relevée</b> dans la fenêtre : la moyenne porte sur les ' + fN(v.jours) + ' jours couverts, pas sur ' + VALO_JOURS + '.'
+          : (v.jours < VALO_JOURS ? '<b>Le magasin n’a que ' + fN(v.jours) + ' jours d’historique</b> : la moyenne porte sur eux, pas sur ' + VALO_JOURS + '.' : '')}</div>
       ${valoTiroir()}
     </div>`;
   }
@@ -716,7 +751,7 @@
               : (E.alertes ? 'sous leur minimum' : (E.vieux ? 'non recompté depuis ' + E.jours + ' jours' : 'au complet')),
             E.alertes ? 'ko' : (E.vieux ? 'wa' : 'ok'), 'stdrop')
         : murC('Stock', '…', E && E.indispo ? esc(E.motif) : 'lecture de l’inventaire…'),
-      murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? '18 mois clos · × 12 ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')
+      murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')
     ]);
     h += '</div>';
     // Les tiroirs : la seule chose qui flotte au-dessus du mur, donc la seule
