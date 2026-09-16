@@ -221,10 +221,32 @@ function ep_ventes_mensuel(): array
     // 2024, son juillet ne vaut que onze jours. Sans cette date, l'année
     // d'ouverture est tirée vers le bas par des jours où le magasin n'existait
     // pas encore.
+    //
+    // Un simple MIN() sur toute la table ne convient PAS : Corbais y porte une
+    // ligne au 21 janvier 1900, et une seule ligne parasite suffit à faire
+    // remonter l'ouverture de cent-vingt ans. On cherche donc le premier jour
+    // vendu DANS le premier mois qui a du chiffre — et seulement si un mois
+    // vide le précède dans la série, sinon ce n'est pas une ouverture mais le
+    // bord de la fenêtre demandée.
     $premiere = null;
-    try {
-        $premiere = Db::rows('SELECT MIN(insert_timestamp) d FROM `transaction` WHERE id_shop = ?', [$shop])[0]['d'] ?? null;
-    } catch (Throwable $e) { /* sans caisse, pas de date d'ouverture */ }
+    $moisOuv = null; $vuVide = false;
+    foreach ($mois as $m2) {
+        if ($m2['ca'] === null) { $vuVide = true; continue; }
+        if ($vuVide) { $moisOuv = (string) $m2['mois']; }
+        break;
+    }
+    if ($moisOuv !== null) {
+        try {
+            $d1 = new DateTimeImmutable($moisOuv . '-01 00:00:00');
+            $r = Db::rows('SELECT MIN(DATE(insert_timestamp)) d FROM `transaction`
+                            WHERE id_shop = ? AND insert_timestamp >= ? AND insert_timestamp < ?',
+                [$shop, $d1->format('Y-m-d H:i:s'), $d1->modify('+1 month')->format('Y-m-d H:i:s')]);
+            $premiere = $r[0]['d'] ?? null;
+        } catch (Throwable $e) { /* sans caisse, le mois entier comptera */ }
+        // Sans caisse sur ce mois-là (P&L seul), on retient le 1er : mieux
+        // vaut un mois entier qu'une date inventée.
+        if ($premiere === null) { $premiere = $moisOuv . '-01'; }
+    }
 
     return [
         'shop'   => (string) $shop,
