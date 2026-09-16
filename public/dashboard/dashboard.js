@@ -581,6 +581,12 @@
    * venu chercher coûte deux fois. */
   function cmdEtat() { return S.aux['cmd|' + S.shop] || null; }
   const cmdHeure = q => q ? q.slice(11, 16).replace(':', ' h ') : '';
+  /** La copie de la base s'arrête parfois : le dire vaut mieux que de faire
+   * passer un gel pour un calme. Vide quand elle suit. */
+  function cmdGel(D) {
+    const c = D && D.copie;
+    return (c && c.arretee && c.retard > 2) ? 'copie arrêtée le ' + esc(fD(c.arretee.slice(0, 10))) : '';
+  }
 
   function murCommandes() {
     const err = S.err['cmd|' + S.shop];
@@ -589,11 +595,13 @@
     if (!D) { return murC('Commandes clients', '…', 'lecture des commandes…'); }
     const C = D.commandes;
     if (!C || C.indispo) { return murC('Commandes clients', '—', C ? esc(C.motif) : 'indisponible'); }
+    const gel = C.source === 'base' ? cmdGel(D) : '';
     if (!C.enCours) {
       return murC('Commandes clients', '0',
         (C.derniere ? 'dernière le ' + esc(fD(C.derniere.slice(0, 10))) : 'aucune commande enregistrée')
-          + (C.dormantes ? ' · ' + C.dormantes + ' fiche' + (C.dormantes > 1 ? 's' : '') + ' jamais clôturée' + (C.dormantes > 1 ? 's' : '') : ''),
-        '', 'cmddrop');
+          + (gel ? ' · ' + gel
+            : (C.dormantes ? ' · ' + C.dormantes + ' fiche' + (C.dormantes > 1 ? 's' : '') + ' jamais clôturée' + (C.dormantes > 1 ? 's' : '') : '')),
+        gel ? 'wa' : '', 'cmddrop');
     }
     const bouts = [];
     if (C.auj) { bouts.push(`<span class="ok">${C.auj} à retirer aujourd’hui</span>`); }
@@ -610,16 +618,19 @@
     if (!D) { return murC('Livraisons', '…', 'lecture des livraisons…'); }
     const L = D.livraisons;
     if (!L || L.indispo) { return murC('Livraisons', '—', L ? esc(L.motif) : 'indisponible'); }
+    // Les livraisons n'ont aucune route côté panel : elles viennent toujours
+    // de la copie. Quand celle-ci est gelée, sa date passe devant le reste.
+    const gel = cmdGel(D);
     if (!L.enRoute) {
       return murC('Livraisons', '0',
-        L.derniere ? 'dernière reçue le ' + esc(fD(L.derniere.slice(0, 10))) : 'aucune commande fournisseur',
-        '', 'cmddrop');
+        gel || (L.derniere ? 'dernière reçue le ' + esc(fD(L.derniere.slice(0, 10))) : 'aucune commande fournisseur'),
+        gel ? 'wa' : '', 'cmddrop');
     }
     const p = L.prochaine ? L.prochaine.slice(0, 10) : null;
     const tard = p && p < AUJ;
     return murC('Livraisons', fN(L.enRoute),
       (p ? (tard ? `<span class="ko">attendue le ${esc(fD(p))}</span>` : 'attendue le ' + esc(fD(p))) : 'sans date annoncée')
-        + (L.derniere ? ' · dernière reçue le ' + esc(fD(L.derniere.slice(0, 10))) : ''),
+        + ' · ' + (gel || (L.derniere ? 'dernière reçue le ' + esc(fD(L.derniere.slice(0, 10))) : '')),
       tard ? 'ko' : 'wa', 'cmddrop');
   }
 
@@ -652,6 +663,9 @@
         h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(l.fournisseur || 'Fournisseur')}</span>
           <span class="n">${fN(l.refs)}</span><span class="n ${tard ? 'ko' : 'mu'}">${a ? esc(fD(a)) : '—'}</span></div>`;
       });
+    }
+    if (cmdGel(D)) {
+      h += `<div class="db-stvide">Le panel n’a pas de route pour les livraisons : elles se lisent dans la copie de la base, et cette copie est arrêtée depuis le ${esc(fD(D.copie.arretee.slice(0, 10)))}, soit ${D.copie.retard} jours. Ce qui est affiché ici est l’état de ce jour-là.</div>`;
     }
     h += '</div>';
     return h;
