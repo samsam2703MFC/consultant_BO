@@ -91,7 +91,7 @@ final class PanelApi
     }
 
     /** Requête HTTP brute. Renvoie [code, corps décodé]. */
-    private static function http(string $method, string $url, ?array $body = null, ?string $token = null): array
+    private static function http(string $method, string $url, ?array $body = null, ?string $token = null, int $timeout = 12): array
     {
         $ch = curl_init($url);
         $headers = ['Accept: application/json'];
@@ -101,7 +101,7 @@ final class PanelApi
             CURLOPT_CUSTOMREQUEST  => $method,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => $headers,
-            CURLOPT_TIMEOUT        => 12,
+            CURLOPT_TIMEOUT        => $timeout,
             CURLOPT_CONNECTTIMEOUT => 6,
         ]);
         if ($body !== null) {
@@ -491,15 +491,15 @@ final class PanelApi
      *
      * @return array{code:int, corps:mixed, erreur:?string}
      */
-    public static function sondeGet(string $path): array
+    public static function sondeGet(string $path, int $timeout = 12): array
     {
         $tok = self::token();
         if ($tok === null) { return ['code' => 0, 'corps' => null, 'erreur' => 'jeton indisponible']; }
         $url = self::config()['base'] . $path;
-        [$code, $res] = self::http('GET', $url, null, $tok);
+        [$code, $res] = self::http('GET', $url, null, $tok, $timeout);
         if ($code === 401) {
             $tok = self::token(true);
-            if ($tok !== null) { [$code, $res] = self::http('GET', $url, null, $tok); }
+            if ($tok !== null) { [$code, $res] = self::http('GET', $url, null, $tok, $timeout); }
         }
         return ['code' => $code, 'corps' => $res, 'erreur' => $code >= 200 && $code < 300 ? null : self::$lastError];
     }
