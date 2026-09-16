@@ -527,7 +527,9 @@
     const att = m && m.attendu ? 100 * (realise || 0) / m.attendu : 0;
     const av = m && m.ecart != null && m.ecart >= 0;
     const J = m && Array.isArray(m.jours) ? m.jours : null;
-    return murC(`La semaine · ${esc(fD(bornes()[0]))} → ${esc(fD(bornes()[1]))}`, fE(realise),
+    // L'en-tête de la page porte déjà « semaine du 14/09 au 20/09 » : le
+    // répéter ici ne dirait rien de plus.
+    return murC('Chiffre d’affaires de la semaine', fE(realise),
       m && m.attendu != null
         ? `attendu à ce jour ${fE(m.attendu)} · <span class="${av ? 'ok' : 'ko'}">${fS(m.ecart)}</span>`
           + (m.clientsManquants ? ` · ${fN(Math.abs(m.clientsManquants))} clients ${m.clientsManquants > 0 ? 'manquants' : 'd’avance'}` : '')
