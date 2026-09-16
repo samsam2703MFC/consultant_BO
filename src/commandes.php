@@ -89,6 +89,8 @@ function cmdDepuisApi(array $l): array
             || (string) ($c['order_status'] ?? '') === 'picked_up';
         $annulee = ($c['non_collection_id_reason'] ?? null) !== null;
         if ($remise || $annulee) { continue; }
+        // La liste arrive déjà bornée par `date_from` ; ce filet ne sert que
+        // si le panel devait un jour cesser de l'honorer.
         if ($quand === '' || substr($quand, 0, 10) < $limite) { $n['dormantes']++; continue; }
         $n['enCours']++;
         if (substr($quand, 0, 10) === $auj) { $n['auj']++; }
@@ -142,13 +144,32 @@ function ep_ventes_commandes(): array
         && (time() - (int) $memo['le']) < CMD_CACHE_MIN * 60) {
         $out['commandes'] = $memo['v'];
     } elseif (PanelApi::configured()) {
-        // Trente secondes, et non douze : la route rend TOUTES les commandes
-        // du magasin, 7 245 à Corbais. Le repli sur la copie reste là si même
-        // cela ne suffit pas, et le résultat tient un quart d'heure.
-        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders', 30);
+        // `date_from` EST supporté, et c'est lui qui rend la route utilisable :
+        // mesuré à Corbais, l'appel nu expire à 30 s tandis que le même borné
+        // à huit jours répond en 1,5 s avec 140 commandes. Les autres
+        // écritures (`from`, `limit`, `per_page`) sont ignorées par le panel,
+        // qui repart alors sur tout l'historique — donc expire aussi.
+        $depuis = date('Y-m-d', strtotime('-' . CMD_FENETRE . ' day'));
+        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $depuis, 25);
         if ((int) ($r['code'] ?? 0) === 200) {
             $v = cmdDepuisApi(analyseListe(is_array($r['corps']) ? $r['corps'] : []));
             $v['source'] = 'api';
+            $v['depuis'] = $depuis;
+            // La réponse est déjà bornée : ce qui dort au-delà de la fenêtre
+            // n'y figure pas, et la date de la dernière commande non plus
+            // quand il n'y en a eu aucune. La copie, elle, porte tout
+            // l'historique jusqu'à son gel — elle complète les deux.
+            try {
+                $b = Db::rows("SELECT MAX(pick_up_datetime) derniere,
+                        SUM(issuing_timestamp IS NULL
+                            AND (order_status IS NULL OR order_status <> 'picked_up')
+                            AND non_collection_id_reason IS NULL
+                            AND pick_up_datetime < ?) dormantes
+                      FROM client_order WHERE id_shop = ?", [$depuis, $sid])[0] ?? [];
+                $d = (string) ($b['derniere'] ?? '');
+                if ($d !== '' && ($v['derniere'] === null || $d > $v['derniere'])) { $v['derniere'] = $d; }
+                $v['dormantes'] = $b['dormantes'] === null ? null : (int) $b['dormantes'];
+            } catch (Throwable $e) { /* la fenêtre suffit */ }
             $out['commandes'] = $v;
             try {
                 Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
