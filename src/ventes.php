@@ -119,6 +119,30 @@ function ep_ventes_sonde(): array
  * bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même,
  * `ca` à null : un trou doit se voir, pas se combler tout seul.
  */
+/**
+ * GET /ventes/mensuel/sonde — ce que la route mensuelle du panel rend vraiment.
+ *
+ * Sonde de cadrage : la copie du P&L porte un août 2026 à 28 812 € pour
+ * Corbais là où la route vivante en annonce 142 901. Avant de recâbler la
+ * source, il faut savoir quelle forme a la réponse du panel.
+ */
+function ep_ventes_mensuel_sonde(): array
+{
+    if (!PanelApi::configured()) { return ['erreur' => 'compte panel non configuré']; }
+    $au = date('Y-m-t');
+    $du = date('Y-m-01', strtotime('-23 month'));
+    $t0 = microtime(true);
+    $r = PanelApi::monthlySales($du, $au);
+    $ms = (int) round((microtime(true) - $t0) * 1000);
+    $l = is_array($r) ? analyseListe($r) : [];
+    return ['du' => $du, 'au' => $au, 'ms' => $ms,
+        'clesRacine' => is_array($r) ? array_slice(array_keys($r), 0, 14) : null,
+        'chemin' => PanelApi::$lastPath,
+        'n' => $l === [] ? null : count($l),
+        'cles' => $l !== [] && is_array($l[0]) ? array_keys($l[0]) : null,
+        'exemples' => array_slice($l, 0, 4)];
+}
+
 function ep_ventes_mensuel(): array
 {
     $shop = (int) ($_GET['shop'] ?? 0);
