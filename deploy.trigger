@@ -374,3 +374,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-16T11:49:04Z sonde profondeur date from
 2026-09-16T11:55:07Z retrait sonde filtres
 2026-09-16T14:26:40Z sonde mensuel panel
+2026-09-16T14:30:33Z valeur sur 720 jours
