@@ -216,10 +216,21 @@ function ep_ventes_mensuel(): array
             $mois[] = ['mois' => $k, 'ca' => null, 'source' => null, 'tickets' => 0, 'jours' => 0];
         }
     }
+    // Le jour où la caisse a sonné pour la première fois. Un mois d'ouverture
+    // ne se répartit pas sur ses 31 jours : Corbais a ouvert le 21 juillet
+    // 2024, son juillet ne vaut que onze jours. Sans cette date, l'année
+    // d'ouverture est tirée vers le bas par des jours où le magasin n'existait
+    // pas encore.
+    $premiere = null;
+    try {
+        $premiere = Db::rows('SELECT MIN(insert_timestamp) d FROM `transaction` WHERE id_shop = ?', [$shop])[0]['d'] ?? null;
+    } catch (Throwable $e) { /* sans caisse, pas de date d'ouverture */ }
+
     return [
         'shop'   => (string) $shop,
         'du'     => $debut->format('Y-m'),
         'au'     => $finExclu->modify('-1 month')->format('Y-m'),
+        'ouverture' => $premiere === null ? null : substr((string) $premiere, 0, 10),
         'source' => 'route vivante du panel sur les derniers mois clos (' . $nVivant . '), copie du P&L quand elle a le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
         'mois'   => $mois,
     ];

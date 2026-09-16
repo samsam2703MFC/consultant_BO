@@ -182,6 +182,24 @@
   /** Le nombre de jours du mois « YYYY-MM ». */
   const joursDuMois = m => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
   const iso = d => d.toISOString().slice(0, 10);
+  /** Le jour de la première vente, tel que /ventes/mensuel le rend. */
+  function valoOuverture() {
+    const d = S.aux['valo|' + S.shop];
+    return d && d.ouverture ? d.ouverture : null;
+  }
+  /* Les jours ACTIFS d'un mois : le mois d'ouverture ne compte qu'à partir du
+   * jour où la caisse a sonné. Corbais a ouvert un 21 juillet — répartir son
+   * juillet sur 31 jours ferait valoir ce mois-là un tiers de ce qu'il vaut,
+   * et tirerait toute l'année d'ouverture vers le bas. */
+  function joursActifs(mois, ouv) {
+    const n = joursDuMois(mois);
+    if (!ouv) { return { deb: 1, n: n }; }
+    const mo = ouv.slice(0, 7);
+    if (mois < mo) { return { deb: 1, n: 0 }; }
+    if (mois > mo) { return { deb: 1, n: n }; }
+    const j = +ouv.slice(8, 10);
+    return { deb: j, n: n - j + 1 };
+  }
 
   function valeurMagasin() {
     const l = valoMois();
@@ -192,17 +210,21 @@
     const dernier = avec[avec.length - 1].mois;
     const fin = new Date(Date.UTC(+dernier.slice(0, 4), +dernier.slice(5, 7) - 1, joursDuMois(dernier)));
     const deb = new Date(fin.getTime() - (VALO_JOURS - 1) * 86400000);
+    const ouv = valoOuverture();
     let total = 0, jours = 0, mois = 0, creux = 0, premier = null;
     l.forEach(c => {
-      const n = joursDuMois(c.mois);
-      const m0 = new Date(Date.UTC(+c.mois.slice(0, 4), +c.mois.slice(5, 7) - 1, 1));
-      const m1 = new Date(Date.UTC(+c.mois.slice(0, 4), +c.mois.slice(5, 7) - 1, n));
-      // Le chevauchement du mois avec la fenêtre, en jours.
+      const A = joursActifs(c.mois, ouv);
+      if (A.n <= 0) { return; }
+      const an = +c.mois.slice(0, 4), mo = +c.mois.slice(5, 7) - 1;
+      const m0 = new Date(Date.UTC(an, mo, A.deb));
+      const m1 = new Date(Date.UTC(an, mo, A.deb + A.n - 1));
+      // Le chevauchement du mois avec la fenêtre, en jours actifs.
       const d0 = m0 > deb ? m0 : deb, d1 = m1 < fin ? m1 : fin;
       const cv = Math.round((d1 - d0) / 86400000) + 1;
       if (cv <= 0) { return; }
       if (c.ca == null) { creux += cv; return; }
-      total += c.ca * cv / n;
+      // Le taux journalier du mois se calcule sur ses jours ACTIFS.
+      total += c.ca * cv / A.n;
       jours += cv; mois++;
       if (premier === null) { premier = c.mois; }
     });
@@ -233,11 +255,14 @@
     });
     const cles = Object.keys(par).sort();
     if (!cles.length) return null;
+    const ouv = valoOuverture();
     return cles.map(k => {
-      const m = par[k], ca = m.reduce((a, b) => a + b.ca, 0);
-      const jours = m.reduce((a, b) => a + joursDuMois(b.mois), 0);
+      const m = par[k];
+      let ca = 0, jours = 0;
+      m.forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; jours += A.n; });
       const quot = jours ? ca / jours : null;
       return { lib: k, n: m.length, ca: ca, jours: jours,
+        ouverte: !!(ouv && ouv.slice(0, 4) === k),
         quotidien: quot, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
     });
   }
@@ -274,7 +299,7 @@
       <div class="grN" style="--n:${A.length}">${A.map(o => `<div>
         <span class="q">${esc(o.lib)}</span>
         <span class="v">${o.valeur == null ? '—' : fE(o.valeur)}</span>
-        <span class="s">${fE(o.ca)} de CA${o.n < 12 ? ' · ' + o.n + ' mois sur 12' : ''}</span>
+        <span class="s">${fE(o.ca)} de CA${o.ouverte ? ' · ouvert le ' + esc(fD(valoOuverture())) : (o.n < 12 ? ' · ' + o.n + ' mois sur 12' : '')}</span>
       </div>`).join('')}</div>
     </div>`;
   }
@@ -712,6 +737,51 @@
     return h;
   }
 
+  /* --- L'objectif atteint ---------------------------------------------------
+   * Au jour, c'est le budget du jour ; à la semaine, l'objectif de la semaine
+   * entière — et non l'attendu à ce jour, qui ne dit que « dans les temps ».
+   * Un objectif de semaine ne tombe qu'un dimanche : c'est bien un événement. */
+  function objectifAtteint(m) {
+    if (!m) { return false; }
+    if (S.vue === 'jour') { return m.objectifJour > 0 && m.ca >= m.objectifJour; }
+    const fait = m.realise != null ? m.realise : m.ca;
+    return m.objectif > 0 && fait != null && fait >= m.objectif;
+  }
+  /* Une fois par magasin, par vue et par date : la page se relit toute seule
+   * toutes les dix minutes, et des confettis toutes les dix minutes ne sont
+   * plus une fête, c'est une alarme. */
+  function confettisFaits() {
+    const cle = 'dbConfetti|' + S.shop + '|' + S.vue + '|' + S.date;
+    try {
+      if (localStorage.getItem(cle) === '1') { return true; }
+      localStorage.setItem(cle, '1');
+    } catch (e) { /* navigation privée : on fête, et tant pis pour la mémoire */ }
+    return false;
+  }
+  function confettis() {
+    if (confettisFaits()) { return; }
+    // Qui a demandé moins d'animations n'en reçoit pas : la nouvelle est déjà
+    // dans la jauge, qui passe au vert.
+    try {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+    } catch (e) { /* vieux navigateur */ }
+    const COUL = ['#C0182B', '#2d7a3e', '#e2b93b', '#8a6508', '#78554B', '#f7f3ec'];
+    const n = document.createElement('div');
+    n.className = 'mb-confi';
+    let h = '';
+    for (let i = 0; i < 44; i++) {
+      const l = (Math.random() * 100).toFixed(1);
+      const w = (5 + Math.random() * 5).toFixed(1);
+      const dur = (1500 + Math.random() * 1100).toFixed(0);
+      const ret = (Math.random() * 700).toFixed(0);
+      const rot = (Math.random() * 900 - 450).toFixed(0);
+      h += `<i style="left:${l}%;width:${w}px;height:${(w * 1.8).toFixed(1)}px;background:${COUL[i % COUL.length]};animation-duration:${dur}ms;animation-delay:${ret}ms;--r:${rot}deg"></i>`;
+    }
+    n.innerHTML = h;
+    document.body.appendChild(n);
+    setTimeout(() => { n.remove(); }, 3600);
+  }
+
   function rendMobile(m, d) {
     const T = mobTaches();
     const v = valeurMagasin();
@@ -779,6 +849,7 @@
       $.innerHTML = rendMobile(m, d);
       $.classList.add('mob');
       brancher();
+      if (objectifAtteint(m)) { confettis(); }
       return;
     }
     $.classList.remove('mob');
