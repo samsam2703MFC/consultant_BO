@@ -77,6 +77,48 @@ function ep_commandes_sonde(): array
         }
         $out['tables'][] = $bloc;
     }
+    // Ce que l'API du panel accepte de servir : la base est en retard de deux
+    // mois sur ces tables (cf. /audit/fraicheur), donc si l'écran doit dire
+    // « en cours », la donnée doit venir d'une route, pas d'une copie.
+    if (PanelApi::configured()) {
+        $cands = [
+            '/shops/' . $sid . '/client-orders',
+            '/client-orders?shop_id=' . $sid,
+            '/shops/' . $sid . '/orders/pending',
+            '/shops/' . $sid . '/pickups',
+            '/shops/' . $sid . '/material-orders',
+            '/material-orders?shop_id=' . $sid,
+            '/shops/' . $sid . '/material-orders/in-transit',
+            '/shops/' . $sid . '/webshop/orders',
+            '/webshop/orders?shop_id=' . $sid,
+            '/shops/' . $sid . '/ws-orders',
+            '/consultant/shops/' . $sid . '/client-orders',
+            '/consultant/shops/' . $sid . '/deliveries',
+            '/shops/' . $sid . '/material-requisitions',
+        ];
+        foreach ($cands as $p) {
+            $r = PanelApi::sondeGet($p);
+            $c = $r['corps'] ?? null;
+            $l = is_array($c) ? analyseListe($c) : [];
+            $ligne = ['route' => $p, 'code' => (int) $r['code'], 'n' => $l !== [] ? count($l) : null,
+                'cles' => $l !== [] && is_array($l[0]) ? array_keys($l[0]) : null];
+            // La FRAÎCHEUR, jamais le contenu : la plus récente des dates
+            // portées par la réponse suffit à dire si la route sert le jour même.
+            if ($l !== []) {
+                $dates = [];
+                foreach ($l as $e) {
+                    if (!is_array($e)) { continue; }
+                    foreach ($e as $k => $v) {
+                        if (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}/', $v) && preg_match('/date|_at|time/i', (string) $k)) {
+                            $dates[$k] = max($dates[$k] ?? '', substr($v, 0, 10));
+                        }
+                    }
+                }
+                $ligne['plusRecent'] = $dates;
+            }
+            $out['panel'][] = $ligne;
+        }
+    }
     // Le même compte sur TOUT le réseau : un magasin peut n'avoir rien reçu.
     try {
         $out['reseau'] = [
