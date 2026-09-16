@@ -218,37 +218,35 @@
       duMois: premier ? libMois(premier) : '', auMois: libMois(dernier)
     };
   }
-  /* Les six derniers trimestres CLOS — le trimestre en cours est écarté comme
-   * le mois en cours : à mi-parcours il vaudrait la moitié de lui-même. Chaque
-   * trimestre porte la valeur que le magasin aurait eue à ce rythme-là. */
-  function valoTrimestres() {
+  /* Année par année, à la même règle : le CA de l'année ramené au jour, puis à
+   * l'année, puis divisé par six. Seules les années qui ont des ventes sont
+   * rendues — une colonne vide n'apprend rien. L'année en cours y figure : le
+   * diviseur étant ses jours vécus, elle dit le rythme du moment, pas un
+   * demi-exercice. */
+  function valoAnnees() {
     const l = valoMois();
     if (!l) return null;
-    let y = +AUJ.slice(0, 4), q = Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1;
-    const cles = [];
-    for (let i = 0; i < 6; i++) { q--; if (q < 1) { q = 4; y--; } cles.unshift(y + 'T' + q); }
     const par = {};
     l.filter(c => c.ca != null).forEach(c => {
-      const k = c.mois.slice(0, 4) + 'T' + (Math.floor((+c.mois.slice(5, 7) - 1) / 3) + 1);
+      const k = c.mois.slice(0, 4);
       (par[k] = par[k] || []).push(c);
     });
-    const out = cles.map(k => {
-      const l = par[k] || [], ca = l.reduce((a, b) => a + b.ca, 0);
-      const jours = l.reduce((a, b) => a + joursDuMois(b.mois), 0);
-      // Même règle qu'au-dessus, à l'échelle du trimestre : le CA ramené au
-      // jour, puis à l'année, puis divisé par six.
+    const cles = Object.keys(par).sort();
+    if (!cles.length) return null;
+    return cles.map(k => {
+      const m = par[k], ca = m.reduce((a, b) => a + b.ca, 0);
+      const jours = m.reduce((a, b) => a + joursDuMois(b.mois), 0);
       const quot = jours ? ca / jours : null;
-      return { lib: 'T' + k.slice(5) + ' ' + k.slice(0, 4), n: l.length, ca: l.length ? ca : null,
+      return { lib: k, n: m.length, ca: ca, jours: jours,
         quotidien: quot, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
     });
-    return out.some(o => o.n) ? out : null;
   }
-  /** La courbe des six trimestres : les trous ne sont pas reliés, ils se voient. */
-  function courbeTrim(T) {
+  /** La courbe des années : les trous ne sont pas reliés, ils se voient. */
+  function courbeValo(T) {
     const vs = T.map(o => o.valeur).filter(v => v != null);
     // La boîte est à la largeur réelle du bloc : étirée, un cercle deviendrait
-    // une ellipse. Les abscisses tombent au centre des six colonnes de dessous,
-    // pour que chaque point soit au-dessus de son trimestre.
+    // une ellipse. Les abscisses tombent au centre des colonnes de dessous,
+    // pour que chaque point soit au-dessus de son année.
     const mn = Math.min(...vs), mx = Math.max(...vs), W = 1360, H = 150;
     const x = i => ((i + 0.5) * W / T.length).toFixed(1);
     const y = v => (H - 14 - (H - 32) * (v - mn) / ((mx - mn) || 1)).toFixed(1);
@@ -266,17 +264,17 @@
     </svg>`;
   }
   function valoTiroir() {
-    const T = valoTrimestres();
-    if (!T) return '<div class="vide">Pas encore de trimestre clos pour ce magasin.</div>';
-    const connus = T.filter(o => o.n).length;
+    const A = valoAnnees();
+    if (!A) return '<div class="vide">Pas encore d’année de ventes pour ce magasin.</div>';
+    const cours = A[A.length - 1];
     return `<div class="db-vtri">
-      <div class="hd">La valeur trimestre par trimestre — ce que le magasin aurait valu au rythme de chaque trimestre.
-        ${connus < 6 ? '<b>' + connus + ' trimestre' + (connus > 1 ? 's' : '') + ' clos sur six</b> dans le relevé ; les autres sont vides.' : 'Six trimestres clos, le trimestre en cours écarté.'}</div>
-      ${courbeTrim(T)}
-      <div class="gr6">${T.map(o => `<div class="${o.n ? '' : 'vide'}">
+      <div class="hd">La valeur année par année — ce que le magasin aurait valu au rythme de chaque année.
+        ${cours && cours.n < 12 ? '<b>' + esc(cours.lib) + ' n’a que ' + cours.n + ' mois</b> : sa valeur est le rythme de ces mois-là, ramené à l’année.' : ''}</div>
+      ${courbeValo(A)}
+      <div class="grN" style="--n:${A.length}">${A.map(o => `<div>
         <span class="q">${esc(o.lib)}</span>
         <span class="v">${o.valeur == null ? '—' : fE(o.valeur)}</span>
-        <span class="s">${o.ca == null ? 'pas de CA relevé' : fE(o.ca) + ' de CA' + (o.n < 3 ? ' · ' + o.n + ' mois sur 3' : '')}</span>
+        <span class="s">${fE(o.ca)} de CA${o.n < 12 ? ' · ' + o.n + ' mois sur 12' : ''}</span>
       </div>`).join('')}</div>
     </div>`;
   }
