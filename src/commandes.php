@@ -279,8 +279,14 @@ function ep_commandes_filtres(): array
 {
     $sid = (int) ($_GET['shop'] ?? 2);
     if (!PanelApi::configured()) { return ['erreur' => 'compte panel non configuré']; }
-    $du = date('Y-m-d', strtotime('-8 day'));
+    $du = (string) ($_GET['depuis'] ?? date('Y-m-d', strtotime('-8 day')));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du)) { $du = date('Y-m-d', strtotime('-8 day')); }
     $base = '/shops/' . $sid . '/client-orders';
+    // `date_from` borne-t-il sur le RETRAIT ou sur la PRISE ? La question n'est
+    // pas théorique : s'il borne sur la prise, une commande acceptée il y a
+    // trois semaines pour samedi prochain disparaîtrait de l'écran. On compare
+    // donc plusieurs profondeurs, et on regarde la plus ANCIENNE date de
+    // retrait rendue — si elle recule avec la borne, c'est la prise qui filtre.
     $cands = [$base, $base . '?date_from=' . $du, $base . '?from=' . $du,
         $base . '?pick_up_date_from=' . $du, $base . '?status=new',
         $base . '?limit=50', $base . '?per_page=50&page=1'];
@@ -290,13 +296,20 @@ function ep_commandes_filtres(): array
         $r = PanelApi::sondeGet($p, 30);
         $ms = (int) round((microtime(true) - $t0) * 1000);
         $l = is_array($r['corps'] ?? null) ? analyseListe($r['corps']) : [];
-        $recent = null;
+        $recent = null; $vieux = null; $prise = null;
         foreach ($l as $c) {
-            $q = is_array($c) ? (string) ($c['pick_up_datetime'] ?? '') : '';
-            if ($q !== '' && ($recent === null || $q > $recent)) { $recent = $q; }
+            if (!is_array($c)) { continue; }
+            $q = (string) ($c['pick_up_datetime'] ?? '');
+            if ($q !== '') {
+                if ($recent === null || $q > $recent) { $recent = $q; }
+                if ($vieux === null || $q < $vieux) { $vieux = $q; }
+            }
+            $a = (string) ($c['accepting_timestamp'] ?? '');
+            if ($a !== '' && ($prise === null || $a < $prise)) { $prise = $a; }
         }
         $out['essais'][] = ['route' => $p, 'code' => (int) $r['code'], 'ms' => $ms,
-            'n' => $l === [] ? null : count($l), 'plusRecent' => $recent];
+            'n' => $l === [] ? null : count($l), 'plusRecent' => $recent,
+            'retraitLePlusAncien' => $vieux, 'priseLaPlusAncienne' => $prise];
     }
     return $out;
 }
