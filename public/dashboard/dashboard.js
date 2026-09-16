@@ -749,8 +749,13 @@
   }
   /* Une fois par magasin, par vue et par date : la page se relit toute seule
    * toutes les dix minutes, et des confettis toutes les dix minutes ne sont
-   * plus une fête, c'est une alarme. */
-  function confettisFaits() {
+   * plus une fête, c'est une alarme.
+   *
+   * Le nom ne dit pas « confettis » : `confettis(n)` existe déjà plus bas et
+   * rend une chaîne de papiers pour la carte du bureau. Deux fonctions de
+   * même nom, et JavaScript garde la dernière — celle-ci n'aurait jamais
+   * tourné. */
+  function feteFaite() {
     const cle = 'dbConfetti|' + S.shop + '|' + S.vue + '|' + S.date;
     try {
       if (localStorage.getItem(cle) === '1') { return true; }
@@ -758,8 +763,8 @@
     } catch (e) { /* navigation privée : on fête, et tant pis pour la mémoire */ }
     return false;
   }
-  function confettis() {
-    if (confettisFaits()) { return; }
+  function feteObjectif() {
+    if (feteFaite()) { return; }
     // Qui a demandé moins d'animations n'en reçoit pas : la nouvelle est déjà
     // dans la jauge, qui passe au vert.
     try {
@@ -849,7 +854,7 @@
       $.innerHTML = rendMobile(m, d);
       $.classList.add('mob');
       brancher();
-      if (objectifAtteint(m)) { confettis(); }
+      if (objectifAtteint(m)) { feteObjectif(); }
       return;
     }
     $.classList.remove('mob');
