@@ -862,7 +862,9 @@
       $.innerHTML = rendMobile(m, d);
       $.classList.add('mob');
       brancher();
-      const forcee = feteDemandee();
+      // La fête attend que le jour soit lu : lancée sur un mur encore vide,
+      // elle serait finie avant que le premier chiffre s'affiche.
+      const forcee = !!m && feteDemandee();
       if (forcee || objectifAtteint(m)) { feteObjectif(forcee); }
       return;
     }
