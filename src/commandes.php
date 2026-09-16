@@ -149,6 +149,11 @@ function ep_ventes_commandes(): array
         // à huit jours répond en 1,5 s avec 140 commandes. Les autres
         // écritures (`from`, `limit`, `per_page`) sont ignorées par le panel,
         // qui repart alors sur tout l'historique — donc expire aussi.
+        // Et `date_from` borne bien sur le RETRAIT, pas sur la prise — mesuré
+        // à Halle : borné au 1er septembre, le plus ancien retrait rendu est
+        // le 2 septembre alors que la plus ancienne prise remonte au 22 août.
+        // Une commande acceptée il y a trois semaines pour samedi prochain
+        // reste donc comptée, ce qui est exactement ce qu'il faut.
         $depuis = date('Y-m-d', strtotime('-' . CMD_FENETRE . ' day'));
         $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . $depuis, 25);
         if ((int) ($r['code'] ?? 0) === 200) {
@@ -261,55 +266,6 @@ function ep_ventes_commandes(): array
             'lignes' => $lignes];
     } catch (Throwable $e) {
         $out['livraisons'] = ['indispo' => true, 'motif' => $e->getMessage()];
-    }
-    return $out;
-}
-
-/**
- * GET /ventes/commandes/filtres?shop=2 — la route accepte-t-elle d'en rendre
- * moins ?
- *
- * `/shops/{id}/client-orders` rend tout l'historique : 7 245 commandes à
- * Corbais, au-delà de ce qu'un écran peut attendre. Si un paramètre borne la
- * réponse, l'écran devient immédiat ; sinon il faut vivre avec la mémoire de
- * quinze minutes. La sonde mesure le nombre de lignes ET le temps de chaque
- * écriture — c'est le temps qui tranche, pas l'existence d'une réponse.
- */
-function ep_commandes_filtres(): array
-{
-    $sid = (int) ($_GET['shop'] ?? 2);
-    if (!PanelApi::configured()) { return ['erreur' => 'compte panel non configuré']; }
-    $du = (string) ($_GET['depuis'] ?? date('Y-m-d', strtotime('-8 day')));
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du)) { $du = date('Y-m-d', strtotime('-8 day')); }
-    $base = '/shops/' . $sid . '/client-orders';
-    // `date_from` borne-t-il sur le RETRAIT ou sur la PRISE ? La question n'est
-    // pas théorique : s'il borne sur la prise, une commande acceptée il y a
-    // trois semaines pour samedi prochain disparaîtrait de l'écran. On compare
-    // donc plusieurs profondeurs, et on regarde la plus ANCIENNE date de
-    // retrait rendue — si elle recule avec la borne, c'est la prise qui filtre.
-    $cands = [$base, $base . '?date_from=' . $du, $base . '?from=' . $du,
-        $base . '?pick_up_date_from=' . $du, $base . '?status=new',
-        $base . '?limit=50', $base . '?per_page=50&page=1'];
-    $out = ['shop' => $sid, 'depuis' => $du, 'essais' => []];
-    foreach ($cands as $p) {
-        $t0 = microtime(true);
-        $r = PanelApi::sondeGet($p, 30);
-        $ms = (int) round((microtime(true) - $t0) * 1000);
-        $l = is_array($r['corps'] ?? null) ? analyseListe($r['corps']) : [];
-        $recent = null; $vieux = null; $prise = null;
-        foreach ($l as $c) {
-            if (!is_array($c)) { continue; }
-            $q = (string) ($c['pick_up_datetime'] ?? '');
-            if ($q !== '') {
-                if ($recent === null || $q > $recent) { $recent = $q; }
-                if ($vieux === null || $q < $vieux) { $vieux = $q; }
-            }
-            $a = (string) ($c['accepting_timestamp'] ?? '');
-            if ($a !== '' && ($prise === null || $a < $prise)) { $prise = $a; }
-        }
-        $out['essais'][] = ['route' => $p, 'code' => (int) $r['code'], 'ms' => $ms,
-            'n' => $l === [] ? null : count($l), 'plusRecent' => $recent,
-            'retraitLePlusAncien' => $vieux, 'priseLaPlusAncienne' => $prise];
     }
     return $out;
 }

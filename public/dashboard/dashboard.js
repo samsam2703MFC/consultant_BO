@@ -639,8 +639,12 @@
     const D = cmdEtat();
     if (!D) { return '<div class="db-stvide">lecture en cours…</div>'; }
     const C = D.commandes || {}, L = D.livraisons || {};
-    let h = '<div class="db-cmdt">';
-    h += '<div class="th"><span>À retirer</span><span>Articles</span><span>Montant</span></div>';
+    // Le panel ne joint pas le détail à la liste : quand aucune ligne ne sait
+    // son nombre d'articles, la colonne disparaît plutôt que d'aligner des
+    // tirets.
+    const art = (C.lignes || []).some(l => l.articles != null);
+    let h = `<div class="db-cmdt${art ? '' : ' sansArt'}">`;
+    h += `<div class="th"><span>À retirer</span>${art ? '<span>Articles</span>' : ''}<span>Montant</span></div>`;
     if (!(C.lignes || []).length) {
       h += `<div class="db-stvide">Aucune commande en cours${C.derniere ? ' — la dernière était à retirer le ' + esc(fD(C.derniere.slice(0, 10))) : ''}.
         ${C.dormantes ? `<br>${C.dormantes} fiche${C.dormantes > 1 ? 's' : ''} de plus de ${C.fenetre} jours n’${C.dormantes > 1 ? 'ont' : 'a'} jamais été clôturée${C.dormantes > 1 ? 's' : ''} : la remise n’y a pas été enregistrée. Elles ne comptent pas comme des commandes en attente.` : ''}</div>`;
@@ -649,7 +653,7 @@
         const j = l.quand ? l.quand.slice(0, 10) : null;
         const tard = j && j < AUJ;
         h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(j ? fD(j) : '—')}${l.quand ? ' · ' + esc(cmdHeure(l.quand)) : ''}</span>
-          <span class="n">${l.articles == null ? '—' : fN(l.articles)}</span><span class="n ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
+          ${art ? `<span class="n">${l.articles == null ? '—' : fN(l.articles)}</span>` : ''}<span class="n ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
       });
     }
     h += '</div><div class="db-cmdt" style="margin-top:12px">';
