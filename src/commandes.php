@@ -47,18 +47,109 @@ declare(strict_types=1);
  * jamais été enregistrée, pas des clients qu'on attend. Un écran qui crie 114
  * pour rien se fait ignorer en trois jours. Elles ne disparaissent pas pour
  * autant — `dormantes` les compte, et le tiroir le dit.
+ *
+ * L'API PASSE AVANT LA BASE, et c'est mesuré : `client_order` s'arrête au
+ * 14 juillet 2026 à 10 h 55 pour les quatre magasins — la même coupure que
+ * `transaction` et `product_movement`. Pendant ce temps
+ * `/shops/4/client-orders` rend 588 commandes à Halle, dont une acceptée
+ * aujourd'hui pour un retrait la semaine prochaine, là où la copie en compte
+ * 431 et s'arrête au 22 juillet. Lire la copie, ici, c'est afficher un magasin
+ * qui n'a rien commandé depuis deux mois alors qu'il prépare la semaine.
+ *
+ * Les livraisons fournisseur, elles, n'ont aucune route : elles restent lues
+ * en base, et l'écran dit alors la date à laquelle la copie s'est arrêtée
+ * plutôt que de faire passer un gel pour un calme.
  */
 const CMD_FENETRE = 8;
+/** La copie est relue au plus une fois par quart d'heure : l'API rend TOUTES
+ * les commandes du magasin (7 245 à Corbais), ce n'est pas une lecture qu'on
+ * refait à chaque ouverture de l'écran. */
+const CMD_CACHE_MIN = 15;
+
+/**
+ * Les mêmes comptes, à partir de la liste rendue par le panel.
+ *
+ * On n'y prend que la date, le statut, le volume et le montant : la réponse
+ * porte aussi le nom du client et celui de la vendeuse, ils s'arrêtent ici.
+ *
+ * @param list<array<string,mixed>> $l
+ */
+function cmdDepuisApi(array $l): array
+{
+    $auj = date('Y-m-d');
+    $maintenant = date('Y-m-d H:i:s');
+    $limite = date('Y-m-d', strtotime('-' . CMD_FENETRE . ' day'));
+    $n = ['total' => count($l), 'enCours' => 0, 'auj' => 0, 'aVenir' => 0,
+        'retard' => 0, 'dormantes' => 0, 'derniere' => null, 'montant' => 0.0, 'lignes' => []];
+    foreach ($l as $c) {
+        if (!is_array($c)) { continue; }
+        $quand = (string) ($c['pick_up_datetime'] ?? '');
+        if ($quand !== '' && ($n['derniere'] === null || $quand > $n['derniere'])) { $n['derniere'] = $quand; }
+        $remise = ($c['issuing_timestamp'] ?? null) !== null
+            || (string) ($c['order_status'] ?? '') === 'picked_up';
+        $annulee = ($c['non_collection_id_reason'] ?? null) !== null;
+        if ($remise || $annulee) { continue; }
+        if ($quand === '' || substr($quand, 0, 10) < $limite) { $n['dormantes']++; continue; }
+        $n['enCours']++;
+        if (substr($quand, 0, 10) === $auj) { $n['auj']++; }
+        elseif ($quand > $maintenant) { $n['aVenir']++; }
+        else { $n['retard']++; }
+        $montant = (float) ($c['total_value'] ?? 0);
+        $n['montant'] += $montant;
+        $articles = 0.0;
+        foreach ((array) ($c['products'] ?? []) as $p) {
+            if (is_array($p)) { $articles += (float) ($p['quantity'] ?? 0); }
+        }
+        $n['lignes'][] = ['quand' => $quand, 'statut' => $c['order_status'] ?? null,
+            'articles' => $articles, 'montant' => round($montant, 2)];
+    }
+    usort($n['lignes'], static fn ($a, $b) => strcmp((string) $a['quand'], (string) $b['quand']));
+    $n['lignes'] = array_slice($n['lignes'], 0, 20);
+    $n['montant'] = round($n['montant'], 2);
+    $n['fenetre'] = CMD_FENETRE;
+    return $n;
+}
+
 function ep_ventes_commandes(): array
 {
     $sid = (int) ($_GET['shop'] ?? 0);
     if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $out = ['shop' => $sid, 'commandes' => null, 'livraisons' => null];
 
-    // --- les commandes clients -------------------------------------------
+    // --- l'état de la copie ----------------------------------------------
+    // La caisse sert de battement de cœur : c'est elle qui dit jusqu'à quand
+    // la base a été alimentée. Les livraisons n'ont pas d'autre source, donc
+    // l'écran doit pouvoir dire « copie arrêtée le … » plutôt que de faire
+    // passer un gel pour un calme.
+    try {
+        $c = Db::rows('SELECT MAX(insert_timestamp) le FROM `transaction`')[0]['le'] ?? null;
+        $out['copie'] = ['arretee' => $c,
+            'retard' => $c === null ? null : (int) floor((time() - strtotime((string) $c)) / 86400)];
+    } catch (Throwable $e) { $out['copie'] = null; }
+
+    // --- les commandes clients : l'API d'abord ---------------------------
+    $cle = 'cmdApi:' . $sid;
+    $memo = setting($cle);
+    if (is_array($memo) && isset($memo['le'], $memo['v'])
+        && (time() - (int) $memo['le']) < CMD_CACHE_MIN * 60) {
+        $out['commandes'] = $memo['v'];
+    } elseif (PanelApi::configured()) {
+        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders');
+        if ((int) ($r['code'] ?? 0) === 200) {
+            $v = cmdDepuisApi(analyseListe(is_array($r['corps']) ? $r['corps'] : []));
+            $v['source'] = 'api';
+            $out['commandes'] = $v;
+            try {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    [$cle, json_encode(['le' => time(), 'v' => $v])]);
+            } catch (Throwable $e) { /* mémorisation best-effort */ }
+        }
+    }
+
+    // --- repli sur la copie, quand le panel ne répond pas -----------------
     // Le montant vient du détail (`client_order_product`) : l'entête ne le
     // porte pas. Une commande sans ligne compte quand même, à 0 €.
-    try {
+    if ($out['commandes'] === null) { try {
         $ouverte = 'co.issuing_timestamp IS NULL
                     AND (co.order_status IS NULL OR co.order_status <> \'picked_up\')
                     AND co.non_collection_id_reason IS NULL';
@@ -93,10 +184,10 @@ function ep_ventes_commandes(): array
             'auj' => (int) ($t['auj'] ?? 0), 'aVenir' => (int) ($t['aVenir'] ?? 0),
             'retard' => (int) ($t['retard'] ?? 0), 'dormantes' => (int) ($t['dormantes'] ?? 0),
             'fenetre' => CMD_FENETRE, 'derniere' => $t['derniere'] ?? null,
-            'montant' => round($montant, 2), 'lignes' => $lignes];
+            'montant' => round($montant, 2), 'lignes' => $lignes, 'source' => 'base'];
     } catch (Throwable $e) {
         $out['commandes'] = ['indispo' => true, 'motif' => $e->getMessage()];
-    }
+    } }
 
     // --- les livraisons fournisseur --------------------------------------
     // Le nom du fournisseur n'est pas dans `material_order` : il faut la table
