@@ -586,7 +586,8 @@
     if (!C || C.indispo) { return murC('Commandes clients', '—', C ? esc(C.motif) : 'indisponible'); }
     if (!C.enCours) {
       return murC('Commandes clients', '0',
-        C.derniere ? 'dernière le ' + esc(fD(C.derniere.slice(0, 10))) : 'aucune commande enregistrée',
+        (C.derniere ? 'dernière le ' + esc(fD(C.derniere.slice(0, 10))) : 'aucune commande enregistrée')
+          + (C.dormantes ? ' · ' + C.dormantes + ' fiche' + (C.dormantes > 1 ? 's' : '') + ' jamais clôturée' + (C.dormantes > 1 ? 's' : '') : ''),
         '', 'cmddrop');
     }
     const bouts = [];
@@ -622,21 +623,21 @@
     const D = cmdEtat();
     if (!D) { return '<div class="db-stvide">lecture en cours…</div>'; }
     const C = D.commandes || {}, L = D.livraisons || {};
-    let h = '<div class="db-stt">';
-    h += `<div class="th"><span>À retirer</span><span class="v">Articles</span><span class="v">Montant</span></div>`;
+    let h = '<div class="db-cmdt">';
+    h += '<div class="th"><span>À retirer</span><span>Articles</span><span>Montant</span></div>';
     if (!(C.lignes || []).length) {
-      h += `<div class="db-stvide">Aucune commande en cours${C.derniere ? ' — la dernière a été retirée le ' + esc(fD(C.derniere.slice(0, 10))) : ''}.</div>`;
+      h += `<div class="db-stvide">Aucune commande en cours${C.derniere ? ' — la dernière était à retirer le ' + esc(fD(C.derniere.slice(0, 10))) : ''}.
+        ${C.dormantes ? `<br>${C.dormantes} fiche${C.dormantes > 1 ? 's' : ''} de plus de ${C.fenetre} jours n’${C.dormantes > 1 ? 'ont' : 'a'} jamais été clôturée${C.dormantes > 1 ? 's' : ''} : la remise n’y a pas été enregistrée. Elles ne comptent pas comme des commandes en attente.` : ''}</div>`;
     } else {
       C.lignes.forEach(l => {
         const j = l.quand ? l.quand.slice(0, 10) : null;
         const tard = j && j < AUJ;
-        h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(j ? fD(j) : '—')} ${esc(cmdHeure(l.quand))}</span>
-          <span class="v">${fN(l.articles)}</span><span class="v ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
+        h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(j ? fD(j) : '—')}${l.quand ? ' · ' + esc(cmdHeure(l.quand)) : ''}</span>
+          <span class="n">${fN(l.articles)}</span><span class="n ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
       });
     }
-    h += '</div>';
-    h += `<div class="db-stt" style="margin-top:10px">
-      <div class="th"><span>Livraison attendue</span><span class="v">Réfs</span><span class="v">Attendue</span></div>`;
+    h += '</div><div class="db-cmdt" style="margin-top:12px">';
+    h += '<div class="th"><span>Livraison en route</span><span>Réfs</span><span>Attendue</span></div>';
     if (!(L.lignes || []).length) {
       h += `<div class="db-stvide">Aucune livraison en route${L.derniere ? ' — la dernière est arrivée le ' + esc(fD(L.derniere.slice(0, 10))) : ''}.</div>`;
     } else {
@@ -644,7 +645,7 @@
         const a = l.attendue ? l.attendue.slice(0, 10) : null;
         const tard = a && a < AUJ;
         h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(l.fournisseur || 'Fournisseur')}</span>
-          <span class="v">${fN(l.refs)}</span><span class="v ${tard ? 'ko' : 'mu'}">${a ? esc(fD(a)) : '—'}</span></div>`;
+          <span class="n">${fN(l.refs)}</span><span class="n ${tard ? 'ko' : 'mu'}">${a ? esc(fD(a)) : '—'}</span></div>`;
       });
     }
     h += '</div>';
@@ -698,7 +699,7 @@
     // Les tiroirs : la seule chose qui flotte au-dessus du mur, donc la seule
     // qui a droit à un cadre.
     if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
-    if (S.cmdOuvert) { h += `<div class="mb-tir">${cmdTiroir()}</div>`; }
+    if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
     if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     h += '</div>';

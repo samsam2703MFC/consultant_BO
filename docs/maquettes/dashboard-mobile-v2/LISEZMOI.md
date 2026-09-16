@@ -39,6 +39,20 @@ en premier.
 
 `planche.html` met les trois côte à côte.
 
+## Ce qui a été retenu
+
+**B**, le mur — et deux mesures de plus, demandées après coup : les
+**commandes clients en cours** et les **livraisons** fournisseur attendues.
+Le mur en porte donc douze, toujours sans défiler.
+
+La mesure a réservé une surprise, consignée ici parce qu'elle vaut pour la
+suite : ces deux-là existent en base (`client_order`, `material_order`) et la
+seule route du panel qui réponde, `/shops/{id}/client-orders`, rend
+exactement la même chose — mais il n'y a plus d'activité. Dernière commande à
+Gosselies le **30 mai**, dernière livraison reçue le **12 juillet**, deux
+commandes fournisseur encore en route. D'où la règle tenue à l'écran : zéro
+n'est jamais une panne, la cellule donne la date de la dernière.
+
 ## Regénérer
 
 ```bash

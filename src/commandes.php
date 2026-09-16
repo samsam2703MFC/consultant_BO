@@ -37,12 +37,18 @@ declare(strict_types=1);
  * GET /ventes/commandes?shop=3 — les commandes clients en cours et les
  * livraisons fournisseur attendues, pour un magasin.
  *
- * « En cours » a un sens précis : la commande n'a pas été remise
- * (`issuing_timestamp` vide et statut différent de `picked_up`) et n'a pas été
- * annulée (`non_collection_id_reason` vide). Trois sous-ensembles comptent
- * pour l'écran — celles à retirer aujourd'hui, celles à venir, et celles dont
- * l'heure de retrait est passée sans que personne soit venu.
+ * « En cours » a un sens précis, et il a fallu le resserrer après mesure : la
+ * commande n'a pas été remise (`issuing_timestamp` vide et statut différent de
+ * `picked_up`), n'a pas été annulée (`non_collection_id_reason` vide) — ET sa
+ * date de retrait tombe dans les huit derniers jours ou plus tard.
+ *
+ * Sans cette fenêtre, Gosselies afficherait « 114 commandes en retard »,
+ * remontant jusqu'au 3 août 2025 : ce sont des fiches dont la remise n'a
+ * jamais été enregistrée, pas des clients qu'on attend. Un écran qui crie 114
+ * pour rien se fait ignorer en trois jours. Elles ne disparaissent pas pour
+ * autant — `dormantes` les compte, et le tiroir le dit.
  */
+const CMD_FENETRE = 8;
 function ep_ventes_commandes(): array
 {
     $sid = (int) ($_GET['shop'] ?? 0);
@@ -53,16 +59,18 @@ function ep_ventes_commandes(): array
     // Le montant vient du détail (`client_order_product`) : l'entête ne le
     // porte pas. Une commande sans ligne compte quand même, à 0 €.
     try {
-        $enCours = 'co.issuing_timestamp IS NULL
+        $ouverte = 'co.issuing_timestamp IS NULL
                     AND (co.order_status IS NULL OR co.order_status <> \'picked_up\')
                     AND co.non_collection_id_reason IS NULL';
+        $fen = 'co.pick_up_datetime >= DATE_SUB(CURDATE(), INTERVAL ' . CMD_FENETRE . ' DAY)';
         $t = Db::rows("SELECT
                 COUNT(*) total,
-                SUM($enCours) enCours,
-                SUM($enCours AND DATE(co.pick_up_datetime) = CURDATE()) auj,
-                SUM($enCours AND co.pick_up_datetime > NOW()) aVenir,
-                SUM($enCours AND co.pick_up_datetime < NOW()
+                SUM($ouverte AND $fen) enCours,
+                SUM($ouverte AND $fen AND DATE(co.pick_up_datetime) = CURDATE()) auj,
+                SUM($ouverte AND $fen AND co.pick_up_datetime > NOW()) aVenir,
+                SUM($ouverte AND $fen AND co.pick_up_datetime < NOW()
                     AND DATE(co.pick_up_datetime) <> CURDATE()) retard,
+                SUM($ouverte AND NOT $fen) dormantes,
                 MAX(co.pick_up_datetime) derniere
               FROM client_order co WHERE co.id_shop = ?", [$sid])[0] ?? [];
         $lignes = [];
@@ -71,7 +79,7 @@ function ep_ventes_commandes(): array
                                   COALESCE(SUM(p.total_gross_value_after_discount), 0) montant
                              FROM client_order co
                              LEFT JOIN client_order_product p ON p.id_order = co.id
-                            WHERE co.id_shop = ? AND $enCours
+                            WHERE co.id_shop = ? AND $ouverte AND $fen
                             GROUP BY co.id, co.pick_up_datetime, co.order_status
                             ORDER BY co.pick_up_datetime ASC LIMIT 20", [$sid]) as $r) {
             // Ni nom ni téléphone : la date, le volume, le montant.
@@ -83,8 +91,8 @@ function ep_ventes_commandes(): array
         $out['commandes'] = [
             'total' => (int) ($t['total'] ?? 0), 'enCours' => (int) ($t['enCours'] ?? 0),
             'auj' => (int) ($t['auj'] ?? 0), 'aVenir' => (int) ($t['aVenir'] ?? 0),
-            'retard' => (int) ($t['retard'] ?? 0),
-            'derniere' => $t['derniere'] ?? null,
+            'retard' => (int) ($t['retard'] ?? 0), 'dormantes' => (int) ($t['dormantes'] ?? 0),
+            'fenetre' => CMD_FENETRE, 'derniere' => $t['derniere'] ?? null,
             'montant' => round($montant, 2), 'lignes' => $lignes];
     } catch (Throwable $e) {
         $out['commandes'] = ['indispo' => true, 'motif' => $e->getMessage()];
