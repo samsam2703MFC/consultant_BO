@@ -565,6 +565,21 @@ chmod 600 /etc/cron.d/cockpit-scouting
 } > /etc/cron.d/cockpit-push
 chown root:root /etc/cron.d/cockpit-push
 chmod 600 /etc/cron.d/cockpit-push
+# --- La carte des sources ----------------------------------------------------
+# Chaque nuit : d'où vient ce que chaque écran affiche. Lue dans le code, donc
+# juste par construction — une liste tenue à la main mentirait dès la semaine
+# suivante.
+{
+  echo "SHELL=/bin/sh"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+  echo "40 3 * * * root php ${TARGET_DIR}/bin/carte_sources.php >>/var/log/cockpit-carte.log 2>&1"
+} > /etc/cron.d/cockpit-carte
+chown root:root /etc/cron.d/cockpit-carte
+chmod 600 /etc/cron.d/cockpit-carte
+# Et tout de suite, pour que l'écran ne soit pas vide à la première visite.
+php "$TARGET_DIR/bin/carte_sources.php" >>/var/log/cockpit-carte.log 2>&1 || true
+log "Carte des sources : /etc/cron.d/cockpit-carte — chaque nuit à 3 h 40 (journal : /var/log/cockpit-carte.log)."
+
 log "Notifications de stock : /etc/cron.d/cockpit-push — toutes les 15 min de 5 h à 20 h (journal : /var/log/cockpit-push.log)."
 
 systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true

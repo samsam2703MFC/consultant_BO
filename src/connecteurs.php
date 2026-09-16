@@ -144,3 +144,79 @@ function connecteurEtat(string $code): ?array
     }
     return null;
 }
+
+/**
+ * POST /connecteurs/{code}/test — « est-ce que ça marche, maintenant ? »
+ *
+ * Un vrai appel, pas une relecture de réglage : une clé peut être présente et
+ * refusée, un mot de passe peut avoir expiré. Le résultat s'écrit dans
+ * `ceo_connecteur` comme n'importe quel geste, et l'écran le montre.
+ *
+ * Chaque connecteur a l'appel le moins cher qui prouve quelque chose :
+ *  - panel et ERP ont déjà leur `tester()` (authentification) ;
+ *  - Google fait une recherche de lieu, la requête la plus légère de l'API ;
+ *  - l'IA n'a pas d'appel gratuit — on ne facture pas un test à chaque clic,
+ *    on dit seulement si la clé est là et ce que le dernier appel a donné.
+ */
+function wr_connecteur_test(string $code): array
+{
+    if (!isset(CONNECTEURS[$code])) { http_response_code(404); return ['error' => 'connecteur inconnu']; }
+    connecteurTable();
+    $t0 = microtime(true);
+    $ok = false; $msg = ''; $items = 0; $teste = true;
+
+    if ($code === 'panel') {
+        [$ok, $msg] = PanelApi::tester();
+        if ($ok) {
+            // Un jeton valide ne dit pas que les données suivent : on lit les
+            // boutiques, c'est la première chose dont tout l'écran dépend.
+            $r = PanelApi::get('/shops');
+            $l = is_array($r) ? analyseListe($r) : [];
+            $items = count($l);
+            $msg = $items ? $items . ' boutique' . ($items > 1 ? 's' : '') . ' lues' : 'authentifié, mais aucune boutique rendue';
+            $ok = $items > 0;
+        }
+    } elseif ($code === 'erp') {
+        [$ok, $msg] = ErpApi::tester();
+    } elseif ($code === 'google') {
+        if (!GoogleApi::configured()) { $ok = false; $msg = 'clé Google absente'; }
+        else {
+            $r = GoogleApi::chercher('L\'Atelier by Halle');
+            $ok = is_array($r) && $r !== [];
+            $msg = $ok ? 'recherche de lieu acceptée' : 'la clé est là, mais Google n’a rien rendu';
+        }
+    } elseif ($code === 'anthropic') {
+        // Pas d'appel : une proposition de note se facture. On ne teste que la
+        // présence de la clé, et on le dit clairement.
+        $teste = false;
+        $ok = Anthropic::configured();
+        $msg = $ok ? 'clé présente — non appelée, une proposition de note se facture'
+                   : 'clé absente';
+    }
+
+    $ms = (int) round((microtime(true) - $t0) * 1000);
+    if ($teste) { connecteurNote($code, $ok, $msg . ' · ' . $ms . ' ms', $items); }
+    return ['code' => $code, 'ok' => $ok, 'message' => $msg, 'ms' => $ms, 'appele' => $teste,
+        'connecteur' => connecteurEtat($code)];
+}
+
+/**
+ * GET /carte-sources — d'où vient ce que chaque écran affiche.
+ *
+ * La carte est établie par `bin/carte_sources.php`, en cron quotidien : la
+ * lire dans le code à chaque requête coûterait un parcours de deux mégaoctets
+ * de PHP pour une réponse qui ne change qu'aux livraisons.
+ */
+function ep_carte_sources(): array
+{
+    $c = setting('carteSources', null);
+    if (!is_array($c) || !isset($c['lignes'])) {
+        return ['etabli' => false,
+            'motif' => 'carte jamais établie — lancer bin/carte_sources.php (cron quotidien posé au déploiement)'];
+    }
+    $c['etabli'] = true;
+    // L'âge se lit tout de suite : une carte de trois semaines ne décrit plus
+    // le code d'aujourd'hui.
+    $c['jours'] = isset($c['etabliLe']) ? (int) floor((time() - strtotime((string) $c['etabliLe'])) / 86400) : null;
+    return $c;
+}
