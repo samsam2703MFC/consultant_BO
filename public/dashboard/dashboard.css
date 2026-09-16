@@ -594,6 +594,19 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .mb-sem>div{display:flex;flex-direction:column;justify-content:flex-end;height:100%}
 .mb-sem i{display:block;width:100%;border-radius:2px 2px 0 0}
 .mb-sem span{display:block;font:600 7.5px var(--font-ui);color:var(--color-text-muted);text-align:center;margin-top:2px}
+/* L'objectif atteint. Rien qui gêne le doigt, rien qui reste : des papiers
+   qui tombent une fois, puis le nœud disparaît. */
+.mb-confi{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
+.mb-confi i{position:absolute;top:-24px;border-radius:1px;opacity:0;
+  animation-name:mb-tombe;animation-timing-function:cubic-bezier(.25,.6,.5,1);animation-fill-mode:forwards}
+@keyframes mb-tombe{
+  0%{opacity:0;transform:translateY(0) rotate(0)}
+  8%{opacity:1}
+  85%{opacity:1}
+  100%{opacity:0;transform:translateY(102vh) rotate(var(--r,360deg))}
+}
+@media (prefers-reduced-motion:reduce){.mb-confi{display:none}}
+
 /* Les tiroirs gardent leur forme de carte : ils sont la seule chose qui
    flotte au-dessus du mur, donc la seule qui a droit à un cadre. */
 #dash.mob .mb-tir{margin:10px 0 2px}
