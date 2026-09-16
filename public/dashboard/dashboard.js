@@ -18,7 +18,7 @@
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
-    stockOuvert: false, stockVues: null,
+    stockOuvert: false, stockVues: null, cmdOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -57,6 +57,15 @@
     if (S.vue === 'semaine') { const j = (t.getDay() + 6) % 7; const du = new Date(t); du.setDate(t.getDate() - j); const au = new Date(du); au.setDate(du.getDate() + 6); return [du.toISOString().slice(0, 10), au.toISOString().slice(0, 10)]; }
     const du = S.date.slice(0, 8) + '01'; const fin = new Date(t.getFullYear(), t.getMonth() + 1, 0); return [du, fin.toISOString().slice(0, 10)];
   }
+  /** Le lundi et le dimanche de la date regardée, quelle que soit la vue :
+   * au téléphone, le mur porte la semaine même quand on lit le jour. */
+  function bornesSemaine() {
+    const t = new Date(S.date + 'T12:00:00');
+    const j = (t.getDay() + 6) % 7;
+    const du = new Date(t); du.setDate(t.getDate() - j);
+    const au = new Date(du); au.setDate(du.getDate() + 6);
+    return [du.toISOString().slice(0, 10), au.toISOString().slice(0, 10)];
+  }
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
       S.enCours[cle] = true; delete S.err[cle];
@@ -87,6 +96,12 @@
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
     if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
+    // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
+    // la même que la vue Semaine, donc déjà connue du serveur.
+    if (estMobile() && S.vue === 'jour') { lireAux('sem|' + bornesSemaine()[0], '/exploitation/periode?vue=semaine&date=' + S.date, force); }
+    // Les commandes clients et les livraisons : une seule lecture, elle porte
+    // les deux et ne dépend pas de la période regardée.
+    if (estMobile()) { lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force); }
     // Les non-conformités se lisent sous les trois vues : la veille en Jour,
     // la période affichée en Semaine et en Mois.
     lireAux(cleNC(), urlNC(ncFenetre()), force);
@@ -471,115 +486,221 @@
     return { total: T.length, faites: nF, nonFaites: T.length - nF, bloquantes: T.filter(bloq).length };
   }
 
-  function mobHero(m) {
+  /* Une cellule du mur : une étiquette, un chiffre, une ligne d'explication.
+   * `ouvre` porte le nom de l'attribut qui déplie le tiroir correspondant. */
+  function murC(k, v, s, cls, ouvre, apres) {
+    return `<div${ouvre ? ` data-${ouvre}="1" data-ouvre="1"` : ''}><div class="k">${k}</div>`
+      + `<div class="v ${cls || ''}">${v}</div>`
+      + (s ? `<div class="s">${s}</div>` : '') + (apres || '') + '</div>';
+  }
+  const murR = (cells, un) => { const c = cells.filter(Boolean); return c.length ? `<div class="mb-r${un ? ' un' : ''}">${c.join('')}</div>` : ''; };
+  const murJauge = (pct, coul) => `<div class="mb-jauge"><i style="width:${Math.max(0, Math.min(100, pct || 0)).toFixed(1)}%${coul ? ';background:' + coul : ''}"></i></div>`;
+
+  /** Les sept barres de la semaine : la hauteur dit l'atteinte, pas le chiffre —
+   * sinon le dimanche écrase le lundi et on ne voit plus qui a manqué. */
+  function murSemaine(J) {
+    return `<div class="mb-sem">${J.map(j => {
+      const att = (j.ca != null && j.objectif) ? j.ca / j.objectif : null;
+      const h = att == null ? 3 : Math.max(3, Math.round(Math.min(1.2, att) * 26));
+      const c = att == null ? 'var(--color-border-secondary)' : (att >= 1 ? '#2d7a3e' : 'var(--color-primary)');
+      return `<div><i style="height:${h}px;background:${c}"></i><span>${esc(j.court || fD(j.date))}</span></div>`;
+    }).join('')}</div>`;
+  }
+
+  /** Le grand chiffre de la période regardée, avec sa jauge d'atteinte. */
+  function murPeriode(m) {
     if (S.vue === 'jour') {
       const obj = m && m.objectifJour;
-      const att = obj ? Math.min(100, 100 * m.ca / obj) : 0;
-      const ecart = obj ? obj - m.ca : null;
+      const att = obj ? 100 * m.ca / obj : 0;
+      const ecart = obj ? m.ca - obj : null;
       const cl = (ecart != null && m.panier > 0) ? Math.round(Math.abs(ecart) / m.panier) : null;
-      return `<div class="mb-hero">
-        <div class="k">Chiffre d’affaires du jour</div>
-        <div class="v">${fE(m ? m.ca : null)}</div>
-        <div class="o">${obj ? 'objectif ' + fE(obj) + ' · ' + fP(att) : 'pas d’objectif du jour'}</div>
-        ${obj ? `<div class="mb-bar"><i style="width:${att.toFixed(1)}%"></i></div>
-        <div class="dl">${ecart > 0
-            ? `<span><b class="ko">− ${fE(ecart)}</b> sur l’objectif</span>${cl != null ? `<span>${fN(cl)} clients de moins</span>` : ''}`
-            : `<span><b class="ok">+ ${fE(-ecart)}</b> au-dessus</span>${cl != null ? `<span>${fN(cl)} clients d’avance</span>` : ''}`}</div>` : ''}
-      </div>`;
+      return murC('Chiffre d’affaires du jour', fE(m ? m.ca : null),
+        obj ? `objectif ${fE(obj)} · ${fP(att)} · <span class="${ecart >= 0 ? 'ok' : 'ko'}">${fS(ecart)}</span>`
+              + (cl ? ` · ${fN(cl)} client${cl > 1 ? 's' : ''} ${ecart >= 0 ? 'd’avance' : 'de moins'}` : '')
+            : 'pas d’objectif du jour',
+        '', '', obj ? murJauge(att, att >= 100 ? '#2d7a3e' : '') : '');
     }
+    const realise = m ? (m.realise != null ? m.realise : m.ca) : null;
+    const att = m && m.attendu ? 100 * (realise || 0) / m.attendu : 0;
     const av = m && m.ecart != null && m.ecart >= 0;
-    const att = m && m.attendu ? Math.min(100, 100 * (m.realise || 0) / m.attendu) : 0;
-    return `<div class="mb-hero">
-      <div class="k">La semaine · ${esc(fD(bornes()[0]))} → ${esc(fD(bornes()[1]))}</div>
-      <div class="v">${fE(m ? (m.realise != null ? m.realise : m.ca) : null)}</div>
-      <div class="o">${m && m.attendu != null ? 'attendu à ce jour ' + fE(m.attendu) : ''}${m && m.objectif ? ' · objectif ' + fE(m.objectif) : ''}</div>
-      ${m && m.attendu ? `<div class="mb-bar"><i class="${av ? 'ok' : ''}" style="width:${att.toFixed(1)}%"></i></div>
-      <div class="dl"><span><b class="${av ? 'ok' : 'ko'}">${av ? '+ ' : '− '}${fE(Math.abs(m.ecart))}</b> sur l’attendu</span>
-        ${m.clientsManquants != null ? `<span>${fN(Math.abs(m.clientsManquants))} clients ${m.clientsManquants > 0 ? 'de moins' : 'd’avance'}</span>` : ''}</div>` : ''}
-    </div>`;
+    const J = m && Array.isArray(m.jours) ? m.jours : null;
+    return murC(`La semaine · ${esc(fD(bornes()[0]))} → ${esc(fD(bornes()[1]))}`, fE(realise),
+      m && m.attendu != null
+        ? `attendu à ce jour ${fE(m.attendu)} · <span class="${av ? 'ok' : 'ko'}">${fS(m.ecart)}</span>`
+          + (m.clientsManquants ? ` · ${fN(Math.abs(m.clientsManquants))} clients ${m.clientsManquants > 0 ? 'manquants' : 'd’avance'}` : '')
+        : (m && m.objectif ? 'objectif ' + fE(m.objectif) : ''),
+      '', '', (m && m.attendu ? murJauge(att, av ? '#2d7a3e' : '') : '') + (J ? murSemaine(J) : ''));
   }
 
-  /* Les non-conformités au téléphone : le bandeau du bureau porte trois
-   * pastilles sur une ligne, il ne tient pas dans 390 px. Même donnée, forme
-   * de carte — et le tiroir du bureau en dessous quand on l'ouvre. */
-  function mobNC() {
+  /** La semaine vue depuis le jour : le retard, et les sept barres. */
+  function murSemaineResume() {
+    const d = S.aux['sem|' + bornesSemaine()[0]];
+    const m = d && Array.isArray(d.magasins) ? d.magasins.find(x => String(x.shopId) === String(S.shop)) : null;
+    if (!m) { return murC('La semaine', '…', 'lecture de la semaine…'); }
+    const av = m.ecart != null && m.ecart >= 0;
+    const J = Array.isArray(m.jours) ? m.jours : null;
+    const arret = J ? (J.filter(j => j.passe).slice(-1)[0] || null) : null;
+    return murC(`La semaine${arret ? ' · au ' + esc(fD(arret.date)) : ''}`,
+      m.ecart == null ? fE(m.realise) : fS(m.ecart), m.ecart == null ? '' :
+        `${fE(m.realise)} contre ${fE(m.attendu)} attendus`
+        + (m.clientsManquants ? ` · ${fN(Math.abs(m.clientsManquants))} clients ${m.clientsManquants > 0 ? 'manquants' : 'd’avance'}` : ''),
+      m.ecart == null ? '' : (av ? 'ok' : 'ko'), '', J ? murSemaine(J) : '');
+  }
+
+  /* Les non-conformités, en une cellule du mur : le nombre ouvert, et ce qui
+   * l'explique en une ligne. Le tiroir du bureau s'ouvre dessous. */
+  function murNC() {
     const cle = cleNC(), D = S.aux[cle], f = ncFenetre();
     const quand = f.jour ? 'hier' : (S.vue === 'semaine' ? 'cette semaine' : 'ce mois');
-    if (S.err[cle]) { return mobCarte('Non-conformités', esc(S.err[cle]), '—'); }
-    if (!D) { return mobCarte('Non-conformités', 'lecture en cours…', '…'); }
-    if (D.indispo) { return ''; }
+    if (S.err[cle]) { return murC('Non-conformités', '—', esc(S.err[cle])); }
+    if (!D) { return murC('Non-conformités', '…', 'lecture du panel…'); }
+    if (D.indispo) { return murC('Non-conformités', '—', esc(D.motif || 'indisponible')); }
     const L = ncLignes();
     if (!L.length) {
-      return mobCarte('Non-conformités',
+      return murC('Non-conformités', D.notees ? '0' : '—',
         D.notees ? D.notees + ' tâche' + (D.notees > 1 ? 's' : '') + ' notée' + (D.notees > 1 ? 's' : '') + ' ' + quand + ', rien à reprendre'
                  : 'aucun contrôle consigné ' + (f.jour ? 'ce jour-là' : 'sur cette période'),
-        D.notees ? '✓' : '—');
+        D.notees ? 'ok' : '', 'ncdrop');
     }
-    const ouverts = L.filter(x => x.etat.c !== 'ok'), repris = L.filter(x => x.etat.c === 'ok');
-    const pills = `<div class="mb-pills">${ouverts.length ? `<span class="ko">${ouverts.length} à reprendre</span>` : ''}
-      ${repris.length ? `<span class="ok">${repris.length} reprise${repris.length > 1 ? 's' : ''}</span>` : ''}
-      <span>${D.notees} tâche${D.notees > 1 ? 's' : ''} notée${D.notees > 1 ? 's' : ''}</span></div>`;
-    return `<div class="mb-c" data-ncdrop="1"><div class="hd">
-      <span class="k">Non-conformités<em>${esc(quand)} · ${esc(f.jour ? fDL(f.du) : libPeriode())}</em></span>
-      <span class="v ${ouverts.length ? 'ko' : 'ok'}">${L.length}</span><span class="ch">${S.ncOuvert ? '⌄' : '›'}</span></div>
-      <div class="cp">${pills}</div></div>${S.ncOuvert ? ncTiroir(D, L) : ''}`;
+    const ouverts = L.filter(x => x.etat.c !== 'ok').length;
+    return murC('Non-conformités', String(L.length),
+      `${esc(quand)} · ${ouverts ? `<span class="ko">${ouverts} à reprendre</span> · ` : ''}${D.notees} notée${D.notees > 1 ? 's' : ''}`,
+      ouverts ? 'wa' : 'ok', 'ncdrop');
   }
 
-  function mobCarte(titre, sous, val, cls, corps) {
-    return `<div class="mb-c ${cls || ''}"><div class="hd"><span class="k">${titre}${sous ? `<em>${sous}</em>` : ''}</span>
-      <span class="v">${val}</span><span class="ch">›</span></div>${corps ? `<div class="cp">${corps}</div>` : ''}</div>`;
+  /* --- Commandes clients et livraisons --------------------------------------
+   * Deux cellules du mur, une seule lecture. Zéro n'est pas une panne : quand
+   * il n'y a rien en cours, la cellule dit la date de la dernière — sinon on
+   * ne sait pas distinguer « rien à faire » de « l'écran ne lit plus rien ».
+   * Le retard de retrait passe devant : une commande payée que personne n'est
+   * venu chercher coûte deux fois. */
+  function cmdEtat() { return S.aux['cmd|' + S.shop] || null; }
+  const cmdHeure = q => q ? q.slice(11, 16).replace(':', ' h ') : '';
+
+  function murCommandes() {
+    const err = S.err['cmd|' + S.shop];
+    if (err) { return murC('Commandes clients', '—', esc(err)); }
+    const D = cmdEtat();
+    if (!D) { return murC('Commandes clients', '…', 'lecture des commandes…'); }
+    const C = D.commandes;
+    if (!C || C.indispo) { return murC('Commandes clients', '—', C ? esc(C.motif) : 'indisponible'); }
+    if (!C.enCours) {
+      return murC('Commandes clients', '0',
+        C.derniere ? 'dernière le ' + esc(fD(C.derniere.slice(0, 10))) : 'aucune commande enregistrée',
+        '', 'cmddrop');
+    }
+    const bouts = [];
+    if (C.auj) { bouts.push(`<span class="ok">${C.auj} à retirer aujourd’hui</span>`); }
+    if (C.retard) { bouts.push(`<span class="ko">${C.retard} en retard</span>`); }
+    if (C.aVenir) { bouts.push(C.aVenir + ' à venir'); }
+    if (C.montant) { bouts.push(fE(C.montant)); }
+    return murC('Commandes clients', fN(C.enCours), bouts.join(' · '),
+      C.retard ? 'ko' : (C.auj ? 'ok' : ''), 'cmddrop');
+  }
+
+  function murLivraisons() {
+    const D = cmdEtat();
+    if (S.err['cmd|' + S.shop]) { return murC('Livraisons', '—', 'lecture impossible'); }
+    if (!D) { return murC('Livraisons', '…', 'lecture des livraisons…'); }
+    const L = D.livraisons;
+    if (!L || L.indispo) { return murC('Livraisons', '—', L ? esc(L.motif) : 'indisponible'); }
+    if (!L.enRoute) {
+      return murC('Livraisons', '0',
+        L.derniere ? 'dernière reçue le ' + esc(fD(L.derniere.slice(0, 10))) : 'aucune commande fournisseur',
+        '', 'cmddrop');
+    }
+    const p = L.prochaine ? L.prochaine.slice(0, 10) : null;
+    const tard = p && p < AUJ;
+    return murC('Livraisons', fN(L.enRoute),
+      (p ? (tard ? `<span class="ko">attendue le ${esc(fD(p))}</span>` : 'attendue le ' + esc(fD(p))) : 'sans date annoncée')
+        + (L.derniere ? ' · dernière reçue le ' + esc(fD(L.derniere.slice(0, 10))) : ''),
+      tard ? 'ko' : 'wa', 'cmddrop');
+  }
+
+  /** Le tiroir : les commandes à retirer d'abord, les livraisons ensuite. */
+  function cmdTiroir() {
+    const D = cmdEtat();
+    if (!D) { return '<div class="db-stvide">lecture en cours…</div>'; }
+    const C = D.commandes || {}, L = D.livraisons || {};
+    let h = '<div class="db-stt">';
+    h += `<div class="th"><span>À retirer</span><span class="v">Articles</span><span class="v">Montant</span></div>`;
+    if (!(C.lignes || []).length) {
+      h += `<div class="db-stvide">Aucune commande en cours${C.derniere ? ' — la dernière a été retirée le ' + esc(fD(C.derniere.slice(0, 10))) : ''}.</div>`;
+    } else {
+      C.lignes.forEach(l => {
+        const j = l.quand ? l.quand.slice(0, 10) : null;
+        const tard = j && j < AUJ;
+        h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(j ? fD(j) : '—')} ${esc(cmdHeure(l.quand))}</span>
+          <span class="v">${fN(l.articles)}</span><span class="v ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
+      });
+    }
+    h += '</div>';
+    h += `<div class="db-stt" style="margin-top:10px">
+      <div class="th"><span>Livraison attendue</span><span class="v">Réfs</span><span class="v">Attendue</span></div>`;
+    if (!(L.lignes || []).length) {
+      h += `<div class="db-stvide">Aucune livraison en route${L.derniere ? ' — la dernière est arrivée le ' + esc(fD(L.derniere.slice(0, 10))) : ''}.</div>`;
+    } else {
+      L.lignes.forEach(l => {
+        const a = l.attendue ? l.attendue.slice(0, 10) : null;
+        const tard = a && a < AUJ;
+        h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(l.fournisseur || 'Fournisseur')}</span>
+          <span class="v">${fN(l.refs)}</span><span class="v ${tard ? 'ko' : 'mu'}">${a ? esc(fD(a)) : '—'}</span></div>`;
+      });
+    }
+    h += '</div>';
+    return h;
   }
 
   function rendMobile(m, d) {
     const T = mobTaches();
     const v = valeurMagasin();
+    const E = stockEtat();
+    const ca = m ? (m.ca != null ? m.ca : m.realise) : null;
     let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d">${esc(libPeriode())}</div></div>
       <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
       <div class="mb-sc">`;
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
-    h += m ? mobHero(m) : `<div class="mb-hero"><div class="k">Chiffre d’affaires</div><div class="v">…</div><div class="o">lecture en cours</div></div>`;
-    if (T && T.bloquantes) {
-      h += `<div class="mb-alerte" data-mobsec="taches"><span class="n">${T.bloquantes}</span>
-        <span class="t"><b>tâche${T.bloquantes > 1 ? 's' : ''} bloquante${T.bloquantes > 1 ? 's' : ''}</b>exploitation non rendue · ${T.faites} / ${T.total} faites</span>
-        <span class="ch">›</span></div>`;
-    }
-    h += mobNC();
-    h += mobCarte('Les tâches ' + (S.vue === 'jour' ? 'du jour' : 'de la semaine'),
-      T && T.total ? (S.vue === 'jour' ? T.total + ' relevée' + (T.total > 1 ? 's' : '')
-        : T.total + ' sur ' + T.jours + ' jour' + (T.jours > 1 ? 's' : '') + ' relevé' + (T.jours > 1 ? 's' : ''))
-        : (T ? 'aucune tâche relevée' : 'lecture du panel…'),
-      T && T.total ? T.faites + ' / ' + T.total : '—', '',
-      T && T.total ? `<div class="mb-pills">${T.bloquantes ? `<span class="ko">${T.bloquantes} bloquante${T.bloquantes > 1 ? 's' : ''}</span>` : ''}
-        <span>${T.nonFaites} non faite${T.nonFaites > 1 ? 's' : ''}</span>
-        <span class="ok">${T.faites} faite${T.faites > 1 ? 's' : ''}</span></div>` : '');
-    if (m) {
-      const ca = m.ca != null ? m.ca : m.realise;
-      const lg = (lib, larg, coul, val) => `<div><span class="l">${lib}</span><span class="m"><i style="width:${Math.min(100, Math.abs(larg || 0)).toFixed(1)}%;background:${coul}"></i></span><span class="n">${val}</span></div>`;
-      h += mobCarte('Le compte ' + (S.vue === 'jour' ? 'du jour' : 'de la semaine'),
-        (m.tickets != null ? fN(m.tickets) + ' clients' : '') + (m.panier ? ' · panier ' + fU(m.panier) : ''),
-        m.net == null ? '—' : fE(m.net), '',
-        `<div class="mb-casc">
-          ${lg('Chiffre d’affaires', 100, '#78554B', fE(ca))}
-          ${lg('− Coût matière', m.coutMatierePct, '#C0182B', fP(m.coutMatierePct))}
-          ${lg('− Main-d’œuvre', m.labourPct, '#B26A00', fP(m.labourPct))}
-          ${lg('= Résultat', m.netPct, m.net >= 0 ? '#2d7a3e' : '#C0182B', m.net == null ? '—' : fE(m.net))}
-        </div>`);
-    }
-    const E = stockEtat();
-    if (E && !E.indispo && E.n) {
-      h += `<div class="mb-c" data-stdrop="1"><div class="hd">
-        <span class="k">Stock${E.vieux && !E.alertes ? ' — non recompté depuis ' + E.jours + ' jours' : ''}<em>${stockSous(E)}</em></span>
-        <span class="v ${E.alertes ? 'ko' : (E.vieux ? 'wa' : 'ok')}">${E.alertes || (E.vieux ? '⏳' : '✓')}</span><span class="ch">${S.stockOuvert ? '⌄' : '›'}</span></div>
-        ${E.alertes ? `<div class="cp"><div class="mb-pills">${E.ruptures ? `<span class="ko">${E.ruptures} à zéro</span>` : ''}
-          ${E.negatifs ? `<span class="ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}
-          <span>${E.alertes} sous le minimum</span></div>
-          <div class="db-stpush">${pushBouton()}</div></div>` : ''}
-      </div>${S.stockOuvert ? `<div class="db-stdl">${stockTiroir(E)}</div>` : ''}`;
-    }
-    h += `<div class="mb-c or" data-vdrop="1"><div class="hd"><span class="k">Ce que vaut le magasin<em>${v && v.n ? '18 mois clos · × 12 ÷ ' + VALO_DIV : 'lecture des ventes…'}</em></span>
-      <span class="v">${v && v.n ? fE(v.valeur) : '…'}</span><span class="ch">${S.valoOuvert ? '⌄' : '›'}</span></div></div>`;
-    if (S.valoOuvert) { h += rendValeur(); }
+    h += '<div class="mb-mur">';
+    h += murR([m ? murPeriode(m) : murC('Chiffre d’affaires', '…', 'lecture en cours…')], true);
+    h += murR([
+      murC('Clients', m && m.tickets != null ? fN(m.tickets) : '—', m && m.panier ? 'panier ' + fU(m.panier) : ''),
+      murC('Résultat', m && m.net != null ? fE(m.net) : '—', m && m.netPct != null ? fP(m.netPct) + ' des ventes' : 'P&amp;L incomplet',
+        m && m.net != null ? (m.net >= 0 ? 'ok' : 'ko') : '')
+    ]);
+    h += murR([
+      murC('Matière', m ? fP(m.coutMatierePct) : '—', m && m.margeBrutePct != null ? 'marge brute ' + fP(m.margeBrutePct) : '',
+        m && m.coutMatierePct > 35 ? 'wa' : ''),
+      murC('Main-d’œuvre', m && m.labourPct != null ? fP(m.labourPct) : '—', ca != null ? 'des ventes' : '')
+    ]);
+    // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
+    // un bon jour rattrape quelque chose ou s'il masque un retard.
+    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); }
+    h += murR([murCommandes(), murLivraisons()]);
+    h += murR([
+      murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
+        T && T.total ? (T.bloquantes ? `<span class="ko">${T.bloquantes} bloquante${T.bloquantes > 1 ? 's' : ''}</span> · ` : '')
+            + T.nonFaites + ' non faite' + (T.nonFaites > 1 ? 's' : '')
+          : (T ? 'aucune tâche relevée' : 'lecture du panel…'),
+        T && T.bloquantes ? 'ko' : ''),
+      murNC()
+    ]);
+    h += murR([
+      E && !E.indispo && E.n
+        ? murC('Stock', E.ruptures ? String(E.ruptures) : (E.alertes ? String(E.alertes) : (E.vieux ? '⏳' : '✓')),
+            E.ruptures ? `références à zéro · ${E.alertes} sous le minimum`
+              : (E.alertes ? 'sous leur minimum' : (E.vieux ? 'non recompté depuis ' + E.jours + ' jours' : 'au complet')),
+            E.alertes ? 'ko' : (E.vieux ? 'wa' : 'ok'), 'stdrop')
+        : murC('Stock', '…', E && E.indispo ? esc(E.motif) : 'lecture de l’inventaire…'),
+      murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? '18 mois clos · × 12 ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')
+    ]);
+    h += '</div>';
+    // Les tiroirs : la seule chose qui flotte au-dessus du mur, donc la seule
+    // qui a droit à un cadre.
+    if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
+    if (S.cmdOuvert) { h += `<div class="mb-tir">${cmdTiroir()}</div>`; }
+    if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
+    if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     h += '</div>';
     h += `<div class="mb-tabs">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤']]
       .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
@@ -1529,10 +1650,7 @@
     $.querySelectorAll('[data-ncgrp]').forEach(b => b.addEventListener('click', () => {
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
-    $.querySelectorAll('[data-mobsec]').forEach(b => b.addEventListener('click', () => {
-      const c = $.querySelector('.mb-c');
-      if (c) { try { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { c.scrollIntoView(); } }
-    }));
+    $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
   }
 
   // Tourner le téléphone, ou ouvrir la page sur un écran étroit, change de
