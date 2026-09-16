@@ -298,8 +298,8 @@
       <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.total)} de chiffre d’affaires sur ${fN(v.jours)} jours,
         soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année, ÷ ${VALO_DIV} : deux mois de chiffre d’affaires.
         La fenêtre va du ${esc(v.du)} au ${esc(v.au)} — ${esc(v.duMois)} à ${esc(v.auMois)}.
-        ${v.creux ? '<b>' + fN(v.creux) + ' jours sans vente relevée</b> dans la fenêtre : la moyenne porte sur les ' + fN(v.jours) + ' jours couverts, pas sur ' + VALO_JOURS + '.'
-          : (v.jours < VALO_JOURS ? '<b>Le magasin n’a que ' + fN(v.jours) + ' jours d’historique</b> : la moyenne porte sur eux, pas sur ' + VALO_JOURS + '.' : '')}</div>
+        ${v.creux ? '<em class="att">' + fN(v.creux) + ' jours sans vente relevée</em> dans la fenêtre : la moyenne porte sur les ' + fN(v.jours) + ' jours couverts, pas sur ' + VALO_JOURS + '.'
+          : (v.jours < VALO_JOURS ? '<em class="att">le magasin n’a que ' + fN(v.jours) + ' jours d’historique</em> : la moyenne porte sur eux, pas sur ' + VALO_JOURS + '.' : '')}</div>
       ${valoTiroir()}
     </div>`;
   }
