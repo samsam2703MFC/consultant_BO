@@ -1664,7 +1664,10 @@
   let _mob = estMobile(), _rt = null;
   window.addEventListener('resize', () => {
     clearTimeout(_rt);
-    _rt = setTimeout(() => { const n = estMobile(); if (n !== _mob) { _mob = n; rendre(); } }, 160);
+    // En passant au téléphone, le mur demande deux lectures que le bureau ne
+    // fait pas (la semaine sous le jour, les commandes) : on les déclenche,
+    // sinon les cellules resteraient à « lecture en cours » pour toujours.
+    _rt = setTimeout(() => { const n = estMobile(); if (n !== _mob) { _mob = n; if (n) { charger(false); } else { rendre(); } } }, 160);
   });
 
   /* --- départ ------------------------------------------------------------- */
