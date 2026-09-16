@@ -378,3 +378,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-16T14:33:07Z reserve du tiroir valeur
 2026-09-16T14:38:11Z valeur sur 730 jours actifs
 2026-09-16T14:46:17Z valeur annee par annee
+2026-09-16T16:01:52Z mois d ouverture et confettis
