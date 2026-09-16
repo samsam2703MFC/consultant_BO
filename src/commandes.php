@@ -142,6 +142,71 @@ function ep_ventes_commandes(): array
     return $out;
 }
 
+/**
+ * GET /ventes/commandes/courbe — pourquoi plus de commandes depuis le 30 mai ?
+ *
+ * Une date d'arrêt ne dit rien à elle seule. Ce qui tranche, c'est la FORME de
+ * l'arrêt, et elle se lit sur trois axes :
+ *  - mois par mois et magasin par magasin : une falaise le même jour partout
+ *    est une panne, un tarissement étalé est un usage qui se perd ;
+ *  - les autres canaux (`ws_orders`, `pwa_orders`, `pwa_cafe_orders`) : si
+ *    l'un démarre quand l'autre s'arrête, la commande a déménagé ;
+ *  - la caisse (`transaction`) sur les mêmes mois, comme témoin : si elle
+ *    s'arrête aussi, c'est la copie qui a lâché, pas le magasin.
+ *
+ * Comptes seulement, aucune ligne nominative.
+ */
+function ep_commandes_courbe(): array
+{
+    $out = ['aujourdhui' => date('Y-m-d'), 'canaux' => [], 'client_order' => [], 'temoins' => []];
+    // 1. Les commandes au comptoir, par mois et par magasin, sur la date de
+    //    PRISE (accepting_timestamp) et non de retrait : c'est le moment où
+    //    quelqu'un a saisi quelque chose.
+    try {
+        foreach (Db::rows("SELECT id_shop,
+                        DATE_FORMAT(COALESCE(accepting_timestamp, pick_up_datetime), '%Y-%m') mois,
+                        COUNT(*) n,
+                        COUNT(DISTINCT id_accepting_employee) agents,
+                        SUM(id_transaction IS NOT NULL) encaissees,
+                        SUM(order_status IS NULL) sansStatut
+                   FROM client_order
+                  WHERE COALESCE(accepting_timestamp, pick_up_datetime) >= DATE_SUB(CURDATE(), INTERVAL 20 MONTH)
+                  GROUP BY id_shop, mois ORDER BY mois, id_shop") as $r) {
+            $out['client_order'][] = $r;
+        }
+        $out['bornes'] = Db::rows('SELECT MIN(accepting_timestamp) premiere, MAX(accepting_timestamp) derniere,
+                COUNT(*) total, SUM(accepting_timestamp IS NULL) sansPrise FROM client_order')[0] ?? null;
+    } catch (Throwable $e) { $out['client_order'] = ['erreur' => $e->getMessage()]; }
+    // 2. Les autres canaux : lequel prend le relais, et quand.
+    foreach ([['ws_orders', 'created_at'], ['pwa_orders', 'created_at'],
+              ['pwa_cafe_orders', 'created_at'], ['ws_stock_reservation', 'created_at']] as [$t, $c]) {
+        try {
+            $l = [];
+            foreach (Db::rows("SELECT DATE_FORMAT(`$c`, '%Y-%m') mois, COUNT(*) n FROM `$t`
+                               GROUP BY mois ORDER BY mois") as $r) { $l[] = $r; }
+            $out['canaux'][] = ['table' => $t, 'mois' => $l];
+        } catch (Throwable $e) { $out['canaux'][] = ['table' => $t, 'erreur' => $e->getMessage()]; }
+    }
+    // 3. Les témoins : la caisse et les avis sur les tâches, sur les mêmes
+    //    mois. Ils disent si la base reçoit encore quelque chose.
+    try {
+        $l = [];
+        foreach (Db::rows("SELECT DATE_FORMAT(insert_timestamp, '%Y-%m') mois,
+                                  COUNT(DISTINCT ticket_key) n FROM `transaction`
+                           WHERE insert_timestamp >= DATE_SUB(CURDATE(), INTERVAL 8 MONTH)
+                           GROUP BY mois ORDER BY mois") as $r) { $l[] = $r; }
+        $out['temoins'][] = ['table' => 'transaction', 'mois' => $l];
+    } catch (Throwable $e) { $out['temoins'][] = ['table' => 'transaction', 'erreur' => $e->getMessage()]; }
+    try {
+        $l = [];
+        foreach (Db::rows("SELECT DATE_FORMAT(created_at, '%Y-%m') mois, COUNT(*) n FROM mac_task_review
+                           WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 8 MONTH)
+                           GROUP BY mois ORDER BY mois") as $r) { $l[] = $r; }
+        $out['temoins'][] = ['table' => 'mac_task_review', 'mois' => $l];
+    } catch (Throwable $e) { $out['temoins'][] = ['table' => 'mac_task_review', 'erreur' => $e->getMessage()]; }
+    return $out;
+}
+
 /** GET /ventes/commandes/sonde — statuts, volumes et fraîcheur, par table. */
 function ep_commandes_sonde(): array
 {
