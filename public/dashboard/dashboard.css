@@ -600,3 +600,34 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-stnote{font:400 10.5px var(--font-ui);color:var(--color-text-muted);max-width:280px;line-height:1.35}
 .db-stpush{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 #dash.mob .db-stnote{max-width:none}
+
+/* --- Le mur ---------------------------------------------------------------
+   Le tableau de bord au téléphone : aucune boîte, aucun repli. Des filets,
+   des chiffres, et la typographie pour toute hiérarchie. Douze mesures sur
+   un écran, sans défiler ni toucher — ce qui demande un geste s'ouvre
+   quand même, sous le mur, pour qui veut le détail. */
+.mb-mur{border-top:.5px solid rgba(34,34,34,.14)}
+.mb-r{display:grid;grid-template-columns:1fr 1fr;border-bottom:.5px solid rgba(34,34,34,.14)}
+.mb-r>div{padding:9px 2px 8px;min-width:0}
+.mb-r>div+div{border-left:.5px solid rgba(34,34,34,.14);padding-left:12px}
+.mb-r .k{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.mb-r .v{font-family:var(--font-display);font-size:25px;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums}
+.mb-r .v.ko{color:#C0182B}.mb-r .v.ok{color:#2d7a3e}.mb-r .v.wa{color:#B26A00}.mb-r .v.or{color:#8a6508}
+.mb-r .s{font-size:10px;color:var(--color-text-muted);line-height:1.3;margin-top:1px}
+.mb-r .s .ko{color:#C0182B;font-weight:600}
+.mb-r .s .ok{color:#2d7a3e;font-weight:600}
+.mb-r.un{grid-template-columns:1fr}
+.mb-r.un .v{font-size:38px}
+/* La cellule qui s'ouvre ne porte ni chevron ni cadre : seul le pointeur et
+   un léger retour au doigt la distinguent. */
+.mb-r [data-ouvre]{cursor:pointer;-webkit-tap-highlight-color:rgba(192,24,43,.06)}
+.mb-r [data-ouvre]:active{background:var(--color-background-secondary)}
+.mb-jauge{height:3px;border-radius:2px;background:var(--color-background-secondary);margin-top:7px;overflow:hidden}
+.mb-jauge i{display:block;height:100%;border-radius:2px;background:var(--color-primary)}
+.mb-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;align-items:end;height:34px;margin-top:7px}
+.mb-sem>div{display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.mb-sem i{display:block;width:100%;border-radius:2px 2px 0 0}
+.mb-sem span{display:block;font:600 7.5px var(--font-ui);color:var(--color-text-muted);text-align:center;margin-top:2px}
+/* Les tiroirs gardent leur forme de carte : ils sont la seule chose qui
+   flotte au-dessus du mur, donc la seule qui a droit à un cadre. */
+#dash.mob .mb-tir{margin:10px 0 2px}
