@@ -763,8 +763,16 @@
     } catch (e) { /* navigation privée : on fête, et tant pis pour la mémoire */ }
     return false;
   }
-  function feteObjectif() {
-    if (feteFaite()) { return; }
+  /** `?fete=1` force la fête une fois, pour la voir sans attendre un bon jour. */
+  let _feteForcee = false;
+  function feteDemandee() {
+    if (_feteForcee) { return false; }
+    if (new URLSearchParams(location.search).get('fete') !== '1') { return false; }
+    _feteForcee = true;
+    return true;
+  }
+  function feteObjectif(force) {
+    if (!force && feteFaite()) { return; }
     // Qui a demandé moins d'animations n'en reçoit pas : la nouvelle est déjà
     // dans la jauge, qui passe au vert.
     try {
@@ -854,7 +862,8 @@
       $.innerHTML = rendMobile(m, d);
       $.classList.add('mob');
       brancher();
-      if (objectifAtteint(m)) { feteObjectif(); }
+      const forcee = feteDemandee();
+      if (forcee || objectifAtteint(m)) { feteObjectif(forcee); }
       return;
     }
     $.classList.remove('mob');
