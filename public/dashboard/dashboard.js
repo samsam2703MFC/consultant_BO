@@ -649,7 +649,7 @@
         const j = l.quand ? l.quand.slice(0, 10) : null;
         const tard = j && j < AUJ;
         h += `<div class="tr${tard ? ' neg' : ''}"><span class="r">${esc(j ? fD(j) : '—')}${l.quand ? ' · ' + esc(cmdHeure(l.quand)) : ''}</span>
-          <span class="n">${fN(l.articles)}</span><span class="n ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
+          <span class="n">${l.articles == null ? '—' : fN(l.articles)}</span><span class="n ${tard ? 'ko' : ''}">${fE(l.montant)}</span></div>`;
       });
     }
     h += '</div><div class="db-cmdt" style="margin-top:12px">';

@@ -96,9 +96,17 @@ function cmdDepuisApi(array $l): array
         else { $n['retard']++; }
         $montant = (float) ($c['total_value'] ?? 0);
         $n['montant'] += $montant;
-        $articles = 0.0;
-        foreach ((array) ($c['products'] ?? []) as $p) {
-            if (is_array($p)) { $articles += (float) ($p['quantity'] ?? 0); }
+        // Le détail n'accompagne pas toujours la liste : sans lui, le nombre
+        // d'articles est INCONNU, et il vaut mieux un tiret qu'un zéro — un
+        // zéro dirait « commande vide », ce qui est faux.
+        $prods = (array) ($c['products'] ?? []);
+        $articles = null;
+        if ($prods !== []) {
+            $q = 0.0; $aQte = false;
+            foreach ($prods as $p) {
+                if (is_array($p) && isset($p['quantity'])) { $q += (float) $p['quantity']; $aQte = true; }
+            }
+            $articles = $aQte ? $q : (float) count($prods);
         }
         $n['lignes'][] = ['quand' => $quand, 'statut' => $c['order_status'] ?? null,
             'articles' => $articles, 'montant' => round($montant, 2)];
@@ -134,7 +142,10 @@ function ep_ventes_commandes(): array
         && (time() - (int) $memo['le']) < CMD_CACHE_MIN * 60) {
         $out['commandes'] = $memo['v'];
     } elseif (PanelApi::configured()) {
-        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders');
+        // Trente secondes, et non douze : la route rend TOUTES les commandes
+        // du magasin, 7 245 à Corbais. Le repli sur la copie reste là si même
+        // cela ne suffit pas, et le résultat tient un quart d'heure.
+        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders', 30);
         if ((int) ($r['code'] ?? 0) === 200) {
             $v = cmdDepuisApi(analyseListe(is_array($r['corps']) ? $r['corps'] : []));
             $v['source'] = 'api';
@@ -229,6 +240,42 @@ function ep_ventes_commandes(): array
             'lignes' => $lignes];
     } catch (Throwable $e) {
         $out['livraisons'] = ['indispo' => true, 'motif' => $e->getMessage()];
+    }
+    return $out;
+}
+
+/**
+ * GET /ventes/commandes/filtres?shop=2 — la route accepte-t-elle d'en rendre
+ * moins ?
+ *
+ * `/shops/{id}/client-orders` rend tout l'historique : 7 245 commandes à
+ * Corbais, au-delà de ce qu'un écran peut attendre. Si un paramètre borne la
+ * réponse, l'écran devient immédiat ; sinon il faut vivre avec la mémoire de
+ * quinze minutes. La sonde mesure le nombre de lignes ET le temps de chaque
+ * écriture — c'est le temps qui tranche, pas l'existence d'une réponse.
+ */
+function ep_commandes_filtres(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 2);
+    if (!PanelApi::configured()) { return ['erreur' => 'compte panel non configuré']; }
+    $du = date('Y-m-d', strtotime('-8 day'));
+    $base = '/shops/' . $sid . '/client-orders';
+    $cands = [$base, $base . '?date_from=' . $du, $base . '?from=' . $du,
+        $base . '?pick_up_date_from=' . $du, $base . '?status=new',
+        $base . '?limit=50', $base . '?per_page=50&page=1'];
+    $out = ['shop' => $sid, 'depuis' => $du, 'essais' => []];
+    foreach ($cands as $p) {
+        $t0 = microtime(true);
+        $r = PanelApi::sondeGet($p, 30);
+        $ms = (int) round((microtime(true) - $t0) * 1000);
+        $l = is_array($r['corps'] ?? null) ? analyseListe($r['corps']) : [];
+        $recent = null;
+        foreach ($l as $c) {
+            $q = is_array($c) ? (string) ($c['pick_up_datetime'] ?? '') : '';
+            if ($q !== '' && ($recent === null || $q > $recent)) { $recent = $q; }
+        }
+        $out['essais'][] = ['route' => $p, 'code' => (int) $r['code'], 'ms' => $ms,
+            'n' => $l === [] ? null : count($l), 'plusRecent' => $recent];
     }
     return $out;
 }
