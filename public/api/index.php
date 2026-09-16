@@ -38,6 +38,7 @@ require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/prod_manque.php';
 require __DIR__ . '/../../src/analyse_magasin.php';
 require __DIR__ . '/../../src/ventes.php';
+require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/croisements.php';
 require __DIR__ . '/../../src/kpis.php';
 require __DIR__ . '/../../src/cadence.php';
@@ -191,6 +192,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
+            $path === '/ventes/commandes/sonde'      => ep_commandes_sonde(),
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
