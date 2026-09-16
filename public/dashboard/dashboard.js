@@ -33,6 +33,9 @@
   const fS = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + fE(Math.abs(n));
   const fSK = n => n == null ? '—' : (n >= 0 ? '+ ' : '− ') + fK(Math.abs(n));
   const fN = n => n == null ? '—' : nf(Math.round(n), 0);
+  // Le signe moins typographique, comme fS : « -87,1 % » et « − 1 754 € »
+  // côte à côte sur le même écran, cela se voit.
+  const fPS = n => n == null ? '—' : (n >= 0 ? '' : '− ') + nf(Math.abs(n), 1) + ' %';
   const coul = n => n == null ? 'mu' : (n >= 0 ? 'ok' : 'ko');
   const fD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
   const fDL = d => { if (!d) { return ''; } const t = new Date(d + 'T12:00:00'); return t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
@@ -666,7 +669,7 @@
     h += murR([m ? murPeriode(m) : murC('Chiffre d’affaires', '…', 'lecture en cours…')], true);
     h += murR([
       murC('Clients', m && m.tickets != null ? fN(m.tickets) : '—', m && m.panier ? 'panier ' + fU(m.panier) : ''),
-      murC('Résultat', m && m.net != null ? fE(m.net) : '—', m && m.netPct != null ? fP(m.netPct) + ' des ventes' : 'P&amp;L incomplet',
+      murC('Résultat', m && m.net != null ? fS(m.net) : '—', m && m.netPct != null ? fPS(m.netPct) + ' des ventes' : 'P&amp;L incomplet',
         m && m.net != null ? (m.net >= 0 ? 'ok' : 'ko') : '')
     ]);
     h += murR([
