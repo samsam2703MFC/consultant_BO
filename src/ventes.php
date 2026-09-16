@@ -107,42 +107,20 @@ function ep_ventes_sonde(): array
 /**
  * GET /ventes/mensuel?shop=4&mois=24 — le CA mois par mois d'un magasin.
  *
- * DEUX sources, parce qu'aucune n'est complète à elle seule :
- *  - `mac_shop_monthly_pnl`, le P&L mensuel du panel : il porte les mois clos
- *    jusqu'au dernier, mais n'a aucune ligne en 2025 ;
+ * TROIS sources, parce qu'aucune n'est complète à elle seule :
+ *  - `/consultant/shops/sales-kpis`, la route vivante du panel : elle sert le
+ *    jour même, mais un appel par mois — on ne l'interroge donc que sur les
+ *    trois derniers mois clos, et elle y fait foi ;
+ *  - `mac_shop_monthly_pnl`, la copie du P&L mensuel : elle porte l'histoire,
+ *    mais n'a aucune ligne en 2025 et se dégrade sur les mois récents ;
  *  - `transaction`, les ventes de caisse : elles couvrent 2025, mais s'arrêtent
  *    au 14 juillet 2026 (mesuré sur les quatre magasins).
- * Le P&L fait foi quand il a le mois — c'est un chiffre arrêté ; la caisse
- * comble le reste. Chaque mois dit d'où il vient.
+ * Chaque mois dit d'où il vient.
  *
  * Le mois EN COURS est écarté : incomplet, il tirerait toute moyenne vers le
  * bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même,
  * `ca` à null : un trou doit se voir, pas se combler tout seul.
  */
-/**
- * GET /ventes/mensuel/sonde — ce que la route mensuelle du panel rend vraiment.
- *
- * Sonde de cadrage : la copie du P&L porte un août 2026 à 28 812 € pour
- * Corbais là où la route vivante en annonce 142 901. Avant de recâbler la
- * source, il faut savoir quelle forme a la réponse du panel.
- */
-function ep_ventes_mensuel_sonde(): array
-{
-    if (!PanelApi::configured()) { return ['erreur' => 'compte panel non configuré']; }
-    $au = date('Y-m-t');
-    $du = date('Y-m-01', strtotime('-23 month'));
-    $t0 = microtime(true);
-    $r = PanelApi::monthlySales($du, $au);
-    $ms = (int) round((microtime(true) - $t0) * 1000);
-    $l = is_array($r) ? analyseListe($r) : [];
-    return ['du' => $du, 'au' => $au, 'ms' => $ms,
-        'clesRacine' => is_array($r) ? array_slice(array_keys($r), 0, 14) : null,
-        'chemin' => PanelApi::$lastPath,
-        'n' => $l === [] ? null : count($l),
-        'cles' => $l !== [] && is_array($l[0]) ? array_keys($l[0]) : null,
-        'exemples' => array_slice($l, 0, 4)];
-}
-
 function ep_ventes_mensuel(): array
 {
     $shop = (int) ($_GET['shop'] ?? 0);
@@ -185,11 +163,48 @@ function ep_ventes_mensuel(): array
         }
     } catch (Throwable $e) { /* pas de P&L : la caisse seule */ }
 
-    $mois = []; $nPnl = 0; $nCaisse = 0;
+    // 3) les DERNIERS mois, lus en direct sur le panel.
+    //
+    // La copie du P&L est partielle sur les mois récents : mesuré le
+    // 16 septembre 2026, elle porte un août 2026 à 28 812 € pour Corbais là
+    // où la route vivante en annonce 142 901 — et à 9 911 € pour Gosselies
+    // contre 49 085. Juillet, lui, concorde à l'euro près. La copie n'est
+    // donc pas fausse, elle est en retard : sur les trois derniers mois clos,
+    // c'est le panel qui fait foi.
+    //
+    // (`/consultant/shops/monthly-sales` ne répond pas — mesuré. On interroge
+    // donc `sales-kpis` mois par mois, trois appels menés de front.)
+    $vivant = [];
+    if (PanelApi::configured()) {
+        $chemins = [];
+        for ($i = 1; $i <= 3; $i++) {
+            $m = $finExclu->modify('-' . $i . ' month');
+            if ($m < $debut) { break; }
+            $chemins[$m->format('Y-m')] = '/consultant/shops/sales-kpis?'
+                . http_build_query(['date_from' => $m->format('Y-m-01'), 'date_to' => $m->format('Y-m-t')]);
+        }
+        foreach (PanelApi::getParallele($chemins, 3) as $k => $r) {
+            foreach (analyseListe(is_array($r) ? $r : []) as $x) {
+                $id = 0;
+                foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                    if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+                }
+                if ($id !== $shop) { continue; }
+                $ca = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+                if ($ca !== null && (float) $ca > 0) { $vivant[(string) $k] = round((float) $ca, 2); }
+            }
+        }
+    }
+
+    $mois = []; $nPnl = 0; $nCaisse = 0; $nVivant = 0;
     for ($i = 0; $i < $n; $i++) {
         $k = $debut->modify('+' . $i . ' month')->format('Y-m');
         $c = $caisse[$k] ?? ['ca' => null, 'tickets' => 0, 'jours' => 0];
-        if (isset($pnl[$k])) {
+        if (isset($vivant[$k])) {
+            $nVivant++;
+            $mois[] = ['mois' => $k, 'ca' => $vivant[$k], 'source' => 'panel',
+                'tickets' => $c['tickets'], 'jours' => $c['jours']];
+        } elseif (isset($pnl[$k])) {
             $nPnl++;
             $mois[] = ['mois' => $k, 'ca' => $pnl[$k], 'source' => 'pnl',
                 'tickets' => $c['tickets'], 'jours' => $c['jours']];
@@ -205,7 +220,7 @@ function ep_ventes_mensuel(): array
         'shop'   => (string) $shop,
         'du'     => $debut->format('Y-m'),
         'au'     => $finExclu->modify('-1 month')->format('Y-m'),
-        'source' => 'P&L mensuel du panel quand il a le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
+        'source' => 'route vivante du panel sur les derniers mois clos (' . $nVivant . '), copie du P&L quand elle a le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
         'mois'   => $mois,
     ];
 }
