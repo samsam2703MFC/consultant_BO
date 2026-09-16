@@ -357,3 +357,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-15T17:34:51Z stock inventaire non recompte
 2026-09-16T07:46:58Z notifications push service worker
 2026-09-16T07:51:10Z carte des sources et test connecteurs
+2026-09-16T07:52:33Z etablir la carte des sources
