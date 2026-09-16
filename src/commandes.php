@@ -18,14 +18,121 @@ declare(strict_types=1);
  *    fournisseur avec date attendue (`expected_date`,
  *    `supplier_planned_delivery_date`) et date livrée (`delivered_on`).
  *
- * Le panel n'expose aucune de ces trois par son API (`/shops/{id}/orders`,
- * `/deliveries`, `/preorders` : 404 sur toutes). La lecture se fait donc en
- * base — mesuré le 16 septembre 2026.
+ * Côté API du panel, une seule des trois répond : `/shops/{id}/client-orders`,
+ * et elle rend EXACTEMENT ce que porte la base — 337 commandes pour Gosselies,
+ * la dernière au 30 mai 2026, des deux côtés. Les livraisons fournisseur n'ont
+ * aucune route (`/material-orders`, `/deliveries` : 404). La lecture se fait
+ * donc en base, qui est ici la source et non une copie en retard.
  *
- * La sonde ci-dessous rend des COMPTES et des DATES, jamais le contenu d'une
- * ligne : une commande porte un nom et un téléphone, ils n'ont rien à faire
- * dans un diagnostic.
+ * Mesuré le 16 septembre 2026. Et ce que la mesure dit aussi, c'est que ce
+ * réseau ne prend plus guère de commandes : la dernière remonte au 30 mai à
+ * Gosselies, au 24 août à Corbais. L'écran doit donc savoir afficher « aucune »
+ * sans avoir l'air en panne — d'où la date de la dernière, toujours rendue.
+ *
+ * Rien de nominatif ne sort d'ici : une commande porte un nom et un téléphone,
+ * on n'en garde que la date, le nombre d'articles et le montant.
  */
+
+/**
+ * GET /ventes/commandes?shop=3 — les commandes clients en cours et les
+ * livraisons fournisseur attendues, pour un magasin.
+ *
+ * « En cours » a un sens précis : la commande n'a pas été remise
+ * (`issuing_timestamp` vide et statut différent de `picked_up`) et n'a pas été
+ * annulée (`non_collection_id_reason` vide). Trois sous-ensembles comptent
+ * pour l'écran — celles à retirer aujourd'hui, celles à venir, et celles dont
+ * l'heure de retrait est passée sans que personne soit venu.
+ */
+function ep_ventes_commandes(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $out = ['shop' => $sid, 'commandes' => null, 'livraisons' => null];
+
+    // --- les commandes clients -------------------------------------------
+    // Le montant vient du détail (`client_order_product`) : l'entête ne le
+    // porte pas. Une commande sans ligne compte quand même, à 0 €.
+    try {
+        $enCours = 'co.issuing_timestamp IS NULL
+                    AND (co.order_status IS NULL OR co.order_status <> \'picked_up\')
+                    AND co.non_collection_id_reason IS NULL';
+        $t = Db::rows("SELECT
+                COUNT(*) total,
+                SUM($enCours) enCours,
+                SUM($enCours AND DATE(co.pick_up_datetime) = CURDATE()) auj,
+                SUM($enCours AND co.pick_up_datetime > NOW()) aVenir,
+                SUM($enCours AND co.pick_up_datetime < NOW()
+                    AND DATE(co.pick_up_datetime) <> CURDATE()) retard,
+                MAX(co.pick_up_datetime) derniere
+              FROM client_order co WHERE co.id_shop = ?", [$sid])[0] ?? [];
+        $lignes = [];
+        foreach (Db::rows("SELECT co.id, co.pick_up_datetime quand, co.order_status statut,
+                                  COALESCE(SUM(p.quantity), 0) articles,
+                                  COALESCE(SUM(p.total_gross_value_after_discount), 0) montant
+                             FROM client_order co
+                             LEFT JOIN client_order_product p ON p.id_order = co.id
+                            WHERE co.id_shop = ? AND $enCours
+                            GROUP BY co.id, co.pick_up_datetime, co.order_status
+                            ORDER BY co.pick_up_datetime ASC LIMIT 20", [$sid]) as $r) {
+            // Ni nom ni téléphone : la date, le volume, le montant.
+            $lignes[] = ['quand' => (string) $r['quand'], 'statut' => $r['statut'],
+                'articles' => (float) $r['articles'], 'montant' => round((float) $r['montant'], 2)];
+        }
+        $montant = 0.0;
+        foreach ($lignes as $l) { $montant += $l['montant']; }
+        $out['commandes'] = [
+            'total' => (int) ($t['total'] ?? 0), 'enCours' => (int) ($t['enCours'] ?? 0),
+            'auj' => (int) ($t['auj'] ?? 0), 'aVenir' => (int) ($t['aVenir'] ?? 0),
+            'retard' => (int) ($t['retard'] ?? 0),
+            'derniere' => $t['derniere'] ?? null,
+            'montant' => round($montant, 2), 'lignes' => $lignes];
+    } catch (Throwable $e) {
+        $out['commandes'] = ['indispo' => true, 'motif' => $e->getMessage()];
+    }
+
+    // --- les livraisons fournisseur --------------------------------------
+    // Le nom du fournisseur n'est pas dans `material_order` : il faut la table
+    // de référence, dont le nom varie selon les versions du panel. On la
+    // cherche plutôt que de la deviner.
+    $tFourn = null;
+    try {
+        foreach (Db::rows("SELECT TABLE_NAME n FROM information_schema.TABLES
+                            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'material\\_supplier%'
+                            ORDER BY CHAR_LENGTH(TABLE_NAME) LIMIT 1") as $r) {
+            $tFourn = (string) $r['n'];
+        }
+    } catch (Throwable $e) { /* on se passera du nom */ }
+    try {
+        $t = Db::rows("SELECT COUNT(*) total,
+                SUM(delivered_on IS NULL AND status NOT IN ('ARCHIVED','CANCELLED')) enRoute,
+                MIN(CASE WHEN delivered_on IS NULL AND status NOT IN ('ARCHIVED','CANCELLED')
+                         THEN COALESCE(supplier_planned_delivery_date, expected_date,
+                                       in_transit_expected_date) END) prochaine,
+                MAX(delivered_on) derniere
+              FROM material_order WHERE id_shop = ?", [$sid])[0] ?? [];
+        $sel = $tFourn !== null ? 'f.name' : 'NULL';
+        $join = $tFourn !== null ? "LEFT JOIN `$tFourn` f ON f.id = o.id_supplier" : '';
+        $lignes = [];
+        foreach (Db::rows("SELECT o.id, $sel fournisseur, o.status statut, o.order_date passee,
+                                  COALESCE(o.supplier_planned_delivery_date, o.expected_date,
+                                           o.in_transit_expected_date) attendue,
+                                  (SELECT COUNT(*) FROM material_order_item i WHERE i.id_order = o.id) refs
+                             FROM material_order o $join
+                            WHERE o.id_shop = ? AND o.delivered_on IS NULL
+                              AND o.status NOT IN ('ARCHIVED','CANCELLED')
+                            ORDER BY attendue IS NULL, attendue ASC LIMIT 12", [$sid]) as $r) {
+            $lignes[] = ['fournisseur' => $r['fournisseur'] !== null ? (string) $r['fournisseur'] : null,
+                'statut' => (string) $r['statut'], 'passee' => $r['passee'],
+                'attendue' => $r['attendue'], 'refs' => (int) $r['refs']];
+        }
+        $out['livraisons'] = ['total' => (int) ($t['total'] ?? 0), 'enRoute' => (int) ($t['enRoute'] ?? 0),
+            'prochaine' => $t['prochaine'] ?? null, 'derniere' => $t['derniere'] ?? null,
+            'lignes' => $lignes];
+    } catch (Throwable $e) {
+        $out['livraisons'] = ['indispo' => true, 'motif' => $e->getMessage()];
+    }
+    return $out;
+}
 
 /** GET /ventes/commandes/sonde — statuts, volumes et fraîcheur, par table. */
 function ep_commandes_sonde(): array
