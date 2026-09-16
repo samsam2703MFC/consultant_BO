@@ -12,6 +12,31 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 
 ---
 
+## `GET /carte-sources` et `POST /connecteurs/{code}/test`
+
+**La carte** dit d'où vient ce que chaque écran affiche. Elle est lue dans le
+**code**, pas dans une liste tenue à la main — une liste à la main ment dès la
+semaine suivante. `bin/carte_sources.php` découpe chaque fonction `ep_*` et
+regarde ce qu'elle appelle (`Db::`, `PanelApi::`, `ErpApi::`, `GoogleApi::`,
+`Anthropic::`, `ScoutingOsm::`), puis écrit le résultat dans `ceo_app_setting`
+sous `carteSources`. Cron quotidien à 3 h 40, et un passage au déploiement.
+
+Quatre catégories : `base` (la base seule), `api` (une API extérieure seule),
+`mixte` (les deux), `calcule` (ni l'une ni l'autre — un calcul pur). La réponse
+porte `jours`, l'âge de la carte : une carte de trois semaines ne décrit plus
+le code d'aujourd'hui.
+
+**Le test** — `POST /connecteurs/{code}/test` — fait un **vrai appel**, pas une
+relecture de réglage : une clé peut être présente et refusée. Le résultat
+s'écrit dans `ceo_connecteur` comme n'importe quel geste.
+
+| connecteur | ce que le test fait |
+|---|---|
+| `panel` | authentification, **puis** lecture de `/shops` — un jeton valide ne prouve pas que les données suivent |
+| `erp` | `ErpApi::tester()` |
+| `google` | une recherche de lieu, la requête la moins chère de l'API |
+| `anthropic` | **aucun appel** : une proposition de note se facture. On dit si la clé est là, rien de plus |
+
 ## Les notifications push — `GET /push/cle`, `POST /push/abonnements`, `POST /push/essai`
 
 Le Web Push sans dépendance : PHP 8 + OpenSSL. Deux normes assemblées dans

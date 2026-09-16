@@ -118,6 +118,7 @@ function route(string $method, string $path): mixed
             $path === '/consultants'                   => ep_consultants(),
             $path === '/fournisseurs'                  => ep_suppliers(),
             $path === '/connecteurs'                   => ep_connecteurs(),
+            $path === '/carte-sources'                 => ep_carte_sources(),
             $path === '/rapports'                      => ep_rapports(),
             $path === '/kpi-defs'                      => ep_kpi_referentiel(),
             $path === '/kpi-table'                     => ep_kpi_table(),
@@ -278,6 +279,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/erp/compte/test') { return wr_erp_compte_test(); }
     if ($method === 'PUT' && $path === '/centrale/fournisseur-pct') { return wr_ca_fournisseur_pct(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
+    if ($method === 'POST' && preg_match('#^/connecteurs/([\w-]+)/test$#', $path, $m)) { return wr_connecteur_test($m[1]); }
     if ($method === 'POST' && $path === '/push/abonnements') { return wr_push_abonnement(); }
     if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
     if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }
