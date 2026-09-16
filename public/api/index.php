@@ -19,6 +19,7 @@ require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
+require __DIR__ . '/../../src/push.php';
 require __DIR__ . '/../../src/resultat.php';
 require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
@@ -189,6 +190,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
+            $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
@@ -276,6 +278,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/erp/compte/test') { return wr_erp_compte_test(); }
     if ($method === 'PUT' && $path === '/centrale/fournisseur-pct') { return wr_ca_fournisseur_pct(); }
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
+    if ($method === 'POST' && $path === '/push/abonnements') { return wr_push_abonnement(); }
+    if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
+    if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_patch($m[1]); }
     if ($method === 'POST' && preg_match('#^/projects/([\w-]+)/tasks$#', $path, $m)) { return wr_task_create($m[1]); }

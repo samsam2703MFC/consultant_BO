@@ -182,12 +182,14 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   « stock au complet » mais « inventaire non recompté depuis N jours », en
   orange. Mesuré : Corbais affichait un stock parfait avec un comptage vieux de
   trois semaines.
-  Un bouton **« M'avertir »** demande la permission du navigateur et fait
-  paraître un avertissement quand une référence PASSE sous son minimum entre
-  deux lectures — jamais à la première, qui n'a rien à comparer. Sans service
-  worker, ces avertissements ne partent que **tant que la page est ouverte** ;
-  l'écran le dit plutôt que de laisser croire à une alerte qui suivrait le
-  gérant.
+  Un bouton **« M'avertir »** abonne l'appareil aux **notifications push** :
+  service worker (`public/dashboard/sw.js`), clés VAPID, abonnement déposé au
+  serveur. L'alerte part alors **même application fermée et téléphone rangé** —
+  `bin/push_stock.php` surveille le stock toutes les quinze minutes de 5 h à
+  20 h et ne signale que les références qui **viennent** de passer sous leur
+  minimum. Un bouton « Essai » envoie un message de vérification tout de suite.
+  Le bouton dit toujours où l'on en est : indisponible sans HTTPS, refusé si la
+  permission est bloquée, « averti sur cet appareil » une fois abonné.
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.

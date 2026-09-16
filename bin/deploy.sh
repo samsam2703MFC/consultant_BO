@@ -553,6 +553,20 @@ fi
 } > /etc/cron.d/cockpit-scouting
 chown root:root /etc/cron.d/cockpit-scouting
 chmod 600 /etc/cron.d/cockpit-scouting
+
+# --- Les notifications de rupture de stock -----------------------------------
+# Toutes les quinze minutes aux heures d'ouverture : un stock qui tombe à 7 h du
+# matin doit se savoir avant le coup de feu, pas le lendemain. Hors de ces
+# heures, personne n'est en magasin pour y répondre.
+{
+  echo "SHELL=/bin/sh"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+  echo "*/15 5-20 * * * root php ${TARGET_DIR}/bin/push_stock.php >>/var/log/cockpit-push.log 2>&1"
+} > /etc/cron.d/cockpit-push
+chown root:root /etc/cron.d/cockpit-push
+chmod 600 /etc/cron.d/cockpit-push
+log "Notifications de stock : /etc/cron.d/cockpit-push — toutes les 15 min de 5 h à 20 h (journal : /var/log/cockpit-push.log)."
+
 systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
 # Les secteurs absents ou trop vieux se relisent tout de suite, en arrière-plan :
 # la livraison n'attend pas Overpass, et le premier utilisateur non plus.

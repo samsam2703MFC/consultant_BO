@@ -12,6 +12,33 @@ répond pas, `data.js` (jeu de démonstration) prend le relais et `p.source` vau
 
 ---
 
+## Les notifications push — `GET /push/cle`, `POST /push/abonnements`, `POST /push/essai`
+
+Le Web Push sans dépendance : PHP 8 + OpenSSL. Deux normes assemblées dans
+`src/push.php` — **VAPID** (RFC 8292) pour dire qui envoie, et le **chiffrement
+`aes128gcm`** (RFC 8291) pour que le service de push transporte sans lire.
+
+Les clés VAPID vivent dans `ceo_app_setting` sous `pushVapid`, générées à la
+première demande. **Les changer invalide tous les abonnements** : le navigateur
+lie chaque abonnement à la clé publique qu'on lui a donnée.
+
+- `GET /push/cle` → `{ pret, cle, abonnements }`, ou `{ pret: false, motif }`
+  quand PHP n'a pas `openssl_pkey_derive`, `hash_hkdf` ou `aes-128-gcm`.
+- `POST /push/abonnements` ← `{ shop, endpoint, p256dh, auth }`. Un même
+  appareil qui se réabonne garde son endpoint : la ligne est mise à jour.
+- `DELETE /push/abonnements` ← `{ endpoint }`.
+- `POST /push/essai` ← `{ shop }` → `{ abonnements, envoyes, retires, erreurs }`.
+
+Table `ceo_push_abonnement` (créée à la volée) : `shop_id`, `endpoint` (unique),
+`p256dh`, `auth`, `agent`, `cree_le`, `vu_le`, `echecs`. Un envoi qui rend
+**404 ou 410** retire l'abonnement : l'appareil ne reviendra pas.
+
+L'envoi est fait par `bin/push_stock.php`, en cron toutes les quinze minutes de
+5 h à 20 h. Il retient dans `ceo_app_setting` (`pushStock:<id>`) la liste des
+références en alerte au passage précédent et **ne notifie que les nouvelles** —
+sans cela, chaque passage rappellerait les quatre-vingt-quinze ruptures de la
+veille. Le premier passage d'un magasin n'envoie rien : il pose l'état.
+
 ## `GET /ventes/stock`
 
 L'inventaire matière d'**un** magasin. `/centrale/stock` fait la même lecture

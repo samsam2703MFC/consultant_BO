@@ -597,3 +597,6 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-stbar.wa{border-color:rgba(178,106,0,.35);background:#fdf8f0}
 .db-stbar.wa .t{color:#B26A00}
 .mb-c .hd .v.wa{color:#B26A00}
+.db-stnote{font:400 10.5px var(--font-ui);color:var(--color-text-muted);max-width:280px;line-height:1.35}
+.db-stpush{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+#dash.mob .db-stnote{max-width:none}
