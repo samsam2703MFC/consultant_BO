@@ -4383,9 +4383,62 @@ class App {
     readOne('/connecteurs').then(d => { this._coEnCours = false;
       this.D.connecteurs = (d && d.connecteurs) || []; this.setState({}); });
   }
+  /* Un vrai appel, à la demande : « est-ce que ça marche, maintenant ? ». Une
+   * clé peut être présente et refusée, un mot de passe peut avoir expiré —
+   * relire le réglage ne le dirait pas. */
+  coTester(code){
+    if (this._coTest === code) { return; }
+    this._coTest = code;
+    this.D.coEssai = Object.assign({}, this.D.coEssai, { [code]: { encours: true } });
+    this.setState({});
+    write('api', 'POST', '/connecteurs/' + encodeURIComponent(code) + '/test', {}).then(r => {
+      this._coTest = null;
+      this.D.coEssai = Object.assign({}, this.D.coEssai, { [code]: {
+        ok: !!(r && r.ok), message: (r && r.message) || 'pas de réponse', ms: r && r.ms, appele: !(r && r.appele === false) } });
+      this.coCharge(true);                       // l'état de la table a bougé
+      this.setState({});
+    }).catch(() => {
+      this._coTest = null;
+      this.D.coEssai = Object.assign({}, this.D.coEssai, { [code]: { ok: false, message: 'appel impossible' } });
+      this.setState({});
+    });
+  }
+  /* La carte des sources : d'où vient ce que chaque écran affiche. Établie
+   * chaque nuit dans le code — une liste tenue à la main mentirait.
+   * Le nom ne peut pas commencer par « ca » : la Centrale d'achat a déjà son
+   * caCharge(), et la dernière définition d'une classe écrase la première. */
+  carteCharge(){
+    if (this._carteEnCours || this.D.carte) { return; }
+    this._carteEnCours = true;
+    readOne('/carte-sources').then(d => { this._carteEnCours = false; this.D.carte = d || {}; this.setState({}); });
+  }
   valsConnecteurs(common){
     const liste = this.D.connecteurs;
     common.coChargement = !liste;
+    this.carteCharge();
+    const C = this.D.carte;
+    common.cartePret = !!(C && C.etabli);
+    common.carteChargement = !C;
+    common.carteMotif = C && !C.etabli ? (C.motif || '') : '';
+    if (common.cartePret) {
+      const LIB = { base: ['La base seule', 'continuent de marcher si le panel tombe'],
+        mixte: ['La base et une API', 'la base pour le cadre, l’API pour les chiffres'],
+        api: ['Une API seule', 'tombent avec l’API'],
+        calcule: ['Un calcul', 'ni base ni API'] };
+      common.carteTotal = C.endpoints;
+      common.carteJours = C.jours === 0 ? 'établie cette nuit' : 'établie il y a ' + C.jours + ' jour' + (C.jours > 1 ? 's' : '');
+      common.carteCompte = ['base', 'mixte', 'api', 'calcule'].filter(k => C.compte[k]).map(k => ({
+        cle: k, nom: LIB[k][0], quoi: LIB[k][1], n: C.compte[k],
+        part: Math.round(100 * C.compte[k] / C.endpoints),
+        coul: k === 'base' ? '#2d7a3e' : (k === 'api' ? '#8D1D2C' : (k === 'mixte' ? '#B26A00' : '#78554B'))
+      }));
+      // Les plus grosses lectures qui passent par une API : c'est là que se
+      // joue ce qu'on gagnerait à passer en base.
+      common.carteLourdes = (C.lignes || []).filter(l => l.categorie === 'api' || l.categorie === 'mixte')
+        .sort((a, b) => b.lignes - a.lignes).slice(0, 12)
+        .map(l => ({ fonction: l.fonction, fichier: l.fichier, lignes: String(l.lignes),
+          route: (l.routes && l.routes[0]) || '—', sources: l.sources.join(' + ') }));
+    }
     // Un état, une couleur, une phrase : ce qu'il faut faire, pas ce qui s'est
     // passé. « Jamais appelé » n'est pas une anomalie — le connecteur attend
     // son premier geste.
@@ -4407,6 +4460,8 @@ class App {
         passages: c2.passages ? String(c2.passages) : '',
         detail: c2.erreur || c2.detail || '',
         detailSt: 'font-size:11px;line-height:1.4;text-wrap:pretty;color:' + (c2.erreur ? '#8D1D2C' : 'var(--color-text-muted)'),
+        tester: () => this.coTester(c2.code),
+        essai: (this.D.coEssai || {})[c2.code] || null,
       };
     });
   }

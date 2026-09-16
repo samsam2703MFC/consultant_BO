@@ -136,6 +136,27 @@ du seed sont des ids de démo à remplacer). Si le panel vit sur une autre base
 MySQL que le cockpit, pointez la connexion du cockpit sur la base commune ou
 répliquez `mac_report_share`.
 
+## Diagnostic API — connecteurs et carte des sources
+
+L'onglet **Diagnostic API** de l'écran Journal porte deux choses :
+
+- **Les connecteurs**, avec un bouton **Tester** par ligne. Un vrai appel, pas
+  une relecture de réglage : une clé peut être présente et refusée. Le panel
+  s'authentifie *puis* lit `/shops` — un jeton valide ne prouve pas que les
+  données suivent. L'IA n'est **pas** appelée : une proposition de note se
+  facture, et l'écran le dit au lieu de faire semblant. Le résultat s'écrit
+  dans `ceo_connecteur` comme n'importe quel geste.
+- **La carte des sources** : les 152 lectures classées par ce qu'elles
+  interrogent vraiment — **65 la base seule**, 45 les deux, 20 une API seule,
+  22 un calcul pur. Puis les plus grosses lectures qui passent par une API,
+  triées par longueur : c'est là que se joue ce qu'on gagnerait à passer en
+  base. Établie par `bin/carte_sources.php`, **lue dans le code** et non dans
+  une liste tenue à la main, en cron chaque nuit à 3 h 40.
+
+Piège rencontré : la méthode ne pouvait pas s'appeler `caCharge()` — la
+Centrale d'achat en a déjà une, et la **dernière** définition d'une classe
+écrase la première, sans erreur. D'où `carteCharge()`.
+
 ## Dashboard magasin
 
 Une page à part, `public/dashboard/?shop=4&vue=mois&date=…`, hors SPA : cinq

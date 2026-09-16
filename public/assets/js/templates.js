@@ -8378,6 +8378,7 @@ function tplDiagnostic(c, x){
         <th style="${TH}">Dernier succès</th>
         <th style="${TH}">Dernier appel</th>
         <th style="${TH};text-align:right">Passages</th>
+        <th style="${TH};text-align:right">Vérifier</th>
       </tr></thead>
       <tbody>${c.coLignes.map(l => `
         <tr>
@@ -8390,8 +8391,42 @@ function tplDiagnostic(c, x){
           <td style="${TD};white-space:nowrap">${esc(l.succes)}</td>
           <td style="${TD};white-space:nowrap;color:var(--color-text-muted)">${esc(l.appel)}</td>
           <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.passages)}</td>
+          <td style="${TD};text-align:right;white-space:nowrap">
+            <button ${x.A(l.tester)} title="Un vrai appel, maintenant" style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer"${l.essai && l.essai.encours ? ' disabled' : ''}>${l.essai && l.essai.encours ? 'appel…' : '↻ Tester'}</button>
+            ${l.essai && !l.essai.encours ? `<div style="font-size:10.5px;line-height:1.35;margin-top:4px;max-width:230px;text-wrap:pretty;color:${l.essai.ok ? '#2d7a3e' : '#8D1D2C'}">${l.essai.ok ? '✓' : '✗'} ${esc(l.essai.message)}${l.essai.ms != null && l.essai.appele ? ` · ${l.essai.ms} ms` : ''}</div>` : ''}
+          </td>
         </tr>`).join('')}</tbody>
     </table></div>`}
+  </div>
+
+  <!-- D'où vient ce que chaque écran affiche. Lue dans le code chaque nuit :
+       une liste tenue à la main mentirait dès la semaine suivante. -->
+  <div style="${CARD};margin-bottom:16px">
+    <div style="font-family:var(--font-display);font-size:15px">Ce qui vient de la base, ce qui vient d'une API</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5;text-wrap:pretty">
+      ${c.cartePret ? `Les ${esc(String(c.carteTotal))} lectures de l'API du cockpit, classées par ce qu'elles interrogent vraiment — lue dans le code, ${esc(c.carteJours)}. Ce qui ne tient qu'à la base continue de s'afficher quand le panel tombe.`
+        : (c.carteChargement ? 'Lecture de la carte…' : esc(c.carteMotif || 'carte indisponible'))}
+    </div>
+    ${c.cartePret ? `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px">
+      ${c.carteCompte.map(k => `
+      <div style="border:1px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
+        <div style="font-family:var(--font-display);font-size:24px;line-height:1;color:${k.coul}">${esc(String(k.n))}</div>
+        <div style="font-size:11.5px;font-weight:600;margin-top:3px">${esc(k.nom)}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.35;margin-top:1px">${esc(k.quoi)} · ${esc(String(k.part))} %</div>
+      </div>`).join('')}
+    </div>
+    <div style="font-size:11.5px;font-weight:600;margin:14px 0 4px">Les plus grosses lectures qui passent par une API</div>
+    <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:6px;text-wrap:pretty">C'est là que se joue ce qu'on gagnerait à passer en base : les plus longues, donc les plus lentes à rendre, et celles qui tombent avec l'API.</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px">
+      <thead><tr><th style="${TH}">Lecture</th><th style="${TH}">Route</th><th style="${TH}">Source</th><th style="${TH};text-align:right">Lignes</th></tr></thead>
+      <tbody>${c.carteLourdes.map(l => `
+        <tr><td style="${TD}"><div style="font-size:12px;font-weight:500">${esc(l.fonction)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.fichier)}</div></td>
+        <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(l.route)}</td>
+        <td style="${TD};font-size:11.5px">${esc(l.sources)}</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.lignes)}</td></tr>`).join('')}</tbody>
+    </table></div>` : ''}
   </div>
 
   <!-- Nettoyage du module marketing : la liste exacte AVANT le geste, et le
