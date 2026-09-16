@@ -18,7 +18,8 @@
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
-    stockOuvert: false, stockAvertir: false, stockVues: null };
+    stockOuvert: false, stockVues: null,
+    pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -255,9 +256,7 @@
     const E = stockEtat();
     if (E && !E.indispo && !E.n) { return ''; }        // pas d'inventaire : on se tait
     const al = E && !E.indispo ? E.alertes : 0;
-    const av = S.stockAvertir;
-    const bouton = ('Notification' in window)
-      ? `<button class="db-btn db-stav${av ? ' on' : ''}" data-stav="1">${av ? '🔔 averti' : 'M’avertir'}</button>` : '';
+    const bouton = pushBouton();
     const vieux = E && !E.indispo && E.vieux;
     const cls = al ? ' ko' : (vieux ? ' wa' : (E && !E.indispo ? ' ok' : ' mu'));
     const titre = al ? al + ' référence' + (al > 1 ? 's' : '') + ' sous le minimum'
@@ -310,26 +309,109 @@
       ${A.length > 80 ? `<div class="db-stvide">+ ${A.length - 80} autre(s) référence(s) en alerte.</div>` : ''}</div>`;
   }
 
-  /* Les avertissements du navigateur : ils ne partent QUE tant que la page est
-   * ouverte — sans service worker, rien ne tourne en arrière-plan. On le dit
-   * plutôt que de laisser croire à une alerte qui suivrait le gérant. */
-  function stockAvertirBascule() {
-    if (S.stockAvertir) { S.stockAvertir = false; rendre(); return; }
-    if (!('Notification' in window)) { S.stockAvertir = false; rendre(); return; }
-    const suite = p => { S.stockAvertir = (p === 'granted'); rendre(); };
-    if (Notification.permission === 'granted') { suite('granted'); return; }
-    if (Notification.permission === 'denied') { suite('denied'); return; }
-    try { Notification.requestPermission().then(suite); } catch (e) { suite('denied'); }
+  /* --- L'abonnement aux notifications ---------------------------------------
+   * Le navigateur s'inscrit auprès de son service de push (Google, Mozilla,
+   * Apple), qui lui rend une adresse et deux clés. On les dépose au serveur :
+   * c'est lui qui enverra, même application fermée, même téléphone rangé.
+   *
+   * Trois conditions, et l'écran dit laquelle manque : un contexte sécurisé
+   * (HTTPS), un service worker, et la permission de l'utilisateur. */
+  function pushDisponible() {
+    return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
   }
 
-  /** Après chaque relecture : ce qui vient de passer sous le minimum. */
+  async function pushEtatLire() {
+    if (!pushDisponible()) {
+      S.pushEtat = 'impossible';
+      S.pushMotif = window.isSecureContext === false
+        ? 'les notifications demandent une connexion sécurisée (https)'
+        : 'ce navigateur ne sait pas recevoir de notifications';
+      return;
+    }
+    if (Notification.permission === 'denied') { S.pushEtat = 'refuse'; S.pushMotif = 'notifications bloquées dans les réglages du navigateur'; return; }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('./');
+      const ab = reg ? await reg.pushManager.getSubscription() : null;
+      S.pushEtat = ab ? 'abonne' : 'possible';
+    } catch (e) { S.pushEtat = 'possible'; }
+  }
+
+  const pushOctets = b64 => {
+    const p = '='.repeat((4 - b64.length % 4) % 4);
+    const t = atob((b64 + p).replace(/-/g, '+').replace(/_/g, '/'));
+    const u = new Uint8Array(t.length);
+    for (let i = 0; i < t.length; i++) { u[i] = t.charCodeAt(i); }
+    return u;
+  };
+
+  async function pushBasculer() {
+    if (S.pushOccupe) { return; }
+    S.pushOccupe = true; rendre();
+    try {
+      if (!pushDisponible()) { await pushEtatLire(); return; }
+      const reg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+      await navigator.serviceWorker.ready;
+      const dejaLa = await reg.pushManager.getSubscription();
+      if (dejaLa) {
+        await fetch(API + '/push/abonnements', { method: 'DELETE', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: dejaLa.endpoint }) }).catch(() => {});
+        await dejaLa.unsubscribe().catch(() => {});
+        S.pushEtat = 'possible';
+        return;
+      }
+      const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+      if (perm !== 'granted') { S.pushEtat = 'refuse'; S.pushMotif = 'permission refusée'; return; }
+      const c = await lire('/push/cle');
+      if (!c || !c.pret) { S.pushEtat = 'impossible'; S.pushMotif = (c && c.motif) || 'le serveur n’est pas prêt'; return; }
+      const ab = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: pushOctets(c.cle) });
+      const j = ab.toJSON();
+      const r = await fetch(API + '/push/abonnements', { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shop: S.shop, endpoint: ab.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }) });
+      if (!r.ok) { await ab.unsubscribe().catch(() => {}); S.pushEtat = 'impossible'; S.pushMotif = 'le serveur a refusé l’abonnement'; return; }
+      S.pushEtat = 'abonne'; S.pushMotif = '';
+    } catch (e) {
+      S.pushEtat = 'impossible'; S.pushMotif = e && e.message ? e.message : 'abonnement impossible';
+    } finally { S.pushOccupe = false; rendre(); }
+  }
+
+  /** Un message d'essai, pour vérifier que la chaîne va jusqu'au bout. */
+  async function pushEssai() {
+    S.pushOccupe = true; rendre();
+    try {
+      const r = await fetch(API + '/push/essai', { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shop: S.shop }) });
+      const d = await r.json().catch(() => null);
+      S.pushMotif = d && d.envoyes ? 'essai envoyé à ' + d.envoyes + ' appareil' + (d.envoyes > 1 ? 's' : '')
+        : (d && d.erreurs && d.erreurs.length ? 'essai refusé : ' + d.erreurs[0] : 'aucun appareil abonné');
+    } catch (e) { S.pushMotif = 'essai impossible'; }
+    finally { S.pushOccupe = false; rendre(); }
+  }
+
+  /** Le libellé du bouton, qui dit toujours où on en est. */
+  function pushBouton() {
+    if (S.pushEtat === 'impossible' || S.pushEtat === 'refuse') {
+      return `<span class="db-stnote" title="${esc(S.pushMotif)}">🔕 ${esc(S.pushMotif || 'notifications indisponibles')}</span>`;
+    }
+    const occ = S.pushOccupe ? ' disabled' : '';
+    if (S.pushEtat === 'abonne') {
+      return `<button class="db-btn db-stav on" data-stav="1"${occ}>🔔 averti sur cet appareil</button>`
+        + `<button class="db-btn db-stav" data-stessai="1"${occ}>Essai</button>`
+        + (S.pushMotif ? `<span class="db-stnote">${esc(S.pushMotif)}</span>` : '');
+    }
+    return `<button class="db-btn db-stav" data-stav="1"${occ}>${S.pushOccupe ? 'abonnement…' : 'M’avertir'}</button>`;
+  }
+
+  /* Le serveur avertit même application fermée, mais son passage a lieu toutes
+   * les quinze minutes. Tant que la page est ouverte, elle relit le stock
+   * toutes les dix minutes : autant le dire tout de suite. */
   function stockAvertirSiNouveau(E) {
     if (!E || E.indispo) { return; }
     const set = {};
     E.lignes.forEach(x => { if (x.alerte) { set[x.ref] = 1; } });
     const avant = S.stockVues;
     S.stockVues = set;
-    if (!avant || !S.stockAvertir) { return; }          // première lecture : rien à annoncer
+    if (!avant || S.pushEtat !== 'abonne') { return; }  // première lecture : rien à annoncer
     const neufs = Object.keys(set).filter(r => !avant[r]);
     if (!neufs.length || !('Notification' in window) || Notification.permission !== 'granted') { return; }
     try {
@@ -492,7 +574,7 @@
         ${E.alertes ? `<div class="cp"><div class="mb-pills">${E.ruptures ? `<span class="ko">${E.ruptures} à zéro</span>` : ''}
           ${E.negatifs ? `<span class="ko">${E.negatifs} négatif${E.negatifs > 1 ? 's' : ''}</span>` : ''}
           <span>${E.alertes} sous le minimum</span></div>
-          ${('Notification' in window) ? `<button class="db-btn db-stav${S.stockAvertir ? ' on' : ''}" data-stav="1" style="margin-top:8px">${S.stockAvertir ? '🔔 averti des nouvelles ruptures' : 'M’avertir des nouvelles ruptures'}</button>` : ''}</div>` : ''}
+          <div class="db-stpush">${pushBouton()}</div></div>` : ''}
       </div>${S.stockOuvert ? `<div class="db-stdl">${stockTiroir(E)}</div>` : ''}`;
     }
     h += `<div class="mb-c or" data-vdrop="1"><div class="hd"><span class="k">Ce que vaut le magasin<em>${v && v.n ? '18 mois clos · × 12 ÷ ' + VALO_DIV : 'lecture des ventes…'}</em></span>
@@ -1440,7 +1522,8 @@
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
     $.querySelectorAll('[data-stdrop]').forEach(b => b.addEventListener('click', () => { S.stockOuvert = !S.stockOuvert; rendre(); }));
-    $.querySelectorAll('[data-stav]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); stockAvertirBascule(); }));
+    $.querySelectorAll('[data-stav]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); pushBasculer(); }));
+    $.querySelectorAll('[data-stessai]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); pushEssai(); }));
     $.querySelectorAll('[data-ncrow]').forEach(b => b.addEventListener('click', () => {
       S.ncLigne = S.ncLigne === b.dataset.ncrow ? null : b.dataset.ncrow; rendre(); }));
     $.querySelectorAll('[data-ncgrp]').forEach(b => b.addEventListener('click', () => {
@@ -1461,6 +1544,7 @@
   });
 
   /* --- départ ------------------------------------------------------------- */
+  pushEtatLire().then(() => rendre()).catch(() => {});
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
   charger(false);
