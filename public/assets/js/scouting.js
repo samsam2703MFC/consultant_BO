@@ -158,6 +158,9 @@ const OUTILS = [
   ['isochrone', 'Isochrone', 'Un clic : la zone atteignable en ce temps de trajet, calculée sur le réseau routier (Valhalla, OpenStreetMap).']
 ];
 const ISO_URL = 'https://valhalla1.openstreetmap.de/isochrone';
+// Le même service, en matrice : les minutes de route de quelques points vers
+// quelques autres (au plus cent paires et 150 km par appel).
+const MATRICE_URL = 'https://valhalla1.openstreetmap.de/sources_to_targets';
 const ISO_CHOIX = [['auto10', '10 min en voiture'], ['auto15', '15 min en voiture'], ['auto20', '20 min en voiture'], ['pedestrian15', '15 min à pied']];
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
@@ -415,7 +418,11 @@ export class Scouting {
       plan: false, planN: 5, planSeuil: false, planImg: '', planBusy: false,
       // L'écart minimum entre deux ouvertures du plan, en minutes de voiture
       // (0 = aucun), et la même distance vis-à-vis des magasins déjà ouverts.
-      planEcart: 20, planReseau: true
+      planEcart: 20, planReseau: true,
+      // planRoute : l'écart se mesure en vraies minutes de route (service de
+      // routage) plutôt qu'à vol d'oiseau ; planSel garde la sélection calculée
+      // et sa clé, planCalc l'avancement pendant le calcul.
+      planRoute: true, planSel: null, planCalc: null
     };
     this._h = [];
     this._scroll = {};
@@ -1661,7 +1668,7 @@ export class Scouting {
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
   }
 
-  fermerPlan(){ this.setState({ plan: false }); }
+  fermerPlan(){ this._planCle = null; this.setState({ plan: false, planCalc: null }); }
 
   setPlan(patch){
     this.setState(patch);
@@ -1669,31 +1676,53 @@ export class Scouting {
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
   }
 
-  planDonnees(){
-    const s = this.state, self = this;
+  // Ce qui entre dans la sélection du plan : les candidates au score, dans
+  // tout le pays, et la clé qui dit si la sélection par la route est à jour.
+  planSelection(){
+    const s = this.state;
     const N = Math.max(1, Math.min(5, s.planN || 5)), seuil = !!s.planSeuil;
-    // L'écart minimum : des minutes de voiture, converties à vol d'oiseau à
-    // 45 km/h de moyenne — 20 min font 15 km. Les zones se prennent au score
-    // dans tout le pays ; une zone trop près d'une retenue (ou d'un magasin
-    // ouvert, si demandé) cède la place à la suivante de sa province.
     const minutes = Math.max(0, +s.planEcart || 0), ecartKm = minutes * 45 / 60;
-    const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
+    const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null)
+      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: m.nom || m.name || 'magasin', fixe: true }));
     const groupes = this.scanTop5(ecartKm > 0 ? 40 : 5);
     const cands = [];
     groupes.forEach(g => g.zones.forEach(z => { if (!seuil || z.score >= s.minScore) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
     cands.sort((a, b) => (b.score - a.score) || (b.ca - a.ca));
-    const retenues = [], parProv = {}, ecartesProv = {};
-    let ecartes = 0;
-    cands.forEach(z => {
-      if ((parProv[z.code] || 0) >= N) return;
-      if (ecartKm > 0){
-        const trop = retenues.some(r => dist(z.lat, z.lng, r.lat, r.lng) < ecartKm)
-          || (s.planReseau && ouverts.some(m => dist(z.lat, z.lng, +m.lat, +m.lng) < ecartKm));
-        if (trop) { ecartes++; ecartesProv[z.code] = (ecartesProv[z.code] || 0) + 1; return; }
-      }
-      parProv[z.code] = (parProv[z.code] || 0) + 1;
-      retenues.push(z);
-    });
+    const route = ecartKm > 0 && s.planRoute !== false;
+    // au-delà de `cut` km à vol d'oiseau, l'écart en minutes est acquis : il
+    // faudrait rouler à 140 km/h de moyenne, porte à porte
+    const cut = minutes / 60 * 140;
+    const cle = route ? [this._top5Key, N, seuil, minutes, !!s.planReseau, ouverts.map(m => m.lat.toFixed(4) + ',' + m.lng.toFixed(4)).join(';')].join('#') : '';
+    return { N: N, seuil: seuil, minutes: minutes, ecartKm: ecartKm, cut: cut, ouverts: ouverts, groupes: groupes, cands: cands, route: route, cle: cle };
+  }
+
+  planDonnees(){
+    const s = this.state, self = this;
+    const P = this.planSelection();
+    const N = P.N, seuil = P.seuil, minutes = P.minutes, ecartKm = P.ecartKm, cut = P.cut, groupes = P.groupes;
+    const fixes = s.planReseau ? P.ouverts : [];
+    let retenues = [], ecartes = 0, ecartesProv = {}, temps = {}, sel = null, enCours = false;
+    if (P.route){
+      // la sélection par la route est asynchrone : tant qu'elle n'est pas là, le plan attend
+      sel = s.planSel && s.planSel.cle === P.cle ? s.planSel : null;
+      if (sel){ retenues = sel.retenues; ecartes = sel.ecartes; ecartesProv = sel.ecartesProv; temps = sel.temps; }
+      else { enCours = true; this.planLancer(P); }
+    } else {
+      // À vol d'oiseau, à 45 km/h de moyenne — 20 min font 15 km. Les zones se
+      // prennent au score dans tout le pays ; une zone trop près d'une retenue
+      // (ou d'un magasin ouvert, si demandé) cède la place à la suivante de sa province.
+      const parProv = {};
+      P.cands.forEach(z => {
+        if ((parProv[z.code] || 0) >= N) return;
+        if (ecartKm > 0){
+          const trop = retenues.concat(fixes).some(r => dist(z.lat, z.lng, r.lat, r.lng) < ecartKm);
+          if (trop) { ecartes++; ecartesProv[z.code] = (ecartesProv[z.code] || 0) + 1; return; }
+        }
+        parProv[z.code] = (parProv[z.code] || 0) + 1;
+        retenues.push(z);
+      });
+    }
+    const de = n => (/^[aeiouyàâéèêëîïôûùh]/i.test(n) ? 'd’' : 'de ') + n;
     const provinces = [], tous = [];
     let total = 0, hhTot = 0, k = 0;
     groupes.forEach(g => {
@@ -1701,8 +1730,10 @@ export class Scouting {
       const lignes = zones.map((z, i) => {
         const cc = self.concurrenceAu(z.lat, z.lng, s.radius);
         k++;
+        const v = ecartKm > 0 ? self.voisinDe(z, retenues.concat(fixes), temps, cut, P.route) : null;
+        const voisinTxt = !(ecartKm > 0) ? '' : v ? (P.route ? 'à ' + Math.round(v.sec / 60) + ' min ' + de(v.nom) + (v.approx ? ' (estimé)' : '') : 'à ' + Math.round(v.km) + ' km ' + de(v.nom) + ' à vol d’oiseau') : (P.route ? 'rien à moins de ' + Math.round(cut) + ' km' : '');
         return { rang: i + 1, num: k, commune: z.commune, arr: z.arr, prov: g.prov, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
-          emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng };
+          emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng, voisin: v, voisinTxt: voisinTxt };
       });
       const sous = lignes.reduce((a, l) => a + l.ca, 0);
       total += sous; hhTot += lignes.reduce((a, l) => a + l.hh, 0);
@@ -1714,15 +1745,18 @@ export class Scouting {
     const caReseau = reseau.reduce((a, m) => a + m.caAnnuel, 0);
     const nProv = provinces.filter(p => p.lignes.length).length;
     const R = s.radius.toFixed(1).replace('.', ',') + ' km';
-    const ecartTxt = ecartKm > 0 ? 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' (' + Math.round(ecartKm) + ' km à vol d’oiseau, à 45 km/h de moyenne)' : 'sans écart minimum entre elles';
+    let ecartTxt = 'sans écart minimum entre elles';
+    if (ecartKm > 0 && P.route) ecartTxt = 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' — minutes de route du service Valhalla sur OpenStreetMap, ' + fmtInt(sel ? sel.trajets : 0) + ' trajets calculés' + (sel && sel.approx ? ', ' + sel.approx + ' estimé' + (sel.approx > 1 ? 's' : '') + ' à vol d’oiseau faute de réponse' : '') + ' ; au-delà de ' + Math.round(cut) + ' km à vol d’oiseau, l’écart est acquis sans calcul';
+    else if (ecartKm > 0) ecartTxt = 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' (' + Math.round(ecartKm) + ' km à vol d’oiseau, à 45 km/h de moyenne)';
     return {
+      enCours: enCours, calc: s.planCalc, route: P.route, cut: cut,
       titre: 'Plan d’expansion — ' + tous.length + ' ouverture' + (tous.length > 1 ? 's' : '') + ' dans ' + nProv + ' province' + (nProv > 1 ? 's' : ''),
       date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
       N: N, seuil: seuil, minScore: s.minScore, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
       total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
       resume: [
         ['CA annuel estimé, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
-        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
+        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (P.route ? ' par la route' : '') + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
         ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
         caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
       ],
@@ -1733,17 +1767,167 @@ export class Scouting {
       hypotheses: [
         ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
         ['Emprise', s.emprise > 0 ? 'imposée ' + s.emprise + ' %' : 'calculée, max ' + s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
-        ['Rayon', R], ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)]
+        ['Rayon', R], ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)],
+        ['Écart entre ouvertures', ecartKm > 0 ? minutes + ' min de voiture' + (P.route ? ', temps de route' : ', ≈ ' + Math.round(ecartKm) + ' km') + (s.planReseau ? ', magasins ouverts compris' : '') : 'aucun']
       ],
       sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
-        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + ' · CA réel du réseau : P&L du panel, douze derniers mois clos.'
+        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + (ecartKm > 0 && P.route ? ' · temps de route : Valhalla (FOSSGIS) sur OpenStreetMap' : '') + ' · CA réel du réseau : P&L du panel, douze derniers mois clos.'
     };
+  }
+
+  /* ---------- l'écart entre ouvertures, en vraies minutes de route ---------- */
+  // La sélection reste gloutonne, au score : chaque candidate est comparée
+  // aux zones déjà retenues (et aux magasins ouverts) qui sont à moins de
+  // `cut` km à vol d'oiseau ; les minutes de route de ces paires viennent du
+  // service de matrice, par salves de candidates, quatre appels de front au
+  // plus — c'est un service communautaire. Les trajets connus sont gardés en
+  // mémoire et sur le poste : le plan suivant ne redemande que le neuf.
+  planLancer(P){
+    if (this._planCle === P.cle) return;
+    this._planCle = P.cle;
+    setTimeout(() => this.planCalculer(P), 0);
+  }
+
+  async planCalculer(P){
+    const lim = P.minutes * 60, cut = P.cut, N = P.N, cands = P.cands;
+    const fixes = this.state.planReseau ? P.ouverts : [];
+    const run = { appels: 0, echecs: 0, trajets: 0, approx: 0, examinees: 0, coupe: false, t0: Date.now() };
+    const vivant = () => this._planCle === P.cle && this.state.plan;
+    const kp = (a, b) => { const x = a.lat.toFixed(4) + ',' + a.lng.toFixed(4), y = b.lat.toFixed(4) + ',' + b.lng.toFixed(4); return x < y ? x + '|' + y : y + '|' + x; };
+    const union = (a, b) => a.concat(b.filter(x => a.indexOf(x) < 0));
+    const retenues = [], parProv = {}, ecartesProv = {}, temps = {};
+    let ecartes = 0, i = 0;
+    this.setState({ planCalc: { examinees: 0, retenues: 0, appels: 0 } });
+    try {
+      while (i < cands.length){
+        // la salve : les prochaines candidates encore éligibles
+        const salve = [];
+        while (i < cands.length && salve.length < 16){ const z = cands[i++]; if ((parProv[z.code] || 0) < N) salve.push(z); }
+        if (!salve.length) break;
+        // ce qu'il faut demander pour chacune : les retenues et magasins à
+        // moins de `cut`, et les candidates de la salve qui la précèdent ; des
+        // candidates à moins de 60 km l'une de l'autre partagent un appel
+        const groupes = [];
+        salve.forEach((z, j) => {
+          const cibles = retenues.concat(fixes).filter(r => dist(z.lat, z.lng, r.lat, r.lng) < cut)
+            .concat(salve.slice(0, j).filter(r => dist(z.lat, z.lng, r.lat, r.lng) < cut));
+          if (!cibles.length) return;
+          const g = groupes.find(g => g.sources.every(a => dist(a.lat, a.lng, z.lat, z.lng) < 60) && (g.sources.length + 1) * union(g.cibles, cibles).length <= 100);
+          if (g){ g.sources.push(z); g.cibles = union(g.cibles, cibles); } else groupes.push({ sources: [z], cibles: cibles.slice() });
+        });
+        for (let o = 0; o < groupes.length; o += 4){
+          await Promise.all(groupes.slice(o, o + 4).map(g => this.tempsRoute(g.sources, g.cibles, run).then(grille => {
+            g.sources.forEach((a, si) => g.cibles.forEach((b, ci) => { const v = grille[si][ci]; if (v != null && v >= 0){ const c = kp(a, b); temps[c] = temps[c] === undefined ? v : Math.min(temps[c], v); } }));
+          })));
+          if (!vivant()){ if (this._planCle === P.cle) this._planCle = null; return; }
+        }
+        // puis la décision, dans l'ordre du score
+        salve.forEach(z => {
+          run.examinees++;
+          if ((parProv[z.code] || 0) >= N) return;
+          const trop = retenues.concat(fixes).some(r => dist(z.lat, z.lng, r.lat, r.lng) < cut && this.tempsEntre(z, r, temps, run) < lim);
+          if (trop){ ecartes++; ecartesProv[z.code] = (ecartesProv[z.code] || 0) + 1; return; }
+          parProv[z.code] = (parProv[z.code] || 0) + 1;
+          retenues.push(z);
+        });
+        this.setState({ planCalc: { examinees: run.examinees, retenues: retenues.length, appels: run.appels } });
+      }
+    } catch (e) {
+      console.warn('[scouting] temps de route :', e);
+      if (!vivant()) return;
+      this._planCle = null;
+      this.notify('Temps de route indisponibles (' + e.message + ') — l’écart est mesuré à vol d’oiseau');
+      this.setState({ planCalc: null, planRoute: false });
+      return;
+    }
+    this.routesSauver();
+    if (!vivant()){ if (this._planCle === P.cle) this._planCle = null; return; }
+    if (run.trajets === 0 && run.echecs) this.notify('Le service de routage n’a pas répondu : les écarts sont estimés à vol d’oiseau (45 km/h)');
+    else if (run.coupe) this.notify('Service de routage lent : au-delà de ' + run.appels + ' appels, les derniers écarts sont estimés à vol d’oiseau');
+    this._planImgKey = null;
+    this.setState({ planCalc: null, planSel: { cle: P.cle, retenues: retenues, ecartes: ecartes, ecartesProv: ecartesProv, temps: temps, trajets: run.trajets, appels: run.appels, approx: run.approx, echecs: run.echecs, duree: Date.now() - run.t0 } });
+    this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+  }
+
+  // Les secondes de route entre deux points, si on les a demandées ; sinon
+  // l'estimation à vol d'oiseau à 45 km/h, comptée comme telle.
+  tempsEntre(a, b, temps, run){
+    const x = a.lat.toFixed(4) + ',' + a.lng.toFixed(4), y = b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+    const v = temps[x < y ? x + '|' + y : y + '|' + x];
+    if (v !== undefined) return v;
+    if (run) run.approx++;
+    return dist(a.lat, a.lng, b.lat, b.lng) / 45 * 3600;
+  }
+
+  // Le voisin le plus proche d'une zone retenue : par la route parmi ceux à
+  // moins de `cut` km (au-delà, l'écart est acquis), sinon à vol d'oiseau.
+  voisinDe(z, autres, temps, cut, route){
+    let best = null;
+    autres.forEach(r => {
+      if (r === z) return;
+      const d = dist(z.lat, z.lng, r.lat, r.lng);
+      if (route){
+        if (d >= cut) return;
+        const x = z.lat.toFixed(4) + ',' + z.lng.toFixed(4), y = r.lat.toFixed(4) + ',' + r.lng.toFixed(4);
+        const v = temps[x < y ? x + '|' + y : y + '|' + x];
+        const sec = v !== undefined ? v : d / 45 * 3600;
+        if (!best || sec < best.sec) best = { nom: r.commune || r.nom, sec: sec, km: d, approx: v === undefined };
+      } else if (!best || d < best.km) best = { nom: r.commune || r.nom, km: d, sec: d / 45 * 3600, approx: true };
+    });
+    return best;
+  }
+
+  routesCache(){ return this._routes || (this._routes = ls.get('routes') || {}); }
+
+  routesSauver(){
+    const R = this.routesCache(), cles = Object.keys(R);
+    if (cles.length > 8000){ const garde = {}; cles.slice(-5000).forEach(c => { garde[c] = R[c]; }); this._routes = garde; }
+    ls.set('routes', this._routes);
+  }
+
+  // Les secondes de route de `sources` vers `cibles`, par le service de
+  // matrice, en tranches d'au plus cent paires. Rend une grille
+  // [source][cible] : -1 quand il n'y a pas de route, null quand le service
+  // n'a pas répondu. Les paires connues sont relues du cache.
+  async tempsRoute(sources, cibles, run){
+    const R = this.routesCache();
+    const kk = (a, b) => a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + '>' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+    const grille = sources.map(a => cibles.map(b => R[kk(a, b)]));
+    const manque = cibles.map((c, j) => j).filter(j => sources.some((a, si) => grille[si][j] === undefined));
+    const tranche = Math.max(1, Math.floor(100 / sources.length));
+    for (let o = 0; o < manque.length; o += tranche){
+      const part = manque.slice(o, o + tranche);
+      if (run.coupe || run.appels >= 300 || Date.now() - run.t0 > 150000){
+        run.coupe = true;
+        sources.forEach((a, si) => part.forEach(j => { if (grille[si][j] === undefined) grille[si][j] = null; }));
+        continue;
+      }
+      const q = { sources: sources.map(a => ({ lat: a.lat, lon: a.lng })), targets: part.map(j => ({ lat: cibles[j].lat, lon: cibles[j].lng })), costing: 'auto' };
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 25000);
+      run.appels++;
+      try {
+        const r = await fetch(MATRICE_URL + '?json=' + encodeURIComponent(JSON.stringify(q)), { signal: ctl.signal, headers: { Accept: 'application/json' } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        const m = j && j.sources_to_targets || [];
+        sources.forEach((a, si) => part.forEach((j2, n) => {
+          const c = (m[si] || [])[n];
+          const v = c && c.time != null ? Math.round(c.time) : -1;
+          grille[si][j2] = v; R[kk(a, cibles[j2])] = v; run.trajets++;
+        }));
+      } catch (e) {
+        run.echecs++;
+        sources.forEach((a, si) => part.forEach(j2 => { if (grille[si][j2] === undefined) grille[si][j2] = null; }));
+      } finally { clearTimeout(t); }
+    }
+    return grille;
   }
 
   // La carte du plan : le pays (ou l'emprise des points), les zones retenues
   // numérotées, les magasins ouverts. Même assemblage de tuiles que le dossier.
   carteStatiquePlan(){
     const s = this.state, d = this.planDonnees();
+    if (d.enCours) return Promise.resolve('');
     const pts = [];
     d.provinces.forEach(p => p.lignes.forEach(l => pts.push(l)));
     const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
@@ -1803,14 +1987,21 @@ export class Scouting {
       titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') + (d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''),
       resume: d.resume, carte: d.carte || '', carteNote: d.carteNote,
       provinces: d.provinces.map(p => ({ nom: p.nom, detail: p.detail, sousTotal: fmtEur(p.sousTotal),
-        lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr, String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
+        lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr + (l.voisinTxt ? ' · ' + l.voisinTxt : ''), String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
       classement: d.classement.map(l => [String(l.num), l.commune, l.prov, String(l.score), fmtEur(l.ca)]),
       hypotheses: d.hypotheses, methode: d.methode, sources: d.sources
     };
   }
 
+  planPret(d){
+    if (!d.enCours) return true;
+    this.notify('Les temps de route sont en cours de calcul — un instant.');
+    return false;
+  }
+
   async telechargerPlanPdf(){
     const d = this.planDonnees();
+    if (!this.planPret(d)) return;
     if (!this.useApi()){ this.imprimerPlan(); return; }
     this.setState({ planBusy: true });
     try {
@@ -1839,6 +2030,7 @@ export class Scouting {
 
   imprimerPlan(){
     const d = this.planDonnees();
+    if (!this.planPret(d)) return;
     d.carte = this.state.planImg || '';
     const logo = new URL('assets/img/logo.png', document.baseURI).href;
     const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
@@ -1851,10 +2043,12 @@ export class Scouting {
 
   exporterPlanCsv(){
     const d = this.planDonnees(), s = this.state;
+    if (!this.planPret(d)) return;
     const rows = [];
-    d.provinces.forEach(p => p.lignes.forEach(l => rows.push([l.num, p.nom, l.rang, l.commune, l.arr, l.score, Math.round(l.hh), l.n, l.forts, l.chaines, (l.emprise * 100).toFixed(1), Math.round(l.ca), Math.round(l.m2), l.lat.toFixed(5), l.lng.toFixed(5)])));
-    rows.push(['', 'TOTAL', '', d.nPts + ' ouvertures', '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '']);
-    this.csv('plan_expansion', ['numero', 'province', 'rang_province', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng'], rows);
+    d.provinces.forEach(p => p.lignes.forEach(l => rows.push([l.num, p.nom, l.rang, l.commune, l.arr, l.score, Math.round(l.hh), l.n, l.forts, l.chaines, (l.emprise * 100).toFixed(1), Math.round(l.ca), Math.round(l.m2), l.lat.toFixed(5), l.lng.toFixed(5),
+      l.voisin ? l.voisin.nom : '', l.voisin ? l.voisin.km.toFixed(1) : '', l.voisin && d.route && !l.voisin.approx ? Math.round(l.voisin.sec / 60) : ''])));
+    rows.push(['', 'TOTAL', '', d.nPts + ' ouvertures', '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '', '', '', '']);
+    this.csv('plan_expansion', ['numero', 'province', 'rang_province', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng', 'plus_proche', 'plus_proche_km_vol_oiseau', 'plus_proche_min_route'], rows);
   }
 
   /* ---------- la concurrence d'un point, lue pour les listes ---------- */
@@ -3496,6 +3690,7 @@ export class Scouting {
         ecartChoix: [[0, 'sans écart minimum'], [10, '10 min entre elles'], [15, '15 min entre elles'], [20, '20 min entre elles'], [30, '30 min entre elles']].map(c => ({ value: String(c[0]), label: c[1] })),
         ecartVal: String(Math.max(0, +s.planEcart || 0)), setEcart: e => self.setPlan({ planEcart: parseInt(e.target.value, 10) || 0 }),
         reseauOn: !!s.planReseau, toggleReseau: () => self.setPlan({ planReseau: !s.planReseau }),
+        routeOn: s.planRoute !== false, toggleRoute: () => self.setPlan({ planRoute: s.planRoute === false }),
         fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
       }) : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
