@@ -64,6 +64,19 @@ function fusionneAttributs(v, n){
  * puis on relâche le focus : l'événement tardif ne trouve plus rien à appeler.
  */
 const GESTES = ['data-h', 'data-c', 'data-i', 'data-sb', 'data-pd', 'data-ds', 'data-dp', 'data-en'];
+
+/**
+ * Le réseau au complet : tous les magasins qui avaient un objectif l'ont passé.
+ *
+ * Deux garde-fous. Un magasin fermé ne compte pas — il n'avait rien à faire ce
+ * jour-là. Et il en faut au moins DEUX : avec un seul, « tous les magasins »
+ * ne dit rien de plus que sa propre ligne, et la fête serait un doublon.
+ */
+function tousAtteints(lignes){
+  // Un magasin sans budget n'a pas d'objectif à rater : il ne vote pas.
+  const juges = (lignes || []).filter(l => l && l.ouvert && l.avecObjectif);
+  return juges.length >= 2 && juges.every(l => l.atteint);
+}
 function neutralise(el){
   if (!el || el.nodeType !== 1) { return; }
   const nu = n2 => GESTES.forEach(a => n2.removeAttribute(a));
@@ -7553,6 +7566,10 @@ class App {
       const sansO = m.objectif == null;
       return {
         id: m.shopId, nom: reseau ? 'Réseau' : m.magasin, ouvert: reseau ? (m.magasins || 0) > 0 : !!m.ouvert, reseau: !!reseau,
+        // L'objectif de la PÉRIODE, pas l'attendu à ce jour : être dans les
+        // temps n'est pas l'avoir fait.
+        avecObjectif: !reseau && !!m.ouvert && !sansO,
+        atteint: !reseau && !!m.ouvert && !sansO && m.realise != null && m.realise >= m.objectif,
         sousTitre: reseau ? m.magasins + ' magasin(s)' + (m.magasinsAvecObjectif < m.magasins ? ' · ' + (m.magasins - m.magasinsAvecObjectif) + ' sans budget' : '')
           : (m.ouvert ? ((m.sansBudget || []).length ? 'sans budget ' + m.sansBudget.join(', ') : '') : (m.motif || 'sans réponse')),
         actif: !reseau && m.shopId === sel, chevron: reseau ? '' : (m.shopId === sel ? '▾' : '▸'),
@@ -7578,6 +7595,10 @@ class App {
     };
     common.rpLignes = (r.magasins || []).map(m => ligne(m, false));
     common.rpReseau = ligne(res, true);
+    // Le réseau au complet : tous les magasins ouverts qui ont un objectif
+    // l'ont passé, et il y en a au moins deux — un seul magasin n'est pas un
+    // réseau, et la fête serait celle de sa propre ligne.
+    common.rpTous = tousAtteints(common.rpLignes);
     common.rpNote = r.source || '';
     common.rpEntetes = vue === 'semaine'
       ? ['Magasin', 'Objectif', 'Réalisé', 'Attendu à ce jour', 'Écart', 'Clients manquants']
@@ -7786,6 +7807,9 @@ class App {
       const actif = m.shopId === sel;
       return {
         id: m.shopId, nom: m.magasin, ouvert: !!m.ouvert, actif,
+        // Objectif passé : la ligne le porte, l'écran s'en sert pour le feu.
+        avecObjectif: !!m.ouvert && m.objectifAtteinte != null,
+        atteint: !!m.ouvert && m.objectifAtteinte != null && m.objectifAtteinte >= 1,
         // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
         ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
         // Cliquer la sparkline ouvre la MODALE du CA heure par heure — la
@@ -7852,6 +7876,8 @@ class App {
         st: 'cursor:pointer;background:' + (actif ? 'var(--color-background-secondary)' : 'transparent'),
       };
     });
+
+    common.rjTous = tousAtteints(common.rjLignes);
 
     // --- La MODALE du CA heure par heure : le clic sur une sparkline ouvre
     //     le relevé complet du magasin — chaque heure, son CA, sa part.

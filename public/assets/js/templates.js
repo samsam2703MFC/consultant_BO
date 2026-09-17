@@ -4033,12 +4033,44 @@ function tplPerformance(c, x){
 }
 
 /** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
+/* Le petit feu d'artifice d'une ligne qui a passé son objectif, et la pluie de
+ * papiers quand c'est tout le réseau. Les deux sont décoratifs — `aria-hidden`
+ * et sans pointeur : le chiffre reste la vraie nouvelle, le reste se remarque
+ * sans se lire. */
+const eclat = (px, cls) => `<svg class="${cls}" viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true" focusable="false">
+  <g stroke="#e2b93b" stroke-width="2.4" stroke-linecap="round">
+    <path d="M12 1.6v4.8M12 17.6v4.8M1.6 12h4.8M17.6 12h4.8"/>
+    <path d="M4.8 4.8l3 3M16.2 16.2l3 3M19.2 4.8l-3 3M7.8 16.2l-3 3" opacity=".75"/>
+  </g><circle cx="12" cy="12" r="2.8" fill="#C0182B"/></svg>`;
+/* Un dessin plutôt qu'un emoji : 🎆 tombe en carré bleu dès que la police
+ * système n'a pas la couleur, et à douze pixels il ne ressemble à rien. */
+const feuLigne = `<span class="rj-feu" title="Objectif atteint">${eclat(13, '')}</span>`;
+function confettisReseau(){
+  const coul = ['#C0182B', '#2d7a3e', '#e2b93b', '#8a6508', '#78554B', '#f7f3ec'];
+  let h = '';
+  // Positions stables d'un rendu à l'autre : un générateur à graine fixe, sinon
+  // les papiers sautent à chaque redessin de l'écran.
+  let g = 7;
+  const al = () => { g = (g * 16807) % 2147483647; return g / 2147483647; };
+  for (let i = 0; i < 60; i++) {
+    const a = al(), b = al(), c2 = al();
+    h += `<i style="left:${(a * 100).toFixed(1)}%;width:${(5 + b * 5).toFixed(1)}px;height:${(9 + b * 9).toFixed(1)}px;background:${coul[i % coul.length]};animation-duration:${(3.4 + c2 * 2.6).toFixed(2)}s;animation-delay:${(-c2 * 6).toFixed(2)}s;--r:${(a * 900 - 450).toFixed(0)}deg"></i>`;
+  }
+  return `<div class="rj-confi" aria-hidden="true">${h}</div>`;
+}
+
 function tplResultat(c, x){
   const { esc } = x;
   // Chaque onglet dit où en est sa lecture : anneau qui tourne, puis coche.
   const ong = o => `<button ${x.A(o.go)} class="${o.on ? 'rj-on' : ''}" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:7px 18px;border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.etat === 'lecture' ? '<i class="rj-ring"></i>' : '<i class="rj-ok">✓</i>'}${esc(o.nom)}</button>`;
+  // Tout le réseau au-dessus de son objectif : la nouvelle mérite mieux qu'une
+  // colonne verte. L'onglet ouvert décide — la journée et la période ne se
+  // gagnent pas ensemble.
+  const tous = c.rjOnglet === 'jour' ? c.rjTous : c.rpTous;
   return `
   <div data-screen="resultat" style="display:flex;flex-direction:column;gap:14px">
+    ${tous ? confettisReseau() : ''}
+    ${tous ? `<div class="rj-tous">${eclat(17, 'rj-feu')}Tous les magasins ont passé leur objectif ${esc(c.rjOnglet === 'jour' ? 'du jour' : (c.rjOnglet === 'mois' ? 'du mois' : 'de la semaine'))}.</div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjOngletTxt)}</div>
       <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.rjOnglets.map(ong).join('')}</div>
@@ -4094,7 +4126,7 @@ function tplResultatPeriode(c, x){
   const rang = l => `
     <tr ${l.ouvrir ? x.A(l.ouvrir) : ''} class="${l.reseau ? '' : 'hv-bg'}" style="${l.st}">
       <td style="padding:9px 10px;${l.reseau ? 'border-top:1px solid var(--color-border-secondary)' : bord}">
-        <div style="font-weight:500">${l.chevron ? `<span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>` : ''}${esc(l.nom)}</div>
+        <div style="font-weight:500">${l.chevron ? `<span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>` : ''}${esc(l.nom)}${l.atteint ? feuLigne : ''}</div>
         ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:${l.reseau ? 0 : 14}px">${esc(l.sousTitre)}</div>` : ''}
       </td>
       ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true) + cel(l.attendu, 'var(--color-text-muted)')
@@ -4325,7 +4357,7 @@ function tplResultatJour(c, x){
         ${c.rjLignes.map(l => `
           <tr ${x.A(l.ouvrir)} class="hv-bg" style="${l.st}">
             <td style="padding:9px 10px;${bord}">
-              <div style="font-weight:500"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nom)}</div>
+              <div style="font-weight:500"><span style="font-size:9px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>${esc(l.nom)}${l.atteint ? feuLigne : ''}</div>
               ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:14px">${esc(l.sousTitre)}</div>` : ''}
             </td>
             <td style="padding:6px 10px;${bord};vertical-align:middle">${l.heures
