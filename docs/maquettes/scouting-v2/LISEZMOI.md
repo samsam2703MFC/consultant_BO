@@ -31,6 +31,8 @@ surface), les **notes Google** de la concurrence, et l'assistant
 | `a-carte-potentiel.html` | la carte **peint le potentiel** au lieu de pointer la concurrence |
 | `b-zone-dessinee.html` | la zone d'étude **se dessine** — isochrone, polygone, cercle libre |
 | `c-dossier.html` | l'étude **sort en dossier** daté, partageable, versionné |
+| `d-trois-lectures.html` | le même territoire **lu trois fois** — marché, concurrence, synthèse |
+| `e-echelle-arrondissement.html` | la même question **posée à l'arrondissement** |
 
 ### A — la carte se lit
 
@@ -67,6 +69,31 @@ carte, son marché, sa concurrence, sa comparaison au réseau et **les
 hypothèses qui l'ont produite**, en PDF et en Excel, partageable, avec son
 historique (« dépense calée sur le réseau, 586 € → 339 € »). Deux rapports de
 dates différentes restent comparables.
+
+### D — le même territoire, trois lectures
+
+Le sélecteur de thème en action, sur la même fenêtre (Hainaut, Namur,
+Brabant wallon) : le **marché** (ménages accessibles en 4 km), la
+**concurrence** (les commerces de ce même rayon), et la **synthèse** — le CA
+que le modèle en tire, `ménages × 339 € × emprise ÷ (1 − 15 %)`, l'emprise
+descendant avec la pression concurrentielle. Là où le marché est le plus
+épais, la concurrence l'est aussi : c'est l'emprise qui tranche.
+
+La pression est calculée avec une force moyenne de 0,62 par concurrent
+(faute d'avoir la note de chacun dans la maquette) ; l'écran, lui, la tire de
+la note Google.
+
+### E — l'échelle change
+
+La même question posée aux 43 arrondissements : combien de ménages se
+partagent un commerce. **Charleroi en compte 2 635 pour un point de vente,
+Tournai 440** — un rapport de six. Chaque maille prend la valeur de
+l'arrondissement de la commune la plus proche, ce qui redessine le découpage
+administratif sans en charger les contours.
+
+Ce que la carte dit du réseau : Gosselies est dans Charleroi (1er des 43),
+Halle dans Hal-Vilvorde (2e), Berlo dans Liège (18e). Le réseau est déjà là
+où il y a de la place.
 
 ## D'où viennent les chiffres
 

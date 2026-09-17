@@ -21,6 +21,9 @@
   const RAMPE = ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'];
   const GRIS = 'rgba(120,110,100,.18)';
   const POP = ['#f6efe3', '#e9d7b4', '#d9b978', '#c2933c'];
+  const ROUGE = ['#f7e9ea', '#e3b9bd', '#c77c85', '#8D1D2C'];
+  const BLEU = ['#eaf0f4', '#c2d4e0', '#8fb0c6', '#3f6f92'];
+  const SPEND = 339, PASSAGE = 0.15, EMAX = 20, COMPK = 0.2, FORCE = 0.62;
 
   const km = (a, b, c, d) => {
     const x = (c - a) * 111.2, y = (d - b) * 111.2 * Math.cos((a + c) / 2 * Math.PI / 180);
@@ -102,25 +105,34 @@
         const p = P(c);
         return p.x > -60 && p.x < w + 60 && p.y > -60 && p.y < h + 60;
       });
+      const CALCUL = { potentiel: 1, marche: 1, concurrence: 1, ca: 1, emprise: 1 };
       const val = [];
-      if (o.peindre === 'potentiel') {
+      if (CALCUL[o.peindre]) {
         vues.forEach(c => {
           let pop = 0;
           autour(gr.g, c[0], c[1], R + 1).forEach(v => {
             const d = km(c[0], c[1], v[0], v[1]);
             if (d <= R - 0.5) { pop += v[2]; } else if (d < R + 0.5) { pop += v[2] * (R + 0.5 - d); }
           });
-          let n = 0;
-          autour(gPts, c[0], c[1], R).forEach(p => { if (km(c[0], c[1], p[0], p[1]) <= R) { n++; } });
+          let n = 0, pression = 0;
+          autour(gPts, c[0], c[1], R).forEach(p => {
+            const d = km(c[0], c[1], p[0], p[1]);
+            if (d <= R) { n++; pression += FORCE * (1 - 0.6 * d / R); }
+          });
           const hh = pop / HH;
-          val.push([c, hh, n, hh / (n + 1)]);
+          const emprise = Math.max(4, EMAX / (1 + COMPK * pression));
+          const ca = hh * SPEND * emprise / 100 / (1 - PASSAGE);
+          val.push([c, hh, n, hh / (n + 1), emprise, ca]);
         });
-        const tri = val.map(v => v[3]).sort((a, b) => a - b);
+        const COL = { potentiel: 3, marche: 1, concurrence: 2, ca: 5, emprise: 4 };
+        const k = COL[o.peindre];
+        const tri = val.map(v => v[k]).sort((a, b) => a - b);
         const q = f => tri[Math.floor(tri.length * f)];
         mes.bornes = [q(0.25), q(0.5), q(0.75)];
         mes.mailles = val.length;
         mes.menages = Math.round(vues.reduce((s, c) => s + c[2], 0) / HH);
         mes.sans = val.filter(v => v[2] === 0).length;
+        mes.max = tri[tri.length - 1];
       }
 
       /* --- peinture -------------------------------------------------------- */
@@ -130,13 +142,37 @@
         cx.fillStyle = couleur;
         cx.fillRect(a.x, b.y, Math.max(b.x - a.x, 1.2), Math.max(a.y - b.y, 1.2));
       };
-      if (o.peindre === 'potentiel') {
+      if (CALCUL[o.peindre]) {
+        const COL = { potentiel: 3, marche: 1, concurrence: 2, ca: 5, emprise: 4 };
+        const RA = { potentiel: RAMPE, marche: BLEU, concurrence: ROUGE, ca: RAMPE, emprise: RAMPE };
+        const k = COL[o.peindre], ra = RA[o.peindre];
         cx.globalAlpha = 0.78;
         val.forEach(v => {
-          const m = v[3];
+          const m = v[k];
           const i = m < mes.bornes[0] ? 0 : m < mes.bornes[1] ? 1 : m < mes.bornes[2] ? 2 : 3;
           mes.classes[i]++;
-          carre(v[0], RAMPE[i]);
+          carre(v[0], ra[i]);
+        });
+        cx.globalAlpha = 1;
+      } else if (o.peindre === 'arr') {
+        /* Lecture par arrondissement : chaque maille prend la valeur de
+           l'arrondissement de la commune la plus proche. */
+        const gCom = ranger(communes, c => c[3], c => c[4]);
+        const vals = Object.keys(o.valeursArr).map(k2 => o.valeursArr[k2]).sort((a, b) => a - b);
+        const q = f => vals[Math.floor(vals.length * f)];
+        mes.bornes = [q(0.25), q(0.5), q(0.75)];
+        cx.globalAlpha = 0.72;
+        vues.forEach(c => {
+          let best = null, bd = 99;
+          autour(gCom, c[0], c[1], 14).forEach(x => {
+            const d = km(c[0], c[1], x[3], x[4]); if (d < bd) { bd = d; best = x; }
+          });
+          if (!best || bd > 11) { return; }
+          const m = o.valeursArr[best[1]];
+          if (m == null) { return; }
+          const i = m < mes.bornes[0] ? 0 : m < mes.bornes[1] ? 1 : m < mes.bornes[2] ? 2 : 3;
+          mes.classes[i]++;
+          carre(c, RAMPE[i]);
         });
         cx.globalAlpha = 1;
       } else if (o.peindre === 'population') {
@@ -207,7 +243,8 @@
       }
 
       if (o.apres) { o.apres(mes, map); }
-      global.__pret = true;
+      global.__faits = (global.__faits || 0) + 1;
+      if (global.__faits >= (global.__attendus || 1)) { global.__pret = true; }
     });
     return map;
   };

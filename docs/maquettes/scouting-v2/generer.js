@@ -329,12 +329,147 @@ ${TABS('Mes études')}
 })();
 </script>`;
 
+
+/* --------------------------------------------------- D — trois lectures --- */
+const TRIO = [
+  ['marche', 'Le marché', 'Ménages accessibles en 4 km — la population du recensement, là où elle vit, ramenée au rayon de chalandise.', 'ménages'],
+  ['concurrence', 'La concurrence', 'Commerces de boulangerie-pâtisserie présents dans ces mêmes 4 km, tels qu’OpenStreetMap les connaît.', 'concurrents'],
+  ['ca', 'Ce que le modèle en tire', 'CA annuel estimé : ménages × 339 € × emprise ÷ (1 − 15 %), l’emprise descendant avec la pression concurrentielle.', '€ / an'],
+];
+const D = `${BAR(`<button>Assistant « où puis-je ouvrir ? »</button><button class="ac">Comparer les lectures</button>
+  <button>Magasins du réseau</button><button class="pr">Exporter les trois cartes</button>`)}
+${TABS('Carte')}
+<div class="body trio">
+  ${TRIO.map(([k, t, d], i) => `
+  <div class="map${i ? ' bordg' : ''}">
+    <div id="map${i}"></div>
+    <div class="mapui">
+      <div class="bulle titre" style="max-width:none;right:14px"><b>${esc(t)}</b><span>${esc(d)}</span></div>
+      <div class="bulle leg" data-k="leg${i}"></div>
+    </div>
+  </div>`).join('')}
+</div>
+<script>
+window.__attendus = 3;
+(function () {
+  const nf = n => Math.round(n).toLocaleString('fr-BE');
+  const CAD = [[50.18, 3.55], [50.72, 5.15]];
+  const RA = { marche: ['#eaf0f4', '#c2d4e0', '#8fb0c6', '#3f6f92'],
+               concurrence: ['#f7e9ea', '#e3b9bd', '#c77c85', '#8D1D2C'],
+               ca: ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'] };
+  const UNITE = { marche: ' ménages', concurrence: '', ca: ' €' };
+  [['marche', 0], ['concurrence', 1], ['ca', 2]].forEach(function (x) {
+    carte({ el: 'map' + x[1], cadre: CAD, peindre: x[0], apres: function (m) {
+      const b = m.bornes, r = RA[x[0]], u = UNITE[x[0]];
+      const t = ['moins de ' + nf(b[0]), nf(b[0]) + ' à ' + nf(b[1]), nf(b[1]) + ' à ' + nf(b[2]), nf(b[2]) + ' et plus'];
+      document.querySelector('[data-k="leg' + x[1] + '"]').innerHTML =
+        [3, 2, 1, 0].map(function (i) {
+          return '<div class="l"><span class="sw" style="background:' + r[i] + '"></span>'
+            + '<span class="tx">' + t[i] + u + '</span><span class="n">' + nf(m.classes[i]) + '</span></div>';
+        }).join('') + '<div class="p">maille 1 km² · ' + nf(m.mailles) + ' mailles peintes</div>';
+    } });
+  });
+})();
+</script>`;
+
+/* ------------------------------------------------------ E — les échelles --- */
+const ARR_PT = {
+  'Alost': 1882, 'Anvers': 1404, 'Arlon': 544, 'Ath': 1143, 'Audenarde': 1983, 'Bastogne': 1215,
+  'Bruges': 958, 'Bruxelles-Capitale': 1348, 'Charleroi': 2635, 'Courtrai': 1150, 'Dinant': 798,
+  'Dixmude': 1025, 'Eeklo': 1788, 'Furnes': 603, 'Gand': 1112, 'Hal-Vilvorde': 2085, 'Hasselt': 1467,
+  'Huy': 1452, 'La Louvière': 1603, 'Liège': 1341, 'Louvain': 1308, 'Maaseik': 1267, 'Malines': 1519,
+  'Marche-en-Famenne': 785, 'Mons': 1147, 'Namur': 1257, 'Neufchâteau': 826, 'Nivelles': 1504,
+  'Ostende': 1491, 'Philippeville': 1082, 'Roulers': 1002, 'Saint-Nicolas': 1820, 'Soignies': 1288,
+  'Termonde': 1071, 'Thuin': 1732, 'Tielt': 1195, 'Tongres': 743, 'Tournai': 440, 'Turnhout': 1343,
+  'Verviers': 492, 'Virton': 812, 'Waremme': 1552, 'Ypres': 840
+};
+const ARR_TOP = [
+  [1, 'Charleroi', '2 635', '171 253 ménages · 65 commerces'],
+  [2, 'Hal-Vilvorde', '2 085', '289 828 ménages · 139 commerces'],
+  [3, 'Audenarde', '1 983', '53 545 ménages · 27 commerces'],
+  [4, 'Alost', '1 882', '127 989 ménages · 68 commerces'],
+  [5, 'Saint-Nicolas', '1 820', '121 944 ménages · 67 commerces'],
+  [6, 'Eeklo', '1 788', '37 548 ménages · 21 commerces'],
+  [7, 'Thuin', '1 732', '39 842 ménages · 23 commerces'],
+];
+const ARR_BAS = [
+  [43, 'Tournai', '440', '97 717 ménages · 222 commerces'],
+  [42, 'Verviers', '492', '125 474 ménages · 255 commerces'],
+  [41, 'Arlon', '544', '27 720 ménages · 51 commerces'],
+];
+const E = `${BAR(`<button>Assistant « où puis-je ouvrir ? »</button><button>Magasins du réseau</button>
+  <button class="ac">Comparer 2 arrondissements</button><button class="pr">Exporter la vue</button>`)}
+${TABS('Carte')}
+<div class="body">
+  <div class="pan g">
+    <div class="lb">Échelle de lecture</div>
+    <div class="ech"><span>Maille 1 km²</span><span>Commune</span><span class="on">Arrondissement</span></div>
+    <div class="mu" style="margin-bottom:14px">La même question à trois distances : la maille dit où poser le magasin, l'arrondissement dit où aller chercher.</div>
+    <div class="lb">Ce que la carte montre</div>
+    <div class="th">
+      <b>Ménages par point de vente<span>43 arrondissements</span></b>
+      <i class="on">Ménages ÷ commerces de l'arrondissement</i>
+      <i>Commerces pour 10 000 habitants</i>
+      <i>Part de concurrents notés 4,3 et plus</i>
+      <i>Marché boulangerie total</i>
+    </div>
+    <div class="lb">Légende — quartiles des 43</div>
+    <div class="lg" data-k="leg"></div>
+    <div class="mu" style="margin-top:8px">Beaucoup de ménages pour peu de commerces : le territoire est sous-servi. Peu de ménages par commerce : il est saturé.</div>
+    <div class="hr"></div>
+    <div class="pli"><span>Filtres — note, ménages, rayon, seuil</span><b>+</b></div>
+    <div class="pli"><span>Hypothèses du modèle — 13 valeurs</span><b>+</b></div>
+  </div>
+  <div class="map">
+    <div id="map"></div>
+    <div class="mapui">
+      <div class="bulle titre"><b>Ménages par point de vente, par arrondissement</b>
+        <span>Les 43 arrondissements administratifs, chacun coloré par le nombre de ménages que se partage un commerce de boulangerie. Le découpage suit la commune la plus proche de chaque maille.</span></div>
+      <div class="bulle etat">43 arrondissements · 4 993 400 ménages · 4 108 commerces · médiane 1 257 ménages par point</div>
+    </div>
+  </div>
+  <div class="pan d">
+    <div class="lb">Les plus sous-servis</div>
+    <div class="rang">
+      ${ARR_TOP.map(r => `<div class="l"><span class="r">${r[0]}</span><span class="n">${esc(r[1])}<em>${esc(r[3])}</em></span><span class="v">${esc(r[2])}<em>par point</em></span></div>`).join('')}
+    </div>
+    <div class="lb" style="margin:16px 0 7px">Les plus saturés</div>
+    <div class="rang">
+      ${ARR_BAS.map(r => `<div class="l"><span class="r">${r[0]}</span><span class="n">${esc(r[1])}<em>${esc(r[3])}</em></span><span class="v">${esc(r[2])}<em>par point</em></span></div>`).join('')}
+    </div>
+    <div class="mu" style="margin-top:8px">Le réseau est déjà là où il y a de la place : Gosselies est dans Charleroi (1er), Halle dans Hal-Vilvorde (2e). Berlo, à Liège, est 18e sur 43.</div>
+    <div class="hr"></div>
+    <div class="lb">Et ensuite</div>
+    <div class="act">
+      <button class="pr">Descendre à la maille dans Charleroi</button>
+      <button>Comparer Charleroi et Hal-Vilvorde</button>
+      <button>Exporter les 43 lignes en Excel</button>
+    </div>
+  </div>
+</div>
+<script>
+carte({ el: 'map', cadre: [[49.47, 2.55], [51.52, 6.35]], peindre: 'arr', valeursArr: ${JSON.stringify(ARR_PT)}, apres: function (m) {
+  const nf = n => Math.round(n).toLocaleString('fr-BE');
+  const oeil = ${JSON.stringify(OEIL)};
+  const r = ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'], b = m.bornes;
+  const t = ['moins de ' + nf(b[0]), nf(b[0]) + ' à ' + nf(b[1]), nf(b[1]) + ' à ' + nf(b[2]), nf(b[2]) + ' et plus'];
+  document.querySelector('[data-k="leg"]').innerHTML = [3, 2, 1, 0].map(function (i) {
+    return '<div class="r">' + oeil + '<span class="sw" style="background:' + r[i] + '"></span>'
+      + '<span class="tx">' + t[i] + ' ménages</span></div>';
+  }).join('');
+} });
+</script>`;
+
 /* --------------------------------------------------------------- écriture -- */
 const PAGES = [
   ['a-carte-potentiel.html', 'A — la carte se lit', A,
    'La carte peint le potentiel au lieu de pointer les concurrents : une maille d’un kilomètre carré, la population du recensement accessible en 4 km divisée par les commerces déjà installés, quatre classes et une légende chiffrée. Les 4 108 pastilles rouges deviennent une couche discrète. Les six réglages du panneau gauche se replient : ce sont des boutons de réglage, pas une lecture.'],
   ['b-zone-dessinee.html', 'B — la zone se dessine', B,
    'Une boîte à outils sur la carte — point, cercle, polygone, rectangle, isochrone, mesure — et tout se recalcule dans la zone tracée. Ici l’isochrone de 15 minutes de voiture face au disque de 4 km d’aujourd’hui, à Farciennes : la forme de la zone change le marché, donc le CA estimé. Les deux colonnes sont calculées par la même arithmétique, avec les hypothèses réellement enregistrées.'],
+  ['d-trois-lectures.html', 'D — le même territoire, trois lectures', D,
+   'Le sélecteur de thème en action : le marché (ménages accessibles en 4 km), la concurrence (les commerces du même rayon) et la synthèse (le CA que le modèle en tire, emprise comprise). Trois cartes de la même fenêtre — Hainaut, Namur, Brabant wallon — qui ne disent pas la même chose : là où le marché est le plus épais, la concurrence l’est aussi, et c’est l’emprise qui tranche.'],
+  ['e-echelle-arrondissement.html', 'E — l’échelle change', E,
+   'La même question posée à l’arrondissement : combien de ménages se partagent un commerce. Charleroi en compte 2 635 pour un seul point de vente, Tournai 440. C’est la carte qui dit où aller chercher, avant de descendre à la maille pour dire où poser le magasin.'],
   ['c-dossier.html', 'C — le dossier sort tout seul', C,
    'Ce que l’écran sait déjà calculer, mis en page : une étude d’implantation datée, avec sa carte, son marché, sa concurrence, sa comparaison au réseau et les hypothèses qui l’ont produite — en PDF et en Excel, partageable, versionnée. Aujourd’hui la sortie est un CSV de coordonnées ; un dossier se refait à la main dans un traitement de texte.'],
 ];

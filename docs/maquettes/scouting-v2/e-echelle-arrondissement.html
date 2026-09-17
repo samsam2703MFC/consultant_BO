@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E — l’échelle change</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="scouting2.css">
+<script src="/public/assets/vendor/leaflet/leaflet.js"></script>
+<script src="donnees.js"></script>
+<script src="carte.js"></script>
+<style>body{margin:0;background:#F5F1EB;display:flex;justify-content:center;padding:22px 0}</style>
+</head><body><div class="app"><div class="bar"><div class="et"><i></i>4 108 commerces · 565 communes · OpenStreetMap relu le 15/09/2026</div><span class="sp"></span><button>Assistant « où puis-je ouvrir ? »</button><button>Magasins du réseau</button>
+  <button class="ac">Comparer 2 arrondissements</button><button class="pr">Exporter la vue</button></div>
+<div class="tabs"><span class="on">Carte</span><span>Zones candidates<em>6</em></span><span>Concurrents<em>1 051</em></span><span>Arrondissements<em>43</em></span><span>Top 5 par province</span><span>Mes études<em>4</em></span></div>
+<div class="body">
+  <div class="pan g">
+    <div class="lb">Échelle de lecture</div>
+    <div class="ech"><span>Maille 1 km²</span><span>Commune</span><span class="on">Arrondissement</span></div>
+    <div class="mu" style="margin-bottom:14px">La même question à trois distances : la maille dit où poser le magasin, l'arrondissement dit où aller chercher.</div>
+    <div class="lb">Ce que la carte montre</div>
+    <div class="th">
+      <b>Ménages par point de vente<span>43 arrondissements</span></b>
+      <i class="on">Ménages ÷ commerces de l'arrondissement</i>
+      <i>Commerces pour 10 000 habitants</i>
+      <i>Part de concurrents notés 4,3 et plus</i>
+      <i>Marché boulangerie total</i>
+    </div>
+    <div class="lb">Légende — quartiles des 43</div>
+    <div class="lg" data-k="leg"></div>
+    <div class="mu" style="margin-top:8px">Beaucoup de ménages pour peu de commerces : le territoire est sous-servi. Peu de ménages par commerce : il est saturé.</div>
+    <div class="hr"></div>
+    <div class="pli"><span>Filtres — note, ménages, rayon, seuil</span><b>+</b></div>
+    <div class="pli"><span>Hypothèses du modèle — 13 valeurs</span><b>+</b></div>
+  </div>
+  <div class="map">
+    <div id="map"></div>
+    <div class="mapui">
+      <div class="bulle titre"><b>Ménages par point de vente, par arrondissement</b>
+        <span>Les 43 arrondissements administratifs, chacun coloré par le nombre de ménages que se partage un commerce de boulangerie. Le découpage suit la commune la plus proche de chaque maille.</span></div>
+      <div class="bulle etat">43 arrondissements · 4 993 400 ménages · 4 108 commerces · médiane 1 257 ménages par point</div>
+    </div>
+  </div>
+  <div class="pan d">
+    <div class="lb">Les plus sous-servis</div>
+    <div class="rang">
+      <div class="l"><span class="r">1</span><span class="n">Charleroi<em>171 253 ménages · 65 commerces</em></span><span class="v">2 635<em>par point</em></span></div><div class="l"><span class="r">2</span><span class="n">Hal-Vilvorde<em>289 828 ménages · 139 commerces</em></span><span class="v">2 085<em>par point</em></span></div><div class="l"><span class="r">3</span><span class="n">Audenarde<em>53 545 ménages · 27 commerces</em></span><span class="v">1 983<em>par point</em></span></div><div class="l"><span class="r">4</span><span class="n">Alost<em>127 989 ménages · 68 commerces</em></span><span class="v">1 882<em>par point</em></span></div><div class="l"><span class="r">5</span><span class="n">Saint-Nicolas<em>121 944 ménages · 67 commerces</em></span><span class="v">1 820<em>par point</em></span></div><div class="l"><span class="r">6</span><span class="n">Eeklo<em>37 548 ménages · 21 commerces</em></span><span class="v">1 788<em>par point</em></span></div><div class="l"><span class="r">7</span><span class="n">Thuin<em>39 842 ménages · 23 commerces</em></span><span class="v">1 732<em>par point</em></span></div>
+    </div>
+    <div class="lb" style="margin:16px 0 7px">Les plus saturés</div>
+    <div class="rang">
+      <div class="l"><span class="r">43</span><span class="n">Tournai<em>97 717 ménages · 222 commerces</em></span><span class="v">440<em>par point</em></span></div><div class="l"><span class="r">42</span><span class="n">Verviers<em>125 474 ménages · 255 commerces</em></span><span class="v">492<em>par point</em></span></div><div class="l"><span class="r">41</span><span class="n">Arlon<em>27 720 ménages · 51 commerces</em></span><span class="v">544<em>par point</em></span></div>
+    </div>
+    <div class="mu" style="margin-top:8px">Le réseau est déjà là où il y a de la place : Gosselies est dans Charleroi (1er), Halle dans Hal-Vilvorde (2e). Berlo, à Liège, est 18e sur 43.</div>
+    <div class="hr"></div>
+    <div class="lb">Et ensuite</div>
+    <div class="act">
+      <button class="pr">Descendre à la maille dans Charleroi</button>
+      <button>Comparer Charleroi et Hal-Vilvorde</button>
+      <button>Exporter les 43 lignes en Excel</button>
+    </div>
+  </div>
+</div>
+<script>
+carte({ el: 'map', cadre: [[49.47, 2.55], [51.52, 6.35]], peindre: 'arr', valeursArr: {"Alost":1882,"Anvers":1404,"Arlon":544,"Ath":1143,"Audenarde":1983,"Bastogne":1215,"Bruges":958,"Bruxelles-Capitale":1348,"Charleroi":2635,"Courtrai":1150,"Dinant":798,"Dixmude":1025,"Eeklo":1788,"Furnes":603,"Gand":1112,"Hal-Vilvorde":2085,"Hasselt":1467,"Huy":1452,"La Louvière":1603,"Liège":1341,"Louvain":1308,"Maaseik":1267,"Malines":1519,"Marche-en-Famenne":785,"Mons":1147,"Namur":1257,"Neufchâteau":826,"Nivelles":1504,"Ostende":1491,"Philippeville":1082,"Roulers":1002,"Saint-Nicolas":1820,"Soignies":1288,"Termonde":1071,"Thuin":1732,"Tielt":1195,"Tongres":743,"Tournai":440,"Turnhout":1343,"Verviers":492,"Virton":812,"Waremme":1552,"Ypres":840}, apres: function (m) {
+  const nf = n => Math.round(n).toLocaleString('fr-BE');
+  const oeil = "<svg class=\"oe\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z\"/><circle cx=\"12\" cy=\"12\" r=\"2.8\"/></svg>";
+  const r = ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'], b = m.bornes;
+  const t = ['moins de ' + nf(b[0]), nf(b[0]) + ' à ' + nf(b[1]), nf(b[1]) + ' à ' + nf(b[2]), nf(b[2]) + ' et plus'];
+  document.querySelector('[data-k="leg"]').innerHTML = [3, 2, 1, 0].map(function (i) {
+    return '<div class="r">' + oeil + '<span class="sw" style="background:' + r[i] + '"></span>'
+      + '<span class="tx">' + t[i] + ' ménages</span></div>';
+  }).join('');
+} });
+</script></div></body></html>
