@@ -145,3 +145,22 @@ npx http-server . -p 8099 -c-1 --silent        # depuis la racine du dépôt
 
 Les tuiles OpenStreetMap doivent être joignables ; dans l'environnement de
 capture elles passent par le proxy, servies à la page par interception.
+
+## Ce qui a été retenu
+
+**A et B sont dans l'écran** (`public/assets/js/scouting.js`, `scouting-tpl.js`,
+`app.css`) :
+
+- la carte peint une maille de 1 km² par maille — cinq thèmes (ménages par
+  point de vente, ménages accessibles, concurrents, CA estimé, score), quatre
+  classes aux quartiles de la sélection, un œil par classe ; le calcul suit
+  les filtres et les hypothèses, et prend un tiers de seconde ;
+- le panneau gauche s'ouvre sur ce que la carte montre ; filtres, couches,
+  hypothèses, calage et sources se replient ;
+- une boîte à outils sous le zoom : point, cercle, polygone, rectangle,
+  isochrone (10, 15, 20 min en voiture, 15 min à pied — service de routage
+  Valhalla de la communauté OpenStreetMap) ; la fiche calcule dans la zone
+  tracée et dit ce que la forme change par rapport au disque du rayon ;
+- les onglets s'appellent Zones candidates, Concurrents, Arrondissements.
+
+C (le dossier), D et E restent des maquettes.

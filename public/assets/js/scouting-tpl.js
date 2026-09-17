@@ -46,10 +46,98 @@ export function renderTop(c, x){
   </div>`;
 }
 
-/* --- Panneau gauche : filtres, couches, hypothèses, population, notes ------ */
+/* --- Panneau gauche : ce que la carte montre, puis les réglages, repliables -- */
+const OEIL = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg>';
+const OEIL_FERME = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3l18 18M10.6 10.7a2.8 2.8 0 0 0 3.9 3.9M6.4 6.5C3.4 8.4 1.6 12 1.6 12s4 7 10.4 7c1.7 0 3.2-.4 4.5-1M9.5 5.3C10.3 5.1 11.1 5 12 5c6.4 0 10.4 7 10.4 7s-.9 1.6-2.5 3.2"/></svg>';
+// Une section repliable : le titre est un bouton, le contenu n'est rendu
+// qu'ouvert — les curseurs d'une section fermée n'existent pas.
+const pli = (x, esc, c, k, titre, corps) => `
+  <button ${x.A(c.pli(k))} class="sc-pli${c.plis[k] ? ' open' : ''}" type="button"><span>${esc(titre)}</span><b>${c.plis[k] ? '−' : '+'}</b></button>
+  ${c.plis[k] ? `<div class="sc-pli-c">${corps()}</div>` : ''}`;
+
 export function renderLeft(c, x){
   const { esc } = x;
   const check = (on, fn, extra) => `<input type="checkbox"${on ? ' checked' : ''} ${x.C(fn)} style="accent-color:var(--color-primary);${extra || ''}">`;
+  const filtres = () => `
+  <div class="t-admin-label" style="margin-bottom:4px">Note Google minimale — ${live('minRatingLabel', esc, c)}${info(esc, c.tips.minRating)}</div>
+  <input type="range" min="0" max="5" step="0.1" value="${c.minRating}" ${x.I(c.slideMinRating)} ${x.C(c.setMinRating)}>
+  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 16px">${live('ratingCoverage', esc, c)}</div>
+
+  <div class="t-admin-label" style="margin-bottom:4px">Ménages minimum par commune — ${live('minHhLabel', esc, c)}${info(esc, c.tips.minHh)}</div>
+  <input type="range" min="0" max="30000" step="500" value="${c.minHh}" ${x.I(c.slideMinHh)} ${x.C(c.setMinHh)}>
+  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 16px">${live('communeCoverage', esc, c)}</div>
+
+  <div class="t-admin-label" style="margin-bottom:4px">Rayon d'exclusion — ${live('radiusLabel', esc, c)}${info(esc, c.tips.radius)}</div>
+  <input type="range" min="0.5" max="5" step="0.1" value="${c.radius}" ${x.I(c.slideRadius)} ${x.C(c.setRadius)}>
+  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 16px">Le rayon des mailles, de la fiche et des zones — ou dessine la zone sur la carte.</div>
+
+  <div class="t-admin-label" style="margin-bottom:4px">Seuil « concurrent fort » — ${live('threshLabel', esc, c)}${info(esc, c.tips.thresh)}</div>
+  <input type="range" min="3.5" max="5" step="0.1" value="${c.thresh}" ${x.I(c.slideThresh)} ${x.C(c.setThresh)}>
+  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px">${live('threshHint', esc, c)}</div>`;
+
+  const couches = () => `
+  <div class="t-admin-label" style="margin-bottom:8px;color:#1b5e20">+ &nbsp;Potentiel</div>
+  <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;border-left:2px solid rgba(27,94,32,.35);padding-left:10px">
+    ${c.layersPlus.map(l => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+      ${check(l.on, l.toggle)}
+      <span>${esc(l.name)}</span>
+    </label>`).join('')}
+  </div>
+  <div class="t-admin-label" style="margin-bottom:8px;color:var(--color-primary)">− &nbsp;Contraintes</div>
+  <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:8px;border-left:2px solid rgba(141,29,44,.35);padding-left:10px">
+    ${c.layersMinus.map(l => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+      ${check(l.on, l.toggle)}
+      <span>${esc(l.name)}</span>
+    </label>`).join('')}
+  </div>`;
+
+  const hyp = () => `
+  <div style="display:flex;align-items:baseline;justify-content:flex-end;margin-bottom:8px">
+    <button ${x.A(c.exportParams)} style="border:none;background:transparent;padding:0;font-family:var(--font-ui);font-size:11px;color:var(--color-primary);cursor:pointer">Exporter CSV</button>
+  </div>
+  <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px">Enregistrées automatiquement et reprises dans les zones candidates.</div>
+  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:10px">
+    ${c.params.map((p, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
+      <span style="font-size:11px;color:var(--color-text-muted);line-height:1.35;display:inline-flex;align-items:center">${esc(p.k)}${info(esc, p.i)}</span>
+      <input id="sc-p${i}" type="number" step="any" value="${esc(p.v)}" ${x.C(p.set)} style="width:68px;flex:0 0 auto;${numCss}">
+    </div>`).join('')}
+  </div>
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.empriseHint)}<br><br>Réseau : 416 € (Max&amp;Sandra), 550 € (Berlo), 586 € (Halle). Emprise Halle 15,5 % pour un CA de 1.296.881 € TTC sur 250 m².</div>`;
+
+  const calage = () => `
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px;display:inline-flex;align-items:flex-start">${esc(c.calage.intro)}${info(esc, c.calage.tip)}</div>
+  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:8px">
+    ${c.calage.rows.map(r => `
+    <div style="padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="font-weight:500">${esc(r.nom)}</span><span style="font-weight:600;color:${r.ecartColor}">${esc(r.ecart)}</span></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:2px"><span>réel ${esc(r.reel)}${r.annualise ? ' · ' + r.mois + ' mois' : ''}</span><span>modèle ${esc(r.modele)}</span></div>
+      ${r.pos ? '' : `<div style="margin-top:5px"><button ${x.A(r.place)} class="btn-secondary" style="padding:3px 8px;font-size:11px">Placer sur la carte</button></div>`}
+    </div>`).join('')}
+    ${c.calage.rows.length ? '' : `<div style="padding:8px 9px;font-size:11px;color:var(--color-text-muted)">${esc(c.calage.vide)}</div>`}
+  </div>
+  ${c.calage.placing ? `<div style="font-size:11px;color:var(--color-primary);font-weight:500;margin-bottom:6px">Clique sur la carte pour placer le magasin.</div>` : ''}
+  ${c.calage.med ? `<button ${x.A(c.calage.caler)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px">${esc(c.calage.bouton)}</button>` : ''}
+  <div style="font-size:11px;color:var(--color-text-muted);margin:6px 0 8px;line-height:1.5">${esc(c.calage.note)}</div>`;
+
+  const sources = () => `
+  <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Population${info(esc, c.popTip)}</div>
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.popCoverage)}</div>
+  <label style="display:block;font-size:12px;color:var(--color-text);border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:10px;text-align:center;cursor:pointer;margin-bottom:16px">
+    Importer un CSV StatBel (code NIS ; population)
+    <input type="file" accept=".csv,.txt" ${x.C(c.importPops)} style="display:none">
+  </label>
+  <div class="t-admin-label" style="margin-bottom:6px">Notes Google</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 9px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary)">
+    <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.gOk ? '#1b5e20' : '#8D1D2C'}"></div>
+    <div style="flex:1;font-size:11px;line-height:1.45;color:var(--color-text)">${esc(c.gLabel)}</div>
+    ${c.gOk ? '' : `<button ${x.A(c.goParams)} class="btn-secondary" style="flex:0 0 auto;padding:4px 9px;font-size:11px">Paramètres</button>`}
+  </div>
+  <button ${x.A(c.enrich)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px${c.gOk ? '' : ';opacity:.6'}">${esc(c.enrichLabel)}</button>
+  <div style="font-size:11px;color:var(--color-text-muted);margin:6px 0 8px;line-height:1.5">${esc(c.gkeyHint)}</div>`;
+
   return `
   <div class="t-admin-label" style="margin-bottom:6px">Chercher une ville</div>
   <div class="sc-ville">
@@ -59,8 +147,24 @@ export function renderLeft(c, x){
     ${c.villeVide ? `<div class="vide">${esc(c.villeVide)}</div>` : ''}
   </div>
 
+  <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Ce que la carte montre${info(esc, c.themeTip)}</div>
+  <div class="sc-theme">
+    ${c.themes.map(t => `<button ${x.A(t.pick)} type="button"${t.on ? ' class="on"' : ''} title="${esc(t.tip)}"><span>${esc(t.label)}</span>${t.on ? '<i>●</i>' : ''}</button>`).join('')}
+  </div>
+  ${c.themeLegend.rows.length ? `
+  <div class="sc-leg">
+    ${c.themeLegend.rows.map(r => `
+    <div class="r${r.off ? ' off' : ''}">
+      <button ${x.A(r.toggle)} class="oe" type="button" title="${r.off ? 'Rallumer' : 'Éteindre'} cette classe">${r.off ? OEIL_FERME : OEIL}</button>
+      <span class="sw" style="background:${r.color}"></span>
+      <span class="tx">${esc(r.label)}</span>
+      <span class="n">${esc(r.n)}</span>
+    </div>`).join('')}
+  </div>` : ''}
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.45;margin-bottom:18px">${esc(c.themeLegend.note)}</div>
+
   <div class="t-admin-label" style="margin-bottom:8px">Provinces &amp; régions</div>
-  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">
+  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
     ${c.provinces.map(p => `
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
       ${check(p.on, p.toggle)}
@@ -70,25 +174,11 @@ export function renderLeft(c, x){
   </div>
 
   <div class="t-admin-label" style="margin-bottom:6px">Arrondissement</div>
-  <select ${x.C(c.setArr)} style="${selCss};margin-bottom:20px">${opts(c.arrOptions, c.arr)}</select>
+  <select ${x.C(c.setArr)} style="${selCss};margin-bottom:16px">${opts(c.arrOptions, c.arr)}</select>
 
-  <div class="t-admin-label" style="margin-bottom:4px">Note Google minimale — ${live('minRatingLabel', esc, c)}${info(esc, c.tips.minRating)}</div>
-  <input type="range" min="0" max="5" step="0.1" value="${c.minRating}" ${x.I(c.slideMinRating)} ${x.C(c.setMinRating)}>
-  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 18px">${live('ratingCoverage', esc, c)}</div>
+  ${pli(x, esc, c, 'filtres', 'Filtres — note, ménages, rayon, seuil', filtres)}
 
-  <div class="t-admin-label" style="margin-bottom:4px">Ménages minimum par commune — ${live('minHhLabel', esc, c)}${info(esc, c.tips.minHh)}</div>
-  <input type="range" min="0" max="30000" step="500" value="${c.minHh}" ${x.I(c.slideMinHh)} ${x.C(c.setMinHh)}>
-  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 18px">${live('communeCoverage', esc, c)}</div>
-
-  <div class="t-admin-label" style="margin-bottom:4px">Rayon d'exclusion — ${live('radiusLabel', esc, c)}${info(esc, c.tips.radius)}</div>
-  <input type="range" min="0.5" max="5" step="0.1" value="${c.radius}" ${x.I(c.slideRadius)} ${x.C(c.setRadius)}>
-  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 18px">Approximation de l'isochrone 15–20 min voiture</div>
-
-  <div class="t-admin-label" style="margin-bottom:4px">Seuil « concurrent fort » — ${live('threshLabel', esc, c)}${info(esc, c.tips.thresh)}</div>
-  <input type="range" min="3.5" max="5" step="0.1" value="${c.thresh}" ${x.I(c.slideThresh)} ${x.C(c.setThresh)}>
-  <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 20px">${live('threshHint', esc, c)}</div>
-
-  <div style="height:0.5px;background:var(--color-border-tertiary);margin-bottom:16px"></div>
+  <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
 
   <div class="t-admin-label" style="margin-bottom:8px">Lecture de la carte</div>
   <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(27,94,32,.35);border-radius:8px;background:rgba(27,94,32,.07);cursor:pointer;margin-bottom:10px">
@@ -101,87 +191,44 @@ export function renderLeft(c, x){
   <div class="t-admin-label" style="margin-bottom:4px">Score minimum — ${live('minScoreLabel', esc, c)} / 100${info(esc, c.tips.minScore)}</div>
   <input type="range" min="0" max="95" step="5" value="${c.minScore}" ${x.I(c.slideMinScore)} ${x.C(c.setMinScore)}>
   <div style="height:12px"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
     <button ${x.A(c.presetPrio)} class="btn-secondary" style="padding:8px 6px;font-size:12px">Opportunités</button>
     <button ${x.A(c.presetConc)} class="btn-secondary" style="padding:8px 6px;font-size:12px">Concurrence</button>
   </div>
-
-  <div class="t-admin-label" style="margin-bottom:8px;color:#1b5e20">+ &nbsp;Potentiel</div>
-  <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;border-left:2px solid rgba(27,94,32,.35);padding-left:10px">
-    ${c.layersPlus.map(l => `
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-      ${check(l.on, l.toggle)}
-      <span>${esc(l.name)}</span>
-    </label>`).join('')}
-  </div>
-
-  <div class="t-admin-label" style="margin-bottom:8px;color:var(--color-primary)">− &nbsp;Contraintes</div>
-  <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:20px;border-left:2px solid rgba(141,29,44,.35);padding-left:10px">
-    ${c.layersMinus.map(l => `
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-      ${check(l.on, l.toggle)}
-      <span>${esc(l.name)}</span>
-    </label>`).join('')}
-  </div>
-
-  <div style="height:0.5px;background:var(--color-border-tertiary);margin-bottom:16px"></div>
-
-  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px">
-    <div class="t-admin-label">Hypothèses du modèle</div>
-    <button ${x.A(c.exportParams)} style="border:none;background:transparent;padding:0;font-family:var(--font-ui);font-size:11px;color:var(--color-primary);cursor:pointer">Exporter CSV</button>
-  </div>
-  <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px">Enregistrées automatiquement et reprises dans ceo_zones.</div>
-  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:14px">
-    ${c.params.map((p, i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
-      <span style="font-size:11px;color:var(--color-text-muted);line-height:1.35;display:inline-flex;align-items:center">${esc(p.k)}${info(esc, p.i)}</span>
-      <input id="sc-p${i}" type="number" step="any" value="${esc(p.v)}" ${x.C(p.set)} style="width:68px;flex:0 0 auto;${numCss}">
-    </div>`).join('')}
-  </div>
-  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.empriseHint)}<br><br>Réseau : 416 € (Max&amp;Sandra), 550 € (Berlo), 586 € (Halle). Emprise Halle 15,5 % pour un CA de 1.296.881 € TTC sur 250 m².</div>
+  ${pli(x, esc, c, 'couches', 'Couches — potentiel et contraintes', couches)}
 
   <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
 
-  <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Calage sur le réseau${info(esc, c.calage.tip)}</div>
-  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.calage.intro)}</div>
-  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:8px">
-    ${c.calage.rows.map(r => `
-    <div style="padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
-      <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="font-weight:500">${esc(r.nom)}</span><span style="font-weight:600;color:${r.ecartColor}">${esc(r.ecart)}</span></div>
-      <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:2px"><span>réel ${esc(r.reel)}${r.annualise ? ' · ' + r.mois + ' mois' : ''}</span><span>modèle ${esc(r.modele)}</span></div>
-      ${r.pos ? '' : `<div style="margin-top:5px"><button ${x.A(r.place)} class="btn-secondary" style="padding:3px 8px;font-size:11px">Placer sur la carte</button></div>`}
-    </div>`).join('')}
-    ${c.calage.rows.length ? '' : `<div style="padding:8px 9px;font-size:11px;color:var(--color-text-muted)">${esc(c.calage.vide)}</div>`}
-  </div>
-  ${c.calage.placing ? `<div style="font-size:11px;color:var(--color-primary);font-weight:500;margin-bottom:6px">Clique sur la carte pour placer le magasin.</div>` : ''}
-  ${c.calage.med ? `<button ${x.A(c.calage.caler)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px">${esc(c.calage.bouton)}</button>` : ''}
-  <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(c.calage.note)}</div>
-
-  <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
-
-  <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Population${info(esc, c.popTip)}</div>
-  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.popCoverage)}</div>
-  <label style="display:block;font-size:12px;color:var(--color-text);border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
-    Importer un CSV StatBel (code NIS ; population)
-    <input type="file" accept=".csv,.txt" ${x.C(c.importPops)} style="display:none">
-  </label>
-
-  <div style="height:0.5px;background:var(--color-border-tertiary);margin:16px 0"></div>
-
-  <div class="t-admin-label" style="margin-bottom:6px">Notes Google</div>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 9px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary)">
-    <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.gOk ? '#1b5e20' : '#8D1D2C'}"></div>
-    <div style="flex:1;font-size:11px;line-height:1.45;color:var(--color-text)">${esc(c.gLabel)}</div>
-    ${c.gOk ? '' : `<button ${x.A(c.goParams)} class="btn-secondary" style="flex:0 0 auto;padding:4px 9px;font-size:11px">Paramètres</button>`}
-  </div>
-  <button ${x.A(c.enrich)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px${c.gOk ? '' : ';opacity:.6'}">${esc(c.enrichLabel)}</button>
-  <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(c.gkeyHint)}</div>`;
+  ${pli(x, esc, c, 'hyp', 'Hypothèses du modèle — ' + c.params.length + ' valeurs', hyp)}
+  ${pli(x, esc, c, 'calage', 'Calage sur le réseau', calage)}
+  ${pli(x, esc, c, 'sources', 'Population · Notes Google', sources)}
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.45;margin-top:4px">Repliés : ce sont des réglages, pas une lecture. La carte s'ouvre sur ce qu'elle montre.</div>`;
 }
 
-/* --- Habillage de la carte : légende, ligne d'état, voile de chargement ---- */
+/* --- Habillage de la carte : outils de dessin, légende, ligne d'état, voile -- */
+const ICONE = {
+  point: '<path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>',
+  cercle: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/>',
+  polygone: '<path d="M5 9l7-5 7 6-3 9H8z"/>',
+  rectangle: '<rect x="4.5" y="6.5" width="15" height="11" rx="1"/>',
+  isochrone: '<path d="M12 3.5c4 2 6.5 4.6 6.5 8.5S16 18.5 12 20.5 5.5 15.9 5.5 12 8 5.5 12 3.5z"/><circle cx="12" cy="12" r="2"/>',
+  gomme: '<path d="M8 20h11"/><path d="M15.5 4.5l4 4-9 9-4-4z"/>'
+};
+const ico = k => `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONE[k] || ''}</svg>`;
+
 export function renderMapUi(c, x){
   const { esc } = x;
   return `
+  <div class="sc-outils" title="">
+    ${c.tools.map(t => `<button ${x.A(t.pick)} type="button" class="${t.on ? 'on' : ''}" title="${esc(t.label + ' — ' + t.tip)}">${ico(t.k)}</button>`).join('')}
+    <div class="sep"></div>
+    <button ${x.A(c.effacerZone)} type="button" title="Effacer la zone et fermer la fiche">${ico('gomme')}</button>
+  </div>
+  ${c.tool !== 'point' || c.dessinHint ? `
+  <div class="sc-dessin">
+    ${esc(c.dessinHint)}
+    ${c.tool === 'isochrone' ? `<select ${x.C(c.setIso)} style="${selCss}">${opts(c.isoChoix, c.iso)}</select>` : ''}
+  </div>` : ''}
   <div style="position:absolute;top:12px;right:12px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;width:208px;box-shadow:0 2px 10px rgba(0,0,0,.08)">
     <div class="t-admin-label" style="margin-bottom:8px">Légende</div>
     ${c.legend.map(i => `
@@ -190,7 +237,7 @@ export function renderMapUi(c, x){
       <span>${esc(i.label)}</span>
     </div>`).join('')}
     <div style="height:0.5px;background:var(--color-border-tertiary);margin:8px 0"></div>
-    <div style="font-size:11px;color:var(--color-text-muted);line-height:1.4">Clic sur la carte hors zone rouge = évaluer une zone candidate.</div>
+    <div style="font-size:11px;color:var(--color-text-muted);line-height:1.4">Un clic évalue un point dans son rayon ; les outils à gauche dessinent la zone — cercle, polygone, rectangle, isochrone.</div>
   </div>
 
   <div style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
@@ -218,9 +265,10 @@ export function renderRight(c, x){
   const { esc } = x;
   const sel = c.hasSel ? `
   <div>
-    <div class="t-admin-label" style="margin-bottom:4px">${c.selRang ? 'Point chaud nº' + c.selRang : 'Zone candidate'}</div>
+    <div class="t-admin-label" style="margin-bottom:4px">${c.selRang ? 'Point chaud nº' + c.selRang : c.selZone ? 'Zone dessinée' : 'Zone candidate'}</div>
     <div class="t-section-title" style="font-size:18px;margin-bottom:2px">${esc(c.selCommune)}</div>
-    <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.selGeo)}</div>
+    <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:${c.selZone ? 4 : 14}px">${esc(c.selGeo)}</div>
+    ${c.selZone ? `<div style="font-size:12px;font-weight:500;color:#1b5e20;margin-bottom:14px">${esc(c.selZone)}</div>` : ''}
 
     <div style="background:${c.selVerdictBg};border-radius:10px;padding:12px 14px;margin-bottom:16px">
       <div style="font-size:12px;color:${c.selVerdictColor};font-weight:600;margin-bottom:2px">${esc(c.selVerdict)}</div>
@@ -238,6 +286,7 @@ export function renderRight(c, x){
       <span style="font-family:var(--font-display);font-size:22px;color:var(--color-primary)">${esc(c.selCa)}</span>
     </div>
     <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.selCaDetail)}</div>
+    ${c.selDisque ? `<div style="font-size:11px;line-height:1.5;color:var(--color-text);background:var(--color-background-secondary);border-radius:8px;padding:9px 11px;margin-bottom:14px">${esc(c.selDisque)}</div>` : ''}
 
     <button ${x.A(c.addCandidate)} class="btn-primary" style="width:100%;padding:10px">Ajouter aux candidats</button>
 
@@ -315,7 +364,7 @@ export function renderOverlays(c, x){
   if (c.isZones) return `
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
-      <div class="t-section-title" style="font-size:16px">ceo_zones</div>
+      <div class="t-section-title" style="font-size:16px">Zones candidates</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${c.wiz.fait ? 'Balayage des arrondissements retenus par l’assistant — indépendant du cadrage de la carte' : 'Balayage de la vue carte courante'} · score minimum ${c.minScore} · clic sur une ligne pour ouvrir la fiche</div>
       <button ${x.A(c.exportZones)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
@@ -375,7 +424,7 @@ export function renderOverlays(c, x){
   if (c.isConc) return `
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <div class="t-section-title" style="font-size:16px">ceo_concurrents</div>
+      <div class="t-section-title" style="font-size:16px">Concurrents</div>
       <input id="sc-q" type="text" placeholder="Filtrer par nom, commune, arrondissement" value="${esc(c.q)}" ${x.I(c.setQ)} style="flex:1;max-width:300px;padding:7px 9px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-surface);font-size:12px;font-family:var(--font-ui);color:var(--color-text)">
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(c.concCount)} · 400 lignes max</div>
       <button ${x.A(c.enrichAll)} class="btn-secondary" style="padding:7px 12px;font-size:12px">${esc(c.enrichAllLabel)}</button>
@@ -405,7 +454,7 @@ export function renderOverlays(c, x){
   if (c.isArr) return `
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
-      <div class="t-section-title" style="font-size:16px">ceo_arrondissements</div>
+      <div class="t-section-title" style="font-size:16px">Arrondissements</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">Clic sur une ligne pour filtrer la carte</div>
       <button ${x.A(c.exportArr)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
