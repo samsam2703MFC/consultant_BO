@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — le dossier sort tout seul</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="scouting2.css">
+<script src="/public/assets/vendor/leaflet/leaflet.js"></script>
+<script src="donnees.js"></script>
+<script src="carte.js"></script>
+<style>body{margin:0;background:#F5F1EB;display:flex;justify-content:center;padding:22px 0}</style>
+</head><body><div class="app"><div class="bar"><div class="et"><i></i>4 108 commerces · 565 communes · OpenStreetMap relu le 15/09/2026</div><span class="sp"></span><button>Assistant « où puis-je ouvrir ? »</button><button>Analyse de zone</button>
+  <button class="ac">Mes études</button><button class="pr">Partager avec l'équipe</button></div>
+<div class="tabs"><span>Carte</span><span>Zones candidates<em>6</em></span><span>Concurrents<em>1 051</em></span><span>Arrondissements<em>43</em></span><span>Top 5 par province</span><span class="on">Mes études<em>4</em></span></div>
+<div class="body">
+  <div class="pan g">
+    <div class="lb">Mes études</div>
+    <div class="rang" style="margin-bottom:12px">
+      <div class="l"><span class="r">●</span><span class="n">Farciennes<em>17/09/2026 · brouillon</em></span><span class="v">100<em>score</em></span></div>
+      <div class="l"><span class="r">○</span><span class="n">Sambreville<em>16/09/2026 · partagée</em></span><span class="v">96<em>score</em></span></div>
+      <div class="l"><span class="r">○</span><span class="n">Tamise<em>16/09/2026 · partagée</em></span><span class="v">93<em>score</em></span></div>
+      <div class="l"><span class="r">○</span><span class="n">Dour<em>12/09/2026 · candidate retenue</em></span><span class="v">83<em>score</em></span></div>
+    </div>
+    <div class="lb">Sections du rapport</div>
+    <div class="lg">
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Carte de situation</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Le marché — ménages, dépense</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">La concurrence relevée</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Le modèle et ses hypothèses</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Comparaison au réseau</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Photos et notes de terrain</span></div>
+    </div>
+    <div class="mu">Le rapport se compose ici et se régénère à chaque changement d'hypothèse : il porte la date et les paramètres qui l'ont produit.</div>
+  </div>
+  <div class="doss">
+    <div class="page">
+      <div class="hd">
+        <img src="/public/assets/img/logo.png" alt="">
+        <div class="t"><b>Farciennes — étude d'implantation</b>
+          <span>Arrondissement de Charleroi · Hainaut · éditée le 17 septembre 2026</span></div>
+        <div class="sc"><b>100</b><span>SCORE</span></div>
+      </div>
+      <h3>Situation — rayon de chalandise 4 km</h3>
+      <div class="mini"><div id="map"></div></div>
+      <h3>L'essentiel</h3>
+      <div class="q4">
+        <div><div class="t">Ménages accessibles</div><div class="n">20 382</div></div>
+        <div><div class="t">Concurrents en 4 km</div><div class="n">3</div></div>
+        <div><div class="t">Emprise du modèle</div><div class="n">17,4 %</div></div>
+        <div><div class="t">CA annuel estimé</div><div class="n">1 412 087 €</div></div>
+      </div>
+      <h3>Le marché</h3>
+      <table>
+        <tr><th>Mesure</th><th>Valeur</th><th>Source</th></tr>
+        <tr><td>Population du rayon</td><td class="n">47 082 hab.</td><td>recensement 2021, maille 1 km²</td></tr>
+        <tr><td>Ménages (2,31 personnes)</td><td class="n">20 382</td><td>recensement 2021</td></tr>
+        <tr><td>Dépense boulangerie par ménage</td><td class="n">339 €/an</td><td>étude GeoConsulting, calée sur le réseau</td></tr>
+        <tr><td>Marché boulangerie du rayon</td><td class="n">6 909 498 €</td><td>ménages × dépense</td></tr>
+        <tr><td>Emprise retenue</td><td class="n">17,4 %</td><td>20 % ÷ (1 + 0,2 × pression)</td></tr>
+        <tr><td>CA annuel estimé TTC</td><td class="g">1 412 087 €</td><td>marché × emprise ÷ (1 − 15 % de passage)</td></tr>
+        <tr><td>Rendement sur 150 m²</td><td class="n">9 414 €/m²</td><td>Halle mesurée : 5 188 €/m²</td></tr>
+      </table>
+      <h3>La concurrence relevée en 4 km</h3>
+      <table>
+        <tr><th>Commerce</th><th>Distance</th><th>Note</th><th>Force retenue</th></tr>
+        <tr><td>Boulangerie — Farciennes centre</td><td>0,9 km</td><td class="n">4,1</td><td>62 %</td></tr>
+        <tr><td>Boulangerie — Aiseau-Presles</td><td>2,7 km</td><td class="n">4,4</td><td>81 %</td></tr>
+        <tr><td>Pâtisserie — Châtelet</td><td>3,6 km</td><td class="n">—</td><td>50 %</td></tr>
+      </table>
+      <h3>Comparaison au réseau</h3>
+      <table>
+        <tr><th>Point de vente</th><th>Ménages</th><th>Dépense</th><th>Emprise</th><th>CA</th></tr>
+        <tr><td class="n">Farciennes — projet</td><td>20 382</td><td>339 €</td><td>17,4 %</td><td class="g">1 412 087 €</td></tr>
+        <tr><td>L'Atelier by Halle — mesuré 08/2024</td><td>12 164</td><td>586 €</td><td>15,5 %</td><td>1 296 881 €</td></tr>
+        <tr><td>L'Atelier by Berlo</td><td>13 821</td><td>550 €</td><td>—</td><td>—</td></tr>
+        <tr><td>L'Atelier by Max &amp; Sandra</td><td>2 613</td><td>416 €</td><td>—</td><td>—</td></tr>
+      </table>
+      <div class="src">Sources — commerces et communes : OpenStreetMap, cache du serveur relu le 15/09/2026 · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat) · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024), dépense calée sur les magasins du réseau · notes : Google Places.
+        <br>Hypothèses du modèle au moment de l'édition : dépense 339 €, passage 15 %, emprise maximale 20 %, sensibilité 0,2, ménage 2,31 personnes, rayon 4 km, surface 150 m².</div>
+    </div>
+  </div>
+  <div class="pan d">
+    <div class="lb">Éditer</div>
+    <div class="act" style="margin-top:0">
+      <button class="pr">Télécharger le PDF (4 pages)</button>
+      <button>Exporter les tableaux en Excel</button>
+      <button>Envoyer par courriel</button>
+      <button>Copier le lien de l'étude</button>
+    </div>
+    <div class="hr"></div>
+    <div class="lb">Historique</div>
+    <div class="rang">
+      <div class="l"><span class="r">●</span><span class="n">Dépense calée sur le réseau<em>17/09 · 586 € → 339 €</em></span><span class="v">−42 %<em>CA estimé</em></span></div>
+      <div class="l"><span class="r">○</span><span class="n">Surface ramenée à 150 m²<em>16/09</em></span><span class="v">9 414 €<em>/m²</em></span></div>
+      <div class="l"><span class="r">○</span><span class="n">Zone créée depuis la carte<em>16/09</em></span><span class="v">100<em>score</em></span></div>
+    </div>
+    <div class="mu" style="margin-top:10px">Chaque édition garde ses hypothèses : deux rapports de dates différentes restent comparables.</div>
+    <div class="hr"></div>
+    <div class="lb">Partage</div>
+    <div class="pli"><span>Équipe développement — 3 personnes</span><b>✓</b></div>
+    <div class="pli"><span>Lien externe (lecture seule)</span><b>+</b></div>
+  </div>
+</div>
+<script>
+(function () {
+  const c = (window.SC.communes.filter(function (x) { return x[0] === 'Farciennes'; })[0]) || ['Farciennes', 'Charleroi', 'WHT', 50.4306, 4.5433];
+  carte({ el: 'map', centre: [c[3], c[4]], zoom: 11.2, peindre: 'population',
+    zone: { lat: c[3], lng: c[4], rayon: 4 } });
+})();
+</script></div></body></html>

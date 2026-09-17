@@ -1,0 +1,160 @@
+/* Scouting — reprise après lecture de GeoExplore. Trois directions.
+ * Écran de référence : 1600 × 1000, la charte du cockpit. */
+
+.app{width:1600px;height:1000px;overflow:hidden;background:var(--color-bg);font-family:var(--font-ui);
+  color:var(--color-text);display:flex;flex-direction:column;border:1px solid rgba(0,0,0,.10);
+  border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.14)}
+
+/* --- barre haute et onglets ----------------------------------------------- */
+.bar{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--color-surface);
+  border-bottom:.5px solid var(--color-border-tertiary);flex:0 0 auto}
+.bar .et{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-muted)}
+.bar .et i{width:8px;height:8px;border-radius:50%;background:#2d7a3e;display:block}
+.bar .sp{flex:1}
+.bar button{font-family:var(--font-ui);font-size:12px;padding:7px 12px;border-radius:8px;
+  border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);white-space:nowrap}
+.bar button.pr{background:var(--color-primary);border-color:var(--color-primary);color:#fff;font-weight:500}
+.bar button.ac{border-color:var(--color-primary);color:var(--color-primary);font-weight:600}
+.tabs{display:flex;gap:4px;padding:0 18px;background:var(--color-surface);
+  border-bottom:.5px solid var(--color-border-tertiary);flex:0 0 auto}
+.tabs span{padding:9px 14px 7px;font-size:12px;font-weight:500;color:var(--color-text-muted);
+  border-bottom:2px solid transparent}
+.tabs span.on{color:var(--color-primary);border-bottom-color:var(--color-primary)}
+.tabs em{font-style:normal;font-size:10px;color:var(--color-text-muted);opacity:.8;margin-left:5px}
+
+/* --- colonnes -------------------------------------------------------------- */
+.body{flex:1;min-height:0;display:flex}
+.pan{background:var(--color-surface);overflow:hidden;padding:15px 16px;box-sizing:border-box;flex:0 0 auto}
+.pan.g{width:296px;border-right:.5px solid var(--color-border-tertiary)}
+.pan.d{width:340px;border-left:.5px solid var(--color-border-tertiary)}
+.map{flex:1;min-width:0;position:relative;background:#eee}
+#map{position:absolute;inset:0}
+.cnv{position:absolute;inset:0;pointer-events:none;z-index:500}
+.leaflet-tile-pane{filter:grayscale(.92) brightness(1.06) contrast(.92)}
+
+.lb{font:600 10px var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--color-text-muted);
+  margin-bottom:7px}
+.hr{height:.5px;background:var(--color-border-tertiary);margin:15px 0}
+.mu{font-size:11px;color:var(--color-text-muted);line-height:1.45}
+
+/* --- le sélecteur de thème (ce que la carte montre) ------------------------ */
+.th{border:.5px solid var(--color-border-secondary);border-radius:9px;overflow:hidden;margin-bottom:12px}
+.th b{display:block;padding:9px 11px;font:600 13px var(--font-ui);background:var(--color-background-secondary);
+  border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between}
+.th b span{font-weight:400;font-size:11px;color:var(--color-text-muted)}
+.th i{display:block;padding:7px 11px;font-style:normal;font-size:12px;color:var(--color-text-muted);
+  border-bottom:.5px solid var(--color-border-tertiary)}
+.th i:last-child{border-bottom:0}
+.th i.on{color:var(--color-text);font-weight:500;background:rgba(27,94,32,.06)}
+
+/* --- légende classée, à la GeoExplore -------------------------------------- */
+.lg{border:.5px solid var(--color-border-tertiary);border-radius:9px;overflow:hidden;margin-bottom:10px}
+.lg .r{display:flex;align-items:center;gap:9px;padding:7px 10px;border-bottom:.5px solid var(--color-border-tertiary);
+  font-size:12px}
+.lg .r:last-child{border-bottom:0}
+.lg .r .oe{width:15px;height:15px;flex:0 0 auto;opacity:.55}
+.lg .r .sw{width:22px;height:13px;border-radius:3px;flex:0 0 auto;border:.5px solid rgba(0,0,0,.12)}
+.lg .r .tx{flex:1;font-variant-numeric:tabular-nums}
+.lg .r .n{font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums}
+
+.ech{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:.5px solid var(--color-border-secondary);
+  border-radius:8px;overflow:hidden;margin-bottom:14px}
+.ech span{padding:7px 0;text-align:center;font-size:11.5px;color:var(--color-text-muted);
+  border-right:.5px solid var(--color-border-tertiary)}
+.ech span:last-child{border-right:0}
+.ech span.on{background:var(--color-primary);color:#fff;font-weight:600}
+
+.pli{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;
+  border:.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary);
+  font-size:12px;margin-bottom:8px}
+.pli em{font-style:normal;color:var(--color-text-muted);font-size:11px}
+.pli b{font-weight:600;color:var(--color-text-muted);font-size:14px}
+
+/* --- habillage de la carte ------------------------------------------------- */
+.mapui{position:absolute;inset:0;pointer-events:none;z-index:650}
+.mapui .bulle{position:absolute;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);
+  border-radius:10px;box-shadow:0 2px 14px rgba(0,0,0,.10);padding:10px 12px}
+.mapui .etat{left:14px;bottom:14px;font-size:11.5px;color:var(--color-text-muted)}
+.mapui .titre{left:14px;top:14px;max-width:330px}
+.mapui .titre b{display:block;font-family:var(--font-display);font-size:15px;line-height:1.2;margin-bottom:3px}
+.mapui .titre span{font-size:11px;color:var(--color-text-muted);line-height:1.45;display:block}
+
+/* la boîte à outils de dessin, colonne d'icônes */
+.outils{position:absolute;left:14px;top:14px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);
+  border-radius:10px;box-shadow:0 2px 14px rgba(0,0,0,.10);padding:5px;display:flex;flex-direction:column;gap:3px}
+.outils s{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;color:var(--color-text-muted)}
+.outils s.on{background:var(--color-primary);color:#fff}
+.outils .sep{height:.5px;background:var(--color-border-tertiary);margin:3px 2px}
+
+.pin{position:absolute;transform:translate(-50%,-100%);font-size:11px;font-weight:600;color:#fff;
+  background:var(--color-primary);padding:3px 8px;border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,.2);white-space:nowrap}
+.pin.v{background:#2f7d32}
+.pin:after{content:'';position:absolute;left:50%;bottom:-4px;width:8px;height:8px;background:inherit;
+  transform:translateX(-50%) rotate(45deg)}
+
+/* --- panneau droit : mesures ----------------------------------------------- */
+.kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 0;
+  border-bottom:.5px solid var(--color-border-tertiary);font-size:12.5px}
+.kv span{color:var(--color-text-muted);font-size:12px}
+.kv b{font-weight:600;font-variant-numeric:tabular-nums}
+.kv b.v{color:#2f7d32}
+.kv b.r{color:var(--color-primary)}
+
+.gros{font-family:var(--font-display);font-size:30px;line-height:1.05;margin:2px 0 2px}
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.deux>div{border:.5px solid var(--color-border-tertiary);border-radius:9px;padding:9px 10px;background:var(--color-surface)}
+.deux>div.act{border-color:rgba(47,125,50,.45);background:rgba(47,125,50,.06)}
+.deux .t{font-size:10.5px;color:var(--color-text-muted);line-height:1.3;min-height:26px}
+.deux .n{font-family:var(--font-display);font-size:19px;line-height:1.1;margin-top:3px;font-variant-numeric:tabular-nums}
+.deux .s{font-size:10.5px;color:var(--color-text-muted);margin-top:2px}
+
+.rang{border:.5px solid var(--color-border-tertiary);border-radius:9px;overflow:hidden}
+.rang .l{display:grid;grid-template-columns:20px 1fr auto;gap:8px;align-items:baseline;padding:7px 10px;
+  border-bottom:.5px solid var(--color-border-tertiary);font-size:12px}
+.rang .l:last-child{border-bottom:0}
+.rang .l .r{color:var(--color-text-muted);font-size:11px}
+.rang .l .n{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rang .l .n em{font-style:normal;display:block;font-size:10.5px;color:var(--color-text-muted);font-weight:400}
+.rang .l .v{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.rang .l .v em{font-style:normal;display:block;font-size:10.5px;color:var(--color-text-muted);font-weight:400}
+
+.act{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.act button{font-family:var(--font-ui);font-size:12px;padding:9px 12px;border-radius:8px;
+  border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:left}
+.act button.pr{background:var(--color-primary);border-color:var(--color-primary);color:#fff;font-weight:500}
+
+/* --- C : le dossier -------------------------------------------------------- */
+.doss{flex:1;min-width:0;display:flex;justify-content:center;overflow:hidden;background:#EDE7DE;padding:14px 0}
+.page{width:720px;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.13);padding:18px 26px;box-sizing:border-box}
+.page .leaflet-control-attribution{display:none}
+.page .hd{display:flex;align-items:flex-start;gap:12px;border-bottom:1.5px solid var(--color-primary);padding-bottom:9px}
+.page .hd img{height:30px}
+.page .hd .t{flex:1}
+.page .hd .t b{display:block;font-family:var(--font-display);font-size:20px;line-height:1.15}
+.page .hd .t span{font-size:11px;color:var(--color-text-muted)}
+.page .hd .sc{text-align:right}
+.page .hd .sc b{display:block;font-family:var(--font-display);font-size:30px;line-height:1;color:#2f7d32}
+.page .hd .sc span{font-size:10px;color:var(--color-text-muted);letter-spacing:.06em}
+.page h3{font:600 10px var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--color-text-muted);
+  margin:9px 0 4px}
+.page .mini{height:104px;position:relative;border-radius:8px;overflow:hidden;border:.5px solid var(--color-border-tertiary)}
+.page .q4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.page .q4>div{border:.5px solid var(--color-border-tertiary);border-radius:8px;padding:6px 9px}
+.page .q4 .t{font-size:10px;color:var(--color-text-muted);line-height:1.25;min-height:24px}
+.page .q4 .n{font-family:var(--font-display);font-size:17px;line-height:1.1;margin-top:2px}
+.page table{width:100%;border-collapse:collapse;font-size:11px}
+.page th{text-align:left;font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--color-text-muted);padding:4px 6px;border-bottom:.5px solid var(--color-border-secondary)}
+.page td{padding:3px 6px;border-bottom:.5px solid var(--color-border-tertiary);font-variant-numeric:tabular-nums}
+.page td.n{font-weight:600}
+.page td.g{color:#2f7d32;font-weight:600}
+.page .src{font-size:9px;color:var(--color-text-muted);line-height:1.45;margin-top:10px;
+  border-top:.5px solid var(--color-border-tertiary);padding-top:8px}
+
+/* --- la planche ------------------------------------------------------------ */
+.planche{display:flex;flex-direction:column;gap:30px;padding:26px;width:max-content}
+.planche .col{width:1600px}
+.planche p.tt{margin:0 0 10px;font:600 15px var(--font-ui);color:var(--color-text)}
+.planche p.tt em{display:block;font-style:normal;font-weight:400;font-size:12px;color:var(--color-text-muted);
+  margin-top:3px;max-width:1100px;line-height:1.5}

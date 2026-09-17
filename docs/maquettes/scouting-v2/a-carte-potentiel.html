@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — la carte se lit</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="scouting2.css">
+<script src="/public/assets/vendor/leaflet/leaflet.js"></script>
+<script src="donnees.js"></script>
+<script src="carte.js"></script>
+<style>body{margin:0;background:#F5F1EB;display:flex;justify-content:center;padding:22px 0}</style>
+</head><body><div class="app"><div class="bar"><div class="et"><i></i>4 108 commerces · 565 communes · OpenStreetMap relu le 15/09/2026</div><span class="sp"></span><button>Assistant « où puis-je ouvrir ? »</button><button>Magasins du réseau</button>
+  <button class="ac">Comparer</button><button class="pr">Exporter la vue</button></div>
+<div class="tabs"><span class="on">Carte</span><span>Zones candidates<em>6</em></span><span>Concurrents<em>1 051</em></span><span>Arrondissements<em>43</em></span><span>Top 5 par province</span><span>Mes études<em>4</em></span></div>
+<div class="body">
+  <div class="pan g">
+    <div class="lb">Ce que la carte montre</div>
+    <div class="th">
+      <b>Ménages par point de vente<span>maille 1 km²</span></b>
+      <i class="on">Ménages accessibles en 4 km ÷ (concurrents + 1)</i>
+      <i>Ménages accessibles en 4 km</i>
+      <i>Concurrents en 4 km · dont notés 4,3 et plus</i>
+      <i>Emprise du modèle · CA estimé · €/m²</i>
+      <i>Population du recensement 2021</i>
+    </div>
+    <div class="lb">Légende — ménages par point, quartiles de la vue</div>
+    <div class="lg">
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="sw" style="background:#2f7d32"></span><span class="tx" data-k="l3">—</span><span class="n" data-k="n3">—</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="sw" style="background:#7fb076"></span><span class="tx" data-k="l2">—</span><span class="n" data-k="n2">—</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="sw" style="background:#bcd6b5"></span><span class="tx" data-k="l1">—</span><span class="n" data-k="n1">—</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="sw" style="background:#e9f0e6"></span><span class="tx" data-k="l0">—</span><span class="n" data-k="n0">—</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="sw" style="background:#8D1D2C"></span><span class="tx">Commerce concurrent</span><span class="n">5 253</span></div>
+    </div>
+    <div class="mu" style="margin-bottom:14px">La concurrence est celle qu'OpenStreetMap connaît, dans les neuf secteurs interrogés : une maille verte sans concurrent peut l'être parce que le commerce n'est pas cartographié. La carte le dit au lieu de le taire.</div>
+    <div class="lb">Échelle de lecture</div>
+    <div class="ech"><span class="on">Maille 1 km²</span><span>Commune</span><span>Arrondissement</span></div>
+    <div class="hr"></div>
+    <div class="pli"><span>Filtres — note, ménages, rayon, seuil</span><b>+</b></div>
+    <div class="pli"><span>Hypothèses du modèle — 13 valeurs</span><b>+</b></div>
+    <div class="pli"><span>Calage sur le réseau · Population · Notes Google</span><b>+</b></div>
+    <div class="mu">Repliés : ce sont des réglages, pas une lecture. L'écran s'ouvre sur la carte, pas sur la console.</div>
+  </div>
+  <div class="map">
+    <div id="map"></div>
+    <div class="mapui">
+      <div class="bulle titre"><b>Ménages par point de vente</b>
+        <span>Population du recensement 2021 accessible en 4 km, divisée par les commerces déjà installés dans ce même rayon. Peint maille par maille : la couleur est le potentiel, pas la présence.</span></div>
+      <div class="bulle etat" data-k="etat">—</div>
+    </div>
+  </div>
+  <div class="pan d">
+    <div class="lb">Ce que la carte dit</div>
+    <div class="deux">
+      <div class="act"><div class="t">Mailles sans aucun concurrent en 4 km</div><div class="n" data-k="sans">—</div><div class="s" data-k="sansPc">—</div></div>
+      <div><div class="t">Ménages couverts par la vue</div><div class="n" data-k="hh">—</div><div class="s">recensement 2021</div></div>
+    </div>
+    <div class="lb">Les meilleures mailles de la vue</div>
+    <div class="rang" data-k="rang"></div>
+    <div class="mu" style="margin-top:8px">Une ligne par commune : la meilleure maille du territoire de la commune, pas son centre.</div>
+    <div class="hr"></div>
+    <div class="lb">Et ensuite</div>
+    <div class="act">
+      <button class="pr">Ouvrir la maille dans l'analyse de zone</button>
+      <button>Exporter la carte en PDF (légende comprise)</button>
+      <button>Exporter les mailles en Excel</button>
+    </div>
+  </div>
+</div>
+<script>
+carte({ el: 'map', cadre: [[49.47, 2.55], [51.52, 6.35]], peindre: 'potentiel', apres: function (m) {
+  const nf = n => Math.round(n).toLocaleString('fr-BE');
+  const q = k => document.querySelector('[data-k="' + k + '"]');
+  const b = m.bornes;
+  const txt = ['moins de ' + nf(b[0]), nf(b[0]) + ' à ' + nf(b[1]), nf(b[1]) + ' à ' + nf(b[2]), nf(b[2]) + ' et plus'];
+  for (let i = 0; i < 4; i++) {
+    q('l' + i).textContent = txt[i];
+    q('n' + i).textContent = nf(m.classes[i]);
+  }
+  q('sans').textContent = nf(m.sans);
+  q('sansPc').textContent = Math.round(m.sans / m.mailles * 100) + ' % de la vue';
+  q('hh').textContent = nf(m.menages);
+  q('etat').textContent = nf(m.mailles) + ' mailles peintes · ' + nf(m.menages) + ' ménages · rayon de chalandise 4 km';
+  q('rang').innerHTML = m.sommets.map(function (s, i) {
+    return '<div class="l"><span class="r">' + (i + 1) + '</span><span class="n">' + s.nom
+      + '<em>' + s.arr + ' · ' + nf(s.hh) + ' ménages · ' + s.n + ' conc.</em></span>'
+      + '<span class="v">' + nf(s.m) + '<em>par point</em></span></div>';
+  }).join('');
+} });
+</script></div></body></html>
