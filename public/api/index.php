@@ -17,6 +17,7 @@ require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/scouting_osm.php';
+require __DIR__ . '/../../src/scouting_dossier.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -407,6 +408,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/scouting/refresh/(\d{1,3})$#', $path, $m)) { return wr_scouting_refresh((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/scouting/reseau/(\d{1,10})$#', $path, $m)) { return wr_scouting_reseau_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
+    if ($method === 'POST' && $path === '/scouting/dossier.pdf') { return wr_scouting_dossier_pdf(); }
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }
 

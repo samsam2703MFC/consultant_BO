@@ -8367,6 +8367,9 @@ function ep_scouting(): array
         'lat' => (float) $r['lat'], 'lng' => (float) $r['lng'], 'hh' => (int) $r['households'], 'market' => (int) $r['market'],
         'emprise' => (float) $r['emprise'], 'ca' => (int) $r['revenue'], 'score' => (int) $r['score'], 'n' => (int) $r['shops'],
         'strong' => (int) $r['strong'], 'm2' => (int) $r['revenue_m2'],
+        'zone' => isset($r['zone_json']) && $r['zone_json'] !== null ? json_decode((string) $r['zone_json'], true) : null,
+        'hyp' => isset($r['hyp_json']) && $r['hyp_json'] !== null ? json_decode((string) $r['hyp_json'], true) : null,
+        'date' => $r['created_at'],
     ], Db::rows('SELECT * FROM ceo_scouting_candidate ORDER BY created_at, id'));
     $pops = [];
     foreach (Db::rows('SELECT ins, population FROM ceo_scouting_population') as $r) {

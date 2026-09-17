@@ -198,6 +198,8 @@ const TIP_FICHE = {
   'Chaînes dans la zone': 'Enseignes de chaîne (marque relevée par OpenStreetMap, ou nom connu) parmi les concurrents de la zone.',
 };
 const TIP_ZONES = {
+  forts: 'Concurrents forts dans le rayon : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
+  chaines: 'Enseignes de chaîne dans le rayon — la marque relevée par OpenStreetMap, ou un nom connu (Paul, Panos, Délifrance, Le Pain Quotidien…). Une chaîne déjà là dit que la zone de chalandise tient.',
   score: TIP_FICHE['Score d\'opportunité'],
   hh: 'Population des cellules de 1 km² du recensement 2021 dans le rayon autour du point balayé (cellules de bord au prorata), divisée par la taille des ménages — le même calcul que la fiche.',
   n: 'Concurrents de la sélection à moins de « rayon » km du point. Une zone à moins de « rayon » km d\'un concurrent fort n\'est pas retenue (zone rouge).',
@@ -272,6 +274,14 @@ const cerclePoly = (lat, lng, rKm) => {
   for (let a = 0; a < 360; a += 6){ const t = a * Math.PI / 180; out.push([lat + rKm / 111.2 * Math.cos(t), lng + rKm / kx * Math.sin(t)]); }
   return out;
 };
+// Web Mercator : le pixel d'un point, au zoom z, dans le monde des tuiles.
+const merc = (lat, lng, z) => {
+  const n = 256 * Math.pow(2, z), si = Math.sin(lat * Math.PI / 180);
+  return [(lng + 180) / 360 * n, (0.5 - Math.log((1 + si) / (1 - si)) / (4 * Math.PI)) * n];
+};
+const slugDe = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'zone';
+const nomCourt = nom => String(nom || '').replace(/^L['’]?\s*Atelier by\s*-?\s*/i, '').replace(/^Atelier by\s*-?\s*/i, '') || String(nom || '');
+const pct1 = v => (v * 100).toFixed(1).replace('.', ',') + ' %';
 const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const medOf = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 const pickParams = v => { const o = {}; PARAM_KEYS.forEach(k => { if (v && typeof v[k] === 'number' && isFinite(v[k])) o[k] = v[k]; });
@@ -383,7 +393,10 @@ export class Scouting {
       // du panneau gauche, l'outil de dessin et le temps de l'isochrone :
       // des préférences de vue, gardées dans ce navigateur, jamais en base.
       theme: 'potentiel', themeOff: {}, plis: { filtres: false, couches: false, hyp: false, calage: false, sources: false },
-      tool: 'point', iso: 'auto10', isoBusy: false, dessin: 0
+      tool: 'point', iso: 'auto10', isoBusy: false, dessin: 0,
+      // Le dossier d'implantation : ouvert sur la fiche courante, avec la zone
+      // retenue dont il vient (pour dire ce qui a changé depuis), et sa carte.
+      dossier: false, dossierCand: null, dossierImg: '', dossierBusy: false
     };
     this._h = [];
     this._scroll = {};
@@ -496,7 +509,7 @@ export class Scouting {
       this._arrVu = s.wiz + '|' + s.arr;
       try { tr.scrollIntoView({ block: 'nearest' }); } catch (e) { /* navigateur sans options */ }
     }
-    this.el.classList.toggle('sc-overlay-open', !!(s.reseau || s.compare || s.view !== 'map'));
+    this.el.classList.toggle('sc-overlay-open', !!(s.reseau || s.compare || s.view !== 'map' || s.dossier));
     this.saveParams();
     const fp = this.fingerprint();
     if (fp === this._fp) return;
@@ -997,6 +1010,7 @@ export class Scouting {
       + '<br>' + esc(b.commune || '—') + ' · arr. ' + esc(b.arr || '—')
       + '<br>Note : ' + (r ? r.toFixed(1) + ' / 5 (' + ((rv && rv.n) || 0) + ' avis)' : 'non renseignée')
       + '<br>Force estimée : ' + Math.round(this.strength(b) * 100) + ' %'
+      + (this.estChaine(b) ? '<br><b>Enseigne de chaîne — ' + esc(this.marqueDe(b)) + '</b>' : '')
       + (this.isStrong(b) ? '<br><b style="color:#8D1D2C">Concurrent fort</b>' : '') + '</div>';
   }
 
@@ -1009,9 +1023,11 @@ export class Scouting {
     const bounds = this.map.getBounds().pad(0.25), z = this.map.getZoom();
     const vis = this.shops().filter(b => bounds.contains([b.lat, b.lng]));
     const single = b => {
-      const r = this.rating(b);
+      const r = this.rating(b), ch = this.estChaine(b);
       const col = !r ? R_COL.none : r >= 4.5 ? R_COL.high : r >= 3.5 ? R_COL.mid : R_COL.low;
-      return L.circleMarker([b.lat, b.lng], { renderer: this.vecR, radius: 5, color: '#fff', weight: 1, fillColor: col, fillOpacity: .95 })
+      // Une enseigne de chaîne porte un liseré noir : on la reconnaît de loin,
+      // quelle que soit sa note.
+      return L.circleMarker([b.lat, b.lng], { renderer: this.vecR, radius: ch ? 6 : 5, color: ch ? '#221E1A' : '#fff', weight: ch ? 2.2 : 1, fillColor: col, fillOpacity: .95 })
         .bindPopup(this.shopPopup(b));
     };
     if (!s.layers.cluster || z >= 12){
@@ -1559,6 +1575,247 @@ export class Scouting {
     if (x) x.zone ? this.evaluateZone(x.zone) : this.evaluate(x.lat, x.lng);
   }
 
+  /* ---------- la concurrence d'un point, lue pour les listes ---------- */
+  // Qui est là, dans le rayon : les forts, les enseignes de chaîne (marque et
+  // nombre), et les noms avec leur note — ce que la liste des points où
+  // ouvrir doit dire, pas seulement un compte.
+  concurrenceAu(lat, lng, R){
+    const near = this.shops().map(b => ({ b: b, d: dist(lat, lng, b.lat, b.lng) })).filter(o => o.d <= R).sort((a, b) => a.d - b.d);
+    const forts = near.filter(o => this.isStrong(o.b));
+    const ch = near.filter(o => this.estChaine(o.b));
+    const marques = ch.length ? this.marquesDe(ch.map(o => o.b)) : [];
+    const chainesTxt = marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', ');
+    const noms = near.slice(0, 12).map(o => {
+      const r = this.rating(o.b);
+      return o.b.name + (r ? ' ' + r.toFixed(1).replace('.', ',') : '') + (this.isStrong(o.b) ? ' — fort' : '') + (this.estChaine(o.b) ? ' — chaîne' : '') + ' · ' + o.d.toFixed(1).replace('.', ',') + ' km';
+    });
+    return { n: near.length, forts: forts.length, chaines: ch.length, chainesTxt: chainesTxt, marques: marques,
+      noms: noms.join('\n') + (near.length > 12 ? '\n… et ' + (near.length - 12) + ' autres' : '') };
+  }
+
+  /* ---------- le dossier d'implantation ---------- */
+  zoneLibelle(z){
+    const t = z.type === 'isochrone' ? 'Isochrone ' + z.minutes + ' min ' + (z.mode === 'pedestrian' ? 'à pied' : 'en voiture')
+      : z.type === 'cercle' ? 'Cercle de ' + (+z.rayon || 0).toFixed(1).replace('.', ',') + ' km' : z.type === 'rectangle' ? 'Rectangle' : 'Polygone à ' + z.poly.length + ' sommets';
+    if (z.aire == null) return t;
+    return t + ' · ' + (z.aire >= 10 ? Math.round(z.aire) : z.aire.toFixed(1).replace('.', ',')) + ' km² · rayon équivalent ' + z.req.toFixed(1).replace('.', ',') + ' km';
+  }
+
+  ouvrirDossier(cand){
+    if (!this.state.sel) return;
+    this.setState({ dossier: true, dossierCand: cand || null, dossierImg: '', view: 'map', compare: false, reseau: false });
+    this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
+  }
+
+  fermerDossier(){ this.setState({ dossier: false, dossierCand: null }); }
+
+  // Tout ce que le dossier dit, sous forme de données : la page à l'écran, le
+  // PDF du serveur, l'impression et le CSV en sont quatre lectures.
+  dossierDonnees(){
+    const s = this.state, x = s.sel, self = this;
+    if (!x) return null;
+    const z = x.zone, R = s.radius, hhSize = s.hhSize || HH_SIZE;
+    const dans = z ? 'dans la zone' : 'dans le rayon';
+    const rayonTxt = R.toFixed(1).replace('.', ',') + ' km';
+    const verdictOk = !x.blocked.length && x.score >= 55;
+    const nomCom = x.commune || 'Zone';
+    const reseau = [[nomCom + ' — projet', 'zone évaluée', fmtInt(x.hh), fmtEur(s.spend), pct1(x.emprise), fmtEur(x.ca), 'ce dossier']];
+    this.calage().rows.forEach(r => {
+      if (!r.ev) return;
+      reseau.push([nomCourt(r.m.nom), 'en exploitation' + (r.m.caAnnuel ? ' · CA réel ' + fmtEur(r.m.caAnnuel) : ''),
+        fmtInt(r.ev.hh), fmtEur(s.spend), pct1(r.ev.emprise), fmtEur(r.ev.ca),
+        r.ratio ? 'réel = modèle ' + (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : 'CA réel inconnu']);
+    });
+    RESEAU.forEach(r => reseau.push([r.nom, 'référence — étude GeoConsulting 08/2024', fmtInt(r.hh), fmtEur(r.depense), r.emprise ? pct1(r.emprise / 100) : '—',
+      r.ca ? fmtEur(r.ca) : '—', r.statut + (r.marche ? ' · marché ' + fmtEur(r.marche) : '')]));
+    const chaines = x.near.filter(o => self.estChaine(o.b));
+    const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
+    const notes = [];
+    if (z && x.disque) notes.push('Au même centre, le rayon de ' + rayonTxt + ' compte ' + fmtInt(x.disque.hh) + ' ménages et ' + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '')
+      + ' — la zone dessinée en compte ' + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtInt(Math.abs(x.hh - x.disque.hh)) + ' ménages, soit '
+      + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtEur(Math.abs(x.hh - x.disque.hh) * s.spend) + ' de marché.');
+    const cand = s.dossierCand;
+    if (cand && cand.hyp){
+      const noms = { spend: ['dépense par ménage', v => fmtEur(v)], passage: ['passage', v => v + ' %'], surface: ['surface', v => v + ' m²'], emprise: ['emprise imposée', v => v ? v + ' %' : 'calculée'],
+        empriseMax: ['emprise maximale', v => v + ' %'], compK: ['sensibilité', v => String(v).replace('.', ',')], hhSize: ['taille des ménages', v => String(v).replace('.', ',')],
+        radius: ['rayon', v => (+v).toFixed(1).replace('.', ',') + ' km'], thresh: ['concurrent fort dès', v => (+v).toFixed(1).replace('.', ',') + ' ★'], weak: ['concurrent dès', v => (+v).toFixed(1).replace('.', ',') + ' ★'] };
+      const diff = [];
+      Object.keys(noms).forEach(k => { if (cand.hyp[k] != null && typeof s[k] === 'number' && Math.abs(cand.hyp[k] - s[k]) > 1e-9) diff.push(noms[k][0] + ' ' + noms[k][1](cand.hyp[k]) + ' → ' + noms[k][1](s[k])); });
+      const quand = cand.date ? new Date(cand.date).toLocaleDateString('fr-BE') : '';
+      notes.push(diff.length
+        ? 'Depuis que la zone a été retenue' + (quand ? ' le ' + quand : '') + ', les hypothèses ont changé : ' + diff.join(' ; ') + '. Le dossier est calculé avec celles d’aujourd’hui.'
+        : 'Hypothèses inchangées depuis que la zone a été retenue' + (quand ? ' le ' + quand : '') + '.');
+    }
+    return {
+      titre: nomCom + ' — étude d’implantation', commune: nomCom,
+      geo: 'arr. ' + x.arr + ' · ' + x.prov + ' · ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4),
+      date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
+      score: x.score, verdictOk: verdictOk,
+      verdict: x.blocked.length ? 'Zone exclue — concurrence forte' : x.score >= 55 ? 'Zone candidate prioritaire' : 'Zone candidate secondaire',
+      verdictNote: x.blocked.length
+        ? x.blocked.length + ' concurrent(s) fort(s) à moins de ' + rayonTxt + (z ? ' du centre' : '') + ' : ' + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
+        : 'Score d’opportunité ' + x.score + '/100 — ménages accessibles pondérés par la pression concurrentielle.',
+      zone: z ? this.zoneLibelle(z) : 'Rayon de ' + rayonTxt + ' autour du point',
+      carteNote: 'En vert, la zone évaluée' + (z ? ' ; en pointillé, le rayon de ' + rayonTxt + ' au même centre' : '') + '. Les points : les commerces relevés, colorés par leur note Google. Fond de carte © OpenStreetMap.',
+      essentiel: [
+        ['Ménages ' + dans, fmtInt(x.hh), 'recensement 2021'],
+        ['Concurrents ' + dans, String(x.near.length), x.blocked.length ? 'dont ' + x.blocked.length + ' fort' + (x.blocked.length > 1 ? 's' : '') : chaines.length ? chaines.length + ' de chaîne' : 'aucun fort'],
+        ['Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), pct1(x.emprise), 'pression ' + x.load.toFixed(2)],
+        ['CA annuel estimé', fmtEur(x.ca), fmtEur(x.ca / s.surface) + ' / m² sur ' + s.surface + ' m²']
+      ],
+      marche: [
+        ['Population ' + dans, fmtInt(x.hh * hhSize) + ' hab.', self._grid ? 'recensement 2021, maille de 1 km²' : 'part du territoire des communes dans le rayon'],
+        ['Ménages (' + String(hhSize).replace('.', ',') + ' personnes)', fmtInt(x.hh), 'population ÷ taille des ménages'],
+        ['dont zone primaire', fmtInt(x.prim), 'rayon réduit à 55 %'],
+        ['Dépense boulangerie par ménage', fmtEur(s.spend) + ' / an', 'hypothèse du modèle — étude GeoConsulting : 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra'],
+        ['Marché boulangerie ' + dans, fmtEur(x.market), 'ménages × dépense'],
+        ['Pression concurrentielle', x.load.toFixed(2), 'Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5'],
+        ['Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), pct1(x.emprise), s.emprise > 0 ? 'imposée à toutes les zones' : s.empriseMax + ' % ÷ (1 + ' + String(s.compK).replace('.', ',') + ' × pression), plancher 4 %'],
+        ['CA annuel estimé TTC', fmtEur(x.ca), 'marché × emprise ÷ (1 − ' + s.passage + ' % de passage)'],
+        ['Rendement sur ' + s.surface + ' m²', fmtEur(x.ca / s.surface) + ' / m²', 'Halle mesurée : 5 188 € / m² sur 250 m²'],
+        ['CA hebdomadaire', fmtEur(x.ca / 52), 'CA annuel ÷ 52']
+      ],
+      concurrence: x.near.slice(0, 30).map(o => {
+        const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b);
+        return [o.b.name, o.b.commune || '—', o.d.toFixed(1).replace('.', ',') + ' km',
+          r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : rv && rv.n ? ' (' + rv.n + ' avis)' : '') : '—',
+          Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
+      }),
+      chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
+      reseau: reseau,
+      hypotheses: [
+        ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
+        ['Emprise imposée', s.emprise > 0 ? s.emprise + ' %' : 'calculée'], ['Emprise maximale', s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
+        ['Taille des ménages', String(hhSize).replace('.', ',')], ['Rayon', rayonTxt], ['Concurrent dès', (+s.weak).toFixed(1).replace('.', ',') + ' ★'],
+        ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)]
+      ],
+      notes: notes,
+      sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
+        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '')
+        + (z && z.type === 'isochrone' ? ' · isochrone : Valhalla (routage OpenStreetMap)' : '') + '.'
+    };
+  }
+
+  // La carte du dossier : les tuiles OpenStreetMap assemblées dans un canvas,
+  // la zone et les commerces dessinés dessus, rendus en image — le PDF part
+  // sans réseau, et l'impression aussi.
+  carteStatique(){
+    const s = this.state, x = s.sel;
+    if (!x) return Promise.resolve('');
+    const pts = x.zone ? x.zone.poly : cerclePoly(x.lat, x.lng, s.radius);
+    const key = [x.lat.toFixed(5), x.lng.toFixed(5), pts.length, s.radius, this._rev, s.minRating, s.arr].join('|');
+    if (this._imgKey === key && this._imgP) return this._imgP;
+    const W = 720, H = 400, bb = boitePoly(pts);
+    let z = 15;
+    for (; z > 8; z--){ const a = merc(bb.n, bb.w, z), b = merc(bb.s, bb.e, z); if (b[0] - a[0] <= W * 0.8 && b[1] - a[1] <= H * 0.8) break; }
+    const c = merc((bb.n + bb.s) / 2, (bb.w + bb.e) / 2, z), x0 = c[0] - W / 2, y0 = c[1] - H / 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const cx = canvas.getContext('2d');
+    cx.fillStyle = '#EAE4DC'; cx.fillRect(0, 0, W, H);
+    const charges = [];
+    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++){
+      charges.push(new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { try { cx.drawImage(img, tx * 256 - x0, ty * 256 - y0); } catch (e) { /* tuile refusée */ } res(); };
+        img.onerror = () => res();
+        img.src = 'https://tile.openstreetmap.org/' + z + '/' + tx + '/' + ty + '.png';
+      }));
+    }
+    const P = ll => { const m = merc(ll[0], ll[1], z); return [m[0] - x0, m[1] - y0]; };
+    this._imgKey = key;
+    this._imgP = Promise.all(charges).then(() => {
+      const vb = { s: bb.s - 0.05, n: bb.n + 0.05, w: bb.w - 0.08, e: bb.e + 0.08 };
+      this.shops().forEach(b => {
+        if (b.lat < vb.s || b.lat > vb.n || b.lng < vb.w || b.lng > vb.e) return;
+        const p = P([b.lat, b.lng]), r = this.rating(b);
+        cx.beginPath(); cx.arc(p[0], p[1], 4.5, 0, 6.2832);
+        cx.fillStyle = !r ? R_COL.none : r >= 4.5 ? R_COL.high : r >= 3.5 ? R_COL.mid : R_COL.low; cx.fill();
+        cx.lineWidth = 1.2; cx.strokeStyle = '#fff'; cx.stroke();
+        if (this.estChaine(b)){ cx.beginPath(); cx.arc(p[0], p[1], 7.5, 0, 6.2832); cx.lineWidth = 1.6; cx.strokeStyle = '#221E1A'; cx.stroke(); }
+      });
+      cx.beginPath();
+      pts.forEach((p, i) => { const q = P(p); if (i) cx.lineTo(q[0], q[1]); else cx.moveTo(q[0], q[1]); });
+      cx.closePath();
+      cx.fillStyle = 'rgba(27,94,32,.14)'; cx.fill();
+      cx.lineWidth = 2.5; cx.strokeStyle = '#1b5e20'; cx.stroke();
+      const c0 = P([x.lat, x.lng]);
+      if (x.zone){
+        const rp = P([x.lat, x.lng + s.radius / (111.2 * Math.cos(x.lat * Math.PI / 180))]);
+        cx.setLineDash([5, 5]); cx.beginPath(); cx.arc(c0[0], c0[1], Math.abs(rp[0] - c0[0]), 0, 6.2832);
+        cx.lineWidth = 1.4; cx.strokeStyle = '#2b2b2b'; cx.stroke(); cx.setLineDash([]);
+      }
+      cx.beginPath(); cx.arc(c0[0], c0[1], 6, 0, 6.2832); cx.fillStyle = '#1b5e20'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
+      cx.font = '11px Helvetica, Arial, sans-serif';
+      const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
+      cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
+      cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
+      // En JPEG : six fois plus léger qu'en PNG pour une carte, et le PDF part
+      // avec une image de 120 Ko au lieu de 800.
+      try { return canvas.toDataURL('image/jpeg', 0.88); } catch (e) { console.warn('[scouting] carte du dossier :', e.message); return ''; }
+    });
+    return this._imgP;
+  }
+
+  // Le PDF vient du serveur (même chaîne que l'analyse magasin) ; sans moteur
+  // PDF là-bas, ou hors ligne, la fenêtre d'impression produit le même document.
+  async telechargerPdf(){
+    const d = this.dossierDonnees();
+    if (!d) return;
+    if (!this.useApi()){ this.imprimerDossier(); return; }
+    this.setState({ dossierBusy: true });
+    try {
+      d.carte = await this.carteStatique();
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 60000);
+      const r = await fetch(API_BASE + '/scouting/dossier.pdf', {
+        method: 'POST', credentials: 'same-origin', signal: ctl.signal,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' }, body: JSON.stringify(d)
+      });
+      clearTimeout(t);
+      if (r.status === 501){ this.notify('Aucun moteur PDF sur ce serveur : la fenêtre d’impression produit le même document.'); this.imprimerDossier(); return; }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a');
+      a.href = url; a.download = 'dossier-implantation-' + slugDe(d.commune) + '-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      this.notify('Dossier PDF téléchargé — ' + d.commune);
+    } catch (e) {
+      this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
+      this.imprimerDossier();
+    } finally {
+      this.setState({ dossierBusy: false });
+    }
+  }
+
+  imprimerDossier(){
+    const d = this.dossierDonnees();
+    if (!d) return;
+    d.carte = this.state.dossierImg || '';
+    const logo = new URL('assets/img/logo.png', document.baseURI).href;
+    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
+      + T.dossierPage(d, esc, logo) + '</body></html>';
+    const w = window.open('', '_blank');
+    if (!w){ this.notify('Fenêtre bloquée par le navigateur — autorise les fenêtres surgissantes pour imprimer le dossier.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 600);
+  }
+
+  exporterDossierCsv(){
+    const d = this.dossierDonnees();
+    if (!d) return;
+    const rows = [['dossier', 'titre', d.titre, d.date], ['dossier', 'zone', d.zone, d.geo], ['dossier', 'score', d.score, d.verdict]];
+    d.essentiel.forEach(r => rows.push(['essentiel', r[0], r[1], r[2]]));
+    d.marche.forEach(r => rows.push(['marche', r[0], r[1], r[2]]));
+    d.concurrence.forEach(r => rows.push(['concurrence', r[0], r[2] + ' · note ' + r[3] + ' · force ' + r[4], r[1] + (r[5] ? ' · concurrent fort' : '') + (r[6] ? ' · chaîne ' + r[6] : '')]));
+    d.reseau.forEach(r => rows.push(['reseau', r[0], r[5], r[1] + ' · ' + r[2] + ' ménages · ' + r[3] + ' · emprise ' + r[4] + ' · ' + r[6]]));
+    d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
+    d.notes.forEach(n => rows.push(['notes', '', n, '']));
+    rows.push(['sources', '', d.sources, '']);
+    this.csv('dossier_' + slugDe(d.commune), ['section', 'mesure', 'valeur', 'detail'], rows);
+  }
+
   /* ---------- la zone dessinée ---------- */
   // Tout ce que la fiche calcule pour un disque, calculé dans un polygone :
   // les ménages des mailles de 1 km² dont le centre est dedans, les commerces
@@ -2019,15 +2276,33 @@ export class Scouting {
   }
 
   /* ---------- candidats & export ---------- */
+  // les hypothèses du modèle, telles qu'elles s'enregistrent avec une zone
+  hypotheses(){
+    const s = this.state, o = {};
+    ['spend', 'passage', 'surface', 'emprise', 'empriseMax', 'compK', 'hhSize', 'radius', 'thresh', 'weak', 'minScore'].forEach(k => { if (typeof s[k] === 'number') o[k] = s[k]; });
+    return o;
+  }
+
+  // une zone retenue se rouvre telle qu'elle a été tracée
+  candEval(c){
+    if (c.zone && Array.isArray(c.zone.poly) && c.zone.poly.length >= 3) this.evaluateZone(Object.assign({}, c.zone, { centre: [+c.lat, +c.lng] }));
+    else this.evaluate(+c.lat, +c.lng);
+  }
+
   addCandidate(){
-    const s = this.state, x = s.sel;
+    const s = this.state, x = s.sel, self = this;
     if (!x) return;
+    const z = x.zone;
     const c = {
-      id: Date.now(), name: x.commune + ' — zone ' + x.lat.toFixed(3) + '/' + x.lng.toFixed(3),
+      id: Date.now(), name: x.commune + ' — ' + (z ? self.zoneLibelle(z).split(' · ')[0].toLowerCase() : 'zone ' + x.lat.toFixed(3) + '/' + x.lng.toFixed(3)),
       commune: x.commune, arr: x.arr, prov: x.prov, lat: x.lat, lng: x.lng,
       hh: Math.round(x.hh), market: Math.round(x.market), emprise: x.emprise,
       ca: Math.round(x.ca), score: x.score, n: x.near.length, strong: x.blocked.length,
-      m2: Math.round(x.ca / s.surface)
+      m2: Math.round(x.ca / s.surface),
+      // La zone telle qu'elle a été tracée, et les hypothèses du moment : le
+      // dossier se refait sur la même zone, et dit ce qui a changé depuis.
+      zone: z ? { type: z.type, poly: z.poly.map(p => [+(+p[0]).toFixed(5), +(+p[1]).toFixed(5)]), rayon: z.rayon || null, minutes: z.minutes || null, mode: z.mode || null } : null,
+      hyp: this.hypotheses(), date: new Date().toISOString()
     };
     const list = s.candidates.concat([c]);
     ls.set('cand', list);
@@ -2315,9 +2590,11 @@ export class Scouting {
     const scan = (s.view === 'zones' && s.communes.length) ? this.scanPrio() : [];
     let zonesRows = scan.map((p, i) => {
       const emp = p.ca ? (p.ca * (1 - s.passage / 100)) / (p.hh * s.spend) : 0;
+      const cc = self.concurrenceAu(p.lat, p.lng, s.radius);
       return {
         rang: i + 1, commune: p.commune, arr: p.arr, lat: p.lat, lng: p.lng,
         score: p.score, hh: fmtInt(p.hh), hhRaw: Math.round(p.hh), n: p.n,
+        forts: cc.forts, chaines: cc.chainesTxt || (cc.chaines ? String(cc.chaines) : '—'), chainesN: cc.chaines, noms: cc.noms,
         emprise: (emp * 100).toFixed(1) + ' %', empriseRaw: (emp * 100).toFixed(1),
         ca: fmtEur(p.ca), caRaw: Math.round(p.ca),
         m2: fmtEur(p.ca / s.surface), m2Raw: Math.round(p.ca / s.surface),
@@ -2325,7 +2602,7 @@ export class Scouting {
       };
     });
     if (sk !== 'rang'){
-      const num = { score: 'score', hh: 'hhRaw', n: 'n', emprise: 'empriseRaw', ca: 'caRaw', m2: 'm2Raw' };
+      const num = { score: 'score', hh: 'hhRaw', n: 'n', forts: 'forts', chaines: 'chainesN', emprise: 'empriseRaw', ca: 'caRaw', m2: 'm2Raw' };
       zonesRows = zonesRows.slice().sort((a, b) => num[sk]
         ? (parseFloat(a[num[sk]]) - parseFloat(b[num[sk]])) * dir
         : String(a[sk] || '').localeCompare(String(b[sk] || '')) * dir);
@@ -2517,7 +2794,7 @@ export class Scouting {
           // le résultat
           chauds: chauds.map((p, i) => ({
             rang: i + 1, commune: p.commune, arr: p.arr, ca: fmtEur(p.ca), score: p.score,
-            hh: fmtInt(p.hh) + ' ménages', n: p.n + ' concurrent' + (p.n > 1 ? 's' : ''),
+            hh: fmtInt(p.hh) + ' ménages', n: (() => { const cc = self.concurrenceAu(p.lat, p.lng, s.radius); return p.n + ' concurrent' + (p.n > 1 ? 's' : '') + (cc.forts ? ', ' + cc.forts + ' fort' + (cc.forts > 1 ? 's' : '') : '') + (cc.chainesTxt ? ' · ' + cc.chainesTxt : ''); })(),
             voir: () => { if (self.map) self.map.setView([p.lat, p.lng], 12); self.evaluate(p.lat, p.lng); }
           })),
           nChauds: chauds.length,
@@ -2659,6 +2936,7 @@ export class Scouting {
         { color: R_COL.mid, label: 'Note 3,5 – 4,5' },
         { color: R_COL.low, label: 'Note inférieure à 3,5' },
         { color: R_COL.none, label: 'Note non renseignée' },
+        { color: '#fff', border: '#221E1A', label: 'Enseigne de chaîne — liseré noir' },
         { color: 'rgba(141,29,44,.35)', label: 'Zone d\'exclusion — concurrence forte' },
         { color: '#1b5e20', label: 'Zone prioritaire — score élevé' },
         { color: '#FAC775', label: 'Zone candidate retenue' },
@@ -2678,8 +2956,8 @@ export class Scouting {
         rang: i + 1, commune: p.commune, score: p.score, ca: fmtEur(p.ca),
         // L'arrondissement ne se répète que s'il y en a plusieurs : sur un seul
         // il repoussait « concurrents » à la ligne pour ne rien apprendre.
-        meta: (unArr ? '' : 'arr. ' + p.arr + ' · ') + fmtInt(p.hh) + ' ménages · '
-          + p.n + ' concurrent' + (p.n > 1 ? 's' : ''),
+        meta: (() => { const cc = self.concurrenceAu(p.lat, p.lng, s.radius); return (unArr ? '' : 'arr. ' + p.arr + ' · ') + fmtInt(p.hh) + ' ménages · '
+          + p.n + ' concurrent' + (p.n > 1 ? 's' : '') + (cc.forts ? ' (' + cc.forts + ' fort' + (cc.forts > 1 ? 's' : '') + ')' : '') + (cc.chainesTxt ? ' · chaîne' + (cc.chaines > 1 ? 's' : '') + ' : ' + cc.chainesTxt : ''); })(),
         on: memePoint(p),
         voir: () => {
           if (self.map) self.map.setView([p.lat, p.lng], Math.max(self.map.getZoom(), 12));
@@ -2697,11 +2975,7 @@ export class Scouting {
       selRang: (chauds.findIndex(memePoint) + 1) || 0,
       selCommune: x ? x.commune : '',
       selGeo: x ? 'arr. ' + x.arr + ' · ' + x.prov + ' · ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) : '',
-      selZone: x && x.zone ? (() => {
-        const z = x.zone, t = z.type === 'isochrone' ? 'Isochrone ' + z.minutes + ' min ' + (z.mode === 'pedestrian' ? 'à pied' : 'en voiture')
-          : z.type === 'cercle' ? 'Cercle de ' + z.rayon.toFixed(1).replace('.', ',') + ' km' : z.type === 'rectangle' ? 'Rectangle' : 'Polygone à ' + z.poly.length + ' sommets';
-        return t + ' · ' + (z.aire >= 10 ? Math.round(z.aire) : z.aire.toFixed(1).replace('.', ',')) + ' km² · rayon équivalent ' + z.req.toFixed(1).replace('.', ',') + ' km';
-      })() : '',
+      selZone: x && x.zone ? self.zoneLibelle(x.zone) : '',
       selDisque: x && x.zone && x.disque ? 'Au même centre, le rayon de ' + s.radius.toFixed(1).replace('.', ',') + ' km compte ' + fmtInt(x.disque.hh) + ' ménages et '
         + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '') + ' — la zone dessinée en compte '
         + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtInt(Math.abs(x.hh - x.disque.hh)) + ' ménages, soit '
@@ -2754,10 +3028,19 @@ export class Scouting {
       nCandidates: s.candidates.length,
       noCandidates: s.candidates.length === 0,
       candidates: s.candidates.map(c => ({
-        name: c.commune, meta: fmtEur(c.ca) + ' · ' + fmtInt(c.hh) + ' ménages · score ' + c.score,
-        focus: () => { if (self.map) self.map.setView([c.lat, c.lng], 12); self.evaluate(+c.lat, +c.lng); },
+        name: c.commune, meta: fmtEur(c.ca) + ' · ' + fmtInt(c.hh) + ' ménages · score ' + c.score + (c.zone ? ' · zone dessinée' : ''),
+        focus: () => { if (self.map) self.map.setView([c.lat, c.lng], 12); self.candEval(c); },
+        dossier: () => { if (self.map) self.map.setView([c.lat, c.lng], 12); self.candEval(c); self.ouvrirDossier(c); },
         remove: () => self.removeCandidate(c)
       })),
+      ouvrirDossier: () => self.ouvrirDossier(null),
+      dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
+        img: s.dossierImg, busy: s.dossierBusy,
+        fermer: () => self.fermerDossier(),
+        pdf: () => self.telechargerPdf(),
+        csv: () => self.exporterDossierCsv(),
+        imprimer: () => self.imprimerDossier()
+      }) : null,
       histTitle: hist.title, hist: hist.bars,
 
       /* ----- modale réseau ----- */
@@ -2805,31 +3088,32 @@ export class Scouting {
       q: s.q, setQ: e => self.setState({ q: e.target.value }),
       zonesRows: zonesRows,
       zonesEmpty: s.busy ? 'Chargement en cours…' : !this.map ? 'Carte indisponible.' : 'Aucune zone ne passe le score minimum ' + s.minScore + ' dans la vue courante — dézoome la carte ou abaisse le seuil.',
-      zonesCols: [['rang', 'Rang'], ['commune', 'Localité'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
+      zonesCols: [['rang', 'Rang'], ['commune', 'Localité'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['forts', 'Forts'], ['chaines', 'Chaînes'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
         .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ZONES[k] || '' })),
       concRows: concRows,
       concCount: concCount,
       arrRows: arrRows,
       top5: s.view === 'top5' ? self.scanTop5().map(g => ({
         prov: g.prov, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection',
-        rows: g.zones.map((p, i) => ({ rang: i + 1, commune: p.commune, arr: p.arr, score: p.score, hh: fmtInt(p.hh), n: p.n,
-          emprise: (p.emprise * 100).toFixed(1) + ' %', ca: fmtEur(p.ca), m2: fmtEur(p.ca / s.surface), open: () => goMap(p.lat, p.lng, 13, true) }))
+        rows: g.zones.map((p, i) => { const cc = self.concurrenceAu(p.lat, p.lng, s.radius); return { rang: i + 1, commune: p.commune, arr: p.arr, score: p.score, hh: fmtInt(p.hh), n: p.n,
+          forts: cc.forts, chaines: cc.chainesTxt || (cc.chaines ? String(cc.chaines) : '—'), noms: cc.noms,
+          emprise: (p.emprise * 100).toFixed(1) + ' %', ca: fmtEur(p.ca), m2: fmtEur(p.ca / s.surface), open: () => goMap(p.lat, p.lng, 13, true) }; })
       })) : [],
-      top5Cols: [['rang', 'Rang'], ['commune', 'Commune'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
+      top5Cols: [['rang', 'Rang'], ['commune', 'Commune'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['forts', 'Forts'], ['chaines', 'Chaînes'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
         .map(([k, label]) => ({ label: label, tip: TIP_ZONES[k] || '' })),
       top5Empty: s.busy ? 'Chargement en cours…' : 'Aucune commune dans la sélection — coche au moins une province.',
       exportTop5: () => {
         const g = self.scanTop5();
-        self.csv('ceo_top5_provinces', ['province', 'rang', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
+        self.csv('ceo_top5_provinces', ['province', 'rang', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'concurrents_noms', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
           'hyp_rayon_km', 'hyp_depense_menage', 'hyp_emprise_max_pct', 'hyp_sensibilite', 'hyp_passage_pct', 'hyp_surface_m2'],
-          [].concat.apply([], g.map(x => x.zones.map((p, i) => [x.prov, i + 1, p.commune, p.arr, p.score, Math.round(p.hh), p.n, (p.emprise * 100).toFixed(1), Math.round(p.ca), Math.round(p.ca / s.surface),
-            p.lat.toFixed(5), p.lng.toFixed(5), s.radius.toFixed(1), s.spend, s.empriseMax, s.compK, s.passage, s.surface]))));
+          [].concat.apply([], g.map(x => x.zones.map((p, i) => { const cc = self.concurrenceAu(p.lat, p.lng, s.radius); return [x.prov, i + 1, p.commune, p.arr, p.score, Math.round(p.hh), p.n, cc.forts, cc.chainesTxt, String(cc.noms).replace(/\n/g, ' / '), (p.emprise * 100).toFixed(1), Math.round(p.ca), Math.round(p.ca / s.surface),
+            p.lat.toFixed(5), p.lng.toFixed(5), s.radius.toFixed(1), s.spend, s.empriseMax, s.compK, s.passage, s.surface]; }))));
       },
       arrCols: [['arr', 'Arrondissement'], ['communes', 'Communes'], ['pop', 'Population'], ['hh', 'Ménages'], ['market', 'Marché'], ['shops', 'Commerces'], ['strong', 'Forts'], ['dens', '/ 10.000 hab.'], ['avg', 'Note moy.'], ['perShop', 'Ménages / point']]
         .map(([k, label]) => ({ label: label, sort: sortBy(k), tip: TIP_ARR[k] || '' })),
-      exportZones: () => self.csv('ceo_zones', ['rang', 'localite', 'arrondissement', 'score', 'menages', 'concurrents', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
+      exportZones: () => self.csv('ceo_zones', ['rang', 'localite', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'concurrents_noms', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng',
         'hyp_depense_menage', 'hyp_passage_pct', 'hyp_surface_m2', 'hyp_emprise_max_pct', 'hyp_sensibilite', 'hyp_taille_menages', 'hyp_rayon_km'],
-        zonesRows.map(r => [r.rang, r.commune, r.arr, r.score, r.hhRaw, r.n, r.empriseRaw, r.caRaw, r.m2Raw, r.lat.toFixed(5), r.lng.toFixed(5),
+        zonesRows.map(r => [r.rang, r.commune, r.arr, r.score, r.hhRaw, r.n, r.forts, r.chainesN ? r.chaines : '', String(r.noms || '').replace(/\n/g, ' / '), r.empriseRaw, r.caRaw, r.m2Raw, r.lat.toFixed(5), r.lng.toFixed(5),
           s.spend, s.passage, s.surface, s.empriseMax, s.compK, s.hhSize, s.radius])),
       exportConc: () => self.csv('ceo_concurrents', ['nom', 'commune', 'arrondissement', 'province', 'note', 'avis', 'source_note', 'force_pct', 'concurrent_fort', 'commentaire', 'adresse', 'lat', 'lng'],
         concRows.map(r => [r.name, r.commune, r.arr, r.prov, r.note, r.avis, r.src, r.force, r.strong ? 'oui' : 'non', String(r.comment || '').replace(/[\r\n]+/g, ' '), r.addr, r.lat.toFixed(5), r.lng.toFixed(5)])),

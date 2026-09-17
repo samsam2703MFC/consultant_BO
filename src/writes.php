@@ -3437,18 +3437,55 @@ function wr_scouting_candidate_post(): array
     if ($id <= 0) { $id = (int) round(microtime(true) * 1000); }
     $name = mb_substr((string) ($b['name'] ?? ''), 0, 200);
     $commune = mb_substr((string) ($b['commune'] ?? ''), 0, 120);
-    Db::exec('INSERT INTO ceo_scouting_candidate (id, name, commune, arrondissement, province, lat, lng, households, market, emprise, revenue, score, shops, strong, revenue_m2, created_at)'
-        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name = VALUES(name)', [
+    // La zone dessinée (type, sommets, rayon) et les hypothèses du moment :
+    // le dossier d'une zone retenue se refait plus tard sur la même zone, et
+    // dit ce qui a changé depuis.
+    $zone = scoutingZoneJson($b['zone'] ?? null);
+    $hyp = null;
+    if (is_array($b['hyp'] ?? null)) {
+        $h = [];
+        foreach ($b['hyp'] as $k => $v) {
+            if (is_string($k) && preg_match('/^[a-zA-Z]{1,24}$/', $k) === 1 && is_numeric($v)) { $h[$k] = (float) $v; }
+            if (count($h) >= 24) { break; }
+        }
+        $hyp = $h === [] ? null : json_encode($h);
+    }
+    Db::exec('INSERT INTO ceo_scouting_candidate (id, name, commune, arrondissement, province, lat, lng, households, market, emprise, revenue, score, shops, strong, revenue_m2, zone_json, hyp_json, created_at)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name = VALUES(name)', [
         $id, $name, $commune, mb_substr((string) ($b['arr'] ?? ''), 0, 60), mb_substr((string) ($b['prov'] ?? ''), 0, 60),
         (float) ($b['lat'] ?? 0), (float) ($b['lng'] ?? 0),
         max(0, (int) round((float) ($b['hh'] ?? 0))), max(0, (int) round((float) ($b['market'] ?? 0))),
         max(0.0, min(1.0, (float) ($b['emprise'] ?? 0))), max(0, (int) round((float) ($b['ca'] ?? 0))),
         max(0, min(100, (int) ($b['score'] ?? 0))), max(0, (int) ($b['n'] ?? 0)), max(0, (int) ($b['strong'] ?? 0)),
-        max(0, (int) round((float) ($b['m2'] ?? 0))), date('Y-m-d H:i:s'),
+        max(0, (int) round((float) ($b['m2'] ?? 0))), $zone, $hyp, date('Y-m-d H:i:s'),
     ]);
     journalAdd('CEO', 'Scouting', $commune !== '' ? $commune : '—',
         'Zone candidate retenue — ' . $name . ' · CA estimé ' . number_format((float) ($b['ca'] ?? 0), 0, ',', '.') . ' € · score ' . (int) ($b['score'] ?? 0) . '/100');
     return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * Une zone dessinée, telle que l'écran la garde : un type, des sommets
+ * (au plus 400, en degrés), un rayon en km, le temps et le mode d'un
+ * isochrone. Rien d'autre n'entre en base.
+ */
+function scoutingZoneJson($z): ?string
+{
+    if (!is_array($z) || !is_array($z['poly'] ?? null)) { return null; }
+    $poly = [];
+    foreach ($z['poly'] as $p) {
+        if (!is_array($p) || !isset($p[0], $p[1]) || !is_numeric($p[0]) || !is_numeric($p[1])) { continue; }
+        $poly[] = [round((float) $p[0], 5), round((float) $p[1], 5)];
+        if (count($poly) >= 400) { break; }
+    }
+    if (count($poly) < 3) { return null; }
+    $type = (string) ($z['type'] ?? 'polygone');
+    if (!in_array($type, ['cercle', 'polygone', 'rectangle', 'isochrone'], true)) { $type = 'polygone'; }
+    $out = ['type' => $type, 'poly' => $poly];
+    if (isset($z['rayon']) && is_numeric($z['rayon'])) { $out['rayon'] = round((float) $z['rayon'], 2); }
+    if (isset($z['minutes']) && is_numeric($z['minutes'])) { $out['minutes'] = (int) $z['minutes']; }
+    if (isset($z['mode']) && in_array($z['mode'], ['auto', 'pedestrian'], true)) { $out['mode'] = $z['mode']; }
+    return json_encode($out);
 }
 
 /** DELETE /scouting/candidates/{id} */
