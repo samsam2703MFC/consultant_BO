@@ -124,6 +124,35 @@ const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B'
 // « Ath » doit trouver Ath, « chatelet » Châtelet et « SAINT-GHISLAIN »
 // Saint-Ghislain : on compare sans casse ni accents.
 const sansAccent = v => String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// Ce que la carte peint, maille de 1 km² par maille : une valeur du modèle,
+// quatre classes (quartiles de la sélection), une rampe. Le thème « potentiel »
+// est la lecture de départ : ménages accessibles ÷ (concurrents + 1).
+const THEMES = [
+  ['potentiel', 'Ménages par point de vente', 'Ménages accessibles dans le rayon ÷ (concurrents du rayon + 1). Beaucoup de ménages pour peu de commerces : la maille est sous-servie.'],
+  ['menages', 'Ménages accessibles', 'Population du recensement 2021 dans le rayon, divisée par la taille des ménages — là où les gens habitent.'],
+  ['concurrence', 'Concurrents dans le rayon', 'Boulangeries et pâtisseries relevées dans OpenStreetMap à moins d\'un rayon de la maille.'],
+  ['ca', 'CA annuel estimé', 'Le modèle de la fiche, maille par maille : ménages × dépense × emprise ÷ (1 − passage), l\'emprise descendant avec la pression concurrentielle.'],
+  ['score', 'Score d\'opportunité', 'ménages ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100 — le score des zones prioritaires.'],
+  ['aucun', 'Rien — le fond de carte seul', '']
+];
+const THEME_RAMPE = {
+  potentiel: ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'],
+  menages: ['#eaf0f4', '#c2d4e0', '#8fb0c6', '#3f6f92'],
+  concurrence: ['#f7e9ea', '#e3b9bd', '#c77c85', '#8D1D2C'],
+  ca: ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'],
+  score: ['#faf3e4', '#f0d9a0', '#dfae55', '#b8791c']
+};
+// Les outils de dessin de la zone d'étude. « point » est le geste d'origine :
+// un clic, le rayon du curseur.
+const OUTILS = [
+  ['point', 'Évaluer un point', 'Un clic sur la carte : la zone est le rayon réglé à gauche.'],
+  ['cercle', 'Cercle', 'Deux clics : le centre, puis le bord.'],
+  ['polygone', 'Polygone', 'Un clic par sommet ; double-clic, ou clic sur le premier sommet, pour fermer. Échap annule.'],
+  ['rectangle', 'Rectangle', 'Deux clics : deux coins opposés.'],
+  ['isochrone', 'Isochrone', 'Un clic : la zone atteignable en ce temps de trajet, calculée sur le réseau routier (Valhalla, OpenStreetMap).']
+];
+const ISO_URL = 'https://valhalla1.openstreetmap.de/isochrone';
+const ISO_CHOIX = [['auto10', '10 min en voiture'], ['auto15', '15 min en voiture'], ['auto20', '20 min en voiture'], ['pedestrian15', '15 min à pied']];
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
 const LS = 'ceo_scouting';
@@ -138,7 +167,7 @@ const TIP_REGL = {
   weak: 'Note en dessous de laquelle un commerce n\'est pas tenu pour un concurrent : sa force tombe à zéro, il ne pèse ni dans la pression ni dans les zones rouges.\nforce = (note − ce seuil) ÷ (5 − ce seuil).',
   caVise: 'Chiffre d\'affaires annuel TTC en dessous duquel une zone n\'est ni tracée ni listée. À 0, aucun plancher — seul le score minimum filtre.',
   thresh: 'Note à partir de laquelle un concurrent est « fort » : zone rouge autour de lui, et poids × 1,5 dans la pression concurrentielle.\nSans note, il est fort si sa force OSM ≥ 0,75 − (5 − seuil) × 0,05.',
-  minScore: 'Score d\'opportunité en dessous duquel une zone n\'est ni tracée sur la carte ni listée dans ceo_zones.\nscore = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100.',
+  minScore: 'Score d\'opportunité en dessous duquel une zone n\'est ni tracée sur la carte ni listée dans les zones candidates.\nscore = ménages du rayon ÷ 14 000 × 60 + emprise ÷ emprise max × 40, de 0 à 100.',
   ca: 'CA annuel TTC = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage).'
 };
 const TIP_HYP = {
@@ -163,7 +192,10 @@ const TIP_FICHE = {
   'Emprise imposée': 'Emprise fixée dans les hypothèses : la même pour toutes les zones, la concurrence ne la modifie pas.',
   'Passage': 'Majoration par la clientèle de passage : CA = CA des ménages ÷ (1 − passage).',
   'Rendement annuel / m²': '€/m² = CA annuel ÷ surface nette cible (hypothèse).',
-  'CA hebdomadaire': 'CA annuel ÷ 52.'
+  'CA hebdomadaire': 'CA annuel ÷ 52.',
+  'Ménages dans la zone': 'Population des cellules de 1 km² du recensement 2021 dont le centre est dans la zone dessinée, divisée par la taille moyenne des ménages. Le rayon équivalent est celui du disque de même aire : c\'est lui qui sert au modèle.',
+  'Boulangeries dans la zone': 'Concurrents de la sélection dont le point est dans la zone dessinée. « Fortes » : à moins d\'un rayon du centre, avec une note ≥ seuil « concurrent fort ».',
+  'Chaînes dans la zone': 'Enseignes de chaîne (marque relevée par OpenStreetMap, ou nom connu) parmi les concurrents de la zone.',
 };
 const TIP_ZONES = {
   score: TIP_FICHE['Score d\'opportunité'],
@@ -204,6 +236,41 @@ const lens = (r1, r2, d) => {
   const a = r1 * r1, b = r2 * r2;
   return a * Math.acos((d * d + a - b) / (2 * d * r1)) + b * Math.acos((d * d + b - a) / (2 * d * r2))
     - 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
+};
+// Point dans un polygone (lancer de rayon), aire en km² (formule du lacet sur
+// une projection locale), centre de gravité — ce qu'il faut pour une zone
+// dessinée à la main.
+const dansPoly = (poly, lat, lng) => {
+  let ok = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const a = poly[i], b = poly[j];
+    if ((a[0] > lat) !== (b[0] > lat) && lng < (b[1] - a[1]) * (lat - a[0]) / (b[0] - a[0]) + a[1]) ok = !ok;
+  }
+  return ok;
+};
+const airePoly = poly => {
+  if (poly.length < 3) return 0;
+  const lat0 = poly[0][0], kx = 111.2 * Math.cos(lat0 * Math.PI / 180), ky = 111.2;
+  let a = 0;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    a += (poly[j][1] * kx) * (poly[i][0] * ky) - (poly[i][1] * kx) * (poly[j][0] * ky);
+  }
+  return Math.abs(a) / 2;
+};
+const centrePoly = poly => {
+  let lat = 0, lng = 0;
+  poly.forEach(p => { lat += p[0]; lng += p[1]; });
+  return [lat / poly.length, lng / poly.length];
+};
+const boitePoly = poly => {
+  const b = { s: 90, n: -90, w: 180, e: -180 };
+  poly.forEach(p => { b.s = Math.min(b.s, p[0]); b.n = Math.max(b.n, p[0]); b.w = Math.min(b.w, p[1]); b.e = Math.max(b.e, p[1]); });
+  return b;
+};
+const cerclePoly = (lat, lng, rKm) => {
+  const out = [], kx = 111.2 * Math.cos(lat * Math.PI / 180);
+  for (let a = 0; a < 360; a += 6){ const t = a * Math.PI / 180; out.push([lat + rKm / 111.2 * Math.cos(t), lng + rKm / kx * Math.sin(t)]); }
+  return out;
 };
 const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const medOf = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -311,7 +378,12 @@ export class Scouting {
       wiz: 0, wizFait: false,
       sel: null, candidates: [], compare: false, cmpA: '', cmpB: '',
       view: 'map', sortKey: 'score', sortDir: -1, q: '', ville: '', wville: '', stop: false, reseau: false, notes: {},
-      gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null
+      gconf: null, magasins: [], placing: null, enriching: false, enrichDone: 0, enrichTotal: 0, ratings: {}, pops: {}, toast: null,
+      // Ce que la carte peint (thème, classes éteintes), les sections repliées
+      // du panneau gauche, l'outil de dessin et le temps de l'isochrone :
+      // des préférences de vue, gardées dans ce navigateur, jamais en base.
+      theme: 'potentiel', themeOff: {}, plis: { filtres: false, couches: false, hyp: false, calage: false, sources: false },
+      tool: 'point', iso: 'auto10', isoBusy: false, dessin: 0
     };
     this._h = [];
     this._scroll = {};
@@ -359,6 +431,11 @@ export class Scouting {
   restoreLocal(){
     const s = this.state;
     Object.assign(s, pickParams(ls.get('params')));
+    const vue = ls.get('vue') || {};
+    if (THEMES.some(t => t[0] === vue.theme)) s.theme = vue.theme;
+    if (vue.themeOff && typeof vue.themeOff === 'object') s.themeOff = vue.themeOff;
+    if (vue.plis && typeof vue.plis === 'object') s.plis = Object.assign({}, s.plis, vue.plis);
+    if (ISO_CHOIX.some(c => c[0] === vue.iso)) s.iso = vue.iso;
     s.ratings = ls.get('ratings') || {};
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
@@ -372,6 +449,13 @@ export class Scouting {
   }
 
   reg(fn){ this._h.push(fn); return this._h.length - 1; }
+
+  // préférences de vue : thème, classes éteintes, sections repliées, isochrone
+  setVue(patch){
+    this.setState(patch);
+    const s = this.state;
+    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso });
+  }
 
   render(){
     if (!this.el.isConnected) return;
@@ -480,7 +564,8 @@ export class Scouting {
     return [s.bakeries.length, s.communes.length, this._rev, JSON.stringify(s.prov), s.arr, s.minRating,
       s.minHh, s.radius, s.thresh, JSON.stringify(s.layers), s.sel ? s.sel.lat + ',' + s.sel.lng : '',
       s.candidates.length, s.minScore, s.view, s.reseau ? 1 : 0,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.nMax, s.hhMin, s.zoneMax, s.zoning.length, s.wizFait ? 1 : 0].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.nMax, s.hhMin, s.zoneMax, s.zoning.length, s.wizFait ? 1 : 0,
+      s.theme, JSON.stringify(s.themeOff), s.sel && s.sel.zone ? 'zone' + s.sel.zone.poly.length : '', this._grid ? 1 : 0].join('|');
   }
 
   scheduleRedraw(ms){
@@ -591,7 +676,29 @@ export class Scouting {
     this.gExcl = L.layerGroup().addTo(map);
     this.gRoads = L.layerGroup();
     this.gSel = L.layerGroup().addTo(map);
-    map.on('click', e => { if (this.state.placing) this.placeStore(e.latlng.lat, e.latlng.lng); else this.evaluate(e.latlng.lat, e.latlng.lng); });
+    this.gDraw = L.layerGroup().addTo(map);   // le tracé en cours
+    // La peinture des mailles : un canvas dans un pane sous les tracés
+    // vectoriels (400) et au-dessus des tuiles (200). Il ne reçoit aucun clic.
+    map.createPane('sc-raster').style.zIndex = 350;
+    map.getPane('sc-raster').style.pointerEvents = 'none';
+    const self = this;
+    const Raster = L.Layer.extend({
+      onAdd(m){
+        this._c = L.DomUtil.create('canvas', 'leaflet-zoom-hide');
+        this._c.style.position = 'absolute';
+        m.getPane('sc-raster').appendChild(this._c);
+        m.on('moveend zoomend viewreset resize', this._peindre, this);
+        this._peindre();
+      },
+      onRemove(m){ L.DomUtil.remove(this._c); m.off('moveend zoomend viewreset resize', this._peindre, this); },
+      _peindre(){ try { self.paintRaster(this._c); } catch (e) { console.error('[scouting] mailles', e); } }
+    });
+    this.raster = new Raster().addTo(map);
+    map.on('click', e => this.onMapClick(e));
+    map.on('dblclick', e => { if (this._draw && this._draw.type === 'polygone') this.finirPolygone(); });
+    map.on('mousemove', e => { if (this._draw) this.tracerTemp(e.latlng); });
+    this._onKey = e => { if (e.key === 'Escape' && this._draw){ this.cancelDraw(); this.notify('Tracé annulé'); } };
+    document.addEventListener('keydown', this._onKey);
     map.on('zoomend moveend', () => {
       if (!this.state.communes.length) return;
       this.scheduleRedraw(120);
@@ -1207,8 +1314,11 @@ export class Scouting {
     try { this.drawShops(); } catch (e) { console.error('[scouting] points', e); }
     if (s.layers.excl) try {
       const vb = this.map.getBounds().pad(0.35);
+      // Sous une carte peinte, la contrainte se lit au liseré : le disque plein
+      // recouvrait la lecture qu'on vient d'allumer.
+      const peint = s.theme !== 'aucun' && !!this._grid;
       shops.filter(b => this.isStrong(b) && vb.contains([b.lat, b.lng])).forEach(b => {
-        const c = L.circle([b.lat, b.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#8D1D2C', weight: 1, opacity: .5, fillColor: '#8D1D2C', fillOpacity: .18 });
+        const c = L.circle([b.lat, b.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#8D1D2C', weight: peint ? 1.2 : 1, opacity: peint ? .55 : .5, fillColor: '#8D1D2C', fillOpacity: peint ? .05 : .18 });
         const r = this.rating(b);
         c.bindPopup('<div class="sc-pop"><b style="color:#8D1D2C">Pas d\'installation — concurrence forte</b><br>'
           + esc(b.name) + (r ? ' · ' + r.toFixed(1) + '/5' : '') + '<br>' + esc(b.addr || b.commune || '')
@@ -1265,10 +1375,18 @@ export class Scouting {
       });
     } catch (e) { console.error('[scouting] densité', e); }
     else if (this.gHeat._map){ try { this.map.removeLayer(this.gHeat); } catch (e) { /* déjà retiré */ } }
-    if (s.sel){
+    if (s.sel && s.sel.zone){
+      // La zone tracée en trait plein ; le disque du rayon, au même centre, en
+      // pointillé : c'est la comparaison que la fiche chiffre.
+      L.circle([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#2b2b2b', weight: 1.6, dashArray: '5 6', fill: false, opacity: .8 }).addTo(this.gSel);
+      L.polygon(s.sel.zone.poly, { renderer: this.vecR, color: '#1b5e20', weight: 2.2, fillColor: '#1b5e20', fillOpacity: .12 }).addTo(this.gSel);
+      L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 6, color: '#fff', weight: 2, fillColor: '#1b5e20', fillOpacity: 1 }).addTo(this.gSel);
+    } else if (s.sel){
       L.circle([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#1b5e20', weight: 2, dashArray: '5 5', fillColor: '#1b5e20', fillOpacity: .08 }).addTo(this.gSel);
       L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 7, color: '#fff', weight: 2, fillColor: '#1b5e20', fillOpacity: 1 }).addTo(this.gSel);
     }
+    if (this.raster) this.raster._peindre();
+    this.el.classList.toggle('sc-dessine', (s.tool || 'point') !== 'point');
     s.candidates.forEach(c => {
       L.circleMarker([c.lat, c.lng], { renderer: this.vecR, radius: 6, color: '#1b5e20', weight: 2, fillColor: '#FAC775', fillOpacity: 1 })
         .bindPopup('<div class="sc-pop"><b>' + esc(c.name) + '</b><br>CA estimé : ' + fmtEur(c.ca) + '</div>').addTo(this.gSel);
@@ -1359,6 +1477,8 @@ export class Scouting {
           pop += c[2];
         });
         this._grid = { buckets: buckets, byNis: byNis, areas: (d && d.communes) || {}, n: cells.length, pop: pop, source: (d && d.source) || 'recensement 2021', annee: (d && d.annee) || 2021 };
+        this._rkKey = null;
+        this.scheduleRedraw(30);
         return this._grid;
       })
       .catch(e => { console.warn('[scouting] grille de population indisponible :', e.message); this._gridP = null; return null; });
@@ -1436,7 +1556,282 @@ export class Scouting {
   setParam(patch){
     this.setState(patch);
     const x = this.state.sel;
-    if (x) this.evaluate(x.lat, x.lng);
+    if (x) x.zone ? this.evaluateZone(x.zone) : this.evaluate(x.lat, x.lng);
+  }
+
+  /* ---------- la zone dessinée ---------- */
+  // Tout ce que la fiche calcule pour un disque, calculé dans un polygone :
+  // les ménages des mailles de 1 km² dont le centre est dedans, les commerces
+  // dedans, la pression au prorata de la distance au centre — rapportée au
+  // rayon équivalent (même aire), pour que le modèle reste le même.
+  evaluateZone(zone){
+    const s = this.state;
+    if (!s.communes.length || !zone || !zone.poly || zone.poly.length < 3) return;
+    const poly = zone.poly, cen = zone.centre || centrePoly(poly);
+    const aire = airePoly(poly), Req = Math.max(0.3, Math.sqrt(aire / Math.PI));
+    const bb = boitePoly(poly);
+    const near = this.shops()
+      .filter(b => b.lat >= bb.s && b.lat <= bb.n && b.lng >= bb.w && b.lng <= bb.e && dansPoly(poly, b.lat, b.lng))
+      .map(b => ({ b: b, d: dist(cen[0], cen[1], b.lat, b.lng) })).sort((a, b) => a.d - b.d);
+    // La zone rouge garde sa règle : pas d'installation à moins d'un rayon
+    // d'un concurrent fort — c'est le centre qui est jugé, pas toute la zone.
+    const blocked = this.shops().filter(b => this.isStrong(b) && dist(cen[0], cen[1], b.lat, b.lng) <= s.radius)
+      .map(b => ({ b: b, d: dist(cen[0], cen[1], b.lat, b.lng) })).sort((a, b) => a.d - b.d);
+    const hh = this.householdsInPoly(poly, bb, cen, Req), prim = this.householdsIn(cen[0], cen[1], Req * 0.55);
+    let load = 0;
+    near.forEach(o => { load += this.strength(o.b) * (1 - Math.min(o.d, Req) / Req * 0.6) * (this.isStrong(o.b) ? 1.5 : 1); });
+    const eMax = (s.empriseMax || 30) / 100;
+    const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + (s.compK || 0.22) * load)));
+    const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
+    const market = hh * s.spend;
+    const ca = market * emprise / (1 - s.passage / 100);
+    let cm = null, cd = 1e9;
+    s.communes.forEach(c => { const d = dist(cen[0], cen[1], c.lat, c.lng); if (d < cd){ cd = d; cm = c; } });
+    const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
+    this.setState({
+      sel: {
+        lat: cen[0], lng: cen[1], hh: hh, prim: prim, market: market, emprise: emprise, ca: ca,
+        near: near, blocked: blocked, load: load, score: score,
+        commune: cm ? cm.name : '—', arr: cm ? cm.arr : '—',
+        prov: cm ? (PROV.find(p => p.code === cm.prov) || {}).name : '—',
+        cmHh: cm ? cm.hh : 0, cmEst: cm ? !!cm.est : false, cmPop: cm ? cm.pop : 0,
+        zone: Object.assign({}, zone, { centre: cen, aire: aire, req: Req }),
+        disque: this.evalDisque(cen[0], cen[1], s.radius)
+      }
+    });
+  }
+
+  // Le disque du rayon au même centre : ménages et commerces, pour dire ce que
+  // la forme de la zone change.
+  evalDisque(lat, lng, R){
+    return { hh: this.householdsIn(lat, lng, R), n: this.shops().filter(b => dist(lat, lng, b.lat, b.lng) <= R).length };
+  }
+
+  householdsInPoly(poly, bb, cen, Req){
+    const g = this._grid;
+    if (!g) return this.householdsIn(cen[0], cen[1], Req);
+    const step = 0.02;
+    let pop = 0;
+    for (let i = Math.floor(bb.s / step); i <= Math.floor(bb.n / step); i++) for (let j = Math.floor(bb.w / step); j <= Math.floor(bb.e / step); j++){
+      const l = g.buckets[i + ',' + j]; if (!l) continue;
+      for (let q = 0; q < l.length; q++){ const c = l[q]; if (dansPoly(poly, c[0], c[1])) pop += c[2]; }
+    }
+    return pop / (this.state.hhSize || HH_SIZE);
+  }
+
+  /* ---------- le dessin sur la carte ---------- */
+  setTool(t){
+    this.cancelDraw();
+    if (this.map){ if (t === 'polygone') this.map.doubleClickZoom.disable(); else this.map.doubleClickZoom.enable(); }
+    this.setState({ tool: t });
+  }
+
+  cancelDraw(){
+    this._draw = null;
+    if (this.gDraw) this.gDraw.clearLayers();
+    if (this.state.dessin) this.setState({ dessin: 0 });
+  }
+
+  onMapClick(e){
+    const s = this.state, lat = e.latlng.lat, lng = e.latlng.lng;
+    if (s.placing) return this.placeStore(lat, lng);
+    const t = s.tool || 'point';
+    if (t === 'point') return this.evaluate(lat, lng);
+    if (t === 'isochrone') return this.isochrone(lat, lng);
+    if (this._fini && Date.now() - this._fini < 600) return;   // la fin du double-clic qui vient de fermer
+    const d = this._draw || (this._draw = { type: t, pts: [] });
+    // Le double-clic qui ferme un polygone envoie d'abord deux clics : le
+    // second sommet, à quelques mètres du premier, n'en est pas un.
+    const last = d.pts[d.pts.length - 1];
+    if (last && dist(last[0], last[1], lat, lng) < 0.03) return;
+    if (t === 'polygone' && d.pts.length >= 3 && this.presDuPremier(e.latlng)) return this.finirPolygone();
+    d.pts.push([lat, lng]);
+    if (t === 'cercle' && d.pts.length === 2){
+      const c = d.pts[0], r = Math.max(0.2, dist(c[0], c[1], lat, lng));
+      return this.finirDessin({ type: 'cercle', poly: cerclePoly(c[0], c[1], r), centre: c, rayon: r });
+    }
+    if (t === 'rectangle' && d.pts.length === 2){
+      const a = d.pts[0], b = d.pts[1];
+      return this.finirDessin({ type: 'rectangle', poly: [[a[0], a[1]], [a[0], b[1]], [b[0], b[1]], [b[0], a[1]]] });
+    }
+    this.setState({ dessin: d.pts.length });
+    this.tracerTemp(e.latlng);
+  }
+
+  presDuPremier(ll){
+    const d = this._draw; if (!d || !d.pts.length || !this.map) return false;
+    const a = this.map.latLngToContainerPoint(d.pts[0]), b = this.map.latLngToContainerPoint(ll);
+    return Math.abs(a.x - b.x) < 10 && Math.abs(a.y - b.y) < 10;
+  }
+
+  finirPolygone(){
+    const d = this._draw;
+    if (!d || d.type !== 'polygone') return;
+    if (this._fini && Date.now() - this._fini < 600) return;
+    if (d.pts.length < 3){ this.notify('Il faut au moins trois sommets'); return; }
+    this.finirDessin({ type: 'polygone', poly: d.pts.slice() });
+  }
+
+  finirDessin(zone){
+    this._draw = null;
+    this._fini = Date.now();
+    if (this.gDraw) this.gDraw.clearLayers();
+    this.setState({ dessin: 0 });
+    this.evaluateZone(zone);
+  }
+
+  // Le tracé qui suit le curseur : cercle, rectangle ou polyligne provisoire.
+  tracerTemp(ll){
+    const d = this._draw; if (!d || !this.map || !d.pts.length) return;
+    this.gDraw.clearLayers();
+    const st = { renderer: this.vecR, color: '#1b5e20', weight: 1.5, dashArray: '4 4', fillColor: '#1b5e20', fillOpacity: .06 };
+    const c = d.pts[0];
+    if (d.type === 'cercle') L.circle(c, Object.assign({}, st, { radius: Math.max(200, dist(c[0], c[1], ll.lat, ll.lng) * 1000) })).addTo(this.gDraw);
+    else if (d.type === 'rectangle') L.rectangle([c, [ll.lat, ll.lng]], st).addTo(this.gDraw);
+    else L.polyline(d.pts.concat([[ll.lat, ll.lng]]), Object.assign({}, st, { fill: false })).addTo(this.gDraw);
+    d.pts.forEach((p, i) => L.circleMarker(p, { renderer: this.vecR, radius: i ? 3 : 5, color: '#1b5e20', weight: 1.5, fillColor: '#fff', fillOpacity: 1 }).addTo(this.gDraw));
+  }
+
+  // L'isochrone : le polygone atteignable en N minutes, demandé au service de
+  // routage public de la communauté OpenStreetMap (Valhalla). Mis en mémoire
+  // par point et par durée ; s'il ne répond pas, le disque du rayon sert.
+  isochrone(lat, lng){
+    const s = this.state;
+    const m = /^(auto|pedestrian)(\d+)$/.exec(s.iso || 'auto10') || ['', 'auto', '10'];
+    const costing = m[1], minutes = +m[2];
+    const key = [lat.toFixed(4), lng.toFixed(4), costing, minutes].join('|');
+    this._isoCache = this._isoCache || {};
+    const go = poly => this.evaluateZone({ type: 'isochrone', poly: poly, centre: [lat, lng], minutes: minutes, mode: costing });
+    if (this._isoCache[key]) return go(this._isoCache[key]);
+    if (s.isoBusy) return;
+    this.setState({ isoBusy: true });
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 15000);
+    const q = { locations: [{ lat: lat, lon: lng }], costing: costing, contours: [{ time: minutes }], polygons: true, denoise: 0.3, generalize: 100 };
+    fetch(ISO_URL + '?json=' + encodeURIComponent(JSON.stringify(q)), { signal: ctl.signal, headers: { Accept: 'application/json' } })
+      .then(r => { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(j => {
+        const f = (j && j.features || [])[0], geo = f && f.geometry;
+        let ring = null;
+        if (geo && geo.type === 'Polygon') ring = geo.coordinates[0];
+        else if (geo && geo.type === 'MultiPolygon') geo.coordinates.forEach(p => { if (!ring || p[0].length > ring.length) ring = p[0]; });
+        if (!ring || ring.length < 4) throw new Error('réponse sans polygone');
+        const poly = ring.map(pt => [pt[1], pt[0]]);
+        this._isoCache[key] = poly;
+        this.setState({ isoBusy: false });
+        go(poly);
+      })
+      .catch(e => {
+        clearTimeout(t);
+        this.setState({ isoBusy: false });
+        this.notify('Isochrone indisponible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — le rayon de ' + s.radius.toFixed(1) + ' km est évalué à la place');
+        this.evaluate(lat, lng);
+      });
+  }
+
+  /* ---------- la carte de potentiel : une valeur par maille de 1 km² ---------- */
+  // Le modèle de la fiche, calculé sur chaque maille du recensement dont la
+  // commune passe les filtres : ménages du rayon, concurrents du rayon et leur
+  // pression, emprise, CA, score. Une passe sur tout le pays (une demi-seconde),
+  // mémorisée tant que rien de ce qui compte ne change ; la peinture, elle,
+  // ne coûte rien et suit la vue. `calculer` à faux : on ne fait que lire ce
+  // qui est déjà prêt — le rendu n'attend jamais le calcul.
+  rasterVals(calculer){
+    const s = this.state, g = this._grid;
+    if (!g || !s.communes.length || s.theme === 'aucun' || !THEME_RAMPE[s.theme]) return null;
+    const R = s.radius;
+    const key = [s.theme, R, this._rev, s.communes.length, s.bakeries.length, JSON.stringify(s.prov), s.arr, s.minRating, s.minHh, s.thresh, s.weak,
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.hhSize].join('|');
+    if (key === this._rkKey) return this._rkVal;
+    // Pendant le chargement, les communes arrivent secteur par secteur : on ne
+    // recalcule pas neuf fois, la carte se peint quand tout est là.
+    if (s.busy) return null;
+    // Sans calcul, la légende garde les bornes d'avant le temps d'un redessin :
+    // la peinture qui suit apporte les nouvelles, et le rendu qu'elle déclenche
+    // les affiche. Rien ne clignote.
+    if (!calculer) return this._rkVal && this._rkVal.theme === s.theme ? this._rkVal : null;
+    const okIns = {};
+    this.filteredCommunes().forEach(c => { okIns[c.ins] = 1; });
+    const shops = this.shops(), force = new Map();
+    shops.forEach(x => force.set(x, this.strength(x)));
+    const kLat = 1 / 111, kLng = 1 / (111 * Math.cos(50.6 * Math.PI / 180));
+    const bLat = Math.max(R, 0.5) * kLat, bLng = Math.max(R, 0.5) * kLng, bucket = {};
+    shops.forEach(x => { const k2 = Math.floor(x.lat / bLat) + ',' + Math.floor(x.lng / bLng); (bucket[k2] || (bucket[k2] = [])).push(x); });
+    const eMax = (s.empriseMax || 30) / 100, compK = s.compK || 0.22;
+    const cells = [];
+    Object.keys(g.buckets).forEach(bk => {
+      const l = g.buckets[bk];
+      for (let q = 0; q < l.length; q++){
+        const c = l[q];
+        if (!c[3] || !okIns[c[3]]) continue;
+        const lat = c[0], lng = c[1];
+        const hh = this.householdsIn(lat, lng, R);
+        let n = 0, load = 0;
+        const i = Math.floor(lat / bLat), j = Math.floor(lng / bLng);
+        for (let a = i - 1; a <= i + 1; a++) for (let b2 = j - 1; b2 <= j + 1; b2++){
+          const m = bucket[a + ',' + b2]; if (!m) continue;
+          for (let k = 0; k < m.length; k++){ const d = dist(lat, lng, m[k].lat, m[k].lng); if (d <= R){ n++; load += force.get(m[k]) * (1 - d / R * 0.6); } }
+        }
+        const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + compK * load)));
+        const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
+        const ca = hh * s.spend * emprise / (1 - s.passage / 100);
+        const v = s.theme === 'potentiel' ? hh / (n + 1) : s.theme === 'menages' ? hh : s.theme === 'concurrence' ? n
+          : s.theme === 'ca' ? ca : Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
+        cells.push([lat, lng, v, n, hh, 0]);
+      }
+    });
+    // Quartiles de la sélection. Sur des entiers (concurrents), les quartiles
+    // se confondent : on les prend alors parmi les valeurs distinctes.
+    let tri = cells.map(c => c[2]).sort((a, b) => a - b);
+    if (s.theme === 'concurrence' || s.theme === 'score') tri = tri.filter((v, i) => i === 0 || v !== tri[i - 1]);
+    const q = f => tri.length ? tri[Math.min(tri.length - 1, Math.floor(tri.length * f))] : 0;
+    const bornes = [q(0.25), q(0.5), q(0.75)];
+    const counts = [0, 0, 0, 0];
+    let sans = 0;
+    cells.forEach(c => {
+      const i = c[2] < bornes[0] ? 0 : c[2] < bornes[1] ? 1 : c[2] < bornes[2] ? 2 : 3;
+      c[5] = i; counts[i]++;
+      if (c[3] === 0) sans++;
+    });
+    this._rkKey = key;
+    this._rkVal = { cells: cells, bornes: bornes, counts: counts, sans: sans, n: cells.length, theme: s.theme };
+    return this._rkVal;
+  }
+
+  paintRaster(canvas){
+    const map = this.map, s = this.state;
+    if (!map || !canvas) return;
+    const size = map.getSize(), dpr = window.devicePixelRatio || 1;
+    L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
+    if (canvas.width !== size.x * dpr || canvas.height !== size.y * dpr){
+      canvas.width = size.x * dpr; canvas.height = size.y * dpr;
+      canvas.style.width = size.x + 'px'; canvas.style.height = size.y + 'px';
+    }
+    const cx = canvas.getContext('2d');
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.clearRect(0, 0, size.x, size.y);
+    const avant = this._rkKey;
+    const rv = this.rasterVals(true);
+    // Le calcul vient d'avoir lieu : la légende de gauche a de nouvelles
+    // bornes à montrer.
+    if (rv && this._rkKey !== avant && !this._rkRendu){ this._rkRendu = true; setTimeout(() => { this._rkRendu = false; if (this.el.isConnected) this.render(); }, 0); }
+    if (!rv) return;
+    const b = map.getBounds().pad(0.05), rampe = THEME_RAMPE[s.theme], off = s.themeOff || {};
+    const sud = b.getSouth(), nord = b.getNorth(), ouest = b.getWest(), est = b.getEast();
+    const demi = 0.5 / 111.2, z = map.getZoom();
+    // De loin la peinture porte la lecture ; de près, c'est la rue qu'on lit,
+    // la couleur reste en fond.
+    cx.globalAlpha = z <= 9 ? 0.68 : z <= 11 ? 0.55 : z <= 12 ? 0.42 : 0.32;
+    const cells = rv.cells;
+    for (let i = 0; i < cells.length; i++){
+      const c = cells[i];
+      if (off[c[5]] || c[0] < sud || c[0] > nord || c[1] < ouest || c[1] > est) continue;
+      const kx = 0.5 / (111.2 * Math.cos(c[0] * Math.PI / 180));
+      const p1 = map.latLngToContainerPoint([c[0] + demi, c[1] - kx]), p2 = map.latLngToContainerPoint([c[0] - demi, c[1] + kx]);
+      cx.fillStyle = rampe[c[5]];
+      cx.fillRect(p1.x, p1.y, Math.max(1.2, p2.x - p1.x + 0.8), Math.max(1.2, p2.y - p1.y + 0.8));
+    }
+    cx.globalAlpha = 1;
   }
 
   /* ---------- calage sur le réseau ---------- */
@@ -2223,6 +2618,42 @@ export class Scouting {
       reload: () => { if (!s.busy) self.load(true); },
       toggleCompare: () => self.setState({ compare: !s.compare, reseau: false }),
       compareCols: cmp,
+      /* ----- ce que la carte montre : thème et légende classée ----- */
+      theme: s.theme,
+      themes: THEMES.map(t => ({ k: t[0], label: t[1], tip: t[2], on: s.theme === t[0], pick: () => self.setVue({ theme: t[0] }) })),
+      themeLegend: (() => {
+        if (s.theme === 'aucun') return { rows: [], note: 'La carte ne peint rien : seuls les repères (commerces, zones) sont dessinés.' };
+        if (!self._grid) return { rows: [], note: 'Grille de population indisponible : rien à peindre.' };
+        const rv = self.rasterVals(false);
+        if (!rv) return { rows: [], note: s.communes.length ? 'Calcul des mailles…' : 'En attente des communes…' };
+        const fmt = v => s.theme === 'ca' ? fmtEur(v) : s.theme === 'concurrence' || s.theme === 'score' ? String(Math.round(v)) : fmtInt(v);
+        const u = s.theme === 'potentiel' ? 'ménages par point de vente' : s.theme === 'menages' ? 'ménages accessibles' : s.theme === 'concurrence' ? 'concurrents dans le rayon' : s.theme === 'score' ? 'score sur 100' : 'CA annuel estimé';
+        const b = rv.bornes, lab = ['moins de ' + fmt(b[0]), fmt(b[0]) + ' à ' + fmt(b[1]), fmt(b[1]) + ' à ' + fmt(b[2]), fmt(b[2]) + ' et plus'];
+        return {
+          rows: [3, 2, 1, 0].map(i => ({
+            color: THEME_RAMPE[s.theme][i], label: lab[i], n: fmtInt(rv.counts[i]), off: !!s.themeOff[i],
+            toggle: () => self.setVue({ themeOff: Object.assign({}, s.themeOff, { [i]: !s.themeOff[i] }) })
+          })),
+          note: u.charAt(0).toUpperCase() + u.slice(1) + ', quartiles de la sélection · ' + fmtInt(rv.n) + ' mailles de 1 km² · ' + fmtInt(rv.sans) + ' (' + Math.round(rv.sans / Math.max(1, rv.n) * 100) + ' %) sans concurrent en ' + s.radius.toFixed(1).replace('.', ',') + ' km'
+        };
+      })(),
+      themeTip: 'La carte peint chaque maille de 1 km² du recensement dont la commune passe les filtres, avec le modèle de la fiche appliqué à la maille : ménages et concurrents dans le rayon réglé ci-dessous. Quatre classes aux quartiles de la sélection ; l\'œil éteint une classe. La concurrence est celle qu\'OpenStreetMap connaît : une maille sans concurrent peut l\'être parce que le commerce n\'est pas cartographié.',
+      plis: s.plis,
+      pli: k => () => self.setVue({ plis: Object.assign({}, s.plis, { [k]: !s.plis[k] }) }),
+      /* ----- la zone d'étude : outils de dessin ----- */
+      tool: s.tool || 'point',
+      tools: OUTILS.map(o => ({ k: o[0], label: o[1], tip: o[2], on: (s.tool || 'point') === o[0], pick: () => self.setTool(o[0]) })),
+      iso: s.iso, isoChoix: ISO_CHOIX.map(c => ({ value: c[0], label: c[1] })), setIso: e => self.setVue({ iso: e.target.value }),
+      dessinHint: (() => {
+        const t = s.tool || 'point';
+        if (s.isoBusy) return 'Isochrone en cours de calcul…';
+        if (t === 'point') return '';
+        if (t === 'polygone') return s.dessin ? s.dessin + ' sommet' + (s.dessin > 1 ? 's' : '') + ' — double-clic ou clic sur le premier pour fermer, Échap pour annuler' : 'Clique un premier sommet.';
+        if (t === 'cercle') return s.dessin ? 'Clique le bord du cercle.' : 'Clique le centre du cercle.';
+        if (t === 'rectangle') return s.dessin ? 'Clique le coin opposé.' : 'Clique un premier coin.';
+        return 'Clique le point de départ : la zone atteignable est calculée sur les routes.';
+      })(),
+      effacerZone: () => { self.cancelDraw(); self.setState({ sel: null }); },
       legend: [
         { color: R_COL.high, label: 'Note 4,5 et plus' },
         { color: R_COL.mid, label: 'Note 3,5 – 4,5' },
@@ -2266,21 +2697,30 @@ export class Scouting {
       selRang: (chauds.findIndex(memePoint) + 1) || 0,
       selCommune: x ? x.commune : '',
       selGeo: x ? 'arr. ' + x.arr + ' · ' + x.prov + ' · ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) : '',
+      selZone: x && x.zone ? (() => {
+        const z = x.zone, t = z.type === 'isochrone' ? 'Isochrone ' + z.minutes + ' min ' + (z.mode === 'pedestrian' ? 'à pied' : 'en voiture')
+          : z.type === 'cercle' ? 'Cercle de ' + z.rayon.toFixed(1).replace('.', ',') + ' km' : z.type === 'rectangle' ? 'Rectangle' : 'Polygone à ' + z.poly.length + ' sommets';
+        return t + ' · ' + (z.aire >= 10 ? Math.round(z.aire) : z.aire.toFixed(1).replace('.', ',')) + ' km² · rayon équivalent ' + z.req.toFixed(1).replace('.', ',') + ' km';
+      })() : '',
+      selDisque: x && x.zone && x.disque ? 'Au même centre, le rayon de ' + s.radius.toFixed(1).replace('.', ',') + ' km compte ' + fmtInt(x.disque.hh) + ' ménages et '
+        + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '') + ' — la zone dessinée en compte '
+        + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtInt(Math.abs(x.hh - x.disque.hh)) + ' ménages, soit '
+        + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtEur(Math.abs(x.hh - x.disque.hh) * s.spend) + ' de marché.' : '',
       selVerdict: x ? (x.blocked.length ? 'Zone exclue — concurrence forte' : x.score >= 55 ? 'Zone candidate prioritaire' : 'Zone candidate secondaire') : '',
       selVerdictBg: x ? (x.blocked.length ? 'rgba(141,29,44,.10)' : x.score >= 55 ? 'rgba(27,94,32,.10)' : 'var(--color-background-secondary)') : '',
       selVerdictColor: x ? (x.blocked.length ? '#8D1D2C' : x.score >= 55 ? '#1b5e20' : 'var(--color-text)') : '',
       selVerdictNote: x ? (x.blocked.length
-        ? x.blocked.length + ' concurrent(s) fort(s) à moins de ' + s.radius.toFixed(1) + ' km : ' + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
+        ? x.blocked.length + ' concurrent(s) fort(s) à moins de ' + s.radius.toFixed(1) + ' km' + (x.zone ? ' du centre' : '') + ' : ' + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
         : 'Score d\'opportunité ' + x.score + '/100 — ménages accessibles pondérés par la pression concurrentielle.') : '',
       selRows: x ? [
         { k: 'Score d\'opportunité', v: x.score + ' / 100' },
-        { k: 'Ménages dans le rayon', v: fmtInt(x.hh) },
+        { k: x.zone ? 'Ménages dans la zone' : 'Ménages dans le rayon', v: fmtInt(x.hh) },
         { k: 'Population communale', v: fmtInt(x.cmPop) + (x.cmEst ? ' (estimée)' : '') },
         { k: 'dont zone primaire', v: fmtInt(x.prim) },
         { k: 'Marché boulangerie', v: fmtEur(x.market) },
         { k: 'Dépense / ménage', v: fmtEur(s.spend) },
-        { k: 'Boulangeries dans le rayon', v: fmtInt(x.near.length) + (x.blocked.length ? ' (dont ' + x.blocked.length + ' fortes)' : '') },
-        { k: 'Chaînes dans le rayon', v: (() => {
+        { k: x.zone ? 'Boulangeries dans la zone' : 'Boulangeries dans le rayon', v: fmtInt(x.near.length) + (x.blocked.length ? ' (dont ' + x.blocked.length + ' fortes)' : '') },
+        { k: x.zone ? 'Chaînes dans la zone' : 'Chaînes dans le rayon', v: (() => {
           const ch = x.near.filter(o => self.estChaine(o.b));
           if (!ch.length) return 'aucune';
           const m = self.marquesDe(ch.map(o => o.b));
@@ -2351,7 +2791,7 @@ export class Scouting {
       hasZoneCol: !!x,
 
       /* ----- vues tabulaires ceo_ ----- */
-      views: [['map', 'Carte'], ['zones', 'ceo_zones'], ['concurrents', 'ceo_concurrents'], ['arrondissements', 'ceo_arrondissements'], ['top5', 'Top 5 par province']]
+      views: [['map', 'Carte'], ['zones', 'Zones candidates'], ['concurrents', 'Concurrents'], ['arrondissements', 'Arrondissements'], ['top5', 'Top 5 par province']]
         .map(([k, label]) => ({
           label: label,
           color: s.view === k ? 'var(--color-primary)' : 'var(--color-text-muted)',

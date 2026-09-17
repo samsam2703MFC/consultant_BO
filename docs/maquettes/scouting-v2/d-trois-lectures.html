@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D — le même territoire, trois lectures</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="scouting2.css">
+<script src="/public/assets/vendor/leaflet/leaflet.js"></script>
+<script src="donnees.js"></script>
+<script src="carte.js"></script>
+<style>body{margin:0;background:#F5F1EB;display:flex;justify-content:center;padding:22px 0}</style>
+</head><body><div class="app"><div class="bar"><div class="et"><i></i>4 108 commerces · 565 communes · OpenStreetMap relu le 15/09/2026</div><span class="sp"></span><button>Assistant « où puis-je ouvrir ? »</button><button class="ac">Comparer les lectures</button>
+  <button>Magasins du réseau</button><button class="pr">Exporter les trois cartes</button></div>
+<div class="tabs"><span class="on">Carte</span><span>Zones candidates<em>6</em></span><span>Concurrents<em>1 051</em></span><span>Arrondissements<em>43</em></span><span>Top 5 par province</span><span>Mes études<em>4</em></span></div>
+<div class="body trio">
+  
+  <div class="map">
+    <div id="map0"></div>
+    <div class="mapui">
+      <div class="bulle titre" style="max-width:none;right:14px"><b>Le marché</b><span>Ménages accessibles en 4 km — la population du recensement, là où elle vit, ramenée au rayon de chalandise.</span></div>
+      <div class="bulle leg" data-k="leg0"></div>
+    </div>
+  </div>
+  <div class="map bordg">
+    <div id="map1"></div>
+    <div class="mapui">
+      <div class="bulle titre" style="max-width:none;right:14px"><b>La concurrence</b><span>Commerces de boulangerie-pâtisserie présents dans ces mêmes 4 km, tels qu’OpenStreetMap les connaît.</span></div>
+      <div class="bulle leg" data-k="leg1"></div>
+    </div>
+  </div>
+  <div class="map bordg">
+    <div id="map2"></div>
+    <div class="mapui">
+      <div class="bulle titre" style="max-width:none;right:14px"><b>Ce que le modèle en tire</b><span>CA annuel estimé : ménages × 339 € × emprise ÷ (1 − 15 %), l’emprise descendant avec la pression concurrentielle.</span></div>
+      <div class="bulle leg" data-k="leg2"></div>
+    </div>
+  </div>
+</div>
+<script>
+window.__attendus = 3;
+(function () {
+  const nf = n => Math.round(n).toLocaleString('fr-BE');
+  const CAD = [[50.18, 3.55], [50.72, 5.15]];
+  const RA = { marche: ['#eaf0f4', '#c2d4e0', '#8fb0c6', '#3f6f92'],
+               concurrence: ['#f7e9ea', '#e3b9bd', '#c77c85', '#8D1D2C'],
+               ca: ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'] };
+  const UNITE = { marche: ' ménages', concurrence: '', ca: ' €' };
+  [['marche', 0], ['concurrence', 1], ['ca', 2]].forEach(function (x) {
+    carte({ el: 'map' + x[1], cadre: CAD, peindre: x[0], apres: function (m) {
+      const b = m.bornes, r = RA[x[0]], u = UNITE[x[0]];
+      const t = ['moins de ' + nf(b[0]), nf(b[0]) + ' à ' + nf(b[1]), nf(b[1]) + ' à ' + nf(b[2]), nf(b[2]) + ' et plus'];
+      document.querySelector('[data-k="leg' + x[1] + '"]').innerHTML =
+        [3, 2, 1, 0].map(function (i) {
+          return '<div class="l"><span class="sw" style="background:' + r[i] + '"></span>'
+            + '<span class="tx">' + t[i] + u + '</span><span class="n">' + nf(m.classes[i]) + '</span></div>';
+        }).join('') + '<div class="p">maille 1 km² · ' + nf(m.mailles) + ' mailles peintes</div>';
+    } });
+  });
+})();
+</script></div></body></html>

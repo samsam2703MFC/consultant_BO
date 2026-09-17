@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — la zone se dessine</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<link rel="stylesheet" href="/public/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="scouting2.css">
+<script src="/public/assets/vendor/leaflet/leaflet.js"></script>
+<script src="donnees.js"></script>
+<script src="carte.js"></script>
+<style>body{margin:0;background:#F5F1EB;display:flex;justify-content:center;padding:22px 0}</style>
+</head><body><div class="app"><div class="bar"><div class="et"><i></i>4 108 commerces · 565 communes · OpenStreetMap relu le 15/09/2026</div><span class="sp"></span><button>Assistant « où puis-je ouvrir ? »</button><button class="ac">Analyse de zone</button>
+  <button>Magasins du réseau</button><button class="pr">Enregistrer la zone</button></div>
+<div class="tabs"><span class="on">Carte</span><span>Zones candidates<em>6</em></span><span>Concurrents<em>1 051</em></span><span>Arrondissements<em>43</em></span><span>Top 5 par province</span><span>Mes études<em>4</em></span></div>
+<div class="body">
+  <div class="pan g">
+    <div class="lb">La zone d'étude</div>
+    <div class="th">
+      <b>Isochrone 10 min voiture<span>proposé</span></b>
+      <i class="on">Isochrone — 10, 15 ou 20 min, voiture ou à pied</i>
+      <i>Cercle — rayon libre</i>
+      <i>Polygone dessiné à la main</i>
+      <i>Commune · arrondissement · province</i>
+    </div>
+    <div class="mu" style="margin-bottom:14px">Aujourd'hui la zone est un disque de 4 km, le même partout. À Anvers il tombe dans le port, à Bastogne il s'arrête avant les villages qui font le chiffre. Le temps de trajet, lui, épouse les routes.</div>
+    <div class="hr"></div>
+    <div class="lb">Ce qu'on additionne dedans</div>
+    <div class="lg">
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Ménages du recensement 2021</span><span class="n" data-k="ehh">—</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Commerces concurrents</span><span class="n" data-k="en">—</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Notes Google des concurrents</span><span class="n">4,3 moy.</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Zoning d'activité et de vente</span><span class="n">2</span></div>
+      <div class="r"><svg class="oe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.6 12S5.6 5 12 5s10.4 7 10.4 7-4 7-10.4 7S1.6 12 1.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="tx">Magasins du réseau</span><span class="n">0</span></div>
+    </div>
+    <div class="hr"></div>
+    <div class="lb">Le modèle appliqué</div>
+    <div class="kv"><span>Dépense par ménage et par an</span><b>339 €</b></div>
+    <div class="kv"><span>Part du passage</span><b>15 %</b></div>
+    <div class="kv"><span>Surface nette visée</span><b>150 m²</b></div>
+    <div class="kv"><span>Emprise retenue</span><b>17,4 %</b></div>
+    <div class="mu" style="margin-top:8px">Valeurs réellement enregistrées sur le serveur, calage réseau compris. L'emprise est tenue constante entre les deux zones : ce qui change ici, c'est la forme de la zone, rien d'autre.</div>
+  </div>
+  <div class="map">
+    <div id="map"></div>
+    <div class="mapui">
+      <div class="outils">
+        <s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></s><s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg></s><s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7-5 7 6-3 9H8z"/></svg></s><s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="6.5" width="15" height="11" rx="1"/></svg></s>
+        <div class="sep"></div><s class="on"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c4 2 6.5 4.6 6.5 8.5S16 18.5 12 20.5 5.5 15.9 5.5 12 8 5.5 12 3.5z"/><circle cx="12" cy="12" r="2"/></svg></s><s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 14.5l11-11 5 5-11 11z"/><path d="M7 11l1.8 1.8M10 8l1.8 1.8M13 5l1.8 1.8"/></svg></s>
+        <div class="sep"></div><s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20h11"/><path d="M15.5 4.5l4 4-9 9-4-4z"/></svg></s><s><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v4H7z"/></svg></s>
+      </div>
+      <div class="bulle titre" style="left:64px"><b>Farciennes — isochrone 10 min</b>
+        <span>Le trait plein : 10 minutes de voiture. Le pointillé : le rayon de 4 km d'aujourd'hui. Les carrés ambrés : la population du recensement, là où elle vit.</span></div>
+      <div class="bulle etat" data-k="etat">—</div>
+      <div class="pin v" data-k="pin" style="left:50%;top:50%">Farciennes</div>
+    </div>
+  </div>
+  <div class="pan d">
+    <div class="lb">La zone dessinée</div>
+    <div class="deux">
+      <div><div class="t">Rayon 4 km — la règle actuelle</div><div class="n" data-k="hhC">—</div><div class="s" data-k="nC">—</div></div>
+      <div class="act"><div class="t">Isochrone 10 min — proposé</div><div class="n" data-k="hhI">—</div><div class="s" data-k="nI">—</div></div>
+    </div>
+    <div class="mu" style="margin-bottom:12px">Les deux zones partent du centre de la commune. La ligne Farciennes de ceo_zones, elle, retient le meilleur point du territoire : 20 382 ménages, 3 concurrents.</div>
+    <div class="kv"><span>Marché boulangerie — isochrone</span><b data-k="marche">—</b></div>
+    <div class="kv"><span>Marché boulangerie — rayon 4 km</span><b data-k="marcheC">—</b></div>
+    <div class="kv"><span>Ce que la forme change</span><b data-k="ecart">—</b></div>
+    <div class="kv"><span>CA estimé, à emprise égale</span><b class="v" data-k="ca">—</b></div>
+    <div class="kv"><span>Rendement sur 150 m²</span><b data-k="m2">—</b></div>
+    <div class="mu" style="margin-top:8px">L'emprise est tenue à 17,4 % dans les deux colonnes pour isoler l'effet de la forme. En vrai elle se recalculerait sur la concurrence de la zone : un concurrent de plus la fait descendre, et le CA avec elle. Repère : Halle mesurée rend 5 188 €/m².</div>
+    <div class="lb" style="margin:16px 0 7px">Ce que ça vaut, comparé au réseau</div>
+    <div class="rang">
+      <div class="l"><span class="r">1</span><span class="n">L'Atelier by Halle<em>mesuré 08/2024 · 250 m²</em></span><span class="v">1 296 881 €<em>12 164 mén.</em></span></div>
+      <div class="l"><span class="r">2</span><span class="n">L'Atelier by Berlo<em>en exploitation</em></span><span class="v">7 605 148 €<em>marché</em></span></div>
+      <div class="l"><span class="r">3</span><span class="n">By Max &amp; Sandra<em>en exploitation</em></span><span class="v">1 086 800 €<em>marché</em></span></div>
+    </div>
+    <div class="act">
+      <button class="pr">Enregistrer comme zone candidate</button>
+      <button>Éditer le dossier d'implantation (PDF)</button>
+      <button>Exporter la zone en Excel</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const c = (window.SC.communes.filter(function (x) { return x[0] === 'Farciennes'; })[0]) || ['Farciennes', 'Charleroi', 'WHT', 50.4306, 4.5433];
+  carte({ el: 'map', centre: [c[3], c[4]], zoom: 11.6, peindre: 'population',
+    zone: { lat: c[3], lng: c[4], rayon: 4, isochrone: 4.05 },
+    apres: function (m, map) {
+      const nf = n => Math.round(n).toLocaleString('fr-BE');
+      const eur = n => nf(n) + ' €';
+      const q = k => document.querySelector('[data-k="' + k + '"]');
+      const z = m.zone, SPEND = 339, PASS = 0.15, EMP = 0.174, SURF = 150;
+      const ca = h => h * SPEND * EMP / (1 - PASS);
+      q('hhC').textContent = nf(z.hhCer); q('nC').textContent = z.nCer + ' concurrents';
+      q('hhI').textContent = nf(z.hhIso); q('nI').textContent = z.nIso + ' concurrents';
+      q('ehh').textContent = nf(z.hhIso); q('en').textContent = z.nIso;
+      q('marche').textContent = eur(z.hhIso * SPEND);
+      q('marcheC').textContent = eur(z.hhCer * SPEND);
+      q('ca').textContent = eur(ca(z.hhIso));
+      q('m2').textContent = eur(ca(z.hhIso) / SURF) + ' / m²';
+      const d = (z.hhIso - z.hhCer) * SPEND;
+      q('ecart').textContent = (d >= 0 ? '+ ' : '− ') + eur(Math.abs(d)) + ' de marché';
+      q('ecart').className = d >= 0 ? 'v' : 'r';
+      q('etat').textContent = 'isochrone 10 min · ' + nf(z.hhIso) + ' ménages · ' + z.nIso
+        + ' concurrents  —  rayon 4 km · ' + nf(z.hhCer) + ' ménages · ' + z.nCer + ' concurrents';
+      const p = map.latLngToContainerPoint(L.latLng(c[3], c[4]));
+      q('pin').style.left = p.x + 'px'; q('pin').style.top = (p.y - 12) + 'px';
+    } });
+})();
+</script></div></body></html>
