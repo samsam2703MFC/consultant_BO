@@ -390,3 +390,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-17T19:16:52Z scouting points de comparaison ajoutes a la main
 2026-09-17T19:29:34Z scouting trois lectures et echelle arrondissement
 2026-09-17T19:37:36Z scouting plan d expansion en deux clics
+2026-09-17T19:54:54Z scouting sombreffe au reseau et ecart 20 min entre ouvertures
