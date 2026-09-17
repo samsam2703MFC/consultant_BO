@@ -3488,6 +3488,39 @@ function scoutingZoneJson($z): ?string
     return json_encode($out);
 }
 
+/**
+ * PUT /scouting/references — la liste complète des points de comparaison
+ * saisis à la main (au plus trente). Chaque point : un nom, un statut, une
+ * position facultative en Belgique, et des chiffres positifs ou absents.
+ */
+function wr_scouting_references_put(): array
+{
+    $b = body();
+    $liste = is_array($b['references'] ?? null) ? $b['references'] : [];
+    $num = static function ($v): ?float {
+        if ($v === null || $v === '' || !is_numeric($v)) { return null; }
+        $f = (float) $v;
+        return is_finite($f) && $f >= 0 ? round($f, 4) : null;
+    };
+    $out = [];
+    foreach ($liste as $r) {
+        if (!is_array($r)) { continue; }
+        $nom = mb_substr(trim((string) ($r['nom'] ?? '')), 0, 80);
+        if ($nom === '') { continue; }
+        $lat = $num($r['lat'] ?? null); $lng = $num($r['lng'] ?? null);
+        if ($lat === null || $lng === null || $lat < 49.4 || $lat > 51.6 || $lng < 2.4 || $lng > 6.5) { $lat = null; $lng = null; }
+        $o = ['id' => mb_substr((string) ($r['id'] ?? ''), 0, 40) ?: (string) round(microtime(true) * 1000), 'nom' => $nom,
+            'statut' => mb_substr(trim((string) ($r['statut'] ?? '')), 0, 80), 'lat' => $lat, 'lng' => $lng];
+        foreach (['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'] as $k) { $o[$k] = $num($r[$k] ?? null); }
+        $out[] = $o;
+        if (count($out) >= 30) { break; }
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['scoutingReferences', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Scouting', '—', 'Points de comparaison du scouting enregistrés — ' . count($out) . ' point' . (count($out) > 1 ? 's' : ''));
+    return ['ok' => true, 'references' => $out];
+}
+
 /** DELETE /scouting/candidates/{id} */
 function wr_scouting_candidate_delete(int $id): array
 {

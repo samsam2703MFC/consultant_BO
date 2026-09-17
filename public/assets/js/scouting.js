@@ -396,7 +396,9 @@ export class Scouting {
       tool: 'point', iso: 'auto10', isoBusy: false, dessin: 0,
       // Le dossier d'implantation : ouvert sur la fiche courante, avec la zone
       // retenue dont il vient (pour dire ce qui a changé depuis), et sa carte.
-      dossier: false, dossierCand: null, dossierImg: '', dossierBusy: false
+      dossier: false, dossierCand: null, dossierImg: '', dossierBusy: false,
+      // Les points de comparaison ajoutés à la main, et le formulaire ouvert.
+      references: [], refForm: null
     };
     this._h = [];
     this._scroll = {};
@@ -453,6 +455,7 @@ export class Scouting {
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
     s.pops = ls.get('pops') || {};
+    s.references = ls.get('refs') || [];
   }
 
   /* --- cycle de rendu ------------------------------------------------------- */
@@ -644,7 +647,8 @@ export class Scouting {
       else if (r.source === 'google') ratings[r.id] = { rating: null, n: 0 };   // déjà interrogé, sans note
       if (r.comment) notes[r.id] = r.comment;
     });
-    const patch = { ratings, notes, candidates: d.candidates || [], pops: d.populations || {} };
+    const patch = { ratings, notes, candidates: d.candidates || [], pops: d.populations || {}, references: Array.isArray(d.references) ? d.references : [] };
+    ls.set('refs', patch.references);
     const pr = pickParams(d.params);
     Object.assign(patch, pr);
     patch.gconf = d.google && typeof d.google === 'object' ? d.google : null;   // l'état du connecteur, jamais la clé
@@ -1573,6 +1577,47 @@ export class Scouting {
     this.setState(patch);
     const x = this.state.sel;
     if (x) x.zone ? this.evaluateZone(x.zone) : this.evaluate(x.lat, x.lng);
+  }
+
+  /* ---------- les points de comparaison saisis à la main ---------- */
+  // Un magasin à ouvrir, une zone mesurée, un concurrent qu'on connaît : à
+  // côté des trois références de l'étude, avec les mêmes lignes. Enregistrés
+  // en base quand l'API répond, toujours dans ce navigateur.
+  refOuvrir(prefill){
+    this.setState({ reseau: true, refForm: Object.assign({ nom: '', statut: '' }, prefill || {}) });
+    setTimeout(() => { const el = this.el.querySelector('#sc-ref-nom'); if (el) el.focus(); }, 60);
+  }
+
+  refFermer(){ this.setState({ refForm: null }); }
+
+  refChamp(k, v){ if (this.state.refForm) this.state.refForm[k] = v; }
+
+  refEnregistrer(){
+    const f = this.state.refForm;
+    if (!f) return;
+    const nom = String(f.nom || '').trim();
+    if (!nom){ this.notify('Donne un nom au point de comparaison'); return; }
+    const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.').replace(/\s/g, '')); return isFinite(n) && n >= 0 ? n : null; };
+    const r = { id: f.id || String(Date.now()), nom: nom.slice(0, 80), statut: String(f.statut || '').trim().slice(0, 80), lat: num(f.lat), lng: num(f.lng) };
+    if (r.lat == null || r.lng == null || r.lat < 49.4 || r.lat > 51.6 || r.lng < 2.4 || r.lng > 6.5){ r.lat = null; r.lng = null; }
+    ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'].forEach(k => { r[k] = num(f[k]); });
+    if (r.marche == null && r.hh && r.depense) r.marche = Math.round(r.hh * r.depense);
+    const list = this.state.references.filter(o => o.id !== r.id).concat([r]);
+    this.refSauver(list);
+    this.setState({ refForm: null });
+    this.notify('Point de comparaison enregistré — ' + r.nom);
+  }
+
+  refSupprimer(id){
+    const r = this.state.references.find(o => o.id === id);
+    this.refSauver(this.state.references.filter(o => o.id !== id));
+    this.notify('Point de comparaison retiré' + (r ? ' — ' + r.nom : ''));
+  }
+
+  refSauver(list){
+    ls.set('refs', list);
+    this.setState({ references: list });
+    if (this.useApi()) apiWrite('PUT', '/scouting/references', { references: list });
   }
 
   /* ---------- la concurrence d'un point, lue pour les listes ---------- */
@@ -2667,16 +2712,19 @@ export class Scouting {
       };
     }) : [];
 
+    // Une colonne du réseau : les références de l'étude ont tous leurs
+    // chiffres, un point saisi à la main n'a que ceux qu'on lui a donnés.
+    const ou = (v, f) => (v == null || v === '' || isNaN(+v)) ? '—' : f(+v);
     const reseauRows = r => [
-      { k: 'Population de la zone', v: fmtInt(r.pop) },
-      { k: 'Ménages', v: fmtInt(r.hh) },
-      { k: 'Taille des ménages', v: String(r.taille).replace('.', ',') },
-      { k: 'Revenu moyen / ménage', v: fmtEur(r.revenu) },
-      { k: 'Part de jeunes', v: String(r.jeunes).replace('.', ',') + ' %' },
-      { k: 'Part d\'actifs', v: String(r.actifs).replace('.', ',') + ' %' },
-      { k: 'Part de seniors', v: String(r.seniors).replace('.', ',') + ' %' },
-      { k: 'Dépense boulangerie / ménage', v: fmtEur(r.depense) },
-      { k: 'Marché boulangerie', v: fmtEur(r.marche) },
+      { k: 'Population de la zone', v: ou(r.pop, fmtInt) },
+      { k: 'Ménages', v: ou(r.hh, fmtInt) },
+      { k: 'Taille des ménages', v: ou(r.taille, v => String(v).replace('.', ',')) },
+      { k: 'Revenu moyen / ménage', v: ou(r.revenu, fmtEur) },
+      { k: 'Part de jeunes', v: ou(r.jeunes, v => String(v).replace('.', ',') + ' %') },
+      { k: 'Part d\'actifs', v: ou(r.actifs, v => String(v).replace('.', ',') + ' %') },
+      { k: 'Part de seniors', v: ou(r.seniors, v => String(v).replace('.', ',') + ' %') },
+      { k: 'Dépense boulangerie / ménage', v: ou(r.depense, fmtEur) },
+      { k: 'Marché boulangerie', v: ou(r.marche != null && r.marche !== '' ? r.marche : (r.hh && r.depense ? r.hh * r.depense : null), fmtEur) },
       { k: 'Emprise retenue', v: r.emprise ? String(r.emprise).replace('.', ',') + ' %' : '—' },
       { k: 'CA annuel TTC', v: r.ca ? fmtEur(r.ca) : '—' },
       { k: 'Surface nette', v: r.surface ? r.surface + ' m²' : '—' },
@@ -3048,10 +3096,32 @@ export class Scouting {
       openReseau: () => self.setState({ reseau: true }),
       closeReseau: () => self.setState({ reseau: false }),
       reseauCols: RESEAU.map(r => ({
-        nom: r.nom, statut: r.statut, rows: reseauRows(r),
+        nom: r.nom, statut: r.statut, rows: reseauRows(r), perso: false,
         locate: () => { self.setState({ reseau: false, compare: false, view: 'map' }); setTimeout(() => { if (self.map) self.map.setView([r.lat, r.lng], 13); self.evaluate(r.lat, r.lng); }, 80); },
         applyDepense: () => self.setParam({ spend: r.depense })
-      })),
+      })).concat(s.references.map(r => ({
+        nom: r.nom, statut: r.statut || 'point de comparaison', rows: reseauRows(r), perso: true,
+        locate: r.lat != null && r.lng != null ? () => { self.setState({ reseau: false, compare: false, view: 'map' }); setTimeout(() => { if (self.map) self.map.setView([+r.lat, +r.lng], 13); self.evaluate(+r.lat, +r.lng); }, 80); } : null,
+        applyDepense: r.depense ? () => self.setParam({ spend: +r.depense }) : null,
+        modifier: () => self.refOuvrir(r),
+        supprimer: () => self.refSupprimer(r.id)
+      }))),
+      refForm: s.refForm ? {
+        champs: [['nom', 'Nom', 'text'], ['statut', 'Statut', 'text'], ['lat', 'Latitude', 'number'], ['lng', 'Longitude', 'number'],
+          ['pop', 'Population de la zone', 'number'], ['hh', 'Ménages', 'number'], ['taille', 'Taille des ménages', 'number'], ['revenu', 'Revenu moyen / ménage (€)', 'number'],
+          ['jeunes', 'Part de jeunes (%)', 'number'], ['actifs', 'Part d\'actifs (%)', 'number'], ['seniors', 'Part de seniors (%)', 'number'],
+          ['depense', 'Dépense boulangerie / ménage (€/an)', 'number'], ['marche', 'Marché boulangerie (€) — vide = ménages × dépense', 'number'],
+          ['emprise', 'Emprise retenue (%)', 'number'], ['ca', 'CA annuel TTC (€)', 'number'], ['surface', 'Surface nette (m²)', 'number']]
+          .map(([k, label, type]) => ({ k: k, label: label, type: type, v: s.refForm[k] == null ? '' : s.refForm[k], set: e => self.refChamp(k, e.target.value) })),
+        neuf: !s.refForm.id, depuisZone: !!s.refForm.depuisZone,
+        enregistrer: () => self.refEnregistrer(), annuler: () => self.refFermer()
+      } : null,
+      refOuvrir: () => self.refOuvrir(null),
+      refDepuisZone: x ? () => self.refOuvrir({
+        depuisZone: true, nom: x.commune + ' — zone évaluée', statut: 'zone évaluée le ' + new Date().toLocaleDateString('fr-BE'),
+        lat: +x.lat.toFixed(5), lng: +x.lng.toFixed(5), pop: Math.round(x.hh * (s.hhSize || HH_SIZE)), hh: Math.round(x.hh), taille: s.hhSize || HH_SIZE,
+        depense: s.spend, marche: Math.round(x.market), emprise: +(x.emprise * 100).toFixed(1), ca: Math.round(x.ca), surface: s.surface
+      }) : null,
       zoneCol: x ? {
         nom: 'Zone évaluée — ' + x.commune, statut: 'arr. ' + x.arr,
         rows: [
