@@ -6,12 +6,14 @@ declare(strict_types=1);
  *   php bin/mix1000.php                      dernier mois clos
  *   php bin/mix1000.php --fenetre=trimestre  trois derniers mois clos
  *   php bin/mix1000.php --fenetre=annee      douze derniers mois clos
- *   php bin/mix1000.php --top=40             références détaillées (défaut 25, 0 = toutes)
+ *   php bin/mix1000.php --top=40             n'en détailler que 40 (défaut : toutes)
  *   php bin/mix1000.php --ca=10000           ajoute la colonne « pour ce CA-là »
- *   php bin/mix1000.php --csv                sortie CSV (une ligne par catégorie puis par référence)
+ *   php bin/mix1000.php --csv                sortie CSV (une ligne par référence puis par catégorie)
  *
- * Pour 1 000 € encaissés, combien d'unités de chaque référence et combien
- * d'euros par catégorie. Le rapport est SANS ÉCHELLE : il vaut pour un magasin
+ * Pour 1 000 € encaissés, combien d'unités de chaque référence — et, en
+ * récapitulatif, combien d'euros par catégorie. C'est le mix du RÉSEAU : les
+ * ventes des magasins actifs additionnées, puis ramenées à 1 000 €. L'en-tête
+ * nomme les magasins comptés, pour qu'on voie sur quoi la base repose. Le rapport est SANS ÉCHELLE : il vaut pour un magasin
  * à 8 000 €/semaine comme pour un à 25 000 €, et c'est ce qui en fait une base
  * de calcul — dimensionner une production, une commande, le prévisionnel d'une
  * ouverture se ramène à multiplier par le CA visé ÷ 1 000.
@@ -47,7 +49,7 @@ if (!in_array($fenetre, ['mois', 'trimestre', 'annee'], true)) {
     fwrite(STDERR, "fenêtre inconnue : $fenetre (attendu mois, trimestre ou annee)\n");
     exit(1);
 }
-$top = (int) $opt('top', '25');
+$top = (int) $opt('top', '0');           // 0 = toutes les références
 $caCible = (float) $opt('ca', '0');
 $csv = in_array('--csv', $args, true);
 
@@ -116,8 +118,24 @@ $f = function_exists('setting') ? setting('periodeProduitsFenetre') : null;
 if (!is_array($f) || ($f['fenetre'] ?? '') !== $fenetre) { $f = null; }
 $lib = is_array($f) ? (string) ($f['libelle'] ?? $fenetre) : $fenetre;
 $src = is_array($f) && ($f['source'] ?? '') !== '' ? (string) $f['source'] : 'non déclarée';
+// Les magasins comptés. Le panel sert la ventilation par magasin : on en tire
+// les noms, et le mix se lit sur des magasins nommés plutôt que sur un nombre.
+// Les autres sources ne la servent pas ; on retombe alors sur le seul nombre
+// porté par les références, en le disant.
 $mag = 0;
 foreach ($m['refs'] as $r) { $mag = max($mag, $r['magasins']); }
+$noms = [];
+foreach ($refs as $r) {
+    foreach ((array) ($r['parMagasin'] ?? []) as $pm) {
+        if ((float) ($pm['vol'] ?? 0) > 0) { $noms[(string) ($pm['nom'] ?? '')] = true; }
+    }
+}
+unset($noms['']);
+$noms = array_keys($noms);
+sort($noms);
+$quiMag = $noms !== []
+    ? 'mix de ' . count($noms) . ' magasins : ' . implode(', ', $noms)
+    : 'mix de ' . $mag . ' magasins (cette source ne dit pas lesquels)';
 
 $n2 = static fn (float $v, int $d = 2): string => number_format($v, $d, ',', ' ');
 // printf compte les OCTETS : « Pâtisserie » décalait toute sa ligne. On cale
@@ -132,13 +150,13 @@ if ($csv) {
     $out = fopen('php://output', 'w');
     fputcsv($out, ['niveau', 'categorie', 'reference', 'unites_par_1000_eur', 'euros_par_1000_eur',
         'part_pct', 'prix_moyen_eur', 'magasins'], ';');
-    foreach ($m['cats'] as $c) {
-        fputcsv($out, ['categorie', $c['nom'], '', round($c['u1000'], 2), round($c['e1000'], 2),
-            round($c['part'] * 100, 2), '', ''], ';');
-    }
     foreach ($m['refs'] as $r) {
         fputcsv($out, ['reference', $r['cat'], $r['nom'], round($r['u1000'], 3), round($r['e1000'], 2),
             round($r['part'] * 100, 3), round($r['prix'], 2), $r['magasins']], ';');
+    }
+    foreach ($m['cats'] as $c) {
+        fputcsv($out, ['categorie', $c['nom'], '', round($c['u1000'], 2), round($c['e1000'], 2),
+            round($c['part'] * 100, 2), '', ''], ';');
     }
     fclose($out);
     exit(0);
@@ -147,22 +165,13 @@ if ($csv) {
 $cible = static fn (float $u): string => $caCible > 0 ? '  ' . str_pad(number_format($u * $caCible / 1000, 0, ',', ' '), 16, ' ', STR_PAD_LEFT) : '';
 
 echo "Mix par 1 000 € vendus — $lib · source : $src\n";
+echo ucfirst($quiMag) . "\n";
 echo 'CA de référence : ' . $n2($m['ca'], 0) . ' € · ' . count($m['refs']) . ' références vendues · '
-    . $n2($m['unites'], 0) . " unités · $mag magasins\n";
+    . $n2($m['unites'], 0) . " unités\n";
 if ($caCible > 0) { echo 'Dernière colonne : les mêmes unités pour ' . $n2($caCible, 0) . " € de CA\n"; }
 
-echo "\nPar catégorie — pour 1 000 € encaissés\n";
-echo '  ' . $pad('Catégorie', 30) . $pad('€ / 1 000 €', 14, true) . $pad('unités', 12, true)
-    . $pad('part', 9, true) . ($caCible > 0 ? '  ' . $pad('CA visé', 16, true) : '') . "\n";
-foreach ($m['cats'] as $c) {
-    echo '  ' . $pad($c['nom'], 30) . $pad($n2($c['e1000']) . ' €', 14, true) . $pad($n2($c['u1000'], 1), 12, true)
-        . $pad($n2($c['part'] * 100, 1) . ' %', 9, true) . $cible($c['u1000']) . "\n";
-}
-echo '  ' . $pad('Total', 30) . $pad($n2(array_sum(array_column($m['cats'], 'e1000'))) . ' €', 14, true)
-    . $pad($n2($m['unites'] * 1000 / $m['ca'], 1), 12, true)
-    . $pad($n2(array_sum(array_column($m['cats'], 'part')) * 100, 1) . ' %', 9, true)
-    . $cible($m['unites'] * 1000 / $m['ca']) . "\n";
-
+// Les références d'abord : c'est la base qu'on vient chercher. Les catégories
+// ne sont qu'un récapitulatif, elles ferment le tableau.
 $liste = $top > 0 ? array_slice($m['refs'], 0, $top) : $m['refs'];
 echo "\nPar référence — pour 1 000 € encaissés" . ($top > 0 && count($m['refs']) > $top
     ? ' (les ' . $top . ' premières sur ' . count($m['refs']) . ')' : '') . "\n";
@@ -174,3 +183,15 @@ foreach ($liste as $r) {
         . $pad($n2($r['e1000']) . ' €', 14, true) . $pad($n2($r['prix']) . ' €', 10, true)
         . $cible($r['u1000']) . "\n";
 }
+
+echo "\nRécapitulatif par catégorie — pour 1 000 € encaissés\n";
+echo '  ' . $pad('Catégorie', 30) . $pad('€ / 1 000 €', 14, true) . $pad('unités', 12, true)
+    . $pad('part', 9, true) . ($caCible > 0 ? '  ' . $pad('CA visé', 16, true) : '') . "\n";
+foreach ($m['cats'] as $c) {
+    echo '  ' . $pad($c['nom'], 30) . $pad($n2($c['e1000']) . ' €', 14, true) . $pad($n2($c['u1000'], 1), 12, true)
+        . $pad($n2($c['part'] * 100, 1) . ' %', 9, true) . $cible($c['u1000']) . "\n";
+}
+echo '  ' . $pad('Total', 30) . $pad($n2(array_sum(array_column($m['cats'], 'e1000'))) . ' €', 14, true)
+    . $pad($n2($m['unites'] * 1000 / $m['ca'], 1), 12, true)
+    . $pad($n2(array_sum(array_column($m['cats'], 'part')) * 100, 1) . ' %', 9, true)
+    . $cible($m['unites'] * 1000 / $m['ca']) . "\n";

@@ -198,14 +198,20 @@ interrogé depuis le navigateur qu'en repli, hors API.
 ## Mix par 1 000 € vendus
 
 La base de calcul du réseau : pour 1 000 € encaissés, combien d'unités de chaque
-référence et combien d'euros par catégorie.
+référence — toutes les références, puis un récapitulatif par catégorie.
 
 ```bash
 php bin/mix1000.php                      # dernier mois clos
-php bin/mix1000.php --fenetre=trimestre  # ou --fenetre=annee
-php bin/mix1000.php --ca=12000 --top=40  # les mêmes unités ramenées à 12 000 € de CA
+php bin/mix1000.php --fenetre=annee      # ou --fenetre=trimestre
+php bin/mix1000.php --ca=12000           # les mêmes unités ramenées à 12 000 € de CA
+php bin/mix1000.php --top=40             # n'en détailler que 40
 php bin/mix1000.php --csv > mix.csv
 ```
+
+C'est le mix du **réseau** : les ventes des magasins actifs additionnées, puis
+ramenées à 1 000 €. L'en-tête nomme les magasins comptés (`Mix de 4 magasins :
+…`, quand la source sert la ventilation par magasin), pour qu'on voie sur quoi
+la base repose au lieu de la croire.
 
 Le rapport est **sans échelle** : il vaut pour un magasin à 8 000 €/semaine comme
 pour un à 25 000 €. Dimensionner une production, une commande ou le prévisionnel
