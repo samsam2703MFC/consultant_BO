@@ -1,7 +1,7 @@
 # Scouting — ce que GeoExplore fait, et ce qu'on pourrait faire
 
 Comparaison de l'écran **Scouting — où ouvrir** (`#/scouting`) avec
-**GeoExplore** de GeoConsulting (`geoconsulting.eu/geoexplore`), puis trois
+**GeoExplore** de GeoConsulting (`geoconsulting.eu/geoexplore`), puis cinq
 propositions en maquette.
 
 L'outil de GeoConsulting n'est pas public : la page produit, ses captures et
@@ -24,7 +24,7 @@ calé sur nos propres magasins** (dépense par ménage, emprise, passage,
 surface), les **notes Google** de la concurrence, et l'assistant
 « où puis-je ouvrir ? ».
 
-## Les trois propositions
+## Les propositions
 
 | Fichier | Ce qu'elle change |
 | --- | --- |
@@ -138,7 +138,7 @@ arithmétique que l'écran (ménages = population ÷ 2,31, rayon 4 km).
 ## Refaire les captures
 
 ```sh
-node docs/maquettes/scouting-v2/generer.js     # écrit les 4 pages HTML
+node docs/maquettes/scouting-v2/generer.js     # écrit les pages HTML
 npx http-server . -p 8099 -c-1 --silent        # depuis la racine du dépôt
 # puis Playwright sur http://127.0.0.1:8099/docs/maquettes/scouting-v2/<page>.html
 ```
