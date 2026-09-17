@@ -388,3 +388,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-17T18:53:35Z scouting carte de potentiel et zone dessinee
 2026-09-17T19:12:50Z scouting dossier implantation et chaines dans la liste
 2026-09-17T19:16:52Z scouting points de comparaison ajoutes a la main
+2026-09-17T19:29:34Z scouting trois lectures et echelle arrondissement
