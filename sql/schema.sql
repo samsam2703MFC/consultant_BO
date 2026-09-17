@@ -617,6 +617,8 @@ CREATE TABLE IF NOT EXISTS ceo_scouting_candidate (
   shops          SMALLINT UNSIGNED NOT NULL,  -- boulangeries dans le rayon
   strong         SMALLINT UNSIGNED NOT NULL,  -- dont concurrents forts
   revenue_m2     INT UNSIGNED NOT NULL,       -- CA / m² sur la surface cible
+  zone_json      TEXT NULL,                    -- zone dessinée : type, sommets, rayon, isochrone
+  hyp_json       TEXT NULL,                    -- hypothèses du modèle au moment où la zone est retenue
   created_at     DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

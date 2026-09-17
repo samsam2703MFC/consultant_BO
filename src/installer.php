@@ -90,8 +90,15 @@ function ensureScouting(): void
         . 'shops SMALLINT UNSIGNED NOT NULL,'
         . 'strong SMALLINT UNSIGNED NOT NULL,'
         . 'revenue_m2 INT UNSIGNED NOT NULL,'
+        . 'zone_json TEXT NULL,'
+        . 'hyp_json TEXT NULL,'
         . 'created_at DATETIME NOT NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Les zones retenues avant le dessin de zone : deux colonnes de plus, la
+    // zone dessinée et les hypothèses du moment (null pour les anciennes).
+    foreach (['zone_json', 'hyp_json'] as $col) {
+        try { Db::exec('ALTER TABLE ceo_scouting_candidate ADD COLUMN ' . $col . ' TEXT NULL'); } catch (Throwable $e) { /* déjà là */ }
+    }
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_population ('
         . 'ins CHAR(5) PRIMARY KEY,'
         . 'population INT UNSIGNED NOT NULL,'

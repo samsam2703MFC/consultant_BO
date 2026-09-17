@@ -233,7 +233,7 @@ export function renderMapUi(c, x){
     <div class="t-admin-label" style="margin-bottom:8px">Légende</div>
     ${c.legend.map(i => `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;line-height:1.3">
-      <div style="width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:${i.color};border:1px solid rgba(0,0,0,.15)"></div>
+      <div style="width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:${i.color};border:${i.border ? '2px solid ' + i.border : '1px solid rgba(0,0,0,.15)'}"></div>
       <span>${esc(i.label)}</span>
     </div>`).join('')}
     <div style="height:0.5px;background:var(--color-border-tertiary);margin:8px 0"></div>
@@ -289,6 +289,7 @@ export function renderRight(c, x){
     ${c.selDisque ? `<div style="font-size:11px;line-height:1.5;color:var(--color-text);background:var(--color-background-secondary);border-radius:8px;padding:9px 11px;margin-bottom:14px">${esc(c.selDisque)}</div>` : ''}
 
     <button ${x.A(c.addCandidate)} class="btn-primary" style="width:100%;padding:10px">Ajouter aux candidats</button>
+    <button ${x.A(c.ouvrirDossier)} class="btn-secondary" style="width:100%;padding:9px;margin-top:8px;font-size:12px">Éditer le dossier d'implantation</button>
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 4px">
       <div class="t-admin-label">Concurrents dans le rayon</div>
@@ -345,22 +346,133 @@ export function renderRight(c, x){
       <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)}</div>
     </div>
     <button ${x.A(k.focus)} class="icon-circle" style="width:22px;height:22px" title="Voir sur la carte">→</button>
+    <button ${x.A(k.dossier)} class="icon-circle" style="width:22px;height:22px;font-size:10px;letter-spacing:-.02em" title="Éditer le dossier d'implantation">PDF</button>
     <button ${x.A(k.remove)} class="icon-circle" style="width:22px;height:22px" title="Retirer">×</button>
   </div>`).join('')}
   ${c.noCandidates ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucune zone retenue pour l\'instant.</div>' : ''}`;
 }
 
-/* --- Vues tabulaires ceo_ et comparaison d'arrondissements ----------------- */
+
+/* --- Le dossier d'implantation : une page, quatre lectures ----------------- */
+/* La même page sert à l'écran (overlay), à la fenêtre d'impression et,
+   côté serveur, le PDF reprend les mêmes données. Les styles vivent ici pour
+   suivre la page partout où elle va. */
+export const DOSS_CSS = `
+.sc-doss{font-family:var(--font-ui,Helvetica,Arial,sans-serif);color:#221E1A;background:#fff;width:210mm;max-width:100%;margin:0 auto;padding:14mm 16mm 16mm;box-sizing:border-box;box-shadow:0 4px 24px rgba(0,0,0,.13);font-size:12px;line-height:1.4}
+.sc-doss .hd{display:flex;align-items:flex-start;gap:12px;border-bottom:2px solid #8D1D2C;padding-bottom:10px}
+.sc-doss .hd img{height:30px;display:block}
+.sc-doss .hd .t{flex:1;min-width:0}
+.sc-doss .hd .t b{display:block;font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:21px;line-height:1.15;font-weight:400;margin-top:4px}
+.sc-doss .hd .t span{display:block;font-size:11.5px;color:#7a736a;margin-top:2px}
+.sc-doss .hd .t em{display:block;font-style:normal;font-size:12px;color:#2d7a3e;font-weight:600;margin-top:3px}
+.sc-doss .hd .sc{text-align:right;flex:0 0 auto;padding-top:6px}
+.sc-doss .hd .sc b{display:block;font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:32px;line-height:1;color:#2d7a3e;font-weight:400}
+.sc-doss .hd .sc span{font-size:9.5px;color:#7a736a;letter-spacing:.08em;text-transform:uppercase}
+.sc-doss h3{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-weight:400;font-size:15px;margin:18px 0 8px;padding-bottom:4px;border-bottom:1.4px solid #8D1D2C}
+.sc-doss .verdict{border-radius:8px;padding:10px 12px;margin:14px 0 0}
+.sc-doss .verdict b{display:block;font-size:12.5px;margin-bottom:2px}
+.sc-doss .verdict span{font-size:11px;color:#7a736a;line-height:1.5}
+.sc-doss .carte{width:100%;height:auto;display:block;border:1px solid #e6e0d8;border-radius:6px}
+.sc-doss .attente{height:200px;display:flex;align-items:center;justify-content:center;border:1px dashed #d8d0c4;border-radius:6px;color:#7a736a;font-size:12px}
+.sc-doss .legende{font-size:10.5px;color:#7a736a;margin-top:5px;line-height:1.5}
+.sc-doss .q{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.sc-doss .q>div{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:8px 10px}
+.sc-doss .q .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;min-height:24px}
+.sc-doss .q .v{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:19px;line-height:1.1;margin-top:3px}
+.sc-doss .q .s{font-size:10px;color:#7a736a;margin-top:2px}
+.sc-doss table{width:100%;border-collapse:collapse;font-size:11.5px}
+.sc-doss th{text-align:right;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:400;padding:5px 6px;border-bottom:1px solid #221E1A}
+.sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
+.sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
+.sc-doss .ch{display:inline-block;font-size:9.5px;font-weight:600;border-radius:9px;padding:1px 7px;background:#EEE9E1;color:#221E1A;margin-left:5px;white-space:nowrap}
+.sc-doss .note{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:9px 11px;font-size:10.5px;color:#7a736a;line-height:1.6;margin-top:10px}
+.sc-doss .note b{color:#221E1A}
+.sc-doss .hyp{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.sc-doss .hyp div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:.5px solid #EAE3D8;font-size:11px}
+.sc-doss .hyp div span{color:#7a736a}
+`;
+export const DOSS_PRINT = `
+@page{size:A4;margin:14mm 15mm 18mm}
+body{margin:0;background:#fff}
+.sc-doss{box-shadow:none;width:auto;max-width:none;padding:0}
+.sc-doss h3{page-break-after:avoid}
+.sc-doss tr,.sc-doss .q>div,.sc-doss .note{page-break-inside:avoid}
+`;
+
+export function dossierPage(d, esc, logo){
+  const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
+  return `
+  <div class="sc-doss">
+    <div class="hd">
+      ${logo ? `<img src="${esc(logo)}" alt="">` : ''}
+      <div class="t"><b>${esc(d.titre)}</b><span>${esc(d.geo)} · éditée le ${esc(d.date)}</span>${d.zone ? `<em>${esc(d.zone)}</em>` : ''}</div>
+      <div class="sc"><b>${esc(d.score)}</b><span>score / 100</span></div>
+    </div>
+    <div class="verdict" style="background:${d.verdictOk ? '#E3EFE6' : '#F6E4E7'}"><b style="color:${d.verdictOk ? '#2d7a3e' : '#8D1D2C'}">${esc(d.verdict)}</b><span>${esc(d.verdictNote)}</span></div>
+
+    <h3>Situation</h3>
+    ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">${d.carteAttente || 'Carte en cours d’assemblage…'}</div>`}
+    <div class="legende">${esc(d.carteNote)}</div>
+
+    <h3>L'essentiel</h3>
+    <div class="q">${d.essentiel.map(tuile).join('')}</div>
+
+    <h3>Le marché</h3>
+    <table><tr><th class="l">Mesure</th><th>Valeur</th><th class="l" style="padding-left:18px">Source · calcul</th></tr>
+      ${d.marche.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
+    </table>
+
+    <h3>La concurrence relevée${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
+    ${d.concurrence.length ? `
+    <table><tr><th class="l">Commerce</th><th class="l">Commune</th><th>Distance</th><th>Note / 5</th><th>Force</th><th class="l" style="padding-left:12px">Lecture</th></tr>
+      ${d.concurrence.map(r => `<tr><td class="l"><b>${esc(r[0])}</b>${r[6] ? `<span class="ch">${esc(r[6])}</span>` : ''}</td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>
+        <td class="l ${r[5] ? 'acc' : 'mut'}" style="padding-left:12px">${r[5] ? '<b>concurrent fort</b>' : 'concurrent'}</td></tr>`).join('')}
+    </table>` : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
+
+    <h3>Comparaison au réseau</h3>
+    <table><tr><th class="l">Point de vente</th><th class="l">Statut</th><th>Ménages</th><th>Dépense</th><th>Emprise</th><th>CA annuel</th><th class="l" style="padding-left:12px">Note</th></tr>
+      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td><td class="n ${i ? '' : 'ok'}"><b>${esc(r[5])}</b></td><td class="l mut" style="padding-left:12px">${esc(r[6])}</td></tr>`).join('')}
+    </table>
+    ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
+
+    <h3>Les hypothèses au moment de l'édition</h3>
+    <div class="hyp">${d.hypotheses.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
+    <div class="note"><b>Sources.</b> ${esc(d.sources)}</div>
+  </div>`;
+}
+
+function renderDossier(c, x){
+  const { esc } = x;
+  const d = c.dossier;
+  return `
+  <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
+      <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
+      <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · les chiffres de la fiche, mis en page</div>
+      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
+      <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter les tableaux (CSV)</button>
+      <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>
+      <button ${x.A(d.fermer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Fermer</button>
+    </div>
+    <div id="sc-dossier" class="sc-scroll" style="flex:1;overflow:auto;padding:18px 16px 28px">
+      <style>${DOSS_CSS}</style>
+      ${dossierPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png')}
+    </div>
+  </div>`;
+}
+
+/* --- Vues tabulaires et comparaison d'arrondissements ---------------------- */
 const overlayCss = 'position:absolute;inset:0;z-index:1200;background:var(--color-bg);overflow:auto;padding:16px';
 const boxCss = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto;overflow-y:visible';
 const headCss = 'background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-secondary);min-width:max-content';
 const lineCss = 'align-items:center;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;min-width:max-content';
-const ZONES_GRID = '56px 200px 190px 66px 96px 108px 84px 150px 96px';
+const ZONES_GRID = '48px 180px 160px 62px 90px 112px 64px 220px 80px 130px 90px';
 const CONC_GRID = '16px 230px 150px 170px 76px 64px 74px 64px 280px 64px';
 const ARR_GRID = '190px 84px 104px 104px 150px 92px 76px 96px 84px 110px';
 
 export function renderOverlays(c, x){
   const { esc } = x;
+  if (c.dossier) return renderDossier(c, x);
   if (c.isZones) return `
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
@@ -379,7 +491,9 @@ export function renderOverlays(c, x){
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <span style="padding:8px;font-weight:600;color:#1b5e20">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
-        <span style="padding:8px">${r.n}</span>
+        <span style="padding:8px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}</span>
+        <span style="padding:8px;color:${r.forts ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${r.forts}</span>
+        <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chainesN ? 'font-weight:500' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
         <span style="padding:8px">${esc(r.emprise)}</span>
         <span style="padding:8px;font-weight:500">${esc(r.ca)}</span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.m2)}</span>
@@ -411,7 +525,9 @@ export function renderOverlays(c, x){
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <span style="padding:8px;font-weight:600;color:${r.score >= c.minScore ? '#1b5e20' : '#c17a2a'}">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
-        <span style="padding:8px">${r.n}</span>
+        <span style="padding:8px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}</span>
+        <span style="padding:8px;color:${r.forts ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${r.forts}</span>
+        <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chaines !== '—' ? 'font-weight:500' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
         <span style="padding:8px">${esc(r.emprise)}</span>
         <span style="padding:8px;font-weight:500">${esc(r.ca)}</span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.m2)}</span>
