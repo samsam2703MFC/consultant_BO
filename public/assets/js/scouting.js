@@ -398,7 +398,11 @@ export class Scouting {
       // retenue dont il vient (pour dire ce qui a changé depuis), et sa carte.
       dossier: false, dossierCand: null, dossierImg: '', dossierBusy: false,
       // Les points de comparaison ajoutés à la main, et le formulaire ouvert.
-      references: [], refForm: null
+      references: [], refForm: null,
+      // L'échelle de lecture (maille, commune, arrondissement) et les trois
+      // lectures côte à côte : la carte principale garde son thème, les deux
+      // autres panneaux ont le leur.
+      echelle: 'maille', trio: false, trio2: 'concurrence', trio3: 'ca'
     };
     this._h = [];
     this._scroll = {};
@@ -409,7 +413,9 @@ export class Scouting {
     this.el.innerHTML = '<div data-sc-part="top" style="flex:0 0 auto"></div>'
       + '<div style="flex:1;display:flex;min-height:0;position:relative">'
       + '<div data-sc-part="left" id="sc-left" class="sc-scroll" style="width:296px;flex:0 1 296px;min-width:236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto;padding:16px;box-sizing:border-box"></div>'
-      + '<div style="flex:1 1 auto;position:relative;min-width:320px"><div id="scout-map" style="position:absolute;inset:0;background:#EAE4DC"></div><div data-sc-part="mapui"></div></div>'
+      + '<div style="flex:1 1 auto;position:relative;min-width:320px"><div id="scout-map" style="position:absolute;inset:0;background:#EAE4DC"></div>'
+      + '<div id="scout-map2" class="sc-panneau" style="left:33.34%;right:33.33%"></div><div id="scout-map3" class="sc-panneau" style="left:66.67%;right:0"></div>'
+      + '<div data-sc-part="mapui"></div></div>'
       + '<div data-sc-part="right" id="sc-right" class="sc-scroll" style="width:336px;flex:0 1 336px;min-width:260px;background:var(--color-surface);border-left:0.5px solid var(--color-border-tertiary);overflow-y:auto;padding:16px;box-sizing:border-box"></div>'
       + '<div data-sc-part="overlays" style="display:contents"></div>'
       + '</div><div data-sc-part="modal"></div>';
@@ -451,6 +457,9 @@ export class Scouting {
     if (vue.themeOff && typeof vue.themeOff === 'object') s.themeOff = vue.themeOff;
     if (vue.plis && typeof vue.plis === 'object') s.plis = Object.assign({}, s.plis, vue.plis);
     if (ISO_CHOIX.some(c => c[0] === vue.iso)) s.iso = vue.iso;
+    if (['maille', 'commune', 'arrondissement'].includes(vue.echelle)) s.echelle = vue.echelle;
+    if (THEMES.some(t => t[0] === vue.trio2 && t[0] !== 'aucun')) s.trio2 = vue.trio2;
+    if (THEMES.some(t => t[0] === vue.trio3 && t[0] !== 'aucun')) s.trio3 = vue.trio3;
     s.ratings = ls.get('ratings') || {};
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
@@ -470,7 +479,7 @@ export class Scouting {
   setVue(patch){
     this.setState(patch);
     const s = this.state;
-    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso });
+    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso, echelle: s.echelle, trio2: s.trio2, trio3: s.trio3 });
   }
 
   render(){
@@ -513,6 +522,10 @@ export class Scouting {
       try { tr.scrollIntoView({ block: 'nearest' }); } catch (e) { /* navigateur sans options */ }
     }
     this.el.classList.toggle('sc-overlay-open', !!(s.reseau || s.compare || s.view !== 'map' || s.dossier));
+    if (this.el.classList.contains('sc-trio') !== !!s.trio){
+      this.el.classList.toggle('sc-trio', !!s.trio);
+      setTimeout(() => { try { this.ajusterTrio(); } catch (e) { console.error('[scouting] trio', e); } }, 30);
+    }
     this.saveParams();
     const fp = this.fingerprint();
     if (fp === this._fp) return;
@@ -581,7 +594,8 @@ export class Scouting {
       s.minHh, s.radius, s.thresh, JSON.stringify(s.layers), s.sel ? s.sel.lat + ',' + s.sel.lng : '',
       s.candidates.length, s.minScore, s.view, s.reseau ? 1 : 0,
       s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.compare ? 1 : 0, s.weak, s.caVise, s.nMax, s.hhMin, s.zoneMax, s.zoning.length, s.wizFait ? 1 : 0,
-      s.theme, JSON.stringify(s.themeOff), s.sel && s.sel.zone ? 'zone' + s.sel.zone.poly.length : '', this._grid ? 1 : 0].join('|');
+      s.theme, JSON.stringify(s.themeOff), s.sel && s.sel.zone ? 'zone' + s.sel.zone.poly.length : '', this._grid ? 1 : 0,
+      s.echelle, s.trio ? 1 : 0, s.trio2, s.trio3].join('|');
   }
 
   scheduleRedraw(ms){
@@ -700,6 +714,7 @@ export class Scouting {
     map.getPane('sc-raster').style.pointerEvents = 'none';
     const self = this;
     const Raster = L.Layer.extend({
+      initialize(opts){ this.opts = opts || {}; },
       onAdd(m){
         this._c = L.DomUtil.create('canvas', 'leaflet-zoom-hide');
         this._c.style.position = 'absolute';
@@ -708,9 +723,11 @@ export class Scouting {
         this._peindre();
       },
       onRemove(m){ L.DomUtil.remove(this._c); m.off('moveend zoomend viewreset resize', this._peindre, this); },
-      _peindre(){ try { self.paintRaster(this._c); } catch (e) { console.error('[scouting] mailles', e); } }
+      _peindre(){ try { self.paintRaster(this._c, this._map, this.opts.theme ? this.opts.theme() : null, !!this.opts.dots); } catch (e) { console.error('[scouting] mailles', e); } }
     });
-    this.raster = new Raster().addTo(map);
+    this.Raster = Raster;
+    this.raster = new Raster({}).addTo(map);
+    this.rasters = [];
     map.on('click', e => this.onMapClick(e));
     map.on('dblclick', e => { if (this._draw && this._draw.type === 'polygone') this.finirPolygone(); });
     map.on('mousemove', e => { if (this._draw) this.tracerTemp(e.latlng); });
@@ -1406,6 +1423,7 @@ export class Scouting {
       L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 7, color: '#fff', weight: 2, fillColor: '#1b5e20', fillOpacity: 1 }).addTo(this.gSel);
     }
     if (this.raster) this.raster._peindre();
+    (this.rasters || []).forEach(r => r._peindre());
     this.el.classList.toggle('sc-dessine', (s.tool || 'point') !== 'point');
     s.candidates.forEach(c => {
       L.circleMarker([c.lat, c.lng], { renderer: this.vecR, radius: 6, color: '#1b5e20', weight: 2, fillColor: '#FAC775', fillOpacity: 1 })
@@ -1497,7 +1515,7 @@ export class Scouting {
           pop += c[2];
         });
         this._grid = { buckets: buckets, byNis: byNis, areas: (d && d.communes) || {}, n: cells.length, pop: pop, source: (d && d.source) || 'recensement 2021', annee: (d && d.annee) || 2021 };
-        this._rkKey = null;
+        this._rbKey = null;
         this.scheduleRedraw(30);
         return this._grid;
       })
@@ -2038,20 +2056,22 @@ export class Scouting {
   // mémorisée tant que rien de ce qui compte ne change ; la peinture, elle,
   // ne coûte rien et suit la vue. `calculer` à faux : on ne fait que lire ce
   // qui est déjà prêt — le rendu n'attend jamais le calcul.
-  rasterVals(calculer){
+  /* Le socle des mailles, indépendant du thème : pour chaque maille de 1 km²
+   * dont la commune passe les filtres, le modèle de la fiche — ménages et
+   * concurrents du rayon, pression, emprise, CA, score — et le code NIS de sa
+   * commune. Une passe sur le pays (un tiers de seconde), mémorisée tant que
+   * rien de ce qui compte ne change. Les thèmes et les échelles s'en
+   * déduisent sans recalculer. */
+  rasterBase(calculer){
     const s = this.state, g = this._grid;
-    if (!g || !s.communes.length || s.theme === 'aucun' || !THEME_RAMPE[s.theme]) return null;
+    if (!g || !s.communes.length) return null;
     const R = s.radius;
-    const key = [s.theme, R, this._rev, s.communes.length, s.bakeries.length, JSON.stringify(s.prov), s.arr, s.minRating, s.minHh, s.thresh, s.weak,
+    const key = [R, this._rev, s.communes.length, s.bakeries.length, JSON.stringify(s.prov), s.arr, s.minRating, s.minHh, s.thresh, s.weak,
       s.spend, s.passage, s.emprise, s.empriseMax, s.compK, s.hhSize].join('|');
-    if (key === this._rkKey) return this._rkVal;
+    if (key === this._rbKey) return this._rbVal;
     // Pendant le chargement, les communes arrivent secteur par secteur : on ne
     // recalcule pas neuf fois, la carte se peint quand tout est là.
-    if (s.busy) return null;
-    // Sans calcul, la légende garde les bornes d'avant le temps d'un redessin :
-    // la peinture qui suit apporte les nouvelles, et le rendu qu'elle déclenche
-    // les affiche. Rien ne clignote.
-    if (!calculer) return this._rkVal && this._rkVal.theme === s.theme ? this._rkVal : null;
+    if (s.busy || !calculer) return null;
     const okIns = {};
     this.filteredCommunes().forEach(c => { okIns[c.ins] = 1; });
     const shops = this.shops(), force = new Map();
@@ -2061,6 +2081,7 @@ export class Scouting {
     shops.forEach(x => { const k2 = Math.floor(x.lat / bLat) + ',' + Math.floor(x.lng / bLng); (bucket[k2] || (bucket[k2] = [])).push(x); });
     const eMax = (s.empriseMax || 30) / 100, compK = s.compK || 0.22;
     const cells = [];
+    let sans = 0;
     Object.keys(g.buckets).forEach(bk => {
       const l = g.buckets[bk];
       for (let q = 0; q < l.length; q++){
@@ -2077,31 +2098,101 @@ export class Scouting {
         const auto = Math.max(0.04, Math.min(eMax, eMax / (1 + compK * load)));
         const emprise = s.emprise > 0 ? s.emprise / 100 : auto;
         const ca = hh * s.spend * emprise / (1 - s.passage / 100);
-        const v = s.theme === 'potentiel' ? hh / (n + 1) : s.theme === 'menages' ? hh : s.theme === 'concurrence' ? n
-          : s.theme === 'ca' ? ca : Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
-        cells.push([lat, lng, v, n, hh, 0]);
+        const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
+        if (n === 0) sans++;
+        cells.push([lat, lng, hh, n, emprise, ca, score, c[3]]);
       }
     });
-    // Quartiles de la sélection. Sur des entiers (concurrents), les quartiles
-    // se confondent : on les prend alors parmi les valeurs distinctes.
-    let tri = cells.map(c => c[2]).sort((a, b) => a - b);
-    if (s.theme === 'concurrence' || s.theme === 'score') tri = tri.filter((v, i) => i === 0 || v !== tri[i - 1]);
-    const q = f => tri.length ? tri[Math.min(tri.length - 1, Math.floor(tri.length * f))] : 0;
-    const bornes = [q(0.25), q(0.5), q(0.75)];
-    const counts = [0, 0, 0, 0];
-    let sans = 0;
-    cells.forEach(c => {
-      const i = c[2] < bornes[0] ? 0 : c[2] < bornes[1] ? 1 : c[2] < bornes[2] ? 2 : 3;
-      c[5] = i; counts[i]++;
-      if (c[3] === 0) sans++;
-    });
-    this._rkKey = key;
-    this._rkVal = { cells: cells, bornes: bornes, counts: counts, sans: sans, n: cells.length, theme: s.theme };
-    return this._rkVal;
+    this._rbKey = key;
+    this._rbVal = { cells: cells, sans: sans };
+    this._rkDeriv = {};
+    this._rkStamp = (this._rkStamp || 0) + 1;
+    return this._rbVal;
   }
 
-  paintRaster(canvas){
-    const map = this.map, s = this.state;
+  // Les entités d'une échelle — communes ou arrondissements de la sélection —
+  // avec leurs ménages, leurs commerces, leur population, et la valeur du
+  // thème : ménages ÷ commerces (ménages par point de vente), ménages, ou
+  // commerces pour dix mille habitants.
+  entites(ech, th){
+    const cs = this.filteredCommunes(), parIns = {}, vals = {}, nParIns = {};
+    this.shops().forEach(b => { if (b.ins) nParIns[b.ins] = (nParIns[b.ins] || 0) + 1; });
+    cs.forEach(c => {
+      const key = ech === 'commune' ? c.ins : (c.arr || '—');
+      parIns[c.ins] = key;
+      const e = vals[key] || (vals[key] = { key: key, nom: ech === 'commune' ? c.name : (c.arr || '—'), sous: ech === 'commune' ? 'arr. ' + c.arr : '', hh: 0, pop: 0, shops: 0, nCom: 0, lat: 0, lng: 0, bb: null });
+      e.hh += c.hh || 0; e.pop += c.pop || 0; e.shops += nParIns[c.ins] || 0; e.nCom++;
+      e.lat += c.lat; e.lng += c.lng;
+      if (c.bb && c.bb.length === 4) e.bb = e.bb ? [Math.min(e.bb[0], c.bb[0]), Math.min(e.bb[1], c.bb[1]), Math.max(e.bb[2], c.bb[2]), Math.max(e.bb[3], c.bb[3])] : c.bb.slice();
+    });
+    const liste = Object.keys(vals).map(k => {
+      const e = vals[k];
+      e.lat /= e.nCom; e.lng /= e.nCom;
+      e.v = th === 'potentiel' ? e.hh / Math.max(1, e.shops) : th === 'menages' ? e.hh : (e.pop > 0 ? e.shops / (e.pop / 10000) : 0);
+      if (ech === 'arrondissement') e.sous = e.nCom + ' commune' + (e.nCom > 1 ? 's' : '') + ' · ' + fmtInt(e.hh) + ' ménages · ' + e.shops + ' commerce' + (e.shops > 1 ? 's' : '');
+      else e.sous += ' · ' + fmtInt(e.hh) + ' ménages · ' + e.shops + ' commerce' + (e.shops > 1 ? 's' : '');
+      return e;
+    }).sort((a, b) => b.v - a.v);
+    return { parIns: parIns, vals: vals, liste: liste };
+  }
+
+  /* La lecture d'un thème à une échelle : la classe de chaque maille (0–3,
+   * 255 = pas peinte), les bornes des quartiles, les comptes. À la maille,
+   * chaque maille vaut pour elle-même ; à la commune ou à l'arrondissement,
+   * chaque maille prend la valeur de son entité, et les quartiles sont ceux
+   * des entités. Dérivé du socle, mémorisé par thème et échelle.
+   * `calculer` à faux : on ne fait que lire ce qui est prêt. */
+  rasterVals(theme, calculer){
+    const s = this.state;
+    theme = theme || s.theme;
+    if (theme === 'aucun' || !THEME_RAMPE[theme]) return null;
+    const ech = s.echelle || 'maille';
+    // CA et score n'ont de sens qu'à la maille : à l'entité, on lit les
+    // ménages par point de vente.
+    const th = ech !== 'maille' && (theme === 'ca' || theme === 'score') ? 'potentiel' : theme;
+    const k = th + '|' + ech;
+    this._rkDeriv = this._rkDeriv || {};
+    const base = this.rasterBase(calculer);
+    if (!base) return this._rkDeriv[k] || null;
+    if (this._rkDeriv[k]) return this._rkDeriv[k];
+    const cells = base.cells, n = cells.length, cls = new Uint8Array(n), counts = [0, 0, 0, 0];
+    const quart = (arr, unique) => {
+      let tri = arr.slice().sort((a, b) => a - b);
+      if (unique) tri = tri.filter((v, i) => i === 0 || v !== tri[i - 1]);
+      const q = f => tri.length ? tri[Math.min(tri.length - 1, Math.floor(tri.length * f))] : 0;
+      return [q(0.25), q(0.5), q(0.75)];
+    };
+    let bornes, entites = null;
+    if (ech === 'maille'){
+      const val = new Array(n);
+      for (let i = 0; i < n; i++){
+        const c = cells[i];
+        val[i] = th === 'potentiel' ? c[2] / (c[3] + 1) : th === 'menages' ? c[2] : th === 'concurrence' ? c[3] : th === 'ca' ? c[5] : c[6];
+      }
+      bornes = quart(val, th === 'concurrence' || th === 'score');
+      for (let i = 0; i < n; i++){ const v = val[i]; const j = v < bornes[0] ? 0 : v < bornes[1] ? 1 : v < bornes[2] ? 2 : 3; cls[i] = j; counts[j]++; }
+    } else {
+      entites = this.entites(ech, th);
+      bornes = quart(entites.liste.map(e => e.v), false);
+      entites.liste.forEach(e => { e.cls = e.v < bornes[0] ? 0 : e.v < bornes[1] ? 1 : e.v < bornes[2] ? 2 : 3; counts[e.cls]++; });
+      for (let i = 0; i < n; i++){
+        const key = entites.parIns[cells[i][7]], e = key != null ? entites.vals[key] : null;
+        cls[i] = e ? e.cls : 255;
+      }
+    }
+    const out = { cells: cells, cls: cls, bornes: bornes, counts: counts, n: n, sans: base.sans, theme: th, demande: theme, echelle: ech,
+      entites: entites, nEnt: entites ? entites.liste.length : 0 };
+    this._rkDeriv[k] = out;
+    this._rkStamp = (this._rkStamp || 0) + 1;
+    return out;
+  }
+
+  // La peinture d'un panneau : ses mailles au thème demandé, et, sur les
+  // panneaux de comparaison, les commerces en points — ils n'ont pas la
+  // couche des repères de la carte principale.
+  paintRaster(canvas, map, theme, points){
+    map = map || this.map;
+    const s = this.state;
     if (!map || !canvas) return;
     const size = map.getSize(), dpr = window.devicePixelRatio || 1;
     L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
@@ -2112,28 +2203,104 @@ export class Scouting {
     const cx = canvas.getContext('2d');
     cx.setTransform(dpr, 0, 0, dpr, 0, 0);
     cx.clearRect(0, 0, size.x, size.y);
-    const avant = this._rkKey;
-    const rv = this.rasterVals(true);
-    // Le calcul vient d'avoir lieu : la légende de gauche a de nouvelles
-    // bornes à montrer.
-    if (rv && this._rkKey !== avant && !this._rkRendu){ this._rkRendu = true; setTimeout(() => { this._rkRendu = false; if (this.el.isConnected) this.render(); }, 0); }
-    if (!rv) return;
-    const b = map.getBounds().pad(0.05), rampe = THEME_RAMPE[s.theme], off = s.themeOff || {};
+    const avant = this._rkStamp || 0;
+    const rv = this.rasterVals(theme || s.theme, true);
+    // Un calcul vient d'avoir lieu : les légendes ont de nouvelles bornes.
+    if ((this._rkStamp || 0) !== avant && !this._rkRendu){ this._rkRendu = true; setTimeout(() => { this._rkRendu = false; if (this.el.isConnected) this.render(); }, 0); }
+    const b = map.getBounds().pad(0.05);
     const sud = b.getSouth(), nord = b.getNorth(), ouest = b.getWest(), est = b.getEast();
-    const demi = 0.5 / 111.2, z = map.getZoom();
-    // De loin la peinture porte la lecture ; de près, c'est la rue qu'on lit,
-    // la couleur reste en fond.
-    cx.globalAlpha = z <= 9 ? 0.68 : z <= 11 ? 0.55 : z <= 12 ? 0.42 : 0.32;
-    const cells = rv.cells;
-    for (let i = 0; i < cells.length; i++){
-      const c = cells[i];
-      if (off[c[5]] || c[0] < sud || c[0] > nord || c[1] < ouest || c[1] > est) continue;
-      const kx = 0.5 / (111.2 * Math.cos(c[0] * Math.PI / 180));
-      const p1 = map.latLngToContainerPoint([c[0] + demi, c[1] - kx]), p2 = map.latLngToContainerPoint([c[0] - demi, c[1] + kx]);
-      cx.fillStyle = rampe[c[5]];
-      cx.fillRect(p1.x, p1.y, Math.max(1.2, p2.x - p1.x + 0.8), Math.max(1.2, p2.y - p1.y + 0.8));
+    const z = map.getZoom();
+    if (rv){
+      const rampe = THEME_RAMPE[rv.theme], off = map === this.map ? (s.themeOff || {}) : {};
+      const demi = 0.5 / 111.2;
+      // De loin la peinture porte la lecture ; de près, c'est la rue qu'on lit,
+      // la couleur reste en fond.
+      cx.globalAlpha = z <= 9 ? 0.68 : z <= 11 ? 0.55 : z <= 12 ? 0.42 : 0.32;
+      const cells = rv.cells, cls = rv.cls;
+      for (let i = 0; i < cells.length; i++){
+        const c = cells[i], k = cls[i];
+        if (k === 255 || off[k] || c[0] < sud || c[0] > nord || c[1] < ouest || c[1] > est) continue;
+        const kx = 0.5 / (111.2 * Math.cos(c[0] * Math.PI / 180));
+        const p1 = map.latLngToContainerPoint([c[0] + demi, c[1] - kx]), p2 = map.latLngToContainerPoint([c[0] - demi, c[1] + kx]);
+        cx.fillStyle = rampe[k];
+        cx.fillRect(p1.x, p1.y, Math.max(1.2, p2.x - p1.x + 0.8), Math.max(1.2, p2.y - p1.y + 0.8));
+      }
+      cx.globalAlpha = 1;
     }
-    cx.globalAlpha = 1;
+    if (points){
+      const r = z >= 12 ? 4 : z >= 10 ? 2.6 : 1.6;
+      this.shops().forEach(x => {
+        if (x.lat < sud || x.lat > nord || x.lng < ouest || x.lng > est) return;
+        const p = map.latLngToContainerPoint([x.lat, x.lng]);
+        cx.beginPath(); cx.arc(p.x, p.y, r, 0, 6.2832);
+        cx.fillStyle = 'rgba(141,29,44,.75)'; cx.fill();
+        if (this.estChaine(x)){ cx.lineWidth = 1.4; cx.strokeStyle = '#221E1A'; cx.stroke(); }
+      });
+    }
+  }
+
+  // La légende d'un thème à l'échelle courante : quatre classes, leurs bornes,
+  // leurs comptes (mailles, ou communes, ou arrondissements). `oeil` : les
+  // classes s'éteignent — sur la carte principale seulement.
+  legendeDe(theme, oeil){
+    const s = this.state, ech = s.echelle || 'maille';
+    if (theme === 'aucun') return { rows: [], note: 'La carte ne peint rien : seuls les repères (commerces, zones) sont dessinés.' };
+    if (!this._grid) return { rows: [], note: 'Grille de population indisponible : rien à peindre.' };
+    const rv = this.rasterVals(theme, false);
+    if (!rv) return { rows: [], note: s.communes.length ? 'Calcul des mailles…' : 'En attente des communes…' };
+    const th = rv.theme;
+    const fmt = v => th === 'ca' ? fmtEur(v) : th === 'concurrence' ? (ech === 'maille' ? String(Math.round(v)) : v.toFixed(1).replace('.', ',')) : th === 'score' ? String(Math.round(v)) : fmtInt(v);
+    const u = th === 'potentiel' ? (ech === 'maille' ? 'ménages par point de vente' : 'ménages par point de vente (ménages ÷ commerces)') : th === 'menages' ? 'ménages' + (ech === 'maille' ? ' accessibles' : '')
+      : th === 'concurrence' ? (ech === 'maille' ? 'concurrents dans le rayon' : 'commerces pour 10 000 habitants') : th === 'score' ? 'score sur 100' : 'CA annuel estimé';
+    const b = rv.bornes, lab = ['moins de ' + fmt(b[0]), fmt(b[0]) + ' à ' + fmt(b[1]), fmt(b[1]) + ' à ' + fmt(b[2]), fmt(b[2]) + ' et plus'];
+    const self = this;
+    const quoi = ech === 'maille' ? fmtInt(rv.n) + ' mailles de 1 km² · ' + fmtInt(rv.sans) + ' (' + Math.round(rv.sans / Math.max(1, rv.n) * 100) + ' %) sans concurrent en ' + s.radius.toFixed(1).replace('.', ',') + ' km'
+      : rv.nEnt + ' ' + (ech === 'commune' ? 'communes' : 'arrondissements');
+    return {
+      rows: [3, 2, 1, 0].map(i => ({
+        color: THEME_RAMPE[th][i], label: lab[i], n: fmtInt(rv.counts[i]), off: oeil && !!s.themeOff[i],
+        toggle: oeil ? () => self.setVue({ themeOff: Object.assign({}, s.themeOff, { [i]: !s.themeOff[i] }) }) : null
+      })),
+      note: u.charAt(0).toUpperCase() + u.slice(1) + ', quartiles ' + (ech === 'maille' ? 'de la sélection' : 'des ' + (ech === 'commune' ? 'communes' : 'arrondissements')) + ' · ' + quoi
+    };
+  }
+
+  /* ---------- trois lectures côte à côte ---------- */
+  // Deux cartes de plus, créées à la première demande, calées sur la carte
+  // principale et qui la suivent (et réciproquement) : le même territoire lu
+  // trois fois. Un clic sur l'une évalue le point comme sur la principale.
+  ensureTrioMaps(){
+    if (this.trioMaps || !this.map || !window.L) return;
+    const self = this;
+    this.trioMaps = [];
+    [['scout-map2', () => self.state.trio2], ['scout-map3', () => self.state.trio3]].forEach(([id, theme]) => {
+      const el = this.el.querySelector('#' + id);
+      if (!el) return;
+      const m = L.map(el, { center: this.map.getCenter(), zoom: this.map.getZoom(), minZoom: 6, maxZoom: 14, zoomControl: false, attributionControl: false, doubleClickZoom: false });
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+      m.createPane('sc-raster').style.zIndex = 350;
+      m.getPane('sc-raster').style.pointerEvents = 'none';
+      const r = new this.Raster({ theme: theme, dots: true }).addTo(m);
+      this.rasters.push(r);
+      m.on('click', e => this.onMapClick(e));
+      this.trioMaps.push(m);
+    });
+    const tous = [this.map].concat(this.trioMaps);
+    const suivre = src => {
+      if (this._sync) return;
+      this._sync = true;
+      try { const c = src.getCenter(), z = src.getZoom(); tous.forEach(m => { if (m !== src) m.setView(c, z, { animate: false }); }); }
+      finally { this._sync = false; }
+    };
+    tous.forEach(m => m.on('move', () => suivre(m)));
+  }
+
+  ajusterTrio(){
+    if (!this.map) return;
+    if (this.state.trio) this.ensureTrioMaps();
+    this.map.invalidateSize();
+    (this.trioMaps || []).forEach(m => { m.invalidateSize(); m.setView(this.map.getCenter(), this.map.getZoom(), { animate: false }); });
+    this.scheduleRedraw(40);
   }
 
   /* ---------- calage sur le réseau ---------- */
@@ -2946,20 +3113,39 @@ export class Scouting {
       /* ----- ce que la carte montre : thème et légende classée ----- */
       theme: s.theme,
       themes: THEMES.map(t => ({ k: t[0], label: t[1], tip: t[2], on: s.theme === t[0], pick: () => self.setVue({ theme: t[0] }) })),
-      themeLegend: (() => {
-        if (s.theme === 'aucun') return { rows: [], note: 'La carte ne peint rien : seuls les repères (commerces, zones) sont dessinés.' };
-        if (!self._grid) return { rows: [], note: 'Grille de population indisponible : rien à peindre.' };
-        const rv = self.rasterVals(false);
-        if (!rv) return { rows: [], note: s.communes.length ? 'Calcul des mailles…' : 'En attente des communes…' };
-        const fmt = v => s.theme === 'ca' ? fmtEur(v) : s.theme === 'concurrence' || s.theme === 'score' ? String(Math.round(v)) : fmtInt(v);
-        const u = s.theme === 'potentiel' ? 'ménages par point de vente' : s.theme === 'menages' ? 'ménages accessibles' : s.theme === 'concurrence' ? 'concurrents dans le rayon' : s.theme === 'score' ? 'score sur 100' : 'CA annuel estimé';
-        const b = rv.bornes, lab = ['moins de ' + fmt(b[0]), fmt(b[0]) + ' à ' + fmt(b[1]), fmt(b[1]) + ' à ' + fmt(b[2]), fmt(b[2]) + ' et plus'];
+      themeLegend: self.legendeDe(s.theme, true),
+      legendeDe: t => self.legendeDe(t, false),
+      echelle: s.echelle,
+      echelles: [['maille', 'Maille 1 km²'], ['commune', 'Commune'], ['arrondissement', 'Arrondissement']].map(([k, label]) => ({ k: k, label: label, on: (s.echelle || 'maille') === k, pick: () => self.setVue({ echelle: k }) })),
+      echelleNote: (s.echelle || 'maille') === 'maille' ? '' : (s.theme === 'ca' || s.theme === 'score' ? 'CA et score se lisent à la maille seulement : à cette échelle, la carte montre les ménages par point de vente. ' : '')
+        + 'Chaque maille prend la valeur de sa ' + (s.echelle === 'commune' ? 'commune' : 'commune, et la commune celle de son arrondissement') + ' ; les quartiles sont ceux des ' + (s.echelle === 'commune' ? 'communes' : 'arrondissements') + ' de la sélection.',
+      trio: !!s.trio,
+      toggleTrio: () => self.setState({ trio: !s.trio, compare: false, reseau: false, view: 'map' }),
+      trioPans: s.trio ? [
+        { i: 1, label: (THEMES.find(t => t[0] === s.theme) || THEMES[0])[1], rows: self.legendeDe(s.theme, false).rows, select: null },
+        { i: 2, label: '', rows: self.legendeDe(s.trio2, false).rows, select: { value: s.trio2, set: e => self.setVue({ trio2: e.target.value }) } },
+        { i: 3, label: '', rows: self.legendeDe(s.trio3, false).rows, select: { value: s.trio3, set: e => self.setVue({ trio3: e.target.value }) } }
+      ] : [],
+      trioChoix: THEMES.filter(t => t[0] !== 'aucun').map(t => ({ value: t[0], label: t[1] })),
+      // À l'échelle de la commune ou de l'arrondissement : le classement des
+      // entités, en tête et en queue, cliquables pour cadrer la carte.
+      classement: (() => {
+        const ech = s.echelle || 'maille';
+        if (ech === 'maille' || s.theme === 'aucun') return null;
+        const rv = self.rasterVals(s.theme, false);
+        if (!rv || !rv.entites) return null;
+        const th = rv.theme, l = rv.entites.liste;
+        const fmt = e => th === 'potentiel' ? fmtInt(e.v) : th === 'menages' ? fmtInt(e.v) : e.v.toFixed(1).replace('.', ',');
+        const unite = th === 'potentiel' ? 'ménages / point' : th === 'menages' ? 'ménages' : '/ 10 000 hab.';
+        const ligne = (e, rang) => ({ rang: rang, nom: e.nom, sous: e.sous, v: fmt(e), unite: unite,
+          aller: () => { if (!self.map) return; if (e.bb) self.map.fitBounds([[e.bb[0], e.bb[1]], [e.bb[2], e.bb[3]]], { padding: [20, 20] }); else self.map.setView([e.lat, e.lng], ech === 'commune' ? 12 : 10); } });
+        const nomEch = ech === 'commune' ? 'communes' : 'arrondissements';
         return {
-          rows: [3, 2, 1, 0].map(i => ({
-            color: THEME_RAMPE[s.theme][i], label: lab[i], n: fmtInt(rv.counts[i]), off: !!s.themeOff[i],
-            toggle: () => self.setVue({ themeOff: Object.assign({}, s.themeOff, { [i]: !s.themeOff[i] }) })
-          })),
-          note: u.charAt(0).toUpperCase() + u.slice(1) + ', quartiles de la sélection · ' + fmtInt(rv.n) + ' mailles de 1 km² · ' + fmtInt(rv.sans) + ' (' + Math.round(rv.sans / Math.max(1, rv.n) * 100) + ' %) sans concurrent en ' + s.radius.toFixed(1).replace('.', ',') + ' km'
+          titre: th === 'potentiel' ? 'Les plus sous-servis' : th === 'menages' ? 'Les plus peuplés' : 'Les plus denses en commerces',
+          titreQueue: th === 'potentiel' ? 'Les plus saturés' : th === 'menages' ? 'Les moins peuplés' : 'Les moins denses',
+          tete: l.slice(0, 7).map((e, i) => ligne(e, i + 1)),
+          queue: l.slice(-3).reverse().map((e, i) => ligne(e, l.length - i)),
+          note: l.length + ' ' + nomEch + ' dans la sélection · ' + (th === 'potentiel' ? 'ménages ÷ commerces : beaucoup de ménages pour peu de commerces, le territoire est sous-servi' : th === 'menages' ? 'ménages des communes, recensement 2021' : 'commerces relevés pour dix mille habitants') + ' · clique une ligne pour cadrer la carte'
         };
       })(),
       themeTip: 'La carte peint chaque maille de 1 km² du recensement dont la commune passe les filtres, avec le modèle de la fiche appliqué à la maille : ménages et concurrents dans le rayon réglé ci-dessous. Quatre classes aux quartiles de la sélection ; l\'œil éteint une classe. La concurrence est celle qu\'OpenStreetMap connaît : une maille sans concurrent peut l\'être parce que le commerce n\'est pas cartographié.',

@@ -163,4 +163,19 @@ capture elles passent par le proxy, servies à la page par interception.
   tracée et dit ce que la forme change par rapport au disque du rayon ;
 - les onglets s'appellent Zones candidates, Concurrents, Arrondissements.
 
-C (le dossier), D et E restent des maquettes.
+**C, D et E ont suivi** :
+
+- C — le dossier d'implantation, depuis la fiche d'une zone et depuis chaque
+  zone retenue : la page à l'écran, le PDF (`POST /scouting/dossier.pdf`, même
+  chaîne que l'analyse magasin), l'impression, le CSV ; la zone dessinée et
+  les hypothèses voyagent avec la zone retenue ;
+- D — « Trois lectures » dans la barre haute : deux panneaux de plus, calés
+  sur la carte principale et qui la suivent, chacun avec son thème et sa
+  légende ;
+- E — « Échelle de lecture » sous la légende : maille, commune ou
+  arrondissement ; chaque maille prend la valeur de son entité, les quartiles
+  sont ceux des entités, et le panneau droit classe les entités en tête et en
+  queue (Charleroi 2 635 ménages par point, Tournai 440), cliquables pour
+  cadrer la carte.
+
+Les cinq propositions sont dans l'écran.

@@ -37,6 +37,7 @@ export function renderTop(c, x){
     <div style="flex:1"></div>
     <button ${x.A(c.ouvrirWiz)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap;border-color:var(--color-primary);color:var(--color-primary);font-weight:600">Où puis-je ouvrir ?</button>
     <button ${x.A(c.openReseau)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Magasins du réseau</button>
+    <button ${x.A(c.toggleTrio)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap${c.trio ? ';border-color:var(--color-primary);color:var(--color-primary)' : ''}">${c.trio ? 'Une lecture' : 'Trois lectures'}</button>
     <button ${x.A(c.toggleCompare)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">${c.compare ? 'Retour à la carte' : 'Comparer 2 arrondissements'}</button>
     <button ${x.A(c.reload)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Recharger les données</button>
     <button ${x.A(c.exportCsv)} class="btn-primary" style="padding:7px 14px;font-size:12px;white-space:nowrap">Exporter les candidats (${c.nCandidates})</button>
@@ -149,7 +150,7 @@ export function renderLeft(c, x){
 
   <div class="t-admin-label" style="margin-bottom:6px;display:inline-flex;align-items:center">Ce que la carte montre${info(esc, c.themeTip)}</div>
   <div class="sc-theme">
-    ${c.themes.map(t => `<button ${x.A(t.pick)} type="button"${t.on ? ' class="on"' : ''} title="${esc(t.tip)}"><span>${esc(t.label)}</span>${t.on ? '<i>●</i>' : ''}</button>`).join('')}
+    ${c.themes.map(t => `<button ${x.A(t.pick)} type="button" class="${t.on ? 'on' : ''}${c.echelle !== 'maille' && (t.k === 'ca' || t.k === 'score') ? ' loin' : ''}" title="${esc(t.tip)}"><span>${esc(t.label)}${c.echelle !== 'maille' && (t.k === 'ca' || t.k === 'score') ? ' <small>maille seulement</small>' : ''}</span>${t.on ? '<i>●</i>' : ''}</button>`).join('')}
   </div>
   ${c.themeLegend.rows.length ? `
   <div class="sc-leg">
@@ -161,7 +162,11 @@ export function renderLeft(c, x){
       <span class="n">${esc(r.n)}</span>
     </div>`).join('')}
   </div>` : ''}
-  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.45;margin-bottom:18px">${esc(c.themeLegend.note)}</div>
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.45;margin-bottom:12px">${esc(c.themeLegend.note)}</div>
+
+  <div class="t-admin-label" style="margin-bottom:6px">Échelle de lecture</div>
+  <div class="sc-ech">${c.echelles.map(e => `<button ${x.A(e.pick)} type="button"${e.on ? ' class="on"' : ''}>${esc(e.label)}</button>`).join('')}</div>
+  ${c.echelleNote ? `<div style="font-size:11px;color:var(--color-text-muted);line-height:1.45;margin-bottom:18px">${esc(c.echelleNote)}</div>` : '<div style="height:18px"></div>'}
 
   <div class="t-admin-label" style="margin-bottom:8px">Provinces &amp; régions</div>
   <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
@@ -229,7 +234,13 @@ export function renderMapUi(c, x){
     ${esc(c.dessinHint)}
     ${c.tool === 'isochrone' ? `<select ${x.C(c.setIso)} style="${selCss}">${opts(c.isoChoix, c.iso)}</select>` : ''}
   </div>` : ''}
-  <div style="position:absolute;top:12px;right:12px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;width:208px;box-shadow:0 2px 10px rgba(0,0,0,.08)">
+  ${c.trio ? c.trioPans.map(pn => `
+  <div class="sc-cap p${pn.i}">
+    ${pn.select ? `<select ${x.C(pn.select.set)} style="${selCss};padding:5px 7px;font-size:12px;font-weight:600">${opts(c.trioChoix, pn.select.value)}</select>`
+      : `<div style="font-size:11.5px;font-weight:600;padding:2px 0 4px;line-height:1.3" title="Le thème choisi dans le panneau de gauche">${esc(pn.label)}</div>`}
+    ${pn.rows.map(r => `<div class="r"><span class="sw" style="background:${r.color}"></span><span class="tx">${esc(r.label)}</span><span class="n">${esc(r.n)}</span></div>`).join('')}
+  </div>`).join('') : ''}
+  <div class="sc-legende" style="position:absolute;top:12px;right:12px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;width:208px;box-shadow:0 2px 10px rgba(0,0,0,.08)">
     <div class="t-admin-label" style="margin-bottom:8px">Légende</div>
     ${c.legend.map(i => `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;line-height:1.3">
@@ -240,7 +251,7 @@ export function renderMapUi(c, x){
     <div style="font-size:11px;color:var(--color-text-muted);line-height:1.4">Un clic évalue un point dans son rayon ; les outils à gauche dessinent la zone — cercle, polygone, rectangle, isochrone.</div>
   </div>
 
-  <div style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
+  <div class="sc-etat" style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
 
   ${c.wiz.fait && !c.wiz.etape ? `
   <div class="wz-rappel">
@@ -337,7 +348,18 @@ export function renderRight(c, x){
     </div>
   </div>`).join('')}`;
 
-  return `${sel}${chauds}
+  const classement = c.classement ? `
+  <div class="t-admin-label" style="margin:${c.hasSel ? 22 : 0}px 0 6px">${esc(c.classement.titre)}</div>
+  <div class="sc-rang">
+    ${c.classement.tete.map(l => `<div ${x.A(l.aller)} class="l" title="Cadrer la carte"><span class="r">${l.rang}</span><span class="n">${esc(l.nom)}<em>${esc(l.sous)}</em></span><span class="v">${esc(l.v)}<em>${esc(l.unite)}</em></span></div>`).join('')}
+  </div>
+  <div class="t-admin-label" style="margin:14px 0 6px">${esc(c.classement.titreQueue)}</div>
+  <div class="sc-rang">
+    ${c.classement.queue.map(l => `<div ${x.A(l.aller)} class="l" title="Cadrer la carte"><span class="r">${l.rang}</span><span class="n">${esc(l.nom)}<em>${esc(l.sous)}</em></span><span class="v">${esc(l.v)}<em>${esc(l.unite)}</em></span></div>`).join('')}
+  </div>
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-top:8px">${esc(c.classement.note)}</div>` : '';
+
+  return `${sel}${classement}${chauds}
   <div class="t-admin-label" style="margin:22px 0 8px">Zones candidates retenues</div>
   ${c.candidates.map(k => `
   <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
