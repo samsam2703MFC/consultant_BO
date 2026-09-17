@@ -384,3 +384,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-16T16:31:49Z fete a la demande
 2026-09-16T16:34:41Z fete forcee attend les chiffres
 2026-09-16T16:53:36Z objectif atteint visible toute la journee
+2026-09-17T16:45:03Z eclat sur la ligne et confettis reseau
