@@ -78,16 +78,22 @@ const INS_PROV = {
   '81': 'WLX', '82': 'WLX', '83': 'WLX', '84': 'WLX', '85': 'WLX',
   '91': 'WNA', '92': 'WNA', '93': 'WNA'
 };
-// Points de comparaison du réseau — chiffres de l'étude GeoConsulting
-// (Halle, 28-08-2024, p.26 et p.28). Halle = projet mesuré à 250 m².
+// Points de comparaison du réseau — chiffres des études GeoConsulting :
+// Sombreffe (étude de potentiel du 17-04-2024, p.25 comparaison au réseau,
+// p.26 potentiel d'affaires : projet mesuré à 110 m²) et Halle (28-08-2024,
+// p.26 et p.28 : projet mesuré à 250 m²). Max & Sandra et Berlo sont les
+// zones de chalandise des magasins existants telles que l'étude les mesure.
 const RESEAU = [
-  { nom: 'L\'Atelier by Max & Sandra', statut: 'En exploitation',
+  { nom: 'L\'Atelier by Max & Sandra', statut: 'En exploitation', etude: '04/2024',
     pop: 6263, hh: 2613, taille: 2.4, revenu: 38454, jeunes: 19.7, actifs: 67.2, seniors: 13.2,
     marche: 1086800, depense: 416, emprise: null, ca: null, surface: null, lat: 50.46, lng: 4.44 },
-  { nom: 'L\'Atelier by Berlo', statut: 'En exploitation',
+  { nom: 'L\'Atelier by Berlo', statut: 'En exploitation', etude: '04/2024',
     pop: 30705, hh: 13821, taille: 2.2, revenu: 48327, jeunes: 17.8, actifs: 71.1, seniors: 11.0,
     marche: 7605148, depense: 550, emprise: null, ca: null, surface: null, lat: 50.63, lng: 5.57 },
-  { nom: 'L\'Atelier by Halle', statut: 'Projet mesuré · août 2024',
+  { nom: 'L\'Atelier by Harmonie — Sombreffe', statut: 'Projet mesuré · avril 2024', etude: '04/2024',
+    pop: 19189, hh: 7522, taille: 2.55, revenu: 53283, jeunes: 19.25, actifs: 66.93, seniors: 13.82,
+    marche: 4889480, depense: 650, emprise: 17.8, ca: 965644, surface: 110, lat: 50.5285, lng: 4.5885 },
+  { nom: 'L\'Atelier by Halle', statut: 'Projet mesuré · août 2024', etude: '08/2024',
     pop: 28057, hh: 12164, taille: 2.31, revenu: 47566, jeunes: 16.5, actifs: 64.0, seniors: 19.49,
     marche: 7128652, depense: 586, emprise: 15.5, ca: 1296881, surface: 250, lat: 50.7256, lng: 4.2225 }
 ];
@@ -171,7 +177,7 @@ const TIP_REGL = {
   ca: 'CA annuel TTC = ménages du rayon × dépense par ménage × emprise ÷ (1 − passage).'
 };
 const TIP_HYP = {
-  'Dépense boulangerie / ménage (€/an)': 'Ce qu\'un ménage dépense par an en boulangerie-pâtisserie — étude GeoConsulting (Halle, 08-2024) : 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra.\nMarché du rayon = ménages du rayon × dépense.',
+  'Dépense boulangerie / ménage (€/an)': 'Ce qu\'un ménage dépense par an en boulangerie-pâtisserie — études GeoConsulting : 650 € à Sombreffe (04-2024), 586 € à Halle (08-2024), 550 € à Berlo, 416 € chez Max & Sandra.\nMarché du rayon = ménages du rayon × dépense.',
   'Emprise imposée (%, 0 = calculée)': 'Part du marché du rayon captée par le point. À 0, l\'emprise est calculée depuis la concurrence (emprise max, sensibilité, pression). Une valeur > 0 s\'applique telle quelle à toutes les zones — Halle mesurée : 15,5 %.',
   'Part du passage (%)': 'Part du CA apportée par la clientèle de passage, en plus des ménages du rayon.\nCA = CA des ménages ÷ (1 − passage) ; à 15 %, CA des ménages ÷ 0,85.',
   'Surface nette cible (m²)': 'Surface de vente du projet. N\'entre que dans le rendement : €/m² = CA annuel ÷ surface (Halle : 1 296 881 € sur 250 m²).',
@@ -406,7 +412,10 @@ export class Scouting {
       // Le plan d'expansion : les meilleures zones de chaque province, ce
       // qu'elles peuvent dégager, en deux clics. N zones par province, avec
       // ou sans le score minimum.
-      plan: false, planN: 5, planSeuil: false, planImg: '', planBusy: false
+      plan: false, planN: 5, planSeuil: false, planImg: '', planBusy: false,
+      // L'écart minimum entre deux ouvertures du plan, en minutes de voiture
+      // (0 = aucun), et la même distance vis-à-vis des magasins déjà ouverts.
+      planEcart: 20, planReseau: true
     };
     this._h = [];
     this._scroll = {};
@@ -1169,10 +1178,11 @@ export class Scouting {
   // le score dit ce qu'elles valent. Les commerces sont rangés par cases d'un
   // rayon de côté : un point ne regarde que ses neuf cases voisines, et onze
   // provinces se balaient en une fraction de seconde.
-  scanTop5(){
+  scanTop5(max){
     const s = this.state, R = s.radius;
+    max = max || 5;
     const key = [R, s.thresh, s.arr, JSON.stringify(s.prov), s.minRating, s.minHh, this._rev,
-      s.spend, s.passage, s.emprise, s.empriseMax, s.compK].join('|');
+      s.spend, s.passage, s.emprise, s.empriseMax, s.compK, max].join('|');
     if (key === this._top5Key) return this._top5Val;
     const shopsAll = this.shops();
     const cs = this.filteredCommunes();
@@ -1208,7 +1218,7 @@ export class Scouting {
       const zones = this.balayerEmprise({ s0: s0, n0: n0, w0: w0, e0: e0, dLat: dLat, dLng: dLng },
         voisines, toutes, around, c => c.prov === p.code)
         // Le score plafonne à 100 : à égalité, le CA estimé départage.
-        .sort((a, b) => (b.score - a.score) || (b.ca - a.ca)).slice(0, 5);
+        .sort((a, b) => (b.score - a.score) || (b.ca - a.ca)).slice(0, max);
       out.push({ code: p.code, prov: p.name, communes: mine.length, shops: shops.filter(x => x.prov === p.code).length, zones: zones });
     });
     this._top5Key = key; this._top5Val = out;
@@ -1662,10 +1672,32 @@ export class Scouting {
   planDonnees(){
     const s = this.state, self = this;
     const N = Math.max(1, Math.min(5, s.planN || 5)), seuil = !!s.planSeuil;
+    // L'écart minimum : des minutes de voiture, converties à vol d'oiseau à
+    // 45 km/h de moyenne — 20 min font 15 km. Les zones se prennent au score
+    // dans tout le pays ; une zone trop près d'une retenue (ou d'un magasin
+    // ouvert, si demandé) cède la place à la suivante de sa province.
+    const minutes = Math.max(0, +s.planEcart || 0), ecartKm = minutes * 45 / 60;
+    const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
+    const groupes = this.scanTop5(ecartKm > 0 ? 40 : 5);
+    const cands = [];
+    groupes.forEach(g => g.zones.forEach(z => { if (!seuil || z.score >= s.minScore) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
+    cands.sort((a, b) => (b.score - a.score) || (b.ca - a.ca));
+    const retenues = [], parProv = {}, ecartesProv = {};
+    let ecartes = 0;
+    cands.forEach(z => {
+      if ((parProv[z.code] || 0) >= N) return;
+      if (ecartKm > 0){
+        const trop = retenues.some(r => dist(z.lat, z.lng, r.lat, r.lng) < ecartKm)
+          || (s.planReseau && ouverts.some(m => dist(z.lat, z.lng, +m.lat, +m.lng) < ecartKm));
+        if (trop) { ecartes++; ecartesProv[z.code] = (ecartesProv[z.code] || 0) + 1; return; }
+      }
+      parProv[z.code] = (parProv[z.code] || 0) + 1;
+      retenues.push(z);
+    });
     const provinces = [], tous = [];
     let total = 0, hhTot = 0, k = 0;
-    this.scanTop5().forEach(g => {
-      const zones = g.zones.filter(z => !seuil || z.score >= s.minScore).slice(0, N);
+    groupes.forEach(g => {
+      const zones = retenues.filter(z => z.code === g.code);
       const lignes = zones.map((z, i) => {
         const cc = self.concurrenceAu(z.lat, z.lng, s.radius);
         k++;
@@ -1674,28 +1706,30 @@ export class Scouting {
       });
       const sous = lignes.reduce((a, l) => a + l.ca, 0);
       total += sous; hhTot += lignes.reduce((a, l) => a + l.hh, 0);
-      provinces.push({ nom: g.prov, code: g.code, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection', lignes: lignes, sousTotal: sous });
+      const manque = ecartKm > 0 && lignes.length < N && ecartesProv[g.code] ? ' · ' + ecartesProv[g.code] + ' zone' + (ecartesProv[g.code] > 1 ? 's' : '') + ' écartée' + (ecartesProv[g.code] > 1 ? 's' : '') + ' pour proximité' : '';
+      provinces.push({ nom: g.prov, code: g.code, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection' + manque, lignes: lignes, sousTotal: sous });
       lignes.forEach(l => tous.push(l));
     });
     const reseau = (s.magasins || []).filter(m => m.ouvert && m.caAnnuel);
     const caReseau = reseau.reduce((a, m) => a + m.caAnnuel, 0);
     const nProv = provinces.filter(p => p.lignes.length).length;
     const R = s.radius.toFixed(1).replace('.', ',') + ' km';
+    const ecartTxt = ecartKm > 0 ? 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' (' + Math.round(ecartKm) + ' km à vol d’oiseau, à 45 km/h de moyenne)' : 'sans écart minimum entre elles';
     return {
       titre: 'Plan d’expansion — ' + tous.length + ' ouverture' + (tous.length > 1 ? 's' : '') + ' dans ' + nProv + ' province' + (nProv > 1 ? 's' : ''),
       date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
-      N: N, seuil: seuil, minScore: s.minScore,
+      N: N, seuil: seuil, minScore: s.minScore, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
       total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
       resume: [
         ['CA annuel estimé, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
-        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '')],
+        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
         ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
         caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
       ],
       provinces: provinces,
       classement: tous.slice().sort((a, b) => b.ca - a.ca).slice(0, 10),
       carteNote: 'Les ronds verts numérotés : les zones retenues, dans l’ordre du plan. Les carrés noirs : les magasins du réseau déjà ouverts. Fond de carte © OpenStreetMap.',
-      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
+      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score par province' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + ', ' + ecartTxt + (ecartes ? ' ; ' + ecartes + ' zone' + (ecartes > 1 ? 's' : '') + ' mieux classée' + (ecartes > 1 ? 's' : '') + ' ' + (ecartes > 1 ? 'ont' : 'a') + ' cédé la place pour cause de proximité' : '') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
       hypotheses: [
         ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
         ['Emprise', s.emprise > 0 ? 'imposée ' + s.emprise + ' %' : 'calculée, max ' + s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
@@ -1766,7 +1800,7 @@ export class Scouting {
 
   planPayload(d){
     return {
-      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') ,
+      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') + (d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''),
       resume: d.resume, carte: d.carte || '', carteNote: d.carteNote,
       provinces: d.provinces.map(p => ({ nom: p.nom, detail: p.detail, sousTotal: fmtEur(p.sousTotal),
         lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr, String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
@@ -1874,7 +1908,7 @@ export class Scouting {
         fmtInt(r.ev.hh), fmtEur(s.spend), pct1(r.ev.emprise), fmtEur(r.ev.ca),
         r.ratio ? 'réel = modèle ' + (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : 'CA réel inconnu']);
     });
-    RESEAU.forEach(r => reseau.push([r.nom, 'référence — étude GeoConsulting 08/2024', fmtInt(r.hh), fmtEur(r.depense), r.emprise ? pct1(r.emprise / 100) : '—',
+    RESEAU.forEach(r => reseau.push([r.nom, 'référence — étude GeoConsulting ' + (r.etude || ''), fmtInt(r.hh), fmtEur(r.depense), r.emprise ? pct1(r.emprise / 100) : '—',
       r.ca ? fmtEur(r.ca) : '—', r.statut + (r.marche ? ' · marché ' + fmtEur(r.marche) : '')]));
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
@@ -1915,7 +1949,7 @@ export class Scouting {
         ['Population ' + dans, fmtInt(x.hh * hhSize) + ' hab.', self._grid ? 'recensement 2021, maille de 1 km²' : 'part du territoire des communes dans le rayon'],
         ['Ménages (' + String(hhSize).replace('.', ',') + ' personnes)', fmtInt(x.hh), 'population ÷ taille des ménages'],
         ['dont zone primaire', fmtInt(x.prim), 'rayon réduit à 55 %'],
-        ['Dépense boulangerie par ménage', fmtEur(s.spend) + ' / an', 'hypothèse du modèle — étude GeoConsulting : 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra'],
+        ['Dépense boulangerie par ménage', fmtEur(s.spend) + ' / an', 'hypothèse du modèle — études GeoConsulting : 650 € à Sombreffe, 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra'],
         ['Marché boulangerie ' + dans, fmtEur(x.market), 'ménages × dépense'],
         ['Pression concurrentielle', x.load.toFixed(2), 'Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5'],
         ['Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), pct1(x.emprise), s.emprise > 0 ? 'imposée à toutes les zones' : s.empriseMax + ' % ÷ (1 + ' + String(s.compK).replace('.', ',') + ' × pression), plancher 4 %'],
@@ -3459,6 +3493,9 @@ export class Scouting {
         nChoix: [1, 2, 3, 5].map(n => ({ value: String(n), label: n + ' par province' })), nVal: String(Math.max(1, Math.min(5, s.planN || 5))),
         setN: e => self.setPlan({ planN: parseInt(e.target.value, 10) || 5 }),
         seuilOn: !!s.planSeuil, toggleSeuil: () => self.setPlan({ planSeuil: !s.planSeuil }),
+        ecartChoix: [[0, 'sans écart minimum'], [10, '10 min entre elles'], [15, '15 min entre elles'], [20, '20 min entre elles'], [30, '30 min entre elles']].map(c => ({ value: String(c[0]), label: c[1] })),
+        ecartVal: String(Math.max(0, +s.planEcart || 0)), setEcart: e => self.setPlan({ planEcart: parseInt(e.target.value, 10) || 0 }),
+        reseauOn: !!s.planReseau, toggleReseau: () => self.setPlan({ planReseau: !s.planReseau }),
         fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
       }) : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {

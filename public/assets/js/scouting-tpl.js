@@ -107,7 +107,7 @@ export function renderLeft(c, x){
       <input id="sc-p${i}" type="number" step="any" value="${esc(p.v)}" ${x.C(p.set)} style="width:68px;flex:0 0 auto;${numCss}">
     </div>`).join('')}
   </div>
-  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.empriseHint)}<br><br>Réseau : 416 € (Max&amp;Sandra), 550 € (Berlo), 586 € (Halle). Emprise Halle 15,5 % pour un CA de 1.296.881 € TTC sur 250 m².</div>`;
+  <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px">${esc(c.empriseHint)}<br><br>Réseau : 416 € (Max&amp;Sandra), 550 € (Berlo), 650 € (Sombreffe), 586 € (Halle). Emprise mesurée 17,8 % à Sombreffe pour 965.644 € TTC sur 110 m², 15,5 % à Halle pour 1.296.881 € TTC sur 250 m².</div>`;
 
   const calage = () => `
   <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px;display:inline-flex;align-items:flex-start">${esc(c.calage.intro)}${info(esc, c.calage.tip)}</div>
@@ -495,7 +495,7 @@ export function planPage(d, esc, logo){
   <div class="sc-doss">
     <div class="hd">
       ${logo ? `<img src="${esc(logo)}" alt="">` : ''}
-      <div class="t"><b>${esc(d.titre)}</b><span>édité le ${esc(d.date)} · ${d.N} par province au plus${d.seuil ? ' · score ≥ ' + esc(d.minScore) : ' · sans score minimum'}</span></div>
+      <div class="t"><b>${esc(d.titre)}</b><span>édité le ${esc(d.date)} · ${d.N} par province au plus${d.seuil ? ' · score ≥ ' + esc(d.minScore) : ' · sans score minimum'}${d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''}</span></div>
       <div class="sc"><b style="font-size:24px">${eur(d.total)}</b><span>CA annuel estimé</span></div>
     </div>
 
@@ -536,6 +536,8 @@ function renderPlan(c, x){
       <div style="font-size:11px;color:var(--color-text-muted)">${d.nPts} ouverture${d.nPts > 1 ? 's' : ''} · ${esc(d.total.toLocaleString ? Math.round(d.total).toLocaleString('fr-BE') : d.total)} € de CA annuel estimé</div>
       <select ${x.C(d.setN)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.nChoix, d.nVal)}</select>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.seuilOn ? ' checked' : ''} ${x.C(d.toggleSeuil)} style="accent-color:var(--color-primary)">seulement au-dessus du score ${d.minScore}</label>
+      <select ${x.C(d.setEcart)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.ecartChoix, d.ecartVal)}</select>
+      ${d.minutes ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.reseauOn ? ' checked' : ''} ${x.C(d.toggleReseau)} style="accent-color:var(--color-primary)">et des magasins ouverts</label>` : ''}
       <div style="flex:1"></div>
       <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
       <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter (CSV)</button>
@@ -772,7 +774,7 @@ export function renderModal(c, x){
     <div style="background:var(--color-surface);border-radius:14px;width:100%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.28)">
       <div style="display:flex;align-items:baseline;gap:14px;padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary)">
         <div class="t-section-title" style="font-size:18px">Magasins du réseau — points de comparaison</div>
-        <div style="font-size:11px;color:var(--color-text-muted);flex:1">Chiffres de l'étude GeoConsulting, Halle, 28-08-2024, puis les points ajoutés à la main · la colonne verte reprend la zone évaluée en cours</div>
+        <div style="font-size:11px;color:var(--color-text-muted);flex:1">Chiffres des études GeoConsulting — Sombreffe, 17-04-2024 ; Halle, 28-08-2024 —, puis les points ajoutés à la main · la colonne verte reprend la zone évaluée en cours</div>
         <button ${x.A(c.closeReseau)} class="btn-secondary" style="padding:6px 12px;font-size:12px">Fermer</button>
       </div>
       <div id="sc-modal" class="sc-scroll" style="flex:1;overflow:auto;padding:18px 20px 22px">
