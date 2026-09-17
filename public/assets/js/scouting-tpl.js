@@ -640,25 +640,56 @@ export function renderModal(c, x){
       <span style="font-size:11px;color:var(--color-text-muted)">${esc(r.k)}</span>
       <span style="font-size:12px;font-weight:500;text-align:right">${esc(r.v)}</span>
     </div>`).join('')}
-    ${green ? '' : `
+    ${green ? `
     <div style="display:flex;gap:6px;padding:10px 12px">
-      <button ${x.A(k.locate)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Voir sur la carte</button>
-      <button ${x.A(k.applyDepense)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Reprendre sa dépense</button>
+      <button ${x.A(c.refDepuisZone)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px;border-color:#1b5e20;color:#1b5e20">Retenir comme point de comparaison</button>
+    </div>` : `
+    <div style="display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap">
+      ${k.locate ? `<button ${x.A(k.locate)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Voir sur la carte</button>` : ''}
+      ${k.applyDepense ? `<button ${x.A(k.applyDepense)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Reprendre sa dépense</button>` : ''}
+      ${k.perso ? `<button ${x.A(k.modifier)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Modifier</button>
+      <button ${x.A(k.supprimer)} class="btn-secondary" style="flex:0 0 auto;padding:7px 9px;font-size:11px" title="Retirer ce point">×</button>` : ''}
     </div>`}
   </div>`;
+
+  // Le formulaire d'un point de comparaison : les mêmes lignes qu'une colonne,
+  // à remplir. Vide = la ligne affichera « — ».
+  const formulaire = f => `
+  <div style="flex:1 1 0;min-width:240px;max-width:300px;border:1px solid var(--color-primary);border-radius:10px;overflow:hidden">
+    <div style="padding:12px 14px;background:rgba(141,29,44,.06);border-bottom:0.5px solid var(--color-border-tertiary)">
+      <div style="font-size:13px;font-weight:600">${f.neuf ? 'Nouveau point de comparaison' : 'Modifier le point'}</div>
+      <div style="font-size:11px;color:var(--color-text-muted)">${f.depuisZone ? 'Pré-rempli avec la zone évaluée — corrige ce que tu sais.' : 'Un magasin à ouvrir, une zone mesurée, un concurrent connu.'}</div>
+    </div>
+    <div style="padding:8px 12px 4px;display:flex;flex-direction:column;gap:6px">
+      ${f.champs.map(ch => `
+      <label style="display:flex;flex-direction:column;gap:2px;font-size:10.5px;color:var(--color-text-muted)">${esc(ch.label)}
+        <input id="sc-ref-${ch.k}" type="${ch.type}" step="any" value="${esc(ch.v)}" ${x.C(ch.set)} ${x.I(ch.set)} style="${txtCss};font-size:12px;padding:5px 7px;text-align:${ch.type === 'number' ? 'right' : 'left'}">
+      </label>`).join('')}
+    </div>
+    <div style="display:flex;gap:6px;padding:10px 12px">
+      <button ${x.A(f.enregistrer)} class="btn-primary" style="flex:1;padding:8px 6px;font-size:12px">Enregistrer</button>
+      <button ${x.A(f.annuler)} class="btn-secondary" style="flex:0 0 auto;padding:8px 10px;font-size:12px">Annuler</button>
+    </div>
+  </div>`;
+  const ajouter = `
+  <button ${x.A(c.refOuvrir)} style="flex:0 0 200px;min-height:160px;border:1px dashed var(--color-border-secondary);border-radius:10px;background:transparent;font-family:var(--font-ui);font-size:12px;color:var(--color-text-muted);cursor:pointer;padding:16px">
+    <span style="display:block;font-size:22px;line-height:1;margin-bottom:6px">＋</span>Ajouter un point de comparaison
+    <span style="display:block;font-size:10.5px;margin-top:6px;line-height:1.4">un magasin à ouvrir, une zone mesurée, un concurrent connu</span>
+  </button>`;
 
   const modal = c.reseau ? `
   <div style="position:fixed;inset:0;z-index:900;background:rgba(34,34,34,.45);display:flex;align-items:center;justify-content:center;padding:32px;animation:fadeIn 140ms ease">
     <div style="background:var(--color-surface);border-radius:14px;width:100%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.28)">
       <div style="display:flex;align-items:baseline;gap:14px;padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary)">
         <div class="t-section-title" style="font-size:18px">Magasins du réseau — points de comparaison</div>
-        <div style="font-size:11px;color:var(--color-text-muted);flex:1">Chiffres de l'étude GeoConsulting, Halle, 28-08-2024 · la colonne de droite reprend la zone évaluée en cours</div>
+        <div style="font-size:11px;color:var(--color-text-muted);flex:1">Chiffres de l'étude GeoConsulting, Halle, 28-08-2024, puis les points ajoutés à la main · la colonne verte reprend la zone évaluée en cours</div>
         <button ${x.A(c.closeReseau)} class="btn-secondary" style="padding:6px 12px;font-size:12px">Fermer</button>
       </div>
       <div id="sc-modal" class="sc-scroll" style="flex:1;overflow:auto;padding:18px 20px 22px">
-        <div style="display:flex;gap:14px;align-items:flex-start">
+        <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
           ${c.reseauCols.map(k => col(k, false)).join('')}
           ${c.hasZoneCol ? col(c.zoneCol, true) : ''}
+          ${c.refForm ? formulaire(c.refForm) : ajouter}
         </div>
       </div>
     </div>

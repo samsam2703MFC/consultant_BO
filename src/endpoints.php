@@ -8384,7 +8384,19 @@ function ep_scouting(): array
         'candidates'  => $candidates,
         'populations' => (object) $pops,
         'tiles'       => $tiles,
+        'references'  => scoutingReferences(),
     ];
+}
+
+/**
+ * Les points de comparaison ajoutés à la main dans « Magasins du réseau » :
+ * un magasin à ouvrir, une zone mesurée, un concurrent connu — à côté des
+ * trois références de l'étude, qui restent dans le code de l'écran.
+ */
+function scoutingReferences(): array
+{
+    $l = setting('scoutingReferences');
+    return is_array($l) ? array_values(array_filter($l, 'is_array')) : [];
 }
 
 /**
