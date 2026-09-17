@@ -10,8 +10,9 @@ declare(strict_types=1);
  *   php bin/mix1000.php --ca=10000           ajoute la colonne « pour ce CA-là »
  *   php bin/mix1000.php --csv                sortie CSV (une ligne par référence puis par catégorie)
  *
- * Pour 1 000 € encaissés, combien d'unités de chaque référence — et, en
- * récapitulatif, combien d'euros par catégorie. C'est le mix du RÉSEAU : les
+ * Pour 1 000 € encaissés : par produit, le volume en unités, son prix de vente,
+ * ce qu'il pèse en euros et sa part du CA — la colonne des parts somme à 100 %,
+ * celle des euros à 1 000 €. Un récapitulatif par catégorie ferme le tableau. C'est le mix du RÉSEAU : les
  * ventes des magasins actifs additionnées, puis ramenées à 1 000 €. L'en-tête
  * nomme les magasins comptés, pour qu'on voie sur quoi la base repose. Le rapport est SANS ÉCHELLE : il vaut pour un magasin
  * à 8 000 €/semaine comme pour un à 25 000 €, et c'est ce qui en fait une base
@@ -138,6 +139,10 @@ $quiMag = $noms !== []
     : 'mix de ' . $mag . ' magasins (cette source ne dit pas lesquels)';
 
 $n2 = static fn (float $v, int $d = 2): string => number_format($v, $d, ',', ' ');
+// Le volume pour 1 000 € : deux décimales, partout. Une référence rare tombe
+// sous l'unité et s'afficherait à zéro alors qu'elle se vend ; et une colonne
+// dont la précision change d'une ligne à l'autre ne se lit pas.
+$vol = static fn (float $v): string => number_format($v, 2, ',', ' ');
 // printf compte les OCTETS : « Pâtisserie » décalait toute sa ligne. On cale
 // donc les colonnes sur le nombre de caractères.
 $pad = static function (string $s, int $n, bool $droite = false): string {
@@ -175,23 +180,32 @@ if ($caCible > 0) { echo 'Dernière colonne : les mêmes unités pour ' . $n2($c
 $liste = $top > 0 ? array_slice($m['refs'], 0, $top) : $m['refs'];
 echo "\nPar référence — pour 1 000 € encaissés" . ($top > 0 && count($m['refs']) > $top
     ? ' (les ' . $top . ' premières sur ' . count($m['refs']) . ')' : '') . "\n";
-echo '  ' . $pad('Référence', 34) . $pad('Catégorie', 20) . $pad('unités', 11, true)
-    . $pad('€ / 1 000 €', 14, true) . $pad('prix', 10, true)
+echo '  ' . $pad('Produit', 34) . $pad('Catégorie', 20) . $pad('volume', 10, true)
+    . $pad('prix', 10, true) . $pad('€ / 1 000 €', 14, true) . $pad('% du CA', 10, true)
     . ($caCible > 0 ? '  ' . $pad('CA visé', 16, true) : '') . "\n";
 foreach ($liste as $r) {
-    echo '  ' . $pad($r['nom'], 34) . $pad($r['cat'], 20) . $pad($n2($r['u1000'], 1), 11, true)
-        . $pad($n2($r['e1000']) . ' €', 14, true) . $pad($n2($r['prix']) . ' €', 10, true)
-        . $cible($r['u1000']) . "\n";
+    echo '  ' . $pad($r['nom'], 34) . $pad($r['cat'], 20) . $pad($vol($r['u1000']), 10, true)
+        . $pad($n2($r['prix']) . ' €', 10, true) . $pad($n2($r['e1000']) . ' €', 14, true)
+        . $pad($n2($r['part'] * 100, 2) . ' %', 10, true) . $cible($r['u1000']) . "\n";
+}
+// La ligne de total ferme la liste : 1 000 € et 100 % au centième près, sinon
+// c'est que le lot compté n'est pas celui qu'on croit. Elle ne s'affiche que
+// sur la liste entière — sur un extrait elle ne voudrait rien dire.
+if ($top <= 0 || count($m['refs']) <= $top) {
+    echo '  ' . $pad('Total', 34) . $pad('', 20) . $pad($vol($m['unites'] * 1000 / $m['ca']), 10, true)
+        . $pad('', 10, true) . $pad($n2(array_sum(array_column($m['refs'], 'e1000'))) . ' €', 14, true)
+        . $pad($n2(array_sum(array_column($m['refs'], 'part')) * 100, 2) . ' %', 10, true)
+        . $cible($m['unites'] * 1000 / $m['ca']) . "\n";
 }
 
 echo "\nRécapitulatif par catégorie — pour 1 000 € encaissés\n";
 echo '  ' . $pad('Catégorie', 30) . $pad('€ / 1 000 €', 14, true) . $pad('unités', 12, true)
-    . $pad('part', 9, true) . ($caCible > 0 ? '  ' . $pad('CA visé', 16, true) : '') . "\n";
+    . $pad('% du CA', 10, true) . ($caCible > 0 ? '  ' . $pad('CA visé', 16, true) : '') . "\n";
 foreach ($m['cats'] as $c) {
-    echo '  ' . $pad($c['nom'], 30) . $pad($n2($c['e1000']) . ' €', 14, true) . $pad($n2($c['u1000'], 1), 12, true)
-        . $pad($n2($c['part'] * 100, 1) . ' %', 9, true) . $cible($c['u1000']) . "\n";
+    echo '  ' . $pad($c['nom'], 30) . $pad($n2($c['e1000']) . ' €', 14, true) . $pad($vol($c['u1000']), 12, true)
+        . $pad($n2($c['part'] * 100, 2) . ' %', 10, true) . $cible($c['u1000']) . "\n";
 }
 echo '  ' . $pad('Total', 30) . $pad($n2(array_sum(array_column($m['cats'], 'e1000'))) . ' €', 14, true)
-    . $pad($n2($m['unites'] * 1000 / $m['ca'], 1), 12, true)
-    . $pad($n2(array_sum(array_column($m['cats'], 'part')) * 100, 1) . ' %', 9, true)
+    . $pad($vol($m['unites'] * 1000 / $m['ca']), 12, true)
+    . $pad($n2(array_sum(array_column($m['cats'], 'part')) * 100, 2) . ' %', 10, true)
     . $cible($m['unites'] * 1000 / $m['ca']) . "\n";

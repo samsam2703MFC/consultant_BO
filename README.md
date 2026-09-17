@@ -197,8 +197,11 @@ interrogé depuis le navigateur qu'en repli, hors API.
 
 ## Mix par 1 000 € vendus
 
-La base de calcul du réseau : pour 1 000 € encaissés, combien d'unités de chaque
-référence — toutes les références, puis un récapitulatif par catégorie.
+La base de calcul du réseau : pour 1 000 € encaissés, une ligne par produit —
+**volume** en unités, **prix de vente**, **euros** pesés et **part du CA**. La
+colonne des parts somme à 100 %, celle des euros à 1 000 € : si le total tombe
+à côté, le lot compté n'est pas celui qu'on croit. Toutes les références, puis
+un récapitulatif par catégorie.
 
 ```bash
 php bin/mix1000.php                      # dernier mois clos
