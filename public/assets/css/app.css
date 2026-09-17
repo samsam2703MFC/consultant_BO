@@ -231,3 +231,32 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 /* Le détail des marques sous le compte : « 3 » ne dit pas si c'est Paul ou le
    boulanger du coin qui s'est déclaré une enseigne. */
 .wz-t .mq { display: block; font: 400 9.5px var(--font-ui); color: var(--color-text-muted); font-style: normal; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Résultat : l'objectif passé -------------------------------------------
+   Un petit feu sur la ligne du magasin, une pluie de papiers quand c'est tout
+   le réseau. Décoratif et sans pointeur : le tableau reste lisible dessous, et
+   qui a demandé moins d'animations n'a que le signe, immobile. */
+.rj-feu { display: inline-block; margin-left: 6px; line-height: 1; vertical-align: -2px;
+  animation: rj-eclat 1.5s ease-in-out 3; transform-origin: 50% 50%; }
+.rj-tous .rj-feu { margin: 0; vertical-align: -3px; }
+@keyframes rj-eclat {
+  0%, 100% { transform: scale(1) rotate(0); opacity: .95; }
+  35%      { transform: scale(1.35) rotate(-8deg); opacity: 1; }
+  65%      { transform: scale(1.1) rotate(6deg); opacity: 1; }
+}
+.rj-tous { display: flex; align-items: center; gap: 8px; border: 0.5px solid #bfdcc6;
+  background: #f4f9f5; color: #2d7a3e; border-radius: 10px; padding: 9px 14px;
+  font: 500 12.5px var(--font-ui); }
+.rj-confi { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; }
+.rj-confi i { position: absolute; top: -24px; border-radius: 1px;
+  animation-name: rj-tombe; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes rj-tombe {
+  0%   { opacity: 0; transform: translateY(-30px) rotate(0); }
+  6%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(102vh) rotate(var(--r, 360deg)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rj-confi { display: none; }
+  .rj-feu { animation: none; }
+}
