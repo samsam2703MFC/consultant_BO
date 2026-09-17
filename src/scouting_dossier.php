@@ -230,3 +230,149 @@ function scoutingDossierHtml(array $d): string
     }
     return $h . '</div>';
 }
+
+/** POST /scouting/plan.pdf — le plan d'expansion, en PDF. */
+function wr_scouting_plan_pdf(): array
+{
+    $d = scoutingPlanValide(body());
+    if ($d === null) { http_response_code(422); return ['error' => 'plan vide : aucune province']; }
+    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
+        . htmlspecialchars($d['titre'], ENT_QUOTES, 'UTF-8') . '</title></head><body>'
+        . scoutingPlanHtml($d) . '</body></html>';
+    $pdf = rapPdfRendu($doc, [
+        'magasin' => 'Réseau',
+        'rapport' => 'Plan d’expansion',
+        'genere' => date('d/m/Y à H:i'),
+        'envoye' => '',
+    ]);
+    if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
+    journalAdd('CEO', 'Scouting', '—', 'Plan d’expansion édité — ' . $d['sousTitre'] . ' · ' . $d['total']);
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="plan-expansion-' . date('Y-m-d') . '.pdf"');
+    echo $pdf;
+    exit;
+}
+
+/** @return array<string,mixed>|null */
+function scoutingPlanValide(array $b): ?array
+{
+    $s = static fn ($v, int $max) => mb_substr(trim((string) (is_scalar($v) ? $v : '')), 0, $max);
+    $lignes = static function ($v, int $colonnes, int $max, int $larg) use ($s): array {
+        $out = [];
+        if (!is_array($v)) { return $out; }
+        foreach ($v as $l) {
+            if (!is_array($l)) { continue; }
+            $row = [];
+            for ($i = 0; $i < $colonnes; $i++) { $row[] = $s($l[$i] ?? '', $larg); }
+            $out[] = $row;
+            if (count($out) >= $max) { break; }
+        }
+        return $out;
+    };
+    $carte = (string) ($b['carte'] ?? '');
+    if ($carte !== '' && (strlen($carte) > 3000000 || preg_match('#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$#', $carte) !== 1)) { $carte = ''; }
+    $provinces = [];
+    foreach ((array) ($b['provinces'] ?? []) as $p) {
+        if (!is_array($p)) { continue; }
+        $nom = $s($p['nom'] ?? '', 60);
+        if ($nom === '') { continue; }
+        $provinces[] = ['nom' => $nom, 'detail' => $s($p['detail'] ?? '', 120), 'sousTotal' => $s($p['sousTotal'] ?? '', 40),
+            'lignes' => $lignes($p['lignes'] ?? [], 10, 5, 120)];
+        if (count($provinces) >= 11) { break; }
+    }
+    if ($provinces === []) { return null; }
+    return [
+        'titre' => $s($b['titre'] ?? 'Plan d’expansion', 160),
+        'sousTitre' => $s($b['sousTitre'] ?? '', 160),
+        'date' => $s($b['date'] ?? date('d/m/Y'), 60),
+        'total' => $s($b['total'] ?? '', 40),
+        'resume' => $lignes($b['resume'] ?? [], 3, 6, 120),
+        'carte' => $carte, 'carteNote' => $s($b['carteNote'] ?? '', 240),
+        'provinces' => $provinces,
+        'classement' => $lignes($b['classement'] ?? [], 5, 10, 80),
+        'hypotheses' => $lignes($b['hypotheses'] ?? [], 2, 20, 120),
+        'methode' => $s($b['methode'] ?? '', 900),
+        'sources' => $s($b['sources'] ?? '', 700),
+    ];
+}
+
+/** La mise en page du plan — les conventions du dossier. */
+function scoutingPlanHtml(array $d): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $logo = rapLogoDataUri();
+    $css = '<style>
+      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
+      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
+      .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
+      .soustitre{font-size:9pt;color:#7a736a;margin:0 0 5mm}
+      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .sec small{font-family:Helvetica,Arial,sans-serif;font-size:7.5pt;color:#7a736a;margin-left:3mm}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
+      .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm}
+      .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
+      table.grille{width:100%;border-collapse:separate;border-spacing:1.6mm 0;margin:0 -1.6mm 5mm}
+      table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
+      .t td{font-size:8.4pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8;vertical-align:top}
+      .t .l{text-align:left}
+      .t tr.tot td{font-weight:bold;border-top:1pt solid #221E1A;border-bottom:0;background:#fbf9f5}
+      .carte{width:100%;height:auto;display:block;border:1px solid #e6e0d8;border-radius:6px}
+      .legende{font-size:7.5pt;color:#7a736a;margin:1.5mm 0 5mm;line-height:1.5}
+      .total{font-family:Georgia,"DejaVu Serif",serif;font-size:20pt;color:#2d7a3e;line-height:1;white-space:nowrap}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
+    </style>';
+    $h = $css . '<div class="doc">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
+        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
+        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Plan d’expansion<br>édité le ' . $e($d['date']) . '</td></tr></table>'
+        . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top"><div class="serif h1">' . $e($d['titre']) . '</div>'
+        . '<p class="soustitre">' . $e($d['sousTitre']) . '</p></td>'
+        . '<td align="right" valign="top" style="width:48mm;padding-top:5mm"><div class="total">' . $e($d['total']) . '</div><div class="k">CA annuel estimé</div></td></tr></table>';
+    if ($d['resume'] !== []) {
+        $h .= '<div class="sec">Ce que le plan peut dégager</div><table class="grille" cellpadding="0" cellspacing="0"><tr>';
+        $w = (int) floor(100 / max(1, count($d['resume'])));
+        foreach ($d['resume'] as $t) {
+            $h .= '<td width="' . $w . '%" valign="top" class="tile"><div class="k">' . $e($t[0]) . '</div><div class="v">' . $e($t[1]) . '</div>'
+                . ($t[2] !== '' ? '<div class="s">' . $e($t[2]) . '</div>' : '') . '</td>';
+        }
+        $h .= '</tr></table>';
+    }
+    if ($d['carte'] !== '') {
+        $h .= '<div class="sec">Où ouvrir</div><img class="carte" src="' . $d['carte'] . '" alt="">'
+            . '<div class="legende">' . $e($d['carteNote'] !== '' ? $d['carteNote'] : 'Fond de carte © OpenStreetMap.') . '</div>';
+    }
+    foreach ($d['provinces'] as $p) {
+        $h .= '<div class="sec">' . $e($p['nom']) . '<small>' . $e($p['detail']) . '</small></div>';
+        if ($p['lignes'] === []) { $h .= '<p class="mut" style="font-size:8.5pt;margin:0 0 5mm">Aucune zone retenue dans cette province.</p>'; continue; }
+        $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondissement</th><th>Score</th><th>Ménages</th><th>Concurrents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>';
+        foreach ($p['lignes'] as $l) {
+            $h .= '<tr><td class="l mut">' . $e($l[0]) . '</td><td class="l"><b>' . $e($l[1]) . '</b></td><td class="l mut">' . $e($l[2]) . '</td><td>' . $e($l[3]) . '</td><td>' . $e($l[4]) . '</td>'
+                . '<td>' . $e($l[5]) . '</td><td class="l mut">' . $e($l[6]) . '</td><td>' . $e($l[7]) . '</td><td style="white-space:nowrap"><b>' . $e($l[8]) . '</b></td><td class="mut">' . $e($l[9]) . '</td></tr>';
+        }
+        $h .= '<tr class="tot"><td colspan="8" class="l">' . count($p['lignes']) . ' ouverture' . (count($p['lignes']) > 1 ? 's' : '') . '</td><td style="white-space:nowrap">' . $e($p['sousTotal']) . '</td><td></td></tr></table>';
+    }
+    if ($d['classement'] !== []) {
+        $h .= '<div class="sec">Les dix meilleures, toutes provinces</div><table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Province</th><th>Score</th><th>CA estimé</th></tr>';
+        foreach ($d['classement'] as $l) {
+            $h .= '<tr><td class="l mut">' . $e($l[0]) . '</td><td class="l"><b>' . $e($l[1]) . '</b></td><td class="l mut">' . $e($l[2]) . '</td><td>' . $e($l[3]) . '</td><td style="white-space:nowrap"><b>' . $e($l[4]) . '</b></td></tr>';
+        }
+        $h .= '</table>';
+    }
+    if ($d['methode'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">Méthode.</b> ' . $e($d['methode']) . '</div>'; }
+    if ($d['hypotheses'] !== []) {
+        $h .= '<div class="sec">Les hypothèses au moment de l’édition</div><table class="t" cellpadding="0" cellspacing="0">';
+        $cols = array_chunk($d['hypotheses'], (int) ceil(count($d['hypotheses']) / 2));
+        $n = max(array_map('count', $cols));
+        for ($i = 0; $i < $n; $i++) {
+            $h .= '<tr>';
+            foreach ($cols as $col) { $r = $col[$i] ?? ['', '']; $h .= '<td class="l mut" style="width:32%">' . $e($r[0]) . '</td><td class="l" style="width:18%"><b>' . $e($r[1]) . '</b></td>'; }
+            $h .= '</tr>';
+        }
+        $h .= '</table>';
+    }
+    if ($d['sources'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>'; }
+    return $h . '</div>';
+}

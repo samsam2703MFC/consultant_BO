@@ -402,7 +402,11 @@ export class Scouting {
       // L'échelle de lecture (maille, commune, arrondissement) et les trois
       // lectures côte à côte : la carte principale garde son thème, les deux
       // autres panneaux ont le leur.
-      echelle: 'maille', trio: false, trio2: 'concurrence', trio3: 'ca'
+      echelle: 'maille', trio: false, trio2: 'concurrence', trio3: 'ca',
+      // Le plan d'expansion : les meilleures zones de chaque province, ce
+      // qu'elles peuvent dégager, en deux clics. N zones par province, avec
+      // ou sans le score minimum.
+      plan: false, planN: 5, planSeuil: false, planImg: '', planBusy: false
     };
     this._h = [];
     this._scroll = {};
@@ -521,7 +525,7 @@ export class Scouting {
       this._arrVu = s.wiz + '|' + s.arr;
       try { tr.scrollIntoView({ block: 'nearest' }); } catch (e) { /* navigateur sans options */ }
     }
-    this.el.classList.toggle('sc-overlay-open', !!(s.reseau || s.compare || s.view !== 'map' || s.dossier));
+    this.el.classList.toggle('sc-overlay-open', !!(s.reseau || s.compare || s.view !== 'map' || s.dossier || s.plan));
     if (this.el.classList.contains('sc-trio') !== !!s.trio){
       this.el.classList.toggle('sc-trio', !!s.trio);
       setTimeout(() => { try { this.ajusterTrio(); } catch (e) { console.error('[scouting] trio', e); } }, 30);
@@ -1636,6 +1640,187 @@ export class Scouting {
     ls.set('refs', list);
     this.setState({ references: list });
     if (this.useApi()) apiWrite('PUT', '/scouting/references', { references: list });
+  }
+
+  /* ---------- le plan d'expansion ---------- */
+  // Le Top 5 par province, mis en plan : N zones par province, ce que chacune
+  // peut dégager, le total pour le réseau, la carte des points. Deux clics :
+  // le bouton, le PDF.
+  ouvrirPlan(){
+    this.setState({ plan: true, planImg: '', dossier: false, compare: false, reseau: false, view: 'map' });
+    this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+  }
+
+  fermerPlan(){ this.setState({ plan: false }); }
+
+  setPlan(patch){
+    this.setState(patch);
+    this._planImgKey = null;
+    this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+  }
+
+  planDonnees(){
+    const s = this.state, self = this;
+    const N = Math.max(1, Math.min(5, s.planN || 5)), seuil = !!s.planSeuil;
+    const provinces = [], tous = [];
+    let total = 0, hhTot = 0, k = 0;
+    this.scanTop5().forEach(g => {
+      const zones = g.zones.filter(z => !seuil || z.score >= s.minScore).slice(0, N);
+      const lignes = zones.map((z, i) => {
+        const cc = self.concurrenceAu(z.lat, z.lng, s.radius);
+        k++;
+        return { rang: i + 1, num: k, commune: z.commune, arr: z.arr, prov: g.prov, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
+          emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng };
+      });
+      const sous = lignes.reduce((a, l) => a + l.ca, 0);
+      total += sous; hhTot += lignes.reduce((a, l) => a + l.hh, 0);
+      provinces.push({ nom: g.prov, code: g.code, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection', lignes: lignes, sousTotal: sous });
+      lignes.forEach(l => tous.push(l));
+    });
+    const reseau = (s.magasins || []).filter(m => m.ouvert && m.caAnnuel);
+    const caReseau = reseau.reduce((a, m) => a + m.caAnnuel, 0);
+    const nProv = provinces.filter(p => p.lignes.length).length;
+    const R = s.radius.toFixed(1).replace('.', ',') + ' km';
+    return {
+      titre: 'Plan d’expansion — ' + tous.length + ' ouverture' + (tous.length > 1 ? 's' : '') + ' dans ' + nProv + ' province' + (nProv > 1 ? 's' : ''),
+      date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
+      N: N, seuil: seuil, minScore: s.minScore,
+      total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
+      resume: [
+        ['CA annuel estimé, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
+        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '')],
+        ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
+        caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
+      ],
+      provinces: provinces,
+      classement: tous.slice().sort((a, b) => b.ca - a.ca).slice(0, 10),
+      carteNote: 'Les ronds verts numérotés : les zones retenues, dans l’ordre du plan. Les carrés noirs : les magasins du réseau déjà ouverts. Fond de carte © OpenStreetMap.',
+      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
+      hypotheses: [
+        ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
+        ['Emprise', s.emprise > 0 ? 'imposée ' + s.emprise + ' %' : 'calculée, max ' + s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
+        ['Rayon', R], ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)]
+      ],
+      sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
+        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + ' · CA réel du réseau : P&L du panel, douze derniers mois clos.'
+    };
+  }
+
+  // La carte du plan : le pays (ou l'emprise des points), les zones retenues
+  // numérotées, les magasins ouverts. Même assemblage de tuiles que le dossier.
+  carteStatiquePlan(){
+    const s = this.state, d = this.planDonnees();
+    const pts = [];
+    d.provinces.forEach(p => p.lignes.forEach(l => pts.push(l)));
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
+    if (!pts.length && !mags.length) return Promise.resolve('');
+    const key = pts.map(l => l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length;
+    if (this._planImgKey === key && this._planImgP) return this._planImgP;
+    // Le pays entier tient au zoom 8 dans 740 × 540 : un cran de moins et la
+    // Belgique n'occupait que le tiers de l'image.
+    const W = 740, H = 540;
+    const bb = boitePoly(pts.map(l => [l.lat, l.lng]).concat(mags.map(m => [+m.lat, +m.lng])));
+    let z = 12;
+    for (; z > 6; z--){ const a = merc(bb.n, bb.w, z), b = merc(bb.s, bb.e, z); if (b[0] - a[0] <= W * 0.97 && b[1] - a[1] <= H * 0.97) break; }
+    const c = merc((bb.n + bb.s) / 2, (bb.w + bb.e) / 2, z), x0 = c[0] - W / 2, y0 = c[1] - H / 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const cx = canvas.getContext('2d');
+    cx.fillStyle = '#EAE4DC'; cx.fillRect(0, 0, W, H);
+    const charges = [];
+    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++){
+      charges.push(new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { try { cx.drawImage(img, tx * 256 - x0, ty * 256 - y0); } catch (e) { /* tuile refusée */ } res(); };
+        img.onerror = () => res();
+        img.src = 'https://tile.openstreetmap.org/' + z + '/' + tx + '/' + ty + '.png';
+      }));
+    }
+    const P = ll => { const m = merc(ll[0], ll[1], z); return [m[0] - x0, m[1] - y0]; };
+    this._planImgKey = key;
+    this._planImgP = Promise.all(charges).then(() => {
+      // un voile clair : les repères doivent se lire sur le fond
+      cx.fillStyle = 'rgba(255,255,255,.28)'; cx.fillRect(0, 0, W, H);
+      mags.forEach(m => {
+        const p = P([+m.lat, +m.lng]);
+        cx.fillStyle = '#221E1A'; cx.fillRect(p[0] - 6, p[1] - 6, 12, 12);
+        cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.strokeRect(p[0] - 6, p[1] - 6, 12, 12);
+      });
+      pts.forEach(l => {
+        const p = P([l.lat, l.lng]);
+        cx.beginPath(); cx.arc(p[0], p[1], 10, 0, 6.2832);
+        cx.fillStyle = '#1b5e20'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
+        cx.fillStyle = '#fff'; cx.font = 'bold 10px Helvetica, Arial, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.fillText(String(l.num), p[0], p[1] + 0.5);
+      });
+      cx.textAlign = 'left'; cx.textBaseline = 'alphabetic';
+      cx.font = '11px Helvetica, Arial, sans-serif';
+      const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
+      cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
+      cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
+      try { return canvas.toDataURL('image/jpeg', 0.88); } catch (e) { console.warn('[scouting] carte du plan :', e.message); return ''; }
+    });
+    return this._planImgP;
+  }
+
+  planPayload(d){
+    return {
+      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') ,
+      resume: d.resume, carte: d.carte || '', carteNote: d.carteNote,
+      provinces: d.provinces.map(p => ({ nom: p.nom, detail: p.detail, sousTotal: fmtEur(p.sousTotal),
+        lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr, String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
+      classement: d.classement.map(l => [String(l.num), l.commune, l.prov, String(l.score), fmtEur(l.ca)]),
+      hypotheses: d.hypotheses, methode: d.methode, sources: d.sources
+    };
+  }
+
+  async telechargerPlanPdf(){
+    const d = this.planDonnees();
+    if (!this.useApi()){ this.imprimerPlan(); return; }
+    this.setState({ planBusy: true });
+    try {
+      d.carte = await this.carteStatiquePlan();
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 60000);
+      const r = await fetch(API_BASE + '/scouting/plan.pdf', {
+        method: 'POST', credentials: 'same-origin', signal: ctl.signal,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' }, body: JSON.stringify(this.planPayload(d))
+      });
+      clearTimeout(t);
+      if (r.status === 501){ this.notify('Aucun moteur PDF sur ce serveur : la fenêtre d’impression produit le même document.'); this.imprimerPlan(); return; }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a');
+      a.href = url; a.download = 'plan-expansion-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      this.notify('Plan d’expansion téléchargé — ' + d.nPts + ' ouvertures, ' + fmtEur(d.total));
+    } catch (e) {
+      this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
+      this.imprimerPlan();
+    } finally {
+      this.setState({ planBusy: false });
+    }
+  }
+
+  imprimerPlan(){
+    const d = this.planDonnees();
+    d.carte = this.state.planImg || '';
+    const logo = new URL('assets/img/logo.png', document.baseURI).href;
+    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
+      + T.planPage(d, esc, logo) + '</body></html>';
+    const w = window.open('', '_blank');
+    if (!w){ this.notify('Fenêtre bloquée par le navigateur — autorise les fenêtres surgissantes pour imprimer le plan.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 600);
+  }
+
+  exporterPlanCsv(){
+    const d = this.planDonnees(), s = this.state;
+    const rows = [];
+    d.provinces.forEach(p => p.lignes.forEach(l => rows.push([l.num, p.nom, l.rang, l.commune, l.arr, l.score, Math.round(l.hh), l.n, l.forts, l.chaines, (l.emprise * 100).toFixed(1), Math.round(l.ca), Math.round(l.m2), l.lat.toFixed(5), l.lng.toFixed(5)])));
+    rows.push(['', 'TOTAL', '', d.nPts + ' ouvertures', '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '']);
+    this.csv('plan_expansion', ['numero', 'province', 'rang_province', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng'], rows);
   }
 
   /* ---------- la concurrence d'un point, lue pour les listes ---------- */
@@ -3268,6 +3453,14 @@ export class Scouting {
         remove: () => self.removeCandidate(c)
       })),
       ouvrirDossier: () => self.ouvrirDossier(null),
+      ouvrirPlan: () => self.ouvrirPlan(),
+      plan: s.plan ? Object.assign(self.planDonnees(), {
+        img: s.planImg, busy: s.planBusy,
+        nChoix: [1, 2, 3, 5].map(n => ({ value: String(n), label: n + ' par province' })), nVal: String(Math.max(1, Math.min(5, s.planN || 5))),
+        setN: e => self.setPlan({ planN: parseInt(e.target.value, 10) || 5 }),
+        seuilOn: !!s.planSeuil, toggleSeuil: () => self.setPlan({ planSeuil: !s.planSeuil }),
+        fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
+      }) : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
         img: s.dossierImg, busy: s.dossierBusy,
         fermer: () => self.fermerDossier(),

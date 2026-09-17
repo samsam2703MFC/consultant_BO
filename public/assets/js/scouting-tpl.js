@@ -36,6 +36,7 @@ export function renderTop(c, x){
     </div>
     <div style="flex:1"></div>
     <button ${x.A(c.ouvrirWiz)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap;border-color:var(--color-primary);color:var(--color-primary);font-weight:600">Où puis-je ouvrir ?</button>
+    <button ${x.A(c.ouvrirPlan)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap;border-color:#1b5e20;color:#1b5e20;font-weight:600">Plan d'expansion</button>
     <button ${x.A(c.openReseau)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Magasins du réseau</button>
     <button ${x.A(c.toggleTrio)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap${c.trio ? ';border-color:var(--color-primary);color:var(--color-primary)' : ''}">${c.trio ? 'Une lecture' : 'Trois lectures'}</button>
     <button ${x.A(c.toggleCompare)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">${c.compare ? 'Retour à la carte' : 'Comparer 2 arrondissements'}</button>
@@ -406,6 +407,7 @@ export const DOSS_CSS = `
 .sc-doss th{text-align:right;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:400;padding:5px 6px;border-bottom:1px solid #221E1A}
 .sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
 .sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
+.sc-doss tr.tot td{font-weight:600;border-top:1px solid #221E1A;border-bottom:0;background:#fbf9f5}
 .sc-doss .ch{display:inline-block;font-size:9.5px;font-weight:600;border-radius:9px;padding:1px 7px;background:#EEE9E1;color:#221E1A;margin-left:5px;white-space:nowrap}
 .sc-doss .note{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:9px 11px;font-size:10.5px;color:#7a736a;line-height:1.6;margin-top:10px}
 .sc-doss .note b{color:#221E1A}
@@ -483,6 +485,70 @@ function renderDossier(c, x){
   </div>`;
 }
 
+
+/* --- Le plan d'expansion : le Top 5 par province, mis en plan ------------- */
+export function planPage(d, esc, logo){
+  const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
+  const nf = n => Math.round(n).toLocaleString('fr-BE');
+  const eur = n => nf(n) + ' €';
+  return `
+  <div class="sc-doss">
+    <div class="hd">
+      ${logo ? `<img src="${esc(logo)}" alt="">` : ''}
+      <div class="t"><b>${esc(d.titre)}</b><span>édité le ${esc(d.date)} · ${d.N} par province au plus${d.seuil ? ' · score ≥ ' + esc(d.minScore) : ' · sans score minimum'}</span></div>
+      <div class="sc"><b style="font-size:24px">${eur(d.total)}</b><span>CA annuel estimé</span></div>
+    </div>
+
+    <h3>Ce que le plan peut dégager</h3>
+    <div class="q">${d.resume.map(tuile).join('')}</div>
+
+    <h3>Où ouvrir</h3>
+    ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">Carte en cours d’assemblage…</div>`}
+    <div class="legende">${esc(d.carteNote)}</div>
+
+    ${d.provinces.map(p => `
+    <h3>${esc(p.nom)} <span class="ch">${esc(p.detail)}</span></h3>
+    ${p.lignes.length ? `
+    <table><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondissement</th><th>Score</th><th>Ménages</th><th>Concurrents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>
+      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l"><b>${esc(l.commune)}</b></td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut">${eur(l.m2)}</td></tr>`).join('')}
+      <tr class="tot"><td colspan="4" class="l">${p.lignes.length} ouverture${p.lignes.length > 1 ? 's' : ''}</td><td>${nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${eur(p.sousTotal)}</td><td></td></tr>
+    </table>` : '<p class="mut" style="font-size:11.5px">Aucune zone hors des rayons d’exclusion dans cette province' + (d.seuil ? ', au-dessus du score ' + esc(d.minScore) : '') + '.</p>'}`).join('')}
+
+    <h3>Les dix meilleures, toutes provinces</h3>
+    <table><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Province</th><th>Score</th><th>CA estimé</th></tr>
+      ${d.classement.map(l => `<tr><td class="l mut">${l.num}</td><td class="l"><b>${esc(l.commune)}</b></td><td class="l mut">${esc(l.prov)}</td><td>${l.score}</td><td class="n"><b>${eur(l.ca)}</b></td></tr>`).join('')}
+    </table>
+
+    <div class="note"><b>Méthode.</b> ${esc(d.methode)}</div>
+    <h3>Les hypothèses au moment de l'édition</h3>
+    <div class="hyp">${d.hypotheses.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
+    <div class="note"><b>Sources.</b> ${esc(d.sources)}</div>
+  </div>`;
+}
+
+function renderPlan(c, x){
+  const { esc } = x;
+  const d = c.plan;
+  return `
+  <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto;flex-wrap:wrap">
+      <div class="t-section-title" style="font-size:16px">Plan d'expansion</div>
+      <div style="font-size:11px;color:var(--color-text-muted)">${d.nPts} ouverture${d.nPts > 1 ? 's' : ''} · ${esc(d.total.toLocaleString ? Math.round(d.total).toLocaleString('fr-BE') : d.total)} € de CA annuel estimé</div>
+      <select ${x.C(d.setN)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.nChoix, d.nVal)}</select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.seuilOn ? ' checked' : ''} ${x.C(d.toggleSeuil)} style="accent-color:var(--color-primary)">seulement au-dessus du score ${d.minScore}</label>
+      <div style="flex:1"></div>
+      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
+      <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter (CSV)</button>
+      <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>
+      <button ${x.A(d.fermer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Fermer</button>
+    </div>
+    <div id="sc-plan" class="sc-scroll" style="flex:1;overflow:auto;padding:18px 16px 28px">
+      <style>${DOSS_CSS}</style>
+      ${planPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png')}
+    </div>
+  </div>`;
+}
+
 /* --- Vues tabulaires et comparaison d'arrondissements ---------------------- */
 const overlayCss = 'position:absolute;inset:0;z-index:1200;background:var(--color-bg);overflow:auto;padding:16px';
 const boxCss = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto;overflow-y:visible';
@@ -495,6 +561,7 @@ const ARR_GRID = '190px 84px 104px 104px 150px 92px 76px 96px 84px 110px';
 export function renderOverlays(c, x){
   const { esc } = x;
   if (c.dossier) return renderDossier(c, x);
+  if (c.plan) return renderPlan(c, x);
   if (c.isZones) return `
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
@@ -529,6 +596,7 @@ export function renderOverlays(c, x){
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
       <div class="t-section-title" style="font-size:16px">Top 5 par province</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">Balayage de chaque province cochée sur toute son emprise · une zone par commune · sans score minimum (score sous ${c.minScore} en orange) · clic sur une ligne pour ouvrir la fiche</div>
+      <button ${x.A(c.ouvrirPlan)} class="btn-secondary" style="padding:7px 12px;font-size:12px;border-color:#1b5e20;color:#1b5e20;font-weight:600">Plan d'expansion</button>
       <button ${x.A(c.exportTop5)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
