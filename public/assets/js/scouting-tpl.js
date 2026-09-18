@@ -392,6 +392,18 @@ export const DOSS_CSS = `
 .sc-doss .hd .sc{text-align:right;flex:0 0 auto;padding-top:6px}
 .sc-doss .hd .sc b{display:block;font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:32px;line-height:1;color:#2d7a3e;font-weight:400}
 .sc-doss .hd .sc span{font-size:9.5px;color:#7a736a;letter-spacing:.08em;text-transform:uppercase}
+/* le dossier : la marque en haut avec la date d'édition, le titre en dessous — comme le PDF */
+.sc-doss .hd.hdd{display:block;border-bottom:0;padding-bottom:0}
+.sc-doss .hdd .hd1{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:2px solid #8D1D2C;padding-bottom:10px}
+.sc-doss .hdd .hd1 img{height:36px;display:block}
+.sc-doss .hdd .hd1 .marque{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:18px;font-weight:400}
+.sc-doss .hdd .hd1 .ed{font-size:11px;color:#7a736a;text-align:right;line-height:1.55}
+.sc-doss .hdd .hd2{display:flex;align-items:flex-start;gap:16px;margin-top:8px}
+.sc-doss .hdd .hd2 .t b{font-size:27px;margin-top:6px;letter-spacing:-.01em}
+.sc-doss .hdd .hd2 .t span{margin-top:4px}
+.sc-doss .hdd .hd2 .t em{margin-top:4px}
+.sc-doss .hdd .hd2 .sc{padding-top:12px}
+.sc-doss .hdd .hd2 .sc b{font-size:40px}
 .sc-doss h3{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-weight:400;font-size:15px;margin:18px 0 8px;padding-bottom:4px;border-bottom:1.4px solid #8D1D2C}
 .sc-doss .verdict{border-radius:8px;padding:10px 12px;margin:14px 0 0}
 .sc-doss .verdict b{display:block;font-size:12.5px;margin-bottom:2px}
@@ -505,10 +517,12 @@ export function dossierPage(d, esc, logo){
   const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
   return `
   <div class="sc-doss">
-    <div class="hd">
-      ${logo ? `<img src="${esc(logo)}" alt="">` : ''}
-      <div class="t"><b>${esc(d.titre)}</b><span>${esc(d.geo)} · éditée le ${esc(d.date)}</span>${d.zone ? `<em>${esc(d.zone)}</em>` : ''}</div>
-      <div class="sc"><b>${esc(d.score)}</b><span>score / 100</span></div>
+    <div class="hd hdd">
+      <div class="hd1">${logo ? `<img src="${esc(logo)}" alt="">` : '<b class="marque">L’Atelier by</b>'}<span class="ed">Étude d’implantation<br>éditée le ${esc(d.date)}</span></div>
+      <div class="hd2">
+        <div class="t"><b>${esc(d.titre)}</b><span>${esc(d.geo)}</span>${d.zone ? `<em>${esc(d.zone)}</em>` : ''}</div>
+        <div class="sc"><b>${esc(d.score)}</b><span>score / 100</span></div>
+      </div>
     </div>
     <div class="verdict" style="background:${d.verdictOk ? '#E3EFE6' : '#F6E4E7'}"><b style="color:${d.verdictOk ? '#2d7a3e' : '#8D1D2C'}">${esc(d.verdict)}</b><span>${esc(d.verdictNote)}</span></div>
 
