@@ -8356,6 +8356,9 @@ function ep_actions_usage(): array
 /** GET /scouting — saisies enregistrées, hypothèses, état du connecteur Google, inventaire du cache OSM. */
 function ep_scouting(): array
 {
+    // Les fiches Google prêtées à des commerces sans nom (la recherche rendait
+    // le voisin) ne valent rien : on les oublie, la saisie terrain reste.
+    try { Db::exec("DELETE FROM ceo_scouting_competitor WHERE rating_source = 'google' AND name LIKE '%sans nom%'"); } catch (Throwable $e) { /* table absente */ }
     $competitors = array_map(fn ($r) => [
         'id' => $r['osm_id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'],
         'rating' => $r['rating'] !== null ? (float) $r['rating'] : null,

@@ -3391,6 +3391,7 @@ function wr_scouting_concurrents_google(): array
         if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
         $name = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
         $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
+        if ($name === '' || preg_match('/sans nom/iu', $name)) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
         $cur = Db::row('SELECT place_id, address, rating, reviews, rating_source, google_json, google_at FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
         // du cache, s'il a moins de 30 jours
         if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400) {
@@ -3477,6 +3478,9 @@ function wr_scouting_notes(): array
         $arr     = mb_substr(trim((string) ($r['arr'] ?? '')), 0, 60);
         $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
         if ($name === '' || $lat === 0.0 || $lng === 0.0) { continue; }
+        // Un commerce sans nom dans OpenStreetMap ne se cherche pas : Google
+        // rendrait la fiche du voisin le plus proche, et on la lui prêterait.
+        if (preg_match('/sans nom/iu', $name)) { $out[] = ['id' => $id, 'rating' => null, 'reviews' => 0, 'adresse' => null]; continue; }
         $ou = trim((string) ($r['addr'] ?? ''));
         GoogleApi::$lastError = null;
         $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : $commune) . ' Belgique', $lat, $lng);
