@@ -400,3 +400,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-18T06:40:13Z scouting google dans le dossier etude contre reel mot de fin
 2026-09-18T06:42:55Z scouting pas de fiche google pour un commerce sans nom
 2026-09-18T06:57:47Z scouting magasins editables reseau prevu reel listes compactes taille
+2026-09-18T07:04:43Z scouting base de prix ttc dite dans le dossier
