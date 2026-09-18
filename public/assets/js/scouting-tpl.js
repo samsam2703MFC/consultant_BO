@@ -541,6 +541,7 @@ export function dossierPage(d, esc, logo){
 
     <h3>La concurrence, en détail${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
     ${d.concurrenceNote ? `<div class="note" style="color:inherit">${esc(d.concurrenceNote)}</div>` : ''}
+    ${d.ecartesNote ? `<div class="note">${esc(d.ecartesNote)}</div>` : ''}
     ${d.cartes.length ? d.cartes.map((c, i) => { const r = c.ligne, f = c.fiche; return `
     <div class="ccard${r[6] ? ' fort' : ''}">
       <div class="chead"><span class="num">${i + 1}</span><b>${esc(r[0])}</b>${r[7] ? `<span class="ch">chaîne ${esc(r[7])}</span>` : ''}<span class="mut">${esc(r[1])}</span>

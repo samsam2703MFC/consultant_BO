@@ -101,6 +101,7 @@ function scoutingDossierValide(array $b): ?array
         'marche' => $lignes($b['marche'] ?? [], 3, 16, 200),
         'concurrence' => $lignes($b['concurrence'] ?? [], 8, 150, 120),
         'concurrenceNote' => $s($b['concurrenceNote'] ?? '', 700),
+        'ecartesNote' => $s($b['ecartesNote'] ?? '', 1200),
         'indirecte' => $lignes($b['indirecte'] ?? [], 6, 40, 120),
         'indirecteNote' => $s($b['indirecteNote'] ?? '', 500),
         'ecolesNote' => $s($b['ecolesNote'] ?? '', 700),
@@ -298,6 +299,7 @@ function scoutingDossierHtml(array $d): string
 
     $h .= '<div class="sec">La concurrence, en détail</div>';
     if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#221E1A">' . $e($d['concurrenceNote']) . '</div>'; }
+    if ($d['ecartesNote'] !== '') { $h .= '<div class="methode">' . $e($d['ecartesNote']) . '</div>'; }
     if ($d['cartes'] !== []) {
         // la liste : chaque concurrent, sa ligne, puis sa fiche Google
         foreach ($d['cartes'] as $i => $c) {

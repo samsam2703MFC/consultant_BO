@@ -3392,11 +3392,16 @@ function wr_scouting_concurrents_google(): array
         $name = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
         $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
         if ($name === '' || preg_match('/sans nom/iu', $name)) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-        $cur = Db::row('SELECT place_id, address, rating, reviews, rating_source, google_json, google_at FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+        $cur = Db::row('SELECT place_id, address, rating, reviews, rating_source, google_json, google_at, business_status, last_review_at FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
         // du cache, s'il a moins de 30 jours
         if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400) {
             $g = json_decode((string) $cur['google_json'], true);
-            if (is_array($g)) { $g['id'] = $id; $g['cache'] = true; $out[] = $g; $caches++; continue; }
+            if (is_array($g)) {
+                $g['id'] = $id; $g['cache'] = true;
+                $g['statut'] = (string) ($g['statut'] ?? ($cur['business_status'] ?? ''));
+                $g['dernierAvis'] = $g['dernierAvis'] ?? ($cur['last_review_at'] ?? null);
+                $out[] = $g; $caches++; continue;
+            }
         }
         $placeId = trim((string) ($cur['place_id'] ?? ''));
         if ($placeId === '' && $name !== '' && $lat !== 0.0 && $lng !== 0.0) {
@@ -3428,16 +3433,24 @@ function wr_scouting_concurrents_google(): array
         }
         $photo = null;
         if ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
+        // Le signe de vie : le plus récent des avis que Google rend (cinq au
+        // plus) et le statut de l'établissement. Un commerce fermé, ou sans
+        // avis depuis plus d'un an, est écarté de l'étude par l'écran.
+        $dernier = null;
+        foreach ($f['derniers'] as $a) { $q = substr((string) ($a['le'] ?? ''), 0, 10); if ($q !== '' && ($dernier === null || $q > $dernier)) { $dernier = $q; } }
+        $statut = mb_substr((string) ($f['statut'] ?? ''), 0, 24);
         $g = ['id' => $id, 'fiche' => true, 'placeId' => $placeId, 'nom' => $f['nom'], 'adresse' => $f['adresse'], 'note' => $f['note'], 'n' => $f['avis'],
-            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '', 'le' => date('Y-m-d')];
-        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, updated_at, place_id, address, google_json, google_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '', 'le' => date('Y-m-d'),
+            'statut' => $statut, 'dernierAvis' => $dernier];
+        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, updated_at, place_id, address, google_json, google_at, business_status, last_review_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE'
             . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)), reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
             . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)), updated_at = VALUES(updated_at),"
-            . ' place_id = VALUES(place_id), address = VALUES(address), google_json = VALUES(google_json), google_at = VALUES(google_at)',
+            . ' place_id = VALUES(place_id), address = VALUES(address), google_json = VALUES(google_json), google_at = VALUES(google_at),'
+            . ' business_status = VALUES(business_status), last_review_at = VALUES(last_review_at)',
             [$id, $name, mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120), mb_substr(trim((string) ($r['arr'] ?? '')), 0, 60),
              $f['note'] !== null ? round((float) $f['note'], 1) : null, $f['avis'], 'google', date('Y-m-d H:i:s'), $placeId, mb_substr((string) ($f['adresse'] ?? ''), 0, 200),
-             json_encode($g, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s')]);
+             json_encode($g, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), $statut !== '' ? $statut : null, $dernier]);
         $out[] = $g;
     }
     if ($out === [] && $erreur === null) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)']; }
@@ -3492,19 +3505,21 @@ function wr_scouting_notes(): array
                 $erreur = 'Google Places : ' . $msg;
                 break;
             }
-            $res = ['note' => null, 'avis' => 0, 'placeId' => '', 'adresse' => ''];   // fiche introuvable : retenu, pour ne pas redemander
+            $res = ['note' => null, 'avis' => 0, 'placeId' => '', 'adresse' => '', 'statut' => ''];   // fiche introuvable : retenu, pour ne pas redemander
         }
         $placeId = mb_substr((string) ($res['placeId'] ?? ''), 0, 80);
         $adresse = mb_substr((string) ($res['adresse'] ?? ''), 0, 200);
-        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, place_id, address) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+        $statut = mb_substr((string) ($res['statut'] ?? ''), 0, 24);
+        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, place_id, address, business_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
             . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)),"
             . " reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
             . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)),"
             . ' updated_at = VALUES(updated_at),'
-            . " place_id = IF(VALUES(place_id) = '', place_id, VALUES(place_id)), address = IF(VALUES(address) = '', address, VALUES(address))",
-            [$id, $name, $commune, $arr, $res['note'], $res['avis'], 'google', null, date('Y-m-d H:i:s'), $placeId !== '' ? $placeId : null, $adresse !== '' ? $adresse : null]);
-        $out[] = ['id' => $id, 'rating' => $res['note'], 'reviews' => $res['avis'], 'adresse' => $adresse !== '' ? $adresse : null];
+            . " place_id = IF(VALUES(place_id) = '', place_id, VALUES(place_id)), address = IF(VALUES(address) = '', address, VALUES(address)),"
+            . ' business_status = IF(VALUES(business_status) IS NULL, business_status, VALUES(business_status))',
+            [$id, $name, $commune, $arr, $res['note'], $res['avis'], 'google', null, date('Y-m-d H:i:s'), $placeId !== '' ? $placeId : null, $adresse !== '' ? $adresse : null, $statut !== '' ? $statut : null]);
+        $out[] = ['id' => $id, 'rating' => $res['note'], 'reviews' => $res['avis'], 'adresse' => $adresse !== '' ? $adresse : null, 'statut' => $statut];
         if ($res['note'] !== null) { $rated++; }
     }
     if ($out === [] && $erreur === null) {
