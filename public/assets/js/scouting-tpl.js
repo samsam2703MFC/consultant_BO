@@ -512,7 +512,7 @@ function renderDossier(c, x){
 
 
 /* --- Le plan d'expansion : le Top 5 par province, mis en plan ------------- */
-export function planPage(d, esc, logo){
+export function planPage(d, esc, logo, x){
   const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
   const nf = n => Math.round(n).toLocaleString('fr-BE');
   const eur = n => nf(n) + ' €';
@@ -520,7 +520,7 @@ export function planPage(d, esc, logo){
   <div class="sc-doss">
     <div class="hd">
       ${logo ? `<img src="${esc(logo)}" alt="">` : ''}
-      <div class="t"><b>${esc(d.titre)}</b><span>édité le ${esc(d.date)} · ${d.N} par province au plus${d.seuil ? ' · score ≥ ' + esc(d.minScore) : ' · sans score minimum'}${d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''}</span></div>
+      <div class="t"><b>${esc(d.titre)}</b><span>édité le ${esc(d.date)} · ${d.N} par province au plus${d.seuil ? ' · score ≥ ' + esc(d.minScore) : ' · sans score minimum'}${d.caMinTxt ? esc(d.caMinTxt) : ''}${d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''}</span></div>
       <div class="sc"><b style="font-size:24px">${eur(d.total)}</b><span>CA annuel estimé</span></div>
     </div>
 
@@ -535,7 +535,7 @@ export function planPage(d, esc, logo){
     <h3>${esc(p.nom)} <span class="ch">${esc(p.detail)}</span></h3>
     ${p.lignes.length ? `
     <table class="plan"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondis&shy;sement</th><th>Score</th><th>Ménages</th><th>Concur&shy;rents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>
-      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
+      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${x && l.dossier ? `<button ${x.A(l.dossier)} class="btn-secondary" style="padding:1px 6px;font-size:9.5px;margin-left:6px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button>` : ''}${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
       <tr class="tot"><td colspan="4" class="l">${p.lignes.length} ouverture${p.lignes.length > 1 ? 's' : ''}</td><td>${nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${eur(p.sousTotal)}</td><td></td></tr>
     </table>` : '<p class="mut" style="font-size:11.5px">Aucune zone hors des rayons d’exclusion dans cette province' + (d.seuil ? ', au-dessus du score ' + esc(d.minScore) : '') + '.</p>'}`).join('')}
 
@@ -561,6 +561,7 @@ function renderPlan(c, x){
       <div style="font-size:11px;color:var(--color-text-muted)">${d.enCours ? 'temps de route en cours…' : `${d.nPts} ouverture${d.nPts > 1 ? 's' : ''} · ${esc(d.total.toLocaleString ? Math.round(d.total).toLocaleString('fr-BE') : d.total)} € de CA annuel estimé`}</div>
       <select ${x.C(d.setN)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.nChoix, d.nVal)}</select>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.seuilOn ? ' checked' : ''} ${x.C(d.toggleSeuil)} style="accent-color:var(--color-primary)">seulement au-dessus du score ${d.minScore}</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px" title="Seules les zones dont le CA annuel estimé atteint ce montant entrent dans le plan">CA annuel ≥ <input type="number" min="0" step="50000" placeholder="aucun minimum" value="${esc(d.caMinVal)}" ${x.C(d.setCaMin)} style="${selCss};width:132px;padding:5px 8px;font-size:12px"> €</label>
       <select ${x.C(d.setEcart)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.ecartChoix, d.ecartVal)}</select>
       ${d.minutes ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.reseauOn ? ' checked' : ''} ${x.C(d.toggleReseau)} style="accent-color:var(--color-primary)">et des magasins ouverts</label>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer" title="Les minutes de voiture viennent du service de routage Valhalla sur OpenStreetMap ; décochée, l’écart est estimé à vol d’oiseau à 45 km/h"><input type="checkbox"${d.routeOn ? ' checked' : ''} ${x.C(d.toggleRoute)} style="accent-color:var(--color-primary)">temps de route réels</label>` : ''}
@@ -576,7 +577,7 @@ function renderPlan(c, x){
         <div class="t-section-title" style="font-size:16px">Temps de route en cours…</div>
         <div style="font-size:12.5px;margin-top:10px">${d.calc ? `${d.calc.examinees} zone${d.calc.examinees > 1 ? 's' : ''} examinée${d.calc.examinees > 1 ? 's' : ''} · ${d.calc.retenues} retenue${d.calc.retenues > 1 ? 's' : ''} · ${d.calc.appels} appel${d.calc.appels > 1 ? 's' : ''} au service de routage` : 'préparation'}</div>
         <div class="mut" style="font-size:11px;margin:16px auto 0;max-width:540px;line-height:1.5">Chaque zone candidate est comparée, en minutes de voiture, aux zones déjà retenues et aux magasins ouverts à moins de ${Math.round(d.cut)} km — service de routage Valhalla sur OpenStreetMap. Les trajets calculés restent sur ce poste : le prochain plan ira plus vite.</div>
-      </div>` : planPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png')}
+      </div>` : planPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png', x)}
     </div>
   </div>`;
 }
@@ -608,7 +609,7 @@ export function renderOverlays(c, x){
       ${c.zonesRows.map(r => `
       <div ${x.A(r.open)} class="hv-bg" style="display:grid;grid-template-columns:${ZONES_GRID};${lineCss};cursor:pointer">
         <span style="padding:8px;color:var(--color-text-muted)">${r.rang}</span>
-        <span style="padding:8px;font-weight:500">${esc(r.commune)}</span>
+        <span style="padding:8px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.commune)}<button ${x.A(r.dossier)} class="btn-secondary" style="padding:2px 7px;font-size:10px;margin-left:8px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button></span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <span style="padding:8px;font-weight:600;color:#1b5e20">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
@@ -643,7 +644,7 @@ export function renderOverlays(c, x){
       ${g.rows.map(r => `
       <div ${x.A(r.open)} class="hv-bg" style="display:grid;grid-template-columns:${ZONES_GRID};${lineCss};cursor:pointer">
         <span style="padding:8px;color:var(--color-text-muted)">${r.rang}</span>
-        <span style="padding:8px;font-weight:500">${esc(r.commune)}</span>
+        <span style="padding:8px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.commune)}<button ${x.A(r.dossier)} class="btn-secondary" style="padding:2px 7px;font-size:10px;margin-left:8px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button></span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <span style="padding:8px;font-weight:600;color:${r.score >= c.minScore ? '#1b5e20' : '#c17a2a'}">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
