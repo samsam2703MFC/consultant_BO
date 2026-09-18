@@ -99,6 +99,16 @@ function ensureScouting(): void
     foreach (['zone_json', 'hyp_json'] as $col) {
         try { Db::exec('ALTER TABLE ceo_scouting_candidate ADD COLUMN ' . $col . ' TEXT NULL'); } catch (Throwable $e) { /* déjà là */ }
     }
+    // L'étude de marché locale d'un point (GET /scouting/etude) : ce
+    // qu'OpenStreetMap a répondu, gardé quelques semaines.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_etude ('
+        . 'cle CHAR(32) PRIMARY KEY,'
+        . 'lat DECIMAL(8,5) NOT NULL,'
+        . 'lng DECIMAL(8,5) NOT NULL,'
+        . 'r INT UNSIGNED NOT NULL,'
+        . 'fetched_at DATETIME NOT NULL,'
+        . 'payload MEDIUMTEXT NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_population ('
         . 'ins CHAR(5) PRIMARY KEY,'
         . 'population INT UNSIGNED NOT NULL,'

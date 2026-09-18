@@ -8409,6 +8409,46 @@ function scoutingReferences(): array
  * une fois puis gardée dans ceo_app_setting.scoutingReseau ; une position
  * pointée à la main sur la carte (PUT /scouting/reseau/{id}) prime.
  */
+/**
+ * GET /scouting/etude?lat=&lng=&r= — l'étude de marché locale d'un point :
+ * ce qu'OpenStreetMap sait du rayon (entreprises, zonings, écoles, flux,
+ * concurrence indirecte). Servi du cache s'il a moins de 45 jours, sinon
+ * relevé chez Overpass depuis le serveur (jusqu'à deux minutes) et déposé.
+ * `force=1` relit quoi qu'il en soit ; un relevé qui échoue rend le cache
+ * périmé s'il existe, avec `perime: true`.
+ */
+function ep_scouting_etude(): array
+{
+    $lat = (float) ($_GET['lat'] ?? 0); $lng = (float) ($_GET['lng'] ?? 0);
+    $r = (int) ($_GET['r'] ?? 4000);
+    if ($lat < 49.4 || $lat > 51.6 || $lng < 2.3 || $lng > 6.5) { http_response_code(400); return ['error' => 'point hors de Belgique']; }
+    $r = max(500, min(15000, $r));
+    $lat = round($lat, 3); $lng = round($lng, 3);
+    $cle = md5(number_format($lat, 3, '.', '') . ',' . number_format($lng, 3, '.', '') . ',' . $r);
+    $row = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
+    $force = !empty($_GET['force']);
+    if ($row !== null && !$force && strtotime((string) $row['fetched_at']) > time() - 45 * 86400) {
+        $d = json_decode((string) $row['payload'], true);
+        if (is_array($d)) { $d['cache'] = true; $d['releve'] = $row['fetched_at']; return $d; }
+    }
+    @set_time_limit(200);
+    @ini_set('memory_limit', '512M');
+    $d = ScoutingOsm::etude($lat, $lng, $r);
+    if ($d === null) {
+        if ($row !== null) {
+            $old = json_decode((string) $row['payload'], true);
+            if (is_array($old)) { $old['cache'] = true; $old['perime'] = true; $old['releve'] = $row['fetched_at']; return $old; }
+        }
+        http_response_code(502);
+        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
+    }
+    Db::exec('INSERT INTO ceo_scouting_etude (cle, lat, lng, r, fetched_at, payload) VALUES (?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE fetched_at = VALUES(fetched_at), payload = VALUES(payload)',
+        [$cle, $lat, $lng, $r, date('Y-m-d H:i:s'), json_encode($d, JSON_UNESCAPED_UNICODE)]);
+    $d['cache'] = false; $d['releve'] = date('Y-m-d H:i:s');
+    return $d;
+}
+
 function ep_scouting_reseau(): array
 {
     try {

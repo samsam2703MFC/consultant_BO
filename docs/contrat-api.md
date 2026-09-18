@@ -151,6 +151,7 @@ qu'un mois à 6 507 € sur 7 jours est un mois d'ouverture et non un mois raté
 | — | `GET /scouting` | Scouting commercial : saisies, hypothèses, état du connecteur Google, inventaire du cache OSM |
 | — | `GET /scouting/tiles/{secteur}` | Scouting commercial : un secteur du cache OpenStreetMap |
 | — | `GET /scouting/reseau` | Scouting commercial : magasins du réseau, position (fiche Google ou pointée) et CA réel des douze derniers mois clos — le calage du modèle |
+| — | `GET /scouting/etude?lat=&lng=&r=` | Scouting commercial : l'étude de marché locale d'un point — ce qu'OpenStreetMap sait du rayon `r` (mètres, 500 à 15 000) : entreprises par famille (`ent`), zonings avec emprise et entreprises dedans (`zonings`), écoles (`ecoles`), générateurs de flux (`flux`), concurrence indirecte (`indirecte`). Servi du cache `ceo_scouting_etude` s'il a moins de 45 jours (`cache: true`, `releve`), sinon relevé chez Overpass depuis le serveur (jusqu'à deux minutes) ; `force=1` relit ; un relevé qui échoue rend le cache périmé avec `perime: true`, ou 502 |
 
 ### `/meta`
 

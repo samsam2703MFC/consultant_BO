@@ -601,6 +601,17 @@ CREATE TABLE IF NOT EXISTS ceo_scouting_competitor (
   updated_at     DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- L'étude de marché locale d'un point : la réponse d'OpenStreetMap au rayon
+-- (entreprises, zonings, écoles, flux), gardée quelques semaines.
+CREATE TABLE IF NOT EXISTS ceo_scouting_etude (
+  cle         CHAR(32) PRIMARY KEY,            -- md5 de lat,lng arrondis à 3 décimales + rayon
+  lat         DECIMAL(8,5) NOT NULL,
+  lng         DECIMAL(8,5) NOT NULL,
+  r           INT UNSIGNED NOT NULL,           -- rayon en mètres
+  fetched_at  DATETIME NOT NULL,
+  payload     MEDIUMTEXT NOT NULL              -- JSON, voir ScoutingOsm::analyserEtude
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS ceo_scouting_candidate (
   id             BIGINT UNSIGNED PRIMARY KEY, -- horodatage client (ms)
   name           VARCHAR(200) NOT NULL,
