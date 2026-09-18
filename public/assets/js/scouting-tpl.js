@@ -425,6 +425,9 @@ export const DOSS_CSS = `
 .sc-doss .gavis{font-size:11.5px;line-height:1.5;margin-top:4px}
 .sc-doss .motfin{border:1.5px solid #8D1D2C;border-radius:8px;padding:14px 16px;margin-top:18px;font-family:Georgia,"DejaVu Serif",serif;font-size:13.5px;line-height:1.6}
 .sc-doss .motfin .k{font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;margin-bottom:6px}
+.sc-doss .hl{display:inline-block;padding:3px 8px;border-radius:6px;font-weight:700;background:#f1ede6}
+.sc-doss .hl.pos{background:rgba(27,94,32,.12);color:#1b5e20}
+.sc-doss .hl.neg{background:rgba(141,29,44,.12);color:#8D1D2C}
 .sc-doss .motfin table.mini{margin:10px 0 0;font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:11.5px}
 .sc-doss .motfin table.mini th,.sc-doss .motfin table.mini td{padding:4px 6px}
 .sc-doss .motfin table.mini td.cur{background:rgba(141,29,44,.08);font-weight:600;border-radius:4px}
@@ -508,10 +511,13 @@ export function dossierPage(d, esc, logo){
       <table class="mini"><tr><th class="l"></th>${d.monteeCols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
         ${d.monteeRows.map((r, i) => `<tr><td class="l${i ? '' : ' ok'}">${esc(r[0])}</td>${[1, 2, 3, 4].map(k => `<td class="n${+r[5] === k ? ' cur' : ''}">${esc(r[k])}${+r[5] === k ? '<small>en cours</small>' : ''}</td>`).join('')}</tr>`).join('')}
       </table></div>` : ''}
-    <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:10px">Phase</th></tr>
-      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b><div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3;max-width:150px">${esc(r[6])}</div></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l" style="padding-left:10px;white-space:pre-line;line-height:1.4;font-size:11px;min-width:150px">${esc(r[5])}</td></tr>`).join('')}
+    <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Cible de l'année</th><th>Réel / cible</th><th>Réel / plan</th></tr>
+      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b><div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3;max-width:160px">${esc(r[8])}</div></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}
+        <td class="n"><b>${esc(r[4])}</b><div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3;white-space:normal;max-width:130px">${esc(r[5])}</div></td>
+        <td class="n"><span class="hl${r[9] ? ' ' + r[9] : ''}">${esc(r[6])}</span></td>
+        <td class="n mut">${esc(r[7])}</td></tr>`).join('')}
     </table>
-    <div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. L’écart se lit réel ÷ prévu − 1 ; il est le même aux trois échelles.</div>
+    <div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
     <h3>Les hypothèses au moment de l'édition</h3>

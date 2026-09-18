@@ -103,7 +103,7 @@ function scoutingDossierValide(array $b): ?array
         'ecoles' => $lignes($b['ecoles'] ?? [], 6, 40, 120),
         'flux' => $lignes($b['flux'] ?? [], 6, 40, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
-        'reseau' => $lignes($b['reseau'] ?? [], 7, 12, 160),
+        'reseau' => $lignes($b['reseau'] ?? [], 10, 12, 160),
         'montee' => $s($b['montee'] ?? '', 500),
         'monteeCols' => $lignes([$b['monteeCols'] ?? []], 4, 1, 30)[0] ?? ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
         'monteeRows' => $lignes($b['monteeRows'] ?? [], 6, 12, 80),
@@ -195,6 +195,8 @@ function scoutingDossierHtml(array $d): string
       .motfin table.mini td{padding:1.2mm 2mm;border-bottom:.5pt solid #EAE3D8}
       .motfin table.mini td.cur{background:#F6E4E7;font-weight:bold}
       .motfin .curk{font-size:6.3pt;font-weight:normal;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
+      .hl{display:inline-block;padding:.8mm 2mm;border-radius:4px;font-weight:bold;background:#f1ede6}
+      .hl.pos{background:#E3EFE6;color:#2d7a3e}.hl.neg{background:#F6E4E7;color:#8D1D2C}
     </style>';
 
     $h = $css . '<div class="doc">'
@@ -356,13 +358,16 @@ function scoutingDossierHtml(array $d): string
             $h .= '</div>';
         }
         $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:3mm">Phase</th></tr>';
+            . '<th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Cible de l’année</th><th>Réel / cible</th><th>Réel / plan</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
-            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b><div class="mut" style="font-size:6.8pt;line-height:1.35;max-width:38mm">' . $e($r[6] ?? '') . '</div></td>';
+            $sens = (string) ($r[9] ?? '');
+            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b><div class="mut" style="font-size:6.8pt;line-height:1.35;max-width:36mm">' . $e($r[8] ?? '') . '</div></td>';
             foreach ([1, 2, 3] as $k) { $h .= '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap;line-height:1.45">' . nl2br($e($r[$k])) . '</td>'; }
-            $h .= '<td style="white-space:nowrap"><b>' . $e($r[4]) . '</b></td><td class="l" style="padding-left:3mm;line-height:1.45;font-size:7.9pt">' . nl2br($e($r[5])) . '</td></tr>';
+            $h .= '<td style="white-space:nowrap"><b>' . $e($r[4]) . '</b><div class="mut" style="font-size:6.8pt;line-height:1.35;white-space:normal;max-width:30mm">' . $e($r[5]) . '</div></td>'
+                . '<td style="white-space:nowrap"><span class="hl' . ($sens === 'pos' ? ' pos' : ($sens === 'neg' ? ' neg' : '')) . '">' . $e($r[6]) . '</span></td>'
+                . '<td class="mut" style="white-space:nowrap">' . $e($r[7]) . '</td></tr>';
         }
-        $h .= '</table><div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. L’écart se lit réel ÷ prévu − 1 ; il est le même aux trois échelles.</div>';
+        $h .= '</table><div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>';
     }
 
     foreach ($d['notes'] as $n) {
