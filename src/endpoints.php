@@ -2064,20 +2064,28 @@ function ep_exploitation_jour(): array
     // L'OBJECTIF du jour : le budget validé du mois, à défaut le CA théorique
     // de l'étude — la règle du cockpit — ramené au jour d'ouverture. Un mois
     // sans budget n'a pas d'objectif : on ne fabrique pas de zéro.
-    $budMois = [];
+    // Le budget du mois de la date — et celui du mois du lundi de sa semaine
+    // quand la semaine en cours chevauche deux mois (le graphique de la
+    // semaine a besoin de l'objectif de chacun de ses jours).
+    $nSem = (int) date('N', strtotime($date));
+    $lundiSem = date('Y-m-d', strtotime($date . ' -' . ($nSem - 1) . ' days'));
+    $moisBud = array_values(array_unique([substr($date, 0, 7), substr($lundiSem, 0, 7)]));
+    $budMoisPar = [];
     try {
-        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf
-                            WHERE year = ? AND month = ?',
-            [(int) date('Y', strtotime($date)), (int) date('n', strtotime($date))]) as $b2) {
+        $condB = implode(' OR ', array_fill(0, count($moisBud), '(year = ? AND month = ?)'));
+        $argsB = [];
+        foreach ($moisBud as $ym) { $argsB[] = (int) substr($ym, 0, 4); $argsB[] = (int) substr($ym, 5, 2); }
+        foreach (Db::rows('SELECT shop_id, year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE ' . $condB, $argsB) as $b2) {
             $v = null; $src = null;
             if ($b2['revenue_budget'] !== null && (float) $b2['revenue_budget'] > 0) {
                 $v = (float) $b2['revenue_budget']; $src = 'budget';
             } elseif ($b2['ca_theorique'] !== null && (float) $b2['ca_theorique'] > 0) {
                 $v = (float) $b2['ca_theorique']; $src = 'theorique';
             }
-            if ($v !== null) { $budMois[(string) $b2['shop_id']] = ['montant' => $v, 'source' => $src]; }
+            if ($v !== null) { $budMoisPar[sprintf('%04d-%02d', (int) $b2['year'], (int) $b2['month'])][(string) $b2['shop_id']] = ['montant' => $v, 'source' => $src]; }
         }
     } catch (PDOException $e) { /* budget non encodé : pas d'objectif */ }
+    $budMois = $budMoisPar[substr($date, 0, 7)] ?? [];
     // « The heatmap window cannot exceed 31 days » (mesuré sur la route) : la
     // fenêtre qui va du plus ancien jour de référence à aujourd'hui fait 43
     // jours, elle part donc en tranches de 31 jours au plus. Les jours des
@@ -2508,6 +2516,50 @@ function ep_exploitation_jour(): array
             $objJour = $part !== null ? round($bm['montant'] * $part, 2)
                 : ($joursOuverts > 0 ? round($bm['montant'] / $joursOuverts, 2) : null);
         }
+
+        // ── LA SEMAINE EN COURS, jour par jour, du lundi au dimanche : ventes,
+        //    résultat et objectif de chaque jour — la même règle que l'objectif
+        //    du jour, appliquée au jour de semaine, avec le budget du mois de
+        //    chaque jour. Les jours à venir n'ont qu'un objectif ; le jour
+        //    regardé porte son résultat mesuré, les autres le résultat réparti.
+        $semaine = [];
+        for ($i6 = 0; $i6 < 7; $i6++) {
+            $j6 = date('Y-m-d', strtotime($lundiSem . ' +' . $i6 . ' days'));
+            $wd6 = $i6 + 1;
+            $ym6 = substr($j6, 0, 7);
+            $bm6 = $budMoisPar[$ym6][(string) $id] ?? null;
+            $obj6 = null;
+            if ($bm6 !== null) {
+                $p6 = new DateTimeImmutable($ym6 . '-01');
+                $nj6 = (int) $p6->format('t');
+                $part6 = null;
+                if ($pjR !== null) {
+                    $den6 = 0.0;
+                    for ($k6 = 0; $k6 < $nj6; $k6++) {
+                        $w6 = (int) $p6->modify('+' . $k6 . ' days')->format('N');
+                        if (isset($wdActifs[$w6])) { $den6 += $pjR['poids'][$w6]; }
+                    }
+                    if ($den6 > 0 && isset($wdActifs[$wd6])) { $part6 = $pjR['poids'][$wd6] / $den6; }
+                } elseif (isset($moyWd[$wd6]) && ($profilSrc === 'memoire' || ($parWd[$wd6]['n'] ?? 0) >= 2)) {
+                    $att6 = 0.0;
+                    for ($k6 = 0; $k6 < $nj6; $k6++) { $att6 += $moyWd[(int) $p6->modify('+' . $k6 . ' days')->format('N')] ?? 0.0; }
+                    if ($att6 > 0) { $part6 = $moyWd[$wd6] / $att6; }
+                }
+                if ($part6 !== null) { $obj6 = round($bm6['montant'] * $part6, 2); }
+                elseif (isset($wdActifs[$wd6])) {
+                    $jo6 = 0;
+                    for ($k6 = 0; $k6 < $nj6; $k6++) { if (isset($wdActifs[(int) $p6->modify('+' . $k6 . ' days')->format('N')])) { $jo6++; } }
+                    if ($jo6 > 0) { $obj6 = round($bm6['montant'] / $jo6, 2); }
+                }
+            }
+            $d6 = $parJour[$j6] ?? null;
+            $ouv6 = $d6 !== null && $d6['ouvert'];
+            $net6 = ($ouv6 && $labJ !== null && $ohJ !== null) ? $d6['mb'] - $labJ - $ohJ : null;
+            if ($j6 === $date && $net !== null) { $net6 = $net; }
+            $semaine[] = ['date' => $j6, 'wd' => $wd6, 'passe' => $j6 <= $date, 'aujourdhui' => $j6 === $date,
+                'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null, 'tickets' => $ouv6 ? $d6['tickets'] : null,
+                'net' => $net6 !== null ? round($net6, 2) : null, 'objectif' => $obj6];
+        }
         // Les ventes PAR HEURE du jour (déjà lues par la route des heures) et
         // le planning par personne : la sparkline de la vue réseau et le Gantt
         // du détail. Le CA attribué = le CA de chaque heure partagé entre les
@@ -2613,6 +2665,7 @@ function ep_exploitation_jour(): array
             'overheadMois' => $ohMois !== null ? round($ohMois, 2) : null,
             'labourMois' => $labourMois !== null ? round($labourMois, 2) : null,
             'joursOuverts' => $joursOuverts,
+            'semaine' => $semaine,
             'objectifJour' => $objJour, 'objectifSource' => $objSrc,
             'objectifMois' => $objMois, 'objectifBase' => $objBase,
             'objectifPart' => $part === null ? null : round($part * 100, 2),
