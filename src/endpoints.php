@@ -8433,7 +8433,22 @@ function ep_scouting_etude(): array
     }
     @set_time_limit(200);
     @ini_set('memory_limit', '512M');
-    $d = ScoutingOsm::etude($lat, $lng, $r);
+    // Un seul relevé à la fois pour un même point : le second appel attend le
+    // premier (verrou MySQL), puis se sert du cache qu'il vient d'écrire.
+    $verrou = 'scetude' . $cle;
+    $pris = Db::row('SELECT GET_LOCK(?, 190) AS l', [$verrou]);
+    if ($pris !== null && (int) $pris['l'] === 1 && !$force) {
+        $row2 = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
+        if ($row2 !== null && strtotime((string) $row2['fetched_at']) > time() - 45 * 86400) {
+            $d = json_decode((string) $row2['payload'], true);
+            if (is_array($d)) { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); $d['cache'] = true; $d['releve'] = $row2['fetched_at']; return $d; }
+        }
+    }
+    try {
+        $d = ScoutingOsm::etude($lat, $lng, $r);
+    } finally {
+        try { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); } catch (Throwable $e) { /* verrou déjà rendu */ }
+    }
     if ($d === null) {
         if ($row !== null) {
             $old = json_decode((string) $row['payload'], true);
