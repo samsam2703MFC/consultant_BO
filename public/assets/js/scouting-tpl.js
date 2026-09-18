@@ -500,7 +500,7 @@ export function dossierPage(d, esc, logo){
 
     <h3>Le réseau : prévu et réel</h3>
     <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:10px">D'où viennent les chiffres</th></tr>
-      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre-line;line-height:1.35">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l mut" style="padding-left:10px">${esc(r[5])}</td></tr>`).join('')}
+      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l mut" style="padding-left:10px;font-size:10.5px;line-height:1.35">${esc(r[5])}</td></tr>`).join('')}
     </table>
     <div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. L’écart se lit réel ÷ prévu − 1 ; il est le même aux trois échelles.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
