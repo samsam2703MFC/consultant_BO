@@ -496,10 +496,10 @@ export function dossierPage(d, esc, logo){
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>
-    <table><tr><th class="l">Magasin</th><th>CA prévu</th><th>CA réel</th><th>Écart réel / prévu</th><th class="l" style="padding-left:12px">D'où viennent les chiffres</th></tr>
+    <table><tr><th class="l">Magasin</th><th>CA prévu TTC</th><th>CA réel TTC</th><th>Écart réel / prévu</th><th class="l" style="padding-left:12px">D'où viennent les chiffres</th></tr>
       ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n ${i ? '' : 'ok'}"><b>${esc(r[1])}</b></td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="l mut" style="padding-left:12px">${esc(r[4])}</td></tr>`).join('')}
     </table>
-    <div class="legende">Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>
+    <div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché (TTC). Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L, douze derniers mois clos, annualisés quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
     <h3>Les hypothèses au moment de l'édition</h3>
