@@ -168,6 +168,33 @@ final class GoogleApi
     }
 
     /**
+     * Le signe de vie d'une fiche, et rien d'autre : le statut de
+     * l'établissement et la date du plus récent des avis que Google rend
+     * (cinq au plus). Pour passer toute la carte au crible sans rapatrier
+     * les fiches. Null si Google refuse ou ne connaît plus la fiche.
+     *
+     * @return array{statut: string, dernierAvis: ?string}|null
+     */
+    public static function vie(string $placeId): ?array
+    {
+        if ($placeId === '') { self::$lastError = 'identifiant de fiche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        [$code, $json] = self::http('GET', self::BASE . '/places/' . rawurlencode($placeId)
+            . '?languageCode=' . rawurlencode($c['langue']), 'id,businessStatus,reviews', $c['cle'], null);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        $dernier = null;
+        foreach ((array) ($json['reviews'] ?? []) as $r) {
+            $q = (string) ($r['publishTime'] ?? '');
+            $t = $q !== '' ? strtotime($q) : false;
+            if ($t === false) { continue; }
+            $j = gmdate('Y-m-d', $t);
+            if ($dernier === null || $j > $dernier) { $dernier = $j; }
+        }
+        return ['statut' => (string) ($json['businessStatus'] ?? ''), 'dernierAvis' => $dernier];
+    }
+
+    /**
      * Une photo de fiche, en JPEG, au plus `largeur` pixels de large — rendue
      * en data URI pour voyager dans le dossier. Null si Google la refuse.
      */

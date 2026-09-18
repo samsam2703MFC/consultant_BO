@@ -3466,6 +3466,74 @@ function wr_scouting_concurrents_google(): array
 }
 
 /**
+ * POST /scouting/concurrents/vie — le signe de vie Google de toute la carte,
+ * par lots : pour chaque concurrent noté par Google qui n'a pas encore de
+ * statut, la fiche (place_id) est interrogée pour son statut et la date du
+ * plus récent avis ; sans place_id, une recherche par le nom d'abord. Corps
+ * `{ n }` (25 par défaut, 40 au plus) ; la réponse dit ce qui reste, l'appel
+ * suivant continue. Une clé refusée ou un quota épuisé arrête le lot.
+ */
+function wr_scouting_concurrents_vie(): array
+{
+    if (!GoogleApi::configured()) {
+        http_response_code(422);
+        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
+    }
+    $b = body();
+    $n = max(1, min(40, (int) ($b['n'] ?? 25)));
+    @set_time_limit(120);
+    $fatal = '/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i';
+    $rows = Db::rows("SELECT osm_id, name, commune, place_id FROM ceo_scouting_competitor
+                       WHERE rating_source = 'google' AND business_status IS NULL AND name NOT LIKE '%sans nom%'
+                       ORDER BY (place_id IS NULL OR place_id = ''), osm_id LIMIT " . $n);
+    $faits = 0; $fermes = 0; $dormants = 0; $appels = 0; $erreur = null; $noms = [];
+    $ilYaUnAn = date('Y-m-d', strtotime('-365 days'));
+    foreach ($rows as $r) {
+        $placeId = trim((string) ($r['place_id'] ?? ''));
+        if ($placeId === '') {
+            // fiche jamais raccordée : la recherche par le nom, près de rien de
+            // précis (la commune), rend l'identifiant et déjà le statut
+            GoogleApi::$lastError = null;
+            $res = GoogleApi::noteProche(trim((string) $r['name'] . ' ' . (string) $r['commune']) . ' Belgique', 50.5, 4.5, 50000);
+            $appels++;
+            if ($res === null) {
+                $msg = GoogleApi::$lastError ?? 'réponse vide';
+                if (preg_match($fatal, $msg)) { $erreur = 'Google Places : ' . $msg; break; }
+                Db::exec("UPDATE ceo_scouting_competitor SET business_status = 'INCONNU' WHERE osm_id = ?", [$r['osm_id']]);
+                $faits++; continue;
+            }
+            $placeId = (string) ($res['placeId'] ?? '');
+            if ($placeId === '') {
+                Db::exec("UPDATE ceo_scouting_competitor SET business_status = 'INCONNU' WHERE osm_id = ?", [$r['osm_id']]);
+                $faits++; continue;
+            }
+            Db::exec('UPDATE ceo_scouting_competitor SET place_id = ? WHERE osm_id = ?', [mb_substr($placeId, 0, 80), $r['osm_id']]);
+        }
+        GoogleApi::$lastError = null;
+        $v = GoogleApi::vie($placeId);
+        $appels++;
+        if ($v === null) {
+            $msg = GoogleApi::$lastError ?? 'réponse vide';
+            if (preg_match($fatal, $msg)) { $erreur = 'Google Places : ' . $msg; break; }
+            // fiche disparue chez Google (404) : elle ne reviendra pas, on le note
+            Db::exec("UPDATE ceo_scouting_competitor SET business_status = 'INCONNU' WHERE osm_id = ?", [$r['osm_id']]);
+            $faits++; continue;
+        }
+        $statut = $v['statut'] !== '' ? mb_substr($v['statut'], 0, 24) : 'INCONNU';
+        Db::exec('UPDATE ceo_scouting_competitor SET business_status = ?, last_review_at = ? WHERE osm_id = ?', [$statut, $v['dernierAvis'], $r['osm_id']]);
+        $faits++;
+        if (str_starts_with($statut, 'CLOSED')) { $fermes++; $noms[] = $r['name'] . ' (' . $r['commune'] . ') — fermé'; }
+        elseif ($v['dernierAvis'] !== null && $v['dernierAvis'] < $ilYaUnAn) { $dormants++; $noms[] = $r['name'] . ' (' . $r['commune'] . ') — dernier avis ' . $v['dernierAvis']; }
+    }
+    $reste = (int) (Db::row("SELECT COUNT(*) n FROM ceo_scouting_competitor WHERE rating_source = 'google' AND business_status IS NULL AND name NOT LIKE '%sans nom%'")['n'] ?? 0);
+    if ($faits > 0) {
+        journalAdd('CEO', 'Scouting', 'Signe de vie', 'Signe de vie Google des concurrents — ' . $faits . ' fiches, ' . $fermes . ' fermée(s), ' . $dormants . ' sans avis depuis un an, ' . $appels . ' appels, reste ' . $reste
+            . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
+    }
+    return ['ok' => true, 'faits' => $faits, 'fermes' => $fermes, 'dormants' => $dormants, 'appels' => $appels, 'reste' => $reste, 'ecartes' => $noms, 'erreur' => $erreur];
+}
+
+/**
  * POST /scouting/notes — les notes Google d'un lot de commerces (≤ 40).
  *
  * La clé est celle du connecteur Google de Paramètres, la même que pour la
