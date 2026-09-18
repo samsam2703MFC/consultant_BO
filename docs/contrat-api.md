@@ -565,6 +565,7 @@ repli, sans API ou si le serveur n'atteint pas Overpass.
 - `params` : `null` tant qu'aucune hypothèse n'a été enregistrée (défauts de l'étude Halle côté client).
 - `google` : l'état du connecteur Google de Paramètres (`PUT /parametres/google-cle`) — jamais la clé. Les notes des
   concurrents se demandent au serveur par `POST /scouting/notes` ; sans clé, il répond 422.
+| Scouting — signe de vie Google de toute la carte (statut, date du dernier avis), par lots | `POST /scouting/concurrents/vie` (`{ n }`, 25 par défaut, 40 au plus ; rend `faits`, `fermes`, `dormants`, `reste`, `ecartes` ; colonnes `business_status`, `last_review_at`) |
 - `competitors[].source` ∈ `google` | `manuel` ; une note `manuel` prime sur Google. `rating: null` avec
   `source: "google"` = commerce déjà interrogé sans note (pas réinterrogé).
 - `id` d'un concurrent = type + id OSM (`n`, `w`, `r`). `id` d'une zone candidate = horodatage client (ms).
