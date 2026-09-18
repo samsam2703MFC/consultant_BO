@@ -393,3 +393,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-17T19:54:54Z scouting sombreffe au reseau et ecart 20 min entre ouvertures
 2026-09-17T20:11:16Z scouting plan ecart en minutes de route reelles
 2026-09-18T04:35:31Z scouting tableaux du plan dans la page
+2026-09-18T05:07:31Z scouting etude de marche locale dans le dossier
