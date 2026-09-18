@@ -409,9 +409,10 @@ export const DOSS_CSS = `
 .sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
 .sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
 .sc-doss td.com{min-width:124px}
-.sc-doss .ccard{border:0.5px solid #e6e0d8;border-radius:8px;margin-bottom:8px;background:#fff;overflow:hidden}
+.sc-doss .ccard{border:0.5px solid #e6e0d8;border-radius:8px;margin:0 0 10px;background:#fff;overflow:hidden}
+.sc-doss .note + .ccard{margin-top:14px}
 .sc-doss .ccard.fort{border-color:rgba(141,29,44,.45)}
-.sc-doss .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;padding:8px 12px;background:#fbf9f5;font-size:12px}
+.sc-doss .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:8px 12px;background:#fbf9f5;font-size:12px}
 .sc-doss .chead .num{color:#7a736a;font-variant-numeric:tabular-nums}
 .sc-doss .chead b{font-size:13px}
 .sc-doss .chead .chiffres{margin-left:auto;display:flex;gap:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -499,8 +500,9 @@ export function dossierPage(d, esc, logo){
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>
-    <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:10px">D'où viennent les chiffres</th></tr>
-      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l mut" style="padding-left:10px;font-size:10.5px;line-height:1.35">${esc(r[5])}</td></tr>`).join('')}
+    ${d.montee ? `<div class="motfin" style="margin:0 0 12px;font-size:12.5px"><div class="k">La montée en charge</div>${esc(d.montee)}</div>` : ''}
+    <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:10px">Phase</th></tr>
+      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b><div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3;max-width:150px">${esc(r[6])}</div></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l" style="padding-left:10px;white-space:pre-line;line-height:1.4;font-size:11px;min-width:150px">${esc(r[5])}</td></tr>`).join('')}
     </table>
     <div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. L’écart se lit réel ÷ prévu − 1 ; il est le même aux trois échelles.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}

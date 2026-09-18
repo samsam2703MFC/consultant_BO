@@ -3639,6 +3639,11 @@ function wr_scouting_magasin_put(string $shopId): array
     }
     $etude = mb_substr(trim((string) ($b['etude'] ?? '')), 0, 40);
     if ($etude !== '') { $o['etude'] = $etude; }
+    // l'ouverture : mm/aaaa ou aaaa-mm, gardée « AAAA-MM »
+    $ouv = trim((string) ($b['ouverture'] ?? ''));
+    if (preg_match('/^(\d{1,2})\s*[\/.-]\s*(\d{4})$/', $ouv, $m) === 1) { $o['ouverture'] = sprintf('%04d-%02d', (int) $m[2], max(1, min(12, (int) $m[1]))); }
+    elseif (preg_match('/^(\d{4})\s*[\/.-]\s*(\d{1,2})$/', $ouv, $m) === 1) { $o['ouverture'] = sprintf('%04d-%02d', (int) $m[1], max(1, min(12, (int) $m[2]))); }
+    elseif (preg_match('/^\d{4}$/', $ouv) === 1) { $o['ouverture'] = $ouv; }
     $note = mb_substr(trim((string) ($b['note'] ?? '')), 0, 300);
     if ($note !== '') { $o['note'] = $note; }
     $tous = setting('scoutingMagasins');

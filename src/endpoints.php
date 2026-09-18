@@ -8471,10 +8471,14 @@ function ep_scouting_etude(): array
 function ep_scouting_reseau(): array
 {
     try {
-        $shops = Db::rows('SELECT id, name, city, zone, region, active FROM shops ORDER BY sort_order, id');
+        // since_year : l'année d'ouverture connue du panel — le mois, lui, se
+        // saisit dans « Magasins du réseau » quand on le sait
+        $shops = array_map(fn ($r) => $r + ['ouvertLe' => !empty($r['since_year']) ? sprintf('%04d', (int) $r['since_year']) : null],
+            Db::rows('SELECT id, name, city, zone, region, active, since_year FROM shops ORDER BY sort_order, id'));
     } catch (PDOException $e) {
         $shops = array_map(fn ($r) => ['id' => $r['id'], 'name' => $r['name'], 'city' => null, 'zone' => $r['zone'], 'region' => null,
-            'active' => $r['status'] === 'Ouvert' ? 1 : 0], Db::rows('SELECT id, name, zone, status FROM ceo_shop ORDER BY id'));
+            'active' => $r['status'] === 'Ouvert' ? 1 : 0, 'ouvertLe' => !empty($r['opened_on']) ? substr((string) $r['opened_on'], 0, 7) : null],
+            Db::rows('SELECT id, name, zone, status, opened_on FROM ceo_shop ORDER BY id'));
     }
     $pos = setting('scoutingReseau');
     if (!is_array($pos)) { $pos = []; }
@@ -8528,6 +8532,8 @@ function ep_scouting_reseau(): array
             'annualise' => $mois > 0 && $mois < 12,
             // les données d'étude saisies à la main (PUT /scouting/magasins/{id})
             'saisie' => is_array($saisie) ? $saisie : null,
+            // l'ouverture : « AAAA-MM » ou « AAAA » (le panel ne connaît que l'année)
+            'ouvertLe' => $sh['ouvertLe'] ?? null,
         ];
     }
     if ($modifie) {

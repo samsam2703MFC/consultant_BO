@@ -83,6 +83,10 @@ const INS_PROV = {
 // p.26 potentiel d'affaires : projet mesuré à 110 m²) et Halle (28-08-2024,
 // p.26 et p.28 : projet mesuré à 250 m²). Max & Sandra et Berlo sont les
 // zones de chalandise des magasins existants telles que l'étude les mesure.
+// La montée en charge d'un magasin : part du CA prévu attendue en année 1, 2,
+// 3, puis le plan à partir de la quatrième.
+const PALIERS = [0.7, 0.8, 0.9, 1];
+
 const RESEAU = [
   { nom: 'L\'Atelier by Max & Sandra', statut: 'En exploitation', etude: '04/2024',
     pop: 6263, hh: 2613, taille: 2.4, revenu: 38454, jeunes: 19.7, actifs: 67.2, seniors: 13.2,
@@ -1770,10 +1774,28 @@ export class Scouting {
     return RESEAU.find(r => nm.indexOf(sansAccent(r.nom.replace(/[—–-]/g, ' ').trim().split(/\s+/).pop())) >= 0) || null;
   }
 
+  // La montée en charge : trois ans pour arriver au plan — année 1 à 70 % du
+  // CA prévu, année 2 à 80 %, année 3 à 90 %, la quatrième au plan.
+  phaseDe(ouverture){
+    if (!ouverture) return null;
+    const m = /^(\d{4})(?:-(\d{2}))?/.exec(String(ouverture));
+    if (!m) return null;
+    const debut = new Date(+m[1], m[2] ? +m[2] - 1 : 0, 1);
+    const annees = (Date.now() - debut.getTime()) / (365.25 * 86400000);
+    if (!(annees >= 0)) return null;
+    const annee = Math.min(4, Math.floor(annees) + 1);
+    return { annees: annees, annee: annee, pct: PALIERS[annee - 1], precis: !!m[2],
+      libelle: 'année ' + annee + (annee >= 4 ? ' et plus' : '') + ' → ' + Math.round(PALIERS[annee - 1] * 100) + ' % du prévu' };
+  }
+
   magasinFiche(m){
     const ref = this.magasinRef(m), sa = m.saisie || {};
     const f = { id: m.id, nom: nomCourt(m.nom), magasin: true, statut: 'en exploitation', etude: sa.etude || (ref && ref.etude) || '', lat: m.lat, lng: m.lng,
-      caReel: m.caAnnuel || null, mois: m.mois || 0, annualise: !!m.annualise, du: m.du || '', au: m.au || '', caPrevu: sa.caPrevu != null ? +sa.caPrevu : null, saisi: !!m.saisie, note: sa.note || '' };
+      caReel: m.caAnnuel || null, mois: m.mois || 0, annualise: !!m.annualise, du: m.du || '', au: m.au || '', caPrevu: sa.caPrevu != null ? +sa.caPrevu : null, saisi: !!m.saisie, note: sa.note || '',
+      ouverture: sa.ouverture || m.ouvertLe || '' };
+    f.phase = this.phaseDe(f.ouverture);
+    f.prevu = f.caPrevu || f.ca || null;
+    f.objectif = f.phase && f.prevu ? f.prevu * f.phase.pct : null;
     ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'].forEach(k => {
       f[k] = sa[k] != null ? +sa[k] : (ref && ref[k] != null ? ref[k] : null);
     });
@@ -1793,7 +1815,7 @@ export class Scouting {
 
   magasinOuvrir(m){
     const f = this.magasinFiche(m);
-    const pre = { magasinId: m.id, nom: f.nom, statut: f.statut, etude: f.etude, caPrevu: f.caPrevu, note: f.note };
+    const pre = { magasinId: m.id, nom: f.nom, statut: f.statut, etude: f.etude, caPrevu: f.caPrevu, note: f.note, ouverture: f.ouverture ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : '' };
     ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'].forEach(k => { pre[k] = f[k]; });
     this.setState({ reseau: true, refForm: pre });
     setTimeout(() => { const el = this.el.querySelector('#sc-ref-caPrevu'); if (el) el.focus(); }, 60);
@@ -1805,6 +1827,11 @@ export class Scouting {
     ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface', 'caPrevu'].forEach(k => { const v = num(f[k]); if (v != null) o[k] = v; });
     const etude = String(f.etude || '').trim().slice(0, 40);
     if (etude) o.etude = etude;
+    const ouv = String(f.ouverture || '').trim();
+    let mo = /^(\d{1,2})\s*[\/.-]\s*(\d{4})$/.exec(ouv);
+    if (mo) o.ouverture = mo[2] + '-' + String(Math.max(1, Math.min(12, +mo[1]))).padStart(2, '0');
+    else if ((mo = /^(\d{4})\s*[\/.-]\s*(\d{1,2})$/.exec(ouv))) o.ouverture = mo[1] + '-' + String(Math.max(1, Math.min(12, +mo[2]))).padStart(2, '0');
+    else if (/^\d{4}$/.test(ouv)) o.ouverture = ouv;
     const note = String(f.note || '').trim().slice(0, 300);
     if (note) o.note = note;
     const id = f.magasinId;
@@ -2424,14 +2451,16 @@ export class Scouting {
     // Trois lectures du même écart : la semaine, le mois, l'année. Le réel
     // est une moyenne par mois clos (et par semaine), projetée sur douze mois.
     const duo = (a, b) => (a ? fmtEur(a) : '—') + ' prévu\n' + (b ? fmtEur(b) : '—') + ' réel';
-    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts']];
+    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)', '—', 'année 1 → 70 % = ' + fmtEur(x.ca * PALIERS[0]), 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts']];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
-      const prevu = f.caPrevu || f.ca || null, reel = f.caReel || null;
+      const prevu = f.prevu, reel = f.caReel || null;
       const source = f.caPrevu ? 'prévu réaliste saisi' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'prévu = étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu — à saisir dans Magasins du réseau';
       const periode = r.m.mois ? 'réel = moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'CA réel inconnu';
-      reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel), ecart(reel, prevu), source + ' · ' + periode]);
+      const phase = f.phase ? 'ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ' · ' + f.phase.libelle + (f.objectif ? '\nobjectif ' + fmtEur(f.objectif) + ' · réel ' + ecart(reel, f.objectif) : '') : 'ouverture à saisir\n(Magasins du réseau)';
+      reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel), ecart(reel, prevu), phase, source + ' · ' + periode]);
     });
+    const montee = 'Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.';
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
     // la lecture d'ensemble de la concurrence : combien, quelles forces, quelles notes, qui est le plus près
@@ -2552,6 +2581,7 @@ export class Scouting {
         });
       })(),
       etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
+      montee: montee,
       motFin: 'Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
       indirecte: et ? resume(et.indirecte) : [],
       indirecteNote: et && et.indirecte.length ? 'Les plus proches : ' + proches(et.indirecte, 6) + '.' : '',
@@ -2698,7 +2728,8 @@ export class Scouting {
     [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], 'les plus proches', x[1], '']); });
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
-    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · écart ' + r[4], r[5]]));
+    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · écart ' + r[4] + ' · ' + r[5].replace(/\n/g, ' · '), r[6]]));
+    if (d.montee) rows.push(['reseau', 'montée en charge', d.montee, '']);
     d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
@@ -3925,7 +3956,7 @@ export class Scouting {
           reel: r.m.caAnnuel ? fmtEur(r.m.caAnnuel) : 'CA réel inconnu', modele: r.ev ? fmtEur(r.ev.ca) : (r.m.lat == null ? 'position inconnue' : '—'),
           ecart: r.ratio ? (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : '—',
           ecartColor: r.ratio ? (Math.abs(r.ratio - 1) <= 0.25 ? '#1b5e20' : '#c17a2a') : 'var(--color-text-muted)',
-          prevu: (() => { const f = self.magasinFiche(r.m); return f.caPrevu ? 'prévu réaliste ' + fmtEur(f.caPrevu) + (r.m.caAnnuel ? ' · réel/prévu ' + (r.m.caAnnuel >= f.caPrevu ? '+' : '−') + Math.round(Math.abs(r.m.caAnnuel / f.caPrevu - 1) * 100) + ' %' : '') : ''; })(),
+          prevu: (() => { const f = self.magasinFiche(r.m); return (f.caPrevu ? 'prévu réaliste ' + fmtEur(f.caPrevu) + (r.m.caAnnuel ? ' · réel/prévu ' + (r.m.caAnnuel >= f.caPrevu ? '+' : '−') + Math.round(Math.abs(r.m.caAnnuel / f.caPrevu - 1) * 100) + ' %' : '') : '') + (f.phase ? (f.caPrevu ? ' · ' : '') + f.phase.libelle + (f.objectif && r.m.caAnnuel ? ' (réel ' + (r.m.caAnnuel >= f.objectif ? '+' : '−') + Math.round(Math.abs(r.m.caAnnuel / f.objectif - 1) * 100) + ' %)' : '') : ''); })(),
           place: () => { self.setState({ placing: r.m.id, view: 'map', reseau: false, compare: false }); self.notify('Clique sur la carte à l\'emplacement de ' + r.m.nom); }
         }));
         return { rows: rows, med: c.med, n: c.n, placing: !!s.placing, caler: () => self.caler(),
@@ -4138,6 +4169,10 @@ export class Scouting {
         const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
         const rows = reseauRows(r);
         if (r.magasin) rows.push(
+          { k: 'Ouvert depuis', v: r.ouverture ? (r.phase && r.phase.precis ? r.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : r.ouverture) + (r.phase ? ' · ' + (r.phase.annees < 1 ? Math.round(r.phase.annees * 12) + ' mois' : r.phase.annees.toFixed(1).replace('.', ',') + ' ans') : '') : 'à saisir' },
+          { k: 'Phase de montée en charge', v: r.phase ? r.phase.libelle : '—', fort: true },
+          { k: 'Objectif de la phase (TTC)', v: r.objectif ? fmtEur(r.objectif) : '—' },
+          { k: 'Réel / objectif de phase', v: ecart(r.caReel, r.objectif), fort: true },
           { k: 'CA annuel prévu réaliste après ouverture (TTC)', v: r.caPrevu ? fmtEur(r.caPrevu) : 'à saisir', fort: true },
           { k: 'CA réel TTC, douze derniers mois clos', v: r.caReel ? fmtEur(r.caReel) + (r.annualise ? ' (' + r.mois + ' mois annualisés)' : '') : 'inconnu' },
           { k: 'CA du modèle TTC, à son emplacement', v: r.caModele ? fmtEur(r.caModele) : (r.lat == null ? 'position inconnue' : '—') },
@@ -4161,7 +4196,7 @@ export class Scouting {
       }))),
       refForm: s.refForm ? {
         champs: (s.refForm.magasinId
-          ? [['caPrevu', 'CA annuel prévu réaliste après ouverture (€ TTC)', 'number'], ['etude', 'Étude de marché (mois/année)', 'text'],
+          ? [['caPrevu', 'CA annuel prévu réaliste après ouverture (€ TTC)', 'number'], ['ouverture', 'Ouverture (mois/année)', 'text'], ['etude', 'Étude de marché (mois/année)', 'text'],
             ['pop', 'Population de la zone', 'number'], ['hh', 'Ménages', 'number'], ['taille', 'Taille des ménages', 'number'], ['revenu', 'Revenu moyen / ménage (€)', 'number'],
             ['jeunes', 'Part de jeunes (%)', 'number'], ['actifs', 'Part d\'actifs (%)', 'number'], ['seniors', 'Part de seniors (%)', 'number'],
             ['depense', 'Dépense boulangerie / ménage (€/an)', 'number'], ['marche', 'Marché boulangerie (€) — vide = ménages × dépense', 'number'],
