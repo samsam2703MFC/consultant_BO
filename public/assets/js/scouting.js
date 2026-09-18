@@ -2461,6 +2461,14 @@ export class Scouting {
       reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel), ecart(reel, prevu), phase, source + ' · ' + periode]);
     });
     const montee = 'Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.';
+    // le mini-tableau de la montée en charge : les paliers en euros, ce dossier
+    // puis chaque magasin, la phase en cours marquée
+    const monteeRows = [[nomCom + ' — ce dossier (modèle)'].concat(PALIERS.map(k => fmtEur(x.ca * k))).concat(['0'])];
+    this.calage().rows.forEach(r => {
+      const f = this.magasinFiche(r.m);
+      if (!f.prevu) { monteeRows.push([f.nom + ' — prévu à saisir', '—', '—', '—', '—', '0']); return; }
+      monteeRows.push([f.nom + (f.phase ? '' : ' — ouverture à saisir')].concat(PALIERS.map(k => fmtEur(f.prevu * k))).concat([String(f.phase ? f.phase.annee : 0)]));
+    });
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
     // la lecture d'ensemble de la concurrence : combien, quelles forces, quelles notes, qui est le plus près
@@ -2582,6 +2590,8 @@ export class Scouting {
       })(),
       etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
       montee: montee,
+      monteeCols: ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
+      monteeRows: monteeRows,
       motFin: 'Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
       indirecte: et ? resume(et.indirecte) : [],
       indirecteNote: et && et.indirecte.length ? 'Les plus proches : ' + proches(et.indirecte, 6) + '.' : '',
@@ -2730,6 +2740,7 @@ export class Scouting {
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
     d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · écart ' + r[4] + ' · ' + r[5].replace(/\n/g, ' · '), r[6]]));
     if (d.montee) rows.push(['reseau', 'montée en charge', d.montee, '']);
+    d.monteeRows.forEach(r => rows.push(['montee_en_charge', r[0], 'année 1 ' + r[1] + ' · année 2 ' + r[2] + ' · année 3 ' + r[3] + ' · année 4+ ' + r[4], +r[5] ? 'en cours : année ' + r[5] : '']));
     d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));

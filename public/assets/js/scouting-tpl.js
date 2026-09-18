@@ -425,6 +425,10 @@ export const DOSS_CSS = `
 .sc-doss .gavis{font-size:11.5px;line-height:1.5;margin-top:4px}
 .sc-doss .motfin{border:1.5px solid #8D1D2C;border-radius:8px;padding:14px 16px;margin-top:18px;font-family:Georgia,"DejaVu Serif",serif;font-size:13.5px;line-height:1.6}
 .sc-doss .motfin .k{font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;margin-bottom:6px}
+.sc-doss .motfin table.mini{margin:10px 0 0;font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:11.5px}
+.sc-doss .motfin table.mini th,.sc-doss .motfin table.mini td{padding:4px 6px}
+.sc-doss .motfin table.mini td.cur{background:rgba(141,29,44,.08);font-weight:600;border-radius:4px}
+.sc-doss .motfin table.mini td.cur small{display:block;font-size:9px;font-weight:500;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
 .sc-doss table.plan th,.sc-doss table.plan td{padding:5px 4px}
 .sc-doss table.plan th{white-space:normal;hyphens:manual}
 .sc-doss tr.tot td{font-weight:600;border-top:1px solid #221E1A;border-bottom:0;background:#fbf9f5}
@@ -500,7 +504,10 @@ export function dossierPage(d, esc, logo){
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>
-    ${d.montee ? `<div class="motfin" style="margin:0 0 12px;font-size:12.5px"><div class="k">La montée en charge</div>${esc(d.montee)}</div>` : ''}
+    ${d.montee ? `<div class="motfin" style="margin:0 0 12px;font-size:12.5px"><div class="k">La montée en charge</div>${esc(d.montee)}
+      <table class="mini"><tr><th class="l"></th>${d.monteeCols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
+        ${d.monteeRows.map((r, i) => `<tr><td class="l${i ? '' : ' ok'}">${esc(r[0])}</td>${[1, 2, 3, 4].map(k => `<td class="n${+r[5] === k ? ' cur' : ''}">${esc(r[k])}${+r[5] === k ? '<small>en cours</small>' : ''}</td>`).join('')}</tr>`).join('')}
+      </table></div>` : ''}
     <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:10px">Phase</th></tr>
       ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b><div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3;max-width:150px">${esc(r[6])}</div></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l" style="padding-left:10px;white-space:pre-line;line-height:1.4;font-size:11px;min-width:150px">${esc(r[5])}</td></tr>`).join('')}
     </table>

@@ -105,6 +105,8 @@ function scoutingDossierValide(array $b): ?array
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
         'reseau' => $lignes($b['reseau'] ?? [], 7, 12, 160),
         'montee' => $s($b['montee'] ?? '', 500),
+        'monteeCols' => $lignes([$b['monteeCols'] ?? []], 4, 1, 30)[0] ?? ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
+        'monteeRows' => $lignes($b['monteeRows'] ?? [], 6, 12, 80),
         'cartes' => (static function ($v) use ($s, $lignes): array {
             $out = [];
             if (!is_array($v)) { return $out; }
@@ -189,6 +191,10 @@ function scoutingDossierHtml(array $d): string
       .gavis{font-size:7.9pt;line-height:1.5;margin-top:1mm;color:#221E1A}
       .motfin{border:1.5pt solid #8D1D2C;border-radius:8px;background:#fff;padding:3.5mm 4mm;margin-top:5mm;
               font-family:Georgia,"DejaVu Serif",serif;font-size:9.5pt;line-height:1.6;color:#221E1A;page-break-inside:avoid}
+      .motfin table.mini{font-family:Helvetica,Arial,sans-serif;font-size:8pt;margin-bottom:0}
+      .motfin table.mini td{padding:1.2mm 2mm;border-bottom:.5pt solid #EAE3D8}
+      .motfin table.mini td.cur{background:#F6E4E7;font-weight:bold}
+      .motfin .curk{font-size:6.3pt;font-weight:normal;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
     </style>';
 
     $h = $css . '<div class="doc">'
@@ -333,7 +339,22 @@ function scoutingDossierHtml(array $d): string
 
     if ($d['reseau'] !== []) {
         $h .= '<div class="sec">Le réseau : prévu et réel — semaine, mois, année</div>';
-        if ($d['montee'] !== '') { $h .= '<div class="motfin" style="margin:0 0 3mm;font-size:8.8pt"><div class="k" style="color:#8D1D2C;margin-bottom:1.2mm">La montée en charge</div>' . $e($d['montee']) . '</div>'; }
+        if ($d['montee'] !== '') {
+            $h .= '<div class="motfin" style="margin:0 0 3mm;font-size:8.8pt"><div class="k" style="color:#8D1D2C;margin-bottom:1.2mm">La montée en charge</div>' . $e($d['montee']);
+            if ($d['monteeRows'] !== []) {
+                $h .= '<table class="t mini" cellpadding="0" cellspacing="0" style="margin:2.5mm 0 0"><tr><th class="l"></th>';
+                foreach ($d['monteeCols'] as $c) { $h .= '<th>' . $e($c) . '</th>'; }
+                $h .= '</tr>';
+                foreach ($d['monteeRows'] as $i => $r) {
+                    $cur = (int) ($r[5] ?? 0);
+                    $h .= '<tr><td class="l' . ($i === 0 ? ' ok' : '') . '">' . $e($r[0]) . '</td>';
+                    foreach ([1, 2, 3, 4] as $k) { $h .= '<td' . ($cur === $k ? ' class="cur"' : '') . ' style="white-space:nowrap">' . $e($r[$k]) . ($cur === $k ? '<div class="curk">en cours</div>' : '') . '</td>'; }
+                    $h .= '</tr>';
+                }
+                $h .= '</table>';
+            }
+            $h .= '</div>';
+        }
         $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>'
             . '<th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:3mm">Phase</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
