@@ -4457,6 +4457,33 @@ function tplResultatJour(c, x){
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
       </div>` : ''}
 
+      ${c.rjDetail.semaine ? (sm => `
+      <div style="margin-top:13px;padding:12px 13px 10px;border-radius:10px;background:var(--color-background-secondary)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="${cap}">Résultat de la semaine en cours</div>
+            <div style="font-size:12px;margin-top:3px;${num}"><span style="color:var(--color-text-muted)">${esc(sm.titre)} ·</span> <span style="font-weight:600;color:${sm.resumeCoul}">${esc(sm.resume)}</span></div>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            ${sm.choix.map(ch => `<button ${x.A(ch.aller)} style="border:1px solid ${ch.on ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${ch.on ? 'var(--color-text)' : 'var(--color-surface)'};color:${ch.on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:3px 10px;font-size:11px;cursor:pointer">${esc(ch.l)}</button>`).join('')}
+          </div>
+        </div>
+        <svg viewBox="0 0 ${sm.g.W} ${sm.g.H}" style="width:100%;height:auto;display:block;margin-top:8px;font-family:var(--font-ui)">
+          ${sm.g.lignes.map(l => `<line x1="${l.x1}" x2="${l.x2}" y1="${l.y1.toFixed(1)}" y2="${l.y2.toFixed(1)}" stroke="${l.c}" stroke-width="1"/>`).join('')}
+          ${sm.g.rects.map(r => `<rect x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" width="${r.w.toFixed(1)}" height="${r.h.toFixed(1)}" rx="${r.rx || 0}" fill="${r.fill}" stroke="${r.stroke || 'none'}" stroke-width="1.4"${r.dash ? ` stroke-dasharray="${r.dash}"` : ''}><title>${esc(r.t)}</title></rect>`).join('')}
+          ${sm.g.paths.map(p => `<path d="${p.d}" fill="${p.fill}"><title>${esc(p.t)}</title></path>`).join('')}
+          ${sm.g.polys.map(p => `<polyline points="${p.pts}" fill="none" stroke="${p.c}" stroke-width="${p.w}"${p.dash ? ` stroke-dasharray="${p.dash}"` : ''} stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
+          ${sm.g.dots.map(d => `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r}" fill="${d.c}" stroke="#fff" stroke-width="2"><title>${esc(d.t)}</title></circle>`).join('')}
+          ${sm.g.textes.map(t => `<text x="${t.x.toFixed(1)}" y="${t.y.toFixed(1)}" text-anchor="${t.a}" font-size="${t.s}" font-weight="${t.w || 400}" fill="${t.c}">${esc(t.t)}</text>`).join('')}
+        </svg>
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted)">
+            ${sm.g.legende.map(l => `<span style="display:inline-flex;align-items:center;gap:5px">${l.sw === 'plein' ? `<i style="width:10px;height:10px;border-radius:2px;background:${l.c}"></i>` : l.sw === 'creux' ? `<i style="width:10px;height:10px;border-radius:2px;border:1.5px solid ${l.c}"></i>` : l.sw === 'pointille' ? `<i style="width:10px;height:10px;border-radius:2px;border:1.5px dashed ${l.c}"></i>` : l.sw === 'ligne' ? `<i style="width:14px;height:0;border-top:2px solid ${l.c}"></i>` : `<i style="width:14px;height:0;border-top:2px dashed ${l.c}"></i>`}${esc(l.l)}</span>`).join('')}
+          </div>
+          <div style="font-size:10px;color:var(--color-text-muted);text-wrap:pretty;max-width:520px">${esc(sm.note)}</div>
+        </div>
+      </div>`)(c.rjDetail.semaine) : ''}
+
       ${c.rjDetail.planning ? `
       <div style="margin-top:13px;padding:12px 13px;border-radius:10px;background:var(--color-background-secondary)">
         <div style="${cap};margin-bottom:8px">Le planning du jour, par personne</div>

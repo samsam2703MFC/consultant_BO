@@ -7662,6 +7662,132 @@ class App {
       }),
     };
   }
+  /**
+   * La semaine en cours du magasin ouvert dans le détail : ventes, résultat
+   * et objectif de chaque jour, du lundi au dimanche — trois lectures au
+   * choix (ventes vs objectif jour par jour, cumul, résultat net), en SVG.
+   * La géométrie est calculée ici, le gabarit ne fait que dessiner.
+   */
+  rjSemaine(m){
+    const jours = m.semaine || [];
+    if (jours.length !== 7) { return null; }
+    const S = this.state;
+    const fE = n => this.fE(n);
+    const fD = d => this.fD(d);
+    const NOMS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    // Le rubis de la maison, un cran plus clair pour tenir la bande de
+    // luminosité d'une marque de graphique ; l'or sombre de l'objectif ; les
+    // deux feux du résultat (le signe est aussi porté par le sens de la barre).
+    const RUBIS = '#A6283A', OR = '#B8860B', VERT = '#2d7a3e', ROUGE = '#C0182B';
+    const GRILLE = 'rgba(34,34,34,0.10)', AXE = 'rgba(34,34,34,0.24)', MUET = '#666666', ENCRE = '#222222';
+    const passes = jours.filter(j => j.passe);
+    const caCum = passes.reduce((t, j) => t + (j.ca || 0), 0);
+    const objCum = passes.reduce((t, j) => t + (j.objectif || 0), 0);
+    const objSem = jours.reduce((t, j) => t + (j.objectif || 0), 0);
+    const netCum = passes.reduce((t, j) => t + (j.net || 0), 0);
+    const avecObj = jours.some(j => j.objectif != null);
+    const avecNet = passes.some(j => j.net != null);
+    const variante = ['a', 'b', 'c'].includes(S.rjGraphe) ? S.rjGraphe : 'a';
+    const choix = [['a', 'Ventes vs objectif'], ['b', 'Cumul de la semaine'], ['c', 'Résultat net']].map(([k, l]) => ({
+      k, l, on: k === variante, aller: () => this.setState({ rjGraphe: k }) }));
+    const titre = 'Semaine du ' + fD(jours[0].date) + ' au ' + fD(jours[6].date);
+    const pct = objCum > 0 ? caCum / objCum : null;
+    const resume = variante === 'c'
+      ? (avecNet ? 'Résultat ' + (netCum >= 0 ? '+' : '−') + fE(Math.abs(netCum)) + ' sur ' + fE(caCum) + ' de ventes'
+          + (caCum > 0 ? ' (' + this.fP(netCum / caCum, 1) + ')' : '') + ' · ' + passes.filter(j => j.ouvert).length + ' jour(s)'
+        : 'Résultat net indisponible : main-d’œuvre ou frais du mois inconnus')
+      : (fE(caCum) + ' réalisés' + (objCum > 0 ? ' sur ' + fE(objCum) + ' d’objectif à ce jour (' + this.fP(pct, 0) + ')' : '')
+          + (objSem > 0 ? ' · objectif de la semaine ' + fE(objSem) : ''));
+    const resumeCoul = variante === 'c' ? (avecNet ? (netCum >= 0 ? VERT : ROUGE) : MUET)
+      : (pct == null ? MUET : (pct >= 1 ? VERT : (pct >= 0.9 ? '#C17A2A' : 'var(--color-primary)')));
+
+    // le cadre commun : sept colonnes, une marge à gauche pour les graduations
+    const W = 640, H = 190, L = 52, R = 14, T = 16, B = 26;
+    const pw = W - L - R, ph = H - T - B;
+    const slot = pw / 7;
+    const g = { W, H, lignes: [], paths: [], rects: [], polys: [], dots: [], textes: [], legende: [] };
+    const cx = i => L + slot * i + slot / 2;
+    // un pas de graduation propre : 1, 2, 5 × 10ⁿ
+    const arrondi = v => { const p = Math.pow(10, Math.floor(Math.log10(Math.max(1, v)))); const r = v / p; return (r <= 1 ? 1 : r <= 2 ? 2 : r <= 5 ? 5 : 10) * p; };
+    const ticks = (max, n) => { const pas = arrondi(max / n); const vals = []; for (let v = 0; v <= max + 1e-9; v += pas) { vals.push(v); } if (vals[vals.length - 1] < max) { vals.push(vals[vals.length - 1] + pas); } return { pas, vals, max: vals[vals.length - 1] }; };
+    const fK = v => v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('fr-BE') + ' k' : String(Math.round(v));
+    jours.forEach((j, i) => {
+      g.textes.push({ x: cx(i), y: H - 8, t: NOMS[i] + ' ' + fD(j.date).slice(0, 2), a: 'middle', s: 10, w: j.aujourdhui ? 700 : 400, c: j.aujourdhui ? ENCRE : MUET });
+    });
+    if (variante === 'a' || variante === 'b'){
+      const cum = []; let acc = 0, accO = 0;
+      jours.forEach(j => { acc += j.ca || 0; accO += j.objectif || 0; cum.push({ ca: j.passe ? acc : null, obj: accO }); });
+      const maxV = variante === 'a'
+        ? Math.max(...jours.map(j => Math.max(j.ca || 0, j.objectif || 0)), 1)
+        : Math.max(acc, accO, 1);
+      const tk = ticks(maxV, 4);
+      const y = v => T + ph - v / tk.max * ph;
+      tk.vals.forEach(v => { g.lignes.push({ x1: L, x2: W - R, y1: y(v), y2: y(v), c: v === 0 ? AXE : GRILLE }); g.textes.push({ x: L - 6, y: y(v) + 3.5, t: fK(v), a: 'end', s: 9.5, c: MUET }); });
+      if (variante === 'a'){
+        // l'objectif en creux (pointillé pour les jours à venir), les ventes
+        // en plein dedans ; le jour regardé porte son chiffre, un jour
+        // atteint sa coche
+        const wO = Math.min(28, slot * 0.64), wR = Math.min(16, slot * 0.36);
+        jours.forEach((j, i) => {
+          const x = cx(i);
+          const t = NOMS[i] + ' ' + fD(j.date) + (j.objectif != null ? ' · objectif ' + fE(j.objectif) : '') + (j.ca != null ? ' · ventes ' + fE(j.ca) : (j.passe ? ' · fermé' : ' · à venir'));
+          if (j.objectif != null && j.objectif > 0) { g.rects.push({ x: x - wO / 2, y: y(j.objectif), w: wO, h: Math.max(1, y(0) - y(j.objectif)), fill: 'none', stroke: OR, dash: j.passe ? '' : '3 2.5', rx: 3, t }); }
+          if (j.ca != null && j.ca > 0) { g.paths.push({ d: this.barreArrondie(x - wR / 2, y(j.ca), wR, y(0) - y(j.ca), 4), fill: RUBIS, t }); }
+          if (j.aujourdhui && j.ca != null) { g.textes.push({ x, y: y(Math.max(j.ca, j.objectif || 0)) - 5, t: fE(j.ca), a: 'middle', s: 10, w: 700, c: ENCRE }); }
+          else if (j.passe && j.ca != null && j.objectif != null && j.ca >= j.objectif) { g.textes.push({ x, y: y(Math.max(j.ca, j.objectif)) - 5, t: '✓', a: 'middle', s: 10, w: 700, c: VERT }); }
+        });
+        g.legende = [{ sw: 'plein', c: RUBIS, l: 'ventes TTC' }, { sw: 'creux', c: OR, l: 'objectif du jour' }, { sw: 'pointille', c: OR, l: 'à venir' }];
+      } else {
+        // deux courbes : le cumul des ventes jusqu'au jour regardé, le cumul
+        // des objectifs jusqu'au dimanche ; l'écart se lit au bout du réel
+        const ptsO = cum.map((c2, i) => cx(i).toFixed(1) + ',' + y(c2.obj).toFixed(1)).join(' ');
+        const ptsR = cum.filter(c2 => c2.ca != null).map((c2, i) => cx(i).toFixed(1) + ',' + y(c2.ca).toFixed(1)).join(' ');
+        if (avecObj) { g.polys.push({ pts: ptsO, c: OR, w: 2, dash: '5 4' }); }
+        if (ptsR) { g.polys.push({ pts: ptsR, c: RUBIS, w: 2.2 }); }
+        if (avecObj) { jours.forEach((j, i) => { g.dots.push({ x: cx(i), y: y(cum[i].obj), r: 2.4, c: OR, t: 'objectif cumulé au ' + fD(j.date) + ' : ' + fE(cum[i].obj) }); }); }
+        const last = passes.length - 1;
+        if (last >= 0 && cum[last].ca != null){
+          const gauche = last >= 5, dessus = cum[last].ca >= cum[last].obj;
+          g.dots.push({ x: cx(last), y: y(cum[last].ca), r: 4.5, c: RUBIS, t: 'ventes cumulées au ' + fD(jours[last].date) + ' : ' + fE(cum[last].ca) });
+          g.textes.push({ x: cx(last) + (gauche ? -9 : 9), y: y(cum[last].ca) + (dessus ? -9 : 14), t: fE(cum[last].ca), a: gauche ? 'end' : 'start', s: 10.5, w: 700, c: ENCRE });
+          if (avecObj) {
+            const ec = cum[last].ca - cum[last].obj;
+            g.textes.push({ x: cx(last) + (gauche ? -9 : 9), y: y(cum[last].ca) + (dessus ? -21 : 26), t: (ec >= 0 ? '+' : '−') + fE(Math.abs(ec)) + ' vs objectif', a: gauche ? 'end' : 'start', s: 9.5, w: 400, c: ec >= 0 ? VERT : ROUGE });
+          }
+        }
+        if (avecObj) { g.textes.push({ x: cx(6), y: y(cum[6].obj) - 8, t: fE(cum[6].obj), a: 'end', s: 9.5, c: MUET }); }
+        g.legende = [{ sw: 'ligne', c: RUBIS, l: 'ventes cumulées' }, { sw: 'tirets', c: OR, l: 'objectif cumulé' }];
+      }
+    } else {
+      // le résultat net de chaque jour passé, au-dessus ou au-dessous de zéro
+      const vals = passes.map(j => j.net || 0);
+      const maxAbs = Math.max(...vals.map(Math.abs), 1);
+      const tk = ticks(maxAbs, 2);
+      const hasNeg = vals.some(v => v < 0), hasPos = vals.some(v => v > 0);
+      const top = hasPos || !hasNeg ? tk.max : 0, bottom = hasNeg ? -tk.max : 0;
+      const y = v => T + (top - v) / ((top - bottom) || 1) * ph;
+      for (let v = bottom; v <= top + 1e-9; v += tk.pas){ g.lignes.push({ x1: L, x2: W - R, y1: y(v), y2: y(v), c: Math.abs(v) < 1e-9 ? AXE : GRILLE }); g.textes.push({ x: L - 6, y: y(v) + 3.5, t: (v < 0 ? '−' : '') + fK(Math.abs(v)), a: 'end', s: 9.5, c: MUET }); }
+      const wB = Math.min(24, slot * 0.5);
+      let iMax = -1;
+      passes.forEach((j, i) => { if (j.net != null && (iMax < 0 || Math.abs(j.net) > Math.abs(passes[iMax].net || 0))) { iMax = i; } });
+      jours.forEach((j, i) => {
+        if (!j.passe || j.net == null) { return; }
+        const x = cx(i), v = j.net, y0 = y(0), y1 = y(v);
+        const t = NOMS[i] + ' ' + fD(j.date) + ' · résultat ' + (v >= 0 ? '+' : '−') + fE(Math.abs(v)) + (j.ca != null ? ' · ventes ' + fE(j.ca) : '');
+        g.paths.push({ d: v >= 0 ? this.barreArrondie(x - wB / 2, y1, wB, Math.max(1, y0 - y1), 4) : this.barreArrondieBas(x - wB / 2, y0, wB, Math.max(1, y1 - y0), 4), fill: v >= 0 ? VERT : ROUGE, t });
+        if (j.aujourdhui || i === iMax) { g.textes.push({ x, y: v >= 0 ? y1 - 5 : y1 + 12, t: (v >= 0 ? '+' : '−') + fE(Math.abs(v)), a: 'middle', s: 10, w: j.aujourdhui ? 700 : 400, c: ENCRE }); }
+      });
+      g.legende = [{ sw: 'plein', c: VERT, l: 'résultat positif' }, { sw: 'plein', c: ROUGE, l: 'résultat négatif' }];
+    }
+    const note = variante === 'c'
+      ? 'Résultat net par jour : marge brute − main-d’œuvre et frais généraux du mois répartis sur les jours d’ouverture ; le jour regardé porte ses coûts mesurés.'
+      : 'Objectif de chaque jour : le budget du mois × le poids du jour de semaine (pondération réseau), sur les jours d’ouverture du magasin. Les jours à venir ne portent que leur objectif.';
+    return { titre, resume, resumeCoul, choix, variante, note, g };
+  }
+  /** Une barre arrondie en haut, carrée sur sa base (4 px de rayon). */
+  barreArrondie(x, y, w, h, r){ r = Math.min(r, w / 2, h); return 'M' + x.toFixed(1) + ',' + (y + h).toFixed(1) + ' V' + (y + r).toFixed(1) + ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + (-r) + ' h' + (w - 2 * r).toFixed(1) + ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r + ' V' + (y + h).toFixed(1) + ' Z'; }
+  /** La même, tournée vers le bas : carrée sur la ligne de zéro, arrondie en bas. */
+  barreArrondieBas(x, y, w, h, r){ r = Math.min(r, w / 2, h); return 'M' + x.toFixed(1) + ',' + y.toFixed(1) + ' V' + (y + h - r).toFixed(1) + ' a' + r + ',' + r + ' 0 0 0 ' + r + ',' + r + ' h' + (w - 2 * r).toFixed(1) + ' a' + r + ',' + r + ' 0 0 0 ' + r + ',' + (-r) + ' V' + y.toFixed(1) + ' Z'; }
   valsResultatJour(common){
     const S = this.state, D = this.D;
     const r = (D.rjour || {})[this.rjCle()];
@@ -7959,6 +8085,8 @@ class App {
     common.rjDetail = {
       id: m.shopId, nom: m.magasin,
       fermer: () => this.setState({ rjSel: null }),
+      // La semaine en cours, jour par jour, en graphique (trois lectures).
+      semaine: this.rjSemaine(m),
       // Le planning du jour en barres : chaque personne, son créneau posé sur
       // l'axe des heures du magasin, et le CA attribué (le CA de chaque heure
       // partagé entre les personnes en poste cette heure-là).
