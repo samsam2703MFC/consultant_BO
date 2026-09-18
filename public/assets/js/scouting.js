@@ -161,6 +161,9 @@ const ISO_URL = 'https://valhalla1.openstreetmap.de/isochrone';
 // Le même service, en matrice : les minutes de route de quelques points vers
 // quelques autres (au plus cent paires et 150 km par appel).
 const MATRICE_URL = 'https://valhalla1.openstreetmap.de/sources_to_targets';
+// « Atelier by Max & Sandra - Gosselies » → « magasin de Gosselies » : dans
+// les tableaux du plan, c'est la ville qui compte, et la place est comptée.
+const nomMagasin = n => { const m = /\s[-–—]\s([^-–—]+)$/.exec(n || ''); return 'magasin de ' + (m ? m[1].trim() : (n || '').replace(/^Atelier by\s*/i, '') || 'réseau'); };
 const ISO_CHOIX = [['auto10', '10 min en voiture'], ['auto15', '15 min en voiture'], ['auto20', '20 min en voiture'], ['pedestrian15', '15 min à pied']];
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
@@ -1683,7 +1686,7 @@ export class Scouting {
     const N = Math.max(1, Math.min(5, s.planN || 5)), seuil = !!s.planSeuil;
     const minutes = Math.max(0, +s.planEcart || 0), ecartKm = minutes * 45 / 60;
     const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null)
-      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: m.nom || m.name || 'magasin', fixe: true }));
+      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: nomMagasin(m.nom || m.name || ''), fixe: true }));
     const groupes = this.scanTop5(ecartKm > 0 ? 40 : 5);
     const cands = [];
     groupes.forEach(g => g.zones.forEach(z => { if (!seuil || z.score >= s.minScore) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
@@ -1722,7 +1725,7 @@ export class Scouting {
         retenues.push(z);
       });
     }
-    const de = n => (/^[aeiouyàâéèêëîïôûùh]/i.test(n) ? 'd’' : 'de ') + n;
+    const de = n => /^magasin /.test(n) ? 'du ' + n : (/^[aeiouyàâéèêëîïôûùh]/i.test(n) ? 'd’' : 'de ') + n;
     const provinces = [], tous = [];
     let total = 0, hhTot = 0, k = 0;
     groupes.forEach(g => {

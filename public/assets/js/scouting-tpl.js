@@ -407,6 +407,9 @@ export const DOSS_CSS = `
 .sc-doss th{text-align:right;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:400;padding:5px 6px;border-bottom:1px solid #221E1A}
 .sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
 .sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
+.sc-doss td.com{min-width:124px}
+.sc-doss table.plan th,.sc-doss table.plan td{padding:5px 4px}
+.sc-doss table.plan th{white-space:normal;hyphens:manual}
 .sc-doss tr.tot td{font-weight:600;border-top:1px solid #221E1A;border-bottom:0;background:#fbf9f5}
 .sc-doss .ch{display:inline-block;font-size:9.5px;font-weight:600;border-radius:9px;padding:1px 7px;background:#EEE9E1;color:#221E1A;margin-left:5px;white-space:nowrap}
 .sc-doss .note{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:9px 11px;font-size:10.5px;color:#7a736a;line-height:1.6;margin-top:10px}
@@ -509,8 +512,8 @@ export function planPage(d, esc, logo){
     ${d.provinces.map(p => `
     <h3>${esc(p.nom)} <span class="ch">${esc(p.detail)}</span></h3>
     ${p.lignes.length ? `
-    <table><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondissement</th><th>Score</th><th>Ménages</th><th>Concurrents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>
-      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l"><b>${esc(l.commune)}</b>${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;white-space:nowrap">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut">${eur(l.m2)}</td></tr>`).join('')}
+    <table class="plan"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondis&shy;sement</th><th>Score</th><th>Ménages</th><th>Concur&shy;rents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>
+      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
       <tr class="tot"><td colspan="4" class="l">${p.lignes.length} ouverture${p.lignes.length > 1 ? 's' : ''}</td><td>${nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${eur(p.sousTotal)}</td><td></td></tr>
     </table>` : '<p class="mut" style="font-size:11.5px">Aucune zone hors des rayons d’exclusion dans cette province' + (d.seuil ? ', au-dessus du score ' + esc(d.minScore) : '') + '.</p>'}`).join('')}
 
