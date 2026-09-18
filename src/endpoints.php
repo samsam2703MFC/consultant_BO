@@ -8540,8 +8540,48 @@ function ep_scouting_reseau(): array
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['scoutingReseau', json_encode($pos, JSON_UNESCAPED_UNICODE)]);
     }
-    return ['magasins' => $out,
-        'source' => 'positions : fiche Google raccordée (réputation) ou pointée sur la carte ; CA : même source que l\'écran P&L (P&L mensuel du panel, ventes caisse pour les mois sans P&L), douze derniers mois clos, annualisé s\'il y en a moins'];
+    return ['magasins' => $out, 'panier' => scoutingPanierReseau(),
+        'source' => 'positions : fiche Google raccordée (réputation) ou pointée sur la carte ; CA : même source que l\'écran P&L (P&L mensuel du panel, ventes caisse pour les mois sans P&L), douze derniers mois clos, annualisé s\'il y en a moins ; panier : caisse du réseau (même source que l\'écran Exploitation), mois en cours'];
+}
+
+/**
+ * Le panier moyen du réseau — la même source que l'écran Exploitation (l'API
+ * du panel quand le compte consultant est là, sinon la caisse en base) : le
+ * mois en cours, ou la semaine s'il porte plus de tickets (début de mois).
+ * TTC après remise, par magasin et pour le réseau. La page de garde du
+ * dossier d'implantation s'en sert pour traduire un CA en clients par jour.
+ * Gardé un jour dans `ceo_app_setting.scoutingPanier`.
+ *
+ * @return array{mois: string, periode: string, jusquau: string, reseau: float, tickets: int, magasins: array<string,float>, le: string}|null
+ */
+function scoutingPanierReseau(): ?array
+{
+    try {
+        $cache = setting('scoutingPanier');
+        if (is_array($cache) && ($cache['le'] ?? '') === date('Y-m-d') && (float) ($cache['reseau'] ?? 0) > 0) { return $cache; }
+        $ex = ep_exploitation();
+        $meilleur = null;
+        foreach (['mois', 'semaine'] as $p) {
+            $c = $ex['reseau'][$p] ?? null;
+            if (is_array($c) && (int) ($c['tickets'] ?? 0) > 0 && (float) ($c['panier'] ?? 0) > 0
+                && ($meilleur === null || (int) $c['tickets'] > $meilleur['tickets'])) {
+                $meilleur = ['periode' => $p, 'tickets' => (int) $c['tickets'], 'panier' => (float) $c['panier']];
+            }
+        }
+        if ($meilleur === null) { return null; }
+        $magasins = [];
+        foreach ($ex['magasins'] ?? [] as $m) {
+            $c = is_array($m) ? ($m[$meilleur['periode']] ?? null) : null;
+            if (is_array($c) && (float) ($c['panier'] ?? 0) > 0) { $magasins[(string) ($m['shopId'] ?? '')] = round((float) $c['panier'], 2); }
+        }
+        $panier = ['mois' => (string) ($ex['mois'] ?? date('Y-m')), 'periode' => $meilleur['periode'], 'jusquau' => (string) ($ex['jour'] ?? ''),
+            'reseau' => round($meilleur['panier'], 2), 'tickets' => $meilleur['tickets'], 'magasins' => $magasins, 'le' => date('Y-m-d')];
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['scoutingPanier', json_encode($panier, JSON_UNESCAPED_UNICODE)]);
+        return $panier;
+    } catch (Throwable $e) {
+        return null;   // caisse indisponible : panier inconnu, le dossier le dit
+    }
 }
 
 /** GET /scouting/tiles/{i} — un secteur du cache OpenStreetMap partagé. */

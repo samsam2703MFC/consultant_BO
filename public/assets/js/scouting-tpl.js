@@ -409,6 +409,12 @@ export const DOSS_CSS = `
 .sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
 .sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
 .sc-doss td.com{min-width:124px}
+.sc-doss table.garde th.v5,.sc-doss table.garde td.v5{background:rgba(27,94,32,.10)}
+.sc-doss table.garde th.v10,.sc-doss table.garde td.v10{background:rgba(139,195,74,.16)}
+.sc-doss table.garde tr.kv td{padding-top:7px;padding-bottom:7px}
+.sc-doss table.garde tr.kv td b{font-weight:600}
+.sc-doss table.rampe{margin-top:12px}
+.sc-doss .attente.ligne{height:auto;padding:9px 12px;justify-content:flex-start;margin-bottom:8px}
 .sc-doss .ccard{border:0.5px solid #e6e0d8;border-radius:8px;margin:0 0 10px;background:#fff;overflow:hidden}
 .sc-doss .note + .ccard{margin-top:14px}
 .sc-doss .ccard.fort{border-color:rgba(141,29,44,.45)}
@@ -471,6 +477,25 @@ function etudeLocale(d, esc){
     + (d.etudeNote ? `<div class="note">${esc(d.etudeNote)}</div>` : '');
 }
 
+// La page de garde, sous la carte : à 5 et 10 minutes en voiture, le magasin
+// en trois lignes, puis le CA prévu avec la montée en charge et, si la caisse
+// du réseau a rendu un panier moyen, les clients par jour.
+function enBref(d, esc){
+  const rows = d.garde && d.garde.length ? d.garde : [];
+  const kv = d.gardeLignes || [];
+  const cols = d.gardeCols || ['5 min en voiture', '10 min en voiture', 'Zone étudiée'];
+  const t1 = rows.length || kv.length ? `<table class="garde">
+    ${rows.length ? `<tr><th class="l"></th><th class="v5">${esc(cols[0])}</th><th class="v10">${esc(cols[1])}</th><th>${esc(cols[2])}</th></tr>
+      ${rows.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n v5"><b>${esc(r[1])}</b></td><td class="n v10"><b>${esc(r[2])}</b></td><td class="n">${esc(r[3])}</td></tr>`).join('')}` : ''}
+    ${kv.map(r => `<tr class="kv"><td class="l"><b>${esc(r[0])}</b></td><td class="l" colspan="3"><b>${esc(r[1])}</b>${r[2] ? ` <span class="mut">· ${esc(r[2])}</span>` : ''}</td></tr>`).join('')}
+  </table>` : '';
+  const t2 = d.rampe && d.rampe.length ? `<table class="rampe"><tr><th class="l">CA prévu TTC · montée en charge</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Clients / jour</th></tr>
+      ${d.rampe.map((r, i) => `<tr${i === d.rampe.length - 1 ? ' class="tot"' : ''}><td class="l">${esc(r[0])}</td><td class="n">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="n">${esc(r[4])}</td></tr>`).join('')}
+    </table>${d.rampeNote ? `<div class="legende">${esc(d.rampeNote)}</div>` : ''}` : '';
+  if (!t1 && !t2) return '';
+  return `<h3>En bref</h3>${!rows.length && d.gardeAttente ? `<div class="attente ligne">${esc(d.gardeAttente)}</div>` : ''}${t1}${t2}`;
+}
+
 export function dossierPage(d, esc, logo){
   const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
   return `
@@ -485,6 +510,7 @@ export function dossierPage(d, esc, logo){
     <h3>Situation</h3>
     ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">${d.carteAttente || 'Carte en cours d’assemblage…'}</div>`}
     <div class="legende">${esc(d.carteNote)}</div>
+    ${enBref(d, esc)}
 
     <h3>L'essentiel</h3>
     <div class="q">${d.essentiel.map(tuile).join('')}</div>
