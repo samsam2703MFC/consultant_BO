@@ -41,11 +41,11 @@ final class GoogleApi
     /** Champs demandés à Google — facturés à la sélection, donc explicites. */
     private const CHAMPS_LIEU = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews';
     private const CHAMPS_RECHERCHE = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount';
-    private const CHAMPS_NOTE = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount';
+    private const CHAMPS_NOTE = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.businessStatus';
     // La fiche d'un concurrent pour le dossier d'implantation : les avis, et
     // les photos du lieu (celles de la fiche — Google ne rend pas les photos
     // jointes à un avis).
-    private const CHAMPS_FICHE = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews,photos';
+    private const CHAMPS_FICHE = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews,photos,businessStatus';
 
     public static function config(): array
     {
@@ -136,6 +136,8 @@ final class GoogleApi
             'nom'  => $p['displayName']['text'] ?? null,
             'placeId' => (string) ($p['id'] ?? ''),
             'adresse' => (string) ($p['formattedAddress'] ?? ''),
+            // OPERATIONAL, CLOSED_TEMPORARILY ou CLOSED_PERMANENTLY
+            'statut' => (string) ($p['businessStatus'] ?? ''),
         ];
     }
 
@@ -153,6 +155,7 @@ final class GoogleApi
             . '?languageCode=' . rawurlencode($c['langue']), self::CHAMPS_FICHE, $c['cle'], null);
         if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
         $d = googleLieuNormalise($json);
+        $d['statut'] = (string) ($json['businessStatus'] ?? '');
         $d['photos'] = [];
         foreach ((array) ($json['photos'] ?? []) as $ph) {
             $nom = trim((string) ($ph['name'] ?? ''));

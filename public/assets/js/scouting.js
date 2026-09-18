@@ -814,8 +814,8 @@ export class Scouting {
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
     const ratings = {}, notes = {};
     (d.competitors || []).forEach(r => {
-      if (r.rating != null) ratings[r.id] = { rating: +r.rating, n: +(r.reviews || 0), manual: r.source === 'manuel', adresse: r.adresse || '' };
-      else if (r.source === 'google') ratings[r.id] = { rating: null, n: 0, adresse: r.adresse || '' };   // déjà interrogé, sans note
+      if (r.rating != null) ratings[r.id] = { rating: +r.rating, n: +(r.reviews || 0), manual: r.source === 'manuel', adresse: r.adresse || '', statut: r.statut || '', dernierAvis: r.dernierAvis || '' };
+      else if (r.source === 'google') ratings[r.id] = { rating: null, n: 0, adresse: r.adresse || '', statut: r.statut || '', dernierAvis: r.dernierAvis || '' };   // déjà interrogé, sans note
       if (r.comment) notes[r.id] = r.comment;
     });
     const patch = { ratings, notes, candidates: d.candidates || [], pops: d.populations || {}, references: Array.isArray(d.references) ? d.references : [] };
@@ -1646,7 +1646,12 @@ export class Scouting {
     return this.strength(b) >= 0.75 - (5 - t) * 0.05;
   }
 
-  shops(){
+  // Les commerces de la sélection, sans les dormants : un concurrent que
+  // Google dit fermé, ou dont le dernier avis Google connu date de plus d'un
+  // an, ne compte ni sur la carte, ni dans la pression, ni dans le dossier.
+  shops(){ return this.shopsBruts().filter(b => !this.dormant(b)); }
+
+  shopsBruts(){
     const s = this.state;
     const hhOk = {};
     s.communes.forEach(c => { hhOk[c.ins] = c.hh >= s.minHh; });
@@ -1657,6 +1662,39 @@ export class Scouting {
       if (s.minHh > 0 && !hhOk[b.ins]) return false;
       return true;
     });
+  }
+
+  // Le signe de vie d'un concurrent, d'après sa fiche Google : fermé, ou
+  // sans avis depuis plus d'un an. Une note terrain (saisie) le garde vivant.
+  dormant(b){ return this.dormantRaison(b) !== ''; }
+
+  dormantRaison(b){
+    const rv = this.state.ratings[b.id];
+    if (!rv || rv.manual) return '';
+    if (rv.statut === 'CLOSED_PERMANENTLY') return 'fermé selon Google';
+    if (rv.statut === 'CLOSED_TEMPORARILY') return 'fermé temporairement selon Google';
+    if (rv.dernierAvis){
+      const t = Date.parse(rv.dernierAvis);
+      if (t && Date.now() - t > 365 * 86400000) return 'dernier avis Google le ' + new Date(t).toLocaleDateString('fr-BE');
+    }
+    return '';
+  }
+
+  // Les dormants autour d'un point (dans le rayon, ou dans la zone) : ce que
+  // le dossier dit avoir écarté, et pourquoi.
+  ecartesAutour(lat, lng, R, poly){
+    const bb = poly ? boitePoly(poly) : null;
+    return this.shopsBruts().filter(b => this.dormant(b) && (poly ? (b.lat >= bb.s && b.lat <= bb.n && b.lng >= bb.w && b.lng <= bb.e && dansPoly(poly, b.lat, b.lng)) : dist(lat, lng, b.lat, b.lng) <= R))
+      .map(b => ({ b: b, d: dist(lat, lng, b.lat, b.lng), raison: this.dormantRaison(b) })).sort((a, b) => a.d - b.d);
+  }
+
+  // La fiche ouverte, recalculée (les dormants viennent d'être connus, une
+  // note a changé) ; la carte du dossier suit.
+  reevaluer(){
+    const x = this.state.sel;
+    if (!x) return;
+    if (x.zone) this.evaluateZone(x.zone); else this.evaluate(x.lat, x.lng);
+    if (this.state.dossier) this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
   }
 
   filteredCommunes(){
@@ -1753,6 +1791,7 @@ export class Scouting {
       sel: {
         lat: lat, lng: lng, hh: hh, prim: prim, market: market, emprise: emprise, ca: ca,
         near: near, blocked: blocked, load: load, score: score,
+        ecartes: this.ecartesAutour(lat, lng, R, null),
         commune: cm ? cm.name : '—', arr: cm ? cm.arr : '—',
         prov: cm ? (PROV.find(p => p.code === cm.prov) || {}).name : '—',
         cmHh: cm ? cm.hh : 0, cmEst: cm ? !!cm.est : false, cmPop: cm ? cm.pop : 0
@@ -2367,10 +2406,19 @@ export class Scouting {
         if (!vivant()) return;
         g.rows = g.rows.concat((r && Array.isArray(r.rows)) ? r.rows : []);
         g.erreur = (r && r.erreur) || null;
-        // les notes et adresses fraîches des fiches rejoignent la sélection
-        g.rows.forEach(f => { if (f.fiche && f.note != null && !(out[f.id] && out[f.id].manual)) out[f.id] = { rating: +f.note, n: +(f.n || 0), adresse: f.adresse || (out[f.id] && out[f.id].adresse) || '' }; });
+        // les notes, adresses et signes de vie frais des fiches rejoignent la sélection
+        const avant = this.shops().length;
+        g.rows.forEach(f => {
+          if (!f.fiche || (out[f.id] && out[f.id].manual)) return;
+          const prec = out[f.id] || {};
+          out[f.id] = { rating: f.note != null ? +f.note : (prec.rating || null), n: f.n != null ? +f.n : (prec.n || 0), adresse: f.adresse || prec.adresse || '',
+            statut: f.statut || prec.statut || '', dernierAvis: f.dernierAvis || prec.dernierAvis || '' };
+        });
         this.saveRatings(out);
         this.setState({ dossierGoogle: Object.assign({}, g, { partiel: i + 10 < proches.length }), ratings: Object.assign({}, out) });
+        // un concurrent vient d'être reconnu fermé ou sans avis depuis un an :
+        // la fiche, la pression, le CA et la carte du dossier sont refaits
+        if (this.shops().length !== avant) this.reevaluer();
       }
       this._googleDossiers[cle] = g;
       if (vivant()) this.setState({ dossierGoogle: g, dossierGoogleBusy: false, ratings: Object.assign({}, out) });
@@ -2682,6 +2730,11 @@ export class Scouting {
       googleNote: s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.rows.some(f => f.fiche)
         ? 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), relevées le ' + new Date(s.dossierGoogle.le).toLocaleDateString('fr-BE') + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.' : '',
       concurrenceNote: concurrenceNote,
+      ecartesNote: (x.ecartes || []).length
+        ? 'Écarté' + (x.ecartes.length > 1 ? 's' : '') + ' de l’étude, ' + x.ecartes.length + ' commerce' + (x.ecartes.length > 1 ? 's' : '') + ' relevé' + (x.ecartes.length > 1 ? 's' : '') + ' ' + dans + ' : '
+          + x.ecartes.slice(0, 20).map(o => o.b.name + (o.b.commune ? ' (' + o.b.commune + ')' : '') + ' — ' + o.raison).join(' ; ') + (x.ecartes.length > 20 ? ' ; …' : '')
+          + '. Règle : un concurrent que Google dit fermé, ou dont le dernier avis Google connu date de plus d’un an, ne compte ni dans la liste, ni dans la pression, ni dans le CA.'
+        : '',
       chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
       // la liste : chaque concurrent, sa ligne, puis sa fiche Google (photo, trois derniers avis) quand elle est là
       cartes: (() => {
@@ -2917,6 +2970,7 @@ export class Scouting {
       sel: {
         lat: cen[0], lng: cen[1], hh: hh, prim: prim, market: market, emprise: emprise, ca: ca,
         near: near, blocked: blocked, load: load, score: score,
+        ecartes: this.ecartesAutour(cen[0], cen[1], Req, poly),
         commune: cm ? cm.name : '—', arr: cm ? cm.arr : '—',
         prov: cm ? (PROV.find(p => p.code === cm.prov) || {}).name : '—',
         cmHh: cm ? cm.hh : 0, cmEst: cm ? !!cm.est : false, cmPop: cm ? cm.pop : 0,
@@ -3430,7 +3484,7 @@ export class Scouting {
     for (let i = 0; i < list.length; i += 10){
       if (this.state.stop) break;
       const r = await this.notesLot(list.slice(i, i + 10));
-      r.rows.forEach(x => { out[x.id] = { rating: x.rating != null ? +x.rating : null, n: +(x.reviews || 0), adresse: x.adresse || '' }; if (x.rating) ok++; });
+      r.rows.forEach(x => { out[x.id] = { rating: x.rating != null ? +x.rating : null, n: +(x.reviews || 0), adresse: x.adresse || '', statut: x.statut || '', dernierAvis: (out[x.id] && out[x.id].dernierAvis) || '' }; if (x.rating) ok++; });
       done += r.rows.length;
       this.saveRatings(out);
       this.setState({ ratings: Object.assign({}, out), enrichDone: done });
