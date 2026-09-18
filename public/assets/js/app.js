@@ -7662,6 +7662,50 @@ class App {
       }),
     };
   }
+  /**
+   * La semaine en cours du magasin ouvert dans le détail, en une ligne : une
+   * case par jour du lundi au dimanche, teintée par le signe du résultat net
+   * du jour (les jours à venir en creux avec leur seul objectif, le jour
+   * regardé cerné), et une case « Semaine » qui porte la couleur du résultat
+   * de la semaine. Le détail complet de chaque jour est dans l'infobulle.
+   */
+  rjSemaine(m){
+    const jours = m.semaine || [];
+    if (jours.length !== 7) { return null; }
+    const fE = n => this.fE(n);
+    const fD = d => this.fD(d);
+    const NOMS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const VERT = '#2d7a3e', ROUGE = '#C0182B', MUET = 'var(--color-text-muted)';
+    const TEINTE = { ok: '#E6F2E9', sous: '#F7E4E6', neutre: '#EFEAE2' };
+    const passes = jours.filter(j => j.passe);
+    const caCum = passes.reduce((t, j) => t + (j.ca || 0), 0);
+    const netCum = passes.reduce((t, j) => t + (j.net || 0), 0);
+    const avecNet = passes.some(j => j.net != null);
+    const signe = v => (v >= 0 ? '+' : '−') + fE(Math.abs(v));
+    const cases = jours.map((j, i) => {
+      const jour = NOMS[i] + ' ' + fD(j.date).slice(0, 2);
+      const auj = !!j.aujourdhui;
+      const bord = auj ? 'box-shadow:inset 0 0 0 2px var(--color-text)' : '';
+      if (!j.passe) {
+        return { jour, auj, fond: 'var(--color-surface)', bord: 'border:1px dashed var(--color-border-secondary);' + bord,
+          val: j.objectif != null ? fE(j.objectif) : '—', valCoul: MUET, sous: j.objectif != null ? 'objectif' : 'à venir',
+          titre: jour + ' · à venir' + (j.objectif != null ? ' · objectif ' + fE(j.objectif) : '') };
+      }
+      if (!j.ouvert) { return { jour, auj, fond: TEINTE.neutre, bord, val: 'fermé', valCoul: MUET, sous: '', titre: jour + ' · fermé' }; }
+      const v = j.net;
+      const e = v == null ? 'neutre' : (v >= 0 ? 'ok' : 'sous');
+      return { jour, auj, fond: TEINTE[e], bord,
+        val: v == null ? '—' : signe(v), valCoul: v == null ? MUET : (v >= 0 ? VERT : ROUGE),
+        sous: (v != null && j.ca > 0) ? this.fP(v / j.ca, 1) + ' des ventes' : (j.ca != null ? fE(j.ca) + ' de ventes' : ''),
+        titre: jour + (v != null ? ' · résultat ' + signe(v) : ' · sans résultat') + (j.ca != null ? ' · ventes ' + fE(j.ca) : '')
+          + (j.objectif != null ? ' · objectif ' + fE(j.objectif) : '') };
+    });
+    const sem = { k: 'Semaine', v: avecNet ? signe(netCum) : '—',
+      s: avecNet && caCum > 0 ? this.fP(netCum / caCum, 1) + ' des ventes' : 'résultat indisponible',
+      fond: !avecNet ? '#8a847b' : (netCum >= 0 ? VERT : '#8D1D2C'),
+      titre: 'Semaine du ' + fD(jours[0].date) + ' au ' + fD(jours[6].date) + ' · résultat ' + (avecNet ? signe(netCum) : 'indisponible') + ' sur ' + fE(caCum) + ' de ventes, ' + passes.filter(j => j.ouvert).length + ' jour(s) — marge brute − main-d’œuvre et frais généraux répartis, le jour regardé avec ses coûts mesurés' };
+    return { titre: 'du ' + fD(jours[0].date) + ' au ' + fD(jours[6].date), cases, sem };
+  }
   valsResultatJour(common){
     const S = this.state, D = this.D;
     const r = (D.rjour || {})[this.rjCle()];
@@ -7959,6 +8003,8 @@ class App {
     common.rjDetail = {
       id: m.shopId, nom: m.magasin,
       fermer: () => this.setState({ rjSel: null }),
+      // La semaine en cours, jour par jour, en graphique (trois lectures).
+      semaine: this.rjSemaine(m),
       // Le planning du jour en barres : chaque personne, son créneau posé sur
       // l'axe des heures du magasin, et le CA attribué (le CA de chaque heure
       // partagé entre les personnes en poste cette heure-là).

@@ -4457,6 +4457,25 @@ function tplResultatJour(c, x){
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
       </div>` : ''}
 
+      ${c.rjDetail.semaine ? (sm => `
+      <div data-rjsem="1" style="margin-top:12px">
+        <div style="${cap};margin-bottom:6px">Résultat de la semaine en cours <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(sm.titre)}</span></div>
+        <div style="display:flex;align-items:stretch;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:stretch;gap:6px;flex:1;min-width:460px">
+            ${sm.cases.map(k => `<div title="${esc(k.titre)}" style="flex:1;min-width:0;border-radius:8px;padding:6px 8px;background:${k.fond};${k.bord};${num}">
+                <div style="font-size:10px;color:${k.auj ? 'var(--color-text)' : 'var(--color-text-muted)'};font-weight:${k.auj ? 700 : 500}">${esc(k.jour)}</div>
+                <div style="font-size:12.5px;font-weight:600;margin-top:2px;color:${k.valCoul};white-space:nowrap">${esc(k.val)}</div>
+                <div style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap">${esc(k.sous)}</div>
+              </div>`).join('')}
+          </div>
+          <div title="${esc(sm.sem.titre)}" style="border-radius:8px;padding:7px 12px;background:${sm.sem.fond};color:#fff;${num};min-width:150px;display:flex;flex-direction:column;justify-content:center">
+            <div style="font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.85">${esc(sm.sem.k)}</div>
+            <div style="font-size:15px;font-weight:700;line-height:1.15;white-space:nowrap">${esc(sm.sem.v)}</div>
+            <div style="font-size:10px;opacity:.92;white-space:nowrap">${esc(sm.sem.s)}</div>
+          </div>
+        </div>
+      </div>`)(c.rjDetail.semaine) : ''}
+
       ${c.rjDetail.planning ? `
       <div style="margin-top:13px;padding:12px 13px;border-radius:10px;background:var(--color-background-secondary)">
         <div style="${cap};margin-bottom:8px">Le planning du jour, par personne</div>
