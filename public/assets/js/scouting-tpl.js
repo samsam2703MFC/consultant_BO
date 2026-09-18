@@ -143,9 +143,9 @@ export function renderLeft(c, x){
   return `
   <div class="t-admin-label" style="margin-bottom:6px">Chercher une ville</div>
   <div class="sc-ville">
-    <input id="sc-ville" type="text" autocomplete="off" spellcheck="false" placeholder="Nom de commune" value="${esc(c.ville)}" ${x.I(c.setVille)} ${x.K(c.villeEntree)}>
+    <input id="sc-ville" type="text" autocomplete="off" spellcheck="false" placeholder="Nom de commune" value="${esc(c.ville)}" ${x.I(c.setVille)} ${x.K(c.villeEntree)} title="Entrée ouvre la fiche de la première commune trouvée, Maj+Entrée son dossier d'implantation">
     ${c.villes.length ? `<div class="res">${c.villes.map(v => `
-      <button ${x.A(v.aller)}><span class="n">${esc(v.nom)}</span><span class="m">${esc(v.meta)}</span></button>`).join('')}</div>` : ''}
+      <div class="l"><button ${x.A(v.aller)}><span class="n">${esc(v.nom)}</span><span class="m">${esc(v.meta)}</span></button><button ${x.A(v.dossier)} class="d" title="Ouvrir le dossier d'implantation de ${esc(v.nom)} — à imprimer ou à télécharger">Dossier</button></div>`).join('')}</div>` : ''}
     ${c.villeVide ? `<div class="vide">${esc(c.villeVide)}</div>` : ''}
   </div>
 

@@ -3429,6 +3429,15 @@ export class Scouting {
         self.evaluate(c.lat, c.lng);
       }, 60);
     };
+    // Le dossier d'implantation d'une ville cherchée, sans passer par la fiche :
+    // même préparation (province cochée, arrondissement), puis le dossier.
+    const dossierVille = c => () => {
+      const patch = { ville: '' };
+      if (!s.prov[c.prov]) patch.prov = Object.assign({}, s.prov, { [c.prov]: true });
+      if (s.arr !== 'all' && s.arr !== c.arr) patch.arr = c.arr;
+      self.setState(patch);
+      setTimeout(() => self.ouvrirDossierPoint(c.lat, c.lng), 60);
+    };
     // Le relevé garde les deux noms : « Ypres » côté français, « Ieper » côté
     // néerlandais. Chercher l'un doit trouver l'autre — le pays est bilingue,
     // et OpenStreetMap ne tranche pas toujours dans le même sens.
@@ -3831,10 +3840,11 @@ export class Scouting {
       setVille: e => self.setState({ ville: e.target.value }),
       // Entrée ouvre la première trouvée : la liste est juste dessous, mais on
       // ne tape pas un nom pour attraper la souris ensuite.
-      villeEntree: e => { if (e.key === 'Enter' && trouvees.length){ e.preventDefault(); aller(trouvees[0].c)(); } },
+      // Entrée : la fiche de la première trouvée ; Maj+Entrée : son dossier d'implantation.
+      villeEntree: e => { if (e.key === 'Enter' && trouvees.length){ e.preventDefault(); (e.shiftKey ? dossierVille : aller)(trouvees[0].c)(); } },
       villes: trouvees.map(o => Object.assign(ligneVille(o), {
         meta: ligneVille(o).meta + (s.prov[o.c.prov] ? '' : ' · province décochée'),
-        aller: aller(o.c)
+        aller: aller(o.c), dossier: dossierVille(o.c)
       })),
       villeVide: vq.length >= 2 && !trouvees.length ? 'Aucune commune de ce nom dans le relevé.' : '',
       pointsChauds: chauds.map((p, i) => ({
