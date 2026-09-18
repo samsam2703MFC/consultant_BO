@@ -409,6 +409,13 @@ export const DOSS_CSS = `
 .sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
 .sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
 .sc-doss td.com{min-width:124px}
+.sc-doss .ccard{border:0.5px solid #e6e0d8;border-radius:8px;margin-bottom:8px;background:#fff;overflow:hidden}
+.sc-doss .ccard.fort{border-color:rgba(141,29,44,.45)}
+.sc-doss .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;padding:8px 12px;background:#fbf9f5;font-size:12px}
+.sc-doss .chead .num{color:#7a736a;font-variant-numeric:tabular-nums}
+.sc-doss .chead b{font-size:13px}
+.sc-doss .chead .chiffres{margin-left:auto;display:flex;gap:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sc-doss .cbody{display:flex;gap:12px;padding:10px 12px}
 .sc-doss .gcard{display:flex;gap:12px;border:0.5px solid #e6e0d8;border-radius:8px;padding:10px 12px;margin-bottom:10px;background:#fff}
 .sc-doss .gphoto{flex:0 0 150px}.sc-doss .gphoto img{width:150px;height:auto;display:block;border-radius:5px}
 .sc-doss .gcred{font-size:9px;color:#7a736a;margin-top:3px}
@@ -481,18 +488,14 @@ export function dossierPage(d, esc, logo){
 
     <h3>La concurrence, en détail${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
     ${d.concurrenceNote ? `<div class="note" style="color:inherit">${esc(d.concurrenceNote)}</div>` : ''}
-    ${d.concurrence.length ? `
-    <table class="plan"><tr><th class="l">Commerce</th><th class="l">Commune · adresse</th><th>Distance</th><th>Note / 5</th><th class="l">Taille (avis)</th><th>Force</th><th class="l" style="padding-left:10px">Lecture</th></tr>
-      ${d.concurrence.map(r => `<tr><td class="l"><b>${esc(r[0])}</b>${r[7] ? `<span class="ch">${esc(r[7])}</span>` : ''}</td><td class="l mut">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n">${esc(r[3])}</td><td class="l mut">${esc(r[4])}</td><td class="n">${esc(r[5])}</td>
-        <td class="l ${r[6] ? 'acc' : 'mut'}" style="padding-left:10px">${r[6] ? '<b>concurrent fort</b>' : 'concurrent'}${r[7] ? ' · chaîne ' + esc(r[7]) : ''}</td></tr>`).join('')}
-    </table>` : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
-    ${d.avisGoogle.length ? `<h3>Ce que Google dit des concurrents les plus proches</h3>
-    ${d.avisGoogle.map(f => `<div class="gcard">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
-      <div class="gtxt"><div class="gnom">${esc(f.nom)} <span class="gnote">${esc(f.note)} ★</span> <span class="mut">${f.n} avis${f.dist ? ' · à ' + esc(f.dist) : ''}</span>${f.url ? ` <a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px;font-weight:400">fiche Google ↗</a>` : ''}</div>
-        ${f.adresse ? `<div class="gadr">${esc(f.adresse)}</div>` : ''}
-        ${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px;margin-top:4px">Aucun avis rendu par Google.</div>'}
-      </div></div>`).join('')}
-    ${d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : ''}` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : ''}
+    ${d.cartes.length ? d.cartes.map((c, i) => { const r = c.ligne, f = c.fiche; return `
+    <div class="ccard${r[6] ? ' fort' : ''}">
+      <div class="chead"><span class="num">${i + 1}</span><b>${esc(r[0])}</b>${r[7] ? `<span class="ch">chaîne ${esc(r[7])}</span>` : ''}<span class="mut">${esc(r[1])}</span>
+        <span class="chiffres"><span>${esc(r[2])}</span><span title="note Google / 5">${r[3] === '—' ? 'sans note' : esc(r[3]) + ' ★'}</span><span>${esc(r[4])}</span><span>force ${esc(r[5])}</span><span class="${r[6] ? 'acc' : 'mut'}">${r[6] ? 'concurrent fort' : 'concurrent'}</span></span></div>
+      ${f ? `<div class="cbody">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
+        <div class="gtxt">${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px">Aucun avis rendu par Google.</div>'}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px">fiche Google ↗</a>` : ''}</div>
+      </div>` : ''}
+    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>
