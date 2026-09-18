@@ -3393,8 +3393,11 @@ function wr_scouting_concurrents_google(): array
         $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
         if ($name === '' || preg_match('/sans nom/iu', $name)) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
         $cur = Db::row('SELECT place_id, address, rating, reviews, rating_source, google_json, google_at, business_status, last_review_at FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
-        // du cache, s'il a moins de 30 jours
-        if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400) {
+        // du cache, s'il a moins de 30 jours — et s'il porte déjà le signe de
+        // vie (statut, dernier avis) : une fiche relevée avant qu'on le garde
+        // est redemandée, sinon le dormant passerait inaperçu un mois de plus
+        if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400
+            && ($cur['business_status'] !== null || $cur['last_review_at'] !== null)) {
             $g = json_decode((string) $cur['google_json'], true);
             if (is_array($g)) {
                 $g['id'] = $id; $g['cache'] = true;
