@@ -7687,9 +7687,11 @@ class App {
     const netCum = passes.reduce((t, j) => t + (j.net || 0), 0);
     const avecObj = jours.some(j => j.objectif != null);
     const avecNet = passes.some(j => j.net != null);
-    const variante = ['a', 'b', 'c'].includes(S.rjGraphe) ? S.rjGraphe : 'a';
-    const choix = [['a', 'Ventes vs objectif'], ['b', 'Cumul de la semaine'], ['c', 'Résultat net']].map(([k, l]) => ({
-      k, l, on: k === variante, aller: () => this.setState({ rjGraphe: k }) }));
+    const variante = ['a', 'b', 'c', 'd1', 'd2', 'd3'].includes(S.rjGraphe) ? S.rjGraphe : 'd1';
+    const choix = [['d1', 'Cases · objectif'], ['d2', 'Cases · résultat'], ['d3', 'Ligne minimale'], ['a', 'Graphique']].map(([k, l]) => ({
+      k, l, on: k === variante || (k === 'a' && ['b', 'c'].includes(variante)), aller: () => this.setState({ rjGraphe: k }) }));
+    const sousChoix = ['a', 'b', 'c'].includes(variante)
+      ? [['a', 'Ventes vs objectif'], ['b', 'Cumul'], ['c', 'Résultat net']].map(([k, l]) => ({ k, l, on: k === variante, aller: () => this.setState({ rjGraphe: k }) })) : [];
     const titre = 'Semaine du ' + fD(jours[0].date) + ' au ' + fD(jours[6].date);
     const pct = objCum > 0 ? caCum / objCum : null;
     const resume = variante === 'c'
@@ -7700,6 +7702,46 @@ class App {
           + (objSem > 0 ? ' · objectif de la semaine ' + fE(objSem) : ''));
     const resumeCoul = variante === 'c' ? (avecNet ? (netCum >= 0 ? VERT : ROUGE) : MUET)
       : (pct == null ? MUET : (pct >= 1 ? VERT : (pct >= 0.9 ? '#C17A2A' : 'var(--color-primary)')));
+
+    // ── La ligne discrète : sept cases, une par jour, teintées par ce que le
+    //    jour a donné (atteinte de l'objectif, ou signe du résultat), et une
+    //    case de semaine qui porte la couleur du résultat de la semaine.
+    const TEINTE = { ok: '#E6F2E9', presque: '#FBEFE0', sous: '#F7E4E6', neutre: '#EFEAE2' };
+    const FEU = { ok: VERT, presque: '#C17A2A', sous: 'var(--color-primary)', neutre: MUET };
+    const etat = p2 => p2 == null ? 'neutre' : (p2 >= 1 ? 'ok' : (p2 >= 0.9 ? 'presque' : 'sous'));
+    const LETTRES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const cases = jours.map((j, i) => {
+      const jour = NOMS[i] + ' ' + fD(j.date).slice(0, 2);
+      const auj = !!j.aujourdhui;
+      const bordAuj = auj ? 'box-shadow:inset 0 0 0 2px var(--color-text)' : '';
+      if (!j.passe) {
+        return { jour, lettre: LETTRES[i], auj, fond: variante === 'd3' ? '#E3DDD4' : 'var(--color-surface)', bord: (variante === 'd3' ? '' : 'border:1px dashed var(--color-border-secondary);') + bordAuj,
+          badge: '', coul: MUET, val: j.objectif != null ? fE(j.objectif) : '—', valCoul: 'var(--color-text-muted)', sous: j.objectif != null ? 'objectif' : 'à venir',
+          titre: jour + ' · à venir' + (j.objectif != null ? ' · objectif ' + fE(j.objectif) : '') };
+      }
+      if (!j.ouvert) {
+        return { jour, lettre: LETTRES[i], auj, fond: variante === 'd3' ? '#d8d2c8' : TEINTE.neutre, bord: bordAuj, badge: '', coul: MUET, val: 'fermé', valCoul: 'var(--color-text-muted)', sous: '', titre: jour + ' · fermé' };
+      }
+      if (variante === 'd2') {
+        const v = j.net;
+        const e = v == null ? 'neutre' : (v >= 0 ? 'ok' : 'sous');
+        return { jour, lettre: LETTRES[i], auj, fond: TEINTE[e], bord: bordAuj, badge: '', coul: FEU[e],
+          val: v == null ? '—' : (v >= 0 ? '+' : '−') + fE(Math.abs(v)), valCoul: v == null ? 'var(--color-text-muted)' : FEU[e],
+          sous: (v != null && j.ca > 0) ? this.fP(v / j.ca, 1) + ' des ventes' : (j.ca != null ? fE(j.ca) + ' de ventes' : ''),
+          titre: jour + (v != null ? ' · résultat ' + (v >= 0 ? '+' : '−') + fE(Math.abs(v)) : ' · sans résultat') + (j.ca != null ? ' · ventes ' + fE(j.ca) : '') };
+      }
+      const p2 = (j.objectif > 0 && j.ca != null) ? j.ca / j.objectif : null;
+      const e = etat(p2);
+      return { jour, lettre: LETTRES[i], auj, fond: variante === 'd3' ? (e === 'neutre' ? '#d8d2c8' : (e === 'sous' ? '#8D1D2C' : FEU[e])) : TEINTE[e], bord: bordAuj,
+        badge: p2 == null ? '' : this.fP(p2, 0), coul: FEU[e], val: fE(j.ca), valCoul: 'var(--color-text)',
+        sous: j.objectif != null ? 'obj. ' + fE(j.objectif) : 'sans objectif',
+        titre: jour + ' · ventes ' + fE(j.ca) + (j.objectif != null ? ' · objectif ' + fE(j.objectif) + (p2 != null ? ' (' + this.fP(p2, 0) + ')' : '') : '') };
+    });
+    const eSem = variante === 'd2' ? (avecNet ? (netCum >= 0 ? 'ok' : 'sous') : 'neutre') : etat(pct);
+    const fondSem = eSem === 'sous' ? '#8D1D2C' : (eSem === 'neutre' ? '#8a847b' : FEU[eSem]);
+    const sem = variante === 'd2'
+      ? { k: 'Semaine', v: avecNet ? (netCum >= 0 ? '+' : '−') + fE(Math.abs(netCum)) : '—', s: avecNet && caCum > 0 ? this.fP(netCum / caCum, 1) + ' des ventes' : 'résultat indisponible', fond: fondSem }
+      : { k: 'Semaine', v: pct != null ? this.fP(pct, 0) + ' de l’objectif' : fE(caCum), s: pct != null ? ((caCum - objCum >= 0 ? '+' : '−') + fE(Math.abs(caCum - objCum)) + ' à ce jour') : 'sans objectif', fond: fondSem };
 
     // le cadre commun : sept colonnes, une marge à gauche pour les graduations
     const W = 640, H = 190, L = 52, R = 14, T = 16, B = 26;
@@ -7782,7 +7824,7 @@ class App {
     const note = variante === 'c'
       ? 'Résultat net par jour : marge brute − main-d’œuvre et frais généraux du mois répartis sur les jours d’ouverture ; le jour regardé porte ses coûts mesurés.'
       : 'Objectif de chaque jour : le budget du mois × le poids du jour de semaine (pondération réseau), sur les jours d’ouverture du magasin. Les jours à venir ne portent que leur objectif.';
-    return { titre, resume, resumeCoul, choix, variante, note, g };
+    return { titre, resume, resumeCoul, choix, sousChoix, variante, note, g, cases, sem };
   }
   /** Une barre arrondie en haut, carrée sur sa base (4 px de rayon). */
   barreArrondie(x, y, w, h, r){ r = Math.min(r, w / 2, h); return 'M' + x.toFixed(1) + ',' + (y + h).toFixed(1) + ' V' + (y + r).toFixed(1) + ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + (-r) + ' h' + (w - 2 * r).toFixed(1) + ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r + ' V' + (y + h).toFixed(1) + ' Z'; }

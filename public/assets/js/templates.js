@@ -4457,16 +4457,40 @@ function tplResultatJour(c, x){
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
       </div>` : ''}
 
-      ${c.rjDetail.semaine ? (sm => `
-      <div style="margin-top:13px;padding:12px 13px 10px;border-radius:10px;background:var(--color-background-secondary)">
+      ${c.rjDetail.semaine ? (sm => {
+        const bouton = ch => `<button ${x.A(ch.aller)} style="border:1px solid ${ch.on ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${ch.on ? 'var(--color-text)' : 'var(--color-surface)'};color:${ch.on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:3px 10px;font-size:11px;cursor:pointer">${esc(ch.l)}</button>`;
+        // la ligne discrète : sept cases et la case de semaine, sans carte
+        if (sm.cases && ['d1', 'd2', 'd3'].includes(sm.variante)) { const mini = sm.variante === 'd3'; return `
+      <div data-rjsem="1" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="${cap}">Semaine en cours <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(sm.titre.replace(/^Semaine /, ''))}</span></div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">${sm.choix.map(bouton).join('')}</div>
+        </div>
+        <div style="display:flex;align-items:${mini ? 'center' : 'stretch'};gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:${mini ? 'flex-start' : 'stretch'};gap:${mini ? '5px' : '6px'};flex:1;min-width:${mini ? '0' : '460px'}">
+            ${sm.cases.map(k => mini
+              ? `<div title="${esc(k.titre)}" style="display:flex;flex-direction:column;align-items:center;gap:3px"><i style="display:block;width:18px;height:18px;border-radius:4px;background:${k.fond};${k.auj ? 'box-shadow:0 0 0 2px var(--color-surface),0 0 0 3.5px var(--color-text)' : ''}"></i><span style="font-size:9px;color:var(--color-text-muted);font-weight:${k.auj ? 700 : 400}">${esc(k.lettre)}</span></div>`
+              : `<div title="${esc(k.titre)}" style="flex:1;min-width:0;border-radius:8px;padding:6px 8px;background:${k.fond};${k.bord};${num}">
+                  <div style="display:flex;justify-content:space-between;gap:4px;font-size:10px;color:var(--color-text-muted)"><span style="font-weight:${k.auj ? 700 : 500};color:${k.auj ? 'var(--color-text)' : 'inherit'}">${esc(k.jour)}</span><span style="color:${k.coul};font-weight:600">${esc(k.badge)}</span></div>
+                  <div style="font-size:12.5px;font-weight:600;margin-top:2px;color:${k.valCoul};white-space:nowrap">${esc(k.val)}</div>
+                  <div style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap">${esc(k.sous)}</div>
+                </div>`).join('')}
+          </div>
+          <div style="border-radius:8px;padding:${mini ? '5px 10px' : '7px 12px'};background:${sm.sem.fond};color:#fff;${num};min-width:${mini ? '0' : '160px'};display:flex;flex-direction:column;justify-content:center">
+            <div style="font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.85">${esc(sm.sem.k)}</div>
+            <div style="font-size:${mini ? '12.5px' : '15px'};font-weight:700;line-height:1.15;white-space:nowrap">${esc(sm.sem.v)}</div>
+            ${sm.sem.s ? `<div style="font-size:10px;opacity:.92;white-space:nowrap">${esc(sm.sem.s)}</div>` : ''}
+          </div>
+        </div>
+      </div>`; }
+        return `
+      <div data-rjsem="1" style="margin-top:13px;padding:12px 13px 10px;border-radius:10px;background:var(--color-background-secondary)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
           <div>
             <div style="${cap}">Résultat de la semaine en cours</div>
             <div style="font-size:12px;margin-top:3px;${num}"><span style="color:var(--color-text-muted)">${esc(sm.titre)} ·</span> <span style="font-weight:600;color:${sm.resumeCoul}">${esc(sm.resume)}</span></div>
           </div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">
-            ${sm.choix.map(ch => `<button ${x.A(ch.aller)} style="border:1px solid ${ch.on ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${ch.on ? 'var(--color-text)' : 'var(--color-surface)'};color:${ch.on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:3px 10px;font-size:11px;cursor:pointer">${esc(ch.l)}</button>`).join('')}
-          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">${sm.choix.map(bouton).join('')}${sm.sousChoix.length ? `<span style="width:6px"></span>${sm.sousChoix.map(bouton).join('')}` : ''}</div>
         </div>
         <svg viewBox="0 0 ${sm.g.W} ${sm.g.H}" style="width:100%;height:auto;display:block;margin-top:8px;font-family:var(--font-ui)">
           ${sm.g.lignes.map(l => `<line x1="${l.x1}" x2="${l.x2}" y1="${l.y1.toFixed(1)}" y2="${l.y2.toFixed(1)}" stroke="${l.c}" stroke-width="1"/>`).join('')}
@@ -4482,7 +4506,7 @@ function tplResultatJour(c, x){
           </div>
           <div style="font-size:10px;color:var(--color-text-muted);text-wrap:pretty;max-width:520px">${esc(sm.note)}</div>
         </div>
-      </div>`)(c.rjDetail.semaine) : ''}
+      </div>`; })(c.rjDetail.semaine) : ''}
 
       ${c.rjDetail.planning ? `
       <div style="margin-top:13px;padding:12px 13px;border-radius:10px;background:var(--color-background-secondary)">
