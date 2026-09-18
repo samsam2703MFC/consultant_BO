@@ -543,6 +543,8 @@ export class Scouting {
       // routage) plutôt qu'à vol d'oiseau ; planSel garde la sélection calculée
       // et sa clé, planCalc l'avancement pendant le calcul.
       planRoute: true, planSel: null, planCalc: null,
+      // Le CA annuel estimé minimum d'une ouverture du plan (0 = aucun).
+      planCaMin: 0,
       // L'étude de marché locale du point du dossier (GET /scouting/etude,
       // ou Overpass depuis le navigateur en repli) : entreprises, zonings,
       // écoles, générateurs de flux, concurrence indirecte.
@@ -1808,22 +1810,24 @@ export class Scouting {
     const minutes = Math.max(0, +s.planEcart || 0), ecartKm = minutes * 45 / 60;
     const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null)
       .map(m => ({ lat: +m.lat, lng: +m.lng, nom: nomMagasin(m.nom || m.name || ''), fixe: true }));
-    const groupes = this.scanTop5(ecartKm > 0 ? 40 : 5);
+    const groupes = this.scanTop5(ecartKm > 0 || s.planCaMin > 0 ? 40 : 5);
+    const caMin = Math.max(0, +s.planCaMin || 0);
     const cands = [];
-    groupes.forEach(g => g.zones.forEach(z => { if (!seuil || z.score >= s.minScore) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
+    groupes.forEach(g => g.zones.forEach(z => { if ((!seuil || z.score >= s.minScore) && (!caMin || z.ca >= caMin)) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
     cands.sort((a, b) => (b.score - a.score) || (b.ca - a.ca));
     const route = ecartKm > 0 && s.planRoute !== false;
     // au-delà de `cut` km à vol d'oiseau, l'écart en minutes est acquis : il
     // faudrait rouler à 140 km/h de moyenne, porte à porte
     const cut = minutes / 60 * 140;
-    const cle = route ? [this._top5Key, N, seuil, minutes, !!s.planReseau, ouverts.map(m => m.lat.toFixed(4) + ',' + m.lng.toFixed(4)).join(';')].join('#') : '';
-    return { N: N, seuil: seuil, minutes: minutes, ecartKm: ecartKm, cut: cut, ouverts: ouverts, groupes: groupes, cands: cands, route: route, cle: cle };
+    const cle = route ? [this._top5Key, N, seuil, caMin, minutes, !!s.planReseau, ouverts.map(m => m.lat.toFixed(4) + ',' + m.lng.toFixed(4)).join(';')].join('#') : '';
+    return { N: N, seuil: seuil, caMin: caMin, minutes: minutes, ecartKm: ecartKm, cut: cut, ouverts: ouverts, groupes: groupes, cands: cands, route: route, cle: cle };
   }
 
   planDonnees(){
     const s = this.state, self = this;
     const P = this.planSelection();
-    const N = P.N, seuil = P.seuil, minutes = P.minutes, ecartKm = P.ecartKm, cut = P.cut, groupes = P.groupes;
+    const N = P.N, seuil = P.seuil, caMin = P.caMin, minutes = P.minutes, ecartKm = P.ecartKm, cut = P.cut, groupes = P.groupes;
+    const caMinTxt = caMin ? ' · CA ≥ ' + fmtEur(caMin) : '';
     const fixes = s.planReseau ? P.ouverts : [];
     let retenues = [], ecartes = 0, ecartesProv = {}, temps = {}, sel = null, enCours = false;
     if (P.route){
@@ -1857,7 +1861,7 @@ export class Scouting {
         const v = ecartKm > 0 ? self.voisinDe(z, retenues.concat(fixes), temps, cut, P.route) : null;
         const voisinTxt = !(ecartKm > 0) ? '' : v ? (P.route ? 'à ' + Math.round(v.sec / 60) + ' min ' + de(v.nom) + (v.approx ? ' (estimé)' : '') : 'à ' + Math.round(v.km) + ' km ' + de(v.nom) + ' à vol d’oiseau') : (P.route ? 'rien à moins de ' + Math.round(cut) + ' km' : '');
         return { rang: i + 1, num: k, commune: z.commune, arr: z.arr, prov: g.prov, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
-          emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng, voisin: v, voisinTxt: voisinTxt };
+          emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng, voisin: v, voisinTxt: voisinTxt, dossier: () => self.ouvrirDossierPoint(z.lat, z.lng) };
       });
       const sous = lignes.reduce((a, l) => a + l.ca, 0);
       total += sous; hhTot += lignes.reduce((a, l) => a + l.hh, 0);
@@ -1876,23 +1880,24 @@ export class Scouting {
       enCours: enCours, calc: s.planCalc, route: P.route, cut: cut,
       titre: 'Plan d’expansion — ' + tous.length + ' ouverture' + (tous.length > 1 ? 's' : '') + ' dans ' + nProv + ' province' + (nProv > 1 ? 's' : ''),
       date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
-      N: N, seuil: seuil, minScore: s.minScore, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
+      N: N, seuil: seuil, minScore: s.minScore, caMin: caMin, caMinTxt: caMinTxt, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
       total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
       resume: [
         ['CA annuel estimé, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
-        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (P.route ? ' par la route' : '') + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
+        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + caMinTxt + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (P.route ? ' par la route' : '') + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
         ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
         caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
       ],
       provinces: provinces,
       classement: tous.slice().sort((a, b) => b.ca - a.ca).slice(0, 10),
       carteNote: 'Les ronds verts numérotés : les zones retenues, dans l’ordre du plan. Les carrés noirs : les magasins du réseau déjà ouverts. Fond de carte © OpenStreetMap.',
-      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score par province' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + ', ' + ecartTxt + (ecartes ? ' ; ' + ecartes + ' zone' + (ecartes > 1 ? 's' : '') + ' mieux classée' + (ecartes > 1 ? 's' : '') + ' ' + (ecartes > 1 ? 'ont' : 'a') + ' cédé la place pour cause de proximité' : '') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
+      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score par province' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + (caMin ? ', au CA annuel estimé d’au moins ' + fmtEur(caMin) : '') + ', ' + ecartTxt + (ecartes ? ' ; ' + ecartes + ' zone' + (ecartes > 1 ? 's' : '') + ' mieux classée' + (ecartes > 1 ? 's' : '') + ' ' + (ecartes > 1 ? 'ont' : 'a') + ' cédé la place pour cause de proximité' : '') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
       hypotheses: [
         ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
         ['Emprise', s.emprise > 0 ? 'imposée ' + s.emprise + ' %' : 'calculée, max ' + s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
         ['Rayon', R], ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)],
-        ['Écart entre ouvertures', ecartKm > 0 ? minutes + ' min de voiture' + (P.route ? ', temps de route' : ', ≈ ' + Math.round(ecartKm) + ' km') + (s.planReseau ? ', magasins ouverts compris' : '') : 'aucun']
+        ['Écart entre ouvertures', ecartKm > 0 ? minutes + ' min de voiture' + (P.route ? ', temps de route' : ', ≈ ' + Math.round(ecartKm) + ' km') + (s.planReseau ? ', magasins ouverts compris' : '') : 'aucun'],
+        ['CA annuel minimum', caMin ? fmtEur(caMin) : 'aucun']
       ],
       sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
         + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + (ecartKm > 0 && P.route ? ' · temps de route : Valhalla (FOSSGIS) sur OpenStreetMap' : '') + ' · CA réel du réseau : P&L du panel, douze derniers mois clos.'
@@ -2108,7 +2113,7 @@ export class Scouting {
 
   planPayload(d){
     return {
-      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') + (d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''),
+      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') + (d.caMinTxt || '') + (d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''),
       resume: d.resume, carte: d.carte || '', carteNote: d.carteNote,
       provinces: d.provinces.map(p => ({ nom: p.nom, detail: p.detail, sousTotal: fmtEur(p.sousTotal),
         lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr + (l.voisinTxt ? ' · ' + l.voisinTxt : ''), String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
@@ -2258,6 +2263,19 @@ export class Scouting {
   }
 
   fermerDossier(){ this.setState({ dossier: false, dossierCand: null }); }
+
+  // Le dossier d'une ville choisie dans une liste (zones candidates, top 5,
+  // plan d'expansion) : la carte s'y rend, la fiche évalue le point, le
+  // dossier s'ouvre — à imprimer ou à télécharger tel quel.
+  ouvrirDossierPoint(lat, lng){
+    this._scroll['sc-table'] = 0;
+    this._planCle = null;
+    this.setState({ view: 'map', plan: false, planCalc: null, compare: false, reseau: false });
+    if (this.map) this.map.setView([lat, lng], 12);
+    this.evaluate(lat, lng);
+    if (this.state.sel) this.ouvrirDossier(null);
+    else this.notify('Les communes ne sont pas encore chargées — un instant, puis réessaie.');
+  }
 
   // Tout ce que le dossier dit, sous forme de données : la page à l'écran, le
   // PDF du serveur, l'impression et le CSV en sont quatre lectures.
@@ -3442,7 +3460,8 @@ export class Scouting {
         emprise: (emp * 100).toFixed(1) + ' %', empriseRaw: (emp * 100).toFixed(1),
         ca: fmtEur(p.ca), caRaw: Math.round(p.ca),
         m2: fmtEur(p.ca / s.surface), m2Raw: Math.round(p.ca / s.surface),
-        open: () => goMap(p.lat, p.lng, 13, true)
+        open: () => goMap(p.lat, p.lng, 13, true),
+        dossier: () => self.ouvrirDossierPoint(p.lat, p.lng)
       };
     });
     if (sk !== 'rang'){
@@ -3910,6 +3929,8 @@ export class Scouting {
         ecartVal: String(Math.max(0, +s.planEcart || 0)), setEcart: e => self.setPlan({ planEcart: parseInt(e.target.value, 10) || 0 }),
         reseauOn: !!s.planReseau, toggleReseau: () => self.setPlan({ planReseau: !s.planReseau }),
         routeOn: s.planRoute !== false, toggleRoute: () => self.setPlan({ planRoute: s.planRoute === false }),
+        caMinVal: s.planCaMin > 0 ? String(s.planCaMin) : '',
+        setCaMin: e => { const v = parseInt(String(e.target.value).replace(/[^\d]/g, ''), 10); self.setPlan({ planCaMin: isNaN(v) ? 0 : Math.max(0, v) }); },
         fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
       }) : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
@@ -3997,7 +4018,7 @@ export class Scouting {
         prov: g.prov, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection',
         rows: g.zones.map((p, i) => { const cc = self.concurrenceAu(p.lat, p.lng, s.radius); return { rang: i + 1, commune: p.commune, arr: p.arr, score: p.score, hh: fmtInt(p.hh), n: p.n,
           forts: cc.forts, chaines: cc.chainesTxt || (cc.chaines ? String(cc.chaines) : '—'), noms: cc.noms,
-          emprise: (p.emprise * 100).toFixed(1) + ' %', ca: fmtEur(p.ca), m2: fmtEur(p.ca / s.surface), open: () => goMap(p.lat, p.lng, 13, true) }; })
+          emprise: (p.emprise * 100).toFixed(1) + ' %', ca: fmtEur(p.ca), m2: fmtEur(p.ca / s.surface), open: () => goMap(p.lat, p.lng, 13, true), dossier: () => self.ouvrirDossierPoint(p.lat, p.lng) }; })
       })) : [],
       top5Cols: [['rang', 'Rang'], ['commune', 'Commune'], ['arr', 'Arrondissement'], ['score', 'Score'], ['hh', 'Ménages'], ['n', 'Concurrents'], ['forts', 'Forts'], ['chaines', 'Chaînes'], ['emprise', 'Emprise'], ['ca', 'CA estimé'], ['m2', '€/m²']]
         .map(([k, label]) => ({ label: label, tip: TIP_ZONES[k] || '' })),
