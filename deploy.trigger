@@ -396,3 +396,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-18T05:07:31Z scouting etude de marche locale dans le dossier
 2026-09-18T05:11:28Z scouting etude locale un releve a la fois
 2026-09-18T06:20:58Z scouting bouton dossier par ville et ca minimum du plan
+2026-09-18T06:33:41Z scouting dossier direct depuis la recherche de ville
