@@ -41,7 +41,11 @@ final class GoogleApi
     /** Champs demandés à Google — facturés à la sélection, donc explicites. */
     private const CHAMPS_LIEU = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews';
     private const CHAMPS_RECHERCHE = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount';
-    private const CHAMPS_NOTE = 'places.displayName,places.rating,places.userRatingCount';
+    private const CHAMPS_NOTE = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount';
+    // La fiche d'un concurrent pour le dossier d'implantation : les avis, et
+    // les photos du lieu (celles de la fiche — Google ne rend pas les photos
+    // jointes à un avis).
+    private const CHAMPS_FICHE = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews,photos';
 
     public static function config(): array
     {
@@ -130,7 +134,55 @@ final class GoogleApi
             'note' => isset($p['rating']) ? round((float) $p['rating'], 1) : null,
             'avis' => (int) ($p['userRatingCount'] ?? 0),
             'nom'  => $p['displayName']['text'] ?? null,
+            'placeId' => (string) ($p['id'] ?? ''),
+            'adresse' => (string) ($p['formattedAddress'] ?? ''),
         ];
+    }
+
+    /**
+     * La fiche complète d'un concurrent : note, avis, adresse, lien, jusqu'à
+     * cinq avis, et les références de ses photos. Même forme que lieu(), plus
+     * `photos` : [ { nom, largeur, hauteur, auteur } ].
+     */
+    public static function fiche(string $placeId): ?array
+    {
+        if ($placeId === '') { self::$lastError = 'identifiant de fiche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        [$code, $json] = self::http('GET', self::BASE . '/places/' . rawurlencode($placeId)
+            . '?languageCode=' . rawurlencode($c['langue']), self::CHAMPS_FICHE, $c['cle'], null);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        $d = googleLieuNormalise($json);
+        $d['photos'] = [];
+        foreach ((array) ($json['photos'] ?? []) as $ph) {
+            $nom = trim((string) ($ph['name'] ?? ''));
+            if ($nom === '') { continue; }
+            $d['photos'][] = ['nom' => $nom, 'largeur' => (int) ($ph['widthPx'] ?? 0), 'hauteur' => (int) ($ph['heightPx'] ?? 0),
+                'auteur' => (string) ((($ph['authorAttributions'] ?? [])[0]['displayName'] ?? ''))];
+            if (count($d['photos']) >= 3) { break; }
+        }
+        return $d;
+    }
+
+    /**
+     * Une photo de fiche, en JPEG, au plus `largeur` pixels de large — rendue
+     * en data URI pour voyager dans le dossier. Null si Google la refuse.
+     */
+    public static function photo(string $nom, int $largeur = 480): ?string
+    {
+        if ($nom === '') { return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        $ch = curl_init(self::BASE . '/' . $nom . '/media?maxWidthPx=' . max(100, min(1600, $largeur)));
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3,
+            CURLOPT_TIMEOUT => 25, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_HTTPHEADER => ['X-Goog-Api-Key: ' . $c['cle']]]);
+        $raw = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $type = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+        if ($raw === false || $code !== 200 || strlen((string) $raw) < 200 || strlen((string) $raw) > 900000) { self::$lastError = 'photo : HTTP ' . $code; return null; }
+        $mime = str_contains($type, 'png') ? 'image/png' : (str_contains($type, 'webp') ? 'image/webp' : 'image/jpeg');
+        return 'data:' . $mime . ';base64,' . base64_encode((string) $raw);
     }
 
     /** La clé part en en-tête, jamais dans l'URL : les URL se retrouvent en logs. */

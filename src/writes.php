@@ -3366,6 +3366,89 @@ function wr_scouting_reseau_put(string $shopId): array
 }
 
 /**
+ * POST /scouting/concurrents/google — ce que Google dit d'un lot de
+ * concurrents (≤ 10) pour le dossier d'implantation : la fiche (note, nombre
+ * d'avis, adresse, lien), jusqu'à trois avis, une photo du lieu. Chaque
+ * fiche est gardée 30 jours dans ceo_scouting_competitor (google_json) — la
+ * limite que Google met au stockage de son contenu — et resservie d'ici là
+ * sans nouvel appel. Un concurrent sans fiche raccordée est d'abord cherché
+ * par son nom près de sa position, comme pour les notes.
+ */
+function wr_scouting_concurrents_google(): array
+{
+    if (!GoogleApi::configured()) {
+        http_response_code(422);
+        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
+    }
+    $b = body();
+    $rows = $b['rows'] ?? [];
+    if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
+    @set_time_limit(120);
+    $out = []; $erreur = null; $appels = 0; $caches = 0;
+    foreach (array_slice(array_values($rows), 0, 10) as $r) {
+        if (!is_array($r)) { continue; }
+        $id = trim((string) ($r['id'] ?? ''));
+        if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
+        $name = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
+        $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
+        $cur = Db::row('SELECT place_id, address, rating, reviews, rating_source, google_json, google_at FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
+        // du cache, s'il a moins de 30 jours
+        if ($cur !== null && $cur['google_json'] !== null && $cur['google_at'] !== null && strtotime((string) $cur['google_at']) > time() - 30 * 86400) {
+            $g = json_decode((string) $cur['google_json'], true);
+            if (is_array($g)) { $g['id'] = $id; $g['cache'] = true; $out[] = $g; $caches++; continue; }
+        }
+        $placeId = trim((string) ($cur['place_id'] ?? ''));
+        if ($placeId === '' && $name !== '' && $lat !== 0.0 && $lng !== 0.0) {
+            GoogleApi::$lastError = null;
+            $ou = trim((string) ($r['addr'] ?? ''));
+            $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $lat, $lng);
+            $appels++;
+            if ($res === null) {
+                $msg = GoogleApi::$lastError ?? 'réponse vide';
+                if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
+            } else {
+                $placeId = (string) ($res['placeId'] ?? '');
+            }
+        }
+        if ($placeId === '') { $out[] = ['id' => $id, 'fiche' => false]; continue; }
+        GoogleApi::$lastError = null;
+        $f = GoogleApi::fiche($placeId);
+        $appels++;
+        if ($f === null) {
+            $msg = GoogleApi::$lastError ?? 'réponse vide';
+            if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
+            $out[] = ['id' => $id, 'fiche' => false];
+            continue;
+        }
+        $avis = [];
+        foreach (array_slice($f['derniers'], 0, 3) as $a) {
+            $avis[] = ['auteur' => mb_substr((string) ($a['auteur'] ?? ''), 0, 60), 'note' => (int) $a['note'], 'le' => substr((string) $a['le'], 0, 10),
+                'texte' => $a['texte'] !== null ? mb_substr((string) $a['texte'], 0, 320) : ''];
+        }
+        $photo = null;
+        if ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
+        $g = ['id' => $id, 'fiche' => true, 'placeId' => $placeId, 'nom' => $f['nom'], 'adresse' => $f['adresse'], 'note' => $f['note'], 'n' => $f['avis'],
+            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '', 'le' => date('Y-m-d')];
+        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, updated_at, place_id, address, google_json, google_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+            . ' ON DUPLICATE KEY UPDATE'
+            . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)), reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
+            . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)), updated_at = VALUES(updated_at),"
+            . ' place_id = VALUES(place_id), address = VALUES(address), google_json = VALUES(google_json), google_at = VALUES(google_at)',
+            [$id, $name, mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120), mb_substr(trim((string) ($r['arr'] ?? '')), 0, 60),
+             $f['note'] !== null ? round((float) $f['note'], 1) : null, $f['avis'], 'google', date('Y-m-d H:i:s'), $placeId, mb_substr((string) ($f['adresse'] ?? ''), 0, 200),
+             json_encode($g, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s')]);
+        $out[] = $g;
+    }
+    if ($out === [] && $erreur === null) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)']; }
+    if ($appels > 0) {
+        journalAdd('CEO', 'Scouting', 'Avis Google', 'Fiches Google des concurrents pour un dossier — ' . count($out) . ' concurrents, ' . $appels . ' appels, ' . $caches . ' du cache'
+            . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
+    }
+    if ($out === [] && $erreur !== null) { http_response_code(502); return ['error' => $erreur, 'rows' => []]; }
+    return ['ok' => true, 'rows' => $out, 'appels' => $appels, 'caches' => $caches, 'erreur' => $erreur];
+}
+
+/**
  * POST /scouting/notes — les notes Google d'un lot de commerces (≤ 40).
  *
  * La clé est celle du connecteur Google de Paramètres, la même que pour la
@@ -3405,16 +3488,19 @@ function wr_scouting_notes(): array
                 $erreur = 'Google Places : ' . $msg;
                 break;
             }
-            $res = ['note' => null, 'avis' => 0];   // fiche introuvable : retenu, pour ne pas redemander
+            $res = ['note' => null, 'avis' => 0, 'placeId' => '', 'adresse' => ''];   // fiche introuvable : retenu, pour ne pas redemander
         }
-        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
+        $placeId = mb_substr((string) ($res['placeId'] ?? ''), 0, 80);
+        $adresse = mb_substr((string) ($res['adresse'] ?? ''), 0, 200);
+        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, place_id, address) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
             . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)),"
             . " reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
             . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)),"
-            . ' updated_at = VALUES(updated_at)',
-            [$id, $name, $commune, $arr, $res['note'], $res['avis'], 'google', null, date('Y-m-d H:i:s')]);
-        $out[] = ['id' => $id, 'rating' => $res['note'], 'reviews' => $res['avis']];
+            . ' updated_at = VALUES(updated_at),'
+            . " place_id = IF(VALUES(place_id) = '', place_id, VALUES(place_id)), address = IF(VALUES(address) = '', address, VALUES(address))",
+            [$id, $name, $commune, $arr, $res['note'], $res['avis'], 'google', null, date('Y-m-d H:i:s'), $placeId !== '' ? $placeId : null, $adresse !== '' ? $adresse : null]);
+        $out[] = ['id' => $id, 'rating' => $res['note'], 'reviews' => $res['avis'], 'adresse' => $adresse !== '' ? $adresse : null];
         if ($res['note'] !== null) { $rated++; }
     }
     if ($out === [] && $erreur === null) {

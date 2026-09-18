@@ -99,6 +99,11 @@ function ensureScouting(): void
     foreach (['zone_json', 'hyp_json'] as $col) {
         try { Db::exec('ALTER TABLE ceo_scouting_candidate ADD COLUMN ' . $col . ' TEXT NULL'); } catch (Throwable $e) { /* déjà là */ }
     }
+    // La fiche Google d'un concurrent : son identifiant, son adresse, et ce
+    // que le dossier d'implantation en montre (avis, photo), gardé 30 jours.
+    foreach (['place_id VARCHAR(80) NULL', 'address VARCHAR(200) NULL', 'google_json MEDIUMTEXT NULL', 'google_at DATETIME NULL'] as $col) {
+        try { Db::exec('ALTER TABLE ceo_scouting_competitor ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
+    }
     // L'étude de marché locale d'un point (GET /scouting/etude) : ce
     // qu'OpenStreetMap a répondu, gardé quelques semaines.
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_scouting_etude ('

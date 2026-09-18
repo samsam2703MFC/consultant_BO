@@ -8361,6 +8361,7 @@ function ep_scouting(): array
         'rating' => $r['rating'] !== null ? (float) $r['rating'] : null,
         'reviews' => $r['reviews'] !== null ? (int) $r['reviews'] : null,
         'source' => $r['rating_source'], 'comment' => $r['comment'],
+        'adresse' => $r['address'] ?? null,
     ], Db::rows('SELECT * FROM ceo_scouting_competitor'));
     $candidates = array_map(fn ($r) => [
         'id' => (int) $r['id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'], 'prov' => $r['province'],

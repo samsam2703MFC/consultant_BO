@@ -598,7 +598,11 @@ CREATE TABLE IF NOT EXISTS ceo_scouting_competitor (
   reviews        INT UNSIGNED NULL,           -- nombre d'avis Google
   rating_source  ENUM('google','manuel') NULL,
   comment        VARCHAR(200) NULL,           -- commentaire terrain
-  updated_at     DATETIME NOT NULL
+  updated_at     DATETIME NOT NULL,
+  place_id       VARCHAR(80) NULL,            -- fiche Google raccordée par la recherche
+  address        VARCHAR(200) NULL,           -- adresse rendue par Google
+  google_json    MEDIUMTEXT NULL,             -- avis et photo pour le dossier (voir wr_scouting_concurrents_google)
+  google_at      DATETIME NULL                -- relevé de google_json ; 30 jours au plus (conditions Google)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- L'étude de marché locale d'un point : la réponse d'OpenStreetMap au rayon

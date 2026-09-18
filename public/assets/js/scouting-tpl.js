@@ -408,6 +408,14 @@ export const DOSS_CSS = `
 .sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
 .sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
 .sc-doss td.com{min-width:124px}
+.sc-doss .gcard{display:flex;gap:12px;border:0.5px solid #e6e0d8;border-radius:8px;padding:10px 12px;margin-bottom:10px;background:#fff}
+.sc-doss .gphoto{flex:0 0 150px}.sc-doss .gphoto img{width:150px;height:auto;display:block;border-radius:5px}
+.sc-doss .gcred{font-size:9px;color:#7a736a;margin-top:3px}
+.sc-doss .gtxt{flex:1;min-width:0}.sc-doss .gnom{font-size:13px;font-weight:600}.sc-doss .gnote{color:#2d7a3e}
+.sc-doss .gadr{font-size:11px;color:#7a736a;margin:2px 0 6px}
+.sc-doss .gavis{font-size:11.5px;line-height:1.5;margin-top:4px}
+.sc-doss .motfin{border:1.5px solid #8D1D2C;border-radius:8px;padding:14px 16px;margin-top:18px;font-family:Georgia,"DejaVu Serif",serif;font-size:13.5px;line-height:1.6}
+.sc-doss .motfin .k{font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;margin-bottom:6px}
 .sc-doss table.plan th,.sc-doss table.plan td{padding:5px 4px}
 .sc-doss table.plan th{white-space:normal;hyphens:manual}
 .sc-doss tr.tot td{font-weight:600;border-top:1px solid #221E1A;border-bottom:0;background:#fbf9f5}
@@ -476,17 +484,30 @@ export function dossierPage(d, esc, logo){
       ${d.concurrence.map(r => `<tr><td class="l"><b>${esc(r[0])}</b>${r[6] ? `<span class="ch">${esc(r[6])}</span>` : ''}</td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>
         <td class="l ${r[5] ? 'acc' : 'mut'}" style="padding-left:12px">${r[5] ? '<b>concurrent fort</b>' : 'concurrent'}${r[6] ? ' · chaîne ' + esc(r[6]) : ''}</td></tr>`).join('')}
     </table>` : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
+    ${d.avisGoogle.length ? `<h3>Ce que Google dit des concurrents les plus proches</h3>
+    ${d.avisGoogle.map(f => `<div class="gcard">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
+      <div class="gtxt"><div class="gnom">${esc(f.nom)} <span class="gnote">${esc(f.note)} ★</span> <span class="mut">${f.n} avis${f.dist ? ' · à ' + esc(f.dist) : ''}</span>${f.url ? ` <a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px;font-weight:400">fiche Google ↗</a>` : ''}</div>
+        ${f.adresse ? `<div class="gadr">${esc(f.adresse)}</div>` : ''}
+        ${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px;margin-top:4px">Aucun avis rendu par Google.</div>'}
+      </div></div>`).join('')}
+    ${d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : ''}` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : ''}
     ${etudeLocale(d, esc)}
 
     <h3>Comparaison au réseau</h3>
     <table><tr><th class="l">Point de vente</th><th class="l">Statut</th><th>Ménages</th><th>Dépense</th><th>Emprise</th><th>CA annuel</th><th class="l" style="padding-left:12px">Note</th></tr>
       ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td><td class="n ${i ? '' : 'ok'}"><b>${esc(r[5])}</b></td><td class="l mut" style="padding-left:12px">${esc(r[6])}</td></tr>`).join('')}
     </table>
+    ${d.etudeReel.length ? `<h3>Étude de marché, modèle et chiffre réel</h3>
+    <table><tr><th class="l">Magasin</th><th>Étude de marché</th><th>Modèle du jour</th><th>CA réel</th><th>Réel / étude</th><th>Réel / modèle</th><th class="l" style="padding-left:12px">Période</th></tr>
+      ${d.etudeReel.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="n">${esc(r[4])}</td><td class="n">${esc(r[5])}</td><td class="l mut" style="padding-left:12px">${esc(r[6])}</td></tr>`).join('')}
+    </table>
+    <div class="legende">L’étude de marché : le CA annuel TTC de l’étude GeoConsulting du magasin, quand il y en a une. Le modèle : le CA que les hypothèses de ce dossier donnent au magasin, là où il est. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. Les écarts se lisent réel ÷ étude − 1 et réel ÷ modèle − 1.</div>` : ''}
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
     <h3>Les hypothèses au moment de l'édition</h3>
     <div class="hyp">${d.hypotheses.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
     <div class="note"><b>Sources.</b> ${esc(d.sources)}</div>
+    ${d.motFin ? `<div class="motfin"><div class="k">À lire avant de signer</div>${esc(d.motFin)}</div>` : ''}
   </div>`;
 }
 
