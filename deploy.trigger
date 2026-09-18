@@ -398,3 +398,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-18T06:20:58Z scouting bouton dossier par ville et ca minimum du plan
 2026-09-18T06:33:41Z scouting dossier direct depuis la recherche de ville
 2026-09-18T06:40:13Z scouting google dans le dossier etude contre reel mot de fin
+2026-09-18T06:42:55Z scouting pas de fiche google pour un commerce sans nom
