@@ -104,6 +104,23 @@ function scoutingDossierValide(array $b): ?array
         'flux' => $lignes($b['flux'] ?? [], 6, 40, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
         'reseau' => $lignes($b['reseau'] ?? [], 5, 12, 160),
+        'cartes' => (static function ($v) use ($s, $lignes): array {
+            $out = [];
+            if (!is_array($v)) { return $out; }
+            foreach ($v as $c) {
+                if (!is_array($c) || !is_array($c['ligne'] ?? null)) { continue; }
+                $ligne = $lignes([$c['ligne']], 8, 1, 120)[0] ?? null;
+                if ($ligne === null) { continue; }
+                $f = is_array($c['fiche'] ?? null) ? $c['fiche'] : null;
+                $photo = $f !== null ? (string) ($f['photo'] ?? '') : '';
+                if ($photo !== '' && (strlen($photo) > 1200000 || preg_match('#^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$#', $photo) !== 1)) { $photo = ''; }
+                $out[] = ['ligne' => $ligne, 'fiche' => $f === null ? null : [
+                    'url' => preg_match('#^https://(maps\.google\.com|www\.google\.com/maps|maps\.app\.goo\.gl)/#', (string) ($f['url'] ?? '')) === 1 ? (string) $f['url'] : '',
+                    'photo' => $photo, 'photoAuteur' => $s($f['photoAuteur'] ?? '', 60), 'avis' => $lignes($f['avis'] ?? [], 4, 3, 340)]];
+                if (count($out) >= 60) { break; }
+            }
+            return $out;
+        })($b['cartes'] ?? []),
         'avisGoogle' => (static function ($v) use ($s, $lignes): array {
             $out = [];
             if (!is_array($v)) { return $out; }
@@ -158,6 +175,10 @@ function scoutingDossierHtml(array $d): string
       .score{font-family:Georgia,"DejaVu Serif",serif;font-size:26pt;color:#2d7a3e;line-height:1}
       .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;
                font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
+      .ccard{border:1px solid #e6e0d8;border-radius:8px;margin-bottom:2.2mm;page-break-inside:avoid}
+      .ccard.fort{border-color:#c98a94}
+      .chead{background:#fbf9f5;padding:1.8mm 3mm;font-size:8.6pt;border-bottom:1px solid #eee7de}
+      .chead .chiffres{float:right;font-size:8pt;white-space:nowrap}
       .gcard{border:1px solid #e6e0d8;border-radius:8px;margin-bottom:3mm;page-break-inside:avoid}
       .gphoto{width:38mm;padding:2.5mm}.gphoto img{width:38mm;height:auto;display:block;border-radius:5px}
       .gcred{font-size:6.5pt;color:#7a736a;margin-top:1mm}
@@ -215,7 +236,28 @@ function scoutingDossierHtml(array $d): string
 
     $h .= '<div class="sec">La concurrence, en détail</div>';
     if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#221E1A">' . $e($d['concurrenceNote']) . '</div>'; }
-    if ($d['concurrence'] === []) {
+    if ($d['cartes'] !== []) {
+        // la liste : chaque concurrent, sa ligne, puis sa fiche Google
+        foreach ($d['cartes'] as $i => $c) {
+            $r = $c['ligne']; $f = $c['fiche']; $fort = !empty($r[6]); $ch = (string) ($r[7] ?? '');
+            $h .= '<table class="ccard' . ($fort ? ' fort' : '') . '" width="100%" cellpadding="0" cellspacing="0">'
+                . '<tr><td class="chead" colspan="2"><span class="mut">' . ($i + 1) . '</span> <b>' . $e($r[0]) . '</b>' . ($ch !== '' ? ' <span class="mut">· chaîne ' . $e($ch) . '</span>' : '')
+                . ' <span class="mut">' . $e($r[1]) . '</span>'
+                . '<span class="chiffres">' . $e($r[2]) . ' &nbsp;·&nbsp; ' . ($r[3] === '—' ? 'sans note' : $e($r[3]) . ' ★') . ' &nbsp;·&nbsp; ' . $e($r[4]) . ' &nbsp;·&nbsp; force ' . $e($r[5]) . ' &nbsp;·&nbsp; <span class="' . ($fort ? 'acc' : 'mut') . '">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . '</span></span></td></tr>';
+            if ($f !== null) {
+                $h .= '<tr>';
+                if ($f['photo'] !== '') { $h .= '<td class="gphoto" valign="top"><img src="' . $f['photo'] . '" alt="">' . ($f['photoAuteur'] !== '' ? '<div class="gcred">photo : ' . $e($f['photoAuteur']) . '</div>' : '') . '</td>'; }
+                $h .= '<td valign="top" class="gtxt"' . ($f['photo'] === '' ? ' colspan="2"' : '') . '>';
+                if ($f['avis'] === []) { $h .= '<div class="mut" style="font-size:7.8pt">Aucun avis rendu par Google.</div>'; }
+                foreach ($f['avis'] as $a) {
+                    $h .= '<div class="gavis"><b>' . $e($a[1]) . ' ★</b> <span class="mut">' . $e($a[0]) . ' · ' . $e($a[2]) . '</span>' . ($a[3] !== '' ? ' — ' . $e($a[3]) : '') . '</div>';
+                }
+                $h .= '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+        if ($d['googleNote'] !== '') { $h .= '<div class="methode">' . $e($d['googleNote']) . '</div>'; }
+    } elseif ($d['concurrence'] === []) {
         $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>';
     } else {
         $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>'
@@ -230,8 +272,9 @@ function scoutingDossierHtml(array $d): string
         $h .= '</table>';
     }
 
-    // Ce que Google dit des concurrents les plus proches : fiche, avis, photo.
-    if ($d['avisGoogle'] !== []) {
+    // (Les fiches Google vivent désormais dans la liste des concurrents ; ceci ne
+    // sert plus qu'à un ancien client qui enverrait encore avisGoogle.)
+    if ($d['avisGoogle'] !== [] && $d['cartes'] === []) {
         $h .= '<div class="sec">Ce que Google dit des concurrents les plus proches</div>';
         foreach ($d['avisGoogle'] as $f) {
             $h .= '<table class="gcard" width="100%" cellpadding="0" cellspacing="0"><tr>';

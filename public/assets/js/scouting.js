@@ -2322,15 +2322,19 @@ export class Scouting {
         if (r.erreur) this.notify('Notes Google : ' + r.erreur);
         if (!vivant()) return;
       }
-      const proches = x.near.filter(o => nomme(o.b)).slice(0, 8).map(o => ({ id: o.b.id, name: o.b.name, addr: o.b.addr || '', commune: o.b.commune || '', arr: o.b.arr || '', lat: o.b.lat, lng: o.b.lng }));
-      let g = { cle: cle, rows: [], erreur: null, le: new Date().toISOString().slice(0, 10) };
-      if (proches.length){
-        const r = await apiWrite('POST', '/scouting/concurrents/google', { rows: proches });
-        g.rows = (r && Array.isArray(r.rows)) ? r.rows : [];
+      // la fiche de chaque concurrent nommé du rayon (trente au plus), par lots
+      // de dix, du plus proche au plus loin ; la liste se remplit lot après lot
+      const proches = x.near.filter(o => nomme(o.b)).slice(0, 30).map(o => ({ id: o.b.id, name: o.b.name, addr: o.b.addr || '', commune: o.b.commune || '', arr: o.b.arr || '', lat: o.b.lat, lng: o.b.lng }));
+      let g = { cle: cle, rows: [], erreur: null, le: new Date().toISOString().slice(0, 10), attendus: proches.length };
+      for (let i = 0; i < proches.length && !g.erreur; i += 10){
+        const r = await apiWrite('POST', '/scouting/concurrents/google', { rows: proches.slice(i, i + 10) });
+        if (!vivant()) return;
+        g.rows = g.rows.concat((r && Array.isArray(r.rows)) ? r.rows : []);
         g.erreur = (r && r.erreur) || null;
         // les notes et adresses fraîches des fiches rejoignent la sélection
         g.rows.forEach(f => { if (f.fiche && f.note != null && !(out[f.id] && out[f.id].manual)) out[f.id] = { rating: +f.note, n: +(f.n || 0), adresse: f.adresse || (out[f.id] && out[f.id].adresse) || '' }; });
         this.saveRatings(out);
+        this.setState({ dossierGoogle: Object.assign({}, g, { partiel: i + 10 < proches.length }), ratings: Object.assign({}, out) });
       }
       this._googleDossiers[cle] = g;
       if (vivant()) this.setState({ dossierGoogle: g, dossierGoogleBusy: false, ratings: Object.assign({}, out) });
@@ -2520,17 +2524,30 @@ export class Scouting {
           ta.n ? ta.taille + ' · ' + fmtInt(ta.n) + ' avis' : '—',
           Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
       }),
-      avisGoogle: (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) ? s.dossierGoogle.rows : []).filter(f => f.fiche).map(f => {
+      avisGoogle: [].filter(f => f.fiche).map(f => {
         const o = x.near.find(q => q.b.id === f.id);
         return { nom: f.nom || (o ? o.b.name : ''), adresse: (f.adresse || '').replace(/, Belgi(que|ë)$/i, ''), note: f.note != null ? (+f.note).toFixed(1).replace('.', ',') : '—', n: f.n || 0,
           dist: o ? o.d.toFixed(1).replace('.', ',') + ' km' : '', url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '',
           avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) };
       }),
-      googleAttente: s.dossierGoogleBusy ? 'Google en cours — notes, adresses, avis et photos des concurrents les plus proches…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
+      googleAttente: s.dossierGoogleBusy ? 'Google en cours — notes, adresses, avis et photos des concurrents' + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + s.dossierGoogle.rows.length + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
       googleNote: s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.rows.some(f => f.fiche)
-        ? 'Fiches Google Maps des huit concurrents les plus proches, relevées le ' + new Date(s.dossierGoogle.le).toLocaleDateString('fr-BE') + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.' : '',
+        ? 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), relevées le ' + new Date(s.dossierGoogle.le).toLocaleDateString('fr-BE') + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.' : '',
       concurrenceNote: concurrenceNote,
       chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
+      // la liste : chaque concurrent, sa ligne, puis sa fiche Google (photo, trois derniers avis) quand elle est là
+      cartes: (() => {
+        const rows = s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) ? s.dossierGoogle.rows : [];
+        const fiches = {};
+        rows.forEach(f => { if (f.fiche) fiches[f.id] = f; });
+        return x.near.slice(0, 150).map(o => {
+          const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b), ta = self.tailleAvis(o.b), f = fiches[o.b.id];
+          const adresse = (f && f.adresse) || (rv && rv.adresse) || o.b.addr || '';
+          return { ligne: [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), o.d.toFixed(1).replace('.', ',') + ' km',
+              r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : '') : '—', ta.n ? ta.taille + ' · ' + fmtInt(ta.n) + ' avis' : '—', Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''],
+            fiche: f ? { url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '', avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) } : null };
+        });
+      })(),
       etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
       motFin: 'Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
       indirecte: et ? resume(et.indirecte) : [],
@@ -2679,7 +2696,7 @@ export class Scouting {
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
     d.reseau.forEach(r => rows.push(['reseau', r[0], 'prévu ' + r[1] + ' · réel ' + r[2] + ' · écart ' + r[3], r[4]]));
-    d.avisGoogle.forEach(f => { rows.push(['google', f.nom, f.note + ' ★ · ' + f.n + ' avis', f.adresse + (f.url ? ' · ' + f.url : '')]); f.avis.forEach(a => rows.push(['google_avis', f.nom, a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
+    d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
     rows.push(['sources', '', d.sources, '']);
