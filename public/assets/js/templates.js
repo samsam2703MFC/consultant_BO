@@ -4457,56 +4457,24 @@ function tplResultatJour(c, x){
         <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
       </div>` : ''}
 
-      ${c.rjDetail.semaine ? (sm => {
-        const bouton = ch => `<button ${x.A(ch.aller)} style="border:1px solid ${ch.on ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${ch.on ? 'var(--color-text)' : 'var(--color-surface)'};color:${ch.on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:3px 10px;font-size:11px;cursor:pointer">${esc(ch.l)}</button>`;
-        // la ligne discrète : sept cases et la case de semaine, sans carte
-        if (sm.cases && ['d1', 'd2', 'd3'].includes(sm.variante)) { const mini = sm.variante === 'd3'; return `
+      ${c.rjDetail.semaine ? (sm => `
       <div data-rjsem="1" style="margin-top:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-          <div style="${cap}">Semaine en cours <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(sm.titre.replace(/^Semaine /, ''))}</span></div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">${sm.choix.map(bouton).join('')}</div>
-        </div>
-        <div style="display:flex;align-items:${mini ? 'center' : 'stretch'};gap:8px;flex-wrap:wrap">
-          <div style="display:flex;align-items:${mini ? 'flex-start' : 'stretch'};gap:${mini ? '5px' : '6px'};flex:1;min-width:${mini ? '0' : '460px'}">
-            ${sm.cases.map(k => mini
-              ? `<div title="${esc(k.titre)}" style="display:flex;flex-direction:column;align-items:center;gap:3px"><i style="display:block;width:18px;height:18px;border-radius:4px;background:${k.fond};${k.auj ? 'box-shadow:0 0 0 2px var(--color-surface),0 0 0 3.5px var(--color-text)' : ''}"></i><span style="font-size:9px;color:var(--color-text-muted);font-weight:${k.auj ? 700 : 400}">${esc(k.lettre)}</span></div>`
-              : `<div title="${esc(k.titre)}" style="flex:1;min-width:0;border-radius:8px;padding:6px 8px;background:${k.fond};${k.bord};${num}">
-                  <div style="display:flex;justify-content:space-between;gap:4px;font-size:10px;color:var(--color-text-muted)"><span style="font-weight:${k.auj ? 700 : 500};color:${k.auj ? 'var(--color-text)' : 'inherit'}">${esc(k.jour)}</span><span style="color:${k.coul};font-weight:600">${esc(k.badge)}</span></div>
-                  <div style="font-size:12.5px;font-weight:600;margin-top:2px;color:${k.valCoul};white-space:nowrap">${esc(k.val)}</div>
-                  <div style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap">${esc(k.sous)}</div>
-                </div>`).join('')}
+        <div style="${cap};margin-bottom:6px">Résultat de la semaine en cours <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(sm.titre)}</span></div>
+        <div style="display:flex;align-items:stretch;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:stretch;gap:6px;flex:1;min-width:460px">
+            ${sm.cases.map(k => `<div title="${esc(k.titre)}" style="flex:1;min-width:0;border-radius:8px;padding:6px 8px;background:${k.fond};${k.bord};${num}">
+                <div style="font-size:10px;color:${k.auj ? 'var(--color-text)' : 'var(--color-text-muted)'};font-weight:${k.auj ? 700 : 500}">${esc(k.jour)}</div>
+                <div style="font-size:12.5px;font-weight:600;margin-top:2px;color:${k.valCoul};white-space:nowrap">${esc(k.val)}</div>
+                <div style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap">${esc(k.sous)}</div>
+              </div>`).join('')}
           </div>
-          <div style="border-radius:8px;padding:${mini ? '5px 10px' : '7px 12px'};background:${sm.sem.fond};color:#fff;${num};min-width:${mini ? '0' : '160px'};display:flex;flex-direction:column;justify-content:center">
+          <div title="${esc(sm.sem.titre)}" style="border-radius:8px;padding:7px 12px;background:${sm.sem.fond};color:#fff;${num};min-width:150px;display:flex;flex-direction:column;justify-content:center">
             <div style="font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.85">${esc(sm.sem.k)}</div>
-            <div style="font-size:${mini ? '12.5px' : '15px'};font-weight:700;line-height:1.15;white-space:nowrap">${esc(sm.sem.v)}</div>
-            ${sm.sem.s ? `<div style="font-size:10px;opacity:.92;white-space:nowrap">${esc(sm.sem.s)}</div>` : ''}
+            <div style="font-size:15px;font-weight:700;line-height:1.15;white-space:nowrap">${esc(sm.sem.v)}</div>
+            <div style="font-size:10px;opacity:.92;white-space:nowrap">${esc(sm.sem.s)}</div>
           </div>
         </div>
-      </div>`; }
-        return `
-      <div data-rjsem="1" style="margin-top:13px;padding:12px 13px 10px;border-radius:10px;background:var(--color-background-secondary)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-          <div>
-            <div style="${cap}">Résultat de la semaine en cours</div>
-            <div style="font-size:12px;margin-top:3px;${num}"><span style="color:var(--color-text-muted)">${esc(sm.titre)} ·</span> <span style="font-weight:600;color:${sm.resumeCoul}">${esc(sm.resume)}</span></div>
-          </div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">${sm.choix.map(bouton).join('')}${sm.sousChoix.length ? `<span style="width:6px"></span>${sm.sousChoix.map(bouton).join('')}` : ''}</div>
-        </div>
-        <svg viewBox="0 0 ${sm.g.W} ${sm.g.H}" style="width:100%;height:auto;display:block;margin-top:8px;font-family:var(--font-ui)">
-          ${sm.g.lignes.map(l => `<line x1="${l.x1}" x2="${l.x2}" y1="${l.y1.toFixed(1)}" y2="${l.y2.toFixed(1)}" stroke="${l.c}" stroke-width="1"/>`).join('')}
-          ${sm.g.rects.map(r => `<rect x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" width="${r.w.toFixed(1)}" height="${r.h.toFixed(1)}" rx="${r.rx || 0}" fill="${r.fill}" stroke="${r.stroke || 'none'}" stroke-width="1.4"${r.dash ? ` stroke-dasharray="${r.dash}"` : ''}><title>${esc(r.t)}</title></rect>`).join('')}
-          ${sm.g.paths.map(p => `<path d="${p.d}" fill="${p.fill}"><title>${esc(p.t)}</title></path>`).join('')}
-          ${sm.g.polys.map(p => `<polyline points="${p.pts}" fill="none" stroke="${p.c}" stroke-width="${p.w}"${p.dash ? ` stroke-dasharray="${p.dash}"` : ''} stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
-          ${sm.g.dots.map(d => `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r}" fill="${d.c}" stroke="#fff" stroke-width="2"><title>${esc(d.t)}</title></circle>`).join('')}
-          ${sm.g.textes.map(t => `<text x="${t.x.toFixed(1)}" y="${t.y.toFixed(1)}" text-anchor="${t.a}" font-size="${t.s}" font-weight="${t.w || 400}" fill="${t.c}">${esc(t.t)}</text>`).join('')}
-        </svg>
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px">
-          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted)">
-            ${sm.g.legende.map(l => `<span style="display:inline-flex;align-items:center;gap:5px">${l.sw === 'plein' ? `<i style="width:10px;height:10px;border-radius:2px;background:${l.c}"></i>` : l.sw === 'creux' ? `<i style="width:10px;height:10px;border-radius:2px;border:1.5px solid ${l.c}"></i>` : l.sw === 'pointille' ? `<i style="width:10px;height:10px;border-radius:2px;border:1.5px dashed ${l.c}"></i>` : l.sw === 'ligne' ? `<i style="width:14px;height:0;border-top:2px solid ${l.c}"></i>` : `<i style="width:14px;height:0;border-top:2px dashed ${l.c}"></i>`}${esc(l.l)}</span>`).join('')}
-          </div>
-          <div style="font-size:10px;color:var(--color-text-muted);text-wrap:pretty;max-width:520px">${esc(sm.note)}</div>
-        </div>
-      </div>`; })(c.rjDetail.semaine) : ''}
+      </div>`)(c.rjDetail.semaine) : ''}
 
       ${c.rjDetail.planning ? `
       <div style="margin-top:13px;padding:12px 13px;border-radius:10px;background:var(--color-background-secondary)">
