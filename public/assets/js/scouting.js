@@ -2233,7 +2233,10 @@ export class Scouting {
     const vivant = () => this._googleCle === cle && this.state.dossier;
     try {
       const out = Object.assign({}, this.state.ratings);
-      const sansNote = x.near.map(o => o.b).filter(b => !out[b.id]).slice(0, 40);
+      // un commerce sans nom dans OpenStreetMap ne se cherche pas chez Google :
+      // la recherche rendrait la fiche du voisin le plus proche
+      const nomme = b => b.name && !/sans nom/i.test(b.name);
+      const sansNote = x.near.map(o => o.b).filter(b => nomme(b) && !out[b.id]).slice(0, 40);
       if (sansNote.length && !s.enriching){
         this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: sansNote.length });
         const r = await this.enrichLots(sansNote, out);
@@ -2241,7 +2244,7 @@ export class Scouting {
         if (r.erreur) this.notify('Notes Google : ' + r.erreur);
         if (!vivant()) return;
       }
-      const proches = x.near.slice(0, 8).map(o => ({ id: o.b.id, name: o.b.name, addr: o.b.addr || '', commune: o.b.commune || '', arr: o.b.arr || '', lat: o.b.lat, lng: o.b.lng }));
+      const proches = x.near.filter(o => nomme(o.b)).slice(0, 8).map(o => ({ id: o.b.id, name: o.b.name, addr: o.b.addr || '', commune: o.b.commune || '', arr: o.b.arr || '', lat: o.b.lat, lng: o.b.lng }));
       let g = { cle: cle, rows: [], erreur: null, le: new Date().toISOString().slice(0, 10) };
       if (proches.length){
         const r = await apiWrite('POST', '/scouting/concurrents/google', { rows: proches });
