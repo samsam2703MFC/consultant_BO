@@ -2508,21 +2508,31 @@ export class Scouting {
     const duo = (a, b) => (a ? fmtEur(a) : '—') + ' prévu\n' + (b ? fmtEur(b) : '—') + ' réel';
     // Chaque ligne : nom, semaine, mois, année (prévu / réel), la cible de
     // l'année (le palier de la phase), sa lecture, réel / cible (mis en
-    // évidence), réel / plan, d'où viennent les chiffres, et le sens de
-    // l'écart pour la couleur.
+    // évidence), réel / plan, d'où viennent les chiffres (gardé pour
+    // l'export, plus affiché sous le nom : la note de bas de tableau le dit
+    // une fois pour tous), et le sens de l'écart pour la couleur.
     const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)',
       fmtEur(x.ca * PALIERS[0]), 'année 1 · 70 % du plan', '—', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts', '']];
+    // d'où viennent les chiffres, regroupés : les magasins qui partagent la
+    // même source sont cités ensemble, et « tous » quand c'est le cas
+    const mm = v => /^\d{4}-\d{2}$/.test(v || '') ? v.slice(5, 7) + '/' + v.slice(0, 4) : (v || '');
+    const gPrevu = {}, gReel = {}, noms = [];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
       const prevu = f.prevu, reel = f.caReel || null;
-      const source = f.caPrevu ? 'prévu réaliste saisi' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'prévu = étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu — à saisir dans Magasins du réseau';
-      const periode = r.m.mois ? 'réel = moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'CA réel inconnu';
+      const nom = nomMagasin(f.nom).replace(/^magasin de /, '');
+      noms.push(nom);
+      const kP = f.caPrevu ? 'prévu réaliste saisi dans « Magasins du réseau »' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'prévu de l’étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu, à saisir dans « Magasins du réseau »';
+      const kR = r.m.mois ? 'réel = moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + mm(r.m.du) + ' → ' + mm(r.m.au) + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'CA réel inconnu';
+      (gPrevu[kP] = gPrevu[kP] || []).push(nom); (gReel[kR] = gReel[kR] || []).push(nom);
       const ouv = f.phase ? 'ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ' · ' : '';
       const cibleNote = f.phase ? ouv + 'année ' + f.phase.annee + (f.phase.annee >= 4 ? ' et +' : '') + ' · ' + Math.round(f.phase.pct * 100) + ' % du plan' : (prevu ? 'ouverture à saisir dans Magasins du réseau' : 'prévu à saisir');
       const rc = reel && f.objectif ? reel / f.objectif - 1 : null;
       reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel),
-        f.objectif ? fmtEur(f.objectif) : '—', cibleNote, ecart(reel, f.objectif), ecart(reel, prevu), source + ' · ' + periode, rc == null ? '' : rc >= 0 ? 'pos' : 'neg']);
+        f.objectif ? fmtEur(f.objectif) : '—', cibleNote, ecart(reel, f.objectif), ecart(reel, prevu), kP + ' · ' + kR, rc == null ? '' : rc >= 0 ? 'pos' : 'neg']);
     });
+    const groupes = g => Object.keys(g).map(k => k + (g[k].length === noms.length && noms.length > 1 ? ' pour tous les magasins' : ' (' + g[k].join(', ') + ')')).join(' ; ');
+    const reseauNote = noms.length ? nomCom + ' — ce dossier : le CA TTC que le modèle prévoit, à comparer aux magasins ouverts. Magasins du réseau — ' + groupes(gPrevu) + '. ' + groupes(gReel).replace(/^./, c => c.toUpperCase()) + '.' : '';
     const montee = 'Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.';
     // le mini-tableau de la montée en charge : les paliers en euros, ce dossier
     // puis chaque magasin, la phase en cours marquée
@@ -2695,7 +2705,7 @@ export class Scouting {
       ecolesNote: et && et.ecoles.length ? 'Les plus proches : ' + proches(et.ecoles, 5) + (et.ecoles.some(e => e.eleves) ? ' — ' + et.ecoles.filter(e => e.eleves).map(e => e.nom + ' : ' + fmtInt(e.eleves) + ' élèves').join(', ') : '') + '.' : '',
       flux: et ? resume(et.flux) : [],
       fluxNote: et && et.flux.length ? 'Les plus proches : ' + proches(et.flux, 6) + '.' : '',
-      reseau: reseau,
+      reseau: reseau, reseauNote: reseauNote,
       hypotheses: [
         ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
         ['Emprise imposée', s.emprise > 0 ? s.emprise + ' %' : 'calculée'], ['Emprise maximale', s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],

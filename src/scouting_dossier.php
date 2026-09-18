@@ -111,6 +111,7 @@ function scoutingDossierValide(array $b): ?array
         'flux' => $lignes($b['flux'] ?? [], 6, 40, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
         'reseau' => $lignes($b['reseau'] ?? [], 10, 12, 160),
+        'reseauNote' => $s($b['reseauNote'] ?? '', 900),
         'montee' => $s($b['montee'] ?? '', 500),
         'monteeCols' => $lignes([$b['monteeCols'] ?? []], 4, 1, 30)[0] ?? ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
         'monteeRows' => $lignes($b['monteeRows'] ?? [], 6, 12, 80),
@@ -409,13 +410,14 @@ function scoutingDossierHtml(array $d): string
             . '<th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Cible de l’année</th><th>Réel / cible</th><th>Réel / plan</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
             $sens = (string) ($r[9] ?? '');
-            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b><div class="mut" style="font-size:6.8pt;line-height:1.35;max-width:36mm">' . $e($r[8] ?? '') . '</div></td>';
+            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td>';
             foreach ([1, 2, 3] as $k) { $h .= '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap;line-height:1.45">' . nl2br($e($r[$k])) . '</td>'; }
             $h .= '<td style="white-space:nowrap"><b>' . $e($r[4]) . '</b><div class="mut" style="font-size:6.8pt;line-height:1.35;white-space:normal;max-width:30mm">' . $e($r[5]) . '</div></td>'
                 . '<td style="white-space:nowrap"><span class="hl' . ($sens === 'pos' ? ' pos' : ($sens === 'neg' ? ' neg' : '')) . '">' . $e($r[6]) . '</span></td>'
                 . '<td class="mut" style="white-space:nowrap">' . $e($r[7]) . '</td></tr>';
         }
-        $h .= '</table><div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>';
+        $h .= '</table>' . ($d['reseauNote'] !== '' ? '<div class="legende" style="color:#221E1A;margin-bottom:1.5mm">' . $e($d['reseauNote']) . '</div>' : '')
+            . '<div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>';
     }
 
     foreach ($d['notes'] as $n) {
