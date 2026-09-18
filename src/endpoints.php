@@ -8500,6 +8500,8 @@ function ep_scouting_reseau(): array
         unset($l);
     } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
     $out = [];
+    $saisies = setting('scoutingMagasins');
+    if (!is_array($saisies)) { $saisies = []; }
     foreach ($shops as $sh) {
         $id = (string) $sh['id'];
         $p = $pos[$id] ?? null;
@@ -8507,6 +8509,7 @@ function ep_scouting_reseau(): array
             $g = GoogleApi::position($fiches[$id]);
             if ($g !== null) { $p = ['lat' => $g['lat'], 'lng' => $g['lng'], 'source' => 'google', 'le' => date('Y-m-d')]; $pos[$id] = $p; $modifie = true; }
         }
+        $saisie = $saisies[$id] ?? null;
         $ca = null; $mois = 0; $du = null; $au = null; $tot = 0.0;
         foreach ($cellules[$id] ?? [] as [$y, $m, $v]) {
             if ($mois >= 12) { break; }
@@ -8523,6 +8526,8 @@ function ep_scouting_reseau(): array
             'position' => is_array($p) ? (string) ($p['source'] ?? 'google') : null,
             'caAnnuel' => $ca !== null ? (int) round($ca) : null, 'mois' => $mois, 'du' => $du, 'au' => $au,
             'annualise' => $mois > 0 && $mois < 12,
+            // les données d'étude saisies à la main (PUT /scouting/magasins/{id})
+            'saisie' => is_array($saisie) ? $saisie : null,
         ];
     }
     if ($modifie) {

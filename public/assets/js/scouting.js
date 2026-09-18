@@ -199,7 +199,7 @@ const TIP_FICHE = {
   'Marché boulangerie': 'Marché = ménages du rayon × dépense boulangerie par ménage (hypothèse).',
   'Dépense / ménage': 'Hypothèse du modèle : dépense annuelle d\'un ménage en boulangerie-pâtisserie.',
   'Boulangeries dans le rayon': 'Concurrents de la sélection à moins de « rayon » km du point. « Fortes » : note ≥ seuil « concurrent fort », ou force OSM élevée sans note.',
-  'Pression concurrentielle': 'Σ, sur les concurrents du rayon, de : force (0 à 1) × (1 − 0,6 × distance ÷ rayon) × 1,5 si le concurrent est fort.\nUn concurrent au centre pèse toute sa force, un concurrent en bord de rayon 40 % de sa force. Force = (note − 3) ÷ 2, ou signaux OSM sans note.',
+  'Pression concurrentielle': 'Σ, sur les concurrents du rayon, de : force (0 à 1) × (1 − 0,6 × distance ÷ rayon) × 1,5 si le concurrent est fort.\nUn concurrent au centre pèse toute sa force, un concurrent en bord de rayon 40 % de sa force. Force = (note − 3) ÷ 2 × taille, ou signaux OSM sans note. La taille vient du nombre d’avis Google : petite (moins de 30) × 0,8, moyenne (30 à 99) × 1, grande (100 à 199) × 1,15, très grande (200 et plus) × 1,3.',
   'Emprise estimée': 'emprise = emprise max ÷ (1 + sensibilité × pression concurrentielle), entre 4 % et l\'emprise max.',
   'Emprise imposée': 'Emprise fixée dans les hypothèses : la même pour toutes les zones, la concurrence ne la modifie pas.',
   'Passage': 'Majoration par la clientèle de passage : CA = CA des ménages ÷ (1 − passage).',
@@ -1584,13 +1584,25 @@ export class Scouting {
   /* ---------- filtres ---------- */
   rating(b){ const r = this.state.ratings[b.id]; return r && r.rating ? r.rating : null; }
 
+  // La taille d'un concurrent, lue dans son nombre d'avis Google : petite
+  // (moins de 30), moyenne (30 à 99), grande (100 à 199), très grande (200 et
+  // plus). Elle module la force : × 0,8, × 1, × 1,15, × 1,3.
+  tailleAvis(b){
+    const rv = this.state.ratings[b.id], n = rv && rv.n ? +rv.n : 0;
+    if (!n) return { n: 0, taille: '', coef: 1 };
+    if (n >= 200) return { n: n, taille: 'très grande', coef: 1.3 };
+    if (n >= 100) return { n: n, taille: 'grande', coef: 1.15 };
+    if (n >= 30) return { n: n, taille: 'moyenne', coef: 1 };
+    return { n: n, taille: 'petite', coef: 0.8 };
+  }
+
   strength(b){  // force du concurrent, 0–1
     const r = this.rating(b);
     // La borne basse est un RÉGLAGE : en dessous, le commerce ne pèse rien.
     // Elle valait 3 en dur, ce qui interdisait de dire « ici, un 3,5 n'est pas
     // un concurrent ». Le haut de l'échelle reste 5.
     const w = Math.max(0, Math.min(4.9, this.state.weak != null ? this.state.weak : 3));
-    if (r) return Math.max(0, Math.min(1, (r - w) / (5 - w)));
+    if (r) return Math.max(0, Math.min(1, (r - w) / (5 - w) * this.tailleAvis(b).coef));
     let s = 0.4;
     const n = (b.name || '').toLowerCase();
     if (this.estChaine(b)) s += 0.25;
@@ -1747,6 +1759,71 @@ export class Scouting {
     if (x) x.zone ? this.evaluateZone(x.zone) : this.evaluate(x.lat, x.lng);
   }
 
+  /* ---------- les magasins du réseau : étude d'origine, saisie, prévu ---------- */
+  // Chaque magasin ouvert porte une fiche : les chiffres de son étude de
+  // marché (ceux de RESEAU, reconnus au dernier mot du nom — Sandra, Berlo,
+  // Sombreffe, Halle), recouverts par ce qui a été saisi à la main (PUT
+  // /scouting/magasins/{id}), dont le CA annuel prévu réaliste après
+  // ouverture — le chiffre auquel le réel se compare.
+  magasinRef(m){
+    const nm = sansAccent(m.nom || '');
+    return RESEAU.find(r => nm.indexOf(sansAccent(r.nom.replace(/[—–-]/g, ' ').trim().split(/\s+/).pop())) >= 0) || null;
+  }
+
+  magasinFiche(m){
+    const ref = this.magasinRef(m), sa = m.saisie || {};
+    const f = { id: m.id, nom: nomCourt(m.nom), magasin: true, statut: 'en exploitation', etude: sa.etude || (ref && ref.etude) || '', lat: m.lat, lng: m.lng,
+      caReel: m.caAnnuel || null, mois: m.mois || 0, annualise: !!m.annualise, du: m.du || '', au: m.au || '', caPrevu: sa.caPrevu != null ? +sa.caPrevu : null, saisi: !!m.saisie, note: sa.note || '' };
+    ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'].forEach(k => {
+      f[k] = sa[k] != null ? +sa[k] : (ref && ref[k] != null ? ref[k] : null);
+    });
+    const ev = this.evalStore(m);
+    f.caModele = ev ? ev.ca : null;
+    return f;
+  }
+
+  // Les références d'étude du réseau : la fiche de chaque magasin ouvert, puis
+  // les études qui ne correspondent à aucun magasin ouvert.
+  etudesReseau(){
+    const ouverts = (this.state.magasins || []).filter(m => m.ouvert);
+    const fiches = ouverts.map(m => this.magasinFiche(m));
+    const pris = ouverts.map(m => this.magasinRef(m)).filter(Boolean);
+    return fiches.concat(RESEAU.filter(r => pris.indexOf(r) < 0).map(r => Object.assign({ magasin: false }, r)));
+  }
+
+  magasinOuvrir(m){
+    const f = this.magasinFiche(m);
+    const pre = { magasinId: m.id, nom: f.nom, statut: f.statut, etude: f.etude, caPrevu: f.caPrevu, note: f.note };
+    ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'].forEach(k => { pre[k] = f[k]; });
+    this.setState({ reseau: true, refForm: pre });
+    setTimeout(() => { const el = this.el.querySelector('#sc-ref-caPrevu'); if (el) el.focus(); }, 60);
+  }
+
+  magasinEnregistrer(f){
+    const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.').replace(/\s/g, '')); return isFinite(n) && n >= 0 ? n : null; };
+    const o = {};
+    ['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface', 'caPrevu'].forEach(k => { const v = num(f[k]); if (v != null) o[k] = v; });
+    const etude = String(f.etude || '').trim().slice(0, 40);
+    if (etude) o.etude = etude;
+    const note = String(f.note || '').trim().slice(0, 300);
+    if (note) o.note = note;
+    const id = f.magasinId;
+    const upd = (this.state.magasins || []).map(m => m.id === id ? Object.assign({}, m, { saisie: Object.keys(o).length ? Object.assign({ le: new Date().toISOString().slice(0, 10) }, o) : null }) : m);
+    this.setState({ magasins: upd, refForm: null });
+    this._rev++;
+    if (this.useApi()) apiWrite('PUT', '/scouting/magasins/' + id, o).catch(e => this.notify('Enregistrement impossible : ' + e.message));
+    else this.notify('Hors ligne : la saisie ne survivra pas au rechargement.');
+    this.notify('Magasin enregistré — ' + f.nom + (o.caPrevu ? ' · CA prévu réaliste ' + fmtEur(o.caPrevu) : ''));
+  }
+
+  magasinEffacer(m){
+    const upd = (this.state.magasins || []).map(x => x.id === m.id ? Object.assign({}, x, { saisie: null }) : x);
+    this.setState({ magasins: upd, refForm: null });
+    this._rev++;
+    if (this.useApi()) apiWrite('PUT', '/scouting/magasins/' + m.id, {}).catch(e => this.notify('Effacement impossible : ' + e.message));
+    this.notify('Saisie effacée — ' + nomCourt(m.nom) + ' revient aux chiffres de l’étude');
+  }
+
   /* ---------- les points de comparaison saisis à la main ---------- */
   // Un magasin à ouvrir, une zone mesurée, un concurrent qu'on connaît : à
   // côté des trois références de l'étude, avec les mêmes lignes. Enregistrés
@@ -1763,6 +1840,7 @@ export class Scouting {
   refEnregistrer(){
     const f = this.state.refForm;
     if (!f) return;
+    if (f.magasinId){ this.magasinEnregistrer(f); return; }
     const nom = String(f.nom || '').trim();
     if (!nom){ this.notify('Donne un nom au point de comparaison'); return; }
     const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.').replace(/\s/g, '')); return isFinite(n) && n >= 0 ? n : null; };
@@ -2336,26 +2414,16 @@ export class Scouting {
     const rayonTxt = R.toFixed(1).replace('.', ',') + ' km';
     const verdictOk = !x.blocked.length && x.score >= 55;
     const nomCom = x.commune || 'Zone';
-    const reseau = [[nomCom + ' — projet', 'zone évaluée', fmtInt(x.hh), fmtEur(s.spend), pct1(x.emprise), fmtEur(x.ca), 'ce dossier']];
-    this.calage().rows.forEach(r => {
-      if (!r.ev) return;
-      reseau.push([nomCourt(r.m.nom), 'en exploitation' + (r.m.caAnnuel ? ' · CA réel ' + fmtEur(r.m.caAnnuel) : ''),
-        fmtInt(r.ev.hh), fmtEur(s.spend), pct1(r.ev.emprise), fmtEur(r.ev.ca),
-        r.ratio ? 'réel = modèle ' + (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : 'CA réel inconnu']);
-    });
-    RESEAU.forEach(r => reseau.push([r.nom, 'référence — étude GeoConsulting ' + (r.etude || ''), fmtInt(r.hh), fmtEur(r.depense), r.emprise ? pct1(r.emprise / 100) : '—',
-      r.ca ? fmtEur(r.ca) : '—', r.statut + (r.marche ? ' · marché ' + fmtEur(r.marche) : '')]));
-    // Étude de marché, modèle et chiffre réel, magasin par magasin : l'étude
-    // GeoConsulting se reconnaît au dernier mot de son nom (Sombreffe, Halle…).
-    const norm = t => sansAccent(String(t || '')).toLowerCase();
+    // Le réseau, simplement : pour chaque magasin, le CA prévu (le prévu
+    // réaliste saisi, sinon l'étude de marché), le CA réel et l'écart.
     const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
-    const etudeReel = this.calage().rows.map(r => {
-      const nm = norm(r.m.nom);
-      const ref = RESEAU.find(x => x.ca && nm.indexOf(norm(x.nom.replace(/[—–-]/g, ' ').trim().split(/\s+/).pop())) >= 0);
-      const reel = r.m.caAnnuel || null, mod = r.ev ? r.ev.ca : null;
-      const periode = r.m.mois ? r.m.mois + ' mois' + (r.m.annualise ? ', annualisés' : '') + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') : '';
-      return [nomCourt(r.m.nom), ref ? fmtEur(ref.ca) + (ref.etude ? ' (' + ref.etude + ')' : '') : '—', mod ? fmtEur(mod) : '—',
-        reel ? fmtEur(reel) : 'inconnu', ref ? ecart(reel, ref.ca) : '—', ecart(reel, mod), periode];
+    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca) + ' (modèle)', '—', '—', 'le CA que ce dossier prévoit, à comparer aux magasins ouverts']];
+    this.calage().rows.forEach(r => {
+      const f = this.magasinFiche(r.m);
+      const prevu = f.caPrevu || f.ca || null;
+      const source = f.caPrevu ? 'prévu réaliste saisi' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu — à saisir dans Magasins du réseau';
+      const periode = r.m.mois ? 'réel sur ' + r.m.mois + ' mois' + (r.m.annualise ? ', annualisé' : '') + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') : 'CA réel inconnu';
+      reseau.push([f.nom, prevu ? fmtEur(prevu) : '—', f.caReel ? fmtEur(f.caReel) : '—', ecart(f.caReel, prevu), source + ' · ' + periode]);
     });
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
@@ -2370,12 +2438,21 @@ export class Scouting {
       + ', ' + chaines.length + ' de chaîne' + (marques.length ? ' (' + marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', ') + ')' : '')
       + ', ' + notees.length + ' notée' + (notees.length > 1 ? 's' : '') + ' sur Google' + (notees.length ? ' — note moyenne ' + moy.toFixed(1).replace('.', ',') + ' (' + cl.map(c => c[1] + ' ' + c[0]).join(', ') + ')' : '')
       + (x.near.length - notees.length ? ', ' + (x.near.length - notees.length) + ' sans note' : '') + '. La plus proche : ' + x.near[0].b.name + ' à ' + km(x.near[0].d)
-      + (forts.length ? ' ; le concurrent fort le plus proche : ' + forts[0].b.name + ' à ' + km(forts[0].d) : '') + '. Pression concurrentielle ' + x.load.toFixed(2) + ' — Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5.';
+      + (forts.length ? ' ; le concurrent fort le plus proche : ' + forts[0].b.name + ' à ' + km(forts[0].d) : '') + '. Pression concurrentielle ' + x.load.toFixed(2) + ' — Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5 ; la force tient compte de la taille, lue dans le nombre d’avis Google : petite (moins de 30) × 0,8, moyenne (30 à 99) × 1, grande (100 à 199) × 1,15, très grande (200 et plus) × 1,3.'
+      + (() => { const t = { 'très grande': 0, grande: 0, moyenne: 0, petite: 0 }; x.near.forEach(o => { const k = self.tailleAvis(o.b).taille; if (k) t[k]++; }); const l = Object.keys(t).filter(k => t[k]).map(k => t[k] + ' ' + k + (t[k] > 1 && k !== 'très grande' && k !== 'grande' ? 's' : t[k] > 1 && k === 'grande' ? 's' : t[k] > 1 ? 's' : '')); return l.length ? ' Tailles : ' + l.join(', ') + '.' : ''; })();
     // l'étude locale : la bonne, pour ce point et ce rayon, si elle est là
     const et = s.etude && s.etude.cle === this.etudeCle(x.lat, x.lng) ? s.etude : null;
     const etudeAttente = et ? '' : s.etudeBusy ? 'Étude locale en cours — OpenStreetMap relève les entreprises, les zonings, les écoles et les générateurs de flux du rayon…' : s.etudeErr ? 'Étude locale indisponible : ' + s.etudeErr + '. Les sections qui suivent manquent dans ce dossier.' : '';
     const R1 = self.etudeRayon() / 1000, rTxt = R1.toFixed(1).replace('.', ',') + ' km';
-    const ligneLieu = e => [e.nom, e.genre, km(e.dKm)];
+    // Les lieux se résument par genre : combien à moins de 1, 2, 3 km et dans
+    // le rayon, et le plus proche — dix piscines ne font pas dix lignes.
+    const resume = liste => {
+      const par = {};
+      liste.forEach(e => { const g = par[e.genre] || (par[e.genre] = { genre: e.genre, n1: 0, n2: 0, n3: 0, n: 0, proche: null }); g.n++; if (e.dKm < 1) g.n1++; if (e.dKm < 2) g.n2++; if (e.dKm < 3) g.n3++; if (!g.proche || e.dKm < g.proche.dKm) g.proche = e; });
+      return Object.keys(par).map(k => par[k]).sort((a, b) => b.n - a.n || a.proche.dKm - b.proche.dKm)
+        .map(g => [g.genre.charAt(0).toUpperCase() + g.genre.slice(1), String(g.n1), String(g.n2), String(g.n3), String(g.n), g.proche.nom + ' · ' + km(g.proche.dKm)]);
+    };
+    const proches = (liste, n) => liste.slice(0, n).map(e => e.nom + ' (' + km(e.dKm) + ')').join(', ');
     const zoningsRows = et ? et.zonings.map(z => [z.nom || 'Zone ' + (z.genre === 'commerces' ? 'de commerces' : z.genre === 'mixte' ? 'd’activité' : z.genre === 'industriel' ? 'industrielle' : 'commerciale') + ' sans nom',
       z.reste ? 'la plus proche à ' + km(z.dKm) : z.genre + (z.morceaux > 1 ? ' · ' + z.morceaux + ' parcelles' : '') + (z.approx ? ' · emprise approchée' : ''), z.reste ? '' : km(z.dKm), (z.ha >= 10 ? Math.round(z.ha) : z.ha.toFixed(1).replace('.', ',')) + ' ha', String(z.n)]) : [];
     const tissuRows = et ? [
@@ -2437,11 +2514,12 @@ export class Scouting {
       concurrence: x.near.slice(0, 150).map(o => {
         const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b);
         const adresse = (rv && rv.adresse) || o.b.addr || '';
+        const ta = self.tailleAvis(o.b);
         return [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), o.d.toFixed(1).replace('.', ',') + ' km',
-          r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : rv && rv.n ? ' (' + rv.n + ' avis)' : '') : '—',
+          r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : '') : '—',
+          ta.n ? ta.taille + ' · ' + fmtInt(ta.n) + ' avis' : '—',
           Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
       }),
-      etudeReel: etudeReel,
       avisGoogle: (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) ? s.dossierGoogle.rows : []).filter(f => f.fiche).map(f => {
         const o = x.near.find(q => q.b.id === f.id);
         return { nom: f.nom || (o ? o.b.name : ''), adresse: (f.adresse || '').replace(/, Belgi(que|ë)$/i, ''), note: f.note != null ? (+f.note).toFixed(1).replace('.', ',') : '—', n: f.n || 0,
@@ -2455,10 +2533,13 @@ export class Scouting {
       chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
       etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
       motFin: 'Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
-      indirecte: et ? et.indirecte.map(ligneLieu) : [],
+      indirecte: et ? resume(et.indirecte) : [],
+      indirecteNote: et && et.indirecte.length ? 'Les plus proches : ' + proches(et.indirecte, 6) + '.' : '',
       tissu: tissuRows, zonings: zoningsRows,
-      ecoles: et ? et.ecoles.map(e => [e.nom, e.genre + (e.eleves ? ' · ' + fmtInt(e.eleves) + ' élèves' : ''), km(e.dKm)]) : [],
-      flux: et ? et.flux.map(ligneLieu) : [],
+      ecoles: et ? resume(et.ecoles) : [],
+      ecolesNote: et && et.ecoles.length ? 'Les plus proches : ' + proches(et.ecoles, 5) + (et.ecoles.some(e => e.eleves) ? ' — ' + et.ecoles.filter(e => e.eleves).map(e => e.nom + ' : ' + fmtInt(e.eleves) + ' élèves').join(', ') : '') + '.' : '',
+      flux: et ? resume(et.flux) : [],
+      fluxNote: et && et.flux.length ? 'Les plus proches : ' + proches(et.flux, 6) + '.' : '',
       reseau: reseau,
       hypotheses: [
         ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
@@ -2588,16 +2669,16 @@ export class Scouting {
     d.essentiel.forEach(r => rows.push(['essentiel', r[0], r[1], r[2]]));
     d.marche.forEach(r => rows.push(['marche', r[0], r[1], r[2]]));
     if (d.concurrenceNote) rows.push(['concurrence', 'lecture', d.concurrenceNote, '']);
-    d.concurrence.forEach(r => rows.push(['concurrence', r[0], r[2] + ' · note ' + r[3] + ' · force ' + r[4], r[1] + (r[5] ? ' · concurrent fort' : '') + (r[6] ? ' · chaîne ' + r[6] : '')]));
-    d.indirecte.forEach(r => rows.push(['concurrence_indirecte', r[0], r[2], r[1]]));
+    d.concurrence.forEach(r => rows.push(['concurrence', r[0], r[2] + ' · note ' + r[3] + ' · taille ' + r[4] + ' · force ' + r[5], r[1] + (r[6] ? ' · concurrent fort' : '') + (r[7] ? ' · chaîne ' + r[7] : '')]));
+    d.indirecte.forEach(r => rows.push(['concurrence_indirecte', r[0], r[4] + ' dans le rayon · ' + r[1] + ' à moins de 1 km · ' + r[2] + ' à moins de 2 km · ' + r[3] + ' à moins de 3 km', 'plus proche : ' + r[5]]));
     d.tissu.forEach(r => rows.push(['tissu_economique', r[0], r[1], r[2]]));
     d.zonings.forEach(r => rows.push(['zonings', r[0], r[4] + ' entreprises · ' + r[3], r[1] + ' · ' + r[2]]));
-    d.ecoles.forEach(r => rows.push(['ecoles', r[0], r[2], r[1]]));
-    d.flux.forEach(r => rows.push(['flux', r[0], r[2], r[1]]));
+    d.ecoles.forEach(r => rows.push(['ecoles', r[0], r[4] + ' dans le rayon · ' + r[1] + ' à moins de 1 km · ' + r[2] + ' à moins de 2 km · ' + r[3] + ' à moins de 3 km', 'plus proche : ' + r[5]]));
+    d.flux.forEach(r => rows.push(['flux', r[0], r[4] + ' dans le rayon · ' + r[1] + ' à moins de 1 km · ' + r[2] + ' à moins de 2 km · ' + r[3] + ' à moins de 3 km', 'plus proche : ' + r[5]]));
+    [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], 'les plus proches', x[1], '']); });
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
-    d.reseau.forEach(r => rows.push(['reseau', r[0], r[5], r[1] + ' · ' + r[2] + ' ménages · ' + r[3] + ' · emprise ' + r[4] + ' · ' + r[6]]));
-    d.etudeReel.forEach(r => rows.push(['etude_vs_reel', r[0], 'étude ' + r[1] + ' · modèle ' + r[2] + ' · réel ' + r[3], 'réel/étude ' + r[4] + ' · réel/modèle ' + r[5] + (r[6] ? ' · ' + r[6] : '')]));
+    d.reseau.forEach(r => rows.push(['reseau', r[0], 'prévu ' + r[1] + ' · réel ' + r[2] + ' · écart ' + r[3], r[4]]));
     d.avisGoogle.forEach(f => { rows.push(['google', f.nom, f.note + ' ★ · ' + f.n + ' avis', f.adresse + (f.url ? ' · ' + f.url : '')]); f.avis.forEach(a => rows.push(['google_avis', f.nom, a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
@@ -3824,6 +3905,7 @@ export class Scouting {
           reel: r.m.caAnnuel ? fmtEur(r.m.caAnnuel) : 'CA réel inconnu', modele: r.ev ? fmtEur(r.ev.ca) : (r.m.lat == null ? 'position inconnue' : '—'),
           ecart: r.ratio ? (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : '—',
           ecartColor: r.ratio ? (Math.abs(r.ratio - 1) <= 0.25 ? '#1b5e20' : '#c17a2a') : 'var(--color-text-muted)',
+          prevu: (() => { const f = self.magasinFiche(r.m); return f.caPrevu ? 'prévu réaliste ' + fmtEur(f.caPrevu) + (r.m.caAnnuel ? ' · réel/prévu ' + (r.m.caAnnuel >= f.caPrevu ? '+' : '−') + Math.round(Math.abs(r.m.caAnnuel / f.caPrevu - 1) * 100) + ' %' : '') : ''; })(),
           place: () => { self.setState({ placing: r.m.id, view: 'map', reseau: false, compare: false }); self.notify('Clique sur la carte à l\'emplacement de ' + r.m.nom); }
         }));
         return { rows: rows, med: c.med, n: c.n, placing: !!s.placing, caler: () => self.caler(),
@@ -4032,11 +4114,25 @@ export class Scouting {
       reseau: s.reseau,
       openReseau: () => self.setState({ reseau: true }),
       closeReseau: () => self.setState({ reseau: false }),
-      reseauCols: RESEAU.map(r => ({
-        nom: r.nom, statut: r.statut, rows: reseauRows(r), perso: false,
-        locate: () => { self.setState({ reseau: false, compare: false, view: 'map' }); setTimeout(() => { if (self.map) self.map.setView([r.lat, r.lng], 13); self.evaluate(r.lat, r.lng); }, 80); },
-        applyDepense: () => self.setParam({ spend: r.depense })
-      })).concat(s.references.map(r => ({
+      reseauCols: self.etudesReseau().map(r => {
+        const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
+        const rows = reseauRows(r);
+        if (r.magasin) rows.push(
+          { k: 'CA annuel prévu réaliste après ouverture', v: r.caPrevu ? fmtEur(r.caPrevu) : 'à saisir', fort: true },
+          { k: 'CA réel, douze derniers mois clos', v: r.caReel ? fmtEur(r.caReel) + (r.annualise ? ' (' + r.mois + ' mois annualisés)' : '') : 'inconnu' },
+          { k: 'CA du modèle, à son emplacement', v: r.caModele ? fmtEur(r.caModele) : (r.lat == null ? 'position inconnue' : '—') },
+          { k: 'Réel / prévu', v: ecart(r.caReel, r.caPrevu) },
+          { k: 'Réel / étude', v: ecart(r.caReel, r.ca) },
+          { k: 'Réel / modèle', v: ecart(r.caReel, r.caModele) });
+        return {
+          nom: r.nom, statut: r.magasin ? 'magasin du réseau · ' + (r.saisi ? 'données saisies le ' + new Date(r.saisie && r.saisie.le || Date.now()).toLocaleDateString('fr-BE') : r.etude ? 'étude GeoConsulting ' + r.etude : 'sans étude de marché') : r.statut,
+          rows: rows, perso: false, magasin: !!r.magasin,
+          locate: r.lat != null && r.lng != null ? () => { self.setState({ reseau: false, compare: false, view: 'map' }); setTimeout(() => { if (self.map) self.map.setView([+r.lat, +r.lng], 13); self.evaluate(+r.lat, +r.lng); }, 80); } : null,
+          applyDepense: r.depense ? () => self.setParam({ spend: +r.depense }) : null,
+          modifier: r.magasin ? () => self.magasinOuvrir((s.magasins || []).find(m => m.id === r.id)) : null,
+          supprimer: r.magasin && r.saisi ? () => self.magasinEffacer((s.magasins || []).find(m => m.id === r.id)) : null
+        };
+      }).concat(s.references.map(r => ({
         nom: r.nom, statut: r.statut || 'point de comparaison', rows: reseauRows(r), perso: true,
         locate: r.lat != null && r.lng != null ? () => { self.setState({ reseau: false, compare: false, view: 'map' }); setTimeout(() => { if (self.map) self.map.setView([+r.lat, +r.lng], 13); self.evaluate(+r.lat, +r.lng); }, 80); } : null,
         applyDepense: r.depense ? () => self.setParam({ spend: +r.depense }) : null,
@@ -4044,13 +4140,20 @@ export class Scouting {
         supprimer: () => self.refSupprimer(r.id)
       }))),
       refForm: s.refForm ? {
-        champs: [['nom', 'Nom', 'text'], ['statut', 'Statut', 'text'], ['lat', 'Latitude', 'number'], ['lng', 'Longitude', 'number'],
-          ['pop', 'Population de la zone', 'number'], ['hh', 'Ménages', 'number'], ['taille', 'Taille des ménages', 'number'], ['revenu', 'Revenu moyen / ménage (€)', 'number'],
-          ['jeunes', 'Part de jeunes (%)', 'number'], ['actifs', 'Part d\'actifs (%)', 'number'], ['seniors', 'Part de seniors (%)', 'number'],
-          ['depense', 'Dépense boulangerie / ménage (€/an)', 'number'], ['marche', 'Marché boulangerie (€) — vide = ménages × dépense', 'number'],
-          ['emprise', 'Emprise retenue (%)', 'number'], ['ca', 'CA annuel TTC (€)', 'number'], ['surface', 'Surface nette (m²)', 'number']]
+        champs: (s.refForm.magasinId
+          ? [['caPrevu', 'CA annuel prévu réaliste après ouverture (€)', 'number'], ['etude', 'Étude de marché (mois/année)', 'text'],
+            ['pop', 'Population de la zone', 'number'], ['hh', 'Ménages', 'number'], ['taille', 'Taille des ménages', 'number'], ['revenu', 'Revenu moyen / ménage (€)', 'number'],
+            ['jeunes', 'Part de jeunes (%)', 'number'], ['actifs', 'Part d\'actifs (%)', 'number'], ['seniors', 'Part de seniors (%)', 'number'],
+            ['depense', 'Dépense boulangerie / ménage (€/an)', 'number'], ['marche', 'Marché boulangerie (€) — vide = ménages × dépense', 'number'],
+            ['emprise', 'Emprise retenue (%)', 'number'], ['ca', 'CA annuel TTC de l\'étude (€)', 'number'], ['surface', 'Surface nette (m²)', 'number'], ['note', 'Note', 'text']]
+          : [['nom', 'Nom', 'text'], ['statut', 'Statut', 'text'], ['lat', 'Latitude', 'number'], ['lng', 'Longitude', 'number'],
+            ['pop', 'Population de la zone', 'number'], ['hh', 'Ménages', 'number'], ['taille', 'Taille des ménages', 'number'], ['revenu', 'Revenu moyen / ménage (€)', 'number'],
+            ['jeunes', 'Part de jeunes (%)', 'number'], ['actifs', 'Part d\'actifs (%)', 'number'], ['seniors', 'Part de seniors (%)', 'number'],
+            ['depense', 'Dépense boulangerie / ménage (€/an)', 'number'], ['marche', 'Marché boulangerie (€) — vide = ménages × dépense', 'number'],
+            ['emprise', 'Emprise retenue (%)', 'number'], ['ca', 'CA annuel TTC (€)', 'number'], ['surface', 'Surface nette (m²)', 'number']])
           .map(([k, label, type]) => ({ k: k, label: label, type: type, v: s.refForm[k] == null ? '' : s.refForm[k], set: e => self.refChamp(k, e.target.value) })),
-        neuf: !s.refForm.id, depuisZone: !!s.refForm.depuisZone,
+        neuf: !s.refForm.id && !s.refForm.magasinId, depuisZone: !!s.refForm.depuisZone,
+        magasin: s.refForm.magasinId ? s.refForm.nom : '',
         enregistrer: () => self.refEnregistrer(), annuler: () => self.refFermer()
       } : null,
       refOuvrir: () => self.refOuvrir(null),
