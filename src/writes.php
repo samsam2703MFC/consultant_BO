@@ -3611,6 +3611,46 @@ function wr_scouting_references_put(): array
     return ['ok' => true, 'references' => $out];
 }
 
+/**
+ * PUT /scouting/magasins/{id} — les données d'étude d'un magasin du réseau,
+ * saisies à la main : ce que l'étude de marché disait (ménages, dépense,
+ * emprise, CA, surface…), la date de l'étude, et le CA annuel prévu
+ * réaliste après ouverture — celui auquel le réel se compare. Un corps vide
+ * efface la saisie et rend le magasin à ses valeurs d'étude d'origine.
+ * Ligne `ceo_app_setting.scoutingMagasins`, une entrée par magasin.
+ */
+function wr_scouting_magasin_put(string $shopId): array
+{
+    $nom = magasinConnu($shopId);
+    if ($nom === null) {
+        try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$shopId]); $nom = $r['name'] ?? null; } catch (PDOException $e) { $nom = null; }
+    }
+    if ($nom === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $b = body();
+    $num = static function ($v): ?float {
+        if ($v === null || $v === '' || !is_numeric($v)) { return null; }
+        $f = (float) $v;
+        return is_finite($f) && $f >= 0 ? round($f, 4) : null;
+    };
+    $o = [];
+    foreach (['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface', 'caPrevu'] as $k) {
+        $v = $num($b[$k] ?? null);
+        if ($v !== null) { $o[$k] = $v; }
+    }
+    $etude = mb_substr(trim((string) ($b['etude'] ?? '')), 0, 40);
+    if ($etude !== '') { $o['etude'] = $etude; }
+    $note = mb_substr(trim((string) ($b['note'] ?? '')), 0, 300);
+    if ($note !== '') { $o['note'] = $note; }
+    $tous = setting('scoutingMagasins');
+    if (!is_array($tous)) { $tous = []; }
+    if ($o === []) { unset($tous[$shopId]); } else { $o['le'] = date('Y-m-d'); $tous[$shopId] = $o; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['scoutingMagasins', json_encode($tous, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Scouting', $nom, $o === [] ? 'Données d\'étude du magasin effacées — retour aux valeurs de l\'étude' :
+        'Données d\'étude du magasin saisies' . (isset($o['caPrevu']) ? ' — CA prévu réaliste ' . number_format($o['caPrevu'], 0, ',', ' ') . ' €' : ''));
+    return ['ok' => true, 'id' => $shopId, 'saisie' => $o === [] ? null : $o];
+}
+
 /** DELETE /scouting/candidates/{id} */
 function wr_scouting_candidate_delete(int $id): array
 {

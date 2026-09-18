@@ -409,6 +409,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/scouting/concurrents/google') { return wr_scouting_concurrents_google(); }
     if ($method === 'POST' && preg_match('#^/scouting/refresh/(\d{1,3})$#', $path, $m)) { return wr_scouting_refresh((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/scouting/reseau/(\d{1,10})$#', $path, $m)) { return wr_scouting_reseau_put($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/scouting/magasins/(\d{1,10})$#', $path, $m)) { return wr_scouting_magasin_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
     if ($method === 'POST' && $path === '/scouting/dossier.pdf') { return wr_scouting_dossier_pdf(); }
     if ($method === 'POST' && $path === '/scouting/plan.pdf') { return wr_scouting_plan_pdf(); }

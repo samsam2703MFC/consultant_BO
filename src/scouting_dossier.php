@@ -92,16 +92,18 @@ function scoutingDossierValide(array $b): ?array
         'carteNote' => $s($b['carteNote'] ?? '', 240),
         'essentiel' => $lignes($b['essentiel'] ?? [], 3, 6, 80),
         'marche' => $lignes($b['marche'] ?? [], 3, 16, 200),
-        'concurrence' => $lignes($b['concurrence'] ?? [], 7, 150, 120),
+        'concurrence' => $lignes($b['concurrence'] ?? [], 8, 150, 120),
         'concurrenceNote' => $s($b['concurrenceNote'] ?? '', 700),
-        'indirecte' => $lignes($b['indirecte'] ?? [], 3, 60, 120),
+        'indirecte' => $lignes($b['indirecte'] ?? [], 6, 40, 120),
+        'indirecteNote' => $s($b['indirecteNote'] ?? '', 500),
+        'ecolesNote' => $s($b['ecolesNote'] ?? '', 700),
+        'fluxNote' => $s($b['fluxNote'] ?? '', 500),
         'tissu' => $lignes($b['tissu'] ?? [], 3, 12, 200),
         'zonings' => $lignes($b['zonings'] ?? [], 5, 30, 120),
-        'ecoles' => $lignes($b['ecoles'] ?? [], 3, 80, 120),
-        'flux' => $lignes($b['flux'] ?? [], 3, 80, 120),
+        'ecoles' => $lignes($b['ecoles'] ?? [], 6, 40, 120),
+        'flux' => $lignes($b['flux'] ?? [], 6, 40, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
-        'reseau' => $lignes($b['reseau'] ?? [], 7, 12, 120),
-        'etudeReel' => $lignes($b['etudeReel'] ?? [], 7, 12, 120),
+        'reseau' => $lignes($b['reseau'] ?? [], 5, 12, 160),
         'avisGoogle' => (static function ($v) use ($s, $lignes): array {
             $out = [];
             if (!is_array($v)) { return $out; }
@@ -217,13 +219,13 @@ function scoutingDossierHtml(array $d): string
         $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>';
     } else {
         $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Commerce</th><th class="l">Commune</th><th>Distance</th><th>Note / 5</th><th>Force</th><th class="l" style="padding-left:4mm">Lecture</th></tr>';
+            . '<th class="l">Commerce</th><th class="l">Commune · adresse</th><th>Distance</th><th>Note / 5</th><th class="l">Taille (avis)</th><th>Force</th><th class="l" style="padding-left:3mm">Lecture</th></tr>';
         foreach ($d['concurrence'] as $r) {
-            $fort = !empty($r[5]);
-            $ch = (string) ($r[6] ?? '');
+            $fort = !empty($r[6]);
+            $ch = (string) ($r[7] ?? '');
             $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td class="l mut">' . $e($r[1]) . '</td>'
-                . '<td>' . $e($r[2]) . '</td><td>' . $e($r[3]) . '</td><td>' . $e($r[4]) . '</td>'
-                . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:4mm">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . ($ch !== '' ? ' · chaîne ' . $e($ch) : '') . '</td></tr>';
+                . '<td style="white-space:nowrap">' . $e($r[2]) . '</td><td>' . $e($r[3]) . '</td><td class="l mut">' . $e($r[4]) . '</td><td>' . $e($r[5]) . '</td>'
+                . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:3mm">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . ($ch !== '' ? ' · chaîne ' . $e($ch) : '') . '</td></tr>';
         }
         $h .= '</table>';
     }
@@ -246,21 +248,29 @@ function scoutingDossierHtml(array $d): string
     }
 
     // L'étude de marché locale : ce qu'OpenStreetMap sait du rayon.
-    $liste = static function (string $titre, array $rows, array $tetes, string $vide) use (&$h, $e): void {
+    // Une liste : colonnes de gauche (les `$gauche` premières et, si la
+    // dernière est un nom, la dernière), chiffres à droite, une note dessous.
+    $liste = static function (string $titre, array $rows, array $tetes, string $vide, string $note = '', int $gauche = 2, bool $derniereGauche = false) use (&$h, $e): void {
         $h .= '<div class="sec">' . $e($titre) . '</div>';
         if ($rows === []) { $h .= '<p class="mut" style="font-size:8.5pt;margin:0 0 5mm">' . $e($vide) . '</p>'; return; }
+        $n = count($tetes);
         $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>';
-        foreach ($tetes as $i => $t) { $h .= '<th' . ($i < 2 ? ' class="l"' : '') . '>' . $e($t) . '</th>'; }
+        foreach ($tetes as $i => $t) { $h .= '<th' . ($i < $gauche || ($derniereGauche && $i === $n - 1) ? ' class="l"' . ($derniereGauche && $i === $n - 1 ? ' style="padding-left:3mm"' : '') : '') . '>' . $e($t) . '</th>'; }
         $h .= '</tr>';
         foreach ($rows as $r) {
             $h .= '<tr>';
-            foreach ($r as $i => $c) { $h .= '<td class="' . ($i === 0 ? 'l' : ($i === 1 ? 'l mut' : '')) . '">' . ($i === 0 ? '<b>' . $e($c) . '</b>' : $e($c)) . '</td>'; }
+            foreach ($r as $i => $c) {
+                $g = $i < $gauche || ($derniereGauche && $i === $n - 1);
+                $h .= '<td class="' . ($i === 0 ? 'l' : ($g ? 'l mut' : '')) . '"' . ($derniereGauche && $i === $n - 1 ? ' style="padding-left:3mm"' : '') . '>' . ($i === 0 ? '<b>' . $e($c) . '</b>' : $e($c)) . '</td>';
+            }
             $h .= '</tr>';
         }
         $h .= '</table>';
+        if ($note !== '') { $h .= '<div class="legende" style="margin-top:-3mm">' . $e($note) . '</div>'; }
     };
     if ($d['indirecte'] !== [] || $d['tissu'] !== [] || $d['zonings'] !== [] || $d['ecoles'] !== [] || $d['flux'] !== []) {
-        $liste('La concurrence indirecte', $d['indirecte'], ['Enseigne', 'Genre', 'Distance'], 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.');
+        $bandes = ['Genre', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'Le plus proche'];
+        $liste('La concurrence indirecte', $d['indirecte'], $bandes, 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.', $d['indirecteNote'], 1, true);
         if ($d['tissu'] !== []) {
             $h .= '<div class="sec">Le tissu économique</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
                 . '<th class="l">Famille</th><th>Entreprises</th><th class="l" style="padding-left:6mm">Ce qu’on y compte</th></tr>';
@@ -271,32 +281,21 @@ function scoutingDossierHtml(array $d): string
             $h .= '</table>';
         }
         $liste('Les zonings et parcs d’activité', $d['zonings'], ['Zone', 'Genre', 'Distance', 'Surface', 'Entreprises'], 'Aucun zoning ni parc d’activité cartographié dans le rayon.');
-        $liste('Les écoles', $d['ecoles'], ['École', 'Niveau', 'Distance'], 'Aucune école cartographiée dans le rayon.');
-        $liste('Les générateurs de flux', $d['flux'], ['Lieu', 'Genre', 'Distance'], 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.');
+        $liste('Les écoles', $d['ecoles'], ['Niveau', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'La plus proche'], 'Aucune école cartographiée dans le rayon.', $d['ecolesNote'], 1, true);
+        $liste('Les générateurs de flux', $d['flux'], $bandes, 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.', $d['fluxNote'], 1, true);
         if ($d['etudeNote'] !== '') { $h .= '<div class="methode">' . $e($d['etudeNote']) . '</div>'; }
     }
 
     if ($d['reseau'] !== []) {
-        $h .= '<div class="sec">Comparaison au réseau</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Point de vente</th><th class="l">Statut</th><th>Ménages</th><th>Dépense</th><th>Emprise</th><th>CA annuel</th><th class="l" style="padding-left:4mm">Note</th></tr>';
+        $h .= '<div class="sec">Le réseau : prévu et réel</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Magasin</th><th>CA prévu</th><th>CA réel</th><th>Écart réel / prévu</th><th class="l" style="padding-left:4mm">D’où viennent les chiffres</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
-            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td class="l mut">' . $e($r[1]) . '</td>'
-                . '<td>' . $e($r[2]) . '</td><td>' . $e($r[3]) . '</td><td>' . $e($r[4]) . '</td>'
-                . '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap"><b>' . $e($r[5]) . '</b></td>'
-                . '<td class="l mut" style="padding-left:4mm">' . $e($r[6]) . '</td></tr>';
+            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td>'
+                . '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
+                . '<td style="white-space:nowrap">' . $e($r[2]) . '</td><td style="white-space:nowrap"><b>' . $e($r[3]) . '</b></td>'
+                . '<td class="l mut" style="padding-left:4mm">' . $e($r[4]) . '</td></tr>';
         }
-        $h .= '</table>';
-    }
-
-    if ($d['etudeReel'] !== []) {
-        $h .= '<div class="sec">Étude de marché, modèle et chiffre réel</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Magasin</th><th>Étude de marché</th><th>Modèle du jour</th><th>CA réel</th><th>Réel / étude</th><th>Réel / modèle</th><th class="l" style="padding-left:4mm">Période</th></tr>';
-        foreach ($d['etudeReel'] as $r) {
-            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td style="white-space:nowrap">' . $e($r[1]) . '</td><td style="white-space:nowrap">' . $e($r[2]) . '</td>'
-                . '<td style="white-space:nowrap"><b>' . $e($r[3]) . '</b></td><td style="white-space:nowrap">' . $e($r[4]) . '</td><td style="white-space:nowrap">' . $e($r[5]) . '</td>'
-                . '<td class="l mut" style="padding-left:4mm">' . $e($r[6]) . '</td></tr>';
-        }
-        $h .= '</table><div class="legende">L’étude de marché : le CA annuel TTC de l’étude GeoConsulting du magasin, quand il y en a une. Le modèle : le CA que les hypothèses de ce dossier donnent au magasin, là où il est. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. Les écarts se lisent réel ÷ étude − 1 et réel ÷ modèle − 1.</div>';
+        $h .= '</table><div class="legende">Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>';
     }
 
     foreach ($d['notes'] as $n) {

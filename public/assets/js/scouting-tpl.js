@@ -116,6 +116,7 @@ export function renderLeft(c, x){
     <div style="padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
       <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="font-weight:500">${esc(r.nom)}</span><span style="font-weight:600;color:${r.ecartColor}">${esc(r.ecart)}</span></div>
       <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:2px"><span>réel ${esc(r.reel)}${r.annualise ? ' · ' + r.mois + ' mois' : ''}</span><span>modèle ${esc(r.modele)}</span></div>
+      ${r.prevu ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(r.prevu)}</div>` : ''}
       ${r.pos ? '' : `<div style="margin-top:5px"><button ${x.A(r.place)} class="btn-secondary" style="padding:3px 8px;font-size:11px">Placer sur la carte</button></div>`}
     </div>`).join('')}
     ${c.calage.rows.length ? '' : `<div style="padding:8px 9px;font-size:11px;color:var(--color-text-muted)">${esc(c.calage.vide)}</div>`}
@@ -438,19 +439,20 @@ body{margin:0;background:#fff}
 // n'a pas répondu, puis cinq tableaux.
 function etudeLocale(d, esc){
   if (!d.etude) return d.etudeAttente ? `<h3>L'étude de marché locale</h3><div class="attente">${esc(d.etudeAttente)}</div>` : '';
-  const table = (titre, rows, tetes, vide) => `
+  const table = (titre, rows, tetes, vide, note, gauche) => `
     <h3>${titre}</h3>
-    ${rows.length ? `<table><tr>${tetes.map((t, i) => `<th${i < 2 ? ' class="l"' : ''}>${esc(t)}</th>`).join('')}</tr>
-      ${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i === 0 ? 'l' : i === 1 ? 'l mut' : 'n'}">${i === 0 ? '<b>' + esc(c) + '</b>' : esc(c)}</td>`).join('')}</tr>`).join('')}
-    </table>` : `<p class="mut" style="font-size:11.5px">${esc(vide)}</p>`}`;
-  return table('La concurrence indirecte', d.indirecte, ['Enseigne', 'Genre', 'Distance'], 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.')
+    ${rows.length ? `<table><tr>${tetes.map((t, i) => `<th${i < (gauche || 2) ? ' class="l"' : ''}${i === tetes.length - 1 && gauche === 1 ? ' class="l" style="padding-left:12px"' : ''}>${esc(t)}</th>`).join('')}</tr>
+      ${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i === 0 ? 'l' : (gauche === 1 ? (i === r.length - 1 ? 'l mut' : 'n') : (i === 1 ? 'l mut' : 'n'))}"${gauche === 1 && i === r.length - 1 ? ' style="padding-left:12px"' : ''}>${i === 0 ? '<b>' + esc(c) + '</b>' : esc(c)}</td>`).join('')}</tr>`).join('')}
+    </table>${note ? `<div class="legende">${esc(note)}</div>` : ''}` : `<p class="mut" style="font-size:11.5px">${esc(vide)}</p>`}`;
+  const bandes = ['Genre', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'Le plus proche'];
+  return table('La concurrence indirecte', d.indirecte, bandes, 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.', d.indirecteNote, 1)
     + `<h3>Le tissu économique</h3>
     <table><tr><th class="l">Famille</th><th>Entreprises</th><th class="l" style="padding-left:18px">Ce qu'on y compte</th></tr>
       ${d.tissu.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
     </table>`
     + table('Les zonings et parcs d\'activité', d.zonings, ['Zone', 'Genre', 'Distance', 'Surface', 'Entreprises'], 'Aucun zoning ni parc d’activité cartographié dans le rayon.')
-    + table('Les écoles', d.ecoles, ['École', 'Niveau', 'Distance'], 'Aucune école cartographiée dans le rayon.')
-    + table('Les générateurs de flux', d.flux, ['Lieu', 'Genre', 'Distance'], 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.')
+    + table('Les écoles', d.ecoles, ['Niveau', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'La plus proche'], 'Aucune école cartographiée dans le rayon.', d.ecolesNote, 1)
+    + table('Les générateurs de flux', d.flux, bandes, 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.', d.fluxNote, 1)
     + (d.etudeNote ? `<div class="note">${esc(d.etudeNote)}</div>` : '');
 }
 
@@ -480,9 +482,9 @@ export function dossierPage(d, esc, logo){
     <h3>La concurrence, en détail${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
     ${d.concurrenceNote ? `<div class="note" style="color:inherit">${esc(d.concurrenceNote)}</div>` : ''}
     ${d.concurrence.length ? `
-    <table><tr><th class="l">Commerce</th><th class="l">Commune</th><th>Distance</th><th>Note / 5</th><th>Force</th><th class="l" style="padding-left:12px">Lecture</th></tr>
-      ${d.concurrence.map(r => `<tr><td class="l"><b>${esc(r[0])}</b>${r[6] ? `<span class="ch">${esc(r[6])}</span>` : ''}</td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>
-        <td class="l ${r[5] ? 'acc' : 'mut'}" style="padding-left:12px">${r[5] ? '<b>concurrent fort</b>' : 'concurrent'}${r[6] ? ' · chaîne ' + esc(r[6]) : ''}</td></tr>`).join('')}
+    <table class="plan"><tr><th class="l">Commerce</th><th class="l">Commune · adresse</th><th>Distance</th><th>Note / 5</th><th class="l">Taille (avis)</th><th>Force</th><th class="l" style="padding-left:10px">Lecture</th></tr>
+      ${d.concurrence.map(r => `<tr><td class="l"><b>${esc(r[0])}</b>${r[7] ? `<span class="ch">${esc(r[7])}</span>` : ''}</td><td class="l mut">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n">${esc(r[3])}</td><td class="l mut">${esc(r[4])}</td><td class="n">${esc(r[5])}</td>
+        <td class="l ${r[6] ? 'acc' : 'mut'}" style="padding-left:10px">${r[6] ? '<b>concurrent fort</b>' : 'concurrent'}${r[7] ? ' · chaîne ' + esc(r[7]) : ''}</td></tr>`).join('')}
     </table>` : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
     ${d.avisGoogle.length ? `<h3>Ce que Google dit des concurrents les plus proches</h3>
     ${d.avisGoogle.map(f => `<div class="gcard">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
@@ -493,15 +495,11 @@ export function dossierPage(d, esc, logo){
     ${d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : ''}` : d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : ''}
     ${etudeLocale(d, esc)}
 
-    <h3>Comparaison au réseau</h3>
-    <table><tr><th class="l">Point de vente</th><th class="l">Statut</th><th>Ménages</th><th>Dépense</th><th>Emprise</th><th>CA annuel</th><th class="l" style="padding-left:12px">Note</th></tr>
-      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td><td class="n ${i ? '' : 'ok'}"><b>${esc(r[5])}</b></td><td class="l mut" style="padding-left:12px">${esc(r[6])}</td></tr>`).join('')}
+    <h3>Le réseau : prévu et réel</h3>
+    <table><tr><th class="l">Magasin</th><th>CA prévu</th><th>CA réel</th><th>Écart réel / prévu</th><th class="l" style="padding-left:12px">D'où viennent les chiffres</th></tr>
+      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n ${i ? '' : 'ok'}"><b>${esc(r[1])}</b></td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="l mut" style="padding-left:12px">${esc(r[4])}</td></tr>`).join('')}
     </table>
-    ${d.etudeReel.length ? `<h3>Étude de marché, modèle et chiffre réel</h3>
-    <table><tr><th class="l">Magasin</th><th>Étude de marché</th><th>Modèle du jour</th><th>CA réel</th><th>Réel / étude</th><th>Réel / modèle</th><th class="l" style="padding-left:12px">Période</th></tr>
-      ${d.etudeReel.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="n">${esc(r[4])}</td><td class="n">${esc(r[5])}</td><td class="l mut" style="padding-left:12px">${esc(r[6])}</td></tr>`).join('')}
-    </table>
-    <div class="legende">L’étude de marché : le CA annuel TTC de l’étude GeoConsulting du magasin, quand il y en a une. Le modèle : le CA que les hypothèses de ce dossier donnent au magasin, là où il est. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. Les écarts se lisent réel ÷ étude − 1 et réel ÷ modèle − 1.</div>` : ''}
+    <div class="legende">Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
     <h3>Les hypothèses au moment de l'édition</h3>
@@ -780,15 +778,17 @@ export function renderModal(c, x){
       <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.statut)}</div>
     </div>
     ${k.rows.map(r => `
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 12px;border-bottom:0.5px solid var(--color-border-tertiary)">
-      <span style="font-size:11px;color:var(--color-text-muted)">${esc(r.k)}</span>
-      <span style="font-size:12px;font-weight:500;text-align:right">${esc(r.v)}</span>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 12px;border-bottom:0.5px solid var(--color-border-tertiary)${r.fort ? ';background:rgba(141,29,44,.05)' : ''}">
+      <span style="font-size:11px;color:${r.fort ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(r.k)}</span>
+      <span style="font-size:12px;font-weight:${r.fort ? '600' : '500'};text-align:right">${esc(r.v)}</span>
     </div>`).join('')}
     ${green ? `
     <div style="display:flex;gap:6px;padding:10px 12px">
       <button ${x.A(c.refDepuisZone)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px;border-color:#1b5e20;color:#1b5e20">Retenir comme point de comparaison</button>
     </div>` : `
     <div style="display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap">
+      ${k.magasin ? `<button ${x.A(k.modifier)} class="btn-primary" style="flex:1;padding:7px 6px;font-size:11px">Modifier</button>` : ''}
+      ${k.magasin && k.supprimer ? `<button ${x.A(k.supprimer)} class="btn-secondary" style="flex:0 0 auto;padding:7px 8px;font-size:11px" title="Effacer la saisie et revenir aux chiffres de l’étude">Effacer</button>` : ''}
       ${k.locate ? `<button ${x.A(k.locate)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Voir sur la carte</button>` : ''}
       ${k.applyDepense ? `<button ${x.A(k.applyDepense)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Reprendre sa dépense</button>` : ''}
       ${k.perso ? `<button ${x.A(k.modifier)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px">Modifier</button>
@@ -801,8 +801,8 @@ export function renderModal(c, x){
   const formulaire = f => `
   <div style="flex:1 1 0;min-width:240px;max-width:300px;border:1px solid var(--color-primary);border-radius:10px;overflow:hidden">
     <div style="padding:12px 14px;background:rgba(141,29,44,.06);border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="font-size:13px;font-weight:600">${f.neuf ? 'Nouveau point de comparaison' : 'Modifier le point'}</div>
-      <div style="font-size:11px;color:var(--color-text-muted)">${f.depuisZone ? 'Pré-rempli avec la zone évaluée — corrige ce que tu sais.' : 'Un magasin à ouvrir, une zone mesurée, un concurrent connu.'}</div>
+      <div style="font-size:13px;font-weight:600">${f.magasin ? esc(f.magasin) + ' — données du magasin' : f.neuf ? 'Nouveau point de comparaison' : 'Modifier le point'}</div>
+      <div style="font-size:11px;color:var(--color-text-muted)">${f.magasin ? 'Le CA prévu réaliste est celui auquel le réel se compare ; les autres champs partent de l’étude de marché — corrige ce que tu sais.' : f.depuisZone ? 'Pré-rempli avec la zone évaluée — corrige ce que tu sais.' : 'Un magasin à ouvrir, une zone mesurée, un concurrent connu.'}</div>
     </div>
     <div style="padding:8px 12px 4px;display:flex;flex-direction:column;gap:6px">
       ${f.champs.map(ch => `
