@@ -548,7 +548,10 @@ export class Scouting {
       // L'étude de marché locale du point du dossier (GET /scouting/etude,
       // ou Overpass depuis le navigateur en repli) : entreprises, zonings,
       // écoles, générateurs de flux, concurrence indirecte.
-      etude: null, etudeBusy: false, etudeErr: ''
+      etude: null, etudeBusy: false, etudeErr: '',
+      // Ce que Google dit des concurrents les plus proches du point du dossier
+      // (fiche, avis, photo), et l'enrichissement en cours.
+      dossierGoogle: null, dossierGoogleBusy: false
     };
     this._h = [];
     this._scroll = {};
@@ -803,8 +806,8 @@ export class Scouting {
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
     const ratings = {}, notes = {};
     (d.competitors || []).forEach(r => {
-      if (r.rating != null) ratings[r.id] = { rating: +r.rating, n: +(r.reviews || 0), manual: r.source === 'manuel' };
-      else if (r.source === 'google') ratings[r.id] = { rating: null, n: 0 };   // déjà interrogé, sans note
+      if (r.rating != null) ratings[r.id] = { rating: +r.rating, n: +(r.reviews || 0), manual: r.source === 'manuel', adresse: r.adresse || '' };
+      else if (r.source === 'google') ratings[r.id] = { rating: null, n: 0, adresse: r.adresse || '' };   // déjà interrogé, sans note
       if (r.comment) notes[r.id] = r.comment;
     });
     const patch = { ratings, notes, candidates: d.candidates || [], pops: d.populations || {}, references: Array.isArray(d.references) ? d.references : [] };
@@ -2211,6 +2214,49 @@ export class Scouting {
     this.setState({ dossier: true, dossierCand: cand || null, dossierImg: '', view: 'map', compare: false, reseau: false });
     this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
     this.etudeLocale(this.state.sel.lat, this.state.sel.lng);
+    this.dossierGoogleCharger();
+  }
+
+  // Google pour le dossier : d'abord les notes et adresses des concurrents du
+  // rayon qui n'en ont pas encore (jusqu'à 40, par lots de 10), puis la
+  // fiche des huit plus proches — avis et photo — gardée 30 jours au serveur.
+  // Rien sans clé Google ni hors ligne ; une fois par point et par session.
+  async dossierGoogleCharger(){
+    const s = this.state, x = s.sel;
+    if (!x || !this.useApi() || !this.googleOk()) return;
+    const cle = this.etudeCle(x.lat, x.lng);
+    this._googleDossiers = this._googleDossiers || {};
+    if (this._googleDossiers[cle]){ this.setState({ dossierGoogle: this._googleDossiers[cle], dossierGoogleBusy: false }); return; }
+    if (this._googleCle === cle) return;
+    this._googleCle = cle;
+    this.setState({ dossierGoogle: null, dossierGoogleBusy: true });
+    const vivant = () => this._googleCle === cle && this.state.dossier;
+    try {
+      const out = Object.assign({}, this.state.ratings);
+      const sansNote = x.near.map(o => o.b).filter(b => !out[b.id]).slice(0, 40);
+      if (sansNote.length && !s.enriching){
+        this.setState({ enriching: true, stop: false, enrichDone: 0, enrichTotal: sansNote.length });
+        const r = await this.enrichLots(sansNote, out);
+        this.setState({ ratings: Object.assign({}, out), enriching: false, stop: false });
+        if (r.erreur) this.notify('Notes Google : ' + r.erreur);
+        if (!vivant()) return;
+      }
+      const proches = x.near.slice(0, 8).map(o => ({ id: o.b.id, name: o.b.name, addr: o.b.addr || '', commune: o.b.commune || '', arr: o.b.arr || '', lat: o.b.lat, lng: o.b.lng }));
+      let g = { cle: cle, rows: [], erreur: null, le: new Date().toISOString().slice(0, 10) };
+      if (proches.length){
+        const r = await apiWrite('POST', '/scouting/concurrents/google', { rows: proches });
+        g.rows = (r && Array.isArray(r.rows)) ? r.rows : [];
+        g.erreur = (r && r.erreur) || null;
+        // les notes et adresses fraîches des fiches rejoignent la sélection
+        g.rows.forEach(f => { if (f.fiche && f.note != null && !(out[f.id] && out[f.id].manual)) out[f.id] = { rating: +f.note, n: +(f.n || 0), adresse: f.adresse || (out[f.id] && out[f.id].adresse) || '' }; });
+        this.saveRatings(out);
+      }
+      this._googleDossiers[cle] = g;
+      if (vivant()) this.setState({ dossierGoogle: g, dossierGoogleBusy: false, ratings: Object.assign({}, out) });
+    } catch (e) {
+      this._googleCle = null;
+      if (vivant()) this.setState({ dossierGoogleBusy: false, enriching: false, dossierGoogle: { cle: cle, rows: [], erreur: e.message || String(e) } });
+    }
   }
 
   /* ---------- l'étude de marché locale ---------- */
@@ -2296,6 +2342,18 @@ export class Scouting {
     });
     RESEAU.forEach(r => reseau.push([r.nom, 'référence — étude GeoConsulting ' + (r.etude || ''), fmtInt(r.hh), fmtEur(r.depense), r.emprise ? pct1(r.emprise / 100) : '—',
       r.ca ? fmtEur(r.ca) : '—', r.statut + (r.marche ? ' · marché ' + fmtEur(r.marche) : '')]));
+    // Étude de marché, modèle et chiffre réel, magasin par magasin : l'étude
+    // GeoConsulting se reconnaît au dernier mot de son nom (Sombreffe, Halle…).
+    const norm = t => sansAccent(String(t || '')).toLowerCase();
+    const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
+    const etudeReel = this.calage().rows.map(r => {
+      const nm = norm(r.m.nom);
+      const ref = RESEAU.find(x => x.ca && nm.indexOf(norm(x.nom.replace(/[—–-]/g, ' ').trim().split(/\s+/).pop())) >= 0);
+      const reel = r.m.caAnnuel || null, mod = r.ev ? r.ev.ca : null;
+      const periode = r.m.mois ? r.m.mois + ' mois' + (r.m.annualise ? ', annualisés' : '') + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') : '';
+      return [nomCourt(r.m.nom), ref ? fmtEur(ref.ca) + (ref.etude ? ' (' + ref.etude + ')' : '') : '—', mod ? fmtEur(mod) : '—',
+        reel ? fmtEur(reel) : 'inconnu', ref ? ecart(reel, ref.ca) : '—', ecart(reel, mod), periode];
+    });
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
     // la lecture d'ensemble de la concurrence : combien, quelles forces, quelles notes, qui est le plus près
@@ -2375,13 +2433,25 @@ export class Scouting {
       ],
       concurrence: x.near.slice(0, 150).map(o => {
         const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b);
-        return [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), o.b.commune || '—', o.d.toFixed(1).replace('.', ',') + ' km',
+        const adresse = (rv && rv.adresse) || o.b.addr || '';
+        return [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), o.d.toFixed(1).replace('.', ',') + ' km',
           r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : rv && rv.n ? ' (' + rv.n + ' avis)' : '') : '—',
           Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
       }),
+      etudeReel: etudeReel,
+      avisGoogle: (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) ? s.dossierGoogle.rows : []).filter(f => f.fiche).map(f => {
+        const o = x.near.find(q => q.b.id === f.id);
+        return { nom: f.nom || (o ? o.b.name : ''), adresse: (f.adresse || '').replace(/, Belgi(que|ë)$/i, ''), note: f.note != null ? (+f.note).toFixed(1).replace('.', ',') : '—', n: f.n || 0,
+          dist: o ? o.d.toFixed(1).replace('.', ',') + ' km' : '', url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '',
+          avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) };
+      }),
+      googleAttente: s.dossierGoogleBusy ? 'Google en cours — notes, adresses, avis et photos des concurrents les plus proches…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
+      googleNote: s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.rows.some(f => f.fiche)
+        ? 'Fiches Google Maps des huit concurrents les plus proches, relevées le ' + new Date(s.dossierGoogle.le).toLocaleDateString('fr-BE') + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.' : '',
       concurrenceNote: concurrenceNote,
       chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
       etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
+      motFin: 'Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
       indirecte: et ? et.indirecte.map(ligneLieu) : [],
       tissu: tissuRows, zonings: zoningsRows,
       ecoles: et ? et.ecoles.map(e => [e.nom, e.genre + (e.eleves ? ' · ' + fmtInt(e.eleves) + ' élèves' : ''), km(e.dKm)]) : [],
@@ -2522,7 +2592,10 @@ export class Scouting {
     d.ecoles.forEach(r => rows.push(['ecoles', r[0], r[2], r[1]]));
     d.flux.forEach(r => rows.push(['flux', r[0], r[2], r[1]]));
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
+    if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
     d.reseau.forEach(r => rows.push(['reseau', r[0], r[5], r[1] + ' · ' + r[2] + ' ménages · ' + r[3] + ' · emprise ' + r[4] + ' · ' + r[6]]));
+    d.etudeReel.forEach(r => rows.push(['etude_vs_reel', r[0], 'étude ' + r[1] + ' · modèle ' + r[2] + ' · réel ' + r[3], 'réel/étude ' + r[4] + ' · réel/modèle ' + r[5] + (r[6] ? ' · ' + r[6] : '')]));
+    d.avisGoogle.forEach(f => { rows.push(['google', f.nom, f.note + ' ★ · ' + f.n + ' avis', f.adresse + (f.url ? ' · ' + f.url : '')]); f.avis.forEach(a => rows.push(['google_avis', f.nom, a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
     rows.push(['sources', '', d.sources, '']);
@@ -3075,7 +3148,7 @@ export class Scouting {
     for (let i = 0; i < list.length; i += 10){
       if (this.state.stop) break;
       const r = await this.notesLot(list.slice(i, i + 10));
-      r.rows.forEach(x => { out[x.id] = { rating: x.rating != null ? +x.rating : null, n: +(x.reviews || 0) }; if (x.rating) ok++; });
+      r.rows.forEach(x => { out[x.id] = { rating: x.rating != null ? +x.rating : null, n: +(x.reviews || 0), adresse: x.adresse || '' }; if (x.rating) ok++; });
       done += r.rows.length;
       this.saveRatings(out);
       this.setState({ ratings: Object.assign({}, out), enrichDone: done });

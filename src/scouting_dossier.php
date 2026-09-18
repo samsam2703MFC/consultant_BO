@@ -101,6 +101,23 @@ function scoutingDossierValide(array $b): ?array
         'flux' => $lignes($b['flux'] ?? [], 3, 80, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
         'reseau' => $lignes($b['reseau'] ?? [], 7, 12, 120),
+        'etudeReel' => $lignes($b['etudeReel'] ?? [], 7, 12, 120),
+        'avisGoogle' => (static function ($v) use ($s, $lignes): array {
+            $out = [];
+            if (!is_array($v)) { return $out; }
+            foreach ($v as $f) {
+                if (!is_array($f)) { continue; }
+                $photo = (string) ($f['photo'] ?? '');
+                if ($photo !== '' && (strlen($photo) > 1200000 || preg_match('#^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$#', $photo) !== 1)) { $photo = ''; }
+                $out[] = ['nom' => $s($f['nom'] ?? '', 120), 'adresse' => $s($f['adresse'] ?? '', 160), 'note' => $s($f['note'] ?? '', 10), 'n' => (int) ($f['n'] ?? 0),
+                    'dist' => $s($f['dist'] ?? '', 20), 'url' => preg_match('#^https://(maps\.google\.com|www\.google\.com/maps|maps\.app\.goo\.gl)/#', (string) ($f['url'] ?? '')) === 1 ? (string) $f['url'] : '',
+                    'photo' => $photo, 'photoAuteur' => $s($f['photoAuteur'] ?? '', 60), 'avis' => $lignes($f['avis'] ?? [], 4, 3, 340)];
+                if (count($out) >= 10) { break; }
+            }
+            return $out;
+        })($b['avisGoogle'] ?? []),
+        'googleNote' => $s($b['googleNote'] ?? '', 500),
+        'motFin' => $s($b['motFin'] ?? '', 900),
         'hypotheses' => $lignes($b['hypotheses'] ?? [], 2, 20, 120),
         'notes' => $notes,
         'sources' => $s($b['sources'] ?? '', 700),
@@ -139,6 +156,14 @@ function scoutingDossierHtml(array $d): string
       .score{font-family:Georgia,"DejaVu Serif",serif;font-size:26pt;color:#2d7a3e;line-height:1}
       .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;
                font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
+      .gcard{border:1px solid #e6e0d8;border-radius:8px;margin-bottom:3mm;page-break-inside:avoid}
+      .gphoto{width:38mm;padding:2.5mm}.gphoto img{width:38mm;height:auto;display:block;border-radius:5px}
+      .gcred{font-size:6.5pt;color:#7a736a;margin-top:1mm}
+      .gtxt{padding:2.5mm 3mm}.gnom{font-size:9.5pt;font-weight:bold}.gnote{color:#2d7a3e}
+      .gadr{font-size:8pt;color:#7a736a;margin:.6mm 0 1.4mm}
+      .gavis{font-size:7.9pt;line-height:1.5;margin-top:1mm;color:#221E1A}
+      .motfin{border:1.5pt solid #8D1D2C;border-radius:8px;background:#fff;padding:3.5mm 4mm;margin-top:5mm;
+              font-family:Georgia,"DejaVu Serif",serif;font-size:9.5pt;line-height:1.6;color:#221E1A;page-break-inside:avoid}
     </style>';
 
     $h = $css . '<div class="doc">'
@@ -203,6 +228,23 @@ function scoutingDossierHtml(array $d): string
         $h .= '</table>';
     }
 
+    // Ce que Google dit des concurrents les plus proches : fiche, avis, photo.
+    if ($d['avisGoogle'] !== []) {
+        $h .= '<div class="sec">Ce que Google dit des concurrents les plus proches</div>';
+        foreach ($d['avisGoogle'] as $f) {
+            $h .= '<table class="gcard" width="100%" cellpadding="0" cellspacing="0"><tr>';
+            if ($f['photo'] !== '') { $h .= '<td class="gphoto" valign="top"><img src="' . $f['photo'] . '" alt="">' . ($f['photoAuteur'] !== '' ? '<div class="gcred">photo : ' . $e($f['photoAuteur']) . '</div>' : '') . '</td>'; }
+            $h .= '<td valign="top" class="gtxt"><div class="gnom">' . $e($f['nom']) . ' <span class="gnote">' . $e($f['note']) . ' ★</span> <span class="mut">' . (int) $f['n'] . ' avis' . ($f['dist'] !== '' ? ' · à ' . $e($f['dist']) : '') . '</span></div>'
+                . ($f['adresse'] !== '' ? '<div class="gadr">' . $e($f['adresse']) . '</div>' : '');
+            if ($f['avis'] === []) { $h .= '<div class="mut" style="font-size:7.8pt;margin-top:1mm">Aucun avis rendu par Google.</div>'; }
+            foreach ($f['avis'] as $a) {
+                $h .= '<div class="gavis"><b>' . $e($a[1]) . ' ★</b> <span class="mut">' . $e($a[0]) . ' · ' . $e($a[2]) . '</span>' . ($a[3] !== '' ? ' — ' . $e($a[3]) : '') . '</div>';
+            }
+            $h .= '</td></tr></table>';
+        }
+        if ($d['googleNote'] !== '') { $h .= '<div class="methode">' . $e($d['googleNote']) . '</div>'; }
+    }
+
     // L'étude de marché locale : ce qu'OpenStreetMap sait du rayon.
     $liste = static function (string $titre, array $rows, array $tetes, string $vide) use (&$h, $e): void {
         $h .= '<div class="sec">' . $e($titre) . '</div>';
@@ -246,6 +288,17 @@ function scoutingDossierHtml(array $d): string
         $h .= '</table>';
     }
 
+    if ($d['etudeReel'] !== []) {
+        $h .= '<div class="sec">Étude de marché, modèle et chiffre réel</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Magasin</th><th>Étude de marché</th><th>Modèle du jour</th><th>CA réel</th><th>Réel / étude</th><th>Réel / modèle</th><th class="l" style="padding-left:4mm">Période</th></tr>';
+        foreach ($d['etudeReel'] as $r) {
+            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td style="white-space:nowrap">' . $e($r[1]) . '</td><td style="white-space:nowrap">' . $e($r[2]) . '</td>'
+                . '<td style="white-space:nowrap"><b>' . $e($r[3]) . '</b></td><td style="white-space:nowrap">' . $e($r[4]) . '</td><td style="white-space:nowrap">' . $e($r[5]) . '</td>'
+                . '<td class="l mut" style="padding-left:4mm">' . $e($r[6]) . '</td></tr>';
+        }
+        $h .= '</table><div class="legende">L’étude de marché : le CA annuel TTC de l’étude GeoConsulting du magasin, quand il y en a une. Le modèle : le CA que les hypothèses de ce dossier donnent au magasin, là où il est. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. Les écarts se lisent réel ÷ étude − 1 et réel ÷ modèle − 1.</div>';
+    }
+
     foreach ($d['notes'] as $n) {
         $h .= '<div class="methode">' . $e($n) . '</div>';
     }
@@ -267,6 +320,9 @@ function scoutingDossierHtml(array $d): string
 
     if ($d['sources'] !== '') {
         $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>';
+    }
+    if ($d['motFin'] !== '') {
+        $h .= '<div class="motfin"><div class="k" style="color:#8D1D2C;margin-bottom:1.5mm">À lire avant de signer</div>' . $e($d['motFin']) . '</div>';
     }
     return $h . '</div>';
 }

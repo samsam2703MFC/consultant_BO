@@ -406,6 +406,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m)) { return wr_scouting_tile_put((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/competitors') { return wr_scouting_competitors_put(); }
     if ($method === 'POST' && $path === '/scouting/notes') { return wr_scouting_notes(); }
+    if ($method === 'POST' && $path === '/scouting/concurrents/google') { return wr_scouting_concurrents_google(); }
     if ($method === 'POST' && preg_match('#^/scouting/refresh/(\d{1,3})$#', $path, $m)) { return wr_scouting_refresh((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/scouting/reseau/(\d{1,10})$#', $path, $m)) { return wr_scouting_reseau_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
