@@ -499,10 +499,10 @@ export function dossierPage(d, esc, logo){
     ${etudeLocale(d, esc)}
 
     <h3>Le réseau : prévu et réel</h3>
-    <table><tr><th class="l">Magasin</th><th>CA prévu TTC</th><th>CA réel TTC</th><th>Écart réel / prévu</th><th class="l" style="padding-left:12px">D'où viennent les chiffres</th></tr>
-      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n ${i ? '' : 'ok'}"><b>${esc(r[1])}</b></td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="l mut" style="padding-left:12px">${esc(r[4])}</td></tr>`).join('')}
+    <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:10px">D'où viennent les chiffres</th></tr>
+      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre-line;line-height:1.35">${esc(r[k])}</td>`).join('')}<td class="n"><b>${esc(r[4])}</b></td><td class="l mut" style="padding-left:10px">${esc(r[5])}</td></tr>`).join('')}
     </table>
-    <div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché (TTC). Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L, douze derniers mois clos, annualisés quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>
+    <div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. L’écart se lit réel ÷ prévu − 1 ; il est le même aux trois échelles.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
     <h3>Les hypothèses au moment de l'édition</h3>
@@ -556,7 +556,7 @@ export function planPage(d, esc, logo, x){
     ${d.provinces.map(p => `
     <h3>${esc(p.nom)} <span class="ch">${esc(p.detail)}</span></h3>
     ${p.lignes.length ? `
-    <table class="plan"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondis&shy;sement</th><th>Score</th><th>Ménages</th><th>Concur&shy;rents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>
+    <table class="plan"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondis&shy;sement</th><th>Score</th><th>Ménages</th><th>Concur&shy;rents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé TTC</th><th>€/m²</th></tr>
       ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${x && l.dossier ? `<button ${x.A(l.dossier)} class="btn-secondary" style="padding:1px 6px;font-size:9.5px;margin-left:6px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button>` : ''}${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
       <tr class="tot"><td colspan="4" class="l">${p.lignes.length} ouverture${p.lignes.length > 1 ? 's' : ''}</td><td>${nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${eur(p.sousTotal)}</td><td></td></tr>
     </table>` : '<p class="mut" style="font-size:11.5px">Aucune zone hors des rayons d’exclusion dans cette province' + (d.seuil ? ', au-dessus du score ' + esc(d.minScore) : '') + '.</p>'}`).join('')}

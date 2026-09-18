@@ -103,7 +103,7 @@ function scoutingDossierValide(array $b): ?array
         'ecoles' => $lignes($b['ecoles'] ?? [], 6, 40, 120),
         'flux' => $lignes($b['flux'] ?? [], 6, 40, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
-        'reseau' => $lignes($b['reseau'] ?? [], 5, 12, 160),
+        'reseau' => $lignes($b['reseau'] ?? [], 6, 12, 160),
         'cartes' => (static function ($v) use ($s, $lignes): array {
             $out = [];
             if (!is_array($v)) { return $out; }
@@ -330,15 +330,14 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['reseau'] !== []) {
-        $h .= '<div class="sec">Le réseau : prévu et réel</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Magasin</th><th>CA prévu TTC</th><th>CA réel TTC</th><th>Écart réel / prévu</th><th class="l" style="padding-left:4mm">D’où viennent les chiffres</th></tr>';
+        $h .= '<div class="sec">Le réseau : prévu et réel — semaine, mois, année</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Écart réel / prévu</th><th class="l" style="padding-left:3mm">D’où viennent les chiffres</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
-            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td>'
-                . '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
-                . '<td style="white-space:nowrap">' . $e($r[2]) . '</td><td style="white-space:nowrap"><b>' . $e($r[3]) . '</b></td>'
-                . '<td class="l mut" style="padding-left:4mm">' . $e($r[4]) . '</td></tr>';
+            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td>';
+            foreach ([1, 2, 3] as $k) { $h .= '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap;line-height:1.45">' . nl2br($e($r[$k])) . '</td>'; }
+            $h .= '<td style="white-space:nowrap"><b>' . $e($r[4]) . '</b></td><td class="l mut" style="padding-left:3mm">' . $e($r[5]) . '</td></tr>';
         }
-        $h .= '</table><div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché (TTC). Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L, douze derniers mois clos, annualisés quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>';
+        $h .= '</table><div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. L’écart se lit réel ÷ prévu − 1 ; il est le même aux trois échelles.</div>';
     }
 
     foreach ($d['notes'] as $n) {

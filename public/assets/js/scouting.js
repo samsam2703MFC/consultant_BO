@@ -1964,7 +1964,7 @@ export class Scouting {
       N: N, seuil: seuil, minScore: s.minScore, caMin: caMin, caMinTxt: caMinTxt, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
       total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
       resume: [
-        ['CA annuel estimé, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
+        ['CA annuel estimé TTC, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
         ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + caMinTxt + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (P.route ? ' par la route' : '') + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
         ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
         caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
@@ -2421,13 +2421,16 @@ export class Scouting {
     // Le réseau, simplement : pour chaque magasin, le CA prévu (le prévu
     // réaliste saisi, sinon l'étude de marché), le CA réel et l'écart.
     const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
-    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca) + ' (modèle)', '—', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts']];
+    // Trois lectures du même écart : la semaine, le mois, l'année. Le réel
+    // est une moyenne par mois clos (et par semaine), projetée sur douze mois.
+    const duo = (a, b) => (a ? fmtEur(a) : '—') + ' prévu\n' + (b ? fmtEur(b) : '—') + ' réel';
+    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts']];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
-      const prevu = f.caPrevu || f.ca || null;
-      const source = f.caPrevu ? 'prévu réaliste saisi' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu — à saisir dans Magasins du réseau';
-      const periode = r.m.mois ? 'réel sur ' + r.m.mois + ' mois' + (r.m.annualise ? ', annualisé' : '') + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') : 'CA réel inconnu';
-      reseau.push([f.nom, prevu ? fmtEur(prevu) : '—', f.caReel ? fmtEur(f.caReel) : '—', ecart(f.caReel, prevu), source + ' · ' + periode]);
+      const prevu = f.caPrevu || f.ca || null, reel = f.caReel || null;
+      const source = f.caPrevu ? 'prévu réaliste saisi' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'prévu = étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu — à saisir dans Magasins du réseau';
+      const periode = r.m.mois ? 'réel = moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'CA réel inconnu';
+      reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel), ecart(reel, prevu), source + ' · ' + periode]);
     });
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
@@ -2501,7 +2504,7 @@ export class Scouting {
         ['Ménages ' + dans, fmtInt(x.hh), 'recensement 2021'],
         ['Concurrents ' + dans, String(x.near.length), x.blocked.length ? 'dont ' + x.blocked.length + ' fort' + (x.blocked.length > 1 ? 's' : '') : chaines.length ? chaines.length + ' de chaîne' : 'aucun fort'],
         ['Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), pct1(x.emprise), 'pression ' + x.load.toFixed(2)],
-        ['CA annuel estimé', fmtEur(x.ca), fmtEur(x.ca / s.surface) + ' / m² sur ' + s.surface + ' m²']
+        ['CA annuel estimé TTC', fmtEur(x.ca), fmtEur(x.ca / s.surface) + ' / m² sur ' + s.surface + ' m²']
       ],
       marche: [
         ['Population ' + dans, fmtInt(x.hh * hhSize) + ' hab.', self._grid ? 'recensement 2021, maille de 1 km²' : 'part du territoire des communes dans le rayon'],
@@ -2695,7 +2698,7 @@ export class Scouting {
     [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], 'les plus proches', x[1], '']); });
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
-    d.reseau.forEach(r => rows.push(['reseau', r[0], 'prévu ' + r[1] + ' · réel ' + r[2] + ' · écart ' + r[3], r[4]]));
+    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · écart ' + r[4], r[5]]));
     d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
@@ -3727,7 +3730,7 @@ export class Scouting {
       { k: 'Dépense boulangerie / ménage', v: ou(r.depense, fmtEur) },
       { k: 'Marché boulangerie', v: ou(r.marche != null && r.marche !== '' ? r.marche : (r.hh && r.depense ? r.hh * r.depense : null), fmtEur) },
       { k: 'Emprise retenue', v: r.emprise ? String(r.emprise).replace('.', ',') + ' %' : '—' },
-      { k: 'CA annuel TTC', v: r.ca ? fmtEur(r.ca) : '—' },
+      { k: 'CA annuel TTC de l’étude', v: r.ca ? fmtEur(r.ca) : '—' },
       { k: 'Surface nette', v: r.surface ? r.surface + ' m²' : '—' },
       { k: 'Rendement / m²', v: r.ca && r.surface ? fmtEur(r.ca / r.surface) : '—' },
       { k: 'CA hebdomadaire', v: r.ca ? fmtEur(r.ca / 52) : '—' }
@@ -3926,7 +3929,7 @@ export class Scouting {
           place: () => { self.setState({ placing: r.m.id, view: 'map', reseau: false, compare: false }); self.notify('Clique sur la carte à l\'emplacement de ' + r.m.nom); }
         }));
         return { rows: rows, med: c.med, n: c.n, placing: !!s.placing, caler: () => self.caler(),
-          intro: 'CA réel des magasins ouverts (P&L du panel, douze derniers mois clos) face au CA que le modèle prédit à leur emplacement, hypothèses courantes. L\'écart lit le réel par rapport au modèle : +30 % = le magasin fait 30 % de plus que prévu.',
+          intro: 'CA réel TTC des magasins ouverts (ventes du P&L du panel, douze derniers mois clos) face au CA TTC que le modèle prédit à leur emplacement, hypothèses courantes. L\'écart lit le réel par rapport au modèle : +30 % = le magasin fait 30 % de plus que prévu.',
           bouton: c.med ? 'Caler la dépense/ménage (× ' + c.med.toFixed(2).replace('.', ',') + ')' : '',
           note: c.med ? 'Le calage multiplie la dépense par ménage par le rapport médian réel ÷ modèle : le modèle retrouve le réseau, et les écarts qui restent disent ce que l\'emplacement n\'explique pas.' : 'Il faut au moins un magasin ouvert, positionné et avec un CA réel pour caler.',
           vide: s.magasins && s.magasins.length ? 'Aucun magasin ouvert positionné.' : (self.useApi() ? 'Magasins du réseau en cours de lecture…' : 'Hors ligne : magasins du réseau indisponibles.'),
@@ -4137,7 +4140,7 @@ export class Scouting {
         if (r.magasin) rows.push(
           { k: 'CA annuel prévu réaliste après ouverture (TTC)', v: r.caPrevu ? fmtEur(r.caPrevu) : 'à saisir', fort: true },
           { k: 'CA réel TTC, douze derniers mois clos', v: r.caReel ? fmtEur(r.caReel) + (r.annualise ? ' (' + r.mois + ' mois annualisés)' : '') : 'inconnu' },
-          { k: 'CA du modèle, à son emplacement', v: r.caModele ? fmtEur(r.caModele) : (r.lat == null ? 'position inconnue' : '—') },
+          { k: 'CA du modèle TTC, à son emplacement', v: r.caModele ? fmtEur(r.caModele) : (r.lat == null ? 'position inconnue' : '—') },
           { k: 'Réel / prévu', v: ecart(r.caReel, r.caPrevu) },
           { k: 'Réel / étude', v: ecart(r.caReel, r.ca) },
           { k: 'Réel / modèle', v: ecart(r.caReel, r.caModele) });
