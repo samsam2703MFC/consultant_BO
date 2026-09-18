@@ -288,14 +288,14 @@ function scoutingDossierHtml(array $d): string
 
     if ($d['reseau'] !== []) {
         $h .= '<div class="sec">Le réseau : prévu et réel</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Magasin</th><th>CA prévu</th><th>CA réel</th><th>Écart réel / prévu</th><th class="l" style="padding-left:4mm">D’où viennent les chiffres</th></tr>';
+            . '<th class="l">Magasin</th><th>CA prévu TTC</th><th>CA réel TTC</th><th>Écart réel / prévu</th><th class="l" style="padding-left:4mm">D’où viennent les chiffres</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
             $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td>'
                 . '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
                 . '<td style="white-space:nowrap">' . $e($r[2]) . '</td><td style="white-space:nowrap"><b>' . $e($r[3]) . '</b></td>'
                 . '<td class="l mut" style="padding-left:4mm">' . $e($r[4]) . '</td></tr>';
         }
-        $h .= '</table><div class="legende">Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché. Le réel : le P&L des douze derniers mois clos, annualisé quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>';
+        $h .= '</table><div class="legende">Tout est TTC. Le prévu : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché (TTC). Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L, douze derniers mois clos, annualisés quand il en manque. L’écart se lit réel ÷ prévu − 1.</div>';
     }
 
     foreach ($d['notes'] as $n) {

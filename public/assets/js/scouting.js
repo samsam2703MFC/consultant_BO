@@ -1981,7 +1981,7 @@ export class Scouting {
         ['CA annuel minimum', caMin ? fmtEur(caMin) : 'aucun']
       ],
       sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
-        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + (ecartKm > 0 && P.route ? ' · temps de route : Valhalla (FOSSGIS) sur OpenStreetMap' : '') + ' · CA réel du réseau : P&L du panel, douze derniers mois clos.'
+        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + (ecartKm > 0 && P.route ? ' · temps de route : Valhalla (FOSSGIS) sur OpenStreetMap' : '') + ' · CA réel du réseau : ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises, TTC) pour les mois sans P&L, douze derniers mois clos.'
     };
   }
 
@@ -2417,7 +2417,7 @@ export class Scouting {
     // Le réseau, simplement : pour chaque magasin, le CA prévu (le prévu
     // réaliste saisi, sinon l'étude de marché), le CA réel et l'écart.
     const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
-    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca) + ' (modèle)', '—', '—', 'le CA que ce dossier prévoit, à comparer aux magasins ouverts']];
+    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca) + ' (modèle)', '—', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts']];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
       const prevu = f.caPrevu || f.ca || null;
@@ -4118,8 +4118,8 @@ export class Scouting {
         const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
         const rows = reseauRows(r);
         if (r.magasin) rows.push(
-          { k: 'CA annuel prévu réaliste après ouverture', v: r.caPrevu ? fmtEur(r.caPrevu) : 'à saisir', fort: true },
-          { k: 'CA réel, douze derniers mois clos', v: r.caReel ? fmtEur(r.caReel) + (r.annualise ? ' (' + r.mois + ' mois annualisés)' : '') : 'inconnu' },
+          { k: 'CA annuel prévu réaliste après ouverture (TTC)', v: r.caPrevu ? fmtEur(r.caPrevu) : 'à saisir', fort: true },
+          { k: 'CA réel TTC, douze derniers mois clos', v: r.caReel ? fmtEur(r.caReel) + (r.annualise ? ' (' + r.mois + ' mois annualisés)' : '') : 'inconnu' },
           { k: 'CA du modèle, à son emplacement', v: r.caModele ? fmtEur(r.caModele) : (r.lat == null ? 'position inconnue' : '—') },
           { k: 'Réel / prévu', v: ecart(r.caReel, r.caPrevu) },
           { k: 'Réel / étude', v: ecart(r.caReel, r.ca) },
@@ -4141,7 +4141,7 @@ export class Scouting {
       }))),
       refForm: s.refForm ? {
         champs: (s.refForm.magasinId
-          ? [['caPrevu', 'CA annuel prévu réaliste après ouverture (€)', 'number'], ['etude', 'Étude de marché (mois/année)', 'text'],
+          ? [['caPrevu', 'CA annuel prévu réaliste après ouverture (€ TTC)', 'number'], ['etude', 'Étude de marché (mois/année)', 'text'],
             ['pop', 'Population de la zone', 'number'], ['hh', 'Ménages', 'number'], ['taille', 'Taille des ménages', 'number'], ['revenu', 'Revenu moyen / ménage (€)', 'number'],
             ['jeunes', 'Part de jeunes (%)', 'number'], ['actifs', 'Part d\'actifs (%)', 'number'], ['seniors', 'Part de seniors (%)', 'number'],
             ['depense', 'Dépense boulangerie / ménage (€/an)', 'number'], ['marche', 'Marché boulangerie (€) — vide = ménages × dépense', 'number'],
