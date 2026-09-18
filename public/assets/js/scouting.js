@@ -2451,14 +2451,22 @@ export class Scouting {
     // Trois lectures du même écart : la semaine, le mois, l'année. Le réel
     // est une moyenne par mois clos (et par semaine), projetée sur douze mois.
     const duo = (a, b) => (a ? fmtEur(a) : '—') + ' prévu\n' + (b ? fmtEur(b) : '—') + ' réel';
-    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)', '—', 'année 1 → 70 % = ' + fmtEur(x.ca * PALIERS[0]), 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts']];
+    // Chaque ligne : nom, semaine, mois, année (prévu / réel), la cible de
+    // l'année (le palier de la phase), sa lecture, réel / cible (mis en
+    // évidence), réel / plan, d'où viennent les chiffres, et le sens de
+    // l'écart pour la couleur.
+    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)',
+      fmtEur(x.ca * PALIERS[0]), 'année 1 · 70 % du plan', '—', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts', '']];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
       const prevu = f.prevu, reel = f.caReel || null;
       const source = f.caPrevu ? 'prévu réaliste saisi' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'prévu = étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu — à saisir dans Magasins du réseau';
       const periode = r.m.mois ? 'réel = moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + r.m.du + ' → ' + r.m.au + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'CA réel inconnu';
-      const phase = f.phase ? 'ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ' · ' + f.phase.libelle + (f.objectif ? '\nobjectif ' + fmtEur(f.objectif) + ' · réel ' + ecart(reel, f.objectif) : '') : 'ouverture à saisir\n(Magasins du réseau)';
-      reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel), ecart(reel, prevu), phase, source + ' · ' + periode]);
+      const ouv = f.phase ? 'ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ' · ' : '';
+      const cibleNote = f.phase ? ouv + 'année ' + f.phase.annee + (f.phase.annee >= 4 ? ' et +' : '') + ' · ' + Math.round(f.phase.pct * 100) + ' % du plan' : (prevu ? 'ouverture à saisir dans Magasins du réseau' : 'prévu à saisir');
+      const rc = reel && f.objectif ? reel / f.objectif - 1 : null;
+      reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel),
+        f.objectif ? fmtEur(f.objectif) : '—', cibleNote, ecart(reel, f.objectif), ecart(reel, prevu), source + ' · ' + periode, rc == null ? '' : rc >= 0 ? 'pos' : 'neg']);
     });
     const montee = 'Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.';
     // le mini-tableau de la montée en charge : les paliers en euros, ce dossier
@@ -2738,7 +2746,7 @@ export class Scouting {
     [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], 'les plus proches', x[1], '']); });
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
-    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · écart ' + r[4] + ' · ' + r[5].replace(/\n/g, ' · '), r[6]]));
+    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · cible de l’année ' + r[4] + ' (' + r[5] + ') · réel/cible ' + r[6] + ' · réel/plan ' + r[7], r[8]]));
     if (d.montee) rows.push(['reseau', 'montée en charge', d.montee, '']);
     d.monteeRows.forEach(r => rows.push(['montee_en_charge', r[0], 'année 1 ' + r[1] + ' · année 2 ' + r[2] + ' · année 3 ' + r[3] + ' · année 4+ ' + r[4], +r[5] ? 'en cours : année ' + r[5] : '']));
     d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
