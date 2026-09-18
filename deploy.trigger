@@ -413,3 +413,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-18T11:22:40Z scouting concurrents fermes ou sans avis depuis un an ecartes
 2026-09-18T11:31:05Z scouting fiches google sans signe de vie redemandees
 2026-09-18T11:48:30Z scouting signe de vie google de toute la carte par lots
+2026-09-18T12:31:10Z resultat du jour serie de la semaine dans l api
