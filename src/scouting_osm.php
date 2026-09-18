@@ -301,4 +301,236 @@ final class ScoutingOsm
         }
         return $out;
     }
+
+    /* ---------------------------------------------------------------------
+     * L'étude de marché locale d'un point : ce qu'OpenStreetMap sait du
+     * rayon — entreprises par famille, zonings et ce qu'ils abritent,
+     * écoles, générateurs de flux, concurrence indirecte. Une requête par
+     * point, servie et mise en cache par GET /scouting/etude.
+     * ------------------------------------------------------------------- */
+
+    /** La requête du rayon d'un point : comptes par famille, puis les listes. */
+    public static function requeteEtude(float $lat, float $lng, int $rM): string
+    {
+        $a = 'around:' . $rM . ',' . number_format($lat, 6, '.', '') . ',' . number_format($lng, 6, '.', '');
+        // Les entreprises sortent sans étiquette (« skel center ») : il en
+        // faut la position pour les compter dans les zonings, pas le nom.
+        // Chaque famille est précédée de son compte, ce qui permet de la
+        // reconnaître dans le flot de la réponse.
+        return '[out:json][timeout:120];'
+            . 'nwr(' . $a . ')["shop"]->.s;.s out count;.s out skel center;'
+            . 'nwr(' . $a . ')["amenity"~"^(restaurant|cafe|fast_food|bar|pub|food_court|ice_cream)$"]->.h;.h out count;.h out skel center;'
+            . 'nwr(' . $a . ')["office"]->.o;.o out count;.o out skel center;'
+            . 'nwr(' . $a . ')["craft"]->.c;.c out count;.c out skel center;'
+            . '(nwr(' . $a . ')["industrial"];nwr(' . $a . ')["man_made"="works"];)->.i;.i out count;.i out skel center;'
+            . '(way(' . $a . ')["landuse"~"^(industrial|commercial|retail)$"];rel(' . $a . ')["landuse"~"^(industrial|commercial|retail)$"];);out tags geom;'
+            . 'nwr(' . $a . ')["amenity"~"^(school|college|university|kindergarten|childcare)$"];out tags center;'
+            . '(nwr(' . $a . ')["amenity"~"^(hospital|clinic|nursing_home|townhall|social_facility|marketplace|fuel|cafe)$"];'
+            . 'nwr(' . $a . ')["amenity"="fast_food"]["cuisine"~"sandwich|bakery|coffee|donut|bagel"];'
+            . 'nwr(' . $a . ')["railway"~"^(station|halt)$"];nwr(' . $a . ')["leisure"~"^(sports_centre|stadium|swimming_pool)$"];'
+            . 'nwr(' . $a . ')["shop"~"^(supermarket|convenience|mall|department_store|coffee|confectionery|deli|tea|frozen_food)$"];'
+            . 'nwr(' . $a . ')["office"="government"];);out tags center;';
+    }
+
+    /** Réponse Overpass → l'étude, compacte : comptes, zonings, écoles, flux, concurrence indirecte. */
+    public static function analyserEtude(array $r, float $lat0, float $lng0): array
+    {
+        $dist = static function (float $a, float $b, float $c, float $d): float {
+            $p = M_PI / 180; $x = sin(($c - $a) * $p / 2); $y = sin(($d - $b) * $p / 2);
+            return 2 * 6371 * asin(sqrt($x * $x + cos($a * $p) * cos($c * $p) * $y * $y));
+        };
+        $centre = static function (array $e): ?array {
+            if (isset($e['lat'], $e['lon'])) { return [(float) $e['lat'], (float) $e['lon']]; }
+            if (isset($e['center']['lat'], $e['center']['lon'])) { return [(float) $e['center']['lat'], (float) $e['center']['lon']]; }
+            if (isset($e['bounds']['minlat'])) { $b = $e['bounds']; return [((float) $b['minlat'] + (float) $b['maxlat']) / 2, ((float) $b['minlon'] + (float) $b['maxlon']) / 2]; }
+            return null;
+        };
+        // 1. Les familles d'entreprises, dans l'ordre de la requête : chaque
+        //    « count » ouvre une famille, les éléments sans étiquette qui
+        //    suivent en font partie.
+        $familles = ['commerces', 'horeca', 'bureaux', 'artisans', 'industries'];
+        $ent = ['commerces' => 0, 'horeca' => 0, 'bureaux' => 0, 'artisans' => 0, 'industries' => 0];
+        $pts = [];   // [lat, lng] de chaque entreprise
+        $k = -1;
+        $zonesBrutes = []; $ecoles = []; $flux = []; $indirecte = [];
+        foreach ((array) ($r['elements'] ?? []) as $e) {
+            if (!is_array($e)) { continue; }
+            if (($e['type'] ?? '') === 'count') {
+                $k++;
+                if (isset($familles[$k])) { $ent[$familles[$k]] = (int) ($e['tags']['total'] ?? 0); }
+                continue;
+            }
+            $t = (array) ($e['tags'] ?? []);
+            if ($t === []) {
+                // une entreprise, sans étiquette
+                if ($k >= 0 && $k < count($familles)) { $c = $centre($e); if ($c !== null) { $pts[] = $c; } }
+                continue;
+            }
+            if (isset($t['landuse'])) { $zonesBrutes[] = $e; continue; }
+            $c = $centre($e);
+            if ($c === null) { continue; }
+            $d = round($dist($lat0, $lng0, $c[0], $c[1]), 2);
+            $nom = self::ou($t, ['name:fr', 'name', 'brand', 'operator']);
+            $am = (string) ($t['amenity'] ?? '');
+            if (in_array($am, ['school', 'college', 'university', 'kindergarten', 'childcare'], true)) {
+                $isced = (string) ($t['isced:level'] ?? '');
+                if ($am === 'kindergarten') { $genre = 'école maternelle'; }
+                elseif ($am === 'childcare') { $genre = 'crèche'; }
+                elseif ($am === 'college' || $am === 'university') { $genre = 'enseignement supérieur'; }
+                elseif ($isced !== '') {
+                    $niv = [];
+                    if (preg_match('/\b0\b/', $isced)) { $niv[] = 'maternelle'; }
+                    if (preg_match('/\b1\b/', $isced)) { $niv[] = 'primaire'; }
+                    if (preg_match('/\b[23]\b/', $isced)) { $niv[] = 'secondaire'; }
+                    if (preg_match('/\b[4-8]\b/', $isced)) { $niv[] = 'supérieur'; }
+                    $genre = $niv === [] ? 'école' : 'école ' . implode(' et ', array_unique($niv));
+                } else { $genre = 'école'; }
+                $ecoles[] = ['nom' => $nom !== '' ? $nom : ucfirst($genre) . ' sans nom', 'genre' => $genre, 'lat' => round($c[0], 5), 'lng' => round($c[1], 5), 'dKm' => $d,
+                    'eleves' => (int) ($t['capacity'] ?? 0)];
+                continue;
+            }
+            $shop = (string) ($t['shop'] ?? '');
+            $indir = [
+                'supermarket' => 'supermarché', 'convenience' => 'supérette', 'mall' => 'centre commercial', 'department_store' => 'grand magasin',
+                'coffee' => 'torréfacteur / café', 'confectionery' => 'confiserie', 'deli' => 'épicerie fine', 'tea' => 'salon de thé', 'frozen_food' => 'surgelés',
+            ];
+            if ($shop !== '' && isset($indir[$shop])) {
+                $indirecte[] = ['nom' => $nom !== '' ? $nom : ucfirst($indir[$shop]), 'genre' => $indir[$shop], 'lat' => round($c[0], 5), 'lng' => round($c[1], 5), 'dKm' => $d];
+                continue;
+            }
+            if ($am === 'cafe' || $am === 'fast_food') {
+                $cui = (string) ($t['cuisine'] ?? '');
+                $genre = $am === 'cafe' ? (preg_match('/coffee/', $cui) ? 'coffee shop' : 'café / salon de thé') : (preg_match('/sandwich/', $cui) ? 'sandwicherie' : 'snack');
+                $indirecte[] = ['nom' => $nom !== '' ? $nom : ucfirst($genre), 'genre' => $genre, 'lat' => round($c[0], 5), 'lng' => round($c[1], 5), 'dKm' => $d];
+                continue;
+            }
+            $genre = '';
+            if ($am === 'hospital') { $genre = 'hôpital'; }
+            elseif ($am === 'clinic') { $genre = 'clinique / polyclinique'; }
+            elseif ($am === 'nursing_home') { $genre = 'maison de repos'; }
+            elseif ($am === 'social_facility') {
+                $sf = (string) ($t['social_facility'] ?? '');
+                $genre = preg_match('/nursing|assisted|group_home|senior/', $sf . ' ' . (string) ($t['social_facility:for'] ?? '')) ? 'maison de repos' : 'service social';
+            }
+            elseif ($am === 'townhall') { $genre = 'maison communale'; }
+            elseif ($am === 'marketplace') { $genre = 'marché'; }
+            elseif ($am === 'fuel') { $genre = 'station-service'; }
+            elseif (isset($t['railway'])) { $genre = $t['railway'] === 'station' ? 'gare' : 'arrêt de train'; }
+            elseif (isset($t['leisure'])) { $genre = ['sports_centre' => 'centre sportif', 'stadium' => 'stade', 'swimming_pool' => 'piscine'][$t['leisure']] ?? 'sport'; }
+            elseif (($t['office'] ?? '') === 'government') { $genre = 'administration'; }
+            if ($genre === '') { continue; }
+            $flux[] = ['nom' => $nom !== '' ? $nom : ucfirst($genre), 'genre' => $genre, 'lat' => round($c[0], 5), 'lng' => round($c[1], 5), 'dKm' => $d];
+        }
+        // 2. Les zonings : chaque surface, son emprise (hectares), et les
+        //    entreprises dont le point tombe dedans. Les morceaux qui portent
+        //    le même nom se rassemblent — un parc d'activité est souvent
+        //    cartographié parcelle par parcelle.
+        $dansPoly = static function (float $y, float $x, array $poly): bool {
+            $in = false; $n = count($poly);
+            for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
+                $yi = $poly[$i][0]; $xi = $poly[$i][1]; $yj = $poly[$j][0]; $xj = $poly[$j][1];
+                if ((($yi > $y) !== ($yj > $y)) && ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi) ?: 1e-12) + $xi)) { $in = !$in; }
+            }
+            return $in;
+        };
+        $aireHa = static function (array $poly, float $latRef): float {
+            $kx = 111.32 * cos($latRef * M_PI / 180); $ky = 110.57; $a = 0.0; $n = count($poly);
+            for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) { $a += ($poly[$j][1] * $kx) * ($poly[$i][0] * $ky) - ($poly[$i][1] * $kx) * ($poly[$j][0] * $ky); }
+            return abs($a) / 2 * 100;   // km² → ha
+        };
+        $genres = ['industrial' => 'industriel', 'commercial' => 'commercial', 'retail' => 'commerces'];
+        $zones = [];
+        foreach ($zonesBrutes as $e) {
+            $t = (array) ($e['tags'] ?? []);
+            $poly = [];
+            if (($e['type'] ?? '') === 'way' && isset($e['geometry']) && is_array($e['geometry'])) {
+                foreach ($e['geometry'] as $g) { if (isset($g['lat'], $g['lon'])) { $poly[] = [(float) $g['lat'], (float) $g['lon']]; } }
+            } elseif (isset($e['bounds']['minlat'])) {
+                // relation : l'anneau extérieur est fait de plusieurs chemins ;
+                // on prend la boîte englobante, et on le dit
+                $b = $e['bounds'];
+                $poly = [[(float) $b['minlat'], (float) $b['minlon']], [(float) $b['minlat'], (float) $b['maxlon']], [(float) $b['maxlat'], (float) $b['maxlon']], [(float) $b['maxlat'], (float) $b['minlon']]];
+            }
+            if (count($poly) < 3) { continue; }
+            $la = 0.0; $lo = 0.0;
+            foreach ($poly as $p) { $la += $p[0]; $lo += $p[1]; }
+            $la /= count($poly); $lo /= count($poly);
+            $ha = $aireHa($poly, $la);
+            if ($ha < 0.5) { continue; }   // une parcelle, pas un zoning
+            $n = 0;
+            foreach ($pts as $p) { if ($dansPoly($p[0], $p[1], $poly)) { $n++; } }
+            $nom = self::ou($t, ['name:fr', 'name']);
+            $genre = $genres[(string) ($t['landuse'] ?? '')] ?? 'activité';
+            $cle = $nom !== '' ? mb_strtolower($nom) : 'z' . count($zones);
+            if (isset($zones[$cle])) {
+                $z = &$zones[$cle];
+                $z['lat'] = ($z['lat'] * $z['ha'] + $la * $ha) / ($z['ha'] + $ha);
+                $z['lng'] = ($z['lng'] * $z['ha'] + $lo * $ha) / ($z['ha'] + $ha);
+                $z['ha'] += $ha; $z['n'] += $n; $z['morceaux']++;
+                if ($z['genre'] !== $genre) { $z['genre'] = 'mixte'; }
+                unset($z);
+            } else {
+                $zones[$cle] = ['nom' => $nom, 'genre' => $genre, 'lat' => $la, 'lng' => $lo, 'ha' => $ha, 'n' => $n, 'morceaux' => 1,
+                    'approx' => ($e['type'] ?? '') !== 'way'];
+            }
+        }
+        $zonings = [];
+        foreach ($zones as $z) {
+            $zonings[] = ['nom' => $z['nom'], 'genre' => $z['genre'], 'lat' => round($z['lat'], 5), 'lng' => round($z['lng'], 5),
+                'ha' => round($z['ha'], 1), 'n' => $z['n'], 'morceaux' => $z['morceaux'], 'approx' => $z['approx'],
+                'dKm' => round($dist($lat0, $lng0, $z['lat'], $z['lng']), 2)];
+        }
+        // Les zonings qui comptent d'abord (nommés, ou d'au moins 2 ha, ou
+        // abritant au moins 3 entreprises), du plus près au plus loin ; les
+        // petites parcelles restantes se résument en une ligne.
+        $tri = static fn ($a, $b) => $a['dKm'] <=> $b['dKm'];
+        usort($zonings, $tri);
+        $gros = array_values(array_filter($zonings, static fn ($z) => $z['nom'] !== '' || $z['ha'] >= 2 || $z['n'] >= 3));
+        $petits = array_values(array_filter($zonings, static fn ($z) => !($z['nom'] !== '' || $z['ha'] >= 2 || $z['n'] >= 3)));
+        $zonings = array_slice($gros, 0, 25);
+        if ($petits !== []) {
+            $ha = 0.0; $n = 0; $dmin = 99.0;
+            foreach ($petits as $z) { $ha += $z['ha']; $n += $z['n']; $dmin = min($dmin, $z['dKm']); }
+            $zonings[] = ['nom' => count($petits) . ' petites zones sans nom (moins de 2 ha)', 'genre' => 'parcelles', 'lat' => $lat0, 'lng' => $lng0,
+                'ha' => round($ha, 1), 'n' => $n, 'morceaux' => count($petits), 'approx' => false, 'dKm' => round($dmin, 2), 'reste' => true];
+        }
+        // Un même lieu est souvent cartographié deux fois (le bâtiment et le
+        // point) : même nom à moins de 250 m, on ne garde que le premier.
+        $dedoublonne = static function (array $l) use ($dist): array {
+            usort($l, static fn ($a, $b) => $a['dKm'] <=> $b['dKm']);
+            $out = [];
+            foreach ($l as $e) {
+                $nom = mb_strtolower($e['nom']);
+                foreach ($out as $o) {
+                    if (mb_strtolower($o['nom']) === $nom && $dist($o['lat'], $o['lng'], $e['lat'], $e['lng']) < 0.25) { continue 2; }
+                }
+                $out[] = $e;
+            }
+            return $out;
+        };
+        $ecoles = $dedoublonne($ecoles); $flux = $dedoublonne($flux); $indirecte = $dedoublonne($indirecte);
+        $ent['total'] = array_sum($ent);
+        $ent['zonings'] = 0;
+        foreach ($zonings as $z) { $ent['zonings'] += $z['n']; }
+        return [
+            't' => (int) round(microtime(true) * 1000),
+            'osm' => (string) ($r['osm3s']['timestamp_osm_base'] ?? ''),
+            'ent' => $ent, 'zonings' => $zonings,
+            'ecoles' => array_slice($ecoles, 0, 80), 'flux' => array_slice($flux, 0, 80), 'indirecte' => array_slice($indirecte, 0, 60),
+        ];
+    }
+
+    /** L'étude d'un point : Overpass, puis l'analyse ; null si aucun miroir ne répond (voir $lastError). */
+    public static function etude(float $lat, float $lng, int $rM): ?array
+    {
+        self::$lastError = null;
+        // 90 s par miroir : un miroir qui traîne cède la place au suivant, et
+        // l'appel HTTP (200 s au plus) rend la main avant de mourir.
+        $r = self::appel(self::requeteEtude($lat, $lng, $rM), (int) abs(round($lat * 1000 + $lng * 1000)), 90);
+        if ($r === null) { return null; }
+        $d = self::analyserEtude($r, $lat, $lng);
+        unset($r);
+        $d['r'] = $rM;
+        return $d;
+    }
 }

@@ -248,6 +248,7 @@ function route(string $method, string $path): mixed
             $path === '/erp/compte'                    => ErpApi::statut(),
             $path === '/scouting'                      => ep_scouting(),
             $path === '/scouting/reseau'               => ep_scouting_reseau(),
+            $path === '/scouting/etude'                => ep_scouting_etude(),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
         };

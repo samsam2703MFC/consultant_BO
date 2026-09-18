@@ -92,7 +92,14 @@ function scoutingDossierValide(array $b): ?array
         'carteNote' => $s($b['carteNote'] ?? '', 240),
         'essentiel' => $lignes($b['essentiel'] ?? [], 3, 6, 80),
         'marche' => $lignes($b['marche'] ?? [], 3, 16, 200),
-        'concurrence' => $lignes($b['concurrence'] ?? [], 6, 40, 120),
+        'concurrence' => $lignes($b['concurrence'] ?? [], 7, 150, 120),
+        'concurrenceNote' => $s($b['concurrenceNote'] ?? '', 700),
+        'indirecte' => $lignes($b['indirecte'] ?? [], 3, 60, 120),
+        'tissu' => $lignes($b['tissu'] ?? [], 3, 12, 200),
+        'zonings' => $lignes($b['zonings'] ?? [], 5, 30, 120),
+        'ecoles' => $lignes($b['ecoles'] ?? [], 3, 80, 120),
+        'flux' => $lignes($b['flux'] ?? [], 3, 80, 120),
+        'etudeNote' => $s($b['etudeNote'] ?? '', 500),
         'reseau' => $lignes($b['reseau'] ?? [], 7, 12, 120),
         'hypotheses' => $lignes($b['hypotheses'] ?? [], 2, 20, 120),
         'notes' => $notes,
@@ -179,7 +186,8 @@ function scoutingDossierHtml(array $d): string
         $h .= '</table>';
     }
 
-    $h .= '<div class="sec">La concurrence relevée</div>';
+    $h .= '<div class="sec">La concurrence, en détail</div>';
+    if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#221E1A">' . $e($d['concurrenceNote']) . '</div>'; }
     if ($d['concurrence'] === []) {
         $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>';
     } else {
@@ -187,11 +195,43 @@ function scoutingDossierHtml(array $d): string
             . '<th class="l">Commerce</th><th class="l">Commune</th><th>Distance</th><th>Note / 5</th><th>Force</th><th class="l" style="padding-left:4mm">Lecture</th></tr>';
         foreach ($d['concurrence'] as $r) {
             $fort = !empty($r[5]);
+            $ch = (string) ($r[6] ?? '');
             $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td class="l mut">' . $e($r[1]) . '</td>'
                 . '<td>' . $e($r[2]) . '</td><td>' . $e($r[3]) . '</td><td>' . $e($r[4]) . '</td>'
-                . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:4mm">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . '</td></tr>';
+                . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:4mm">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . ($ch !== '' ? ' · chaîne ' . $e($ch) : '') . '</td></tr>';
         }
         $h .= '</table>';
+    }
+
+    // L'étude de marché locale : ce qu'OpenStreetMap sait du rayon.
+    $liste = static function (string $titre, array $rows, array $tetes, string $vide) use (&$h, $e): void {
+        $h .= '<div class="sec">' . $e($titre) . '</div>';
+        if ($rows === []) { $h .= '<p class="mut" style="font-size:8.5pt;margin:0 0 5mm">' . $e($vide) . '</p>'; return; }
+        $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>';
+        foreach ($tetes as $i => $t) { $h .= '<th' . ($i < 2 ? ' class="l"' : '') . '>' . $e($t) . '</th>'; }
+        $h .= '</tr>';
+        foreach ($rows as $r) {
+            $h .= '<tr>';
+            foreach ($r as $i => $c) { $h .= '<td class="' . ($i === 0 ? 'l' : ($i === 1 ? 'l mut' : '')) . '">' . ($i === 0 ? '<b>' . $e($c) . '</b>' : $e($c)) . '</td>'; }
+            $h .= '</tr>';
+        }
+        $h .= '</table>';
+    };
+    if ($d['indirecte'] !== [] || $d['tissu'] !== [] || $d['zonings'] !== [] || $d['ecoles'] !== [] || $d['flux'] !== []) {
+        $liste('La concurrence indirecte', $d['indirecte'], ['Enseigne', 'Genre', 'Distance'], 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.');
+        if ($d['tissu'] !== []) {
+            $h .= '<div class="sec">Le tissu économique</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+                . '<th class="l">Famille</th><th>Entreprises</th><th class="l" style="padding-left:6mm">Ce qu’on y compte</th></tr>';
+            foreach ($d['tissu'] as $r) {
+                $h .= '<tr><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
+                    . '<td class="l mut" style="padding-left:6mm">' . $e($r[2]) . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+        $liste('Les zonings et parcs d’activité', $d['zonings'], ['Zone', 'Genre', 'Distance', 'Surface', 'Entreprises'], 'Aucun zoning ni parc d’activité cartographié dans le rayon.');
+        $liste('Les écoles', $d['ecoles'], ['École', 'Niveau', 'Distance'], 'Aucune école cartographiée dans le rayon.');
+        $liste('Les générateurs de flux', $d['flux'], ['Lieu', 'Genre', 'Distance'], 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.');
+        if ($d['etudeNote'] !== '') { $h .= '<div class="methode">' . $e($d['etudeNote']) . '</div>'; }
     }
 
     if ($d['reseau'] !== []) {

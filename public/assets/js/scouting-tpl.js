@@ -426,6 +426,26 @@ body{margin:0;background:#fff}
 .sc-doss tr,.sc-doss .q>div,.sc-doss .note{page-break-inside:avoid}
 `;
 
+// Les sections de l'étude de marché locale : en attente tant qu'OpenStreetMap
+// n'a pas répondu, puis cinq tableaux.
+function etudeLocale(d, esc){
+  if (!d.etude) return d.etudeAttente ? `<h3>L'étude de marché locale</h3><div class="attente">${esc(d.etudeAttente)}</div>` : '';
+  const table = (titre, rows, tetes, vide) => `
+    <h3>${titre}</h3>
+    ${rows.length ? `<table><tr>${tetes.map((t, i) => `<th${i < 2 ? ' class="l"' : ''}>${esc(t)}</th>`).join('')}</tr>
+      ${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i === 0 ? 'l' : i === 1 ? 'l mut' : 'n'}">${i === 0 ? '<b>' + esc(c) + '</b>' : esc(c)}</td>`).join('')}</tr>`).join('')}
+    </table>` : `<p class="mut" style="font-size:11.5px">${esc(vide)}</p>`}`;
+  return table('La concurrence indirecte', d.indirecte, ['Enseigne', 'Genre', 'Distance'], 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.')
+    + `<h3>Le tissu économique</h3>
+    <table><tr><th class="l">Famille</th><th>Entreprises</th><th class="l" style="padding-left:18px">Ce qu'on y compte</th></tr>
+      ${d.tissu.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
+    </table>`
+    + table('Les zonings et parcs d\'activité', d.zonings, ['Zone', 'Genre', 'Distance', 'Surface', 'Entreprises'], 'Aucun zoning ni parc d’activité cartographié dans le rayon.')
+    + table('Les écoles', d.ecoles, ['École', 'Niveau', 'Distance'], 'Aucune école cartographiée dans le rayon.')
+    + table('Les générateurs de flux', d.flux, ['Lieu', 'Genre', 'Distance'], 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.')
+    + (d.etudeNote ? `<div class="note">${esc(d.etudeNote)}</div>` : '');
+}
+
 export function dossierPage(d, esc, logo){
   const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
   return `
@@ -449,12 +469,14 @@ export function dossierPage(d, esc, logo){
       ${d.marche.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
     </table>
 
-    <h3>La concurrence relevée${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
+    <h3>La concurrence, en détail${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
+    ${d.concurrenceNote ? `<div class="note" style="color:inherit">${esc(d.concurrenceNote)}</div>` : ''}
     ${d.concurrence.length ? `
     <table><tr><th class="l">Commerce</th><th class="l">Commune</th><th>Distance</th><th>Note / 5</th><th>Force</th><th class="l" style="padding-left:12px">Lecture</th></tr>
       ${d.concurrence.map(r => `<tr><td class="l"><b>${esc(r[0])}</b>${r[6] ? `<span class="ch">${esc(r[6])}</span>` : ''}</td><td class="l mut">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>
-        <td class="l ${r[5] ? 'acc' : 'mut'}" style="padding-left:12px">${r[5] ? '<b>concurrent fort</b>' : 'concurrent'}</td></tr>`).join('')}
+        <td class="l ${r[5] ? 'acc' : 'mut'}" style="padding-left:12px">${r[5] ? '<b>concurrent fort</b>' : 'concurrent'}${r[6] ? ' · chaîne ' + esc(r[6]) : ''}</td></tr>`).join('')}
     </table>` : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
+    ${etudeLocale(d, esc)}
 
     <h3>Comparaison au réseau</h3>
     <table><tr><th class="l">Point de vente</th><th class="l">Statut</th><th>Ménages</th><th>Dépense</th><th>Emprise</th><th>CA annuel</th><th class="l" style="padding-left:12px">Note</th></tr>
@@ -475,7 +497,7 @@ function renderDossier(c, x){
   <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
       <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
-      <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · les chiffres de la fiche, mis en page</div>
+      <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
       <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
       <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter les tableaux (CSV)</button>
       <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>

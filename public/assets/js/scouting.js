@@ -303,6 +303,123 @@ const pickParams = v => { const o = {}; PARAM_KEYS.forEach(k => { if (v && typeo
   if (v && (v.zoneMax === null || (typeof v.zoneMax === 'number' && isFinite(v.zoneMax)))) o.zoneMax = v.zoneMax;
   return o; };
 
+/* --- l'étude de marché locale d'un point : la requête et sa lecture ---------- */
+// Port exact de ScoutingOsm::requeteEtude / analyserEtude (src/scouting_osm.php),
+// pour le repli quand le serveur n'atteint pas OpenStreetMap.
+function requeteEtude(lat, lng, rM){
+  const a = 'around:' + rM + ',' + lat.toFixed(6) + ',' + lng.toFixed(6);
+  return '[out:json][timeout:120];'
+    + 'nwr(' + a + ')["shop"]->.s;.s out count;.s out skel center;'
+    + 'nwr(' + a + ')["amenity"~"^(restaurant|cafe|fast_food|bar|pub|food_court|ice_cream)$"]->.h;.h out count;.h out skel center;'
+    + 'nwr(' + a + ')["office"]->.o;.o out count;.o out skel center;'
+    + 'nwr(' + a + ')["craft"]->.c;.c out count;.c out skel center;'
+    + '(nwr(' + a + ')["industrial"];nwr(' + a + ')["man_made"="works"];)->.i;.i out count;.i out skel center;'
+    + '(way(' + a + ')["landuse"~"^(industrial|commercial|retail)$"];rel(' + a + ')["landuse"~"^(industrial|commercial|retail)$"];);out tags geom;'
+    + 'nwr(' + a + ')["amenity"~"^(school|college|university|kindergarten|childcare)$"];out tags center;'
+    + '(nwr(' + a + ')["amenity"~"^(hospital|clinic|nursing_home|townhall|social_facility|marketplace|fuel|cafe)$"];'
+    + 'nwr(' + a + ')["amenity"="fast_food"]["cuisine"~"sandwich|bakery|coffee|donut|bagel"];'
+    + 'nwr(' + a + ')["railway"~"^(station|halt)$"];nwr(' + a + ')["leisure"~"^(sports_centre|stadium|swimming_pool)$"];'
+    + 'nwr(' + a + ')["shop"~"^(supermarket|convenience|mall|department_store|coffee|confectionery|deli|tea|frozen_food)$"];'
+    + 'nwr(' + a + ')["office"="government"];);out tags center;';
+}
+
+function analyserEtude(r, lat0, lng0){
+  const centre = e => e.lat != null && e.lon != null ? [+e.lat, +e.lon] : e.center ? [+e.center.lat, +e.center.lon]
+    : e.bounds ? [(+e.bounds.minlat + +e.bounds.maxlat) / 2, (+e.bounds.minlon + +e.bounds.maxlon) / 2] : null;
+  const familles = ['commerces', 'horeca', 'bureaux', 'artisans', 'industries'];
+  const ent = { commerces: 0, horeca: 0, bureaux: 0, artisans: 0, industries: 0 };
+  const pts = [], zonesBrutes = [], ecoles = [], flux = [], indirecte = [];
+  const indir = { supermarket: 'supermarché', convenience: 'supérette', mall: 'centre commercial', department_store: 'grand magasin', coffee: 'torréfacteur / café', confectionery: 'confiserie', deli: 'épicerie fine', tea: 'salon de thé', frozen_food: 'surgelés' };
+  let k = -1;
+  (r.elements || []).forEach(e => {
+    if (e.type === 'count'){ k++; if (familles[k]) ent[familles[k]] = +(e.tags && e.tags.total) || 0; return; }
+    const t = e.tags || {};
+    if (!Object.keys(t).length){ if (k >= 0 && k < familles.length){ const c = centre(e); if (c) pts.push(c); } return; }
+    if (t.landuse){ zonesBrutes.push(e); return; }
+    const c = centre(e);
+    if (!c) return;
+    const d = Math.round(dist(lat0, lng0, c[0], c[1]) * 100) / 100;
+    const nom = t['name:fr'] || t.name || t.brand || t.operator || '';
+    const am = t.amenity || '';
+    const maj = x => x.charAt(0).toUpperCase() + x.slice(1);
+    if (/^(school|college|university|kindergarten|childcare)$/.test(am)){
+      const isced = t['isced:level'] || '';
+      let genre;
+      if (am === 'kindergarten') genre = 'école maternelle';
+      else if (am === 'childcare') genre = 'crèche';
+      else if (am === 'college' || am === 'university') genre = 'enseignement supérieur';
+      else if (isced){
+        const niv = [];
+        if (/\b0\b/.test(isced)) niv.push('maternelle');
+        if (/\b1\b/.test(isced)) niv.push('primaire');
+        if (/\b[23]\b/.test(isced)) niv.push('secondaire');
+        if (/\b[4-8]\b/.test(isced)) niv.push('supérieur');
+        genre = niv.length ? 'école ' + niv.join(' et ') : 'école';
+      } else genre = 'école';
+      ecoles.push({ nom: nom || maj(genre) + ' sans nom', genre: genre, lat: c[0], lng: c[1], dKm: d, eleves: parseInt(t.capacity, 10) || 0 });
+      return;
+    }
+    const shop = t.shop || '';
+    if (shop && indir[shop]){ indirecte.push({ nom: nom || maj(indir[shop]), genre: indir[shop], lat: c[0], lng: c[1], dKm: d }); return; }
+    if (am === 'cafe' || am === 'fast_food'){
+      const cui = t.cuisine || '';
+      const genre = am === 'cafe' ? (/coffee/.test(cui) ? 'coffee shop' : 'café / salon de thé') : (/sandwich/.test(cui) ? 'sandwicherie' : 'snack');
+      indirecte.push({ nom: nom || maj(genre), genre: genre, lat: c[0], lng: c[1], dKm: d }); return;
+    }
+    let genre = '';
+    if (am === 'hospital') genre = 'hôpital';
+    else if (am === 'clinic') genre = 'clinique / polyclinique';
+    else if (am === 'nursing_home') genre = 'maison de repos';
+    else if (am === 'social_facility') genre = /nursing|assisted|group_home|senior/.test((t.social_facility || '') + ' ' + (t['social_facility:for'] || '')) ? 'maison de repos' : 'service social';
+    else if (am === 'townhall') genre = 'maison communale';
+    else if (am === 'marketplace') genre = 'marché';
+    else if (am === 'fuel') genre = 'station-service';
+    else if (t.railway) genre = t.railway === 'station' ? 'gare' : 'arrêt de train';
+    else if (t.leisure) genre = { sports_centre: 'centre sportif', stadium: 'stade', swimming_pool: 'piscine' }[t.leisure] || 'sport';
+    else if (t.office === 'government') genre = 'administration';
+    if (!genre) return;
+    flux.push({ nom: nom || maj(genre), genre: genre, lat: c[0], lng: c[1], dKm: d });
+  });
+  const dansPoly = (y, x, poly) => { let dedans = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){ const yi = poly[i][0], xi = poly[i][1], yj = poly[j][0], xj = poly[j][1]; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-12) + xi)) dedans = !dedans; } return dedans; };
+  const aireHa = (poly, latRef) => { const kx = 111.32 * Math.cos(latRef * Math.PI / 180), ky = 110.57; let a = 0; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) a += (poly[j][1] * kx) * (poly[i][0] * ky) - (poly[i][1] * kx) * (poly[j][0] * ky); return Math.abs(a) / 2 * 100; };
+  const genres = { industrial: 'industriel', commercial: 'commercial', retail: 'commerces' };
+  const zones = {};
+  let nz = 0;
+  zonesBrutes.forEach(e => {
+    const t = e.tags || {};
+    let poly = [];
+    if (e.type === 'way' && Array.isArray(e.geometry)) poly = e.geometry.filter(g => g.lat != null).map(g => [+g.lat, +g.lon]);
+    else if (e.bounds){ const b = e.bounds; poly = [[+b.minlat, +b.minlon], [+b.minlat, +b.maxlon], [+b.maxlat, +b.maxlon], [+b.maxlat, +b.minlon]]; }
+    if (poly.length < 3) return;
+    let la = 0, lo = 0;
+    poly.forEach(p => { la += p[0]; lo += p[1]; });
+    la /= poly.length; lo /= poly.length;
+    const ha = aireHa(poly, la);
+    if (ha < 0.5) return;
+    let n = 0;
+    pts.forEach(p => { if (dansPoly(p[0], p[1], poly)) n++; });
+    const nom = t['name:fr'] || t.name || '', genre = genres[t.landuse] || 'activité';
+    const cle = nom ? nom.toLowerCase() : 'z' + (nz++);
+    const z = zones[cle];
+    if (z){
+      z.lat = (z.lat * z.ha + la * ha) / (z.ha + ha); z.lng = (z.lng * z.ha + lo * ha) / (z.ha + ha);
+      z.ha += ha; z.n += n; z.morceaux++; if (z.genre !== genre) z.genre = 'mixte';
+    } else zones[cle] = { nom: nom, genre: genre, lat: la, lng: lo, ha: ha, n: n, morceaux: 1, approx: e.type !== 'way' };
+  });
+  const tous = Object.keys(zones).map(c => { const z = zones[c]; return { nom: z.nom, genre: z.genre, lat: z.lat, lng: z.lng, ha: Math.round(z.ha * 10) / 10, n: z.n, morceaux: z.morceaux, approx: z.approx, dKm: Math.round(dist(lat0, lng0, z.lat, z.lng) * 100) / 100 }; })
+    .sort((a, b) => a.dKm - b.dKm);
+  const compte = z => z.nom || z.ha >= 2 || z.n >= 3;
+  const zonings = tous.filter(compte).slice(0, 25), petits = tous.filter(z => !compte(z));
+  if (petits.length) zonings.push({ nom: petits.length + ' petites zones sans nom (moins de 2 ha)', genre: 'parcelles', lat: lat0, lng: lng0, ha: Math.round(petits.reduce((a, z) => a + z.ha, 0) * 10) / 10,
+    n: petits.reduce((a, z) => a + z.n, 0), morceaux: petits.length, approx: false, dKm: Math.min.apply(null, petits.map(z => z.dKm)), reste: true });
+  // un même lieu est souvent cartographié deux fois (le bâtiment et le point)
+  const dedoublonne = l => { const out = []; l.sort((a, b) => a.dKm - b.dKm).forEach(e => { const nom = e.nom.toLowerCase(); if (!out.some(o => o.nom.toLowerCase() === nom && dist(o.lat, o.lng, e.lat, e.lng) < 0.25)) out.push(e); }); return out; };
+  ent.total = ent.commerces + ent.horeca + ent.bureaux + ent.artisans + ent.industries;
+  ent.zonings = zonings.reduce((a, z) => a + z.n, 0);
+  return { t: Date.now(), osm: (r.osm3s && r.osm3s.timestamp_osm_base) || '', ent: ent, zonings: zonings,
+    ecoles: dedoublonne(ecoles).slice(0, 80), flux: dedoublonne(flux).slice(0, 80), indirecte: dedoublonne(indirecte).slice(0, 60) };
+}
+
 /* --- stockage local : cache Overpass et repli hors API ----------------------- */
 const ls = {
   get(k){ try { const v = localStorage.getItem(LS + '_' + k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
@@ -425,7 +542,11 @@ export class Scouting {
       // planRoute : l'écart se mesure en vraies minutes de route (service de
       // routage) plutôt qu'à vol d'oiseau ; planSel garde la sélection calculée
       // et sa clé, planCalc l'avancement pendant le calcul.
-      planRoute: true, planSel: null, planCalc: null
+      planRoute: true, planSel: null, planCalc: null,
+      // L'étude de marché locale du point du dossier (GET /scouting/etude,
+      // ou Overpass depuis le navigateur en repli) : entreprises, zonings,
+      // écoles, générateurs de flux, concurrence indirecte.
+      etude: null, etudeBusy: false, etudeErr: ''
     };
     this._h = [];
     this._scroll = {};
@@ -2084,6 +2205,56 @@ export class Scouting {
     if (!this.state.sel) return;
     this.setState({ dossier: true, dossierCand: cand || null, dossierImg: '', view: 'map', compare: false, reseau: false });
     this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
+    this.etudeLocale(this.state.sel.lat, this.state.sel.lng);
+  }
+
+  /* ---------- l'étude de marché locale ---------- */
+  // Ce qu'OpenStreetMap sait du rayon autour du point : le serveur relève et
+  // garde (GET /scouting/etude) ; s'il ne répond pas, le navigateur interroge
+  // Overpass lui-même. Une étude par point et par rayon, gardée en mémoire.
+  etudeCle(lat, lng){ return lat.toFixed(3) + ',' + lng.toFixed(3) + ',' + this.etudeRayon(); }
+  etudeRayon(){ return Math.round(this.state.radius * 10) * 100; }
+
+  etudeLocale(lat, lng){
+    const cle = this.etudeCle(lat, lng);
+    this._etudes = this._etudes || {};
+    if (this._etudes[cle]){ this.setState({ etude: this._etudes[cle], etudeBusy: false, etudeErr: '' }); return Promise.resolve(this._etudes[cle]); }
+    if (this._etudeP && this._etudeCle === cle) return this._etudeP;
+    this._etudeCle = cle;
+    this.setState({ etude: null, etudeBusy: true, etudeErr: '' });
+    const r = this.etudeRayon();
+    const fini = d => {
+      d.cle = cle;
+      this._etudes[cle] = d;
+      if (this._etudeCle === cle){ this._etudeP = null; this.setState({ etude: d, etudeBusy: false, etudeErr: '' }); }
+      return d;
+    };
+    const rate = e => {
+      if (this._etudeCle === cle){ this._etudeP = null; this.setState({ etudeBusy: false, etudeErr: e && e.message ? e.message : 'service injoignable' }); }
+      return null;
+    };
+    // le repli : les miroirs Overpass l'un après l'autre, 100 s chacun au plus
+    const parNavigateur = async () => {
+      let last = null;
+      for (let k = 0; k < OVERPASS.length; k++){
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 100000);
+        try {
+          const rep = await fetch(OVERPASS[k], { method: 'POST', body: 'data=' + encodeURIComponent(requeteEtude(lat, lng, r)), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal });
+          if (!rep.ok) throw new Error('HTTP ' + rep.status);
+          const j = await rep.json();
+          if (!j.elements) throw new Error('réponse vide');
+          const d = analyserEtude(j, lat, lng);
+          d.r = r; d.cache = false; d.releve = new Date().toISOString();
+          return d;
+        } catch (e) { last = e; } finally { clearTimeout(t); }
+      }
+      throw new Error('OpenStreetMap n’a pas répondu (' + (last && last.name === 'AbortError' ? 'délai dépassé' : last && last.message || 'sans détail') + ')');
+    };
+    const p = (this.useApi()
+      ? apiGet('/scouting/etude?lat=' + lat.toFixed(5) + '&lng=' + lng.toFixed(5) + '&r=' + r, 190000).catch(() => parNavigateur())
+      : parNavigateur()).then(fini, rate);
+    this._etudeP = p;
+    return p;
   }
 
   fermerDossier(){ this.setState({ dossier: false, dossierCand: null }); }
@@ -2109,6 +2280,36 @@ export class Scouting {
       r.ca ? fmtEur(r.ca) : '—', r.statut + (r.marche ? ' · marché ' + fmtEur(r.marche) : '')]));
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
+    // la lecture d'ensemble de la concurrence : combien, quelles forces, quelles notes, qui est le plus près
+    const forts = x.near.filter(o => self.isStrong(o.b)), notees = x.near.filter(o => self.rating(o.b));
+    const patiss = x.near.filter(o => o.b.pastry).length;
+    const moy = notees.length ? notees.reduce((a, o) => a + self.rating(o.b), 0) / notees.length : 0;
+    const cl = [['≥ 4,5 ★', o => self.rating(o.b) >= 4.5], ['4,0 à 4,4 ★', o => self.rating(o.b) >= 4 && self.rating(o.b) < 4.5], ['sous 4,0 ★', o => self.rating(o.b) < 4]].map(c => [c[0], notees.filter(c[1]).length]).filter(c => c[1]);
+    const km = v => v.toFixed(1).replace('.', ',') + ' km';
+    const concurrenceNote = !x.near.length ? '' : x.near.length + ' boulangerie' + (x.near.length > 1 ? 's' : '') + ' et pâtisserie' + (x.near.length > 1 ? 's' : '') + ' relevée' + (x.near.length > 1 ? 's' : '') + ' ' + dans
+      + (patiss ? ' (dont ' + patiss + ' pâtisserie' + (patiss > 1 ? 's' : '') + ')' : '') + ' : ' + forts.length + ' concurrent' + (forts.length > 1 ? 's' : '') + ' fort' + (forts.length > 1 ? 's' : '') + ' (note ≥ ' + (+s.thresh).toFixed(1).replace('.', ',') + ' ★)'
+      + ', ' + chaines.length + ' de chaîne' + (marques.length ? ' (' + marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', ') + ')' : '')
+      + ', ' + notees.length + ' notée' + (notees.length > 1 ? 's' : '') + ' sur Google' + (notees.length ? ' — note moyenne ' + moy.toFixed(1).replace('.', ',') + ' (' + cl.map(c => c[1] + ' ' + c[0]).join(', ') + ')' : '')
+      + (x.near.length - notees.length ? ', ' + (x.near.length - notees.length) + ' sans note' : '') + '. La plus proche : ' + x.near[0].b.name + ' à ' + km(x.near[0].d)
+      + (forts.length ? ' ; le concurrent fort le plus proche : ' + forts[0].b.name + ' à ' + km(forts[0].d) : '') + '. Pression concurrentielle ' + x.load.toFixed(2) + ' — Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5.';
+    // l'étude locale : la bonne, pour ce point et ce rayon, si elle est là
+    const et = s.etude && s.etude.cle === this.etudeCle(x.lat, x.lng) ? s.etude : null;
+    const etudeAttente = et ? '' : s.etudeBusy ? 'Étude locale en cours — OpenStreetMap relève les entreprises, les zonings, les écoles et les générateurs de flux du rayon…' : s.etudeErr ? 'Étude locale indisponible : ' + s.etudeErr + '. Les sections qui suivent manquent dans ce dossier.' : '';
+    const R1 = self.etudeRayon() / 1000, rTxt = R1.toFixed(1).replace('.', ',') + ' km';
+    const ligneLieu = e => [e.nom, e.genre, km(e.dKm)];
+    const zoningsRows = et ? et.zonings.map(z => [z.nom || 'Zone ' + (z.genre === 'commerces' ? 'de commerces' : z.genre === 'mixte' ? 'd’activité' : z.genre === 'industriel' ? 'industrielle' : 'commerciale') + ' sans nom',
+      z.reste ? 'la plus proche à ' + km(z.dKm) : z.genre + (z.morceaux > 1 ? ' · ' + z.morceaux + ' parcelles' : '') + (z.approx ? ' · emprise approchée' : ''), z.reste ? '' : km(z.dKm), (z.ha >= 10 ? Math.round(z.ha) : z.ha.toFixed(1).replace('.', ',')) + ' ha', String(z.n)]) : [];
+    const tissuRows = et ? [
+      ['Commerces', fmtInt(et.ent.commerces), 'boutiques, alimentation, supermarchés, garages… (étiquette shop)'],
+      ['Horeca', fmtInt(et.ent.horeca), 'restaurants, cafés, snacks, bars'],
+      ['Bureaux et services', fmtInt(et.ent.bureaux), 'bureaux, agences, professions libérales (étiquette office)'],
+      ['Artisans', fmtInt(et.ent.artisans), 'ateliers et métiers (étiquette craft)'],
+      ['Industries', fmtInt(et.ent.industries), 'sites industriels et usines'],
+      ['Total cartographié dans ' + rTxt, fmtInt(et.ent.total), 'dont ' + fmtInt(et.ent.zonings) + ' dans les zonings · OpenStreetMap ne connaît que les entreprises cartographiées : un plancher, pas le registre TVA']
+    ] : [];
+    const osmDate = et && et.osm ? new Date(et.osm).toLocaleDateString('fr-BE') : '';
+    const etudeNote = et ? 'Étude locale : OpenStreetMap' + (osmDate ? ' (données du ' + osmDate + ')' : '') + (et.releve ? ', relevé ' + (et.cache ? 'gardé depuis le ' : 'du ') + new Date(et.releve.replace(' ', 'T')).toLocaleDateString('fr-BE') : '') + (et.perime ? ' — relevé périmé, OpenStreetMap n’a pas répondu' : '')
+      + ', dans un rayon de ' + rTxt + ' autour du point' + (z ? ' (le rayon, pas la zone dessinée)' : '') + '. Entreprises comptées par famille d’étiquettes (shop, horeca, office, craft, industrial) ; zonings : surfaces industrielles, commerciales et de commerces de plus d’un demi-hectare, avec les entreprises dont le point tombe dedans ; écoles et générateurs de flux triés par distance à vol d’oiseau.' : '';
     const notes = [];
     if (z && x.disque) notes.push('Au même centre, le rayon de ' + rayonTxt + ' compte ' + fmtInt(x.disque.hh) + ' ménages et ' + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '')
       + ' — la zone dessinée en compte ' + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtInt(Math.abs(x.hh - x.disque.hh)) + ' ménages, soit '
@@ -2154,13 +2355,19 @@ export class Scouting {
         ['Rendement sur ' + s.surface + ' m²', fmtEur(x.ca / s.surface) + ' / m²', 'Halle mesurée : 5 188 € / m² sur 250 m²'],
         ['CA hebdomadaire', fmtEur(x.ca / 52), 'CA annuel ÷ 52']
       ],
-      concurrence: x.near.slice(0, 30).map(o => {
+      concurrence: x.near.slice(0, 150).map(o => {
         const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b);
-        return [o.b.name, o.b.commune || '—', o.d.toFixed(1).replace('.', ',') + ' km',
+        return [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), o.b.commune || '—', o.d.toFixed(1).replace('.', ',') + ' km',
           r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : rv && rv.n ? ' (' + rv.n + ' avis)' : '') : '—',
           Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
       }),
+      concurrenceNote: concurrenceNote,
       chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
+      etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
+      indirecte: et ? et.indirecte.map(ligneLieu) : [],
+      tissu: tissuRows, zonings: zoningsRows,
+      ecoles: et ? et.ecoles.map(e => [e.nom, e.genre + (e.eleves ? ' · ' + fmtInt(e.eleves) + ' élèves' : ''), km(e.dKm)]) : [],
+      flux: et ? et.flux.map(ligneLieu) : [],
       reseau: reseau,
       hypotheses: [
         ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
@@ -2171,7 +2378,7 @@ export class Scouting {
       notes: notes,
       sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
         + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '')
-        + (z && z.type === 'isochrone' ? ' · isochrone : Valhalla (routage OpenStreetMap)' : '') + '.'
+        + (z && z.type === 'isochrone' ? ' · isochrone : Valhalla (routage OpenStreetMap)' : '') + (et ? ' · entreprises, zonings, écoles, flux et concurrence indirecte : OpenStreetMap (Overpass)' : '') + '.'
     };
   }
 
@@ -2240,11 +2447,13 @@ export class Scouting {
   // Le PDF vient du serveur (même chaîne que l'analyse magasin) ; sans moteur
   // PDF là-bas, ou hors ligne, la fenêtre d'impression produit le même document.
   async telechargerPdf(){
-    const d = this.dossierDonnees();
+    let d = this.dossierDonnees();
     if (!d) return;
     if (!this.useApi()){ this.imprimerDossier(); return; }
     this.setState({ dossierBusy: true });
     try {
+      // l'étude locale en cours a jusqu'à trois minutes ; le dossier part avec elle
+      if (this._etudeP){ await Promise.race([this._etudeP, new Promise(res => setTimeout(res, 190000))]); d = this.dossierDonnees() || d; }
       d.carte = await this.carteStatique();
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), 60000);
@@ -2287,7 +2496,14 @@ export class Scouting {
     const rows = [['dossier', 'titre', d.titre, d.date], ['dossier', 'zone', d.zone, d.geo], ['dossier', 'score', d.score, d.verdict]];
     d.essentiel.forEach(r => rows.push(['essentiel', r[0], r[1], r[2]]));
     d.marche.forEach(r => rows.push(['marche', r[0], r[1], r[2]]));
+    if (d.concurrenceNote) rows.push(['concurrence', 'lecture', d.concurrenceNote, '']);
     d.concurrence.forEach(r => rows.push(['concurrence', r[0], r[2] + ' · note ' + r[3] + ' · force ' + r[4], r[1] + (r[5] ? ' · concurrent fort' : '') + (r[6] ? ' · chaîne ' + r[6] : '')]));
+    d.indirecte.forEach(r => rows.push(['concurrence_indirecte', r[0], r[2], r[1]]));
+    d.tissu.forEach(r => rows.push(['tissu_economique', r[0], r[1], r[2]]));
+    d.zonings.forEach(r => rows.push(['zonings', r[0], r[4] + ' entreprises · ' + r[3], r[1] + ' · ' + r[2]]));
+    d.ecoles.forEach(r => rows.push(['ecoles', r[0], r[2], r[1]]));
+    d.flux.forEach(r => rows.push(['flux', r[0], r[2], r[1]]));
+    if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     d.reseau.forEach(r => rows.push(['reseau', r[0], r[5], r[1] + ' · ' + r[2] + ' ménages · ' + r[3] + ' · emprise ' + r[4] + ' · ' + r[6]]));
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
