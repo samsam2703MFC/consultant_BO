@@ -110,8 +110,8 @@ function scoutingDossierValide(array $b): ?array
         'ecoles' => $lignes($b['ecoles'] ?? [], 6, 40, 120),
         'flux' => $lignes($b['flux'] ?? [], 6, 40, 120),
         'etudeNote' => $s($b['etudeNote'] ?? '', 500),
-        'reseau' => $lignes($b['reseau'] ?? [], 10, 12, 160),
-        'reseauNote' => $s($b['reseauNote'] ?? '', 900),
+        'reseau' => $lignes($b['reseau'] ?? [], 12, 12, 160),
+        'reseauNote' => $s($b['reseauNote'] ?? '', 1400),
         'montee' => $s($b['montee'] ?? '', 500),
         'monteeCols' => $lignes([$b['monteeCols'] ?? []], 4, 1, 30)[0] ?? ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
         'monteeRows' => $lignes($b['monteeRows'] ?? [], 6, 12, 80),
@@ -210,6 +210,9 @@ function scoutingDossierHtml(array $d): string
       .doc.garde .zone{margin-bottom:3mm}.doc.garde .verdict{margin-bottom:3mm}.doc.garde .sec{margin-bottom:1.8mm}
       .t tr.kv td{padding-top:2mm;padding-bottom:2mm}
       .t tr.tot td{font-weight:bold;border-top:1pt solid #221E1A;border-bottom:0;background:#fbf9f5}
+      .t.reseau td{vertical-align:middle;white-space:nowrap}.t.reseau tr.p td{border-bottom:0;padding-bottom:.3mm}
+      .t.reseau tr.p td[rowspan]{border-bottom:.5pt solid #EAE3D8}.t.reseau tr.r td{padding-top:.3mm}
+      .t.reseau td.lib{font-size:6.5pt;letter-spacing:.05em;text-transform:uppercase}
     </style>';
 
     $h = $css . '<div class="doc' . ($d['garde'] !== [] ? ' garde' : '') . '">'
@@ -406,15 +409,23 @@ function scoutingDossierHtml(array $d): string
             }
             $h .= '</div>';
         }
-        $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Cible de l’année</th><th>Réel / cible</th><th>Réel / plan</th></tr>';
+        $h .= '<table class="t reseau" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">Magasin</th><th class="l"></th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Cible de l’année</th><th>Réel / cible</th><th>Réel / plan</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
-            $sens = (string) ($r[9] ?? '');
-            $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td>';
-            foreach ([1, 2, 3] as $k) { $h .= '<td class="' . ($i === 0 ? 'ok' : '') . '" style="white-space:nowrap;line-height:1.45">' . nl2br($e($r[$k])) . '</td>'; }
-            $h .= '<td style="white-space:nowrap"><b>' . $e($r[4]) . '</b><div class="mut" style="font-size:6.8pt;line-height:1.35;white-space:normal;max-width:30mm">' . $e($r[5]) . '</div></td>'
-                . '<td style="white-space:nowrap"><span class="hl' . ($sens === 'pos' ? ' pos' : ($sens === 'neg' ? ' neg' : '')) . '">' . $e($r[6]) . '</span></td>'
-                . '<td class="mut" style="white-space:nowrap">' . $e($r[7]) . '</td></tr>';
+            $sens = (string) ($r[10] ?? '');
+            // deux lignes par magasin, prévu puis réel ; une seule sans réel
+            $reel = ($r[2] ?? '—') !== '—' || ($r[4] ?? '—') !== '—' || ($r[6] ?? '—') !== '—';
+            $sp = $reel ? ' rowspan="2"' : '';
+            $h .= '<tr class="' . ($reel ? 'p' : 'seul') . '"><td class="l"' . $sp . '><b>' . $e($r[0]) . '</b></td><td class="l mut lib">prévu</td>';
+            foreach ([1, 3, 5] as $k) { $h .= '<td class="' . ($i === 0 ? 'ok' : '') . '">' . $e($r[$k]) . '</td>'; }
+            $h .= '<td' . $sp . '><b>' . $e($r[7]) . '</b></td>'
+                . '<td' . $sp . '><span class="hl' . ($sens === 'pos' ? ' pos' : ($sens === 'neg' ? ' neg' : '')) . '">' . $e($r[8]) . '</span></td>'
+                . '<td class="mut"' . $sp . '>' . $e($r[9]) . '</td></tr>';
+            if ($reel) {
+                $h .= '<tr class="r"><td class="l mut lib">réel</td>';
+                foreach ([2, 4, 6] as $k) { $h .= '<td><b>' . $e($r[$k]) . '</b></td>'; }
+                $h .= '</tr>';
+            }
         }
         $h .= '</table>' . ($d['reseauNote'] !== '' ? '<div class="legende" style="color:#221E1A;margin-bottom:1.5mm">' . $e($d['reseauNote']) . '</div>' : '')
             . '<div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>';

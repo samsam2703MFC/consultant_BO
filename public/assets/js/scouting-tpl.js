@@ -439,6 +439,11 @@ export const DOSS_CSS = `
 .sc-doss .motfin table.mini td.cur{background:rgba(141,29,44,.08);font-weight:600;border-radius:4px}
 .sc-doss .motfin table.mini td.cur small{display:block;font-size:9px;font-weight:500;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
 .sc-doss table.plan th,.sc-doss table.plan td{padding:5px 4px}
+.sc-doss table.reseau td{vertical-align:middle;white-space:nowrap}
+.sc-doss table.reseau tr.p td{border-bottom:0;padding-bottom:1px}
+.sc-doss table.reseau tr.p td[rowspan]{border-bottom:.5px solid #EAE3D8}
+.sc-doss table.reseau tr.r td{padding-top:1px}
+.sc-doss table.reseau td.mut{font-size:10px;letter-spacing:.04em;text-transform:uppercase}
 .sc-doss table.plan th{white-space:normal;hyphens:manual}
 .sc-doss tr.tot td{font-weight:600;border-top:1px solid #221E1A;border-bottom:0;background:#fbf9f5}
 .sc-doss .ch{display:inline-block;font-size:9.5px;font-weight:600;border-radius:9px;padding:1px 7px;background:#EEE9E1;color:#221E1A;margin-left:5px;white-space:nowrap}
@@ -537,11 +542,10 @@ export function dossierPage(d, esc, logo){
       <table class="mini"><tr><th class="l"></th>${d.monteeCols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
         ${d.monteeRows.map((r, i) => `<tr><td class="l${i ? '' : ' ok'}">${esc(r[0])}</td>${[1, 2, 3, 4].map(k => `<td class="n${+r[5] === k ? ' cur' : ''}">${esc(r[k])}${+r[5] === k ? '<small>en cours</small>' : ''}</td>`).join('')}</tr>`).join('')}
       </table></div>` : ''}
-    <table class="plan"><tr><th class="l">Magasin</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Cible de l'année</th><th>Réel / cible</th><th>Réel / plan</th></tr>
-      ${d.reseau.map((r, i) => `<tr><td class="l"><b>${esc(r[0])}</b></td>${[1, 2, 3].map(k => `<td class="n ${i ? '' : 'ok'}" style="white-space:pre;line-height:1.4">${esc(r[k])}</td>`).join('')}
-        <td class="n"><b>${esc(r[4])}</b><div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3;white-space:normal;max-width:130px">${esc(r[5])}</div></td>
-        <td class="n"><span class="hl${r[9] ? ' ' + r[9] : ''}">${esc(r[6])}</span></td>
-        <td class="n mut">${esc(r[7])}</td></tr>`).join('')}
+    <table class="plan reseau"><tr><th class="l">Magasin</th><th class="l"></th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Cible de l'année</th><th>Réel / cible</th><th>Réel / plan</th></tr>
+      ${d.reseau.map((r, i) => { const reel = r[2] !== '—' || r[4] !== '—' || r[6] !== '—', sp = reel ? ' rowspan="2"' : ''; return `<tr class="${reel ? 'p' : 'seul'}"><td class="l"${sp}><b>${esc(r[0])}</b></td><td class="l mut">prévu</td>${[1, 3, 5].map(k => `<td class="n${i ? '' : ' ok'}">${esc(r[k])}</td>`).join('')}
+        <td class="n"${sp}><b>${esc(r[7])}</b></td><td class="n"${sp}><span class="hl${r[10] ? ' ' + r[10] : ''}">${esc(r[8])}</span></td><td class="n mut"${sp}>${esc(r[9])}</td></tr>${reel ? `
+        <tr class="r"><td class="l mut">réel</td>${[2, 4, 6].map(k => `<td class="n"><b>${esc(r[k])}</b></td>`).join('')}</tr>` : ''}`; }).join('')}
     </table>
     ${d.reseauNote ? `<div class="legende" style="color:#221E1A">${esc(d.reseauNote)}</div>` : ''}
     <div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>
