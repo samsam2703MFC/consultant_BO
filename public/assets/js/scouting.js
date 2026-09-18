@@ -555,7 +555,11 @@ export class Scouting {
       etude: null, etudeBusy: false, etudeErr: '',
       // Ce que Google dit des concurrents les plus proches du point du dossier
       // (fiche, avis, photo), et l'enrichissement en cours.
-      dossierGoogle: null, dossierGoogleBusy: false
+      dossierGoogle: null, dossierGoogleBusy: false,
+      // La page de garde du dossier : les isochrones de 5 et 10 minutes en
+      // voiture autour du point et ce qu'elles contiennent ; le panier moyen
+      // du réseau (caisse) pour traduire le CA en clients par jour.
+      garde: null, gardeBusy: false, gardeErr: '', panier: null
     };
     this._h = [];
     this._scroll = {};
@@ -804,7 +808,7 @@ export class Scouting {
     this._pulled = true;
     // Les magasins du réseau (position, CA réel) arrivent à part : la fiche
     // Google peut prendre quelques secondes la première fois.
-    apiGet('/scouting/reseau', 30000).then(r => { this.setState({ magasins: (r && r.magasins) || [] }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
+    apiGet('/scouting/reseau', 30000).then(r => { this.setState({ magasins: (r && r.magasins) || [], panier: (r && r.panier) || null }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
     if (!d) return;
     this._serverTiles = {};
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
@@ -2316,9 +2320,14 @@ export class Scouting {
 
   ouvrirDossier(cand){
     if (!this.state.sel) return;
+    const x = this.state.sel;
     this.setState({ dossier: true, dossierCand: cand || null, dossierImg: '', view: 'map', compare: false, reseau: false });
-    this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
-    this.etudeLocale(this.state.sel.lat, this.state.sel.lng);
+    // la carte part tout de suite avec la zone ; elle est refaite avec les
+    // isochrones dès que Valhalla les rend
+    const carte = () => this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
+    carte();
+    this.gardeCharger(x.lat, x.lng).then(carte);
+    this.etudeLocale(x.lat, x.lng);
     this.dossierGoogleCharger();
   }
 
@@ -2417,6 +2426,52 @@ export class Scouting {
       ? apiGet('/scouting/etude?lat=' + lat.toFixed(5) + '&lng=' + lng.toFixed(5) + '&r=' + r, 190000).catch(() => parNavigateur())
       : parNavigateur()).then(fini, rate);
     this._etudeP = p;
+    return p;
+  }
+
+  // La page de garde : les isochrones de 5 et 10 minutes en voiture autour du
+  // point (Valhalla, une seule requête), les ménages et les boulangeries que
+  // chacune contient. Une fois par point ; sans réponse en 20 s, le dossier
+  // part sans elles et la carte garde la zone étudiée.
+  gardeCharger(lat, lng){
+    const cle = this.etudeCle(lat, lng);
+    this._gardes = this._gardes || {};
+    if (this._gardes[cle]){ this.setState({ garde: this._gardes[cle], gardeBusy: false, gardeErr: '' }); return Promise.resolve(this._gardes[cle]); }
+    if (this._gardeP && this._gardeCle === cle) return this._gardeP;
+    this._gardeCle = cle;
+    this.setState({ garde: null, gardeBusy: true, gardeErr: '' });
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 20000);
+    const q = { locations: [{ lat: lat, lon: lng }], costing: 'auto', contours: [{ time: 5 }, { time: 10 }], polygons: true, denoise: 0.3, generalize: 100 };
+    const p = fetch(ISO_URL + '?json=' + encodeURIComponent(JSON.stringify(q)), { signal: ctl.signal, headers: { Accept: 'application/json' } })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(j => {
+        const iso = {};
+        (j && j.features || []).forEach(f => {
+          const geo = f.geometry, min = +(f.properties && f.properties.contour);
+          let ring = null;
+          if (geo && geo.type === 'Polygon') ring = geo.coordinates[0];
+          else if (geo && geo.type === 'MultiPolygon') geo.coordinates.forEach(pp => { if (!ring || pp[0].length > ring.length) ring = pp[0]; });
+          if (ring && ring.length >= 4 && (min === 5 || min === 10)) iso[min] = ring.map(pt => [pt[1], pt[0]]);
+        });
+        if (!iso[5] || !iso[10]) throw new Error('réponse sans polygone');
+        const mesure = (poly, rKm) => {
+          const bb = boitePoly(poly);
+          return { hh: Math.round(this.householdsInPoly(poly, bb, [lat, lng], rKm)),
+            n: this.shops().filter(b => b.lat >= bb.s && b.lat <= bb.n && b.lng >= bb.w && b.lng <= bb.e && dansPoly(poly, b.lat, b.lng)).length };
+        };
+        const m5 = mesure(iso[5], 3), m10 = mesure(iso[10], 6);
+        const d = { cle: cle, iso5: iso[5], iso10: iso[10], hh5: m5.hh, hh10: m10.hh, n5: m5.n, n10: m10.n };
+        this._gardes[cle] = d;
+        if (this._gardeCle === cle){ this._gardeP = null; this.setState({ garde: d, gardeBusy: false, gardeErr: '' }); }
+        return d;
+      })
+      .catch(e => {
+        if (this._gardeCle === cle){ this._gardeP = null; this.setState({ gardeBusy: false, gardeErr: e && e.name === 'AbortError' ? 'délai dépassé' : (e && e.message) || 'service injoignable' }); }
+        return null;
+      })
+      .finally(() => clearTimeout(t));
+    this._gardeP = p;
     return p;
   }
 
@@ -2522,6 +2577,34 @@ export class Scouting {
     if (z && x.disque) notes.push('Au même centre, le rayon de ' + rayonTxt + ' compte ' + fmtInt(x.disque.hh) + ' ménages et ' + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '')
       + ' — la zone dessinée en compte ' + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtInt(Math.abs(x.hh - x.disque.hh)) + ' ménages, soit '
       + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtEur(Math.abs(x.hh - x.disque.hh) * s.spend) + ' de marché.');
+    // La page de garde : à 5 et 10 minutes en voiture (isochrones Valhalla),
+    // le magasin en trois lignes, le CA prévu avec la montée en charge — et,
+    // si la caisse du réseau a rendu un panier moyen, les clients par jour.
+    const g = s.garde && s.garde.cle === this.etudeCle(x.lat, x.lng) ? s.garde : null;
+    const gardeAttente = g ? '' : s.gardeBusy ? 'Isochrones de 5 et 10 minutes en voiture en cours de calcul (Valhalla, routage OpenStreetMap)…' : s.gardeErr ? 'Isochrones de 5 et 10 minutes indisponibles : ' + s.gardeErr + '. La carte montre la zone étudiée.' : '';
+    const garde = g ? [
+      ['Ménages', fmtInt(g.hh5), fmtInt(g.hh10), fmtInt(x.hh)],
+      ['Marché (ménages × dépense)', fmtEur(g.hh5 * s.spend), fmtEur(g.hh10 * s.spend), fmtEur(x.market)],
+      ['Boulangeries concurrentes', String(g.n5), String(g.n10), String(x.near.length)]
+    ] : [];
+    const pan = s.panier && +s.panier.reseau > 0 ? s.panier : null;
+    const eur2 = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const moisTxt = m => { const dt = /^\d{4}-\d{2}$/.test(m || '') ? new Date(m + '-01T00:00:00') : null; return dt ? dt.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : ''; };
+    const jj = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v.slice(8, 10) + '/' + v.slice(5, 7) : '';
+    const panQuand = pan ? (pan.periode === 'semaine' ? 'semaine en cours' : moisTxt(pan.mois)) + (pan.jusquau ? ' au ' + jj(pan.jusquau) : '') : '';
+    const panTxt = pan ? eur2(pan.reseau) + ' (caisse du réseau, ' + panQuand + ')' : '';
+    const clientsJour = ca => pan ? fmtInt(ca / 52 / 6 / pan.reseau) : '—';
+    const captes = x.hh * x.emprise;
+    const gardeLignes = [
+      ['Entreprises dans le rayon', et ? fmtInt(et.ent.total) : s.etudeBusy ? 'relevé en cours' : '—', et ? 'OpenStreetMap, ' + rTxt + ', dont ' + fmtInt(et.ent.zonings) + ' en zoning' : 'étude locale OpenStreetMap'],
+      ['Manne de clients', fmtInt(captes) + ' ménages', 'emprise ' + pct1(x.emprise) + ' de ' + fmtInt(x.hh) + ' ménages, soit environ ' + fmtInt(captes * hhSize) + ' personnes'],
+      ['Panier moyen', pan ? eur2(pan.reseau) : 'inconnu', pan ? 'caisse du réseau, ' + panQuand + ' · au plan, ' + clientsJour(x.ca) + ' clients par jour sur 6 jours' : 'la caisse du réseau ne l’a pas encore rendu']
+    ];
+    const rampe = ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Plan · année 4 et + · 100 %'].map((lib, i) => {
+      const ca = x.ca * PALIERS[i];
+      return [lib, fmtEur(ca / 52), fmtEur(ca / 12), fmtEur(ca), clientsJour(ca)];
+    });
+    const rampeNote = 'Clients par jour : CA de la semaine ÷ 6 jours d’ouverture ÷ panier moyen' + (pan ? ' de ' + panTxt : ' (inconnu : la caisse du réseau ne l’a pas encore rendu)') + '.';
     const cand = s.dossierCand;
     if (cand && cand.hyp){
       const noms = { spend: ['dépense par ménage', v => fmtEur(v)], passage: ['passage', v => v + ' %'], surface: ['surface', v => v + ' m²'], emprise: ['emprise imposée', v => v ? v + ' %' : 'calculée'],
@@ -2544,7 +2627,11 @@ export class Scouting {
         ? x.blocked.length + ' concurrent(s) fort(s) à moins de ' + rayonTxt + (z ? ' du centre' : '') + ' : ' + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
         : 'Score d’opportunité ' + x.score + '/100 — ménages accessibles pondérés par la pression concurrentielle.',
       zone: z ? this.zoneLibelle(z) : 'Rayon de ' + rayonTxt + ' autour du point',
-      carteNote: 'En vert, la zone évaluée' + (z ? ' ; en pointillé, le rayon de ' + rayonTxt + ' au même centre' : '') + '. Les points : les commerces relevés, colorés par leur note Google. Fond de carte © OpenStreetMap.',
+      carteNote: g ? 'Isochrones : Valhalla (routage OpenStreetMap). En pointillé, ' + (z ? 'la zone étudiée' : 'le rayon de ' + rayonTxt) + '. Points : les commerces relevés (couleur = note Google). Fond de carte © OpenStreetMap.'
+        : 'En vert, la zone évaluée' + (z ? ' ; en pointillé, le rayon de ' + rayonTxt + ' au même centre' : '') + '. Les points : les commerces relevés, colorés par leur note Google. Fond de carte © OpenStreetMap.',
+      gardeAttente: gardeAttente,
+      gardeCols: ['5 min en voiture', '10 min en voiture', z ? 'Zone étudiée' : 'Rayon de ' + rayonTxt],
+      garde: garde, gardeLignes: gardeLignes, rampe: rampe, rampeNote: rampeNote,
       essentiel: [
         ['Ménages ' + dans, fmtInt(x.hh), 'recensement 2021'],
         ['Concurrents ' + dans, String(x.near.length), x.blocked.length ? 'dont ' + x.blocked.length + ' fort' + (x.blocked.length > 1 ? 's' : '') : chaines.length ? chaines.length + ' de chaîne' : 'aucun fort'],
@@ -2618,7 +2705,7 @@ export class Scouting {
       notes: notes,
       sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
         + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '')
-        + (z && z.type === 'isochrone' ? ' · isochrone : Valhalla (routage OpenStreetMap)' : '') + (et ? ' · entreprises, zonings, écoles, flux et concurrence indirecte : OpenStreetMap (Overpass)' : '') + '.'
+        + (g || (z && z.type === 'isochrone') ? ' · isochrones : Valhalla (routage OpenStreetMap)' : '') + (et ? ' · entreprises, zonings, écoles, flux et concurrence indirecte : OpenStreetMap (Overpass)' : '') + (pan ? ' · panier moyen : caisse du réseau' : '') + '.'
     };
   }
 
@@ -2629,11 +2716,15 @@ export class Scouting {
     const s = this.state, x = s.sel;
     if (!x) return Promise.resolve('');
     const pts = x.zone ? x.zone.poly : cerclePoly(x.lat, x.lng, s.radius);
-    const key = [x.lat.toFixed(5), x.lng.toFixed(5), pts.length, s.radius, this._rev, s.minRating, s.arr].join('|');
+    // les isochrones de la page de garde, quand Valhalla les a rendues
+    const g = s.garde && s.garde.cle === this.etudeCle(x.lat, x.lng) ? s.garde : null;
+    const key = [x.lat.toFixed(5), x.lng.toFixed(5), pts.length, s.radius, this._rev, s.minRating, s.arr, g ? 'iso' : ''].join('|');
     if (this._imgKey === key && this._imgP) return this._imgP;
-    const W = 720, H = 400, bb = boitePoly(pts);
+    // la page de garde cadre sur les 10 minutes en voiture, au plus près :
+    // la zone étudiée reste en pointillé, coupée au bord s'il le faut
+    const W = 720, H = g ? 340 : 400, bb = boitePoly(g ? g.iso10 : pts), fit = g ? 0.92 : 0.8;
     let z = 15;
-    for (; z > 8; z--){ const a = merc(bb.n, bb.w, z), b = merc(bb.s, bb.e, z); if (b[0] - a[0] <= W * 0.8 && b[1] - a[1] <= H * 0.8) break; }
+    for (; z > 8; z--){ const a = merc(bb.n, bb.w, z), b = merc(bb.s, bb.e, z); if (b[0] - a[0] <= W * fit && b[1] - a[1] <= H * fit) break; }
     const c = merc((bb.n + bb.s) / 2, (bb.w + bb.e) / 2, z), x0 = c[0] - W / 2, y0 = c[1] - H / 2;
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
@@ -2653,6 +2744,12 @@ export class Scouting {
     this._imgKey = key;
     this._imgP = Promise.all(charges).then(() => {
       const vb = { s: bb.s - 0.05, n: bb.n + 0.05, w: bb.w - 0.08, e: bb.e + 0.08 };
+      const trace = poly => { cx.beginPath(); poly.forEach((p, i) => { const q = P(p); if (i) cx.lineTo(q[0], q[1]); else cx.moveTo(q[0], q[1]); }); cx.closePath(); };
+      if (g){
+        // 10 minutes en vert clair dessous, 5 minutes en vert foncé dessus
+        trace(g.iso10); cx.fillStyle = 'rgba(139,195,74,.30)'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#7cb342'; cx.stroke();
+        trace(g.iso5); cx.fillStyle = 'rgba(27,94,32,.34)'; cx.fill(); cx.lineWidth = 2.5; cx.strokeStyle = '#1b5e20'; cx.stroke();
+      }
       this.shops().forEach(b => {
         if (b.lat < vb.s || b.lat > vb.n || b.lng < vb.w || b.lng > vb.e) return;
         const p = P([b.lat, b.lng]), r = this.rating(b);
@@ -2661,19 +2758,36 @@ export class Scouting {
         cx.lineWidth = 1.2; cx.strokeStyle = '#fff'; cx.stroke();
         if (this.estChaine(b)){ cx.beginPath(); cx.arc(p[0], p[1], 7.5, 0, 6.2832); cx.lineWidth = 1.6; cx.strokeStyle = '#221E1A'; cx.stroke(); }
       });
-      cx.beginPath();
-      pts.forEach((p, i) => { const q = P(p); if (i) cx.lineTo(q[0], q[1]); else cx.moveTo(q[0], q[1]); });
-      cx.closePath();
-      cx.fillStyle = 'rgba(27,94,32,.14)'; cx.fill();
-      cx.lineWidth = 2.5; cx.strokeStyle = '#1b5e20'; cx.stroke();
+      trace(pts);
+      if (g){
+        // la zone étudiée en pointillé : les isochrones gardent leurs couleurs
+        cx.setLineDash([6, 4]); cx.lineWidth = 1.6; cx.strokeStyle = '#2b2b2b'; cx.stroke(); cx.setLineDash([]);
+      } else {
+        cx.fillStyle = 'rgba(27,94,32,.14)'; cx.fill();
+        cx.lineWidth = 2.5; cx.strokeStyle = '#1b5e20'; cx.stroke();
+      }
       const c0 = P([x.lat, x.lng]);
-      if (x.zone){
+      if (x.zone && !g){
         const rp = P([x.lat, x.lng + s.radius / (111.2 * Math.cos(x.lat * Math.PI / 180))]);
         cx.setLineDash([5, 5]); cx.beginPath(); cx.arc(c0[0], c0[1], Math.abs(rp[0] - c0[0]), 0, 6.2832);
         cx.lineWidth = 1.4; cx.strokeStyle = '#2b2b2b'; cx.stroke(); cx.setLineDash([]);
       }
       cx.beginPath(); cx.arc(c0[0], c0[1], 6, 0, 6.2832); cx.fillStyle = '#1b5e20'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
       cx.font = '11px Helvetica, Arial, sans-serif';
+      if (g){
+        // la légende sur l'image : le PDF et l'impression la gardent
+        const items = [['rgba(27,94,32,.75)', '5 min en voiture'], ['rgba(139,195,74,.9)', '10 min en voiture'], ['', x.zone ? 'zone étudiée' : 'rayon de ' + s.radius.toFixed(1).replace('.', ',') + ' km']];
+        let wl = 10;
+        items.forEach(it => { wl += 18 + cx.measureText(it[1]).width + 10; });
+        cx.fillStyle = 'rgba(255,255,255,.9)'; cx.fillRect(8, 8, wl, 24);
+        let xl = 16;
+        items.forEach(it => {
+          if (it[0]){ cx.fillStyle = it[0]; cx.fillRect(xl, 14, 12, 12); }
+          else { cx.setLineDash([3, 2]); cx.strokeStyle = '#2b2b2b'; cx.lineWidth = 1.4; cx.strokeRect(xl + 0.5, 14.5, 11, 11); cx.setLineDash([]); }
+          cx.fillStyle = '#333'; cx.fillText(it[1], xl + 17, 24);
+          xl += 18 + cx.measureText(it[1]).width + 10;
+        });
+      }
       const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
       cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
       cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
@@ -2694,6 +2808,7 @@ export class Scouting {
     try {
       // l'étude locale en cours a jusqu'à trois minutes ; le dossier part avec elle
       if (this._etudeP){ await Promise.race([this._etudeP, new Promise(res => setTimeout(res, 190000))]); d = this.dossierDonnees() || d; }
+      if (this._gardeP){ await Promise.race([this._gardeP, new Promise(res => setTimeout(res, 21000))]); d = this.dossierDonnees() || d; }
       d.carte = await this.carteStatique();
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), 60000);

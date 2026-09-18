@@ -90,6 +90,13 @@ function scoutingDossierValide(array $b): ?array
         'zone' => $s($b['zone'] ?? '', 200),
         'carte' => $carte,
         'carteNote' => $s($b['carteNote'] ?? '', 240),
+        // la page de garde : à 5 et 10 minutes en voiture, trois lignes sur
+        // le magasin, le CA prévu avec la montée en charge
+        'garde' => $lignes($b['garde'] ?? [], 4, 6, 60),
+        'gardeCols' => $lignes([$b['gardeCols'] ?? []], 3, 1, 40)[0] ?? ['5 min en voiture', '10 min en voiture', 'Zone étudiée'],
+        'gardeLignes' => $lignes($b['gardeLignes'] ?? [], 3, 6, 200),
+        'rampe' => $lignes($b['rampe'] ?? [], 5, 5, 60),
+        'rampeNote' => $s($b['rampeNote'] ?? '', 400),
         'essentiel' => $lignes($b['essentiel'] ?? [], 3, 6, 80),
         'marche' => $lignes($b['marche'] ?? [], 3, 16, 200),
         'concurrence' => $lignes($b['concurrence'] ?? [], 8, 150, 120),
@@ -197,9 +204,14 @@ function scoutingDossierHtml(array $d): string
       .motfin .curk{font-size:6.3pt;font-weight:normal;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
       .hl{display:inline-block;padding:.8mm 2mm;border-radius:4px;font-weight:bold;background:#f1ede6}
       .hl.pos{background:#E3EFE6;color:#2d7a3e}.hl.neg{background:#F6E4E7;color:#8D1D2C}
+      .t th.v5,.t td.v5{background:#E8F0E9}.t th.v10,.t td.v10{background:#F0F6E8}
+      table.t.garde{margin-bottom:2.5mm}.t.garde th{padding:1.1mm 2mm}.t.garde td{padding:1.1mm 2mm}.t.garde td.l:first-child{white-space:nowrap}
+      .doc.garde .zone{margin-bottom:3mm}.doc.garde .verdict{margin-bottom:3mm}.doc.garde .sec{margin-bottom:1.8mm}
+      .t tr.kv td{padding-top:2mm;padding-bottom:2mm}
+      .t tr.tot td{font-weight:bold;border-top:1pt solid #221E1A;border-bottom:0;background:#fbf9f5}
     </style>';
 
-    $h = $css . '<div class="doc">'
+    $h = $css . '<div class="doc' . ($d['garde'] !== [] ? ' garde' : '') . '">'
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">'
             : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
@@ -219,9 +231,45 @@ function scoutingDossierHtml(array $d): string
             . ($d['verdictNote'] !== '' ? '<div class="n">' . $e($d['verdictNote']) . '</div>' : '') . '</div>';
     }
 
+    // avec les isochrones de la page de garde, la carte se passe de titre :
+    // elle porte sa légende, et la page doit tenir en une
+    $garde = $d['garde'] !== [];
     if ($d['carte'] !== '') {
-        $h .= '<div class="sec">Situation</div><img class="carte" src="' . $d['carte'] . '" alt="">'
-            . ($d['carteNote'] !== '' ? '<div class="legende">' . $e($d['carteNote']) . '</div>' : '<div class="legende">Fond de carte © OpenStreetMap.</div>');
+        $h .= ($garde ? '' : '<div class="sec">Situation</div>') . '<img class="carte" src="' . $d['carte'] . '" alt="">'
+            . '<div class="legende"' . ($garde ? ' style="margin-bottom:3mm"' : '') . '>' . $e($d['carteNote'] !== '' ? $d['carteNote'] : 'Fond de carte © OpenStreetMap.') . '</div>';
+    }
+
+    // La page de garde : sous la carte, à 5 et 10 minutes en voiture, le
+    // magasin en trois lignes, le CA prévu avec la montée en charge. Le reste
+    // du dossier commence sur la page suivante.
+    if ($d['garde'] !== [] || $d['gardeLignes'] !== [] || $d['rampe'] !== []) {
+        $h .= '<div class="sec">En bref</div>';
+        if ($d['garde'] !== [] || $d['gardeLignes'] !== []) {
+            $h .= '<table class="t garde" cellpadding="0" cellspacing="0">';
+            if ($d['garde'] !== []) {
+                $c = $d['gardeCols'] + ['5 min en voiture', '10 min en voiture', 'Zone étudiée'];
+                $h .= '<tr><th class="l"></th><th class="v5">' . $e($c[0]) . '</th><th class="v10">' . $e($c[1]) . '</th><th>' . $e($c[2]) . '</th></tr>';
+                foreach ($d['garde'] as $r) {
+                    $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td class="v5" style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
+                        . '<td class="v10" style="white-space:nowrap"><b>' . $e($r[2]) . '</b></td><td style="white-space:nowrap">' . $e($r[3]) . '</td></tr>';
+                }
+            }
+            foreach ($d['gardeLignes'] as $r) {
+                $h .= '<tr class="kv"><td class="l"><b>' . $e($r[0]) . '</b></td><td class="l" colspan="3"><b>' . $e($r[1]) . '</b>'
+                    . ($r[2] !== '' ? ' <span class="mut">· ' . $e($r[2]) . '</span>' : '') . '</td></tr>';
+            }
+            $h .= '</table>';
+        }
+        if ($d['rampe'] !== []) {
+            $h .= '<table class="t garde" cellpadding="0" cellspacing="0"><tr><th class="l">CA prévu TTC · montée en charge</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Clients / jour</th></tr>';
+            $n = count($d['rampe']);
+            foreach ($d['rampe'] as $i => $r) {
+                $h .= '<tr' . ($i === $n - 1 ? ' class="tot"' : '') . '><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap">' . $e($r[1]) . '</td>'
+                    . '<td style="white-space:nowrap">' . $e($r[2]) . '</td><td style="white-space:nowrap"><b>' . $e($r[3]) . '</b></td><td style="white-space:nowrap">' . $e($r[4]) . '</td></tr>';
+            }
+            $h .= '</table>' . ($d['rampeNote'] !== '' ? '<div class="legende">' . $e($d['rampeNote']) . '</div>' : '');
+        }
+        $h .= '<div style="page-break-before:always"></div>';
     }
 
     if ($d['essentiel'] !== []) {
