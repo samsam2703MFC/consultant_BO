@@ -2505,34 +2505,37 @@ export class Scouting {
     const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
     // Trois lectures du même écart : la semaine, le mois, l'année. Le réel
     // est une moyenne par mois clos (et par semaine), projetée sur douze mois.
-    const duo = (a, b) => (a ? fmtEur(a) : '—') + ' prévu\n' + (b ? fmtEur(b) : '—') + ' réel';
-    // Chaque ligne : nom, semaine, mois, année (prévu / réel), la cible de
-    // l'année (le palier de la phase), sa lecture, réel / cible (mis en
-    // évidence), réel / plan, d'où viennent les chiffres (gardé pour
-    // l'export, plus affiché sous le nom : la note de bas de tableau le dit
-    // une fois pour tous), et le sens de l'écart pour la couleur.
-    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52) + ' prévu', fmtEur(x.ca / 12) + ' prévu', fmtEur(x.ca) + ' prévu (modèle)',
-      fmtEur(x.ca * PALIERS[0]), 'année 1 · 70 % du plan', '—', '—', 'le CA TTC que ce dossier prévoit, à comparer aux magasins ouverts', '']];
+    // Chaque ligne : nom, prévu et réel de la semaine, du mois, de l'année,
+    // la cible de l'année (le palier de la phase), réel / cible (mis en
+    // évidence), réel / plan, le sens de l'écart pour la couleur, et d'où
+    // viennent les chiffres (l'export CSV). La phase et les sources se
+    // lisent une fois pour tous, dans la note sous le tableau.
+    const eur = v => v ? fmtEur(v) : '—';
+    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52), '—', fmtEur(x.ca / 12), '—', fmtEur(x.ca), '—', fmtEur(x.ca * PALIERS[0]), '—', '—', '', 'le CA TTC que le modèle prévoit · année 1, 70 % du plan']];
     // d'où viennent les chiffres, regroupés : les magasins qui partagent la
-    // même source sont cités ensemble, et « tous » quand c'est le cas
+    // même source (ou la même phase) sont cités ensemble
     const mm = v => /^\d{4}-\d{2}$/.test(v || '') ? v.slice(5, 7) + '/' + v.slice(0, 4) : (v || '');
-    const gPrevu = {}, gReel = {}, noms = [];
+    const gPrevu = {}, gReel = {}, gPhase = {}, noms = [];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
       const prevu = f.prevu, reel = f.caReel || null;
       const nom = nomMagasin(f.nom).replace(/^magasin de /, '');
       noms.push(nom);
-      const kP = f.caPrevu ? 'prévu réaliste saisi dans « Magasins du réseau »' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'prévu de l’étude de marché' + (f.etude ? ' ' + f.etude : '') : 'pas de prévu, à saisir dans « Magasins du réseau »';
-      const kR = r.m.mois ? 'réel = moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + mm(r.m.du) + ' → ' + mm(r.m.au) + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'CA réel inconnu';
-      (gPrevu[kP] = gPrevu[kP] || []).push(nom); (gReel[kR] = gReel[kR] || []).push(nom);
-      const ouv = f.phase ? 'ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ' · ' : '';
-      const cibleNote = f.phase ? ouv + 'année ' + f.phase.annee + (f.phase.annee >= 4 ? ' et +' : '') + ' · ' + Math.round(f.phase.pct * 100) + ' % du plan' : (prevu ? 'ouverture à saisir dans Magasins du réseau' : 'prévu à saisir');
+      const kP = f.caPrevu ? 'saisi dans « Magasins du réseau »' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'celui de l’étude de marché' + (f.etude ? ' ' + f.etude : '') : 'à saisir dans « Magasins du réseau »';
+      const kR = r.m.mois ? 'moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + mm(r.m.du) + ' → ' + mm(r.m.au) + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'inconnu, pas de mois clos';
+      const kF = f.phase ? 'année ' + f.phase.annee + (f.phase.annee >= 4 ? ' et +' : '') + ' (' + Math.round(f.phase.pct * 100) + ' % du plan)' : 'ouverture à saisir dans « Magasins du réseau »';
+      const ouv = f.phase ? ' (ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ')' : '';
+      (gPrevu[kP] = gPrevu[kP] || []).push(nom); (gReel[kR] = gReel[kR] || []).push(nom); (gPhase[kF] = gPhase[kF] || []).push(nom + ouv);
       const rc = reel && f.objectif ? reel / f.objectif - 1 : null;
-      reseau.push([f.nom, duo(prevu ? prevu / 52 : null, reel ? reel / 52 : null), duo(prevu ? prevu / 12 : null, reel ? reel / 12 : null), duo(prevu, reel),
-        f.objectif ? fmtEur(f.objectif) : '—', cibleNote, ecart(reel, f.objectif), ecart(reel, prevu), kP + ' · ' + kR, rc == null ? '' : rc >= 0 ? 'pos' : 'neg']);
+      reseau.push([f.nom, eur(prevu ? prevu / 52 : 0), eur(reel ? reel / 52 : 0), eur(prevu ? prevu / 12 : 0), eur(reel ? reel / 12 : 0), eur(prevu), eur(reel),
+        eur(f.objectif), ecart(reel, f.objectif), ecart(reel, prevu), rc == null ? '' : rc >= 0 ? 'pos' : 'neg', 'prévu ' + kP + ' · réel : ' + kR + ' · ' + kF + ouv]);
     });
     const groupes = g => Object.keys(g).map(k => k + (g[k].length === noms.length && noms.length > 1 ? ' pour tous les magasins' : ' (' + g[k].join(', ') + ')')).join(' ; ');
-    const reseauNote = noms.length ? nomCom + ' — ce dossier : le CA TTC que le modèle prévoit, à comparer aux magasins ouverts. Magasins du réseau — ' + groupes(gPrevu) + '. ' + groupes(gReel).replace(/^./, c => c.toUpperCase()) + '.' : '';
+    const reseauNote = noms.length
+      ? 'Cible de l’année, le palier de la phase — ' + Object.keys(gPhase).map(k => k + ' : ' + gPhase[k].join(', ')).join(' ; ') + ' ; ' + nomCom + ' — ce dossier : année 1 (70 % du plan). '
+        + 'Prévu — ' + groupes(gPrevu) + ' ; ' + nomCom + ' — ce dossier : le CA TTC que le modèle prévoit, à comparer aux magasins ouverts. '
+        + 'Réel — ' + groupes(gReel) + '.'
+      : '';
     const montee = 'Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.';
     // le mini-tableau de la montée en charge : les paliers en euros, ce dossier
     // puis chaque magasin, la phase en cours marquée
@@ -2871,7 +2874,7 @@ export class Scouting {
     [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], 'les plus proches', x[1], '']); });
     if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
-    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1].replace(/\n/g, ' / ') + ' · mois : ' + r[2].replace(/\n/g, ' / ') + ' · année : ' + r[3].replace(/\n/g, ' / ') + ' · cible de l’année ' + r[4] + ' (' + r[5] + ') · réel/cible ' + r[6] + ' · réel/plan ' + r[7], r[8]]));
+    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1] + ' prévu / ' + r[2] + ' réel · mois : ' + r[3] + ' prévu / ' + r[4] + ' réel · année : ' + r[5] + ' prévu / ' + r[6] + ' réel · cible de l’année ' + r[7] + ' · réel/cible ' + r[8] + ' · réel/plan ' + r[9], r[11]]));
     if (d.montee) rows.push(['reseau', 'montée en charge', d.montee, '']);
     d.monteeRows.forEach(r => rows.push(['montee_en_charge', r[0], 'année 1 ' + r[1] + ' · année 2 ' + r[2] + ' · année 3 ' + r[3] + ' · année 4+ ' + r[4], +r[5] ? 'en cours : année ' + r[5] : '']));
     d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
