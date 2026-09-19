@@ -422,4 +422,8 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-19T08:27:19Z newsletter assistant quatre etapes sans reseaux
 2026-09-19T12:40:00Z application consultant pwa visites terrain
 2026-09-19T12:52:00Z visites tables action de visite renommees
+2026-09-19T13:44:45Z visites : conformité planogramme et assortiment
+2026-09-19T13:49:58Z visites : fenêtre d'assortiment calée sur la dernière vente
+2026-09-19T13:54:30Z visites : la fenêtre lue est dite dans les alertes
+2026-09-19T18:14:02Z visites : conclusion de visite en trois temps
 2026-09-19T13:20:00Z visites review vu sur place vrai probleme recommandation

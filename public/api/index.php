@@ -22,6 +22,7 @@ require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites.php';
+require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -268,6 +269,7 @@ function route(string $method, string $path): mixed
             $path === '/visites/synthese'              => ep_visites_synthese(),
             $path === '/visites/cron'                  => ep_visites_cron(),
             $path === '/visites/reglages'              => ep_visites_reglages(),
+            $path === '/visites/conformite'            => ep_visites_conformite(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),

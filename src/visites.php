@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 const VI_STATUTS_VISITE = ['planifiee', 'confirmee', 'en_cours', 'terminee', 'annulee'];
 const VI_MOTIFS         = ['reguliere', 'asap', 'due', 'revisite'];
-const VI_MODULES        = ['produit', 'hygiene', 'visuel', 'planogramme', 'msp'];
+const VI_MODULES        = ['produit', 'hygiene', 'visuel', 'planogramme', 'assortiment', 'msp'];
 const VI_PRIORITES      = ['P0', 'P1', 'P2'];
 const VI_ASSIGNES       = ['franchise', 'equipe', 'consultant', 'admin'];
 const VI_STATUTS_PLAN   = ['ouvert', 'attente', 'valide', 'reprendre', 'ferme', 'escalade'];
@@ -230,6 +230,15 @@ function viChecklistDefaut(): array
             ['ref' => 'comptoir_pains', 'libelle' => 'Comptoir pains', 'photo' => true, 'pct' => true],
             ['ref' => 'comptoir_viennoiserie', 'libelle' => 'Comptoir viennoiserie', 'photo' => true, 'pct' => true],
             ['ref' => 'comptoir_tartes', 'libelle' => 'Comptoir tartes et sablés', 'photo' => true, 'pct' => true]]],
+        // L'assortiment se contrôle après le planogramme : le comptoir dit où
+        // chaque référence va, l'assortiment dit lesquelles doivent y être. Ce
+        // que le cockpit sait déjà (obligatoires sans place, obligatoires
+        // jamais passées en caisse) s'affiche au-dessus du module ; ces points
+        // enregistrent ce que seul l'oeil sur place peut constater.
+        ['id' => 'assortiment', 'nom' => 'Assortiment', 'points' => [
+            ['ref' => 'obligatoires', 'libelle' => 'Références obligatoires toutes présentes en rayon', 'photo' => true],
+            ['ref' => 'ruptures', 'libelle' => 'Ruptures du jour — cause connue, parade en place', 'photo' => false],
+            ['ref' => 'etiquettes', 'libelle' => 'Étiquettes et prix conformes au référentiel', 'photo' => true]]],
         ['id' => 'msp', 'nom' => 'Mystery shopper', 'points' => [
             ['ref' => 'msp_hygiene', 'libelle' => 'Hygiène : ce que le rapport a relevé est corrigé', 'photo' => false],
             ['ref' => 'msp_accueil', 'libelle' => 'Accueil : conforme au rapport', 'photo' => false],
