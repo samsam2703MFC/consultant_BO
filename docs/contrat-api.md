@@ -619,6 +619,28 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - Tables : `ceo_nl_magasin`, `ceo_nl_source`, `ceo_nl_segment`, `ceo_nl_campagne` (créées et semées par `ensureNewsletter()` ; les magasins
   suivent `ep_stores()` à chaque démarrage). Les modèles (copy FR/NL/EN, SMS) vivent dans le module front `assets/js/newsletter.js`.
 
+**Le moteur** (`src/newsletter_envoi.php`) — contacts, envoi, suivi, horloge :
+
+- `POST /newsletter/contacts/import` (marque) `{ source, shop?, lot?, csv }` : CSV avec en-tête (`email` requis ; `prenom`, `nom`, `langue`,
+  `magasin`, `telephone`, `optin`, `optin_sms`, `dernier_achat`, `panier`, `produits`, `anniversaire`, `cree_le`) → `{ nouveaux, misAJour, ignores, lot, contacts }`.
+  Une base qui a des contacts compte pour de vrai (`sources[].reel`, `segments[].reel`) ; sinon le jeu d'essai reste.
+  `GET /newsletter/contacts/lots`, `DELETE /newsletter/contacts/lots/{lot}`.
+- `PUT /newsletter/reglages` (marque) `{ dispatch?, testAdresses?, slackWebhook?, domaine? }`. `dispatch: true` exige un SMTP configuré ;
+  tant qu'il est faux, **rien ne part** (mode test), la réponse de `/newsletter` porte `test: true`.
+- `POST /newsletter/test` `{ subject, body, headline, cta, templateId, lang, sender, voucher }` : le mail rendu part aux adresses de test
+  (`nlTestAdresses`, sinon l'expéditeur SMTP), même en mode test → `{ ok, simule, adresses, erreur }`.
+- `POST /newsletter/campagnes/{id}/envoyer` : la date passe à maintenant et l'horloge passe ; `POST /newsletter/tick` (marque) : l'horloge à la demande.
+- `GET /newsletter/cron?jeton=…` (`nlJeton`, cron toutes les 5 minutes par `bin/newsletter_cron.sh`) : campagnes dues par lots de 100 par minute
+  (500 par passage), statut `sched → live → sent` ; automatisations évaluées une fois par jour (`dormant45` : dernier achat il y a 45 jours
+  exactement ; `birthday` : J-3 ; `firstOffice` : compte office créé il y a 2 jours ; `third` : deux mails déjà reçus ; `season` : J-7 avant la
+  date de la campagne). Jamais deux mails au même contact le même jour, jamais deux fois la même campagne.
+- Suivi, routes publiques : `GET /newsletter/o/{token}` (pixel), `GET /newsletter/c/{token}` (clic → redirection vers `nlLienWebshop` ou le cockpit),
+  `GET /newsletter/u/{token}` (désinscription en un clic). Les stats d'une campagne envoyée viennent de `ceo_nl_envoi` (`stats.reel`).
+- Vouchers : codes uniques (8 caractères, `ceo_nl_voucher`) générés au départ jusqu'à `maxVouchers` ; `POST /newsletter/vouchers/{code}/utiliser` les encaisse.
+- Non branchés, et dits tels quels dans Paramètres : SMS (aucun fournisseur), LinkedIn et Instagram (brouillons à coller), Stripe. Slack part
+  par webhook (`nlSlackWebhook`) au départ de la campagne.
+- Page franchisé hors cockpit : `newsletter/?shop={id}` (même module, rôle = magasin).
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)
