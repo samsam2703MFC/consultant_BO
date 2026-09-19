@@ -415,3 +415,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-18T11:48:30Z scouting signe de vie google de toute la carte par lots
 2026-09-18T12:31:10Z resultat du jour serie de la semaine dans l api
 2026-09-18T13:12:40Z resultat du jour ligne de la semaine cases au resultat
+2026-09-19T06:40:10Z scouting lieux a demarcher dans l api
