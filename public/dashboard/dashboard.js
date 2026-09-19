@@ -863,7 +863,7 @@
   function rendActions(mobile) {
     let h = '';
     if (mobile) { h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Mon plan d’action · ce que le consultant a vu</div></div></div>`; }
-    h += '<div id="db-actions" style="min-height:60vh;padding:0 4px"></div>';
+    h += '<div id="db-actions" style="min-height:60vh;padding:0 4px ' + (mobile ? '96px' : '0') + '"></div>';
     if (mobile) { h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`; }
     return h;
   }
