@@ -419,3 +419,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-19T06:32:20Z rail erp franchise prospection mobile et newsletter en mode test
 2026-09-19T07:20:42Z newsletter moteur contacts envoi suivi horloge dispatch
 2026-09-19T08:01:34Z prospection type d offre par client et calcul par offre
+2026-09-19T08:27:19Z newsletter assistant quatre etapes sans reseaux
