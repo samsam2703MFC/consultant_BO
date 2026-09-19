@@ -8523,6 +8523,58 @@ function ep_scouting_etude(): array
     return $d;
 }
 
+/**
+ * GET /scouting/demarchage?lat&lng&r — les lieux à démarcher autour d'un
+ * point (entreprises, écoles, santé, administrations, formation, funéraire,
+ * sport, hôtels, commerces en zoning), avec adresse, téléphone et taille.
+ * Même mécanique que l'étude locale : un relevé OpenStreetMap gardé 45 jours
+ * dans ceo_scouting_etude (clé préfixée), un seul relevé à la fois par point.
+ */
+function ep_scouting_demarchage(): array
+{
+    $lat = (float) ($_GET['lat'] ?? 0); $lng = (float) ($_GET['lng'] ?? 0);
+    $r = (int) ($_GET['r'] ?? 5000);
+    if ($lat < 49.4 || $lat > 51.6 || $lng < 2.3 || $lng > 6.5) { http_response_code(400); return ['error' => 'point hors de Belgique']; }
+    $r = max(1000, min(20000, $r));
+    $lat = round($lat, 3); $lng = round($lng, 3);
+    $cle = md5('dem|' . number_format($lat, 3, '.', '') . ',' . number_format($lng, 3, '.', '') . ',' . $r);
+    $row = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
+    $force = !empty($_GET['force']);
+    if ($row !== null && !$force && strtotime((string) $row['fetched_at']) > time() - 45 * 86400) {
+        $d = json_decode((string) $row['payload'], true);
+        if (is_array($d)) { $d['cache'] = true; $d['releve'] = $row['fetched_at']; return $d; }
+    }
+    @set_time_limit(200);
+    @ini_set('memory_limit', '512M');
+    $verrou = 'scdem' . $cle;
+    $pris = Db::row('SELECT GET_LOCK(?, 190) AS l', [$verrou]);
+    if ($pris !== null && (int) $pris['l'] === 1 && !$force) {
+        $row2 = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
+        if ($row2 !== null && strtotime((string) $row2['fetched_at']) > time() - 45 * 86400) {
+            $d = json_decode((string) $row2['payload'], true);
+            if (is_array($d)) { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); $d['cache'] = true; $d['releve'] = $row2['fetched_at']; return $d; }
+        }
+    }
+    try {
+        $d = ScoutingOsm::demarchage($lat, $lng, $r);
+    } finally {
+        try { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); } catch (Throwable $e) { /* verrou déjà rendu */ }
+    }
+    if ($d === null) {
+        if ($row !== null) {
+            $old = json_decode((string) $row['payload'], true);
+            if (is_array($old)) { $old['cache'] = true; $old['perime'] = true; $old['releve'] = $row['fetched_at']; return $old; }
+        }
+        http_response_code(502);
+        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
+    }
+    Db::exec('INSERT INTO ceo_scouting_etude (cle, lat, lng, r, fetched_at, payload) VALUES (?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE fetched_at = VALUES(fetched_at), payload = VALUES(payload)',
+        [$cle, $lat, $lng, $r, date('Y-m-d H:i:s'), json_encode($d, JSON_UNESCAPED_UNICODE)]);
+    $d['cache'] = false; $d['releve'] = date('Y-m-d H:i:s');
+    return $d;
+}
+
 function ep_scouting_reseau(): array
 {
     try {
