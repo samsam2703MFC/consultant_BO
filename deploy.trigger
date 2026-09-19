@@ -416,3 +416,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-18T12:31:10Z resultat du jour serie de la semaine dans l api
 2026-09-18T13:12:40Z resultat du jour ligne de la semaine cases au resultat
 2026-09-19T06:40:10Z scouting lieux a demarcher dans l api
+2026-09-19T06:32:20Z rail erp franchise prospection mobile et newsletter en mode test
