@@ -18,6 +18,8 @@ require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/scouting_dossier.php';
+require __DIR__ . '/../../src/newsletter.php';
+require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -250,6 +252,8 @@ function route(string $method, string $path): mixed
             $path === '/scouting/reseau'               => ep_scouting_reseau(),
             $path === '/scouting/etude'                => ep_scouting_etude(),
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
+            $path === '/newsletter'                    => ep_newsletter(),
+            preg_match('#^/prospection/(\d{1,10})$#', $path, $m) === 1 => ep_prospection($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
         };
@@ -414,6 +418,13 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/scouting/magasins/(\d{1,10})$#', $path, $m)) { return wr_scouting_magasin_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
     if ($method === 'POST' && $path === '/scouting/dossier.pdf') { return wr_scouting_dossier_pdf(); }
+    // --- newsletter & campagnes (mode test : aucun envoi ne part)
+    if ($method === 'POST' && $path === '/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
+    if ($method === 'DELETE' && preg_match('#^/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
+    if ($method === 'POST' && $path === '/newsletter/segments') { return wr_newsletter_segment_post(); }
+    if ($method === 'PUT' && preg_match('#^/newsletter/magasins/(brand|\d{1,10})$#', $path, $m)) { return wr_newsletter_magasin_put($m[1]); }
+    if ($method === 'POST' && $path === '/newsletter/test') { return wr_newsletter_test_post(); }
+    if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/plan.pdf') { return wr_scouting_plan_pdf(); }
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }

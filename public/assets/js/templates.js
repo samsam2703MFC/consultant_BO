@@ -147,6 +147,10 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isPlan ? tplPlan(c, x) : ''}
+      ${c.isDemarchage ? tplDemarchage(c, x) : ''}
+      ${c.isNewsletter || c.isNewsletterShop ? tplNewsletter(c, x) : ''}
+      ${c.isProspection ? tplProspection(c, x) : ''}
+      ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
@@ -9527,5 +9531,175 @@ function tplSeuil(c, x){
         <td style="${TD};color:var(--color-text-muted)">${esc(r.faible)}</td>
       </tr>`).join('')}</tbody>
     </table></div>`}
+  </div>`;
+}
+
+
+/* --- Développement commercial : la liste de démarchage d'un magasin -------- */
+/* Deux lectures des mêmes lieux : le tableau, dense, pour préparer la liste ;
+   les fiches, par famille, pour la tournée. Chaque lieu porte sa case, la
+   date de visite, le retour et la note — la note l'envoie au CRM. */
+function tplDemarchage(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const inp = 'font-family:var(--font-ui);font-size:12px;padding:5px 7px;border-radius:7px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);box-sizing:border-box';
+  const btnP = 'border:none;background:var(--color-primary);color:#fff;border-radius:999px;padding:8px 16px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  const puce = on => `border:1px solid ${on ? 'var(--color-text)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-text)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};border-radius:999px;padding:4px 11px;font-size:11.5px;cursor:pointer;font-family:var(--font-ui)`;
+  const badgeCrm = `<span title="Annoté : part au CRM marketing" style="display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:2px 7px;border-radius:999px;background:#E6F2E9;color:#2d7a3e;white-space:nowrap">→ CRM</span>`;
+  const retourSel = l => `<select ${x.C(l.setRetour)} style="${inp};width:118px">${c.dmRetours.map(r => `<option value="${esc(r.v)}"${r.v === l.retour ? ' selected' : ''}>${esc(r.l)}</option>`).join('')}</select>`;
+  const dateInp = l => `<input type="date" value="${esc(l.visite)}" ${x.C(l.setVisite)} style="${inp};width:132px">`;
+  const noteInp = (l, w) => `<input type="text" value="${esc(l.note)}" placeholder="Annotation…" ${x.C(l.setNote)} style="${inp};width:${w}">`;
+  const coche = l => `<input type="checkbox" ${l.coche ? 'checked' : ''} ${x.C(l.setCoche)} style="width:16px;height:16px;accent-color:var(--color-primary);cursor:pointer">`;
+  const adresse = l => l.sansAdresse
+    ? `<span style="color:var(--color-text-muted)">adresse non cartographiée</span> <a href="${esc(l.maps)}" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:none;white-space:nowrap">📍 Maps</a>`
+    : `${esc(l.adresse)} <a href="${esc(l.maps)}" target="_blank" rel="noopener" title="Ouvrir dans Google Maps" style="color:var(--color-primary);text-decoration:none;white-space:nowrap">📍</a>`;
+  const entete = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
+      <select ${x.C(c.dmSetMagasin)} style="${SEL};font-weight:500">${c.dmMagasins.map(o => `<option value="${esc(o.id)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      <span style="font-size:12px;color:var(--color-text-muted)">Rayon</span>
+      <select ${x.C(c.dmSetR)} style="${SEL}">${c.dmRayons.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.l)}</option>`).join('')}</select>
+      <input type="search" value="${esc(c.dmQ)}" ${x.C(c.dmSetQ)} placeholder="Chercher un lieu, une rue…" style="${SEL};min-width:220px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" ${c.dmGrand ? 'checked' : ''} ${x.C(c.dmToggleGrand)} style="accent-color:var(--color-primary)">20 personnes et plus</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" ${c.dmSeul ? 'checked' : ''} ${x.C(c.dmToggleSeul)} style="accent-color:var(--color-primary)">Ma liste seulement</label>
+      <span style="flex:1"></span>
+      <span style="display:inline-flex;gap:4px">${c.dmVues.map(v => `<button ${x.A(v.go)} style="${puce(v.on)}">${esc(v.l)}</button>`).join('')}</span>
+      <button ${x.A(c.dmRefresh)} title="Relever à nouveau dans OpenStreetMap" style="${btnS}">↻ Relever</button>
+    </div>`;
+  if (c.dmChargement) { return `<div data-screen="demarchage" style="display:flex;flex-direction:column;gap:16px"><div style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture des magasins du réseau…</div></div>`; }
+  if (c.dmSansMagasin) { return `<div data-screen="demarchage" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">Aucun magasin du réseau n’a de position : pointez-les sur la carte dans Scouting — où ouvrir (Magasins du réseau).</div>`; }
+  if (c.dmLecture) { return `<div data-screen="demarchage" style="display:flex;flex-direction:column;gap:16px">${entete}<div style="${carte};padding:40px 20px;font-size:13px;color:var(--color-text-muted)">Relevé des lieux autour du magasin dans OpenStreetMap — une minute la première fois, puis gardé 45 jours…</div></div>`; }
+  if (c.dmErreur) { return `<div data-screen="demarchage" style="display:flex;flex-direction:column;gap:16px">${entete}<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.dmErreurTxt)}</div></div>`; }
+  const R = c.dmResume;
+  const resume = `
+    <div style="${carte};padding:12px 16px;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+      ${[['Lieux relevés', R.total, R.adresses + ' avec adresse · ' + R.zonings + ' zonings'], ['Affichés', R.montre, 'selon les filtres'], ['Cochés', R.coches, 'ma liste de démarchage'], ['Visités', R.visites, 'date de visite posée'], ['Annotés → CRM', R.annotes, 'à envoyer au CRM marketing']].map(t => `
+      <div><div style="${cap}">${esc(t[0])}</div><div style="font-family:var(--font-display);font-size:22px;line-height:1.1;margin-top:2px;${num}">${esc(String(t[1]))}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(t[2])}</div></div>`).join('')}
+      <span style="flex:1"></span>
+      <button ${x.A(c.dmExporter)} style="${btnS}" ${R.coches ? '' : 'disabled'}>⤓ Exporter ma liste (CSV)</button>
+      <button ${x.A(c.dmCrm)} style="${btnP}">Envoyer au CRM · ${esc(String(R.annotes))}</button>
+    </div>`;
+  const familles = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="${cap};margin-right:4px">Types</span>
+      ${c.dmFamilles.map(f => `<button ${x.A(f.go)} style="${puce(f.on)}">${esc(f.l)} <span style="opacity:.7">${esc(String(f.n))}</span></button>`).join('')}
+      <button ${x.A(c.dmToutesFam)} style="border:none;background:transparent;color:var(--color-text-muted);font-size:11px;cursor:pointer;font-family:var(--font-ui)">tous</button>
+    </div>`;
+  const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
+  const tableau = `
+    <div style="${carte};padding:6px 14px 10px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr>${['', 'Lieu', 'Type', 'Adresse', 'Dist.', 'Taille', 'Visite', 'Retour', 'Annotation', ''].map((h, i) => `<th style="text-align:${i === 4 ? 'right' : 'left'};padding:9px 8px 7px;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap">${esc(h)}</th>`).join('')}</tr>
+        ${c.dmLieux.map(l => `<tr style="${l.coche ? 'background:rgba(141,29,44,0.04)' : ''}">
+          <td style="padding:7px 4px 7px 8px;${bord};width:22px">${coche(l)}</td>
+          <td style="padding:7px 8px;${bord};min-width:180px"><div style="font-weight:600">${esc(l.nom)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.genre)}${l.zoning ? ' · ' + esc(l.zoning) : ''}${l.tel ? ' · ' + esc(l.tel) : ''}</div></td>
+          <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11.5px">${esc(l.fam)}</td>
+          <td style="padding:7px 8px;${bord};min-width:200px;font-size:11.5px">${adresse(l)}</td>
+          <td style="padding:7px 8px;${bord};text-align:right;white-space:nowrap;${num}">${esc(l.dist)}</td>
+          <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11px;color:${l.tailleCoul}">${esc(l.taille)}</td>
+          <td style="padding:5px 6px;${bord}">${dateInp(l)}</td>
+          <td style="padding:5px 6px;${bord}">${retourSel(l)}</td>
+          <td style="padding:5px 6px;${bord};min-width:180px">${noteInp(l, '100%')}</td>
+          <td style="padding:7px 8px 7px 4px;${bord}">${l.crm ? badgeCrm : ''}</td>
+        </tr>`).join('')}
+      </table>
+      ${c.dmLieux.length ? '' : `<div style="padding:20px 0;font-size:12.5px;color:var(--color-text-muted)">Aucun lieu ne passe les filtres.</div>`}
+    </div>`;
+  const fiche = l => `
+    <div style="background:var(--color-surface);border:1px solid ${l.coche ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:flex-start;gap:9px">
+        ${coche(l)}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;line-height:1.2">${esc(l.nom)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(l.genre)}${l.zoning ? ' · ' + esc(l.zoning) : ''}</div>
+        </div>
+        <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;${num}">${esc(l.dist)}</span>
+      </div>
+      <div style="font-size:11.5px;line-height:1.4">${adresse(l)}${l.tel ? `<div style="color:var(--color-text-muted)">${esc(l.tel)}</div>` : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10.5px;font-weight:600;color:${l.tailleCoul}">${esc(l.taille)}</span>${l.crm ? badgeCrm : ''}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:4px;border-top:0.5px dashed var(--color-border-tertiary)">${dateInp(l)}${retourSel(l)}</div>
+      ${noteInp(l, '100%')}
+    </div>`;
+  const fiches = c.dmGroupes.length ? c.dmGroupes.map(g => `
+    <div>
+      <div style="${cap};margin:6px 0 8px">${esc(g.l)} · ${esc(String(g.lieux.length))}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px">${g.lieux.map(fiche).join('')}</div>
+    </div>`).join('') : `<div style="${carte};padding:20px;font-size:12.5px;color:var(--color-text-muted)">Aucun lieu ne passe les filtres.</div>`;
+  return `
+  <div data-screen="demarchage" style="display:flex;flex-direction:column;gap:14px">
+    ${entete}
+    ${resume}
+    ${familles}
+    ${c.dmVue === 'cartes' ? fiches : tableau}
+    <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.5;text-wrap:pretty">${esc(c.dmNote)}</div>
+  </div>`;
+}
+
+/* --- Newsletter : module à part (assets/js/newsletter.js), monté après le rendu ---
+ * La vue marque (admin) et la vue magasin (franchisé) sont deux écrans du
+ * rail ; le module reçoit le rôle. Ici : l'en-tête, le choix du magasin pour
+ * la vue franchisé, et le nœud d'accueil. */
+function tplNewsletter(c, x){
+  const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const shop = c.isNewsletterShop;
+  return `
+  <div data-screen="${shop ? 'newsletterShop' : 'newsletter'}" style="display:flex;flex-direction:column;gap:12px">
+    ${shop ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="${cap}">Vue du magasin</span>
+      ${c.prChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</span>' : `<select ${x.C(c.prSetMagasin)} style="${SEL}">${c.prMagasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`}
+      <span style="font-size:11.5px;color:var(--color-text-muted)">Ce que le franchisé voit : ses segments, sa campagne, son adresse — pas les paramètres, pas les automatisations.</span>
+    </div>` : ''}
+    ${c.prSansMagasin && shop ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin pointé sur la carte.</div>' : ''}
+    <div id="newsletter-root" style="min-height:400px"></div>
+  </div>`;
+}
+
+/* --- Prospection : module à part (assets/js/prospection.js), monté après le rendu --- */
+function tplProspection(c, x){
+  const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  return `
+  <div data-screen="prospection" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="${cap}">Magasin</span>
+      ${c.prChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</span>' : `<select ${x.C(c.prSetMagasin)} style="${SEL}">${c.prMagasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`}
+      ${c.prMagasin ? `<span style="font-size:11.5px;color:var(--color-text-muted)">La même liste sur le téléphone : <a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="color:var(--color-primary)">Prospection mobile ↗</a></span>` : ''}
+    </div>
+    ${c.prSansMagasin ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin pointé sur la carte : pointez-le dans Scouting (Magasins du réseau).</div>' : ''}
+    <div id="prospection-root" style="min-height:400px"></div>
+  </div>`;
+}
+
+/* --- Prospection mobile : la page du téléphone, ses liens, un aperçu --- */
+function tplProspectionMobile(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  return `
+  <div data-screen="prospectionMobile" style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">
+        <div style="${cap};margin-bottom:8px">Le lien de chaque magasin</div>
+        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-bottom:12px">Une page à part, faite pour le téléphone : ma liste et l’annotation en tournée (un tap fait avancer le statut, la note part au CRM), la carte des concentrations, le CA possible. Elle lit et écrit la même réserve que l’écran Prospection : ce qui est coché au bureau l’est sur le téléphone, et inversement. À envoyer au franchisé, ou à ajouter à l’écran d’accueil de son téléphone.</div>
+        ${c.prChargement ? '<div style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</div>' : `<div style="display:flex;flex-direction:column;gap:6px">${c.prLiens.map(l => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:${l.on ? 'var(--color-background-secondary)' : 'transparent'}">
+            <button ${x.A(() => c.prSetMagasin({ target: { value: l.id } }))} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--color-text);text-align:left;flex:0 0 220px">${esc(l.nom)}</button>
+            <a href="${esc(l.url)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--color-primary);word-break:break-all;flex:1">${esc(l.url)}</a>
+          </div>`).join('')}</div>`}
+        ${c.prMagasin ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button ${x.A(c.prCopier)} style="${btnS}">Copier le lien de ${esc(c.prMagasin.nom)}</button><a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="${btnS};text-decoration:none;display:inline-flex;align-items:center">Ouvrir dans un onglet ↗</a></div>` : ''}
+      </div>
+    </div>
+    <div style="${carte};padding:14px 16px 16px">
+      <div style="${cap};margin-bottom:10px;display:flex;justify-content:space-between"><span>Aperçu · ${esc(c.prMagasin ? c.prMagasin.nom : '')}</span><span>390 × 760</span></div>
+      ${c.prMagasin ? `<div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.prLienMobile)}" title="Prospection mobile" style="width:390px;height:760px;border:none;display:block"></iframe></div>` : '<div style="font-size:12px;color:var(--color-text-muted)">Choisissez un magasin.</div>'}
+    </div>
   </div>`;
 }

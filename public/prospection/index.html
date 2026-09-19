@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prospection — L'Atelier by</title>
+<!-- Chemins RELATIFS : la page vit sous /prospection/, l'API sous ../api/cockpit.
+     La liste de démarchage en tournée : ma liste, l'annotation, la carte, le CA.
+     Même réserve serveur que l'écran Prospection du cockpit. -->
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<style>
+  html,body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-ui)}
+  #pm{height:100dvh;display:flex;flex-direction:column}
+  .pm-hd{display:flex;align-items:center;gap:9px;padding:10px 14px 8px;flex:0 0 auto}
+  .pm-hd img{height:22px}
+  .pm-hd .t{font-family:var(--font-display);font-size:16px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pm-hd .d{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pm-hd .mid{flex:1;min-width:0}
+  .pm-hd select{font-family:var(--font-ui);font-size:12px;padding:6px 8px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:34vw;flex:0 0 auto}
+  #pm-root{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .pr-mobile .pr-nav.mob{position:sticky;top:0;background:var(--color-bg);z-index:2;padding-top:2px}
+</style>
+</head>
+<body>
+<div id="pm">
+  <div class="pm-hd"><img src="../assets/img/logo.png" alt="">
+    <div class="mid"><div class="t" id="pm-nom">Prospection</div><div class="d" id="pm-sous">la liste de démarchage du magasin</div></div>
+    <select id="pm-shop" title="Magasin"></select></div>
+  <div id="pm-root"></div>
+</div>
+<script src="../assets/js/prospection.js"></script>
+<script>
+(function () {
+  const API = '../api/cockpit';
+  const q = new URLSearchParams(location.search);
+  let shop = q.get('shop') || '';
+  const sel = document.getElementById('pm-shop'), nom = document.getElementById('pm-nom'), sous = document.getElementById('pm-sous');
+  function monter() {
+    document.title = 'Prospection — ' + (nom.textContent || "L'Atelier by");
+    window.CockpitProspection.mount(document.getElementById('pm-root'), { shop, apiBase: API, mobile: true, leafletDir: '../assets/vendor/leaflet/' });
+  }
+  fetch(API + '/scouting/reseau', { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(r => r.json()).then(R => {
+    const ms = (R && R.magasins || []).filter(m => m.lat != null);
+    if (!shop && ms.length) shop = String(ms[0].id);
+    sel.innerHTML = ms.map(m => `<option value="${m.id}" ${String(m.id) === shop ? 'selected' : ''}>${String(m.nom).replace(/</g, '&lt;')}</option>`).join('');
+    const m = ms.find(x => String(x.id) === shop);
+    nom.textContent = m ? m.nom : 'Prospection';
+    sous.textContent = 'Prospection · ma liste, en tournée';
+    nom.title = nom.textContent;
+    monter();
+  }).catch(() => { sous.textContent = 'API injoignable'; monter(); });
+  sel.addEventListener('change', () => {
+    shop = sel.value;
+    const u = new URL(location.href); u.searchParams.set('shop', shop); history.replaceState(null, '', u);
+    nom.textContent = sel.options[sel.selectedIndex].textContent;
+    monter();
+  });
+})();
+</script>
+</body>
+</html>
