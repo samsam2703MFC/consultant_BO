@@ -71,6 +71,26 @@ function vcVendues(string $shop, string $du, string $au): ?array
 }
 
 /**
+ * Le dernier jour où la caisse de ce magasin a remonté une ligne de ticket.
+ *
+ * La fenêtre ne part pas d'aujourd'hui mais de là : une base arrêtée fin
+ * juillet ferait dire à trente jours de silence que toutes les obligatoires
+ * ont disparu du rayon, ce qui est un défaut de synchronisation, pas un
+ * défaut d'assortiment.
+ */
+function vcDerniereVente(string $shop): ?string
+{
+    if (!function_exists('utilColonnes')) { return null; }
+    $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
+    if ($ct === null) { return null; }
+    try {
+        $r = Db::row(sprintf('SELECT MAX(`%s`) AS d FROM `transaction` WHERE `%s` = ?', $ct['date'], $ct['shop']), [$shop]);
+    } catch (PDOException $e) { return null; }
+    $d = $r === null ? null : (string) ($r['d'] ?? '');
+    return $d !== null && $d !== '' ? substr($d, 0, 10) : null;
+}
+
+/**
  * Le comptoir tel qu'il est dessiné : emplacements, emplacements tenus, et
  * les références qui y ont une place.
  */
@@ -129,20 +149,30 @@ function ep_visites_conformite(): array
     $sid = (int) ($_GET['shop'] ?? 0);
     if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $jours = max(7, min(180, (int) ($_GET['jours'] ?? 30)));
-    $au = date('Y-m-d');
+    $auj = date('Y-m-d');
+    // La fenêtre se cale sur la dernière vente connue du magasin, et non sur
+    // aujourd'hui : une base en retard rendrait sinon un rayon entièrement vide.
+    $derniere = vcDerniereVente((string) $sid);
+    $au = $derniere !== null && $derniere < $auj ? $derniere : $auj;
     $du = date('Y-m-d', strtotime($au . ' -' . ($jours - 1) . ' days'));
+    $retard = $derniere === null ? null : (int) round((strtotime($auj) - strtotime($derniere)) / 86400);
 
     $comptoir = vcComptoir();
     $obl = vcObligatoires();
-    $vendues = vcVendues((string) $sid, $du, $au);
+    $vendues = $derniere === null ? null : vcVendues((string) $sid, $du, $au);
 
     // --- L'assortiment. Présente = vue au moins une fois sur la fenêtre.
     $assort = ['obligatoires' => count($obl), 'presentes' => 0, 'manquantes' => 0,
-        'pct' => null, 'liste' => [], 'du' => $du, 'au' => $au, 'jours' => $jours, 'motif' => null];
+        'pct' => null, 'liste' => [], 'du' => $du, 'au' => $au, 'jours' => $jours,
+        'derniereVente' => $derniere, 'retard' => $retard, 'motif' => null];
     if ($obl === []) {
         $assort['motif'] = 'aucune référence n’est déclarée obligatoire pour le réseau';
+    } elseif ($derniere === null) {
+        $assort['motif'] = 'la caisse de ce magasin n’a remonté aucune ligne de ticket';
     } elseif ($vendues === null) {
         $assort['motif'] = 'la caisse n’expose pas ses lignes de ticket sur cette base';
+    } elseif ($vendues === []) {
+        $assort['motif'] = 'aucune vente sur la fenêtre : rien à conclure de l’assortiment';
     } else {
         $manquantes = []; $sansId = 0;
         foreach ($obl as $p) {
@@ -179,7 +209,7 @@ function ep_visites_conformite(): array
         'montage' => vcMontage($sid, $au)];
     $plano['comptoirsMontes'] = count($plano['montage']);
 
-    return ['shop' => (string) $sid, 'jour' => $au, 'lu' => date('Y-m-d H:i'),
+    return ['shop' => (string) $sid, 'jour' => $auj, 'lu' => date('Y-m-d H:i'),
         'planogramme' => $plano, 'assortiment' => $assort,
         'source' => ['planogramme' => 'cockpit — comptoir dessiné, placements et photos de montage',
             'assortiment' => 'catalogue (références obligatoires) × lignes de ticket du magasin']];
