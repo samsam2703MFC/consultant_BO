@@ -268,6 +268,7 @@ class App {
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
+      appAgenda: 'app-consultant', appPlans: 'app-plans-action', appSynthese: 'app-synthese', appMobile: 'app-mobile', appReglages: 'app-reglages',
     };
   }
   /**
@@ -586,6 +587,10 @@ class App {
       const role = this.state.screen === 'newsletter' ? 'brand' : String((this.dmMagasin() || {}).id || '');
       if (role) window.CockpitNewsletter.mount(document.getElementById('newsletter-root'), { role, apiBase: API_BASE, imgDir: 'assets/img/newsletter/', notify: msg => this.notify(msg) });
     }
+    if (this.state.ready && /^app(Agenda|Plans|Synthese|Reglages)$/.test(this.state.screen) && window.CockpitVisites){
+      const vue = { appAgenda: 'agenda', appPlans: 'admin', appSynthese: 'synthese', appReglages: 'reglages' }[this.state.screen];
+      window.CockpitVisites.mount(document.getElementById('visites-root'), { role: 'admin', vue, apiBase: API_BASE, mobile: false, racine: '', notify: msg => this.notify(msg) });
+    }
 
     // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
     // `usageInventaire`). Après la fusion, jamais avant : c'est le DOM vivant
@@ -888,6 +893,11 @@ class App {
       newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
       prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
       prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
+      appAgenda: ['Application consultant', 'L\u2019agenda des visites et les boutiques, tels que le consultant les voit sur le téléphone : feu par boutique, fiche de visite, tableau de bord, checklist, review et plan d\u2019action. Ici sur grand écran, la même chose.'],
+      appPlans: ['Plans d\u2019action', 'Les corrections envoyées par les franchisés, à accepter ou à renvoyer ; les escalades et les retards. Le workflow à trois : franchisé, admin, consultant terrain.'],
+      appSynthese: ['Synthèse réseau', 'La synthèse quotidienne : plans en cours, en attente, fermés ; chaque boutique avec son feu, sa dernière visite, son CA, sa note Google ; les escalades possibles et les actions du jour.'],
+      appMobile: ['Application mobile', 'La page à installer sur le téléphone du consultant, du franchisé et de l\u2019admin : un lien par personne, un aperçu. Elle fonctionne hors ligne et rejoue ses écritures au retour du réseau.'],
+      appReglages: ['Réglages visites', 'La checklist par module, les seuils du feu tricolore, la fréquence de visite par boutique, l\u2019horloge des rappels et de la synthèse.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
@@ -1295,6 +1305,14 @@ class App {
         ['prospectionMobile', 'Prospection mobile', 0],
         ['newsletter', 'Newsletter', 0],
         ['newsletterShop', 'Newsletter magasin', 0]]],
+      // L'application terrain : ce que le consultant, le franchisé et l'admin
+      // ont sur le téléphone — et ici, sur grand écran.
+      ['Application consultant', [
+        ['appAgenda', 'Agenda & boutiques', 0],
+        ['appPlans', 'Plans d’action', 0],
+        ['appSynthese', 'Synthèse réseau', 0],
+        ['appMobile', 'Application mobile', 0],
+        ['appReglages', 'Réglages visites', 0]]],
       ['Contrôle', [
         ['suivi', 'Tâches', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
         ['reporting', 'Reporting automatisé', 0]]],
@@ -1327,11 +1345,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isAppVisites', 'isAppMobile'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', appAgenda: 'isAppVisites', appPlans: 'isAppVisites', appSynthese: 'isAppVisites', appReglages: 'isAppVisites', appMobile: 'isAppMobile' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1718,6 +1736,7 @@ class App {
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
     if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
     if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
+    if (common.isAppVisites || common.isAppMobile) this.valsAppVisites(common);
     if (common.isBxc) this.valsBxc(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
@@ -7308,6 +7327,23 @@ class App {
     this.setState({});
   }
   /** Les écrans Prospection, Prospection mobile et Newsletter magasin : le magasin choisi, le lien mobile. */
+  /** L'application terrain : l'écran monté, et les liens du téléphone. */
+  valsAppVisites(common){
+    const S = this.state;
+    common.appScreen = S.screen;
+    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+    if (!this.D.viConsultants && !this._viConsEnCours) {
+      this._viConsEnCours = true;
+      readOne('/consultants').then(r => { this._viConsEnCours = false; this.D.viConsultants = Array.isArray(r) ? r : []; this.setState({}); });
+    }
+    const cons = this.D.viConsultants || [];
+    common.viConsultants = cons.map(c => ({ id: String(c.id), nom: c.nom, url: base + 'visites/?role=consultant&id=' + encodeURIComponent(String(c.id)) }));
+    common.viMagasins = this.open().map(m => ({ id: String(m.id), nom: m.nom, url: base + 'visites/?shop=' + encodeURIComponent(String(m.id)) }));
+    common.viAdmin = base + 'visites/?role=admin';
+    common.viApercu = S.viApercu || (common.viConsultants[0] ? common.viConsultants[0].url : common.viAdmin);
+    common.viChoisir = url => () => this.setState({ viApercu: url });
+    common.viCopier = url => () => { try { navigator.clipboard.writeText(url); this.notify('Lien copié — à ouvrir sur le téléphone.'); } catch (e) { this.notify('Copie impossible : sélectionnez le lien.'); } };
+  }
   valsProspection(common){
     const ms = this.dmMagasins();
     const m = this.dmMagasin();

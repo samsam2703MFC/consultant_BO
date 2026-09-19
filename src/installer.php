@@ -51,6 +51,7 @@ function ensureInstalled(): void
     ensureScouting();
     ensureNewsletter();
     ensureProspection();
+    ensureVisites();
 }
 
 /**

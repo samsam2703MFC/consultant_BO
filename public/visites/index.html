@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3efe9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Visites — L'Atelier by</title>
+<!-- L'application terrain : consultant (?role=consultant&id=u8), franchisé (?shop=3), admin (?role=admin).
+     Chemins RELATIFS : la page vit sous /visites/, l'API sous ../api/cockpit. Installable (manifest + service worker). -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="apple-touch-icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<style>
+  html, body { margin: 0; background: var(--color-bg); font-family: var(--font-ui); color: var(--color-text); }
+  .en-tete { display: flex; align-items: center; gap: 10px; padding: 12px 14px 4px; }
+  .en-tete img { height: 22px; }
+  .en-tete .t { font-family: var(--font-display); font-size: 17px; line-height: 1.1; }
+  .en-tete .d { font-size: 11px; color: var(--color-text-muted); }
+  .en-tete .sp { flex: 1; }
+  .en-tete .av { width: 30px; height: 30px; border-radius: 50%; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
+  .en-tete .av.fr { background: #78554B; }
+  #visites-root { min-height: 70vh; }
+</style>
+</head>
+<body>
+<div class="en-tete"><img src="../assets/img/logo.png" alt="L'Atelier by"><div><div class="t" id="titre">Visites</div><div class="d" id="sous">…</div></div><span class="sp"></span><div class="av" id="av">—</div></div>
+<div id="visites-root"></div>
+<script src="../assets/js/visites.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var shop = q.get('shop') || '';
+  var role = shop ? 'franchise' : (q.get('role') === 'admin' ? 'admin' : 'consultant');
+  var id = q.get('id') || localStorage.getItem('vi.moi') || '';
+  if (role === 'consultant' && q.get('id')) { localStorage.setItem('vi.moi', q.get('id')); }
+  var av = document.getElementById('av');
+  av.textContent = role === 'franchise' ? 'FR' : role === 'admin' ? 'AD' : (id ? id.replace(/^u/, '').slice(0, 2) : '?');
+  av.className = 'av' + (role === 'franchise' ? ' fr' : '');
+  document.getElementById('titre').textContent = role === 'franchise' ? 'Mon plan d’action' : role === 'admin' ? 'Validations et synthèse' : 'Visites terrain';
+  document.getElementById('sous').textContent = role === 'franchise' ? 'boutique ' + shop : role === 'admin' ? 'vue admin' : 'consultant';
+  var h = window.CockpitVisites.mount(document.getElementById('visites-root'), {
+    role: role, id: id, shop: shop, apiBase: '../api/cockpit', mobile: true, racine: '../',
+  });
+  // Le titre suit la boutique une fois lue.
+  var t = setInterval(function () {
+    if (!h || !h.D) { return; }
+    clearInterval(t);
+    var b = role === 'franchise' ? h.boutique(shop) : null;
+    if (b) { document.getElementById('sous').textContent = b.nom; }
+    else if (role === 'consultant') { document.getElementById('sous').textContent = h.consultantNom(h.moi) || 'choisissez qui vous êtes (Réglages)'; }
+    if (role === 'consultant' && h.moi) { av.textContent = (h.consultantNom(h.moi) || '?').split(/\s+/).map(function (x) { return x[0]; }).join('').slice(0, 2).toUpperCase(); }
+  }, 300);
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function () {}); }
+})();
+</script>
+</body>
+</html>

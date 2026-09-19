@@ -262,3 +262,15 @@ Puis dans le navigateur : `$BASE/` →
 | `/api/cockpit/*` → 404 | `mod_rewrite` inactif ou `AllowOverride` ≠ `All` sur le répertoire |
 | Partages panel vides | `mac_report_share` inexistante (aucun partage encore créé côté panel) — normal, volet vide |
 | Boutique « #n » au lieu du nom dans les partages | `ceo_shop.pwa_shop_id` pas encore mappé aux vrais ids du panel |
+
+## Application terrain (visites)
+
+Le même fichier cron porte l'**horloge des visites** : toutes les 5 minutes,
+`bin/visites_cron.sh` appelle `/api/cockpit/visites/cron?jeton=…` (jeton
+`visitesJeton` lu en base). L'horloge escalade les P0 dont l'échéance est
+dépassée, envoie les rappels J-1 (18 h) et jour J (7 h) et la synthèse du
+matin (7 h), une fois par jour chacun. Les photos de visite vivent sous
+`public/uploads/visites/` (exclu du rsync, créé et donné à www-data par le
+déploiement, hors git). Les mails ne partent que si le réglage `mails` est
+activé dans Réglages visites ; les notifications push partent toujours vers
+les abonnements existants.

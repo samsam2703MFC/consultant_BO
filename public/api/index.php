@@ -21,6 +21,7 @@ require __DIR__ . '/../../src/scouting_dossier.php';
 require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/prospection.php';
+require __DIR__ . '/../../src/visites.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -263,6 +264,11 @@ function route(string $method, string $path): mixed
             $path === '/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),
             preg_match('#^/prospection/(\d{1,10})$#', $path, $m) === 1 => ep_prospection($m[1]),
+            $path === '/visites/app'                   => ep_visites_app(),
+            $path === '/visites/synthese'              => ep_visites_synthese(),
+            $path === '/visites/cron'                  => ep_visites_cron(),
+            $path === '/visites/reglages'              => ep_visites_reglages(),
+            preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
         };
@@ -441,6 +447,18 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
+    // --- visites terrain (application consultant, franchisé, admin)
+    if ($method === 'POST' && $path === '/visites') { return wr_visites_post(); }
+    if ($method === 'PUT' && $path === '/visites/reglages') { return wr_visites_reglages_put(); }
+    if ($method === 'POST' && $path === '/visites/tick') { return wr_visites_tick(); }
+    if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }
+    if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_put($m[1]); }
+    if ($method === 'POST' && $path === '/plans') { return wr_plans_post(); }
+    if ($method === 'PUT' && preg_match('#^/plans/([\w-]{1,40})$#', $path, $m)) { return wr_plans_put($m[1]); }
+    if ($method === 'POST' && $path === '/msp') { return wr_msp_post(); }
+    if ($method === 'DELETE' && preg_match('#^/msp/(\d+)$#', $path, $m)) { return wr_msp_delete((int) $m[1]); }
+    if ($method === 'PUT' && preg_match('#^/equipe/(\d{1,10})$#', $path, $m)) { return wr_equipe_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/plan.pdf') { return wr_scouting_plan_pdf(); }
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }
