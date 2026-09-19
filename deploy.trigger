@@ -427,3 +427,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-19T13:54:30Z visites : la fenêtre lue est dite dans les alertes
 2026-09-19T18:14:02Z visites : conclusion de visite en trois temps
 2026-09-19T13:20:00Z visites review vu sur place vrai probleme recommandation
+2026-09-19T14:05:00Z fusion des branches controle guide plan d action dans le dashboard posts facebook
