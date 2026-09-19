@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — PWA Visites consultant</title>
+<!-- Maquette statique des dix écrans du brief « Suivi franchisé & consultation ».
+     Un écran à la fois : ?ecran=agenda|portfolio|fiche|tb|checklist|review|historique|sam|franchise|admin
+     Données : magasins, notes Google, CA de la semaine et consultants réels du cockpit (19/09/2026) ;
+     le reste (visites, plans d'action, MSP) est illustratif. Aucun nom de client. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<style>
+  html,body{margin:0;background:#cfc7bc;font-family:var(--font-ui);color:var(--color-text);font-size:14px;line-height:1.45}
+  .tel{width:390px;min-height:844px;margin:16px auto;background:var(--color-bg);border-radius:30px;overflow:hidden;position:relative;box-shadow:0 14px 40px rgba(0,0,0,.25)}
+  .tel.tab{width:820px;min-height:700px;border-radius:18px}
+  .sb{display:flex;justify-content:space-between;padding:12px 22px 4px;font-size:12px;font-weight:600}
+  .hd{display:flex;align-items:center;gap:10px;padding:8px 18px 10px}
+  .hd img{height:22px}
+  .hd .t{font-family:var(--font-display);font-size:19px;line-height:1.1}
+  .hd .d{font-size:11px;color:var(--color-text-muted)}
+  .hd .sp{flex:1}
+  .hd .av{width:32px;height:32px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+  .sc{padding:0 14px 90px}
+  .tab .sc{padding:0 22px 30px}
+  .card{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  .cap{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:14px 2px 6px}
+  .row{display:flex;align-items:center;gap:8px}
+  .sp{flex:1}
+  .feu{width:12px;height:12px;border-radius:50%;flex:0 0 auto;display:inline-block}
+  .v{background:#2d7a3e}.o{background:#E0A526}.r{background:#C0182B}
+  .pill{display:inline-flex;align-items:center;gap:4px;font:700 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+  .api{background:#E6F2E9;color:#2d7a3e}.loc{background:#F7E4E6;color:#C0182B}.mix{background:#FBEFE0;color:#B26A00}
+  .p0{background:#C0182B;color:#fff}.p1{background:#E0A526;color:#3a2a00}.p2{background:var(--color-background-secondary);color:var(--color-text)}
+  .st-ouv{background:#FBEFE0;color:#B26A00}.st-att{background:#FFF6D6;color:#7a5a00}.st-val{background:#E6F2E9;color:#2d7a3e}.st-rep{background:#EEE6FA;color:#5b3d9e}.st-fer{background:var(--color-background-secondary);color:var(--color-text-muted)}.st-esc{background:#C0182B;color:#fff}
+  .k{font-family:var(--font-display);font-size:22px;line-height:1}
+  .mu{color:var(--color-text-muted)}.sm{font-size:11.5px}.xs{font-size:10.5px}
+  .up{color:#2d7a3e}.dn{color:#C0182B}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;padding:10px 14px;font:600 13px var(--font-ui);border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)}
+  .btn.p{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+  .btn.w{width:100%;box-sizing:border-box}
+  .btn.s{padding:6px 10px;font-size:11.5px;border-radius:8px}
+  .btns{display:flex;gap:8px;margin-top:10px}
+  .bas{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:var(--color-surface);border-top:.5px solid var(--color-border-tertiary);padding:8px 0 16px}
+  .bas div{text-align:center;font:600 10px var(--font-ui);color:var(--color-text-muted)}
+  .bas div i{display:block;font-style:normal;font-size:17px;opacity:.55;margin-bottom:2px}
+  .bas div.on{color:var(--color-primary)}.bas div.on i{opacity:1}
+  .jour{display:grid;grid-template-columns:54px 1fr;gap:10px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+  .jour .j{font-size:11px;color:var(--color-text-muted);line-height:1.3}.jour .j b{display:block;font-size:14px;color:var(--color-text)}
+  .vis{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:9px 11px}
+  .vis b{font-size:14px}
+  .libre{color:var(--color-text-muted);font-size:12px;padding:6px 0}
+  .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
+  .al{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:12.5px}
+  .al:last-child{border:none}
+  .ph{height:120px;border-radius:10px;background:linear-gradient(135deg,#d8cfc3,#bfb3a4);display:flex;align-items:center;justify-content:center;color:#6b5f52;font-size:12px;position:relative}
+  .ph small{position:absolute;left:8px;bottom:6px;font-size:10px;background:rgba(0,0,0,.45);color:#fff;padding:2px 6px;border-radius:6px}
+  .phs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .phs .ph{height:70px}
+  .mod{margin-top:12px}
+  .mod .th{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .mod .th b{font-size:14px}
+  .pt{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:9px 11px;margin-bottom:6px}
+  .pt .l1{display:flex;align-items:center;gap:8px}
+  .cb{width:18px;height:18px;border:1.5px solid var(--color-border-secondary);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+  .cb.on{background:#2d7a3e;border-color:#2d7a3e;color:#fff}.cb.ko{background:#C0182B;border-color:#C0182B;color:#fff}
+  .notes{display:flex;gap:3px}
+  .notes i{width:22px;height:22px;border-radius:6px;background:var(--color-background-secondary);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;font-weight:600;color:var(--color-text-muted)}
+  .notes i.on{background:var(--color-text);color:#fff}
+  .notes i.bad{background:#C0182B;color:#fff}
+  .act{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .chip{font:600 11px var(--font-ui);padding:5px 9px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface)}
+  .chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+  .bar{height:6px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;background:var(--color-primary)}
+  .spark{display:flex;align-items:flex-end;gap:4px;height:44px;margin-top:6px}
+  .spark i{flex:1;background:#d8cfc3;border-radius:3px 3px 0 0}
+  .spark i.o{background:var(--color-primary)}
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .tbl th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:8px 8px;border-bottom:.5px solid var(--color-border-tertiary)}
+  .tbl td{padding:9px 8px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:top}
+  .tbl td b{font-size:13.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px}
+  .src{font-size:10px;color:var(--color-text-muted);margin-top:2px}
+  .toast{position:absolute;left:14px;right:14px;bottom:86px;background:var(--color-text);color:#fff;border-radius:12px;padding:10px 12px;font-size:12px}
+  .plan{border-left:3px solid var(--color-border-secondary);padding-left:10px;margin:8px 0}
+  .plan.p0b{border-color:#C0182B}.plan.p1b{border-color:#E0A526}.plan.p2b{border-color:#9a8c6a}
+  .stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px;text-align:center}
+  section{display:none}section.on{display:block}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SB = `<div class="sb"><span>09:47</span><span>●●●● ▲ 92 %</span></div>`;
+const HD = (t, d, ic) => `<div class="hd"><img src="../../../public/assets/img/logo.png" alt=""><div><div class="t">${t}</div><div class="d">${d}</div></div><span class="sp"></span>${ic || '<div class="av">LV</div>'}</div>`;
+const BAS = (on) => `<div class="bas">${[['agenda', '📅', 'Agenda'], ['portfolio', '🏪', 'Boutiques'], ['plans', '✅', 'Plans'], ['config', '⚙️', 'Réglages']].map(x => `<div class="${x[0] === on ? 'on' : ''}"><i>${x[1]}</i>${x[2]}</div>`).join('')}</div>`;
+const API = '<span class="pill api">API</span>', LOC = '<span class="pill loc">Local</span>', MIX = '<span class="pill mix">API + local</span>';
+const E = {};
+
+/* 0. Agenda semaine — l'écran d'accueil */
+E.agenda = `<div class="tel">${SB}${HD('Loic V. — semaine 39', 'du lundi 21 au dimanche 27 septembre')}
+<div class="sc">
+  <div class="row" style="margin:4px 2px 8px"><span class="chip on">Semaine</span><span class="chip">Mois</span><span class="chip">Liste</span><span class="sp"></span><span class="xs mu">dernière sync 09:41 ✓</span></div>
+  <div class="jour"><div class="j"><b>Lun 21</b>10h – 11h30</div><div class="vis"><div class="row"><span class="feu o"></span><b>Corbais</b><span class="sp"></span><span class="pill" style="background:var(--color-background-secondary)">confirmée</span></div>
+    <div class="sm mu" style="margin-top:3px">CA semaine 30 404 € vs 35 177 € objectif · −14 % · Google 4,1 (754 avis)</div><div class="sm" style="margin-top:2px">1 non-conformité ouverte · frigo vitrine</div><div class="act"><span class="btn s p">Ouvrir la fiche</span></div></div></div>
+  <div class="jour"><div class="j"><b>Mar 22</b>09h – 10h30</div><div class="vis" style="border-color:#e8b4bb"><div class="row"><span class="feu r"></span><b>Gosselies</b><span class="sp"></span><span class="pill p0">prioritaire</span></div>
+    <div class="sm" style="margin-top:3px;color:#C0182B">🚨 P0 hygiène ouvert depuis 3 j · pas de photo franchisé</div><div class="sm mu" style="margin-top:2px">CA semaine 9 038 € vs 14 305 € · −37 %</div><div class="act"><span class="btn s p">Ouvrir la fiche</span><span class="btn s">Appeler</span></div></div></div>
+  <div class="jour"><div class="j"><b>Mer 23</b></div><div class="libre">Libre</div></div>
+  <div class="jour"><div class="j"><b>Jeu 24</b>14h – 15h</div><div class="vis"><div class="row"><span class="feu v"></span><b>Sombreffe</b><span class="sp"></span><span class="pill" style="background:var(--color-background-secondary)">confirmée</span></div>
+    <div class="sm mu" style="margin-top:3px">Google 4,8 (69 avis) · aucune alerte · planogramme 92 %</div><div class="act"><span class="btn s p">Ouvrir la fiche</span></div></div></div>
+  <div class="jour"><div class="j"><b>Ven 25</b>10h – 11h30</div><div class="vis"><div class="row"><span class="feu o"></span><b>Halle</b><span class="sp"></span><span class="pill" style="background:var(--color-background-secondary)">planifiée</span></div>
+    <div class="sm mu" style="margin-top:3px">CA semaine 9 512 € vs 13 367 € · −29 % · Google 4,5 (46)</div><div class="sm" style="margin-top:2px">P1 planogramme comptoir 1 · en attente validation</div><div class="act"><span class="btn s p">Ouvrir la fiche</span></div></div></div>
+  <div class="jour"><div class="j"><b>Sam 26</b></div><div class="libre">Libre</div></div>
+  <div class="cap">À planifier</div>
+  <div class="card"><div class="row"><b>Gosselies — revisite</b><span class="sp"></span><span class="pill p0">ASAP</span></div><div class="sm mu">P0 non fermé après validation : à confirmer sur place dès cette semaine.</div><div class="act"><span class="btn s p">⚡ Visiter cette semaine</span></div></div>
+  <div class="card"><div class="row"><b>Sombreffe — visite due</b><span class="sp"></span><span class="pill st-att">due depuis 2 j</span></div><div class="sm mu">Dernière visite le 10 septembre · fréquence hebdomadaire.</div><div class="act"><span class="btn s">📅 Planifier</span></div></div>
+  <div class="cap">Demain matin</div>
+  <div class="card sm">🔔 Rappel J-1 posé pour Corbais : « Lundi 10h — 1 non-conformité frigo à revoir, CA −14 % ». Le franchisé reçoit le sien ce soir.</div>
+</div>${BAS('agenda')}</div>`;
+
+/* 1. Portfolio */
+E.portfolio = `<div class="tel">${SB}${HD('Mes boutiques', '4 ouvertes · feu par boutique')}
+<div class="sc">
+  ${[['v', 'Sombreffe', 'CA ↗ · Google 4,8 · 0 alerte', 'visite jeudi 14h'], ['o', 'Corbais', 'CA −14 % vs objectif · Google 4,1 ↘ · 1 NC', 'visite lundi 10h'], ['r', 'Gosselies', 'P0 hygiène +3 j · CA −37 % · 2 NC', 'visite mardi 09h'], ['o', 'Halle', 'CA −29 % · Google 4,5 → · P1 en attente', 'visite vendredi 10h']].map(b => `
+  <div class="card"><div class="row"><span class="feu ${b[0]}"></span><b style="font-size:16px">${b[1]}</b><span class="sp"></span><span class="xs mu">${b[3]}</span></div><div class="sm mu" style="margin-top:4px">${b[2]}</div>
+    <div class="row" style="margin-top:8px;gap:6px"><span class="pill api">CA · Google</span><span class="pill loc">NC · planogramme</span><span class="sp"></span><span class="btn s">Tableau de bord</span></div></div>`).join('')}
+  <div class="cap">Comment le feu se calcule</div>
+  <div class="card sm mu">🟢 CA stable ou ↗, Google ≥ 4,5, pas de P0, planogramme ≥ 80 %<br>🟡 CA ↘ 5–10 %, Google ↓ 0,5, P1 ouvert, planogramme 60–79 %<br>🔴 P0 ouvert &gt; 3 j, Google ↓ &gt; 0,5, alerte MSP, planogramme &lt; 60 %</div>
+</div>${BAS('portfolio')}</div>`;
+
+/* 1.3 Fiche visite avant d'y aller */
+E.fiche = `<div class="tel">${SB}${HD('Visite — Gosselies', 'mardi 22 septembre · 09h – 10h30', '<span class="pill p0">prioritaire</span>')}
+<div class="sc">
+  <div class="card"><div class="row"><span>📍</span><div><b>Atelier by Max &amp; Sandra</b><div class="sm mu">Gosselies · 25 min depuis Corbais</div></div><span class="sp"></span><span class="btn s">GPS</span></div>
+    <div class="row" style="margin-top:8px"><span>🕐</span><div class="sm">Durée prévue 1h30 · 09h – 10h30</div><span class="sp"></span><span class="btn s">Reprogrammer</span></div></div>
+  <div class="cap">Tableau de bord — aperçu</div>
+  <div class="kpi">
+    <div><div class="row xs mu">CA semaine ${API}</div><div class="k" style="margin-top:4px">9 038 €</div><div class="sm dn">−37 % vs 14 305 € objectif</div></div>
+    <div><div class="row xs mu">Google ${API}</div><div class="k" style="margin-top:4px">4,5</div><div class="sm mu">148 avis · dernier avis 2/5</div></div>
+    <div><div class="row xs mu">Non-conformités ${LOC}</div><div class="k" style="margin-top:4px;color:#C0182B">2</div><div class="sm mu">1 P0 · 1 P1 · retard +3 j</div></div>
+    <div><div class="row xs mu">Équipe ${LOC}</div><div class="k" style="margin-top:4px">6 / 7</div><div class="sm mu">1 départ ce mois</div></div>
+  </div>
+  <div class="cap">Priorités du jour</div>
+  <div class="card">
+    <div class="plan p0b"><div class="row"><span class="pill p0">P0</span><b>Hygiène zone arrière</b></div><div class="sm mu">Ouvert le 19/09 · délai dépassé de 1 j · franchisé n'a pas envoyé de photo</div></div>
+    <div class="plan p1b"><div class="row"><span class="pill p1">P1</span><b>Rupture croissants (2 j)</b></div><div class="sm mu">Cause probable : approvisionnement · à vérifier avec le fournisseur</div></div>
+    <div class="plan p2b"><div class="row"><span class="pill p2">P2</span><b>Affichage prix comptoir 2</b></div><div class="sm mu">Photo franchisé validée le 20/09 · à confirmer sur place</div></div>
+  </div>
+  <div class="card sm"><b>Avant d'entrer</b><div class="mu">Google : 2 avis ≤ 2/5 ce mois (sandwich, galette trop cuite). MSP septembre : hygiène 15/20 — zone arrière signalée. Regarder l'arrière en premier.</div></div>
+  <div class="card sm">✅ Franchisé prévenu hier 18h · « Consultant demain 09h — préparez la photo du frigo »</div>
+  <div class="btns"><span class="btn p w">▶ Démarrer la visite</span></div>
+  <div class="btns"><span class="btn w">📞 Appeler</span><span class="btn w">❌ Reprogrammer</span></div>
+</div>${BAS('agenda')}</div>`;
+
+/* 2. Tableau de bord franchisé, en arrivant */
+E.tb = `<div class="tel">${SB}${HD('Gosselies', 'mardi 22 septembre · 09:04 · visite en cours', '<span class="pill" style="background:#F7E4E6;color:#C0182B">● REC 00:04</span>')}
+<div class="sc">
+  <div class="cap">Photo du jour</div>
+  <div class="phs"><div class="ph">Façade<small>09:02</small></div><div class="ph">Intérieur<small>09:03</small></div><div class="ph" style="background:var(--color-background-secondary);border:1.5px dashed var(--color-border-secondary);color:var(--color-primary)">📷 Arrière</div></div>
+  <div class="xs mu" style="margin:4px 2px">Horodatée, GPS (consenti), EXIF retiré · comparée aux 12/09 et 05/09 dans l'historique</div>
+  <div class="cap">4 chiffres clés</div>
+  <div class="kpi">
+    <div><div class="row xs mu">CA semaine ${API}</div><div class="k" style="margin-top:4px">9 038 €</div><div class="sm dn">−37 % vs objectif · −8 % vs N-1</div><div class="bar"><i style="width:63%"></i></div></div>
+    <div><div class="row xs mu">Clients ${MIX}</div><div class="sm" style="margin-top:4px"><span class="pill api">Google</span> <b>4,5</b> · 148 avis</div><div class="sm" style="margin-top:3px"><span class="pill loc">MSP</span> <b>16/20</b> · hygiène 15</div></div>
+    <div><div class="row xs mu">Non-conformités ${LOC}</div><div class="k" style="margin-top:4px;color:#C0182B">2 ouvertes</div><div class="sm mu">hygiène arrière · croissants</div></div>
+    <div><div class="row xs mu">Équipe ${LOC}</div><div class="k" style="margin-top:4px">6 / 7</div><div class="sm mu">turnover 1 sur 3 mois</div></div>
+  </div>
+  <div class="cap">Alertes</div>
+  <div class="card">
+    <div class="al"><span class="feu r" style="margin-top:4px"></span><div><b>Hygiène zone arrière</b> — P0, retard +1 j<div class="xs mu">MSP 15/20 le 8/09 · pas de photo de correction</div></div></div>
+    <div class="al"><span class="feu r" style="margin-top:4px"></span><div><b>Rupture croissants</b> — 2 jours<div class="xs mu">comptoir viennoiserie · appro lundi manquée</div></div></div>
+    <div class="al"><span class="feu o" style="margin-top:4px"></span><div><b>Déviation planogramme</b> — comptoir 1 à 78 %<div class="xs mu">baguettes déplacées, 2 emplacements vides</div></div></div>
+    <div class="al"><span class="feu o" style="margin-top:4px"></span><div><b>Google</b> — 2 avis ≤ 2/5 ce mois<div class="xs mu">sandwich trop fin · galette trop cuite</div></div></div>
+  </div>
+  <div class="btns"><span class="btn p w">▶ Checklist de visite</span><span class="btn w">Historique 3 mois</span></div>
+</div>${BAS('portfolio')}</div>`;
+
+/* 3. Checklist modulaire */
+const point = (t, etat, note, extra) => `<div class="pt"><div class="l1"><span class="cb ${etat}">${etat === 'on' ? '✓' : etat === 'ko' ? '!' : ''}</span><b class="sm" style="flex:1">${t}</b><span class="notes">${[1, 2, 3, 4, 5].map(n => `<i class="${note === n ? (n <= 2 ? 'bad' : 'on') : ''}">${n}</i>`).join('')}</span></div>${extra ? `<div class="act">${extra}</div>` : ''}</div>`;
+E.checklist = `<div class="tel">${SB}${HD('Checklist — Gosselies', 'mardi 22 septembre · 09:15', '<span class="pill" style="background:var(--color-background-secondary)">11 / 18</span>')}
+<div class="sc" style="padding-bottom:150px">
+  <div class="mod"><div class="th"><b>1 · Produit</b>${LOC}<span class="sp"></span><span class="xs mu">4 points</span></div>
+    ${point('Pain blanc — bonne tête, croûte', 'on', 4, '<span class="chip">📷 1 photo</span><span class="chip">ok</span>')}
+    ${point('Sablés — fraîcheur', '', 0, '<span class="chip">📷 Photo</span><span class="chip">Note…</span>')}
+    ${point('Croissants — température, feuilletage', 'ko', 2, '<span class="chip">📷 1 photo</span><span class="chip" style="border-color:#C0182B;color:#C0182B">froids, four en panne</span>')}
+  </div>
+  <div class="mod"><div class="th"><b>2 · Hygiène</b>${LOC}<span class="sp"></span><span class="xs mu">5 points</span></div>
+    ${point('Sol zone production propre', 'on', 5)}
+    ${point('Frigo vitrine ≤ 4 °C', 'on', 4, '<span class="chip">📷 Thermomètre</span><span class="chip on">4,2 °C ✓</span>')}
+    ${point('Zone arrière (signalée MSP)', 'ko', 2, '<span class="chip">📷 2 photos</span><span class="chip" style="border-color:#C0182B;color:#C0182B">toujours dégradée → P0</span>')}
+  </div>
+  <div class="mod"><div class="th"><b>3 · Visuel</b>${LOC}<span class="sp"></span><span class="xs mu">2 points</span></div>
+    ${point('Façade / vitrine', 'on', 4, '<span class="chip">📷 avant · aujourd’hui</span><span class="chip">prix manquant en haut</span>')}
+  </div>
+  <div class="mod"><div class="th"><b>4 · Planogramme</b>${MIX}<span class="sp"></span><span class="xs mu">3 comptoirs</span></div>
+    <div class="pt"><div class="l1"><span class="cb ko">!</span><b class="sm" style="flex:1">Comptoir 1 — pains</b><span class="pill loc">78 %</span></div>
+      <div class="phs" style="margin-top:6px"><div class="ph" style="height:60px">Référence réseau<small>API</small></div><div class="ph" style="height:60px">Aujourd’hui<small>09:21</small></div><div class="ph" style="height:60px;background:var(--color-background-secondary);border:1.5px dashed var(--color-border-secondary);color:var(--color-primary)">📷</div></div>
+      <div class="act"><span class="chip on">Baguettes déplacées</span><span class="chip on">2 vides</span><span class="chip">Surstock</span><span class="chip">Promo en cours</span></div></div>
+    ${point('Comptoir 2 — viennoiserie', 'ko', 3, '<span class="chip" style="border-color:#C0182B;color:#C0182B">rupture croissants · 2 j</span>')}
+    ${point('Comptoir 3 — tartes & sablés', 'on', 5)}
+  </div>
+  <div class="mod"><div class="th"><b>5 · Mystery shopper</b>${LOC}<span class="sp"></span><span class="xs mu">rapport de septembre</span></div>
+    <div class="card" style="margin-bottom:6px"><div class="row"><b>16 / 20</b><span class="sp"></span><span class="xs mu">MSP du 8 septembre · téléversé par Sam</span></div>
+      <div class="sm" style="margin-top:4px">🟢 Accueil 18 · 🟢 Produits 18 · 🟡 Hygiène 15 · 🟡 Ambiance 16</div>
+      <div class="xs mu" style="margin-top:4px">« zone arrière à améliorer » · « musique trop forte »</div></div>
+    ${point('Hygiène arrière : dégradée depuis le MSP ?', 'ko', 0, '<span class="chip on">Oui — dégradation</span><span class="chip">Non, conforme</span>')}
+    ${point('Ambiance : bruyante aujourd’hui ?', 'on', 0, '<span class="chip">Oui</span><span class="chip on">Non</span>')}
+  </div>
+  <div class="toast">✓ Enregistré en local · 09:22 · sync à la sortie</div>
+</div>${BAS('portfolio')}</div>`;
+
+/* 4. Review post-visite */
+E.review = `<div class="tel">${SB}${HD('Review — Gosselies', 'visite du 22 septembre · 09h – 10h25')}
+<div class="sc">
+  <div class="cap">Écarts relevés</div>
+  <div class="card">
+    <div class="plan p0b"><div class="row"><span class="feu r"></span><b>Zone arrière</b> · 2/5</div><div class="sm mu">MSP 15/20 le 8/09 → toujours dégradée : dégradation confirmée</div></div>
+    <div class="plan p0b"><div class="row"><span class="feu r"></span><b>Croissants</b> · 2/5 vs cible 4+</div><div class="sm mu">Cause : four en panne depuis hier · rupture 2 j</div></div>
+    <div class="plan p1b"><div class="row"><span class="feu o"></span><b>Comptoir 1</b> · 78 % vs référence</div><div class="sm mu">Baguettes déplacées, 2 emplacements vides</div></div>
+  </div>
+  <div class="cap">Plan d'action</div>
+  <div class="card">
+    <div class="plan p0b"><div class="row"><span class="pill p0">P0</span><b>Nettoyage complet zone arrière</b></div><div class="sm mu">Franchisé · sous 24 h · photo attendue</div><div class="act"><span class="chip on">Franchisé</span><span class="chip">Équipe</span><span class="chip">24 h</span><span class="chip" style="border-color:#C0182B;color:#C0182B">🚨 Escalader à Sam</span></div></div>
+    <div class="plan p0b"><div class="row"><span class="pill p0">P0</span><b>Four : devis technicien</b></div><div class="sm mu">Franchisé · 48 h · rupture croissants tant que non réparé</div></div>
+    <div class="plan p1b"><div class="row"><span class="pill p1">P1</span><b>Remise en conformité comptoir 1</b></div><div class="sm mu">Équipe · mercredi 23 · photo avant/après</div></div>
+    <div class="plan p2b"><div class="row"><span class="pill p2">P2</span><b>Affichage prix comptoir 2</b></div><div class="sm mu">Équipe · vendredi 25</div></div>
+    <div class="sm" style="margin-top:8px">🟢 <b>Observé positif</b> : accueil chaleureux, vitrine propre, équipe présente malgré le four.</div>
+  </div>
+  <div class="cap">Équipe</div>
+  <div class="card"><div class="row"><span>Sentiment</span><span class="sp"></span><span style="letter-spacing:2px">★★★☆☆</span></div><div class="sm mu">Fatigue visible, un départ ce mois · franchisé impliqué, dépassé par le four</div></div>
+  <div class="btns"><span class="btn p w">💾 Enregistrer · notifier le franchisé</span></div>
+  <div class="btns"><span class="btn w">📤 Synchroniser (3 photos en attente)</span></div>
+</div>${BAS('portfolio')}</div>`;
+
+/* 5. Historique 3 mois */
+E.historique = `<div class="tel">${SB}${HD('Historique — Gosselies', '3 derniers mois · 11 visites')}
+<div class="sc">
+  <div class="cap">Photos du jour</div>
+  <div class="card"><div class="phs"><div class="ph">22 sept<small>façade</small></div><div class="ph">15 sept<small>façade</small></div><div class="ph">8 sept<small>façade</small></div></div><div class="act"><span class="chip">Comparer 22 ↔ 8 sept</span><span class="chip">Intérieur</span><span class="chip">Comptoirs</span></div></div>
+  <div class="cap">CA semaine vs objectif ${API}</div>
+  <div class="card"><div class="spark">${[92, 88, 85, 79, 74, 70, 68, 63].map((h, i) => `<i style="height:${h}%" class="${i === 7 ? 'o' : ''}"></i>`).join('')}</div><div class="row xs mu" style="margin-top:4px"><span>S32</span><span class="sp"></span><span>S39 · 63 % de l'objectif</span></div><div class="sm dn" style="margin-top:4px">↘ 8 semaines de baisse · −37 % cette semaine</div></div>
+  <div class="cap">Clients</div>
+  <div class="card"><div class="row sm"><span class="pill api">Google</span><span>juil. 4,6 → août 4,5 → sept. 4,5</span><span class="sp"></span><span class="mu">→</span></div>
+    <div class="row sm" style="margin-top:6px"><span class="pill loc">MSP</span><span>juil. 18 → août 17 → sept. 16</span><span class="sp"></span><span class="dn">↘</span></div>
+    <div class="xs mu" style="margin-top:6px">Google tient, MSP baisse : la qualité objective se dégrade avant les avis — signal précoce.</div></div>
+  <div class="cap">Non-conformités ${LOC}</div>
+  <div class="card sm">juil. 2 fermées · 0 ouverte<br>août 1 fermée · 1 ouverte<br>sept. 3 fermées · <b class="dn">2 ouvertes</b> (hygiène arrière ×2 récidive)</div>
+  <div class="cap">Planogramme ${MIX}</div>
+  <div class="card"><div class="row sm"><span>juil. 85 %</span><span class="mu">·</span><span>août 92 %</span><span class="mu">·</span><span class="dn">sept. 78 %</span><span class="sp"></span><span class="dn">↘ −14 pts</span></div><div class="bar"><i style="width:78%"></i></div><div class="xs mu" style="margin-top:4px">2 ruptures ce mois · croissants, baguette tradition</div></div>
+  <div class="cap">Notes du consultant</div>
+  <div class="card sm">22 sept — four en panne, arrière dégradé, équipe fatiguée<br>15 sept — arrière moyen, comptoir 1 décalé<br>8 sept — RAS, promo galette</div>
+  <div class="cap">Face au réseau (4 boutiques)</div>
+  <div class="card sm">CA vs objectif : <b class="dn">−37 %</b> · réseau −24 %<br>Google : 4,5 · réseau 4,5<br>Planogramme : 78 % · réseau 86 %</div>
+</div>${BAS('portfolio')}</div>`;
+
+/* 6. Synthèse Sam (tablette) */
+E.sam = `<div class="tel tab">${SB}${HD('Synthèse réseau — Sam', 'samedi 19 septembre · 4 boutiques · 5 consultants', '<div class="av">SV</div>')}
+<div class="sc">
+  <div class="stat"><div><div class="xs mu">Plans d'action en cours</div><div class="k" style="margin-top:4px">10</div><div class="xs mu">3 P0 · 5 P1 · 2 P2</div></div><div><div class="xs mu">En attente de validation</div><div class="k" style="margin-top:4px">3</div><div class="xs mu">photos franchisés à contrôler</div></div><div><div class="xs mu">Fermés cette semaine</div><div class="k" style="margin-top:4px;color:#2d7a3e">7</div><div class="xs mu">validés et confirmés sur place</div></div></div>
+  <div class="cap">Les boutiques</div>
+  <div class="card" style="padding:4px 6px"><table class="tbl">
+    <tr><th>Boutique</th><th>Feu</th><th>Dernière visite</th><th>CA semaine ${API}</th><th>Google ${API}</th><th>Planogramme</th><th>NC ouvertes</th><th>Signal</th></tr>
+    <tr><td><b>Sombreffe</b></td><td><span class="feu v"></span></td><td>10 sept · Pierre B.</td><td>10 911 € · <span class="dn">−23 %</span></td><td>4,8 (69)</td><td>92 %</td><td>0</td><td class="mu">visite due</td></tr>
+    <tr><td><b>Corbais</b></td><td><span class="feu o"></span></td><td>15 sept · Loic V.</td><td>30 404 € · <span class="dn">−14 %</span></td><td>4,1 (754) ↘</td><td>84 %</td><td>1</td><td>frigo vitrine · avis 1/5 récents</td></tr>
+    <tr><td><b>Halle</b></td><td><span class="feu o"></span></td><td>17 sept · Szymon M.</td><td>9 512 € · <span class="dn">−29 %</span></td><td>4,5 (46)</td><td>81 %</td><td>1</td><td>P1 en attente de validation</td></tr>
+    <tr><td><b>Gosselies</b></td><td><span class="feu r"></span></td><td>15 sept · Stefano B.</td><td>9 038 € · <span class="dn">−37 %</span></td><td>4,5 (148)</td><td>78 % ↘</td><td class="dn"><b>2</b></td><td class="dn">P0 hygiène +3 j · four</td></tr>
+  </table></div>
+  <div class="grid2">
+    <div><div class="cap">Escalades possibles</div><div class="card sm">
+      <div class="al"><span class="feu r" style="margin-top:4px"></span><div><b>Gosselies</b> — P0 hygiène ouvert depuis le 19/09, aucune photo<div class="xs mu">délai dépassé · appeler le franchisé</div></div></div>
+      <div class="al"><span class="feu o" style="margin-top:4px"></span><div><b>Halle</b> — photo planogramme reçue, pas encore validée<div class="xs mu">en attente admin depuis 2 j</div></div></div>
+      <div class="al"><span class="feu o" style="margin-top:4px"></span><div><b>Corbais</b> — Google ↘ (2 avis 1/5 en mai) + MSP 17<div class="xs mu">à surveiller : accueil / personnalisation commandes</div></div></div>
+    </div></div>
+    <div><div class="cap">Actions requises aujourd'hui</div><div class="card sm">1. Appeler le franchisé de Gosselies (P0 en retard)<br>2. Valider la photo de Halle (planogramme comptoir 1)<br>3. Planifier Sombreffe (visite due depuis 2 j)<br>4. Lire le MSP de Corbais avant la visite de lundi</div>
+      <div class="cap">Consultants cette semaine</div><div class="card sm">Loic V. 4 visites · Stefano B. 3 · Szymon M. 3 · Pierre B. 2 · Sam V. 1<div class="xs mu" style="margin-top:4px">13 visites · 11 checklists complètes · 31 photos</div></div></div>
+  </div>
+</div></div>`;
+
+/* 7. Franchisé : mon plan d'action */
+E.franchise = `<div class="tel">${SB}${HD('Mon plan d’action', 'Gosselies · 3 en cours · 1 fermé', '<div class="av" style="background:#78554B">MS</div>')}
+<div class="sc">
+  <div class="card" style="border-color:#e8b4bb"><div class="row"><span class="pill st-ouv">Ouvert</span><span class="pill p0">P0</span><span class="sp"></span><span class="xs dn">délai : demain</span></div>
+    <b style="display:block;margin-top:6px">Nettoyage complet zone arrière</b><div class="sm mu">Assigné par Loic V. le 22/09 · « sol, plans de travail, poubelles ; photo une fois fait »</div>
+    <div class="btns"><span class="btn p w">📷 Photo de la correction</span></div></div>
+  <div class="card"><div class="row"><span class="pill st-att">En attente de validation</span><span class="pill p1">P1</span></div>
+    <b style="display:block;margin-top:6px">Comptoir 1 remis conforme</b><div class="sm mu">Photo envoyée le 23/09 à 14h · l'admin la contrôle</div><div class="act"><span class="chip">Voir ma photo</span></div></div>
+  <div class="card"><div class="row"><span class="pill st-rep">À reprendre</span><span class="pill p2">P2</span><span class="sp"></span><span class="xs mu">nouveau délai : 25/09</span></div>
+    <b style="display:block;margin-top:6px">Affichage prix comptoir 2</b><div class="sm mu">Retour admin : « il manque les prix de la rangée du haut »</div><div class="btns"><span class="btn w">📷 Reprendre la photo</span></div></div>
+  <div class="card" style="opacity:.75"><div class="row"><span class="pill st-fer">Fermé</span></div><b style="display:block;margin-top:6px">Frigo vitrine à 4 °C</b><div class="sm mu">Corrigé le 18/09 · validé le 18/09 · confirmé en visite le 22/09</div></div>
+  <div class="cap">Ma boutique cette semaine</div>
+  <div class="card sm"><div class="row"><span>CA</span><span class="sp"></span><b>9 038 €</b><span class="mu">/ 14 305 €</span></div><div class="bar"><i style="width:63%"></i></div><div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>4,5</b><span class="mu">148 avis</span></div></div>
+</div><div class="bas" style="grid-template-columns:1fr 1fr"><div class="on"><i>✅</i>Plan d'action</div><div><i>📊</i>Dashboard</div></div></div>`;
+
+/* 8. Admin : corrections à valider */
+E.admin = `<div class="tel">${SB}${HD('Corrections à valider', '3 photos reçues · vue admin', '<div class="av">SV</div>')}
+<div class="sc">
+  ${[['Halle', 'Planogramme comptoir 1', 'P1', '23 sept 14:02', 'photo nette, rangée du bas conforme, rangée du haut à vérifier'], ['Corbais', 'Frigo vitrine ≤ 4 °C', 'P0', '23 sept 09:40', 'thermomètre à 3,8 °C visible'], ['Gosselies', 'Affichage prix comptoir 2', 'P2', '22 sept 17:15', 'prix du haut absents']].map(c => `
+  <div class="card"><div class="row"><b>${c[0]}</b><span class="pill ${c[2] === 'P0' ? 'p0' : c[2] === 'P1' ? 'p1' : 'p2'}">${c[2]}</span><span class="sp"></span><span class="xs mu">${c[3]}</span></div>
+    <div class="sm" style="margin-top:3px">${c[1]}</div>
+    <div class="phs" style="margin-top:8px"><div class="ph" style="height:80px">Avant<small>visite</small></div><div class="ph" style="height:80px;grid-column:span 2">Photo du franchisé<small>${c[3]}</small></div></div>
+    <div class="xs mu" style="margin-top:6px">${c[4]}</div>
+    <div class="btns"><span class="btn p w">✅ Accepter</span><span class="btn w">🔄 À reprendre</span></div></div>`).join('')}
+  <div class="cap">Cette semaine</div>
+  <div class="card sm">✅ 12 acceptées · 🔄 3 reprises · 🚨 1 escaladée à Sam</div>
+</div>${BAS('plans')}</div>`;
+
+const q = new URLSearchParams(location.search);
+const e = q.get('ecran') || 'agenda';
+document.getElementById('app').innerHTML = E[e] || E.agenda;
+document.title = 'Maquette — ' + e;
+</script>
+</body>
+</html>
