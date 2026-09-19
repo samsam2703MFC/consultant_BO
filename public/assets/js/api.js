@@ -52,7 +52,9 @@ export const ENDPOINTS = {
   prodCatalogue:  '/production/catalogue',
   prodGroupes:    '/production/groupes',
   prodCategories: '/production/categories',
-  prodPeriodes:   '/production/periodes'
+  prodPeriodes:   '/production/periodes',
+  fbRegles:       '/referentiels/facebook-regles',
+  fbPosts:        '/facebook/posts'
 };
 
 /* --- Chronométrage des appels ---------------------------------------------
@@ -228,7 +230,11 @@ function shape(p, source){
       // Niveaux, seuil et référentiel du signalement — réglage serveur,
       // jamais une constante d'écran. `ensureValidation()` garantit qu'il
       // existe : le repli ne sert qu'à un serveur injoignable.
-      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
+      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] },
+      // Pack de règles de l'agent de contrôle Facebook. Les cinq niveaux de
+      // notes ne sont PAS ici : ce sont ceux de SIGNAL, une seule échelle de
+      // conformité pour les tâches consultants comme pour les posts.
+      FB: p.fbRegles || { seuil: 4, familles: [], regles: [] } },
     D: Object.assign({}, p.raw || {}, {
       stores: joinPerf(p.stores, p.perf, meta && meta.exercice, p.etp),
       // Les lignes PLATES telles que la base les rend, gardées à côté des
@@ -260,7 +266,8 @@ function shape(p, source){
       prodGroupes: (p.prodGroupes || {}).groupes || [],
       prodCategories: (p.prodCategories || {}).categories || [],
       prodPeriodes: (p.prodPeriodes || {}).periodes || [],
-      roles: (p.roles || {}).roles || []
+      roles: (p.roles || {}).roles || [],
+      fbPosts: p.fbPosts || []
     })
   };
 }
@@ -328,6 +335,7 @@ function emptyPayload(){
     exploitation: { jour: null, semaine: null, mois: null, magasins: [], reseau: {}, avertissement: null },
     prodCatalogue: [], prodGroupes: { groupes: [] }, prodCategories: { categories: [] },
     prodPeriodes: { periodes: [] },
-    roles: { source: null, roles: [] }
+    roles: { source: null, roles: [] },
+    fbRegles: { seuil: 4, familles: [], regles: [] }, fbPosts: []
   };
 }
