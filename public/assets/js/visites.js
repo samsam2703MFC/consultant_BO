@@ -422,6 +422,45 @@
           ${ouvert && manq.length ? `<div class="sm" style="margin-top:6px">${manq.map(x => `<div class="row" style="padding:2px 0"><span>${esc(x.nom)}</span><span class="sp"></span><span class="xs mu">${x.auComptoir ? 'a sa place au comptoir' : 'pas de place au comptoir'}</span></div>`).join('')}${as.manquantes > manq.length ? `<div class="xs mu">… et ${as.manquantes - manq.length} autre(s)</div>` : ''}</div>` : ''}
           <div class="xs mu" style="margin-top:6px">Planogramme : comptoir dessiné dans le cockpit. Assortiment : références obligatoires × lignes de ticket du magasin, ${fmtD(as.du)} – ${fmtD(as.au)}.${as.retard > 2 ? ' La caisse s’arrête au ' + fmtD(as.derniereVente) + ' (' + as.retard + ' j de retard) : la fenêtre se cale dessus.' : ''}</div></div>`;
     }
+    /**
+     * La conclusion de visite en trois temps — ce qui justifie d'être venu.
+     *
+     * D'abord voir la réalité : sur place, le consultant voit comment ça tourne
+     * vraiment — l'énergie de l'équipe, l'exécution contre le process, l'écart
+     * entre le protocole et ce qu'on fait. Ensuite diagnostiquer le vrai
+     * problème : production mal synchronisée, équipe démotivée, décor, prix —
+     * pas la même analyse depuis le bureau. Enfin recommander avec crédit :
+     * quand il a vu, mesuré, touché, il peut dire « voilà ce qui ne marche pas
+     * et voilà pourquoi », et l'équipe l'écoute.
+     *
+     * Les trois tiennent dans `notes`, sous leurs titres : rien à changer au
+     * serveur, l'historique et la synthèse les lisent tels quels.
+     */
+    static get TEMPS() {
+      return [
+        ['vu', 'Vu sur place', 'La réalité, pas le papier : le client sort-il satisfait ? l’équipe applique-t-elle les standards ou prend-elle des raccourcis ? l’énergie, l’exécution face au process…'],
+        ['probleme', 'Le vrai problème', 'Si le chiffre ou la qualité baissent, quel est le vrai coupable ? Production mal synchronisée, équipe démotivée, décor qui n’invite pas, prix mal positionnés…'],
+        ['reco', 'Ma recommandation', '« Voilà ce qui ne marche pas, et voilà pourquoi. » Vu, mesuré, touché — des données, pas une opinion.']];
+    }
+    /** Le texte des notes découpé en trois temps ; ce qui ne porte pas de titre reste en « libre ». */
+    conclusionDe(notes) {
+      const out = { vu: '', probleme: '', reco: '', libre: '' };
+      const T = this.constructor.TEMPS;
+      let cle = 'libre';
+      String(notes || '').split('\n').forEach(l => {
+        const t = T.find(x => l.startsWith(x[1] + ' —'));
+        if (t) { cle = t[0]; out[cle] = l.slice(t[1].length + 2).trim(); return; }
+        out[cle] = (out[cle] ? out[cle] + '\n' : '') + l;
+      });
+      Object.keys(out).forEach(k => { out[k] = out[k].trim(); });
+      return out;
+    }
+    /** Les trois temps remis en un seul texte, titres compris. */
+    notesDe(f) {
+      const parts = this.constructor.TEMPS.filter(t => (f[t[0]] || '').trim()).map(t => t[1] + ' — ' + f[t[0]].trim());
+      if ((f.notes || '').trim()) { parts.push(f.notes.trim()); }
+      return parts.join('\n\n');
+    }
     src(s) { return s === 'api' ? '<span class="pill api">API</span>' : s === 'mix' ? '<span class="pill mix">API + local</span>' : '<span class="pill loc">Local</span>'; }
     kpis(b, court) {
       const ca = b.ca, g = b.google, eq = b.equipe, msp = b.msp;
@@ -567,18 +606,21 @@
       const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
       const b = this.boutique(v.shop) || { court: v.shop }; const f = this.form; const finie = v.statut === 'terminee';
       const ecarts = this.ecartsDe(v);
-      if (!f.pa) { f.pa = finie ? [] : ecarts.map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true })); f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; }
+      if (!f.pa) { f.pa = finie ? [] : ecarts.map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true })); f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; const c = this.conclusionDe(v.notes); f.vu = c.vu; f.probleme = c.probleme; f.reco = c.reco; f.notes = c.libre; }
       const dejaPlans = this.plansDe(v.shop).filter(p => String(p.visite_id) === String(v.id));
       const attente = this.file.filter(o => o.apres === 'photo').length;
       return this.hd('Review — ' + b.court, 'visite du ' + fmtDJ(v.prevu_le) + (v.commence_a ? ' · ' + fmtH(v.commence_a) + (v.termine_a ? ' – ' + fmtH(v.termine_a) : '') : ''), 'checklist/' + v.id)
         + `<div class="cap">Écarts relevés</div><div class="card">${ecarts.length ? ecarts.map(e => `<div class="plan ${e.grave ? 'P0b' : 'P1b'}"><div class="row"><span class="feu ${e.grave ? 'rouge' : 'orange'}"></span><b>${esc(e.titre)}</b></div><div class="sm mu">${esc(e.detail)}</div></div>`).join('') : '<div class="sm mu">Aucun écart dans la checklist.</div>'}</div>`
-        + (finie ? `<div class="cap">Plan d’action de cette visite</div>${dejaPlans.length ? dejaPlans.map(p => this.planLigne(p)).join('') : '<div class="card sm mu">Aucune action.</div>'}`
+        + (finie ? (v.notes || v.positif ? (() => { const c = this.conclusionDe(v.notes); return `<div class="cap">Conclusion de visite</div><div class="card sm">${this.constructor.TEMPS.filter(t => c[t[0]]).map(t => `<div style="margin-bottom:6px"><b>${t[1]}</b><div>${esc(c[t[0]])}</div></div>`).join('')}${c.libre ? `<div class="mu">${esc(c.libre)}</div>` : ''}${v.positif ? `<div style="margin-top:6px"><b>Observé positif</b><div>${esc(v.positif)}</div></div>` : ''}</div>`; })() : '') + `<div class="cap">Plan d’action de cette visite</div>${dejaPlans.length ? dejaPlans.map(p => this.planLigne(p)).join('') : '<div class="card sm mu">Aucune action.</div>'}`
           : `<div class="cap">Plan d’action</div><div class="card">${f.pa.map((a, i) => `<div class="plan ${a.priorite}b" style="padding-bottom:6px"><input type="text" data-f="pa|${i}|titre" value="${esc(a.titre)}" placeholder="Action…" style="font-weight:600"><input type="text" data-f="pa|${i}|detail" value="${esc(a.detail || '')}" placeholder="Détail pour le franchisé…" style="margin-top:4px;font-size:12px">
               <div class="act">${['P0', 'P1', 'P2'].map(p => `<button class="chip ${a.priorite === p ? 'on' : ''}" data-a="pa" data-v="${i}|priorite|${p}">${p}</button>`).join('')}<span style="width:6px"></span>${Object.keys(ASSIGNES).map(k => `<button class="chip ${a.assigne === k ? 'on' : ''}" data-a="pa" data-v="${i}|assigne|${k}">${ASSIGNES[k]}</button>`).join('')}</div>
               <div class="act">${[[1, '24 h'], [2, '48 h'], [7, '1 sem.'], [14, '2 sem.']].map(([n, l]) => `<button class="chip ${a.echeance === plusJours(auj(), n) ? 'on' : ''}" data-a="pa" data-v="${i}|echeance|${plusJours(auj(), n)}">${l}</button>`).join('')}<input type="date" data-f="pa|${i}|echeance" value="${esc(a.echeance || '')}" style="width:150px;padding:5px 7px"><span class="sp"></span><button class="chip ko" data-a="pa-del" data-v="${i}">retirer</button></div></div>`).join('')}
             <div class="act"><button class="chip" data-a="pa-add">+ Ajouter une action</button></div></div>
             <div class="cap">Observé positif</div><div class="card"><textarea data-f="form|positif" placeholder="Ce qui va bien — dit au franchisé aussi">${esc(f.positif)}</textarea></div>
-            <div class="cap">Équipe</div><div class="card"><div class="row"><span>Sentiment</span><span class="sp"></span><span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="form" data-v="sentiment|${n}" class="${f.sentiment >= n ? 'on' : ''}">★</button>`).join('')}</span></div><textarea data-f="form|notes" placeholder="Notes du consultant (historique)…" style="margin-top:8px">${esc(f.notes)}</textarea></div>
+            <div class="cap">Équipe</div><div class="card"><div class="row"><span>Sentiment</span><span class="sp"></span><span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="form" data-v="sentiment|${n}" class="${f.sentiment >= n ? 'on' : ''}">★</button>`).join('')}</span></div></div>
+            <div class="cap">Conclusion de visite <button class="chip" data-a="drop" data-v="pourquoi" style="margin-left:6px">${this.ouvert.pourquoi ? 'pourquoi ▴' : 'pourquoi ▾'}</button></div>
+            ${this.ouvert.pourquoi ? `<div class="card sm mu"><b>Voir la réalité.</b> Sur le papier ou en visio, c’est utile mais incomplet. Sur place, on voit comment ça tourne vraiment : l’énergie de l’équipe, l’exécution face au process, l’écart entre le protocole et ce qu’on fait. Le client sort-il satisfait ? Les standards sont-ils appliqués, ou raccourcis ?<br><br><b>Diagnostiquer le vrai problème.</b> Si une boutique perd du chiffre ou que la qualité se dégrade, de près on nomme le vrai coupable — production mal synchronisée, équipe démotivée, décor qui n’invite pas, prix mal positionnés. Pas la même analyse depuis le bureau.<br><br><b>Donner du crédit à la recommandation.</b> Quand on a vu, mesuré, touché, on peut dire : « voilà ce qui ne marche pas, et voilà pourquoi ». Les équipes écoutent mieux, et vous avez des données, pas une opinion.</div>` : ''}
+            <div class="card">${this.constructor.TEMPS.map(t => `<div class="champ"><label>${t[1]}</label><textarea data-f="form|${t[0]}" placeholder="${esc(t[2])}">${esc(f[t[0]] || '')}</textarea></div>`).join('')}<div class="champ"><label>Autres notes</label><textarea data-f="form|notes" placeholder="Ce qui ne rentre pas dans les trois temps…">${esc(f.notes || '')}</textarea></div></div>
             <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>`)
         + (attente ? `<div class="btns"><button class="btn w" data-a="sync">📤 Synchroniser (${attente} photo${attente > 1 ? 's' : ''} en attente)</button></div>` : '');
     }
@@ -814,7 +856,7 @@
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, positif: f.positif || '', notes: f.notes || '' });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, positif: f.positif || '', notes: this.notesDe(f) });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       this.form = {};
       this.go('historique', v.shop);
