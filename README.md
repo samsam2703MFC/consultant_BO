@@ -93,6 +93,7 @@ sql/
   seed.sql              seed généré (php bin/seed.php --sql)
 bin/
   seed.php              seed de démonstration (PRNG mulberry32, parité JS)
+  mix1000.php           le mix par 1 000 € vendus (base de calcul production/commandes)
 config/
   config.example.php    modèle de configuration
 docs/
@@ -332,6 +333,42 @@ relecture. Dépendances réseau côté serveur : les miroirs Overpass et, pour l
 notes Google, `places.googleapis.com` (connecteur Google de Paramètres). Côté
 navigateur : `tile.openstreetmap.org` (fond de carte) seulement — Overpass n'est
 interrogé depuis le navigateur qu'en repli, hors API.
+
+## Mix par 1 000 € vendus
+
+La base de calcul du réseau : pour 1 000 € encaissés, une ligne par produit —
+**volume** en unités, **prix de vente**, **euros** pesés et **part du CA**. La
+colonne des parts somme à 100 %, celle des euros à 1 000 € : si le total tombe
+à côté, le lot compté n'est pas celui qu'on croit. Toutes les références, puis
+un récapitulatif par catégorie.
+
+```bash
+php bin/mix1000.php                      # dernier mois clos
+php bin/mix1000.php --fenetre=annee      # ou --fenetre=trimestre
+php bin/mix1000.php --ca=12000           # les mêmes unités ramenées à 12 000 € de CA
+php bin/mix1000.php --top=40             # n'en détailler que 40
+php bin/mix1000.php --csv > mix.csv
+```
+
+C'est le mix du **réseau** : les ventes des magasins actifs additionnées, puis
+ramenées à 1 000 €. L'en-tête nomme les magasins comptés (`Mix de 4 magasins :
+…`, quand la source sert la ventilation par magasin), pour qu'on voie sur quoi
+la base repose au lieu de la croire.
+
+Le rapport est **sans échelle** : il vaut pour un magasin à 8 000 €/semaine comme
+pour un à 25 000 €. Dimensionner une production, une commande ou le prévisionnel
+d'une ouverture revient à le multiplier par le CA visé ÷ 1 000 — c'est ce que
+fait `--ca`.
+
+Le chiffre vient de `ep_products()`, la source de l'écran **Scoring des
+références** : le panel d'abord, la caisse locale en repli, `ceo_product_month_sales`
+en dernier. Le CA d'une référence est `volume × prix moyen`, comme le fait
+l'écran — deux écrans ne calculent pas la même chose de deux façons.
+
+Le dénominateur est le **CA des références vendues**, pas le CA du P&L : les
+euros par catégorie somment donc exactement à 1 000 €. Un magasin dont le P&L
+dépasse ce total (B2B, prestations hors caisse) applique la base à sa seule part
+caisse.
 
 ## Notes
 
