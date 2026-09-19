@@ -421,3 +421,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-19T08:01:34Z prospection type d offre par client et calcul par offre
 2026-09-19T08:27:19Z newsletter assistant quatre etapes sans reseaux
 2026-09-19T12:40:00Z application consultant pwa visites terrain
+2026-09-19T12:52:00Z visites tables action de visite renommees
