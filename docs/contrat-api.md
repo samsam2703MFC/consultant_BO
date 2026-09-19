@@ -682,7 +682,7 @@ due (fréquence par boutique), CA sous −`caOrange` % seulement si `caSeul` ;
 🟢 sinon.
 
 Tables : `ceo_visite`, `ceo_visite_point`, `ceo_visite_photo`,
-`ceo_plan_action`, `ceo_plan_action_evt`, `ceo_msp`, `ceo_equipe_releve` ;
+`ceo_visite_action`, `ceo_visite_action_evt`, `ceo_msp`, `ceo_equipe_releve` ;
 réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
 `visitesJeton`, `visitesCron`. Abonnements push : `shop_id` = la boutique
 (franchisé), `c:{consultant}` ou `admin`.

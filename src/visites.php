@@ -108,7 +108,7 @@ function ensureVisites(): void
         KEY k_shop (shop_id, prise_a),
         KEY k_plan (plan_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plan_action (
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_action (
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id VARCHAR(40) NULL,
         shop_id VARCHAR(32) NOT NULL,
@@ -131,7 +131,7 @@ function ensureVisites(): void
         KEY k_shop (shop_id, statut),
         KEY k_visite (visite_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_plan_action_evt (
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_action_evt (
         id INT AUTO_INCREMENT PRIMARY KEY,
         plan_id INT NOT NULL,
         quand DATETIME NOT NULL,
@@ -400,7 +400,7 @@ function viPlanLigne(array $p): array
 function viPlans(?string $shop, int $joursFermes = 90): array
 {
     $limite = date('Y-m-d H:i:s', strtotime("-{$joursFermes} days"));
-    $sql = 'SELECT * FROM ceo_plan_action WHERE (statut <> \'ferme\' OR maj_le >= ?)';
+    $sql = 'SELECT * FROM ceo_visite_action WHERE (statut <> \'ferme\' OR maj_le >= ?)';
     $args = [$limite];
     if ($shop !== null) { $sql .= ' AND shop_id = ?'; $args[] = $shop; }
     $sql .= ' ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\'), echeance, id';
@@ -589,7 +589,7 @@ function ep_visites_boutique(string $shop): array
     $du = date('Y-m-d', strtotime('-92 days'));
     $visites = array_map('viVisiteLigne', Db::rows('SELECT * FROM ceo_visite WHERE shop_id = ? AND prevu_le >= ? AND statut = \'terminee\' ORDER BY prevu_le DESC', [$shop, $du]));
     $parMois = [];
-    foreach (Db::rows('SELECT DATE_FORMAT(cree_le, \'%Y-%m\') mois, statut, COUNT(*) n FROM ceo_plan_action WHERE shop_id = ? AND cree_le >= ? GROUP BY mois, statut', [$shop, $du . ' 00:00:00']) as $r) {
+    foreach (Db::rows('SELECT DATE_FORMAT(cree_le, \'%Y-%m\') mois, statut, COUNT(*) n FROM ceo_visite_action WHERE shop_id = ? AND cree_le >= ? GROUP BY mois, statut', [$shop, $du . ' 00:00:00']) as $r) {
         $parMois[$r['mois']][$r['statut']] = (int) $r['n'];
     }
     $planoParVisite = [];
@@ -749,8 +749,8 @@ function wr_visites_photos_post(): array
 
 function viPlanParId(string $id): ?array
 {
-    $p = ctype_digit($id) ? Db::row('SELECT * FROM ceo_plan_action WHERE id = ?', [(int) $id]) : null;
-    if ($p === null) { $p = Db::row('SELECT * FROM ceo_plan_action WHERE client_id = ?', [$id]); }
+    $p = ctype_digit($id) ? Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [(int) $id]) : null;
+    if ($p === null) { $p = Db::row('SELECT * FROM ceo_visite_action WHERE client_id = ?', [$id]); }
     return $p;
 }
 
@@ -777,16 +777,16 @@ function wr_plans_post(): array
         $titre = mb_substr(trim((string) ($p['titre'] ?? '')), 0, 190);
         if (!isset(viMagasins()[$shop]) || $titre === '') { continue; }
         $cid = mb_substr(trim((string) ($p['client_id'] ?? '')), 0, 40) ?: null;
-        if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_plan_action WHERE client_id = ?', [$cid])) !== null) { $out[] = viPlanLigne($ex); continue; }
+        if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_visite_action WHERE client_id = ?', [$cid])) !== null) { $out[] = viPlanLigne($ex); continue; }
         $prio = in_array($p['priorite'] ?? '', VI_PRIORITES, true) ? $p['priorite'] : 'P1';
         $ass = in_array($p['assigne'] ?? '', VI_ASSIGNES, true) ? $p['assigne'] : 'franchise';
         $now = date('Y-m-d H:i:s');
-        Db::exec('INSERT INTO ceo_plan_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        Db::exec('INSERT INTO ceo_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [$cid, $shop, $visite ? (int) $visite['id'] : null, mb_substr(preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? '')), 0, 60) ?: null,
              $titre, mb_substr((string) ($p['detail'] ?? ''), 0, 2000) ?: null, $prio, $ass, viDate($p['echeance'] ?? null), 'ouvert', $qui, $now, $now]);
         $id = (int) Db::pdo()->lastInsertId();
-        Db::exec('INSERT INTO ceo_plan_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, 'ouvert', 'créé']);
-        $ligne = viPlanLigne(Db::row('SELECT * FROM ceo_plan_action WHERE id = ?', [$id]));
+        Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, 'ouvert', 'créé']);
+        $ligne = viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [$id]));
         $out[] = $ligne; $nouveaux[$shop][] = $ligne;
     }
     foreach ($nouveaux as $shop => $ls) {
@@ -838,13 +838,13 @@ function wr_plans_put(string $id): array
             if ($vers === 'ferme') { $set[] = 'ferme_le = ?'; $args[] = $now; }
             if ($vers === 'reprendre') { $set[] = 'retour = ?'; $args[] = mb_substr((string) ($b['retour'] ?? $b['commentaire'] ?? ''), 0, 1000) ?: null; }
             if ($vers === 'escalade') { $set[] = 'escalade_motif = ?'; $args[] = mb_substr((string) ($b['escalade_motif'] ?? $b['commentaire'] ?? ''), 0, 1000) ?: null; }
-            Db::exec('INSERT INTO ceo_plan_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)',
                 [(int) $p['id'], $now, $qui, $p['statut'], $vers, mb_substr((string) ($b['commentaire'] ?? $b['retour'] ?? ''), 0, 1000) ?: null, $photoId]);
         }
     }
     if (!$set) { return ['ok' => true, 'plan' => viPlanLigne($p)]; }
     $set[] = 'maj_le = ?'; $args[] = $now; $args[] = (int) $p['id'];
-    Db::exec('UPDATE ceo_plan_action SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    Db::exec('UPDATE ceo_visite_action SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
     $shop = (string) $p['shop_id']; $court = viMagasins()[$shop]['court'] ?? $shop;
     if ($vers !== '' && $vers !== $p['statut']) {
         $t = $p['titre'];
@@ -854,7 +854,7 @@ function wr_plans_put(string $id): array
         if ($vers === 'escalade')  { viNotifier('admin', 'Escalade — ' . $court, $p['priorite'] . ' ' . $t, 'visites/?role=admin', 'escalade-' . $p['id']); }
         journalAdd($qui, 'Plan d’action', null, $court . ' : « ' . $t . ' » ' . $p['statut'] . ' → ' . $vers);
     }
-    return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM ceo_plan_action WHERE id = ?', [(int) $p['id']]))];
+    return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [(int) $p['id']]))];
 }
 
 /* --- écritures : MSP, équipe, réglages ---------------------------------------- */
@@ -1040,10 +1040,10 @@ function viHorloge(bool $force = false): array
     $mags = viMagasins();
     // 1. Un P0 (ou P1) ouvert dont l'échéance est dépassée de `escaladeJours` : escaladé, l'admin prévenu.
     $limite = date('Y-m-d', strtotime('-' . (int) $s['escaladeJours'] . ' days'));
-    foreach (Db::rows('SELECT * FROM ceo_plan_action WHERE statut IN (\'ouvert\', \'reprendre\') AND priorite = \'P0\' AND echeance IS NOT NULL AND echeance < ?', [$limite]) as $p) {
+    foreach (Db::rows('SELECT * FROM ceo_visite_action WHERE statut IN (\'ouvert\', \'reprendre\') AND priorite = \'P0\' AND echeance IS NOT NULL AND echeance < ?', [$limite]) as $p) {
         $now = date('Y-m-d H:i:s');
-        Db::exec('UPDATE ceo_plan_action SET statut = \'escalade\', escalade_motif = ?, maj_le = ? WHERE id = ?', ['échéance dépassée (automatique)', $now, (int) $p['id']]);
-        Db::exec('INSERT INTO ceo_plan_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [(int) $p['id'], $now, 'horloge', $p['statut'], 'escalade', 'échéance dépassée']);
+        Db::exec('UPDATE ceo_visite_action SET statut = \'escalade\', escalade_motif = ?, maj_le = ? WHERE id = ?', ['échéance dépassée (automatique)', $now, (int) $p['id']]);
+        Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [(int) $p['id'], $now, 'horloge', $p['statut'], 'escalade', 'échéance dépassée']);
         $court = $mags[(string) $p['shop_id']]['court'] ?? $p['shop_id'];
         viNotifier('admin', 'Escalade automatique — ' . $court, 'P0 « ' . $p['titre'] . ' » : échéance dépassée', 'visites/?role=admin', 'escalade-' . $p['id']);
         $fait['escalades']++;
@@ -1054,7 +1054,7 @@ function viHorloge(bool $force = false): array
         $demain = date('Y-m-d', strtotime('+1 day'));
         foreach (Db::rows('SELECT * FROM ceo_visite WHERE prevu_le = ? AND statut IN (\'planifiee\', \'confirmee\')', [$demain]) as $v) {
             $shop = (string) $v['shop_id']; $court = $mags[$shop]['court'] ?? $shop;
-            $ouverts = Db::rows('SELECT priorite, titre FROM ceo_plan_action WHERE shop_id = ? AND statut IN (\'ouvert\', \'reprendre\', \'escalade\') ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\') LIMIT 2', [$shop]);
+            $ouverts = Db::rows('SELECT priorite, titre FROM ceo_visite_action WHERE shop_id = ? AND statut IN (\'ouvert\', \'reprendre\', \'escalade\') ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\') LIMIT 2', [$shop]);
             $suite = $ouverts ? ' — ' . implode(', ', array_map(fn ($o) => $o['priorite'] . ' ' . $o['titre'], $ouverts)) : '';
             viNotifier('c:' . $v['consultant_id'], 'Demain ' . $v['debut_h'] . ' — ' . $court, 'Visite prévue' . $suite, 'visites/?role=consultant&id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'j1-' . $v['id']);
             viNotifier($shop, 'Visite demain ' . $v['debut_h'], $v['consultant_nom'] . ' passe demain' . ($ouverts ? ' — préparez : ' . $ouverts[0]['titre'] : ''), 'visites/?shop=' . rawurlencode($shop), 'j1-' . $v['id']);
