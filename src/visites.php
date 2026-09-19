@@ -31,6 +31,21 @@ const VI_GENRES_PHOTO   = ['jour_facade', 'jour_interieur', 'jour_arriere', 'poi
 const VI_ROLES          = ['consultant', 'franchise', 'admin'];
 
 /**
+ * Ce que seule la présence sur place donne — et que la review recueille :
+ * voir la réalité (l'énergie de l'équipe, l'exécution face au protocole, le
+ * client qui sort satisfait ou non), nommer le vrai problème quand le chiffre
+ * ou la qualité baisse, et une recommandation qui a du crédit parce qu'elle
+ * a été vue, mesurée, touchée.
+ */
+const VI_EXECUTION = ['', 'standards', 'raccourcis', 'ecarts'];        // standards appliqués / quelques raccourcis / écarts fréquents
+const VI_CLIENTS   = ['', 'satisfaits', 'mitiges', 'insatisfaits'];     // ce qu'on voit à la sortie
+function viCausesDiag(): array
+{
+    return ['production' => 'Production mal synchronisée', 'equipe' => 'Équipe démotivée', 'decor' => 'Décor, ambiance qui n’invite pas',
+        'prix' => 'Prix mal positionnés', 'appro' => 'Approvisionnement, ruptures', 'accueil' => 'Accueil, vente', 'hygiene' => 'Hygiène, propreté', 'autre' => 'Autre'];
+}
+
+/**
  * Qui peut faire passer un plan d'action d'un statut à l'autre. Le franchisé
  * ne fait qu'envoyer sa correction ; l'admin valide, renvoie, escalade, ferme ;
  * le consultant crée, confirme sur place (ferme), escalade — et peut valider
@@ -67,6 +82,11 @@ function ensureVisites(): void
         sentiment TINYINT NULL,
         positif TEXT NULL,
         notes TEXT NULL,
+        execution VARCHAR(12) NULL,
+        clients VARCHAR(12) NULL,
+        causes TEXT NULL,
+        diagnostic TEXT NULL,
+        reco TEXT NULL,
         cree_le DATETIME NOT NULL,
         maj_le DATETIME NOT NULL,
         UNIQUE KEY u_client (client_id),
@@ -164,6 +184,14 @@ function ensureVisites(): void
         par VARCHAR(120) NOT NULL DEFAULT \'\',
         KEY k_shop (shop_id, releve_le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Les colonnes de la review arrivées après la table : ajoutées si elles manquent.
+    $manque = true;
+    try { $manque = Db::row("SHOW COLUMNS FROM ceo_visite LIKE 'reco'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($manque) {
+        foreach (['execution VARCHAR(12) NULL', 'clients VARCHAR(12) NULL', 'causes TEXT NULL', 'diagnostic TEXT NULL', 'reco TEXT NULL'] as $col) {
+            try { Db::exec('ALTER TABLE ceo_visite ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
+        }
+    }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -365,6 +393,9 @@ function viVisiteLigne(array $v): array
         'prevu_le' => $v['prevu_le'], 'debut_h' => $v['debut_h'], 'duree_min' => (int) $v['duree_min'],
         'motif' => $v['motif'], 'statut' => $v['statut'], 'commence_a' => $v['commence_a'], 'termine_a' => $v['termine_a'],
         'sentiment' => $v['sentiment'] !== null ? (int) $v['sentiment'] : null, 'positif' => $v['positif'], 'notes' => $v['notes'],
+        'execution' => $v['execution'] ?? null, 'clients' => $v['clients'] ?? null,
+        'causes' => !empty($v['causes']) ? (json_decode((string) $v['causes'], true) ?: []) : [],
+        'diagnostic' => $v['diagnostic'] ?? null, 'reco' => $v['reco'] ?? null,
         'maj_le' => $v['maj_le']];
 }
 
@@ -549,7 +580,8 @@ function ep_visites_app(): array
             'ca' => $ca[$sid] ?? null, 'google' => $google[$sid] ?? null, 'plano' => $plano,
             'equipe' => $equipe[$sid] ?? null, 'msp' => $msp[$sid][0] ?? null,
             'plansOuverts' => count($ouverts), 'p0' => count(array_filter($ouverts, fn ($p) => $p['priorite'] === 'P0')),
-            'derniereVisite' => $derniere ? ['id' => $derniere['id'], 'le' => $derniere['prevu_le'], 'consultant' => $derniere['consultantNom']] : null,
+            'derniereVisite' => $derniere ? ['id' => $derniere['id'], 'le' => $derniere['prevu_le'], 'consultant' => $derniere['consultantNom'],
+                'causes' => $derniere['causes'], 'reco' => $derniere['reco'], 'diagnostic' => $derniere['diagnostic'], 'execution' => $derniere['execution'], 'clients' => $derniere['clients'], 'positif' => $derniere['positif']] : null,
             'prochaineVisite' => $prochaine ? ['id' => $prochaine['id'], 'le' => $prochaine['prevu_le'], 'h' => $prochaine['debut_h'], 'consultant' => $prochaine['consultantNom']] : null,
             'visiteEnCours' => $enCours ? $enCours['id'] : null, 'frequence' => viFrequence($sid),
         ]);
@@ -557,7 +589,7 @@ function ep_visites_app(): array
     return ['role' => $role, 'id' => $id, 'shop' => $shop, 'maintenant' => date('Y-m-d H:i'),
         'boutiques' => $boutiques, 'consultants' => viConsultants(),
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $plans,
-        'msp' => $msp, 'equipe' => $equipe, 'checklist' => viChecklist(), 'causes' => viCausesPlano(), 'seuils' => viSeuils(),
+        'msp' => $msp, 'equipe' => $equipe, 'checklist' => viChecklist(), 'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
         'frequence' => setting('visitesFrequence', []) ?: (object) [],
         'reseau' => viReseau($boutiques)];
 }
@@ -660,12 +692,18 @@ function wr_visites_put(string $id): array
     if (array_key_exists('sentiment', $b)) { $s = (int) $b['sentiment']; $set[] = 'sentiment = ?'; $args[] = $s >= 1 && $s <= 5 ? $s : null; }
     if (array_key_exists('positif', $b)) { $set[] = 'positif = ?'; $args[] = mb_substr((string) $b['positif'], 0, 2000); }
     if (array_key_exists('notes', $b)) { $set[] = 'notes = ?'; $args[] = mb_substr((string) $b['notes'], 0, 4000); }
+    if (array_key_exists('execution', $b)) { $set[] = 'execution = ?'; $args[] = in_array($b['execution'], VI_EXECUTION, true) && $b['execution'] !== '' ? $b['execution'] : null; }
+    if (array_key_exists('clients', $b)) { $set[] = 'clients = ?'; $args[] = in_array($b['clients'], VI_CLIENTS, true) && $b['clients'] !== '' ? $b['clients'] : null; }
+    if (array_key_exists('causes', $b)) { $c = is_array($b['causes']) ? array_values(array_intersect(array_map('strval', $b['causes']), array_keys(viCausesDiag()))) : []; $set[] = 'causes = ?'; $args[] = $c ? json_encode($c) : null; }
+    if (array_key_exists('diagnostic', $b)) { $set[] = 'diagnostic = ?'; $args[] = mb_substr((string) $b['diagnostic'], 0, 4000) ?: null; }
+    if (array_key_exists('reco', $b)) { $set[] = 'reco = ?'; $args[] = mb_substr((string) $b['reco'], 0, 4000) ?: null; }
     if (isset($b['consultant'])) { $set[] = 'consultant_id = ?'; $args[] = mb_substr((string) $b['consultant'], 0, 32); $set[] = 'consultant_nom = ?'; $args[] = viConsultantNom((string) $b['consultant']); }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
     Db::exec('UPDATE ceo_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
     if (($b['statut'] ?? '') === 'terminee') {
-        journalAdd($v['consultant_nom'] ?: 'Consultant', 'Visite', null, 'Visite terminée : ' . (viMagasins()[(string) $v['shop_id']]['court'] ?? $v['shop_id']));
+        journalAdd($v['consultant_nom'] ?: 'Consultant', 'Visite', null, 'Visite terminée : ' . (viMagasins()[(string) $v['shop_id']]['court'] ?? $v['shop_id'])
+            . (!empty($b['reco']) ? ' — ' . mb_substr((string) $b['reco'], 0, 160) : ''));
     }
     return ['ok' => true, 'visite' => viVisiteLigne(Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]))];
 }
@@ -1019,6 +1057,12 @@ function viSyntheseHtml(array $s): string
     }
     $h .= '</table>';
     if ($s['escalades']) { $h .= '<h3>Escalades possibles</h3><ul>'; foreach ($s['escalades'] as $x) { $h .= '<li>' . $feu[$x['feu']] . ' ' . $e($x['titre']) . ' — <i>' . $e($x['detail']) . '</i></li>'; } $h .= '</ul>'; }
+    $diags = array_filter($s['boutiques'], fn ($b) => !empty($b['derniereVisite']['reco']) || !empty($b['derniereVisite']['causes']));
+    if ($diags) {
+        $h .= '<h3>Vu sur place — le vrai problème</h3><ul>';
+        foreach ($diags as $b) { $dv = $b['derniereVisite']; $h .= '<li><b>' . $e($b['court']) . '</b> (' . $e($dv['le']) . ', ' . $e($dv['consultant']) . ') : ' . $e(implode(', ', array_map(fn ($c) => viCausesDiag()[$c] ?? $c, $dv['causes'] ?? []))) . ($dv['reco'] ? ' — « ' . $e($dv['reco']) . ' »' : '') . '</li>'; }
+        $h .= '</ul>';
+    }
     if ($s['actions']) { $h .= '<h3>Actions requises aujourd’hui</h3><ol>'; foreach ($s['actions'] as $a) { $h .= '<li>' . $e($a) . '</li>'; } $h .= '</ol>'; }
     $h .= '<p style="color:#777;font-size:12px">Cette semaine : ' . $s['visitesSemaine'] . ' visites · ' . $s['checklists'] . ' terminées · ' . $s['photosSemaine'] . ' photos.</p>';
     return $h;

@@ -26,6 +26,8 @@
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const GENRES_JOUR = [['jour_facade', 'Façade'], ['jour_interieur', 'Intérieur'], ['jour_arriere', 'Arrière']];
   const RUBRIQUES_MSP = ['accueil', 'produits', 'hygiene', 'ambiance'];
+  const EXECUTION = { standards: 'Standards appliqués', raccourcis: 'Quelques raccourcis', ecarts: 'Écarts fréquents' };
+  const CLIENTS = { satisfaits: 'Satisfaits', mitiges: 'Mitigés', insatisfaits: 'Insatisfaits' };
 
   const CSS = `
 .vi{font-family:var(--font-ui);color:var(--color-text);font-size:14px;line-height:1.45;position:relative;min-height:100%}
@@ -302,6 +304,7 @@
     boutique(id) { return (this.D.boutiques || []).find(b => String(b.id) === String(id)) || null; }
     visite(id) { return (this.D.visites || []).find(v => String(v.id) === String(id) || (v.client_id && v.client_id === id)) || null; }
     plan(id) { return (this.D.plans || []).find(p => String(p.id) === String(id) || (p.client_id && p.client_id === id)) || null; }
+    derniereVisiteDe(shop) { return (this.D.visites || []).filter(v => String(v.shop) === String(shop) && v.statut === 'terminee').sort((a, c) => a.prevu_le < c.prevu_le ? 1 : -1)[0] || null; }
     plansDe(shop, ouverts) { return (this.D.plans || []).filter(p => String(p.shop) === String(shop) && (!ouverts || /^(ouvert|reprendre|escalade)$/.test(p.statut))); }
     pointsDe(vid) { const m = {}; (this.D.points || []).filter(p => String(p.visite_id) === String(vid)).forEach(p => { m[p.ref] = p; }); return m; }
     photosDe(vid) { return (this.D.photos || []).filter(p => String(p.visite_id) === String(vid)); }
@@ -505,18 +508,28 @@
       const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
       const b = this.boutique(v.shop) || { court: v.shop }; const f = this.form; const finie = v.statut === 'terminee';
       const ecarts = this.ecartsDe(v);
-      if (!f.pa) { f.pa = finie ? [] : ecarts.map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true })); f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; }
+      if (!f.pa) { f.pa = finie ? [] : ecarts.map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true })); f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || ''; }
+      const CD = this.D.causesDiag || {}; const baisse = b.feu === 'rouge' || (b.ca && b.ca.pct != null && b.ca.pct < 0);
       const dejaPlans = this.plansDe(v.shop).filter(p => String(p.visite_id) === String(v.id));
       const attente = this.file.filter(o => o.apres === 'photo').length;
       return this.hd('Review — ' + b.court, 'visite du ' + fmtDJ(v.prevu_le) + (v.commence_a ? ' · ' + fmtH(v.commence_a) + (v.termine_a ? ' – ' + fmtH(v.termine_a) : '') : ''), 'checklist/' + v.id)
         + `<div class="cap">Écarts relevés</div><div class="card">${ecarts.length ? ecarts.map(e => `<div class="plan ${e.grave ? 'P0b' : 'P1b'}"><div class="row"><span class="feu ${e.grave ? 'rouge' : 'orange'}"></span><b>${esc(e.titre)}</b></div><div class="sm mu">${esc(e.detail)}</div></div>`).join('') : '<div class="sm mu">Aucun écart dans la checklist.</div>'}</div>`
-        + (finie ? `<div class="cap">Plan d’action de cette visite</div>${dejaPlans.length ? dejaPlans.map(p => this.planLigne(p)).join('') : '<div class="card sm mu">Aucune action.</div>'}`
+        + (finie ? `${this.vuSurPlace(v)}<div class="cap">Plan d’action de cette visite</div>${dejaPlans.length ? dejaPlans.map(p => this.planLigne(p)).join('') : '<div class="card sm mu">Aucune action.</div>'}`
           : `<div class="cap">Plan d’action</div><div class="card">${f.pa.map((a, i) => `<div class="plan ${a.priorite}b" style="padding-bottom:6px"><input type="text" data-f="pa|${i}|titre" value="${esc(a.titre)}" placeholder="Action…" style="font-weight:600"><input type="text" data-f="pa|${i}|detail" value="${esc(a.detail || '')}" placeholder="Détail pour le franchisé…" style="margin-top:4px;font-size:12px">
               <div class="act">${['P0', 'P1', 'P2'].map(p => `<button class="chip ${a.priorite === p ? 'on' : ''}" data-a="pa" data-v="${i}|priorite|${p}">${p}</button>`).join('')}<span style="width:6px"></span>${Object.keys(ASSIGNES).map(k => `<button class="chip ${a.assigne === k ? 'on' : ''}" data-a="pa" data-v="${i}|assigne|${k}">${ASSIGNES[k]}</button>`).join('')}</div>
               <div class="act">${[[1, '24 h'], [2, '48 h'], [7, '1 sem.'], [14, '2 sem.']].map(([n, l]) => `<button class="chip ${a.echeance === plusJours(auj(), n) ? 'on' : ''}" data-a="pa" data-v="${i}|echeance|${plusJours(auj(), n)}">${l}</button>`).join('')}<input type="date" data-f="pa|${i}|echeance" value="${esc(a.echeance || '')}" style="width:150px;padding:5px 7px"><span class="sp"></span><button class="chip ko" data-a="pa-del" data-v="${i}">retirer</button></div></div>`).join('')}
             <div class="act"><button class="chip" data-a="pa-add">+ Ajouter une action</button></div></div>
+            <div class="cap">Vu sur place</div><div class="card">
+              <div class="row"><span>Énergie de l’équipe</span><span class="sp"></span><span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="form" data-v="sentiment|${n}" class="${f.sentiment >= n ? 'on' : ''}">★</button>`).join('')}</span></div>
+              <div class="sm" style="margin-top:8px">Exécution face au protocole</div><div class="act">${Object.keys(EXECUTION).map(k => `<button class="chip ${f.execution === k ? 'on' : ''}" data-a="form" data-v="execution|${k}">${EXECUTION[k]}</button>`).join('')}</div>
+              <div class="sm" style="margin-top:8px">Les clients sortent…</div><div class="act">${Object.keys(CLIENTS).map(k => `<button class="chip ${f.clients === k ? 'on' : ''}" data-a="form" data-v="clients|${k}">${CLIENTS[k]}</button>`).join('')}</div>
+              <textarea data-f="form|notes" placeholder="Ce que je vois tourner réellement — notes du consultant (historique)…" style="margin-top:8px">${esc(f.notes)}</textarea></div>
+            <div class="cap">Le vrai problème ${baisse ? '<span class="pill P0">chiffre ou qualité en baisse</span>' : ''}</div><div class="card">
+              <div class="sm mu">${baisse ? 'Le chiffre ou la qualité baisse : qui est le vrai coupable ?' : 'Si quelque chose cloche, nommez la cause — pas la même analyse depuis le bureau.'}</div>
+              <div class="act">${Object.keys(CD).map(k => `<button class="chip ${f.causes.includes(k) ? 'on' : ''}" data-a="cause-diag" data-v="${k}">${esc(CD[k])}</button>`).join('')}</div>
+              <textarea data-f="form|diagnostic" placeholder="Pourquoi — ce que j’ai vu, mesuré, touché…" style="margin-top:8px">${esc(f.diagnostic)}</textarea></div>
+            <div class="cap">Recommandation</div><div class="card"><div class="sm mu">« Voilà ce qui ne marche pas et voilà pourquoi. » Le franchisé la lit ; Sam la retrouve dans la synthèse.</div><textarea data-f="form|reco" placeholder="Ce qui ne marche pas, pourquoi, et ce qu’on fait…" style="margin-top:8px">${esc(f.reco)}</textarea></div>
             <div class="cap">Observé positif</div><div class="card"><textarea data-f="form|positif" placeholder="Ce qui va bien — dit au franchisé aussi">${esc(f.positif)}</textarea></div>
-            <div class="cap">Équipe</div><div class="card"><div class="row"><span>Sentiment</span><span class="sp"></span><span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="form" data-v="sentiment|${n}" class="${f.sentiment >= n ? 'on' : ''}">★</button>`).join('')}</span></div><textarea data-f="form|notes" placeholder="Notes du consultant (historique)…" style="margin-top:8px">${esc(f.notes)}</textarea></div>
             <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>`)
         + (attente ? `<div class="btns"><button class="btn w" data-a="sync">📤 Synchroniser (${attente} photo${attente > 1 ? 's' : ''} en attente)</button></div>` : '');
     }
@@ -536,7 +549,7 @@
         + `<div class="cap">Clients</div><div class="card"><div class="row sm"><span class="pill api">Google</span><span>${b.google ? note1(b.google.note) + ' · ' + b.google.avis + ' avis' + (b.google.faibles ? ' · ' + b.google.faibles + ' avis ≤ 2/5 sur 30 j' : '') : '—'}</span></div><div class="row sm" style="margin-top:6px"><span class="pill loc">MSP</span><span>${msps.length ? msps.slice().reverse().map(m => esc(MOIS[Number(m.mois.slice(5)) - 1] || m.mois) + ' ' + note1(m.total)).join(' → ') : 'aucun rapport'}</span></div></div>`
         + `<div class="cap">Plans d’action ${this.src('local')}</div><div class="card sm">${pm ? (Object.keys(pm).sort().map(m => { const x = pm[m]; const tot = Object.values(x).reduce((a, c) => a + c, 0); return esc(m) + ' : ' + tot + ' créé' + (tot > 1 ? 's' : '') + ' · ' + (x.ferme || 0) + ' fermé' + ((x.ferme || 0) > 1 ? 's' : ''); }).join('<br>') || 'aucun') : (B ? 'aucun' : 'lecture…')}<br>${this.plansDe(shop, true).length} ouvert(s) aujourd’hui</div>`
         + `<div class="cap">Planogramme ${this.src('mix')}</div><div class="card">${B && B.planoParVisite.length ? `<div class="row sm">${B.planoParVisite.map(p => esc(fmtD(p.le)) + ' ' + p.pct + ' %').join(' <span class="mu">·</span> ')}</div><div class="bar"><i style="width:${B.planoParVisite[B.planoParVisite.length - 1].pct}%"></i></div>` : '<div class="sm mu">Pas encore de relevé.</div>'}${b.plano && b.plano.ruptures ? `<div class="xs mu" style="margin-top:4px">${b.plano.ruptures} rupture(s) au dernier relevé</div>` : ''}</div>`
-        + `<div class="cap">Notes du consultant</div><div class="card sm">${visites.length ? visites.slice(0, 6).map(v => `${fmtD(v.prevu_le)} — ${esc(v.consultantNom || '')}${v.sentiment ? ' · équipe ' + '★'.repeat(v.sentiment) : ''}${v.notes ? ' · ' + esc(v.notes) : ''}${v.positif ? ' · 🟢 ' + esc(v.positif) : ''}`).join('<br>') : 'aucune visite terminée'}</div>`
+        + `<div class="cap">Vu sur place, visite après visite</div>${visites.length ? visites.slice(0, 4).map(v => this.vuSurPlace(v, fmtDJ(v.prevu_le) + ' · ' + (v.consultantNom || '')) || `<div class="card sm mu">${fmtDJ(v.prevu_le)} · ${esc(v.consultantNom || '')} — sans notes</div>`).join('') : '<div class="card sm mu">aucune visite terminée</div>'}`
         + (B && B.nc && !B.nc.indispo ? `<div class="cap">Non-conformités du panel (30 j) ${this.src('api')}</div><div class="card sm">${B.nc.total} relevée(s) · <b class="${B.nc.ouvertes ? 'dn' : ''}">${B.nc.ouvertes} non corrigée(s)</b>${B.nc.liste.length ? '<br>' + B.nc.liste.slice(0, 4).map(n => (n.corrigee ? '✓ ' : '! ') + esc(n.tache) + ' (' + fmtD(n.jour) + ', ' + n.note + '/5)').join('<br>') : ''}</div>` : '')
         + `<div class="cap">Face au réseau (${R.boutiques || 0} boutiques)</div><div class="card sm">CA vs objectif : <b class="${b.ca && b.ca.pct < 0 ? 'dn' : ''}">${b.ca ? pct(b.ca.pct) : '—'}</b> · réseau ${pct(R.caPct)}<br>Google : ${b.google ? note1(b.google.note) : '—'} · réseau ${note1(R.google)}<br>Planogramme : ${b.plano ? b.plano.pct + ' %' : '—'} · réseau ${R.plano != null ? R.plano + ' %' : '—'}</div>`;
     }
@@ -548,6 +561,7 @@
         const enCours = ps.filter(p => p.statut !== 'ferme').length;
         return this.hd('Mon plan d’action', b.court + ' · ' + enCours + ' en cours · ' + (ps.length - enCours) + ' fermé' + (ps.length - enCours > 1 ? 's' : ''))
           + (ps.length ? ps.map(p => this.planLigne(p, p.statut === 'ouvert' || p.statut === 'reprendre' ? `<div class="btns"><button class="btn ${p.statut === 'ouvert' ? 'p' : ''} w" data-a="photo" data-v="correction|${esc(this.shop)}||${esc(p.ref || '')}|${esc(p.id)}">📷 ${p.statut === 'reprendre' ? 'Reprendre la photo' : 'Photo de la correction'}</button></div>` : p.statut === 'attente' ? '<div class="xs mu" style="margin-top:6px">L’admin contrôle la photo.</div>' : '')).join('') : '<div class="card sm mu">Aucune action en cours. 🎉</div>')
+          + this.vuSurPlace(this.derniereVisiteDe(this.shop), 'Ce que le consultant a vu')
           + `<div class="cap">Ma boutique cette semaine</div><div class="card sm">${b.ca ? `<div class="row"><span>CA</span><span class="sp"></span><b>${eur(b.ca.ca)}</b><span class="mu">/ ${eur(b.ca.objectif)}</span></div><div class="bar"><i style="width:${Math.min(100, Math.round(b.ca.ca / Math.max(1, b.ca.objectif) * 100))}%"></i></div>` : ''}${b.google ? `<div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>${note1(b.google.note)}</b><span class="mu">${b.google.avis} avis</span></div>` : ''}${b.prochaineVisite ? `<div class="row" style="margin-top:6px"><span>Prochaine visite</span><span class="sp"></span><b>${fmtDJ(b.prochaineVisite.le)} ${b.prochaineVisite.h}</b></div>` : ''}</div>`;
       }
       const ouverts = (D.plans || []).filter(p => p.statut !== 'ferme');
@@ -592,7 +606,21 @@
           <div class="cap">Les boutiques</div><div class="card" style="padding:4px 6px;overflow:auto"><table class="tbl"><tr><th>Boutique</th><th>Feu</th><th>Dernière visite</th><th>CA semaine ${this.src('api')}</th><th>Google ${this.src('api')}</th><th>Plano</th><th>Actions</th><th>Signal</th></tr>${S.boutiques.map(b => `<tr><td><b>${esc(b.court)}</b></td><td>${this.feuDot(b)}</td><td>${b.derniereVisite ? fmtD(b.derniereVisite.le) + ' · ' + esc(b.derniereVisite.consultant) : '<span class="mu">jamais</span>'}</td><td>${b.ca ? eur(b.ca.ca) + ' · <span class="' + (b.ca.pct < 0 ? 'dn' : 'up') + '">' + pct(b.ca.pct) + '</span>' : '—'}</td><td>${b.google ? note1(b.google.note) + ' (' + b.google.avis + ')' : '—'}</td><td>${b.plano ? b.plano.pct + ' %' : '—'}</td><td class="${b.p0 ? 'dn' : ''}">${b.plansOuverts}${b.p0 ? ' · ' + b.p0 + ' P0' : ''}</td><td class="${b.feu === 'rouge' ? 'dn' : 'mu'}">${esc((b.motifs || []).slice(0, 2).join(' · ') || '—')}</td></tr>`).join('')}</table></div>
           <div class="grid2"><div><div class="cap">Escalades possibles</div><div class="card sm">${S.escalades.length ? S.escalades.map(e => `<div class="al"><span class="feu ${e.feu}" style="margin-top:4px"></span><div><b>${esc(e.titre)}</b><div class="xs mu">${esc(e.detail)}</div></div></div>`).join('') : '<span class="mu">Aucune.</span>'}</div></div>
           <div><div class="cap">Actions requises aujourd’hui</div><div class="card sm">${S.actions.length ? S.actions.map((a, i) => (i + 1) + '. ' + esc(a)).join('<br>') : '<span class="mu">Rien d’urgent.</span>'}</div><div class="cap">Consultants cette semaine</div><div class="card sm">${Object.keys(S.consultants || {}).length ? Object.keys(S.consultants).map(k => esc(k) + ' ' + S.consultants[k]).join(' · ') : '<span class="mu">aucune visite planifiée</span>'}<div class="xs mu" style="margin-top:4px">${S.visitesSemaine} visites · ${S.checklists} terminées · ${S.photosSemaine} photos</div></div></div></div>
+          ${S.boutiques.some(b => b.derniereVisite && (b.derniereVisite.reco || (b.derniereVisite.causes || []).length)) ? `<div class="cap">Vu sur place — le vrai problème</div><div class="card sm">${S.boutiques.filter(b => b.derniereVisite && (b.derniereVisite.reco || (b.derniereVisite.causes || []).length)).map(b => { const d = b.derniereVisite; const CD = this.D.causesDiag || {}; return `<div class="al"><span class="feu ${b.feu}" style="margin-top:4px"></span><div><b>${esc(b.court)}</b> · ${fmtD(d.le)} · ${esc(d.consultant)}${(d.causes || []).length ? '<div>' + esc(d.causes.map(c => CD[c] || c).join(', ')) + '</div>' : ''}${d.reco ? `<div class="mu">« ${esc(d.reco)} »</div>` : ''}</div></div>`; }).join('')}</div>` : ''}
           <div class="card sm mu">Réseau : CA ${pct(R.caPct)} vs objectif · Google ${note1(R.google)} · planogramme ${R.plano != null ? R.plano + ' %' : '—'}. La synthèse part aussi par mail le matin si une adresse est réglée (Réglages).</div>`;
+    }
+    /** Ce que le consultant a vu, diagnostiqué et recommandé — lu par le franchisé, l'admin, l'historique. */
+    vuSurPlace(v, titre) {
+      if (!v || !(v.reco || v.diagnostic || (v.causes || []).length || v.execution || v.clients || v.sentiment || v.positif)) { return ''; }
+      const CD = this.D.causesDiag || {};
+      return `<div class="cap">${titre || 'Vu sur place'}</div><div class="card sm">
+        ${v.sentiment || v.execution || v.clients ? `<div class="row" style="flex-wrap:wrap;gap:6px">${v.sentiment ? `<span class="pill">équipe ${'★'.repeat(v.sentiment)}</span>` : ''}${v.execution ? `<span class="pill ${v.execution === 'standards' ? 'api' : v.execution === 'ecarts' ? 'loc' : 'mix'}">${EXECUTION[v.execution] || v.execution}</span>` : ''}${v.clients ? `<span class="pill ${v.clients === 'satisfaits' ? 'api' : v.clients === 'insatisfaits' ? 'loc' : 'mix'}">clients ${(CLIENTS[v.clients] || v.clients).toLowerCase()}</span>` : ''}</div>` : ''}
+        ${(v.causes || []).length ? `<div style="margin-top:6px"><b>Le vrai problème :</b> ${esc(v.causes.map(c => CD[c] || c).join(', '))}</div>` : ''}
+        ${v.diagnostic ? `<div class="mu" style="margin-top:2px">${esc(v.diagnostic)}</div>` : ''}
+        ${v.reco ? `<div style="margin-top:6px"><b>Recommandation :</b> ${esc(v.reco)}</div>` : ''}
+        ${v.positif ? `<div style="margin-top:6px">🟢 ${esc(v.positif)}</div>` : ''}
+        ${v.notes ? `<div class="mu" style="margin-top:4px">${esc(v.notes)}</div>` : ''}
+        <div class="xs mu" style="margin-top:6px">${esc(v.consultantNom || '')} · visite du ${fmtDJ(v.prevu_le)}</div></div>`;
     }
     async chargerSynthese() { try { this.S = await this.lire('/visites/synthese', 'synthese'); } catch (e) { this.S = null; this.dire('Synthèse indisponible hors ligne.'); return; } this.rendre(); }
     v_msp() {
@@ -647,7 +675,7 @@
       if (a === 'recharger') { this.recharger(); return; }
       if (a === 'synthese') { this.S = null; this.rendre(); return; }
       if (a === 'raz') { Idb.vider('cache').then(() => this.recharger()); return; }
-      if (a === 'form') { this.form[parts[0]] = parts.length > 1 ? (isNaN(parts[1]) ? parts[1] : Number(parts[1])) : true; if (parts[0] === 'sentiment' && this.form.sentiment === Number(parts[1])) { /* garde */ } this.rendre(); return; }
+      if (a === 'form') { const val = parts.length > 1 ? (isNaN(parts[1]) ? parts[1] : Number(parts[1])) : true; this.form[parts[0]] = (parts[0] === 'execution' || parts[0] === 'clients') && this.form[parts[0]] === val ? '' : val; this.rendre(); return; }
       if (a === 'planifier') { this.planifier(); return; }
       if (a === 'reprog') { const f = this.form; this.ecrire({ method: 'PUT', path: '/visites/' + encodeURIComponent(v), body: { prevu_le: f.prevu_le, debut_h: f.debut_h, qui: this.qui() }, apres: 'visite' }); const vis = this.visite(v); if (vis) { if (f.prevu_le) { vis.prevu_le = f.prevu_le; } if (f.debut_h) { vis.debut_h = f.debut_h; } } this.form = {}; this.dire('Visite reprogrammée.'); return; }
       if (a === 'annuler') { if (!confirm('Annuler cette visite ?')) { return; } this.majVisite(v, { statut: 'annulee' }); this.go('agenda'); return; }
@@ -658,6 +686,7 @@
       if (a === 'etat') { const cyc = { '': 'ok', ok: 'ko', ko: 'na', na: '' }; const p = this.point(parts[0], parts[1], parts[2]); p.etat = cyc[p.etat || ''] || ''; this.point_save(parts[0], p); return; }
       if (a === 'note') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); if (p.note != null && !p.etat) { p.etat = p.note <= 2 ? 'ko' : 'ok'; } this.point_save(parts[0], p); return; }
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
+      if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
@@ -751,7 +780,7 @@
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, positif: f.positif || '', notes: f.notes || '' });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       this.form = {};
       this.go('historique', v.shop);
