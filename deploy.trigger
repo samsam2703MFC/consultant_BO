@@ -424,3 +424,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-19T12:52:00Z visites tables action de visite renommees
 2026-09-19T13:44:45Z visites : conformité planogramme et assortiment
 2026-09-19T13:49:58Z visites : fenêtre d'assortiment calée sur la dernière vente
+2026-09-19T13:54:30Z visites : la fenêtre lue est dite dans les alertes

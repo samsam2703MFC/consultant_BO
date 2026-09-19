@@ -417,7 +417,7 @@
           <div class="mu">${pl.motif ? esc(pl.motif) : `${pl.tenus} emplacement${pl.tenus > 1 ? 's' : ''} tenu${pl.tenus > 1 ? 's' : ''} sur ${pl.emplacements} · ${pl.zones} comptoir${pl.zones > 1 ? 's' : ''} dessiné${pl.zones > 1 ? 's' : ''} · ${pl.comptoirsMontes ? pl.comptoirsMontes + ' photographié' + (pl.comptoirsMontes > 1 ? 's' : '') + ' monté' + (pl.comptoirsMontes > 1 ? 's' : '') + ' aujourd’hui' : 'aucune photo de montage aujourd’hui'}`}</div>
           ${sansPlace.length ? `<div class="xs" style="margin-top:4px">⚠ ${pl.obligatoiresSansPlace} obligatoire${pl.obligatoiresSansPlace > 1 ? 's' : ''} sans place au comptoir : <span class="mu">${sansPlace.slice(0, 6).map(x => esc(x.nom)).join(' · ')}${sansPlace.length > 6 ? ' …' : ''}</span></div>` : ''}
           <div class="row" style="margin-top:10px">${feuAs ? `<span class="feu ${feuAs}"></span>` : ''}<b>Assortiment obligatoire</b><span class="sp"></span><b>${as.pct != null ? as.pct + ' %' : '—'}</b></div>
-          <div class="mu">${as.motif ? esc(as.motif) : `${as.presentes} des ${as.lisibles} obligatoires vues en caisse sur ${as.jours} j${as.sansIdentifiant ? ' · ' + as.sansIdentifiant + ' sans identifiant de caisse' : ''}`}</div>
+          <div class="mu">${as.motif ? esc(as.motif) : `${as.presentes} des ${as.lisibles} obligatoires vues en caisse sur les ${as.jours} j jusqu’au ${fmtD(as.au)}${as.sansIdentifiant ? ' · ' + as.sansIdentifiant + ' sans identifiant de caisse' : ''}`}</div>
           ${manq.length ? `<div class="act" style="margin-top:6px"><button class="chip ${ouvert ? 'on' : ''}" data-a="drop" data-v="${esc(cle)}">${as.manquantes} manquante${as.manquantes > 1 ? 's' : ''} ${ouvert ? '▴' : '▾'}</button></div>` : as.motif ? '' : '<div class="xs up" style="margin-top:4px">Toutes les obligatoires sont passées en caisse.</div>'}
           ${ouvert && manq.length ? `<div class="sm" style="margin-top:6px">${manq.map(x => `<div class="row" style="padding:2px 0"><span>${esc(x.nom)}</span><span class="sp"></span><span class="xs mu">${x.auComptoir ? 'a sa place au comptoir' : 'pas de place au comptoir'}</span></div>`).join('')}${as.manquantes > manq.length ? `<div class="xs mu">… et ${as.manquantes - manq.length} autre(s)</div>` : ''}</div>` : ''}
           <div class="xs mu" style="margin-top:6px">Planogramme : comptoir dessiné dans le cockpit. Assortiment : références obligatoires × lignes de ticket du magasin, ${fmtD(as.du)} – ${fmtD(as.au)}.${as.retard > 2 ? ' La caisse s’arrête au ' + fmtD(as.derniereVente) + ' (' + as.retard + ' j de retard) : la fenêtre se cale dessus.' : ''}</div></div>`;
@@ -522,7 +522,7 @@
       if (cf && cf.assortiment && cf.assortiment.manquantes) {
         const as = cf.assortiment;
         alertes.push([as.pct != null && as.pct < 75 ? 'rouge' : 'orange',
-          as.manquantes + ' référence(s) obligatoire(s) sans une seule vente sur ' + as.jours + ' j',
+          as.manquantes + ' référence(s) obligatoire(s) sans une seule vente sur ' + as.jours + ' j (au ' + fmtD(as.au) + ')',
           (as.liste || []).slice(0, 4).map(x => x.nom + (x.auComptoir ? '' : ' (pas de place au comptoir)')).join(' · ')]);
       }
       if (cf && cf.planogramme && cf.planogramme.obligatoiresSansPlace) {
