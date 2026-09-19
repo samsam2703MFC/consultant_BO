@@ -647,6 +647,52 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
   Slack) du brief a été retirée de l'assistant, qui compte quatre étapes : segment, template, texte, envoi.
 - Page franchisé hors cockpit : `newsletter/?shop={id}` (même module, rôle = magasin).
 
+### `/visites` — l'application terrain (consultant, franchisé, admin)
+
+Une PWA (`visites/`) et cinq écrans du rail « Application consultant ». Le
+serveur relit l'existant (CA `/exploitation/jour`, Google `/reputation`,
+non-conformités `/pwa/tasks/nc`, push, SMTP) et porte ce qui n'existait pas :
+la visite, ses points, ses photos, le plan d'action à trois acteurs, le
+rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
+`?shop=3` (franchisé), `?role=admin`.
+
+| Route | Rôle | Ce qu'elle rend ou fait |
+|---|---|---|
+| `GET /visites/app?role=&id=&shop=` | tous | tout ce que l'application affiche : `boutiques[]` (feu, motifs, `ca`, `google`, `plano`, `equipe`, `msp`, `plansOuverts`, dernière et prochaine visite), `visites[]` (−90 j … +21 j), `points[]`, `photos[]`, `plans[]`, `msp{}`, `equipe{}`, `checklist[]`, `causes{}`, `seuils{}`, `frequence{}`, `reseau{}`. Le franchisé n'a que sa boutique. |
+| `GET /visites/boutique/{shop}` | tous | ce qui coûte un appel au panel (`nc`) et l'historique 3 mois : `visites[]` terminées, `plansParMois`, `planoParVisite[]`, `photosJour[]`, `msp[]`, `equipe`. |
+| `GET /visites/synthese` | admin | la synthèse du jour : `compteurs`, `boutiques[]`, `escalades[]`, `actions[]`, `consultants{}`. Envoyée par mail le matin si `seuils.mails` et `seuils.mailSynthese`. |
+| `GET /visites/reglages` | admin | checklist, seuils, fréquences, état de l'horloge, adresse du cron. |
+| `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
+| `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
+| `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, `sentiment` 1..5, `positif`, `notes`. `{id}` est l'identifiant ou le `client_id`. |
+| `PUT /visites/{id}/points` | consultant | `points[]` : `ref`, `module`, `libelle`, `etat` (ok, ko, na), `note` 1..5, `valeur` (% planogramme), `commentaire`, `causes[]`. Idempotent par (visite, ref). |
+| `POST /visites/photos` | tous | `client_id`, `shop` ou `visite_id`, `ref`, `plan_id`, `genre` (jour_facade, jour_interieur, jour_arriere, point, avant, apres, correction), `data` (data-URL ≤ 2 Mo, JPEG/PNG/WebP), `prise_a`, `lat`, `lng`. Fichier sous `uploads/visites/{shop}/`. |
+| `POST /plans` | consultant, admin | un plan ou `plans[]` : `client_id`, `shop` ou `visite_id`, `ref`, `titre`, `detail`, `priorite` (P0, P1, P2), `assigne` (franchise, equipe, consultant, admin), `echeance`. Push au franchisé. |
+| `PUT /plans/{id}` | tous | `statut` + `role` : transitions permises par rôle (franchisé : ouvert/reprendre → attente ; admin et consultant : attente → valide ou reprendre, valide → ferme, ouvert → escalade, …), `retour` (à reprendre), `escalade_motif`, `photo_client_id`, et le contenu pour consultant et admin. 409 si le passage est refusé. Push à qui de droit. |
+| `POST /msp` | consultant, admin | `shop`, `mois` AAAA-MM, `rubriques{}` (/20), `total`, `commentaires`, `fichier` (data-URL PDF ≤ 8 Mo). Un rapport par boutique et par mois. |
+| `PUT /equipe/{shop}` | consultant, franchisé | `effectif`, `prevu`, `departs`, `releve_le`. |
+| `PUT /visites/reglages` | admin | `checklist[]` (modules produit, hygiene, visuel, planogramme, msp ; points `ref`, `libelle`, `photo`, `pct`), `seuils{}`, `frequence{shop: jours}`. |
+| `POST /visites/tick` | admin | l'horloge tout de suite (`force` : sans attendre l'heure). |
+
+Feu tricolore (`seuils`, la première règle qui s'applique) : 🔴 P0 ouvert
+plus de `p0Jours`, Google sous `googleCible − googleRouge`, planogramme sous
+`planoRouge`, rubrique MSP sous `mspAlerte` ; 🟡 P0 ou P1 ouvert, Google sous
+la cible, deux avis ≤ 2/5 sur 30 jours, planogramme sous `planoOrange`, visite
+due (fréquence par boutique), CA sous −`caOrange` % seulement si `caSeul` ;
+🟢 sinon.
+
+Tables : `ceo_visite`, `ceo_visite_point`, `ceo_visite_photo`,
+`ceo_plan_action`, `ceo_plan_action_evt`, `ceo_msp`, `ceo_equipe_releve` ;
+réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
+`visitesJeton`, `visitesCron`. Abonnements push : `shop_id` = la boutique
+(franchisé), `c:{consultant}` ou `admin`.
+
+Hors ligne (module `assets/js/visites.js`) : la lecture `/visites/app` est
+gardée en IndexedDB ; chaque écriture porte un `client_id`, est appliquée à
+l'écran, mise en file et rejouée au retour du réseau ; les photos sont
+réduites sur l'appareil (bord long 1600 px, JPEG 0,7, EXIF retiré) avant
+d'entrer dans la file.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)

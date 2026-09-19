@@ -160,6 +160,7 @@ rsync -a --delete \
 # survivre au déploiement. Sans cette exclusion, `rsync --delete` les effacerait
 # à chaque livraison — une photo de comptoir perdue sans que rien ne le dise.
 mkdir -p "$TARGET_DIR/public/uploads/plano"
+mkdir -p "$TARGET_DIR/public/uploads/visites"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 
@@ -514,6 +515,7 @@ done
 # (le jeton cuit dans le fichier avait ces deux faiblesses).
 chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
 chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
+chmod +x "$TARGET_DIR/bin/visites_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -525,6 +527,7 @@ chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
   # Newsletter : l'horloge des campagnes, toutes les 5 minutes (lots de 100 par
   # minute ; en mode test elle ne fait rien partir et le dit).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/newsletter_cron.sh >/dev/null 2>&1"
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/visites_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports

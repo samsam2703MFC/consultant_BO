@@ -1,0 +1,14 @@
+{
+  "name": "Visites terrain — L'Atelier by",
+  "short_name": "Visites",
+  "description": "Agenda, checklist et plan d'action des visites en boutique.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3efe9",
+  "theme_color": "#f3efe9",
+  "lang": "fr",
+  "icons": [
+    { "src": "../assets/img/logo.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}
