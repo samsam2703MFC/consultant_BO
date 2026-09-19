@@ -1,6 +1,7 @@
 /* Newsletter & campagnes — la marque et ses franchisés écrivent aux clients
- * captés en boutique : email + SMS, segments, modèles, vouchers, déclinaison
- * sur les réseaux, automatisations, droits marque / franchisé.
+ * captés en boutique : email + SMS, segments, modèles, vouchers,
+ * automatisations, droits marque / franchisé. (La déclinaison sur les réseaux
+ * du brief a été retirée : pas nécessaire.)
  *
  * Un seul module, deux vues : la MARQUE (rôle « brand » — tout, paramètres
  * compris) et le MAGASIN (rôle = id du magasin — ses segments, sa campagne,
@@ -284,7 +285,7 @@
     step: 1, sourceId: 'indiv', segmentId: '', templateId: 'gagne', subjects: {}, bodies: {}, smsTexts: {}, sendLangs: ['fr', 'nl'], editLang: 'fr',
     date: '', time: '08:30', maxVouchers: '30', testSent: false, senderId: '',
     segForm: false, segName: '', segShop: 'all', segProduct: 'all', segPeriod: '365', segMinBasket: '',
-    channel: 'email', socialOn: { linkedin: true, instagram: true, slack: true }, socialTexts: {}, socialReviewed: {}, sendMode: 'manual', trigger: 'dormant45',
+    channel: 'email', sendMode: 'manual', trigger: 'dormant45',
   });
 
   class NL {
@@ -362,15 +363,6 @@
       const insight = (paras.find(p => !/^(bonjour|dag|hello)/i.test(p)) || paras[0] || '').replace(/\s+/g, ' ');
       const tp = this.tpl();
       return { hook: this.subject(), insight, cta: this.LL(tp.cta), link: 'latelier.by/' + (tp.voucher ? 'v/K7M2DIAM' : 'shop'), previewBody: body };
-    }
-    gen() {
-      const s = this.s, b = this.blocks(), seg = this.segById(s.segmentId), isAuto = s.sendMode === 'auto';
-      const shopTag = (seg.shop ? this.nomShop(seg.shop) : 'reseau').toLowerCase().replace(/[^a-z0-9]+/g, '');
-      return {
-        linkedin: `${b.hook}.\n\n${b.insight}\n\n${b.cta} → ${b.link}`,
-        instagram: `${b.hook} ✦\n${b.cta.replace(/^(Je |Ik |I'll |I )/, '')} — lien en bio.\n#latelierby #${shopTag} #boulangerie`,
-        slack: `📣 Newsletter « ${b.hook} » part ${isAuto ? 'en automatique' : 'le ' + s.date.split('-').reverse().join('/') + ' à ' + s.time} vers ${fmt(this.langTotal())} clients (${this.L(seg.name)}). Offre : ${b.insight.slice(0, 110)}${b.insight.length > 110 ? '…' : ''}`,
-      };
     }
     checks() {
       const t = this.t(), s = this.s, subject = this.subject(), body = this.body(), sd = this.sender();
@@ -465,8 +457,6 @@
       const pillM = (label, bg, color, border) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`;
       if (c.channel === 'email' || c.channel === 'both') pills.push(pillM(t.chEmail, 'transparent', MUTED, 'var(--color-border-secondary)'));
       if (c.channel === 'sms' || c.channel === 'both') pills.push(pillM('SMS', 'transparent', MUTED, 'var(--color-border-secondary)'));
-      const soc = Object.entries(c.social || {}).filter(e => e[1] && e[1].on).map(e => ({ linkedin: 'LinkedIn', instagram: 'Instagram', slack: 'Slack' })[e[0]] || e[0]);
-      if (soc.length) pills.push(pillM(soc.join(' · '), 'transparent', MUTED, 'var(--color-border-secondary)'));
       pills.push(c.sendMode === 'auto' ? pillM(`${t.pillAuto} · ${t['tr_' + c.trigger] || c.trigger}`, SEC, ON, SEC) : pillM(t.pillManual, BG2, MUTED, 'var(--color-border-tertiary)'));
       const retro = c.status === 'sent' && st.sent > 0;
       const peutRetirer = c.status !== 'sent' && (this.isBrand() || c.createdBy === this.role());
@@ -489,8 +479,8 @@
     /* --- 2. assistant nouvelle campagne -------------------------------------- */
     vWizard() {
       const s = this.s, t = this.t();
-      const steps = [t.s1, t.s2, t.s3, t.soShort, t.s5].map((label, i) => { const n = i + 1, active = n === s.step, done = n < s.step; return `<div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;background:${active ? SEC : done ? P : BG2};color:${active ? ON : done ? '#fff' : MUTED}">${n}</span><span style="font-size:13px;color:${active ? 'var(--color-text)' : MUTED}">${esc(label)}</span></div>`; }).join('');
-      const corps = [this.step1, this.step2, this.step3, this.step4, this.step5][s.step - 1].call(this);
+      const steps = [t.s1, t.s2, t.s3, t.s5].map((label, i) => { const n = i + 1, active = n === s.step, done = n < s.step; return `<div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;background:${active ? SEC : done ? P : BG2};color:${active ? ON : done ? '#fff' : MUTED}">${n}</span><span style="font-size:13px;color:${active ? 'var(--color-text)' : MUTED}">${esc(label)}</span></div>`; }).join('');
+      const corps = [this.step1, this.step2, this.step3, this.step5][s.step - 1].call(this);
       return `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px">
         <h1 style="font-family:var(--font-display);font-size:32px;font-weight:400;line-height:1.2;margin:0">${esc(t.newCampaign)}</h1>
@@ -501,7 +491,7 @@
           ${corps}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px">
             ${this.btnS('prev', esc(t.back), null, 'padding:10px 16px;visibility:' + (s.step === 1 ? 'hidden' : 'visible'))}
-            ${this.btnP('next', esc(s.step === 5 ? t.schedule : t.next), null, 'padding:10px 18px;' + (s.busy ? 'opacity:.6' : ''))}
+            ${this.btnP('next', esc(s.step === 4 ? t.schedule : t.next), null, 'padding:10px 18px;' + (s.busy ? 'opacity:.6' : ''))}
           </div>
         </div>
         ${this.preview()}
@@ -587,28 +577,6 @@
       <div style="display:flex;gap:16px;font-size:12px;color:${MUTED}"><span>${body.trim() ? body.trim().split(/\s+/).length : 0} ${esc(t.words)}</span><span>·</span><span>${esc(t.oneCta)}</span></div>
       ${hasSms ? `<label style="display:flex;flex-direction:column;gap:6px;border-top:0.5px solid var(--color-border-tertiary);padding-top:18px"><span style="display:flex;justify-content:space-between;gap:12px">${this.cap(esc(t.smsText))}<span style="font-size:12px;color:${sms.length > 160 ? P : MUTED}">${sms.length} / 160</span></span><textarea data-f="sms" rows="3" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:12px;font-size:14px;line-height:1.5;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(sms)}</textarea><span style="font-size:12px;color:${MUTED}">${esc(t.smsHint)}</span></label>` : ''}`;
     }
-    step4() {
-      const s = this.s, t = this.t(), b = this.blocks(), gen = this.gen(), tp = this.tpl();
-      const meta = { linkedin: { name: 'LinkedIn', max: 3000, rows: 5, note: t.soNoteLi }, instagram: { name: 'Instagram', max: 2200, rows: 4, note: t.soNoteIg }, slack: { name: 'Slack · #boutiques', max: 500, rows: 3, note: t.soNoteSlack } };
-      const cards = ['linkedin', 'instagram', 'slack'].map(k => {
-        const on = !!s.socialOn[k], text = s.socialTexts[k] ?? gen[k], reviewed = !!s.socialReviewed[k];
-        const st = !on ? [t.soOff, 'transparent', MUTED, 'var(--color-border-secondary)'] : reviewed ? [t.soReviewed, BG2, GREEN, 'var(--color-border-tertiary)'] : [t.soReview, SEC, ON, SEC];
-        return `<div style="border:${on ? '0.5px solid var(--color-border-tertiary)' : '0.5px solid transparent'};border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;background:${on ? SURF : BG2}">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-            <button data-a="social-toggle" data-v="${k}" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-ui);text-align:left"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${on ? '✓' : ''}</span><span style="font-size:14px;font-weight:500;color:var(--color-text)">${meta[k].name}</span><span style="font-size:12px;color:${MUTED}">${esc(t['so_' + k])}</span></button>
-            ${this.pill(st[0], st[1], st[2], st[3])}
-          </div>
-          ${on ? `<textarea data-f="social-${k}" rows="${meta[k].rows}" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:12px;font-size:14px;line-height:1.5;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(text)}</textarea><div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;color:${MUTED}"><span>${esc(meta[k].note)}</span><span style="color:${text.length > meta[k].max ? P : MUTED}">${text.length} / ${meta[k].max}</span></div>` : ''}
-        </div>`;
-      }).join('');
-      return `${this.h2(t.soTitle, t.soSub)}
-      <div style="background:${BG2};border-radius:8px;padding:14px 16px;display:grid;grid-template-columns:90px 1fr;gap:8px 16px;font-size:13px;align-items:baseline">
-        ${this.cap('Hook')}<div>${esc(b.hook)}</div>${this.cap('Insight')}<div>${esc(b.insight)}</div>${this.cap('CTA')}<div>${esc(b.cta)} → ${esc(b.link)}</div>
-        ${this.cap('Image')}<div style="display:flex;align-items:center;gap:10px">${tp.img ? `<img src="${esc(this.img(tp))}" alt="" style="height:28px;width:auto">` : ''}<span style="color:${MUTED}">${esc(t.soImageNote)}</span></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:12px;color:${MUTED}">${esc(t.soGenerated)}</span>${this.btnS('regen', esc(t.soRegen), null, 'padding:8px 14px')}</div>
-      <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>`;
-    }
     step5() {
       const s = this.s, t = this.t(), isAuto = s.sendMode === 'auto', seg = this.segById(s.segmentId), src = (this.data().sources || []).find(x => x.id === s.sourceId), tp = this.tpl(), sd = this.sender();
       const SEL = `border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%`;
@@ -617,7 +585,6 @@
       const checks = this.checks(), fails = checks.filter(c => !c[1]).length;
       const langSummary = s.sendLangs.length ? `${fmt(this.langTotal())} ${t.recipients} · ${LANG_KEYS.filter(k => s.sendLangs.includes(k)).map(k => k.toUpperCase()).join(' + ')}` : t.langNone;
       const modeSummary = isAuto ? `${t.modeAuto} · ${t['tr_' + s.trigger]}` : `${t.modeManual} · ${s.date.split('-').reverse().join('/')} ${s.time}`;
-      const socialOn = ['linkedin', 'instagram', 'slack'].filter(k => s.socialOn[k]).map(k => ({ linkedin: 'LinkedIn', instagram: 'Instagram', slack: 'Slack' })[k]);
       const rec = (k, v) => `<div style="color:${MUTED}">${esc(k)}</div><div>${v}</div>`;
       return `${this.h2(t.s4Title, t.s4Sub)}
       <div>${this.cap(esc(t.sendMode), 'margin-bottom:8px')}<div class="nl-2" style="gap:8px">${modes}</div></div>
@@ -631,7 +598,7 @@
       <label style="display:flex;flex-direction:column;gap:6px;max-width:320px">${this.cap(esc(t.maxVouchers) + ` <span style="text-transform:none;letter-spacing:0">(${esc(t.optional)})</span>`)}${this.input('maxVouchers', s.maxVouchers, '', 'type="number" placeholder="30"')}<span style="font-size:12px;color:${MUTED}">${esc(s.maxVouchers ? s.maxVouchers + ' ' + t.voucherHintOn : t.voucherHintOff)}</span></label>
       <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:13px">
         ${rec(t.database, esc(src ? this.L(src.name) : ''))}${rec(t.segment, esc(this.L(seg.name)) + ' · ' + fmt(seg.count))}${rec(t.sendLangs, esc(langSummary))}${rec(t.channel, esc({ email: t.chEmail, sms: t.chSms, both: t.chBoth }[s.channel]))}
-        ${rec(t.sendMode, esc(modeSummary))}${rec(t.soShort, esc(socialOn.length ? socialOn.join(' · ') : t.soNone))}${rec(t.template, esc(this.L(tp.name)))}${rec(t.sender, esc(sd.name) + ' · ' + esc(sd.email))}
+        ${rec(t.sendMode, esc(modeSummary))}${rec(t.template, esc(this.L(tp.name)))}${rec(t.sender, esc(sd.name) + ' · ' + esc(sd.email))}
         ${rec(t.subject, esc(this.subject()))}${rec(t.sendTest, this.link('test', esc(s.testSent ? t.testDone : t.testSend)))}
       </div>`;
     }
@@ -764,9 +731,7 @@
           ${ligne('SMTP', r.smtp ? `configuré · ${esc(r.smtpExpediteur)}` : `<span style="color:${P}">non configuré</span> — Paramètres du cockpit → E-mail`)}
           ${ligne('Domaine vérifié', `<input data-f="domaine" value="${esc(d.domaine || '')}" placeholder="atelierby.be" style="${INP};max-width:260px">`)}
           ${ligne('Adresses de test', `<input data-f="testAdresses" value="${esc((r.testAdresses || []).join(', '))}" placeholder="jusqu’à 3 adresses, séparées par des virgules" style="${INP}"><div style="font-size:11px;color:${MUTED};margin-top:4px">Le « test à 3 adresses » de l’assistant part ici, même en mode test.</div>`)}
-          ${ligne('Slack · #boutiques', `<input data-f="slackWebhook" value="${r.slack ? '••••••••  (posé)' : ''}" placeholder="https://hooks.slack.com/services/…" style="${INP}"><div style="font-size:11px;color:${MUTED};margin-top:4px">Le teaser Slack part par ce webhook au départ de la campagne. Vide = à coller à la main.</div>`)}
           ${ligne('SMS', `<span style="color:${MUTED}">aucun fournisseur branché — les textes SMS sont gardés, rien ne part.</span>`)}
-          ${ligne('Réseaux', `<span style="color:${MUTED}">LinkedIn et Instagram : brouillons à coller (pas d’API branchée).</span>`)}
           ${ligne('Vouchers', `<span style="color:${MUTED}">codes uniques générés au départ, 8 caractères ; la boutique les encaisse par l’API (Stripe non branché).</span>`)}
           ${ligne('Horloge', `${this.btnS('tick', 'Passer l’horloge maintenant', null, 'padding:7px 12px;font-size:12px')}<span style="font-size:11px;color:${MUTED};margin-left:10px">${r.cronDernier ? 'dernier passage ' + esc(String(r.cronDernier)) : 'jamais passée'}${tick ? ' · ' + esc(tick) : ''}</span><div style="font-size:11px;color:${MUTED};margin-top:6px;word-break:break-all">cron (toutes les 5 min) : ${esc(r.cron || '')}</div>`)}
         </div>
@@ -815,8 +780,6 @@
       else if (a === 'channel') { s.channel = v; this.render(); }
       else if (a === 'editlang') { s.editLang = v; this.render(); }
       else if (a === 'wrap') { const el = this.editLang(); const body = this.body(); s.bodies[el] = body + (v === '**' ? ' **gras**' : ' _italique_'); this.render(); }
-      else if (a === 'social-toggle') { s.socialOn = Object.assign({}, s.socialOn); s.socialOn[v] = !s.socialOn[v]; this.render(); }
-      else if (a === 'regen') { s.socialTexts = {}; s.socialReviewed = {}; this.render(); }
       else if (a === 'mode') { s.sendMode = v; this.render(); }
       else if (a === 'sender') { s.senderId = v; this.render(); }
       else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
@@ -831,7 +794,6 @@
       if (f === 'subject') { s.subjects = Object.assign({}, s.subjects); s.subjects[el] = v; }
       else if (f === 'body') { s.bodies = Object.assign({}, s.bodies); s.bodies[el] = v; }
       else if (f === 'sms') { s.smsTexts = Object.assign({}, s.smsTexts); s.smsTexts[el] = v; }
-      else if (f.indexOf('social-') === 0) { const k = f.slice(7); s.socialTexts = Object.assign({}, s.socialTexts); s.socialTexts[k] = v; s.socialReviewed = Object.assign({}, s.socialReviewed); s.socialReviewed[k] = true; }
       else if (f === 'segName') s.segName = v;
       else if (f === 'impCsv') { s.imp.csv = v; return; }
       else if (f === 'impLot') { s.imp.lot = v; return; }
@@ -854,12 +816,11 @@
       else if (f === 'impShop') s.imp.shop = v;
       else if (f === 'impCsv' || f === 'impLot') return;
       else if (f === 'testAdresses') { this.putReglages({ testAdresses: v }); return; }
-      else if (f === 'slackWebhook') { this.putReglages({ slackWebhook: v }); return; }
       else if (f === 'domaine') { this.putReglages({ domaine: v }); return; }
       else if (f.indexOf('shopname-') === 0) { this.putShop(f.slice(9), { senderName: v }); return; }
       else if (f.indexOf('shopmail-') === 0) { this.putShop(f.slice(9), { email: v }); return; }
       else if (f.indexOf('shopstatus-') === 0) { this.putShop(f.slice(11), { status: v }); return; }
-      else if (['date', 'time', 'maxVouchers', 'subject', 'body', 'sms', 'segName', 'segMinBasket'].includes(f) || f.indexOf('social-') === 0) return;
+      else if (['date', 'time', 'maxVouchers', 'subject', 'body', 'sms', 'segName', 'segMinBasket'].includes(f)) return;
       this.render();
     }
     putReglages(patch) {
@@ -887,15 +848,14 @@
     nextStep() {
       const s = this.s, t = this.t();
       if (s.step === 1 && !s.sendLangs.length) { this.notify(t.langNone); return; }
-      if (s.step < 5) { s.step++; this.render(); window.scrollTo({ top: 0 }); return; }
+      if (s.step < 4) { s.step++; this.render(); window.scrollTo({ top: 0 }); return; }
       if (s.busy) return;
       const seg = this.segById(s.segmentId), tp = this.tpl();
       const par = (obj, dflt) => { const o = {}; s.sendLangs.forEach(l => { o[l] = obj[l] ?? (dflt ? (dflt[l] ?? dflt.fr ?? '') : ''); }); return o; };
-      const social = {}; ['linkedin', 'instagram', 'slack'].forEach(k => { social[k] = { on: !!s.socialOn[k], text: s.socialTexts[k] ?? this.gen()[k], reviewed: !!s.socialReviewed[k] }; });
       const nom = this.L(tp.name) + ' — ' + (seg.shop ? this.nomShop(seg.shop) : 'Réseau');
       s.busy = true; this.render();
       ecrire(this.base, 'POST', '/newsletter/campagnes', { role: this.role(), name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
-        subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), social, headlines: par({}, tp.headline), ctas: par({}, tp.cta),
+        subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), headlines: par({}, tp.headline), ctas: par({}, tp.cta),
         sendMode: s.sendMode, trigger: s.trigger, date: s.date, time: s.time, maxVouchers: s.maxVouchers, sender: this.sender().id, testSent: s.testSent })
         .then(r => {
           s.busy = false;
