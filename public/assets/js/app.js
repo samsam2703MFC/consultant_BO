@@ -13213,6 +13213,7 @@ class App {
       if (this.state.suiviPeriode !== periode) { return; }
       this.setState({ suiviData: d || { periode, validees: 0, moyenne: null, repartition: {}, ouverts: 0, traites: 0, signalements: [], parIntervenant: [], taches: [] } });
     });
+  }
   /* --- contrôle des posts Facebook -------------------------------------------------- */
   valsPosts(common){
     const S = this.state, D = this.D, M = this.M;
