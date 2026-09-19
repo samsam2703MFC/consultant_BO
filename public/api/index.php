@@ -249,6 +249,7 @@ function route(string $method, string $path): mixed
             $path === '/scouting'                      => ep_scouting(),
             $path === '/scouting/reseau'               => ep_scouting_reseau(),
             $path === '/scouting/etude'                => ep_scouting_etude(),
+            $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
         };
