@@ -266,7 +266,8 @@ class App {
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
-      demarchage: 'developpement-commercial', newsletter: 'newsletter',
+      demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
+      prospection: 'prospection', prospectionMobile: 'prospection-mobile',
     };
   }
   /**
@@ -575,6 +576,16 @@ class App {
       if (!this.scouting) this.scouting = new Scouting(this);
       this.scouting.mount(document.getElementById('scouting-root'));
     }
+    // Prospection et Newsletter sont des modules à part (partagés avec la page
+    // mobile) : ils tiennent leur DOM, on les ré-attache après chaque rendu.
+    if (this.state.ready && this.state.screen === 'prospection' && window.CockpitProspection){
+      const m = this.dmMagasin();
+      if (m) window.CockpitProspection.mount(document.getElementById('prospection-root'), { shop: String(m.id), apiBase: API_BASE, mobile: false, leafletDir: 'assets/vendor/leaflet/' });
+    }
+    if (this.state.ready && (this.state.screen === 'newsletter' || this.state.screen === 'newsletterShop') && window.CockpitNewsletter){
+      const role = this.state.screen === 'newsletter' ? 'brand' : String((this.dmMagasin() || {}).id || '');
+      if (role) window.CockpitNewsletter.mount(document.getElementById('newsletter-root'), { role, apiBase: API_BASE, imgDir: 'assets/img/newsletter/', notify: msg => this.notify(msg) });
+    }
 
     // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
     // `usageInventaire`). Après la fusion, jamais avant : c'est le DOM vivant
@@ -873,7 +884,10 @@ class App {
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       demarchage: ['Développement commercial', 'La liste de démarchage du magasin : les lieux qui rassemblent du monde autour de lui — entreprises, écoles, santé, administrations, formation, funéraire, sport, hôtels, commerces en zoning — relevés dans OpenStreetMap. On coche, on date la visite, on note le retour ; une annotation part au CRM marketing.'],
-      newsletter: ['Newsletter', 'À créer : la lettre du magasin à ses clients et prospects.'],
+      newsletter: ['Newsletter — marque', 'Campagnes email et SMS aux clients captés en boutique : segments, modèles, vouchers, déclinaison sur les réseaux, automatisations. La vue de la marque : tout, y compris les paramètres et les droits des franchisés. Mode test : aucun envoi ne part.'],
+      newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
+      prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
+      prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
@@ -1277,7 +1291,10 @@ class App {
       // en attendant — la prospection autour du magasin, sa lettre.
       ['ERP franchisé', [
         ['demarchage', 'Développement commercial', 0],
-        ['newsletter', 'Newsletter', 0]]],
+        ['prospection', 'Prospection', 0],
+        ['prospectionMobile', 'Prospection mobile', 0],
+        ['newsletter', 'Newsletter', 0],
+        ['newsletterShop', 'Newsletter magasin', 0]]],
       ['Contrôle', [
         ['suivi', 'Tâches', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
         ['reporting', 'Reporting automatisé', 0]]],
@@ -1310,11 +1327,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1700,6 +1717,7 @@ class App {
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
     if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
+    if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
@@ -7254,22 +7272,54 @@ class App {
       this.setState({});
     });
   }
-  /** Ce que le franchisé a fait de chaque lieu, par magasin, dans le navigateur. */
+  /**
+   * Ce que le franchisé a fait de chaque lieu, par magasin — AU SERVEUR
+   * (/prospection/{shop}), la réserve que tient le module Prospection : le
+   * même lieu coché ici l'est sur le téléphone du franchisé. Sans le module
+   * (script absent), l'écran garde l'état en mémoire le temps de la page.
+   */
   dmEtat(){
-    if (!this._dmEtat) {
-      try { this._dmEtat = JSON.parse(localStorage.getItem('ceo_demarchage') || '{}') || {}; } catch (e) { this._dmEtat = {}; }
+    const P = window.CockpitProspection;
+    const m = this.dmMagasin();
+    if (P && m) {
+      // La réserve arrive du serveur après le premier rendu : on se fait
+      // prévenir une fois, et l'écran se redessine avec les cases cochées.
+      if (!this._dmAbonne) { this._dmAbonne = true; P.ecouter(() => { if (/^(demarchage|prospection|prospectionMobile)$/.test(this.state.screen)) this.setState({}); }); }
+      const tout = {}; tout[m.id] = P.etat(m.id); return tout;
     }
+    if (!this._dmEtat) { this._dmEtat = {}; }
     return this._dmEtat;
   }
   dmSet(shopId, id, patch){
+    const P = window.CockpitProspection;
+    if (P) {
+      const d = (this.D.dm || {})[this.dmCle()];
+      const l = d && (d.lieux || []).find(x => x.id === id);
+      P.set(shopId, id, patch, l && l.nom).then(() => this.setState({}));
+      this.setState({});
+      return;
+    }
     const tout = this.dmEtat();
     const par = tout[shopId] || (tout[shopId] = {});
     const cur = par[id] || (par[id] = { coche: false, visite: '', retour: '', note: '' });
     Object.assign(cur, patch);
     if (patch.note !== undefined || patch.retour !== undefined || patch.visite !== undefined) { cur.le = new Date().toISOString().slice(0, 10); }
     if (!cur.coche && !cur.visite && !cur.retour && !cur.note) { delete par[id]; }
-    try { localStorage.setItem('ceo_demarchage', JSON.stringify(tout)); } catch (e) { /* stockage refusé : l'écran garde l'état en mémoire */ }
     this.setState({});
+  }
+  /** Les écrans Prospection, Prospection mobile et Newsletter magasin : le magasin choisi, le lien mobile. */
+  valsProspection(common){
+    const ms = this.dmMagasins();
+    const m = this.dmMagasin();
+    common.prChargement = !this.D.dmReseau;
+    common.prMagasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: m && String(x.id) === String(m.id) }));
+    common.prSetMagasin = e => this.setState({ dmShop: e.target.value });
+    common.prSansMagasin = !!this.D.dmReseau && !m;
+    common.prMagasin = m ? { id: String(m.id), nom: m.nom } : null;
+    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+    common.prLienMobile = m ? base + 'prospection/?shop=' + encodeURIComponent(String(m.id)) : '';
+    common.prLiens = ms.map(x => ({ id: String(x.id), nom: x.nom, url: base + 'prospection/?shop=' + encodeURIComponent(String(x.id)), on: m && String(x.id) === String(m.id) }));
+    common.prCopier = () => { try { navigator.clipboard.writeText(common.prLienMobile); this.notify('Lien copié — à ouvrir sur le téléphone du franchisé.'); } catch (e) { this.notify('Copie impossible : sélectionnez le lien.'); } };
   }
   valsDemarchage(common){
     const S = this.state;

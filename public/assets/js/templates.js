@@ -148,7 +148,9 @@ export function render(c, x){
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isPlan ? tplPlan(c, x) : ''}
       ${c.isDemarchage ? tplDemarchage(c, x) : ''}
-      ${c.isNewsletter ? tplNewsletter(c, x) : ''}
+      ${c.isNewsletter || c.isNewsletterShop ? tplNewsletter(c, x) : ''}
+      ${c.isProspection ? tplProspection(c, x) : ''}
+      ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
@@ -9637,12 +9639,67 @@ function tplDemarchage(c, x){
   </div>`;
 }
 
-/* --- Newsletter : à créer -------------------------------------------------- */
+/* --- Newsletter : module à part (assets/js/newsletter.js), monté après le rendu ---
+ * La vue marque (admin) et la vue magasin (franchisé) sont deux écrans du
+ * rail ; le module reçoit le rôle. Ici : l'en-tête, le choix du magasin pour
+ * la vue franchisé, et le nœud d'accueil. */
 function tplNewsletter(c, x){
   const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const shop = c.isNewsletterShop;
   return `
-  <div data-screen="newsletter" style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:28px 24px;font-size:13px;color:var(--color-text-muted);max-width:640px;line-height:1.6">
-    <div style="font-family:var(--font-display);font-size:19px;color:var(--color-text);margin-bottom:6px">Newsletter — à créer</div>
-    La lettre du magasin à ses clients et prospects : les destinataires viendront de la liste de démarchage et du CRM marketing, le contenu des campagnes. Cet écran est réservé dans le rail, il se construit ensuite.
+  <div data-screen="${shop ? 'newsletterShop' : 'newsletter'}" style="display:flex;flex-direction:column;gap:12px">
+    ${shop ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="${cap}">Vue du magasin</span>
+      ${c.prChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</span>' : `<select ${x.C(c.prSetMagasin)} style="${SEL}">${c.prMagasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`}
+      <span style="font-size:11.5px;color:var(--color-text-muted)">Ce que le franchisé voit : ses segments, sa campagne, son adresse — pas les paramètres, pas les automatisations.</span>
+    </div>` : ''}
+    ${c.prSansMagasin && shop ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin pointé sur la carte.</div>' : ''}
+    <div id="newsletter-root" style="min-height:400px"></div>
+  </div>`;
+}
+
+/* --- Prospection : module à part (assets/js/prospection.js), monté après le rendu --- */
+function tplProspection(c, x){
+  const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  return `
+  <div data-screen="prospection" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="${cap}">Magasin</span>
+      ${c.prChargement ? '<span style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</span>' : `<select ${x.C(c.prSetMagasin)} style="${SEL}">${c.prMagasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`}
+      ${c.prMagasin ? `<span style="font-size:11.5px;color:var(--color-text-muted)">La même liste sur le téléphone : <a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="color:var(--color-primary)">Prospection mobile ↗</a></span>` : ''}
+    </div>
+    ${c.prSansMagasin ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin pointé sur la carte : pointez-le dans Scouting (Magasins du réseau).</div>' : ''}
+    <div id="prospection-root" style="min-height:400px"></div>
+  </div>`;
+}
+
+/* --- Prospection mobile : la page du téléphone, ses liens, un aperçu --- */
+function tplProspectionMobile(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer';
+  return `
+  <div data-screen="prospectionMobile" style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">
+        <div style="${cap};margin-bottom:8px">Le lien de chaque magasin</div>
+        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-bottom:12px">Une page à part, faite pour le téléphone : ma liste et l’annotation en tournée (un tap fait avancer le statut, la note part au CRM), la carte des concentrations, le CA possible. Elle lit et écrit la même réserve que l’écran Prospection : ce qui est coché au bureau l’est sur le téléphone, et inversement. À envoyer au franchisé, ou à ajouter à l’écran d’accueil de son téléphone.</div>
+        ${c.prChargement ? '<div style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins…</div>' : `<div style="display:flex;flex-direction:column;gap:6px">${c.prLiens.map(l => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:${l.on ? 'var(--color-background-secondary)' : 'transparent'}">
+            <button ${x.A(() => c.prSetMagasin({ target: { value: l.id } }))} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--color-text);text-align:left;flex:0 0 220px">${esc(l.nom)}</button>
+            <a href="${esc(l.url)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--color-primary);word-break:break-all;flex:1">${esc(l.url)}</a>
+          </div>`).join('')}</div>`}
+        ${c.prMagasin ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button ${x.A(c.prCopier)} style="${btnS}">Copier le lien de ${esc(c.prMagasin.nom)}</button><a href="${esc(c.prLienMobile)}" target="_blank" rel="noopener" style="${btnS};text-decoration:none;display:inline-flex;align-items:center">Ouvrir dans un onglet ↗</a></div>` : ''}
+      </div>
+    </div>
+    <div style="${carte};padding:14px 16px 16px">
+      <div style="${cap};margin-bottom:10px;display:flex;justify-content:space-between"><span>Aperçu · ${esc(c.prMagasin ? c.prMagasin.nom : '')}</span><span>390 × 760</span></div>
+      ${c.prMagasin ? `<div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.prLienMobile)}" title="Prospection mobile" style="width:390px;height:760px;border:none;display:block"></iframe></div>` : '<div style="font-size:12px;color:var(--color-text-muted)">Choisissez un magasin.</div>'}
+    </div>
   </div>`;
 }

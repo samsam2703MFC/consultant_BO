@@ -49,6 +49,8 @@ function ensureInstalled(): void
     ensureRevue();
     connecteurTable();
     ensureScouting();
+    ensureNewsletter();
+    ensureProspection();
 }
 
 /**

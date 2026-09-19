@@ -572,6 +572,53 @@ repli, sans API ou si le serveur n'atteint pas Overpass.
 - `tiles` : inventaire seulement ; `GET /scouting/tiles/{secteur}` renvoie le JSON `{ t, c, b, p }` déposé
   par le navigateur (communes, commerces, nœuds `place`). 404 si le secteur n'est pas en cache.
 
+### `/prospection/{shop}` — la liste de démarchage du magasin, au serveur
+
+Ce que le franchisé fait de chaque lieu relevé par `/scouting/demarchage` : dans ma liste, visite datée,
+retour, note (part au CRM marketing), et l'**action à suivre** décidée sur place avec sa date. Une seule
+réserve pour le cockpit (écrans Prospection et Développement commercial) et la page mobile
+`prospection/?shop={id}` (`ceo_prospect`, clé magasin + id OSM).
+
+```json
+{ "shop": "2", "n": 3, "lieux": { "n123456": { "coche": true, "visite": "2026-09-19", "retour": "rdv", "note": "Devis 40 pers.",
+                                               "action": "devis", "actionLe": "2026-09-25", "le": "2026-09-19", "nom": "École de Blanmont" } } }
+```
+
+- `retour` ∈ `''` | `rappeler` | `rdv` | `interesse` | `refus` | `client` ; `action` ∈ `''` | `mail` | `test` | `devis` | `rappel` | `passer` | `commande`.
+- `PUT /prospection/{shop}` `{ lieux: { id: { coche?, visite?, retour?, note?, action?, actionLe?, nom? } } }` : fusion champ par
+  champ (400 lieux par appel au plus) ; une ligne vidée disparaît. Rend les lignes relues.
+
+### `/newsletter` — campagnes email + SMS, marque et franchisés (mode test)
+
+`GET /newsletter?role=brand|{shopId}`. Le rôle est porté par la requête, comme le dashboard porte son magasin :
+le serveur applique les droits du rôle demandé et ne les élargit jamais. **Mode test** : aucun envoi ne part ;
+les bases et leurs comptes (`sources`, `segments[].count`) sont un jeu d'essai tant que les vraies bases clients
+ne sont pas raccordées — la réponse le dit (`test: true`).
+
+```json
+{ "test": true, "role": "2", "canSend": true, "domaine": "latelier.by", "smtp": false,
+  "moi": { "id": "2", "nom": "Corbais", "kind": "franchise", "senderName": "L'Atelier By Corbais", "email": "", "status": "unverified", "canSend": true },
+  "magasins": [ … ], "sources": [{ "id": "indiv", "table": "tfb_customers", "name": { "fr": "Clients individuels", "nl": "…", "en": "…" }, "count": 4210, "optin": 3480 }],
+  "segments": [{ "id": "tous-2", "src": "indiv", "shop": "2", "name": { "fr": "…" }, "rule": { "fr": "…" }, "rules": { "magasin": "2", "produit": null, "periode": "365", "panier_min": null }, "count": 1248, "split": [886, 318, 44] }],
+  "campagnes": [{ "id": 1, "name": "Tarte diamant — Corbais", "segment": "tous-2", "langs": ["fr", "nl"], "templateId": "gagne", "channel": "both", "subjects": { "fr": "…" },
+                  "sendMode": "manual", "trigger": null, "sendAt": "2026-09-12 08:30:00", "maxVouchers": 30, "sender": "2", "status": "sent",
+                  "stats": { "sent": 1248, "open": 599, "click": 237, "vouchers": 22, "revenue": 1184 }, "exemple": true, "createdBy": "brand" }],
+  "chiffres": { "optin": 6934, "envoisMois": 2, "vouchers": [58, 100] } }
+```
+
+- Vue **marque** (`brand`) : tous les magasins, segments et campagnes. Vue **magasin** : ses segments (`shop` = lui ou `""`),
+  ses campagnes (créées par lui ou parties de son adresse), son magasin seul dans `magasins`.
+- `magasins[].status` ∈ `verified` | `warmup` | `unverified` ; `canSend` : la marque autorise ou bloque l'envoi du franchisé.
+- `POST /newsletter/campagnes` `{ role, name, segment, langs[], templateId, channel, subjects{}, bodies{}, sms{}, social{}, sendMode, trigger?, date, time, maxVouchers?, sender, testSent?, status? }`
+  → `{ ok, campagne }`. Franchisé : refusé si bloqué (403), segment d'un autre magasin (403), mode `auto` (403), expéditeur autre que le sien (403).
+- `DELETE /newsletter/campagnes/{id}` : brouillon ou programmée ; une campagne envoyée reste (409). Franchisé : les siennes seulement.
+- `POST /newsletter/segments` (marque seule) `{ name, src, shop, product, period, minBasket, count, rule }` → `{ ok, segment }` ; la règle est gardée en `rules_json`.
+- `PUT /newsletter/magasins/{id}` `{ role, senderName?, email?, status?, canSend? }` : le franchisé ne touche qu'à son nom et son adresse ;
+  le statut suit l'adresse (domaine de la marque = vérifié) et la marque peut le fixer ; `canSend` marque seule.
+- `POST /newsletter/test` `{ role, subject }` → `{ ok, simule: true }` : journalisé, rien ne part.
+- Tables : `ceo_nl_magasin`, `ceo_nl_source`, `ceo_nl_segment`, `ceo_nl_campagne` (créées et semées par `ensureNewsletter()` ; les magasins
+  suivent `ep_stores()` à chaque démarrage). Les modèles (copy FR/NL/EN, SMS) vivent dans le module front `assets/js/newsletter.js`.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)
