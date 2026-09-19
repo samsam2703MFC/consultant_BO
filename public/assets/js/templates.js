@@ -9597,7 +9597,7 @@ function tplDemarchage(c, x){
         ${c.dmLieux.map(l => `<tr style="${l.coche ? 'background:rgba(141,29,44,0.04)' : ''}">
           <td style="padding:7px 4px 7px 8px;${bord};width:22px">${coche(l)}</td>
           <td style="padding:7px 8px;${bord};min-width:180px"><div style="font-weight:600">${esc(l.nom)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.genre)}${l.zoning ? ' · ' + esc(l.zoning) : ''}${l.tel ? ' · ' + esc(l.tel) : ''}</div></td>
-          <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11.5px">${esc(l.fam)}</td>
+          <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11.5px">${esc(l.fam)}${l.offre ? `<div style="font-size:10.5px;color:var(--color-primary)">${esc(l.offre)}</div>` : ''}</td>
           <td style="padding:7px 8px;${bord};min-width:200px;font-size:11.5px">${adresse(l)}</td>
           <td style="padding:7px 8px;${bord};text-align:right;white-space:nowrap;${num}">${esc(l.dist)}</td>
           <td style="padding:7px 8px;${bord};white-space:nowrap;font-size:11px;color:${l.tailleCoul}">${esc(l.taille)}</td>

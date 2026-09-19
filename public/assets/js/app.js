@@ -7284,7 +7284,7 @@ class App {
     if (P && m) {
       // La réserve arrive du serveur après le premier rendu : on se fait
       // prévenir une fois, et l'écran se redessine avec les cases cochées.
-      if (!this._dmAbonne) { this._dmAbonne = true; P.ecouter(() => { if (/^(demarchage|prospection|prospectionMobile)$/.test(this.state.screen)) this.setState({}); }); }
+      if (!this._dmAbonne) { this._dmAbonne = true; P.chargerOffres(false); P.ecouter(() => { if (/^(demarchage|prospection|prospectionMobile)$/.test(this.state.screen)) this.setState({}); }); }
       const tout = {}; tout[m.id] = P.etat(m.id); return tout;
     }
     if (!this._dmEtat) { this._dmEtat = {}; }
@@ -7374,6 +7374,7 @@ class App {
           adresse: l.adresse || '', sansAdresse: !l.adresse, tel: l.tel || '', site: l.site || '', mail: l.mail || '', maps,
           zoning: l.zoning || '', dist: l.dKm.toFixed(1).replace('.', ',') + ' km',
           taille: l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers. (probable)' : (l.grand === false ? '< 20 pers. (probable)' : 'taille inconnue')),
+          offre: (() => { const P = window.CockpitProspection; if (!P) return ''; const o = P.offreParId(P.offreDe(l, e.offre)); return o ? o.nom : ''; })(),
           tailleCoul: l.grand === true ? '#2d7a3e' : (l.grand === false ? 'var(--color-text-muted)' : '#C17A2A'),
           coche: !!e.coche, visite: e.visite || '', retour: e.retour || '', retourTxt: retours[e.retour || ''] || '', note: e.note || '',
           crm: !!(e.note && e.note.trim()), le: e.le ? fD(e.le) : '',
@@ -7393,8 +7394,10 @@ class App {
       adresses: brut.filter(l => l.adresse).length, zonings: d.zonings || 0 };
     common.dmRetours = App.DM_RETOURS.map(([v, l]) => ({ v, l }));
     common.dmExporter = () => {
-      const lignes = [['Lieu', 'Type', 'Genre', 'Adresse', 'Téléphone', 'Site', 'Distance (km)', 'Taille', 'Zoning', 'Coché', 'Visite', 'Retour', 'Note']];
-      brut.filter(l => etat[l.id] && etat[l.id].coche).forEach(l => { const e = etat[l.id]; lignes.push([l.nom, nomFam[l.famille] || l.famille, l.genre, l.adresse, l.tel, l.site, String(l.dKm).replace('.', ','), l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers.' : ''), l.zoning || '', 'oui', e.visite || '', retours[e.retour || ''] || '', e.note || '']); });
+      const P = window.CockpitProspection;
+      const offreNom = l => { if (!P) return ''; const o = P.offreParId(P.offreDe(l, (etat[l.id] || {}).offre)); return o ? o.nom : ''; };
+      const lignes = [['Lieu', 'Type', 'Genre', 'Offre', 'Adresse', 'Téléphone', 'Site', 'Distance (km)', 'Taille', 'Zoning', 'Coché', 'Visite', 'Retour', 'Note']];
+      brut.filter(l => etat[l.id] && etat[l.id].coche).forEach(l => { const e = etat[l.id]; lignes.push([l.nom, nomFam[l.famille] || l.famille, l.genre, offreNom(l), l.adresse, l.tel, l.site, String(l.dKm).replace('.', ','), l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers.' : ''), l.zoning || '', 'oui', e.visite || '', retours[e.retour || ''] || '', e.note || '']); });
       const csv = '﻿' + lignes.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);

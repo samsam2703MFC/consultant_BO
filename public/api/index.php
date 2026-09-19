@@ -261,6 +261,7 @@ function route(string $method, string $path): mixed
             $path === '/newsletter'                    => ep_newsletter(),
             $path === '/newsletter/cron'               => ep_newsletter_cron(),
             $path === '/newsletter/contacts/lots'      => ep_newsletter_lots(),
+            $path === '/prospection/offres'            => ep_prospection_offres(),
             preg_match('#^/prospection/(\d{1,10})$#', $path, $m) === 1 => ep_prospection($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
@@ -438,6 +439,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/newsletter/reglages') { return wr_newsletter_reglages(); }
     if ($method === 'POST' && $path === '/newsletter/tick') { return wr_newsletter_tick(); }
     if ($method === 'POST' && preg_match('#^/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
+    if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/plan.pdf') { return wr_scouting_plan_pdf(); }
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
