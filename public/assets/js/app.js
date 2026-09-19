@@ -266,6 +266,7 @@ class App {
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
+      demarchage: 'developpement-commercial', newsletter: 'newsletter',
     };
   }
   /**
@@ -871,6 +872,8 @@ class App {
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
+      demarchage: ['Développement commercial', 'La liste de démarchage du magasin : les lieux qui rassemblent du monde autour de lui — entreprises, écoles, santé, administrations, formation, funéraire, sport, hôtels, commerces en zoning — relevés dans OpenStreetMap. On coche, on date la visite, on note le retour ; une annotation part au CRM marketing.'],
+      newsletter: ['Newsletter', 'À créer : la lettre du magasin à ses clients et prospects.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
@@ -1270,6 +1273,11 @@ class App {
         ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
+      // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
+      // en attendant — la prospection autour du magasin, sa lettre.
+      ['ERP franchisé', [
+        ['demarchage', 'Développement commercial', 0],
+        ['newsletter', 'Newsletter', 0]]],
       ['Contrôle', [
         ['suivi', 'Tâches', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
         ['reporting', 'Reporting automatisé', 0]]],
@@ -1302,11 +1310,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter'].forEach(k => common[k] = false);
     const key = { budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
@@ -1691,6 +1699,7 @@ class App {
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
+    if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
@@ -7203,6 +7212,152 @@ class App {
       return r;
     });
   }
+  /* --- Développement commercial : la liste de démarchage d'un magasin ----
+   * Les lieux viennent de GET /scouting/demarchage (OpenStreetMap, autour du
+   * magasin) ; ce que le franchisé en fait — coché, date de visite, retour,
+   * note — tient pour l'instant dans le navigateur (localStorage), par
+   * magasin : le prototype se juge à l'écran avant d'écrire en base.
+   */
+  static get DM_FAMILLES(){
+    return [['bureaux', 'Entreprises & bureaux'], ['industrie', 'Industrie'], ['ecoles', 'Écoles'], ['sante', 'Santé'], ['administration', 'Administrations'],
+      ['formation', 'Formation'], ['funeraire', 'Funéraire'], ['sport', 'Sport & loisirs'], ['evenements', 'Hôtels & événements'], ['commerces', 'Commerces en zoning'], ['artisans', 'Artisans']];
+  }
+  static get DM_RETOURS(){
+    return [['', '—'], ['rappeler', 'À rappeler'], ['rdv', 'RDV pris'], ['interesse', 'Intéressé'], ['refus', 'Pas intéressé'], ['client', 'Client']];
+  }
+  dmMagasins(){
+    const R = this.D.dmReseau || null;
+    return R ? (R.magasins || []).filter(m => m.lat != null && m.lng != null) : [];
+  }
+  dmMagasin(){
+    const ms = this.dmMagasins();
+    return ms.find(m => String(m.id) === String(this.state.dmShop)) || ms.find(m => m.ouvert) || ms[0] || null;
+  }
+  dmCle(){ const m = this.dmMagasin(); return m ? m.id + '|' + (this.state.dmR || 5000) : ''; }
+  dmCharge(force){
+    if (!this.D.dmReseau && !this._dmReseauEnCours) {
+      this._dmReseauEnCours = true;
+      readOne('/scouting/reseau').then(r => { this._dmReseauEnCours = false; this.D.dmReseau = r || { magasins: [] }; this.setState({}); });
+      return;
+    }
+    const m = this.dmMagasin();
+    if (!m) { return; }
+    const cle = this.dmCle();
+    if (!this.D.dm) { this.D.dm = {}; }
+    if (!this._dmEnCours) { this._dmEnCours = {}; }
+    if (this._dmEnCours[cle] || (this.D.dm[cle] && !force)) { return; }
+    this._dmEnCours[cle] = true;
+    const r = this.state.dmR || 5000;
+    readOne('/scouting/demarchage?lat=' + m.lat.toFixed(5) + '&lng=' + m.lng.toFixed(5) + '&r=' + r + (force ? '&force=1' : '')).then(d => {
+      this._dmEnCours[cle] = false;
+      this.D.dm[cle] = d || { erreur: true };
+      this.setState({});
+    });
+  }
+  /** Ce que le franchisé a fait de chaque lieu, par magasin, dans le navigateur. */
+  dmEtat(){
+    if (!this._dmEtat) {
+      try { this._dmEtat = JSON.parse(localStorage.getItem('ceo_demarchage') || '{}') || {}; } catch (e) { this._dmEtat = {}; }
+    }
+    return this._dmEtat;
+  }
+  dmSet(shopId, id, patch){
+    const tout = this.dmEtat();
+    const par = tout[shopId] || (tout[shopId] = {});
+    const cur = par[id] || (par[id] = { coche: false, visite: '', retour: '', note: '' });
+    Object.assign(cur, patch);
+    if (patch.note !== undefined || patch.retour !== undefined || patch.visite !== undefined) { cur.le = new Date().toISOString().slice(0, 10); }
+    if (!cur.coche && !cur.visite && !cur.retour && !cur.note) { delete par[id]; }
+    try { localStorage.setItem('ceo_demarchage', JSON.stringify(tout)); } catch (e) { /* stockage refusé : l'écran garde l'état en mémoire */ }
+    this.setState({});
+  }
+  valsDemarchage(common){
+    const S = this.state;
+    const ms = this.dmMagasins();
+    const m = this.dmMagasin();
+    common.dmChargement = !this.D.dmReseau;
+    common.dmMagasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: m && String(x.id) === String(m.id) }));
+    common.dmSetMagasin = e => this.setState({ dmShop: e.target.value });
+    common.dmR = String(S.dmR || 5000);
+    common.dmRayons = [['3000', '3 km'], ['5000', '5 km'], ['8000', '8 km'], ['12000', '12 km']].map(([v, l]) => ({ v, l, on: v === String(S.dmR || 5000) }));
+    common.dmSetR = e => this.setState({ dmR: +e.target.value });
+    common.dmVue = S.dmVue === 'cartes' ? 'cartes' : 'tableau';
+    common.dmVues = [['tableau', 'Tableau'], ['cartes', 'Fiches']].map(([v, l]) => ({ v, l, on: v === common.dmVue, go: () => this.setState({ dmVue: v }) }));
+    common.dmGrand = !!S.dmGrand;
+    common.dmToggleGrand = () => this.setState({ dmGrand: !S.dmGrand });
+    common.dmSeul = !!S.dmSeul;
+    common.dmToggleSeul = () => this.setState({ dmSeul: !S.dmSeul });
+    common.dmQ = S.dmQ || '';
+    common.dmSetQ = e => this.setState({ dmQ: e.target.value });
+    common.dmRefresh = () => this.dmCharge(true);
+    common.dmSansMagasin = !!this.D.dmReseau && !m;
+    common.dmLieux = []; common.dmFamilles = []; common.dmGroupes = []; common.dmResume = null; common.dmNote = '';
+    if (!m) { return; }
+    const d = (this.D.dm || {})[this.dmCle()];
+    common.dmLecture = !d;
+    common.dmErreur = !!(d && (d.erreur || d.error));
+    common.dmErreurTxt = d && d.error ? d.error : 'La lecture de /scouting/demarchage a échoué — voir Diagnostic API.';
+    if (!d || common.dmErreur) { return; }
+    const etat = this.dmEtat()[m.id] || {};
+    const fams = App.DM_FAMILLES;
+    const nomFam = Object.fromEntries(fams);
+    const actives = S.dmFam && S.dmFam.length ? S.dmFam : fams.map(f => f[0]);
+    const q = (S.dmQ || '').trim().toLowerCase();
+    // la boulangerie du franchisé et les autres boulangeries ne sont pas des prospects
+    const brut = (d.lieux || []).filter(l => !/bakery|pastry/.test(l.genre) && !/atelier by/i.test(l.nom));
+    const compte = {};
+    brut.forEach(l => { compte[l.famille] = (compte[l.famille] || 0) + 1; });
+    common.dmFamilles = fams.filter(f => compte[f[0]]).map(f => ({ k: f[0], l: f[1], n: compte[f[0]], on: actives.includes(f[0]),
+      go: () => { const cur = (S.dmFam && S.dmFam.length ? S.dmFam : fams.map(x => x[0])); const nx = cur.includes(f[0]) ? cur.filter(k => k !== f[0]) : cur.concat([f[0]]); this.setState({ dmFam: nx.length === fams.length ? [] : nx }); } }));
+    common.dmToutesFam = () => this.setState({ dmFam: [] });
+    const fD = d2 => this.fD(d2);
+    const retours = Object.fromEntries(App.DM_RETOURS);
+    const lieux = brut.filter(l => actives.includes(l.famille))
+      .filter(l => !S.dmGrand || l.grand === true)
+      .filter(l => !q || (l.nom + ' ' + l.genre + ' ' + l.adresse + ' ' + (l.zoning || '')).toLowerCase().includes(q))
+      .filter(l => !S.dmSeul || (etat[l.id] && etat[l.id].coche))
+      .map(l => {
+        const e = etat[l.id] || {};
+        const maps = 'https://www.google.com/maps/search/?api=1&query=' + l.lat + ',' + l.lng;
+        return {
+          id: l.id, nom: l.nom, genre: l.genre, famille: l.famille, fam: nomFam[l.famille] || l.famille,
+          adresse: l.adresse || '', sansAdresse: !l.adresse, tel: l.tel || '', site: l.site || '', mail: l.mail || '', maps,
+          zoning: l.zoning || '', dist: l.dKm.toFixed(1).replace('.', ',') + ' km',
+          taille: l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers. (probable)' : (l.grand === false ? '< 20 pers. (probable)' : 'taille inconnue')),
+          tailleCoul: l.grand === true ? '#2d7a3e' : (l.grand === false ? 'var(--color-text-muted)' : '#C17A2A'),
+          coche: !!e.coche, visite: e.visite || '', retour: e.retour || '', retourTxt: retours[e.retour || ''] || '', note: e.note || '',
+          crm: !!(e.note && e.note.trim()), le: e.le ? fD(e.le) : '',
+          setCoche: ev => this.dmSet(m.id, l.id, { coche: !!ev.target.checked }),
+          setVisite: ev => this.dmSet(m.id, l.id, { visite: ev.target.value }),
+          setRetour: ev => this.dmSet(m.id, l.id, { retour: ev.target.value }),
+          setNote: ev => this.dmSet(m.id, l.id, { note: ev.target.value }),
+        };
+      });
+    common.dmLieux = lieux;
+    // les fiches, par famille, dans l'ordre des familles
+    common.dmGroupes = fams.map(f => ({ k: f[0], l: f[1], lieux: lieux.filter(l => l.famille === f[0]) })).filter(g => g.lieux.length);
+    const coches = brut.filter(l => etat[l.id] && etat[l.id].coche);
+    const visites = brut.filter(l => etat[l.id] && etat[l.id].visite);
+    const annotes = brut.filter(l => etat[l.id] && etat[l.id].note && etat[l.id].note.trim());
+    common.dmResume = { total: brut.length, montre: lieux.length, coches: coches.length, visites: visites.length, annotes: annotes.length,
+      adresses: brut.filter(l => l.adresse).length, zonings: d.zonings || 0 };
+    common.dmRetours = App.DM_RETOURS.map(([v, l]) => ({ v, l }));
+    common.dmExporter = () => {
+      const lignes = [['Lieu', 'Type', 'Genre', 'Adresse', 'Téléphone', 'Site', 'Distance (km)', 'Taille', 'Zoning', 'Coché', 'Visite', 'Retour', 'Note']];
+      brut.filter(l => etat[l.id] && etat[l.id].coche).forEach(l => { const e = etat[l.id]; lignes.push([l.nom, nomFam[l.famille] || l.famille, l.genre, l.adresse, l.tel, l.site, String(l.dKm).replace('.', ','), l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers.' : ''), l.zoning || '', 'oui', e.visite || '', retours[e.retour || ''] || '', e.note || '']); });
+      const csv = '﻿' + lignes.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = 'demarchage-' + String(m.nom).toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click();
+      this.notify('Liste exportée — ' + lignes.length + ' lieux');
+    };
+    common.dmCrm = () => this.notify(annotes.length ? annotes.length + ' annotation(s) à envoyer au CRM marketing — branchement à décider' : 'Aucune annotation : rien à envoyer au CRM');
+    common.dmNote = 'Lieux relevés dans OpenStreetMap' + (d.osm ? ' (données du ' + new Date(d.osm).toLocaleDateString('fr-BE') + ')' : '') + ', dans un rayon de ' + ((S.dmR || 5000) / 1000) + ' km autour du magasin'
+      + (d.releve ? ', relevé ' + (d.cache ? 'gardé depuis le ' : 'du ') + new Date(String(d.releve).replace(' ', 'T')).toLocaleDateString('fr-BE') : '')
+      + '. Taille : ce que la carte dit (employés, élèves, lits) ; sinon la vraisemblance du genre — un hôpital, une école, un site industriel rassemblent plus de vingt personnes, un cabinet ou un artisan rarement. Adresse absente : lieu cartographié sans adresse, le lien Maps mène au point.';
+  }
+
   valsPlan(common){
     const S = this.state, D = this.D;
     const shops = this.open();
