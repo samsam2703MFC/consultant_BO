@@ -10,6 +10,7 @@ require __DIR__ . '/../../src/Db.php';
 require __DIR__ . '/../../src/endpoints.php';
 require __DIR__ . '/../../src/writes.php';
 require __DIR__ . '/../../src/mkt_types.php';
+require __DIR__ . '/../../src/fbcontrole.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
@@ -272,6 +273,8 @@ function route(string $method, string $path): mixed
             $path === '/visites/conformite'            => ep_visites_conformite(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
+            $path === '/referentiels/facebook-regles'   => ep_fb_regles(),
+            $path === '/facebook/posts'                => ep_fb_posts(),
             default                                    => notFound(),
         };
     }
@@ -465,6 +468,10 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }
     if ($method === 'PUT' && $path === '/scouting/references') { return wr_scouting_references_put(); }
+    if ($method === 'POST' && $path === '/facebook/posts') { return wr_fb_post_create(); }
+    if ($method === 'POST' && preg_match('#^/facebook/posts/([\w-]+)/controle$#', $path, $m)) { return wr_fb_controle($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)$#', $path, $m)) { return wr_fb_decision($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)/ecarts/(\d+)$#', $path, $m)) { return wr_fb_ecart_patch($m[1], (int) $m[2]); }
 
     return notFound();
 }
