@@ -14,7 +14,7 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'prospection'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -82,6 +82,7 @@
   }
   function charger(force) {
     const kr = cleRes(), ks = cleSt();
+    if (S.vue === 'prospection') { prCharger(force); rendre(); return; }
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
     // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
@@ -142,6 +143,7 @@
     return s ? s.nom : ('Magasin ' + S.shop);
   }
   function libPeriode() {
+    if (S.vue === 'prospection') { return 'prospection autour du magasin'; }
     if (S.vue === 'jour') { return fDL(S.date); }
     if (S.vue === 'annee') { return 'année ' + annee(); }
     if (S.vue === 'trimestre') { return 'T' + trimestre() + ' ' + annee(); }
@@ -852,9 +854,251 @@
     if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     h += '</div>';
-    h += `<div class="mb-tabs">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤']]
-      .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
+    h += mobTabs();
     return h;
+  }
+  /** Les onglets du bas, au téléphone : le jour, la semaine, la prospection. */
+  function mobTabs() {
+    return `<div class="mb-tabs t3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['prospection', 'Prospection', '◎']]
+      .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
+  }
+
+  /* ==========================================================================
+   * PROSPECTION — la liste de démarchage du magasin, un CRM minimal, la carte
+   * des concentrations et le calculateur de pénétration.
+   *
+   * Les lieux viennent de ../api/cockpit/scouting/demarchage (OpenStreetMap
+   * autour du magasin, gardé 45 jours au serveur) ; la position du magasin de
+   * /scouting/reseau. Ce que le franchisé en fait — ma liste, statut, visite,
+   * note — vit dans le navigateur (localStorage « ceo_demarchage »), la même
+   * réserve que l'écran Développement commercial du cockpit.
+   * ========================================================================== */
+  const PR_FAM = [['bureaux', 'Entreprises', '#8D1D2C'], ['industrie', 'Industrie', '#78554B'], ['ecoles', 'Écoles', '#C17A2A'], ['sante', 'Santé', '#2d7a3e'],
+    ['administration', 'Administrations', '#4a5a8a'], ['formation', 'Formation', '#B26A00'], ['funeraire', 'Funéraire', '#555'], ['sport', 'Sport', '#1baf7a'],
+    ['evenements', 'Hôtels & événements', '#a34a8c'], ['commerces', 'Commerces (zoning)', '#9a8c6a'], ['artisans', 'Artisans', '#6f6f6f']];
+  const PR_NOM = Object.fromEntries(PR_FAM.map(f => [f[0], f[1]]));
+  const PR_COUL = Object.fromEntries(PR_FAM.map(f => [f[0], f[2]]));
+  // Le statut d'un lieu de ma liste, dans l'ordre où on le fait avancer d'un tap.
+  const PR_ST = [['', 'À visiter', 'mu'], ['visite', 'Visité', 'wa'], ['rappeler', 'À rappeler', 'wa'], ['rdv', 'RDV pris', 'ok'], ['client', 'Client', 'ok'], ['refus', 'Refus', 'ko']];
+  const PR = { vue: 'liste', fam: null, grand: false, q: '', r: 5000, reseau: null, lieux: null, err: '', enCours: false,
+    calc: { depense: 6, commandes: 1, semaines: 46, part: 20 } };
+  try { Object.assign(PR.calc, JSON.parse(localStorage.getItem('ceo_prospection_calc') || '{}')); } catch (e) { /* réglages absents */ }
+  function prEtat() {
+    try { return JSON.parse(localStorage.getItem('ceo_demarchage') || '{}') || {}; } catch (e) { return {}; }
+  }
+  function prMa() { const t = prEtat(); return t[S.shop] || {}; }
+  function prEcrire(id, patch) {
+    const t = prEtat(); const par = t[S.shop] || (t[S.shop] = {});
+    const cur = par[id] || (par[id] = { coche: false, visite: '', retour: '', note: '' });
+    Object.assign(cur, patch); cur.le = AUJ;
+    if (!cur.coche && !cur.visite && !cur.retour && !cur.note) { delete par[id]; }
+    try { localStorage.setItem('ceo_demarchage', JSON.stringify(t)); } catch (e) { /* stockage refusé */ }
+  }
+  function prMagasin() {
+    const R = PR.reseau; if (!R) { return null; }
+    return (R.magasins || []).find(m => String(m.id) === String(S.shop) && m.lat != null) || null;
+  }
+  function prCharger(force) {
+    if (!PR.reseau && !PR.enCours) {
+      PR.enCours = true;
+      lire('/scouting/reseau').then(r => { PR.reseau = r || { magasins: [] }; PR.enCours = false; prCharger(false); }).catch(e => { PR.err = e.message; PR.enCours = false; rendre(); });
+      return;
+    }
+    const m = prMagasin();
+    if (!m || PR.enCours) { return; }
+    if (PR.lieux && PR.lieux.r === PR.r && !force) { return; }
+    PR.enCours = true; PR.err = '';
+    lire('/scouting/demarchage?lat=' + m.lat.toFixed(5) + '&lng=' + m.lng.toFixed(5) + '&r=' + PR.r + (force ? '&force=1' : ''))
+      .then(d => { PR.lieux = d; PR.lieux.r = PR.r; }).catch(e => { PR.err = e.message; }).finally(() => { PR.enCours = false; rendre(); });
+  }
+  /** Les lieux relevés, sans les boulangeries (la mienne comprise), avec ce que j'en ai fait. */
+  function prLieux() {
+    const d = PR.lieux; if (!d) { return []; }
+    const ma = prMa();
+    return (d.lieux || []).filter(l => !/bakery|pastry/.test(l.genre) && !/atelier by/i.test(l.nom)).map(l => {
+      const e = ma[l.id] || {};
+      const st = e.retour || (e.visite ? 'visite' : '');
+      return Object.assign({}, l, { dans: !!e.coche, visite: e.visite || '', retour: e.retour || '', note: e.note || '', st,
+        pers: l.personnes != null ? l.personnes : (l.grand === true ? 35 : (l.grand === false ? 8 : 15)) });
+    });
+  }
+  function prMaListe() {
+    const ordre = { '': 0, rappeler: 1, rdv: 2, visite: 3, client: 4, refus: 5 };
+    return prLieux().filter(l => l.dans).sort((a, b) => (ordre[a.st] - ordre[b.st]) || (a.dKm - b.dKm));
+  }
+  const prStat = st => PR_ST.find(x => x[0] === st) || PR_ST[0];
+  const prMaps = l => 'https://www.google.com/maps/search/?api=1&query=' + l.lat + ',' + l.lng;
+  const prAdr = l => l.adresse ? esc(l.adresse) : '<span class="mu">sans adresse</span>';
+  const prTaille = l => l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '20 pers. et +' : (l.grand === false ? '< 20 pers.' : 'taille ?'));
+  /** Les statuts d'un tap : la pastille passe au suivant. */
+  function prPastille(l) {
+    const st = prStat(l.st);
+    return `<button class="pr-st ${st[2]}" data-pr-st="${esc(l.id)}" title="Toucher pour avancer le statut">${st[1]}</button>`;
+  }
+  /** La liste — le CRM : chaque lieu, son statut, sa visite, sa note. */
+  function prRendListe(L) {
+    if (!L.length) { return `<div class="pr-vide">Ma liste est vide. <button class="db-btn" data-pr-vue="choisir">＋ Créer ma liste</button></div>`; }
+    return `<div class="pr-liste">${L.map(l => `
+      <div class="pr-it ${l.st === 'client' ? 'cli' : ''}">
+        <div class="pr-l1"><b>${esc(l.nom)}</b><span class="pr-fam" style="background:${PR_COUL[l.famille] || '#888'}">${esc(PR_NOM[l.famille] || l.famille)}</span><span class="sp"></span>${prPastille(l)}</div>
+        <div class="pr-l2">${prAdr(l)} <a href="${esc(prMaps(l))}" target="_blank" rel="noopener">📍</a>${l.tel ? ` · <a href="tel:${esc(l.tel.replace(/\s+/g, ''))}">${esc(l.tel)}</a>` : ''} · ${l.dKm.toFixed(1).replace('.', ',')} km · ${esc(prTaille(l))}${l.zoning ? ' · ' + esc(l.zoning) : ''}</div>
+        <div class="pr-l3"><label>Visite <input type="date" value="${esc(l.visite)}" data-pr-date="${esc(l.id)}"></label><input type="text" placeholder="Note — part au CRM" value="${esc(l.note)}" data-pr-note="${esc(l.id)}">${l.note ? '<span class="pr-crm">→ CRM</span>' : ''}<button class="pr-x" data-pr-del="${esc(l.id)}" title="Retirer de ma liste">×</button></div>
+      </div>`).join('')}</div>`;
+  }
+  /** Choisir : les lieux autour du magasin, un tap pour les ajouter. */
+  function prRendChoisir(tous) {
+    const compte = {}; tous.forEach(l => { compte[l.famille] = (compte[l.famille] || 0) + 1; });
+    const q = PR.q.trim().toLowerCase();
+    const cand = tous.filter(l => !l.dans && (!PR.fam || l.famille === PR.fam) && (!PR.grand || l.grand === true) && (!q || (l.nom + ' ' + l.genre + ' ' + l.adresse + ' ' + (l.zoning || '')).toLowerCase().includes(q)));
+    return `
+      <div class="pr-chips">${PR_FAM.filter(f => compte[f[0]]).map(f => `<button class="pr-chip ${PR.fam === f[0] ? 'on' : ''}" data-pr-fam="${f[0]}"><i style="background:${f[2]}"></i>${esc(f[1])} <em>${compte[f[0]]}</em></button>`).join('')}</div>
+      <div class="pr-outils"><label class="pr-tog"><input type="checkbox" ${PR.grand ? 'checked' : ''} data-pr-grand="1"> 20 personnes et plus</label>
+        <input type="search" placeholder="Chercher…" value="${esc(PR.q)}" data-pr-q="1"><span class="sp"></span>
+        <button class="db-btn" data-pr-tout="1" ${cand.length ? '' : 'disabled'}>Tout ajouter · ${cand.length}</button></div>
+      <div class="pr-cand">${cand.slice(0, 120).map(l => `
+        <button class="pr-c" data-pr-add="${esc(l.id)}">
+          <span class="plus">＋</span>
+          <span class="tx"><b>${esc(l.nom)}</b><small>${esc(l.genre)} · ${l.dKm.toFixed(1).replace('.', ',')} km · ${esc(prTaille(l))}${l.zoning ? ' · ' + esc(l.zoning) : ''}</small><small>${prAdr(l)}</small></span>
+          <i style="background:${PR_COUL[l.famille] || '#888'}"></i>
+        </button>`).join('')}${cand.length > 120 ? `<div class="pr-vide">… et ${cand.length - 120} autres : affinez avec les types ou la recherche.</div>` : ''}${cand.length ? '' : '<div class="pr-vide">Tout est déjà dans ma liste, ou rien ne passe les filtres.</div>'}</div>`;
+  }
+  /** Le calculateur : par secteur, ce que le monde rassemblé vaut, ce qu'on en capte. */
+  function prRendCalcul(tous) {
+    const c = PR.calc;
+    const parAn = pers => pers * c.depense * c.commandes * c.semaines;
+    const rows = PR_FAM.map(f => {
+      const L = tous.filter(l => l.famille === f[0]); if (!L.length) { return null; }
+      const pers = L.reduce((t, l) => t + l.pers, 0);
+      const clients = L.filter(l => l.st === 'client');
+      const enCours = L.filter(l => l.dans && l.st !== 'client' && l.st !== 'refus');
+      const possible = parAn(pers), atteignable = possible * c.part / 100, capte = clients.reduce((t, l) => t + parAn(l.pers), 0);
+      return { f, n: L.length, pers, clients: clients.length, enCours: enCours.length, pen: L.length ? clients.length / L.length * 100 : 0, possible, atteignable, capte };
+    }).filter(Boolean);
+    const T = rows.reduce((t, r) => ({ n: t.n + r.n, pers: t.pers + r.pers, clients: t.clients + r.clients, enCours: t.enCours + r.enCours, possible: t.possible + r.possible, atteignable: t.atteignable + r.atteignable, capte: t.capte + r.capte }), { n: 0, pers: 0, clients: 0, enCours: 0, possible: 0, atteignable: 0, capte: 0 });
+    const champ = (k, lib, unite, min, max, step) => `<label class="pr-par"><span>${lib}</span><input type="number" min="${min}" max="${max}" step="${step}" value="${c[k]}" data-pr-calc="${k}"><em>${unite}</em></label>`;
+    return `
+      <div class="pr-pars">${champ('depense', 'Dépense par personne et par commande', '€', 1, 50, 0.5)}${champ('commandes', 'Commandes par semaine', '/ sem.', 0.25, 7, 0.25)}${champ('semaines', 'Semaines par an', 'sem.', 20, 52, 1)}${champ('part', 'Part atteignable', '%', 1, 100, 1)}</div>
+      <div class="pr-tot"><div><span class="k">CA possible par an</span><b>${fK(T.possible)}</b><small>${fN(T.pers)} personnes dans ${T.n} lieux</small></div>
+        <div><span class="k">Atteignable à ${c.part} %</span><b>${fK(T.atteignable)}</b><small>l'objectif de démarchage</small></div>
+        <div><span class="k">Capté aujourd'hui</span><b class="${T.capte ? 'ok' : 'mu'}">${fK(T.capte)}</b><small>${T.clients} client${T.clients > 1 ? 's' : ''} · ${T.enCours} en cours</small></div>
+        <div><span class="k">Pénétration</span><b>${T.n ? fP(T.clients / T.n * 100) : '—'}</b><small>clients ÷ lieux</small></div></div>
+      <div class="pr-tab"><div class="th"><span>Secteur</span><span>Lieux</span><span>Pers.</span><span>Clients</span><span>Pénétr.</span><span>CA possible</span><span>Atteignable</span><span>Capté</span></div>
+        ${rows.map(r => `<div class="tr"><span><i style="background:${r.f[2]}"></i>${esc(r.f[1])}</span><span>${r.n}</span><span>${fN(r.pers)}</span><span>${r.clients}${r.enCours ? ` <small>+${r.enCours}</small>` : ''}</span><span>${fP(r.pen)}</span><span>${fK(r.possible)}</span><span>${fK(r.atteignable)}</span><span class="${r.capte ? 'ok' : 'mu'}">${fK(r.capte)}</span></div>`).join('')}
+      </div>
+      <div class="db-note" style="margin-top:8px">Personnes : le chiffre de la carte (employés, élèves, lits) quand il existe, sinon 35 pour un lieu de 20 personnes et plus, 8 pour un petit, 15 quand on ne sait pas. CA possible = personnes × dépense × commandes par semaine × semaines. Capté = les lieux au statut « Client » de ma liste, au même tarif.</div>`;
+  }
+  /** La page, au bureau : la liste et le choix à gauche, la carte et le calcul à droite. */
+  function rendProspection() {
+    const m = prMagasin();
+    if (PR.err && !PR.lieux) { return `<div class="db-err">Prospection : ${esc(PR.err)}</div>`; }
+    if (!PR.reseau) { return `<div class="db-attente">Lecture du magasin…</div>`; }
+    if (!m) { return `<div class="db-alerte">Ce magasin n'a pas de position : pointez-le sur la carte dans Scouting (Magasins du réseau).</div>`; }
+    if (!PR.lieux) { return `<div class="db-attente">Relevé des lieux autour du magasin dans OpenStreetMap — une minute la première fois…</div>`; }
+    const tous = prLieux(), L = prMaListe();
+    return `
+      <div class="pr-hd"><div class="pr-nav">${[['liste', 'Ma liste · ' + L.length], ['choisir', '＋ Créer ma liste'], ['carte', 'Carte'], ['calcul', 'Pénétration & CA']].map(v => `<button class="${PR.vue === v[0] ? 'on' : ''}" data-pr-vue="${v[0]}">${v[1]}</button>`).join('')}</div>
+        <span class="sp"></span><span class="db-lab">Rayon</span><select class="db-sel" data-pr-r="1">${[3000, 5000, 8000, 12000].map(r => `<option value="${r}" ${PR.r === r ? 'selected' : ''}>${r / 1000} km</option>`).join('')}</select>
+        <span class="db-mini">${tous.length} lieux relevés · ${L.filter(l => l.st === 'client').length} client(s) · ${L.filter(l => l.note).length} note(s) → CRM</span></div>
+      <div class="pr-grid">
+        <div class="db-card pr-col"><div class="ct"><b>${PR.vue === 'choisir' ? 'Choisir les lieux à démarcher' : 'Ma liste de démarchage'}</b><span class="db-mini">${PR.vue === 'choisir' ? 'un tap ajoute le lieu' : 'un tap sur le statut le fait avancer'}</span></div>
+          <div class="in">${PR.vue === 'choisir' ? prRendChoisir(tous) : prRendListe(L)}</div></div>
+        <div class="pr-col">
+          <div class="db-card"><div class="ct"><b>Carte des concentrations</b><span class="db-mini">un rond par zoning ou grappe, sa taille dit le nombre de lieux ; ma liste en rubis</span></div><div id="pr-carte-place" class="pr-carte"></div></div>
+          <div class="db-card"><div class="ct"><b>Pénétration et CA possible par secteur</b></div><div class="in">${prRendCalcul(tous)}</div></div>
+        </div>
+      </div>`;
+  }
+  /** La page, au téléphone : quatre onglets, une colonne. */
+  function rendMobileProspection() {
+    const m = prMagasin();
+    const tous = PR.lieux ? prLieux() : [], L = prMaListe();
+    let corps;
+    if (PR.err && !PR.lieux) { corps = `<div class="db-err">${esc(PR.err)}</div>`; }
+    else if (!PR.reseau) { corps = `<div class="db-attente">Lecture du magasin…</div>`; }
+    else if (!m) { corps = `<div class="db-alerte">Ce magasin n'a pas de position : à pointer dans le cockpit (Scouting).</div>`; }
+    else if (!PR.lieux) { corps = `<div class="db-attente">Relevé des lieux autour du magasin — une minute la première fois…</div>`; }
+    else if (PR.vue === 'choisir') { corps = prRendChoisir(tous); }
+    else if (PR.vue === 'carte') { corps = `<div id="pr-carte-place" class="pr-carte mob"></div>`; }
+    else if (PR.vue === 'calcul') { corps = prRendCalcul(tous); }
+    else { corps = prRendListe(L); }
+    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d">Prospection · ${PR.lieux ? tous.length + ' lieux · ' + L.length + ' dans ma liste' : 'autour du magasin'}</div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1">↻</button></div>
+      <div class="pr-nav mob">${[['liste', 'Ma liste'], ['choisir', '＋ Créer'], ['carte', 'Carte'], ['calcul', 'CA']].map(v => `<button class="${PR.vue === v[0] ? 'on' : ''}" data-pr-vue="${v[0]}">${v[1]}</button>`).join('')}</div>
+      <div class="mb-sc pr-sc">${corps}</div>${mobTabs()}`;
+  }
+  /* --- la carte : un nœud Leaflet gardé d'un rendu à l'autre ---------------- */
+  let prCarteEl = null, prCarte = null, prCouches = null;
+  function prLeaflet() {
+    if (window.L) { return Promise.resolve(); }
+    if (prLeaflet.p) { return prLeaflet.p; }
+    prLeaflet.p = new Promise((res, rej) => {
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '../assets/vendor/leaflet/leaflet.css'; document.head.appendChild(css);
+      const js = document.createElement('script'); js.src = '../assets/vendor/leaflet/leaflet.js'; js.onload = res; js.onerror = () => rej(new Error('Leaflet introuvable')); document.head.appendChild(js);
+    });
+    return prLeaflet.p;
+  }
+  function prApresRendu() {
+    const place = document.getElementById('pr-carte-place');
+    if (!place || !PR.lieux) { return; }
+    prLeaflet().then(() => {
+      if (!prCarteEl) { prCarteEl = document.createElement('div'); prCarteEl.style.cssText = 'width:100%;height:100%'; }
+      place.appendChild(prCarteEl);
+      const m = prMagasin();
+      if (!prCarte) {
+        prCarte = L.map(prCarteEl, { zoomControl: true, attributionControl: true }).setView([m.lat, m.lng], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(prCarte);
+        prCouches = L.layerGroup().addTo(prCarte);
+      }
+      prCarte.invalidateSize();
+      prCouches.clearLayers();
+      const tous = prLieux();
+      L.circleMarker([m.lat, m.lng], { radius: 9, color: '#fff', weight: 2, fillColor: '#222', fillOpacity: 1 }).bindTooltip('Le magasin').addTo(prCouches);
+      // les concentrations : par zoning nommé, sinon par grappe de 400 m
+      const grappes = {};
+      tous.forEach(l => {
+        const k = l.zoning ? 'z|' + l.zoning : 'g|' + Math.round(l.lat / 0.0036) + '|' + Math.round(l.lng / 0.0056);
+        const g = grappes[k] || (grappes[k] = { nom: l.zoning || '', n: 0, la: 0, lo: 0, pers: 0, fam: {} });
+        g.n++; g.la += l.lat; g.lo += l.lng; g.pers += l.pers; g.fam[l.famille] = (g.fam[l.famille] || 0) + 1;
+      });
+      Object.values(grappes).filter(g => g.n >= 3).forEach(g => {
+        const dom = Object.entries(g.fam).sort((a, b) => b[1] - a[1])[0][0];
+        L.circle([g.la / g.n, g.lo / g.n], { radius: 120 + Math.sqrt(g.n) * 70, color: PR_COUL[dom] || '#888', weight: 1, fillColor: PR_COUL[dom] || '#888', fillOpacity: 0.16 })
+          .bindTooltip((g.nom || 'Grappe') + ' — ' + g.n + ' lieux, ' + fN(g.pers) + ' personnes · ' + Object.entries(g.fam).sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[1] + ' ' + (PR_NOM[e[0]] || e[0]).toLowerCase()).join(', '))
+          .addTo(prCouches);
+      });
+      tous.forEach(l => {
+        L.circleMarker([l.lat, l.lng], { radius: l.dans ? 6 : 3.5, color: l.dans ? '#fff' : PR_COUL[l.famille] || '#888', weight: l.dans ? 1.5 : 0.8, fillColor: l.dans ? '#8D1D2C' : PR_COUL[l.famille] || '#888', fillOpacity: l.dans ? 1 : 0.7 })
+          .bindTooltip('<b>' + esc(l.nom) + '</b><br>' + esc(l.genre) + ' · ' + esc(prTaille(l)) + (l.adresse ? '<br>' + esc(l.adresse) : '') + (l.dans ? '<br><i>dans ma liste · ' + prStat(l.st)[1] + '</i>' : ''))
+          .on('click', () => { if (!l.dans) { prEcrire(l.id, { coche: true }); rendre(); } })
+          .addTo(prCouches);
+      });
+    }).catch(e => { place.innerHTML = '<div class="db-note" style="padding:12px">Carte indisponible : ' + esc(e.message) + '</div>'; });
+  }
+  function prBrancher() {
+    $.querySelectorAll('[data-pr-vue]').forEach(b => b.addEventListener('click', () => { PR.vue = b.dataset.prVue; rendre(); }));
+    $.querySelectorAll('[data-pr-fam]').forEach(b => b.addEventListener('click', () => { PR.fam = PR.fam === b.dataset.prFam ? null : b.dataset.prFam; rendre(); }));
+    $.querySelectorAll('[data-pr-grand]').forEach(b => b.addEventListener('change', () => { PR.grand = b.checked; rendre(); }));
+    $.querySelectorAll('[data-pr-q]').forEach(b => b.addEventListener('change', () => { PR.q = b.value; rendre(); }));
+    $.querySelectorAll('[data-pr-r]').forEach(b => b.addEventListener('change', () => { PR.r = +b.value; charger(false); }));
+    $.querySelectorAll('[data-pr-add]').forEach(b => b.addEventListener('click', () => { prEcrire(b.dataset.prAdd, { coche: true }); rendre(); }));
+    $.querySelectorAll('[data-pr-tout]').forEach(b => b.addEventListener('click', () => {
+      const q = PR.q.trim().toLowerCase();
+      prLieux().filter(l => !l.dans && (!PR.fam || l.famille === PR.fam) && (!PR.grand || l.grand === true) && (!q || (l.nom + ' ' + l.genre + ' ' + l.adresse).toLowerCase().includes(q))).forEach(l => prEcrire(l.id, { coche: true }));
+      PR.vue = 'liste'; rendre(); }));
+    $.querySelectorAll('[data-pr-del]').forEach(b => b.addEventListener('click', () => { prEcrire(b.dataset.prDel, { coche: false }); rendre(); }));
+    $.querySelectorAll('[data-pr-st]').forEach(b => b.addEventListener('click', () => {
+      const l = prLieux().find(x => x.id === b.dataset.prSt); if (!l) { return; }
+      const i = PR_ST.findIndex(x => x[0] === l.st); const nx = PR_ST[(i + 1) % PR_ST.length][0];
+      // « visité » est une date, pas un retour : le pas suivant la pose à aujourd'hui
+      prEcrire(l.id, nx === 'visite' ? { retour: '', visite: AUJ } : (nx === '' ? { retour: '', visite: '' } : { retour: nx, visite: l.visite || AUJ }));
+      rendre(); }));
+    $.querySelectorAll('[data-pr-date]').forEach(b => b.addEventListener('change', () => { prEcrire(b.dataset.prDate, { visite: b.value }); rendre(); }));
+    $.querySelectorAll('[data-pr-note]').forEach(b => b.addEventListener('change', () => { prEcrire(b.dataset.prNote, { note: b.value }); rendre(); }));
+    $.querySelectorAll('[data-pr-calc]').forEach(b => b.addEventListener('change', () => {
+      PR.calc[b.dataset.prCalc] = +b.value || PR.calc[b.dataset.prCalc];
+      try { localStorage.setItem('ceo_prospection_calc', JSON.stringify(PR.calc)); } catch (e) { /* rien */ }
+      rendre(); }));
   }
 
   function rendre() {
@@ -864,10 +1108,11 @@
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
-      if (S.vue !== 'jour' && S.vue !== 'semaine') { S.vue = 'jour'; urlMaj(); charger(false); }
-      $.innerHTML = rendMobile(m, d);
+      if (S.vue !== 'jour' && S.vue !== 'semaine' && S.vue !== 'prospection') { S.vue = 'jour'; urlMaj(); charger(false); }
+      $.innerHTML = S.vue === 'prospection' ? rendMobileProspection() : rendMobile(m, d);
       $.classList.add('mob');
       brancher();
+      if (S.vue === 'prospection') { prApresRendu(); return; }
       // La fête attend que le jour soit lu : lancée sur un mur encore vide,
       // elle serait finie avant que le premier chiffre s'affiche.
       const forcee = !!m && feteDemandee();
@@ -879,11 +1124,12 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['prospection', 'Prospection']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${S.vue === 'prospection' ? `<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button></div>` : `<span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
-      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
+      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`}`;
+    if (S.vue === 'prospection') { h += rendProspection(); $.innerHTML = h; brancher(); prApresRendu(); return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -1805,6 +2051,7 @@
       const n = b.dataset.ncgrp; S.ncGrav[n] = !S.ncGrav[n]; rendre(); }));
     $.querySelectorAll('[data-jh]').forEach(el => el.addEventListener('click', () => { S.jourH = el.dataset.jh || null; S.heure = null; charger(false); }));
     $.querySelectorAll('[data-cmddrop]').forEach(b => b.addEventListener('click', () => { S.cmdOuvert = !S.cmdOuvert; rendre(); }));
+    prBrancher();
   }
 
   // Tourner le téléphone, ou ouvrir la page sur un écran étroit, change de
