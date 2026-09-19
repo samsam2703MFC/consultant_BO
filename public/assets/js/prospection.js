@@ -40,7 +40,27 @@
   const fD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
 
   /* --- la réserve serveur, partagée entre les hôtes -------------------------- */
-  const STORE = { base: null, etats: {}, enCours: {}, ecoute: [] };
+  const STORE = { base: null, etats: {}, enCours: {}, ecoute: [], offres: null, offresEnCours: false };
+  /* Le type d'offre : ce qu'on propose selon ce qu'est le client — un hôpital
+   * ne prend pas la même chose qu'une maison communale. Catalogue au serveur
+   * (/prospection/offres) : argument, contenu, hypothèses du calcul de CA. */
+  function offresCharger(force) {
+    if (STORE.offresEnCours || (STORE.offres && !force)) return Promise.resolve(STORE.offres || []);
+    STORE.offresEnCours = true;
+    return lire('/prospection/offres').then(d => { STORE.offres = (d && d.offres) || []; return STORE.offres; }).catch(() => STORE.offres || [])
+      .finally(() => { STORE.offresEnCours = false; STORE.ecoute.forEach(f => { try { f('offres'); } catch (e) { /* un hôte parti */ } }); });
+  }
+  function offres() { if (!STORE.offres && !STORE.offresEnCours) offresCharger(false); return STORE.offres || []; }
+  function offreParId(id) { return offres().find(o => o.id === id) || null; }
+  /** L'offre d'un lieu : celle choisie, sinon celle de son genre (mots du libellé), sinon de sa famille, sinon la pause du personnel. */
+  function offreDe(l, choisie) {
+    const O = offres();
+    if (choisie && O.some(o => o.id === choisie)) return choisie;
+    const g = String(l.genre || '').toLowerCase();
+    for (const o of O) { if (o.genres && new RegExp(o.genres, 'iu').test(g)) return o.id; }
+    for (const o of O) { if ((o.familles || []).includes(l.famille)) return o.id; }
+    return O.length ? 'personnel' : '';
+  }
   function apiBase() {
     if (STORE.base) return STORE.base;
     return (typeof window !== 'undefined' && window.COCKPIT_API_BASE) || (location.pathname.replace(/[^/]*$/, '') + 'api/cockpit');
@@ -118,6 +138,7 @@
       const m = this.magasin();
       if (!m || s.enCours) return;
       etatCharger(this.shop(), false);
+      offresCharger(false);
       if (s.lieux && s.lieux.r === s.r && s.lieux.shop === this.shop() && !force) return;
       s.enCours = true; s.err = '';
       const shop = this.shop();
@@ -132,7 +153,8 @@
       return (d.lieux || []).filter(l => !/bakery|pastry/.test(l.genre) && !/atelier by/i.test(l.nom)).map(l => {
         const e = ma[l.id] || {};
         const st = e.retour || (e.visite ? 'visite' : '');
-        return Object.assign({}, l, { dans: !!e.coche, visite: e.visite || '', retour: e.retour || '', note: e.note || '', st, action: e.action || '', actionLe: e.actionLe || '',
+        const offre = offreDe(l, e.offre);
+        return Object.assign({}, l, { dans: !!e.coche, visite: e.visite || '', retour: e.retour || '', note: e.note || '', st, action: e.action || '', actionLe: e.actionLe || '', offre, offreChoisie: e.offre || '',
           aFaire: !!(e.action && (!e.actionLe || e.actionLe <= AUJ)), enRetard: !!(e.action && e.actionLe && e.actionLe < AUJ),
           pers: l.personnes != null ? l.personnes : (l.grand === true ? 35 : (l.grand === false ? 8 : 15)) });
       });
@@ -173,9 +195,16 @@
         <div class="pr-it ${l.st === 'client' ? 'cli' : ''}">
           <div class="pr-l1"><b>${esc(l.nom)}</b><span class="pr-fam" style="background:${COUL[l.famille] || '#888'}">${esc(NOM[l.famille] || l.famille)}</span><span class="sp"></span>${this.pastille(l)}<button class="pr-x" data-a="del" data-v="${esc(l.id)}" title="Retirer de ma liste">×</button></div>
           <div class="pr-l2">${this.adr(l)} <a href="${esc(this.maps(l))}" target="_blank" rel="noopener">📍</a>${l.tel ? ` · <a href="tel:${esc(l.tel.replace(/\s+/g, ''))}">${esc(l.tel)}</a>` : ''} · ${l.dKm.toFixed(1).replace('.', ',')} km · ${esc(this.taille(l))}${l.zoning ? ' · ' + esc(l.zoning) : ''}</div>
+          ${this.htmlOffre(l)}
           <div class="pr-l3"><label>Visite <input type="date" value="${esc(l.visite)}" data-f="date-${esc(l.id)}" data-c="date" data-v="${esc(l.id)}"></label><input type="text" placeholder="Note — part au CRM" value="${esc(l.note)}" data-f="note-${esc(l.id)}" data-c="note" data-v="${esc(l.id)}">${l.note ? '<span class="pr-crm">→ CRM</span>' : ''}</div>
           <div class="pr-l4 ${l.action ? (l.enRetard ? 'retard' : (l.aFaire ? 'auj' : 'plus-tard')) : ''}"><span class="pr-act-ic">${l.action ? (l.enRetard ? '⚑' : '→') : '☐'}</span><select data-c="action" data-v="${esc(l.id)}">${ACT.map(a => `<option value="${a[0]}"${l.action === a[0] ? ' selected' : ''}>${esc(a[1])}</option>`).join('')}</select>${l.action ? `<label>le <input type="date" value="${esc(l.actionLe)}" data-f="actle-${esc(l.id)}" data-c="actionLe" data-v="${esc(l.id)}"></label><span class="pr-act-txt">${l.enRetard ? 'en retard depuis le ' + fD(l.actionLe) : (l.actionLe ? (l.actionLe === AUJ ? 'aujourd’hui' : 'le ' + fD(l.actionLe)) : 'sans date : à faire')}</span><button class="pr-fait" data-a="fait" data-v="${esc(l.id)}" title="C’est fait">✓ fait</button>` : ''}</div>
         </div>`).join('')}</div>`;
+    }
+    /** L'offre à proposer : un choix, et l'argument à dire au comptoir. */
+    htmlOffre(l) {
+      const O = offres(); if (!O.length) return '';
+      const o = offreParId(l.offre) || O[0];
+      return `<div class="pr-offre"><span class="pr-offre-lab">Offre</span><select data-c="offre" data-v="${esc(l.id)}">${O.map(x => `<option value="${x.id}"${x.id === l.offre ? ' selected' : ''}>${esc(x.nom)}</option>`).join('')}</select>${l.offreChoisie ? '' : '<span class="pr-offre-auto" title="proposée d’après le genre du lieu">auto</span>'}<span class="pr-offre-pitch">${esc(o.pitch)}</span><span class="pr-offre-contenu">${esc(o.contenu)} · ${nf(o.depense, 2)} € / pers. · ${nf(o.commandes, o.commandes % 1 ? 1 : 0)} cde / sem.</span></div>`;
     }
     htmlChoisir(tous) {
       const s = this.s, compte = {}; tous.forEach(l => { compte[l.famille] = (compte[l.famille] || 0) + 1; });
@@ -188,36 +217,47 @@
         <div class="pr-cand">${cand.slice(0, 120).map(l => `
           <button class="pr-c" data-a="add" data-v="${esc(l.id)}">
             <span class="plus">＋</span>
-            <span class="tx"><b>${esc(l.nom)}</b><small>${esc(l.genre)} · ${l.dKm.toFixed(1).replace('.', ',')} km · ${esc(this.taille(l))}${l.zoning ? ' · ' + esc(l.zoning) : ''}</small><small>${this.adr(l)}</small></span>
+            <span class="tx"><b>${esc(l.nom)}</b><small>${esc(l.genre)} · ${l.dKm.toFixed(1).replace('.', ',')} km · ${esc(this.taille(l))}${l.zoning ? ' · ' + esc(l.zoning) : ''}</small><small>${this.adr(l)}${offreParId(l.offre) ? ' · <i>' + esc(offreParId(l.offre).nom) + '</i>' : ''}</small></span>
             <i style="background:${COUL[l.famille] || '#888'}"></i>
           </button>`).join('')}${cand.length > 120 ? `<div class="pr-vide">… et ${cand.length - 120} autres : affinez avec les types ou la recherche.</div>` : ''}${cand.length ? '' : '<div class="pr-vide">Tout est déjà dans ma liste, ou rien ne passe les filtres.</div>'}</div>`;
     }
     calcul(tous) {
-      const c = this.s.calc, parAn = pers => pers * c.depense * c.commandes * c.semaines;
-      const rows = FAM.map(f => {
-        const L = tous.filter(l => l.famille === f[0]); if (!L.length) return null;
+      // Par type d'offre : chaque offre a sa dépense par personne, ses commandes par
+      // semaine et sa part atteignable — c'est là que l'hôpital diffère de la commune.
+      const c = this.s.calc, O = offres();
+      const parAn = (o, pers) => pers * o.depense * o.commandes * c.semaines;
+      const rows = O.map(o => {
+        const L = tous.filter(l => l.offre === o.id); if (!L.length) return null;
         const pers = L.reduce((t, l) => t + l.pers, 0);
         const clients = L.filter(l => l.st === 'client'), enCours = L.filter(l => l.dans && l.st !== 'client' && l.st !== 'refus');
-        const possible = parAn(pers), atteignable = possible * c.part / 100, capte = clients.reduce((t, l) => t + parAn(l.pers), 0);
-        return { f, n: L.length, pers, clients: clients.length, enCours: enCours.length, pen: clients.length / L.length * 100, possible, atteignable, capte };
+        const possible = parAn(o, pers), atteignable = possible * o.part / 100, capte = clients.reduce((t, l) => t + parAn(o, l.pers), 0);
+        return { o, f: [o.id, o.nom, this.coulOffre(o.id)], n: L.length, pers, clients: clients.length, enCours: enCours.length, pen: clients.length / L.length * 100, possible, atteignable, capte };
       }).filter(Boolean);
       const T = rows.reduce((t, r) => ({ n: t.n + r.n, pers: t.pers + r.pers, clients: t.clients + r.clients, enCours: t.enCours + r.enCours, possible: t.possible + r.possible, atteignable: t.atteignable + r.atteignable, capte: t.capte + r.capte }),
         { n: 0, pers: 0, clients: 0, enCours: 0, possible: 0, atteignable: 0, capte: 0 });
       return { rows, T };
     }
+    coulOffre(id) { return { bureau: '#8D1D2C', equipe: '#78554B', ecole: '#C17A2A', soins: '#2d7a3e', commune: '#4a5a8a', formation: '#B26A00', funeraire: '#555', sport: '#1baf7a', hotel: '#a34a8c', personnel: '#9a8c6a' }[id] || '#888'; }
     htmlCalcul(tous) {
-      const c = this.s.calc, { rows, T } = this.calcul(tous);
-      const champ = (k, lib, unite, min, max, step) => `<label class="pr-par"><span>${lib}</span><input type="number" min="${min}" max="${max}" step="${step}" value="${c[k]}" data-f="calc-${k}" data-c="calc" data-v="${k}"><em>${unite}</em></label>`;
+      const c = this.s.calc, s = this.s, { rows, T } = this.calcul(tous), O = offres();
+      const num = (o, k, min, max, step) => `<input type="number" min="${min}" max="${max}" step="${step}" value="${o[k]}" data-f="offre-${o.id}-${k}" data-c="offreval" data-v="${o.id}|${k}" class="pr-oin">`;
+      const partMoy = T.possible ? T.atteignable / T.possible * 100 : 0;
       return `
-        <div class="pr-pars">${champ('depense', 'Dépense par personne et par commande', '€', 1, 50, 0.5)}${champ('commandes', 'Commandes par semaine', '/ sem.', 0.25, 7, 0.25)}${champ('semaines', 'Semaines par an', 'sem.', 20, 52, 1)}${champ('part', 'Part atteignable', '%', 1, 100, 1)}</div>
+        <div class="pr-pars pr-pars1"><label class="pr-par"><span>Semaines par an</span><input type="number" min="20" max="52" step="1" value="${c.semaines}" data-f="calc-semaines" data-c="calc" data-v="semaines"><em>sem.</em></label>
+          <div class="pr-par-note">Dépense, commandes par semaine et part atteignable se règlent <b>par type d'offre</b> (tableau des offres ci-dessous) : un hôpital ne commande pas comme une maison communale.</div></div>
         <div class="pr-tot"><div><span class="k">CA possible par an</span><b>${fK(T.possible)}</b><small>${fN(T.pers)} personnes dans ${T.n} lieux</small></div>
-          <div><span class="k">Atteignable à ${c.part} %</span><b>${fK(T.atteignable)}</b><small>l'objectif de démarchage</small></div>
+          <div><span class="k">Atteignable (${fP(partMoy)})</span><b>${fK(T.atteignable)}</b><small>l'objectif de démarchage</small></div>
           <div><span class="k">Capté aujourd'hui</span><b class="${T.capte ? 'ok' : 'mu'}">${fK(T.capte)}</b><small>${T.clients} client${T.clients > 1 ? 's' : ''} · ${T.enCours} en cours</small></div>
           <div><span class="k">Pénétration</span><b>${T.n ? fP(T.clients / T.n * 100) : '—'}</b><small>clients ÷ lieux</small></div></div>
-        <div class="pr-tab"><div class="th"><span>Secteur</span><span>Lieux</span><span>Pers.</span><span>Clients</span><span>Pénétr.</span><span>CA possible</span><span>Atteignable</span><span>Capté</span></div>
+        <div class="pr-tab"><div class="th"><span>Type d'offre</span><span>Lieux</span><span>Pers.</span><span>Clients</span><span>Pénétr.</span><span>CA possible</span><span>Atteignable</span><span>Capté</span></div>
           ${rows.map(r => `<div class="tr"><span><i style="background:${r.f[2]}"></i>${esc(r.f[1])}</span><span>${r.n}</span><span>${fN(r.pers)}</span><span>${r.clients}${r.enCours ? ` <small>+${r.enCours}</small>` : ''}</span><span>${fP(r.pen)}</span><span>${fK(r.possible)}</span><span>${fK(r.atteignable)}</span><span class="${r.capte ? 'ok' : 'mu'}">${fK(r.capte)}</span></div>`).join('')}
         </div>
-        <div class="pr-note">Personnes : le chiffre de la carte (employés, élèves, lits) quand il existe, sinon 35 pour un lieu de 20 personnes et plus, 8 pour un petit, 15 quand on ne sait pas. CA possible = personnes × dépense × commandes par semaine × semaines. Capté = les lieux au statut « Client » de ma liste, au même tarif.</div>`;
+        <div class="pr-offres"><div class="pr-offres-hd"><b>Les offres</b><button class="pr-btn" data-a="offres-plis">${s.offresOuvert ? 'Replier' : 'Régler les hypothèses'}</button></div>
+          ${s.offresOuvert ? `<div class="pr-otab"><div class="th"><span>Offre</span><span>€ / pers. / cde</span><span>cde / sem.</span><span>part %</span></div>
+            ${O.map(o => `<div class="tr"><span><i style="background:${this.coulOffre(o.id)}"></i><b>${esc(o.nom)}</b><small>${esc(o.contenu)}</small></span><span>${num(o, 'depense', 0.5, 200, 0.5)}</span><span>${num(o, 'commandes', 0.25, 14, 0.25)}</span><span>${num(o, 'part', 1, 100, 1)}</span></div>`).join('')}
+            <div class="pr-note">Ces hypothèses sont celles du réseau : réglées ici, elles valent pour tous les magasins, au bureau comme sur le téléphone.</div></div>` : ''}
+        </div>
+        <div class="pr-note">Personnes : le chiffre de la carte (employés, élèves, lits) quand il existe, sinon 35 pour un lieu de 20 personnes et plus, 8 pour un petit, 15 quand on ne sait pas. CA possible = personnes × dépense de l'offre × commandes par semaine de l'offre × semaines. Capté = les lieux au statut « Client » de ma liste, au tarif de leur offre.</div>`;
     }
     garde() {
       const s = this.s, m = this.magasin();
@@ -318,6 +358,7 @@
       if (a === 'vue') { s.vue = v; this.render(); }
       else if (a === 'fam') { s.fam = s.fam === v ? null : v; this.render(); }
       else if (a === 'filtre') { s.filtre = v; this.render(); }
+      else if (a === 'offres-plis') { s.offresOuvert = !s.offresOuvert; this.render(); }
       else if (a === 'fait') {
         // l'action est faite : elle s'efface, la note en garde la trace
         const l = this.lieux().find(x => x.id === v); if (!l) return;
@@ -353,6 +394,14 @@
       else if (c === 'note') { const l = this.lieux().find(x => x.id === v); set(this.shop(), v, { note: b.value }, l && l.nom).then(() => this.render()); this.render(); }
       else if (c === 'action') { const l = this.lieux().find(x => x.id === v); set(this.shop(), v, b.value ? { action: b.value, actionLe: (l && l.actionLe) || AUJ } : { action: '', actionLe: '' }, l && l.nom).then(() => this.render()); this.render(); }
       else if (c === 'actionLe') { const l = this.lieux().find(x => x.id === v); set(this.shop(), v, { actionLe: b.value }, l && l.nom).then(() => this.render()); this.render(); }
+      else if (c === 'offre') { const l = this.lieux().find(x => x.id === v); set(this.shop(), v, { offre: b.value === offreDe(l, '') ? '' : b.value }, l && l.nom).then(() => this.render()); this.render(); }
+      else if (c === 'offreval') {
+        const [id, k] = v.split('|'); const o = offreParId(id); if (!o) return;
+        o[k] = +b.value || o[k];
+        ecrire('PUT', '/prospection/offres', { offres: offres().map(x => ({ id: x.id, depense: x.depense, commandes: x.commandes, part: x.part })) })
+          .then(r => { if (r && r.offres) STORE.offres = r.offres; this.render(); }).catch(err => console.warn('[prospection] offres : ' + err.message));
+        this.render();
+      }
       else if (c === 'calc') {
         s.calc[v] = +b.value || s.calc[v];
         try { localStorage.setItem('ceo_prospection_calc', JSON.stringify(s.calc)); } catch (x) { /* rien */ }
@@ -402,6 +451,24 @@
 .pr-st{border:none;border-radius:999px;padding:5px 12px;font:700 11px var(--font-ui);cursor:pointer;background:var(--color-background-secondary);color:var(--color-text);min-height:30px;white-space:nowrap}
 .pr-st.ok{background:#E6F2E9;color:#2d7a3e}.pr-st.wa{background:#FBEFE0;color:#B26A00}.pr-st.ko{background:#F7E4E6;color:#C0182B}.pr-st.mu{background:var(--color-background-secondary);color:var(--color-text-muted)}
 .pr-l2{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
+.pr-offre{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted);padding:2px 0}
+.pr-offre-lab{font:600 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.pr-offre select{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 8px;font:600 11.5px var(--font-ui);background:var(--color-surface);color:var(--color-primary);min-height:30px;max-width:100%}
+.pr-offre-auto{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.pr-offre-pitch{flex:1 1 100%;font-size:11.5px;color:var(--color-text);line-height:1.4;font-style:italic}
+.pr-offre-contenu{flex:1 1 100%;font-size:10.5px;color:var(--color-text-muted)}
+.pr-pars.pr-pars1{grid-template-columns:minmax(0,170px) minmax(0,1fr);align-items:center}
+.pr-par-note{font-size:11px;color:var(--color-text-muted);line-height:1.45}
+.pr-offres{margin-top:10px;border-top:.5px solid var(--color-border-tertiary);padding-top:8px}
+.pr-offres-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px}
+.pr-otab{margin-top:8px}
+.pr-otab .th,.pr-otab .tr{display:grid;grid-template-columns:minmax(0,1fr) 92px 84px 70px;gap:8px;align-items:center;padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:11.5px}
+.pr-otab .th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.pr-otab .tr span:first-child{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pr-otab .tr i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.pr-otab .tr small{flex:1 1 100%;color:var(--color-text-muted);font-size:10.5px;padding-left:14px}
+.pr-oin{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 7px;font:600 12px var(--font-ui);background:var(--color-surface);color:var(--color-text);width:100%;box-sizing:border-box;min-height:32px}
+@media (max-width:640px){.pr-pars.pr-pars1{grid-template-columns:1fr}.pr-otab .th,.pr-otab .tr{grid-template-columns:minmax(0,1fr) 70px 62px 56px;gap:5px}}
 .pr-l4{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted);padding-top:2px}
 .pr-l4 select{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 8px;font:600 11.5px var(--font-ui);background:var(--color-surface);color:var(--color-text);min-height:32px;max-width:100%}
 .pr-l4 label{display:inline-flex;align-items:center;gap:4px;font:600 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
@@ -453,13 +520,13 @@
 .pr-tot .k{display:block;font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
 .pr-tot b{display:block;font:400 21px var(--font-display);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pr-tot small{display:block;font-size:10px;color:var(--color-text-muted);line-height:1.3}
-.pr-tab .th,.pr-tab .tr{display:grid;grid-template-columns:minmax(0,1.5fr) 44px 54px 58px 58px 74px 74px 70px;gap:6px;align-items:center;font-size:11.5px;padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.pr-tab .th,.pr-tab .tr{display:grid;grid-template-columns:minmax(0,2.2fr) 40px 50px 54px 54px 68px 68px 62px;gap:6px;align-items:center;font-size:11.5px;padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary)}
 .pr-tab .th{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
 .pr-tab .tr span,.pr-tab .th span{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pr-tab .tr span:first-child,.pr-tab .th span:first-child{text-align:left;display:flex;align-items:center;gap:6px}
+.pr-tab .tr span:first-child,.pr-tab .th span:first-child{text-align:left;display:flex;align-items:center;gap:6px;white-space:normal;line-height:1.2}
 .pr-tab .tr i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 .pr-tab .tr small{color:var(--color-text-muted)}
-@media (max-width:640px){.pr-tab .th,.pr-tab .tr{grid-template-columns:minmax(0,1.4fr) 40px 58px 66px 62px}.pr-tab .th span:nth-child(3),.pr-tab .tr span:nth-child(3),.pr-tab .th span:nth-child(7),.pr-tab .tr span:nth-child(7),.pr-tab .th span:nth-child(8),.pr-tab .tr span:nth-child(8){display:none}}
+@media (max-width:640px){.pr-tab .th,.pr-tab .tr{grid-template-columns:minmax(0,1.6fr) 36px 50px 56px 62px}.pr-tab .th span:nth-child(3),.pr-tab .tr span:nth-child(3),.pr-tab .th span:nth-child(7),.pr-tab .tr span:nth-child(7),.pr-tab .th span:nth-child(8),.pr-tab .tr span:nth-child(8){display:none}}
 `;
   function styles() {
     if (document.getElementById('pr-css')) return;
@@ -479,6 +546,7 @@
       return h;
     },
     etat, set, charger: etatCharger,
+    offres, offreDe, offreParId, chargerOffres: offresCharger,
     /** Être prévenu quand la réserve d'un magasin arrive du serveur. */
     ecouter(fn) { STORE.ecoute.push(fn); },
     FAMILLES: FAM, STATUTS: ST,
