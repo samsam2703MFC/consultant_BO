@@ -9950,9 +9950,9 @@ function tplAppMobile(c, x){
         ${c.viConsultants.length ? c.viConsultants.map(ligne).join('') : '<div style="font-size:12px;color:var(--color-text-muted)">Lecture des consultants…</div>'}
       </div>
       <div style="${carte};padding:16px 18px">
-        <div style="${cap};margin-bottom:8px">Franchisés — mon plan d’action, ma boutique</div>
-        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-bottom:10px">Le franchisé reçoit ses actions, envoie la photo de la correction, suit sa boutique. Un lien par magasin.</div>
-        ${c.viMagasins.map(ligne).join('')}
+        <div style="${cap};margin-bottom:8px">Franchisés — dans leur dashboard magasin</div>
+        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55">Pas de lien de plus pour le franchisé : ses actions, la photo de la correction et la recommandation du consultant sont dans son <b>Dashboard magasin</b>, onglet « Plan d’action » — le même lien qu’il a déjà, avec ses notifications.</div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${c.viMagasins.map(l => `<a href="${esc(l.dash)}" target="_blank" rel="noopener" style="font-size:11.5px;color:var(--color-primary);border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:4px 10px;text-decoration:none">${esc(l.nom)} ↗</a>`).join('')}</div>
       </div>
       <div style="${carte};padding:16px 18px">
         <div style="${cap};margin-bottom:8px">Admin — corrections à valider, synthèse</div>

@@ -7375,7 +7375,7 @@ class App {
     }
     const cons = this.D.viConsultants || [];
     common.viConsultants = cons.map(c => ({ id: String(c.id), nom: c.nom, url: base + 'visites/?role=consultant&id=' + encodeURIComponent(String(c.id)) }));
-    common.viMagasins = this.open().map(m => ({ id: String(m.id), nom: m.nom, url: base + 'visites/?shop=' + encodeURIComponent(String(m.id)) }));
+    common.viMagasins = this.open().map(m => ({ id: String(m.id), nom: m.nom, url: base + 'visites/?shop=' + encodeURIComponent(String(m.id)), dash: base + 'dashboard/?shop=' + encodeURIComponent(String(m.id)) + '&vue=actions' }));
     common.viAdmin = base + 'visites/?role=admin';
     common.viApercu = S.viApercu || (common.viConsultants[0] ? common.viConsultants[0].url : common.viAdmin);
     common.viChoisir = url => () => this.setState({ viApercu: url });

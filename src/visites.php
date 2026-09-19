@@ -841,7 +841,7 @@ function wr_plans_post(): array
         $court = viMagasins()[$shop]['court'] ?? $shop;
         $p0 = count(array_filter($ls, fn ($l) => $l['priorite'] === 'P0'));
         viNotifier($shop, 'Plan d’action — ' . $court, count($ls) . ' action' . (count($ls) > 1 ? 's' : '') . ($p0 ? ' dont ' . $p0 . ' P0' : '') . ' : ' . $ls[0]['titre'],
-            'visites/?shop=' . rawurlencode($shop), 'plan-' . $shop);
+            'dashboard/?shop=' . rawurlencode($shop) . '&vue=actions', 'plan-' . $shop);
         journalAdd($qui, 'Plan d’action', null, count($ls) . ' action(s) pour ' . $court);
     }
     return ['ok' => true, 'plans' => $out];
@@ -896,8 +896,8 @@ function wr_plans_put(string $id): array
     if ($vers !== '' && $vers !== $p['statut']) {
         $t = $p['titre'];
         if ($vers === 'attente')   { viNotifier('admin', 'Correction reçue — ' . $court, $t . ' : photo à valider', 'visites/?role=admin', 'valider-' . $p['id']); }
-        if ($vers === 'reprendre') { viNotifier($shop, 'À reprendre — ' . $court, $t . ($b['retour'] ?? '' ? ' : ' . $b['retour'] : ''), 'visites/?shop=' . rawurlencode($shop), 'plan-' . $p['id']); }
-        if ($vers === 'valide')    { viNotifier($shop, 'Correction validée — ' . $court, $t, 'visites/?shop=' . rawurlencode($shop), 'plan-' . $p['id']); }
+        if ($vers === 'reprendre') { viNotifier($shop, 'À reprendre — ' . $court, $t . ($b['retour'] ?? '' ? ' : ' . $b['retour'] : ''), 'dashboard/?shop=' . rawurlencode($shop) . '&vue=actions', 'plan-' . $p['id']); }
+        if ($vers === 'valide')    { viNotifier($shop, 'Correction validée — ' . $court, $t, 'dashboard/?shop=' . rawurlencode($shop) . '&vue=actions', 'plan-' . $p['id']); }
         if ($vers === 'escalade')  { viNotifier('admin', 'Escalade — ' . $court, $p['priorite'] . ' ' . $t, 'visites/?role=admin', 'escalade-' . $p['id']); }
         journalAdd($qui, 'Plan d’action', null, $court . ' : « ' . $t . ' » ' . $p['statut'] . ' → ' . $vers);
     }
@@ -1110,7 +1110,7 @@ function viHorloge(bool $force = false): array
             $ouverts = Db::rows('SELECT priorite, titre FROM ceo_visite_action WHERE shop_id = ? AND statut IN (\'ouvert\', \'reprendre\', \'escalade\') ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\') LIMIT 2', [$shop]);
             $suite = $ouverts ? ' — ' . implode(', ', array_map(fn ($o) => $o['priorite'] . ' ' . $o['titre'], $ouverts)) : '';
             viNotifier('c:' . $v['consultant_id'], 'Demain ' . $v['debut_h'] . ' — ' . $court, 'Visite prévue' . $suite, 'visites/?role=consultant&id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'j1-' . $v['id']);
-            viNotifier($shop, 'Visite demain ' . $v['debut_h'], $v['consultant_nom'] . ' passe demain' . ($ouverts ? ' — préparez : ' . $ouverts[0]['titre'] : ''), 'visites/?shop=' . rawurlencode($shop), 'j1-' . $v['id']);
+            viNotifier($shop, 'Visite demain ' . $v['debut_h'], $v['consultant_nom'] . ' passe demain' . ($ouverts ? ' — préparez : ' . $ouverts[0]['titre'] : ''), 'dashboard/?shop=' . rawurlencode($shop) . '&vue=actions', 'j1-' . $v['id']);
             $fait['rappelsJ1']++;
             if ($mails) {
                 foreach (viConsultants() as $c) {

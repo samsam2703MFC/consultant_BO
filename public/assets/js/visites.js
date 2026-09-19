@@ -124,6 +124,15 @@
 .vi .hd .d{font-size:11px;color:var(--color-text-muted)}
 .vi .retour{border:none;background:none;font-size:20px;cursor:pointer;padding:0 6px 0 0;color:var(--color-text)}
 .vi .rub{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vi .et{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;margin-bottom:8px;overflow:hidden}
+.vi .et.on{border-color:var(--color-primary)}
+.vi .et-h{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer}
+.vi .et-h .num{width:26px;height:26px;border-radius:50%;background:var(--color-background-secondary);display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--font-ui);color:var(--color-text-muted);flex:0 0 auto}
+.vi .et.on .et-h .num{background:var(--color-primary);color:#fff}
+.vi .et.ok .et-h .num{background:#2d7a3e;color:#fff}
+.vi .et-c{padding:0 14px 14px;border-top:.5px solid var(--color-border-tertiary)}
+.vi .et-c .mod{margin-top:8px}
+.vi .et-c .card{background:var(--color-bg)}
 `;
 
   /* --- IndexedDB : une réserve de lectures, une file d'écritures --------- */
@@ -337,7 +346,7 @@
     /** La conformité suit l'écran : le tableau de bord et la checklist la lisent. */
     suivreConformite(v, p) {
       if (v === 'tb' || v === 'historique') { this.chargerConformite(p); return; }
-      if (v === 'checklist' || v === 'review' || v === 'fiche') {
+      if (v === 'checklist' || v === 'review' || v === 'fiche' || v === 'controle') {
         const vi = this.visite(p);
         if (vi) { this.chargerConformite(vi.shop); }
       }
@@ -375,17 +384,17 @@
       const actif = document.activeElement; const focus = actif && this.host.contains(actif) && actif.dataset && actif.dataset.f ? { f: actif.dataset.f, pos: actif.selectionStart } : null;
       const V = this['v_' + this.v] ? this['v_' + this.v]() : this.v_agenda();
       const onglets = this.onglets();
-      vi.innerHTML = (this.o.mobile ? '' : `<div class="onglets">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}">${t[2]}</button>`).join('')}</div>`)
+      vi.innerHTML = (this.o.mobile || this.o.sansOnglets ? '' : `<div class="onglets">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}">${t[2]}</button>`).join('')}</div>`)
         + `<div class="sc">${this.etat()}${V}</div>`
-        + (this.o.mobile ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
+        + (this.o.mobile && !this.o.sansOnglets ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
         + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '');
       if (focus) { const el = this.host.querySelector(`[data-f="${focus.f.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); try { if (focus.pos != null && el.setSelectionRange) { el.setSelectionRange(focus.pos, focus.pos); } } catch (e) { /* select */ } } }
     }
     onglets() {
       if (this.role === 'franchise') { return [['plans', '✅', 'Plan d’action', ['photo']], ['tb', '📊', 'Ma boutique', ['historique']], ['reglages', '⚙️', 'Réglages']]; }
-      if (this.role === 'admin') { return [['admin', '✅', 'À valider'], ['portfolio', '🏪', 'Boutiques', ['tb', 'historique', 'fiche', 'planifier', 'checklist', 'review', 'msp']], ['agenda', '📅', 'Agenda'], ['synthese', '📋', 'Synthèse'], ['reglages', '⚙️', 'Réglages']]; }
-      return [['agenda', '📅', 'Agenda', ['fiche', 'planifier', 'checklist', 'review']], ['portfolio', '🏪', 'Boutiques', ['tb', 'historique', 'msp']], ['plans', '✅', 'Plans', ['admin']], ['reglages', '⚙️', 'Réglages']];
+      if (this.role === 'admin') { return [['admin', '✅', 'À valider'], ['portfolio', '🏪', 'Boutiques', ['tb', 'historique', 'fiche', 'planifier', 'checklist', 'review', 'controle', 'msp']], ['agenda', '📅', 'Agenda'], ['synthese', '📋', 'Synthèse'], ['reglages', '⚙️', 'Réglages']]; }
+      return [['agenda', '📅', 'Agenda', ['fiche', 'planifier', 'checklist', 'review', 'controle']], ['portfolio', '🏪', 'Boutiques', ['tb', 'historique', 'msp']], ['plans', '✅', 'Plans', ['admin']], ['reglages', '⚙️', 'Réglages']];
     }
     etat() {
       const n = this.file.length;
@@ -476,7 +485,7 @@
         ${this.role !== 'consultant' || !this.moi ? `<div class="xs mu">${esc(v.consultantNom || '')}</div>` : ''}
         ${p0 ? `<div class="sm dn" style="margin-top:3px">🚨 P0 ${esc(p0.titre)}${p0.retard ? ' · retard ' + p0.retard + ' j' : ''}</div>` : ''}
         <div class="sm mu" style="margin-top:2px">${b.ca ? 'CA ' + eur(b.ca.ca) + (b.ca.pct != null ? ' · ' + pct(b.ca.pct) : '') : ''}${b.google && b.google.note != null ? ' · Google ' + note1(b.google.note) : ''}${ouverts.length && !p0 ? ' · ' + ouverts.length + ' action(s)' : ''}</div>
-        <div class="act"><button class="btn s p" data-a="go" data-v="${v.statut === 'terminee' ? 'historique/' + esc(v.shop) : 'fiche/' + esc(v.id)}">${v.statut === 'terminee' ? 'Historique' : v.statut === 'en_cours' ? 'Reprendre la visite' : 'Ouvrir la fiche'}</button></div></div>`;
+        <div class="act"><button class="btn s p" data-a="go" data-v="${v.statut === 'terminee' ? 'historique/' + esc(v.shop) : v.statut === 'en_cours' ? 'controle/' + esc(v.id) : 'fiche/' + esc(v.id)}">${v.statut === 'terminee' ? 'Historique' : v.statut === 'en_cours' ? 'Reprendre le contrôle' : 'Ouvrir la fiche'}</button></div></div>`;
     }
     v_portfolio() {
       const D = this.D; const s = D.seuils || {};
@@ -513,11 +522,14 @@
         + (finie ? `<div class="btns"><button class="btn w" data-a="go" data-v="historique/${esc(v.shop)}">Historique</button><button class="btn w" data-a="go" data-v="review/${esc(v.id)}">Relire la review</button></div>`
           : `<div class="btns"><button class="btn p w" data-a="demarrer" data-v="${esc(v.id)}">${enCours ? '▶ Reprendre la visite' : '▶ Démarrer la visite'}</button></div>${v.statut === 'planifiee' ? `<div class="btns"><button class="btn w" data-a="confirmer" data-v="${esc(v.id)}">✓ Confirmer</button><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>` : `<div class="btns"><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>`}`);
     }
-    v_tb() {
-      const shop = this.p || this.shop; const b = this.boutique(shop); if (!b) { return this.hd('Boutique introuvable', '', 'portfolio'); }
-      const B = this.B[shop]; const vEnCours = b.visiteEnCours ? this.visite(b.visiteEnCours) : null;
+    /** Les trois photos du jour : prises, ou à prendre. */
+    photosJourHtml(shop, vEnCours) {
       const pj = this.photosJour(shop); const t = auj();
       const jour = GENRES_JOUR.map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); return p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; }).join('');
+      return `<div class="cap">Photo du jour</div><div class="phs">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
+    }
+    /** Ce qui cloche dans la boutique, d'après les actions, le planogramme, le comptoir, Google et le panel. */
+    alertesDe(shop, b, B) {
       const alertes = [];
       this.plansDe(shop, true).forEach(p => alertes.push([p.priorite === 'P0' ? 'rouge' : 'orange', p.priorite + ' ' + p.titre + (p.retard ? ' — retard ' + p.retard + ' j' : ''), (ASSIGNES[p.assigne] || '') + (p.photo_id ? '' : ' · pas de photo')]));
       if (b.plano && b.plano.pct < (this.D.seuils.planoOrange || 80)) { alertes.push([b.plano.pct < (this.D.seuils.planoRouge || 60) ? 'rouge' : 'orange', 'Planogramme ' + b.plano.pct + ' %', 'relevé du ' + fmtD(b.plano.le) + (b.plano.ruptures ? ' · ' + b.plano.ruptures + ' rupture(s)' : '')]); }
@@ -534,25 +546,34 @@
       }
       if (b.google && b.google.faibles >= 1) { alertes.push([b.google.faibles >= 2 ? 'orange' : 'vert', 'Google — ' + b.google.faibles + ' avis ≤ 2/5 sur 30 j', (b.google.derniers || []).filter(d => d.note <= 2).map(d => d.extrait).join(' · ')]); }
       if (B && B.nc && !B.nc.indispo && B.nc.ouvertes) { alertes.push(['orange', B.nc.ouvertes + ' non-conformité(s) du panel non corrigée(s) sur 30 j', B.nc.liste.filter(n => !n.corrigee).slice(0, 3).map(n => n.tache + ' (' + fmtD(n.jour) + ')').join(' · ')]); }
+      return alertes;
+    }
+    alertesHtml(alertes, panelLu) {
+      return `<div class="cap">Alertes ${panelLu ? '' : '<span class="xs mu">· panel en lecture…</span>'}</div><div class="card">${alertes.length ? alertes.map(a => `<div class="al"><span class="feu ${a[0]}" style="margin-top:4px"></span><div><b>${esc(a[1])}</b><div class="xs mu">${esc(a[2])}</div></div></div>`).join('') : '<div class="sm mu">Aucune alerte.</div>'}</div>`;
+    }
+    v_tb() {
+      const shop = this.p || this.shop; const b = this.boutique(shop); if (!b) { return this.hd('Boutique introuvable', '', 'portfolio'); }
+      const B = this.B[shop]; const vEnCours = b.visiteEnCours ? this.visite(b.visiteEnCours) : null;
+      const t = auj();
+      const alertes = this.alertesDe(shop, b, B);
       return this.hd(b.court, (vEnCours ? 'visite en cours depuis ' + fmtH(vEnCours.commence_a) + ' · ' : '') + fmtDJ(t), this.role === 'franchise' ? null : 'portfolio', vEnCours ? '<span class="pill" style="background:#F7E4E6;color:#C0182B">● en visite</span>' : this.feuDot(b))
-        + `<div class="cap">Photo du jour</div><div class="phs">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`
+        + this.photosJourHtml(shop, vEnCours)
         + '<div class="cap">4 chiffres clés</div>' + this.kpis(b)
-        + `<div class="cap">Alertes ${B ? '' : '<span class="xs mu">· panel en lecture…</span>'}</div><div class="card">${alertes.length ? alertes.map(a => `<div class="al"><span class="feu ${a[0]}" style="margin-top:4px"></span><div><b>${esc(a[1])}</b><div class="xs mu">${esc(a[2])}</div></div></div>`).join('') : '<div class="sm mu">Aucune alerte.</div>'}</div>`
+        + this.alertesHtml(alertes, !!B)
         + (this.role === 'franchise' ? `<div class="btns"><button class="btn p w" data-a="go" data-v="plans">Mon plan d’action</button><button class="btn w" data-a="go" data-v="historique/${esc(shop)}">Historique</button></div>`
-          : `<div class="btns">${vEnCours ? `<button class="btn p w" data-a="go" data-v="checklist/${esc(vEnCours.id)}">▶ Checklist de visite</button>` : `<button class="btn p w" data-a="go" data-v="planifier/${esc(shop)}">📅 Planifier</button>`}<button class="btn w" data-a="go" data-v="historique/${esc(shop)}">Historique 3 mois</button></div>
+          : `<div class="btns">${vEnCours ? `<button class="btn p w" data-a="go" data-v="controle/${esc(vEnCours.id)}">▶ Contrôle guidé</button>` : `<button class="btn p w" data-a="go" data-v="planifier/${esc(shop)}">📅 Planifier</button>`}<button class="btn w" data-a="go" data-v="historique/${esc(shop)}">Historique 3 mois</button></div>
              <div class="btns"><button class="btn w" data-a="go" data-v="msp/${esc(shop)}">MSP et équipe</button>${vEnCours ? '' : `<button class="btn w" data-a="demarrer-ici" data-v="${esc(shop)}">▶ Visite non planifiée</button>`}</div>`);
     }
-    v_checklist() {
-      const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
-      const b = this.boutique(v.shop) || { court: v.shop }; const pts = this.pointsDe(v.id); const photos = this.photosDe(v.id);
-      const cl = this.D.checklist || []; const causes = this.D.causes || {};
-      let total = 0, faits = 0;
-      const mods = cl.map(m => {
+    /** Un module de la checklist : ses points, leurs notes, photos, causes et remarques. */
+    moduleHtml(v, m, pts, photos, cnt, sansTitre) {
+      const b = this.boutique(v.shop) || { court: v.shop };
+      const causes = this.D.causes || {};
+
         const msp = m.id === 'msp' ? b.msp : null;
-        return `<div class="mod"><div class="th"><b>${esc(m.nom)}</b>${this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>
+        return `<div class="mod">${sansTitre ? '' : `<div class="th"><b>${esc(m.nom)}</b>${this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>`}
           ${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
           ${m.points.map(pt => {
-            total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { faits++; }
+            cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
             const phs = photos.filter(x => x.ref === pt.ref);
             const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
             return `<div class="pt ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><button class="cb ${p.etat || ''}" data-a="etat" data-v="${k}">${p.etat === 'ok' ? '✓' : p.etat === 'ko' ? '!' : p.etat === 'na' ? '–' : ''}</button><b class="sm" style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%" style="width:64px;padding:5px 7px">` : `<span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="note" data-v="${k}|${n}" class="${p.note === n ? (n <= 2 ? 'bad' : 'on') : ''}">${n}</button>`).join('')}</span>`}</div>
@@ -560,8 +581,15 @@
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               <input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="Remarque…" style="flex:1;min-width:120px;padding:5px 8px;font-size:12px"></div></div>`;
           }).join('')}</div>`;
-      }).join('');
-      return this.hd('Checklist — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : ''), 'fiche/' + v.id, `<span class="pill">${faits} / ${total}</span>`)
+          }
+    v_checklist() {
+      const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
+      const b = this.boutique(v.shop) || { court: v.shop }; const pts = this.pointsDe(v.id); const photos = this.photosDe(v.id);
+      const cl = this.D.checklist || []; const causes = this.D.causes || {};
+      let cnt = { total: 0, faits: 0 };
+      const mods = cl.map(m => this.moduleHtml(v, m, pts, photos, cnt, false)).join('');
+      const total = cnt.total, faits = cnt.faits;
+      return this.hd('Checklist — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : ''), 'fiche/' + v.id, `<button class="chip" data-a="go" data-v="controle/${esc(v.id)}">Vue guidée</button> <span class="pill">${faits} / ${total}</span>`)
         + this.carteConformite(v.shop)
         + mods
         + `<div class="btns" style="margin-top:16px"><button class="btn p w" data-a="go" data-v="review/${esc(v.id)}">Review et plan d’action ›</button></div><div class="btns"><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>`;
@@ -570,18 +598,33 @@
       const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
       const b = this.boutique(v.shop) || { court: v.shop }; const f = this.form; const finie = v.statut === 'terminee';
       const ecarts = this.ecartsDe(v);
-      if (!f.pa) { f.pa = finie ? [] : ecarts.map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true })); f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || ''; }
-      const CD = this.D.causesDiag || {}; const baisse = b.feu === 'rouge' || (b.ca && b.ca.pct != null && b.ca.pct < 0);
+      this.reviewInit(v, finie, ecarts);
       const dejaPlans = this.plansDe(v.shop).filter(p => String(p.visite_id) === String(v.id));
       const attente = this.file.filter(o => o.apres === 'photo').length;
       return this.hd('Review — ' + b.court, 'visite du ' + fmtDJ(v.prevu_le) + (v.commence_a ? ' · ' + fmtH(v.commence_a) + (v.termine_a ? ' – ' + fmtH(v.termine_a) : '') : ''), 'checklist/' + v.id)
         + `<div class="cap">Écarts relevés</div><div class="card">${ecarts.length ? ecarts.map(e => `<div class="plan ${e.grave ? 'P0b' : 'P1b'}"><div class="row"><span class="feu ${e.grave ? 'rouge' : 'orange'}"></span><b>${esc(e.titre)}</b></div><div class="sm mu">${esc(e.detail)}</div></div>`).join('') : '<div class="sm mu">Aucun écart dans la checklist.</div>'}</div>`
         + (finie ? `${this.vuSurPlace(v)}<div class="cap">Plan d’action de cette visite</div>${dejaPlans.length ? dejaPlans.map(p => this.planLigne(p)).join('') : '<div class="card sm mu">Aucune action.</div>'}`
-          : `<div class="cap">Plan d’action</div><div class="card">${f.pa.map((a, i) => `<div class="plan ${a.priorite}b" style="padding-bottom:6px"><input type="text" data-f="pa|${i}|titre" value="${esc(a.titre)}" placeholder="Action…" style="font-weight:600"><input type="text" data-f="pa|${i}|detail" value="${esc(a.detail || '')}" placeholder="Détail pour le franchisé…" style="margin-top:4px;font-size:12px">
+          : `${this.planFormHtml(v, f)}${this.reviewFormHtml(v, b, f)}            <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>`)
+        + (attente ? `<div class="btns"><button class="btn w" data-a="sync">📤 Synchroniser (${attente} photo${attente > 1 ? 's' : ''} en attente)</button></div>` : '');
+    }
+    /** Le brouillon de la review : actions proposées d'après les écarts, champs relus depuis la visite. */
+    reviewInit(v, finie, ecarts) {
+      const f = this.form;
+      if (f.pa) { return; }
+      f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
+      f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+    }
+    /** Le plan d'action en cours de rédaction. */
+    planFormHtml(v, f) {
+      return `<div class="cap">Plan d’action</div><div class="card">${f.pa.map((a, i) => `<div class="plan ${a.priorite}b" style="padding-bottom:6px"><input type="text" data-f="pa|${i}|titre" value="${esc(a.titre)}" placeholder="Action…" style="font-weight:600"><input type="text" data-f="pa|${i}|detail" value="${esc(a.detail || '')}" placeholder="Détail pour le franchisé…" style="margin-top:4px;font-size:12px">
               <div class="act">${['P0', 'P1', 'P2'].map(p => `<button class="chip ${a.priorite === p ? 'on' : ''}" data-a="pa" data-v="${i}|priorite|${p}">${p}</button>`).join('')}<span style="width:6px"></span>${Object.keys(ASSIGNES).map(k => `<button class="chip ${a.assigne === k ? 'on' : ''}" data-a="pa" data-v="${i}|assigne|${k}">${ASSIGNES[k]}</button>`).join('')}</div>
               <div class="act">${[[1, '24 h'], [2, '48 h'], [7, '1 sem.'], [14, '2 sem.']].map(([n, l]) => `<button class="chip ${a.echeance === plusJours(auj(), n) ? 'on' : ''}" data-a="pa" data-v="${i}|echeance|${plusJours(auj(), n)}">${l}</button>`).join('')}<input type="date" data-f="pa|${i}|echeance" value="${esc(a.echeance || '')}" style="width:150px;padding:5px 7px"><span class="sp"></span><button class="chip ko" data-a="pa-del" data-v="${i}">retirer</button></div></div>`).join('')}
-            <div class="act"><button class="chip" data-a="pa-add">+ Ajouter une action</button></div></div>
-            <div class="cap">Vu sur place <button class="chip" data-a="drop" data-v="pourquoi" style="margin-left:6px">${this.ouvert.pourquoi ? 'pourquoi ▴' : 'pourquoi ▾'}</button></div>
+            <div class="act"><button class="chip" data-a="pa-add">+ Ajouter une action</button></div></div>`;
+    }
+    /** Vu sur place, le vrai problème, la recommandation, l'observé positif. */
+    reviewFormHtml(v, b, f) {
+      const CD = this.D.causesDiag || {}; const baisse = b.feu === 'rouge' || (b.ca && b.ca.pct != null && b.ca.pct < 0);
+      return `            <div class="cap">Vu sur place <button class="chip" data-a="drop" data-v="pourquoi" style="margin-left:6px">${this.ouvert.pourquoi ? 'pourquoi ▴' : 'pourquoi ▾'}</button></div>
             ${this.ouvert.pourquoi ? `<div class="card sm mu"><b>Voir la réalité.</b> Sur le papier ou en visio, c’est utile mais incomplet. Sur place, on voit comment ça tourne vraiment : l’énergie de l’équipe, l’exécution face au process, l’écart entre le protocole et ce qu’on fait. Le client sort-il satisfait ? Les standards sont-ils appliqués, ou raccourcis ?<br><br><b>Diagnostiquer le vrai problème.</b> Si une boutique perd du chiffre ou que la qualité se dégrade, de près on nomme le vrai coupable — production mal synchronisée, équipe démotivée, décor qui n’invite pas, prix mal positionnés. Pas la même analyse depuis le bureau.<br><br><b>Donner du crédit à la recommandation.</b> Quand on a vu, mesuré, touché, on peut dire : « voilà ce qui ne marche pas, et voilà pourquoi ». Les équipes écoutent mieux, et vous avez des données, pas une opinion.</div>` : ''}
             <div class="card">
               <div class="row"><span>Énergie de l’équipe</span><span class="sp"></span><span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="form" data-v="sentiment|${n}" class="${f.sentiment >= n ? 'on' : ''}">★</button>`).join('')}</span></div>
@@ -593,9 +636,44 @@
               <div class="act">${Object.keys(CD).map(k => `<button class="chip ${f.causes.includes(k) ? 'on' : ''}" data-a="cause-diag" data-v="${k}">${esc(CD[k])}</button>`).join('')}</div>
               <textarea data-f="form|diagnostic" placeholder="Pourquoi — ce que j’ai vu, mesuré, touché…" style="margin-top:8px">${esc(f.diagnostic)}</textarea></div>
             <div class="cap">Recommandation</div><div class="card"><div class="sm mu">« Voilà ce qui ne marche pas et voilà pourquoi. » Le franchisé la lit ; Sam la retrouve dans la synthèse.</div><textarea data-f="form|reco" placeholder="Ce qui ne marche pas, pourquoi, et ce qu’on fait…" style="margin-top:8px">${esc(f.reco)}</textarea></div>
-            <div class="cap">Observé positif</div><div class="card"><textarea data-f="form|positif" placeholder="Ce qui va bien — dit au franchisé aussi">${esc(f.positif)}</textarea></div>
-            <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>`)
-        + (attente ? `<div class="btns"><button class="btn w" data-a="sync">📤 Synchroniser (${attente} photo${attente > 1 ? 's' : ''} en attente)</button></div>` : '');
+            <div class="cap">Observé positif</div><div class="card"><textarea data-f="form|positif" placeholder="Ce qui va bien — dit au franchisé aussi">${esc(f.positif)}</textarea></div>`;
+    }
+    /** Le brouillon de la review posé au serveur (sans terminer la visite) : rien ne se perd entre deux écrans. */
+    sauverReview(v) {
+      const f = this.form; if (!f.pa) { return; }
+      const champs = { sentiment: f.sentiment || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' };
+      const change = Object.keys(champs).some(k => JSON.stringify(champs[k] || '') !== JSON.stringify(v[k] || (k === 'causes' ? [] : k === 'sentiment' ? null : '')));
+      if (change) { this.majVisite(v.id, champs); }
+    }
+    /**
+     * Le contrôle guidé : toute la visite en un seul écran, étape après étape —
+     * photo du jour, chiffres et alertes, un module de checklist par étape, ce
+     * qu'on a vu et la recommandation, le plan d'action et la fin de visite.
+     * Chaque étape se replie une fois faite ; on peut rouvrir n'importe laquelle.
+     */
+    v_controle() {
+      const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
+      if (v.statut === 'terminee') { return this.v_review(); }
+      const b = this.boutique(v.shop) || { court: v.shop, motifs: [] }; const f = this.form;
+      this.reviewInit(v, false);
+      const pts = this.pointsDe(v.id); const photos = this.photosDe(v.id); const t = auj();
+      const pj = this.photosJour(v.shop).filter(x => String(x.prise_a).slice(0, 10) === t).length;
+      const B = this.B[v.shop];
+      const etapes = [];
+      etapes.push({ titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
+      etapes.push({ titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
+      (this.D.checklist || []).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
+      const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
+      etapes.push({ titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
+      etapes.push({ titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : ''), fait: false, html: () => this.planFormHtml(v, f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
+      const cle = 'et:' + v.id;
+      let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
+      cur = Math.max(0, Math.min(etapes.length - 1, cur));
+      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), visite: v.id, cur };
+      const faits = etapes.filter(e => e.fait).length;
+      return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
+        + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
+        + etapes.map((e, i) => `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
     }
     v_historique() {
       const shop = this.p || this.shop; const b = this.boutique(shop); if (!b) { return this.hd('Boutique introuvable', '', 'portfolio'); }
@@ -626,6 +704,7 @@
         return this.hd('Mon plan d’action', b.court + ' · ' + enCours + ' en cours · ' + (ps.length - enCours) + ' fermé' + (ps.length - enCours > 1 ? 's' : ''))
           + (ps.length ? ps.map(p => this.planLigne(p, p.statut === 'ouvert' || p.statut === 'reprendre' ? `<div class="btns"><button class="btn ${p.statut === 'ouvert' ? 'p' : ''} w" data-a="photo" data-v="correction|${esc(this.shop)}||${esc(p.ref || '')}|${esc(p.id)}">📷 ${p.statut === 'reprendre' ? 'Reprendre la photo' : 'Photo de la correction'}</button></div>` : p.statut === 'attente' ? '<div class="xs mu" style="margin-top:6px">L’admin contrôle la photo.</div>' : '')).join('') : '<div class="card sm mu">Aucune action en cours. 🎉</div>')
           + this.vuSurPlace(this.derniereVisiteDe(this.shop), 'Ce que le consultant a vu')
+          + (this.o.sansOnglets ? `<div class="btns"><button class="btn w" data-a="go" data-v="historique/${esc(this.shop)}">Historique des visites</button></div>` : '')
           + `<div class="cap">Ma boutique cette semaine</div><div class="card sm">${b.ca ? `<div class="row"><span>CA</span><span class="sp"></span><b>${eur(b.ca.ca)}</b><span class="mu">/ ${eur(b.ca.objectif)}</span></div><div class="bar"><i style="width:${Math.min(100, Math.round(b.ca.ca / Math.max(1, b.ca.objectif) * 100))}%"></i></div>` : ''}${b.google ? `<div class="row" style="margin-top:6px"><span>Google</span><span class="sp"></span><b>${note1(b.google.note)}</b><span class="mu">${b.google.avis} avis</span></div>` : ''}${b.prochaineVisite ? `<div class="row" style="margin-top:6px"><span>Prochaine visite</span><span class="sp"></span><b>${fmtDJ(b.prochaineVisite.le)} ${b.prochaineVisite.h}</b></div>` : ''}</div>`;
       }
       const ouverts = (D.plans || []).filter(p => p.statut !== 'ferme');
@@ -745,13 +824,14 @@
       if (a === 'reprog') { const f = this.form; this.ecrire({ method: 'PUT', path: '/visites/' + encodeURIComponent(v), body: { prevu_le: f.prevu_le, debut_h: f.debut_h, qui: this.qui() }, apres: 'visite' }); const vis = this.visite(v); if (vis) { if (f.prevu_le) { vis.prevu_le = f.prevu_le; } if (f.debut_h) { vis.debut_h = f.debut_h; } } this.form = {}; this.dire('Visite reprogrammée.'); return; }
       if (a === 'annuler') { if (!confirm('Annuler cette visite ?')) { return; } this.majVisite(v, { statut: 'annulee' }); this.go('agenda'); return; }
       if (a === 'confirmer') { this.majVisite(v, { statut: 'confirmee' }); this.dire('Visite confirmée.'); return; }
-      if (a === 'demarrer') { const vis = this.visite(v); if (vis && vis.statut !== 'en_cours') { this.majVisite(v, { statut: 'en_cours' }); const b = this.boutique(vis.shop); if (b) { b.visiteEnCours = vis.id; } } this.go('tb', vis ? vis.shop : null); return; }
+      if (a === 'demarrer') { const vis = this.visite(v); if (vis && vis.statut !== 'en_cours') { this.majVisite(v, { statut: 'en_cours' }); const b = this.boutique(vis.shop); if (b) { b.visiteEnCours = vis.id; } } if (vis) { this.chargerBoutique(vis.shop); this.go('controle', vis.id); } else { this.go('agenda'); } return; }
       if (a === 'demarrer-ici') { this.form = { shop: v, prevu_le: auj(), debut_h: maintenant().slice(11), duree_min: 60, motif: 'asap' }; this.planifier(true); return; }
       if (a === 'photo') { this.prendrePhoto(parts[0], parts[1], parts[2], parts[3], parts[4]); return; }
       if (a === 'etat') { const cyc = { '': 'ok', ok: 'ko', ko: 'na', na: '' }; const p = this.point(parts[0], parts[1], parts[2]); p.etat = cyc[p.etat || ''] || ''; this.point_save(parts[0], p); return; }
       if (a === 'note') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); if (p.note != null && !p.etat) { p.etat = p.note <= 2 ? 'ko' : 'ok'; } this.point_save(parts[0], p); return; }
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
+      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.cur === 1) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
@@ -814,7 +894,7 @@
       D.visites.push({ id: cid, client_id: cid, shop, consultant: cons, consultantNom: body.consultant_nom, prevu_le: body.prevu_le, debut_h: body.debut_h, duree_min: body.duree_min, motif: body.motif, statut: 'planifiee', attente: true });
       const b = this.boutique(shop); if (b && !b.prochaineVisite) { b.prochaineVisite = { id: cid, le: body.prevu_le, h: body.debut_h, consultant: body.consultant_nom }; b.due = null; }
       const p = this.ecrire({ method: 'POST', path: '/visites', body, apres: 'visite' });
-      if (demarrer) { p.then(() => { const v = this.visite(cid) || this.D.visites.find(x => x.client_id === cid); if (v) { this.majVisite(v.id, { statut: 'en_cours' }); const bb = this.boutique(shop); if (bb) { bb.visiteEnCours = v.id; } this.go('tb', shop); } }); this.dire('Visite ouverte.'); return; }
+      if (demarrer) { p.then(() => { const v = this.visite(cid) || this.D.visites.find(x => x.client_id === cid); if (v) { this.majVisite(v.id, { statut: 'en_cours' }); const bb = this.boutique(shop); if (bb) { bb.visiteEnCours = v.id; } this.chargerBoutique(shop); this.go('controle', v.id); } }); this.dire('Visite ouverte.'); return; }
       this.sem = Math.round(jours(lundiDe(auj(), 0), lundiDe(body.prevu_le, 0)) / 7);
       this.go('agenda'); this.dire('Visite planifiée ' + fmtDJ(body.prevu_le) + ' ' + body.debut_h + '.');
     }

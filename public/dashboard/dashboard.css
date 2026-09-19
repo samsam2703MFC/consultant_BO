@@ -627,3 +627,4 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-cmdt .n{font-variant-numeric:tabular-nums;white-space:nowrap}
 .db-cmdt .n.ko{color:#C0182B;font-weight:600}
 .db-cmdt .n.mu{color:var(--color-text-muted)}
+.mb-tabs.mb-tabs3{grid-template-columns:1fr 1fr 1fr}

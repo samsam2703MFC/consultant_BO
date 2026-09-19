@@ -14,7 +14,7 @@
   'use strict';
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
-  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee'].includes(q.get('vue')) ? q.get('vue') : 'jour',
+  const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'actions'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuvert: false, cTri: 'famille', jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -81,6 +81,8 @@
     }
   }
   function charger(force) {
+    // Le plan d'action n'est pas une période : le module des visites lit lui-même.
+    if (S.vue === 'actions') { rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     // La valeur du magasin ne dépend pas de la période regardée : elle se lit
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
@@ -852,11 +854,24 @@
     if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     h += '</div>';
-    h += `<div class="mb-tabs">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤']]
+    h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']]
       .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
     return h;
   }
 
+  /* --- le plan d'action du franchisé : le module des visites, monté ici ------ */
+  function rendActions(mobile) {
+    let h = '';
+    if (mobile) { h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Mon plan d’action · ce que le consultant a vu</div></div></div>`; }
+    h += '<div id="db-actions" style="min-height:60vh;padding:0 4px"></div>';
+    if (mobile) { h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`; }
+    return h;
+  }
+  function monterActions() {
+    const h = document.getElementById('db-actions');
+    if (!h || !window.CockpitVisites) { if (h) { h.innerHTML = '<div class="db-alerte">Le module des visites n’est pas chargé.</div>'; } return; }
+    window.CockpitVisites.mount(h, { role: 'franchise', shop: S.shop, apiBase: API, mobile: false, racine: '../', vue: 'plans', sansOnglets: true });
+  }
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -864,7 +879,8 @@
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
-      if (S.vue !== 'jour' && S.vue !== 'semaine') { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (S.vue !== 'jour' && S.vue !== 'semaine' && S.vue !== 'actions') { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (S.vue === 'actions') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); return; }
       $.innerHTML = rendMobile(m, d);
       $.classList.add('mob');
       brancher();
@@ -879,11 +895,12 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div><div class="db-sous">Dashboard magasin · ${esc(libPeriode())}${S.vue === 'jour' && S.date === AUJ ? ' · en direct, relu toutes les 10 min' : ''}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      <div class="db-ong">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['actions', 'Plan d’action']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       <span class="db-lab">${S.vue === 'jour' ? 'Date' : (S.vue === 'semaine' ? 'Semaine du' : (S.vue === 'mois' ? 'Mois de' : (S.vue === 'trimestre' ? 'Trimestre de' : 'Année de')))}</span>${S.vue === 'trimestre' ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       <button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>
       ${S.date !== AUJ ? `<button class="db-btn" data-auj="1">Aujourd’hui</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>`;
+    if (S.vue === 'actions') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }

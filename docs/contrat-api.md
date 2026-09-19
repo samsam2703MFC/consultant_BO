@@ -758,6 +758,15 @@ réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
 `visitesJeton`, `visitesCron`. Abonnements push : `shop_id` = la boutique
 (franchisé), `c:{consultant}` ou `admin`.
 
+Écrans du consultant : la fiche de visite ouvre le **contrôle guidé**
+(`#controle/{id}`), un seul écran vertical, étape après étape — photo du jour,
+chiffres et alertes, un module de checklist par étape, vu sur place et
+recommandation, plan d'action et fin de visite ; chaque étape se replie une
+fois faite. Le franchisé n'a pas de page à part : son plan d'action, la photo
+de correction et la recommandation sont dans son dashboard magasin
+(`dashboard/?shop=&vue=actions`), où le module est monté ; les notifications
+push du franchisé y mènent.
+
 Hors ligne (module `assets/js/visites.js`) : la lecture `/visites/app` est
 gardée en IndexedDB ; chaque écriture porte un `client_id`, est appliquée à
 l'écran, mise en file et rejouée au retour du réseau ; les photos sont
