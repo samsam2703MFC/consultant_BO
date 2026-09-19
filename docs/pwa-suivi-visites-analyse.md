@@ -256,3 +256,28 @@ Phase 2 (brief) : analytics, export, agenda mensuel enrichi, multi-langue, inté
 
 Points secondaires : fréquence de visite par boutique (hebdo partout ?), durée de conservation
 des photos (3 mois à l'écran, 12 mois en base ?), heures des rappels, langue (FR seul en phase 1).
+
+## 12. Pourquoi sur place, et ce que la review en garde
+
+Un consultant qui ne vient que sur le papier ou par visio est utile mais
+incomplet. Sur place, il voit comment ça tourne réellement : l'énergie de
+l'équipe, l'exécution face au process, les écarts entre ce que dit le
+protocole et ce qu'on fait vraiment, le client qui sort satisfait ou non,
+les standards appliqués ou les raccourcis pris.
+
+Quand une boutique perd du chiffre ou que la qualité se dégrade, celui qui
+regarde de près nomme le vrai coupable : la production mal synchronisée,
+l'équipe démotivée, le décor qui n'invite pas, les prix mal positionnés. Pas
+la même analyse depuis le bureau.
+
+Et la recommandation a du crédit : celui qui a vu, mesuré, touché peut dire
+« voilà ce qui ne marche pas et voilà pourquoi ». Les équipes l'écoutent
+mieux, et la marque tient des données, pas une opinion.
+
+La dernière étape de la visite, la review, recueille ces trois choses :
+
+| Bloc | Ce qu'on saisit | Où on le retrouve |
+|---|---|---|
+| Vu sur place | énergie de l'équipe (1..5), exécution face au protocole (standards appliqués, quelques raccourcis, écarts fréquents), les clients sortent satisfaits / mitigés / insatisfaits, notes | historique de la boutique, visite après visite |
+| Le vrai problème | la ou les causes (production, équipe, décor, prix, approvisionnement, accueil, hygiène, autre) et le pourquoi, vu et mesuré ; mis en avant quand le feu est rouge ou le CA sous l'objectif | synthèse de Sam (« Vu sur place — le vrai problème »), mail du matin |
+| Recommandation | « voilà ce qui ne marche pas et voilà pourquoi », en une ou deux phrases | lue par le franchisé dans son plan d'action, journal du cockpit |
