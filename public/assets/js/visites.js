@@ -199,7 +199,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.S = null; this.R = null;
       this.v = o.vue || (this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
       this.toast = null; this.voir = null; this.ouvert = {};
@@ -238,6 +238,7 @@
         await this.charger();
       } catch (e) { this.host.innerHTML = '<div class="vi"><div class="sc"><div class="card">Le serveur ne répond pas et rien n’est encore en réserve sur cet appareil. Réessayez avec du réseau.</div></div></div>'; return; }
       this.rendre();
+      this.suivreConformite(this.v, this.p);
       if (this.file.length) { this.rejouer(); }
     }
     async charger() {
@@ -328,17 +329,36 @@
       window.scrollTo(0, 0);
       this.rendre();
       if (v === 'tb' || v === 'historique') { this.chargerBoutique(p); }
+      this.suivreConformite(v, p);
+    }
+    /** La conformité suit l'écran : le tableau de bord et la checklist la lisent. */
+    suivreConformite(v, p) {
+      if (v === 'tb' || v === 'historique') { this.chargerConformite(p); return; }
+      if (v === 'checklist' || v === 'review' || v === 'fiche') {
+        const vi = this.visite(p);
+        if (vi) { this.chargerConformite(vi.shop); }
+      }
     }
     deHash(init) {
       const m = /^#([a-z]+)(?:\/([^/]+))?/.exec(location.hash || '');
       if (!m) { if (!init) { this.rendre(); } return; }
       this.v = m[1]; this.p = m[2] != null ? decodeURIComponent(m[2]) : null; this.form = {};
-      if (!init) { this.rendre(); if (this.v === 'tb' || this.v === 'historique') { this.chargerBoutique(this.p); } }
+      if (!init) { this.rendre(); if (this.v === 'tb' || this.v === 'historique') { this.chargerBoutique(this.p); } this.suivreConformite(this.v, this.p); }
     }
     async chargerBoutique(shop) {
       if (!shop) { return; }
       if (this.B[shop] && this.B[shop].lu === this.sync) { return; }
       try { this.B[shop] = await this.lire('/visites/boutique/' + encodeURIComponent(shop), 'boutique:' + shop); } catch (e) { return; }
+      this.rendre();
+    }
+    /**
+     * Ce que le cockpit sait du comptoir : planogramme dessiné et assortiment
+     * obligatoire. Lu une fois par boutique et par session — ni le comptoir ni
+     * la liste des obligatoires ne bougent pendant une visite.
+     */
+    async chargerConformite(shop) {
+      if (!shop || this.C[shop]) { return; }
+      try { this.C[shop] = await this.lire('/visites/conformite?shop=' + encodeURIComponent(shop), 'conformite:' + shop); } catch (e) { return; }
       this.rendre();
     }
     dire(msg) { this.toast = msg; this.rendre(); clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.rendre(); }, 3200); }
@@ -372,6 +392,36 @@
       return `<div class="hd">${retour ? `<button class="retour" data-a="go" data-v="${retour}">‹</button>` : ''}<div><h2>${esc(titre)}</h2>${sous ? `<div class="d">${sous}</div>` : ''}</div><span class="sp"></span>${droite || ''}</div>`;
     }
     feuDot(b) { return `<span class="feu ${b.feu}"></span>`; }
+    /**
+     * Le comptoir d'après le cockpit — ce que le consultant n'a pas à compter.
+     *
+     * Deux constats lus, jamais saisis : le planogramme (emplacements dessinés
+     * et tenus, comptoirs photographiés montés ce jour, obligatoires sans place)
+     * et l'assortiment obligatoire (celles qui n'ont pas passé un ticket sur la
+     * fenêtre). Tant que la lecture n'est pas revenue, la carte le dit ; quand
+     * une source manque, elle rend son motif plutôt qu'un chiffre inventé.
+     */
+    carteConformite(shop) {
+      const C = this.C[shop];
+      if (!C) { return '<div class="cap">Le comptoir d’après le cockpit ' + this.src('mix') + '</div><div class="card sm mu">Lecture du planogramme et de l’assortiment…</div>'; }
+      const pl = C.planogramme || {}; const as = C.assortiment || {};
+      const cle = 'cf:' + shop;
+      const ouvert = !!this.ouvert[cle];
+      const manq = (as.liste || []);
+      const sansPlace = (pl.sansPlace || []);
+      const feuPl = pl.pct == null ? '' : pl.pct < (this.D.seuils.planoRouge || 60) ? 'rouge' : pl.pct < (this.D.seuils.planoOrange || 80) ? 'orange' : 'vert';
+      const feuAs = as.pct == null ? '' : as.pct < 90 ? (as.pct < 75 ? 'rouge' : 'orange') : 'vert';
+      return '<div class="cap">Le comptoir d’après le cockpit ' + this.src('mix') + '</div>'
+        + `<div class="card sm">
+          <div class="row">${feuPl ? `<span class="feu ${feuPl}"></span>` : ''}<b>Planogramme</b><span class="sp"></span><b>${pl.pct != null ? pl.pct + ' %' : '—'}</b></div>
+          <div class="mu">${pl.motif ? esc(pl.motif) : `${pl.tenus} emplacement${pl.tenus > 1 ? 's' : ''} tenu${pl.tenus > 1 ? 's' : ''} sur ${pl.emplacements} · ${pl.zones} comptoir${pl.zones > 1 ? 's' : ''} dessiné${pl.zones > 1 ? 's' : ''} · ${pl.comptoirsMontes ? pl.comptoirsMontes + ' photographié' + (pl.comptoirsMontes > 1 ? 's' : '') + ' monté' + (pl.comptoirsMontes > 1 ? 's' : '') + ' aujourd’hui' : 'aucune photo de montage aujourd’hui'}`}</div>
+          ${sansPlace.length ? `<div class="xs" style="margin-top:4px">⚠ ${pl.obligatoiresSansPlace} obligatoire${pl.obligatoiresSansPlace > 1 ? 's' : ''} sans place au comptoir : <span class="mu">${sansPlace.slice(0, 6).map(x => esc(x.nom)).join(' · ')}${sansPlace.length > 6 ? ' …' : ''}</span></div>` : ''}
+          <div class="row" style="margin-top:10px">${feuAs ? `<span class="feu ${feuAs}"></span>` : ''}<b>Assortiment obligatoire</b><span class="sp"></span><b>${as.pct != null ? as.pct + ' %' : '—'}</b></div>
+          <div class="mu">${as.motif ? esc(as.motif) : `${as.presentes} des ${as.lisibles} obligatoires vues en caisse sur ${as.jours} j${as.sansIdentifiant ? ' · ' + as.sansIdentifiant + ' sans identifiant de caisse' : ''}`}</div>
+          ${manq.length ? `<div class="act" style="margin-top:6px"><button class="chip ${ouvert ? 'on' : ''}" data-a="drop" data-v="${esc(cle)}">${as.manquantes} manquante${as.manquantes > 1 ? 's' : ''} ${ouvert ? '▴' : '▾'}</button></div>` : as.motif ? '' : '<div class="xs up" style="margin-top:4px">Toutes les obligatoires sont passées en caisse.</div>'}
+          ${ouvert && manq.length ? `<div class="sm" style="margin-top:6px">${manq.map(x => `<div class="row" style="padding:2px 0"><span>${esc(x.nom)}</span><span class="sp"></span><span class="xs mu">${x.auComptoir ? 'a sa place au comptoir' : 'pas de place au comptoir'}</span></div>`).join('')}${as.manquantes > manq.length ? `<div class="xs mu">… et ${as.manquantes - manq.length} autre(s)</div>` : ''}</div>` : ''}
+          <div class="xs mu" style="margin-top:6px">Planogramme : comptoir dessiné dans le cockpit. Assortiment : références obligatoires × lignes de ticket du magasin, ${fmtD(as.du)} – ${fmtD(as.au)}.</div></div>`;
+    }
     src(s) { return s === 'api' ? '<span class="pill api">API</span>' : s === 'mix' ? '<span class="pill mix">API + local</span>' : '<span class="pill loc">Local</span>'; }
     kpis(b, court) {
       const ca = b.ca, g = b.google, eq = b.equipe, msp = b.msp;
@@ -468,6 +518,17 @@
       const alertes = [];
       this.plansDe(shop, true).forEach(p => alertes.push([p.priorite === 'P0' ? 'rouge' : 'orange', p.priorite + ' ' + p.titre + (p.retard ? ' — retard ' + p.retard + ' j' : ''), (ASSIGNES[p.assigne] || '') + (p.photo_id ? '' : ' · pas de photo')]));
       if (b.plano && b.plano.pct < (this.D.seuils.planoOrange || 80)) { alertes.push([b.plano.pct < (this.D.seuils.planoRouge || 60) ? 'rouge' : 'orange', 'Planogramme ' + b.plano.pct + ' %', 'relevé du ' + fmtD(b.plano.le) + (b.plano.ruptures ? ' · ' + b.plano.ruptures + ' rupture(s)' : '')]); }
+      const cf = this.C[shop];
+      if (cf && cf.assortiment && cf.assortiment.manquantes) {
+        const as = cf.assortiment;
+        alertes.push([as.pct != null && as.pct < 75 ? 'rouge' : 'orange',
+          as.manquantes + ' référence(s) obligatoire(s) sans une seule vente sur ' + as.jours + ' j',
+          (as.liste || []).slice(0, 4).map(x => x.nom + (x.auComptoir ? '' : ' (pas de place au comptoir)')).join(' · ')]);
+      }
+      if (cf && cf.planogramme && cf.planogramme.obligatoiresSansPlace) {
+        alertes.push(['orange', cf.planogramme.obligatoiresSansPlace + ' obligatoire(s) sans place au comptoir',
+          (cf.planogramme.sansPlace || []).slice(0, 4).map(x => x.nom).join(' · ')]);
+      }
       if (b.google && b.google.faibles >= 1) { alertes.push([b.google.faibles >= 2 ? 'orange' : 'vert', 'Google — ' + b.google.faibles + ' avis ≤ 2/5 sur 30 j', (b.google.derniers || []).filter(d => d.note <= 2).map(d => d.extrait).join(' · ')]); }
       if (B && B.nc && !B.nc.indispo && B.nc.ouvertes) { alertes.push(['orange', B.nc.ouvertes + ' non-conformité(s) du panel non corrigée(s) sur 30 j', B.nc.liste.filter(n => !n.corrigee).slice(0, 3).map(n => n.tache + ' (' + fmtD(n.jour) + ')').join(' · ')]); }
       return this.hd(b.court, (vEnCours ? 'visite en cours depuis ' + fmtH(vEnCours.commence_a) + ' · ' : '') + fmtDJ(t), this.role === 'franchise' ? null : 'portfolio', vEnCours ? '<span class="pill" style="background:#F7E4E6;color:#C0182B">● en visite</span>' : this.feuDot(b))
@@ -485,7 +546,7 @@
       let total = 0, faits = 0;
       const mods = cl.map(m => {
         const msp = m.id === 'msp' ? b.msp : null;
-        return `<div class="mod"><div class="th"><b>${esc(m.nom)}</b>${this.src(m.id === 'planogramme' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>
+        return `<div class="mod"><div class="th"><b>${esc(m.nom)}</b>${this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>
           ${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
           ${m.points.map(pt => {
             total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { faits++; }
@@ -498,6 +559,7 @@
           }).join('')}</div>`;
       }).join('');
       return this.hd('Checklist — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : ''), 'fiche/' + v.id, `<span class="pill">${faits} / ${total}</span>`)
+        + this.carteConformite(v.shop)
         + mods
         + `<div class="btns" style="margin-top:16px"><button class="btn p w" data-a="go" data-v="review/${esc(v.id)}">Review et plan d’action ›</button></div><div class="btns"><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>`;
     }
@@ -643,6 +705,7 @@
       if (a === 'voir') { const p = (this.D.photos || []).find(x => String(x.id) === v || x.client_id === v); if (p) { this.voir = { src: this.photoSrc(p), txt: (this.boutique(p.shop) || {}).court + ' · ' + fmtDJ(p.prise_a) + ' ' + fmtH(p.prise_a) + ' · ' + p.genre.replace('jour_', '') + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
       if (a === 'voir-serie') { const ps = this.photosJour(parts[0]).filter(x => x.genre === parts[1]); if (ps.length) { this.voir = { src: this.photoSrc(ps[0]), txt: ps.length + ' photo(s) · la plus récente ' + fmtDJ(ps[0].prise_a) }; this.rendre(); } return; }
       if (a === 'sem') { this.sem = v === '0' ? 0 : this.sem + Number(v); this.rendre(); return; }
+      if (a === 'drop') { this.ouvert[v] = !this.ouvert[v]; this.rendre(); return; }
       if (a === 'sync') { this.rejouer(); return; }
       if (a === 'recharger') { this.recharger(); return; }
       if (a === 'synthese') { this.S = null; this.rendre(); return; }
