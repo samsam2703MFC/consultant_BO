@@ -615,7 +615,7 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - Vue **marque** (`brand`) : tous les magasins, segments et campagnes. Vue **magasin** : ses segments (`shop` = lui ou `""`),
   ses campagnes (créées par lui ou parties de son adresse), son magasin seul dans `magasins`.
 - `magasins[].status` ∈ `verified` | `warmup` | `unverified` ; `canSend` : la marque autorise ou bloque l'envoi du franchisé.
-- `POST /newsletter/campagnes` `{ role, name, segment, langs[], templateId, channel, subjects{}, bodies{}, sms{}, social{}, sendMode, trigger?, date, time, maxVouchers?, sender, testSent?, status? }`
+- `POST /newsletter/campagnes` `{ role, name, segment, langs[], templateId, channel, subjects{}, bodies{}, sms{}, headlines{}, ctas{}, sendMode, trigger?, date, time, maxVouchers?, sender, testSent?, status? }`
   → `{ ok, campagne }`. Franchisé : refusé si bloqué (403), segment d'un autre magasin (403), mode `auto` (403), expéditeur autre que le sien (403).
 - `DELETE /newsletter/campagnes/{id}` : brouillon ou programmée ; une campagne envoyée reste (409). Franchisé : les siennes seulement.
 - `POST /newsletter/segments` (marque seule) `{ name, src, shop, product, period, minBasket, count, rule }` → `{ ok, segment }` ; la règle est gardée en `rules_json`.
@@ -631,7 +631,7 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
   `magasin`, `telephone`, `optin`, `optin_sms`, `dernier_achat`, `panier`, `produits`, `anniversaire`, `cree_le`) → `{ nouveaux, misAJour, ignores, lot, contacts }`.
   Une base qui a des contacts compte pour de vrai (`sources[].reel`, `segments[].reel`) ; sinon le jeu d'essai reste.
   `GET /newsletter/contacts/lots`, `DELETE /newsletter/contacts/lots/{lot}`.
-- `PUT /newsletter/reglages` (marque) `{ dispatch?, testAdresses?, slackWebhook?, domaine? }`. `dispatch: true` exige un SMTP configuré ;
+- `PUT /newsletter/reglages` (marque) `{ dispatch?, testAdresses?, domaine? }`. `dispatch: true` exige un SMTP configuré ;
   tant qu'il est faux, **rien ne part** (mode test), la réponse de `/newsletter` porte `test: true`.
 - `POST /newsletter/test` `{ subject, body, headline, cta, templateId, lang, sender, voucher }` : le mail rendu part aux adresses de test
   (`nlTestAdresses`, sinon l'expéditeur SMTP), même en mode test → `{ ok, simule, adresses, erreur }`.
@@ -643,8 +643,8 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - Suivi, routes publiques : `GET /newsletter/o/{token}` (pixel), `GET /newsletter/c/{token}` (clic → redirection vers `nlLienWebshop` ou le cockpit),
   `GET /newsletter/u/{token}` (désinscription en un clic). Les stats d'une campagne envoyée viennent de `ceo_nl_envoi` (`stats.reel`).
 - Vouchers : codes uniques (8 caractères, `ceo_nl_voucher`) générés au départ jusqu'à `maxVouchers` ; `POST /newsletter/vouchers/{code}/utiliser` les encaisse.
-- Non branchés, et dits tels quels dans Paramètres : SMS (aucun fournisseur), LinkedIn et Instagram (brouillons à coller), Stripe. Slack part
-  par webhook (`nlSlackWebhook`) au départ de la campagne.
+- Non branchés, et dits tels quels dans Paramètres : SMS (aucun fournisseur), Stripe. La déclinaison sur les réseaux (LinkedIn, Instagram,
+  Slack) du brief a été retirée de l'assistant, qui compte quatre étapes : segment, template, texte, envoi.
 - Page franchisé hors cockpit : `newsletter/?shop={id}` (même module, rôle = magasin).
 
 ## 2. Mapping base de données → écran → champ

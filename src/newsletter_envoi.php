@@ -19,8 +19,7 @@ declare(strict_types=1);
  * base n'a aucun contact, ses compteurs restent le jeu d'essai du brief.
  *
  * SMS : aucun fournisseur n'est branché — le texte est gardé, rien ne part,
- * et l'écran le dit. Réseaux : les brouillons sont gardés ; Slack part par
- * webhook si `nlSlackWebhook` est posé, LinkedIn et Instagram se collent.
+ * et l'écran le dit. La déclinaison sur les réseaux du brief a été retirée.
  * Vouchers : codes uniques générés au départ, marqués « utilisé » par
  * POST /newsletter/vouchers/{code}/utiliser ; Stripe n'est pas branché.
  */
@@ -108,7 +107,7 @@ function nlAdressesTest(): array
 function nlReglages(): array
 {
     return ['dispatch' => nlDispatch(), 'smtp' => Smtp::configured(), 'smtpExpediteur' => Smtp::configured() ? Smtp::config()['expediteur'] : '',
-        'testAdresses' => nlAdressesTest(), 'slack' => (string) setting('nlSlackWebhook', '') !== '', 'sms' => false,
+        'testAdresses' => nlAdressesTest(), 'sms' => false,
         'cron' => rapBaseUrl() . '/api/cockpit/newsletter/cron?jeton=' . (string) setting('nlJeton', ''), 'cronDernier' => setting('nlCronDernier', null)];
 }
 
@@ -396,20 +395,6 @@ function nlStatsReelles(int $campId): ?array
     return ['sent' => (int) $r['ok'], 'echecs' => (int) $r['n'] - (int) $r['ok'], 'open' => (int) $r['o'], 'click' => (int) $r['c'], 'vouchers' => (int) ($v['u'] ?? 0), 'vouchersEmis' => (int) ($v['n'] ?? 0), 'revenue' => 0, 'reel' => true];
 }
 
-/** Le teaser Slack, par webhook, une fois par campagne, au départ. */
-function nlSlack(array $camp): void
-{
-    $hook = (string) setting('nlSlackWebhook', '');
-    if ($hook === '' || !preg_match('#^https://hooks\.slack\.com/#', $hook)) { return; }
-    $social = nlJson($camp['social_json'] ?? null, []);
-    $s = is_array($social) ? ($social['slack'] ?? null) : null;
-    if (!is_array($s) || empty($s['on']) || trim((string) ($s['text'] ?? '')) === '') { return; }
-    $ch = curl_init($hook);
-    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_POSTFIELDS => json_encode(['text' => (string) $s['text']], JSON_UNESCAPED_UNICODE)]);
-    curl_exec($ch); curl_close($ch);
-}
-
 /**
  * L'horloge — GET /newsletter/cron?jeton=… (cron, toutes les 5 minutes) et
  * POST /newsletter/tick (la marque, à la demande). En mode test : ne fait
@@ -431,7 +416,6 @@ function nlHorloge(): array
         if ($budget <= 0) { break; }
         if ($camp['statut'] === 'sched') {
             Db::exec('UPDATE ceo_nl_campagne SET statut = "live", started_at = NOW(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
-            nlSlack($camp);
             journalAdd('Horloge', 'Newsletter', null, 'Campagne en cours d’envoi : ' . $camp['nom']);
         }
         [$env, $ko, $reste] = nlEnvoyerLot($camp, $budget);
@@ -515,7 +499,7 @@ function wr_newsletter_campagne_envoyer(int $id): array
     return ['ok' => true, 'campagne' => $r ? nlCampagneRow($r) : null, 'horloge' => $h];
 }
 
-/** PUT /newsletter/reglages — { dispatch?, testAdresses?, slackWebhook? } (marque). */
+/** PUT /newsletter/reglages — { dispatch?, testAdresses?, domaine? } (marque). */
 function wr_newsletter_reglages(): array
 {
     ensureNewsletter();
@@ -531,11 +515,6 @@ function wr_newsletter_reglages(): array
         $l = is_array($b['testAdresses']) ? $b['testAdresses'] : preg_split('/[,;\s]+/', (string) $b['testAdresses']);
         $l = array_values(array_filter(array_map(fn ($a) => trim((string) $a), $l), fn ($a) => filter_var($a, FILTER_VALIDATE_EMAIL) !== false));
         nlReglagePoser('nlTestAdresses', array_slice($l, 0, 3));
-    }
-    if (array_key_exists('slackWebhook', $b)) {
-        $h = trim((string) $b['slackWebhook']);
-        if ($h !== '' && !preg_match('#^https://hooks\.slack\.com/#', $h)) { http_response_code(422); return ['error' => 'webhook Slack attendu (https://hooks.slack.com/…)']; }
-        nlReglagePoser('nlSlackWebhook', $h);
     }
     if (array_key_exists('domaine', $b)) {
         $d = strtolower(trim((string) $b['domaine']));
