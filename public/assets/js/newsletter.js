@@ -293,7 +293,7 @@
       this.opts = Object.assign({ role: 'brand', imgDir: 'assets/img/newsletter/' }, opts || {});
       this.base = this.opts.apiBase || ((window.COCKPIT_API_BASE) || (location.pathname.replace(/[^/]*$/, '') + 'api/cockpit'));
       this.el = document.createElement('div'); this.el.className = 'nl';
-      this.s = Object.assign({ view: 'dashboard', lang: 'fr', modeFilter: 'all', retroId: null, data: null, err: '', busy: false }, ETAT0());
+      this.s = Object.assign({ view: 'dashboard', lang: 'fr', modeFilter: 'all', retroId: null, data: null, err: '', busy: false, imp: { source: 'indiv', shop: '', csv: '', lot: '' }, tick: null }, ETAT0());
       const d = new Date(); d.setDate(d.getDate() + 5); this.s.date = d.toISOString().slice(0, 10);
       try { const saved = JSON.parse(localStorage.getItem('fb-newsletter-state') || '{}'); if (LANG_KEYS.includes(saved.lang)) this.s.lang = saved.lang; } catch (e) { /* rien */ }
       this.el.addEventListener('click', e => this.onClick(e));
@@ -427,7 +427,7 @@
           ${canSend ? this.btnP('wizard', esc(t.newCampaign)) : `<span style="font-size:12px;color:${MUTED};border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 12px">${esc(t.sendDisabled)}</span>`}
         </div>
       </div>
-      ${d.test ? `<div style="margin-top:8px;font-size:11.5px;color:${ON};background:${SEC};border-radius:8px;padding:6px 12px;display:inline-block">Mode test — aucun envoi ne part ; les bases et leurs comptes sont un jeu d’essai tant que les vraies bases clients ne sont pas raccordées.</div>` : ''}
+      ${d.test ? `<div style="margin-top:8px;font-size:11.5px;color:${ON};background:${SEC};border-radius:8px;padding:6px 12px;display:inline-block">Mode test — aucun envoi ne part${d.reel ? '' : ' ; les bases et leurs comptes sont un jeu d’essai tant qu’aucun contact n’est importé'}.${isBrand ? ' Paramètres → Envois pour dispatcher.' : ''}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:${GREEN};background:#E6F2E9;border-radius:8px;padding:6px 12px;display:inline-block">Envois dispatchés — les campagnes programmées partent par l’horloge, par lots de 100 par minute.</div>`}
       ${s.toast ? `<div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--color-text);color:#fff;border-radius:999px;padding:9px 16px;font-size:12.5px;z-index:50">${esc(s.toast)}</div>` : ''}
       <div class="nl-body">
         ${view === 'dashboard' ? this.vDashboard() : view === 'wizard' ? this.vWizard() : view === 'templates' ? this.vTemplates() : view === 'retro' ? this.vRetro() : this.vSettings()}
@@ -449,7 +449,7 @@
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">${(d.sources || []).map(src => `
         <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-          <div><div style="font-size:13px;font-weight:500">${esc(this.L(src.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:1px">${esc(src.table)}</div></div>
+          <div><div style="font-size:13px;font-weight:500">${esc(this.L(src.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:1px">${src.reel ? 'contacts importés' : esc(src.table) + ' · jeu d’essai'}</div></div>
           <div style="text-align:right"><div style="font-size:18px;font-weight:300">${fmt(src.count)}</div><div style="font-size:11px;color:${MUTED}">${fmt(src.optin)} ${esc(t.optin)}</div></div>
         </div>`).join('')}</div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">${filtres.map(([id, label, n]) => { const on = s.modeFilter === id; return `<button data-a="filtre" data-v="${id}" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(label)} <span style="font-weight:400;opacity:0.7">${n}</span></button>`; }).join('')}</div>
@@ -470,11 +470,13 @@
       pills.push(c.sendMode === 'auto' ? pillM(`${t.pillAuto} · ${t['tr_' + c.trigger] || c.trigger}`, SEC, ON, SEC) : pillM(t.pillManual, BG2, MUTED, 'var(--color-border-tertiary)'));
       const retro = c.status === 'sent' && st.sent > 0;
       const peutRetirer = c.status !== 'sent' && (this.isBrand() || c.createdBy === this.role());
+      const peutEnvoyer = !c.exemple && c.sendMode !== 'auto' && (c.status === 'sched' || c.status === 'draft') && (this.isBrand() || c.createdBy === this.role());
+      const enCours = c.status === 'live' && c.sendMode !== 'auto' && st.reel;
       const subject = (c.subjects && (c.subjects.fr || c.subjects[Object.keys(c.subjects)[0]])) || '';
       return `
         <div class="nl-row nl-tbl" ${retro ? `data-a="retro" data-v="${c.id}"` : ''} style="cursor:${retro ? 'pointer' : 'default'}">
           <div><div style="font-weight:500">${esc(c.name)}${c.exemple ? ` <span title="jeu d’essai" style="font-size:10px;color:${MUTED};font-weight:400">· essai</span>` : ''}</div><div style="font-size:12px;color:${MUTED};margin-top:1px">${esc(subject)}</div>
-            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">${pills.join('')}${peutRetirer ? `<button data-a="retirer" data-v="${c.id}" title="Retirer" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">retirer ×</button>` : ''}</div></div>
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">${pills.join('')}${peutEnvoyer ? `<button data-a="envoyer" data-v="${c.id}" style="border:none;background:none;color:${P};font-size:11px;font-weight:500;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">envoyer maintenant →</button>` : ''}${peutRetirer ? `<button data-a="retirer" data-v="${c.id}" title="Retirer" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">retirer ×</button>` : ''}${enCours ? `<span style="font-size:11px;color:${ON}">${fmt(st.sent)} envoyés${st.echecs ? ' · ' + st.echecs + ' échecs' : ''}</span>` : ''}</div></div>
           <div style="font-size:13px">${esc(this.fDate(c.sendAt, c.sendMode))}</div>
           <div style="font-size:13px;color:${MUTED}">${esc(this.L(seg.name))}</div>
           <div>${this.statusPill(c.status)}</div>
@@ -510,7 +512,7 @@
       const s = this.s, t = this.t(), d = this.data();
       const segs = this.segmentsVisibles();
       const chips = (d.sources || []).map(x => { const on = x.id === s.sourceId; return `<button data-a="source" data-v="${esc(x.id)}" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(this.L(x.name))} <span style="font-weight:400;opacity:0.75">${fmt(x.optin)}</span></button>`; }).join('');
-      const rows = segs.filter(x => x.src === s.sourceId).map(x => { const on = x.id === s.segmentId; return `<button data-a="segment" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 16px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:14px;font-weight:500;color:var(--color-text)">${esc(this.L(x.name))}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(this.L(x.rule))}</span></span><span style="font-size:14px;font-weight:500;color:${P};white-space:nowrap">${fmt(x.count)} <span style="font-weight:400;color:${MUTED};font-size:12px">${esc(t.recipients)}</span></span></button>`; }).join('');
+      const rows = segs.filter(x => x.src === s.sourceId).map(x => { const on = x.id === s.segmentId; return `<button data-a="segment" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 16px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:14px;font-weight:500;color:var(--color-text)">${esc(this.L(x.name))}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(this.L(x.rule))}${x.reel === false ? ' · essai' : ''}</span></span><span style="font-size:14px;font-weight:500;color:${P};white-space:nowrap">${fmt(x.count)} <span style="font-weight:400;color:${MUTED};font-size:12px">${esc(t.recipients)}</span></span></button>`; }).join('');
       const seg = this.segById(s.segmentId), total = seg.split.reduce((a, b) => a + b, 0) || 1;
       const langRows = LANG_KEYS.map((k, i) => { const on = s.sendLangs.includes(k), n = seg.split[i] || 0, pct = Math.round(100 * n / total) + '%'; return `<button data-a="lang-toggle" data-v="${k}" style="display:flex;flex-direction:column;gap:6px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:500;color:var(--color-text)">${esc(t['lang_' + k])}</span><span style="width:16px;height:16px;border-radius:50%;border:1.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${on ? '✓' : ''}</span></span><span style="font-size:18px;font-weight:300;color:${P}">${fmt(n)} <span style="font-size:12px;color:${MUTED}">· ${pct}</span></span><span style="height:4px;border-radius:999px;background:${BG2};overflow:hidden;display:block"><span style="display:block;height:100%;width:${pct};background:${P}"></span></span></button>`; }).join('');
       const langSummary = s.sendLangs.length ? `${fmt(this.langTotal())} ${t.recipients} · ${LANG_KEYS.filter(k => s.sendLangs.includes(k)).map(k => k.toUpperCase()).join(' + ')}` : t.langNone;
@@ -695,11 +697,11 @@
       const dR = ps ? delta(st.revenue - ps.revenue, ' €') : ['—', MUTED];
       const vPct = pct(st.vouchers, st.sent);
       const kpis = [
-        [t.kSent, fmt(st.sent), this.L(seg.name), ['', MUTED], 'var(--color-text)'],
+        [t.kSent, fmt(st.sent), this.L(seg.name) + (st.reel && st.echecs ? ' · ' + st.echecs + ' échec(s)' : ''), ['', MUTED], 'var(--color-text)'],
         [t.kOpen, (st.openPct != null ? st.openPct + ' %' : '—'), fmt(st.open), dOpen, 'var(--color-text)'],
         [t.kClick, (st.clickPct != null ? st.clickPct + ' %' : '—'), fmt(st.click), dClick, 'var(--color-text)'],
         [t.kVouchers, c.maxVouchers ? `${st.vouchers} / ${c.maxVouchers}` : fmt(st.vouchers), (Math.round(vPct * 10) / 10) + ' % ' + t.kSent.toLowerCase(), dV, P],
-        [t.kRevenue, fmt(st.revenue) + ' €', st.vouchers ? 'env. ' + fmt(Math.round(st.revenue / st.vouchers * 10) / 10) + ' € / voucher' : '', dR, P],
+        [t.kRevenue, st.reel ? '—' : fmt(st.revenue) + ' €', st.reel ? 'à rapprocher des ventes' : (st.vouchers ? 'env. ' + fmt(Math.round(st.revenue / st.vouchers * 10) / 10) + ' € / voucher' : ''), st.reel ? ['—', MUTED] : dR, P],
       ];
       const funnel = [[t.kSent, fmt(st.sent), 100, ps ? 100 : null, 'var(--color-text)'], [t.kOpen, st.openPct != null ? st.openPct + ' %' : '—', pct(st.open, st.sent), ps ? pct(ps.open, ps.sent) : null, SEC],
         [t.kClick, st.clickPct != null ? st.clickPct + ' %' : '—', pct(st.click, st.sent), ps ? pct(ps.click, ps.sent) : null, P], [t.kVouchers, c.maxVouchers ? `${st.vouchers} / ${c.maxVouchers}` : fmt(st.vouchers), Math.max(vPct, 1.5), ps ? Math.max(pct(ps.vouchers, ps.sent), 1.5) : null, P]];
@@ -743,6 +745,45 @@
             <div style="display:grid;grid-template-columns:1fr 60px 70px;gap:8px 12px;font-size:13px;align-items:center"><div></div>${this.cap(esc(t.roleBrandShort), 'text-align:center')}${this.cap(esc(t.roleFranchiseShort), 'text-align:center')}${rights}</div></div>
           <p style="margin:0;font-size:12px;color:${MUTED};line-height:1.6">${esc(t.rightsNote)}</p>
         </div>
+      </div>
+      ${isBrand ? this.vEnvoisEtBases() : ''}`;
+    }
+    /** Marque : l'interrupteur des envois, le SMTP, les adresses de test, l'horloge ; les bases et leur import. */
+    vEnvoisEtBases() {
+      const d = this.data(), r = d.reglages || {}, s = this.s, ms = this.magasins().filter(m => m.kind === 'franchise');
+      const INP = `border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font-ui);background:${SURF};width:100%`;
+      const ligne = (k, v) => `<div style="display:grid;grid-template-columns:150px 1fr;gap:6px 14px;align-items:center;font-size:13px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="color:${MUTED}">${k}</div><div>${v}</div></div>`;
+      const sw = (on, a, lab) => `<button data-a="${a}" style="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;color:var(--color-text)"><span style="width:32px;height:18px;border-radius:999px;background:${on ? P : 'var(--color-border-secondary)'};position:relative;display:inline-block"><span style="position:absolute;top:2px;left:${on ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:#fff"></span></span>${lab}</button>`;
+      const tick = s.tick && typeof s.tick === 'object' ? (s.tick.motif ? s.tick.motif : ((s.tick.campagnes || []).map(c => `${c.nom} : ${c.envoyes} envoyés, ${c.reste} restants`).join(' · ') || 'rien à faire')) : (s.tick === 'en cours' ? 'passage en cours…' : '');
+      const lots = d.lots || [];
+      return `
+      <div class="nl-set" style="margin-top:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+        <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+          ${this.cap('Envois', 'margin-bottom:8px')}
+          ${ligne('Régime', sw(!!d.dispatch, 'dispatch', d.dispatch ? '<b>Dispatché</b> — les campagnes partent vraiment' : '<b>Mode test</b> — rien ne part vers les clients'))}
+          ${ligne('SMTP', r.smtp ? `configuré · ${esc(r.smtpExpediteur)}` : `<span style="color:${P}">non configuré</span> — Paramètres du cockpit → E-mail`)}
+          ${ligne('Domaine vérifié', `<input data-f="domaine" value="${esc(d.domaine || '')}" placeholder="atelierby.be" style="${INP};max-width:260px">`)}
+          ${ligne('Adresses de test', `<input data-f="testAdresses" value="${esc((r.testAdresses || []).join(', '))}" placeholder="jusqu’à 3 adresses, séparées par des virgules" style="${INP}"><div style="font-size:11px;color:${MUTED};margin-top:4px">Le « test à 3 adresses » de l’assistant part ici, même en mode test.</div>`)}
+          ${ligne('Slack · #boutiques', `<input data-f="slackWebhook" value="${r.slack ? '••••••••  (posé)' : ''}" placeholder="https://hooks.slack.com/services/…" style="${INP}"><div style="font-size:11px;color:${MUTED};margin-top:4px">Le teaser Slack part par ce webhook au départ de la campagne. Vide = à coller à la main.</div>`)}
+          ${ligne('SMS', `<span style="color:${MUTED}">aucun fournisseur branché — les textes SMS sont gardés, rien ne part.</span>`)}
+          ${ligne('Réseaux', `<span style="color:${MUTED}">LinkedIn et Instagram : brouillons à coller (pas d’API branchée).</span>`)}
+          ${ligne('Vouchers', `<span style="color:${MUTED}">codes uniques générés au départ, 8 caractères ; la boutique les encaisse par l’API (Stripe non branché).</span>`)}
+          ${ligne('Horloge', `${this.btnS('tick', 'Passer l’horloge maintenant', null, 'padding:7px 12px;font-size:12px')}<span style="font-size:11px;color:${MUTED};margin-left:10px">${r.cronDernier ? 'dernier passage ' + esc(String(r.cronDernier)) : 'jamais passée'}${tick ? ' · ' + esc(tick) : ''}</span><div style="font-size:11px;color:${MUTED};margin-top:6px;word-break:break-all">cron (toutes les 5 min) : ${esc(r.cron || '')}</div>`)}
+        </div>
+        <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+          ${this.cap('Bases de données', 'margin-bottom:8px')}
+          ${(d.sources || []).map(x => ligne(esc(this.L(x.name)), x.reel ? `<b>${fmt(x.count)}</b> contacts · ${fmt(x.optin)} opt-in · ${fmt(x.sms || 0)} SMS` : `<span style="color:${MUTED}">jeu d’essai (${fmt(x.count)} · ${fmt(x.optin)} opt-in) — importez des contacts pour passer au réel</span>`)).join('')}
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <select data-f="impSource" style="${INP}">${(d.sources || []).map(x => `<option value="${esc(x.id)}"${s.imp.source === x.id ? ' selected' : ''}>${esc(this.L(x.name))}</option>`).join('')}</select>
+              <select data-f="impShop" style="${INP}"><option value="">Magasin : selon la colonne</option>${ms.map(m => `<option value="${esc(m.id)}"${s.imp.shop === m.id ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>
+              <input data-f="impLot" value="${esc(s.imp.lot)}" placeholder="nom du lot (facultatif)" style="${INP}">
+            </div>
+            <textarea data-f="impCsv" rows="5" placeholder="email;prenom;nom;langue;magasin;telephone;optin;optin_sms;dernier_achat;panier;produits;anniversaire&#10;marie@exemple.be;Marie;Dupont;fr;Corbais;;1;0;2026-08-30;14,20;tartine,cougnou;1988-05-12" style="${INP};font-family:ui-monospace,monospace;font-size:12px;resize:vertical">${esc(s.imp.csv)}</textarea>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:11px;color:${MUTED};line-height:1.5">En-tête obligatoire, « email » requis ; séparateur , ; ou tabulation. Une adresse déjà connue est mise à jour. Une adresse désinscrite reste désinscrite.</span>${this.btnP('import', s.busy ? 'Import…' : 'Importer', null, 'padding:8px 14px;' + (s.busy ? 'opacity:.6' : ''))}</div>
+          </div>
+          ${lots.length ? `<div style="margin-top:14px">${this.cap('Lots importés', 'margin-bottom:6px')}${lots.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(l.lot)} <span style="color:${MUTED}">· ${esc(l.source)} · ${fmt(l.n)} contact(s) · ${esc(String(l.le || '').slice(0, 16))}</span></span><button data-a="lotdel" data-v="${esc(l.lot)}" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;font-family:var(--font-ui)">retirer ×</button></div>`).join('')}</div>` : ''}
+        </div>
       </div>`;
     }
 
@@ -753,6 +794,11 @@
       if (e.target.closest('input,select,textarea,a')) return;
       const a = b.dataset.a, v = b.dataset.v, s = this.s, t = this.t();
       if (a === 'view') this.go(v);
+      else if (a === 'envoyer') { if (!confirm('Envoyer cette campagne maintenant ?')) return; ecrire(this.base, 'POST', '/newsletter/campagnes/' + v + '/envoyer', { role: this.role() }).then(r => { const h = r && r.horloge; this.notify(h && h.motif ? 'Programmée pour maintenant — ' + h.motif + '.' : 'C’est parti : l’horloge envoie par lots de 100 par minute.'); return this.charger(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'dispatch') { const on = !this.data().dispatch; if (on && !confirm('Dispatcher : les campagnes programmées partiront VRAIMENT vers les clients. Continuer ?')) return; this.putReglages({ dispatch: on }); }
+      else if (a === 'tick') { s.tick = 'en cours'; this.render(); ecrire(this.base, 'POST', '/newsletter/tick', { role: this.role() }).then(r => { s.tick = r; this.notify(r.motif ? 'Horloge passée — ' + r.motif : 'Horloge passée : ' + (r.campagnes || []).length + ' campagne(s) traitée(s).'); return this.charger(); }).catch(err => { s.tick = null; this.notify(err.message); }); }
+      else if (a === 'import') { const i = s.imp; if (!i.csv.trim()) { this.notify('Collez un CSV avec une ligne d’en-tête.'); return; } s.busy = true; this.render(); ecrire(this.base, 'POST', '/newsletter/contacts/import', { role: this.role(), source: i.source, shop: i.shop, lot: i.lot, csv: i.csv }).then(r => { s.busy = false; s.imp.csv = ''; this.notify(`Importé : ${r.nouveaux} nouveaux, ${r.misAJour} mis à jour, ${r.ignores} ignorés (lot ${r.lot}).`); return this.charger(); }).catch(err => { s.busy = false; this.notify(err.message); this.render(); }); }
+      else if (a === 'lotdel') { if (!confirm('Retirer le lot « ' + v + ' » et tous ses contacts ?')) return; ecrire(this.base, 'DELETE', '/newsletter/contacts/lots/' + encodeURIComponent(v) + '?role=' + encodeURIComponent(this.role())).then(r => { this.notify(r.retires + ' contact(s) retiré(s).'); return this.charger(); }).catch(err => this.notify(err.message)); }
       else if (a === 'lang') { s.lang = v; this.persist(); this.render(); }
       else if (a === 'wizard') this.go('wizard', { step: 1 });
       else if (a === 'filtre') { s.modeFilter = v; this.render(); }
@@ -773,7 +819,7 @@
       else if (a === 'regen') { s.socialTexts = {}; s.socialReviewed = {}; this.render(); }
       else if (a === 'mode') { s.sendMode = v; this.render(); }
       else if (a === 'sender') { s.senderId = v; this.render(); }
-      else if (a === 'test') { ecrire(this.base, 'POST', '/newsletter/test', { role: this.role(), subject: this.subject() }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test enregistré — mode test, rien n’est parti.' : t.testDone); this.render(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
       else if (a === 'prev') { s.step = Math.max(1, s.step - 1); this.render(); }
       else if (a === 'next') this.nextStep();
       else if (a === 'dupAB') { const c = (this.data().campagnes || []).find(x => String(x.id) === String(v)); if (!c) return; const subj = (c.subjects && (c.subjects.fr || '')) || ''; this.go('wizard', { step: 3, templateId: TEMPLATES.some(z => z.id === c.templateId) ? c.templateId : 'gagne', segmentId: c.segment, sourceId: c.src, subjects: { fr: subj + ' (B)' }, bodies: {}, channel: c.channel === 'sms' ? 'email' : c.channel }); }
@@ -787,6 +833,8 @@
       else if (f === 'sms') { s.smsTexts = Object.assign({}, s.smsTexts); s.smsTexts[el] = v; }
       else if (f.indexOf('social-') === 0) { const k = f.slice(7); s.socialTexts = Object.assign({}, s.socialTexts); s.socialTexts[k] = v; s.socialReviewed = Object.assign({}, s.socialReviewed); s.socialReviewed[k] = true; }
       else if (f === 'segName') s.segName = v;
+      else if (f === 'impCsv') { s.imp.csv = v; return; }
+      else if (f === 'impLot') { s.imp.lot = v; return; }
       else if (f === 'segMinBasket') s.segMinBasket = v;
       else if (f === 'maxVouchers') s.maxVouchers = v;
       else if (f === 'date') s.date = v;
@@ -802,11 +850,21 @@
       else if (f === 'segPeriod') s.segPeriod = v;
       else if (f === 'trigger') s.trigger = v;
       else if (f === 'insert') { const tok = { prenom: '{{prénom}}', code: '{{code_promo}}', webshop: '{{lien_webshop}}', boutique: '{{lien_boutique}}' }[v]; if (tok) { const el = this.editLang(); s.bodies = Object.assign({}, s.bodies); s.bodies[el] = this.body() + tok; } }
+      else if (f === 'impSource') s.imp.source = v;
+      else if (f === 'impShop') s.imp.shop = v;
+      else if (f === 'impCsv' || f === 'impLot') return;
+      else if (f === 'testAdresses') { this.putReglages({ testAdresses: v }); return; }
+      else if (f === 'slackWebhook') { this.putReglages({ slackWebhook: v }); return; }
+      else if (f === 'domaine') { this.putReglages({ domaine: v }); return; }
       else if (f.indexOf('shopname-') === 0) { this.putShop(f.slice(9), { senderName: v }); return; }
       else if (f.indexOf('shopmail-') === 0) { this.putShop(f.slice(9), { email: v }); return; }
       else if (f.indexOf('shopstatus-') === 0) { this.putShop(f.slice(11), { status: v }); return; }
       else if (['date', 'time', 'maxVouchers', 'subject', 'body', 'sms', 'segName', 'segMinBasket'].includes(f) || f.indexOf('social-') === 0) return;
       this.render();
+    }
+    putReglages(patch) {
+      ecrire(this.base, 'PUT', '/newsletter/reglages', Object.assign({ role: this.role() }, patch)).then(r => { if (r && r.reglages) { this.data().reglages = r.reglages; this.data().dispatch = r.reglages.dispatch; this.data().test = !r.reglages.dispatch; } this.render(); })
+        .catch(err => { this.notify(err.message); this.render(); });
     }
     putShop(id, patch) {
       ecrire(this.base, 'PUT', '/newsletter/magasins/' + encodeURIComponent(id), Object.assign({ role: this.role() }, patch)).then(r => {
@@ -837,11 +895,12 @@
       const nom = this.L(tp.name) + ' — ' + (seg.shop ? this.nomShop(seg.shop) : 'Réseau');
       s.busy = true; this.render();
       ecrire(this.base, 'POST', '/newsletter/campagnes', { role: this.role(), name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
-        subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), social,
+        subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), social, headlines: par({}, tp.headline), ctas: par({}, tp.cta),
         sendMode: s.sendMode, trigger: s.trigger, date: s.date, time: s.time, maxVouchers: s.maxVouchers, sender: this.sender().id, testSent: s.testSent })
         .then(r => {
           s.busy = false;
-          this.notify(s.sendMode === 'auto' ? 'Automatisation créée — mode test, rien ne part.' : 'Campagne programmée — mode test, rien ne part.');
+          const test = !(r && r.test === false);
+          this.notify(s.sendMode === 'auto' ? (test ? 'Automatisation créée — mode test, rien ne part.' : 'Automatisation créée : l’horloge l’évalue chaque nuit.') : (test ? 'Campagne programmée — mode test, rien ne part.' : 'Campagne programmée : elle partira à l’heure dite.'));
           Object.assign(s, ETAT0(), { view: 'dashboard', date: s.date, segmentId: seg.id, sourceId: seg.src, senderId: s.senderId });
           return this.charger();
         })

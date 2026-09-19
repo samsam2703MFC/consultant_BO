@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Newsletter — L'Atelier by</title>
+<!-- Chemins RELATIFS : la page vit sous /newsletter/, l'API sous ../api/cockpit.
+     La newsletter du franchisé, hors du cockpit : ses segments, sa campagne,
+     son adresse — le rôle est le magasin (?shop=). Même module que le cockpit. -->
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<style>
+  html,body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-ui)}
+  #nlp{max-width:1220px;margin:0 auto;padding:12px 14px 40px}
+  .nlp-hd{display:flex;align-items:center;gap:10px;padding:4px 0 10px}
+  .nlp-hd img{height:24px}
+  .nlp-hd .mid{flex:1;min-width:0}
+  .nlp-hd .t{font-family:var(--font-display);font-size:17px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nlp-hd .d{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nlp-hd select{font-family:var(--font-ui);font-size:12px;padding:6px 8px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:38vw;flex:0 0 auto}
+</style>
+</head>
+<body>
+<div id="nlp">
+  <div class="nlp-hd"><img src="../assets/img/logo.png" alt="">
+    <div class="mid"><div class="t" id="nlp-nom">Newsletter</div><div class="d" id="nlp-sous">la lettre du magasin à ses clients</div></div>
+    <select id="nlp-shop" title="Magasin"></select></div>
+  <div id="nlp-root"></div>
+</div>
+<script src="../assets/js/newsletter.js"></script>
+<script>
+(function () {
+  const API = '../api/cockpit';
+  const q = new URLSearchParams(location.search);
+  let shop = q.get('shop') || '';
+  const sel = document.getElementById('nlp-shop'), nom = document.getElementById('nlp-nom'), sous = document.getElementById('nlp-sous');
+  function monter() {
+    if (!shop) return;
+    document.title = 'Newsletter — ' + (nom.textContent || "L'Atelier by");
+    window.CockpitNewsletter.mount(document.getElementById('nlp-root'), { role: shop, apiBase: API, imgDir: '../assets/img/newsletter/' });
+  }
+  fetch(API + '/stores?statut=tous', { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(r => r.json()).then(L => {
+    const ms = (Array.isArray(L) ? L : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: String(s.id), nom: s.nom || s.name }));
+    if (!shop && ms.length) shop = ms[0].id;
+    sel.innerHTML = ms.map(m => `<option value="${m.id}" ${m.id === shop ? 'selected' : ''}>${String(m.nom).replace(/</g, '&lt;')}</option>`).join('');
+    const m = ms.find(x => x.id === shop);
+    nom.textContent = m ? m.nom : 'Newsletter'; nom.title = nom.textContent;
+    sous.textContent = 'Newsletter · la lettre du magasin à ses clients';
+    monter();
+  }).catch(() => { sous.textContent = 'API injoignable'; monter(); });
+  sel.addEventListener('change', () => {
+    shop = sel.value;
+    const u = new URL(location.href); u.searchParams.set('shop', shop); history.replaceState(null, '', u);
+    nom.textContent = sel.options[sel.selectedIndex].textContent;
+    monter();
+  });
+})();
+</script>
+</body>
+</html>

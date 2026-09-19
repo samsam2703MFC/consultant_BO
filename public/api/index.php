@@ -19,6 +19,7 @@ require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/scouting_dossier.php';
 require __DIR__ . '/../../src/newsletter.php';
+require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
@@ -68,6 +69,11 @@ try {
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
+    // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
+    // ouvert au monde : c'est le client, depuis sa boîte mail, qui l'appelle.
+    if ($method === 'GET' && preg_match('#^/newsletter/(o|c|u)/([a-f0-9]{32})$#', $path, $m)) {
+        nlSuivi($m[1], $m[2]);   // sort en gif, redirection ou HTML, puis exit
+    }
 
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
     if ($out === null) {
@@ -253,6 +259,8 @@ function route(string $method, string $path): mixed
             $path === '/scouting/etude'                => ep_scouting_etude(),
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
             $path === '/newsletter'                    => ep_newsletter(),
+            $path === '/newsletter/cron'               => ep_newsletter_cron(),
+            $path === '/newsletter/contacts/lots'      => ep_newsletter_lots(),
             preg_match('#^/prospection/(\d{1,10})$#', $path, $m) === 1 => ep_prospection($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             default                                    => notFound(),
@@ -424,6 +432,12 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/newsletter/segments') { return wr_newsletter_segment_post(); }
     if ($method === 'PUT' && preg_match('#^/newsletter/magasins/(brand|\d{1,10})$#', $path, $m)) { return wr_newsletter_magasin_put($m[1]); }
     if ($method === 'POST' && $path === '/newsletter/test') { return wr_newsletter_test_post(); }
+    if ($method === 'POST' && preg_match('#^/newsletter/campagnes/(\d+)/envoyer$#', $path, $m)) { return wr_newsletter_campagne_envoyer((int) $m[1]); }
+    if ($method === 'POST' && $path === '/newsletter/contacts/import') { return wr_newsletter_contacts_import(); }
+    if ($method === 'DELETE' && preg_match('#^/newsletter/contacts/lots/([\w.-]{1,40})$#', $path, $m)) { return wr_newsletter_lot_delete($m[1]); }
+    if ($method === 'PUT' && $path === '/newsletter/reglages') { return wr_newsletter_reglages(); }
+    if ($method === 'POST' && $path === '/newsletter/tick') { return wr_newsletter_tick(); }
+    if ($method === 'POST' && preg_match('#^/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     if ($method === 'POST' && $path === '/scouting/plan.pdf') { return wr_scouting_plan_pdf(); }
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }

@@ -196,6 +196,13 @@ cat /etc/cron.d/cockpit-rapports        # root, 0600 — le jeton y figure
 
 Le jeton (`ceo_app_setting.rapportsJeton`) naît au premier chargement ; le
 script le relit sur l'API et ne l'imprime jamais dans le journal de livraison.
+
+Le même fichier cron porte l'**horloge des newsletters** : toutes les 5 minutes,
+`bin/newsletter_cron.sh` appelle `/api/cockpit/newsletter/cron?jeton=…` (jeton
+`ceo_app_setting.nlJeton`, né tout seul). L'horloge fait partir les campagnes
+dues par lots de 100 par minute et évalue les automatisations une fois par jour.
+Tant que la marque n'a pas **dispatché** (Newsletter → Paramètres → Envois), elle
+ne fait rien partir et répond ce qui attend.
 Un rapport GÉNÉRÉ à la main dans la journée n'est plus envoyé automatiquement
 le même jour — c'est la garde qui évite les doublons.
 

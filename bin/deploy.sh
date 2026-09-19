@@ -513,6 +513,7 @@ done
 # ligne se pose même si l'API est indisponible au moment de la livraison
 # (le jeton cuit dans le fichier avait ces deux faiblesses).
 chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
+chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -521,6 +522,9 @@ chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
   echo "SHELL=/bin/sh"
   echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
   echo "5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/rapports_cron.sh >/dev/null 2>&1"
+  # Newsletter : l'horloge des campagnes, toutes les 5 minutes (lots de 100 par
+  # minute ; en mode test elle ne fait rien partir et le dit).
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/newsletter_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports
