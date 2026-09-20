@@ -719,7 +719,8 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 
 ### `/visites` — l'application terrain (consultant, franchisé, admin)
 
-Une PWA (`visites/`) et cinq écrans du rail « Application consultant ». Le
+Une PWA (`visites/`) sur le téléphone du consultant et de l'admin, et l'onglet
+« Plan d'action » du dashboard magasin pour le franchisé ; rien dans le rail. Le
 serveur relit l'existant (CA `/exploitation/jour`, Google `/reputation`,
 non-conformités `/pwa/tasks/nc`, push, SMTP) et porte ce qui n'existait pas :
 la visite, ses points, ses photos, le plan d'action à trois acteurs, le
