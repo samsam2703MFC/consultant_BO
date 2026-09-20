@@ -151,8 +151,6 @@ export function render(c, x){
       ${c.isNewsletter || c.isNewsletterShop ? tplNewsletter(c, x) : ''}
       ${c.isProspection ? tplProspection(c, x) : ''}
       ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
-      ${c.isAppVisites ? tplAppVisites(c, x) : ''}
-      ${c.isAppMobile ? tplAppMobile(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
@@ -9917,51 +9915,6 @@ function tplProspectionMobile(c, x){
     <div style="${carte};padding:14px 16px 16px">
       <div style="${cap};margin-bottom:10px;display:flex;justify-content:space-between"><span>Aperçu · ${esc(c.prMagasin ? c.prMagasin.nom : '')}</span><span>390 × 760</span></div>
       ${c.prMagasin ? `<div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.prLienMobile)}" title="Prospection mobile" style="width:390px;height:760px;border:none;display:block"></iframe></div>` : '<div style="font-size:12px;color:var(--color-text-muted)">Choisissez un magasin.</div>'}
-    </div>
-  </div>`;
-}
-
-/* --- Application consultant : le module terrain, monté ici sur grand écran --- */
-function tplAppVisites(c, x){
-  return `
-  <div data-screen="${x.esc(c.appScreen)}" style="display:flex;flex-direction:column;gap:12px">
-    <div id="visites-root" style="min-height:400px"></div>
-  </div>`;
-}
-
-/* --- Application mobile : un lien par personne, un aperçu du téléphone --- */
-function tplAppMobile(c, x){
-  const { esc } = x;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
-  const btnS = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 11px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer';
-  const ligne = l => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:${l.url === c.viApercu ? 'var(--color-background-secondary)' : 'transparent'}">
-      <button ${x.A(c.viChoisir(l.url))} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--color-text);text-align:left;min-width:150px">${esc(l.nom)}</button>
-      <a href="${esc(l.url)}" target="_blank" rel="noopener" style="font-size:11.5px;color:var(--color-primary);word-break:break-all;flex:1">${esc(l.url)}</a>
-      <button ${x.A(c.viCopier(l.url))} style="${btnS}">Copier</button>
-    </div>`;
-  return `
-  <div data-screen="appMobile" style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px;align-items:start">
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div style="${carte};padding:16px 18px">
-        <div style="${cap};margin-bottom:8px">Consultants — agenda, checklist, review</div>
-        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-bottom:10px">Le lien porte le consultant : son agenda, ses boutiques, ses visites. À ouvrir sur le téléphone, puis « Ajouter à l’écran d’accueil » : l’application s’installe et fonctionne hors ligne.</div>
-        ${c.viConsultants.length ? c.viConsultants.map(ligne).join('') : '<div style="font-size:12px;color:var(--color-text-muted)">Lecture des consultants…</div>'}
-      </div>
-      <div style="${carte};padding:16px 18px">
-        <div style="${cap};margin-bottom:8px">Franchisés — dans leur dashboard magasin</div>
-        <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55">Pas de lien de plus pour le franchisé : ses actions, la photo de la correction et la recommandation du consultant sont dans son <b>Dashboard magasin</b>, onglet « Plan d’action » — le même lien qu’il a déjà, avec ses notifications.</div>
-        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${c.viMagasins.map(l => `<a href="${esc(l.dash)}" target="_blank" rel="noopener" style="font-size:11.5px;color:var(--color-primary);border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:4px 10px;text-decoration:none">${esc(l.nom)} ↗</a>`).join('')}</div>
-      </div>
-      <div style="${carte};padding:16px 18px">
-        <div style="${cap};margin-bottom:8px">Admin — corrections à valider, synthèse</div>
-        ${ligne({ nom: 'Vue admin (Sam)', url: c.viAdmin })}
-      </div>
-    </div>
-    <div style="${carte};padding:14px 16px 16px">
-      <div style="${cap};margin-bottom:10px;display:flex;justify-content:space-between"><span>Aperçu</span><span>390 × 760</span></div>
-      <div style="width:390px;height:760px;border-radius:28px;border:8px solid #222;overflow:hidden;background:var(--color-bg);margin:0 auto;box-shadow:0 12px 30px rgba(34,34,34,.14)"><iframe src="${esc(c.viApercu)}" title="Aperçu de l’application" style="width:100%;height:100%;border:none"></iframe></div>
     </div>
   </div>`;
 }
