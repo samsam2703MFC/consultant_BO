@@ -404,6 +404,8 @@ function ep_stats_ventes(): array
     $nJ = max(1, count($joursOuverts));
     $catDe = svCategories();
     $lignes = []; $ccT = [];
+    // Chaque produit sur toute la période, rangé sous sa catégorie : le troisième niveau de la liste groupe › catégorie › produit.
+    $ppT = [];
     foreach ($agg as $h => $a) {
         if ((int) $h < $hMin || (int) $h > $hMax) { continue; }
         // Le top 5 de l'heure, par marge — sur les jours dont les tickets sont lus.
@@ -430,6 +432,9 @@ function ep_stats_ventes(): array
             if (!isset($ccT[$cn])) { $ccT[$cn] = ['nom' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false, 'refs' => []]; }
             $ccT[$cn]['q'] += $x['q']; $ccT[$cn]['v'] += $x['v']; $ccT[$cn]['refs'][$x['id']] = true;
             if ($x['cInconnu']) { $ccT[$cn]['cInconnu'] = true; } else { $ccT[$cn]['c'] += $x['c']; }
+            if (!isset($ppT[$x['id']])) { $ppT[$x['id']] = ['id' => $x['id'], 'nom' => $x['nom'], 'cat' => $cn, 'q' => 0.0, 'v' => 0.0, 'c' => 0.0, 'cInconnu' => false]; }
+            $ppT[$x['id']]['q'] += $x['q']; $ppT[$x['id']]['v'] += $x['v'];
+            if ($x['cInconnu']) { $ppT[$x['id']]['cInconnu'] = true; } else { $ppT[$x['id']]['c'] += $x['c']; }
         }
         $tri = static fn ($a2, $b2) => ($b2['m'] ?? -INF) <=> ($a2['m'] ?? -INF) ?: $b2['v'] <=> $a2['v'];
         usort($top, $tri);
@@ -459,10 +464,23 @@ function ep_stats_ventes(): array
     // Chaque catégorie porte sa famille (le groupe de catégories du catalogue) pour la liste famille › catégorie.
     $catsT = []; $vT = array_sum(array_map(static fn ($x) => $x['v'], $ccT));
     $grpDe = svGroupes();
+    // Les produits de chaque catégorie, du plus vendu au moins vendu, avec leur part dans la catégorie.
+    $prodDe = [];
+    foreach ($ppT as $x) {
+        if ($x['v'] <= 0 && $x['q'] <= 0) { continue; }
+        $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+        $prodDe[$x['cat']][] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null];
+    }
     foreach ($ccT as $x) {
         $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
+        $prods = $prodDe[$x['nom']] ?? [];
+        usort($prods, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
+        foreach ($prods as &$pr) { $pr['part'] = $x['v'] > 0 ? round(100 * $pr['v'] / $x['v'], 1) : null; }
+        unset($pr);
         $catsT[] = ['nom' => $x['nom'], 'groupe' => $grpDe[$x['nom']] ?? null, 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
-            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs'])];
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null, 'part' => $vT > 0 ? round(100 * $x['v'] / $vT, 1) : null, 'refs' => count($x['refs']),
+            'produits' => $prods];
     }
     usort($catsT, static fn ($a2, $b2) => $b2['v'] <=> $a2['v']);
     $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
