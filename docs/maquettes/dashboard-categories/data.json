@@ -1,0 +1,677 @@
+{
+ "jour": "2026-09-23",
+ "magasin": "Atelier by Berlo - Corbais",
+ "total": {
+  "ca": 3506.87,
+  "marge": -88.09
+ },
+ "groupes": [
+  {
+   "nom": "Traiteur",
+   "ca": 1520.27,
+   "marge": null,
+   "taux": null,
+   "part": 43.4,
+   "mc": false,
+   "categories": [
+    {
+     "nom": "Flip & Flap",
+     "ca": 572.2,
+     "marge": null,
+     "taux": null,
+     "part": 16.3,
+     "refs": 18,
+     "q": 95,
+     "produits": [
+      {
+       "nom": "SuperClub (Comté & Jambon de Pays)",
+       "q": 11,
+       "ca": 66.0,
+       "marge": 50.8,
+       "taux": 77.0
+      },
+      {
+       "nom": "Américain Maison",
+       "q": 9,
+       "ca": 54.9,
+       "marge": 44.19,
+       "taux": 80.5
+      }
+     ],
+     "autres": 16
+    },
+    {
+     "nom": "Salades",
+     "ca": 310,
+     "marge": null,
+     "taux": null,
+     "part": 8.8,
+     "refs": 7,
+     "q": 24,
+     "produits": [
+      {
+       "nom": "Salade Chèvre",
+       "q": 3,
+       "ca": 38.7,
+       "marge": 36.24,
+       "taux": 93.6
+      },
+      {
+       "nom": "Salade Tagliata",
+       "q": 2,
+       "ca": 29.0,
+       "marge": 17.06,
+       "taux": 58.8
+      },
+      {
+       "nom": "Salade Saumon fumé",
+       "q": 1,
+       "ca": 13.9,
+       "marge": 11.02,
+       "taux": 79.3
+      },
+      {
+       "nom": "Salade Humus & Fallafel",
+       "q": 1,
+       "ca": 12.5,
+       "marge": 11.55,
+       "taux": 92.4
+      }
+     ],
+     "autres": 3
+    },
+    {
+     "nom": "Plat Prepare - Chaud",
+     "ca": 200,
+     "marge": 86.99,
+     "taux": 43.5,
+     "part": 5.7,
+     "refs": 6,
+     "q": 16,
+     "produits": [],
+     "autres": 6
+    },
+    {
+     "nom": "Fromages & Salaisons",
+     "ca": 141.27,
+     "marge": null,
+     "taux": null,
+     "part": 4,
+     "refs": 2,
+     "q": 14,
+     "produits": [
+      {
+       "nom": "Fromage & Spéculoos",
+       "q": 1,
+       "ca": 14.9,
+       "marge": 6.3,
+       "taux": 42.3
+      },
+      {
+       "nom": "Fromage & Spéculoos - 120⌀",
+       "q": 1,
+       "ca": 9.9,
+       "marge": 5.24,
+       "taux": 52.9
+      }
+     ],
+     "autres": 0
+    },
+    {
+     "nom": "Wrapps",
+     "ca": 125.7,
+     "marge": 100.24,
+     "taux": 79.7,
+     "part": 3.6,
+     "refs": 2,
+     "q": 18,
+     "produits": [
+      {
+       "nom": "Wrapps - Poulet & Parmesan",
+       "q": 8,
+       "ca": 55.2,
+       "marge": 42.21,
+       "taux": 76.5
+      },
+      {
+       "nom": "Wrapps - Hummus Falafel",
+       "q": 2,
+       "ca": 14.4,
+       "marge": 12.66,
+       "taux": 87.9
+      }
+     ],
+     "autres": 0
+    },
+    {
+     "nom": "Salade de pâtes",
+     "ca": 100,
+     "marge": -7.44,
+     "taux": -7.4,
+     "part": 2.9,
+     "refs": 2,
+     "q": 8,
+     "produits": [
+      {
+       "nom": "Pâtes Amatriciana",
+       "q": 5,
+       "ca": 62.5,
+       "marge": 58.03,
+       "taux": 92.8
+      }
+     ],
+     "autres": 1
+    },
+    {
+     "nom": "Salades féculentes",
+     "ca": 62.4,
+     "marge": 53.23,
+     "taux": 85.3,
+     "part": 1.8,
+     "refs": 1,
+     "q": 6,
+     "produits": [],
+     "autres": 1
+    },
+    {
+     "nom": "Plateau Sandwich",
+     "ca": 8.7,
+     "marge": 6.06,
+     "taux": 69.7,
+     "part": 0.2,
+     "refs": 1,
+     "q": 3,
+     "produits": [],
+     "autres": 1
+    }
+   ]
+  },
+  {
+   "nom": "Boulangerie",
+   "ca": 594.1,
+   "marge": 295.94,
+   "taux": 49.8,
+   "part": 16.9,
+   "mc": true,
+   "categories": [
+    {
+     "nom": "Pain",
+     "ca": 391.7,
+     "marge": 193.66,
+     "taux": 49.4,
+     "part": 11.2,
+     "refs": 5,
+     "q": 113,
+     "produits": [
+      {
+       "nom": "Pain Demi-Gris",
+       "q": 36,
+       "ca": 115.2,
+       "marge": 53.28,
+       "taux": 46.2
+      },
+      {
+       "nom": "Pain 10 Céréales",
+       "q": 28,
+       "ca": 109.2,
+       "marge": 61.04,
+       "taux": 55.9
+      },
+      {
+       "nom": "Pain Doré",
+       "q": 17,
+       "ca": 54.4,
+       "marge": 25.16,
+       "taux": 46.2
+      },
+      {
+       "nom": "Pain au Chocolat",
+       "q": 21,
+       "ca": 37.8,
+       "marge": 19.11,
+       "taux": 50.6
+      }
+     ],
+     "autres": 1
+    },
+    {
+     "nom": "Petite Boulangerie",
+     "ca": 149.1,
+     "marge": 73.45,
+     "taux": 49.3,
+     "part": 4.3,
+     "refs": 7,
+     "q": 50,
+     "produits": [],
+     "autres": 7
+    },
+    {
+     "nom": "Pain Tradition",
+     "ca": 53.3,
+     "marge": 28.83,
+     "taux": 54.1,
+     "part": 1.5,
+     "refs": 7,
+     "q": 15,
+     "produits": [
+      {
+       "nom": "Baguette Tradition",
+       "q": 3,
+       "ca": 7.5,
+       "marge": 3.45,
+       "taux": 46.0
+      }
+     ],
+     "autres": 6
+    }
+   ]
+  },
+  {
+   "nom": "Tartes",
+   "ca": 500.1,
+   "marge": null,
+   "taux": null,
+   "part": 14.3,
+   "mc": false,
+   "categories": [
+    {
+     "nom": "Tartes",
+     "ca": 293.6,
+     "marge": null,
+     "taux": null,
+     "part": 8.4,
+     "refs": 13,
+     "q": 18,
+     "produits": [
+      {
+       "nom": "Brookie",
+       "q": 1,
+       "ca": 20.5,
+       "marge": 12.72,
+       "taux": 62.0
+      },
+      {
+       "nom": "Flan Breton",
+       "q": 1,
+       "ca": 13.9,
+       "marge": 6.66,
+       "taux": 47.9
+      },
+      {
+       "nom": "Cerise",
+       "q": 1,
+       "ca": 12.9,
+       "marge": 5.07,
+       "taux": 39.3
+      }
+     ],
+     "autres": 10
+    },
+    {
+     "nom": "Tartissières - 19Ø",
+     "ca": 99.4,
+     "marge": 47.8,
+     "taux": 48.1,
+     "part": 2.8,
+     "refs": 3,
+     "q": 6,
+     "produits": [],
+     "autres": 3
+    },
+    {
+     "nom": "Tartes au sucre",
+     "ca": 67.5,
+     "marge": 43.75,
+     "taux": 64.8,
+     "part": 1.9,
+     "refs": 4,
+     "q": 5,
+     "produits": [
+      {
+       "nom": "Tarte Sucre Blanc",
+       "q": 2,
+       "ca": 27.0,
+       "marge": 17.5,
+       "taux": 64.8
+      },
+      {
+       "nom": "Tarte Sucre & Chocolat",
+       "q": 1,
+       "ca": 13.5,
+       "marge": 8.75,
+       "taux": 64.8
+      }
+     ],
+     "autres": 2
+    },
+    {
+     "nom": "Tartissières - 12Ø",
+     "ca": 39.6,
+     "marge": 21.96,
+     "taux": 55.5,
+     "part": 1.1,
+     "refs": 2,
+     "q": 4,
+     "produits": [],
+     "autres": 2
+    }
+   ]
+  },
+  {
+   "nom": "Viennoiserie",
+   "ca": 277.6,
+   "marge": 157.38,
+   "taux": 56.7,
+   "part": 7.9,
+   "mc": true,
+   "categories": [
+    {
+     "nom": "Viennoiserie Ind.",
+     "ca": 271.6,
+     "marge": 154.08,
+     "taux": 56.7,
+     "part": 7.7,
+     "refs": 11,
+     "q": 146,
+     "produits": [
+      {
+       "nom": "Croissant",
+       "q": 23,
+       "ca": 39.1,
+       "marge": 24.15,
+       "taux": 61.8
+      },
+      {
+       "nom": "Couque à la Crème",
+       "q": 6,
+       "ca": 21.0,
+       "marge": 16.62,
+       "taux": 79.1
+      },
+      {
+       "nom": "Mini - Croissant",
+       "q": 6,
+       "ca": 6.0,
+       "marge": 3.3,
+       "taux": 55.0
+      },
+      {
+       "nom": "Brioche tressée au chocolat",
+       "q": 1,
+       "ca": 5.9,
+       "marge": 3.42,
+       "taux": 58.0
+      }
+     ],
+     "autres": 7
+    },
+    {
+     "nom": "Viennoiserie réduction",
+     "ca": 6,
+     "marge": 3.3,
+     "taux": 55,
+     "part": 0.2,
+     "refs": 1,
+     "q": 6,
+     "produits": [],
+     "autres": 1
+    }
+   ]
+  },
+  {
+   "nom": "Quiches",
+   "ca": 251.3,
+   "marge": 149.62,
+   "taux": 59.5,
+   "part": 7.2,
+   "mc": true,
+   "categories": [
+    {
+     "nom": "Quiches",
+     "ca": 251.3,
+     "marge": 149.62,
+     "taux": 59.5,
+     "part": 7.2,
+     "refs": 6,
+     "q": 17,
+     "produits": [
+      {
+       "nom": "Quiche Lorraine",
+       "q": 5,
+       "ca": 74.5,
+       "marge": 45.15,
+       "taux": 60.6
+      },
+      {
+       "nom": "Quiche Grecque",
+       "q": 3,
+       "ca": 44.7,
+       "marge": 27.09,
+       "taux": 60.6
+      },
+      {
+       "nom": "Quiche saumon & épinards",
+       "q": 2,
+       "ca": 29.8,
+       "marge": 16.8,
+       "taux": 56.4
+      },
+      {
+       "nom": "Quiche boeufs & curry de légumes",
+       "q": 1,
+       "ca": 14.9,
+       "marge": 9.03,
+       "taux": 60.6
+      },
+      {
+       "nom": "Quiche Jambon & Chicons",
+       "q": 1,
+       "ca": 14.9,
+       "marge": 9.03,
+       "taux": 60.6
+      },
+      {
+       "nom": "Quiche aux champignons",
+       "q": 1,
+       "ca": 13.9,
+       "marge": 8.03,
+       "taux": 57.8
+      }
+     ],
+     "autres": 0
+    }
+   ]
+  },
+  {
+   "nom": "Pâtisserie",
+   "ca": 138.5,
+   "marge": null,
+   "taux": null,
+   "part": 3.9,
+   "mc": false,
+   "categories": [
+    {
+     "nom": "Entremets - Individuel",
+     "ca": 44.9,
+     "marge": -1034.99,
+     "taux": -2305.1,
+     "part": 1.3,
+     "refs": 5,
+     "q": 13,
+     "produits": [],
+     "autres": 5
+    },
+    {
+     "nom": "Cake 100g.",
+     "ca": 39.6,
+     "marge": 24.23,
+     "taux": 61.2,
+     "part": 1.1,
+     "refs": 3,
+     "q": 4,
+     "produits": [],
+     "autres": 3
+    },
+    {
+     "nom": "Pâtisserie individuelle",
+     "ca": 33,
+     "marge": 27.06,
+     "taux": 82,
+     "part": 0.9,
+     "refs": 1,
+     "q": 11,
+     "produits": [
+      {
+       "nom": "éclair chocolat",
+       "q": 3,
+       "ca": 9.0,
+       "marge": 7.38,
+       "taux": 82.0
+      }
+     ],
+     "autres": 0
+    },
+    {
+     "nom": "Dessert",
+     "ca": 21,
+     "marge": null,
+     "taux": null,
+     "part": 0.6,
+     "refs": 1,
+     "q": 7,
+     "produits": [],
+     "autres": 1
+    }
+   ]
+  },
+  {
+   "nom": "Biscuiterie",
+   "ca": 99.9,
+   "marge": null,
+   "taux": null,
+   "part": 2.8,
+   "mc": false,
+   "categories": [
+    {
+     "nom": "Cookies",
+     "ca": 84.1,
+     "marge": 56.32,
+     "taux": 67,
+     "part": 2.4,
+     "refs": 5,
+     "q": 29,
+     "produits": [
+      {
+       "nom": "Cookie Chocolat Blanc",
+       "q": 3,
+       "ca": 8.7,
+       "marge": 5.82,
+       "taux": 66.9
+      },
+      {
+       "nom": "Cookie Chocolat Lait",
+       "q": 2,
+       "ca": 5.8,
+       "marge": 3.88,
+       "taux": 66.9
+      }
+     ],
+     "autres": 3
+    },
+    {
+     "nom": "Biscuiterie",
+     "ca": 15.8,
+     "marge": null,
+     "taux": null,
+     "part": 0.5,
+     "refs": 3,
+     "q": 4,
+     "produits": [],
+     "autres": 3
+    }
+   ]
+  },
+  {
+   "nom": "Boissons",
+   "ca": 62.3,
+   "marge": 48.61,
+   "taux": 78.0,
+   "part": 1.8,
+   "mc": true,
+   "categories": [
+    {
+     "nom": "Boissons froides",
+     "ca": 41.6,
+     "marge": 29.27,
+     "taux": 70.4,
+     "part": 1.2,
+     "refs": 6,
+     "q": 20,
+     "produits": [
+      {
+       "nom": "Eau Pétillante",
+       "q": 6,
+       "ca": 12.0,
+       "marge": 8.76,
+       "taux": 73.0
+      }
+     ],
+     "autres": 5
+    },
+    {
+     "nom": "Boissons chaudes",
+     "ca": 20.7,
+     "marge": 19.34,
+     "taux": 93.4,
+     "part": 0.6,
+     "refs": 2,
+     "q": 9,
+     "produits": [],
+     "autres": 2
+    }
+   ]
+  },
+  {
+   "nom": "Bundle & Promotion",
+   "ca": 35.0,
+   "marge": 21.49,
+   "taux": 61.4,
+   "part": 1.0,
+   "mc": true,
+   "categories": [
+    {
+     "nom": "Bundle",
+     "ca": 35,
+     "marge": 21.49,
+     "taux": 61.4,
+     "part": 1,
+     "refs": 1,
+     "q": 7,
+     "produits": [],
+     "autres": 1
+    }
+   ]
+  },
+  {
+   "nom": "Tartes · Pâtisserie",
+   "ca": 27.8,
+   "marge": -186.34,
+   "taux": -670.3,
+   "part": 0.8,
+   "mc": true,
+   "categories": [
+    {
+     "nom": "Entremets - 4/6 personnes",
+     "ca": 27.8,
+     "marge": -186.34,
+     "taux": -670.3,
+     "part": 0.8,
+     "refs": 1,
+     "q": 2,
+     "produits": [],
+     "autres": 1
+    }
+   ]
+  }
+ ]
+}
