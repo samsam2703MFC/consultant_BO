@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Ventes par groupe, catégorie, produit</title>
+<!-- Trois propositions pour la carte « Ventes par catégorie » du dashboard magasin :
+       ?v=1  Accordéon à trois niveaux (groupe ▸ catégorie ▸ produit), une ligne = CA, part, marge brute
+       ?v=2  Treemap des groupes + tiroir : le groupe cliqué déplie ses catégories, la catégorie ses produits
+       ?v=3  Trois listes déroulantes en cascade (Groupe ▾ Catégorie ▾ Produit ▾) + tableau du niveau choisi
+     Données : ventes réelles de la veille (data.json, /ventes/stats). Le rattachement produit → catégorie
+     est approché par mots-clés pour la maquette ; en vrai il vient du catalogue. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px}
+  #dash{max-width:1300px;margin:0 auto}
+  .prop{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 8px}
+  .lig{display:grid;grid-template-columns:22px minmax(220px,1.1fr) 3fr 90px 70px 90px 70px;align-items:center;gap:10px;padding:8px 10px;border-top:.5px solid var(--color-border-tertiary);font-size:13px}
+  .lig.g{font-weight:600;background:var(--color-surface)}
+  .lig.c{padding-left:28px;font-size:12.5px}
+  .lig.p{padding-left:54px;font-size:12px;color:var(--color-text);background:var(--color-background-secondary)}
+  .lig.p .nom{font-weight:400}
+  .lig .nom{font-weight:600}
+  .lig .sub{display:block;font:400 10.5px var(--font-ui);color:var(--color-text-muted)}
+  .lig .n{text-align:right;font-variant-numeric:tabular-nums}
+  .lig .n.marge{font-weight:600}
+  .tog{width:20px;height:20px;border-radius:6px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:var(--color-text-muted);cursor:pointer}
+  .tog.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+  .barre{height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden;position:relative}
+  .barre i{position:absolute;left:0;top:0;bottom:0;border-radius:999px}
+  .barre b{position:absolute;left:0;top:0;bottom:0;border-radius:999px;opacity:.35}
+  .ok{color:#2d7a3e}.ko{color:#C0182B}.mu{color:var(--color-text-muted)}.att{color:#B26A00}
+  .ent{display:grid;grid-template-columns:22px minmax(220px,1.1fr) 3fr 90px 70px 90px 70px;gap:10px;padding:8px 10px;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .ent .n{text-align:right}
+  .autres{padding:4px 10px 8px 54px;font-size:11px;color:var(--color-text-muted);background:var(--color-background-secondary)}
+  /* treemap */
+  .tm{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:64px;gap:6px;padding:12px 16px}
+  .tm .t{border-radius:10px;padding:8px 10px;color:#fff;cursor:pointer;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start}
+  .tm .t b{font-size:13px}.tm .t .k{font-family:var(--font-display);font-size:18px;line-height:1}
+  .tm .t small{font-size:10.5px;opacity:.9}
+  .tm .t.on{outline:3px solid var(--color-text);outline-offset:-3px}
+  .tiroir{border-top:.5px solid var(--color-border-tertiary)}
+  .tiroir .th{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:12.5px}
+  .tiroir .th b{font-size:14px}
+  /* cascade */
+  .casc{display:flex;gap:10px;align-items:center;padding:12px 16px;flex-wrap:wrap}
+  .casc label{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .sel{appearance:none;-webkit-appearance:none;font-family:var(--font-ui);font-size:13px;padding:8px 32px 8px 12px;border-radius:9px;border:.5px solid var(--color-border-secondary);background:var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E") no-repeat right 12px center;color:var(--color-text);min-width:190px;font-weight:600}
+  .sel.vide{font-weight:400;color:var(--color-text-muted)}
+  .fil{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-muted);padding:0 16px 8px}
+  .fil b{color:var(--color-text)}
+  .resume{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px 12px}
+  .resume>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 12px}
+  .resume .l{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .resume .v{font-family:var(--font-display);font-size:22px;line-height:1.1;margin-top:4px}
+  .resume .s{font-size:11px;color:var(--color-text-muted)}
+</style>
+</head>
+<body>
+<div id="dash"></div>
+<script>
+const q = new URLSearchParams(location.search); const V = q.get('v') || '1';
+const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fE = n => n == null ? '—' : nf(Math.round(n), 0) + ' €';
+const fP = n => n == null ? '—' : nf(n, 1) + ' %';
+// Même code couleur que le treemap actuel : couleur = marge brute (taux).
+const coul = t => t == null ? '#b8ad9f' : t < 0 ? '#C0182B' : t < 45 ? '#E07B2A' : t < 60 ? '#C9A227' : '#2d7a3e';
+const clMarge = t => t == null ? 'mu' : t < 0 ? 'ko' : t < 45 ? 'att' : 'ok';
+
+fetch('data.json').then(r => r.json()).then(D => {
+  const T = D.total; const max = Math.max(...D.groupes.map(g => g.ca));
+  const ligne = (niv, x, ouvert, tog, refCa) => `
+    <div class="lig ${niv}">
+      <span>${tog ? `<span class="tog ${ouvert ? 'on' : ''}">${ouvert ? '▾' : '▸'}</span>` : ''}</span>
+      <span class="nom">${esc(x.nom)}${x.sub ? `<span class="sub">${x.sub}</span>` : ''}</span>
+      <span class="barre"><i style="width:${Math.max(1, x.ca / refCa * 100)}%;background:${coul(x.taux)}"></i></span>
+      <span class="n">${fE(x.ca)}</span>
+      <span class="n mu">${x.part != null ? fP(x.part) : ''}</span>
+      <span class="n marge ${clMarge(x.taux)}">${x.marge == null ? '<span class="mu" title="coût matière inconnu">?</span>' : fE(x.marge)}</span>
+      <span class="n ${clMarge(x.taux)}">${x.taux == null ? '' : fP(x.taux)}</span>
+    </div>`;
+  const entete = `<div class="ent"><span></span><span>Groupe ▸ catégorie ▸ produit</span><span>Poids dans le CA</span><span class="n">CA</span><span class="n">Part</span><span class="n">Marge brute</span><span class="n">Taux</span></div>`;
+  const carte = (titre, mini, corps) => `<div class="db-card"><div class="ct"><span class="db-lab">${titre}</span><span class="db-mini">${mini}</span></div>${corps}</div>`;
+  const pied = `<div class="lig g" style="border-top:1px solid var(--color-border-secondary)"><span></span><span class="nom">Total du jour<span class="sub">${esc(D.magasin)} · ${esc(D.jour)}</span></span><span></span><span class="n">${fE(T.ca)}</span><span class="n mu">100 %</span><span class="n marge">${fE(T.marge)}</span><span class="n">${fP(T.marge / T.ca * 100)}</span></div>`;
+  const produits = c => c.produits.map(p => ligne('p', Object.assign({}, p, { sub: p.q + ' vendu' + (p.q > 1 ? 's' : '') }), false, false, c.ca)).join('')
+    + (c.autres ? `<div class="autres">… et ${c.autres} autre${c.autres > 1 ? 's' : ''} référence${c.autres > 1 ? 's' : ''} de la catégorie (${c.refs} vendues au total)</div>` : '');
+  const cats = (g, ouverte) => g.categories.map(c => ligne('c', Object.assign({}, c, { sub: c.refs + ' réf. · ' + c.q + ' pièces' }), c.nom === ouverte, true, g.ca) + (c.nom === ouverte ? produits(c) : '')).join('');
+
+  let h = '';
+  if (V === '1') {
+    const G = D.groupes; const gO = 'Traiteur', cO = 'Flip & Flap';
+    h = '<div class="prop">Proposition 1 — accordéon à trois niveaux</div>' + carte('Ventes par catégorie', 'groupe ▸ catégorie ▸ produit · barre : poids dans le CA · couleur : marge brute',
+      entete + G.map(g => ligne('g', Object.assign({}, g, { sub: g.categories.length + ' catégorie' + (g.categories.length > 1 ? 's' : '') }), g.nom === gO, true, max) + (g.nom === gO ? cats(g, cO) : '')).join('') + pied);
+  }
+  if (V === '2') {
+    const G = D.groupes; const gO = 'Traiteur', cO = 'Flip & Flap'; const g = G.find(x => x.nom === gO);
+    const span = x => Math.max(2, Math.round(x.ca / T.ca * 12));
+    h = '<div class="prop">Proposition 2 — treemap des groupes + tiroir</div>' + carte('Ventes par catégorie', 'surface : poids dans le CA · couleur : marge brute · un groupe cliqué se déplie dessous',
+      `<div class="tm">${G.map(x => `<div class="t ${x.nom === gO ? 'on' : ''}" style="grid-column:span ${span(x)};background:${coul(x.taux)}"><b>${esc(x.nom)}</b><span class="k">${fE(x.ca)}</span><small>${fP(x.part)} du CA · ${x.marge == null ? 'coût matière inconnu' : 'marge ' + fP(x.taux)}</small></div>`).join('')}</div>
+       <div class="tiroir"><div class="th"><span class="tog on">▾</span><b>${esc(g.nom)}</b><span class="mu">${fE(g.ca)} · ${fP(g.part)} du CA · marge brute ${fE(g.marge)} (${fP(g.taux)})</span><span style="flex:1"></span><span class="mu" style="font-size:11px">touchez une catégorie pour voir ses produits</span></div>
+       ${entete}${cats(g, cO)}</div>`);
+  }
+  if (V === '3') {
+    const G = D.groupes; const gO = 'Traiteur', cO = 'Flip & Flap'; const g = G.find(x => x.nom === gO); const c = g.categories.find(x => x.nom === cO);
+    const sel = (lab, val, opts, vide) => `<div><label>${lab}</label><br><select class="sel ${vide ? 'vide' : ''}"><option>${esc(val)}</option>${opts.map(o => `<option>${esc(o)}</option>`).join('')}</select></div>`;
+    h = '<div class="prop">Proposition 3 — trois listes déroulantes en cascade</div>' + carte('Ventes par catégorie', 'choisissez le groupe, puis la catégorie, puis le produit : chaque niveau donne son CA et sa marge brute',
+      `<div class="casc">${sel('Groupe', g.nom + ' — ' + fE(g.ca), G.filter(x => x !== g).map(x => x.nom + ' — ' + fE(x.ca)))}<span class="mu">▸</span>${sel('Catégorie', c.nom + ' — ' + fE(c.ca), g.categories.filter(x => x !== c).map(x => x.nom + ' — ' + fE(x.ca)))}<span class="mu">▸</span>${sel('Produit', 'Tous les produits (' + c.refs + ')', c.produits.map(p => p.nom + ' — ' + fE(p.ca)), true)}</div>
+       <div class="fil">Tout le magasin ${fE(T.ca)} ▸ <b>${esc(g.nom)}</b> ${fE(g.ca)} ▸ <b>${esc(c.nom)}</b> ${fE(c.ca)}</div>
+       <div class="resume"><div><div class="l">CA de la catégorie</div><div class="v">${fE(c.ca)}</div><div class="s">${fP(c.part)} du CA du jour · ${fP(c.ca / g.ca * 100)} du groupe</div></div>
+         <div><div class="l">Marge brute</div><div class="v ${clMarge(c.taux)}">${c.marge == null ? '?' : fE(c.marge)}</div><div class="s">${c.taux == null ? 'coût matière inconnu' : 'taux ' + fP(c.taux)}</div></div>
+         <div><div class="l">Pièces</div><div class="v">${c.q}</div><div class="s">${c.refs} références vendues</div></div>
+         <div><div class="l">Groupe ${esc(g.nom)}</div><div class="v">${fE(g.ca)}</div><div class="s">marge ${fE(g.marge)} · ${fP(g.taux)}</div></div></div>
+       ${entete}${produits(c)}`);
+  }
+  document.getElementById('dash').innerHTML = h;
+});
+</script>
+</body>
+</html>
