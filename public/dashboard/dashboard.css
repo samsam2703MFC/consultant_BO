@@ -648,3 +648,5 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-tog.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
 .db-autres{padding:3px 6px 6px 52px;font-size:10.5px;color:var(--color-text-muted);background:var(--color-background-secondary)}
 @media (max-width:900px){.db-ent,.db-al{grid-template-columns:20px minmax(110px,1fr) 2fr 70px 54px 76px 54px;gap:6px}}
+.db-cvue{margin-left:4px}.db-cvue button{padding:4px 10px;font-size:11px}
+.db-card>.ct .db-mini{margin-left:auto}
