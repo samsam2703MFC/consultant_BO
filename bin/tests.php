@@ -101,6 +101,18 @@ catch (Throwable $e) { verifie('code 190 ⇒ MetaTokenExpire', false, get_class(
 $r = MetaGraph::resoudrePage('https://www.facebook.com/limitee', 'tok');
 verifie('rate limit rejoué avec backoff', $r['id'] === '99');
 verifie('version d’API dans l’URL', str_contains($appels[0], 'graph.facebook.com/v21.0/'));
+// Sans token : la voie publique (Page Plugin), dont le HTML est simulé.
+MetaGraph::$transport = static function (string $m, string $url, array $p): array {
+    if ($m === 'GET-HTML' && str_contains($url, 'plugins/page.php') && str_contains($url, 'atelierbyhalle')) {
+        return [200, '<html>…"pageID":"883508651512115",…"name":"L\'Atelier by Halle"…</html>'];
+    }
+    if ($m === 'GET-HTML') { return [200, '<html>Log in or sign up</html>']; }
+    return [500, null];
+};
+$r = MetaGraph::resoudrePage('https://www.facebook.com/atelierbyhalle', '');
+verifie('sans token : identifiant lu par la voie publique', $r['id'] === '883508651512115' && $r['source'] === 'public', json_encode($r));
+try { MetaGraph::resoudrePage('https://www.facebook.com/inconnue', ''); verifie('sans token, page non publique ⇒ MetaIndisponible', false); }
+catch (MetaIndisponible $e) { verifie('sans token, page non publique ⇒ MetaIndisponible', true); }
 
 // --- 4. la détection d'un post sauvage --------------------------------------------------
 echo "Post sauvage\n";

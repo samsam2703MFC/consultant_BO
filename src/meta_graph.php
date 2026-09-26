@@ -130,6 +130,20 @@ final class MetaGraph
      */
     public static function resoudrePage(string $url, ?string $token = null): array
     {
+        $nom = self::nomDePage($url);
+        $token = $token ?? self::config()['systemToken'];
+        // Sans token, l'identifiant se lit quand même : le module public de
+        // Facebook (« Page Plugin ») rend le pageID d'une page publique. Les
+        // posts, eux, attendent le System User — mais la page est déjà connue.
+        if ($token === '') { return self::resoudrePagePublique($nom); }
+        $r = self::http('GET', rawurlencode($nom), ['fields' => 'id,name', 'access_token' => $token]);
+        if (empty($r['id'])) { throw new MetaIndisponible('page introuvable : ' . $nom); }
+        return ['id' => (string) $r['id'], 'nom' => (string) ($r['name'] ?? $nom), 'source' => 'graph'];
+    }
+
+    /** Le nom d'utilisateur (ou l'identifiant) porté par une URL de page. */
+    public static function nomDePage(string $url): string
+    {
         $u = trim($url);
         $nom = null;
         if (preg_match('#[?&]id=(\d{5,})#', $u, $m)) { $nom = $m[1]; }
@@ -138,10 +152,41 @@ final class MetaGraph
         if ($nom === null || $nom === '' || $nom === 'XXXX') {
             throw new MetaIndisponible('URL de page illisible : ' . $url);
         }
-        $r = self::http('GET', rawurlencode($nom), [
-            'fields' => 'id,name', 'access_token' => $token ?? self::config()['systemToken']]);
-        if (empty($r['id'])) { throw new MetaIndisponible('page introuvable : ' . $nom); }
-        return ['id' => (string) $r['id'], 'nom' => (string) ($r['name'] ?? $nom)];
+        return $nom;
+    }
+
+    /**
+     * L'identifiant d'une page publique sans token, par le Page Plugin
+     * (`/plugins/page.php?href=…`), qui s'affiche sans session et porte
+     * `"pageID":"…"`. Vérifié sur la page de Halle : 883508651512115.
+     */
+    public static function resoudrePagePublique(string $nom): array
+    {
+        $href = ctype_digit($nom) ? 'https://www.facebook.com/profile.php?id=' . $nom : 'https://www.facebook.com/' . rawurlencode($nom);
+        // `tabs=timeline` est nécessaire : sans onglet, le module ne porte pas l'identifiant (mesuré).
+        $url = 'https://www.facebook.com/plugins/page.php?href=' . rawurlencode($href) . '&tabs=timeline&width=340&locale=fr_FR';
+        [$code, $html] = self::$transport
+            ? (self::$transport)('GET-HTML', $url, [])
+            : self::curlHtml($url);
+        if ($code < 200 || $code >= 300 || !is_string($html)) {
+            throw new MetaIndisponible('page publique injoignable (HTTP ' . $code . ') : ' . $nom);
+        }
+        if (!preg_match('/"pageID":"(\d{5,})"/', $html, $m)) {
+            throw new MetaIndisponible('page introuvable ou non publique : ' . $nom);
+        }
+        $titre = preg_match('/"name":"([^"\\\\]{2,120})"/', $html, $t) ? json_decode('"' . $t[1] . '"') : null;
+        return ['id' => $m[1], 'nom' => is_string($titre) && $titre !== '' ? $titre : $nom, 'source' => 'public'];
+    }
+
+    private static function curlHtml(string $url): array
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 30, CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36']);
+        $raw = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return [$raw === false ? 0 : $code, $raw === false ? null : (string) $raw];
     }
 
     /** Les tokens de page accessibles au System User : page_id → [token, nom]. */

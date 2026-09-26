@@ -127,7 +127,7 @@ function bgSemer(): void
 function bgPagesReseau(): array
 {
     return [
-        ['Halle',     'Nathan Charlot (Neutralle SRL)', 'https://www.facebook.com/XXXX'],
+        ['Halle',     'Nathan Charlot (Neutralle SRL)', 'https://www.facebook.com/atelierbyhalle'],
         ['Corbais',   'Berlo',                          'https://www.facebook.com/XXXX'],
         ['Gembloux',  'Berlo',                          'https://www.facebook.com/XXXX'],
         ['Sombreffe', 'Harmonie Thiry',                 'https://www.facebook.com/XXXX'],
@@ -422,14 +422,18 @@ function bgResoudrePages(bool $forcer = false): array
 {
     bgTables();
     $out = [];
-    if (!MetaGraph::configured()) { return ['motif' => 'META_SYSTEM_TOKEN absent : les pages ne peuvent pas être résolues', 'pages' => []]; }
+    // Sans token, l'identifiant se lit par la voie publique : la page est
+    // connue, elle reste « à connecter » tant que ses posts ne se lisent pas.
+    $avecToken = MetaGraph::configured();
     foreach (Db::rows('SELECT * FROM brand_guard_pages WHERE actif = 1') as $p) {
         if (!$forcer && $p['page_id'] !== null && $p['statut_connexion'] === 'connectee') { continue; }
         try {
             $r = MetaGraph::resoudrePage((string) $p['page_url']);
-            Db::exec("UPDATE brand_guard_pages SET page_id = ?, page_nom = ?, statut_connexion = 'connectee', derniere_erreur = NULL WHERE id = ?",
-                [$r['id'], $r['nom'], (int) $p['id']]);
-            $out[] = ['boutique' => $p['boutique'], 'ok' => true, 'pageId' => $r['id']];
+            $statut = $avecToken ? 'connectee' : 'a_connecter';
+            $note = $avecToken ? null : 'identifiant trouvé (' . $r['id'] . ') — lecture des posts en attente du token Meta (META_SYSTEM_TOKEN)';
+            Db::exec("UPDATE brand_guard_pages SET page_id = ?, page_nom = ?, statut_connexion = ?, derniere_erreur = ? WHERE id = ?",
+                [$r['id'], $r['nom'], $statut, $note, (int) $p['id']]);
+            $out[] = ['boutique' => $p['boutique'], 'ok' => true, 'pageId' => $r['id'], 'source' => $r['source'] ?? 'graph'];
         } catch (Throwable $e) {
             Db::exec("UPDATE brand_guard_pages SET statut_connexion = 'a_connecter', derniere_erreur = ? WHERE id = ?",
                 [mb_substr($e->getMessage(), 0, 300), (int) $p['id']]);
@@ -437,7 +441,7 @@ function bgResoudrePages(bool $forcer = false): array
             $out[] = ['boutique' => $p['boutique'], 'ok' => false, 'erreur' => $e->getMessage()];
         }
     }
-    return ['pages' => $out];
+    return ['pages' => $out, 'motif' => $avecToken ? null : 'META_SYSTEM_TOKEN absent : identifiants lus par la voie publique, posts non lus'];
 }
 
 /**
