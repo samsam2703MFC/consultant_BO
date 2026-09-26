@@ -436,3 +436,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-26T07:25:24Z Brand Guard : secrets Meta dans config.php
 2026-09-26T17:14:05Z dashboard : les périodes de la semaine (matin, midi, après-midi)
 2026-09-26T17:16:24Z dashboard : colonne Semaine des périodes
+2026-09-26T17:29:51Z résultat semaine : les périodes dans le drop du magasin

@@ -268,6 +268,28 @@ function svPeriodes(array $heures): array
 }
 
 /**
+ * GET /ventes/periodes?shop=4&vue=semaine&date=… — les périodes seules.
+ *
+ * La lecture complète (/ventes/stats) relit les tickets et prend vingt
+ * secondes ; les périodes n'ont besoin que des heures, gravées jour par jour.
+ * Cet appel rend en moins d'une seconde ce que le drop d'un magasin, dans
+ * Résultat › Semaine, affiche à l'ouverture.
+ */
+function ep_ventes_periodes(): array
+{
+    $auj = date('Y-m-d');
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $vue = in_array($_GET['vue'] ?? '', ['jour', 'semaine', 'mois'], true) ? (string) $_GET['vue'] : 'semaine';
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    [$du, $au, $jours] = svJours($vue, $date);
+    $heures = svHeuresJours($sid, $jours);
+    return ['shop' => $sid, 'vue' => $vue, 'du' => $du, 'au' => $au, 'joursServis' => array_keys($heures)] + svPeriodes($heures);
+}
+
+/**
  * Les heures de plusieurs jours d'un magasin — [date => [h => ligne]] ; un jour
  * muet est absent. Les jours clos gravés ne se relisent pas.
  */

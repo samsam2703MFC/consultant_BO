@@ -7709,6 +7709,66 @@ class App {
       this.setState({ rpMaj: new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
     });
   }
+  /**
+   * Les périodes de la semaine d'un magasin — matin 6 – 10 h, midi 11 – 14 h,
+   * après-midi 15 – 19 h — dans le drop de Résultat › Semaine.
+   *
+   * Lu à l'ouverture du magasin, pas au chargement de l'écran : c'est un appel
+   * léger (/ventes/periodes, les heures déjà gravées), gardé par magasin et par
+   * semaine. Chaque case dit ses trois chiffres — ventes, marge nette et sa
+   * part des ventes, clients — et son rang dans la journée, au CA. La couleur
+   * suit le chiffre choisi (CA, marge nette, clients) par rapport à la meilleure
+   * case de la semaine ; le rang reste au CA.
+   */
+  rpPeriodes(m, r){
+    const S = this.state;
+    const cle = 'per|' + m.shopId + '|' + r.du;
+    if (!this._per) { this._per = {}; }
+    if (!this._per[cle] && !this._perEnCours) {
+      this._perEnCours = cle;
+      readOne('/ventes/periodes?shop=' + encodeURIComponent(m.shopId) + '&vue=semaine&date=' + encodeURIComponent(r.du)).then(d => {
+        this._perEnCours = null;
+        this._per[cle] = (d && d.jours) ? d : { erreur: (d && d.error) || 'lecture impossible' };
+        this.setState({});
+      }).catch(() => { this._perEnCours = null; this._per[cle] = { erreur: 'lecture impossible' }; this.setState({}); });
+    }
+    const P = this._per[cle];
+    const col = ['ca', 'res', 'tickets'].includes(S.rpPerCol) ? S.rpPerCol : 'ca';
+    const out = { chargement: !P, erreur: P && P.erreur ? P.erreur : '', col,
+      cols: [['ca', 'CA'], ['res', 'Marge nette'], ['tickets', 'Clients']].map(c => ({ cle: c[0], nom: c[1], on: col === c[0], go: () => this.setState({ rpPerCol: c[0] }) })) };
+    if (!P || P.erreur) { return out; }
+    const B = P.bornes || [], dates = Object.keys(P.jours).sort();
+    const fE = n => this.fE(n), fI = n => Math.round(n || 0).toLocaleString('fr-BE');
+    const fS = n => (n >= 0 ? '+ ' : '− ') + fE(Math.abs(n));
+    const jourNom = d => { const t = new Date(d + 'T12:00:00'); const w = t.toLocaleDateString('fr-BE', { weekday: 'long' }); return w.charAt(0).toUpperCase() + w.slice(1); };
+    const fD = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+    const W = {}; B.forEach(b => { W[b.cle] = { ca: 0, tickets: 0, mb: 0, res: 0 }; });
+    const J = {}; const sem = { ca: 0, tickets: 0, mb: 0, res: 0 };
+    dates.forEach(d => { J[d] = { ca: 0, tickets: 0, mb: 0, res: 0 }; B.forEach(b => { const v = P.jours[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { W[b.cle][k] += v[k] || 0; J[d][k] += v[k] || 0; sem[k] += v[k] || 0; }); }); });
+    const rangs = d => { const o = B.map(b => b.cle).sort((a, c) => (P.jours[d][c] || {}).ca - (P.jours[d][a] || {}).ca); const rg = {}; o.forEach((k, i) => { rg[k] = i + 1; }); return rg; };
+    const LAB = { 1: '1er', 2: '2e', 3: '3e' };
+    const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (P.jours[d][b.cle] || {})[col] || 0)));
+    const ECH = col === 'res'
+      ? [['#1f5a2c', '≥ 80 % de la meilleure marge'], ['#2d7a3e', '55 – 80 %'], ['#6aa84f', '35 – 55 %'], ['#c9e0b8', '18 – 35 %'], ['#efe9e1', '< 18 %']]
+      : [['#8D1D2C', '≥ 80 % de la meilleure case'], ['#C0182B', '55 – 80 %'], ['#F08A2C', '35 – 55 %'], ['#e8c9a0', '18 – 35 %'], ['#efe9e1', '< 18 %']];
+    const teinte = v => { const pc = v / mx; if (col === 'res' && v < 0) { return ['#f5d5d8', true]; } if (pc >= .8) { return [ECH[0][0], false]; } if (pc >= .55) { return [ECH[1][0], false]; } if (pc >= .35) { return [ECH[2][0], false]; } if (pc >= .18) { return [ECH[3][0], true]; } return [ECH[4][0], true]; };
+    const cell = (v, rg, cls) => {
+      if (!cls && (!v || (!v.ca && !v.tickets))) { return { vide: true, cls: 'vide' }; }
+      const [f, clair] = cls ? ['', true] : teinte(v[col] || 0);
+      return { cls: (cls || '') + (clair ? ' clair' : ''), fond: f, rang: rg ? LAB[rg] : '', ca: fE(v.ca),
+        net: fS(v.res), netCls: clair ? (v.res >= 0 ? 'ok' : 'ko') : '', netPct: v.ca > 0 ? Math.round(100 * v.res / v.ca) + ' %' : '—',
+        clients: fI(v.tickets), part: cls === 'sem' && sem.ca > 0 ? Math.round(100 * v.ca / sem.ca) + ' %' : '' };
+    };
+    out.jours = dates.map(d => ({ nom: jourNom(d), date: fD(d) }));
+    out.lignes = B.map(b => ({ nom: b.nom, heures: b.de + ' – ' + b.a + ' h',
+      cases: dates.map(d => cell(P.jours[d][b.cle], rangs(d)[b.cle])).concat([cell(W[b.cle], 0, 'sem')]) }));
+    out.journee = dates.map(d => cell(J[d], 0, 'tot')).concat([cell(sem, 0, 'tot')]);
+    out.legende = ECH.map(e => ({ fond: e[0], lib: e[1] })).concat(col === 'res' ? [{ fond: '#f5d5d8', lib: 'perte' }] : []);
+    const meilleur = B.length ? B.reduce((mm, b) => W[b.cle].ca > W[mm.cle].ca ? b : mm) : null;
+    out.resume = B.map(b => b.nom.toLowerCase() + ' ' + b.de + ' – ' + b.a + ' h').join(' · ')
+      + (meilleur && sem.ca > 0 ? ' · la semaine se fait le ' + meilleur.nom.toLowerCase() + ' : ' + Math.round(100 * W[meilleur.cle].ca / sem.ca) + ' % des ventes' : '');
+    return out;
+  }
   valsResultatPeriode(common){
     const S = this.state, D = this.D;
     const vue = S.rjOnglet || 'semaine';
@@ -7912,6 +7972,8 @@ class App {
           obj: j.objectif == null ? '' : fE(j.objectif), clients: fCl(cl), col: coulEcart(ec), auj: !!j.aujourdhui };
       }),
     };
+    // Les périodes de la semaine — matin, midi, après-midi — de ce magasin.
+    if (vue === 'semaine') { common.rpDetail.periodes = this.rpPeriodes(m, r); }
   }
   /**
    * La semaine en cours du magasin ouvert dans le détail, en une ligne : une
