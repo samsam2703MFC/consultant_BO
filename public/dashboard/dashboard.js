@@ -1762,7 +1762,7 @@
       </div>
       <div class="db-axe" style="padding-top:8px"><span><i class="c" style="background:#e5c9a0"></i>coût matière &nbsp; <i class="c" style="background:#D97706"></i>rémunération &nbsp; <i class="c" style="background:#2d7a3e"></i>marge nette de l’heure &nbsp; <i class="c" style="background:#C0182B"></i>perte</span><span>hauteur de la barre = ventes · case : rouge &lt; 0 · orange &lt; 20 % des ventes · vert clair &lt; 40 % · vert ≥ 40 %</span></div></div>`;
     // La semaine par périodes — matin, midi, après-midi — sous la journée type.
-    if (S.vue === 'semaine' && st.periodes && st.periodes.jours) { h += rendPeriodes(st); }
+    if ((S.vue === 'semaine' || S.vue === 'mois') && st.periodes && st.periodes.jours) { h += rendPeriodes(st); }
     // Tableau + panneau.
     h += `<div class="db-g2">`;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Heure par heure — ventes − matière = marge brute · marge brute − rémunération = marge nette</span></div>
@@ -1785,17 +1785,37 @@
    */
   function rendPeriodes(st) {
     const P = st.periodes, B = P.bornes || [];
-    const dates = Object.keys(P.jours).sort();
+    const mois = S.vue === 'mois';
+    const jourDates = Object.keys(P.jours).sort();
+    // Au mois, les jours se regroupent par semaine (lundi → dimanche, bornée au
+    // mois) : quatre ou cinq colonnes lisibles plutôt que trente. Le rang se
+    // lit alors dans la semaine, et la colonne de droite totalise le mois.
+    let colonnes;
+    if (mois) {
+      const sem = {};
+      jourDates.forEach(d => { const t = new Date(d + 'T12:00:00'); const lundi = new Date(t); lundi.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const k = lundi.toISOString().slice(0, 10); (sem[k] = sem[k] || []).push(d); });
+      colonnes = Object.keys(sem).sort().map(k => ({ cle: k, dates: sem[k] }));
+    } else { colonnes = jourDates.map(d => ({ cle: d, dates: [d] })); }
+    const PJ = {};
+    colonnes.forEach(c => { PJ[c.cle] = {}; B.forEach(b => { const o = { ca: 0, tickets: 0, mb: 0, res: 0 }; c.dates.forEach(d => { const v = P.jours[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { o[k] += v[k] || 0; }); }); PJ[c.cle][b.cle] = o; }); });
+    const dates = colonnes.map(c => c.cle);
     const col = ['ca', 'res', 'tickets'].includes(S.perCol) ? S.perCol : 'ca';
     const NOM = { ca: 'CA', res: 'Marge nette', tickets: 'Clients' };
     const jourNom = d => { const t = new Date(d + 'T12:00:00'); const w = t.toLocaleDateString('fr-BE', { weekday: 'long' }); return w.charAt(0).toUpperCase() + w.slice(1); };
+    const enTete = c => {
+      if (!mois) { return `<div class="hd">${esc(jourNom(c.cle))}<small>${esc(fD(c.cle))}</small></div>`; }
+      const t = new Date(c.cle + 'T12:00:00'); const jeudi = new Date(t); jeudi.setDate(t.getDate() + 3);
+      const an1 = new Date(jeudi.getFullYear(), 0, 4); const num = 1 + Math.round(((jeudi - an1) / 86400000 - 3 + ((an1.getDay() + 6) % 7)) / 7);
+      const d1 = c.dates[0], d2 = c.dates[c.dates.length - 1];
+      return `<div class="hd">Sem. ${num}<small>${d1.slice(8, 10)} – ${fD(d2)}${c.dates.length < 7 ? ' · ' + c.dates.length + ' j' : ''}</small></div>`;
+    };
     const W = {}; B.forEach(b => { W[b.cle] = { ca: 0, tickets: 0, mb: 0, res: 0 }; });
     const J = {}; const sem = { ca: 0, tickets: 0, mb: 0, res: 0 };
-    dates.forEach(d => { J[d] = { ca: 0, tickets: 0, mb: 0, res: 0 }; B.forEach(b => { const v = P.jours[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { W[b.cle][k] += v[k] || 0; J[d][k] += v[k] || 0; sem[k] += v[k] || 0; }); }); });
-    const rangs = d => { const o = B.map(b => b.cle).sort((a, c) => (P.jours[d][c] || {}).ca - (P.jours[d][a] || {}).ca); const r = {}; o.forEach((k, i) => { r[k] = i + 1; }); return r; };
+    dates.forEach(d => { J[d] = { ca: 0, tickets: 0, mb: 0, res: 0 }; B.forEach(b => { const v = PJ[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { W[b.cle][k] += v[k] || 0; J[d][k] += v[k] || 0; sem[k] += v[k] || 0; }); }); });
+    const rangs = d => { const o = B.map(b => b.cle).sort((a, c) => (PJ[d][c] || {}).ca - (PJ[d][a] || {}).ca); const r = {}; o.forEach((k, i) => { r[k] = i + 1; }); return r; };
     const LAB = { 1: '1er', 2: '2e', 3: '3e' };
     // L'échelle : cinq paliers de la meilleure case de la semaine, sur le chiffre choisi.
-    const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (P.jours[d][b.cle] || {})[col] || 0)));
+    const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (PJ[d][b.cle] || {})[col] || 0)));
     const ECH = col === 'res'
       ? [['#1f5a2c', '≥ 80 % de la meilleure marge'], ['#2d7a3e', '55 – 80 %'], ['#6aa84f', '35 – 55 %'], ['#c9e0b8', '18 – 35 %'], ['#efe9e1', '< 18 %']]
       : [['#8D1D2C', '≥ 80 % de la meilleure case'], ['#C0182B', '55 – 80 %'], ['#F08A2C', '35 – 55 %'], ['#e8c9a0', '18 – 35 %'], ['#efe9e1', '< 18 %']];
@@ -1807,21 +1827,21 @@
       const [f, clair] = teinte(v[col] || 0);
       return `<div class="c${clair ? ' clair' : ''}" style="background:${f}${clair ? ';color:var(--color-text)' : ''}"><em>${LAB[rg] || ''}</em><b>${fK(v.ca)}</b>${kv(v, clair)}</div>`;
     };
-    let g = `<div></div>${dates.map(d => `<div class="hd">${esc(jourNom(d))}<small>${esc(fD(d))}</small></div>`).join('')}<div class="hd">Semaine</div>`;
+    let g = `<div></div>${colonnes.map(enTete).join('')}<div class="hd">${mois ? 'Mois' : 'Semaine'}</div>`;
     B.forEach(b => {
       g += `<div class="r">${esc(b.nom)}<small>${b.de} – ${b.a} h</small></div>`;
-      dates.forEach(d => { g += cell(P.jours[d][b.cle], rangs(d)[b.cle]); });
+      dates.forEach(d => { g += cell(PJ[d][b.cle], rangs(d)[b.cle]); });
       const w = W[b.cle];
-      g += `<div class="c sem"><b>${fK(w.ca)}</b><div class="kv"><span>de la semaine</span><span>${sem.ca > 0 ? fN(100 * w.ca / sem.ca) + ' %' : '—'}</span><span>marge nette</span><span>${net(w, true)} <span class="pc">${w.ca > 0 ? fN(100 * w.res / w.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(w.tickets)}</span></div></div>`;
+      g += `<div class="c sem"><b>${fK(w.ca)}</b><div class="kv"><span>${mois ? 'du mois' : 'de la semaine'}</span><span>${sem.ca > 0 ? fN(100 * w.ca / sem.ca) + ' %' : '—'}</span><span>marge nette</span><span>${net(w, true)} <span class="pc">${w.ca > 0 ? fN(100 * w.res / w.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(w.tickets)}</span></div></div>`;
     });
-    g += `<div class="r">Journée</div>${dates.map(d => `<div class="c tot"><b>${fK(J[d].ca)}</b>${kv(J[d], true)}</div>`).join('')}<div class="c tot"><b>${fK(sem.ca)}</b>${kv(sem, true)}</div>`;
+    g += `<div class="r">${mois ? 'Semaine' : 'Journée'}</div>${dates.map(d => `<div class="c tot"><b>${fK(J[d].ca)}</b>${kv(J[d], true)}</div>`).join('')}<div class="c tot"><b>${fK(sem.ca)}</b>${kv(sem, true)}</div>`;
     const bornesTxt = B.map(b => b.nom.toLowerCase() + ' ' + b.de + ' – ' + b.a + ' h').join(' · ');
     const meilleur = B.length ? B.reduce((m, b) => W[b.cle].ca > W[m.cle].ca ? b : m) : null;
     return `<div class="db-card"><div class="ct" data-perdrop="1" style="cursor:pointer"><span class="db-lab">Les périodes — matin, midi, après-midi</span>
-      <span class="db-mini">${bornesTxt}${meilleur && sem.ca > 0 ? ' · la semaine se fait le ' + esc(meilleur.nom.toLowerCase()) + ' : ' + fN(100 * W[meilleur.cle].ca / sem.ca) + ' % des ventes' : ''}</span>
+      <span class="db-mini">${bornesTxt}${meilleur && sem.ca > 0 ? ' · ' + (mois ? 'le mois' : 'la semaine') + ' se fait le ' + esc(meilleur.nom.toLowerCase()) + ' : ' + fN(100 * W[meilleur.cle].ca / sem.ca) + ' % des ventes' : ''}</span>
       <span class="db-cdr" style="padding:0;margin-left:8px">${S.perOuvert ? 'replier ▴' : 'voir les périodes ▾'}</span></div>
-      ${S.perOuvert ? `<div class="ct" style="border-top:none;padding-top:10px;padding-bottom:0"><span class="db-lab">Colorer par</span><div class="db-ong" style="margin-left:8px">${['ca', 'res', 'tickets'].map(k => `<button data-percol="${k}" class="${col === k ? 'on' : ''}">${NOM[k]}</button>`).join('')}</div><span class="db-mini">le rang dans la case : la place de la période dans sa journée, au CA</span></div>
-      <div class="db-per">${g}</div>
+      ${S.perOuvert ? `<div class="ct" style="border-top:none;padding-top:10px;padding-bottom:0"><span class="db-lab">Colorer par</span><div class="db-ong" style="margin-left:8px">${['ca', 'res', 'tickets'].map(k => `<button data-percol="${k}" class="${col === k ? 'on' : ''}">${NOM[k]}</button>`).join('')}</div><span class="db-mini">le rang dans la case : la place de la période dans ${mois ? 'sa semaine' : 'sa journée'}, au CA</span></div>
+      <div class="db-per" style="grid-template-columns:104px repeat(${dates.length},minmax(0,1fr)) 150px">${g}</div>
       <div class="db-perleg">${ECH.map(e => `<span><i style="background:${e[0]}"></i>${e[1]}</span>`).join('')}${col === 'res' ? '<span><i style="background:#f5d5d8"></i>perte</span>' : ''}<span>· les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>` : ''}</div>`;
   }
   function rendPanneau(st, l, moy, nJ) {

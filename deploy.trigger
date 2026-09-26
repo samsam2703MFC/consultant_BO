@@ -441,3 +441,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-26T17:39:36Z résultat semaine : le libellé cède, jamais le chiffre
 2026-09-26T17:41:59Z résultat semaine : libellés courts des périodes
 2026-09-26T17:49:05Z résultat mois : les périodes semaine par semaine
+2026-09-26T17:53:21Z dashboard mois : les périodes semaine par semaine
