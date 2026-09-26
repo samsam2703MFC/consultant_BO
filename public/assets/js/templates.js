@@ -4122,7 +4122,7 @@ function tplPeriodes(g, x){
   const { esc } = x;
   const cap = 'font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
   const cell = k => k.vide ? `<div class="c vide"><b>—</b><div class="kv"><span>aucune vente</span><span></span></div></div>`
-    : `<div class="c ${k.cls}"${k.fond ? ` style="background:${k.fond}"` : ''}>${k.rang ? `<em>${k.rang}</em>` : ''}<b>${esc(k.ca)}</b><div class="kv">${k.part ? `<span>de la semaine</span><span>${k.part}</span>` : ''}<span>marge nette</span><span><span class="${k.netCls}">${esc(k.net)}</span> <span class="pc">${esc(k.netPct)}</span></span><span>clients</span><span>${esc(k.clients)}</span></div></div>`;
+    : `<div class="c ${k.cls}"${k.fond ? ` style="background:${k.fond}"` : ''}>${k.rang ? `<em>${k.rang}</em>` : ''}<b>${esc(k.ca)}</b><div class="kv">${k.part ? `<span>semaine</span><span>${k.part}</span>` : ''}<span title="marge nette et sa part des ventes">marge</span><span><span class="${k.netCls}">${esc(k.net)}</span> <span class="pc">${esc(k.netPct)}</span></span><span>clients</span><span>${esc(k.clients)}</span></div></div>`;
   return `
     <div style="margin-top:18px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">

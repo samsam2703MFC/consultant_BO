@@ -439,3 +439,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-26T17:29:51Z résultat semaine : les périodes dans le drop du magasin
 2026-09-26T17:37:07Z résultat semaine : cases des périodes sans rognage
 2026-09-26T17:39:36Z résultat semaine : le libellé cède, jamais le chiffre
+2026-09-26T17:41:59Z résultat semaine : libellés courts des périodes
