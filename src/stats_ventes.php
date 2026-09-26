@@ -233,6 +233,41 @@ function svLigneHeure(array $r): ?array
 }
 
 /**
+ * Les trois périodes de la journée — matin, midi, après-midi — jour par jour.
+ *
+ * Bornes du réseau : matin 6 – 10 h, midi 11 – 14 h, après-midi 15 – 19 h.
+ * Ce qui se vend avant 6 h compte dans le matin, ce qui se vend après 19 h
+ * dans l'après-midi : une vente ne tombe jamais entre deux périodes. Par
+ * période et par jour : ventes, clients, marge brute, marge nette — les mêmes
+ * chiffres que les heures, additionnés.
+ *
+ * @param array<string,array<string,array>> $heures  [date => [h => ligne]]
+ */
+function svPeriodes(array $heures): array
+{
+    $bornes = [['matin', 'Matin', 6, 10], ['midi', 'Midi', 11, 14], ['aprem', 'Après-midi', 15, 19]];
+    $de = static function (int $h) use ($bornes): string {
+        foreach ($bornes as $b) { if ($h >= $b[2] && $h <= $b[3]) { return $b[0]; } }
+        return $h < $bornes[0][2] ? $bornes[0][0] : $bornes[2][0];
+    };
+    $vide = static fn () => ['ca' => 0.0, 'tickets' => 0, 'mb' => 0.0, 'res' => 0.0];
+    $jours = [];
+    ksort($heures);
+    foreach ($heures as $date => $hs) {
+        $j = ['matin' => $vide(), 'midi' => $vide(), 'aprem' => $vide()];
+        foreach ($hs as $l) {
+            $k = $de((int) $l['h']);
+            $j[$k]['ca'] += (float) $l['ca']; $j[$k]['tickets'] += (int) $l['tickets'];
+            $j[$k]['mb'] += (float) $l['ca'] - (float) $l['mat']; $j[$k]['res'] += (float) $l['marge'];
+        }
+        foreach ($j as &$x) { $x['ca'] = round($x['ca'], 2); $x['mb'] = round($x['mb'], 2); $x['res'] = round($x['res'], 2); }
+        unset($x);
+        $jours[(string) $date] = $j;
+    }
+    return ['bornes' => array_map(static fn ($b) => ['cle' => $b[0], 'nom' => $b[1], 'de' => $b[2], 'a' => $b[3]], $bornes), 'jours' => $jours];
+}
+
+/**
  * Les heures de plusieurs jours d'un magasin — [date => [h => ligne]] ; un jour
  * muet est absent. Les jours clos gravés ne se relisent pas.
  */
@@ -502,6 +537,7 @@ function ep_stats_ventes(): array
             'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
         'heures' => $lignes, 'categories' => $catsT, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'periodes' => svPeriodes($heures),
         'meilleure' => $meilleure ? ['h' => $meilleure['h'], 'res' => $meilleure['res'], 'moy' => $meilleure['moy']['res']] : null,
         'pire' => $pire ? ['h' => $pire['h'], 'res' => $pire['res'], 'moy' => $pire['moy']['res']] : null,
         'source' => ['heures' => 'panel hourly-distribution (ventes, matière, personnel, marge de l’heure)',

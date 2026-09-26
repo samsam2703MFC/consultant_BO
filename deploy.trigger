@@ -434,3 +434,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-24T10:00:00Z dashboard basculeur liste treemap ventes par categorie
 2026-09-26T07:17:24Z Brand Guard en production : charte, pages, verdict, cron quotidien
 2026-09-26T07:25:24Z Brand Guard : secrets Meta dans config.php
+2026-09-26T17:14:05Z dashboard : les périodes de la semaine (matin, midi, après-midi)

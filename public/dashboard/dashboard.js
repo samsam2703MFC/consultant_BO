@@ -16,7 +16,7 @@
   const q = new URLSearchParams(location.search);
   const S = { shop: q.get('shop') || '4', vue: ['jour', 'semaine', 'mois', 'trimestre', 'annee', 'actions'].includes(q.get('vue')) ? q.get('vue') : 'jour',
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     stockOuvert: false, stockVues: null, cmdOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
@@ -1761,6 +1761,8 @@
         <div class="lab">Marge nette<br><span>marge brute − rémunération</span></div>${cases}
       </div>
       <div class="db-axe" style="padding-top:8px"><span><i class="c" style="background:#e5c9a0"></i>coût matière &nbsp; <i class="c" style="background:#D97706"></i>rémunération &nbsp; <i class="c" style="background:#2d7a3e"></i>marge nette de l’heure &nbsp; <i class="c" style="background:#C0182B"></i>perte</span><span>hauteur de la barre = ventes · case : rouge &lt; 0 · orange &lt; 20 % des ventes · vert clair &lt; 40 % · vert ≥ 40 %</span></div></div>`;
+    // La semaine par périodes — matin, midi, après-midi — sous la journée type.
+    if (S.vue === 'semaine' && st.periodes && st.periodes.jours) { h += rendPeriodes(st); }
     // Tableau + panneau.
     h += `<div class="db-g2">`;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Heure par heure — ventes − matière = marge brute · marge brute − rémunération = marge nette</span></div>
@@ -1771,6 +1773,56 @@
     h += rendPanneau(st, sel, moy, nJ);
     h += `</div>`;
     return h;
+  }
+  /**
+   * Les périodes de la semaine : une grille jour × période (matin 6 – 10 h,
+   * midi 11 – 14 h, après-midi 15 – 19 h). Chaque case dit ses trois chiffres
+   * — ventes, marge nette et sa part des ventes, clients — et porte son rang
+   * dans la journée, au CA. La couleur suit le chiffre choisi (CA, marge
+   * nette ou clients), par rapport à la meilleure case de la semaine ; le
+   * rang, lui, reste au CA. Repliée par défaut : la journée type suffit à qui
+   * ne cherche pas la période.
+   */
+  function rendPeriodes(st) {
+    const P = st.periodes, B = P.bornes || [];
+    const dates = Object.keys(P.jours).sort();
+    const col = ['ca', 'res', 'tickets'].includes(S.perCol) ? S.perCol : 'ca';
+    const NOM = { ca: 'CA', res: 'Marge nette', tickets: 'Clients' };
+    const jourNom = d => { const t = new Date(d + 'T12:00:00'); const w = t.toLocaleDateString('fr-BE', { weekday: 'long' }); return w.charAt(0).toUpperCase() + w.slice(1); };
+    const W = {}; B.forEach(b => { W[b.cle] = { ca: 0, tickets: 0, mb: 0, res: 0 }; });
+    const J = {}; const sem = { ca: 0, tickets: 0, mb: 0, res: 0 };
+    dates.forEach(d => { J[d] = { ca: 0, tickets: 0, mb: 0, res: 0 }; B.forEach(b => { const v = P.jours[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { W[b.cle][k] += v[k] || 0; J[d][k] += v[k] || 0; sem[k] += v[k] || 0; }); }); });
+    const rangs = d => { const o = B.map(b => b.cle).sort((a, c) => (P.jours[d][c] || {}).ca - (P.jours[d][a] || {}).ca); const r = {}; o.forEach((k, i) => { r[k] = i + 1; }); return r; };
+    const LAB = { 1: '1er', 2: '2e', 3: '3e' };
+    // L'échelle : cinq paliers de la meilleure case de la semaine, sur le chiffre choisi.
+    const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (P.jours[d][b.cle] || {})[col] || 0)));
+    const ECH = col === 'res'
+      ? [['#1f5a2c', '≥ 80 % de la meilleure marge'], ['#2d7a3e', '55 – 80 %'], ['#6aa84f', '35 – 55 %'], ['#c9e0b8', '18 – 35 %'], ['#efe9e1', '< 18 %']]
+      : [['#8D1D2C', '≥ 80 % de la meilleure case'], ['#C0182B', '55 – 80 %'], ['#F08A2C', '35 – 55 %'], ['#e8c9a0', '18 – 35 %'], ['#efe9e1', '< 18 %']];
+    const teinte = v => { const p = v / mx; if (col === 'res' && v < 0) { return ['#f5d5d8', true]; } if (p >= .8) { return [ECH[0][0], false]; } if (p >= .55) { return [ECH[1][0], false]; } if (p >= .35) { return [ECH[2][0], false]; } if (p >= .18) { return [ECH[3][0], true]; } return [ECH[4][0], true]; };
+    const net = (v, clair) => `<span class="${clair ? (v.res >= 0 ? 'ok' : 'ko') : ''}">${fSK(v.res)}</span>`;
+    const kv = (v, clair) => `<div class="kv"><span>marge nette</span><span>${net(v, clair)} <span class="pc">${v.ca > 0 ? fN(100 * v.res / v.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(v.tickets)}</span></div>`;
+    const cell = (v, rg) => {
+      if (!v || (!v.ca && !v.tickets)) { return `<div class="c vide"><b>—</b><div class="kv"><span>aucune vente</span><span></span></div></div>`; }
+      const [f, clair] = teinte(v[col] || 0);
+      return `<div class="c${clair ? ' clair' : ''}" style="background:${f}${clair ? ';color:var(--color-text)' : ''}"><em>${LAB[rg] || ''}</em><b>${fK(v.ca)}</b>${kv(v, clair)}</div>`;
+    };
+    let g = `<div></div>${dates.map(d => `<div class="hd">${esc(jourNom(d))}<small>${esc(fD(d))}</small></div>`).join('')}<div class="hd">Semaine</div>`;
+    B.forEach(b => {
+      g += `<div class="r">${esc(b.nom)}<small>${b.de} – ${b.a} h</small></div>`;
+      dates.forEach(d => { g += cell(P.jours[d][b.cle], rangs(d)[b.cle]); });
+      const w = W[b.cle];
+      g += `<div class="c sem"><b>${fK(w.ca)}</b><div class="kv"><span>${sem.ca > 0 ? fN(100 * w.ca / sem.ca) + ' % · ' : ''}marge nette</span><span>${net(w, true)} <span class="pc">${w.ca > 0 ? fN(100 * w.res / w.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(w.tickets)}</span></div></div>`;
+    });
+    g += `<div class="r">Journée</div>${dates.map(d => `<div class="c tot"><b>${fK(J[d].ca)}</b>${kv(J[d], true)}</div>`).join('')}<div class="c tot"><b>${fK(sem.ca)}</b>${kv(sem, true)}</div>`;
+    const bornesTxt = B.map(b => b.nom.toLowerCase() + ' ' + b.de + ' – ' + b.a + ' h').join(' · ');
+    const meilleur = B.length ? B.reduce((m, b) => W[b.cle].ca > W[m.cle].ca ? b : m) : null;
+    return `<div class="db-card"><div class="ct" data-perdrop="1" style="cursor:pointer"><span class="db-lab">Les périodes — matin, midi, après-midi</span>
+      <span class="db-mini">${bornesTxt}${meilleur && sem.ca > 0 ? ' · la semaine se fait le ' + esc(meilleur.nom.toLowerCase()) + ' : ' + fN(100 * W[meilleur.cle].ca / sem.ca) + ' % des ventes' : ''}</span>
+      <span class="db-cdr" style="padding:0;margin-left:8px">${S.perOuvert ? 'replier ▴' : 'voir les périodes ▾'}</span></div>
+      ${S.perOuvert ? `<div class="ct" style="border-top:none;padding-top:10px;padding-bottom:0"><span class="db-lab">Colorer par</span><div class="db-ong" style="margin-left:8px">${['ca', 'res', 'tickets'].map(k => `<button data-percol="${k}" class="${col === k ? 'on' : ''}">${NOM[k]}</button>`).join('')}</div><span class="db-mini">le rang dans la case : la place de la période dans sa journée, au CA</span></div>
+      <div class="db-per">${g}</div>
+      <div class="db-perleg">${ECH.map(e => `<span><i style="background:${e[0]}"></i>${e[1]}</span>`).join('')}${col === 'res' ? '<span><i style="background:#f5d5d8"></i>perte</span>' : ''}<span>· les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>` : ''}</div>`;
   }
   function rendPanneau(st, l, moy, nJ) {
     const V = moy ? l.moy.ca : l.ca, M = moy ? l.moy.mat : l.mat, MB = V - M, T = moy ? l.moy.trav : l.trav, R = MB - T;
@@ -1834,6 +1886,8 @@
     $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
+    $.querySelectorAll('[data-perdrop]').forEach(b => b.addEventListener('click', () => { S.perOuvert = !S.perOuvert; rendre(); }));
+    $.querySelectorAll('[data-percol]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.perCol = b.dataset.percol; rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
