@@ -34,6 +34,16 @@ return [
     // réglage Paramètres, puis cette valeur, puis GOOGLE_API_KEY.
     'googleApiKey' => getenv('GOOGLE_API_KEY') ?: null,
 
+    // Brand Guard — accès Meta (lecture seule des pages Facebook du réseau).
+    // Les trois valeurs viennent du Business Manager et de l'app Meta (voir
+    // docs/brand-guard.md). Les variables d'environnement priment.
+    'meta' => [
+        'systemToken'  => getenv('META_SYSTEM_TOKEN') ?: null,   // token longue durée du System User
+        'appSecret'    => getenv('META_APP_SECRET') ?: null,     // Paramètres de l'app → De base → Clé secrète
+        'verifyToken'  => getenv('META_VERIFY_TOKEN') ?: null,   // chaîne libre, la même dans l'abonnement webhook
+        'graphVersion' => 'v21.0',
+    ],
+
     // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.
