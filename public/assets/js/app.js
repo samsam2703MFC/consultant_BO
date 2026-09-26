@@ -7820,13 +7820,13 @@ class App {
     const record = passes.length ? passes.reduce((a, b) => b.ca > a.ca ? b : a) : null;
     const tuiles = [
       { k: 'CA du mois', v: fK(m.realise), s: sansO ? 'pas d’objectif' : 'objectif ' + fK(m.objectif) + ' · attendu ' + fK(m.attendu), cls: '' },
-      { k: 'Atteinte à ce jour', v: sansO ? '—' : Math.round(pc(m.realise, m.attendu)) + ' %', s: sansO ? '' : fSK(m.ecart) + ' · ' + fI(m.clientsManquants) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), cls: sansO ? '' : (m.ecart < 0 ? 'bad' : 'good') },
-      { k: 'Projection fin de mois', v: proj == null ? '—' : fK(proj), s: proj == null ? '' : 'au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', cls: proj == null ? '' : (proj < m.objectif ? 'bad' : 'good') },
+      { k: 'Atteinte', v: sansO ? '—' : Math.round(pc(m.realise, m.attendu)) + ' %', s: sansO ? '' : 'à ce jour · ' + fSK(m.ecart) + ' · ' + fI(m.clientsManquants) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), cls: sansO ? '' : (m.ecart < 0 ? 'bad' : 'good') },
+      { k: 'Projection', v: proj == null ? '—' : fK(proj), s: proj == null ? '' : 'fin de mois au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', cls: proj == null ? '' : (proj < m.objectif ? 'bad' : 'good') },
       { k: 'Reste à faire', v: sansO ? '—' : fK(m.reste), s: sansO ? '' : (restants.length ? restants.length + ' jours · ' + fK(m.reste / restants.length) + ' par jour' : 'mois clos'), cls: '' },
       { k: 'Par jour ouvert', v: fE(m.realise / nJ), s: fI(m.tickets / nJ) + ' clients · panier ' + (m.panier || 0).toFixed(2).replace('.', ',') + ' €', cls: '' },
       { k: 'Marge brute', v: m.margeBrutePct != null ? Math.round(m.margeBrutePct) + ' %' : '—', s: fK(m.margeBrute || 0) + ' · matière ' + Math.round(m.coutMatierePct || 0) + ' % (seuil ' + Math.round((r.seuils || {}).food || 32) + ')', cls: '' },
       { k: 'Résultat net', v: m.net == null ? '—' : fK(m.net), s: m.netPct == null ? '' : m.netPct.toFixed(1).replace('.', ',') + ' % des ventes', cls: m.net == null ? '' : (m.net >= 0 ? 'good' : 'bad') },
-      { k: 'Record du mois', v: record ? fE(record.ca) : '—', s: record ? record.court + ' · ' + record.tickets + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) - 100 >= 0 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', cls: 'gold' },
+      { k: 'Record', v: record ? fE(record.ca) : '—', s: record ? record.court + ' · ' + record.tickets + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) - 100 >= 0 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', cls: 'gold' },
     ];
     // Le calendrier : couleur = atteinte de l'objectif du jour.
     const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#8D1D2C', false] : a >= 100 ? ['#2d7a3e', false] : a >= 90 ? ['#6aa84f', false] : a >= 75 ? ['#F08A2C', false] : ['#e8c9a0', true]; };
