@@ -54,7 +54,9 @@ export const ENDPOINTS = {
   prodCategories: '/production/categories',
   prodPeriodes:   '/production/periodes',
   fbRegles:       '/referentiels/facebook-regles',
-  fbPosts:        '/facebook/posts'
+  fbPosts:        '/facebook/posts',
+  bgStats:        '/marketing/brand-guard/stats',
+  bgPages:        '/marketing/brand-guard/pages'
 };
 
 /* --- Chronométrage des appels ---------------------------------------------
@@ -267,7 +269,9 @@ function shape(p, source){
       prodCategories: (p.prodCategories || {}).categories || [],
       prodPeriodes: (p.prodPeriodes || {}).periodes || [],
       roles: (p.roles || {}).roles || [],
-      fbPosts: p.fbPosts || []
+      fbPosts: p.fbPosts || [],
+      bgStats: p.bgStats || null,
+      bgPages: p.bgPages || null
     })
   };
 }
@@ -336,6 +340,6 @@ function emptyPayload(){
     prodCatalogue: [], prodGroupes: { groupes: [] }, prodCategories: { categories: [] },
     prodPeriodes: { periodes: [] },
     roles: { source: null, roles: [] },
-    fbRegles: { seuil: 4, familles: [], regles: [] }, fbPosts: []
+    fbRegles: { seuil: 4, familles: [], regles: [] }, fbPosts: [], bgStats: null, bgPages: null
   };
 }

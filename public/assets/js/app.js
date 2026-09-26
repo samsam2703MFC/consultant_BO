@@ -165,6 +165,8 @@ class App {
       // Contrôle des posts Facebook : filtres de l'écran, brouillon de décision
       // par post (`fbVal`, envoyé au clic seulement) et modale de soumission.
       fbStore: 'tous', fbEtat: 'À traiter', fbVal: {}, fbNew: null,
+      // Brand Guard : la période du tableau de bord (7, 30, 90 jours).
+      bgJours: 30,
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
@@ -252,6 +254,9 @@ class App {
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
+      // Le contrôle des posts Facebook (Brand Guard) : sans adresse, l'écran
+      // ne se rouvrait pas depuis un lien.
+      posts: 'controle-posts-facebook',
     };
   }
   /**
@@ -12041,6 +12046,8 @@ class App {
       if (this.state.suiviPeriode !== periode) { return; }
       this.setState({ suiviData: d || { periode, validees: 0, moyenne: null, repartition: {}, ouverts: 0, traites: 0, signalements: [], parIntervenant: [], taches: [] } });
     });
+  }
+
   /* --- contrôle des posts Facebook -------------------------------------------------- */
   valsPosts(common){
     const S = this.state, D = this.D, M = this.M;
@@ -12237,6 +12244,50 @@ class App {
     common.fbEchelle = (((M.SIGNAL || {}).niveaux) || []).map(l => ({ n: l.n, nom: l.nom, aide: l.aide,
       numSt: 'width:17px;height:17px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:' + l.couleur,
       nomSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }));
+
+    // --- Brand Guard : la charte relue par le modèle, les pages, les chiffres.
+    //     Les chiffres viennent du serveur (/marketing/brand-guard/stats) ;
+    //     rien ne se recalcule ici, le rapport du lundi lit les mêmes.
+    const bgS = D.bgStats, bgP = D.bgPages;
+    const per = bgS && bgS.periodes ? (bgS.periodes[String(S.bgJours)] || bgS.periodes['30']) : null;
+    const sCoul = v => v == null ? '#666666' : v >= 90 ? '#2d7a3e' : v >= 75 ? '#D97706' : '#C0182B';
+    common.bg = {
+      absent: !bgS,
+      version: bgS ? bgS.charteVersion : '—',
+      claude: !!(bgS && bgS.anthropic && bgS.anthropic.configure),
+      meta: !!(bgS && bgS.meta && bgS.meta.configure),
+      etatTxt: !bgS ? 'Brand Guard injoignable.'
+        : (bgS.anthropic && bgS.anthropic.configure ? 'Charte relue par ' + bgS.anthropic.modele : 'Sans clé Anthropic : règles mécaniques seules')
+          + ' · ' + (bgS.meta && bgS.meta.configure ? 'Meta connecté (' + bgS.meta.version + ')' : 'Meta non connecté — META_SYSTEM_TOKEN absent'),
+      periodes: [7, 30, 90].map(j => ({ j, nom: j + ' j', on: S.bgJours === j, go: () => this.setState({ bgJours: j }),
+        st: 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 10px;'
+          + (S.bgJours === j ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)') })),
+      controles: per ? per.controles : 0,
+      taux: per && per.tauxConformite != null ? per.tauxConformite + ' %' : '—', tauxCoul: sCoul(per ? per.tauxConformite : null),
+      score: per && per.scoreMoyen != null ? per.scoreMoyen + '/100' : '—', scoreCoul: sCoul(per ? per.scoreMoyen : null),
+      sauvages: per ? per.sauvages : 0, sauvagesCoul: per && per.sauvages ? '#C0182B' : '#2d7a3e',
+      boutiques: per ? per.boutiques.map(b => ({ nom: b.boutique || '—', n: b.controles,
+        taux: b.tauxConformite != null ? b.tauxConformite + ' %' : '—', tauxCoul: sCoul(b.tauxConformite),
+        score: b.scoreMoyen != null ? b.scoreMoyen : '—', sauvages: b.sauvages,
+        sauvagesSt: 'font-size:11px;font-weight:600;color:' + (b.sauvages ? '#C0182B' : 'var(--color-text-muted)'),
+        top: (b.topRegles || []).map(r => r.libelle + ' (' + r.n + ')').join(' · ') })) : [],
+      topRegles: per ? (per.topRegles || []).map(r => ({ nom: r.libelle, n: r.n })) : [],
+      pages: bgP && bgP.pages ? bgP.pages.map(p => ({ nom: p.boutique, franchise: p.franchise || '', url: p.pageUrl,
+        etat: p.statut === 'connectee' ? 'Connectée' : p.statut === 'erreur' ? 'Erreur' : 'À connecter',
+        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
+          + (p.statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : p.statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        detail: p.erreur || (p.derniereSync ? 'lu le ' + p.derniereSync.slice(0, 16) : (p.pageId ? 'id ' + p.pageId : 'URL à saisir')) })) : [],
+      // Résoudre : chaque URL devient un page_id — le serveur fait l'appel, le token ne quitte pas le serveur.
+      resoudre: async () => {
+        this.notify('Résolution des pages en cours…');
+        const r = await this.api('PUT', '/marketing/brand-guard/pages', { resoudre: true });
+        if (r && r.pages) { D.bgPages = r; }
+        const res = r && r.resolution;
+        this.notify(res && res.motif ? res.motif : res ? (res.pages || []).filter(x => x.ok).length + ' page(s) résolue(s) sur ' + (res.pages || []).length : 'Résolution impossible');
+        this.forceUpdate();
+      },
+      resoudreSt: 'border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;padding:5px 11px;border-radius:999px',
+    };
 
     // --- modale de soumission (un post arrive normalement du magasin ;
     //     ici, de quoi en soumettre un et voir l'agent travailler)

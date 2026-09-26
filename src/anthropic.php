@@ -147,6 +147,74 @@ final class Anthropic
         ];
     }
 
+    /**
+     * Le verdict Brand Guard : un post (texte + jusqu'à dix images) jugé
+     * contre la charte, en sortie STRUCTURÉE.
+     *
+     * Trois choix : la charte part en `system` avec `cache_control` — elle est
+     * longue, identique d'un post à l'autre, elle ne se repaie pas à chaque
+     * appel ; le verdict est FORCÉ par un outil (`tool_choice`), donc jamais
+     * lu dans du texte libre ; et la règle de décision n'est pas ici — le
+     * code appelant la réapplique sur les écarts rendus.
+     *
+     * @param list<string|array{data:string,mime:string}> $images  URL http(s) ou octets
+     * @return array  le verdict de l'outil (+ `modele`), ou ['erreur' => …]
+     */
+    public static function verdict(string $system, string $texte, array $images, string $boutique = ''): array
+    {
+        $c = self::config();
+        if ($c['cle'] === '') { return ['erreur' => 'clé Anthropic absente']; }
+        $contenu = [];
+        foreach (array_slice($images, 0, 10) as $img) {
+            if (is_array($img) && isset($img['data'])) {
+                $contenu[] = ['type' => 'image', 'source' => ['type' => 'base64',
+                    'media_type' => (string) ($img['mime'] ?? 'image/jpeg'), 'data' => base64_encode((string) $img['data'])]];
+            } elseif (is_string($img) && preg_match('#^https?://#i', $img)) {
+                $contenu[] = ['type' => 'image', 'source' => ['type' => 'url', 'url' => $img]];
+            }
+        }
+        $contenu[] = ['type' => 'text', 'text' => 'Boutique : ' . ($boutique !== '' ? $boutique : '(non précisée)')
+            . "\nTexte du post :\n" . ($texte !== '' ? $texte : '(aucun texte)')];
+        $outil = [
+            'name' => 'verdict',
+            'description' => "Rend le verdict de conformité d'un post à la charte.",
+            'input_schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'statut' => ['type' => 'string', 'enum' => ['conforme', 'a_corriger', 'bloque']],
+                    'score' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
+                    'ecarts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'regle' => ['type' => 'string', 'description' => 'Code de la règle de la charte, tel quel'],
+                        'gravite' => ['type' => 'string', 'enum' => ['bloquant', 'majeur', 'mineur']],
+                        'constat' => ['type' => 'string'],
+                        'correction' => ['type' => 'string', 'description' => 'Consigne claire et exécutable pour le franchisé'],
+                    ], 'required' => ['regle', 'gravite', 'constat', 'correction']]],
+                    'message_franchise' => ['type' => 'string', 'description' => '2-3 phrases directes adressées au franchisé'],
+                ],
+                'required' => ['statut', 'score', 'ecarts', 'message_franchise'],
+            ],
+        ];
+        $corps = [
+            'model' => $c['modele'],
+            'max_tokens' => 1500,
+            'system' => [['type' => 'text', 'text' => $system, 'cache_control' => ['type' => 'ephemeral']]],
+            'tools' => [$outil],
+            'tool_choice' => ['type' => 'tool', 'name' => 'verdict'],
+            'messages' => [['role' => 'user', 'content' => $contenu]],
+        ];
+        [$code, $rep] = self::http($corps, $c['cle']);
+        if ($code < 200 || $code >= 300) {
+            $det = is_array($rep) ? (string) ($rep['error']['message'] ?? json_encode($rep, JSON_UNESCAPED_UNICODE)) : '';
+            return ['erreur' => 'API Anthropic → HTTP ' . $code . ($det !== '' ? ' : ' . substr($det, 0, 240) : '')];
+        }
+        foreach (($rep['content'] ?? []) as $b) {
+            if (($b['type'] ?? '') === 'tool_use' && is_array($b['input'] ?? null)) {
+                return $b['input'] + ['modele' => $c['modele']];
+            }
+        }
+        return ['erreur' => 'le modèle n’a pas rendu de verdict structuré'];
+    }
+
     /** POST /v1/messages. La clé part en en-tête, jamais dans une URL ni un log. */
     private static function http(array $corps, string $cle): array
     {

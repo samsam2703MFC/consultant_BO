@@ -4867,7 +4867,48 @@ function tplPosts(c, x){
 
     <div style="display:flex;flex-direction:column;gap:14px">
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px">
-        <div style="font-size:13px;font-weight:500">Règles de l'agent</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:13px;font-weight:500">Brand Guard — charte</div>
+          <span style="font-size:10px;color:var(--color-text-muted);margin-left:auto">charte ${esc(c.bg.version)}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.45;text-wrap:pretty">${esc(c.bg.etatTxt)}</div>
+        ${c.bg.absent ? '' : `
+        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin-top:11px">
+          ${c.bg.periodes.map(p => `<button ${x.A(p.go)} style="${p.st}">${p.nom}</button>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+          <div><div style="${dcap}">Contrôles</div><div style="font-size:16px;font-weight:500">${c.bg.controles}</div></div>
+          <div><div style="${dcap}">Conformité</div><div style="font-size:16px;font-weight:500;color:${c.bg.tauxCoul}">${c.bg.taux}</div></div>
+          <div><div style="${dcap}">Score</div><div style="font-size:16px;font-weight:500;color:${c.bg.scoreCoul}">${c.bg.score}</div></div>
+          <div><div style="${dcap}">Sauvages</div><div style="font-size:16px;font-weight:500;color:${c.bg.sauvagesCoul}">${c.bg.sauvages}</div></div>
+        </div>
+        ${c.bg.boutiques.length ? `
+        <div style="margin-top:10px">
+          ${c.bg.boutiques.map(b => `
+            <div style="display:flex;align-items:baseline;gap:8px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:500">${esc(b.nom)}</span>
+              <span style="font-size:10.5px;color:var(--color-text-muted)">${b.n} contrôle${b.n > 1 ? 's' : ''}</span>
+              <span style="font-size:11px;font-weight:600;color:${b.tauxCoul};margin-left:auto">${b.taux}</span>
+              <span style="font-size:11px;color:var(--color-text-muted)">${b.score}</span>
+              <span style="${b.sauvagesSt}">${b.sauvages} sauvage${b.sauvages > 1 ? 's' : ''}</span>
+              ${b.top ? `<div style="flex-basis:100%;font-size:10.5px;color:var(--color-text-muted);line-height:1.4">${esc(b.top)}</div>` : ''}
+            </div>`).join('')}
+        </div>` : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Aucun contrôle sur la période.</div>`}
+        ${c.bg.topRegles.length ? `<div style="margin-top:10px"><div style="${dcap}">Règles les plus violées</div>${c.bg.topRegles.map(r => `<div style="font-size:11.5px;padding:3px 0">${esc(r.nom)} <span style="color:var(--color-text-muted)">· ${r.n}</span></div>`).join('')}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:13px">
+          <span style="${dcap}">Pages Facebook</span>
+          <button ${x.A(c.bg.resoudre)} style="${c.bg.resoudreSt};margin-left:auto">Résoudre les pages</button>
+        </div>
+        ${c.bg.pages.map(p => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:500">${esc(p.nom)}</span>
+            <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(p.franchise)}</span>
+            <span style="${p.etatSt};margin-left:auto">${p.etat}</span>
+            <div style="flex-basis:100%;font-size:10.5px;color:var(--color-text-muted);line-height:1.4;overflow-wrap:anywhere">${esc(p.detail)}</div>
+          </div>`).join('')}`}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:500">Règles mécaniques de l'agent</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.45;text-wrap:pretty">${esc(c.fbSeuilTxt)}</div>
         ${c.fbRegleFams.map(f => `
           <div style="margin-top:13px">

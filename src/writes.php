@@ -877,6 +877,46 @@ function fbEnregistrerControle(array $row): array
     }
     journalAdd('Agent de contrôle', 'Contrôle', $row['shop_name'] ?? '—',
         'Post « ' . fbTitre($row['message']) . ' » contrôlé — ' . $res['note'] . '/5 · ' . $res['resume']);
+
+    // Brand Guard : la charte, texte et visuels, par-dessus les règles
+    // mécaniques. Ses écarts rejoignent la liste du post, préfixés « bg: » ;
+    // un verdict BLOQUÉ refuse la demande au nom de l'agent — elle ne part
+    // pas, le franchisé corrige et resoumet, le franchiseur peut forcer.
+    if (function_exists('bgControlerDemande')) {
+        try {
+            $bg = bgControlerDemande($row);
+            $res['brandGuard'] = $bg;
+            $ajout = 0;
+            foreach ($bg['ecarts'] as $e) {
+                if (($e['moteur'] ?? '') !== 'claude') { continue; }
+                Db::exec('INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                    [$row['id'], 'bg:' . $e['regle'], $e['libelle'], $e['famille'], $e['libelle'],
+                        BG_GRAVITES[$e['gravite']] ?? 1, mb_substr($e['constat'] . ($e['correction'] !== '' ? ' → ' . $e['correction'] : ''), 0, 400),
+                        null, in_array('bg:' . $e['regle'], $ignores, true) ? 'ignore' : 'ouvert', date('Y-m-d H:i:s')]);
+                $ajout++;
+            }
+            if ($ajout > 0) {
+                $tous = Db::rows('SELECT gravite, status AS statut FROM ceo_fb_finding WHERE post_id = ?', [$row['id']]);
+                $note = fbNote(array_map(static fn ($f) => ['gravite' => (int) $f['gravite'], 'statut' => $f['statut']], $tous));
+                $res['note'] = $note;
+                $res['resume'] = fbResume($note, array_map(static fn ($f) => ['gravite' => (int) $f['gravite'], 'statut' => $f['statut'], 'famille' => 'charte'], $tous));
+                Db::exec('UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $bg['message'] ?? $res['resume'], $row['id']]);
+            }
+            if ($bg['statut'] === 'bloque' && $row['status'] !== 'brouillon') {
+                $pire = null;
+                foreach ($bg['ecarts'] as $e) { if ($e['gravite'] === 'bloquant') { $pire = $e; break; } }
+                Db::exec("UPDATE ceo_fb_post SET status = 'refuse', note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = 'Brand Guard' WHERE id = ?",
+                    [$res['note'], $pire['famille'] ?? 'Charte de marque', $pire['libelle'] ?? 'Écart bloquant', $bg['message'], date('Y-m-d H:i:s'), $row['id']]);
+                journalAdd('Brand Guard', 'Refus', $row['shop_name'] ?? '—',
+                    'Post « ' . fbTitre($row['message']) . ' » bloqué — ' . $bg['score'] . '/100 · ' . ($pire['libelle'] ?? 'écart bloquant') . ' (charte ' . $bg['charteVersion'] . ')');
+            } elseif ($bg['erreur'] !== null) {
+                journalAdd('Brand Guard', 'Contrôle', $row['shop_name'] ?? '—', 'Charte non relue par le modèle : ' . $bg['erreur'] . ' — règles mécaniques seules');
+            }
+        } catch (Throwable $e) {
+            // Brand Guard ne doit jamais empêcher la soumission : l'échec se lit au journal.
+            journalAdd('Brand Guard', 'Erreur', $row['shop_name'] ?? '—', 'Contrôle de charte impossible : ' . $e->getMessage());
+        }
+    }
     return $res;
 }
 
