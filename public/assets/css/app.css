@@ -355,3 +355,24 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .rp-per .c.clair .ok,.rp-per .c.sem .ok,.rp-per .c.tot .ok{color:#2d7a3e}.rp-per .c.clair .ko,.rp-per .c.sem .ko,.rp-per .c.tot .ko{color:#C0182B}
 .rp-per .c.vide{background:var(--color-surface);color:var(--color-text-muted)}
 .rp-perleg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);padding:8px 0 0;flex-wrap:wrap;align-items:center}.rp-perleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* Le mois d'un magasin (Résultat › Mois, drop) : huit chiffres, calendrier, trois blocs de même hauteur. */
+.rm-kp{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.rm-kp .t{background:var(--color-surface);border-radius:9px;padding:9px 11px;min-width:0}
+.rm-kp .t .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rm-kp .t .v{font-family:var(--font-display);font-size:19px;margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rm-kp .t .s{font-size:10px;color:var(--color-text-muted);line-height:1.35;margin-top:2px}
+.rm-kp .t.bad .v{color:#C0182B}.rm-kp .t.good .v{color:#2d7a3e}.rm-kp .t.gold{background:#fdf6e3;border:1px solid #e6c65a}.rm-kp .t.gold .v{color:#8a6508}
+.rm-bloc{display:flex;flex-direction:column;min-width:0}.rm-bloc+.rm-bloc{margin-top:14px}
+.rm-card{background:var(--color-surface);border-radius:9px;padding:10px 12px;flex:1}
+.rm-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;margin-top:14px}.rm-3 .rm-bloc+.rm-bloc{margin-top:0}
+.rm-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.rm-cal .h{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:center}
+.rm-cal .d{border-radius:7px;padding:7px 9px;min-height:62px;display:flex;flex-direction:column;gap:1px;color:#fff;min-width:0}
+.rm-cal .d b{font-size:14px;white-space:nowrap}.rm-cal .d small{font-size:10px;opacity:.92;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rm-cal .d .n{font:600 9px var(--font-ui);opacity:.8}
+.rm-cal .d.clair{color:var(--color-text)}.rm-cal .d.auj{outline:2px solid var(--color-text);outline-offset:1px}
+.rm-cal .d.vide{background:transparent;border:.5px dashed var(--color-border-secondary)}.rm-cal .d.fut{background:var(--color-background-secondary);color:var(--color-text-muted)}.rm-cal .d.fut b{color:var(--color-text-muted)}
+.rm-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:8px}.rm-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.rm-bar{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 0}.rm-bar .l{width:66px;color:var(--color-text-muted)}.rm-bar .b{flex:1;height:10px;border-radius:5px;background:var(--color-background-secondary);position:relative;overflow:hidden}.rm-bar .b i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.rm-bar .b em{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--color-text)}.rm-bar .v{width:58px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}.rm-bar .c{width:40px;text-align:right;font-size:10.5px;font-weight:600}
+.rm-hb{display:flex;align-items:flex-end;gap:3px;height:64px}.rm-hb i{flex:1;border-radius:3px 3px 0 0;background:#c9c2b8;position:relative;min-height:1px}.rm-hb i.on{background:#8D1D2C}.rm-hb i.on2{background:#F08A2C}.rm-hb i span{position:absolute;bottom:-14px;left:0;right:0;text-align:center;font-size:8.5px;color:var(--color-text-muted)}
+@media (max-width:1200px){.rm-kp{grid-template-columns:repeat(4,minmax(0,1fr))}.rm-3{grid-template-columns:1fr}}

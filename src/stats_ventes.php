@@ -286,7 +286,22 @@ function ep_ventes_periodes(): array
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
     [$du, $au, $jours] = svJours($vue, $date);
     $heures = svHeuresJours($sid, $jours);
-    return ['shop' => $sid, 'vue' => $vue, 'du' => $du, 'au' => $au, 'joursServis' => array_keys($heures)] + svPeriodes($heures);
+    // Les heures additionnées sur la période, et leur moyenne par jour ouvert :
+    // de quoi dire l'heure de pointe sans relire les tickets.
+    $parH = []; $nJ = 0;
+    foreach ($heures as $hs) {
+        if ($hs === []) { continue; }
+        $nJ++;
+        foreach ($hs as $l) {
+            $h = (int) $l['h'];
+            $parH[$h] ??= ['h' => $h, 'ca' => 0.0, 'tickets' => 0, 'res' => 0.0];
+            $parH[$h]['ca'] += (float) $l['ca']; $parH[$h]['tickets'] += (int) $l['tickets']; $parH[$h]['res'] += (float) $l['marge'];
+        }
+    }
+    ksort($parH);
+    $lignesH = array_values(array_map(static fn ($x) => ['h' => $x['h'], 'ca' => round($x['ca'], 2), 'tickets' => $x['tickets'], 'res' => round($x['res'], 2),
+        'moy' => ['ca' => round($x['ca'] / max(1, $nJ), 2), 'tickets' => round($x['tickets'] / max(1, $nJ), 1), 'res' => round($x['res'] / max(1, $nJ), 2)]], $parH));
+    return ['shop' => $sid, 'vue' => $vue, 'du' => $du, 'au' => $au, 'joursServis' => array_keys($heures), 'nJoursOuverts' => $nJ, 'heures' => $lignesH] + svPeriodes($heures);
 }
 
 /**

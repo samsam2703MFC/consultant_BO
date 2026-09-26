@@ -4117,6 +4117,44 @@ function tplResultatSquelette(vue){
 }
 
 /** La semaine ou le mois, face à l'objectif et au compte de résultat. */
+/* --- Le mois d'un magasin : huit chiffres, le calendrier, cascade, profil, heures, périodes --- */
+function tplResultatMois(c, d, x){
+  const { esc } = x;
+  const M = d.mois;
+  const bord = 'border-bottom:0.5px solid var(--color-border-tertiary)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const cap = 'font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const bloc = (titre, corps) => `<div class="rm-bloc"><div style="${cap};margin-bottom:8px">${esc(titre)}</div><div class="rm-card">${corps}</div></div>`;
+  const nbCol = 10 + (c.rpMois ? 1 : 0);
+  return `
+    <tr><td colspan="${nbCol}" style="padding:4px 10px 18px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:6px 0 12px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:var(--font-display);font-size:17px">${esc(d.nom)}</span><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(M.sousTitre)}</span></div>
+        <button ${x.A(d.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+      </div>
+      <div class="rm-kp">${M.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+      ${bloc('Le calendrier du mois — CA, atteinte de l’objectif du jour, clients', `
+        <div class="rm-cal">${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('')}
+          ${M.cases.map(k => k.vide ? '<div class="d vide"></div>' : k.ferme ? `<div class="d fut"><span class="n">${esc(k.court)}</span><b>fermé</b></div>` : k.futur ? `<div class="d fut"><span class="n">${esc(k.court)}</span><b>—</b>${k.obj ? `<small>objectif ${esc(k.obj)}</small>` : ''}</div>`
+            : `<div class="d${k.clair ? ' clair' : ''}${k.auj ? ' auj' : ''}" style="background:${k.fond}"><span class="n">${esc(k.court)}</span><b>${esc(k.ca)}</b><small>${esc(k.att)}</small><small>${esc(k.cli)}</small></div>`).join('')}
+        </div>
+        <div class="rm-leg"><span><i style="background:#8D1D2C"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#2d7a3e"></i>100 – 110 %</span><span><i style="background:#6aa84f"></i>90 – 100 %</span><span><i style="background:#F08A2C"></i>75 – 90 %</span><span><i style="background:#e8c9a0"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div>`)}
+      <div class="rm-3">
+        ${bloc('La cascade du mois', `<table style="width:100%;border-collapse:collapse;font-size:12.5px">${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
+              <td style="padding:6px 0;${bord};width:120px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
+              <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul}"></i></span></td>
+              <td style="padding:6px 0;${bord};text-align:right;${num};width:82px">${esc(l.v)}</td>
+              <td style="padding:6px 0 6px 10px;${bord};text-align:right;${num};width:54px;color:${l.coul}">${esc(l.p)}</td></tr>`).join('')}</table>${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
+        ${bloc('Le profil des jours — moyenne par jour de la semaine', `${M.profil.map(p => `<div class="rm-bar"><span class="l">${esc(p.nom)}</span><span class="b"><i style="width:${p.w}%;background:${p.ok ? '#8D1D2C' : '#c9c2b8'}"></i>${p.wo != null ? `<em style="left:${p.wo}%"></em>` : ''}</span><span class="v">${esc(p.ca)}</span><span class="c" style="color:${p.ok == null ? 'var(--color-text-muted)' : (p.ok ? '#2d7a3e' : '#C0182B')}">${esc(p.att)}</span></div>`).join('')}
+          <div class="rm-leg" style="margin-top:6px"><span>le trait noir = objectif du jour${M.pireJour ? ' · le ' + esc(M.pireJour) + ' est le point faible du mois' : ''}</span></div>`)}
+        ${bloc('Les heures — CA moyen par jour ouvert', M.heures.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des heures…</div>` : (M.heures.barres.length ? `
+          <div class="rm-hb">${M.heures.barres.map(b => `<i class="${b.cls}" style="height:${b.w}%" title="${esc(b.titre)}"><span>${b.h}h</span></i>`).join('')}</div>
+          <div class="rm-leg" style="margin-top:18px;flex-direction:column;gap:4px;align-items:flex-start"><span><i style="background:#8D1D2C"></i>le plus de CA : ${esc(M.heures.ca)}</span><span><i style="background:#F08A2C"></i>le plus de clients : ${esc(M.heures.cli)}</span></div>` : `<div style="font-size:12px;color:var(--color-text-muted)">Aucune heure lue sur le mois.</div>`))}
+      </div>
+      ${d.periodes ? tplPeriodes(d.periodes, x) : ''}
+    </td></tr>`;
+}
+
 /* --- Les périodes de la semaine — matin, midi, après-midi (drop d'un magasin) --- */
 function tplPeriodes(g, x){
   const { esc } = x;
@@ -4172,7 +4210,7 @@ function tplResultatPeriode(c, x){
   const bloc = (titre, corps) => `<div><div style="${cap};margin-bottom:8px">${esc(titre)}</div>${corps}</div>`;
   const kv = (l, v, coul, fort) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;${bord};font-size:12.5px${fort ? ';font-weight:600' : ''}"><span>${esc(l)}</span><span style="${num};white-space:nowrap${coul ? ';color:' + coul : ''}">${esc(v)}</span></div>`;
   const d = c.rpDetail;
-  const detail = !d ? '' : `
+  const detail = !d ? '' : (d.mois ? tplResultatMois(c, d, x) : `
     <tr><td colspan="${nbCol}" style="padding:4px 10px 18px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:6px 0 12px">
         <div style="font-family:var(--font-display);font-size:17px">${esc(d.nom)}</div>
@@ -4243,7 +4281,7 @@ function tplResultatPeriode(c, x){
         </div>
       </div>
       ${d.periodes ? tplPeriodes(d.periodes, x) : ''}
-    </td></tr>`;
+    </td></tr>`);
   const lignes = c.rpLignes.map(l => rang(l) + (l.actif ? detail : '')).join('');
   return `
     <div style="${carte};padding:17px 19px">
