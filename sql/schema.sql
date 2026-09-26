@@ -707,3 +707,69 @@ CREATE TABLE IF NOT EXISTS ceo_fb_finding (
   KEY idx_post (post_id, gravite),
   CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES ceo_fb_post(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- Brand Guard — contrôle de marque des posts Facebook (src/brand_guard.php)
+--
+-- La charte vit en base et s'édite : le prompt se construit à partir des règles
+-- actives, et chaque verdict enregistre la VERSION de charte (empreinte des
+-- règles actives) qui l'a produit. Les pages sont des données de configuration
+-- (URL → page_id résolu au premier lancement). Un contrôle = un passage de
+-- l'agent, avant (demande) ou après (post lu sur la page) publication ; un post
+-- sans demande liée est SAUVAGE. Aucun secret ici : tokens et clé en variables
+-- d'environnement.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS brand_guard_pages (
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  shop_id          VARCHAR(8)   NULL,
+  boutique         VARCHAR(80)  NOT NULL,
+  franchise        VARCHAR(120) NOT NULL DEFAULT '',
+  page_url         VARCHAR(300) NOT NULL DEFAULT '',
+  page_id          VARCHAR(40)  NULL,
+  page_nom         VARCHAR(160) NULL,
+  statut_connexion ENUM('a_connecter','connectee','erreur') NOT NULL DEFAULT 'a_connecter',
+  derniere_erreur  VARCHAR(300) NULL,
+  derniere_sync    DATETIME     NULL,
+  webhook_abonne   TINYINT(1)   NOT NULL DEFAULT 0,
+  actif            TINYINT(1)   NOT NULL DEFAULT 1,
+  KEY idx_page (page_id),
+  KEY idx_shop (shop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brand_guard_rules (
+  code        VARCHAR(40)  PRIMARY KEY,
+  famille     VARCHAR(60)  NOT NULL,
+  libelle     VARCHAR(160) NOT NULL,
+  description TEXT         NOT NULL,
+  gravite     ENUM('bloquant','majeur','mineur') NOT NULL DEFAULT 'majeur',
+  actif       TINYINT(1)   NOT NULL DEFAULT 1,
+  rang        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  maj_le      DATETIME     NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brand_guard_checks (
+  id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+  post_id        VARCHAR(16)  NULL,           -- la demande (ceo_fb_post), flux « avant »
+  fb_post_id     VARCHAR(64)  NULL,           -- le post Facebook, flux « après »
+  shop_id        VARCHAR(8)   NULL,
+  boutique       VARCHAR(80)  NULL,
+  source         ENUM('avant','apres') NOT NULL,
+  sauvage        TINYINT(1)   NOT NULL DEFAULT 0,
+  statut         ENUM('conforme','a_corriger','bloque') NOT NULL,
+  score          TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  ecarts_json    JSON         NULL,           -- [{regle, libelle, famille, gravite, constat, correction, moteur}]
+  message        TEXT         NULL,           -- le message au franchisé
+  charte_version CHAR(12)     NOT NULL,
+  moteur         VARCHAR(20)  NOT NULL DEFAULT 'claude',  -- claude | regles
+  modele         VARCHAR(60)  NULL,
+  images_json    JSON         NULL,           -- liens directs des visuels contrôlés
+  lien           VARCHAR(400) NULL,
+  publie_le      DATETIME     NULL,
+  texte          TEXT         NULL,
+  notifie_le     DATETIME     NULL,
+  created_at     DATETIME     NOT NULL,
+  KEY idx_fb (fb_post_id),
+  KEY idx_post (post_id),
+  KEY idx_shop (shop_id, created_at),
+  KEY idx_sauvage (sauvage, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

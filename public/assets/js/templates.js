@@ -160,6 +160,7 @@ export function render(c, x){
       ${c.isKpiT ? tplKpiT(c, x) : ''}
       ${c.isTaches ? tplTaches(c, x) : ''}
       ${c.isPosts ? tplPosts(c, x) : ''}
+      ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
       ${c.isJournal ? tplJournal(c, x) : ''}
@@ -5459,6 +5460,88 @@ function tplTaches(c, x){
   </div>`;
 }
 
+/* --- Paramètres — Brand Guard : la charte et les pages Facebook -------------- */
+function tplBrandGuard(c, x){
+  const { esc } = x;
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 8px 8px 0';
+  const P = c.bgp, G = c.bgPages;
+  return `
+  <div data-screen="brand-guard" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500">La charte de marque</div>
+        <span style="font-size:11px;color:var(--color-text-muted)">version ${esc(P.version)} · ${P.nActives} règle${P.nActives > 1 ? 's' : ''} active${P.nActives > 1 ? 's' : ''} sur ${P.n}</span>
+        ${P.modifie ? `<span style="font-size:10.5px;font-weight:500;border-radius:999px;padding:2px 9px;background:rgba(217,119,6,0.14);color:#D97706">modifications non enregistrées</span>` : ''}
+        <span style="flex:1"></span>
+        ${P.modifie ? `<button ${x.A(P.annuler)} style="${P.btnS}">Annuler</button>` : ''}
+        <button ${x.A(P.enregistrer)} style="${P.btnP}${P.modifie ? '' : ';opacity:0.45'}">Enregistrer la charte</button>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin:4px 0 14px;line-height:1.45;text-wrap:pretty">Le contrôle des posts relit ces règles telles quelles, texte et visuels. Une règle <b>bloquante</b> arrête un post ; une <b>majeure</b> le renvoie à corriger ; une <b>mineure</b> est signalée. Chaque enregistrement fait une nouvelle version, et chaque verdict garde la sienne.</div>
+      ${P.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la charte…</div>` : P.erreur ? `<div style="font-size:12px;color:#8D1D2C">${esc(P.erreur)}</div>` : `
+      <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin-bottom:12px">
+        ${P.familles.map(f => `<button ${x.A(f.go)} style="${P.famBtn(f.on)}">${esc(f.nom)}</button>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <thead><tr>
+          <th style="${th};width:150px">Famille</th>
+          <th style="${th};width:220px">Règle</th>
+          <th style="${th}">Ce que le contrôleur vérifie</th>
+          <th style="${th};width:110px">Gravité</th>
+          <th style="${th};width:80px">État</th>
+          <th style="padding:0 0 8px 8px;width:24px"></th>
+        </tr></thead>
+        <tbody>
+          ${P.regles.map(r => `<tr style="${r.rowSt}">
+            <td style="padding:8px 8px 8px 0"><input value="${esc(r.famille)}" ${x.C(r.set('famille'))} list="bg-familles" style="${P.rowInput}" /></td>
+            <td style="padding:8px 8px"><input value="${esc(r.libelle)}" ${x.C(r.set('libelle'))} placeholder="Libellé court" style="${P.rowInput};font-weight:500" /><div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.code)}</div></td>
+            <td style="padding:8px 8px"><textarea ${x.C(r.set('description'))} rows="3" placeholder="Une phrase que le contrôleur peut appliquer : ce qui est attendu, ce qui ne passe pas." style="${P.rowInput};resize:vertical;line-height:1.45;min-height:58px;field-sizing:content">${esc(r.description)}</textarea></td>
+            <td style="padding:8px 8px"><select ${x.C(r.set('gravite'))} style="${r.gravSt}">${P.gravites.map(g => `<option value="${g.val}" ${g.val === r.gravite ? 'selected' : ''}>${g.nom}</option>`).join('')}</select></td>
+            <td style="padding:8px 8px"><button ${x.A(r.toggle)} style="${r.actifSt}">${r.actifTxt}</button></td>
+            <td style="padding:8px 0 8px 8px;text-align:right"><button ${x.A(r.retirer)} title="Retirer de la charte" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <datalist id="bg-familles">${P.familles.filter(f => f.val !== 'toutes').map(f => `<option value="${esc(f.nom)}"></option>`).join('')}</datalist>
+      <div style="margin-top:10px"><button ${x.A(P.ajouter)} style="${P.btnS}">+ Ajouter une règle</button></div>`}
+    </div>
+
+    <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500">La page Facebook de chaque magasin</div>
+        ${G.modifie ? `<span style="font-size:10.5px;font-weight:500;border-radius:999px;padding:2px 9px;background:rgba(217,119,6,0.14);color:#D97706">modifications non enregistrées</span>` : ''}
+        <span style="flex:1"></span>
+        ${G.modifie ? `<button ${x.A(G.annuler)} style="${P.btnS}">Annuler</button>` : ''}
+        <button ${x.A(() => G.enregistrer(false))} style="${P.btnS}">Enregistrer</button>
+        <button ${x.A(() => G.enregistrer(true))} style="${P.btnP}${G.metaOk ? '' : ';opacity:0.45'}" title="${G.metaOk ? 'Chaque URL devient un identifiant de page' : 'Demande le token Meta sur le serveur'}">Enregistrer et résoudre</button>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin:4px 0 14px;line-height:1.45;text-wrap:pretty">L’adresse de la page, telle qu’elle s’ouvre dans un navigateur. « Résoudre » la transforme en identifiant Meta ; ensuite, chaque post publié sur cette page est contrôlé, et signalé s’il n’est pas passé par l’application.</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:12px;color:${G.metaOk ? '#2d7a3e' : 'var(--color-text-muted)'}"><span style="width:7px;height:7px;border-radius:999px;background:${G.metaOk ? '#2d7a3e' : '#D97706'}"></span>${esc(G.metaTxt)}</div>
+      ${G.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des pages…</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px">
+        <thead><tr>
+          <th style="${th};width:190px">Magasin</th>
+          <th style="${th};width:200px">Franchisé / exploitant</th>
+          <th style="${th}">Adresse de la page Facebook</th>
+          <th style="${th};width:110px">Connexion</th>
+        </tr></thead>
+        <tbody>
+          ${G.lignes.map(l => `<tr style="border-top:0.5px solid var(--color-border-tertiary);vertical-align:top">
+            <td style="padding:9px 8px 9px 0;font-weight:500">${esc(l.boutique)}</td>
+            <td style="padding:9px 8px"><input value="${esc(l.franchise)}" ${x.C(l.setFranchise)} placeholder="—" style="${G.rowInput}" /></td>
+            <td style="padding:9px 8px"><input value="${esc(l.url)}" ${x.C(l.setUrl)} placeholder="${l.placeholder}" style="${G.rowInput}${l.modifie ? ';border-color:#D97706' : ''}" />${l.detail ? `<div style="font-size:10.5px;color:${l.etat === 'Erreur' ? '#C0182B' : 'var(--color-text-muted)'};margin-top:3px;overflow-wrap:anywhere">${esc(l.detail)}</div>` : ''}</td>
+            <td style="padding:11px 8px"><span style="${l.etatSt}">${l.etat}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="display:grid;grid-template-columns:minmax(0,420px);gap:6px;margin-top:16px">
+        <label style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted)">Adresse des alertes et du rapport du lundi</label>
+        <input value="${esc(G.mailAlerte)}" ${x.C(G.setMail)} placeholder="ceo@latelierby.be" style="${G.rowInput}" />
+        <div style="font-size:11px;color:var(--color-text-muted)">Un post sauvage y part dans la minute ; le rapport de la semaine, le lundi à 7 h.</div>
+      </div>`}
+    </div>
+  </div>`;
+}
+
 /* --- Contrôle des posts Facebook --------------------------------------------- */
 function tplPosts(c, x){
   const { esc } = x;
@@ -5580,7 +5663,48 @@ function tplPosts(c, x){
 
     <div style="display:flex;flex-direction:column;gap:14px">
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px">
-        <div style="font-size:13px;font-weight:500">Règles de l'agent</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:13px;font-weight:500">Brand Guard — charte</div>
+          <span style="font-size:10px;color:var(--color-text-muted);margin-left:auto">charte ${esc(c.bg.version)}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.45;text-wrap:pretty">${esc(c.bg.etatTxt)}</div>
+        ${c.bg.absent ? '' : `
+        <div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin-top:11px">
+          ${c.bg.periodes.map(p => `<button ${x.A(p.go)} style="${p.st}">${p.nom}</button>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+          <div><div style="${dcap}">Contrôles</div><div style="font-size:16px;font-weight:500">${c.bg.controles}</div></div>
+          <div><div style="${dcap}">Conformité</div><div style="font-size:16px;font-weight:500;color:${c.bg.tauxCoul}">${c.bg.taux}</div></div>
+          <div><div style="${dcap}">Score</div><div style="font-size:16px;font-weight:500;color:${c.bg.scoreCoul}">${c.bg.score}</div></div>
+          <div><div style="${dcap}">Sauvages</div><div style="font-size:16px;font-weight:500;color:${c.bg.sauvagesCoul}">${c.bg.sauvages}</div></div>
+        </div>
+        ${c.bg.boutiques.length ? `
+        <div style="margin-top:10px">
+          ${c.bg.boutiques.map(b => `
+            <div style="display:flex;align-items:baseline;gap:8px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:500">${esc(b.nom)}</span>
+              <span style="font-size:10.5px;color:var(--color-text-muted)">${b.n} contrôle${b.n > 1 ? 's' : ''}</span>
+              <span style="font-size:11px;font-weight:600;color:${b.tauxCoul};margin-left:auto">${b.taux}</span>
+              <span style="font-size:11px;color:var(--color-text-muted)">${b.score}</span>
+              <span style="${b.sauvagesSt}">${b.sauvages} sauvage${b.sauvages > 1 ? 's' : ''}</span>
+              ${b.top ? `<div style="flex-basis:100%;font-size:10.5px;color:var(--color-text-muted);line-height:1.4">${esc(b.top)}</div>` : ''}
+            </div>`).join('')}
+        </div>` : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Aucun contrôle sur la période.</div>`}
+        ${c.bg.topRegles.length ? `<div style="margin-top:10px"><div style="${dcap}">Règles les plus violées</div>${c.bg.topRegles.map(r => `<div style="font-size:11.5px;padding:3px 0">${esc(r.nom)} <span style="color:var(--color-text-muted)">· ${r.n}</span></div>`).join('')}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:13px">
+          <span style="${dcap}">Pages Facebook</span>
+          <button ${x.A(c.bg.resoudre)} style="${c.bg.resoudreSt};margin-left:auto">Résoudre les pages</button>
+        </div>
+        ${c.bg.pages.map(p => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:500">${esc(p.nom)}</span>
+            <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(p.franchise)}</span>
+            <span style="${p.etatSt};margin-left:auto">${p.etat}</span>
+            <div style="flex-basis:100%;font-size:10.5px;color:var(--color-text-muted);line-height:1.4;overflow-wrap:anywhere">${esc(p.detail)}</div>
+          </div>`).join('')}`}
+      </div>
+      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:500">Règles mécaniques de l'agent</div>
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.45;text-wrap:pretty">${esc(c.fbSeuilTxt)}</div>
         ${c.fbRegleFams.map(f => `
           <div style="margin-top:13px">

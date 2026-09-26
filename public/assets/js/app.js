@@ -178,6 +178,8 @@ class App {
       // Contrôle des posts Facebook : filtres de l'écran, brouillon de décision
       // par post (`fbVal`, envoyé au clic seulement) et modale de soumission.
       fbStore: 'tous', fbEtat: 'À traiter', fbVal: {}, fbNew: null,
+      // Brand Guard : la période du tableau de bord (7, 30, 90 jours).
+      bgJours: 30,
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
@@ -271,7 +273,7 @@ class App {
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
-      posts: 'controle-posts-facebook',
+      posts: 'controle-posts-facebook', brandGuard: 'brand-guard',
     };
   }
   /**
@@ -898,6 +900,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
       posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
       scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
       analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
@@ -941,8 +944,8 @@ class App {
         [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
-      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne et la table des KPI.',
-        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['caReglages', 'Centrale d’achat'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI']]],
+      parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
+        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['caReglages', 'Centrale d’achat'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
         [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
       analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
@@ -1336,7 +1339,7 @@ class App {
         ['posts', 'Contrôle posts Facebook', this.fbAttente().length],
         ['reporting', 'Reporting automatisé', 0]]],
       ['Administration', [
-        ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable']],
+        ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
@@ -1364,8 +1367,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
@@ -1781,6 +1784,7 @@ class App {
     if (common.isTaches) this.valsTaches(common, flat);
     // --- contrôle des posts Facebook
     if (common.isPosts) this.valsPosts(common);
+    if (common.isBrandGuard) this.valsBrandGuard(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches
@@ -13180,6 +13184,137 @@ class App {
       this.setState({ suiviData: d || { periode, validees: 0, moyenne: null, repartition: {}, ouverts: 0, traites: 0, signalements: [], parIntervenant: [], taches: [] } });
     });
   }
+
+  /* --- Paramètres — Brand Guard : la charte et les pages ---------------------------- */
+  /**
+   * La charte s'édite ici et nulle part ailleurs. Deux principes :
+   *
+   *  - le brouillon est LOCAL jusqu'à « Enregistrer » : le contrôle des posts
+   *    relit la charte en service, pas une charte à moitié tapée ; à
+   *    l'enregistrement, la version change et le journal le dit ;
+   *  - chaque magasin du réseau a sa ligne de page, qu'il ait déjà une entrée
+   *    ou non : une page manquante se voit, elle ne se devine pas.
+   */
+  valsBrandGuard(common){
+    const S = this.state, D = this.D;
+    if (!this._bgRegles && !this._bgReglesEnCours) {
+      this._bgReglesEnCours = true;
+      readOne('/marketing/brand-guard/rules').then(d => {
+        this._bgReglesEnCours = false;
+        this._bgRegles = (d && d.regles) ? d : { regles: [], charteVersion: '—' };
+        this.setState({ bgDraft: null });
+      }).catch(() => { this._bgReglesEnCours = false; this._bgRegles = { regles: [], charteVersion: '—', erreur: true }; this.setState({}); });
+    }
+    if (!this._bgPages && !this._bgPagesEnCours) {
+      this._bgPagesEnCours = true;
+      readOne('/marketing/brand-guard/pages').then(d => {
+        this._bgPagesEnCours = false;
+        this._bgPages = (d && d.pages) ? d : { pages: [], meta: {}, mailAlerte: '' };
+        this.setState({ bgPagesDraft: null });
+      }).catch(() => { this._bgPagesEnCours = false; this._bgPages = { pages: [], meta: {}, mailAlerte: '', erreur: true }; this.setState({}); });
+    }
+    const GRAV = [['bloquant', 'Bloquant', '#8D1D2C'], ['majeur', 'Majeur', '#C0182B'], ['mineur', 'Mineur', '#D97706']];
+    const gc = g => (GRAV.find(x => x[0] === g) || GRAV[1])[2];
+    const rowInput = 'width:100%;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 9px;background:var(--color-background-secondary);color:var(--color-text);font-family:var(--font-ui)';
+
+    // --- la charte : le brouillon, ou la charte en service
+    const enService = this._bgRegles;
+    const draft = S.bgDraft || (enService ? enService.regles.map(r => Object.assign({}, r)) : null);
+    const modifie = !!S.bgDraft;
+    const setDraft = f => this.setState(s2 => { const d = (s2.bgDraft || (this._bgRegles ? this._bgRegles.regles.map(r => Object.assign({}, r)) : [])).map(r => Object.assign({}, r)); f(d); return { bgDraft: d }; });
+    const familles = draft ? Array.from(new Set(draft.map(r => r.famille))).filter(Boolean) : [];
+    const famFiltre = S.bgFam || 'toutes';
+    const visibles = draft ? draft.map((r, i) => Object.assign({ i }, r)).filter(r => famFiltre === 'toutes' || r.famille === famFiltre) : [];
+    common.bgp = {
+      chargement: !enService,
+      erreur: enService && enService.erreur ? 'Charte injoignable — le serveur ne répond pas.' : '',
+      version: enService ? enService.charteVersion : '—',
+      modifie,
+      n: draft ? draft.length : 0, nActives: draft ? draft.filter(r => r.actif).length : 0,
+      familles: [{ val: 'toutes', nom: 'Toutes', on: famFiltre === 'toutes', go: () => this.setState({ bgFam: 'toutes' }) }]
+        .concat(familles.map(f => ({ val: f, nom: f, on: famFiltre === f, go: () => this.setState({ bgFam: f }) }))),
+      famBtn: on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:5px 11px;' + (on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'),
+      gravites: GRAV.map(g => ({ val: g[0], nom: g[1] })),
+      rowInput,
+      regles: visibles.map(r => ({
+        code: r.code, famille: r.famille, libelle: r.libelle, description: r.description, gravite: r.gravite, actif: !!r.actif,
+        gravSt: 'font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-background-secondary);font-family:var(--font-ui);color:' + gc(r.gravite) + ';font-weight:600',
+        rowSt: 'border-top:0.5px solid var(--color-border-tertiary);vertical-align:top' + (r.actif ? '' : ';opacity:0.55'),
+        actifTxt: r.actif ? 'Active' : 'Inactive',
+        actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;border:none;font-family:var(--font-ui);'
+          + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        set: k => e => setDraft(d => { d[r.i][k] = e.target.value; }),
+        toggle: () => setDraft(d => { d[r.i].actif = !d[r.i].actif; }),
+        retirer: () => { if (confirm('Retirer la règle « ' + r.libelle + ' » de la charte ?')) { setDraft(d => { d.splice(r.i, 1); }); } },
+      })),
+      ajouter: () => setDraft(d => { const n = d.length + 1; d.push({ code: 'regle-' + n + '-' + Date.now().toString(36).slice(-3), famille: famFiltre !== 'toutes' ? famFiltre : (familles[0] || 'Charte de marque'), libelle: '', description: '', gravite: 'majeur', actif: true }); }),
+      annuler: () => this.setState({ bgDraft: null }),
+      enregistrer: async () => {
+        const d = (S.bgDraft || []).map(r => Object.assign({}, r, { libelle: (r.libelle || '').trim(), description: (r.description || '').trim() }));
+        const vide = d.find(r => !r.libelle || !r.description);
+        if (vide) { this.notify('Chaque règle porte un libellé et une description — « ' + (vide.libelle || vide.code) + ' » est incomplète'); return; }
+        // Le code suit le libellé pour une règle nouvelle : lisible dans les verdicts.
+        d.forEach(r => { if (/^regle-\d+-/.test(r.code)) { r.code = (r.famille + '-' + r.libelle).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40); } });
+        const r = await this.api('PUT', '/marketing/brand-guard/rules', { regles: d, par: 'CEO' });
+        if (r && r.regles) {
+          this._bgRegles = r; this.setState({ bgDraft: null });
+          this.log('Paramètre', '—', 'Charte Brand Guard enregistrée — version ' + r.charteVersion);
+          this.notify('Charte enregistrée — version ' + r.charteVersion);
+        }
+      },
+      btnP: 'border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 16px;border-radius:8px',
+      btnS: 'border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 14px;border-radius:8px',
+    };
+
+    // --- les pages : une ligne par magasin du réseau, la page trouvée ou non
+    const pg = this._bgPages;
+    const pDraft = S.bgPagesDraft || {};
+    // Une page rattachée à un magasin que le cockpit ne connaît pas s'affiche
+    // quand même : une ligne qui disparaît est une page qu'on ne surveille plus.
+    const idsMag = new Set((D.stores || []).map(m => String(m.id)));
+    const parMag = {}; const sansMag = [];
+    (pg ? pg.pages : []).forEach(p => { if (p.magasinId && idsMag.has(String(p.magasinId))) { parMag[String(p.magasinId)] = p; } else { sansMag.push(p); } });
+    const setP = (cle, k) => e => this.setState(s2 => ({ bgPagesDraft: Object.assign({}, s2.bgPagesDraft, { [cle]: Object.assign({}, (s2.bgPagesDraft || {})[cle], { [k]: e.target.value }) }) }));
+    const lignePage = (cle, base, mag) => {
+      const d = pDraft[cle] || {};
+      const url = d.pageUrl != null ? d.pageUrl : (base ? base.pageUrl : '');
+      const statut = !base ? 'absente' : base.statut;
+      return { cle, magasinId: mag ? mag.id : (base ? base.magasinId : null), id: base ? base.id : null,
+        boutique: mag ? mag.nom : (base ? base.boutique : ''), franchise: d.franchise != null ? d.franchise : (mag ? (mag.franchise || '') : (base ? base.franchise : '')),
+        url, placeholder: 'https://www.facebook.com/…', setUrl: setP(cle, 'pageUrl'), setFranchise: setP(cle, 'franchise'),
+        modifie: !!pDraft[cle],
+        etat: statut === 'connectee' ? 'Connectée' : statut === 'erreur' ? 'Erreur' : statut === 'absente' ? 'Pas de page' : 'À connecter',
+        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;'
+          + (statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        detail: base ? (base.erreur || (base.pageId ? 'id ' + base.pageId + (base.derniereSync ? ' · lue le ' + String(base.derniereSync).slice(0, 16) : '') : '')) : '' };
+    };
+    const lignes = (D.stores || []).map(m => lignePage('m:' + m.id, parMag[String(m.id)] || null, m))
+      .concat(sansMag.map(p => lignePage('p:' + p.id, p, null)));
+    const meta = (pg && pg.meta) || {};
+    common.bgPages = {
+      chargement: !pg,
+      lignes, rowInput,
+      modifie: Object.keys(pDraft).length > 0,
+      mailAlerte: S.bgMail != null ? S.bgMail : (pg ? pg.mailAlerte || '' : ''),
+      setMail: e => this.setState({ bgMail: e.target.value }),
+      metaTxt: meta.configure ? 'System User Meta configuré · API ' + meta.version : 'META_SYSTEM_TOKEN absent sur le serveur — les pages se résoudront dès qu’il sera posé (voir docs/brand-guard.md).',
+      metaOk: !!meta.configure,
+      enregistrer: async (resoudre) => {
+        const pages = lignes.filter(l => pDraft[l.cle] || (resoudre && l.url)).map(l => ({ id: l.id, magasinId: l.magasinId, boutique: l.boutique, franchise: l.franchise, pageUrl: l.url, actif: true }));
+        const body = { pages, resoudre: !!resoudre };
+        if (S.bgMail != null) { body.mailAlerte = S.bgMail; }
+        const r = await this.api('PUT', '/marketing/brand-guard/pages', body);
+        if (r && r.pages) {
+          this._bgPages = r; this.setState({ bgPagesDraft: null, bgMail: null });
+          const res = r.resolution;
+          this.notify(res && res.motif ? res.motif : res ? (res.pages || []).filter(x => x.ok).length + ' page(s) résolue(s) sur ' + (res.pages || []).length : 'Pages enregistrées');
+          this.log('Paramètre', '—', 'Pages Facebook Brand Guard ' + (resoudre ? 'résolues' : 'enregistrées'));
+        }
+      },
+      annuler: () => this.setState({ bgPagesDraft: null, bgMail: null }),
+    };
+  }
+
   /* --- contrôle des posts Facebook -------------------------------------------------- */
   valsPosts(common){
     const S = this.state, D = this.D, M = this.M;
@@ -13376,6 +13511,50 @@ class App {
     common.fbEchelle = (((M.SIGNAL || {}).niveaux) || []).map(l => ({ n: l.n, nom: l.nom, aide: l.aide,
       numSt: 'width:17px;height:17px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:' + l.couleur,
       nomSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }));
+
+    // --- Brand Guard : la charte relue par le modèle, les pages, les chiffres.
+    //     Les chiffres viennent du serveur (/marketing/brand-guard/stats) ;
+    //     rien ne se recalcule ici, le rapport du lundi lit les mêmes.
+    const bgS = D.bgStats, bgP = D.bgPages;
+    const per = bgS && bgS.periodes ? (bgS.periodes[String(S.bgJours)] || bgS.periodes['30']) : null;
+    const sCoul = v => v == null ? '#666666' : v >= 90 ? '#2d7a3e' : v >= 75 ? '#D97706' : '#C0182B';
+    common.bg = {
+      absent: !bgS,
+      version: bgS ? bgS.charteVersion : '—',
+      claude: !!(bgS && bgS.anthropic && bgS.anthropic.configure),
+      meta: !!(bgS && bgS.meta && bgS.meta.configure),
+      etatTxt: !bgS ? 'Brand Guard injoignable.'
+        : (bgS.anthropic && bgS.anthropic.configure ? 'Charte relue par ' + bgS.anthropic.modele : 'Sans clé Anthropic : règles mécaniques seules')
+          + ' · ' + (bgS.meta && bgS.meta.configure ? 'Meta connecté (' + bgS.meta.version + ')' : 'Meta non connecté — META_SYSTEM_TOKEN absent'),
+      periodes: [7, 30, 90].map(j => ({ j, nom: j + ' j', on: S.bgJours === j, go: () => this.setState({ bgJours: j }),
+        st: 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 10px;'
+          + (S.bgJours === j ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)') })),
+      controles: per ? per.controles : 0,
+      taux: per && per.tauxConformite != null ? per.tauxConformite + ' %' : '—', tauxCoul: sCoul(per ? per.tauxConformite : null),
+      score: per && per.scoreMoyen != null ? per.scoreMoyen + '/100' : '—', scoreCoul: sCoul(per ? per.scoreMoyen : null),
+      sauvages: per ? per.sauvages : 0, sauvagesCoul: per && per.sauvages ? '#C0182B' : '#2d7a3e',
+      boutiques: per ? per.boutiques.map(b => ({ nom: b.boutique || '—', n: b.controles,
+        taux: b.tauxConformite != null ? b.tauxConformite + ' %' : '—', tauxCoul: sCoul(b.tauxConformite),
+        score: b.scoreMoyen != null ? b.scoreMoyen : '—', sauvages: b.sauvages,
+        sauvagesSt: 'font-size:11px;font-weight:600;color:' + (b.sauvages ? '#C0182B' : 'var(--color-text-muted)'),
+        top: (b.topRegles || []).map(r => r.libelle + ' (' + r.n + ')').join(' · ') })) : [],
+      topRegles: per ? (per.topRegles || []).map(r => ({ nom: r.libelle, n: r.n })) : [],
+      pages: bgP && bgP.pages ? bgP.pages.map(p => ({ nom: p.boutique, franchise: p.franchise || '', url: p.pageUrl,
+        etat: p.statut === 'connectee' ? 'Connectée' : p.statut === 'erreur' ? 'Erreur' : 'À connecter',
+        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
+          + (p.statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : p.statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        detail: p.erreur || (p.derniereSync ? 'lu le ' + p.derniereSync.slice(0, 16) : (p.pageId ? 'id ' + p.pageId : 'URL à saisir')) })) : [],
+      // Résoudre : chaque URL devient un page_id — le serveur fait l'appel, le token ne quitte pas le serveur.
+      resoudre: async () => {
+        this.notify('Résolution des pages en cours…');
+        const r = await this.api('PUT', '/marketing/brand-guard/pages', { resoudre: true });
+        if (r && r.pages) { D.bgPages = r; }
+        const res = r && r.resolution;
+        this.notify(res && res.motif ? res.motif : res ? (res.pages || []).filter(x => x.ok).length + ' page(s) résolue(s) sur ' + (res.pages || []).length : 'Résolution impossible');
+        this.forceUpdate();
+      },
+      resoudreSt: 'border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;padding:5px 11px;border-radius:999px',
+    };
 
     // --- modale de soumission (un post arrive normalement du magasin ;
     //     ici, de quoi en soumettre un et voir l'agent travailler)
