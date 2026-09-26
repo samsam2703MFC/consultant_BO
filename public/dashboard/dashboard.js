@@ -1180,7 +1180,6 @@
    */
   function rendPeriode(m, d) {
     const sem = S.vue === 'semaine';
-    const per = sem ? 'la semaine' : 'le mois';
     const sansO = m.objectif == null;
     const jours = Array.isArray(m.jours) ? m.jours : [];
     const passes = jours.filter(j => j.passe && j.ca);
@@ -1193,9 +1192,9 @@
     let h = `<div class="db-tuiles huit">
       ${tuile(sem ? 'CA de la semaine' : 'CA du mois', fK(m.realise), sansO ? 'pas de budget pour cette période' : 'objectif ' + fK(m.objectif) + ' (' + srcO + ') · attendu ' + fK(m.attendu))}
       ${tuile('Atteinte', sansO ? '—' : fP(100 * m.realise / m.attendu), sansO ? '' : 'à ce jour · ' + fSK(m.ecart) + ' · ' + fN(Math.abs(m.clientsManquants)) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), sansO ? '' : (m.ecart < 0 ? 'vif' : 'bon'))}
-      ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'fin de ' + per + ' au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
+      ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
       ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')))}
-      ${tuile('Par jour ouvert', fE(m.realise / nJ), fN(m.tickets / nJ) + ' clients · panier ' + fU(m.panier))}
+      ${tuile('Par jour ouvert', fE(m.realise / nJ), fN(m.tickets / nJ) + ' clients · panier ' + fU(m.panier).replace(' €', '\u00a0€'))}
       ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 32) + ')')}
       ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
       ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
