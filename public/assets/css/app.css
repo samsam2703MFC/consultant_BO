@@ -346,8 +346,9 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .rp-per .c b{font-size:14px;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums}
 .rp-per .c em{position:absolute;top:5px;right:6px;font:600 9px var(--font-ui);font-style:normal;border-radius:999px;padding:1px 6px;background:rgba(255,255,255,.22)}
 .rp-per .c.clair{color:var(--color-text)}.rp-per .c.clair em{background:rgba(0,0,0,.07)}
-.rp-per .c .kv{display:grid;grid-template-columns:auto auto;gap:1px 6px;font-size:9.5px;text-align:left;margin-top:3px;justify-content:space-between;line-height:1.35;max-width:100%}
-.rp-per .c .kv span:nth-child(odd){opacity:.85;white-space:nowrap}.rp-per .c .kv span:nth-child(even){font-weight:600;text-align:right;white-space:nowrap}
+.rp-per .c .kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 6px;font-size:9.5px;text-align:left;margin-top:3px;line-height:1.35;width:100%}
+/* Le chiffre ne cède jamais : c'est le libellé qui se raccourcit quand la case est étroite. */
+.rp-per .c .kv span:nth-child(odd){opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.rp-per .c .kv span:nth-child(even){font-weight:600;text-align:right;white-space:nowrap}
 .rp-per .c .kv .pc{font-weight:500;opacity:.8}
 .rp-per .c.sem{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);color:var(--color-text)}
 .rp-per .c.tot{background:var(--color-surface);color:var(--color-text)}
