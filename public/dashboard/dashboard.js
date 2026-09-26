@@ -1812,7 +1812,7 @@
       g += `<div class="r">${esc(b.nom)}<small>${b.de} – ${b.a} h</small></div>`;
       dates.forEach(d => { g += cell(P.jours[d][b.cle], rangs(d)[b.cle]); });
       const w = W[b.cle];
-      g += `<div class="c sem"><b>${fK(w.ca)}</b><div class="kv"><span>${sem.ca > 0 ? fN(100 * w.ca / sem.ca) + ' % · ' : ''}marge nette</span><span>${net(w, true)} <span class="pc">${w.ca > 0 ? fN(100 * w.res / w.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(w.tickets)}</span></div></div>`;
+      g += `<div class="c sem"><b>${fK(w.ca)}</b><div class="kv"><span>de la semaine</span><span>${sem.ca > 0 ? fN(100 * w.ca / sem.ca) + ' %' : '—'}</span><span>marge nette</span><span>${net(w, true)} <span class="pc">${w.ca > 0 ? fN(100 * w.res / w.ca) + ' %' : '—'}</span></span><span>clients</span><span>${fN(w.tickets)}</span></div></div>`;
     });
     g += `<div class="r">Journée</div>${dates.map(d => `<div class="c tot"><b>${fK(J[d].ca)}</b>${kv(J[d], true)}</div>`).join('')}<div class="c tot"><b>${fK(sem.ca)}</b>${kv(sem, true)}</div>`;
     const bornesTxt = B.map(b => b.nom.toLowerCase() + ' ' + b.de + ' – ' + b.a + ' h').join(' · ');

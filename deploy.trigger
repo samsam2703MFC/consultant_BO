@@ -435,3 +435,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-26T07:17:24Z Brand Guard en production : charte, pages, verdict, cron quotidien
 2026-09-26T07:25:24Z Brand Guard : secrets Meta dans config.php
 2026-09-26T17:14:05Z dashboard : les périodes de la semaine (matin, midi, après-midi)
+2026-09-26T17:16:24Z dashboard : colonne Semaine des périodes
