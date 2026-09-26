@@ -4133,19 +4133,19 @@ function tplResultatMois(c, d, x){
         <button ${x.A(d.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
       </div>
       <div class="rm-kp">${M.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
-      ${bloc('Le calendrier du mois — CA, atteinte de l’objectif du jour, clients', `
+      ${bloc((M.semaine ? 'La semaine' : 'Le calendrier du mois') + ' — CA, atteinte de l’objectif du jour, clients', `
         <div class="rm-cal">${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('')}
           ${M.cases.map(k => k.vide ? '<div class="d vide"></div>' : k.ferme ? `<div class="d fut"><span class="n">${esc(k.court)}</span><b>fermé</b></div>` : k.futur ? `<div class="d fut"><span class="n">${esc(k.court)}</span><b>—</b>${k.obj ? `<small>objectif ${esc(k.obj)}</small>` : ''}</div>`
             : `<div class="d${k.clair ? ' clair' : ''}${k.auj ? ' auj' : ''}" style="background:${k.fond}"><span class="n">${esc(k.court)}</span><b>${esc(k.ca)}</b><small>${esc(k.att)}</small><small>${esc(k.cli)}</small></div>`).join('')}
         </div>
         <div class="rm-leg"><span><i style="background:#8D1D2C"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#2d7a3e"></i>100 – 110 %</span><span><i style="background:#6aa84f"></i>90 – 100 %</span><span><i style="background:#F08A2C"></i>75 – 90 %</span><span><i style="background:#e8c9a0"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div>`)}
-      <div class="rm-3">
-        ${bloc('La cascade du mois', `<table style="width:100%;border-collapse:collapse;font-size:12.5px">${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
+      <div class="rm-3${M.profil ? '' : ' deux'}">
+        ${bloc(M.semaine ? 'La cascade de la semaine' : 'La cascade du mois', `<table style="width:100%;border-collapse:collapse;font-size:12.5px">${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:600' : ''}">
               <td style="padding:6px 0;${bord};width:120px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
               <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul}"></i></span></td>
               <td style="padding:6px 0;${bord};text-align:right;${num};width:82px">${esc(l.v)}</td>
               <td style="padding:6px 0 6px 10px;${bord};text-align:right;${num};width:54px;color:${l.coul}">${esc(l.p)}</td></tr>`).join('')}</table>${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
-        ${bloc('Le profil des jours — moyenne par jour de la semaine', `${M.profil.map(p => `<div class="rm-bar"><span class="l">${esc(p.nom)}</span><span class="b"><i style="width:${p.w}%;background:${p.ok ? '#8D1D2C' : '#c9c2b8'}"></i>${p.wo != null ? `<em style="left:${p.wo}%"></em>` : ''}</span><span class="v">${esc(p.ca)}</span><span class="c" style="color:${p.ok == null ? 'var(--color-text-muted)' : (p.ok ? '#2d7a3e' : '#C0182B')}">${esc(p.att)}</span></div>`).join('')}
+        ${!M.profil ? '' : bloc('Le profil des jours — moyenne par jour de la semaine', `${M.profil.map(p => `<div class="rm-bar"><span class="l">${esc(p.nom)}</span><span class="b"><i style="width:${p.w}%;background:${p.ok ? '#8D1D2C' : '#c9c2b8'}"></i>${p.wo != null ? `<em style="left:${p.wo}%"></em>` : ''}</span><span class="v">${esc(p.ca)}</span><span class="c" style="color:${p.ok == null ? 'var(--color-text-muted)' : (p.ok ? '#2d7a3e' : '#C0182B')}">${esc(p.att)}</span></div>`).join('')}
           <div class="rm-leg" style="margin-top:6px"><span>le trait noir = objectif du jour${M.pireJour ? ' · le ' + esc(M.pireJour) + ' est le point faible du mois' : ''}</span></div>`)}
         ${bloc('Les heures — CA moyen par jour ouvert', M.heures.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des heures…</div>` : (M.heures.barres.length ? `
           <div class="rm-hb">${M.heures.barres.map(b => `<i class="${b.cls}" style="height:${b.w}%" title="${esc(b.titre)}"><span>${b.h}h</span></i>`).join('')}</div>

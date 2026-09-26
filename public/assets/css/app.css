@@ -365,7 +365,7 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .rm-kp .t.bad .v{color:#C0182B}.rm-kp .t.good .v{color:#2d7a3e}.rm-kp .t.gold{background:#fdf6e3;border:1px solid #e6c65a}.rm-kp .t.gold .v{color:#8a6508}
 .rm-bloc{display:flex;flex-direction:column;min-width:0}.rm-bloc+.rm-bloc{margin-top:14px}
 .rm-card{background:var(--color-surface);border-radius:9px;padding:10px 12px;flex:1}
-.rm-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;margin-top:14px}.rm-3 .rm-bloc+.rm-bloc{margin-top:0}
+.rm-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;margin-top:14px}.rm-3 .rm-bloc+.rm-bloc{margin-top:0}.rm-3.deux{grid-template-columns:repeat(2,minmax(0,1fr))}
 .rm-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .rm-cal .h{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:center}
 .rm-cal .d{border-radius:7px;padding:7px 9px;min-height:62px;display:flex;flex-direction:column;gap:1px;color:#fff;min-width:0}

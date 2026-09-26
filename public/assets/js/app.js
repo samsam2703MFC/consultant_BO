@@ -7805,7 +7805,9 @@ class App {
    * clients au panier moyen. Le profil des jours dit quel jour de la semaine
    * manque ; les heures viennent de l'appel léger des périodes.
    */
-  rpMois(m, r, d){
+  rpMois(m, r, d, vue){
+    const sem = vue === 'semaine';
+    const per = sem ? 'la semaine' : 'le mois';
     const fE = n => this.fE(n);
     const fK = n => Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fE(n);
     const fSK = n => (n >= 0 ? '+ ' : '− ') + fK(Math.abs(n));
@@ -7819,10 +7821,10 @@ class App {
     const proj = sansO || !m.attendu ? null : m.realise / m.attendu * m.objectif;
     const record = passes.length ? passes.reduce((a, b) => b.ca > a.ca ? b : a) : null;
     const tuiles = [
-      { k: 'CA du mois', v: fK(m.realise), s: sansO ? 'pas d’objectif' : 'objectif ' + fK(m.objectif) + ' · attendu ' + fK(m.attendu), cls: '' },
+      { k: sem ? 'CA de la semaine' : 'CA du mois', v: fK(m.realise), s: sansO ? 'pas d’objectif' : 'objectif ' + fK(m.objectif) + ' · attendu ' + fK(m.attendu), cls: '' },
       { k: 'Atteinte', v: sansO ? '—' : Math.round(pc(m.realise, m.attendu)) + ' %', s: sansO ? '' : 'à ce jour · ' + fSK(m.ecart) + ' · ' + fI(m.clientsManquants) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), cls: sansO ? '' : (m.ecart < 0 ? 'bad' : 'good') },
-      { k: 'Projection', v: proj == null ? '—' : fK(proj), s: proj == null ? '' : 'fin de mois au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', cls: proj == null ? '' : (proj < m.objectif ? 'bad' : 'good') },
-      { k: 'Reste à faire', v: sansO ? '—' : fK(m.reste), s: sansO ? '' : (restants.length ? restants.length + ' jours · ' + fK(m.reste / restants.length) + ' par jour' : 'mois clos'), cls: '' },
+      { k: 'Projection', v: proj == null ? '—' : fK(proj), s: proj == null ? '' : 'fin de ' + per + ' au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', cls: proj == null ? '' : (proj < m.objectif ? 'bad' : 'good') },
+      { k: 'Reste à faire', v: sansO ? '—' : fK(m.reste), s: sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')), cls: '' },
       { k: 'Par jour ouvert', v: fE(m.realise / nJ), s: fI(m.tickets / nJ) + ' clients · panier ' + (m.panier || 0).toFixed(2).replace('.', ',') + ' €', cls: '' },
       { k: 'Marge brute', v: m.margeBrutePct != null ? Math.round(m.margeBrutePct) + ' %' : '—', s: fK(m.margeBrute || 0) + ' · matière ' + Math.round(m.coutMatierePct || 0) + ' % (seuil ' + Math.round((r.seuils || {}).food || 32) + ')', cls: '' },
       { k: 'Résultat net', v: m.net == null ? '—' : fK(m.net), s: m.netPct == null ? '' : m.netPct.toFixed(1).replace('.', ',') + ' % des ventes', cls: m.net == null ? '' : (m.net >= 0 ? 'good' : 'bad') },
@@ -7848,14 +7850,16 @@ class App {
     const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
     const profilL = profil.map(p => ({ nom: p.nom, ca: fE(p.ca), w: Math.round(p.ca / mx * 100), wo: p.o ? Math.round(p.o / mx * 100) : null, ok: p.o ? p.ca >= p.o : null, att: p.o ? Math.round(pc(p.ca, p.o)) + ' %' : '', n: p.n }));
     // Les heures : de l'appel léger des périodes, quand il est arrivé.
-    const per = (this._per || {})['per|mois|' + m.shopId + '|' + r.du];
-    const H = per && per.heures ? per.heures.filter(h => h.h >= 5 && h.h <= 19) : [];
+    const perD = (this._per || {})['per|' + (sem ? 'semaine' : 'mois') + '|' + m.shopId + '|' + r.du];
+    const H = perD && perD.heures ? perD.heures.filter(h => h.h >= 5 && h.h <= 19) : [];
     const hCa = H.length ? H.reduce((a, b) => b.moy.ca > a.moy.ca ? b : a) : null, hCli = H.length ? H.reduce((a, b) => b.moy.tickets > a.moy.tickets ? b : a) : null;
     const mxH = Math.max(1, ...H.map(h => h.moy.ca));
-    const heures = { chargement: !per, barres: H.map(h => ({ h: h.h, w: Math.round(h.moy.ca / mxH * 100), cls: h === hCa ? 'on' : (h === hCli ? 'on2' : ''), titre: h.h + ' – ' + (h.h + 1) + ' h · ' + fE(h.moy.ca) + ' · ' + fI(h.moy.tickets) + ' clients par jour ouvert' })),
+    const heures = { chargement: !perD, barres: H.map(h => ({ h: h.h, w: Math.round(h.moy.ca / mxH * 100), cls: h === hCa ? 'on' : (h === hCli ? 'on2' : ''), titre: h.h + ' – ' + (h.h + 1) + ' h · ' + fE(h.moy.ca) + ' · ' + fI(h.moy.tickets) + ' clients par jour ouvert' })),
       ca: hCa ? hCa.h + ' – ' + (hCa.h + 1) + ' h · ' + fE(hCa.moy.ca) + ' par jour' : '', cli: hCli ? hCli.h + ' – ' + (hCli.h + 1) + ' h · ' + fI(hCli.moy.tickets) + ' par jour' : '' };
-    return { tuiles, cases, profil: profilL, pireJour: pire ? pire.nom.toLowerCase() : '', heures,
-      sousTitre: passes.length + ' jour' + (passes.length > 1 ? 's' : '') + ' ouvert' + (passes.length > 1 ? 's' : '') + ' sur ' + J.length + (r.enCours ? ' · lu le ' + (r.jusqua || r.aujourdhui || '').slice(8, 10) + '/' + (r.jusqua || r.aujourdhui || '').slice(5, 7) : ' · mois clos') };
+    // À la semaine, chaque jour n'apparaît qu'une fois : le profil des jours
+    // redirait le calendrier, il ne s'affiche pas.
+    return { tuiles, cases, profil: sem ? null : profilL, pireJour: pire ? pire.nom.toLowerCase() : '', heures, semaine: sem,
+      sousTitre: passes.length + ' jour' + (passes.length > 1 ? 's' : '') + ' ouvert' + (passes.length > 1 ? 's' : '') + ' sur ' + J.length + (r.enCours ? ' · lu le ' + (r.jusqua || r.aujourdhui || '').slice(8, 10) + '/' + (r.jusqua || r.aujourdhui || '').slice(5, 7) : (sem ? ' · semaine close' : ' · mois clos')) };
   }
   valsResultatPeriode(common){
     const S = this.state, D = this.D;
@@ -8065,7 +8069,7 @@ class App {
     if (vue === 'semaine' || vue === 'mois') { common.rpDetail.periodes = this.rpPeriodes(m, r, vue); }
     // Le mois d'un magasin : les huit chiffres, le calendrier, le profil des
     // jours, les heures — à la place de la liste des jours.
-    if (vue === 'mois') { common.rpDetail.mois = this.rpMois(m, r, common.rpDetail); }
+    common.rpDetail.mois = this.rpMois(m, r, common.rpDetail, vue);
   }
   /**
    * La semaine en cours du magasin ouvert dans le détail, en une ligne : une
