@@ -4122,7 +4122,7 @@ function tplPeriodes(g, x){
   const { esc } = x;
   const cap = 'font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
   const cell = k => k.vide ? `<div class="c vide"><b>—</b><div class="kv"><span>aucune vente</span><span></span></div></div>`
-    : `<div class="c ${k.cls}"${k.fond ? ` style="background:${k.fond}"` : ''}>${k.rang ? `<em>${k.rang}</em>` : ''}<b>${esc(k.ca)}</b><div class="kv">${k.part ? `<span>semaine</span><span>${k.part}</span>` : ''}<span title="marge nette et sa part des ventes">marge</span><span><span class="${k.netCls}">${esc(k.net)}</span> <span class="pc">${esc(k.netPct)}</span></span><span>clients</span><span>${esc(k.clients)}</span></div></div>`;
+    : `<div class="c ${k.cls}"${k.fond ? ` style="background:${k.fond}"` : ''}>${k.rang ? `<em>${k.rang}</em>` : ''}<b>${esc(k.ca)}</b><div class="kv">${k.part ? `<span>${g.partLib || 'semaine'}</span><span>${k.part}</span>` : ''}<span title="marge nette et sa part des ventes">marge</span><span><span class="${k.netCls}">${esc(k.net)}</span> <span class="pc">${esc(k.netPct)}</span></span><span>clients</span><span>${esc(k.clients)}</span></div></div>`;
   return `
     <div style="margin-top:18px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
@@ -4130,15 +4130,15 @@ function tplPeriodes(g, x){
         ${g.chargement || g.erreur ? '' : `<div style="display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:999px;overflow:hidden;margin-left:4px">
           ${g.cols.map(c => `<button ${x.A(c.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 11px;${c.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">${c.nom}</button>`).join('')}
         </div>`}
-        <span style="font-size:11px;color:var(--color-text-muted);margin-left:auto;text-align:right">${g.chargement ? 'Lecture des heures de la semaine…' : (g.erreur ? esc(g.erreur) : esc(g.resume))}</span>
+        <span style="font-size:11px;color:var(--color-text-muted);margin-left:auto;text-align:right">${g.chargement ? 'Lecture des heures ' + (g.mois ? 'du mois' : 'de la semaine') + '…' : (g.erreur ? esc(g.erreur) : esc(g.resume))}</span>
       </div>
       ${g.chargement || g.erreur ? '' : `
       <div class="rp-per" style="grid-template-columns:104px repeat(${g.jours.length},minmax(0,1fr)) 150px">
-        <div></div>${g.jours.map(j => `<div class="hd">${esc(j.nom)}<small>${esc(j.date)}</small></div>`).join('')}<div class="hd">Semaine</div>
+        <div></div>${g.jours.map(j => `<div class="hd">${esc(j.nom)}<small>${esc(j.date)}</small></div>`).join('')}<div class="hd">${g.totLib || 'Semaine'}</div>
         ${g.lignes.map(l => `<div class="r">${esc(l.nom)}<small>${esc(l.heures)}</small></div>${l.cases.map(cell).join('')}`).join('')}
-        <div class="r">Journée</div>${g.journee.map(cell).join('')}
+        <div class="r">${g.mois ? 'Semaine' : 'Journée'}</div>${g.journee.map(cell).join('')}
       </div>
-      <div class="rp-perleg">${g.legende.map(e => `<span><i style="background:${e.fond}"></i>${esc(e.lib)}</span>`).join('')}<span>· le rang dans la case : la place de la période dans sa journée, au CA · les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>`}
+      <div class="rp-perleg">${g.legende.map(e => `<span><i style="background:${e.fond}"></i>${esc(e.lib)}</span>`).join('')}<span>· le rang dans la case : la place de la période dans ${g.mois ? 'sa semaine' : 'sa journée'}, au CA · les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>`}
     </div>`;
 }
 

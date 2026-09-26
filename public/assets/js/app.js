@@ -7720,13 +7720,14 @@ class App {
    * suit le chiffre choisi (CA, marge nette, clients) par rapport à la meilleure
    * case de la semaine ; le rang reste au CA.
    */
-  rpPeriodes(m, r){
+  rpPeriodes(m, r, vue){
     const S = this.state;
-    const cle = 'per|' + m.shopId + '|' + r.du;
+    vue = vue === 'mois' ? 'mois' : 'semaine';
+    const cle = 'per|' + vue + '|' + m.shopId + '|' + r.du;
     if (!this._per) { this._per = {}; }
     if (!this._per[cle] && !this._perEnCours) {
       this._perEnCours = cle;
-      readOne('/ventes/periodes?shop=' + encodeURIComponent(m.shopId) + '&vue=semaine&date=' + encodeURIComponent(r.du)).then(d => {
+      readOne('/ventes/periodes?shop=' + encodeURIComponent(m.shopId) + '&vue=' + vue + '&date=' + encodeURIComponent(r.du)).then(d => {
         this._perEnCours = null;
         this._per[cle] = (d && d.jours) ? d : { erreur: (d && d.error) || 'lecture impossible' };
         this.setState({});
@@ -7734,20 +7735,44 @@ class App {
     }
     const P = this._per[cle];
     const col = ['ca', 'res', 'tickets'].includes(S.rpPerCol) ? S.rpPerCol : 'ca';
-    const out = { chargement: !P, erreur: P && P.erreur ? P.erreur : '', col,
+    const mois = vue === 'mois';
+    const out = { chargement: !P, erreur: P && P.erreur ? P.erreur : '', col, mois,
+      totLib: mois ? 'Mois' : 'Semaine', partLib: mois ? 'mois' : 'semaine',
       cols: [['ca', 'CA'], ['res', 'Marge nette'], ['tickets', 'Clients']].map(c => ({ cle: c[0], nom: c[1], on: col === c[0], go: () => this.setState({ rpPerCol: c[0] }) })) };
     if (!P || P.erreur) { return out; }
-    const B = P.bornes || [], dates = Object.keys(P.jours).sort();
+    const B = P.bornes || [];
+    // Au mois, les jours se regroupent par semaine (du lundi au dimanche,
+    // bornée au mois) : sept colonnes lisibles plutôt que trente illisibles.
+    // Chaque colonne garde ses dates ; le rang se lit dans la colonne.
+    const jourDates = Object.keys(P.jours).sort();
+    let colonnes;
+    if (mois) {
+      const sem = {};
+      jourDates.forEach(d => { const t = new Date(d + 'T12:00:00'); const lundi = new Date(t); lundi.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const k = lundi.toISOString().slice(0, 10); (sem[k] = sem[k] || []).push(d); });
+      colonnes = Object.keys(sem).sort().map(k => ({ cle: k, dates: sem[k] }));
+    } else { colonnes = jourDates.map(d => ({ cle: d, dates: [d] })); }
+    const agr = c => { const o = {}; B.forEach(b => { o[b.cle] = { ca: 0, tickets: 0, mb: 0, res: 0 }; c.dates.forEach(d => { const v = P.jours[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { o[b.cle][k] += v[k] || 0; }); }); }); return o; };
+    const parCol = {}; colonnes.forEach(c => { parCol[c.cle] = agr(c); });
+    const dates = colonnes.map(c => c.cle);
+    const PJ = parCol;
     const fE = n => this.fE(n), fI = n => Math.round(n || 0).toLocaleString('fr-BE');
     const fS = n => (n >= 0 ? '+ ' : '− ') + fE(Math.abs(n));
     const jourNom = d => { const t = new Date(d + 'T12:00:00'); const w = t.toLocaleDateString('fr-BE', { weekday: 'long' }); return w.charAt(0).toUpperCase() + w.slice(1); };
     const fD = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+    // L'en-tête d'une colonne : le jour (semaine) ou « Sem. 37 · 8 – 14/09 » (mois).
+    const enTete = c => {
+      if (!mois) { return { nom: jourNom(c.cle), date: fD(c.cle) }; }
+      const t = new Date(c.cle + 'T12:00:00'); const jeudi = new Date(t); jeudi.setDate(t.getDate() + 3);
+      const an1 = new Date(jeudi.getFullYear(), 0, 4); const num = 1 + Math.round(((jeudi - an1) / 86400000 - 3 + ((an1.getDay() + 6) % 7)) / 7);
+      const d1 = c.dates[0], d2 = c.dates[c.dates.length - 1];
+      return { nom: 'Sem. ' + num, date: d1.slice(8, 10) + ' – ' + fD(d2) + (c.dates.length < 7 ? ' · ' + c.dates.length + ' j' : '') };
+    };
     const W = {}; B.forEach(b => { W[b.cle] = { ca: 0, tickets: 0, mb: 0, res: 0 }; });
     const J = {}; const sem = { ca: 0, tickets: 0, mb: 0, res: 0 };
-    dates.forEach(d => { J[d] = { ca: 0, tickets: 0, mb: 0, res: 0 }; B.forEach(b => { const v = P.jours[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { W[b.cle][k] += v[k] || 0; J[d][k] += v[k] || 0; sem[k] += v[k] || 0; }); }); });
-    const rangs = d => { const o = B.map(b => b.cle).sort((a, c) => (P.jours[d][c] || {}).ca - (P.jours[d][a] || {}).ca); const rg = {}; o.forEach((k, i) => { rg[k] = i + 1; }); return rg; };
+    dates.forEach(d => { J[d] = { ca: 0, tickets: 0, mb: 0, res: 0 }; B.forEach(b => { const v = PJ[d][b.cle] || {}; ['ca', 'tickets', 'mb', 'res'].forEach(k => { W[b.cle][k] += v[k] || 0; J[d][k] += v[k] || 0; sem[k] += v[k] || 0; }); }); });
+    const rangs = d => { const o = B.map(b => b.cle).sort((a, c) => (PJ[d][c] || {}).ca - (PJ[d][a] || {}).ca); const rg = {}; o.forEach((k, i) => { rg[k] = i + 1; }); return rg; };
     const LAB = { 1: '1er', 2: '2e', 3: '3e' };
-    const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (P.jours[d][b.cle] || {})[col] || 0)));
+    const mx = Math.max(1e-9, ...dates.flatMap(d => B.map(b => (PJ[d][b.cle] || {})[col] || 0)));
     const ECH = col === 'res'
       ? [['#1f5a2c', '≥ 80 % de la meilleure marge'], ['#2d7a3e', '55 – 80 %'], ['#6aa84f', '35 – 55 %'], ['#c9e0b8', '18 – 35 %'], ['#efe9e1', '< 18 %']]
       : [['#8D1D2C', '≥ 80 % de la meilleure case'], ['#C0182B', '55 – 80 %'], ['#F08A2C', '35 – 55 %'], ['#e8c9a0', '18 – 35 %'], ['#efe9e1', '< 18 %']];
@@ -7759,14 +7784,14 @@ class App {
         net: fS(v.res), netCls: clair ? (v.res >= 0 ? 'ok' : 'ko') : '', netPct: v.ca > 0 ? Math.round(100 * v.res / v.ca) + ' %' : '—',
         clients: fI(v.tickets), part: cls === 'sem' && sem.ca > 0 ? Math.round(100 * v.ca / sem.ca) + ' %' : '' };
     };
-    out.jours = dates.map(d => ({ nom: jourNom(d), date: fD(d) }));
+    out.jours = colonnes.map(enTete);
     out.lignes = B.map(b => ({ nom: b.nom, heures: b.de + ' – ' + b.a + ' h',
-      cases: dates.map(d => cell(P.jours[d][b.cle], rangs(d)[b.cle])).concat([cell(W[b.cle], 0, 'sem')]) }));
+      cases: dates.map(d => cell(PJ[d][b.cle], rangs(d)[b.cle])).concat([cell(W[b.cle], 0, 'sem')]) }));
     out.journee = dates.map(d => cell(J[d], 0, 'tot')).concat([cell(sem, 0, 'tot')]);
     out.legende = ECH.map(e => ({ fond: e[0], lib: e[1] })).concat(col === 'res' ? [{ fond: '#f5d5d8', lib: 'perte' }] : []);
     const meilleur = B.length ? B.reduce((mm, b) => W[b.cle].ca > W[mm.cle].ca ? b : mm) : null;
     out.resume = B.map(b => b.nom.toLowerCase() + ' ' + b.de + ' – ' + b.a + ' h').join(' · ')
-      + (meilleur && sem.ca > 0 ? ' · la semaine se fait le ' + meilleur.nom.toLowerCase() + ' : ' + Math.round(100 * W[meilleur.cle].ca / sem.ca) + ' % des ventes' : '');
+      + (meilleur && sem.ca > 0 ? ' · ' + (mois ? 'le mois' : 'la semaine') + ' se fait le ' + meilleur.nom.toLowerCase() + ' : ' + Math.round(100 * W[meilleur.cle].ca / sem.ca) + ' % des ventes' : '');
     return out;
   }
   valsResultatPeriode(common){
@@ -7972,8 +7997,9 @@ class App {
           obj: j.objectif == null ? '' : fE(j.objectif), clients: fCl(cl), col: coulEcart(ec), auj: !!j.aujourdhui };
       }),
     };
-    // Les périodes de la semaine — matin, midi, après-midi — de ce magasin.
-    if (vue === 'semaine') { common.rpDetail.periodes = this.rpPeriodes(m, r); }
+    // Les périodes — matin, midi, après-midi — de ce magasin : jour par jour
+    // sur la semaine, semaine par semaine sur le mois.
+    if (vue === 'semaine' || vue === 'mois') { common.rpDetail.periodes = this.rpPeriodes(m, r, vue); }
   }
   /**
    * La semaine en cours du magasin ouvert dans le détail, en une ligne : une
