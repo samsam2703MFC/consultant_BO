@@ -667,3 +667,15 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-per .c.vide{background:var(--color-background-secondary);color:var(--color-text-muted)}
 .db-perleg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);padding:8px 16px 12px;flex-wrap:wrap;align-items:center}.db-perleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 @media (max-width:900px){.db-per{grid-template-columns:70px repeat(7,minmax(0,1fr)) 90px;gap:3px;padding:10px 8px 4px}.db-per .c{padding:6px 3px}.db-per .c b{font-size:11px}.db-per .c .kv{display:none}.db-per .c em{display:none}}
+/* La période du magasin : huit tuiles, le calendrier coloré par l'atteinte du jour, le profil des jours. */
+.db-tuiles.huit{grid-template-columns:repeat(8,minmax(0,1fr))}
+.db-tuiles.huit .db-tui{min-height:96px}.db-tuiles.huit .db-tui .v{font-size:21px}
+.db-tui.or{border-color:#e6c65a;background:#fdf6e3}.db-tui.or .v{color:#8a6508}
+.db-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:12px 16px 6px}
+.db-cal .h{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:center}
+.db-cal .d{border-radius:7px;padding:7px 9px;min-height:60px;display:flex;flex-direction:column;gap:1px;color:#fff;min-width:0}
+.db-cal .d b{font-size:14px;white-space:nowrap}.db-cal .d small{font-size:10px;opacity:.92;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.db-cal .d .n{font:600 9px var(--font-ui);opacity:.8}
+.db-cal .d.clair{color:var(--color-text)}.db-cal .d.auj{outline:2px solid var(--color-text);outline-offset:1px}
+.db-cal .d.vide{background:transparent;border:.5px dashed var(--color-border-secondary)}.db-cal .d.fut{background:var(--color-background-secondary);color:var(--color-text-muted)}.db-cal .d.fut b{color:var(--color-text-muted)}
+.db-prof{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 0}.db-prof .l{width:70px;color:var(--color-text-muted)}.db-prof .b{flex:1;height:10px;border-radius:5px;background:var(--color-background-secondary);position:relative;overflow:hidden}.db-prof .b i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.db-prof .b em{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--color-text)}.db-prof .v{width:62px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}.db-prof .c{width:40px;text-align:right;font-size:10.5px;font-weight:600}
+@media (max-width:900px){.db-tuiles.huit{grid-template-columns:repeat(4,minmax(0,1fr))}.db-cal{gap:3px;padding:8px}.db-cal .d{padding:5px 4px;min-height:44px}.db-cal .d b{font-size:11px}.db-cal .d small{display:none}}

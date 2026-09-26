@@ -1171,60 +1171,66 @@
   function hDe(t) { const p = String(t || '0:0').split(':'); return (+p[0] || 0) + (+p[1] || 0) / 60; }
 
   /* Résultat › Semaine, Mois — le magasin déplié. */
+  /**
+   * La semaine ou le mois du magasin — comme le drop de Résultat dans le
+   * cockpit : huit chiffres (dont la projection de fin de période, le reste à
+   * faire par jour et le record), le calendrier coloré par l'atteinte de
+   * l'objectif de CHAQUE jour, puis le P&L et — au mois — le profil des jours.
+   * Les heures ont leur propre section juste en dessous.
+   */
   function rendPeriode(m, d) {
+    const sem = S.vue === 'semaine';
+    const per = sem ? 'la semaine' : 'le mois';
     const sansO = m.objectif == null;
-    const srcO = m.objectifSource === 'budget' ? 'budget validé' : (m.objectifSource === 'theorique' ? 'CA théorique de l’étude' : esc(m.objectifSource || ''));
-    const sansB = Array.isArray(m.sansBudget) && m.sansBudget.length ? ' · sans budget ' + esc(m.sansBudget.join(', ')) : '';
-    const att = m.objectif ? Math.min(100, 100 * m.realise / m.objectif) : 0;
-    const attendu = m.objectif && m.attendu != null ? Math.min(100, 100 * m.attendu / m.objectif) : null;
-    const cl = m.clientsManquants;
-    let h = `<div class="db-tuiles">
-      ${tuile('Objectif', sansO ? '—' : fK(m.objectif), sansO ? 'pas de budget pour cette période' : srcO + ' · réparti sur la pondération réseau' + sansB)}
-      ${tuile('Attendu à ce jour', sansO ? '—' : fK(m.attendu), sansO ? '' : 'jours passés au poids de chacun')}
-      ${tuile('Réalisé', fK(m.realise), fN(m.tickets) + ' clients · panier ' + fU(m.panier) + (m.atteinte != null && !sansO ? ' · ' + fP(100 * m.atteinte) + ' de l’attendu' : ''))}
-      ${tuile('Écart à l’attendu', sansO ? '—' : fSK(m.ecart), sansO ? '' : (cl != null ? (cl > 0 ? fN(cl) + ' clients manquants' : fN(-cl) + ' clients d’avance') + ' · ' + fE(Math.abs(m.ecart)) + ' ÷ ' + fU(m.panier) : ''), sansO ? '' : (m.ecart >= 0 ? 'bon' : 'vif'))}
-      ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : 'prévu sur les jours restants : ' + fK(m.prevu))}
-      ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
-    </div>`;
-    if (!sansO) {
-      h += `<div class="db-card"><div style="padding:12px 16px"><div class="db-lab">Objectif ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'} — ${fK(m.objectif)}</div>
-        <div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${attendu != null ? `<b style="left:${attendu.toFixed(1)}%"></b>` : ''}</div>
-        <div class="db-mini" style="margin-top:5px">${fP(att)} réalisé${attendu != null ? ' · le repère noir est l’attendu à ce jour (' + fP(attendu) + ')' : ''}</div></div></div>`;
-    }
     const jours = Array.isArray(m.jours) ? m.jours : [];
+    const passes = jours.filter(j => j.passe && j.ca);
+    const restants = jours.filter(j => !j.passe && !j.ferme && !j.aujourdhui);
+    const nJ = Math.max(1, passes.length);
+    const proj = sansO || !m.attendu ? null : m.realise / m.attendu * m.objectif;
+    const record = passes.length ? passes.reduce((a, b) => b.ca > a.ca ? b : a) : null;
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    const srcO = m.objectifSource === 'budget' ? 'budget validé' : (m.objectifSource === 'theorique' ? 'CA théorique de l’étude' : esc(m.objectifSource || ''));
+    let h = `<div class="db-tuiles huit">
+      ${tuile(sem ? 'CA de la semaine' : 'CA du mois', fK(m.realise), sansO ? 'pas de budget pour cette période' : 'objectif ' + fK(m.objectif) + ' (' + srcO + ') · attendu ' + fK(m.attendu))}
+      ${tuile('Atteinte', sansO ? '—' : fP(100 * m.realise / m.attendu), sansO ? '' : 'à ce jour · ' + fSK(m.ecart) + ' · ' + fN(Math.abs(m.clientsManquants)) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), sansO ? '' : (m.ecart < 0 ? 'vif' : 'bon'))}
+      ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'fin de ' + per + ' au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
+      ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')))}
+      ${tuile('Par jour ouvert', fE(m.realise / nJ), fN(m.tickets / nJ) + ' clients · panier ' + fU(m.panier))}
+      ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 32) + ')')}
+      ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
+      ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
+    </div>`;
+    // Le calendrier : une case par jour, colorée par l'atteinte de SON objectif.
     if (jours.length) {
-      const mx = Math.max(...jours.map(x => Math.max(x.ca || 0, x.objectif || 0)), 1);
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">Jour par jour</span><span class="db-mini">barre : CA · trait noir : objectif du jour · rose : sous l’objectif · orange : aujourd’hui</span></div>
-        <div class="db-jours" style="grid-template-columns:repeat(${jours.length},minmax(0,1fr))">${jours.map(x => {
-          const ca = x.ca || 0; const cls = x.ferme ? 'ferme' : (x.aujourdhui ? 'auj' : (x.objectif && ca < x.objectif && x.passe ? 'sous' : ''));
-          return `<div title="${esc(x.date)}${x.objectif ? ' · objectif ' + fE(x.objectif) : ''}"><em>${x.ferme ? '' : (x.passe || x.aujourdhui ? (S.vue === 'mois' ? nf(ca / 1000, 1) : fK(ca)) : '')}</em><div class="bb"><i class="${cls}" style="height:${x.ferme ? 4 : (100 * ca / mx).toFixed(1)}%"></i>${x.objectif ? `<b style="bottom:${(100 * x.objectif / mx).toFixed(1)}%"></b>` : ''}</div><span>${esc(x.court)}</span></div>`; }).join('')}</div>
-        ${S.vue === 'mois' ? '<div class="db-note">Montants en k€.</div>' : ''}</div>`;
+      const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#8D1D2C', false] : a >= 100 ? ['#2d7a3e', false] : a >= 90 ? ['#6aa84f', false] : a >= 75 ? ['#F08A2C', false] : ['#e8c9a0', true]; };
+      let cases = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('');
+      const t0 = new Date(jours[0].date + 'T12:00:00');
+      for (let i = 0; i < (t0.getDay() + 6) % 7; i++) { cases += '<div class="d vide"></div>'; }
+      jours.forEach(j => {
+        if (j.ferme) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>fermé</b></div>`; return; }
+        if (!j.passe && !j.ca) { cases += `<div class="d fut"><span class="n">${esc(j.court)}</span><b>—</b>${j.objectif ? `<small>objectif ${fE(j.objectif)}</small>` : ''}</div>`; return; }
+        const [fond, clair] = teinte(j); const dc = j.objectif && m.panier ? j.tickets - Math.round(j.objectif / m.panier) : null;
+        cases += `<div class="d${clair ? ' clair' : ''}${j.aujourdhui ? ' auj' : ''}" style="background:${fond}"><span class="n">${esc(j.court)}${record && j.date === record.date ? ' · record' : ''}</span><b>${fE(j.ca)}</b><small>${j.objectif ? Math.round(pc(j.ca, j.objectif)) + ' % de ' + fE(j.objectif) : 'pas d’objectif'}</small><small>${fN(j.tickets)} clients${dc == null ? '' : ' · ' + (dc >= 0 ? '+' : '−') + Math.abs(dc)}</small></div>`;
+      });
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">${sem ? 'La semaine' : 'Le calendrier du mois'} — CA, atteinte de l’objectif du jour, clients</span></div>
+        <div class="db-cal">${cases}</div>
+        <div class="db-perleg"><span><i style="background:#8D1D2C"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#2d7a3e"></i>100 – 110 %</span><span><i style="background:#6aa84f"></i>90 – 100 %</span><span><i style="background:#F08A2C"></i>75 – 90 %</span><span><i style="background:#e8c9a0"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div></div>`;
     }
-    h += rendTenir(m, d);
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${S.vue === 'semaine' ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
+    // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
+    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
+    let prof = '';
+    if (!sem && passes.length) {
+      const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      const par = {}; passes.forEach(j => { (par[j.jour] = par[j.jour] || []).push(j); });
+      const profil = Object.keys(par).map(Number).sort().map(w => { const l = par[w]; return { nom: NOMJ[w], ca: l.reduce((a, j) => a + j.ca, 0) / l.length, o: l.reduce((a, j) => a + (j.objectif || 0), 0) / l.length }; });
+      const mx = Math.max(1, ...profil.map(p => Math.max(p.ca, p.o)));
+      const pire = profil.filter(p => p.o).sort((a, b) => pc(a.ca, a.o) - pc(b.ca, b.o))[0];
+      prof = `<div class="db-card"><div class="ct"><span class="db-lab">Le profil des jours</span><span class="db-mini">moyenne par jour de la semaine · le trait noir = objectif du jour${pire ? ' · le ' + pire.nom.toLowerCase() + ' est le point faible du mois' : ''}</span></div>
+        <div style="padding:10px 16px 12px">${profil.map(p => `<div class="db-prof"><span class="l">${p.nom}</span><span class="b"><i style="width:${Math.round(p.ca / mx * 100)}%;background:${p.o && p.ca >= p.o ? '#8D1D2C' : '#c9c2b8'}"></i>${p.o ? `<em style="left:${Math.round(p.o / mx * 100)}%"></em>` : ''}</span><span class="v">${fE(p.ca)}</span><span class="c" style="color:${!p.o ? 'var(--color-text-muted)' : (p.ca >= p.o ? '#2d7a3e' : '#C0182B')}">${p.o ? Math.round(pc(p.ca, p.o)) + ' %' : ''}</span></div>`).join('')}</div></div>`;
+    }
+    h += prof ? `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">${pl}${prof}</div>` : pl;
     if (S.vue === 'mois') { h += rendRentab(); }
     return h;
-  }
-
-  /* Ce qu'il manque, et ce qu'il faut pour tenir l'objectif — comme le drop de Résultat. */
-  function rendTenir(m, d) {
-    if (m.objectif == null) { return ''; }
-    const jours = Array.isArray(m.jours) ? m.jours : [];
-    const restants = jours.filter(j => !j.passe && !j.ferme && !j.aujourdhui);
-    const eff = m.reste - m.prevu;   // ce qu'il faut faire EN PLUS de ce que la pondération prévoyait
-    const effCl = m.panier > 0 ? Math.round(eff / m.panier) : null;
-    const parJour = restants.length ? m.reste / restants.length : null;
-    const cl = m.clientsManquants;
-    return `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
-      <div class="db-card"><div class="ct"><span class="db-lab">Ce qu’il manque</span><span class="db-mini">écart à l’attendu ${d.enCours ? 'à ce jour' : 'de la période'}</span></div>
-        <div style="padding:12px 16px"><div style="font-family:var(--font-display);font-size:20px;color:${cl > 0 ? '#C0182B' : '#2d7a3e'}">${cl > 0 ? 'Il manque ' + fN(cl) + ' clients' : (cl < 0 ? fN(-cl) + ' clients d’avance' : 'Dans la cible')}</div>
-        <div class="db-mini" style="margin-top:4px">${fS(m.ecart)} d’écart · ${fE(Math.abs(m.ecart))} ÷ panier ${fU(m.panier)} = ${fN(Math.abs(cl))} clients</div></div></div>
-      <div class="db-card"><div class="ct"><span class="db-lab">Tenir l’objectif</span><span class="db-mini">${restants.length ? restants.length + ' jour(s) restant(s)' : 'période close'}</span></div>
-        <div class="db-casc" style="grid-template-columns:repeat(3,1fr);padding:10px 16px">
-          <div><div class="k">Reste à faire</div><div class="v">${fK(m.reste)}</div><div class="s">${parJour != null ? fE(parJour) + ' par jour ouvert restant' : ''}</div></div>
-          <div><div class="k">Prévu par la pondération</div><div class="v">${fK(m.prevu)}</div><div class="s">${m.objectif ? Math.round(100 * m.prevu / m.objectif) + ' % de l’objectif' : ''}</div></div>
-          <div><div class="k">Effort en plus</div><div class="v ${eff > 0 ? 'ko' : 'ok'}">${fSK(eff)}</div><div class="s">${effCl != null ? (effCl > 0 ? '+' : '') + fN(effCl) + ' clients sur la période' : ''}</div></div>
-        </div></div></div>`;
   }
 
   /* Le résultat net jour par jour du mois en cours — les cases de l'analyse rentabilité. */
