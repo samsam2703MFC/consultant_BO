@@ -142,5 +142,17 @@ verifie('le prompt porte la règle de décision', str_contains($sys, 'bloque') &
 verifie('la charte de démo a des bloquants, des majeurs et des mineurs',
     count(array_unique(array_column($regles, 'gravite'))) === 3);
 
+// --- 7. le calendrier du cron ---------------------------------------------------------------
+echo "Calendrier du cron\n";
+$tz = new DateTimeZone('Europe/Brussels');
+$pl = bgCronPlan(new DateTime('2026-09-22 07:10', $tz)); // mardi
+verifie('mardi 7 h : audit 2 jours + rapport du jour, pas d’hebdo', $pl['audit'] && $pl['jours'] === 2 && $pl['quotidien'] && !$pl['hebdo'], json_encode($pl));
+$pl = bgCronPlan(new DateTime('2026-09-21 07:00', $tz)); // lundi
+verifie('lundi 7 h : audit 7 jours + rapport du jour + hebdo', $pl['audit'] && $pl['jours'] === 7 && $pl['quotidien'] && $pl['hebdo'], json_encode($pl));
+$pl = bgCronPlan(new DateTime('2026-09-21 13:00', $tz));
+verifie('lundi 13 h : rien', !$pl['audit'] && !$pl['quotidien'] && !$pl['hebdo'], json_encode($pl));
+$pl = bgCronPlan(new DateTime('2026-09-23 15:00', $tz), true);
+verifie('forcé : tout, quelle que soit l’heure', $pl['audit'] && $pl['quotidien'] && $pl['hebdo']);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

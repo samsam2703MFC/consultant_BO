@@ -63,14 +63,27 @@ Sans webhook, rien n'est perdu : le cron du lundi relit sept jours.
 - **App secret** : changer `META_APP_SECRET` **avant** de faire tourner le secret côté Meta — entre les deux, les webhooks sont refusés (403), le cron rattrape.
 - **Clé Anthropic** : Paramètres → Assistance IA, ou `ANTHROPIC_API_KEY`.
 
-## Cron
+## Cron — chaque jour à 7 h
 
 `bin/rapports_cron.sh` (déjà appelé chaque heure) appelle
-`/marketing/brand-guard/cron`. L'endpoint ne fait quelque chose que le
-**lundi à 7 h** (heure de Bruxelles) : audit des sept derniers jours de chaque
-page connectée (tout post non encore contrôlé), puis rapport par mail à
-`mailAlerte`, trié du pire au meilleur, un lien par post. Un rapport ne part
-qu'une fois par jour.
+`/marketing/brand-guard/cron`. L'endpoint agit **tous les jours à 7 h**
+(heure de Bruxelles) :
+
+1. **lecture des pages** connectées — les deux derniers jours (pour couvrir
+   un webhook manqué et une publication tardive ; sept jours le lundi) ;
+2. **copie des visuels** de chaque post lu sous
+   `public/assistant/uploads/brand-guard/<contrôle>/` — la photo du jour,
+   qui survit à l'expiration des liens Facebook ;
+3. **passage de l'agent** sur tout post pas encore contrôlé : verdict,
+   sauvage ou non ;
+4. **rapport de contrôle du jour** par mail à `mailAlerte` — sauvages et
+   non-conformes d'abord, conformes en une ligne ; un jour sans post ne fait
+   pas de mail, seulement une ligne au journal ;
+5. le **lundi**, en plus : le rapport de la semaine, du pire au meilleur.
+
+Un rapport ne part qu'une fois par jour. `?forcer=1` rejoue tout à la main.
+Le webhook reste le chemin rapide : un post publié est contrôlé dans la
+minute, le cron du matin est le filet.
 
 ## Ce qu'un verdict enregistre
 
@@ -99,9 +112,8 @@ lecture d'un événement `feed`, version de charte.
 
 ## Limites connues
 
-- Les images des posts audités sont référencées par leur lien CDN Facebook,
-  qui expire après quelques jours : le verdict, lui, reste. Copier les
-  visuels vers un stockage durable (R2) est le prochain pas.
 - Les visuels d'une **demande** ne sont envoyés au modèle que s'ils portent
   une `url` (absolue, ou relative aux uploads du cockpit) : le formulaire
   actuel enregistre un nom et des dimensions, pas le fichier.
+- Les copies de visuels vivent sur le disque du serveur ; les déplacer vers
+  un stockage objet (R2) est un changement d'une fonction (`bgArchiverImages`).

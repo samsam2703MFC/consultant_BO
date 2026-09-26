@@ -18,5 +18,6 @@ JETON="$(php -r '
 curl -fsS -m 600 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/rapports/cron?jeton=${JETON}" >/dev/null
 # E-mail « commande fournisseur » (centrale d'achat) : même jeton, même heure.
 curl -fsS -m 300 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/centrale/commandes/mail/cron?jeton=${JETON}" >/dev/null || true
-# Brand Guard : audit des pages Facebook et rapport du lundi 7 h (l'endpoint décide de l'heure).
+# Brand Guard : chaque jour à 7 h, lecture des pages Facebook, copie des visuels, passage de
+# l'agent et rapport de contrôle ; le lundi, la semaine en plus (l'endpoint décide de l'heure).
 curl -fsS -m 900 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/marketing/brand-guard/cron?jeton=${JETON}" >/dev/null || true

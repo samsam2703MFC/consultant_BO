@@ -455,11 +455,52 @@ function bgAuditerPost(array $page, array $post, ?array $idsConnus = null): ?arr
     $id = bgEnregistrer($v, ['fbPostId' => $post['id'], 'shopId' => $page['shop_id'], 'boutique' => $page['boutique'],
         'source' => 'apres', 'sauvage' => $sauvage, 'images' => $post['images'], 'lien' => $post['lien'],
         'publieLe' => $post['date'], 'texte' => $post['texte']]);
+    bgArchiverImages($id, $post['images']);
     journalAdd('Brand Guard', $sauvage ? 'Post sauvage' : 'Audit', (string) $page['boutique'],
         ($sauvage ? 'POST SAUVAGE — ' : '') . 'post du ' . substr($post['date'], 0, 16) . ' : ' . $v['statut'] . ' · ' . $v['score'] . '/100'
         . ($v['ecarts'] ? ' · ' . count($v['ecarts']) . ' écart(s)' : ''));
     if ($sauvage) { bgNotifierSauvage($id, $page, $post, $v); }
     return ['id' => $id, 'sauvage' => $sauvage] + $v;
+}
+
+/**
+ * La copie des visuels d'un post audité — la « photo » du jour.
+ *
+ * Les liens CDN de Facebook expirent en quelques jours ; un verdict qu'on
+ * relit un mois plus tard sans son image ne se discute plus. Chaque visuel
+ * (au plus dix, au plus 5 Mo) est copié sous public/assistant/uploads/brand-guard/
+ * et le contrôle garde les deux : le lien d'origine et la copie.
+ *
+ * @return list<array{url:string,copie:?string}>
+ */
+function bgArchiverImages(int $checkId, array $urls): array
+{
+    $dossier = __DIR__ . '/../public/assistant/uploads/brand-guard/' . $checkId;
+    $out = [];
+    foreach (array_slice(array_values(array_filter($urls, 'is_string')), 0, 10) as $i => $u) {
+        $copie = null;
+        if (preg_match('#^https?://#i', $u)) {
+            $ch = curl_init($u);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 30, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXFILESIZE => 5 * 1024 * 1024]);
+            $raw = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $ct = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+            if ($raw !== false && $code >= 200 && $code < 300 && strlen((string) $raw) <= 5 * 1024 * 1024) {
+                $ext = str_contains($ct, 'png') ? 'png' : (str_contains($ct, 'webp') ? 'webp' : (str_contains($ct, 'gif') ? 'gif' : 'jpg'));
+                if (!is_dir($dossier)) { @mkdir($dossier, 0775, true); }
+                $nom = ($i + 1) . '.' . $ext;
+                if (@file_put_contents($dossier . '/' . $nom, $raw) !== false) {
+                    $copie = 'assistant/uploads/brand-guard/' . $checkId . '/' . $nom;
+                }
+            }
+        }
+        $out[] = ['url' => $u, 'copie' => $copie];
+    }
+    if ($out !== []) {
+        Db::exec('UPDATE brand_guard_checks SET images_json = ? WHERE id = ?', [json_encode($out, JSON_UNESCAPED_UNICODE), $checkId]);
+    }
+    return $out;
 }
 
 /** L'alerte « post sauvage » : mail si le courrier est configuré, notification app dans tous les cas. */
@@ -585,7 +626,7 @@ function bgCheckLigne(array $r): array
         'boutique' => $r['boutique'], 'source' => $r['source'], 'sauvage' => (bool) $r['sauvage'], 'statut' => $r['statut'],
         'score' => (int) $r['score'], 'ecarts' => json_decode((string) ($r['ecarts_json'] ?? '[]'), true) ?: [],
         'message' => $r['message'], 'charteVersion' => $r['charte_version'], 'moteur' => $r['moteur'], 'modele' => $r['modele'],
-        'images' => json_decode((string) ($r['images_json'] ?? '[]'), true) ?: [], 'lien' => $r['lien'],
+        'images' => array_map(static fn ($i) => is_array($i) ? $i : ['url' => (string) $i, 'copie' => null], json_decode((string) ($r['images_json'] ?? '[]'), true) ?: []), 'lien' => $r['lien'],
         'publieLe' => $r['publie_le'], 'texte' => $r['texte'], 'quand' => $r['created_at']];
 }
 
@@ -759,13 +800,32 @@ function wr_bg_webhook(string $corps, ?string $signature): array
     return ['ok' => true, 'faits' => $faits];
 }
 
-/* --- cron et rapport du lundi ------------------------------------------------------ */
+/* --- cron : chaque jour la lecture des pages et le rapport de contrôle ------------ */
+
+/**
+ * Ce que le cron doit faire à cette heure-là — une fonction pure, pour que
+ * le calendrier se teste sans base ni horloge.
+ *
+ *  - tous les jours à 7 h (Europe/Brussels) : lire les pages (deux jours,
+ *    pour couvrir un webhook manqué et une publication tardive), passer
+ *    l'agent sur tout post pas encore contrôlé, envoyer le rapport de
+ *    contrôle du jour ;
+ *  - le lundi à 7 h, en plus : le rapport de la semaine, du pire au meilleur.
+ *
+ * @return array{audit:bool,jours:int,quotidien:bool,hebdo:bool}
+ */
+function bgCronPlan(DateTimeInterface $now, bool $forcer = false): array
+{
+    $h7 = (int) $now->format('G') === 7;
+    $lundi = (int) $now->format('N') === 1;
+    return ['audit' => $forcer || $h7, 'jours' => $lundi ? 7 : 2,
+        'quotidien' => $forcer || $h7, 'hebdo' => $forcer || ($h7 && $lundi)];
+}
 
 /**
  * GET /marketing/brand-guard/cron?jeton=… — appelé chaque heure par
- * bin/rapports_cron.sh (même jeton que les rapports). Fait deux choses le
- * lundi à 7 h (heure de Bruxelles) : l'audit des sept derniers jours, puis
- * le rapport par mail. `?forcer=1` pour une exécution à la main.
+ * bin/rapports_cron.sh (même jeton que les rapports) ; agit selon bgCronPlan().
+ * `?forcer=1` pour une exécution à la main. Un rapport ne part qu'une fois par jour.
  */
 function ep_bg_cron(): array
 {
@@ -774,19 +834,60 @@ function ep_bg_cron(): array
         http_response_code(403); return ['error' => 'jeton absent ou invalide'];
     }
     bgTables();
-    $tz = new DateTimeZone('Europe/Brussels');
-    $now = new DateTime('now', $tz);
+    $now = new DateTime('now', new DateTimeZone('Europe/Brussels'));
     $forcer = !empty($_GET['forcer']);
-    $lundi7h = (int) $now->format('N') === 1 && (int) $now->format('G') === 7;
-    if (!$forcer && !$lundi7h) { return ['fait' => false, 'motif' => 'rien à faire avant lundi 7 h (Europe/Brussels)']; }
+    $plan = bgCronPlan($now, $forcer);
+    if (!$plan['audit']) { return ['fait' => false, 'motif' => 'rien à faire avant 7 h (Europe/Brussels)']; }
     $s = setting('brandGuard') ?: [];
-    $cle = 'rapport:' . $now->format('Y-m-d');
-    if (!$forcer && ($s['dernierRapport'] ?? '') === $cle) { return ['fait' => false, 'motif' => 'rapport du jour déjà envoyé']; }
-    $audit = bgAuditer(7);
-    $rapport = bgRapportHebdo();
-    $s['dernierRapport'] = $cle;
+    $jour = $now->format('Y-m-d');
+    if (!$forcer && ($s['dernierRapport'] ?? '') === $jour) { return ['fait' => false, 'motif' => 'contrôle du jour déjà fait']; }
+    $audit = bgAuditer($plan['jours']);
+    $quotidien = $plan['quotidien'] ? bgRapportQuotidien($audit) : null;
+    $hebdo = $plan['hebdo'] ? bgRapportHebdo() : null;
+    $s['dernierRapport'] = $jour;
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['brandGuard', json_encode($s, JSON_UNESCAPED_UNICODE)]);
-    return ['fait' => true, 'audit' => $audit, 'rapport' => $rapport];
+    return ['fait' => true, 'plan' => $plan, 'audit' => $audit, 'quotidien' => $quotidien, 'hebdo' => $hebdo];
+}
+
+/**
+ * Le rapport de contrôle du jour : ce que l'agent a lu depuis hier 7 h —
+ * les posts sauvages et les non-conformes d'abord, puis les conformes en une
+ * ligne. Un jour sans post ne fait pas de mail : le silence est l'information.
+ */
+function bgRapportQuotidien(array $audit): array
+{
+    $depuis = date('Y-m-d H:i:s', time() - 24 * 3600);
+    $rows = Db::rows("SELECT * FROM brand_guard_checks WHERE source = 'apres' AND created_at >= ? ORDER BY sauvage DESC, score ASC, created_at DESC", [$depuis]);
+    $aTraiter = array_values(array_filter($rows, static fn ($r) => (int) $r['sauvage'] === 1 || $r['statut'] !== 'conforme'));
+    $conformes = count($rows) - count($aTraiter);
+    $s = setting('brandGuard') ?: [];
+    $a = trim((string) ($s['mailAlerte'] ?? ''));
+    if ($rows === [] && empty($audit['erreurs'])) {
+        journalAdd('Brand Guard', 'Contrôle du jour', null, 'Aucun post publié depuis hier sur les pages lues (' . (int) ($audit['pages'] ?? 0) . ' page(s)).');
+        return ['posts' => 0, 'aTraiter' => 0, 'envoye' => false];
+    }
+    $h = '<h2 style="font-family:sans-serif">Brand Guard — contrôle du ' . date('d/m/Y') . '</h2>'
+        . '<p style="font-family:sans-serif">' . count($rows) . ' post(s) publié(s) depuis hier · <b>' . count($aTraiter) . ' à traiter</b> · ' . $conformes . ' conforme(s).</p>';
+    if ($aTraiter) {
+        $h .= '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:sans-serif;font-size:13px"><tr><th>Boutique</th><th>Publié</th><th>Verdict</th><th>Écarts</th><th>Post</th></tr>';
+        foreach ($aTraiter as $r) {
+            $ecarts = json_decode((string) ($r['ecarts_json'] ?? '[]'), true) ?: [];
+            $h .= '<tr' . ((int) $r['sauvage'] === 1 ? ' style="background:#fdecee"' : '') . '><td>' . htmlspecialchars((string) $r['boutique']) . ((int) $r['sauvage'] === 1 ? '<br><b style="color:#C0182B">SAUVAGE</b>' : '') . '</td>'
+                . '<td>' . htmlspecialchars(substr((string) ($r['publie_le'] ?? $r['created_at']), 0, 16)) . '</td>'
+                . '<td><b>' . $r['statut'] . '</b> · ' . (int) $r['score'] . '/100</td>'
+                . '<td>' . htmlspecialchars(implode(' · ', array_map(static fn ($e) => ($e['libelle'] ?? $e['regle']) . ' (' . ($e['gravite'] ?? '') . ')', array_slice($ecarts, 0, 4)))) . (count($ecarts) > 4 ? ' …' : '') . '</td>'
+                . '<td>' . ($r['lien'] ? '<a href="' . htmlspecialchars((string) $r['lien']) . '">voir</a>' : '—') . '</td></tr>';
+        }
+        $h .= '</table>';
+    }
+    if (!empty($audit['erreurs'])) {
+        $h .= '<p style="font-family:sans-serif;color:#8a5a13"><b>Pages non lues :</b> ' . htmlspecialchars(implode(' · ', $audit['erreurs'])) . '</p>';
+    }
+    $envoye = $a !== '' && class_exists('Smtp') && Smtp::configured()
+        ? Smtp::envoyer($a, '[Brand Guard] Contrôle du jour — ' . count($aTraiter) . ' à traiter sur ' . count($rows), $h) : false;
+    journalAdd('Brand Guard', 'Contrôle du jour', null, count($rows) . ' post(s) contrôlé(s), ' . count($aTraiter) . ' à traiter'
+        . ($envoye ? ' — rapport envoyé à ' . $a : ' — rapport non envoyé (' . ($a === '' ? 'adresse absente' : 'courrier non configuré') . ')'));
+    return ['posts' => count($rows), 'aTraiter' => count($aTraiter), 'envoye' => $envoye, 'a' => $a];
 }
 
 /** Le rapport hebdomadaire : 7 jours, du pire au meilleur, un lien par post. */
