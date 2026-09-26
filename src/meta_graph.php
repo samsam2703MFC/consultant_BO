@@ -35,12 +35,17 @@ final class MetaGraph
     {
         $s = setting('brandGuard');
         if (!is_array($s)) { $s = []; }
-        $env = static fn (string $k): string => (string) (getenv($k) ?: '');
+        // Les secrets : variable d'environnement d'abord, sinon le bloc `meta`
+        // de config/config.php — hors Git, jamais écrasé par le déploiement,
+        // là où vivent déjà le mot de passe de la base et la clé Google.
+        $cfg = [];
+        try { $cfg = (array) ((Db::config()['meta'] ?? []) ?: []); } catch (Throwable $e) { $cfg = []; }
+        $env = static fn (string $k, string $c) => (string) (getenv($k) ?: ($cfg[$c] ?? ''));
         return [
-            'version'      => trim((string) ($s['graphVersion'] ?? '')) ?: 'v21.0',
-            'systemToken'  => $env('META_SYSTEM_TOKEN'),
-            'appSecret'    => $env('META_APP_SECRET'),
-            'verifyToken'  => $env('META_VERIFY_TOKEN'),
+            'version'      => trim((string) ($s['graphVersion'] ?? '')) ?: (trim((string) ($cfg['graphVersion'] ?? '')) ?: 'v21.0'),
+            'systemToken'  => trim($env('META_SYSTEM_TOKEN', 'systemToken')),
+            'appSecret'    => trim($env('META_APP_SECRET', 'appSecret')),
+            'verifyToken'  => trim($env('META_VERIFY_TOKEN', 'verifyToken')),
         ];
     }
 

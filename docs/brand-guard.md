@@ -21,7 +21,21 @@ Meta : le module ne publie ni ne supprime jamais rien.
 Le contrôle « avant » est aussi appelé automatiquement par `POST /facebook/posts`
 et `POST /facebook/posts/{id}/controle` (le module de demandes existant).
 
-## Secrets — variables d'environnement, jamais la base
+## Secrets — config.php ou variables d'environnement, jamais la base
+
+Le plus simple sur le serveur : le bloc `meta` de `config/config.php` (hors
+Git, jamais écrasé par `bin/deploy.sh`) :
+
+```php
+'meta' => [
+    'systemToken'  => 'EAAG…',          // System User, longue durée
+    'appSecret'    => 'a1b2c3…',        // app Meta → Paramètres → De base
+    'verifyToken'  => 'atelierby-webhook-2026', // chaîne libre
+    'graphVersion' => 'v21.0',
+],
+```
+
+Une variable d'environnement du même nom prime si elle existe.
 
 | Variable | Rôle |
 |---|---|
