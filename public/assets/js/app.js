@@ -256,7 +256,7 @@ class App {
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
       // Le contrôle des posts Facebook (Brand Guard) : sans adresse, l'écran
       // ne se rouvrait pas depuis un lien.
-      posts: 'controle-posts-facebook',
+      posts: 'controle-posts-facebook', brandGuard: 'brand-guard',
     };
   }
   /**
@@ -867,6 +867,7 @@ class App {
       rel: S.rel && { to: S.rel.to, email: S.rel.email, sujet: S.rel.sujet, corps: S.rel.corps }
     };
     const titles = {
+      brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
       posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
       scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
       analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
@@ -1276,6 +1277,7 @@ class App {
         { sub: 'Paramètres', children: [['parametres', 'Général', 0], ['scoring', 'Scoring produits', 0],
           ['caReglages', 'Centrale d’achat', 0],
           ['usageConsole', 'Usage de la console', 0],
+          ['brandGuard', 'Brand Guard', 0],
           ['journal', 'Journal', 0]] }]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
@@ -1296,8 +1298,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isPosts', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isPosts', 'isBrandGuard', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT' }[S.screen];
@@ -1630,6 +1632,7 @@ class App {
     if (common.isTaches) this.valsTaches(common, flat);
     // --- contrôle des posts Facebook
     if (common.isPosts) this.valsPosts(common);
+    if (common.isBrandGuard) this.valsBrandGuard(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches
@@ -12046,6 +12049,136 @@ class App {
       if (this.state.suiviPeriode !== periode) { return; }
       this.setState({ suiviData: d || { periode, validees: 0, moyenne: null, repartition: {}, ouverts: 0, traites: 0, signalements: [], parIntervenant: [], taches: [] } });
     });
+  }
+
+  /* --- Paramètres — Brand Guard : la charte et les pages ---------------------------- */
+  /**
+   * La charte s'édite ici et nulle part ailleurs. Deux principes :
+   *
+   *  - le brouillon est LOCAL jusqu'à « Enregistrer » : le contrôle des posts
+   *    relit la charte en service, pas une charte à moitié tapée ; à
+   *    l'enregistrement, la version change et le journal le dit ;
+   *  - chaque magasin du réseau a sa ligne de page, qu'il ait déjà une entrée
+   *    ou non : une page manquante se voit, elle ne se devine pas.
+   */
+  valsBrandGuard(common){
+    const S = this.state, D = this.D;
+    if (!this._bgRegles && !this._bgReglesEnCours) {
+      this._bgReglesEnCours = true;
+      readOne('/marketing/brand-guard/rules').then(d => {
+        this._bgReglesEnCours = false;
+        this._bgRegles = (d && d.regles) ? d : { regles: [], charteVersion: '—' };
+        this.setState({ bgDraft: null });
+      }).catch(() => { this._bgReglesEnCours = false; this._bgRegles = { regles: [], charteVersion: '—', erreur: true }; this.setState({}); });
+    }
+    if (!this._bgPages && !this._bgPagesEnCours) {
+      this._bgPagesEnCours = true;
+      readOne('/marketing/brand-guard/pages').then(d => {
+        this._bgPagesEnCours = false;
+        this._bgPages = (d && d.pages) ? d : { pages: [], meta: {}, mailAlerte: '' };
+        this.setState({ bgPagesDraft: null });
+      }).catch(() => { this._bgPagesEnCours = false; this._bgPages = { pages: [], meta: {}, mailAlerte: '', erreur: true }; this.setState({}); });
+    }
+    const GRAV = [['bloquant', 'Bloquant', '#8D1D2C'], ['majeur', 'Majeur', '#C0182B'], ['mineur', 'Mineur', '#D97706']];
+    const gc = g => (GRAV.find(x => x[0] === g) || GRAV[1])[2];
+    const rowInput = 'width:100%;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 9px;background:var(--color-background-secondary);color:var(--color-text);font-family:var(--font-ui)';
+
+    // --- la charte : le brouillon, ou la charte en service
+    const enService = this._bgRegles;
+    const draft = S.bgDraft || (enService ? enService.regles.map(r => Object.assign({}, r)) : null);
+    const modifie = !!S.bgDraft;
+    const setDraft = f => this.setState(s2 => { const d = (s2.bgDraft || (this._bgRegles ? this._bgRegles.regles.map(r => Object.assign({}, r)) : [])).map(r => Object.assign({}, r)); f(d); return { bgDraft: d }; });
+    const familles = draft ? Array.from(new Set(draft.map(r => r.famille))).filter(Boolean) : [];
+    const famFiltre = S.bgFam || 'toutes';
+    const visibles = draft ? draft.map((r, i) => Object.assign({ i }, r)).filter(r => famFiltre === 'toutes' || r.famille === famFiltre) : [];
+    common.bgp = {
+      chargement: !enService,
+      erreur: enService && enService.erreur ? 'Charte injoignable — le serveur ne répond pas.' : '',
+      version: enService ? enService.charteVersion : '—',
+      modifie,
+      n: draft ? draft.length : 0, nActives: draft ? draft.filter(r => r.actif).length : 0,
+      familles: [{ val: 'toutes', nom: 'Toutes', on: famFiltre === 'toutes', go: () => this.setState({ bgFam: 'toutes' }) }]
+        .concat(familles.map(f => ({ val: f, nom: f, on: famFiltre === f, go: () => this.setState({ bgFam: f }) }))),
+      famBtn: on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:5px 11px;' + (on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'),
+      gravites: GRAV.map(g => ({ val: g[0], nom: g[1] })),
+      rowInput,
+      regles: visibles.map(r => ({
+        code: r.code, famille: r.famille, libelle: r.libelle, description: r.description, gravite: r.gravite, actif: !!r.actif,
+        gravSt: 'font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-background-secondary);font-family:var(--font-ui);color:' + gc(r.gravite) + ';font-weight:600',
+        rowSt: 'border-top:0.5px solid var(--color-border-tertiary);vertical-align:top' + (r.actif ? '' : ';opacity:0.55'),
+        actifTxt: r.actif ? 'Active' : 'Inactive',
+        actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;border:none;font-family:var(--font-ui);'
+          + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        set: k => e => setDraft(d => { d[r.i][k] = e.target.value; }),
+        toggle: () => setDraft(d => { d[r.i].actif = !d[r.i].actif; }),
+        retirer: () => { if (confirm('Retirer la règle « ' + r.libelle + ' » de la charte ?')) { setDraft(d => { d.splice(r.i, 1); }); } },
+      })),
+      ajouter: () => setDraft(d => { const n = d.length + 1; d.push({ code: 'regle-' + n + '-' + Date.now().toString(36).slice(-3), famille: famFiltre !== 'toutes' ? famFiltre : (familles[0] || 'Charte de marque'), libelle: '', description: '', gravite: 'majeur', actif: true }); }),
+      annuler: () => this.setState({ bgDraft: null }),
+      enregistrer: async () => {
+        const d = (S.bgDraft || []).map(r => Object.assign({}, r, { libelle: (r.libelle || '').trim(), description: (r.description || '').trim() }));
+        const vide = d.find(r => !r.libelle || !r.description);
+        if (vide) { this.notify('Chaque règle porte un libellé et une description — « ' + (vide.libelle || vide.code) + ' » est incomplète'); return; }
+        // Le code suit le libellé pour une règle nouvelle : lisible dans les verdicts.
+        d.forEach(r => { if (/^regle-\d+-/.test(r.code)) { r.code = (r.famille + '-' + r.libelle).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40); } });
+        const r = await this.api('PUT', '/marketing/brand-guard/rules', { regles: d, par: 'CEO' });
+        if (r && r.regles) {
+          this._bgRegles = r; this.setState({ bgDraft: null });
+          this.log('Paramètre', '—', 'Charte Brand Guard enregistrée — version ' + r.charteVersion);
+          this.notify('Charte enregistrée — version ' + r.charteVersion);
+        }
+      },
+      btnP: 'border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 16px;border-radius:8px',
+      btnS: 'border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 14px;border-radius:8px',
+    };
+
+    // --- les pages : une ligne par magasin du réseau, la page trouvée ou non
+    const pg = this._bgPages;
+    const pDraft = S.bgPagesDraft || {};
+    // Une page rattachée à un magasin que le cockpit ne connaît pas s'affiche
+    // quand même : une ligne qui disparaît est une page qu'on ne surveille plus.
+    const idsMag = new Set((D.stores || []).map(m => String(m.id)));
+    const parMag = {}; const sansMag = [];
+    (pg ? pg.pages : []).forEach(p => { if (p.magasinId && idsMag.has(String(p.magasinId))) { parMag[String(p.magasinId)] = p; } else { sansMag.push(p); } });
+    const setP = (cle, k) => e => this.setState(s2 => ({ bgPagesDraft: Object.assign({}, s2.bgPagesDraft, { [cle]: Object.assign({}, (s2.bgPagesDraft || {})[cle], { [k]: e.target.value }) }) }));
+    const lignePage = (cle, base, mag) => {
+      const d = pDraft[cle] || {};
+      const url = d.pageUrl != null ? d.pageUrl : (base ? base.pageUrl : '');
+      const statut = !base ? 'absente' : base.statut;
+      return { cle, magasinId: mag ? mag.id : (base ? base.magasinId : null), id: base ? base.id : null,
+        boutique: mag ? mag.nom : (base ? base.boutique : ''), franchise: d.franchise != null ? d.franchise : (mag ? (mag.franchise || '') : (base ? base.franchise : '')),
+        url, placeholder: 'https://www.facebook.com/…', setUrl: setP(cle, 'pageUrl'), setFranchise: setP(cle, 'franchise'),
+        modifie: !!pDraft[cle],
+        etat: statut === 'connectee' ? 'Connectée' : statut === 'erreur' ? 'Erreur' : statut === 'absente' ? 'Pas de page' : 'À connecter',
+        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;'
+          + (statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
+        detail: base ? (base.erreur || (base.pageId ? 'id ' + base.pageId + (base.derniereSync ? ' · lue le ' + String(base.derniereSync).slice(0, 16) : '') : '')) : '' };
+    };
+    const lignes = (D.stores || []).map(m => lignePage('m:' + m.id, parMag[String(m.id)] || null, m))
+      .concat(sansMag.map(p => lignePage('p:' + p.id, p, null)));
+    const meta = (pg && pg.meta) || {};
+    common.bgPages = {
+      chargement: !pg,
+      lignes, rowInput,
+      modifie: Object.keys(pDraft).length > 0,
+      mailAlerte: S.bgMail != null ? S.bgMail : (pg ? pg.mailAlerte || '' : ''),
+      setMail: e => this.setState({ bgMail: e.target.value }),
+      metaTxt: meta.configure ? 'System User Meta configuré · API ' + meta.version : 'META_SYSTEM_TOKEN absent sur le serveur — les pages se résoudront dès qu’il sera posé (voir docs/brand-guard.md).',
+      metaOk: !!meta.configure,
+      enregistrer: async (resoudre) => {
+        const pages = lignes.filter(l => pDraft[l.cle] || (resoudre && l.url)).map(l => ({ id: l.id, magasinId: l.magasinId, boutique: l.boutique, franchise: l.franchise, pageUrl: l.url, actif: true }));
+        const body = { pages, resoudre: !!resoudre };
+        if (S.bgMail != null) { body.mailAlerte = S.bgMail; }
+        const r = await this.api('PUT', '/marketing/brand-guard/pages', body);
+        if (r && r.pages) {
+          this._bgPages = r; this.setState({ bgPagesDraft: null, bgMail: null });
+          const res = r.resolution;
+          this.notify(res && res.motif ? res.motif : res ? (res.pages || []).filter(x => x.ok).length + ' page(s) résolue(s) sur ' + (res.pages || []).length : 'Pages enregistrées');
+          this.log('Paramètre', '—', 'Pages Facebook Brand Guard ' + (resoudre ? 'résolues' : 'enregistrées'));
+        }
+      },
+      annuler: () => this.setState({ bgPagesDraft: null, bgMail: null }),
+    };
   }
 
   /* --- contrôle des posts Facebook -------------------------------------------------- */
