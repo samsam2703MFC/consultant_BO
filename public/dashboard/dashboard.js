@@ -96,6 +96,8 @@
     }
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     lireAux('notif|' + S.shop, '/ventes/notifications?shop=' + encodeURIComponent(S.shop), force);
+    // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
+    if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
@@ -1229,7 +1231,70 @@
     }
     h += prof ? `<div class="db-g2" style="grid-template-columns:1fr 1fr;margin-bottom:12px">${pl}${prof}</div>` : pl;
     if (S.vue === 'mois') { h += rendRentab(); }
+    if (S.vue === 'semaine') { h += rendSemaines(); }
     return h;
+  }
+
+  /**
+   * Les six dernières semaines, face au N-1 — la même section que le drop du
+   * cockpit : la courbe des clients sur celle d'un an plus tôt en pointillé,
+   * trois tuiles, l'écart semaine par semaine. Sans N-1 (magasin trop jeune),
+   * la courbe reste seule et le motif se lit à la place de la tuile.
+   */
+  function rendSemaines() {
+    const cle = 's6|' + S.shop + '|' + bornes()[0];
+    const D = S.aux[cle];
+    const carte = (corps, sous) => `<div class="db-card"><div class="ct"><span class="db-lab">Les six dernières semaines — clients, face au N-1</span>${sous ? `<span class="db-mini">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
+    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des six semaines…'}</div>`); }
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
+    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
+    const W = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
+    if (!W.length) { return carte(`<div class="db-note">Aucune semaine lue pour ce magasin.</div>`); }
+    const avecN1 = W.some(w => w.n1);
+    const vals = [];
+    W.forEach(w => { if (w.source) { vals.push(w.tickets); } if (w.n1) { vals.push(w.n1.tickets); } });
+    const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
+    const Wd = 1000, Hh = 190, ml = 30, mr = 34, mt = 26, mb = 30;
+    const X = i => (ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1)).toFixed(1);
+    const Y = v => (mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
+    const ft = 'font-family:var(--font-ui)';
+    let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
+    [1, 2].forEach(k => { const y = Y(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
+    const P = W.map((w, i) => w.source ? X(i) + ',' + Y(w.tickets) : null).filter(Boolean);
+    const P1 = W.map((w, i) => w.n1 ? X(i) + ',' + Y(w.n1.tickets) : null).filter(Boolean);
+    if (P1.length > 1) { svg += `<polyline points="${P1.join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>`; }
+    if (P.length > 1) { svg += `<polyline points="${P.join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>`; }
+    W.forEach((w, i) => {
+      const up = !w.n1 || !w.source || w.tickets >= w.n1.tickets;
+      if (w.n1) { svg += `<circle cx="${X(i)}" cy="${Y(w.n1.tickets)}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${X(i)}" y="${(+Y(w.n1.tickets) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${fN(w.n1.tickets)}</text>`; }
+      if (w.source) { svg += `<circle cx="${X(i)}" cy="${Y(w.tickets)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(w.tickets) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${fN(w.tickets)}</text>`; }
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : '#222'}" style="${ft}">S${w.iso}${w.enCours ? ' · en cours' : ''}</text>`;
+    });
+    svg += '</svg>';
+    const chips = W.map(w => {
+      const e = w.n1 && w.source ? pc(w.tickets - w.n1.tickets, w.n1.tickets) : null;
+      const dates = (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
+      const titre = (w.source ? fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fN(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1') + (w.enCours ? ' · ' + w.joursServis + ' jours servis' : '');
+      return `<div class="ch" title="${esc(titre)}"><span><b>S${w.iso}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#c9c2b8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${w.source ? fN(w.tickets) : '—'}</em>`}</div>`;
+    }).join('');
+    const cur = W[W.length - 1], prev = W.length > 1 ? W[W.length - 2] : null;
+    const eT = D.totalN1 && D.totalN1.tickets ? pc(D.total.tickets - D.totalN1.tickets, D.totalN1.tickets) : null;
+    const meilleure = W.filter(w => w.source).reduce((a, b) => !a || b.tickets > a.tickets ? b : a, null);
+    const eP = prev && prev.source && cur.source ? pc(cur.tickets - prev.tickets, prev.tickets) : null;
+    const tuiles = [
+      eT != null ? tuile('Six semaines vs N-1', sg(eT) + ' %', fN(D.total.tickets) + ' clients contre ' + fN(D.totalN1.tickets), eT >= 0 ? 'bon' : 'vif')
+        : tuile('Six semaines', fN(D.total.tickets), esc(D.n1Motif || 'pas de N-1')),
+      tuile(cur.enCours ? 'Semaine en cours' : 'Dernière semaine', cur.source ? fN(cur.tickets) : '—',
+        (eP != null ? sg(eP) + ' % vs S' + prev.iso : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jour' + (cur.joursServis > 1 ? 's' : '') + ' servi' + (cur.joursServis > 1 ? 's' : '') : ''),
+        eP == null ? '' : (eP >= 0 ? 'bon' : 'vif')),
+      tuile('Meilleure semaine', meilleure ? fN(meilleure.tickets) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
+    ].join('');
+    const corps = `<div class="db-s6"><div>${svg}
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(D.n1Motif || '')}</span>`}</div>
+        <div class="db-s6ch">${chips}</div></div>
+      <div class="db-s6t">${tuiles}</div></div>`;
+    return carte(corps, 'S' + W[0].iso + ' → S' + cur.iso + ' · ' + (D.source || ''));
   }
 
   /* Le résultat net jour par jour du mois en cours — les cases de l'analyse rentabilité. */
