@@ -4168,7 +4168,7 @@ function tplSemaines(g, x){
     const S = g.svg;
     const ft = 'font-family:var(--font-ui)';
     const svg = `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMinYMin meet" class="rm-s6c">
-      ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/><text x="${S.ml - 6}" y="${(+t.y + 3).toFixed(1)}" font-size="9.5" text-anchor="end" fill="#666" style="${ft}">${esc(t.v)}</text>`).join('')}
+      ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/>`).join('')}
       ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>` : ''}
       ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>` : ''}
       ${S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${esc(p.v)}</text>`).join('')}
@@ -4178,7 +4178,7 @@ function tplSemaines(g, x){
     corps = `<div class="rm-s6">
       <div>${svg}
         <div class="rm-leg" style="margin-top:2px"><span><i style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${g.avecN1 ? `<span><i style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(g.n1Motif)}</span>`}</div>
-        <div class="rm-s6ch">${g.chips.map(c => `<div class="ch" title="${esc(c.titre)}"><span><b>${esc(c.lab)}</b> <span style="color:var(--color-text-muted)">${esc(c.dates)}</span></span><em style="background:${c.coul}">${esc(c.eco)}</em></div>`).join('')}</div>
+        <div class="rm-s6ch">${g.chips.map(c => `<div class="ch" title="${esc(c.titre)}"><span><b>${esc(c.lab)}</b> <span style="color:var(--color-text-muted)">${esc(c.dates)}</span></span>${g.avecN1 ? `<em style="background:${c.coul}">${esc(c.eco)}</em>` : `<em class="sans">${esc(c.cli)}</em>`}</div>`).join('')}</div>
       </div>
       <div class="rm-s6t">${g.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
     </div>`;
