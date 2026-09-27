@@ -4087,7 +4087,7 @@ function tplResultat(c, x){
       <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
       <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted);margin-top:5px"><i class="rj-ring"></i><span style="font-weight:500;color:var(--color-text)">Lecture du panel</span><span>${esc(c.rjChargeTxt)}</span><span style="margin-left:auto;font-variant-numeric:tabular-nums">${esc(c.rjChargeSec)}</span></div>
     </div>` : ''}
-    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : tplResultatPeriode(c, x)}
+    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : (c.rjOnglet === 'reseau' ? tplResultatReseau(c, x) : tplResultatPeriode(c, x))}
   </div>`;
 }
 
@@ -4156,6 +4156,62 @@ function tplResultatMois(c, d, x){
     </td></tr>`;
 }
 
+/** La courbe des clients, N sur N-1 — partagée par le drop d'un magasin, le réseau et les mini-courbes. */
+function svgCourbe(S, esc){
+  if (!S) { return ''; }
+  const ft = 'font-family:var(--font-ui)';
+  const m = S.mini;
+  return `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="${m ? 'none' : 'xMinYMin meet'}" class="${m ? 'rm-s6m' : 'rm-s6c'}">
+      ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/>`).join('')}
+      ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="${m ? 6 : 2}" stroke-dasharray="${m ? '12 10' : '5 4'}" vector-effect="non-scaling-stroke"/>` : ''}
+      ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="${m ? 7 : 2.5}" vector-effect="non-scaling-stroke"/>` : ''}
+      ${m ? '' : S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${esc(p.v)}</text>`).join('')}
+      ${m ? '' : S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#8D1D2C"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${esc(p.v)}</text>`).join('')}
+      ${S.labels.map(l => `<text x="${l.x}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${l.cur ? '#8D1D2C' : '#222'}" style="${ft}">${esc(l.t)}</text>`).join('')}
+    </svg>`;
+}
+/** Les barres jumelles de l'année : chaque mois de N à côté du même mois de N-1. */
+function svgBarres(S, esc){
+  if (!S) { return ''; }
+  const ft = 'font-family:var(--font-ui)';
+  return `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMinYMin meet" class="rm-s6c">
+    ${S.cols.map(c => c.futur ? `<rect x="${c.x}" y="${(+c.y0 - 22).toFixed(1)}" width="${c.w2}" height="22" fill="none" stroke="rgba(34,34,34,.18)" stroke-dasharray="3 3" rx="3"/>`
+      : `<g><title>${esc(c.titre)}</title>${c.h1 ? `<rect x="${c.x}" y="${c.y1}" width="${c.bw}" height="${c.h1}" fill="#d9d2c8" rx="3"/>` : ''}${c.h ? `<rect x="${c.x2}" y="${c.y}" width="${c.bw}" height="${c.h}" fill="${c.cur ? '#c56a76' : '#8D1D2C'}" rx="3"/>` : ''}${c.eco ? `<text x="${c.xl}" y="${c.ye}" font-size="10" font-weight="600" text-anchor="middle" fill="${c.coul}" style="${ft}">${esc(c.eco)}</text>` : ''}</g>`).join('')}
+    ${S.cols.map(c => `<text x="${c.xl}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#222" style="${ft}">${esc(c.lab)}</text>`).join('')}
+  </svg>`;
+}
+
+/* --- Analyse réseau : les clients du réseau face au N-1, magasin par magasin --- */
+function tplResultatReseau(c, x){
+  const { esc } = x;
+  const g = c.rr || {};
+  const cap = 'font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const bloc = (titre, corps, sous, style) => `<div class="rm-bloc" style="${style || ''}"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>${esc(titre)}</span>${sous ? `<span style="font-weight:500;text-transform:none;letter-spacing:0">${esc(sous)}</span>` : ''}</div><div class="rm-card">${corps}</div></div>`;
+  const ong = `<div class="rr-ong">${(g.onglets || []).map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const tete = `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-family:var(--font-display);font-size:18px">Analyse réseau</span><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(g.sousTitre || '')}</span><span style="margin-left:auto">${ong}</span></div>`;
+  let corps;
+  if (g.chargement) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">Lecture du réseau au panel — une fois par étendue, puis gardé…</div>`; }
+  else if (g.erreur) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)}</div>`; }
+  else {
+    const pill = (t, coul) => t ? `<span class="rr-pill" style="background:${coul}">${esc(t)}</span>` : '';
+    const ecart = (E, titre, sous) => bloc(titre, E.vide ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin comparable.</div>` : `${E.rows.map(r => `<div class="rr-wf"><span>${esc(r.nom)}</span><span class="b"><span class="z"></span><i style="${r.pos ? 'left:50%' : 'right:50%'};width:${r.w}%;background:${r.pos ? '#2d7a3e' : '#C0182B'}"></i></span><b style="color:${r.pos ? '#2d7a3e' : '#C0182B'}">${esc(r.txt)} clients</b></div>`).join('')}<div class="rr-wf tot"><b>Réseau</b><span></span><b style="color:${E.totPos ? '#2d7a3e' : '#C0182B'}">${esc(E.tot)} clients</b></div>`, sous, 'margin-top:0');
+    corps = `
+      <div class="rm-kp sept">${g.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+      ${bloc(g.annee ? 'Le réseau — clients, mois par mois, face à l’an dernier' : 'Le réseau — clients, ' + (g.vue === 'semaine' ? 'six semaines' : 'six mois') + ' face au N-1', `<div class="rm-s6"><div>${g.annee ? svgBarres(g.svg, esc) : svgCourbe(g.svg, esc)}
+          <div class="rm-leg" style="margin-top:2px"><span><i style="background:#8D1D2C;border-radius:${g.annee ? '2px' : '50%'}"></i>clients du réseau</span>${g.avecN1 ? `<span><i style="background:#b9b1a6;border-radius:${g.annee ? '2px' : '50%'}"></i>N-1, magasins comparables${g.annee ? ' · le chiffre au-dessus = écart à périmètre comparable' : ' (pointillé)'}</span>` : `<span>${esc(g.n1Motif)}</span>`}</div>
+          ${g.chips.length ? `<div class="rm-s6ch" style="grid-template-columns:repeat(${g.chips.length},minmax(0,1fr))">${g.chips.map(ch => `<div class="ch" title="${esc(ch.titre)}"><span><b>${esc(ch.lab)}</b><span>${esc(ch.dates)}</span></span>${g.avecN1 ? `<em style="background:${ch.coul}">${esc(ch.eco)}</em>` : `<em class="sans">${esc(ch.cli)}</em>`}</div>`).join('')}</div>` : ''}
+        </div><div class="rm-s6t">${g.tuiles3.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div></div>`, g.source, 'margin-top:0')}
+      ${bloc('Magasin par magasin — classés par clients sur l’étendue', `<table class="rr-tb"><tr><th>Magasin</th><th>Clients</th><th>N-1</th><th>Écart</th><th>${esc(g.curLab)}</th><th>vs N-1</th><th>CA</th><th>Part du réseau</th><th>Tendance N / N-1</th></tr>
+        ${g.lignes.map(l => `<tr><td><span class="rg">${l.rang}</span>${esc(l.nom)}</td><td>${esc(l.clients)}</td><td>${esc(l.n1)}</td><td>${l.sansN1 ? '<span style="color:var(--color-text-muted)">pas de N-1</span>' : pill(l.eco, l.coul)}</td><td>${esc(l.cur)}</td><td>${l.ecoCur ? pill(l.ecoCur, l.coulCur) : '—'}</td><td>${esc(l.ca)}</td><td>${esc(l.part)}</td><td class="mini">${svgCourbe(l.mini, esc)}</td></tr>`).join('')}
+        <tr class="tot"><td>Réseau</td><td>${esc(g.totalLigne.clients)}</td><td>${esc(g.totalLigne.n1)}</td><td>${pill(g.totalLigne.eco, g.totalLigne.coul)}</td><td>${esc(g.totalLigne.cur)}</td><td>${pill(g.totalLigne.ecoCur, g.totalLigne.coulCur)}</td><td>${esc(g.totalLigne.ca)}</td><td>100 %</td><td></td></tr></table>`)}
+      <div class="rm-3 deux">
+        ${ecart(g.ecartCur, 'Qui fait l’écart — ' + g.ecartCurLab + ', clients gagnés ou perdus face au N-1', 'magasins comparables')}
+        ${ecart(g.ecartTot, 'Qui fait l’écart — ' + g.ecartTotLab, 'magasins comparables')}
+      </div>`;
+  }
+  return `<div class="rr" style="background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">${tete}${corps}</div>`;
+}
+
 /* --- Les six dernières semaines, face au N-1 (drop d'un magasin, semaine) --- */
 function tplSemaines(g, x){
   const { esc } = x;
@@ -4165,16 +4221,7 @@ function tplSemaines(g, x){
   else if (g.erreur) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)}</div>`; }
   else if (g.vide) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">Aucune semaine lue pour ce magasin.</div>`; }
   else {
-    const S = g.svg;
-    const ft = 'font-family:var(--font-ui)';
-    const svg = `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMinYMin meet" class="rm-s6c">
-      ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/>`).join('')}
-      ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>` : ''}
-      ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>` : ''}
-      ${S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${esc(p.v)}</text>`).join('')}
-      ${S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#8D1D2C"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${esc(p.v)}</text>`).join('')}
-      ${S.labels.map(l => `<text x="${l.x}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${l.cur ? '#8D1D2C' : '#222'}" style="${ft}">${esc(l.t)}</text>`).join('')}
-    </svg>`;
+    const svg = svgCourbe(g.svg, esc);
     corps = `<div class="rm-s6">
       <div>${svg}
         <div class="rm-leg" style="margin-top:2px"><span><i style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${g.avecN1 ? `<span><i style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(g.n1Motif)}</span>`}</div>

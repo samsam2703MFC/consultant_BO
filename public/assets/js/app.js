@@ -7660,13 +7660,16 @@ class App {
     this.rjCharge(false); this.rpCharge(false, 'semaine'); this.rpCharge(false, 'mois');
     const pret = { jour: !!(D.rjour || {})[this.rjCle()],
       semaine: !!(D.rper || {})[this.rpCle('semaine')], mois: !!(D.rper || {})[this.rpCle('mois')] };
-    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']].map(o => ({
+    pret.reseau = !!((D.rres || {})[this.rrCle()]);
+    if (on === 'reseau') { this.rrCharge(false); common.rr = this.rrVals(); }
+    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['reseau', 'Analyse réseau']].map(o => ({
       cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
     common.rjOngletTxt = {
       jour: 'La journée, magasin par magasin, face à l’objectif du jour et au compte de résultat.',
       semaine: 'La semaine : l’objectif, ce qui est fait, ce qui reste — et en combien de clients.',
-      mois: 'Le mois : le budget, le compte de résultat, et douze mois d’histoire.' }[on];
+      mois: 'Le mois : le budget, le compte de résultat, et douze mois d’histoire.',
+      reseau: 'Le réseau : les clients, période après période, face au N-1 — et qui fait l’écart.' }[on];
     // Le fil de progression : une lecture = un tiers. Le chrono tourne tant
     // qu'une lecture est en cours — une attente muette paraît deux fois plus
     // longue qu'une attente qui compte.
@@ -7689,6 +7692,152 @@ class App {
     if (rj && rj.estAujourdhui && this._rjLuA && Date.now() - this._rjLuA > 600000 && !this._rjEnCours) { this.rjCharge(true); }
     if (!this._rjTick60) { this._rjTick60 = setInterval(() => { if (this.state.screen === 'resultatJour') { this.setState({}); } }, 60000); }
   }
+  /* --- Analyse réseau : les clients du réseau face au N-1, trois étendues --- */
+  rrCle(){ return (this.state.rrVue || 'semaine'); }
+  rrCharge(force){
+    const cle = this.rrCle();
+    if (!this.D.rres) { this.D.rres = {}; }
+    if (!this._rrEnCours) { this._rrEnCours = {}; }
+    if (this._rrEnCours[cle] || (this.D.rres[cle] && !force)) { return; }
+    this._rrEnCours[cle] = true;
+    readOne('/ventes/reseau?vue=' + cle).then(d => {
+      this.D.rres[cle] = (d && d.periodes) ? d : { erreur: (d && d.error) || 'lecture impossible' };
+    }).catch(e => { this.D.rres[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
+      .finally(() => { this._rrEnCours[cle] = false; this.setState({}); });
+  }
+  /**
+   * La courbe des clients — N en trait plein, N-1 en pointillé — en repère
+   * 1000 × 190 : la même pour le drop d'un magasin, le réseau, et les
+   * mini-courbes du tableau (sans les valeurs).
+   */
+  rrCourbe(W, mini){
+    const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
+    const vals = [];
+    W.forEach(w => { if (w.n != null) { vals.push(w.n); } if (w.n1 != null) { vals.push(w.n1); } });
+    if (!vals.length) { return null; }
+    const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
+    const Wd = 1000, Hh = mini ? 60 : 190, ml = mini ? 8 : 30, mr = mini ? 8 : 64, mt = mini ? 8 : 26, mb = mini ? 8 : 30;
+    const X = i => (ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1)).toFixed(1);
+    const Y = v => (mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
+    const grad = mini ? [] : [1, 2].map(k => ({ y: Y(lo + (hi - lo) * k / 3) }));
+    const pts = [], pts1 = [], labels = [];
+    W.forEach((w, i) => {
+      const up = w.n1 == null || w.n == null || w.n >= w.n1;
+      if (w.n != null) { pts.push({ x: X(i), y: Y(w.n), v: fI(w.n), dy: up ? -9 : 16 }); }
+      if (w.n1 != null) { pts1.push({ x: X(i), y: Y(w.n1), v: fI(w.n1), dy: up ? 16 : -9 }); }
+      if (!mini) { labels.push({ x: X(i), t: w.lab + (w.enCours ? ' · en cours' : ''), cur: !!w.enCours }); }
+    });
+    return { Wd, Hh, ml, mr, grad, pts, pts1, labels, hb: Hh - 8, mini: !!mini };
+  }
+  /** Les barres jumelles d'une année : chaque mois de N à côté du même mois de N-1. */
+  rrBarres(W){
+    const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
+    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
+    const mx = Math.max(1, ...W.map(w => Math.max(w.n || 0, w.n1 || 0))) * 1.14;
+    const Wd = 1000, Hh = 210, ml = 20, mr = 20, mt = 26, mb = 30;
+    const X = i => ml + i * (Wd - ml - mr) / Math.max(1, W.length);
+    const Y = v => mt + (mx - v) / mx * (Hh - mt - mb);
+    const bw = (Wd - ml - mr) / Math.max(1, W.length) * 0.34;
+    const cols = W.map((w, i) => {
+      const x = X(i) + bw * 0.2;
+      const o = { lab: w.lab, xl: (x + bw + 1.5).toFixed(1), futur: !!w.futur, x: x.toFixed(1), x2: (x + bw + 3).toFixed(1), bw: bw.toFixed(1), y0: Y(0).toFixed(1), w2: (2 * bw + 3).toFixed(1) };
+      if (!w.futur) {
+        if (w.n1 != null) { o.y1 = Y(w.n1).toFixed(1); o.h1 = (Y(0) - Y(w.n1)).toFixed(1); }
+        if (w.n != null) { o.y = Y(w.n).toFixed(1); o.h = (Y(0) - Y(w.n)).toFixed(1); o.cur = !!w.enCours; }
+        if (w.n1 != null && w.nComp != null) { const e = pc(w.nComp - w.n1, w.n1); o.eco = sg(e) + ' %'; o.coul = col(e); o.ye = (Math.min(Y(w.n || 0), Y(w.n1)) - 6).toFixed(1); }
+        o.titre = (w.n != null ? fI(w.n) + ' clients' : 'pas de vente lue') + (w.n1 != null ? ' · N-1 : ' + fI(w.n1) : '');
+      }
+      return o;
+    });
+    return { Wd, Hh, cols, hb: Hh - 8 };
+  }
+  rrVals(){
+    const S = this.state, vue = this.rrCle();
+    const D = (this.D.rres || {})[vue];
+    const NOMV = { semaine: 'Semaine', mois: 'Mois', annee: 'Année' };
+    const out = { vue, onglets: ['semaine', 'mois', 'annee'].map(k => ({ cle: k, nom: NOMV[k], on: k === vue, go: () => this.setState({ rrVue: k }) })),
+      chargement: !D, erreur: D && D.erreur ? D.erreur : '' };
+    if (!D || D.erreur) { return out; }
+    const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
+    const fE = n => this.fE(n);
+    const fK = n => Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fE(n);
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
+    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
+    const dd = j => j.slice(8, 10) + '/' + j.slice(5, 7);
+    const unite = vue === 'semaine' ? 'semaines' : 'mois';
+    const P = D.periodes.filter(p => !p.futur);
+    const lus = P.filter(p => p.tickets > 0 || p.n1);
+    const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: p.tickets > 0 ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
+    const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : p.lab.replace(/ \d\d$/, '') + ' ' + p.du.slice(0, 4);
+    // Les totaux du réseau et à périmètre comparable.
+    const n = lus.reduce((a, p) => a + p.tickets, 0), ca = lus.reduce((a, p) => a + p.ca, 0);
+    const n1 = lus.reduce((a, p) => a + (p.n1 ? p.n1.tickets : 0), 0), ca1 = lus.reduce((a, p) => a + (p.n1 ? p.n1.ca : 0), 0);
+    const nC = lus.reduce((a, p) => a + (p.n1 ? p.n1.ticketsComp : 0), 0), caC = lus.reduce((a, p) => a + (p.n1 ? p.n1.caComp : 0), 0);
+    const cur = lus.length ? lus[lus.length - 1] : null, prev = lus.length > 1 ? lus[lus.length - 2] : null;
+    const eT = n1 ? pc(nC - n1, n1) : null, eCa = ca1 ? pc(caC - ca1, ca1) : null;
+    const eP = cur && prev && prev.tickets ? pc(cur.tickets - prev.tickets, prev.tickets) : null;
+    const mags = D.magasins;
+    const iCur = cur ? D.periodes.indexOf(cur) : -1;
+    const comp = mags.filter(m => m.totalN1);
+    const hausse = comp.filter(m => { const t = m.total.tickets, c = m.periodes.reduce((a, p) => a + (p.n1 && p.source ? p.tickets : 0), 0); return c >= m.totalN1.tickets; });
+    const sans = mags.filter(m => !m.totalN1);
+    const nP = lus.length;
+    out.tuiles = [
+      { k: 'Clients · ' + nP + ' ' + (vue === 'semaine' ? 'semaines' : 'mois'), v: fI(n), s: mags.length + ' magasins · ' + fK(ca) + ' de CA', cls: '' },
+      eT != null ? { k: 'Clients vs N-1', v: sg(eT) + ' %', s: fI(nC) + ' contre ' + fI(n1) + ' · ' + comp.length + ' magasin' + (comp.length > 1 ? 's' : '') + ' comparable' + (comp.length > 1 ? 's' : ''), cls: eT >= 0 ? 'good' : 'bad' }
+        : { k: 'Clients vs N-1', v: '—', s: 'aucun magasin comparable', cls: '' },
+      cur ? { k: (vue === 'semaine' ? 'Semaine' : 'Mois') + (cur.enCours ? ' en cours' : ' · dernier'), v: fI(cur.tickets), s: (eP != null ? sg(eP) + ' % vs ' + prev.lab : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jours servis' : ''), cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
+      { k: 'Panier moyen', v: n ? (ca / n).toFixed(2).replace('.', ',') + ' €' : '—', s: n1 ? 'N-1 : ' + (ca1 / n1).toFixed(2).replace('.', ',') + ' €' : '', cls: '' },
+      eCa != null ? { k: 'CA vs N-1', v: sg(eCa) + ' %', s: fK(caC) + ' contre ' + fK(ca1) + ' · périmètre comparable', cls: eCa >= 0 ? 'good' : 'bad' } : { k: 'CA vs N-1', v: '—', s: '', cls: '' },
+      { k: 'Magasins en hausse', v: comp.length ? hausse.length + ' / ' + comp.length : '—', s: hausse.length ? hausse.map(m => this.rrCourt(m.nom)).join(', ') + ' au-dessus du N-1' : (comp.length ? 'aucun au-dessus du N-1' : ''), cls: comp.length ? (hausse.length * 2 >= comp.length ? 'good' : 'bad') : '' },
+      { k: 'Sans N-1', v: String(sans.length), s: sans.length ? sans.map(m => this.rrCourt(m.nom)).join(', ') + ' · trop jeune' : 'tous les magasins ont un an', cls: '' }
+    ];
+    // La courbe (ou les barres de l'année), les pastilles, les trois tuiles.
+    out.annee = vue === 'annee';
+    out.svg = vue === 'annee' ? this.rrBarres(D.periodes.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: p.tickets > 0 ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }))) : this.rrCourbe(W, false);
+    out.avecN1 = W.some(w => w.n1 != null);
+    out.chips = vue === 'annee' ? [] : lus.map(p => { const e = p.n1 && p.tickets ? pc(p.n1.ticketsComp - p.n1.tickets, p.n1.tickets) : null;
+      return { lab: p.lab, dates: dates(p), eco: e == null ? '—' : sg(e) + ' %', coul: e == null ? '#c9c2b8' : col(e), cli: fI(p.tickets),
+        titre: fI(p.tickets) + ' clients · ' + fK(p.ca) + (p.n1 ? ' · N-1 : ' + fI(p.n1.tickets) + ' clients · ' + fK(p.n1.ca) + ' (' + p.n1.magasins + ' magasins comparables)' : ' · pas de N-1') + (p.enCours ? ' · ' + p.joursServis + ' jours servis' : '') }; });
+    const best = lus.length ? lus.reduce((a, b) => b.tickets > a.tickets ? b : a) : null;
+    out.tuiles3 = [
+      eT != null ? { k: (vue === 'annee' ? 'Cumul à ce jour' : nP + ' ' + unite) + ' vs N-1', v: sg(eT) + ' %', s: fI(nC) + ' clients contre ' + fI(n1) + ' · périmètre comparable', cls: eT >= 0 ? 'good' : 'bad' } : { k: 'Vs N-1', v: '—', s: 'aucun magasin comparable', cls: '' },
+      cur ? { k: cur.lab + (cur.enCours ? ' · en cours' : ''), v: fI(cur.tickets), s: eP != null ? sg(eP) + ' % vs ' + prev.lab : '', cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
+      best ? { k: vue === 'semaine' ? 'Meilleure semaine' : 'Meilleur mois', v: fI(best.tickets), s: best.lab + (vue === 'semaine' ? ' · ' + dd(best.du) + ' → ' + dd(best.au) : ' ' + best.du.slice(0, 4)), cls: '' } : { k: 'Meilleure période', v: '—', s: '', cls: '' }
+    ];
+    // Le tableau magasin par magasin, classé par clients.
+    out.lignes = mags.map(m => {
+      const t = m.total.tickets, t1 = m.totalN1 ? m.totalN1.tickets : null;
+      const tC = m.periodes.reduce((a, p) => a + (p.n1 && p.source ? p.tickets : 0), 0);
+      const e = t1 ? pc(tC - t1, t1) : null;
+      const pCur = iCur >= 0 ? m.periodes[iCur] : null;
+      const eC = pCur && pCur.n1 && pCur.source ? pc(pCur.tickets - pCur.n1.tickets, pCur.n1.tickets) : null;
+      const mini = this.rrCourbe(m.periodes.filter(p => !p.futur).map(p => ({ n: p.source ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null })), true);
+      return { nom: m.nom, t, clients: fI(t), n1: t1 ? fI(t1) : '—', eco: e == null ? '' : sg(e) + ' %', coul: e == null ? '' : col(e), sansN1: !t1,
+        cur: pCur && pCur.source ? fI(pCur.tickets) : '—', ecoCur: eC == null ? '' : sg(eC) + ' %', coulCur: eC == null ? '' : col(eC),
+        ca: fK(m.total.ca), part: n ? Math.round(100 * t / n) + ' %' : '—', mini };
+    }).sort((a, b) => b.t - a.t).map((l, i) => Object.assign(l, { rang: i + 1 }));
+    out.totalLigne = { clients: fI(n), n1: n1 ? fI(n1) : '—', eco: eT == null ? '' : sg(eT) + ' %', coul: eT == null ? '' : col(eT),
+      cur: cur ? fI(cur.tickets) : '—', ecoCur: cur && cur.n1 ? sg(pc(cur.n1.ticketsComp - cur.n1.tickets, cur.n1.tickets)) + ' %' : '', coulCur: cur && cur.n1 ? col(pc(cur.n1.ticketsComp - cur.n1.tickets, cur.n1.tickets)) : '', ca: fK(ca) };
+    out.curLab = cur ? cur.lab : '';
+    // Qui fait l'écart : les clients gagnés ou perdus face au N-1, sur la
+    // période en cours et sur l'étendue — magasins comparables seulement.
+    const ecarts = (f) => { const rows = comp.map(m => ({ nom: this.rrCourt(m.nom), v: f(m) })).filter(r => r.v != null).sort((a, b) => a.v - b.v);
+      const mx = Math.max(1, ...rows.map(r => Math.abs(r.v))); const tot = rows.reduce((a, r) => a + r.v, 0);
+      return { rows: rows.map(r => ({ nom: r.nom, v: r.v, txt: (r.v >= 0 ? '+' : '−') + fI(Math.abs(r.v)), w: (Math.abs(r.v) / mx * 50).toFixed(1), pos: r.v >= 0 })), tot: (tot >= 0 ? '+' : '−') + fI(Math.abs(tot)), totPos: tot >= 0, vide: !rows.length }; };
+    out.ecartCur = ecarts(m => { const p = iCur >= 0 ? m.periodes[iCur] : null; return p && p.n1 && p.source ? p.tickets - p.n1.tickets : null; });
+    out.ecartTot = ecarts(m => m.totalN1 ? m.periodes.reduce((a, p) => a + (p.n1 && p.source ? p.tickets : 0), 0) - m.totalN1.tickets : null);
+    out.ecartCurLab = cur ? cur.lab : '';
+    out.ecartTotLab = vue === 'annee' ? 'cumul de l’année' : nP + ' ' + unite + ' cumulé' + (vue === 'semaine' ? 'es' : 's');
+    out.sousTitre = mags.length + ' magasins · ' + (vue === 'annee' ? D.du.slice(0, 4) + ' face à ' + (D.du.slice(0, 4) - 1) : lus[0].lab + ' → ' + (cur ? cur.lab : '')) + ' · clients face au N-1';
+    out.source = D.source || '';
+    out.n1Motif = out.avecN1 ? '' : 'aucun magasin n’a de N-1 sur cette étendue';
+    return out;
+  }
+  rrCourt(nom){ const m = String(nom || '').match(/-\s*([^-]+)$/); return m ? m[1].trim() : String(nom || ''); }
   rpCle(vue){ return (vue || this.state.rjOnglet || 'semaine') + '|' + (this.state.rpDate || ''); }
   /** La période lue une fois puis gardée — même règle que la journée : on ne
    *  vide pas le cache avant la réponse, l'ancienne étendue reste lisible. */
@@ -7834,22 +7983,7 @@ class App {
     const dd = j => j.slice(8, 10) + '/' + j.slice(5, 7);
     const W = D.semaines.filter(w => w.source || (w.n1 && w.n1.source));
     const avecN1 = W.some(w => w.n1);
-    // La courbe : un repère de 1000 × 190, les points placés entre le plus bas
-    // et le plus haut des deux séries.
-    const vals = [];
-    W.forEach(w => { if (w.source) { vals.push(w.tickets); } if (w.n1) { vals.push(w.n1.tickets); } });
-    const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
-    const Wd = 1000, Hh = 190, ml = 30, mr = 34, mt = 26, mb = 30;
-    const X = i => ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1);
-    const Y = v => mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb);
-    const grad = [1, 2].map(k => { const v = lo + (hi - lo) * k / 3; return { y: Y(v).toFixed(1), v: fI(v) }; });
-    const pts = [], pts1 = [], labels = [];
-    W.forEach((w, i) => {
-      const up = !w.n1 || !w.source || w.tickets >= w.n1.tickets;
-      if (w.source) { pts.push({ x: X(i).toFixed(1), y: Y(w.tickets).toFixed(1), v: fI(w.tickets), dy: up ? -9 : 16 }); }
-      if (w.n1) { pts1.push({ x: X(i).toFixed(1), y: Y(w.n1.tickets).toFixed(1), v: fI(w.n1.tickets), dy: up ? 16 : -9 }); }
-      labels.push({ x: X(i).toFixed(1), t: 'S' + w.iso + (w.enCours ? ' · en cours' : ''), cur: w.enCours });
-    });
+    const svg = this.rrCourbe(W.map(w => ({ lab: 'S' + w.iso, enCours: w.enCours, n: w.source ? w.tickets : null, n1: w.n1 ? w.n1.tickets : null })), false);
     const chips = W.map(w => ({ lab: 'S' + w.iso, dates: (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : dd(w.du)) + '→' + dd(w.au), cli: w.source ? fI(w.tickets) : '—',
       eco: w.n1 && w.source ? sg(pc(w.tickets - w.n1.tickets, w.n1.tickets)) + ' %' : '—', coul: w.n1 && w.source ? col(pc(w.tickets - w.n1.tickets, w.n1.tickets)) : '#c9c2b8',
       titre: (w.source ? fI(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fI(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1') + (w.enCours ? ' · ' + w.joursServis + ' jours servis' : '') }));
@@ -7864,7 +7998,7 @@ class App {
         cls: prev && prev.source && cur.source ? (cur.tickets >= prev.tickets ? 'good' : 'bad') : '' } : { k: 'Semaine en cours', v: '—', s: '', cls: '' },
       { k: 'Meilleure semaine', v: meilleure ? fI(meilleure.tickets) : '—', s: meilleure ? 'S' + meilleure.iso + ' · ' + dd(meilleure.du) + ' → ' + dd(meilleure.au) : '', cls: '' }
     ];
-    return Object.assign(out, { vide: !W.length, avecN1, n1Motif: D.n1Motif || '', svg: { Wd, Hh, ml, mr, grad, pts, pts1, labels, hb: Hh - 8 }, chips, tuiles,
+    return Object.assign(out, { vide: !W.length, avecN1, n1Motif: D.n1Motif || '', svg, chips, tuiles,
       sousTitre: 'S' + (W[0] ? W[0].iso : '') + ' → S' + (cur ? cur.iso : '') + ' · ' + (D.source || '') });
   }
   rpMois(m, r, d, vue){
