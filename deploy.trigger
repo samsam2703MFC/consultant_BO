@@ -447,3 +447,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-26T19:34:23Z résultat semaine : le drop du magasin refait comme le mois
 2026-09-26T19:42:46Z dashboard : semaine et mois comme le drop du cockpit
 2026-09-26T19:51:51Z dashboard : libellés des tuiles semaine/mois
+2026-09-27T05:24:42Z drop semaine : six semaines face au N-1

@@ -4151,8 +4151,39 @@ function tplResultatMois(c, d, x){
           <div class="rm-hb">${M.heures.barres.map(b => `<i class="${b.cls}" style="height:${b.w}%" title="${esc(b.titre)}"><span>${b.h}h</span></i>`).join('')}</div>
           <div class="rm-leg" style="margin-top:18px;flex-direction:column;gap:4px;align-items:flex-start"><span><i style="background:#8D1D2C"></i>le plus de CA : ${esc(M.heures.ca)}</span><span><i style="background:#F08A2C"></i>le plus de clients : ${esc(M.heures.cli)}</span></div>` : `<div style="font-size:12px;color:var(--color-text-muted)">Aucune heure lue sur le mois.</div>`))}
       </div>
+      ${d.semaines ? tplSemaines(d.semaines, x) : ''}
       ${d.periodes ? tplPeriodes(d.periodes, x) : ''}
     </td></tr>`;
+}
+
+/* --- Les six dernières semaines, face au N-1 (drop d'un magasin, semaine) --- */
+function tplSemaines(g, x){
+  const { esc } = x;
+  const cap = 'font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  let corps;
+  if (g.chargement) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des six semaines…</div>`; }
+  else if (g.erreur) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)}</div>`; }
+  else if (g.vide) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">Aucune semaine lue pour ce magasin.</div>`; }
+  else {
+    const S = g.svg;
+    const ft = 'font-family:var(--font-ui)';
+    const svg = `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMinYMin meet" class="rm-s6c">
+      ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/><text x="${S.ml - 6}" y="${(+t.y + 3).toFixed(1)}" font-size="9.5" text-anchor="end" fill="#666" style="${ft}">${esc(t.v)}</text>`).join('')}
+      ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>` : ''}
+      ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>` : ''}
+      ${S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${esc(p.v)}</text>`).join('')}
+      ${S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#8D1D2C"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${esc(p.v)}</text>`).join('')}
+      ${S.labels.map(l => `<text x="${l.x}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${l.cur ? '#8D1D2C' : '#222'}" style="${ft}">${esc(l.t)}</text>`).join('')}
+    </svg>`;
+    corps = `<div class="rm-s6">
+      <div>${svg}
+        <div class="rm-leg" style="margin-top:2px"><span><i style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${g.avecN1 ? `<span><i style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(g.n1Motif)}</span>`}</div>
+        <div class="rm-s6ch">${g.chips.map(c => `<div class="ch" title="${esc(c.titre)}"><span><b>${esc(c.lab)}</b> <span style="color:var(--color-text-muted)">${esc(c.dates)}</span></span><em style="background:${c.coul}">${esc(c.eco)}</em></div>`).join('')}</div>
+      </div>
+      <div class="rm-s6t">${g.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+    </div>`;
+  }
+  return `<div class="rm-bloc" style="margin-top:14px"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>${esc(g.titre)}</span>${g.sousTitre ? `<span style="font-weight:500;text-transform:none;letter-spacing:0">${esc(g.sousTitre)}</span>` : ''}</div><div class="rm-card">${corps}</div></div>`;
 }
 
 /* --- Les périodes de la semaine — matin, midi, après-midi (drop d'un magasin) --- */

@@ -7805,6 +7805,68 @@ class App {
    * clients au panier moyen. Le profil des jours dit quel jour de la semaine
    * manque ; les heures viennent de l'appel léger des périodes.
    */
+  /**
+   * Les six dernières semaines d'un magasin, face au N-1 : lues une fois par
+   * (magasin, semaine), et rendues en courbe — clients de la semaine en trait
+   * plein, même semaine un an plus tôt en pointillé — avec trois tuiles et
+   * l'écart semaine par semaine. Sans N-1 (magasin trop jeune), la courbe
+   * reste seule et le motif se lit à la place de la tuile.
+   */
+  rpSemaines(m, r){
+    const cle = 's6|' + m.shopId + '|' + r.du;
+    if (!this._s6) { this._s6 = {}; }
+    if (!this._s6[cle] && !this._s6EnCours) {
+      this._s6EnCours = cle;
+      readOne('/ventes/semaines?shop=' + encodeURIComponent(m.shopId) + '&date=' + encodeURIComponent(r.du) + '&n=6').then(d => {
+        this._s6EnCours = null;
+        this._s6[cle] = (d && d.semaines) ? d : { erreur: (d && d.error) || 'lecture impossible' };
+        this.setState({});
+      }).catch(() => { this._s6EnCours = null; this._s6[cle] = { erreur: 'lecture impossible' }; this.setState({}); });
+    }
+    const D = this._s6[cle];
+    const out = { chargement: !D, erreur: D && D.erreur ? D.erreur : '', titre: 'Les six dernières semaines — clients, face au N-1' };
+    if (!D || D.erreur) { return out; }
+    const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
+    const fK = n => Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : this.fE(n);
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
+    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
+    const dd = j => j.slice(8, 10) + '/' + j.slice(5, 7);
+    const W = D.semaines.filter(w => w.source || (w.n1 && w.n1.source));
+    const avecN1 = W.some(w => w.n1);
+    // La courbe : un repère de 1000 × 190, les points placés entre le plus bas
+    // et le plus haut des deux séries.
+    const vals = [];
+    W.forEach(w => { if (w.source) { vals.push(w.tickets); } if (w.n1) { vals.push(w.n1.tickets); } });
+    const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
+    const Wd = 1000, Hh = 190, ml = 48, mr = 40, mt = 26, mb = 30;
+    const X = i => ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1);
+    const Y = v => mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb);
+    const grad = [1, 2].map(k => { const v = lo + (hi - lo) * k / 3; return { y: Y(v).toFixed(1), v: fI(v) }; });
+    const pts = [], pts1 = [], labels = [];
+    W.forEach((w, i) => {
+      const up = !w.n1 || !w.source || w.tickets >= w.n1.tickets;
+      if (w.source) { pts.push({ x: X(i).toFixed(1), y: Y(w.tickets).toFixed(1), v: fI(w.tickets), dy: up ? -9 : 16 }); }
+      if (w.n1) { pts1.push({ x: X(i).toFixed(1), y: Y(w.n1.tickets).toFixed(1), v: fI(w.n1.tickets), dy: up ? 16 : -9 }); }
+      labels.push({ x: X(i).toFixed(1), t: 'S' + w.iso + (w.enCours ? ' · en cours' : ''), cur: w.enCours });
+    });
+    const chips = W.map(w => ({ lab: 'S' + w.iso, dates: dd(w.du) + '→' + dd(w.au), cli: w.source ? fI(w.tickets) : '—',
+      eco: w.n1 && w.source ? sg(pc(w.tickets - w.n1.tickets, w.n1.tickets)) + ' %' : '—', coul: w.n1 && w.source ? col(pc(w.tickets - w.n1.tickets, w.n1.tickets)) : '#c9c2b8',
+      titre: (w.source ? fI(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fI(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1') + (w.enCours ? ' · ' + w.joursServis + ' jours servis' : '') }));
+    const cur = W.length ? W[W.length - 1] : null, prev = W.length > 1 ? W[W.length - 2] : null;
+    const eT = D.totalN1 && D.totalN1.tickets ? pc(D.total.tickets - D.totalN1.tickets, D.totalN1.tickets) : null;
+    const meilleure = W.filter(w => w.source).reduce((a, b) => !a || b.tickets > a.tickets ? b : a, null);
+    const tuiles = [
+      eT != null ? { k: 'Six semaines vs N-1', v: sg(eT) + ' %', s: fI(D.total.tickets) + ' clients contre ' + fI(D.totalN1.tickets), cls: eT >= 0 ? 'good' : 'bad' }
+        : { k: 'Six semaines', v: fI(D.total.tickets), s: D.n1Motif || 'pas de N-1', cls: '' },
+      cur ? { k: cur.enCours ? 'Semaine en cours' : 'Dernière semaine', v: cur.source ? fI(cur.tickets) : '—',
+        s: (prev && prev.source && cur.source ? sg(pc(cur.tickets - prev.tickets, prev.tickets)) + ' % vs S' + prev.iso : '') + (cur.enCours ? (prev ? ' · ' : '') + cur.joursServis + ' jour' + (cur.joursServis > 1 ? 's' : '') + ' servi' + (cur.joursServis > 1 ? 's' : '') : ''),
+        cls: prev && prev.source && cur.source ? (cur.tickets >= prev.tickets ? 'good' : 'bad') : '' } : { k: 'Semaine en cours', v: '—', s: '', cls: '' },
+      { k: 'Meilleure semaine', v: meilleure ? fI(meilleure.tickets) : '—', s: meilleure ? 'S' + meilleure.iso + ' · ' + dd(meilleure.du) + ' → ' + dd(meilleure.au) : '', cls: '' }
+    ];
+    return Object.assign(out, { vide: !W.length, avecN1, n1Motif: D.n1Motif || '', svg: { Wd, Hh, ml, mr, grad, pts, pts1, labels, hb: Hh - 8 }, chips, tuiles,
+      sousTitre: 'S' + (W[0] ? W[0].iso : '') + ' → S' + (cur ? cur.iso : '') + ' · ' + (D.source || '') });
+  }
   rpMois(m, r, d, vue){
     const sem = vue === 'semaine';
     const per = sem ? 'la semaine' : 'le mois';
@@ -8067,6 +8129,8 @@ class App {
     // Les périodes — matin, midi, après-midi — de ce magasin : jour par jour
     // sur la semaine, semaine par semaine sur le mois.
     if (vue === 'semaine' || vue === 'mois') { common.rpDetail.periodes = this.rpPeriodes(m, r, vue); }
+    // Les six dernières semaines face au N-1 : sur la semaine seulement.
+    if (vue === 'semaine') { common.rpDetail.semaines = this.rpSemaines(m, r); }
     // Le mois d'un magasin : les huit chiffres, le calendrier, le profil des
     // jours, les heures — à la place de la liste des jours.
     common.rpDetail.mois = this.rpMois(m, r, common.rpDetail, vue);

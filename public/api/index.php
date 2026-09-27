@@ -34,6 +34,7 @@ require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
+require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -223,6 +224,7 @@ function route(string $method, string $path): mixed
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
+            $path === '/ventes/semaines'              => ep_ventes_semaines(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
             $path === '/ventes/tendance'              => ep_stats_tendance(),
