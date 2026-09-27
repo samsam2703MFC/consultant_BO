@@ -1255,7 +1255,7 @@
     const vals = [];
     W.forEach(w => { if (w.source) { vals.push(w.tickets); } if (w.n1) { vals.push(w.n1.tickets); } });
     const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
-    const Wd = 1000, Hh = 190, ml = 30, mr = 34, mt = 26, mb = 30;
+    const Wd = 1000, Hh = 190, ml = 30, mr = 64, mt = 26, mb = 30;
     const X = i => (ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1)).toFixed(1);
     const Y = v => (mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
     const ft = 'font-family:var(--font-ui)';
