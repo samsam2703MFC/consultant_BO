@@ -7716,7 +7716,7 @@ class App {
     W.forEach(w => { if (w.n != null) { vals.push(w.n); } if (w.n1 != null) { vals.push(w.n1); } });
     if (!vals.length) { return null; }
     const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
-    const Wd = 1000, Hh = mini ? 60 : 190, ml = mini ? 8 : 30, mr = mini ? 8 : 64, mt = mini ? 8 : 26, mb = mini ? 8 : 30;
+    const Wd = mini ? 300 : 1000, Hh = mini ? 70 : 190, ml = mini ? 6 : 30, mr = mini ? 6 : 64, mt = mini ? 8 : 26, mb = mini ? 8 : 30;
     const X = i => (ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1)).toFixed(1);
     const Y = v => (mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
     const grad = mini ? [] : [1, 2].map(k => ({ y: Y(lo + (hi - lo) * k / 3) }));
@@ -7771,7 +7771,8 @@ class App {
     const P = D.periodes.filter(p => !p.futur);
     const lus = P.filter(p => p.tickets > 0 || p.n1);
     const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: p.tickets > 0 ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
-    const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : p.lab.replace(/ \d\d$/, '') + ' ' + p.du.slice(0, 4);
+    const MOISL = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : MOISL[p.iso] + ' ' + p.du.slice(0, 4);
     // Les totaux du réseau et à périmètre comparable.
     const n = lus.reduce((a, p) => a + p.tickets, 0), ca = lus.reduce((a, p) => a + p.ca, 0);
     const n1 = lus.reduce((a, p) => a + (p.n1 ? p.n1.tickets : 0), 0), ca1 = lus.reduce((a, p) => a + (p.n1 ? p.n1.ca : 0), 0);
@@ -7806,7 +7807,7 @@ class App {
     out.tuiles3 = [
       eT != null ? { k: (vue === 'annee' ? 'Cumul à ce jour' : nP + ' ' + unite) + ' vs N-1', v: sg(eT) + ' %', s: fI(nC) + ' clients contre ' + fI(n1) + ' · périmètre comparable', cls: eT >= 0 ? 'good' : 'bad' } : { k: 'Vs N-1', v: '—', s: 'aucun magasin comparable', cls: '' },
       cur ? { k: cur.lab + (cur.enCours ? ' · en cours' : ''), v: fI(cur.tickets), s: eP != null ? sg(eP) + ' % vs ' + prev.lab : '', cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
-      best ? { k: vue === 'semaine' ? 'Meilleure semaine' : 'Meilleur mois', v: fI(best.tickets), s: best.lab + (vue === 'semaine' ? ' · ' + dd(best.du) + ' → ' + dd(best.au) : ' ' + best.du.slice(0, 4)), cls: '' } : { k: 'Meilleure période', v: '—', s: '', cls: '' }
+      best ? { k: vue === 'semaine' ? 'Meilleure semaine' : 'Meilleur mois', v: fI(best.tickets), s: vue === 'semaine' ? best.lab + ' · ' + dd(best.du) + ' → ' + dd(best.au) : MOISL[best.iso] + ' ' + best.du.slice(0, 4), cls: '' } : { k: 'Meilleure période', v: '—', s: '', cls: '' }
     ];
     // Le tableau magasin par magasin, classé par clients.
     out.lignes = mags.map(m => {

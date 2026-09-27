@@ -4161,10 +4161,10 @@ function svgCourbe(S, esc){
   if (!S) { return ''; }
   const ft = 'font-family:var(--font-ui)';
   const m = S.mini;
-  return `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="${m ? 'none' : 'xMinYMin meet'}" class="${m ? 'rm-s6m' : 'rm-s6c'}">
+  return `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMidYMid meet" class="${m ? 'rm-s6m' : 'rm-s6c'}">
       ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/>`).join('')}
-      ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="${m ? 6 : 2}" stroke-dasharray="${m ? '12 10' : '5 4'}" vector-effect="non-scaling-stroke"/>` : ''}
-      ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="${m ? 7 : 2.5}" vector-effect="non-scaling-stroke"/>` : ''}
+      ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="${m ? 4 : 2}" stroke-dasharray="${m ? '8 6' : '5 4'}"/>` : ''}
+      ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="${m ? 5 : 2.5}"/>` : ''}
       ${m ? '' : S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${esc(p.v)}</text>`).join('')}
       ${m ? '' : S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#8D1D2C"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${esc(p.v)}</text>`).join('')}
       ${S.labels.map(l => `<text x="${l.x}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${l.cur ? '#8D1D2C' : '#222'}" style="${ft}">${esc(l.t)}</text>`).join('')}

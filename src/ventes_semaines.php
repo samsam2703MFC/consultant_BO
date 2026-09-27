@@ -128,7 +128,7 @@ function vsPeriodes(string $vue, string $date, int $n): array
         $futur = $du > $auj;
         $jusqua = min($au, $auj);
         $du1 = sprintf('%04d-%02d-01', $yy - 1, $mm); $au1 = min(date('Y-m-t', strtotime($du1)), sprintf('%04d-%02d-%s', $yy - 1, $mm, substr($jusqua, 8, 2)));
-        $out[] = ['lab' => $MN[$mm] . ($vue === 'mois' && ($mm === 1 || $out === []) ? ' ' . substr((string) $yy, 2) : ''), 'iso' => $mm, 'du' => $du, 'au' => $au, 'jusqua' => $futur ? null : $jusqua,
+        $out[] = ['lab' => $MN[$mm], 'iso' => $mm, 'du' => $du, 'au' => $au, 'jusqua' => $futur ? null : $jusqua,
             'du1' => $du1, 'au1' => $au1, 'enCours' => !$futur && $au >= $auj, 'futur' => $futur,
             'joursServis' => $futur ? 0 : (int) ((strtotime($jusqua) - strtotime($du)) / 86400) + 1];
     }
