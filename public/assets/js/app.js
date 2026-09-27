@@ -7772,7 +7772,7 @@ class App {
     const lus = P.filter(p => p.tickets > 0 || p.n1);
     const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: p.tickets > 0 ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
     const MOISL = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-    const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : MOISL[p.iso] + ' ' + p.du.slice(0, 4);
+    const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : dd(p.du) + '→' + dd(p.enCours ? D.aujourdhui : p.au);
     // Les totaux du réseau et à périmètre comparable.
     const n = lus.reduce((a, p) => a + p.tickets, 0), ca = lus.reduce((a, p) => a + p.ca, 0);
     const n1 = lus.reduce((a, p) => a + (p.n1 ? p.n1.tickets : 0), 0), ca1 = lus.reduce((a, p) => a + (p.n1 ? p.n1.ca : 0), 0);
