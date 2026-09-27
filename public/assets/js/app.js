@@ -7850,7 +7850,7 @@ class App {
       if (w.n1) { pts1.push({ x: X(i).toFixed(1), y: Y(w.n1.tickets).toFixed(1), v: fI(w.n1.tickets), dy: up ? 16 : -9 }); }
       labels.push({ x: X(i).toFixed(1), t: 'S' + w.iso + (w.enCours ? ' · en cours' : ''), cur: w.enCours });
     });
-    const chips = W.map(w => ({ lab: 'S' + w.iso, dates: dd(w.du) + '→' + dd(w.au), cli: w.source ? fI(w.tickets) : '—',
+    const chips = W.map(w => ({ lab: 'S' + w.iso, dates: (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : dd(w.du)) + ' → ' + dd(w.au), cli: w.source ? fI(w.tickets) : '—',
       eco: w.n1 && w.source ? sg(pc(w.tickets - w.n1.tickets, w.n1.tickets)) + ' %' : '—', coul: w.n1 && w.source ? col(pc(w.tickets - w.n1.tickets, w.n1.tickets)) : '#c9c2b8',
       titre: (w.source ? fI(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fI(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1') + (w.enCours ? ' · ' + w.joursServis + ' jours servis' : '') }));
     const cur = W.length ? W[W.length - 1] : null, prev = W.length > 1 ? W[W.length - 2] : null;

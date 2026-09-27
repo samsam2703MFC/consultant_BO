@@ -450,3 +450,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-27T05:24:42Z drop semaine : six semaines face au N-1
 2026-09-27T05:28:44Z six semaines : pastilles et axe
 2026-09-27T05:31:59Z six semaines : dates sous le numéro
+2026-09-27T05:38:49Z six semaines : dates courtes
