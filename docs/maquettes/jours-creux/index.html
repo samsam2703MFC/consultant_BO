@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Générateur de promotions et bundles pour les jours creux</title>
+<!-- Trois écrans d'une même proposition : trouver les creux de chaque magasin, générer des promotions et
+     des bundles qui tiennent la marge, suivre ce qu'elles changent.
+       ?v=1  Cockpit › Magasins › Jours creux : la carte jour × heure d'un magasin, les creux à travailler, le réseau
+       ?v=2  Le générateur : pour un créneau, quatre propositions chiffrées (bundle, happy hour, précommande, pause)
+       ?v=3  Le suivi : les promotions en cours magasin par magasin, leur effet sur le créneau, garder ou arrêter
+     Chiffres : ventes réelles par heure des 4 magasins du 31/08 au 27/09 (data.json, /ventes/stats jour par jour),
+     marges réelles des produits de Sombreffe (septembre), taux d'attache réels (croisements, après-midi).
+     Les résultats de l'écran 3 sont posés pour la maquette : rien n'a encore été lancé. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+  #ecran{max-width:1300px;margin:0 auto}
+  .prop{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 8px}
+  .ok{color:#2d7a3e}.ko{color:#C0182B}.mu{color:var(--color-text-muted)}.att{color:#B26A00}
+  .tab{font-variant-numeric:tabular-nums}
+  .ck-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .ck-hd .t{font-family:var(--font-display);font-size:24px;line-height:1.1}
+  .ck-hd .s{font-size:12px;color:var(--color-text-muted)}
+  .sel{font-size:13px;font-weight:500;border:.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 30px 7px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23222'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;margin-bottom:12px}
+  .carte>.ct{padding:11px 16px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .carte>.ct .db-mini{margin-left:auto}
+  .corps{padding:14px 16px}
+  .lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:block;margin-bottom:6px}
+  .btn{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 14px;font:500 12px var(--font-ui);color:var(--color-text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn.prim{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+  .badge{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;display:inline-block;white-space:nowrap}
+  .badge.ok{background:rgba(45,122,62,.12);color:#2d7a3e}.badge.ko{background:rgba(192,24,43,.10);color:#C0182B}.badge.att{background:rgba(178,106,0,.12);color:#B26A00}.badge.mu{background:var(--color-background-secondary);color:var(--color-text)}
+  .badge.pr{background:var(--color-primary);color:#fff}.badge.nv{background:#222;color:#fff}
+  /* heatmap */
+  .deux{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}
+  .hm{display:grid;grid-template-columns:56px repeat(11,1fr);gap:4px;padding:12px 16px 6px}
+  .hm .h{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:center;padding-bottom:2px}
+  .hm .j{font:600 11px var(--font-ui);color:var(--color-text);display:flex;align-items:center}
+  .hm .c{border-radius:7px;padding:6px 4px 5px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;color:#fff}
+  .hm .c b{font-family:var(--font-display);font-size:15px;line-height:1}
+  .hm .c small{font-size:9.5px;opacity:.9;margin-top:2px}
+  .hm .c.clair{color:var(--color-text)}
+  .hm .c.sel{outline:3px solid #222;outline-offset:-3px}
+  .leg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);padding:6px 16px 12px;flex-wrap:wrap;align-items:center}
+  .leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .creux{padding:10px 16px 6px}
+  .cr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:.5px solid var(--color-border-tertiary);align-items:center}
+  .cr:first-child{border-top:none}
+  .cr .n{font-weight:600;font-size:13px}.cr .s{font-size:11px;color:var(--color-text-muted)}
+  .cr .v{font-family:var(--font-display);font-size:20px;text-align:right;line-height:1}.cr .v small{display:block;font-family:var(--font-ui);font-size:10px;color:var(--color-text-muted);font-weight:400;margin-top:2px}
+  .cr.on{background:#fdf4f5;margin:0 -16px;padding:10px 16px;border-radius:8px}
+  table.res{width:100%;border-collapse:collapse}
+  table.res th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 10px 8px}
+  table.res th.n,table.res td.n{text-align:right}
+  table.res td{padding:9px 10px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px;vertical-align:middle}
+  table.res td.nom{font-weight:600}table.res td small{display:block;font-size:10px;color:var(--color-text-muted);font-weight:400}
+  .mini-jg{position:relative;height:8px;border-radius:4px;background:var(--color-background-secondary);min-width:120px}
+  .mini-jg i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:#F08A2C}
+  /* générateur */
+  .gen{display:grid;grid-template-columns:250px minmax(0,1fr);gap:12px;align-items:start}
+  .regl{padding:12px 14px}
+  .regl .lab{margin-top:10px}.regl .lab:first-child{margin-top:0}
+  .regl .v{display:flex;align-items:center;gap:8px;font-size:12.5px}
+  .curseur{flex:1;height:6px;border-radius:3px;background:var(--color-background-secondary);position:relative}
+  .curseur i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--color-primary)}
+  .curseur b{position:absolute;top:-5px;width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--color-primary);transform:translateX(-50%)}
+  .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0}
+  .chk i{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--color-border-secondary);display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-style:normal}
+  .chk i.on{background:var(--color-primary);border-color:var(--color-primary)}
+  .cartes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .pc{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:9px}
+  .pc.top{border:1.5px solid var(--color-primary)}
+  .pc .t{font-family:var(--font-display);font-size:19px;line-height:1.15}
+  .pc .m{font-size:12.5px}
+  .pc .prix{display:flex;align-items:baseline;gap:8px}
+  .pc .prix b{font-family:var(--font-display);font-size:26px;line-height:1}.pc .prix s{color:var(--color-text-muted)}
+  .kv4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .kv4>div{background:var(--color-background-secondary);border-radius:9px;padding:7px 9px}
+  .kv4 .k{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kv4 .v{font-family:var(--font-display);font-size:17px;line-height:1.15;margin-top:2px}
+  .kv4 .s{font-size:9.5px;color:var(--color-text-muted)}
+  .pc .pq{font-size:11.5px;color:var(--color-text-muted);border-left:3px solid var(--color-border-secondary);padding-left:9px}
+  .pc .pq b{color:var(--color-text)}
+  .chips{display:flex;gap:5px;flex-wrap:wrap}
+  .chip{font-size:10.5px;padding:2px 8px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface)}
+  .chip.on{background:#222;color:#fff;border-color:#222}
+  .pc .act{display:flex;gap:6px;margin-top:auto;padding-top:4px;flex-wrap:wrap}
+  .autres{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .autres>div{background:var(--color-background-secondary);border-radius:10px;padding:10px 12px;font-size:12px}
+  .autres b{display:block;font-size:13px}
+  /* suivi */
+  .sv{display:grid;grid-template-columns:200px minmax(0,1fr) 150px 130px 130px 120px;gap:14px;align-items:center;padding:12px 16px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px}
+  .sv .nom{font-weight:600}.sv .nom small,.sv .kv small{display:block;font-weight:400;font-size:10.5px;color:var(--color-text-muted)}
+  .sv .kv b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+  .ent{display:grid;grid-template-columns:200px minmax(0,1fr) 150px 130px 130px 120px;gap:14px;padding:8px 16px 4px;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .barres{display:flex;gap:6px;align-items:flex-end;height:44px}
+  .barres div{flex:1;display:flex;flex-direction:row;align-items:flex-end;gap:2px;position:relative;height:40px}
+  .barres i{flex:1;display:block;background:#DED6C9;border-radius:2px 2px 0 0}
+  .barres b{flex:1;display:block;background:var(--color-primary);border-radius:2px 2px 0 0}
+  .barres small{position:absolute;bottom:-14px;left:0;right:0;text-align:center;font-size:8.5px;color:var(--color-text-muted)}
+  .cal{display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;padding:12px 16px}
+  .cal .h{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:center}
+  .cal .l{font:600 11px var(--font-ui);display:flex;align-items:center}
+  .cal .c{min-height:40px;border-radius:7px;background:var(--color-background-secondary);padding:5px 6px;font-size:10px;line-height:1.25}
+  .cal .c.p{background:#fdf4f5;border:1px solid var(--color-primary)}
+  .cal .c.g{background:#f0f7f2;border:1px solid #bfdcc6}
+  .cal .c.creux{background:#fff3e6}
+  .cal .c b{display:block;font-size:10.5px}
+  .cols{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+const q = new URLSearchParams(location.search); const V = q.get('v') || '1';
+const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const fE = n => nf(n) + ' €';
+const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'], JC = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+const HEURES = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+const coul = idx => idx == null ? ['#efe9e1', true] : idx < .45 ? ['#F08A2C', false] : idx < .7 ? ['#e8c9a0', true] : idx < 1 ? ['#6aa84f', false] : ['#2d7a3e', false];
+
+fetch('data.json').then(r => r.json()).then(D => {
+  const S = D['5'], C = S.cellules, moy = S.moyenneHeure;
+  const cell = (w, h) => C[w + ':' + h] || null;
+  const bloc = (wds, hs) => { const v = wds.flatMap(w => hs.map(h => cell(w, h) || { ca: 0, tickets: 0 })); const n = v.length; return { ca: v.reduce((a, x) => a + x.ca, 0) / n, tk: v.reduce((a, x) => a + x.tickets, 0) / n, heures: n }; };
+  // Les creux : un bloc = des jours × des heures ; le potentiel = remonter le bloc à 70 % de la moyenne du magasin, sur un mois (4,3 semaines).
+  const CREUX = [
+    { nom: 'Lundi → vendredi, 14 – 17 h', wds: [0, 1, 2, 3, 4], hs: [14, 15, 16, 17], sel: true },
+    { nom: 'Dimanche, 15 – 17 h', wds: [6], hs: [15, 16, 17] },
+    { nom: 'Samedi, 15 – 17 h', wds: [5], hs: [15, 16, 17] },
+  ].map(c => { const b = bloc(c.wds, c.hs); const cible = .7 * moy; const pot = Math.max(0, cible - b.ca) * c.hs.length * c.wds.length * 4.3; return Object.assign(c, b, { idx: b.ca / moy, panier: b.tk ? b.ca / b.tk : 0, potentiel: pot }); }).sort((a, b) => b.potentiel - a.potentiel);
+
+  /* ---------- v1 : les creux ------------------------------------------------ */
+  function ecranCreux() {
+    let hm = '<div class="h"></div>' + HEURES.map(h => `<div class="h">${h} h</div>`).join('');
+    JOURS.forEach((j, w) => {
+      hm += `<div class="j">${j}</div>` + HEURES.map(h => { const c = cell(w, h); const idx = c ? c.ca / moy : null; const [fond, clair] = coul(idx); const sel = w <= 4 && h >= 14; return `<div class="c${clair ? ' clair' : ''}${sel ? ' sel' : ''}" style="background:${fond}"><b>${c ? nf(c.ca) : '—'}</b><small>${c ? nf(c.tickets) + ' cl.' : ''}</small></div>`; }).join('');
+    });
+    const reseau = ['2', '3', '4', '5'].map(sid => { const s = D[sid]; const Cc = s.cellules; const v = [0, 1, 2, 3, 4].flatMap(w => [14, 15, 16, 17].map(h => Cc[w + ':' + h] || { ca: 0, tickets: 0 })); const ca = v.reduce((a, x) => a + x.ca, 0) / v.length; const tk = v.reduce((a, x) => a + x.tickets, 0) / v.length; const pot = Math.max(0, .7 * s.moyenneHeure - ca) * 4 * 5 * 4.3; return { nom: s.nom, moy: s.moyenneHeure, ca, tk, idx: ca / s.moyenneHeure, pot, promo: sid === '5' ? 'à générer' : (sid === '2' ? 'Pause café · test 2 sem.' : '—') }; }).sort((a, b) => b.pot - a.pot);
+    const totPot = reseau.reduce((a, r) => a + r.pot, 0);
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux</p>
+    <div class="ck-hd"><div><div class="t">Où le magasin ne vend pas</div><div class="s">le chiffre par heure, jour de semaine par jour de semaine, sur les quatre dernières semaines · la moyenne du magasin fait l’échelle</div></div>
+      <span style="margin-left:auto" class="mu">Magasin</span><select class="sel"><option>Atelier by Harmonie — Sombreffe</option></select><select class="sel"><option>4 dernières semaines</option></select></div>
+    <div class="deux">
+      <div class="carte"><div class="ct"><span class="db-lab">Sombreffe — CA moyen par heure, du 31/08 au 27/09</span><span class="db-mini">moyenne du magasin ${fE(moy)} / h · le cadre noir : le créneau choisi · « cl. » : clients par heure</span></div>
+        <div class="hm">${hm}</div>
+        <div class="leg"><span><i style="background:#F08A2C"></i>creux · &lt; 45 % de la moyenne</span><span><i style="background:#e8c9a0"></i>45 – 70 %</span><span><i style="background:#6aa84f"></i>70 – 100 %</span><span><i style="background:#2d7a3e"></i>≥ 100 %, les rushs</span><span style="margin-left:auto">source : tickets du panel, heure par heure</span></div>
+      </div>
+      <div>
+        <div class="carte"><div class="ct"><span class="db-lab">Les creux à travailler</span><span class="db-mini">potentiel : remonter le créneau à 70 % de la moyenne, par mois</span></div>
+          <div class="creux">${CREUX.map(c => `<div class="cr${c.sel ? ' on' : ''}"><div><div class="n">${esc(c.nom)}</div><div class="s">${fE(c.ca)} / h · ${nf(c.tk)} clients / h · panier ${nf(c.panier, 1)} € · <b class="${c.idx < .45 ? 'ko' : 'att'}">${nf(100 * c.idx)} % de la moyenne</b></div></div><div class="v">${fE(c.potentiel)}<small>par mois</small></div></div>`).join('')}</div>
+          <div class="corps" style="padding-top:4px;display:flex;gap:8px;align-items:center"><span class="btn prim">Générer des promos pour ce créneau ›</span><span class="db-mini">4 propositions chiffrées, marge gardée</span></div>
+        </div>
+        <div class="carte"><div class="ct"><span class="db-lab">Pourquoi l’après-midi</span></div>
+          <div class="corps" style="font-size:12.5px;padding-top:10px">Entre 14 h et 17 h, Sombreffe fait <b>${nf(CREUX[0].tk)} clients par heure</b> contre ${nf(bloc([0,1,2,3,4],[11,12]).tk)} entre 11 h et 13 h, et le panier tombe à <b>${nf(CREUX[0].panier, 1)} €</b> contre ${nf(bloc([0,1,2,3,4],[11,12]).ca / bloc([0,1,2,3,4],[11,12]).tk, 1)} €. Deux leviers, donc : <b>faire venir</b> (trafic) et <b>faire prendre un article de plus</b> (panier). L’équipe est là, le four aussi : chaque euro de l’après-midi est presque de la marge.</div></div>
+      </div>
+    </div>
+    <div class="carte"><div class="ct"><span class="db-lab">Le réseau, même créneau — lundi → vendredi, 14 – 17 h</span><span class="db-mini">chaque magasin sur sa propre moyenne · potentiel réseau ${fE(totPot)} par mois</span></div>
+      <div class="corps" style="padding-top:8px"><table class="res"><thead><tr><th>Magasin</th><th class="n">CA / h sur le créneau</th><th class="n">Sa moyenne</th><th>Part de la moyenne</th><th class="n">Clients / h</th><th class="n">Potentiel / mois</th><th>Promo en cours</th></tr></thead><tbody>
+        ${reseau.map(r => `<tr><td class="nom">${esc(r.nom)}</td><td class="n tab">${fE(r.ca)}</td><td class="n tab mu">${fE(r.moy)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="mini-jg"><i style="width:${Math.min(100, 100 * r.idx).toFixed(0)}%;background:${r.idx < .45 ? '#F08A2C' : '#e8c9a0'}"></i></div><b class="${r.idx < .45 ? 'ko' : 'att'}">${nf(100 * r.idx)} %</b></div></td><td class="n tab">${nf(r.tk)}</td><td class="n tab"><b>${fE(r.pot)}</b></td><td>${r.promo === '—' ? '<span class="mu">—</span>' : `<span class="badge ${r.promo === 'à générer' ? 'pr' : 'mu'}">${esc(r.promo)}</span>`}</td></tr>`).join('')}
+      </tbody></table></div></div>`;
+  }
+
+  /* ---------- v2 : le générateur -------------------------------------------- */
+  function ecranGenerateur() {
+    const c = CREUX[0];
+    const jours = 21.5; // jours ouverts lun-ven par mois
+    const cartes = [
+      { top: true, levier: 'Panier', type: 'Bundle', t: 'Le goûter de 16 h', m: '<b>1/4 de tarte + boisson chaude</b> — vendu comme un seul article à la caisse, de 14 h à 17 h en semaine.',
+        prix: '6,50 €', avant: '7,60 €', remise: '−14 %', marge: '61 %', margeAv: '1/4 tarte 68 % · café 80 %', mEur: '3,95 €', seuil: '8 / jour', seuilS: 'pour +1 000 € de marge / mois', cible: '15 %', cibleS: 'd’attache tarte → café (1 % aujourd’hui)',
+        pq: 'Aujourd’hui, <b>1 % seulement</b> des tartes de l’après-midi partent avec une boisson chaude (croisements, Sombreffe, après-midi). Le quart de tarte est la meilleure marge du rayon (67,9 %) : le bundle rend visible une association que personne ne fait.',
+        canaux: ['Écran caisse', 'Affiche A4', 'Facebook', 'Newsletter'], caisse: 'à créer dans la catégorie Bundle' },
+      { levier: 'Panier', type: 'Bundle', t: 'La pause café', m: '<b>1 café + 1 cookie</b> à un prix rond, 14 h – 17 h, tous les jours.',
+        prix: '3,20 €', avant: '3,80 €', remise: '−16 %', marge: '70 %', margeAv: 'cookies 65 % · café 80 %', mEur: '2,25 €', seuil: '6 / jour', seuilS: 'pour +400 € de marge / mois', cible: '45 %', cibleS: 'd’attache café → cookie (15 – 33 % aujourd’hui)',
+        pq: 'Le café de l’après-midi part déjà avec un cookie <b>une fois sur cinq</b> (15 – 33 % selon les mois). La pause à prix rond pousse le réflexe sans casser la marge : les deux produits sont à plus de 65 %.',
+        canaux: ['Écran caisse', 'Affiche A4'], caisse: 'proche de « 1 croissant + 1 café » (5100001), déjà en caisse le matin' },
+      { levier: 'Trafic', type: 'Précommande', t: 'Le pain de demain', m: 'Commandé <b>entre 14 h et 17 h</b> pour le lendemain : <b>2 pains classiques 5,50 €</b> + 1 viennoiserie offerte au retrait.',
+        prix: '5,50 €', avant: '5,50 €', remise: 'viennoiserie offerte', marge: '52 %', margeAv: '2 pains classiques 55,6 % · croissant 62 %', mEur: '2,85 €', seuil: '+7 clients / h', seuilS: 'sur le créneau, pour +1 200 € / mois', cible: '30 clients / h', cibleS: 'contre ' + nf(c.tk) + ' aujourd’hui',
+        pq: 'Le creux est d’abord un creux de <b>trafic</b> : ' + nf(c.tk) + ' clients par heure. Le pain fait venir, la viennoiserie offerte fait revenir le matin — et la commande de la veille lisse la production.',
+        canaux: ['Newsletter', 'SMS', 'Facebook', 'Affiche A4'], caisse: 'le bundle « 2 pains classiques » (5100002) existe déjà · la précommande passe par la caisse ou la newsletter' },
+      { levier: 'Panier', type: 'Happy hour', t: 'Les demi-tartes de 15 h', m: '<b>1/2 tarte −20 %</b> de 15 h à 17 h, en semaine — ce qui reste en vitrine part plutôt que d’être jeté.',
+        prix: '9,50 €', avant: '11,90 €', remise: '−20 %', marge: '39 %', margeAv: '51 % avant remise', mEur: '3,70 €', seuil: '+22 / semaine', seuilS: 'pour compenser les 36 déjà vendues à plein tarif', cible: '+30 %', cibleS: 'de demi-tartes l’après-midi',
+        pq: 'La moins bonne des quatre : la remise s’applique aussi aux <b>36 demi-tartes</b> que l’après-midi vend déjà à plein tarif. Elle se justifie surtout par la <b>casse évitée</b> — à mesurer avec les pertes du panel.',
+        canaux: ['Écran caisse', 'Facebook'], caisse: 'remise horaire à programmer au panel' },
+    ];
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Générateur</p>
+    <div class="ck-hd"><div><div class="t">Sombreffe — lundi → vendredi, 14 – 17 h</div><div class="s">${fE(c.ca)} / h · ${nf(c.tk)} clients / h · panier ${nf(c.panier, 1)} € · ${nf(100 * c.idx)} % de la moyenne · potentiel ${fE(c.potentiel)} / mois</div></div><span class="badge ko" style="margin-left:6px">creux</span><span style="margin-left:auto" class="btn">‹ Les creux</span></div>
+    <div class="gen">
+      <div class="carte regl">
+        <span class="lab">Marge minimale du bundle</span><div class="v"><div class="curseur"><i style="width:55%"></i><b style="left:55%"></b></div><b>55 %</b></div>
+        <span class="lab">Remise maximale</span><div class="v"><div class="curseur"><i style="width:25%"></i><b style="left:25%"></b></div><b>25 %</b></div>
+        <span class="lab">Leviers</span><div class="chk"><i class="on">✓</i>Panier — un article de plus</div><div class="chk"><i class="on">✓</i>Trafic — faire venir</div><div class="chk"><i></i>Écouler — la vitrine de fin de journée</div>
+        <span class="lab">Familles</span><div class="chk"><i class="on">✓</i>Tartes</div><div class="chk"><i class="on">✓</i>Boissons chaudes</div><div class="chk"><i class="on">✓</i>Cookies · biscuiterie</div><div class="chk"><i class="on">✓</i>Pain</div><div class="chk"><i></i>Traiteur</div>
+        <span class="lab">Canaux disponibles</span><div class="chips"><span class="chip on">Écran caisse</span><span class="chip on">Affiche A4</span><span class="chip on">Facebook</span><span class="chip on">Newsletter</span><span class="chip">SMS</span></div>
+        <span class="lab">Durée du test</span><div class="v"><select class="sel" style="width:100%"><option>2 semaines, puis verdict</option></select></div>
+        <div style="margin-top:12px"><span class="btn prim" style="width:100%;justify-content:center">Regénérer</span></div>
+        <div class="db-mini" style="margin-top:10px">Les propositions s’appuient sur les marges réelles des produits (coût matière des recettes), les taux d’attache de l’après-midi (croisements) et ce que la caisse sait déjà vendre en bundle.</div>
+      </div>
+      <div>
+        <div class="cartes">${cartes.map(k => `<div class="pc${k.top ? ' top' : ''}">
+          <div style="display:flex;gap:6px;align-items:center"><span class="badge ${k.levier === 'Trafic' ? 'nv' : 'pr'}">${k.levier}</span><span class="badge mu">${k.type}</span>${k.top ? '<span class="badge ok" style="margin-left:auto">recommandée</span>' : ''}</div>
+          <div class="t">${esc(k.t)}</div>
+          <div class="m">${k.m}</div>
+          <div class="prix"><b>${esc(k.prix)}</b>${k.avant !== k.prix ? `<s>${esc(k.avant)}</s>` : ''}<span class="mu">${esc(k.remise)}</span></div>
+          <div class="kv4"><div><div class="k">Marge</div><div class="v ${parseInt(k.marge, 10) < 55 ? 'att' : 'ok'}">${esc(k.marge)}</div><div class="s">${esc(k.margeAv)}</div></div><div><div class="k">Marge / vente</div><div class="v">${esc(k.mEur)}</div><div class="s">après remise</div></div><div><div class="k">Seuil</div><div class="v">${esc(k.seuil)}</div><div class="s">${esc(k.seuilS)}</div></div><div><div class="k">Cible</div><div class="v">${esc(k.cible)}</div><div class="s">${esc(k.cibleS)}</div></div></div>
+          <div class="pq">${k.pq}</div>
+          <div class="chips">${k.canaux.map(x => `<span class="chip on">${esc(x)}</span>`).join('')}<span class="chip" style="border-style:dashed">${esc(k.caisse)}</span></div>
+          <div class="act"><span class="btn prim">Adopter pour Sombreffe</span><span class="btn">Ajuster</span><span class="btn">Tester 2 semaines</span></div>
+        </div>`).join('')}</div>
+        <div class="carte" style="margin-top:12px"><div class="ct"><span class="db-lab">Le même générateur, pour les autres magasins</span><span class="db-mini">chaque magasin sur ses propres marges, ses propres attaches et sa propre caisse</span></div>
+          <div class="corps"><div class="autres">
+            <div><b>Corbais — lun → jeu, 15 – 17 h</b>47 % de sa moyenne · première proposition : <b>La pause café</b> (attache café → cookie 11 – 22 %) · potentiel 2 900 € / mois</div>
+            <div><b>Halle — lun → jeu, 15 – 17 h</b>33 % de sa moyenne · première proposition : <b>Le pain de demain</b> (5,7 clients / h, le trafic d’abord) · potentiel 1 700 € / mois</div>
+            <div><b>Gosselies — lun, mar, 14 – 17 h</b>63 % de sa moyenne · première proposition : <b>Le goûter de 16 h</b> · potentiel 600 € / mois</div>
+          </div></div></div>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- v3 : le suivi ------------------------------------------------- */
+  function ecranSuivi() {
+    const promos = [
+      { mag: 'Sombreffe', nom: 'Le goûter de 16 h', type: 'Bundle · panier', depuis: '15/09', creneau: 'lun → ven 14 – 17 h', ca: 18, vendus: 63, marge: 249, verdict: ['Garder', 'ok'], note: 'la note du jour du 22/09 : « pluie toute la journée » — le créneau tient quand même', avant: [72, 78, 81, 79], apres: [88, 94, 96, 90] },
+      { mag: 'Sombreffe', nom: 'Le pain de demain', type: 'Précommande · trafic', depuis: '15/09', creneau: 'lun → ven 14 – 17 h', ca: 6, vendus: 41, marge: 117, verdict: ['Ajuster', 'att'], note: 'peu de précommandes le vendredi (4 sur 41) : le proposer aussi le samedi matin ?', avant: [72, 78, 81, 79], apres: [80, 82, 84, 82] },
+      { mag: 'Corbais', nom: 'La pause café', type: 'Bundle · panier', depuis: '08/09', creneau: 'lun → jeu 15 – 17 h', ca: -2, vendus: 27, marge: 61, verdict: ['Arrêter ou déplacer', 'ko'], note: 'le créneau n’a pas bougé : 27 bundles en 3 semaines, presque tous des clients qui prenaient déjà les deux', avant: [230, 240, 245, 240], apres: [228, 236, 240, 236] },
+    ];
+    const mini = p => { const mx = Math.max(...p.avant, ...p.apres); return `<div class="barres">${p.avant.map((v, i) => `<div><i style="height:${Math.round(40 * v / mx)}px"></i><b style="height:${Math.round(40 * p.apres[i] / mx)}px"></b><small>${14 + i} h</small></div>`).join('')}</div>`; };
+    const cal = (nom, cases) => `<div class="carte"><div class="ct"><span class="db-lab">${esc(nom)} — la semaine, créneau par créneau</span><span class="db-mini">orange : creux sans promo · rouge : promo en test · vert : promo gardée</span></div>
+      <div class="cal"><div></div>${JC.map(j => `<div class="h">${j}</div>`).join('')}${['Matin', 'Midi', 'Après-midi'].map((per, pi) => `<div class="l">${per}</div>` + JC.map((j, wi) => { const k = cases[pi + ':' + wi]; return `<div class="c${k ? ' ' + k[0] : ''}">${k ? `<b>${esc(k[1])}</b>${esc(k[2] || '')}` : ''}</div>`; }).join('')).join('')}</div></div>`;
+    const casesS = {}; [0, 1, 2, 3, 4].forEach(w => { casesS['2:' + w] = ['g', 'Goûter de 16 h', '+ pain de demain']; }); casesS['2:6'] = ['creux', 'creux', '58 € / h']; casesS['2:5'] = ['creux', 'creux', '97 € / h'];
+    const casesC = {}; [0, 1, 2, 3].forEach(w => { casesC['2:' + w] = ['p', 'Pause café', 'test · 3e semaine']; }); casesC['0:3'] = ['creux', 'creux', 'jeu 9 h'];
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Promotions en cours</p>
+    <div class="ck-hd"><div><div class="t">Ce que les promotions changent</div><div class="s">le créneau face à sa référence : les quatre semaines d’avant, mêmes jours, mêmes heures · l’effet se lit sur le créneau entier, pas sur le seul bundle</div></div><span style="margin-left:auto" class="btn prim">+ Nouvelle promo</span></div>
+    <div class="db-tuiles" style="grid-template-columns:repeat(5,1fr)">
+      <div class="db-tui bon"><div class="k">Promos en cours</div><div class="v">3</div><div class="s">2 magasins · 1 à arrêter</div></div>
+      <div class="db-tui bon"><div class="k">CA des créneaux</div><div class="v">+ 9 %</div><div class="s">face aux 4 semaines d’avant</div></div>
+      <div class="db-tui"><div class="k">Bundles vendus</div><div class="v">131</div><div class="s">depuis le lancement</div></div>
+      <div class="db-tui bon"><div class="k">Marge gagnée</div><div class="v">+ 427 €</div><div class="s">remises déduites</div></div>
+      <div class="db-tui vif"><div class="k">Creux sans promo</div><div class="v">5</div><div class="s">dont dimanche 15 – 17 h à Sombreffe</div></div>
+    </div>
+    <div class="carte"><div class="ct"><span class="db-lab">Promotion par promotion</span><span class="db-mini">barres : CA / h du créneau, gris avant, rouge depuis · verdict après 2 semaines</span></div>
+      <div class="ent"><span>Promotion</span><span>Le créneau, avant / depuis</span><span>Effet sur le créneau</span><span>Vendus</span><span>Marge</span><span>Verdict</span></div>
+      ${promos.map(p => `<div class="sv"><span class="nom">${esc(p.nom)}<small>${esc(p.mag)} · ${esc(p.type)} · depuis le ${esc(p.depuis)}</small></span><div style="padding-bottom:14px">${mini(p)}</div><span class="kv"><b class="${p.ca > 5 ? 'ok' : (p.ca >= 0 ? 'att' : 'ko')}">${p.ca >= 0 ? '+' : '−'} ${Math.abs(p.ca)} %</b><small>${esc(p.creneau)}</small></span><span class="kv"><b>${p.vendus}</b><small>bundles / commandes</small></span><span class="kv"><b class="${p.marge > 0 ? 'ok' : 'ko'}">+ ${p.marge} €</b><small>remises déduites</small></span><span><span class="badge ${p.verdict[1]}">${esc(p.verdict[0])}</span></span></div>
+      <div style="padding:0 16px 10px 16px;font-size:11px;color:var(--color-text-muted)">↳ ${esc(p.note)}</div>`).join('')}
+    </div>
+    <div class="cols">${cal('Sombreffe', casesS)}${cal('Corbais', casesC)}</div>`;
+  }
+
+  document.getElementById('ecran').innerHTML = V === '2' ? ecranGenerateur() : V === '3' ? ecranSuivi() : ecranCreux();
+});
+</script>
+</body>
+</html>
