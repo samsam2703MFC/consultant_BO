@@ -259,7 +259,7 @@ class App {
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
-      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits',
+      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', creux: 'jours-creux',
       suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
@@ -930,6 +930,7 @@ class App {
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
+      creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
@@ -1304,6 +1305,7 @@ class App {
       ['Magasins', [
         ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements', 'reputation']],
         ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
+        ['creux', 'Jours creux', 0],
         ['plan', 'Plan de développement', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
@@ -1368,10 +1370,10 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1761,6 +1763,7 @@ class App {
     if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
     if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
+    if (common.isCreux) this.valsCreux(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
@@ -2497,6 +2500,358 @@ class App {
         this.setState({ mkoRes: { q: t, mois: (r || {}).mois || '', produits: (r || {}).produits || [] } });
       });
     }, 350);
+  }
+
+  /* --- jours creux : la carte, l'assistant en cinq étapes, les promotions adoptées, le catalogue des mécaniques --- */
+  cxShopId(){
+    const o = this.open(); const id = String(this.state.cxShop || '');
+    return o.some(s => String(s.id) === id) ? id : (o[0] ? String(o[0].id) : '');
+  }
+  cxCharge(force){
+    const sid = this.cxShopId(); if (!sid) { return; }
+    const cle = sid + ':' + (this.state.cxSem || 4);
+    if (this._cxEnCours === cle) { return; }
+    if (!force && this.state.cx && this.state.cx.cle === cle) { return; }
+    this._cxEnCours = cle;
+    this.setState({ cx: { cle, chargement: true, d: (this.state.cx || {}).d || null } });
+    readOne('/creux?shop=' + sid + '&semaines=' + (this.state.cxSem || 4))
+      .then(d => { this._cxEnCours = null; this.setState({ cx: { cle, chargement: false, d: d || null } }); })
+      .catch(() => { this._cxEnCours = null; this.setState({ cx: { cle, chargement: false, d: null } }); });
+  }
+  cxPromosCharge(force){
+    const cle = this.state.cxTous ? '*' : this.cxShopId();
+    if (this._cxPEnCours === cle) { return; }
+    if (!force && this.state.cxPromos && this.state.cxPromos.cle === cle) { return; }
+    this._cxPEnCours = cle;
+    this.setState({ cxPromos: { cle, chargement: true, d: (this.state.cxPromos || {}).d || null } });
+    readOne('/promo' + (cle === '*' ? '' : '?shop=' + cle))
+      .then(d => { this._cxPEnCours = null; this.setState({ cxPromos: { cle, chargement: false, d: d || null } }); })
+      .catch(() => { this._cxPEnCours = null; this.setState({ cxPromos: { cle, chargement: false, d: null } }); });
+  }
+  cxMecsCharge(force){
+    if (this._cxMEnCours) { return; }
+    if (!force && this.state.cxMecs && this.state.cxMecs.d) { return; }
+    this._cxMEnCours = true;
+    this.setState({ cxMecs: { chargement: true, d: (this.state.cxMecs || {}).d || null } });
+    readOne('/promo/mecaniques')
+      .then(d => { this._cxMEnCours = false; this.setState({ cxMecs: { chargement: false, d: d || null } }); })
+      .catch(() => { this._cxMEnCours = false; this.setState({ cxMecs: { chargement: false, d: null } }); });
+  }
+  cxPropsCharge(force){
+    const S = this.state, sel = S.cxSel;
+    if (!sel || !sel.jours.length || !sel.heures.length || !S.cxLevier) { return; }
+    const cle = [this.cxShopId(), S.cxLevier, sel.jours.join(','), sel.heures[0], sel.heures[sel.heures.length - 1]].join('|');
+    if (this._cxPrEnCours === cle) { return; }
+    if (!force && S.cxProps && S.cxProps.cle === cle) { return; }
+    this._cxPrEnCours = cle;
+    this.setState({ cxProps: { cle, chargement: true, d: null } });
+    readOne('/promo/propositions?shop=' + this.cxShopId() + '&levier=' + S.cxLevier + '&jours=' + sel.jours.join(',') + '&hde=' + sel.heures[0] + '&ha=' + sel.heures[sel.heures.length - 1])
+      .then(d => { this._cxPrEnCours = null; this.setState({ cxProps: { cle, chargement: false, d: d || null } }); })
+      .catch(() => { this._cxPrEnCours = null; this.setState({ cxProps: { cle, chargement: false, d: null } }); });
+  }
+  /** Ce que vaut un bloc jours × heures, lu dans les cases déjà chargées. */
+  cxStats(jours, heures){
+    const d = ((this.state.cx || {}).d) || {}; const cells = d.cells || {}; const moy = d.moyenne || 0;
+    let ca = 0, tk = 0, n = 0, manque = 0;
+    jours.forEach(wd => heures.forEach(h => { const c = cells[wd + ':' + h] || { ca: 0, tk: 0 }; ca += c.ca; tk += c.tk; n++; manque += Math.max(0, (d.seuil || .7) * moy - c.ca); }));
+    const caH = n ? ca / n : 0, tkH = n ? tk / n : 0;
+    const sections = []; heures.forEach(h => { const s = h < 11 ? 'matin' : (h < 14 ? 'midi' : 'apres-midi'); if (!sections.includes(s)) { sections.push(s); } });
+    return { caH, tkH, panier: tkH > 0 ? caH / tkH : null, part: moy > 0 ? 100 * caH / moy : null, potentiel: Math.round(manque * 4.3), sections, cases: n };
+  }
+  cxNomBloc(jours, heures){
+    const J = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    const j = jours.slice().sort((a, b) => a - b);
+    const lib = j.join(',') === '1,2,3,4,5' ? 'Lundi → vendredi' : (j.length === 7 ? 'Tous les jours' : j.map(w => J[w]).join(', '));
+    return heures.length ? lib + ', ' + heures[0] + ' – ' + (heures[heures.length - 1] + 1) + ' h' : lib;
+  }
+  cxPlage(a, b){ const h = []; for (let x = a; x <= b; x++) { h.push(x); } return h; }
+  /** Un clic sur une case : la plage creuse autour d'elle ; un second jour s'ajoute, une heure hors plage l'étend. */
+  cxClicCase(wd, h){
+    const S = this.state, d = (S.cx || {}).d || {}, cells = d.cells || {}, seuil = (d.seuil || .7) * (d.moyenne || 0);
+    const bas = (w, hh) => !!cells[w + ':' + hh] && cells[w + ':' + hh].ca < seuil;
+    const sel = S.cxSel;
+    if (!sel || !sel.jours.length) {
+      let a = h, b = h;
+      if (bas(wd, h)) { while (bas(wd, a - 1)) { a--; } while (bas(wd, b + 1)) { b++; } }
+      this.setState({ cxSel: { jours: [wd], heures: this.cxPlage(a, b) }, cxEtape: 3, cxLevier: null, cxChoix: null });
+      return;
+    }
+    const jours = sel.jours.includes(wd) ? sel.jours.filter(x => x !== wd) : sel.jours.concat([wd]).sort((p, q) => p - q);
+    let heures = sel.heures;
+    if (!heures.includes(h)) { heures = this.cxPlage(Math.min(h, heures[0]), Math.max(h, heures[heures.length - 1])); }
+    this.setState({ cxSel: { jours: jours.length ? jours : [wd], heures }, cxEtape: 3, cxLevier: null, cxChoix: null });
+  }
+  cxToggleHeure(h){
+    const sel = this.state.cxSel || { jours: [1, 2, 3, 4, 5], heures: [] };
+    let a = sel.heures[0], b = sel.heures[sel.heures.length - 1];
+    if (!sel.heures.length) { a = b = h; }
+    else if (h < a) { a = h; } else if (h > b) { b = h; }
+    else if (h === a && a < b) { a++; } else if (h === b && a < b) { b--; } else if (h > a && h < b) { b = h; }
+    this.setState({ cxSel: { jours: sel.jours, heures: this.cxPlage(a, b) }, cxLevier: null, cxChoix: null });
+  }
+  cxToggleJour(wd){
+    const sel = this.state.cxSel || { jours: [], heures: [14, 15, 16, 17] };
+    const jours = sel.jours.includes(wd) ? sel.jours.filter(x => x !== wd) : sel.jours.concat([wd]).sort((p, q) => p - q);
+    this.setState({ cxSel: { jours, heures: sel.heures }, cxLevier: null, cxChoix: null });
+  }
+  cxDates(){
+    const S = this.state;
+    if (S.cxDu && S.cxAu) { return [S.cxDu, S.cxAu]; }
+    const t = new Date(this.M && this.M.TODAY ? this.M.TODAY : Date.now());
+    const lun = new Date(t); lun.setDate(t.getDate() + ((8 - t.getDay()) % 7 || 7));
+    const fin = new Date(lun); fin.setDate(lun.getDate() + 13);
+    const iso = x => x.toISOString().slice(0, 10);
+    return [S.cxDu || iso(lun), S.cxAu || iso(fin)];
+  }
+  cxLib(sel){ const s = String(sel || ''); const i = s.indexOf('|'); return i >= 0 ? s.slice(i + 1) : s.slice(2); }
+  cxType(sel){ const t = String(sel || '').slice(0, 2); return t === 'g:' ? 'groupe' : (t === 'c:' ? 'catégorie' : 'produit'); }
+  /** La recherche du multiselect (déclencheur, article), pour la fiche ou la promotion en préparation. */
+  cxRecherche(cle, q){
+    clearTimeout(this._cxT);
+    this.setState({ cxQ: { cle, q } });
+    const t = (q || '').trim();
+    if (t.length < 2) { this.setState({ cxRes: null }); return; }
+    this._cxT = setTimeout(() => {
+      readOne('/promo/recherche?q=' + encodeURIComponent(t)).then(r => {
+        if (!this.state.cxQ || this.state.cxQ.q.trim() !== t) { return; }
+        this.setState({ cxRes: { cle, q: t, resultats: (r || {}).resultats || [] } });
+      });
+    }, 300);
+  }
+  cxMultiToggle(objKey, champ, r){
+    const obj = Object.assign({}, this.state[objKey] || {});
+    const liste = (obj[champ] || []).slice();
+    const sel = r.type === 'produit' ? r.sel + '|' + r.nom : r.sel;
+    const i = liste.findIndex(x => String(x).split('|')[0] === r.sel);
+    if (i >= 0) { liste.splice(i, 1); } else { liste.push(sel); }
+    obj[champ] = liste;
+    this.setState({ [objKey]: obj });
+  }
+  cxMultiRetirer(objKey, champ, sel){
+    const obj = Object.assign({}, this.state[objKey] || {});
+    obj[champ] = (obj[champ] || []).filter(x => x !== sel);
+    this.setState({ [objKey]: obj });
+  }
+  cxChoisir(p){
+    const m = p.mecanique, ch = p.chiffres || {};
+    this.setState({ cxChoix: m.id, cxForm: { mecaniqueId: m.id, nom: m.nom, type: m.type, regle: m.regle, offre: m.offre, prix: ch.prix != null ? String(ch.prix).replace('.', ',') : (m.prix != null ? String(m.prix).replace('.', ',') : ''),
+      remisePct: m.remisePct != null ? String(m.remisePct) : '', declencheur: (m.declencheur || []).slice(), article: (m.article || []).slice(), canaux: (m.canaux || []).slice(), note: m.note || '', cible: '' }, cxRes: null, cxQ: null });
+  }
+  cxAdopter(statut){
+    const S = this.state, f = S.cxForm, sel = S.cxSel, [du, au] = this.cxDates();
+    if (!f || !sel) { return; }
+    const corps = Object.assign({}, f, { shop: this.cxShopId(), levier: S.cxLevier, jours: sel.jours, heureDe: sel.heures[0], heureA: sel.heures[sel.heures.length - 1], du, au, statut });
+    this.setState({ cxBusy: true });
+    this.api('POST', '/promo', corps).then(r => {
+      this.setState({ cxBusy: false });
+      if (!r || r.ok === false) { return; }
+      this.notify(statut === 'brouillon' ? 'Brouillon enregistré' : 'Promotion adoptée — le dashboard du magasin l’affiche dès maintenant');
+      this.setState({ cxVue: 'promos', cxEtape: 2, cxSel: null, cxLevier: null, cxChoix: null, cxForm: null, cxTous: false });
+      this.cxPromosCharge(true);
+    });
+  }
+  cxPromoStatut(id, statut){
+    this.api('PUT', '/promo/' + id, { statut }).then(r => { if (r && r.ok !== false) { this.cxPromosCharge(true); } });
+  }
+  cxPromoSuppr(id){
+    if (!window.confirm('Effacer ce brouillon ?')) { return; }
+    this.api('DELETE', '/promo/' + id, {}).then(r => { if (r && r.ok !== false) { this.cxPromosCharge(true); } });
+  }
+  cxMecOuvrir(m){
+    this.setState({ cxMecEdit: m ? Object.assign({}, m, { prix: m.prix != null ? String(m.prix).replace('.', ',') : '', remisePct: m.remisePct != null ? String(m.remisePct) : '', margeMin: m.margeMin != null ? String(m.margeMin) : '' })
+      : { id: null, code: '', levier: 'trafic', type: 'bundle', nom: '', regle: '', habitude: '', sections: ['apres-midi'], jours: ['lun', 'mar', 'mer', 'jeu', 'ven'], declencheur: [], article: [], offre: 'prix bundle', prix: '', remisePct: '', margeMin: '55', mesure: '', canaux: ['Écran caisse', 'Affiche A4'], caisse: '', note: '', margeGarde: true, actif: true }, cxRes: null, cxQ: null });
+  }
+  cxMecChamp(k, v){ const e = Object.assign({}, this.state.cxMecEdit || {}); e[k] = v; this.setState({ cxMecEdit: e }); }
+  cxMecBascule(k, v){ const e = Object.assign({}, this.state.cxMecEdit || {}); const l = (e[k] || []).slice(); const i = l.indexOf(v); if (i >= 0) { l.splice(i, 1); } else { l.push(v); } e[k] = l; this.setState({ cxMecEdit: e }); }
+  cxMecEnreg(){
+    const e = this.state.cxMecEdit; if (!e) { return; }
+    if (!(e.nom || '').trim()) { this.notify('Un nom, au moins'); return; }
+    const corps = Object.assign({}, e); delete corps.id; delete corps.enCours; delete corps.majLe; delete corps.majPar;
+    this.setState({ cxBusy: true });
+    this.api(e.id ? 'PUT' : 'POST', e.id ? '/promo/mecaniques/' + e.id : '/promo/mecaniques', corps).then(r => {
+      this.setState({ cxBusy: false });
+      if (!r || r.ok === false) { return; }
+      this.notify('Mécanique enregistrée');
+      this.setState({ cxMecEdit: r.mecanique ? Object.assign({}, r.mecanique, { prix: r.mecanique.prix != null ? String(r.mecanique.prix).replace('.', ',') : '', remisePct: r.mecanique.remisePct != null ? String(r.mecanique.remisePct) : '', margeMin: r.mecanique.margeMin != null ? String(r.mecanique.margeMin) : '' }) : null });
+      this.cxMecsCharge(true);
+    });
+  }
+  cxMecDupliquer(id){ this.api('POST', '/promo/mecaniques/' + id + '/dupliquer', {}).then(r => { if (r && r.ok !== false) { this.notify('Variante créée'); this.cxMecsCharge(true); if (r.mecanique) { this.cxMecOuvrir(r.mecanique); } } }); }
+  cxMecSuppr(m){
+    if (!window.confirm('Supprimer « ' + m.nom + ' » ? Une mécanique utilisée par une promotion en cours sera refusée : désactivez-la plutôt.')) { return; }
+    this.api('DELETE', '/promo/mecaniques/' + m.id, {}).then(r => { if (r && r.ok !== false) { this.notify('Mécanique supprimée'); this.setState({ cxMecEdit: null }); this.cxMecsCharge(true); } });
+  }
+  valsCreux(common){
+    const S = this.state;
+    const vue = S.cxVue || 'creux';
+    common.cxVue = vue;
+    common.cxVues = [['creux', 'Les creux'], ['promos', 'Promotions'], ['catalogue', 'Catalogue des mécaniques']].map(([v, nom]) => ({ v, nom, on: vue === v, choisir: () => { this.setState({ cxVue: v }); } }));
+    common.cxShopOpts = this.open().map(s => ({ id: String(s.id), nom: s.name || s.nom || String(s.id), on: String(s.id) === this.cxShopId() }));
+    common.setCxShop = e => this.setState({ cxShop: e.target.value, cxSel: null, cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null, cxProps: null });
+    common.cxSem = String(S.cxSem || 4);
+    common.setCxSem = e => this.setState({ cxSem: parseInt(e.target.value, 10) || 4 });
+    common.cxNomShop = (common.cxShopOpts.find(o => o.on) || {}).nom || '';
+    const fE = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €';
+    const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+    if (vue === 'creux') { this.cxCharge(false); }
+    if (vue === 'promos') { this.cxPromosCharge(false); }
+    if (vue === 'catalogue') { this.cxMecsCharge(false); }
+    const jf = s => (s || '').split('-').reverse().join('/');
+    const J = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    const LEV = { trafic: '🚶', panier: '🧺', experience: '✨', ecouler: '🗑️' };
+    const coul = idx => idx == null ? ['#efe9e1', true] : idx < .45 ? ['#F08A2C', false] : idx < .7 ? ['#e8c9a0', true] : idx < 1 ? ['#6aa84f', false] : ['#2d7a3e', false];
+
+    /* --- la carte et l'assistant --- */
+    const b = S.cx || {}, d = b.d || {};
+    common.cxChargement = !!b.chargement && !b.d;
+    common.cxIndispo = !b.chargement && !b.d && S.cx ? 'Lecture impossible — API injoignable.' : (d.error || '');
+    const sel = S.cxSel && S.cxSel.jours.length && S.cxSel.heures.length ? S.cxSel : null;
+    const etape = sel ? (S.cxChoix ? 5 : (S.cxLevier ? (S.cxEtape >= 5 ? 5 : 4) : Math.max(3, S.cxEtape || 3))) : 2;
+    if (sel && S.cxEtape >= 4 && !S.cxLevier) { /* on revient au choix du levier */ }
+    common.cxEtape = etape;
+    const st = sel ? this.cxStats(sel.jours, sel.heures) : null;
+    const [du, au] = this.cxDates();
+    common.cxEtapes = [['Magasin', common.cxNomShop.split(' - ').pop()], ['Créneau', sel ? this.cxNomBloc(sel.jours, sel.heures) : ''], ['Paramètres', sel ? 'du ' + jf(du) + ' au ' + jf(au) : ''], ['Levier', S.cxLevier ? ((d.leviers || {})[S.cxLevier] || {}).nom || S.cxLevier : ''], ['Promotion', S.cxForm ? S.cxForm.nom : '']]
+      .map((e, i) => { const n = i + 1; const fait = (n === 1) || (n === 2 && sel) || (n === 3 && sel && etape > 3) || (n === 4 && S.cxLevier && etape > 4) || (n === 5 && false);
+        return { n, nom: e[0], val: e[1] || (n === etape ? 'en cours…' : 'à choisir'), cls: fait ? 'fait' : (n === etape ? 'cur' : 'avenir'),
+          aller: n === 2 ? () => this.setState({ cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null }) : n === 3 ? () => this.setState({ cxEtape: 3, cxLevier: null, cxChoix: null, cxForm: null }) : n === 4 ? () => this.setState({ cxEtape: 4, cxChoix: null, cxForm: null }) : null }; });
+    if (d.cells) {
+      const moy = d.moyenne || 0;
+      common.cxHeures = d.heures || [];
+      common.cxMoyenne = fE(moy);
+      common.cxPeriode = 'du ' + jf(d.du) + ' au ' + jf(d.au) + ' · ' + d.joursLus + ' jours lus';
+      common.cxLignes = [1, 2, 3, 4, 5, 6, 7].map(wd => ({ nom: J[wd], ouvert: !!(d.ouverts || {})[wd],
+        cases: common.cxHeures.map(h => { const c = d.cells[wd + ':' + h]; const idx = c && moy ? c.ca / moy : null; const [fond, clair] = coul(idx);
+          return { fond, clair, ca: c ? nf(c.ca) : '', tk: c ? nf(c.tk) + ' cl.' : '', vide: !c, on: !!(sel && sel.jours.includes(wd) && sel.heures.includes(h)), clic: () => this.cxClicCase(wd, h) }; }) }));
+      common.cxBlocs = (d.blocs || []).map(bl => ({ nom: bl.nom, caH: fE(bl.caH), tkH: nf(bl.tkH), panier: nf(bl.panier, 1) + ' €', part: nf(bl.part) + ' %', partCls: bl.part < 45 ? 'ko' : 'att', potentiel: fE(bl.potentiel),
+        on: !!(sel && sel.jours.join(',') === bl.jours.join(',') && sel.heures.join(',') === bl.heures.join(',')), choisir: () => this.setState({ cxSel: { jours: bl.jours.slice(), heures: bl.heures.slice() }, cxEtape: 3, cxLevier: null, cxChoix: null, cxForm: null }) }));
+      common.cxMidi = d.midi ? { tkH: nf(d.midi.tkH), panier: nf(d.midi.panier, 1) + ' €' } : null;
+      common.cxReseau = (d.reseau || []).map(r => ({ nom: r.nom, moyenne: fE(r.moyenne), bloc: r.bloc ? r.bloc.nom : '—', caH: r.bloc ? fE(r.bloc.caH) : '', part: r.bloc ? nf(r.bloc.part) + ' %' : '', partCls: r.bloc && r.bloc.part < 45 ? 'ko' : 'att', barre: r.bloc ? Math.min(100, r.bloc.part) : 0, potentiel: r.bloc ? fE(r.bloc.potentiel) : '', on: String(r.id) === this.cxShopId(), choisir: () => this.setState({ cxShop: String(r.id), cxSel: null, cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null }) }));
+      common.cxPotReseau = fE((d.reseau || []).reduce((a, r) => a + ((r.bloc || {}).potentiel || 0), 0));
+    }
+    common.cxSel = sel ? { nom: this.cxNomBloc(sel.jours, sel.heures), caH: fE(st.caH), tkH: nf(st.tkH), panier: st.panier != null ? nf(st.panier, 1) + ' €' : '—', part: st.part != null ? nf(st.part) + ' %' : '—', partCls: st.part != null && st.part < 45 ? 'ko' : 'att', potentiel: fE(st.potentiel), cases: st.cases, sections: st.sections,
+      heures: (d.heures || []).map(h => ({ h, on: sel.heures.includes(h), clic: () => this.cxToggleHeure(h) })),
+      jours: [1, 2, 3, 4, 5, 6, 7].map(wd => ({ nom: J[wd], on: sel.jours.includes(wd), clic: () => this.cxToggleJour(wd) })),
+      du, au, setDu: e => this.setState({ cxDu: e.target.value }), setAu: e => this.setState({ cxAu: e.target.value }),
+      nHeures: sel.heures.length * sel.jours.length * Math.max(1, Math.round((new Date(au) - new Date(du)) / 86400000 / 7 + .49)),
+      effacer: () => this.setState({ cxSel: null, cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null }),
+      levier: () => this.setState({ cxEtape: 4 }) } : null;
+    common.cxSemaine = () => this.setState({ cxSel: { jours: [1, 2, 3, 4, 5], heures: (sel ? sel.heures : [14, 15, 16, 17]) }, cxEtape: 3, cxLevier: null, cxChoix: null, cxForm: null });
+
+    /* --- étape 4 : le levier --- */
+    if (sel && st) {
+      const midi = d.midi || {};
+      const rT = midi.tkH ? st.tkH / midi.tkH : 1, rP = midi.panier && st.panier ? st.panier / midi.panier : 1;
+      const fit = { trafic: rT < .5 ? 3 : (rT < .75 ? 2 : 1), panier: rP < .7 ? 3 : (rP < .85 ? 2 : 1), experience: st.sections.includes('apres-midi') ? 2 : 1, ecouler: st.sections.includes('apres-midi') && sel.heures[sel.heures.length - 1] >= 15 ? 2 : 1 };
+      const pq = { trafic: nf(st.tkH) + ' clients / h contre ' + nf(midi.tkH) + ' le midi', panier: 'panier ' + (st.panier != null ? nf(st.panier, 1) : '—') + ' € contre ' + nf(midi.panier, 1) + ' € le midi', experience: 'l’équipe est en poste, le temps de parler existe', ecouler: 'à mesurer avec les pertes du panel' };
+      const ex = { trafic: 'précommande, offre annoncée, rendez-vous du jour', panier: 'bundle, prix rond, l’article suggéré en caisse', experience: 'dégustation, atelier, produit de la semaine, jeu', ecouler: 'happy hour, panier de fin de journée, 3 pour 2' };
+      common.cxLeviers = Object.keys(d.leviers || {}).map(k => ({ cle: k, ic: LEV[k] || '', nom: d.leviers[k].nom, quoi: d.leviers[k].quoi, kpi: d.leviers[k].kpi, ex: ex[k] || '', fit: fit[k] || 1, fitLib: (fit[k] === 3 ? 'très adapté' : fit[k] === 2 ? 'adapté' : 'à vérifier') + ' · ' + (pq[k] || ''), on: S.cxLevier === k, choisir: () => { this.setState({ cxLevier: k, cxEtape: 4, cxChoix: null, cxForm: null }); } }));
+      common.cxLevierNom = S.cxLevier ? ((d.leviers || {})[S.cxLevier] || {}).nom : '';
+      common.cxVersPromotion = S.cxLevier ? () => { this.setState({ cxEtape: 5 }); this.cxPropsCharge(false); } : null;
+    }
+
+    /* --- étape 5 : la promotion --- */
+    if (sel && S.cxLevier && etape === 5) {
+      this.cxPropsCharge(false);
+      const pb = S.cxProps || {}, pd = pb.d || {};
+      common.cxPropsChargement = !!pb.chargement;
+      common.cxPropsFenetre = pd.fenetre ? 'ventes lues du ' + jf(pd.fenetre.du) + ' au ' + jf(pd.fenetre.au) + ' sur le créneau, ' + pd.fenetre.joursLus + ' jours ouverts' + (pd.fenetre.manquants ? ' · ' + pd.fenetre.manquants + ' jour(s) non lus' : '') : '';
+      common.cxProps = (pd.propositions || []).map(p => { const m = p.mecanique, ch = p.chiffres || {}, a = p.article || {}; return {
+        id: m.id, code: m.code, nom: m.nom, regle: m.regle, type: m.type, on: S.cxChoix === m.id, jourOk: p.jourOk,
+        marge: ch.margeApres != null ? nf(ch.margeApres) + ' %' : (a.margePct != null ? nf(a.margePct) + ' %' : 'non mesurée'), margeCls: ch.margeGardee === false ? 'att' : (ch.margeApres != null ? 'ok' : 'mu'),
+        margeS: ch.remisePct ? 'après −' + nf(ch.remisePct) + ' %' : (a.margePct != null ? 'recette connue' : 'coût matière inconnu'),
+        seuil: ch.seuilParJour != null ? '+' + nf(ch.seuilParJour, 1) + ' / j' : '—', seuilS: ch.seuilParJour != null ? 'ventes en plus pour payer la remise' : (ch.remisePct ? 'non calculable' : 'pas de remise'),
+        deja: a.parJour != null ? nf(a.parJour) + ' / j' : '—', dejaS: a.refs ? a.refs + ' réf. de l’article sur le créneau' : 'article absent des ventes du créneau',
+        attache: p.attache ? nf(p.attache.taux) + ' %' : '—', attacheS: p.attache ? 'attache mesurée, ' + p.attache.mois : 'attache non mesurée',
+        choisir: () => this.cxChoisir(p) }; });
+      const f = S.cxForm;
+      common.cxForm = f ? {
+        nom: f.nom, setNom: e => this.setState({ cxForm: Object.assign({}, f, { nom: e.target.value }) }),
+        regle: f.regle, setRegle: e => this.setState({ cxForm: Object.assign({}, f, { regle: e.target.value }) }),
+        offres: ['prix bundle', 'remise %', 'article offert', '3 pour 2', 'aucune remise'].map(o => ({ v: o, on: f.offre === o })), setOffre: e => this.setState({ cxForm: Object.assign({}, f, { offre: e.target.value }) }),
+        prix: f.prix, setPrix: e => this.setState({ cxForm: Object.assign({}, f, { prix: e.target.value }) }),
+        remisePct: f.remisePct, setRemise: e => this.setState({ cxForm: Object.assign({}, f, { remisePct: e.target.value }) }),
+        declencheur: (f.declencheur || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxForm', 'declencheur', s) })),
+        article: (f.article || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxForm', 'article', s) })),
+        canaux: ['Écran caisse', 'Affiche A4', 'Facebook', 'Newsletter', 'SMS'].map(c => ({ nom: c, on: (f.canaux || []).includes(c), clic: () => { const l = (f.canaux || []).slice(); const i = l.indexOf(c); if (i >= 0) { l.splice(i, 1); } else { l.push(c); } this.setState({ cxForm: Object.assign({}, f, { canaux: l }) }); } })),
+        note: f.note, setNote: e => this.setState({ cxForm: Object.assign({}, f, { note: e.target.value }) }),
+        cible: f.cible, setCible: e => this.setState({ cxForm: Object.assign({}, f, { cible: e.target.value }) }),
+        ou: this.cxNomBloc(sel.jours, sel.heures) + ' · du ' + jf(du) + ' au ' + jf(au) + ' · ' + common.cxNomShop,
+        adopter: () => this.cxAdopter('en_cours'), brouillon: () => this.cxAdopter('brouillon'), busy: !!S.cxBusy,
+      } : null;
+      common.cxMultiForm = this.cxMultiVals('cxForm');
+    }
+
+    /* --- les promotions --- */
+    if (vue === 'promos') {
+      const pb = S.cxPromos || {}, pd = pb.d || {};
+      common.cxPromosChargement = !!pb.chargement && !pb.d;
+      common.cxTous = !!S.cxTous;
+      common.cxBasculeTous = () => { this.setState({ cxTous: !S.cxTous }); };
+      const VER = { tot: ['trop tôt', 'mu'], garder: ['garder', 'ok'], ajuster: ['ajuster', 'att'], arreter: ['arrêter ou déplacer', 'ko'] };
+      const STAT = { brouillon: 'brouillon', en_cours: 'en cours', terminee: 'terminée', arretee: 'arrêtée' };
+      common.cxPromos = (pd.promos || []).map(p => { const e = p.effet || {}; const v = VER[e.verdict] || VER.tot; return {
+        id: p.id, nom: p.nom, magasin: (p.magasin || '').split(' - ').pop(), levier: ((pd.leviers || {})[p.levier] || {}).nom || p.levier, ic: LEV[p.levier] || '', type: p.type,
+        creneau: this.cxNomBloc(p.jours, this.cxPlage(p.heureDe, p.heureA)), periode: 'du ' + jf(p.du) + ' au ' + jf(p.au), statut: STAT[p.statut] || p.statut, statutCls: p.statut === 'en_cours' ? (p.active ? 'ok' : 'mu') : (p.statut === 'arretee' ? 'ko' : 'mu'),
+        ref: p.ref && p.ref.caH != null ? fE(p.ref.caH) + ' / h · ' + nf(p.ref.tkH) + ' cl. / h' : 'référence inconnue',
+        depuis: e.caH != null ? fE(e.caH) + ' / h · ' + nf(e.tkH) + ' cl. / h' : 'pas encore de jour lu',
+        deltaCa: e.deltaCaPct != null ? (e.deltaCaPct >= 0 ? '+ ' : '− ') + nf(Math.abs(e.deltaCaPct)) + ' %' : '—', deltaCls: e.deltaCaPct == null ? 'mu' : (e.deltaCaPct >= 8 ? 'ok' : (e.deltaCaPct >= -3 ? 'att' : 'ko')),
+        deltaTk: e.deltaTkPct != null ? (e.deltaTkPct >= 0 ? '+ ' : '− ') + nf(Math.abs(e.deltaTkPct)) + ' % clients' : '', joursLus: e.joursLus || 0,
+        verdict: p.statut === 'en_cours' ? v[0] : '', verdictCls: v[1], regle: p.regle, note: p.note, canaux: (p.canaux || []).join(' · '),
+        terminer: p.statut === 'en_cours' ? () => this.cxPromoStatut(p.id, 'terminee') : null, arreter: p.statut === 'en_cours' ? () => this.cxPromoStatut(p.id, 'arretee') : null,
+        reprendre: p.statut !== 'en_cours' ? () => this.cxPromoStatut(p.id, 'en_cours') : null, effacer: p.statut === 'brouillon' ? () => this.cxPromoSuppr(p.id) : null }; });
+      common.cxNouvelle = () => this.setState({ cxVue: 'creux', cxEtape: 2, cxSel: null, cxLevier: null, cxChoix: null, cxForm: null });
+    }
+
+    /* --- le catalogue --- */
+    if (vue === 'catalogue') {
+      const mb = S.cxMecs || {}, md = mb.d || {};
+      common.cxMecsChargement = !!mb.chargement && !mb.d;
+      const liste = md.mecaniques || [];
+      common.cxMecsN = liste.length; common.cxMecsActives = liste.filter(m => m.actif).length;
+      common.cxMecsLeviers = Object.keys(md.leviers || {}).map(k => ({ cle: k, ic: LEV[k] || '', nom: md.leviers[k].nom, quoi: md.leviers[k].quoi,
+        mecaniques: liste.filter(m => m.levier === k).map(m => ({ id: m.id, code: m.code, nom: m.nom, actif: m.actif, enCours: m.enCours, on: !!(S.cxMecEdit && S.cxMecEdit.id === m.id), ouvrir: () => this.cxMecOuvrir(m) })) }));
+      common.cxMecNouvelle = () => this.cxMecOuvrir(null);
+      const e = S.cxMecEdit;
+      common.cxMecEdit = e ? {
+        id: e.id, titre: e.id ? 'Modifier « ' + e.nom + ' »' : 'Nouvelle mécanique', code: e.code || '', usage: e.enCours ? 'utilisée par ' + e.enCours + ' promotion(s) en cours' : (e.id ? 'aucune promotion en cours ne s’en sert' : ''), maj: e.majLe ? 'modifiée le ' + jf((e.majLe || '').slice(0, 10)) + (e.majPar ? ' par ' + e.majPar : '') : '',
+        nom: e.nom || '', setNom: ev => this.cxMecChamp('nom', ev.target.value),
+        leviers: Object.keys(md.leviers || {}).map(k => ({ v: k, nom: md.leviers[k].nom, on: e.levier === k })), setLevier: ev => this.cxMecChamp('levier', ev.target.value),
+        types: (md.types || []).map(t => ({ v: t, on: e.type === t })), setType: ev => this.cxMecChamp('type', ev.target.value),
+        regle: e.regle || '', setRegle: ev => this.cxMecChamp('regle', ev.target.value),
+        habitude: e.habitude || '', setHabitude: ev => this.cxMecChamp('habitude', ev.target.value),
+        sections: Object.keys(md.sections || {}).map(k => ({ v: k, nom: md.sections[k], on: (e.sections || []).includes(k), clic: () => this.cxMecBascule('sections', k) })),
+        jours: (md.jours || []).map(j => ({ v: j, on: (e.jours || []).includes(j), clic: () => this.cxMecBascule('jours', j) })),
+        declencheur: (e.declencheur || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxMecEdit', 'declencheur', s) })),
+        article: (e.article || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxMecEdit', 'article', s) })),
+        offres: (md.offres || []).map(o => ({ v: o, on: e.offre === o })), setOffre: ev => this.cxMecChamp('offre', ev.target.value),
+        prix: e.prix || '', setPrix: ev => this.cxMecChamp('prix', ev.target.value), remisePct: e.remisePct || '', setRemise: ev => this.cxMecChamp('remisePct', ev.target.value), margeMin: e.margeMin || '', setMargeMin: ev => this.cxMecChamp('margeMin', ev.target.value),
+        mesure: e.mesure || '', setMesure: ev => this.cxMecChamp('mesure', ev.target.value),
+        canaux: (md.canaux || []).map(c => ({ nom: c, on: (e.canaux || []).includes(c), clic: () => this.cxMecBascule('canaux', c) })),
+        caisse: e.caisse || '', setCaisse: ev => this.cxMecChamp('caisse', ev.target.value),
+        note: e.note || '', setNote: ev => this.cxMecChamp('note', ev.target.value),
+        margeGarde: !!e.margeGarde, basculeMarge: () => this.cxMecChamp('margeGarde', !e.margeGarde),
+        actif: !!e.actif, setActif: v => this.cxMecChamp('actif', v),
+        enreg: () => this.cxMecEnreg(), dupliquer: e.id ? () => this.cxMecDupliquer(e.id) : null, suppr: e.id ? () => this.cxMecSuppr(e) : null, fermer: () => this.setState({ cxMecEdit: null, cxRes: null, cxQ: null }), busy: !!S.cxBusy,
+      } : null;
+      common.cxMultiMec = this.cxMultiVals('cxMecEdit');
+    }
+  }
+  /** Les deux barres de recherche d'un objet (déclencheur, article) : la saisie, les résultats, ce qui est coché. */
+  cxMultiVals(objKey){
+    const S = this.state, obj = S[objKey] || {};
+    const out = {};
+    ['declencheur', 'article'].forEach(champ => {
+      const cle = objKey + ':' + champ;
+      const q = S.cxQ && S.cxQ.cle === cle ? S.cxQ.q : '';
+      const res = S.cxRes && S.cxRes.cle === cle && S.cxRes.q === q.trim() ? S.cxRes : null;
+      const coches = {}; (obj[champ] || []).forEach(s => { coches[String(s).split('|')[0]] = true; });
+      const groupes = [];
+      (res ? res.resultats : []).forEach(r => { let g = groupes.find(x => x.type === r.type); if (!g) { g = { type: r.type, nom: r.type === 'groupe' ? 'Groupes' : (r.type === 'catégorie' ? 'Catégories' : 'Produits'), items: [] }; groupes.push(g); }
+        g.items.push({ sel: r.sel, nom: r.nom, info: r.info || '', on: !!coches[r.sel], clic: () => this.cxMultiToggle(objKey, champ, r) }); });
+      out[champ] = { id: 'cx-q-' + objKey + '-' + champ, q, saisir: e => this.cxRecherche(cle, e.target.value), enCours: q.trim().length >= 2 && !res, groupes, vide: !!res && !res.resultats.length, fermer: () => this.setState({ cxQ: null, cxRes: null }) };
+    });
+    return out;
   }
 
   bxcEcrire(campagneId){

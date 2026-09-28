@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — L'assistant promotions des jours creux</title>
+<!-- Un parcours GÉNÉRIQUE en cinq étapes, le même pour tout magasin, tout créneau, tout levier :
+       1. Magasin       — on choisit le magasin, l'analyse des creux s'affiche (carte jour × heure)
+       2. Créneau       — on clique le creux sur la carte
+       3. Paramètres    — heures, jours de la semaine, semaines : le créneau devient une règle
+       4. Levier        — trafic, panier, expérience, écouler
+       5. Promotion     — la mécanique choisie dans le catalogue du levier, chiffrée, puis adoptée
+     ?etape=2  écrans 1 → 3 ensemble (magasin, clic sur le créneau, paramètres)
+     ?etape=4  le levier
+     ?etape=5  la promotion
+     Chiffres : ventes réelles par heure (data.json), marges réelles de Sombreffe, taux d'attache réels. -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px;line-height:1.45}
+  #ecran{max-width:1300px;margin:0 auto}
+  .prop{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 8px}
+  .ok{color:#2d7a3e}.ko{color:#C0182B}.mu{color:var(--color-text-muted)}.att{color:#B26A00}
+  .ck-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .ck-hd .t{font-family:var(--font-display);font-size:24px;line-height:1.1}
+  .ck-hd .s{font-size:12px;color:var(--color-text-muted)}
+  .sel{font-size:13px;font-weight:500;border:.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 30px 7px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23222'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;margin-bottom:12px}
+  .carte>.ct{padding:11px 16px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .carte>.ct .db-mini{margin-left:auto}
+  .corps{padding:14px 16px}
+  .lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:block;margin-bottom:6px}
+  .btn{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;height:31px;padding:0 14px;font:500 12px var(--font-ui);color:var(--color-text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn.prim{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+  .btn.grand{height:38px;padding:0 20px;font-size:13px}
+  .badge{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;display:inline-block;white-space:nowrap}
+  .badge.ok{background:rgba(45,122,62,.12);color:#2d7a3e}.badge.ko{background:rgba(192,24,43,.10);color:#C0182B}.badge.att{background:rgba(178,106,0,.12);color:#B26A00}.badge.mu{background:var(--color-background-secondary);color:var(--color-text)}
+  .badge.pr{background:var(--color-primary);color:#fff}.badge.nv{background:#222;color:#fff}
+  /* le fil des étapes */
+  .etapes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+  .et{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:9px 12px;display:flex;gap:10px;align-items:center;min-width:0}
+  .et .n{width:24px;height:24px;border-radius:50%;background:var(--color-background-secondary);display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);flex:none}
+  .et .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .et .v{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .et.fait .n{background:#2d7a3e;color:#fff}.et.fait .v{color:var(--color-text)}
+  .et.cur{border:1.5px solid var(--color-primary)}.et.cur .n{background:var(--color-primary);color:#fff}
+  .et.avenir .v{color:var(--color-text-muted);font-weight:400}
+  /* heatmap */
+  .deux{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}
+  .hm{display:grid;grid-template-columns:56px repeat(11,1fr);gap:4px;padding:12px 16px 6px}
+  .hm .h{font:600 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:center;padding-bottom:2px}
+  .hm .j{font:600 11px var(--font-ui);display:flex;align-items:center}
+  .hm .c{border-radius:7px;padding:6px 4px 5px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center;color:#fff;cursor:pointer;position:relative}
+  .hm .c b{font-family:var(--font-display);font-size:15px;line-height:1}
+  .hm .c small{font-size:9.5px;opacity:.9;margin-top:2px}
+  .hm .c.clair{color:var(--color-text)}
+  .hm .c.sel{outline:3px solid #222;outline-offset:-3px}
+  .hm .c.clic:after{content:'';position:absolute;inset:-6px;border:2px dashed var(--color-primary);border-radius:10px}
+  .curseur-souris{position:absolute;width:22px;height:22px;pointer-events:none}
+  .leg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);padding:6px 16px 12px;flex-wrap:wrap;align-items:center}
+  .leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  /* le panneau du créneau et ses paramètres */
+  .kv{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .kv>div{background:var(--color-background-secondary);border-radius:9px;padding:8px 10px}
+  .kv .k{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+  .kv .v{font-family:var(--font-display);font-size:19px;line-height:1.15;margin-top:2px}
+  .kv .s{font-size:9.5px;color:var(--color-text-muted)}
+  .puces{display:flex;gap:5px;flex-wrap:wrap}
+  .pu{font-size:11.5px;padding:4px 10px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);font-weight:500}
+  .pu.on{background:#222;color:#fff;border-color:#222}
+  .pu.creux{border-color:#F08A2C;color:#B26A00}
+  .pu.creux.on{background:#F08A2C;color:#fff}
+  .param{padding:12px 16px;border-top:.5px solid var(--color-border-tertiary)}
+  .param .lab{margin-top:10px}.param .lab:first-child{margin-top:0}
+  .ligne{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+  .inp{border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:31px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px}
+  .radio{display:inline-flex;gap:12px;font-size:12.5px;align-items:center}
+  .radio b{display:inline-block;width:14px;height:14px;border-radius:50%;border:1.5px solid var(--color-border-secondary);vertical-align:-2px;margin-right:5px;position:relative}
+  .radio b.on{border-color:var(--color-primary)}.radio b.on:after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--color-primary)}
+  /* le levier */
+  .leviers{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .lv{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:250px}
+  .lv.on{border:2px solid var(--color-primary);background:#fffafb}
+  .lv .ic{font-size:26px;line-height:1}
+  .lv .t{font-family:var(--font-display);font-size:20px;line-height:1.1}
+  .lv .q{font-size:12.5px}
+  .lv .kpi{font-size:11px;color:var(--color-text-muted);border-left:3px solid var(--color-border-secondary);padding-left:8px}
+  .lv .kpi b{color:var(--color-text)}
+  .fit{display:flex;align-items:center;gap:6px;font-size:11px;margin-top:auto}
+  .fit i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-background-secondary)}
+  .fit i.on{background:#2d7a3e}
+  .lv.on .fit i.on{background:var(--color-primary)}
+  .resume{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .resume>div{background:var(--color-background-secondary);border-radius:10px;padding:9px 12px}
+  .resume .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+  .resume .v{font-size:13px;font-weight:600;margin-top:2px}
+  /* la promotion */
+  .promo{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}
+  .pl{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:13px 15px;display:grid;grid-template-columns:minmax(0,1fr) 110px 110px 110px;gap:10px;align-items:center;margin-bottom:8px;cursor:pointer}
+  .pl.on{border:2px solid var(--color-primary);background:#fffafb}
+  .pl .t{font-family:var(--font-display);font-size:18px;line-height:1.1}
+  .pl .m{font-size:12px;color:var(--color-text-muted);margin-top:2px}
+  .pl .kk{text-align:right}.pl .kk .k{font:600 9px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}.pl .kk .v{font-family:var(--font-display);font-size:18px;line-height:1.15}.pl .kk .s{font-size:9.5px;color:var(--color-text-muted)}
+  .cfg{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .cfg .lab{margin:0}
+  .cfg textarea,.cfg .inp{width:100%;box-sizing:border-box}
+  .cfg textarea{border:.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font:400 12.5px/1.45 var(--font-ui);color:var(--color-text);background:var(--color-surface);resize:vertical}
+  .cfg .ligne .inp{width:auto}
+  .cfg .puce{display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:26px;padding:0 6px 0 10px;font-size:11.5px;font-weight:500;background:var(--color-primary);color:#fff}
+  .cfg .puce i{font-style:normal;opacity:.75;font-size:11px}
+  .synth{background:var(--color-background-secondary);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5}
+  .synth b{display:block;font-family:var(--font-display);font-size:17px;margin-bottom:2px}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+const q = new URLSearchParams(location.search); const E = parseInt(q.get('etape') || '2', 10);
+const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const fE = n => nf(n) + ' €';
+const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'], JC = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const HEURES = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+const coul = idx => idx == null ? ['#efe9e1', true] : idx < .45 ? ['#F08A2C', false] : idx < .7 ? ['#e8c9a0', true] : idx < 1 ? ['#6aa84f', false] : ['#2d7a3e', false];
+
+fetch('data.json').then(r => r.json()).then(D => {
+  const S = D['5'], C = S.cellules, moy = S.moyenneHeure;
+  const cell = (w, h) => C[w + ':' + h] || null;
+  const bloc = (wds, hs) => { const v = wds.flatMap(w => hs.map(h => cell(w, h) || { ca: 0, tickets: 0 })); const n = v.length; return { ca: v.reduce((a, x) => a + x.ca, 0) / n, tk: v.reduce((a, x) => a + x.tickets, 0) / n }; };
+  const CR = bloc([0, 1, 2, 3, 4], [14, 15, 16, 17]); CR.idx = CR.ca / moy; CR.panier = CR.ca / CR.tk; CR.pot = Math.max(0, .7 * moy - CR.ca) * 4 * 5 * 4.3;
+  const MIDI = bloc([0, 1, 2, 3, 4], [11, 12]);
+
+  const etapes = (cur, vals) => `<div class="etapes">${[['Magasin', vals[0]], ['Créneau', vals[1]], ['Paramètres', vals[2]], ['Levier', vals[3]], ['Promotion', vals[4]]].map((e, i) => { const n = i + 1; const cls = n < cur ? 'fait' : n === cur ? 'cur' : 'avenir'; return `<div class="et ${cls}"><span class="n">${n < cur ? '✓' : n}</span><div style="min-width:0"><div class="k">${e[0]}</div><div class="v">${esc(e[1] || (n === cur ? 'en cours…' : 'à choisir'))}</div></div></div>`; }).join('')}</div>`;
+
+  /* ---- étapes 1 → 3 : le magasin, le clic sur le créneau, les paramètres ------------------------- */
+  function ecranCreneau() {
+    let hm = '<div class="h"></div>' + HEURES.map(h => `<div class="h">${h} h</div>`).join('');
+    JOURS.forEach((j, w) => {
+      hm += `<div class="j">${j}</div>` + HEURES.map(h => { const c = cell(w, h); const idx = c ? c.ca / moy : null; const [fond, clair] = coul(idx); const sel = w <= 4 && h >= 14; const clic = w === 1 && h === 15; return `<div class="c${clair ? ' clair' : ''}${sel ? ' sel' : ''}${clic ? ' clic' : ''}" style="background:${fond}"><b>${c ? nf(c.ca) : '—'}</b><small>${c ? nf(c.tickets) + ' cl.' : ''}</small>${clic ? '<svg class="curseur-souris" style="right:-14px;bottom:-16px" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 8z" fill="#222" stroke="#fff" stroke-width="1.5"/></svg>' : ''}</div>`; }).join('');
+    });
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions</p>
+    ${etapes(3, ['Sombreffe', 'Lun → ven, 14 – 17 h', '', '', ''])}
+    <div class="ck-hd"><div><div class="t">1. Le magasin, 2. le créneau, 3. ses paramètres</div><div class="s">on choisit le magasin ; sa carte des creux s’affiche ; un clic sur une case propose le bloc creux autour d’elle ; les paramètres le précisent</div></div>
+      <span style="margin-left:auto" class="mu">Magasin</span><select class="sel"><option>Atelier by Harmonie — Sombreffe</option></select><select class="sel"><option>4 dernières semaines</option></select></div>
+    <div class="deux">
+      <div class="carte"><div class="ct"><span class="db-lab">Sombreffe — l’analyse des creux : CA moyen par heure, jour de semaine par jour de semaine</span><span class="db-mini">moyenne ${fE(moy)} / h · un clic sur une case sélectionne le creux autour d’elle, un glisser l’étend</span></div>
+        <div class="hm">${hm}</div>
+        <div class="leg"><span><i style="background:#F08A2C"></i>creux · &lt; 45 %</span><span><i style="background:#e8c9a0"></i>45 – 70 %</span><span><i style="background:#6aa84f"></i>70 – 100 %</span><span><i style="background:#2d7a3e"></i>≥ 100 %</span><span style="margin-left:auto">le cadre noir : la sélection en cours (20 cases)</span></div>
+      </div>
+      <div class="carte">
+        <div class="ct"><span class="db-lab">Le créneau cliqué</span><span class="badge ko">creux · ${nf(100 * CR.idx)} % de la moyenne</span></div>
+        <div class="corps" style="padding-top:12px">
+          <div class="kv"><div><div class="k">CA / heure</div><div class="v">${fE(CR.ca)}</div><div class="s">contre ${fE(moy)} en moyenne</div></div><div><div class="k">Clients / heure</div><div class="v">${nf(CR.tk)}</div><div class="s">contre ${nf(MIDI.tk)} le midi</div></div><div><div class="k">Panier</div><div class="v">${nf(CR.panier, 1)} €</div><div class="s">contre ${nf(MIDI.ca / MIDI.tk, 1)} € le midi</div></div><div><div class="k">Potentiel</div><div class="v">${fE(CR.pot)}</div><div class="s">par mois, à 70 % de la moyenne</div></div></div>
+        </div>
+        <div class="param">
+          <span class="lab">Heures</span><div class="puces">${HEURES.map(h => `<span class="pu${h >= 14 ? ' on' : ''}">${h} h</span>`).join('')}</div>
+          <span class="lab">Jours de la semaine</span><div class="puces">${JOURS.map((j, w) => `<span class="pu${w <= 4 ? ' on' : (w === 6 ? ' creux' : '')}">${j}${w === 6 ? ' · creux aussi' : ''}</span>`).join('')}</div>
+          <span class="lab">Semaines</span>
+          <div class="ligne"><span class="radio"><span><b class="on"></b>chaque semaine</span><span><b></b>certaines semaines</span></span></div>
+          <div class="ligne" style="margin-top:6px"><span class="mu">du</span><input class="inp" value="lundi 6 octobre" style="width:130px"><span class="mu">au</span><input class="inp" value="dimanche 19 octobre" style="width:140px"><span class="badge mu">2 semaines · test</span></div>
+          <div class="ligne" style="margin-top:6px;font-size:11px;color:var(--color-text-muted)">La règle : <b style="color:var(--color-text)">lundi → vendredi, 14 h → 17 h, du 6 au 19 octobre</b> · 40 heures de promotion · référence : les 4 semaines d’avant, mêmes jours, mêmes heures.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center"><span class="btn">‹ Autre créneau</span><span class="btn prim grand" style="margin-left:auto">Choisir le levier ›</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ---- étape 4 : le levier ----------------------------------------------------------------------- */
+  function ecranLevier() {
+    const L = [
+      { ic: '🚶', t: 'Trafic', q: 'Faire venir des clients qui ne viendraient pas à cette heure-là.', kpi: '<b>clients par heure</b> sur le créneau, face aux 4 semaines d’avant', fit: 3, pq: nf(CR.tk) + ' clients / h : c’est d’abord un creux de trafic', on: true, ex: 'précommande, offre annoncée, rendez-vous du jour' },
+      { ic: '🧺', t: 'Panier', q: 'Faire prendre un article de plus à ceux qui viennent déjà.', kpi: '<b>panier moyen</b> et <b>taux d’attache</b> sur le créneau', fit: 3, pq: 'panier ' + nf(CR.panier, 1) + ' € contre ' + nf(MIDI.ca / MIDI.tk, 1) + ' € le midi', ex: 'bundle, prix rond, l’article suggéré en caisse' },
+      { ic: '✨', t: 'Expérience', q: 'Donner une raison de venir : goûter, découvrir, participer.', kpi: '<b>nouveaux clients</b> (newsletter, carte) et <b>avis Google</b>', fit: 2, pq: 'l’équipe est là et disponible l’après-midi', ex: 'dégustation, atelier, produit de la semaine, jeu' },
+      { ic: '🗑️', t: 'Écouler', q: 'Vendre ce qui resterait en vitrine plutôt que de le jeter.', kpi: '<b>pertes du panel</b> et <b>marge nette</b> du créneau', fit: 1, pq: 'à mesurer : les pertes de fin de journée ne sont pas encore lues ici', ex: 'happy hour, panier de fin de journée, −20 % après 16 h' },
+    ];
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions</p>
+    ${etapes(4, ['Sombreffe', 'Lun → ven, 14 – 17 h', 'du 6 au 19 oct. · 40 h', '', ''])}
+    <div class="ck-hd"><div><div class="t">4. Le levier</div><div class="s">ce qu’on veut changer sur ce créneau — le levier décide de la promotion et de l’indicateur qui dira si elle a marché</div></div><span style="margin-left:auto" class="btn">‹ Paramètres</span></div>
+    <div class="carte"><div class="corps"><div class="resume"><div><div class="k">Magasin</div><div class="v">Atelier by Harmonie — Sombreffe</div></div><div><div class="k">Créneau</div><div class="v">lundi → vendredi, 14 – 17 h</div></div><div><div class="k">Période</div><div class="v">du 6 au 19 octobre, 2 semaines</div></div><div><div class="k">Le creux</div><div class="v">${fE(CR.ca)} / h · ${nf(CR.tk)} clients / h · panier ${nf(CR.panier, 1)} €</div></div></div></div></div>
+    <div class="leviers">${L.map(l => `<div class="lv${l.on ? ' on' : ''}"><div class="ic">${l.ic}</div><div class="t">${esc(l.t)}</div><div class="q">${esc(l.q)}</div><div class="kpi">On mesure : ${l.kpi}</div><div class="db-mini">Exemples : ${esc(l.ex)}</div><div class="fit"><i class="${l.fit >= 1 ? 'on' : ''}"></i><i class="${l.fit >= 2 ? 'on' : ''}"></i><i class="${l.fit >= 3 ? 'on' : ''}"></i><span class="mu">${l.fit === 3 ? 'très adapté' : l.fit === 2 ? 'adapté' : 'à vérifier'} · ${esc(l.pq)}</span></div></div>`).join('')}</div>
+    <div class="carte" style="margin-top:12px"><div class="corps" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="font-size:12.5px"><b>Trafic</b> choisi. Un même créneau peut porter deux leviers : on lance Trafic d’abord, Panier s’ajoute au bout de la première semaine si les clients viennent.</div><span class="btn prim grand" style="margin-left:auto">Choisir la promotion ›</span></div></div>`;
+  }
+
+  /* ---- étape 5 : la promotion -------------------------------------------------------------------- */
+  function ecranPromotion() {
+    const P = [
+      { on: true, t: 'Le pain de demain', m: 'Précommande entre 14 h et 17 h pour le lendemain : 2 pains classiques 5,50 € + 1 viennoiserie offerte au retrait.', marge: '52 %', seuil: '+7 cl. / h', pot: '1 200 €' },
+      { t: 'Le rendez-vous de 16 h', m: 'Une fournée sort à 16 h, annoncée chaque jour sur Facebook et par SMS : pain chaud, viennoiseries chaudes.', marge: '58 %', seuil: '+5 cl. / h', pot: '900 €' },
+      { t: 'L’offre newsletter', m: 'Un code de −10 % valable de 14 h à 17 h, envoyé aux 1 240 contacts newsletter du magasin.', marge: '48 %', seuil: '+9 cl. / h', pot: '700 €' },
+      { t: 'Le goûter des écoles', m: 'Un sachet goûter à 2,50 € (mini-viennoiserie + jus) de 15 h à 16 h 30, à la sortie de l’école.', marge: '60 %', seuil: '+6 cl. / h', pot: '800 €' },
+      { t: 'Double points fidélité', m: 'Les points de la carte comptent double de 14 h à 17 h.', marge: '—', seuil: '+8 cl. / h', pot: '600 €' },
+    ];
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions</p>
+    ${etapes(5, ['Sombreffe', 'Lun → ven, 14 – 17 h', 'du 6 au 19 oct. · 40 h', 'Trafic', ''])}
+    <div class="ck-hd"><div><div class="t">5. La promotion</div><div class="s">le catalogue du levier Trafic, chiffré pour ce magasin et ce créneau — on en choisit une, on la règle, on l’adopte</div></div><span style="margin-left:auto" class="btn">‹ Levier</span></div>
+    <div class="promo">
+      <div>
+        <span class="lab">Les promotions du levier Trafic — classées par potentiel sur ce créneau</span>
+        ${P.map(p => `<div class="pl${p.on ? ' on' : ''}"><div><div class="t">${esc(p.t)}</div><div class="m">${esc(p.m)}</div></div><div class="kk"><div class="k">Marge</div><div class="v ${p.marge === '—' ? 'mu' : (parseInt(p.marge, 10) < 55 ? 'att' : 'ok')}">${esc(p.marge)}</div><div class="s">après remise</div></div><div class="kk"><div class="k">Seuil</div><div class="v">${esc(p.seuil)}</div><div class="s">pour payer la remise</div></div><div class="kk"><div class="k">Potentiel</div><div class="v">${esc(p.pot)}</div><div class="s">par mois</div></div></div>`).join('')}
+        <div class="db-mini" style="margin-top:6px">Le catalogue est le même pour tout le réseau ; les chiffres sont ceux du magasin (ses marges, ses attaches, sa caisse). Une promotion adoptée peut être proposée aux autres magasins en un clic.</div>
+      </div>
+      <div class="carte" style="margin:0">
+        <div class="ct"><span class="db-lab">Régler « Le pain de demain »</span><span class="badge nv">Trafic</span></div>
+        <div class="cfg">
+          <span class="lab">Nom, tel qu’il s’affichera en caisse et sur l’affiche</span><input class="inp" value="Le pain de demain">
+          <span class="lab">Les produits</span><div class="puces"><span class="puce">2 pains classiques (5100002)<i>✕</i></span><span class="puce">Croissant<i>✕</i></span><span class="pu">+ ajouter</span></div>
+          <span class="lab">L’offre</span><div class="ligne"><span class="radio"><span><b class="on"></b>article offert</span><span><b></b>prix bundle</span><span><b></b>remise %</span></span></div>
+          <div class="ligne"><span class="mu">Prix</span><input class="inp" value="5,50 €" style="width:80px"><span class="mu">offert</span><input class="inp" value="1 viennoiserie au retrait" style="width:170px"></div>
+          <span class="lab">Où et quand</span><div class="synth"><b>lundi → vendredi, 14 – 17 h</b>du 6 au 19 octobre · Sombreffe · commande en boutique ou par la newsletter, retrait le lendemain dès 7 h</div>
+          <span class="lab">Canaux</span><div class="puces"><span class="pu on">Affiche A4</span><span class="pu on">Écran caisse</span><span class="pu on">Facebook</span><span class="pu on">Newsletter</span><span class="pu">SMS</span></div>
+          <span class="lab">Ce qu’on attend</span><div class="synth"><b>+7 clients / h</b>${nf(CR.tk)} → 15 clients par heure sur le créneau · marge 52 % · seuil de rentabilité +3 commandes / jour · verdict au bout des 2 semaines, face aux 4 semaines d’avant</div>
+          <span class="lab">Note pour l’équipe</span><textarea rows="2">Proposer la précommande à chaque client de l’après-midi ; le sachet est prêt à 7 h le lendemain, nom du client dessus.</textarea>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px"><span class="btn">Enregistrer le brouillon</span><span class="btn prim grand" style="margin-left:auto">Adopter pour Sombreffe ›</span></div>
+          <div class="db-mini">Adopter crée la promotion, prépare l’affiche A4 et le post Facebook, pose la ligne dans le dashboard du magasin et ouvre le suivi du créneau.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ---- le catalogue des mécaniques, par levier ----------------------------------------------------- */
+  function ecranCatalogue(M) {
+    const LEV = ['trafic', 'panier', 'experience', 'ecouler'], IC = { trafic: '🚶', panier: '🧺', experience: '✨', ecouler: '🗑️' };
+    const n = M.mecaniques.length;
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions › Catalogue des mécaniques</p>
+    <div class="ck-hd"><div><div class="t">Les ${n} mécaniques, par levier</div><div class="s">chacune s’appuie sur une habitude d’achat mesurée sur les tickets ; le générateur la rechiffre pour le magasin et le créneau choisis</div></div><span style="margin-left:auto" class="btn">+ Ajouter une mécanique</span></div>
+    ${LEV.map(l => { const lv = M.leviers[l]; const ms = M.mecaniques.filter(m => m.levier === l); return `
+    <div class="carte"><div class="ct"><span style="font-size:18px">${IC[l]}</span><span class="db-lab" style="font-size:12px">${esc(lv.nom)} — ${ms.length} mécaniques</span><span class="db-mini">${esc(lv.quoi)} · on mesure : ${esc(lv.kpi)}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr))">${ms.map((m, i) => `<div style="padding:12px 16px;border-top:.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'border-right:.5px solid var(--color-border-tertiary)' : ''}">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px"><span class="badge mu">${esc(m.id)}</span><span style="font-family:var(--font-display);font-size:17px;line-height:1.1">${esc(m.nom)}</span><span class="badge ${m.margeGarde ? 'ok' : 'att'}" style="margin-left:auto">${m.margeGarde ? 'marge gardée' : 'marge à surveiller'}</span></div>
+        <div style="font-size:12.5px;margin-bottom:5px">${esc(m.regle)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);border-left:3px solid var(--color-border-secondary);padding-left:9px;margin-bottom:6px"><b style="color:var(--color-text)">L’habitude :</b> ${esc(m.habitude)}</div>
+        <div class="puces" style="gap:4px">${['matin', 'midi', 'apres-midi'].map(c => `<span class="pu creux${m.sections.includes(c) ? ' on' : ''}" style="font-size:10.5px;padding:2px 8px;${m.sections.includes(c) ? '' : 'opacity:.45'}">${esc(M.sections[c].split(' (')[0])}</span>`).join('')}<span class="pu" style="font-size:10.5px;padding:2px 8px">déclencheur : ${m.declencheur.length ? m.declencheur.map(x => esc(x.slice(2))).join(', ') : 'tout ticket'}</span><span class="pu" style="font-size:10.5px;padding:2px 8px">${esc(m.type)} · ${esc(m.offre)}</span><span class="pu" style="font-size:10.5px;padding:2px 8px;border-style:dashed">caisse : ${esc(m.caisse)}</span></div>
+      </div>`).join('')}</div></div>`; }).join('')}`;
+  }
+  /* ---- l'édition d'une mécanique : tout se modifie, se duplique, se désactive, se supprime -------------- */
+  function ecranEditer(M) {
+    const LEV = ['trafic', 'panier', 'experience', 'ecouler'], IC = { trafic: '🚶', panier: '🧺', experience: '✨', ecouler: '🗑️' };
+    const m = M.mecaniques.find(x => x.id === 'P1');
+    const inp = 'width:100%;box-sizing:border-box;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+    const ta = inp + ';height:auto;padding:8px 10px;line-height:1.45;resize:vertical';
+    const lab = 'font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:block;margin:0 0 5px';
+    const champ = (l, h) => `<div><span style="${lab}">${l}</span>${h}</div>`;
+    const liste = LEV.map(l => `<div style="padding:8px 12px 2px;font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);background:var(--color-background-secondary)">${IC[l]} ${esc(M.leviers[l].nom)}</div>` + M.mecaniques.filter(x => x.levier === l).map(x => `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px;${x.id === 'P1' ? 'background:#fdf4f5;border-left:3px solid var(--color-primary)' : (x.id === 'X4' ? 'opacity:.5' : '')}"><span class="badge mu" style="font-size:9.5px">${esc(x.id)}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.nom)}${x.id === 'X4' ? ' <span class="mu">· désactivée</span>' : ''}${x.id === 'T7' ? '' : ''}</span><span style="font-size:14px;color:var(--color-text-muted)">✎</span></div>`).join('')).join('');
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions › Catalogue des mécaniques › Modifier</p>
+    <div class="ck-hd"><div><div class="t">Le catalogue se modifie</div><div class="s">chaque mécanique est une fiche du réseau : on la corrige, on la duplique pour en faire une variante, on la désactive sans la perdre, on en crée une nouvelle · les 24 livrées ne sont qu'un point de départ</div></div><span style="margin-left:auto" class="btn prim">+ Nouvelle mécanique</span><span class="btn">Importer</span></div>
+    <div style="display:grid;grid-template-columns:330px minmax(0,1fr);gap:12px;align-items:start">
+      <div class="carte" style="overflow:hidden"><div class="ct"><span class="db-lab">24 mécaniques · 23 actives</span><span class="db-mini">glisser pour ordonner</span></div>${liste}</div>
+      <div class="carte">
+        <div class="ct"><span class="badge mu">P1</span><span class="db-lab" style="font-size:12px">Modifier « ${esc(m.nom)} »</span><span class="db-mini">créée avec le catalogue · modifiée le 28/09 par CEO · utilisée par 1 promotion en cours (Sombreffe)</span></div>
+        <div class="corps" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px">
+          ${champ('Nom', `<input style="${inp}" value="${esc(m.nom)}">`)}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${champ('Levier', `<select style="${inp}">${LEV.map(l => `<option${l === m.levier ? ' selected' : ''}>${esc(M.leviers[l].nom)}</option>`).join('')}</select>`)}${champ('Type', `<select style="${inp}"><option>bundle</option><option>précommande</option><option>remise</option><option>article offert</option><option>suggestion en caisse</option><option>rendez-vous</option><option>événement</option><option>atelier</option><option>jeu</option><option>fidélité</option><option>nouveauté</option></select>`)}</div>
+          <div style="grid-column:1/3">${champ('La règle — telle qu’elle s’affiche dans le générateur', `<textarea rows="2" style="${ta}">${esc(m.regle)}</textarea>`)}</div>
+          <div style="grid-column:1/3">${champ('L’habitude d’achat qui la justifie — le chiffre entre crochets se recalcule pour chaque magasin', `<textarea rows="3" style="${ta}">${esc(m.habitude.replace('1 % seulement', '[attache tartes → boissons chaudes, après-midi] seulement').replace('39 en 4 semaines', '[ventes 1/4 tarte, après-midi, 4 semaines]').replace('67,9 %', '[marge 1/4 tarte]'))}</textarea>`)}</div>
+          ${champ('Sections de la journée — 3 sections, chacune s’active', `<div class="puces" style="gap:6px">${['matin', 'midi', 'apres-midi'].map(c => `<span class="pu creux${m.sections.includes(c) ? ' on' : ''}" style="font-size:12px;padding:6px 12px">${m.sections.includes(c) ? '✓ ' : ''}${esc(M.sections[c])}</span>`).join('')}</div><div class="db-mini" style="margin-top:6px">actives : ${m.sections.map(c => esc(M.sections[c].split(' (')[0].toLowerCase())).join(', ')} · les jours et les heures précis se choisissent à l’étape 3 de l’assistant</div>`)}
+          ${champ('Jours proposés par défaut', `<div class="puces" style="gap:5px">${['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'].map(j => `<span class="pu${m.joursParDefaut.includes(j) ? ' on' : ''}" style="font-size:11.5px;padding:5px 11px">${j}</span>`).join('')}</div><div class="db-mini" style="margin-top:6px">modifiables à l’étape 3</div>`)}
+          <div style="grid-column:1/3">${champ('Déclencheur — famille ou produit que le client achète pour que l’offre s’applique · vide = tout ticket', `
+            <div class="puces" style="margin-bottom:6px">${m.declencheur.map(x => `<span class="puce" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:26px;padding:0 6px 0 10px;font-size:11.5px;font-weight:500;background:var(--color-primary);color:#fff">${esc(x.slice(2))}<small style="opacity:.7">${x.startsWith('g:') ? 'groupe' : x.startsWith('c:') ? 'catégorie' : 'produit'}</small><i style="font-style:normal;opacity:.75">✕</i></span>`).join('')}</div>
+            <div style="position:relative"><input style="${inp};border-color:var(--color-primary)" value="tart" placeholder="Chercher un groupe, une catégorie, un produit…">
+              <div style="position:absolute;left:0;right:0;top:36px;background:var(--color-surface);border:.5px solid var(--color-border-secondary);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.10);z-index:3;overflow:hidden">
+                ${[['Groupes', [['Tartes', true, '13 groupes'], ['Tartes · Pâtisserie', false, '']]], ['Catégories', [['Tartes', true, '1 594 € · 134 demi-tartes en sept.'], ['Tartes – Ø 28 cm', false, '324 €'], ['Tartes au sucre', false, '190 €'], ['Tarte Fruits Frais', false, '160 €'], ['Tartocake - 22Ø', false, '88 €']]], ['Produits', [['1/2', false, 'Tartes · 134 en sept.'], ['1/4', false, 'Tartes · 135 en sept.'], ['1/2 - Chocolat', false, 'Tartes · 36'], ['Pommes Tranches', false, 'Tartes · 2'], ['Pommes Amandes', false, 'Tartes · 2']]]].map(g => `<div style="padding:6px 12px 2px;font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);background:var(--color-background-secondary)">${g[0]}</div>${g[1].map(r => `<div style="display:grid;grid-template-columns:22px 1fr 220px;align-items:center;gap:8px;padding:5px 12px;font-size:12.5px;border-top:.5px solid var(--color-border-tertiary);${r[1] ? 'background:#fdf4f5' : ''}"><span style="width:15px;height:15px;border-radius:4px;border:1.5px solid ${r[1] ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${r[1] ? 'var(--color-primary)' : 'transparent'};display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff">${r[1] ? '✓' : ''}</span><span>${esc(r[0])}</span><span style="text-align:right;color:var(--color-text-muted);font-size:11px">${esc(r[2])}</span></div>`).join('')}`).join('')}
+                <div style="padding:6px 12px;font-size:11px;color:var(--color-text-muted);border-top:.5px solid var(--color-border-tertiary);display:flex;justify-content:space-between"><span>12 résultats pour « tart » · cocher pour ajouter · plusieurs choix possibles</span><span>Échap : fermer</span></div>
+              </div></div>
+            <div style="height:410px"></div>`)}</div>
+          <div style="grid-column:1/3">${champ('Article de l’offre — ce que l’offre ajoute, offre ou remise', `<div class="puces" style="margin-bottom:6px">${m.article.map(x => `<span class="puce" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:26px;padding:0 6px 0 10px;font-size:11.5px;font-weight:500;background:#222;color:#fff">${esc(x.slice(2))}<small style="opacity:.7">${x.startsWith('g:') ? 'groupe' : x.startsWith('c:') ? 'catégorie' : 'produit'}</small><i style="font-style:normal;opacity:.75">✕</i></span>`).join('')}</div><input style="${inp}" placeholder="Chercher un groupe, une catégorie, un produit…">`)}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">${champ('Offre', `<select style="${inp}"><option>prix bundle</option><option>remise %</option><option>article offert</option><option>3 pour 2</option><option>aucune remise</option></select>`)}${champ('Prix / remise par défaut', `<input style="${inp}" value="6,50 €">`)}${champ('Marge minimale', `<input style="${inp}" value="55 %">`)}</div>
+          ${champ('Comment on la mesure', `<select style="${inp}"><option>taux d’attache A → B sur le créneau</option><option>clients par heure sur le créneau</option><option>panier moyen sur le créneau</option><option>pertes du panel</option><option>nouveaux contacts newsletter</option></select>`)}
+          ${champ('Canaux par défaut', `<div class="puces">${['Écran caisse', 'Affiche A4', 'Facebook', 'Newsletter', 'SMS'].map(c => `<span class="pu${m.canaux.includes(c) ? ' on' : ''}" style="font-size:11px;padding:3px 9px">${c}</span>`).join('')}</div>`)}
+          ${champ('Côté caisse', `<input style="${inp}" value="${esc(m.caisse)}">`)}
+          ${champ('Note pour l’équipe — proposée au magasin qui l’adopte', `<textarea rows="2" style="${ta}">Proposer le goûter à chaque client qui prend une tarte ou un café entre 14 h et 17 h. Le bundle est en caisse sous « Goûter de 16 h ».</textarea>`)}
+          <div style="grid-column:1/3;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:.5px solid var(--color-border-tertiary);padding-top:12px">
+            <span class="radio"><span><b class="on"></b>active</span><span><b></b>désactivée — reste dans le catalogue, ne se propose plus</span></span>
+            <span style="margin-left:auto" class="btn">Dupliquer en variante</span><span class="btn" style="color:#C0182B">Supprimer</span><span class="btn prim grand">Enregistrer</span>
+          </div>
+          <div class="db-mini" style="grid-column:1/3">Une mécanique utilisée par une promotion en cours ne se supprime pas, elle se désactive. Les promotions déjà adoptées gardent leur réglage : modifier la fiche change ce que le générateur proposera demain, pas ce qui tourne aujourd’hui.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  if (q.get('etape') === 'catalogue' || q.get('etape') === 'editer') { fetch('mecaniques.json').then(r => r.json()).then(M => { document.getElementById('ecran').innerHTML = q.get('etape') === 'editer' ? ecranEditer(M) : ecranCatalogue(M); }); return; }
+  document.getElementById('ecran').innerHTML = E === 4 ? ecranLevier() : E === 5 ? ecranPromotion() : ecranCreneau();
+});
+</script>
+</body>
+</html>

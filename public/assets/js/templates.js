@@ -153,6 +153,7 @@ export function render(c, x){
       ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
+      ${c.isCreux ? tplCreux(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
@@ -2192,6 +2193,156 @@ function tplMesure(c, x){
     ${(c.mesMotifs || []).length ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${(c.mesMotifs || []).map(m => esc(m)).join(' · ')}</div>` : ''}
     <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.mesSource)}</div>
   </div>`;
+}
+
+/* Jours creux : la carte jour × heure d'un magasin, l'assistant en cinq
+   étapes (créneau, paramètres, levier, promotion), les promotions adoptées et
+   ce qu'elles changent, le catalogue éditable des mécaniques. */
+function tplCreux(c, x){
+  const { esc } = x;
+  const multi = (m, chips, champKey) => `
+    <div class="cx-puces">${chips.map(p => `<span class="mko-puce" style="${p.type === 'produit' ? '' : 'background:#222'}">${esc(p.lib)}<small style="opacity:.7;margin-left:4px">${esc(p.type)}</small><button ${x.A(p.retirer)} title="Retirer">✕</button></span>`).join('')}${chips.length ? '' : '<span class="mko-mu">rien — tout ticket</span>'}</div>
+    <div class="mko-ms"><input id="${m.id}" ${x.I(m.saisir)} value="${esc(m.q)}" placeholder="Chercher un groupe, une catégorie, un produit…" class="mko-inp" autocomplete="off">
+      ${m.enCours ? '<div class="mko-liste"><div class="mko-pied"><span>Recherche…</span></div></div>' : ''}
+      ${m.groupes.length ? `<div class="mko-liste">${m.groupes.map(g => `<div class="mko-grp">${esc(g.nom)}</div>${g.items.map(r => `<div class="mko-it${r.on ? ' on' : ''}" ${x.A(r.clic)}><span class="cb">${r.on ? '✓' : ''}</span><span>${esc(r.nom)}</span><span class="q">${esc(r.info)}</span></div>`).join('')}`).join('')}<div class="mko-pied"><span>cocher pour ajouter ou retirer · plusieurs choix possibles</span><button ${x.A(m.fermer)}>Fermer</button></div></div>` : ''}
+      ${m.vide ? `<div class="mko-liste"><div class="mko-pied"><span>Rien au catalogue pour « ${esc(m.q)} ».</span><button ${x.A(m.fermer)}>Fermer</button></div></div>` : ''}
+    </div>`;
+  const entete = `
+    <div class="mko-hd">
+      <div class="cx-vues">${c.cxVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
+      <span class="mko-mu" style="margin-left:auto">Magasin</span>
+      <select ${x.C(c.setCxShop)} class="mko-sel">${c.cxShopOpts.map(o => `<option value="${esc(o.id)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      ${c.cxVue === 'creux' ? `<select ${x.C(c.setCxSem)} class="mko-sel">${[4, 6, 8, 12].map(n => `<option value="${n}"${String(n) === c.cxSem ? ' selected' : ''}>${n} dernières semaines</option>`).join('')}</select>` : ''}
+    </div>`;
+  const etapes = c.cxEtapes ? `<div class="cx-etapes">${c.cxEtapes.map(e => `<div class="cx-et ${e.cls}" ${e.aller && e.cls === 'fait' ? x.A(e.aller) : ''}><span class="n">${e.cls === 'fait' ? '✓' : e.n}</span><div style="min-width:0"><div class="k">${esc(e.nom)}</div><div class="v">${esc(e.val)}</div></div></div>`).join('')}</div>` : '';
+
+  /* --- la carte des creux et l'assistant --- */
+  let corps = '';
+  if (c.cxVue === 'creux') {
+    if (c.cxIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.cxIndispo)}</div>`; }
+    else if (c.cxChargement || !c.cxLignes) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des heures gravées…</div>`; }
+    else if (c.cxEtape <= 3) {
+      const S = c.cxSel;
+      corps = `
+      <div class="cx-deux">
+        <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(c.cxNomShop)} — CA moyen par heure, jour de semaine par jour de semaine</span><span class="mko-mini">${esc(c.cxPeriode)} · moyenne ${esc(c.cxMoyenne)} / h · un clic sur une case sélectionne le creux autour d’elle, un autre jour s’ajoute au clic</span></div>
+          <div class="cx-hm" style="grid-template-columns:62px repeat(${c.cxHeures.length},1fr)">
+            <div class="h"></div>${c.cxHeures.map(h => `<div class="h">${h} h</div>`).join('')}
+            ${c.cxLignes.map(l => `<div class="j">${esc(l.nom)}${l.ouvert ? '' : '<small>fermé</small>'}</div>${l.cases.map(k => `<div class="c${k.clair ? ' clair' : ''}${k.on ? ' on' : ''}${k.vide ? ' vide' : ''}" style="background:${k.fond}" ${x.A(k.clic)}><b>${k.ca || '—'}</b><small>${esc(k.tk)}</small></div>`).join('')}`).join('')}
+          </div>
+          <div class="cx-leg"><span><i style="background:#F08A2C"></i>creux · &lt; 45 % de la moyenne</span><span><i style="background:#e8c9a0"></i>45 – 70 %</span><span><i style="background:#6aa84f"></i>70 – 100 %</span><span><i style="background:#2d7a3e"></i>≥ 100 %, les rushs</span><span style="margin-left:auto"><button ${x.A(c.cxSemaine)} class="mko-pied-btn">Sélectionner lun → ven</button></span></div>
+        </div>
+        <div>
+          ${S ? `
+          <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">2. Le créneau</span><span class="mko-etat ${S.partCls}" style="margin-left:auto">${esc(S.part)} de la moyenne</span></div>
+            <div class="mko-corps" style="padding-top:10px">
+              <div style="font-family:var(--font-display);font-size:19px;line-height:1.1;margin-bottom:8px">${esc(S.nom)}</div>
+              <div class="cx-kv"><div><div class="k">CA / heure</div><div class="v">${esc(S.caH)}</div><div class="s">moyenne ${esc(c.cxMoyenne)}</div></div><div><div class="k">Clients / heure</div><div class="v">${esc(S.tkH)}</div><div class="s">${c.cxMidi ? 'contre ' + esc(c.cxMidi.tkH) + ' le midi' : ''}</div></div><div><div class="k">Panier</div><div class="v">${esc(S.panier)}</div><div class="s">${c.cxMidi ? 'contre ' + esc(c.cxMidi.panier) + ' le midi' : ''}</div></div><div><div class="k">Potentiel</div><div class="v">${esc(S.potentiel)}</div><div class="s">par mois, à 70 % de la moyenne</div></div></div>
+            </div>
+            <div class="cx-param">
+              <span class="mko-lab" style="display:block;margin-bottom:6px">3. Heures</span><div class="cx-puces">${S.heures.map(h => `<button ${x.A(h.clic)} class="cx-pu${h.on ? ' on' : ''}">${h.h} h</button>`).join('')}</div>
+              <span class="mko-lab" style="display:block;margin:10px 0 6px">Jours de la semaine</span><div class="cx-puces">${S.jours.map(j => `<button ${x.A(j.clic)} class="cx-pu${j.on ? ' on' : ''}">${esc(j.nom)}</button>`).join('')}</div>
+              <span class="mko-lab" style="display:block;margin:10px 0 6px">Semaines — chaque semaine, du … au …</span>
+              <div class="cx-ligne"><input type="date" id="cx-du" value="${esc(S.du)}" ${x.C(S.setDu)} class="mko-inp" style="width:150px"><span class="mko-mu">au</span><input type="date" id="cx-au" value="${esc(S.au)}" ${x.C(S.setAu)} class="mko-inp" style="width:150px"><span class="mko-etat mu">${S.nHeures} h de promotion</span></div>
+              <div class="mko-mu" style="margin-top:8px">La règle : <b style="color:var(--color-text)">${esc(S.nom)}, du ${esc(S.du.split('-').reverse().join('/'))} au ${esc(S.au.split('-').reverse().join('/'))}</b> · référence : les 4 semaines d’avant, mêmes jours, mêmes heures.</div>
+              <div class="cx-ligne" style="margin-top:12px"><button ${x.A(S.effacer)} class="mko-pied-btn">‹ Autre créneau</button><button ${x.A(S.levier)} class="cx-btn prim" style="margin-left:auto">4. Choisir le levier ›</button></div>
+            </div>
+          </div>` : `
+          <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les creux à travailler</span><span class="mko-mini">potentiel : remonter le créneau à 70 % de la moyenne, par mois</span></div>
+            <div class="cx-creux">${c.cxBlocs.length ? c.cxBlocs.map(b => `<div class="cx-cr" ${x.A(b.choisir)}><div><div class="n">${esc(b.nom)}</div><div class="s">${esc(b.caH)} / h · ${esc(b.tkH)} clients / h · panier ${esc(b.panier)} · <b class="${b.partCls}">${esc(b.part)} de la moyenne</b></div></div><div class="v">${esc(b.potentiel)}<small>par mois</small></div></div>`).join('') : '<div class="mko-mu" style="padding:10px 0">Aucun creux net sur ces semaines : ce magasin vend régulièrement. Cliquez une case pour choisir un créneau quand même.</div>'}</div>
+            <div class="mko-corps mko-mu" style="padding-top:4px">Cliquez un creux, ou une case de la carte : le créneau se règle ensuite, heure par heure et jour par jour.</div>
+          </div>`}
+        </div>
+      </div>
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le réseau — le creux principal de chaque magasin, sur sa propre moyenne</span><span class="mko-mini">potentiel réseau ${esc(c.cxPotReseau)} par mois</span></div>
+        <div style="overflow-x:auto"><table class="mko-tab" style="min-width:700px"><thead><tr><th>Magasin</th><th>Creux principal</th><th class="n">CA / h</th><th class="n">Sa moyenne</th><th style="min-width:160px">Part de la moyenne</th><th class="n">Potentiel / mois</th><th></th></tr></thead><tbody>
+          ${c.cxReseau.map(r => `<tr class="${r.on ? 'on' : ''}"><td class="nom">${esc(r.nom)}</td><td>${esc(r.bloc)}</td><td class="n">${esc(r.caH)}</td><td class="n mu">${esc(r.moyenne)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="mko-jg" style="flex:1"><i style="width:${r.barre}%;background:${r.partCls === 'ko' ? '#F08A2C' : '#e8c9a0'}"></i></div><b class="${r.partCls}">${esc(r.part)}</b></div></td><td class="n"><b>${esc(r.potentiel)}</b></td><td>${r.on ? '<span class="mko-etat ok">choisi</span>' : `<button ${x.A(r.choisir)} class="mko-pied-btn">Ouvrir ›</button>`}</td></tr>`).join('')}
+        </tbody></table></div></div>`;
+    } else if (c.cxEtape === 4) {
+      const S = c.cxSel;
+      corps = `
+      <div class="mko-carte"><div class="mko-corps"><div class="cx-resume"><div><div class="k">Magasin</div><div class="v">${esc(c.cxNomShop)}</div></div><div><div class="k">Créneau</div><div class="v">${esc(S.nom)}</div></div><div><div class="k">Période</div><div class="v">du ${esc(S.du.split('-').reverse().join('/'))} au ${esc(S.au.split('-').reverse().join('/'))}</div></div><div><div class="k">Le creux</div><div class="v">${esc(S.caH)} / h · ${esc(S.tkH)} clients / h · panier ${esc(S.panier)}</div></div></div></div></div>
+      <div class="cx-leviers">${c.cxLeviers.map(l => `<div class="cx-lv${l.on ? ' on' : ''}" ${x.A(l.choisir)}><div class="ic">${l.ic}</div><div class="t">${esc(l.nom)}</div><div class="q">${esc(l.quoi)}</div><div class="kpi">On mesure : <b>${esc(l.kpi)}</b></div><div class="mko-mu" style="font-size:11px">Exemples : ${esc(l.ex)}</div><div class="fit"><i class="${l.fit >= 1 ? 'on' : ''}"></i><i class="${l.fit >= 2 ? 'on' : ''}"></i><i class="${l.fit >= 3 ? 'on' : ''}"></i><span class="mko-mu">${esc(l.fitLib)}</span></div></div>`).join('')}</div>
+      <div class="mko-carte" style="margin-top:12px"><div class="mko-corps cx-ligne"><button ${x.A(c.cxEtapes[2].aller)} class="mko-pied-btn">‹ Paramètres</button><span class="mko-mu">${c.cxLevierNom ? '<b>' + esc(c.cxLevierNom) + '</b> choisi. Un même créneau peut porter deux leviers : on adopte l’un, on revient pour l’autre.' : 'Choisissez le levier : il décide de la promotion et de l’indicateur qui dira si elle a marché.'}</span>${c.cxVersPromotion ? `<button ${x.A(c.cxVersPromotion)} class="cx-btn prim" style="margin-left:auto">5. Choisir la promotion ›</button>` : ''}</div></div>`;
+    } else {
+      const F = c.cxForm, M = c.cxMultiForm;
+      corps = `
+      <div class="cx-promo">
+        <div>
+          <span class="mko-lab" style="display:block;margin-bottom:8px">Les mécaniques du levier ${esc(c.cxLevierNom)} — chiffrées pour ${esc(c.cxNomShop)} sur ce créneau${c.cxPropsFenetre ? ' · ' + esc(c.cxPropsFenetre) : ''}</span>
+          ${c.cxPropsChargement ? '<div class="mko-mu">Lecture des tickets du créneau…</div>' : ''}
+          ${!c.cxPropsChargement && !c.cxProps.length ? '<div class="mko-carte" style="padding:16px;color:var(--color-text-muted)">Aucune mécanique active de ce levier ne s’applique aux sections de ce créneau. Ajoutez-en une au catalogue.</div>' : ''}
+          ${c.cxProps.map(p => `<div class="cx-pl${p.on ? ' on' : ''}" ${x.A(p.choisir)}><div><div class="t">${esc(p.nom)}${p.jourOk ? '' : ' <span class="mko-etat att">jours inhabituels</span>'}</div><div class="m">${esc(p.regle)}</div></div><div class="kk"><div class="k">Marge</div><div class="v ${p.margeCls}">${esc(p.marge)}</div><div class="s">${esc(p.margeS)}</div></div><div class="kk"><div class="k">Seuil</div><div class="v">${esc(p.seuil)}</div><div class="s">${esc(p.seuilS)}</div></div><div class="kk"><div class="k">Déjà vendu</div><div class="v">${esc(p.deja)}</div><div class="s">${esc(p.dejaS)}</div></div><div class="kk"><div class="k">Attache</div><div class="v">${esc(p.attache)}</div><div class="s">${esc(p.attacheS)}</div></div></div>`).join('')}
+          <div class="mko-mu" style="margin-top:6px">Le catalogue est le même pour tout le réseau ; les chiffres sont ceux du magasin : ses ventes sur le créneau, ses marges (recettes), ses attaches (croisements). « Non mesurée » veut dire que la donnée manque, pas que la mécanique est mauvaise.</div>
+          <div class="cx-ligne" style="margin-top:10px"><button ${x.A(c.cxEtapes[3].aller)} class="mko-pied-btn">‹ Levier</button></div>
+        </div>
+        <div class="mko-carte" style="margin:0">${F ? `
+          <div class="mko-ct"><span class="mko-lab">Régler « ${esc(F.nom)} »</span><span class="mko-etat nv" style="margin-left:auto">${esc(c.cxLevierNom)}</span></div>
+          <div class="cx-cfg">
+            <label class="mko-lab">Nom, tel qu’il s’affichera en caisse et sur l’affiche</label><input id="cx-f-nom" class="mko-inp" value="${esc(F.nom)}" ${x.C(F.setNom)}>
+            <label class="mko-lab">La règle</label><textarea id="cx-f-regle" rows="2" class="cx-ta" ${x.C(F.setRegle)}>${esc(F.regle)}</textarea>
+            <label class="mko-lab">Déclencheur — ce que le client achète pour que l’offre s’applique · vide = tout ticket</label>${multi(M.declencheur, F.declencheur)}
+            <label class="mko-lab">Article de l’offre — ce que l’offre ajoute, offre ou remise</label>${multi(M.article, F.article)}
+            <div class="cx-ligne"><div><label class="mko-lab">Offre</label><select class="mko-sel" ${x.C(F.setOffre)}>${F.offres.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.v)}</option>`).join('')}</select></div><div><label class="mko-lab">Prix</label><input id="cx-f-prix" class="mko-inp" style="width:90px" value="${esc(F.prix)}" ${x.C(F.setPrix)} placeholder="€"></div><div><label class="mko-lab">Remise %</label><input id="cx-f-remise" class="mko-inp" style="width:80px" value="${esc(F.remisePct)}" ${x.C(F.setRemise)} placeholder="%"></div></div>
+            <label class="mko-lab">Où et quand</label><div class="cx-synth"><b>${esc(F.ou)}</b></div>
+            <label class="mko-lab">Canaux</label><div class="cx-puces">${F.canaux.map(k => `<button ${x.A(k.clic)} class="cx-pu${k.on ? ' on' : ''}">${esc(k.nom)}</button>`).join('')}</div>
+            <label class="mko-lab">Ce qu’on attend — la cible en clair</label><input id="cx-f-cible" class="mko-inp" value="${esc(F.cible)}" ${x.C(F.setCible)} placeholder="+7 clients / h, 45 % d’attache…">
+            <label class="mko-lab">Note pour l’équipe</label><textarea id="cx-f-note" rows="2" class="cx-ta" ${x.C(F.setNote)}>${esc(F.note)}</textarea>
+            <div class="cx-ligne" style="margin-top:4px"><button ${x.A(F.brouillon)} class="mko-pied-btn" ${F.busy ? 'disabled' : ''}>Enregistrer le brouillon</button><button ${x.A(F.adopter)} class="cx-btn prim" style="margin-left:auto" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Enregistrement…' : 'Adopter pour ' + esc(c.cxNomShop.split(' - ').pop()) + ' ›'}</button></div>
+            <div class="mko-mu">Adopter gèle la référence du créneau (les 4 semaines d’avant), pose la promotion dans le dashboard du magasin et ouvre son suivi.</div>
+          </div>` : `<div class="mko-corps mko-mu">Choisissez une mécanique à gauche : elle se règle ici avant d’être adoptée.</div>`}</div>
+      </div>`;
+    }
+    corps = etapes + corps;
+  }
+
+  /* --- les promotions --- */
+  if (c.cxVue === 'promos') {
+    corps = `
+    <div class="mko-hd" style="margin-bottom:10px"><span class="mko-mu">${c.cxPromosChargement ? 'Lecture…' : (c.cxPromos.length + ' promotion' + (c.cxPromos.length > 1 ? 's' : ''))}</span><button ${x.A(c.cxBasculeTous)} class="mko-pied-btn">${c.cxTous ? 'Ce magasin seulement' : 'Tous les magasins'}</button><button ${x.A(c.cxNouvelle)} class="cx-btn prim" style="margin-left:auto">+ Nouvelle promotion</button></div>
+    ${!c.cxPromosChargement && !c.cxPromos.length ? '<div class="mko-carte" style="padding:20px;color:var(--color-text-muted)">Aucune promotion. Cliquez un creux sur la carte, choisissez le levier, adoptez une mécanique.</div>' : ''}
+    ${c.cxPromos.map(p => `<div class="mko-carte"><div class="cx-sv">
+      <div><div style="font-family:var(--font-display);font-size:18px;line-height:1.1">${esc(p.nom)}</div><div class="mko-mu">${p.ic} ${esc(p.levier)}${p.type ? ' · ' + esc(p.type) : ''} · ${esc(p.magasin)}</div><div class="mko-mu">${esc(p.creneau)} · ${esc(p.periode)}</div></div>
+      <div class="kv"><small>Référence, 4 semaines d’avant</small><b class="mu">${esc(p.ref)}</b><small>depuis le lancement · ${p.joursLus} jour(s) lu(s)</small><b>${esc(p.depuis)}</b></div>
+      <div class="kv"><small>Effet sur le créneau</small><b class="${p.deltaCls}">${esc(p.deltaCa)}</b><small>${esc(p.deltaTk)}</small></div>
+      <div><span class="mko-etat ${p.statutCls}">${esc(p.statut)}</span>${p.verdict ? `<div style="margin-top:6px"><span class="mko-etat ${p.verdictCls}">${esc(p.verdict)}</span></div>` : ''}</div>
+      <div class="cx-actions">${p.terminer ? `<button ${x.A(p.terminer)} class="mko-pied-btn">Terminer</button>` : ''}${p.arreter ? `<button ${x.A(p.arreter)} class="mko-pied-btn">Arrêter</button>` : ''}${p.reprendre ? `<button ${x.A(p.reprendre)} class="mko-pied-btn">Reprendre</button>` : ''}${p.effacer ? `<button ${x.A(p.effacer)} class="mko-pied-btn" style="color:#C0182B">Effacer</button>` : ''}</div>
+    </div>${p.regle || p.note ? `<div class="mko-note" style="padding-top:0">${esc(p.regle)}${p.note ? ' — <i>' + esc(p.note) + '</i>' : ''}${p.canaux ? ' · ' + esc(p.canaux) : ''}</div>` : ''}</div>`).join('')}`;
+  }
+
+  /* --- le catalogue --- */
+  if (c.cxVue === 'catalogue') {
+    const E = c.cxMecEdit, M = c.cxMultiMec;
+    corps = `
+    <div class="mko-hd" style="margin-bottom:10px"><span class="mko-mu">${c.cxMecsChargement ? 'Lecture…' : c.cxMecsN + ' mécaniques · ' + c.cxMecsActives + ' actives · chaque fiche se modifie, se duplique, se désactive'}</span><button ${x.A(c.cxMecNouvelle)} class="cx-btn prim" style="margin-left:auto">+ Nouvelle mécanique</button></div>
+    <div class="cx-cat">
+      <div class="mko-carte" style="overflow:hidden">${c.cxMecsLeviers.map(l => `<div class="cx-cat-grp">${l.ic} ${esc(l.nom)} <span class="mko-mu">· ${esc(l.quoi)}</span></div>${l.mecaniques.map(m => `<div class="cx-cat-it${m.on ? ' on' : ''}${m.actif ? '' : ' off'}" ${x.A(m.ouvrir)}><span class="mko-etat mu" style="font-size:9.5px">${esc(m.code || '·')}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.nom)}${m.actif ? '' : ' <span class="mko-mu">· désactivée</span>'}${m.enCours ? ' <span class="mko-etat ok" style="font-size:9.5px">' + m.enCours + ' en cours</span>' : ''}</span><span class="mko-mu">✎</span></div>`).join('')}`).join('')}</div>
+      <div class="mko-carte">${E ? `
+        <div class="mko-ct"><span class="mko-etat mu">${esc(E.code || 'nouvelle')}</span><span class="mko-lab" style="font-size:12px">${esc(E.titre)}</span><span class="mko-mini">${esc(E.usage)}${E.maj ? ' · ' + esc(E.maj) : ''}</span></div>
+        <div class="cx-cfg cx-cfg2">
+          <div><label class="mko-lab">Nom</label><input id="cx-m-nom" class="mko-inp" value="${esc(E.nom)}" ${x.C(E.setNom)}></div>
+          <div class="cx-ligne"><div><label class="mko-lab">Levier</label><select class="mko-sel" ${x.C(E.setLevier)}>${E.leviers.map(l => `<option value="${esc(l.v)}"${l.on ? ' selected' : ''}>${esc(l.nom)}</option>`).join('')}</select></div><div><label class="mko-lab">Type</label><select class="mko-sel" ${x.C(E.setType)}>${E.types.map(t => `<option value="${esc(t.v)}"${t.on ? ' selected' : ''}>${esc(t.v)}</option>`).join('')}</select></div></div>
+          <div class="pleine"><label class="mko-lab">La règle — telle qu’elle s’affiche dans le générateur</label><textarea id="cx-m-regle" rows="2" class="cx-ta" ${x.C(E.setRegle)}>${esc(E.regle)}</textarea></div>
+          <div class="pleine"><label class="mko-lab">L’habitude d’achat qui la justifie</label><textarea id="cx-m-hab" rows="3" class="cx-ta" ${x.C(E.setHabitude)}>${esc(E.habitude)}</textarea></div>
+          <div><label class="mko-lab">Sections de la journée — chacune s’active</label><div class="cx-puces">${E.sections.map(s => `<button ${x.A(s.clic)} class="cx-pu creux${s.on ? ' on' : ''}">${s.on ? '✓ ' : ''}${esc(s.nom)}</button>`).join('')}</div><div class="mko-mu" style="margin-top:4px">les jours et les heures précis se choisissent à l’étape 3 de l’assistant</div></div>
+          <div><label class="mko-lab">Jours proposés par défaut</label><div class="cx-puces">${E.jours.map(j => `<button ${x.A(j.clic)} class="cx-pu${j.on ? ' on' : ''}">${esc(j.v)}</button>`).join('')}</div></div>
+          <div class="pleine"><label class="mko-lab">Déclencheur — famille ou produit que le client achète pour que l’offre s’applique · vide = tout ticket</label>${multi(M.declencheur, E.declencheur)}</div>
+          <div class="pleine"><label class="mko-lab">Article de l’offre — ce que l’offre ajoute, offre ou remise</label>${multi(M.article, E.article)}</div>
+          <div class="cx-ligne"><div><label class="mko-lab">Offre</label><select class="mko-sel" ${x.C(E.setOffre)}>${E.offres.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.v)}</option>`).join('')}</select></div><div><label class="mko-lab">Prix par défaut</label><input id="cx-m-prix" class="mko-inp" style="width:80px" value="${esc(E.prix)}" ${x.C(E.setPrix)}></div><div><label class="mko-lab">Remise %</label><input id="cx-m-rem" class="mko-inp" style="width:70px" value="${esc(E.remisePct)}" ${x.C(E.setRemise)}></div><div><label class="mko-lab">Marge min.</label><input id="cx-m-mmin" class="mko-inp" style="width:70px" value="${esc(E.margeMin)}" ${x.C(E.setMargeMin)}></div></div>
+          <div><label class="mko-lab">Comment on la mesure</label><input id="cx-m-mes" class="mko-inp" value="${esc(E.mesure)}" ${x.C(E.setMesure)}></div>
+          <div><label class="mko-lab">Canaux par défaut</label><div class="cx-puces">${E.canaux.map(k => `<button ${x.A(k.clic)} class="cx-pu${k.on ? ' on' : ''}">${esc(k.nom)}</button>`).join('')}</div></div>
+          <div><label class="mko-lab">Côté caisse</label><input id="cx-m-caisse" class="mko-inp" value="${esc(E.caisse)}" ${x.C(E.setCaisse)}></div>
+          <div><label class="mko-lab">Note pour l’équipe — proposée au magasin qui l’adopte</label><textarea id="cx-m-note" rows="2" class="cx-ta" ${x.C(E.setNote)}>${esc(E.note)}</textarea></div>
+          <div class="pleine cx-ligne" style="border-top:.5px solid var(--color-border-tertiary);padding-top:12px">
+            <button ${x.A(E.basculeMarge)} class="cx-pu${E.margeGarde ? ' on' : ''}">${E.margeGarde ? '✓ marge gardée' : 'marge à surveiller'}</button>
+            <span class="cx-radio"><button ${x.A(() => E.setActif(true))} class="cx-pu${E.actif ? ' on' : ''}">active</button><button ${x.A(() => E.setActif(false))} class="cx-pu${E.actif ? '' : ' on'}">désactivée — reste au catalogue, ne se propose plus</button></span>
+            <span style="margin-left:auto"></span>${E.dupliquer ? `<button ${x.A(E.dupliquer)} class="mko-pied-btn">Dupliquer en variante</button>` : ''}${E.suppr ? `<button ${x.A(E.suppr)} class="mko-pied-btn" style="color:#C0182B">Supprimer</button>` : ''}<button ${x.A(E.fermer)} class="mko-pied-btn">Fermer</button><button ${x.A(E.enreg)} class="cx-btn prim" ${E.busy ? 'disabled' : ''}>${E.busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+          </div>
+          <div class="pleine mko-mu">Une mécanique utilisée par une promotion en cours ne se supprime pas, elle se désactive. Les promotions déjà adoptées gardent leur réglage : modifier la fiche change ce que le générateur proposera demain, pas ce qui tourne aujourd’hui.</div>
+        </div>` : `<div class="mko-corps mko-mu">Choisissez une mécanique à gauche pour la modifier, ou créez-en une nouvelle. Les 24 livrées ne sont qu’un point de départ.</div>`}</div>
+    </div>`;
+  }
+  return `<div data-screen="creux" class="mko">${entete}${corps}</div>`;
 }
 
 /* Les objectifs produits d'une campagne : le multiselect, l'objectif en pièces
