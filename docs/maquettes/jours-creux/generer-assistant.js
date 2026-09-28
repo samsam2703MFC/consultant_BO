@@ -4,7 +4,8 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const path = require('path');
 (async () => {
   const b = await chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost'] });
-  for (const [etape, nom] of [['2', 'assistant-1'], ['4', 'assistant-2'], ['5', 'assistant-3']]) {
+  const liste = process.argv[2] === 'catalogue' ? [['catalogue', 'assistant-4-catalogue']] : [['2', 'assistant-1'], ['4', 'assistant-2'], ['5', 'assistant-3'], ['catalogue', 'assistant-4-catalogue']];
+  for (const [etape, nom] of liste) {
     const p = await b.newPage({ viewport: { width: 1348, height: 900 }, deviceScaleFactor: 1.5 });
     p.on('pageerror', e => console.log('ERREUR', etape, e.message));
     await p.goto('http://127.0.0.1:8099/docs/maquettes/jours-creux/assistant.html?etape=' + etape, { waitUntil: 'load' });

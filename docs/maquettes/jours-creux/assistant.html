@@ -220,6 +220,23 @@ fetch('data.json').then(r => r.json()).then(D => {
     </div>`;
   }
 
+  /* ---- le catalogue des mécaniques, par levier ----------------------------------------------------- */
+  function ecranCatalogue(M) {
+    const LEV = ['trafic', 'panier', 'experience', 'ecouler'], IC = { trafic: '🚶', panier: '🧺', experience: '✨', ecouler: '🗑️' };
+    const n = M.mecaniques.length;
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions › Catalogue des mécaniques</p>
+    <div class="ck-hd"><div><div class="t">Les ${n} mécaniques, par levier</div><div class="s">chacune s’appuie sur une habitude d’achat mesurée sur les tickets ; le générateur la rechiffre pour le magasin et le créneau choisis</div></div><span style="margin-left:auto" class="btn">+ Ajouter une mécanique</span></div>
+    ${LEV.map(l => { const lv = M.leviers[l]; const ms = M.mecaniques.filter(m => m.levier === l); return `
+    <div class="carte"><div class="ct"><span style="font-size:18px">${IC[l]}</span><span class="db-lab" style="font-size:12px">${esc(lv.nom)} — ${ms.length} mécaniques</span><span class="db-mini">${esc(lv.quoi)} · on mesure : ${esc(lv.kpi)}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr))">${ms.map((m, i) => `<div style="padding:12px 16px;border-top:.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'border-right:.5px solid var(--color-border-tertiary)' : ''}">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px"><span class="badge mu">${esc(m.id)}</span><span style="font-family:var(--font-display);font-size:17px;line-height:1.1">${esc(m.nom)}</span><span class="badge ${m.margeGarde ? 'ok' : 'att'}" style="margin-left:auto">${m.margeGarde ? 'marge gardée' : 'marge à surveiller'}</span></div>
+        <div style="font-size:12.5px;margin-bottom:5px">${esc(m.regle)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);border-left:3px solid var(--color-border-secondary);padding-left:9px;margin-bottom:6px"><b style="color:var(--color-text)">L’habitude :</b> ${esc(m.habitude)}</div>
+        <div class="puces" style="gap:4px">${m.creneaux.map(c => `<span class="pu creux" style="font-size:10.5px;padding:2px 8px">${esc(M.creneaux[c] || c)}</span>`).join('')}<span class="pu" style="font-size:10.5px;padding:2px 8px">${esc(m.type)} · ${esc(m.offre)}</span><span class="pu" style="font-size:10.5px;padding:2px 8px;border-style:dashed">caisse : ${esc(m.caisse)}</span></div>
+      </div>`).join('')}</div></div>`; }).join('')}`;
+  }
+  if (q.get('etape') === 'catalogue') { fetch('mecaniques.json').then(r => r.json()).then(M => { document.getElementById('ecran').innerHTML = ecranCatalogue(M); }); return; }
   document.getElementById('ecran').innerHTML = E === 4 ? ecranLevier() : E === 5 ? ecranPromotion() : ecranCreneau();
 });
 </script>
