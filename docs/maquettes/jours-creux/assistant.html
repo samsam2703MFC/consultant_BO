@@ -236,7 +236,44 @@ fetch('data.json').then(r => r.json()).then(D => {
         <div class="puces" style="gap:4px">${m.creneaux.map(c => `<span class="pu creux" style="font-size:10.5px;padding:2px 8px">${esc(M.creneaux[c] || c)}</span>`).join('')}<span class="pu" style="font-size:10.5px;padding:2px 8px">${esc(m.type)} · ${esc(m.offre)}</span><span class="pu" style="font-size:10.5px;padding:2px 8px;border-style:dashed">caisse : ${esc(m.caisse)}</span></div>
       </div>`).join('')}</div></div>`; }).join('')}`;
   }
-  if (q.get('etape') === 'catalogue') { fetch('mecaniques.json').then(r => r.json()).then(M => { document.getElementById('ecran').innerHTML = ecranCatalogue(M); }); return; }
+  /* ---- l'édition d'une mécanique : tout se modifie, se duplique, se désactive, se supprime -------------- */
+  function ecranEditer(M) {
+    const LEV = ['trafic', 'panier', 'experience', 'ecouler'], IC = { trafic: '🚶', panier: '🧺', experience: '✨', ecouler: '🗑️' };
+    const m = M.mecaniques.find(x => x.id === 'P1');
+    const inp = 'width:100%;box-sizing:border-box;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+    const ta = inp + ';height:auto;padding:8px 10px;line-height:1.45;resize:vertical';
+    const lab = 'font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:block;margin:0 0 5px';
+    const champ = (l, h) => `<div><span style="${lab}">${l}</span>${h}</div>`;
+    const liste = LEV.map(l => `<div style="padding:8px 12px 2px;font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);background:var(--color-background-secondary)">${IC[l]} ${esc(M.leviers[l].nom)}</div>` + M.mecaniques.filter(x => x.levier === l).map(x => `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px;${x.id === 'P1' ? 'background:#fdf4f5;border-left:3px solid var(--color-primary)' : (x.id === 'X4' ? 'opacity:.5' : '')}"><span class="badge mu" style="font-size:9.5px">${esc(x.id)}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.nom)}${x.id === 'X4' ? ' <span class="mu">· désactivée</span>' : ''}${x.id === 'T7' ? '' : ''}</span><span style="font-size:14px;color:var(--color-text-muted)">✎</span></div>`).join('')).join('');
+    return `
+    <p class="prop">Cockpit › Magasins › Jours creux › Assistant promotions › Catalogue des mécaniques › Modifier</p>
+    <div class="ck-hd"><div><div class="t">Le catalogue se modifie</div><div class="s">chaque mécanique est une fiche du réseau : on la corrige, on la duplique pour en faire une variante, on la désactive sans la perdre, on en crée une nouvelle · les 24 livrées ne sont qu'un point de départ</div></div><span style="margin-left:auto" class="btn prim">+ Nouvelle mécanique</span><span class="btn">Importer</span></div>
+    <div style="display:grid;grid-template-columns:330px minmax(0,1fr);gap:12px;align-items:start">
+      <div class="carte" style="overflow:hidden"><div class="ct"><span class="db-lab">24 mécaniques · 23 actives</span><span class="db-mini">glisser pour ordonner</span></div>${liste}</div>
+      <div class="carte">
+        <div class="ct"><span class="badge mu">P1</span><span class="db-lab" style="font-size:12px">Modifier « ${esc(m.nom)} »</span><span class="db-mini">créée avec le catalogue · modifiée le 28/09 par CEO · utilisée par 1 promotion en cours (Sombreffe)</span></div>
+        <div class="corps" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px">
+          ${champ('Nom', `<input style="${inp}" value="${esc(m.nom)}">`)}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${champ('Levier', `<select style="${inp}">${LEV.map(l => `<option${l === m.levier ? ' selected' : ''}>${esc(M.leviers[l].nom)}</option>`).join('')}</select>`)}${champ('Type', `<select style="${inp}"><option>bundle</option><option>précommande</option><option>remise</option><option>article offert</option><option>suggestion en caisse</option><option>rendez-vous</option><option>événement</option><option>atelier</option><option>jeu</option><option>fidélité</option><option>nouveauté</option></select>`)}</div>
+          <div style="grid-column:1/3">${champ('La règle — telle qu’elle s’affiche dans le générateur', `<textarea rows="2" style="${ta}">${esc(m.regle)}</textarea>`)}</div>
+          <div style="grid-column:1/3">${champ('L’habitude d’achat qui la justifie — le chiffre entre crochets se recalcule pour chaque magasin', `<textarea rows="3" style="${ta}">${esc(m.habitude.replace('1 % seulement', '[attache tartes → boissons chaudes, après-midi] seulement').replace('39 en 4 semaines', '[ventes 1/4 tarte, après-midi, 4 semaines]').replace('67,9 %', '[marge 1/4 tarte]'))}</textarea>`)}</div>
+          ${champ('Créneaux où elle s’applique', `<div class="puces">${Object.keys(M.creneaux).map(c => `<span class="pu creux${m.creneaux.includes(c) ? ' on' : ''}" style="font-size:11px;padding:3px 9px">${esc(M.creneaux[c])}</span>`).join('')}</div>`)}
+          ${champ('Familles ou produits', `<div class="puces"><span class="puce" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:26px;padding:0 6px 0 10px;font-size:11.5px;font-weight:500;background:var(--color-primary);color:#fff">Tartes<i style="font-style:normal;opacity:.75">✕</i></span><span class="puce" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;height:26px;padding:0 6px 0 10px;font-size:11.5px;font-weight:500;background:var(--color-primary);color:#fff">Boissons chaudes<i style="font-style:normal;opacity:.75">✕</i></span><span class="pu" style="font-size:11px">+ famille</span><span class="pu" style="font-size:11px">+ produit</span></div>`)}
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">${champ('Offre', `<select style="${inp}"><option>prix bundle</option><option>remise %</option><option>article offert</option><option>3 pour 2</option><option>aucune remise</option></select>`)}${champ('Prix / remise par défaut', `<input style="${inp}" value="6,50 €">`)}${champ('Marge minimale', `<input style="${inp}" value="55 %">`)}</div>
+          ${champ('Comment on la mesure', `<select style="${inp}"><option>taux d’attache A → B sur le créneau</option><option>clients par heure sur le créneau</option><option>panier moyen sur le créneau</option><option>pertes du panel</option><option>nouveaux contacts newsletter</option></select>`)}
+          ${champ('Canaux par défaut', `<div class="puces">${['Écran caisse', 'Affiche A4', 'Facebook', 'Newsletter', 'SMS'].map(c => `<span class="pu${m.canaux.includes(c) ? ' on' : ''}" style="font-size:11px;padding:3px 9px">${c}</span>`).join('')}</div>`)}
+          ${champ('Côté caisse', `<input style="${inp}" value="${esc(m.caisse)}">`)}
+          ${champ('Note pour l’équipe — proposée au magasin qui l’adopte', `<textarea rows="2" style="${ta}">Proposer le goûter à chaque client qui prend une tarte ou un café entre 14 h et 17 h. Le bundle est en caisse sous « Goûter de 16 h ».</textarea>`)}
+          <div style="grid-column:1/3;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:.5px solid var(--color-border-tertiary);padding-top:12px">
+            <span class="radio"><span><b class="on"></b>active</span><span><b></b>désactivée — reste dans le catalogue, ne se propose plus</span></span>
+            <span style="margin-left:auto" class="btn">Dupliquer en variante</span><span class="btn" style="color:#C0182B">Supprimer</span><span class="btn prim grand">Enregistrer</span>
+          </div>
+          <div class="db-mini" style="grid-column:1/3">Une mécanique utilisée par une promotion en cours ne se supprime pas, elle se désactive. Les promotions déjà adoptées gardent leur réglage : modifier la fiche change ce que le générateur proposera demain, pas ce qui tourne aujourd’hui.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  if (q.get('etape') === 'catalogue' || q.get('etape') === 'editer') { fetch('mecaniques.json').then(r => r.json()).then(M => { document.getElementById('ecran').innerHTML = q.get('etape') === 'editer' ? ecranEditer(M) : ecranCatalogue(M); }); return; }
   document.getElementById('ecran').innerHTML = E === 4 ? ecranLevier() : E === 5 ? ecranPromotion() : ecranCreneau();
 });
 </script>

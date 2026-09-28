@@ -4,7 +4,8 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const path = require('path');
 (async () => {
   const b = await chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost'] });
-  const liste = process.argv[2] === 'catalogue' ? [['catalogue', 'assistant-4-catalogue']] : [['2', 'assistant-1'], ['4', 'assistant-2'], ['5', 'assistant-3'], ['catalogue', 'assistant-4-catalogue']];
+  const tout = [['2', 'assistant-1'], ['4', 'assistant-2'], ['5', 'assistant-3'], ['catalogue', 'assistant-4-catalogue'], ['editer', 'assistant-5-editer']];
+  const liste = process.argv[2] ? tout.filter(x => x[0] === process.argv[2]) : tout;
   for (const [etape, nom] of liste) {
     const p = await b.newPage({ viewport: { width: 1348, height: 900 }, deviceScaleFactor: 1.5 });
     p.on('pageerror', e => console.log('ERREUR', etape, e.message));
