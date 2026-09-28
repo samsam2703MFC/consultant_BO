@@ -124,6 +124,65 @@ CREATE TABLE IF NOT EXISTS ceo_campagne_objectif_produit (
   PRIMARY KEY (campagne_id, shop_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Jours creux : le catalogue des mécaniques de promotion (semé depuis src/data/promo_mecaniques.json
+-- au premier appel, puis éditable), et les promotions adoptées magasin par magasin sur un créneau.
+CREATE TABLE IF NOT EXISTS ceo_promo_mecanique (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  code        VARCHAR(8)   NULL,             -- T1…, P1…, E1…, X1… (libre)
+  levier      VARCHAR(12)  NOT NULL,         -- trafic | panier | experience | ecouler
+  type        VARCHAR(24)  NULL,             -- bundle, remise, offert, animation…
+  nom         VARCHAR(160) NOT NULL,
+  regle       TEXT         NULL,             -- la règle telle qu'elle s'affiche
+  habitude    TEXT         NULL,             -- l'habitude d'achat qui la justifie
+  sections    VARCHAR(40)  NOT NULL DEFAULT 'apres-midi',  -- matin,midi,apres-midi (csv)
+  jours       VARCHAR(40)  NULL,             -- jours proposés par défaut, lun…dim (csv)
+  declencheur TEXT         NULL,             -- JSON : ["c:Tartes", "p:1045|Pommes Crème"]
+  article     TEXT         NULL,             -- JSON, même forme
+  offre       VARCHAR(24)  NULL,             -- prix bundle | remise % | article offert | 3 pour 2 | aucune remise
+  prix        DECIMAL(8,2) NULL,
+  remise_pct  DECIMAL(5,1) NULL,
+  marge_min   DECIMAL(5,1) NULL,
+  mesure      VARCHAR(80)  NULL,
+  canaux      VARCHAR(200) NULL,             -- csv
+  caisse      VARCHAR(240) NULL,
+  note        TEXT         NULL,
+  marge_garde TINYINT(1)   NOT NULL DEFAULT 1,
+  actif       TINYINT(1)   NOT NULL DEFAULT 1,
+  ordre       INT          NOT NULL DEFAULT 0,
+  cree_le     DATETIME     NULL,
+  maj_le      DATETIME     NULL,
+  maj_par     VARCHAR(120) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_promo (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  shop_id      VARCHAR(32)  NOT NULL,
+  mecanique_id INT          NULL,
+  levier       VARCHAR(12)  NOT NULL,
+  type         VARCHAR(24)  NULL,
+  nom          VARCHAR(160) NOT NULL,
+  regle        TEXT         NULL,
+  jours        VARCHAR(40)  NOT NULL,        -- 1…7 (csv, 1 = lundi)
+  heure_de     TINYINT      NOT NULL,        -- première heure du créneau
+  heure_a      TINYINT      NOT NULL,        -- dernière heure du créneau (incluse)
+  du           DATE         NOT NULL,
+  au           DATE         NOT NULL,
+  declencheur  TEXT         NULL,            -- JSON
+  article      TEXT         NULL,            -- JSON
+  offre        VARCHAR(24)  NULL,
+  prix         DECIMAL(8,2) NULL,
+  remise_pct   DECIMAL(5,1) NULL,
+  canaux       VARCHAR(200) NULL,
+  note         TEXT         NULL,
+  cible        TEXT         NULL,
+  ref_ca_h     DECIMAL(10,2) NULL,           -- la référence gelée à l'adoption : CA / h du créneau
+  ref_tk_h     DECIMAL(8,2) NULL,            -- … clients / h
+  ref_jours    INT          NULL,            -- … sur combien de jours ouverts
+  statut       VARCHAR(12)  NOT NULL DEFAULT 'en_cours',  -- brouillon | en_cours | terminee | arretee
+  cree_le      DATETIME     NULL,
+  maj_le       DATETIME     NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Budget validé une fois par exercice avec le consultant
 CREATE TABLE IF NOT EXISTS ceo_shop_budget (
   shop_id                  VARCHAR(8) NOT NULL,

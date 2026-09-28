@@ -313,6 +313,75 @@ nul **efface** la ligne. `?journal=0` pour les écritures automatiques. Tables `
 campagnes: [ { id, nom, debut, fin, produits, …bilan } ] }`, une entrée par campagne en cours ce jour-là où le
 magasin a un objectif et la campagne des produits ; vide sinon. Même `bilan` que ci-dessus, sans `parJour`.
 
+### `/creux` et `/promo` — les jours creux : la carte, le catalogue des mécaniques, les promotions
+
+`GET /creux?shop=5&semaines=4` (`jusqua=YYYY-MM-DD` pour les tests) — la carte jour de semaine × heure d'un magasin
+sur ses N dernières semaines pleines (lundi → dimanche), lue dans les heures gravées (`svH…`) :
+
+```json
+{ "shop": "5", "nom": "Atelier by Harmonie - Sombreffe", "semaines": 4, "du": "2026-08-31", "au": "2026-09-27", "joursLus": 24,
+  "ouverts": { "2": true, "3": true }, "moyenne": 188.8, "seuil": 0.7, "heures": [6, 7, …, 18],
+  "cells": { "2:14": { "ca": 74.1, "tk": 7.2, "n": 4 } },
+  "blocs": [ { "jours": [2, 3, 4, 5], "heures": [14, 15, 16, 17], "heureDe": 14, "heureA": 17, "nom": "Mardi, Mercredi, Jeudi, Vendredi, 14 – 18 h",
+               "caH": 80.6, "tkH": 8.1, "panier": 10.0, "part": 43, "potentiel": 3542, "cases": 16 } ],
+  "midi": { "tkH": 18.2, "panier": 15.8 },
+  "reseau": [ { "id": "4", "nom": "Atelier by - Halle", "moyenne": 187.2, "bloc": { … } } ],
+  "sections": { "matin": "Matin (avant 11 h)", … }, "leviers": { "trafic": { "nom": "Trafic", "quoi": "…", "kpi": "…" }, … } }
+```
+
+Une case est la moyenne des jours ouverts de ce jour de semaine (un jour compte s'il a vendu). `blocs` : les creux
+détectés (en semaine si au moins trois jours sont sous le seuil, samedi, dimanche ; heures 8 – 17 contiguës sous
+`seuil × moyenne`). `potentiel` = ce que rapporterait par mois le créneau remonté à 70 % de la moyenne du magasin
+(× 4,3 semaines). `reseau` : le creux principal de chaque magasin actif, sur sa propre moyenne.
+
+`GET /promo/mecaniques` — le catalogue, semé depuis `src/data/promo_mecaniques.json` (24 fiches) si la table est vide :
+`{ mecaniques: [ { id, code, levier, type, nom, regle, habitude, sections: ["apres-midi"], jours: ["lun", …],
+declencheur: ["c:Tartes"], article: ["p:1045|Pommes Crème"], offre, prix, remisePct, margeMin, mesure, canaux: [],
+caisse, note, margeGarde, actif, ordre, majLe, majPar, enCours } ], leviers, sections, jours, types, offres, canaux }`.
+`enCours` : combien de promotions en cours s'en servent. Les sélecteurs : `g:Nom` (groupe), `c:Nom` (catégorie),
+`p:<id>|<libellé>` (produit) — la partie après `|` n'est qu'un libellé.
+
+Écritures du catalogue : `POST /promo/mecaniques` (création, corps = la fiche), `PUT /promo/mecaniques/{id}` (`?journal=0`
+pour ne pas journaliser), `POST /promo/mecaniques/{id}/dupliquer` → `{ ok, mecanique }`, `DELETE /promo/mecaniques/{id}`
+(**409** si une promotion en cours s'en sert : on désactive à la place), `PUT /promo/mecaniques/ordre { ids: [] }`.
+
+`GET /promo/recherche?q=pom` — la barre de recherche des multiselects : `{ q, resultats: [ { sel, nom, type, info } ] }`,
+`type` ∈ groupe · catégorie · produit, groupes et catégories d'abord. Deux caractères au moins.
+
+`GET /promo/propositions?shop=5&levier=panier&jours=2,3,4,5&hde=14&ha=17` — les mécaniques actives du levier qui
+s'appliquent aux sections du créneau, chiffrées pour le magasin sur ses tickets gravés (`svP…`) des quatre dernières
+semaines, mêmes jours, mêmes heures :
+
+```json
+{ "fenetre": { "du": "2026-08-31", "au": "2026-09-27", "joursLus": 16, "manquants": 0 }, "ticketsLus": 1600,
+  "propositions": [ { "mecanique": { … }, "jourOk": true,
+      "article": { "parJour": 28, "caParJour": 61.4, "refs": 1, "margePct": 78.3, "prixMoyen": 2.4 },
+      "declencheur": { "parJour": 3, "refs": 1 },
+      "chiffres": { "prix": 6.5, "remisePct": 14, "margeApres": 78.3, "margeEur": 5.1, "seuilParJour": 5.8, "margeGardee": true },
+      "attache": { "taux": 41.2, "mois": "août 2026" } } ] }
+```
+
+`margePct` vient des coûts de recette gravés avec les tickets (null si inconnus) ; `seuilParJour` : les ventes en plus
+qu'il faut chaque jour pour payer la remise sur ce qui se vend déjà ; `attache` (si le module croisements est là) :
+la part des tickets du déclencheur qui contiennent déjà l'article, le dernier mois clos, sur la section du créneau.
+
+`GET /promo?shop=5&date=2026-09-28` (sans `shop` : tout le réseau) — les promotions et leur effet :
+`{ promos: [ { id, shop, magasin, mecaniqueId, levier, type, nom, regle, jours: [2, 3], heureDe, heureA, du, au,
+declencheur, article, offre, prix, remisePct, canaux, note, cible, ref: { caH, tkH, jours }, statut, active,
+effet: { caH, tkH, joursLus, deltaCaPct, deltaTkPct, parJour: { "2026-09-15": { caH, tkH } }, verdict, verdictLib } } ], leviers }`.
+La **référence est gelée à l'adoption** : les quatre semaines d'avant `du`, mêmes jours, mêmes heures. `effet` compare
+le créneau depuis `du` à cette référence ; `verdict` ∈ `tot` (moins de 5 jours lus) · `garder` (ΔCA ≥ 8 %) · `ajuster`
+(≥ −3 %) · `arreter`. `statut` ∈ brouillon · en_cours · terminee · arretee.
+
+`POST /promo` — adopter : `{ shop, mecaniqueId, nom, levier, type, regle, jours: [2, 3, 4, 5], heureDe: 14, heureA: 17,
+du, au, declencheur: [], article: [], offre, prix, remisePct, canaux: [], note, cible, statut }` → `{ ok, promo }` (avec sa
+référence calculée). `PUT /promo/{id}` change `statut`, `note`, `cible`, `canaux`, `nom`, `regle`, `au` ;
+`DELETE /promo/{id}` n'efface qu'un brouillon. Tables `ceo_promo_mecanique` et `ceo_promo`, créées au premier appel.
+
+`GET /exploitation/promos?shop=5&date=2026-09-29` — la carte du dashboard magasin : `{ shop, date, promos: [ { …,
+ceJour, effet, creneau } ] }`, les promotions en cours dont la période couvre la date ; `ceJour` dit si ce jour de
+semaine est un jour du créneau.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json
