@@ -259,7 +259,7 @@ class App {
       caAchats: 'commandes', caFacturation: 'facturation',
       caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
       projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
-      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne',
+      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits',
       suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
@@ -930,6 +930,7 @@ class App {
       resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
+      mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme comptoir', 'Où chaque référence se place au comptoir : zone, meuble, niveau. Un emplacement vide se distingue d\u2019une référence jamais placée.'],
@@ -941,7 +942,7 @@ class App {
       caAchats: ['Achats', 'Ce que les magasins commandent, ce qu’on négocie et ce que la centrale met en avant : les commandes de l’envoi à la livraison, les demandes de prix aux fournisseurs, et les campagnes commerciales.',
         [['caAchats', 'Commandes'], ['caDemande', 'Demande de prix'], ['caCampagnes', 'Campagnes commerciales']]],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : qui occupe quel mois, la liste et leurs statuts, ce qu’elles devraient rapporter, et ce qu’elles ont changé.',
-        [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mesure', 'Mesure']]],
+        [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
@@ -1323,7 +1324,7 @@ class App {
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
       ['Marque & marketing', [
-        ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
+        ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mktObjectifs', 'mesure']],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
@@ -1367,10 +1368,10 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isPosts', 'isBrandGuard'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
+      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1759,6 +1760,7 @@ class App {
     if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
     if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
     if (common.isBxc) this.valsBxc(common);
+    if (common.isMktObj) this.valsMktObj(common);
     if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
@@ -2345,6 +2347,158 @@ class App {
   }
 
   /** Les objectifs saisis, écrits en base sans ligne de journal. */
+  /* --- objectifs produits d'une campagne : le multiselect, l'objectif en pièces par magasin, la jauge --- */
+  valsMktObj(common){
+    const S = this.state;
+    this.mkoCharge(false);
+    const b = S.mko || {};
+    const d = b.d || {};
+    common.mkoChargement = !!b.chargement && !b.d;
+    common.mkoRecalcul = !!b.chargement && !!b.d;
+    common.mkoVide = d.vide || (!b.chargement && !b.d ? 'Lecture impossible — API injoignable.' : '');
+    const camp = d.campagne || null;
+    const jf = s => (s || '').split('-').reverse().join('/');
+    common.mkoCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id), nom: c.nom + ' · ' + jf(c.debut) + ' → ' + jf(c.fin) }));
+    common.mkoCampSel = String((camp || {}).id || '');
+    common.setMkoCamp = e => this.setState({ mkoCamp: parseInt(e.target.value, 10) || 0, mkoQ: '', mkoRes: null });
+    common.mkoNom = '';
+    if (!camp) { return; }
+    const cid = camp.id;
+    common.mkoNom = camp.nom; common.mkoPeriode = 'du ' + jf(camp.debut) + ' au ' + jf(camp.fin); common.mkoStatut = camp.statut || '';
+    common.mkoDate = jf(d.date); common.mkoEstAujourdhui = d.date === d.aujourdhui;
+    // Les produits : la sélection en cours si on vient de cliquer, sinon ceux du serveur.
+    const sel = S.mkoSel && S.mkoSel.cid === cid ? S.mkoSel.liste : (d.produits || []);
+    common.mkoProduits = sel.map(p => ({ id: p.id, nom: p.nom, categorie: p.categorie || '', retirer: () => this.mkoToggle(cid, p, false) }));
+    common.mkoNProduits = sel.length;
+    common.mkoSansProduits = !sel.length;
+    common.mkoQ = S.mkoQ || '';
+    common.setMkoQ = e => { const q = e.target.value; this.setState({ mkoQ: q }); this.mkoChercher(q); };
+    const q = (S.mkoQ || '').trim();
+    const res = S.mkoRes && S.mkoRes.q === q ? S.mkoRes : null;
+    common.mkoRecherche = q.length >= 2 && !res;
+    const selIds = {}; sel.forEach(p => { selIds[String(p.id)] = true; });
+    const parCat = {};
+    (res ? res.produits : []).forEach(p => { const k = p.categorie || 'Sans catégorie'; (parCat[k] = parCat[k] || []).push(p); });
+    common.mkoResultats = Object.keys(parCat).map(cat => ({ cat, produits: parCat[cat].map(p => ({
+      id: p.id, nom: p.nom, on: !!selIds[String(p.id)],
+      volume: p.volume ? p.volume.toLocaleString('fr-BE') + ' en ' + (res.mois || 'mois clos') : '',
+      basculer: () => this.mkoToggle(cid, p, !selIds[String(p.id)]) })) }));
+    common.mkoResVide = !!res && !res.produits.length;
+    common.mkoFermer = () => this.setState({ mkoQ: '', mkoRes: null });
+    // Les magasins : l'objectif saisi (brouillon) sinon celui du serveur, et la jauge.
+    const dr = S.mkoDraft || {};
+    const cle = sid => cid + ':' + sid;
+    const nf = n => n == null ? '' : Math.round(n).toLocaleString('fr-BE');
+    const ETATS = { atteint: ['objectif atteint', 'ok'], avance: ['en avance', 'ok'], clous: ['dans les clous', 'att'], retard: ['en retard', 'ko'], sans: ['', ''] };
+    let totObj = 0, totClients = 0, totVendu = 0;
+    common.mkoMagasins = (d.magasins || []).map(m => {
+      const saisi = dr[cle(m.id)];
+      const o = saisi != null ? (String(saisi).trim() === '' ? null : (parseInt(saisi, 10) || null)) : m.objectif;
+      const bl = m.bilan || null, cm = m.clientsMois || null, jo = bl ? bl.jours : null;
+      if (o) { totObj += o; }
+      if (cm) { totClients += cm.clients; }
+      if (bl) { totVendu += bl.vendu; }
+      const el = ETATS[bl && o ? bl.etat : 'sans'] || ETATS.sans;
+      return {
+        id: m.id, nom: m.nom,
+        clients: cm ? cm.clients.toLocaleString('fr-BE') : '—', clientsNote: cm ? cm.periode : 'pas de relevé',
+        ratio: cm && o ? '1 pour ' + Math.max(1, Math.round(cm.clients / o)) + ' clients' : '',
+        objectif: saisi != null ? saisi : (m.objectif != null ? m.objectif : ''),
+        setObjectif: e => { const v = e.target.value;
+          this.setState(s2 => ({ mkoDraft: Object.assign({}, s2.mkoDraft, { [cle(m.id)]: v }) }));
+          this.autoEnreg('mko' + cid, () => this.mkoEcrire(cid)); },
+        parJour: o && jo && jo.ouverts ? nf(o / jo.ouverts) + ' / j' : '',
+        joursOuverts: jo ? jo.ouverts + ' jours ouverts' : '',
+        vendu: bl ? nf(bl.vendu) : '', pct: bl && o && bl.pct != null ? Math.round(bl.pct) + ' %' : '',
+        ceJour: bl ? '+' + nf(bl.ceJour) : '', rythme: bl && bl.rythme != null ? nf(bl.rythme) + ' / j' : '—',
+        ilFaut: bl && o && bl.ilFaut != null ? nf(bl.ilFaut) + ' / j' : '—', projection: bl && bl.projection != null ? nf(bl.projection) : '—',
+        etat: el[0], etatCls: el[1],
+        barre: bl && o && bl.pct != null ? Math.min(100, bl.pct) : 0,
+        attendu: bl && bl.attendu != null ? bl.attendu : null,
+        vert: !!(bl && (bl.etat === 'avance' || bl.etat === 'atteint')),
+        aSuivre: !!(bl && bl.aSuivre),
+      };
+    });
+    common.mkoTotObjectif = totObj ? nf(totObj) : '';
+    common.mkoTotClients = totClients ? nf(totClients) : '';
+    common.mkoTotVendu = totVendu ? nf(totVendu) : '';
+    const R = d.reseau || {};
+    const elR = ETATS[R.objectif ? (R.etat || 'sans') : 'sans'] || ETATS.sans;
+    const top = (R.parProduit || [])[0];
+    common.mkoReseau = {
+      objectif: nf(R.objectif), vendu: nf(R.vendu || 0), pct: R.objectif && R.pct != null ? Math.round(R.pct) + ' %' : '',
+      etat: elR[0], etatCls: elR[1], ceJour: '+' + nf(R.ceJour || 0),
+      rythme: nf(R.rythme || 0) + ' / j', ilFaut: R.objectif ? nf(R.ilFaut || 0) + ' / j' : '—',
+      projection: R.projection != null ? nf(R.projection) : '—',
+      projPct: R.projection != null && R.objectif ? Math.round(100 * R.projection / R.objectif) + ' %' : '',
+      projOk: R.projection != null && R.objectif ? R.projection >= R.objectif : false,
+      enRetard: R.enRetard || 0, attendu: R.attendu != null ? Math.round(R.attendu) + ' %' : '',
+      parProduit: (R.parProduit || []).map(p => ({ nom: p.nom, q: nf(p.q), part: R.vendu ? Math.round(100 * p.q / R.vendu) + ' %' : '', larg: top && top.q ? Math.round(100 * p.q / top.q) : 0 })),
+      aSuivre: !!R.aSuivre,
+    };
+    common.mkoCourbe = this.mkoCourbe(camp, R);
+    common.mkoEtat = this.autoTxt('mko' + cid);
+    common.mkoTicketsLus = d.ticketsLus || 0;
+  }
+  /** La courbe du cumul réseau face à la droite de l'objectif — les points d'un SVG. */
+  mkoCourbe(camp, R){
+    const cumul = R.cumul || [];
+    if (!cumul.length && !R.objectif) { return null; }
+    const t0 = new Date(camp.debut + 'T12:00:00'), t1 = new Date(camp.fin + 'T12:00:00');
+    const nJ = Math.max(1, Math.round((t1 - t0) / 86400000) + 1);
+    const W = 560, H = 150;
+    const maxi = Math.max(R.objectif || 0, cumul.length ? cumul[cumul.length - 1].cumul : 0, 1);
+    const px = i => 34 + i * ((W - 44) / nJ), py = v => H - 18 - (v / maxi) * (H - 30);
+    const idx = dte => Math.round((new Date(dte + 'T12:00:00') - t0) / 86400000);
+    const pts = [[px(0), py(0)]].concat(cumul.map(c => [px(idx(c.date) + 1), py(c.cumul)]));
+    const der = cumul.length ? cumul[cumul.length - 1] : null;
+    const labels = []; for (let i = 0; i < nJ; i += Math.max(1, Math.round(nJ / 5))) { const t = new Date(t0); t.setDate(t0.getDate() + i); labels.push({ x: px(i + 0.5), txt: t.getDate() + ' ' + ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][t.getMonth()] }); }
+    return { W, H, points: pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '),
+      obj: R.objectif ? { x1: px(0), y1: py(0), x2: px(nJ), y2: py(R.objectif), txt: 'objectif ' + Math.round(R.objectif).toLocaleString('fr-BE') } : null,
+      base: { x1: px(0), x2: px(nJ), y: py(0) },
+      dernier: der ? { x: px(idx(der.date) + 1), y: py(der.cumul), txt: Math.round(der.cumul).toLocaleString('fr-BE') } : null,
+      labels, H2: H - 4 };
+  }
+  mkoCharge(force){
+    const cle = String(this.state.mkoCamp || 0);
+    if (this._mkoEnCours === cle) { return; }
+    if (!force && this.state.mko && this.state.mko.cle === cle) { return; }
+    this._mkoEnCours = cle;
+    this.setState({ mko: { cle, chargement: true, d: (this.state.mko || {}).d || null } });
+    readOne('/marketing/objectifs-produits' + (this.state.mkoCamp ? '?campagne=' + this.state.mkoCamp : ''))
+      .then(d => { this._mkoEnCours = null; this.setState({ mko: { cle, chargement: false, d: d || null }, mkoSel: null }); })
+      .catch(() => { this._mkoEnCours = null; this.setState({ mko: { cle, chargement: false, d: null } }); });
+  }
+  mkoToggle(cid, p, on){
+    const d = ((this.state.mko || {}).d) || {};
+    const base = this.state.mkoSel && this.state.mkoSel.cid === cid ? this.state.mkoSel.liste : (d.produits || []);
+    const sans = base.filter(x => String(x.id) !== String(p.id));
+    const liste = on ? sans.concat([{ id: p.id, nom: p.nom, categorie: p.categorie || '' }]) : sans;
+    this.setState({ mkoSel: { cid, liste } });
+    this.autoEnreg('mko' + cid, () => this.mkoEcrire(cid));
+  }
+  mkoEcrire(cid){
+    const S = this.state, corps = {};
+    if (S.mkoSel && S.mkoSel.cid === cid) { corps.produits = S.mkoSel.liste; }
+    const dr = S.mkoDraft || {}, objectifs = {};
+    Object.keys(dr).forEach(k => { const [c, sid] = k.split(':'); if (String(c) === String(cid)) { objectifs[sid] = dr[k]; } });
+    if (Object.keys(objectifs).length) { corps.objectifs = objectifs; }
+    if (!Object.keys(corps).length) { return true; }
+    return this.api('PUT', '/marketing/campagnes/' + cid + '/produits?journal=0', corps)
+      .then(r => { const ok = !(!r || r.ok === false); if (ok) { this.setState({ mkoDraft: {} }); this.mkoCharge(true); } return ok; });
+  }
+  mkoChercher(q){
+    clearTimeout(this._mkoT);
+    const t = (q || '').trim();
+    if (t.length < 2) { return; }
+    this._mkoT = setTimeout(() => {
+      readOne('/marketing/catalogue?q=' + encodeURIComponent(t)).then(r => {
+        if ((this.state.mkoQ || '').trim() !== t) { return; }
+        this.setState({ mkoRes: { q: t, mois: (r || {}).mois || '', produits: (r || {}).produits || [] } });
+      });
+    }, 350);
+  }
+
   bxcEcrire(campagneId){
     const dr = this.state.bxcDraft || {};
     const objectifs = {};
