@@ -461,3 +461,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-28T09:15:00Z dashboard magasin : la note du jour et la semaine n-1
 2026-09-28T09:50:00Z ventes par heure : un releve pris en journee ne fige plus le jour
 2026-09-28T11:20:00Z objectifs produits des campagnes : multiselect, objectif par magasin, jauge dashboard
+2026-09-28T11:40:00Z objectifs produits : tous les magasins actifs
