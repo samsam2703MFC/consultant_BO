@@ -246,6 +246,28 @@ l'auteur ne soit connu.
 `ceo_shop_month_note` (clé `shop_id, year, month, auteur`) et crée la table au premier appel si
 elle manque — une installation qui n'a pas repassé `schema.sql` répond donc normalement.
 
+### `/exploitation/notes` — la note du jour d'un magasin
+
+`GET /exploitation/notes?shop=2&date=2026-09-28`
+
+```json
+{ "shop": "2", "jour": "2026-09-28",
+  "note": { "jour": "2026-09-28", "texte": "Kermesse de l'école en face, file dès 7 h.", "par": "Sophie", "le": "2026-09-28 13:05:00" },
+  "semaine": { "du": "2026-09-28", "au": "2026-10-04", "notes": [ { "jour": "2026-09-28", "texte": "…", "par": "Sophie", "le": "…" } ] },
+  "n1":      { "du": "2025-09-29", "au": "2025-10-05", "notes": [ { "jour": "2025-10-03", "texte": "Four 2 en panne toute la matinée.", "par": null, "le": "…" } ] } }
+```
+
+Le dashboard journalier dit ce qui s'est passé en chiffres ; la note dit pourquoi. `semaine` est
+la semaine du lundi au dimanche qui contient `date`, avec toutes ses notes (celle du jour comprise) ;
+`n1` est la même semaine **décalée de 364 jours** — le même jour de semaine, comme les ventes face
+au N-1 partout ailleurs. `note` vaut `null` sans note ce jour-là. `par` est un prénom libre, `null`
+si la note n'est pas signée.
+
+Écriture : `POST /exploitation/note` avec `{ shop, jour, texte, par }`. Une note par magasin et par
+jour ; `texte` plafonné à 2 000 caractères, `par` à 120 ; **un texte vide SUPPRIME la note**. Rend
+`{ ok: true, note: { jour, texte, par, le } }` (ou `{ ok: true, vide: true }`). Le serveur écrit
+`ceo_shop_day_note` (clé `shop_id, jour`) et crée la table au premier appel si elle manque.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json

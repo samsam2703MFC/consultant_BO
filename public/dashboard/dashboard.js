@@ -19,6 +19,7 @@
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     stockOuvert: false, stockVues: null, cmdOuvert: false,
+    noteOuvert: false, noteBrouillon: null, noteEtat: null,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -47,6 +48,11 @@
   /* --- lecture ------------------------------------------------------------ */
   function lire(path) {
     return fetch(API + path, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error((j && j.error) || ('HTTP ' + r.status))), () => Promise.reject(new Error('HTTP ' + r.status))));
+  }
+  /** Une écriture : le statut HTTP fait foi, comme pour la lecture. */
+  function ecrire(path, corps) {
+    return fetch(API + path, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(corps) })
       .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error((j && j.error) || ('HTTP ' + r.status))), () => Promise.reject(new Error('HTTP ' + r.status))));
   }
   function cleRes() { return S.vue + '|' + S.date; }
@@ -101,7 +107,7 @@
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
@@ -829,7 +835,7 @@
     ]);
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
-    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); }
+    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
       murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
@@ -851,6 +857,7 @@
     h += '</div>';
     // Les tiroirs : la seule chose qui flotte au-dessus du mur, donc la seule
     // qui a droit à un cadre.
+    if (S.noteOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
     if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
     if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
     if (S.stockOuvert && E && !E.indispo) { h += `<div class="db-stdl mb-tir">${stockTiroir(E)}<div class="db-stpush">${pushBouton()}</div></div>`; }
@@ -859,6 +866,84 @@
     h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']]
       .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
     return h;
+  }
+
+  /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
+  const JOURS_C = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+  function cleNote() { return 'notes|' + S.shop + '|' + S.date; }
+  function cheminNote() { return '/exploitation/notes?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
+  function notePar() { try { return localStorage.getItem('db.notePar') || ''; } catch (e) { return ''; } }
+  /** Ce que montre le champ : le brouillon en cours s'il est de ce jour, sinon la note lue. */
+  function noteTexteCourant(N) {
+    if (S.noteBrouillon && S.noteBrouillon.cle === cleNote()) { return S.noteBrouillon.texte; }
+    return N && N.note ? N.note.texte : '';
+  }
+  function noteLignes(L, exclure, vide) {
+    const l = (L || []).filter(n => n.jour !== exclure);
+    if (!l.length) { return `<div class="db-nl vide">${vide}</div>`; }
+    return l.map(n => { const t = new Date(n.jour + 'T12:00:00'); return `<div class="db-nl"><span class="d">${JOURS_C[t.getDay()]} ${fD(n.jour)}</span><span class="x">${esc(n.texte)}</span>${n.par ? `<span class="p">${esc(n.par)}</span>` : ''}</div>`; }).join('');
+  }
+  /** La tuile du mur mobile : la note en un coup d'œil, le tiroir en dessous. */
+  function murNote() {
+    const N = S.aux[cleNote()];
+    const nt = N && N.note ? N.note.texte : '';
+    const n1 = N && N.n1 && Array.isArray(N.n1.notes) ? N.n1.notes.length : 0;
+    const sous = nt ? esc(nt.length > 90 ? nt.slice(0, 90) + '…' : nt)
+      : (N ? 'ajouter une note' + (n1 ? ' · ' + n1 + ' note' + (n1 > 1 ? 's' : '') + ' la même semaine l’an dernier' : '') : (S.err[cleNote()] ? esc(S.err[cleNote()]) : 'lecture…'));
+    return murC('Note du jour', nt ? '✎' : '+', sous + `<span class="dr"> · ${S.noteOuvert ? 'replier ▴' : (nt ? 'modifier ▾' : 'écrire ▾')}</span>`, '', 'notedrop');
+  }
+  function noteCarte(mobile) {
+    const cle = cleNote(), N = S.aux[cle], err = S.err[cle];
+    const texte = noteTexteCourant(N);
+    const lu = N && N.note ? N.note.texte : '';
+    const modif = S.noteBrouillon && S.noteBrouillon.cle === cle && S.noteBrouillon.texte !== lu;
+    const etat = S.noteEtat && S.noteEtat.cle === cle ? S.noteEtat : null;
+    const sem = N && N.semaine ? N.semaine : null, n1 = N && N.n1 ? N.n1 : null;
+    let pied;
+    if (etat && etat.encours) { pied = 'enregistrement…'; }
+    else if (etat && etat.erreur) { pied = `<span class="ko">${esc(etat.erreur)}</span>`; }
+    else if (modif) { pied = 'modifiée, pas encore enregistrée'; }
+    else if (N && N.note) { pied = 'enregistrée' + (N.note.le ? ' le ' + fD(N.note.le.slice(0, 10)) + ' à ' + N.note.le.slice(11, 16) : '') + (N.note.par ? ' par ' + esc(N.note.par) : ''); }
+    else if (err) { pied = `<span class="ko">${esc(err)}</span>`; }
+    else if (!N) { pied = 'lecture…'; }
+    else { pied = 'pas encore de note ce jour'; }
+    const occupe = etat && etat.encours ? 'disabled' : '';
+    const form = `<div class="db-notej-form">
+      <textarea data-note-texte maxlength="2000" rows="${mobile ? 4 : 5}" placeholder="Ce qui explique la journée : météo, événement, animation, panne, équipe…">${esc(texte)}</textarea>
+      <div class="db-notej-pied"><input data-note-par class="db-sel" maxlength="120" placeholder="signé (prénom)" value="${esc(notePar())}">
+        <button class="db-btn prim" data-note-save ${occupe}>Enregistrer</button>${N && N.note ? `<button class="db-btn" data-note-clear ${occupe}>Effacer</button>` : ''}<span class="db-mini">${pied}</span></div></div>`;
+    const listes = `<div class="db-notej-listes">
+      <div class="db-notej-bloc"><div class="db-notej-t">Cette semaine<small>${sem ? 'du ' + fD(sem.du) + ' au ' + fD(sem.au) : ''}</small></div>${sem ? noteLignes(sem.notes, S.date, 'Aucune autre note cette semaine.') : '<div class="db-nl vide">lecture…</div>'}</div>
+      <div class="db-notej-bloc"><div class="db-notej-t">Même semaine N-1<small>${n1 ? 'du ' + fD(n1.du) + ' au ' + fD(n1.au) : ''}</small></div>${n1 ? noteLignes(n1.notes, null, 'Aucune note cette semaine-là l’an dernier.') : '<div class="db-nl vide">lecture…</div>'}</div></div>`;
+    if (mobile) { return `<div class="db-notej mob"><div class="db-notej-t" style="padding:4px 4px 0">La note du ${esc(fDL(S.date))}</div>${form}${listes}</div>`; }
+    return `<div class="db-card db-notej"><div class="ct"><span class="db-lab">La note du jour — ${esc(fDL(S.date))}</span><span class="db-mini">ce qui explique la journée, relu l’an prochain la même semaine · une note par jour</span></div><div class="db-notej-corps">${form}${listes}</div></div>`;
+  }
+  function noteEnregistrer(texte) {
+    const cle = cleNote();
+    const champ = $.querySelector('[data-note-par]'); const par = champ ? champ.value.trim() : notePar();
+    try { localStorage.setItem('db.notePar', par); } catch (e) { /* navigation privée */ }
+    // Le clavier se range et le formulaire se rend à neuf : sinon, au téléphone,
+    // le champ garde le focus et l'état « enregistrement… » ne s'afficherait pas.
+    if (document.activeElement && document.activeElement.blur) { document.activeElement.blur(); }
+    S.noteEtat = { cle: cle, encours: true }; rendre();
+    ecrire('/exploitation/note', { shop: S.shop, jour: S.date, texte: texte, par: par })
+      .then(() => { S.noteEtat = null; S.noteBrouillon = null; lireAux(cle, cheminNote(), true); })
+      .catch(e => { S.noteEtat = { cle: cle, erreur: e.message }; rendre(); });
+  }
+  /** Le formulaire survit au rendu : quand on y tape, le nœud d'origine reprend la place du
+   * nouveau, sinon chaque relecture du serveur (toutes les 10 min, ou une tuile qui arrive)
+   * volerait le curseur au milieu d'une phrase. */
+  function noteGarder() {
+    const a = document.activeElement;
+    if (!a || !a.matches || !a.matches('[data-note-texte],[data-note-par]')) { return null; }
+    const f = a.closest('.db-notej-form'); if (!f) { return null; }
+    return { form: f, actif: a, deb: a.selectionStart, fin: a.selectionEnd };
+  }
+  function noteRestaurer(g) {
+    if (!g) { return; }
+    const neuf = $.querySelector('.db-notej-form'); if (!neuf) { return; }
+    neuf.replaceWith(g.form);
+    try { g.actif.focus({ preventScroll: true }); g.actif.setSelectionRange(g.deb, g.fin); } catch (e) { /* champ retiré */ }
   }
 
   /* --- le plan d'action du franchisé : le module des visites, monté ici ------ */
@@ -878,6 +963,7 @@
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
     const m = magasin(d);
+    const garde = noteGarder();
     if (estMobile()) {
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
@@ -886,6 +972,7 @@
       $.innerHTML = rendMobile(m, d);
       $.classList.add('mob');
       brancher();
+      noteRestaurer(garde);
       // La fête attend que le jour soit lu : lancée sur un mur encore vide,
       // elle serait finie avant que le premier chiffre s'affiche.
       const forcee = !!m && feteDemandee();
@@ -924,6 +1011,7 @@
     else if (st) { h += rendHeures(st); }
     $.innerHTML = h;
     brancher();
+    noteRestaurer(garde);
   }
   function squelette(n) {
     return `<div class="db-tuiles">${Array.from({ length: 5 }, () => `<div class="db-tui"><div class="db-sk" style="width:60%"></div><div class="db-sk" style="height:24px;margin:8px 0 6px"></div><div class="db-sk" style="width:80%"></div></div>`).join('')}</div>
@@ -1006,6 +1094,7 @@
           <div class="db-mini" style="margin-top:5px">${or ? '<b>' + fP(attReel) + ' réalisé</b> · dépassé de ' + fK(m.ca - m.objectifJour) : fP(att) + ' réalisé'}${R && R.meilleur ? ' · record des ' + esc(nomJ) + 's : ' + fK(R.meilleur.ca) + ' le ' + fD(R.meilleur.date) : ''}${repere}</div></div></div>`;
       }
     }
+    h += noteCarte(false);
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
     // Catégories et planning côte à côte.
     const cats = Array.isArray(m.categories) ? m.categories : [];
@@ -1982,6 +2071,16 @@
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
     $.querySelectorAll('[data-stdrop]').forEach(b => b.addEventListener('click', () => { S.stockOuvert = !S.stockOuvert; rendre(); }));
+    $.querySelectorAll('[data-notedrop]').forEach(b => b.addEventListener('click', () => { S.noteOuvert = !S.noteOuvert; rendre(); }));
+    $.querySelectorAll('[data-note-texte]').forEach(t => t.addEventListener('input', () => {
+      S.noteBrouillon = { cle: cleNote(), texte: t.value };
+      const N = S.aux[cleNote()], lu = N && N.note ? N.note.texte : '';
+      const p = t.parentNode.querySelector('.db-notej-pied .db-mini');
+      if (p && !(S.noteEtat && S.noteEtat.cle === cleNote() && S.noteEtat.encours)) { p.textContent = t.value !== lu ? 'modifiée, pas encore enregistrée' : (lu ? 'enregistrée' : 'pas encore de note ce jour'); }
+    }));
+    $.querySelectorAll('[data-note-par]').forEach(i => i.addEventListener('change', () => { try { localStorage.setItem('db.notePar', i.value.trim()); } catch (e) { /* navigation privée */ } }));
+    $.querySelectorAll('[data-note-save]').forEach(b => b.addEventListener('click', () => { const t = $.querySelector('[data-note-texte]'); noteEnregistrer(t ? t.value : noteTexteCourant(S.aux[cleNote()])); }));
+    $.querySelectorAll('[data-note-clear]').forEach(b => b.addEventListener('click', () => { if (window.confirm('Effacer la note de ce jour ?')) { S.noteBrouillon = null; noteEnregistrer(''); } }));
     $.querySelectorAll('[data-stav]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); pushBasculer(); }));
     $.querySelectorAll('[data-stessai]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); pushEssai(); }));
     $.querySelectorAll('[data-ncrow]').forEach(b => b.addEventListener('click', () => {
