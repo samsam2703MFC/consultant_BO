@@ -95,6 +95,17 @@ CREATE TABLE IF NOT EXISTS ceo_shop_month_note (
   PRIMARY KEY (shop_id, year, month, auteur)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- La note du jour d'un magasin (dashboard journalier) : ce qui explique la
+-- journée, relu la même semaine un an plus tard. Une ligne par jour noté.
+CREATE TABLE IF NOT EXISTS ceo_shop_day_note (
+  shop_id   VARCHAR(8)   NOT NULL,
+  jour      DATE         NOT NULL,
+  texte     TEXT         NULL,
+  par       VARCHAR(120) NULL,
+  maj_le    DATETIME     NULL,
+  PRIMARY KEY (shop_id, jour)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Budget validé une fois par exercice avec le consultant
 CREATE TABLE IF NOT EXISTS ceo_shop_budget (
   shop_id                  VARCHAR(8) NOT NULL,

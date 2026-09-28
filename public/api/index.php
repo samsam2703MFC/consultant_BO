@@ -35,6 +35,7 @@ require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
+require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -129,6 +130,7 @@ function route(string $method, string $path): mixed
             $path === '/stores/perf'                   => ep_perf(),
             $path === '/stores/budgets'                => ep_budgets(),
             $path === '/stores/budget-notes'           => ep_budget_notes(),
+            $path === '/exploitation/notes'            => ep_notes_jour(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
@@ -304,6 +306,7 @@ function route(string $method, string $path): mixed
     // --- écritures
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
+    if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
