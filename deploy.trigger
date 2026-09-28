@@ -463,3 +463,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-28T11:20:00Z objectifs produits des campagnes : multiselect, objectif par magasin, jauge dashboard
 2026-09-28T11:40:00Z objectifs produits : tous les magasins actifs
 2026-09-28T11:55:00Z objectifs produits : identifiants magasin en chaines
+2026-09-28T19:44:01Z jours creux : carte, assistant, catalogue de mecaniques, promotions, dashboard
