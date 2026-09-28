@@ -106,6 +106,24 @@ CREATE TABLE IF NOT EXISTS ceo_shop_day_note (
   PRIMARY KEY (shop_id, jour)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Les objectifs produits d'une campagne : les produits qui comptent, et
+-- l'objectif en pièces de chaque magasin sur la période de la campagne.
+CREATE TABLE IF NOT EXISTS ceo_campagne_produit (
+  campagne_id INT          NOT NULL,
+  product_id  INT          NOT NULL,   -- identifiant de caisse (product.id, tickets du panel)
+  nom         VARCHAR(200) NOT NULL DEFAULT '',
+  categorie   VARCHAR(120) NULL,
+  PRIMARY KEY (campagne_id, product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ceo_campagne_objectif_produit (
+  campagne_id INT         NOT NULL,
+  shop_id     VARCHAR(32) NOT NULL,
+  pieces      INT         NULL,
+  maj         DATETIME    NULL,
+  PRIMARY KEY (campagne_id, shop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Budget validé une fois par exercice avec le consultant
 CREATE TABLE IF NOT EXISTS ceo_shop_budget (
   shop_id                  VARCHAR(8) NOT NULL,

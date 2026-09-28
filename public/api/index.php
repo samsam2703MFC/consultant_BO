@@ -36,6 +36,7 @@ require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/notes_jour.php';
+require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
 require __DIR__ . '/../../src/panel_ventes.php';
@@ -131,6 +132,9 @@ function route(string $method, string $path): mixed
             $path === '/stores/budgets'                => ep_budgets(),
             $path === '/stores/budget-notes'           => ep_budget_notes(),
             $path === '/exploitation/notes'            => ep_notes_jour(),
+            $path === '/exploitation/objectifs-produits' => ep_objectifs_produits_magasin(),
+            $path === '/marketing/objectifs-produits'  => ep_objectifs_produits(),
+            $path === '/marketing/catalogue'           => ep_catalogue_produits(),
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
@@ -357,6 +361,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/stores/([\w-]+)/saisonnalite$#', $path, $m)) { return wr_shop_saisonnalite($m[1]); }
     // Budget × Campagnes : l'objectif de CA d'une campagne, magasin par magasin.
     if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/objectifs$#', $path, $m)) { return wr_campagne_objectifs((int) $m[1]); }
+    if ($method === 'PUT' && preg_match('#^/marketing/campagnes/(\d+)/produits$#', $path, $m)) { return wr_objectifs_produits((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/marketing/mesure/(\d+)$#', $path, $m)) { return wr_mesure_param((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/marketing/mesure/(\d+)/releve$#', $path, $m)) { return wr_mesure_releve((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/marketing/mesure/(\d+)/gel$#', $path, $m)) { return wr_mesure_gel((int) $m[1]); }

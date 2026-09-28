@@ -19,7 +19,7 @@
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     stockOuvert: false, stockVues: null, cmdOuvert: false,
-    noteOuvert: false, noteBrouillon: null, noteEtat: null,
+    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -107,7 +107,7 @@
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
     lireAux('stock|' + S.shop, '/ventes/stock?shop=' + encodeURIComponent(S.shop), force);
-    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); }
+    if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ), force); }
     // Au téléphone, le mur porte la semaine sous le jour : une lecture de plus,
     // la même que la vue Semaine, donc déjà connue du serveur.
@@ -835,7 +835,7 @@
     ]);
     // En vue Jour, la semaine se pose sous la journée : c'est elle qui dit si
     // un bon jour rattrape quelque chose ou s'il masque un retard.
-    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); h += murR([murNote()], true); }
+    if (S.vue === 'jour') { h += murR([murSemaineResume()], true); murObjectifs().forEach(t => { h += murR([t], true); }); h += murR([murNote()], true); }
     h += murR([murCommandes(), murLivraisons()]);
     h += murR([
       murC('Tâches', T && T.total ? T.faites + ' / ' + T.total : '—',
@@ -857,6 +857,7 @@
     h += '</div>';
     // Les tiroirs : la seule chose qui flotte au-dessus du mur, donc la seule
     // qui a droit à un cadre.
+    if (S.objOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.noteOuvert && S.vue === 'jour') { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
     if (S.ncOuvert) { const D = S.aux[cleNC()]; const L = ncLignes(); if (D && L.length) { h += `<div class="mb-tir">${ncTiroir(D, L)}</div>`; } }
     if (S.cmdOuvert) { h += `<div class="db-stdl mb-tir">${cmdTiroir()}</div>`; }
@@ -866,6 +867,52 @@
     h += `<div class="mb-tabs mb-tabs3">${[['jour', 'Le jour', '◉'], ['semaine', 'La semaine', '▤'], ['actions', 'Plan d’action', '✓']]
       .map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}"><i>${o[2]}</i>${o[1]}</button>`).join('')}</div>`;
     return h;
+  }
+
+  /* --- l'objectif produits d'une campagne : « 500 tartes aux pommes en octobre », et où l'on en est --- */
+  function cleObj() { return 'obj|' + S.shop + '|' + S.date; }
+  function cheminObj() { return '/exploitation/objectifs-produits?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date; }
+  const OBJ_ETATS = { atteint: ['objectif atteint', 'ok'], avance: ['en avance', 'ok'], clous: ['dans les clous', 'att'], retard: ['en retard', 'ko'], sans: ['', ''] };
+  function objCampagnes() { const O = S.aux[cleObj()]; return O && Array.isArray(O.campagnes) ? O.campagnes : []; }
+  function objJauge(c, mini) {
+    const pct = c.pct != null ? Math.max(0, Math.min(100, c.pct)) : 0;
+    const vert = c.etat === 'avance' || c.etat === 'atteint';
+    return `<div class="db-bar${mini ? ' mini' : ''}"><i class="${vert ? 'ok' : ''}" style="width:${pct.toFixed(1)}%"></i>${c.attendu != null ? `<b style="left:${Math.max(0, Math.min(100, c.attendu)).toFixed(1)}%" data-l="attendu ${Math.round(c.attendu)} %"></b>` : ''}</div>`;
+  }
+  function objectifsCarte(mobile) {
+    const L = objCampagnes();
+    if (!L.length) { return ''; }
+    const auj = S.date === AUJ;
+    return L.map(c => {
+      const el = OBJ_ETATS[c.etat] || OBJ_ETATS.sans, cls = el[1], j = c.jours || {};
+      const or = c.etat === 'atteint';
+      const top = (c.parProduit || [])[0];
+      const prods = (c.parProduit || []).length ? c.parProduit.map(p => `<div class="db-obj-pp"><span>${esc(p.nom)}</span><span class="n">${fN(p.q)}</span><span class="q">${c.vendu ? fP(100 * p.q / c.vendu).replace(',0', '') : ''}</span><div class="db-bar mini"><i style="width:${top && top.q ? (100 * p.q / top.q).toFixed(1) : 0}%;background:#b8ad9f"></i></div></div>`).join('')
+        : `<div class="db-mini">Aucune vente lue encore${c.aSuivre ? ' — tickets en cours de lecture' : ''}.</div>`;
+      const gauche = `<div class="db-obj-g">
+        <div class="db-obj-gros">${fN(c.vendu)} <small>/ ${fN(c.objectif)} pièces</small> <span class="${cls}">${c.pct != null ? Math.round(c.pct) + ' %' : ''}</span>${or ? '<span class="db-badge-or"><span>🎆</span>Objectif atteint</span>' : ''}</div>
+        ${objJauge(c, false)}
+        <div class="db-mini" style="margin-top:12px"><b class="${cls}">${el[0]}</b>${c.attendu != null ? ' · attendu à ce jour ' + Math.round(c.attendu) + ' %' : ''} · <b>+${fN(c.ceJour)} ${auj ? 'aujourd’hui' : 'ce jour'}</b> · reste ${fN(c.reste)} sur ${j.restants || 0} jour${(j.restants || 0) > 1 ? 's' : ''} ouvert${(j.restants || 0) > 1 ? 's' : ''}${c.aSuivre ? ' · tickets en cours de lecture' : ''}</div>
+        <div class="db-obj-t4">
+          <div><div class="k">${auj ? 'Aujourd’hui' : 'Ce jour'}</div><div class="v">+${fN(c.ceJour)}</div><div class="s">pièces vendues</div></div>
+          <div><div class="k">Reste à vendre</div><div class="v">${fN(c.reste)}</div><div class="s">d’ici le ${fD(c.fin)}</div></div>
+          <div><div class="k">Il faut</div><div class="v ${cls}">${c.ilFaut != null ? fN(Math.round(c.ilFaut)) + ' / j' : '—'}</div><div class="s">rythme actuel ${c.rythme != null ? fN(Math.round(c.rythme)) + ' / j' : '—'}</div></div>
+          <div><div class="k">Projection</div><div class="v ${cls}">${c.projection != null ? fN(c.projection) : '—'}</div><div class="s">${c.projection != null && c.objectif ? Math.round(100 * c.projection / c.objectif) + ' % de l’objectif' : 'au rythme actuel'}</div></div>
+        </div></div>`;
+      const droite = `<div class="db-obj-p"><span class="db-lab">Par produit — vendus depuis le ${fD(c.debut)}</span>${prods}</div>`;
+      const sous = `${fD(c.debut)} → ${fD(c.fin)} · ${(c.produits || []).length} produit${(c.produits || []).length > 1 ? 's' : ''} · jour ${j.passes || 0} sur ${j.ouverts || 0} ouverts · le repère noir : où l’on devrait en être ${auj ? 'aujourd’hui' : 'ce jour-là'}`;
+      if (mobile) { return `<div class="db-obj mob${or ? ' db-or' : ''}"><div class="db-notej-t" style="padding:4px 4px 0">Objectif — ${esc(c.nom)}<small>${esc(sous)}</small></div>${gauche}${droite}</div>`; }
+      return `<div class="db-card db-obj${or ? ' db-or' : ''}"><div class="ct"><span class="db-lab">Objectif produits — ${esc(c.nom)}</span><span class="db-mini">${esc(sous)}</span></div><div class="db-obj-corps">${gauche}${droite}</div></div>`;
+    }).join('');
+  }
+  /** Les tuiles du mur mobile : une par campagne, la jauge en une ligne. */
+  function murObjectifs() {
+    return objCampagnes().map(c => {
+      const el = OBJ_ETATS[c.etat] || OBJ_ETATS.sans, cls = el[1];
+      const v = `${fN(c.vendu)} <span style="font-size:14px;color:var(--color-text-muted)">/ ${fN(c.objectif)}</span> <span class="${cls}" style="font-size:16px;font-family:var(--font-ui);font-weight:600">${c.pct != null ? Math.round(c.pct) + ' %' : ''}</span>`;
+      const s = objJauge(c, true) + `<b class="${cls}">${el[0]}</b>${c.attendu != null ? ' · attendu ' + Math.round(c.attendu) + ' %' : ''} · +${fN(c.ceJour)} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · il faut ${c.ilFaut != null ? fN(Math.round(c.ilFaut)) + ' / j' : '—'}<span class="dr"> · ${S.objOuvert ? 'replier ▴' : 'détail ▾'}</span>`;
+      return murC('Objectif — ' + esc(c.nom), v, s, c.etat === 'atteint' ? 'ok' : '', 'objdrop');
+    });
   }
 
   /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
@@ -1094,6 +1141,7 @@
           <div class="db-mini" style="margin-top:5px">${or ? '<b>' + fP(attReel) + ' réalisé</b> · dépassé de ' + fK(m.ca - m.objectifJour) : fP(att) + ' réalisé'}${R && R.meilleur ? ' · record des ' + esc(nomJ) + 's : ' + fK(R.meilleur.ca) + ' le ' + fD(R.meilleur.date) : ''}${repere}</div></div></div>`;
       }
     }
+    h += objectifsCarte(false);
     h += noteCarte(false);
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
     // Catégories et planning côte à côte.
@@ -2072,6 +2120,7 @@
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
     $.querySelectorAll('[data-stdrop]').forEach(b => b.addEventListener('click', () => { S.stockOuvert = !S.stockOuvert; rendre(); }));
     $.querySelectorAll('[data-notedrop]').forEach(b => b.addEventListener('click', () => { S.noteOuvert = !S.noteOuvert; rendre(); }));
+    $.querySelectorAll('[data-objdrop]').forEach(b => b.addEventListener('click', () => { S.objOuvert = !S.objOuvert; rendre(); }));
     $.querySelectorAll('[data-note-texte]').forEach(t => t.addEventListener('input', () => {
       S.noteBrouillon = { cle: cleNote(), texte: t.value };
       const N = S.aux[cleNote()], lu = N && N.note ? N.note.texte : '';

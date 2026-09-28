@@ -268,6 +268,49 @@ jour ; `texte` plafonné à 2 000 caractères, `par` à 120 ; **un texte vide SU
 `{ ok: true, note: { jour, texte, par, le } }` (ou `{ ok: true, vide: true }`). Le serveur écrit
 `ceo_shop_day_note` (clé `shop_id, jour`) et crée la table au premier appel si elle manque.
 
+### `/marketing/objectifs-produits` — l'objectif en pièces d'une campagne, magasin par magasin
+
+`GET /marketing/objectifs-produits?campagne=12&date=2026-10-19` (sans `campagne` : celle en cours à la date, sinon la
+dernière commencée ; `date` sert aux tests, aujourd'hui par défaut)
+
+```json
+{ "date": "2026-10-19", "campagnes": [ { "id": 12, "nom": "Tartes aux pommes", "debut": "2026-10-01", "fin": "2026-10-31", "statut": "En cours" } ],
+  "campagne": { "id": 12, "nom": "…", "debut": "…", "fin": "…" },
+  "produits": [ { "id": 1043, "nom": "Pommes Tranches", "categorie": "Tartes" } ],
+  "magasins": [ { "id": "5", "nom": "Atelier by Harmonie - Sombreffe",
+                  "clientsMois": { "clients": 4312, "periode": "septembre 2026", "source": "mois" },
+                  "objectif": 500,
+                  "bilan": { "objectif": 500, "vendu": 214, "ceJour": 9, "pct": 42.8, "attendu": 59.3, "etat": "retard",
+                             "reste": 286, "ilFaut": 26, "rythme": 13.2, "projection": 359,
+                             "jours": { "ouverts": 27, "passes": 16, "restants": 11, "calendrier": 31 },
+                             "parProduit": [ { "id": 1043, "nom": "Pommes Tranches", "q": 96 } ],
+                             "parJour": { "2026-10-01": 12 }, "manquants": 0, "aSuivre": false } } ],
+  "reseau": { "objectif": 2150, "vendu": 1320, "ceJour": 60, "pct": 61.4, "attendu": 59.3, "etat": "avance", "rythme": 82,
+              "ilFaut": 75.5, "projection": 2222, "enRetard": 2, "avecObjectif": 4,
+              "parProduit": [ … ], "cumul": [ { "date": "2026-10-01", "jour": 88, "cumul": 88 } ] } }
+```
+
+Les ventes sont les **tickets gravés jour par jour** pour le dashboard (`svP…`) : un produit compte s'il est dans
+la liste de la campagne, quel que soit le magasin. `attendu` est linéaire sur les **jours ouverts** (un jour passé
+est ouvert s'il a vendu ; un jour à venir suit le rythme de semaine des quatre dernières). `etat` ∈ `sans`
+(pas d'objectif) · `atteint` · `avance` (≥ attendu) · `clous` (attendu − 8 points) · `retard`. `rythme` : moyenne
+des sept derniers jours ouverts clos ; `projection` = vendu + rythme × jours restants ; `ilFaut` = reste ÷ jours
+restants. `clientsMois` est une information pour poser l'objectif : le dernier mois clos encodé, sinon les trente
+derniers jours gravés ; `null` si rien n'est connu.
+
+`GET /marketing/catalogue?q=pomme` — la recherche du multiselect : `{ q, mois, produits: [ { id, nom, categorie, volume } ] }`,
+`volume` étant ce que le réseau a vendu le dernier mois clos (tranches déjà gravées ; 0 si inconnu). Deux
+caractères au moins ; 80 résultats au plus, par catégorie puis volume.
+
+Écriture : `PUT /marketing/campagnes/{id}/produits` avec `{ produits: [ { id, nom, categorie } ], objectifs: { "5": 500, "3": "" } }`.
+Chaque clé absente laisse l'autre intacte ; **la liste des produits remplace la précédente** ; un objectif vide ou
+nul **efface** la ligne. `?journal=0` pour les écritures automatiques. Tables `ceo_campagne_produit`
+(clé `campagne_id, product_id`) et `ceo_campagne_objectif_produit` (clé `campagne_id, shop_id`), créées au premier appel.
+
+`GET /exploitation/objectifs-produits?shop=5&date=2026-10-19` — la jauge du dashboard magasin : `{ shop, date,
+campagnes: [ { id, nom, debut, fin, produits, …bilan } ] }`, une entrée par campagne en cours ce jour-là où le
+magasin a un objectif et la campagne des produits ; vide sinon. Même `bilan` que ci-dessus, sans `parJour`.
+
 ### `/products/scoring` — une ligne par référence vendue sur la période
 
 ```json

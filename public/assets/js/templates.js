@@ -152,6 +152,7 @@ export function render(c, x){
       ${c.isProspection ? tplProspection(c, x) : ''}
       ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
       ${c.isBxc ? tplBxc(c, x) : ''}
+      ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isMesure ? (c.mesSimple ? tplMesureComp(c, x) : tplMesure(c, x)) : ''}
       ${c.isProduits ? tplProduits(c, x) : ''}
       ${c.isProjets ? tplProjets(c, x) : ''}
@@ -2190,6 +2191,89 @@ function tplMesure(c, x){
     ${c.mesVue === 'param' ? vueParam() : (c.mesVue === 'produits' ? vueProduits() : vueResultats())}
     ${(c.mesMotifs || []).length ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${(c.mesMotifs || []).map(m => esc(m)).join(' · ')}</div>` : ''}
     <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.mesSource)}</div>
+  </div>`;
+}
+
+/* Les objectifs produits d'une campagne : le multiselect, l'objectif en pièces
+   par magasin avec ses clients du mois en regard, et la jauge de chacun. */
+function tplMktObj(c, x){
+  const { esc } = x;
+  const entete = `
+    <div class="mko-hd">
+      <span class="mko-mu">Campagne</span>
+      <select ${x.C(c.setMkoCamp)} class="mko-sel">${(c.mkoCampOpts || []).map(o => `<option value="${o.v}"${o.v === c.mkoCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      ${c.mkoChargement ? '<span class="mko-mu">Lecture des tickets gravés…</span>' : ''}
+      ${c.mkoRecalcul ? '<span class="mko-mu" style="color:var(--color-primary)">Relecture…</span>' : ''}
+      <span class="mko-mu" style="margin-left:auto">${esc(c.mkoEtat || '')}</span>
+    </div>`;
+  if (c.mkoVide) { return `<div data-screen="mktobj" class="mko">${entete}<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.mkoVide)}</div></div>`; }
+  if (c.mkoChargement || !c.mkoNom) { return `<div data-screen="mktobj" class="mko">${entete}</div>`; }
+  const R = c.mkoReseau, K = c.mkoCourbe;
+  const jauge = (pct, attendu, vert) => `<div class="mko-jg"><i class="${vert ? 'ok' : ''}" style="width:${Math.max(0, Math.min(100, pct || 0)).toFixed(1)}%"></i>${attendu != null ? `<b style="left:${Math.max(0, Math.min(100, attendu)).toFixed(1)}%" title="attendu à ce jour ${Math.round(attendu)} %"></b>` : ''}</div>`;
+  return `
+  <div data-screen="mktobj" class="mko">
+    ${entete}
+    <div class="mko-titre"><div><div class="t">${esc(c.mkoNom)}</div><div class="s">${esc(c.mkoPeriode)}${c.mkoStatut ? ' · ' + esc(c.mkoStatut) : ''} · en pièces · lu au ${esc(c.mkoDate)}</div></div></div>
+
+    <div class="mko-carte">
+      <div class="mko-ct"><span class="mko-lab">Les produits de la campagne</span><span class="mko-mini">tout ce qui est coché compte dans le même objectif · catalogue de caisse, volumes du dernier mois clos sur le réseau</span></div>
+      <div class="mko-corps">
+        <div class="mko-puces">
+          ${c.mkoProduits.map(p => `<span class="mko-puce" title="${esc(p.categorie)}">${esc(p.nom)}<button ${x.A(p.retirer)} title="Retirer de la campagne">✕</button></span>`).join('')}
+          ${c.mkoNProduits ? `<span class="mko-puce off">${c.mkoNProduits} produit${c.mkoNProduits > 1 ? 's' : ''}</span>` : '<span class="mko-mu">Aucun produit encore — cherchez-en un ci-dessous : sans produit, pas de jauge.</span>'}
+        </div>
+        <div class="mko-ms">
+          <input id="mko-q" ${x.I(c.setMkoQ)} value="${esc(c.mkoQ)}" placeholder="Chercher un produit du catalogue : pomme, spéculoos, baguette…" class="mko-inp" autocomplete="off">
+          ${c.mkoRecherche ? '<div class="mko-liste"><div class="mko-pied"><span>Recherche…</span></div></div>' : ''}
+          ${c.mkoResultats && c.mkoResultats.length ? `<div class="mko-liste">
+            ${c.mkoResultats.map(g => `<div class="mko-grp">${esc(g.cat)}</div>${g.produits.map(p => `<div class="mko-it${p.on ? ' on' : ''}" ${x.A(p.basculer)}><span class="cb">${p.on ? '✓' : ''}</span><span>${esc(p.nom)}</span><span class="q">${esc(p.volume)}</span></div>`).join('')}`).join('')}
+            <div class="mko-pied"><span>cliquer pour ajouter ou retirer · enregistré aussitôt</span><button ${x.A(c.mkoFermer)}>Fermer</button></div></div>` : ''}
+          ${c.mkoResVide ? `<div class="mko-liste"><div class="mko-pied"><span>Rien au catalogue pour « ${esc(c.mkoQ)} ».</span><button ${x.A(c.mkoFermer)}>Fermer</button></div></div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="mko-tuiles">
+      <div class="mko-tui ${R.etatCls}"><div class="k">Réseau</div><div class="v">${esc(R.vendu)}${R.objectif ? ` <small>/ ${esc(R.objectif)}</small>` : ''}</div><div class="s">${R.pct ? esc(R.pct) + ' · ' : ''}${esc(R.etat || (R.objectif ? '' : 'aucun objectif posé'))}</div></div>
+      <div class="mko-tui"><div class="k">${c.mkoEstAujourdhui ? 'Aujourd’hui' : 'Ce jour'}</div><div class="v">${esc(R.ceJour)}</div><div class="s">pièces sur le réseau</div></div>
+      <div class="mko-tui"><div class="k">Rythme</div><div class="v">${esc(R.rythme)}</div><div class="s">${R.objectif ? 'il faut ' + esc(R.ilFaut) + ' d’ici la fin' : 'moyenne des 7 derniers jours ouverts'}</div></div>
+      <div class="mko-tui ${R.objectif ? (R.projOk ? 'ok' : 'ko') : ''}"><div class="k">Projection</div><div class="v">${esc(R.projection)}</div><div class="s">${R.projPct ? esc(R.projPct) + ' de l’objectif au rythme actuel' : 'au rythme actuel'}</div></div>
+      <div class="mko-tui ${R.enRetard ? 'ko' : ''}"><div class="k">En retard</div><div class="v">${R.enRetard}</div><div class="s">magasin${R.enRetard > 1 ? 's' : ''} sous l’attendu${R.attendu ? ' (' + esc(R.attendu) + ')' : ''}</div></div>
+    </div>
+
+    <div class="mko-carte">
+      <div class="mko-ct"><span class="mko-lab">L’objectif par magasin — ${esc(c.mkoPeriode)}</span><span class="mko-mini">clients / mois : le dernier mois clos, pour poser un ordre de grandeur · barre : vendu sur objectif, repère noir : attendu à ce jour · un magasin sans objectif ne voit pas la jauge</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab">
+        <thead><tr><th>Magasin</th><th class="n">Clients / mois</th><th class="n">Objectif (pièces)</th><th class="n">Par jour ouvert</th><th class="n">Vendu</th><th style="min-width:180px">Jauge</th><th class="n">${c.mkoEstAujourdhui ? 'Aujourd’hui' : 'Ce jour'} · rythme</th><th class="n">Il faut · projection</th><th>État</th></tr></thead>
+        <tbody>
+          ${c.mkoMagasins.map(m => `<tr>
+            <td class="nom">${esc(m.nom)}${m.joursOuverts ? `<small>${esc(m.joursOuverts)}</small>` : ''}</td>
+            <td class="n mu">${esc(m.clients)}<small>${esc(m.clientsNote)}</small></td>
+            <td class="n"><input type="number" min="0" step="1" value="${esc(String(m.objectif))}" ${x.C(m.setObjectif)} placeholder="—" class="mko-cible">${m.ratio ? `<small>${esc(m.ratio)}</small>` : ''}</td>
+            <td class="n">${esc(m.parJour)}</td>
+            <td class="n"><b>${esc(m.vendu)}</b>${m.pct ? `<small>${esc(m.pct)}</small>` : ''}</td>
+            <td>${c.mkoSansProduits ? '' : jauge(m.barre, m.attendu, m.vert)}${m.aSuivre ? '<small class="mko-mu">tickets en cours de lecture</small>' : ''}</td>
+            <td class="n">${esc(m.ceJour)}<small>${esc(m.rythme)}</small></td>
+            <td class="n"><b class="${m.etatCls}">${esc(m.ilFaut)}</b><small>projection ${esc(m.projection)}</small></td>
+            <td>${m.etat ? `<span class="mko-etat ${m.etatCls}">${esc(m.etat)}</span>` : ''}</td>
+          </tr>`).join('')}
+          <tr class="tot"><td>Réseau</td><td class="n mu">${esc(c.mkoTotClients)}</td><td class="n">${esc(c.mkoTotObjectif)}</td><td></td><td class="n">${esc(c.mkoTotVendu)}</td><td>${R.objectif ? jauge(parseFloat(R.pct) || 0, R.attendu ? parseFloat(R.attendu) : null, R.etatCls === 'ok') : ''}</td><td class="n">${esc(R.ceJour)}<small>${esc(R.rythme)}</small></td><td class="n"><b>${esc(R.ilFaut)}</b><small>projection ${esc(R.projection)}</small></td><td></td></tr>
+        </tbody></table></div>
+      <div class="mko-note">Chaque saisie part en base après une pause de frappe ; le dashboard du magasin affiche la jauge aussitôt. Les ventes sont les tickets de caisse gravés jour par jour (${c.mkoTicketsLus ? c.mkoTicketsLus + ' tickets relus pour cette page' : 'rien à relire'})${R.aSuivre ? ' — la journée en cours se complète à la prochaine lecture' : ''}.</div>
+    </div>
+
+    <div class="mko-cols">
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par produit — réseau</span><span class="mko-mini">vendus depuis le début</span></div>
+        <div class="mko-corps" style="padding-top:6px">${R.parProduit.length ? R.parProduit.map(p => `<div class="mko-pp"><span>${esc(p.nom)}</span><span class="n">${esc(p.q)}</span><span class="q">${esc(p.part)}</span><div class="mko-jg mini"><i style="width:${p.larg}%;background:#b8ad9f"></i></div></div>`).join('') : '<div class="mko-mu">Aucune vente lue encore.</div>'}</div></div>
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le cumul, jour par jour</span><span class="mko-mini">trait pointillé : la droite de l’objectif</span></div>
+        <div class="mko-corps" style="padding:10px 12px 6px">${K ? `<svg class="mko-courbe" viewBox="0 0 ${K.W} ${K.H}">
+          ${K.obj ? `<line x1="${K.obj.x1}" y1="${K.obj.y1}" x2="${K.obj.x2}" y2="${K.obj.y2}" stroke="#222" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${K.obj.x2}" y="${K.obj.y2 - 6}" text-anchor="end" font-size="10" fill="#222">${esc(K.obj.txt)}</text>` : ''}
+          <line x1="${K.base.x1}" y1="${K.base.y}" x2="${K.base.x2}" y2="${K.base.y}" stroke="#DED6C9" stroke-width="1"/>
+          <polyline points="${K.points}" fill="none" stroke="#8D1D2C" stroke-width="3" stroke-linejoin="round"/>
+          ${K.dernier ? `<circle cx="${K.dernier.x}" cy="${K.dernier.y}" r="4" fill="#8D1D2C"/><text x="${K.dernier.x + 8}" y="${K.dernier.y + 4}" font-size="11" font-weight="600" fill="#8D1D2C">${esc(K.dernier.txt)}</text>` : ''}
+          ${K.labels.map(l => `<text x="${l.x}" y="${K.H2}" font-size="9.5" text-anchor="middle" fill="#6b6259">${esc(l.txt)}</text>`).join('')}
+        </svg>` : '<div class="mko-mu">La courbe apparaît avec les premières ventes et un objectif.</div>'}</div></div>
+    </div>
   </div>`;
 }
 
