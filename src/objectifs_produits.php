@@ -258,18 +258,24 @@ function ep_objectifs_produits(): array
 
     @set_time_limit(120);
     $nomDe = opMagasins();
+    // Tous les magasins actifs, pas seulement le périmètre déclaré de la
+    // campagne : un objectif se pose là où on le décide, et le périmètre du
+    // module marketing est parfois d'un autre âge. Le magasin hors périmètre
+    // est dit tel, pas caché.
     $perim = opPerimetre($camp['id'], $nomDe);
+    $perimExplicite = count($perim) < count($nomDe);
     $produits = opProduits($camp['id']);
     $pids = array_column($produits, 'id');
     $obj = opObjectifs($camp['id']);
     $cout = 0; $budget = SV_BUDGET_DEMANDE;
     $mags = [];
     $R = ['objectif' => 0, 'vendu' => 0, 'ceJour' => 0, 'rythme' => 0.0, 'ilFaut' => 0.0, 'projection' => 0, 'attenduPond' => 0.0, 'attenduPoids' => 0, 'parProduit' => [], 'parJour' => [], 'aSuivre' => false, 'retard' => 0, 'avecObjectif' => 0];
-    foreach ($perim as $sid) {
+    foreach (array_keys($nomDe) as $sid) {
         $o = $obj[$sid] ?? null;
         $b = $pids !== [] ? opBilan((int) $sid, $pids, $o, $camp['debut'], $camp['fin'], $date, $cout, $budget) : null;
         if ($b !== null) { unset($b['ouverts']); }
-        $mags[] = ['id' => $sid, 'nom' => $nomDe[$sid], 'clientsMois' => opClientsMois((int) $sid), 'objectif' => $o, 'bilan' => $b];
+        $mags[] = ['id' => $sid, 'nom' => $nomDe[$sid], 'clientsMois' => opClientsMois((int) $sid), 'objectif' => $o, 'bilan' => $b,
+            'horsPerimetre' => $perimExplicite && !in_array($sid, $perim, true)];
         if ($b === null) { continue; }
         $R['vendu'] += $b['vendu']; $R['ceJour'] += $b['ceJour'];
         if ($b['rythme'] !== null) { $R['rythme'] += $b['rythme']; }
@@ -420,9 +426,10 @@ function ep_objectifs_produits_magasin(): array
     $out = ['shop' => $shop, 'date' => $date, 'aujourdhui' => date('Y-m-d'), 'campagnes' => []];
     $nomDe = opMagasins();
     $cout = 0; $budget = SV_BUDGET_DEMANDE;
+    if (!isset($nomDe[$shop])) { return $out; }
+    // L'objectif posé fait foi, pas le périmètre déclaré de la campagne.
     foreach (opCampagnes() as $c) {
         if ($c['debut'] > $date || $c['fin'] < $date) { continue; }
-        if (!in_array($shop, opPerimetre($c['id'], $nomDe), true)) { continue; }
         $o = opObjectifs($c['id'])[$shop] ?? null;
         if ($o === null) { continue; }
         $produits = opProduits($c['id']);

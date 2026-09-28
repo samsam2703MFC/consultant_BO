@@ -2247,7 +2247,7 @@ function tplMktObj(c, x){
         <thead><tr><th>Magasin</th><th class="n">Clients / mois</th><th class="n">Objectif (pièces)</th><th class="n">Par jour ouvert</th><th class="n">Vendu</th><th style="min-width:180px">Jauge</th><th class="n">${c.mkoEstAujourdhui ? 'Aujourd’hui' : 'Ce jour'} · rythme</th><th class="n">Il faut · projection</th><th>État</th></tr></thead>
         <tbody>
           ${c.mkoMagasins.map(m => `<tr>
-            <td class="nom">${esc(m.nom)}${m.joursOuverts ? `<small>${esc(m.joursOuverts)}</small>` : ''}</td>
+            <td class="nom">${esc(m.nom)}<small>${esc(m.joursOuverts)}${m.horsPerimetre ? (m.joursOuverts ? ' · ' : '') + 'hors périmètre déclaré de la campagne' : ''}</small></td>
             <td class="n mu">${esc(m.clients)}<small>${esc(m.clientsNote)}</small></td>
             <td class="n"><input type="number" min="0" step="1" value="${esc(String(m.objectif))}" ${x.C(m.setObjectif)} placeholder="—" class="mko-cible">${m.ratio ? `<small>${esc(m.ratio)}</small>` : ''}</td>
             <td class="n">${esc(m.parJour)}</td>
