@@ -2400,7 +2400,7 @@ class App {
       if (bl) { totVendu += bl.vendu; }
       const el = ETATS[bl && o ? bl.etat : 'sans'] || ETATS.sans;
       return {
-        id: m.id, nom: m.nom,
+        id: m.id, nom: m.nom, horsPerimetre: !!m.horsPerimetre,
         clients: cm ? cm.clients.toLocaleString('fr-BE') : '—', clientsNote: cm ? cm.periode : 'pas de relevé',
         ratio: cm && o ? '1 pour ' + Math.max(1, Math.round(cm.clients / o)) + ' clients' : '',
         objectif: saisi != null ? saisi : (m.objectif != null ? m.objectif : ''),

@@ -296,7 +296,9 @@ est ouvert s'il a vendu ; un jour à venir suit le rythme de semaine des quatre 
 (pas d'objectif) · `atteint` · `avance` (≥ attendu) · `clous` (attendu − 8 points) · `retard`. `rythme` : moyenne
 des sept derniers jours ouverts clos ; `projection` = vendu + rythme × jours restants ; `ilFaut` = reste ÷ jours
 restants. `clientsMois` est une information pour poser l'objectif : le dernier mois clos encodé, sinon les trente
-derniers jours gravés ; `null` si rien n'est connu.
+derniers jours gravés ; `null` si rien n'est connu. `magasins` liste **tous les magasins actifs** ;
+`horsPerimetre: true` marque ceux que le module marketing n'a pas mis dans la campagne — l'objectif s'y
+pose quand même, et c'est l'objectif posé qui fait foi pour le dashboard.
 
 `GET /marketing/catalogue?q=pomme` — la recherche du multiselect : `{ q, mois, produits: [ { id, nom, categorie, volume } ] }`,
 `volume` étant ce que le réseau a vendu le dernier mois clos (tranches déjà gravées ; 0 si inconnu). Deux
