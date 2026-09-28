@@ -84,7 +84,9 @@ function opPerimetre(int $cid, array $nomDe): array
             if (isset($nomDe[$s])) { $ids[] = $s; }
         }
     } catch (PDOException $e) { /* sans table : tout le réseau */ }
-    return $ids === [] ? array_keys($nomDe) : $ids;
+    // Les clés numériques d'un tableau PHP redeviennent des entiers : on les
+    // remet en chaînes, sinon `in_array(…, true)` ne retrouve plus « 5 ».
+    return $ids === [] ? array_map('strval', array_keys($nomDe)) : $ids;
 }
 
 function opProduits(int $cid): array
@@ -271,6 +273,7 @@ function ep_objectifs_produits(): array
     $mags = [];
     $R = ['objectif' => 0, 'vendu' => 0, 'ceJour' => 0, 'rythme' => 0.0, 'ilFaut' => 0.0, 'projection' => 0, 'attenduPond' => 0.0, 'attenduPoids' => 0, 'parProduit' => [], 'parJour' => [], 'aSuivre' => false, 'retard' => 0, 'avecObjectif' => 0];
     foreach (array_keys($nomDe) as $sid) {
+        $sid = (string) $sid;
         $o = $obj[$sid] ?? null;
         $b = $pids !== [] ? opBilan((int) $sid, $pids, $o, $camp['debut'], $camp['fin'], $date, $cout, $budget) : null;
         if ($b !== null) { unset($b['ouverts']); }
