@@ -18,8 +18,10 @@ declare(strict_types=1);
  *    marge d'un produit à une heure = ventes − quantité × coût recette.
  *
  * Un jour clos se lit une fois et se grave (ceo_app_setting svH…/svP…) ; la
- * journée en cours se relit toutes les dix minutes. Les tickets se
- * moissonnent par lots bornés (budget), à la demande puis au cron horaire.
+ * journée en cours se relit toutes les dix minutes. Un relevé n'est définitif
+ * que s'il a été pris un jour plus tard : celui d'une journée en cours reste
+ * un instantané, même quand la date est passée (svGraveValide). Les tickets
+ * se moissonnent par lots bornés (budget), à la demande puis au cron horaire.
  */
 
 const SV_DEBUT = '2026-08-01';        // premier jour moissonné pour les produits
@@ -219,6 +221,25 @@ function svGrave(string $cle, array $v): void
         [$cle, json_encode($v, JSON_UNESCAPED_UNICODE)]);
 }
 
+/**
+ * Un relevé gravé du jour $j vaut-il encore ?
+ *
+ * Définitif seulement s'il a été pris un jour calendaire PLUS TARD : la
+ * journée était close, le panel avait tous ses tickets. Pris le jour même,
+ * ce n'est qu'un instantané — bon dix minutes, comme la journée en cours —
+ * même si la date est passée depuis. Sans cela, un dimanche lu à 9 h par le
+ * premier qui ouvre le dashboard restait figé à 9 h pour toujours, parce que
+ * le lundi le tenait pour « jour clos » : 531 € de matin et rien l'après-midi.
+ * Un relevé sans horodatage (ancienne forme) est tenu pour clos.
+ */
+function svGraveValide(mixed $c, string $champ, string $j): bool
+{
+    if (!is_array($c) || !isset($c[$champ])) { return false; }
+    $quand = (int) ($c['quand'] ?? 0);
+    if ($quand <= 0) { return true; }
+    return date('Y-m-d', $quand) > $j || $quand > time() - SV_TTL_JOUR;
+}
+
 /** Une ligne d'heure normalisée depuis hourly-distribution. */
 function svLigneHeure(array $r): ?array
 {
@@ -310,22 +331,27 @@ function ep_ventes_periodes(): array
  */
 function svHeuresJours(int $sid, array $jours): array
 {
-    $auj = date('Y-m-d');
-    $out = []; $chemins = [];
+    $out = []; $chemins = []; $instantanes = [];
     foreach ($jours as $j) {
         $c = setting('svH' . $sid . ':' . $j);
-        if (is_array($c) && isset($c['h']) && ($j < $auj || (int) ($c['quand'] ?? 0) > time() - SV_TTL_JOUR)) { $out[$j] = $c['h']; continue; }
+        if (svGraveValide($c, 'h', $j)) { $out[$j] = $c['h']; continue; }
+        // Un instantané périmé sert de repli si le panel ne répond pas : mieux
+        // vaut la matinée d'un dimanche que rien du tout.
+        if (is_array($c) && isset($c['h'])) { $instantanes[$j] = $c['h']; }
         $chemins[$j] = '/shops/' . $sid . '/statistics/sales/hourly-distribution/' . $j;
     }
     if ($chemins !== []) {
-        foreach (PanelApi::getParallele($chemins, 6) as $j => $r) {
-            if (!is_array($r)) { continue; }
+        $res = PanelApi::getParallele($chemins, 6);
+        foreach (array_keys($chemins) as $j) {
+            $r = $res[$j] ?? null;
+            if (!is_array($r)) { if (isset($instantanes[$j])) { $out[$j] = $instantanes[$j]; } continue; }
             $hs = [];
             foreach (analyseListe($r) as $x) { $l = svLigneHeure((array) $x); if ($l !== null) { $hs[(string) $l['h']] = $l; } }
             $out[$j] = $hs;
             svGrave('svH' . $sid . ':' . $j, ['quand' => time(), 'h' => $hs]);
         }
     }
+    ksort($out);
     return $out;
 }
 
@@ -336,10 +362,9 @@ function svHeuresJours(int $sid, array $jours): array
  */
 function svProduitsJour(int $sid, string $j, int &$cout, int $budget): ?array
 {
-    $auj = date('Y-m-d');
     $cle = 'svP' . $sid . ':' . $j;
     $c = setting($cle);
-    if (is_array($c) && isset($c['p']) && ($j < $auj || (int) ($c['quand'] ?? 0) > time() - SV_TTL_JOUR)) { return $c['p']; }
+    if (svGraveValide($c, 'p', $j)) { return $c['p']; }
     if ($cout >= $budget) { return null; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     if (!is_array($liste)) { return null; }
@@ -448,8 +473,7 @@ function ep_stats_ventes(): array
     // le reste se grave à la relecture suivante et au cron.
     foreach (array_reverse($jours) as $j) {
         if ($j < SV_DEBUT) { continue; }
-        $grave = setting('svP' . $sid . ':' . $j);
-        $dejaLu = is_array($grave) && isset($grave['p']) && ($j < $auj || (int) ($grave['quand'] ?? 0) > time() - SV_TTL_JOUR);
+        $dejaLu = svGraveValide(setting('svP' . $sid . ':' . $j), 'p', $j);
         if (!$dejaLu && microtime(true) - $t0 > SV_TEMPS_DEMANDE) { $tempsEpuise = true; continue; }
         $p = svProduitsJour($sid, $j, $cout, $budget);
         if ($p !== null) { $prod[$j] = $p; $joursProd[] = $j; }
@@ -595,8 +619,9 @@ function svMoisson(int $budget = SV_BUDGET_CRON): array
     // Du plus récent au plus ancien : le dashboard regarde d'abord la semaine.
     for ($j = $hier; $j >= SV_DEBUT; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
         foreach ($shops as $sid) {
-            $c = setting('svP' . $sid . ':' . $j);
-            if (is_array($c) && isset($c['p'])) { continue; }
+            // Un jour lu pendant qu'il était en cours se relit : ses tickets
+            // de l'après-midi manquaient.
+            if (svGraveValide(setting('svP' . $sid . ':' . $j), 'p', $j)) { continue; }
             if ($cout >= $budget) { $restants++; continue; }
             $r = svProduitsJour($sid, $j, $cout, $budget);
             if ($r !== null) { $faits++; } else { $restants++; }
