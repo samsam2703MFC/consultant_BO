@@ -460,3 +460,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-28T08:30:00Z calendrier du mois : echelle orange vers vert fonce
 2026-09-28T09:15:00Z dashboard magasin : la note du jour et la semaine n-1
 2026-09-28T09:50:00Z ventes par heure : un releve pris en journee ne fige plus le jour
+2026-09-28T11:20:00Z objectifs produits des campagnes : multiselect, objectif par magasin, jauge dashboard
