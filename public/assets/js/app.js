@@ -8028,7 +8028,7 @@ class App {
       { k: 'Record', v: record ? fE(record.ca) : '—', s: record ? record.court + ' · ' + record.tickets + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) - 100 >= 0 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', cls: 'gold' },
     ];
     // Le calendrier : couleur = atteinte de l'objectif du jour.
-    const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#8D1D2C', false] : a >= 100 ? ['#2d7a3e', false] : a >= 90 ? ['#6aa84f', false] : a >= 75 ? ['#F08A2C', false] : ['#e8c9a0', true]; };
+    const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#2d7a3e', false] : a >= 100 ? ['#6aa84f', false] : a >= 90 ? ['#e8c9a0', true] : a >= 75 ? ['#F5B26B', true] : ['#F08A2C', false]; };
     const cases = [];
     if (J.length) { const t = new Date(J[0].date + 'T12:00:00'); for (let i = 0; i < (t.getDay() + 6) % 7; i++) { cases.push({ vide: true }); } }
     J.forEach(j => {

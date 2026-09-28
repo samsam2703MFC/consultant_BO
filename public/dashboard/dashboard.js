@@ -1203,7 +1203,7 @@
     </div>`;
     // Le calendrier : une case par jour, colorée par l'atteinte de SON objectif.
     if (jours.length) {
-      const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#8D1D2C', false] : a >= 100 ? ['#2d7a3e', false] : a >= 90 ? ['#6aa84f', false] : a >= 75 ? ['#F08A2C', false] : ['#e8c9a0', true]; };
+      const teinte = j => { if (!j.objectif) { return ['#efe9e1', true]; } const a = pc(j.ca, j.objectif); return a >= 110 ? ['#2d7a3e', false] : a >= 100 ? ['#6aa84f', false] : a >= 90 ? ['#e8c9a0', true] : a >= 75 ? ['#F5B26B', true] : ['#F08A2C', false]; };
       let cases = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('');
       const t0 = new Date(jours[0].date + 'T12:00:00');
       for (let i = 0; i < (t0.getDay() + 6) % 7; i++) { cases += '<div class="d vide"></div>'; }
@@ -1215,7 +1215,7 @@
       });
       h += `<div class="db-card"><div class="ct"><span class="db-lab">${sem ? 'La semaine' : 'Le calendrier du mois'} — CA, atteinte de l’objectif du jour, clients</span></div>
         <div class="db-cal">${cases}</div>
-        <div class="db-perleg"><span><i style="background:#8D1D2C"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#2d7a3e"></i>100 – 110 %</span><span><i style="background:#6aa84f"></i>90 – 100 %</span><span><i style="background:#F08A2C"></i>75 – 90 %</span><span><i style="background:#e8c9a0"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div></div>`;
+        <div class="db-perleg"><span><i style="background:#2d7a3e"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#6aa84f"></i>100 – 110 %</span><span><i style="background:#e8c9a0"></i>90 – 100 %</span><span><i style="background:#F5B26B"></i>75 – 90 %</span><span><i style="background:#F08A2C"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div></div>`;
     }
     // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
     const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
