@@ -480,3 +480,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-09-29T18:11:52Z dashboard : split comptoir / clients pro en jour, semaine, mois
 2026-09-29T18:21:52Z dashboard : selecteur du calendrier (ca, atteinte, clients)
 2026-09-29T18:39:52Z resultat : clients manquants au comptoir ; releve : part pro par produit
+2026-09-29T19:20:31Z planogramme standard : un seul plan, moments de la journee, rotations comptoir, tablette
