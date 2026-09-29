@@ -136,13 +136,45 @@ function ep_ventes_clients_sonde(): array
     $tc = [];
     try { $tc = $cols('transaction'); } catch (Throwable $e) { $out['erreurs'][] = 'transaction : ' . $e->getMessage(); return $out; }
     $has = fn (string $k) => isset($tc[$k]);
-    $depuis = date('Y-m-d', strtotime('-' . $jours . ' days'));
+    // La fenêtre se cale sur le DERNIER ticket présent : la table partagée peut être en retard sur la caisse.
+    try {
+        $b = Db::row('SELECT /*+ MAX_EXECUTION_TIME(6000) */ MIN(insert_timestamp) premier, MAX(insert_timestamp) dernier, COUNT(*) n FROM `transaction`');
+        $out['transactions'] = ['premier' => $b['premier'] ?? null, 'dernier' => $b['dernier'] ?? null, 'n' => (int) ($b['n'] ?? 0)];
+    } catch (Throwable $e) { $out['erreurs'][] = 'bornes : ' . $e->getMessage(); }
+    $fin = !empty($out['transactions']['dernier']) ? substr((string) $out['transactions']['dernier'], 0, 10) : date('Y-m-d');
+    $depuis = date('Y-m-d', strtotime($fin . ' -' . $jours . ' days'));
+    $out['fenetre'] = ['du' => $depuis, 'au' => $fin];
+    // Le client lui-même : la table `client` dit B2B ou non, société, paiement différé.
+    try {
+        $cc = $cols('client');
+        if (isset($cc['is_b2b'])) {
+            $out['clients'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(6000) */ id_main_shop shop, COUNT(*) n, SUM(is_b2b = 1) b2b, SUM(is_b2b = 1 AND company_name IS NOT NULL AND company_name <> "") avecSociete' . (isset($cc['can_deferral']) ? ', SUM(can_deferral = 1) paiementDiffere' : '') . ' FROM client GROUP BY id_main_shop ORDER BY id_main_shop');
+        }
+    } catch (Throwable $e) { $out['erreurs'][] = 'clients : ' . $e->getMessage(); }
+    // Les tickets portés par un client B2B, sur la fenêtre.
+    if ($has('id_client')) {
+        try {
+            $out['ticketsB2b'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_shop shop, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca,
+                SUM(t.id_client IS NOT NULL AND t.id_client > 0) avecClient, SUM(c.is_b2b = 1) b2b, ROUND(SUM(CASE WHEN c.is_b2b = 1 THEN t.total_gross_amount_after_discount ELSE 0 END)) caB2b,
+                SUM(t.id_client IS NOT NULL AND t.id_client > 0 AND (c.is_b2b IS NULL OR c.is_b2b = 0)) b2cIdentifie
+                FROM `transaction` t LEFT JOIN client c ON c.id = t.id_client WHERE t.insert_timestamp >= ? AND t.insert_timestamp < DATE_ADD(?, INTERVAL 1 DAY) GROUP BY t.id_shop ORDER BY t.id_shop', [$depuis, $fin]);
+        } catch (Throwable $e) { $out['erreurs'][] = 'ticketsB2b : ' . $e->getMessage(); }
+        try {
+            $out['societesB2b'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_shop shop, c.company_name societe, COUNT(*) n, ROUND(SUM(t.total_gross_amount_after_discount)) ca
+                FROM `transaction` t JOIN client c ON c.id = t.id_client WHERE c.is_b2b = 1 AND t.insert_timestamp >= ? GROUP BY t.id_shop, c.company_name ORDER BY ca DESC LIMIT 15', [$depuis]);
+        } catch (Throwable $e) { $out['erreurs'][] = 'societesB2b : ' . $e->getMessage(); }
+    }
+    // Les commandes au comptoir et la boutique en ligne : part des clients B2B.
+    try {
+        $out['commandes'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(6000) */ co.id_shop shop, COUNT(*) n, SUM(c.is_b2b = 1) b2b, MAX(co.pick_up_datetime) derniere FROM client_order co LEFT JOIN client c ON c.id = co.id_client GROUP BY co.id_shop ORDER BY co.id_shop');
+        $out['webshop'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(6000) */ shop_id shop, mode, COUNT(*) n, MAX(delivery_date) derniere FROM ws_orders GROUP BY shop_id, mode ORDER BY shop_id, mode');
+    } catch (Throwable $e) { $out['erreurs'][] = 'commandes : ' . $e->getMessage(); }
     // Par magasin : combien de tickets portent un client, une société, une facture, un paiement différé.
     try {
         $sel = 'id_shop, COUNT(*) n, ROUND(SUM(total_gross_amount_after_discount)) ca';
         foreach (['id_customer', 'id_client', 'id_company', 'id_invoice'] as $k) { if ($has($k)) { $sel .= ", SUM($k IS NOT NULL AND $k > 0) " . substr($k, 3) . ", ROUND(SUM(CASE WHEN $k IS NOT NULL AND $k > 0 THEN total_gross_amount_after_discount ELSE 0 END)) ca_" . substr($k, 3); } }
         foreach (['will_be_invoiced', 'deferral_payment'] as $k) { if ($has($k)) { $sel .= ", SUM($k = 1) $k"; } }
-        $out['tickets'] = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ $sel FROM `transaction` WHERE insert_timestamp >= ? GROUP BY id_shop ORDER BY id_shop", [$depuis]);
+        $out['tickets'] = Db::rows("SELECT /*+ MAX_EXECUTION_TIME(8000) */ $sel FROM `transaction` WHERE insert_timestamp >= ? AND insert_timestamp < DATE_ADD(?, INTERVAL 1 DAY) GROUP BY id_shop ORDER BY id_shop", [$depuis, $fin]);
     } catch (Throwable $e) { $out['erreurs'][] = 'tickets : ' . $e->getMessage(); }
     // Le mode de service (comptoir, emporter, livraison…) et le mode de paiement.
     foreach ([['id_serving_method', 'serving_method', 'services'], ['id_payment_type', 'payment_type', 'paiements']] as [$k, $t, $cle]) {
