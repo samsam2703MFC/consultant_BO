@@ -2972,7 +2972,7 @@ class App {
         encoder: k === 'msp' ? () => this.sqMspOuvrir(String(l.id), tri.cle) : null, fichier: k === 'msp' && x.fichier ? this.sqFichierUrl(x.fichier) : null }; }) }));
     common.sqReseau = d.reseau ? { sur20: d.reseau.sur20 != null ? nf(d.reseau.sur20) : '—', magasins: d.reseau.magasins || (d.magasins || []).length, complets: d.reseau.complets || 0, etoiles: nf(d.reseau.etoiles) } : null;
     const src = d.sources || {};
-    common.sqSources = (src.googleSynchro ? 'Google synchronisé le ' + jf(src.googleSynchro.slice(0, 10)) : 'Google : pas de synchro') + ' · tâches relevées du ' + jf(tri.du) + ' au ' + jf(tri.arrete) + ' · ' + (src.obligatoires || 0) + ' tâche' + (src.obligatoires > 1 ? 's' : '') + ' obligatoire' + (src.obligatoires > 1 ? 's' : '') + ' (CO-)' + ' · CA face au budget des trois mois · client mystère encodé à la main';
+    common.sqSources = (src.googleSynchro ? 'Google synchronisé le ' + jf(src.googleSynchro.slice(0, 10)) : 'Google : pas de synchro') + ' · tâches relevées du ' + jf(tri.du) + ' au ' + jf(tri.arrete) + ' · ' + (src.obligatoires || 0) + ' tâche' + (src.obligatoires > 1 ? 's' : '') + ' obligatoire' + (src.obligatoires > 1 ? 's' : '') + ' (checklist ' + (src.obligatoiresChecklists || ['CQ-02']).join(', ') + ')' + ' · CA face au budget des trois mois · client mystère encodé à la main';
     common.sqRapportHref = API_BASE + '/scoring/rapport?trimestre=' + encodeURIComponent(tri.cle);
     common.sqPdfHref = common.sqRapportHref + '&format=pdf';
     common.sqEnvoi = d.rapport ? { smtp: !!d.rapport.smtp, copies: (d.rapport.copies || []).length, carnet: (d.magasins || []).map(l => ({ nom: l.court, n: (d.rapport.carnet || {})[l.id] || 0 })) } : null;

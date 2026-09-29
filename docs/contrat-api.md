@@ -399,15 +399,16 @@ semaine est un jour du créneau.
       "total": 13.54, "n": 4, "sur": 20, "etoiles": 3.39,
       "prec": { "total": 17.4, "n": 4, "etoiles": 4.36, "postes": { "google": 4.8, "taches": null, "msp": 4, "budget": 4.72 } }, "delta": -0.97 } ],
   "reseau": { "sur20": 11.4, "magasins": 4, "complets": 3, "etoiles": 2.85 },
-  "sources": { "obligatoires": 4, "obligatoiresLues": "2026-09-28", "googleSynchro": "2026-09-14 19:07" },
+  "sources": { "obligatoires": 9, "obligatoiresLues": "2026-09-29", "obligatoiresChecklists": ["CQ-02"], "googleSynchro": "2026-09-14 19:07" },
   "rapport": { "id": 12, "actif": true, "copies": [ "ceo@…" ], "carnet": { "5": 2, "4": 0 }, "smtp": true } }
 ```
 
 Les règles : **Google**, la note de la fiche (`ceo_shop_reputation`) telle quelle, **gelée** dans `ceo_scoring_google` à chaque
 lecture du trimestre en cours — un trimestre clos relit ce qui a été gelé. **Tâches**, la moyenne des journées relevées
 (`ceo_tache_jour`) : un jour vaut la part des tâches rendues (une tâche notée vaut sa cote / 5), et un jour où une tâche
-**obligatoire** manque vaut 0 ; les obligatoires sont les tâches dont la checklist du panel commence par `CO-`, lues une fois
-par jour dans `/pwa/tasks` et gardées dans le réglage `scoringObligatoires`. **Client mystère**, `obtenu / maximum × 5`.
+**obligatoire** manque vaut 0 ; les obligatoires sont les tâches dont la checklist du panel commence par l'un des préfixes du
+réglage `scoringChecklistsObligatoires` (`["CQ-02"]` par défaut : le contrôle qualité d'ouverture, les photos des comptoirs),
+lues une fois par jour dans `/pwa/tasks` et gardées dans le réglage `scoringObligatoires`. **Client mystère**, `obtenu / maximum × 5`.
 **Budget**, le CA des mois du trimestre face à leur budget (`/stores/perf`, la fonction `ep_perf`) : 100 % = 5, 90 % = 4, 80 % = 3,
 70 % = 2, 60 % = 1, 50 % et moins = 0, au prorata entre deux paliers ; un mois sans budget ne
 compte pas, aucun mois budgété : poste sans donnée. Le total est **toujours sur 20** (`sur`) : un poste `v: null` vaut 0
